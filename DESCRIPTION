@@ -1,0 +1,9 @@
+Package: rMVPA
+Type: Package
+Title: Multivoxel Pattern Analysis in R
+Version: 0.1
+Date: 2014-04-01
+Author: Bradley R. Bucusbaum
+Maintainer: brad.buchsbaum@gmail.com
+Description: An R package to facilitate multivoxel pattern analysis of neuroimaging data in R.
+License: GPL (>= 2)
