@@ -7,3 +7,4 @@ Author: Bradley R. Bucusbaum
 Maintainer: brad.buchsbaum@gmail.com
 Description: An R package to facilitate multivoxel pattern analysis of neuroimaging data in R.
 License: GPL (>= 2)
+Imports: caret, neuroim, randomForest, iterators, itertools
