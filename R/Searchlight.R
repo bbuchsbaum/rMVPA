@@ -1,5 +1,7 @@
 
-
+#' searchlight
+#' 
+#' @export
 searchlight <- function(dset, radius=8, model=MVPA.lda_thomaz, ncores=1) {
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
