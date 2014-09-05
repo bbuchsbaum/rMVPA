@@ -23,7 +23,9 @@ MVPAModels$nearestMean <- list(type = "Classification",
                             data.frame(gamma=.1)
                           },
                           fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) nm(x,y, param$gamma),
-                          predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict(modelFit, as.matrix(newdata))$class,
+                          predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                            modelFit$lev[predict(modelFit, as.matrix(newdata))$class]
+                          },
                           prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                             predict(modelFit, as.matrix(newdata))$posterior
                           })
