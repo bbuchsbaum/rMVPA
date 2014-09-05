@@ -15,10 +15,7 @@ predict.corsimFit <- function(modelFit, newData) {
 }
 
 prob.corsimFit <- function(modelFit, newData) {
-  scores <- t(sapply(1:nrow(newData), function(i) {
-    pattern <- newData[i,]
-    cor(pattern, t(modelFit$conditionMeans))
-  }))
+  scores <- cor(t(newData), t(modelFit$conditionMeans))
   
   mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
   probs <- exp(scores - mc)
