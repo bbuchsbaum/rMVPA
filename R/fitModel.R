@@ -127,7 +127,7 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
     ctrl <- caret::trainControl("cv", verboseIter=TRUE)
   }
   
-  res <- mclapply(foldSplit, function(fidx) {
+  res <- parallel::mclapply(foldSplit, function(fidx) {
     print(fidx)
     Xtrain <- X[-fidx,]
     Ytrain <- Y[-fidx]
