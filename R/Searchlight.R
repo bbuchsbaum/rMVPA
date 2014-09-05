@@ -15,7 +15,7 @@ searchlight <- function(dset, radius=8, modelName="svmLinear", ncores=1) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(dset$Y), "!=", length(dset$blockVar)))
   }
   
-  model <- loadModel(modelName)
+  model <- loadModel(modelName)[[modelName]]
   print(model) 
   
   searchIter <- itertools::ihasNext(Searchlight(dset$mask, radius))

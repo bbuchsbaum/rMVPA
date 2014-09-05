@@ -33,7 +33,7 @@ loadModel <- function(name) {
   if (!is.null(MVPAModels[[name]])) {
     MVPAModels[[name]]       
   } else if (length(caret::getModelInfo(name)) > 0) {
-    caret::getModelInfo(name)    
+    caret::getModelInfo(name)[[name]]    
   } else {
     abort("unrecognized model: ", name)
   }

@@ -127,7 +127,7 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
     ctrl <- caret::trainControl("cv", verboseIter=TRUE)
   }
   
-  res <- parallel::mclapply(foldSplit, function(fidx) {
+  res <- lapply(foldSplit, function(fidx) {
     Xtrain <- X[-fidx,]
     Ytrain <- Y[-fidx]
     Xtest <- X[fidx,]   
@@ -138,7 +138,7 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
       fit <- caret::train(Xtrain, Ytrain, method=method, trControl=ctrl, tuneLength=tuneLength)
     }
     cbind(class=predict(fit, newdata=Xtest), predict(fit, newdata=Xtest, type="prob"))
-  }, mc.cores=ncores)
+  })
   
   ret <- do.call(rbind, res)
   if (is.factor(Y) && length(levels(Y)) == 2) {
