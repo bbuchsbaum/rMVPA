@@ -122,9 +122,9 @@ trainModel <- function(x, ...) {
 crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLength=1) {
   
   if (is.null(tuneGrid) || tuneLength == 1 || nrow(tuneGrid) == 1) {
-    ctrl <- caret::trainControl("none", verboseIter=TRUE)
+    ctrl <- caret::trainControl("none", verboseIter=TRUE, classProb=TRUE)
   } else {
-    ctrl <- caret::trainControl("cv", verboseIter=TRUE)
+    ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProb=TRUE)
   }
   
   res <- parallel::mclapply(foldSplit, function(fidx) {
