@@ -17,7 +17,7 @@ searchlight <- function(dset, radius=8, modelName="svmLinear", ncores=1) {
   model <- loadModel(modelName)
   print(model) 
   
-  searchIter <- ihasNext(Searchlight(dset$mask, radius))
+  searchIter <- itertools::ihasNext(Searchlight(dset$mask, radius))
   count <- 1
   while (hasNext(searchIter)) {
     print(count)
