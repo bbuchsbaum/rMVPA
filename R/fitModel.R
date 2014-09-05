@@ -14,6 +14,19 @@ predict.corSimFit <- function(modelFit, newData) {
 }
 
 MVPAModels <- list()
+
+MVPAModels$nearestMean <- list(type = "Classification", 
+                          library = "klaR", 
+                          loop = NULL, 
+                          parameters=data.frame(parameters="gamma", class="numeric", labels="gamma"),
+                          grid=function(x, y, len = NULL) {
+                            data.frame(gamma=.1)
+                          },
+                          fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) nm(x,y, param$gamma),
+                          predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict(modelFit, as.matrix(newdata))$class,
+                          prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                            predict(modelFit, as.matrix(newdata))$posterior
+                          })
     
 MVPAModels$corsim <- list(type = "Classification", 
                     library = "rMVPA", 
@@ -33,13 +46,11 @@ MVPAModels$lda_strimmer <- list(type = "Classification",
                  parameters=data.frame(parameters="lambda", class="numeric", labels="lambda"),
                  grid=function(x, y, len = NULL) data.frame(lambda=0),
                  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...),
-                 predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                   predict(modelFit, as.matrix(newdata), verbose=FALSE)
-                   
-                 }
+                 predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict(modelFit, as.matrix(newdata), verbose=FALSE),
                  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                     predict(modelFit, as.matrix(newdata),verbose=FALSE)$posterior
-                })
+                 })
+                
 
 
 MVPAModels$lda_thomaz <- list(type = "Classification", 

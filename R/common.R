@@ -30,8 +30,9 @@ logit <- function(msg) {
 }
 
 loadModel <- function(name) {
-  if (!is.null(MVPAModels[[name]])) {
-    MVPAModels[[name]]       
+  registry <- get("MVPAModels", .GlobalEnv)
+  if (!is.null(registry[[name]])) {
+    registry[[name]]       
   } else if (length(caret::getModelInfo(name)) > 0) {
     caret::getModelInfo(name)[[name]]    
   } else {
