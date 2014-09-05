@@ -4,6 +4,7 @@
 #' @param radius the searchlight radus in mm
 #' @param modelName the name of the classifcation model to be used
 #' @param ncores the number of cores for parallel processign (default is 1)
+#' @importFrom itertools ihasNext
 #' @export
 searchlight <- function(dset, radius=8, modelName="svmLinear", ncores=1) {
   if (radius < 1 || radius > 100) {
@@ -19,7 +20,7 @@ searchlight <- function(dset, radius=8, modelName="svmLinear", ncores=1) {
   
   searchIter <- itertools::ihasNext(Searchlight(dset$mask, radius))
   count <- 1
-  while (hasNext(searchIter)) {
+  while (itertools::hasNext(searchIter)) {
     print(count)
     vox <- nextElem(searchIter) 
     result <- fitModel(model, dset, vox, ncores)
