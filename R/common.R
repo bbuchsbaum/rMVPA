@@ -26,7 +26,7 @@ abort <- function(msg) {
 
 
 log <- function(msg) {
-  writeLines(msg, get(""MVPA_CONFIG"", .GlobalEnv)$logFile)
+  writeLines(msg, get("MVPA_CONFIG", .GlobalEnv)$logFile)
 }
 
 loadModel <- function(name) {
