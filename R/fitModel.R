@@ -169,7 +169,10 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
     if (nrow(tuneGrid) == 1) {
       ## fast fit
       fit <- method$fit(Xtrain, Ytrain, NULL, tuneGrid, classProbs=TRUE)
-      cbind(class=method$predict(fit, newdata=Xtest), method$prob(fit, newdata=Xtest))
+      probs <- method$prob(fit, newdata=Xtest)
+      cpred <- apply(probs,1, which.max)
+      cpred <- levels(Ytrain)[class]
+      cbind(class=cpred, probs)
     } else {
       fit <- caret::train(Xtrain, Ytrain, method=method, trControl=ctrl, tuneGrid=tuneGrid)
       cbind(class=predict(fit, newdata=Xtest), predict(fit, newdata=Xtest, type="prob"))
