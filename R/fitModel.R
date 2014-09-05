@@ -171,7 +171,7 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
       fit <- method$fit(Xtrain, Ytrain, NULL, tuneGrid, classProbs=TRUE)
       probs <- method$prob(fit, newdata=Xtest)
       cpred <- apply(probs,1, which.max)
-      cpred <- levels(Ytrain)[class]
+      cpred <- levels(Ytrain)[cpred]
       cbind(class=cpred, probs)
     } else {
       fit <- caret::train(Xtrain, Ytrain, method=method, trControl=ctrl, tuneGrid=tuneGrid)
