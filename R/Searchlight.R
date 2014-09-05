@@ -1,31 +1,31 @@
 
 #' searchlight
-#' 
+#' @param dataset
+#' @param radius the searchlight radus in mm
+#' @param modelName the name of the classifcation model to be used
+#' @param ncores the number of cores for parallel processign (default is 1)
 #' @export
-searchlight <- function(dset, radius=8, model=MVPA.lda_thomaz, ncores=1) {
+searchlight <- function(dset, radius=8, modelName="svmLinear", ncores=1) {
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }
   
-  if (length(folds) != length(labels)) {
-    stop(paste("length of 'labels' must equal length of 'folds'", length(labels), "!=", length(folds)))
+  if (length(dset$blockVar) != length(dset$Y)) {
+    stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(dset$Y), "!=", length(dset$blockVar)))
   }
   
-  modelInstance <- createModel(dset, model)
+  model <- loadModel(modelName)
+  print(model) 
   
-  searchIter <- ihasNext(Searchlight(mask, radius))
-  
+  searchIter <- ihasNext(Searchlight(dset$mask, radius))
+  count <- 1
   while (hasNext(searchIter)) {
+    print(count)
     vox <- nextElem(searchIter) 
-    fitModel(model, dset, vox, ncores)
-    
-    
-    
-    
-  
+    result <- fitModel(model, dset, vox, ncores)
+    res <- performance(result)
+    print(res)
+    count <- count + 1
   }
-  
-  
-  
-  
+   
 }
