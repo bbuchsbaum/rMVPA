@@ -154,7 +154,6 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
     
     if (nrow(tuneGrid) == 1) {
       ## fast fit
-      print("fast fit")
       fit <- method$fit(Xtrain, Ytrain, NULL, tuneGrid, classProbs=TRUE)
       cbind(class=method$predict(fit, newdata=Xtest), method$prob(fit, newdata=Xtest))
     } else {
