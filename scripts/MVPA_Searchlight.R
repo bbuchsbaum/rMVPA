@@ -34,9 +34,10 @@ MVPA_CONFIG$train_design <- MVPA_CONFIG$full_design[MVPA_CONFIG$train_subset,]
 MVPA_CONFIG$labels <- loadLabels(MVPA_CONFIG$train_design, MVPA_CONFIG)
 MVPA_CONFIG$blockVar <- loadBlockColumn(MVPA_CONFIG, MVPA_CONFIG$train_design)
 MVPA_CONFIG$train_datavec <- loadBrainData(MVPA_CONFIG, indices=which(MVPA_CONFIG$train_subset))
-log(paste("subset contains", nrow(MVPA_CONFIG$train_design), "of", nrow(MVPA_CONFIG$full_design), "rows."))
+print(paste("subset contains", nrow(MVPA_CONFIG$train_design), "of", nrow(MVPA_CONFIG$full_design), "rows."))
 
 MVPA_CONFIG$model <- loadModel(MVPA_CONFIG$method)
+print(paste("Model: ", MVPA_CONFIG$model))
 
 dataset <- MVPADataset(MVPA_CONFIG$train_datavec, MVPA_CONFIG$labels, MVPA_CONFIG$maskVolume, MVPA_CONFIG$blockVar)
 searchres <- searchlight(dataset, MVPA_CONFIG$radius, MVPA_CONFIG$method, ncores=MVPA_CONFIG$ncores)

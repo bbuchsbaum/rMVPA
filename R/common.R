@@ -25,7 +25,7 @@ abort <- function(msg) {
 }
 
 
-log <- function(msg) {
+logit <- function(msg) {
   writeLines(msg, get("MVPA_CONFIG", .GlobalEnv)$logFile)
 }
 
@@ -96,7 +96,7 @@ loadBrainData <- function(config, indices=NULL) {
   if (!file.exists(config$train_data)) {
     abort(paste("training data", config$train_data, "not found."))
   } else {
-    log(paste("loading data file", config$train_data))
+    logit(paste("loading data file", config$train_data))
     if (!is.null(indices)) {
       loadVector(config$train_data, indices=indices, mask=config$maskVolume)
     } else {
