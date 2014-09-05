@@ -29,8 +29,8 @@ MVPA_CONFIG$maskVolume <- loadMask(MVPA_CONFIG)
 MVPA_CONFIG$full_design <- read.table(MVPA_CONFIG$table, header=TRUE, comment.char=";")
 
 
-MVPA_CONFIG$train_subset <- loadSubset(full_design, MVPA_CONFIG)
-MVPA_CONFIG$train_design <- full_design[MVPA_CONFIG$train_subset,]
+MVPA_CONFIG$train_subset <- loadSubset(MVPA_CONFIG$full_design, MVPA_CONFIG)
+MVPA_CONFIG$train_design <- MVPA_CONFIG$full_design[MVPA_CONFIG$train_subset,]
 MVPA_CONFIG$labels <- loadLabels(MVPA_CONFIG$train_design, MVPA_CONFIG)
 MVPA_CONFIG$blockVar <- loadBlockColumn(MVPA_CONFIG, MVPA_CONFIG$train_design)
 MVPA_CONFIG$train_datavec <- loadBrainData(MVPA_CONFIG, indices=which(MVPA_CONFIG$train_subset))

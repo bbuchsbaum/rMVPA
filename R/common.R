@@ -61,7 +61,7 @@ loadLabels <- function(full_design, config) {
   if (is.null(full_design[[config$labelColumn]])) {
     abort(paste("Error: labelColumn", config$labelColumn, "not found"))
   } else {
-    labels <- design[[config$labelColumn]]
+    labels <- full_design[[config$labelColumn]]
   }
   labels
 }
