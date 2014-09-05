@@ -33,9 +33,12 @@ MVPAModels$lda_strimmer <- list(type = "Classification",
                  parameters=data.frame(parameters="lambda", class="numeric", labels="lambda"),
                  grid=function(x, y, len = NULL) data.frame(lambda=0),
                  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...),
-                 predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict(modelFit, as.matrix(newdata))$class,
+                 predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                   predict(modelFit, as.matrix(newdata), verbose=FALSE)
+                   
+                 }
                  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                    predict(modelFit, as.matrix(newdata))$posterior
+                    predict(modelFit, as.matrix(newdata),verbose=FALSE)$posterior
                 })
 
 
@@ -131,7 +134,7 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
     tuneGrid <- method$grid(tuneLength)
   }
   
-  res <- lapply(foldSplit, function(fidx) {
+  res <- parallel::mclapply(foldSplit, function(fidx) {
     Xtrain <- X[-fidx,]
     Ytrain <- Y[-fidx]
     Xtest <- X[fidx,]   
@@ -145,7 +148,7 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
       fit <- caret::train(Xtrain, Ytrain, method=method, trControl=ctrl, tuneGrid=tuneGrid)
       cbind(class=predict(fit, newdata=Xtest), predict(fit, newdata=Xtest, type="prob"))
     }
-  })
+  }, mc.cores=ncores)
   
 
   
