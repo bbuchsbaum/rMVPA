@@ -122,22 +122,29 @@ trainModel <- function(x, ...) {
 crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLength=1) {
   
   if (is.null(tuneGrid) || tuneLength == 1 || nrow(tuneGrid) == 1) {
-    ctrl <- caret::trainControl("none", verboseIter=TRUE, classProb=TRUE)
+    ctrl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE)
   } else {
-    ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProb=TRUE)
+    ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE)
+  }
+  
+  if (is.null(tuneGrid)) {
+    tuneGrid <- method$grid(tuneLength)
   }
   
   res <- parallel::mclapply(foldSplit, function(fidx) {
     Xtrain <- X[-fidx,]
     Ytrain <- Y[-fidx]
     Xtest <- X[fidx,]   
-    if (!is.null(tuneGrid)) {
+    
+    if (nrow(tuneGrid) == 1) {
+      ## fast fit
+      print("fast fit")
+      fit <- method$fit(Xtrain, Ytrain, NULL, tuneGrid, classProbs=TRUE)
+      cbind(class=method$predict(fit, newdata=Xtest), method$prob(fit, newdata=Xtest))
+    } else {
       fit <- caret::train(Xtrain, Ytrain, method=method, trControl=ctrl, tuneGrid=tuneGrid)
+      cbind(class=predict(fit, newdata=Xtest), predict(fit, newdata=Xtest, type="prob"))
     }
-    else {
-      fit <- caret::train(Xtrain, Ytrain, method=method, trControl=ctrl, tuneLength=tuneLength)
-    }
-    cbind(class=predict(fit, newdata=Xtest), predict(fit, newdata=Xtest, type="prob"))
   }, mc.cores=ncores)
   
 
