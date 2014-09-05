@@ -2,15 +2,29 @@
 
 
 corsimFit <- function(x, y) {
-  list(conditionMeans = splitReduce(x, y, mean))
+  list(conditionMeans = splitReduce(x, y, mean), levs=levels(y))
 }
 
-predict.corSimFit <- function(modelFit, newData) {
+predict.corsimFit <- function(modelFit, newData) {
   res <- sapply(1:nrow(newData), function(i) {
     pattern <- newData[i,]
-    cor(pattern, modelFit$conditionMeans)
+    which.max(cor(pattern, t(modelFit$conditionMeans)))
   })
   
+  modelFit$levs[res]
+}
+
+prob.corsimFit <- function(modelFit, newData) {
+  scores <- t(sapply(1:nrow(newData), function(i) {
+    pattern <- newData[i,]
+    cor(pattern, t(modelFit$conditionMeans))
+  }))
+  
+  mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
+  probs <- exp(scores - mc)
+  probs <- zapsmall(probs/rowSums(probs))
+  colnames(probs) <- modelFit$levs
+  probs
 }
 
 MVPAModels <- list()
@@ -33,12 +47,12 @@ MVPAModels$nearestMean <- list(type = "Classification",
 MVPAModels$corsim <- list(type = "Classification", 
                     library = "rMVPA", 
                     loop = NULL, 
-                    parameters=data.frame(parameters="lambda", class="numeric", labels="lambda"),
-                    grid=function(x, y, len = NULL) data.frame(lambda=seq(.2, .9, length.out=len)),
+                    parameters=data.frame(parameters="none", class="numeric", labels="none"),
+                    grid=function(x, y, len = NULL) data.frame(none=1),
                     fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) corsimFit(x,y),
-                    predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict(modelFit, as.matrix(newdata))$class,
+                    predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict.corsimFit(modelFit, as.matrix(newdata)),
                     prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                      predict(modelFit, as.matrix(newdata))$posterior
+                      prob.corsimFit(modelFit, as.matrix(newdata))
                     })
 
 
