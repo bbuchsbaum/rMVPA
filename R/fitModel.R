@@ -26,6 +26,26 @@ prob.corsimFit <- function(modelFit, newData) {
 
 MVPAModels <- list()
 
+MVPAModels$pca_lda <- list(type = "Classification", 
+                               library = "MASS", 
+                               loop = NULL, 
+                               parameters=data.frame(parameters="ncomp", class="numeric", labels="ncomp"),
+                               grid=function(x, y, len = 5) {
+                                 data.frame(ncomp=1:len)
+                               },
+                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+                                 browser()
+                                 pres <- prcomp(x, scale=TRUE)
+                                 lda(pres$x[,1:param$ncomp])
+                               },
+                                 
+                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                 modelFit$lev[predict(modelFit, as.matrix(newdata))$class]
+                               },
+                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                 predict(modelFit, as.matrix(newdata))$posterior
+                               })
+
 MVPAModels$nearestMean <- list(type = "Classification", 
                           library = "klaR", 
                           loop = NULL, 
@@ -53,7 +73,7 @@ MVPAModels$corsim <- list(type = "Classification",
                     })
 
 
-MVPAModels$lda_strimmer <- list(type = "Classification", 
+MVPAModels$sda_notune <- list(type = "Classification", 
                  library = "sda", 
                  loop = NULL, 
                  parameters=data.frame(parameters="lambda", class="numeric", labels="lambda"),
@@ -63,6 +83,48 @@ MVPAModels$lda_strimmer <- list(type = "Classification",
                  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                     predict(modelFit, as.matrix(newdata),verbose=FALSE)$posterior
                  })
+
+MVPAModels$sda_ranking <- list(type = "Classification", 
+                              library = "sda", 
+                              loop = NULL, 
+                              parameters=data.frame(parameters="lambda", class="numeric", labels="lambda"),
+                              grid=function(x, y, len = NULL) data.frame(lambda=0),
+                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+                                x <- as.matrix(x)
+                                
+                                ind <- if (ncol(x) > 20) {
+                                  rank <- sda.ranking(Xtrain=x, L=y, fdr=TRUE, verbose=FALSE, ...)
+                                  hcind <- which.max(rank[,"HC"])
+                                  
+                                  keep.ind <- if (length(hcind) < 2) {
+                                    1:2
+                                  } else {
+                                    hcind                               
+                                  }                                                                
+                                  rank[keep.ind,"idx"]
+                                } else if (ncol(x) <= 3) {
+                                  1:ncol(x)
+                      
+                                } else {
+                                  rank <- sda.ranking(Xtrain=x, L=y, fdr=FALSE, verbose=FALSE, ...)
+                                  rank[1:(ncol(x)/2), "idx"]
+                                }
+                                
+                                if (length(ind) < 2) {
+                                  browser()
+                                }
+                                fit <- sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
+                                attr(fit, "keep.ind") <- ind
+                                fit
+                              },
+                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {                        
+                                predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]), verbose=FALSE)
+                              },
+                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
+                              })
+
+
                 
 
 
@@ -111,7 +173,8 @@ TwoWayClassificationResult <- function(observed, predicted, probs) {
 MultiWayClassificationResult <- function(observed, predicted, probs) {
   ret <- list(observed=observed,
               predicted=predicted,
-              probs=probs)
+              probs=as.matrix(probs))
+  
   
   class(ret) <- c("MultiWayClassificationResult", "list")
   ret
@@ -129,7 +192,19 @@ performance.TwoWayClassificationResult <- function(x) {
 }
 
 performance.MultiWayClassificationResult <- function(x) {
-  c(accuracy=sum(x$observed == x$predicted)/length(x$observed))
+  obs <- as.character(x$observed)
+  
+  aucres <- sapply(1:ncol(x$prob), function(i) {
+    lev <- colnames(x$prob)[i]
+    pos <- obs == lev
+    pclass <- x$prob[,i]
+    pother <- rowMeans(x$prob[,-i])
+    Metrics::auc(as.numeric(pos), pclass - pother)
+  })
+  
+  names(aucres) <- paste0("auc_", colnames(x$prob))
+
+  c(accuracy=sum(obs == as.character(x$predicted))/length(obs), mauc=mean(aucres), aucres)
 }
 
 
@@ -147,18 +222,20 @@ trainModel <- function(x, ...) {
 
 
 crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLength=1) {
+  if (is.null(tuneGrid)) {
+    tuneGrid <- method$grid(tuneLength)
+  }
   
-  if (is.null(tuneGrid) || tuneLength == 1 || nrow(tuneGrid) == 1) {
+  if (nrow(tuneGrid) == 1) {
     ctrl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE)
   } else {
     ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE)
   }
   
-  if (is.null(tuneGrid)) {
-    tuneGrid <- method$grid(tuneLength)
-  }
   
-  res <- parallel::mclapply(foldSplit, function(fidx) {
+  
+  res <- #parallel::mclapply(foldSplit, function(fidx) {
+  lapply(foldSplit, function(fidx) {
     Xtrain <- X[-fidx,]
     Ytrain <- Y[-fidx]
     Xtest <- X[fidx,]   
@@ -169,12 +246,12 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
       probs <- method$prob(fit, newdata=Xtest)
       cpred <- apply(probs,1, which.max)
       cpred <- levels(Ytrain)[cpred]
-      cbind(class=cpred, probs)
+      data.frame(class=cpred, probs)
     } else {
       fit <- caret::train(Xtrain, Ytrain, method=method, trControl=ctrl, tuneGrid=tuneGrid)
-      cbind(class=predict(fit, newdata=Xtest), predict(fit, newdata=Xtest, type="prob"))
+      data.frame(class=predict(fit, newdata=Xtest), predict(fit, newdata=Xtest, type="prob"))
     }
-  }, mc.cores=ncores)
+  })#, mc.cores=ncores)
   
 
   
@@ -188,7 +265,8 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
 
 fitModel <- function(model, dset, voxelGrid, ncores=2, tuneGrid=NULL, tuneLength=NULL) {
   M <- series(dset$trainVec, voxelGrid)
-  result <- crossval(M, dset$Y, split(1:length(dset$blockVar), dset$blockVar), model, ncores, tuneGrid,tuneLength)
+  
+  result <- crossval(as.matrix(M), dset$Y, split(1:length(dset$blockVar), dset$blockVar), model, ncores, tuneGrid,tuneLength)
 }
 
 trainModel.default <- function(model, dset, voxelGrid, ncores=2) {
