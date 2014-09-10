@@ -24,6 +24,7 @@ prob.corsimFit <- function(modelFit, newData) {
   probs
 }
 
+#' @export
 MVPAModels <- list()
 
 MVPAModels$pca_lda <- list(type = "Classification", 
