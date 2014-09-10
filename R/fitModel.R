@@ -79,7 +79,7 @@ MVPAModels$sda_notune <- list(type = "Classification",
                  loop = NULL, 
                  parameters=data.frame(parameters="lambda", class="numeric", labels="lambda"),
                  grid=function(x, y, len = NULL) data.frame(lambda=0),
-                 fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...),
+                 fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) sda::sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...),
                  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict(modelFit, as.matrix(newdata), verbose=FALSE),
                  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                     predict(modelFit, as.matrix(newdata),verbose=FALSE)$posterior
@@ -94,7 +94,7 @@ MVPAModels$sda_ranking <- list(type = "Classification",
                                 x <- as.matrix(x)
                                 
                                 ind <- if (ncol(x) > 20) {
-                                  rank <- sda.ranking(Xtrain=x, L=y, fdr=TRUE, verbose=FALSE, ...)
+                                  rank <- sda::sda.ranking(Xtrain=x, L=y, fdr=TRUE, verbose=FALSE, ...)
                                   hcind <- which.max(rank[,"HC"])
                                   
                                   keep.ind <- if (length(hcind) < 2) {
