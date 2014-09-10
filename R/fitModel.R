@@ -149,6 +149,7 @@ MVPAModels$lda_thomaz <- list(type = "Classification",
 #' @param Y
 #' @param mask
 #' @param blockVar
+#' @export
 MVPADataset <- function(trainVec, Y, mask, blockVar) {
   ret <- list(
     trainVec=trainVec,
