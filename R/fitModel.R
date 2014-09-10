@@ -54,7 +54,7 @@ MVPAModels$nearestMean <- list(type = "Classification",
                           grid=function(x, y, len = NULL) {
                             data.frame(gamma=.1)
                           },
-                          fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) nm(x,y, param$gamma),
+                          fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) klaR::nm(x,y, param$gamma),
                           predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                             modelFit$lev[predict(modelFit, as.matrix(newdata))$class]
                           },
@@ -107,14 +107,14 @@ MVPAModels$sda_ranking <- list(type = "Classification",
                                   1:ncol(x)
                       
                                 } else {
-                                  rank <- sda.ranking(Xtrain=x, L=y, fdr=FALSE, verbose=FALSE, ...)
+                                  rank <- sda::sda.ranking(Xtrain=x, L=y, fdr=FALSE, verbose=FALSE, ...)
                                   rank[1:(ncol(x)/2), "idx"]
                                 }
                                 
                                 if (length(ind) < 2) {
                                   browser()
                                 }
-                                fit <- sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
+                                fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
                                 attr(fit, "keep.ind") <- ind
                                 fit
                               },
