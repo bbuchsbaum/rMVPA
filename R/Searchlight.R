@@ -4,7 +4,7 @@
   
 .doStandard <- function(model, bvec, Y, blockVar, mask, radius, ncores) {
   searchIter <- itertools::ihasNext(Searchlight(mask, radius)) 
-  foreach(vox = searchIter, .combine=rbind, .verbose=TRUE) %do% {   
+  foreach::foreach(vox = searchIter, .combine=rbind, .verbose=TRUE) %do% {   
     if (nrow(vox) < 3) {
       NA
     } else {
@@ -19,7 +19,7 @@
 
 .doRandomized <- function(model, bvec, Y, blockVar, mask, radius, ncores) {
   searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
-  res <- do.call(rbind, foreach(vox = searchIter, .verbose=TRUE, .errorhandling="stop") %do% {   
+  res <- do.call(rbind, foreach::foreach(vox = searchIter, .verbose=TRUE, .errorhandling="stop") %do% {   
     if (nrow(vox) < 3) {
       NULL
     } else {
