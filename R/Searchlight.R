@@ -59,6 +59,7 @@
 #' @import itertools 
 #' @import foreach
 #' @import doParallel
+#' @import parallel
 #' @export
 searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLinear", ncores=2, method=c("randomized", "standard"), niter=4) {
   if (radius < 1 || radius > 100) {
