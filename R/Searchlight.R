@@ -70,7 +70,6 @@ searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLinear"
   model <- loadModel(modelName)
   method <- match.arg(method)
   
-  browser()
   
   print(model)
   res <- if (method == "standard") {
