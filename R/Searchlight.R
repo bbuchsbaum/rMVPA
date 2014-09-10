@@ -56,7 +56,8 @@
 #' @param modelName the name of the classifcation model to be used
 #' @param ncores the number of cores for parallel processign (default is 1)
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
-#' @importFrom itertools ihasNext
+#' @import itertools 
+#' @import foreach
 #' @export
 searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLinear", ncores=1, method=c("randomized", "standard"), niter=4) {
   if (radius < 1 || radius > 100) {
