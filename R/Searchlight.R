@@ -19,7 +19,7 @@
 
 .doRandomized <- function(model, bvec, Y, blockVar, mask, radius, ncores) {
   searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
-  res <- do.call(rbind, foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="stop", .packages=c("rMVPA", model$library) %dopar% {   
+  res <- do.call(rbind, foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="stop", .packages=c("rMVPA", model$library)) %dopar% {   
     if (nrow(vox) < 3) {
       NULL
     } else {
