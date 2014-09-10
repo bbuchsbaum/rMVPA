@@ -1,11 +1,12 @@
 
-
+#' @export
 setDefault <- function(name, config, default) {
   if (is.null(config[[name]])) {
     config[[name]]<- default
   }
 }
 
+#' @export
 makeOutputDir <- function(dirname) {
   if (!file.exists(dirname)) {
     system(paste("mkdir", dirname))
@@ -16,6 +17,7 @@ makeOutputDir <- function(dirname) {
   }
 }
 
+#' @export
 abort <- function(msg) {
   logFile <- get("MVPA_CONFIG", .GlobalEnv)$logFile
   writeLines(msg, logFile)
@@ -24,11 +26,12 @@ abort <- function(msg) {
   stop()
 }
 
-
+#' @export
 logit <- function(msg) {
   writeLines(msg, get("MVPA_CONFIG", .GlobalEnv)$logFile)
 }
 
+#' @export
 loadModel <- function(name) {
   registry <- get("MVPAModels", .GlobalEnv)
   if (!is.null(registry[[name]])) {
@@ -40,6 +43,7 @@ loadModel <- function(name) {
   }
 }
 
+#' @export
 loadMask <- function(config) {
   if (file.exists(config$mask)) {
     mask <- loadVolume(config$mask)
@@ -50,6 +54,7 @@ loadMask <- function(config) {
   mask
 }
 
+#' @export
 loadDesign <- function(config) {
   if (!file.exists(config$table)) {
     abort("cannot find table named", config$table)
@@ -58,6 +63,7 @@ loadDesign <- function(config) {
   }
 }
 
+#' @export
 loadLabels <- function(full_design, config) {
   if (is.null(full_design[[config$labelColumn]])) {
     abort(paste("Error: labelColumn", config$labelColumn, "not found"))
@@ -67,6 +73,7 @@ loadLabels <- function(full_design, config) {
   labels
 }
 
+#' @export
 loadSubset <- function(full_design, config) {
   keep <- if(is.null(config$subset)) rep(TRUE, nrow(full_design)) else {
     subexpr <- config$subset[[2]]
@@ -83,6 +90,7 @@ loadSubset <- function(full_design, config) {
 
 }
 
+#' @export
 loadBlockColumn <- function(config, design) {
   if (is.null(design[[config$blockColumn]])) {
     abort(paste("blockColumn variable named", config$blockColumn, "not found."))
@@ -93,6 +101,7 @@ loadBlockColumn <- function(config, design) {
    
 }
 
+#' @export
 loadBrainData <- function(config, indices=NULL) {
   if (!file.exists(config$train_data)) {
     abort(paste("training data", config$train_data, "not found."))
