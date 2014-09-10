@@ -46,6 +46,9 @@ dataset <- MVPADataset(MVPA_CONFIG$train_datavec, MVPA_CONFIG$labels, MVPA_CONFI
 searchres <- searchlight(dataset$trainVec, dataset$Y, dataset$mask,dataset$blockVar, MVPA_CONFIG$radius, MVPA_CONFIG$method, ncores=MVPA_CONFIG$ncores)
 
 
-
+lapply(1:length(searchres), function(i) {
+  out <- paste0(MVPA_CONFIG$output, "/", names(searchres)[i], ".nii")
+  writeVolume(searchres[[i]], out)  
+})
 
 
