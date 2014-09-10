@@ -59,7 +59,7 @@
 #' @import itertools 
 #' @import foreach
 #' @export
-searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLinear", ncores=1, method=c("randomized", "standard"), niter=4) {
+searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLinear", ncores=2, method=c("randomized", "standard"), niter=4) {
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }
