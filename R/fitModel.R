@@ -188,7 +188,7 @@ performance <- function(x,...) {
 
 
 performance.TwoWayClassificationResult <- function(x) {
-  c(acc=sum(x$observed == x$predicted)/length(x$observed), acc=Metrics::auc(x$observed == levels(x$observed)[2], x$probs[,2]))
+  c(Accuracy=sum(x$observed == x$predicted)/length(x$observed), AUC=Metrics::auc(x$observed == levels(x$observed)[2], x$probs[,2]))
 }
 
 performance.MultiWayClassificationResult <- function(x) {
@@ -202,9 +202,9 @@ performance.MultiWayClassificationResult <- function(x) {
     Metrics::auc(as.numeric(pos), pclass - pother)
   })
   
-  names(aucres) <- paste0("auc_", colnames(x$prob))
+  names(aucres) <- paste0("AUC_", colnames(x$prob))
 
-  c(accuracy=sum(obs == as.character(x$predicted))/length(obs), mauc=mean(aucres), aucres)
+  c(Accuracy=sum(obs == as.character(x$predicted))/length(obs), Combined_AUC=mean(aucres), aucres)
 }
 
 
@@ -231,7 +231,6 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
   } else {
     ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE)
   }
-  
   
   
   res <- #parallel::mclapply(foldSplit, function(fidx) {
@@ -263,10 +262,9 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
   }
 }
 
-fitModel <- function(model, dset, voxelGrid, ncores=2, tuneGrid=NULL, tuneLength=NULL) {
-  M <- series(dset$trainVec, voxelGrid)
-  
-  result <- crossval(as.matrix(M), dset$Y, split(1:length(dset$blockVar), dset$blockVar), model, ncores, tuneGrid,tuneLength)
+fitModel <- function(model, bvec, Y, blockVar, voxelGrid, ncores=2, tuneGrid=NULL, tuneLength=NULL) {
+  M <- series(bvec, voxelGrid) 
+  result <- crossval(as.matrix(M), Y, split(1:length(blockVar), blockVar), model, ncores, tuneGrid,tuneLength)
 }
 
 trainModel.default <- function(model, dset, voxelGrid, ncores=2) {

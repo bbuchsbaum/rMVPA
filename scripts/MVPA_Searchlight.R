@@ -12,7 +12,7 @@ source(carg, MVPA_CONFIG)
 setDefault("radius", MVPA_CONFIG, 8)
 setDefault("table", MVPA_CONFIG, "design.txt")
 setDefault("type", MVPA_CONFIG, "standard")
-setDefault("method", MVPA_CONFIG, "lda_strimmer")
+setDefault("method", MVPA_CONFIG, "corsim")
 setDefault("ncores", MVPA_CONFIG, 1)
 setDefault("labelColumn", MVPA_CONFIG, "labels")
 setDefault("output", MVPA_CONFIG, paste0("SearchOut_", config$labelColumn))
@@ -27,7 +27,7 @@ MVPA_CONFIG$logFile <- file(paste0(MVPA_CONFIG$output, "/searchlight.log"), "w")
 
 
 MVPA_CONFIG$maskVolume <- loadMask(MVPA_CONFIG)
-MVPA_CONFIG$maskVolume[,,c(1:11, 13:26)] <- 0
+#MVPA_CONFIG$maskVolume[,,c(1:11, 13:26)] <- 0
 
 MVPA_CONFIG$full_design <- read.table(MVPA_CONFIG$table, header=TRUE, comment.char=";")
 
@@ -43,7 +43,7 @@ MVPA_CONFIG$model <- loadModel(MVPA_CONFIG$method)
 library(MVPA_CONFIG$model$library, character.only=TRUE)
 
 dataset <- MVPADataset(MVPA_CONFIG$train_datavec, MVPA_CONFIG$labels, MVPA_CONFIG$maskVolume, MVPA_CONFIG$blockVar)
-searchres <- searchlight(dataset, MVPA_CONFIG$radius, "sda_ranking", ncores=MVPA_CONFIG$ncores)
+searchres <- searchlight(dataset$trainVec, dataset$Y, dataset$mask,dataset$blockVar, MVPA_CONFIG$radius, "sda_ranking", ncores=MVPA_CONFIG$ncores)
 
 
 
