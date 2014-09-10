@@ -4,7 +4,7 @@
   
 .doStandard <- function(model, bvec, Y, blockVar, mask, radius, ncores) {
   searchIter <- itertools::ihasNext(Searchlight(mask, radius)) 
-  foreach::foreach(vox = searchIter, .combine=rbind, .verbose=FALSE) %do% {   
+  foreach::foreach(vox = searchIter, .combine=rbind, .verbose=FALSE) %dopar% {   
     if (nrow(vox) < 3) {
       NA
     } else {
@@ -19,7 +19,7 @@
 
 .doRandomized <- function(model, bvec, Y, blockVar, mask, radius, ncores) {
   searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
-  res <- do.call(rbind, foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="stop") %do% {   
+  res <- do.call(rbind, foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="stop") %dopar% {   
     if (nrow(vox) < 3) {
       NULL
     } else {
@@ -58,6 +58,7 @@
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
 #' @import itertools 
 #' @import foreach
+#' @import doParallel
 #' @export
 searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLinear", ncores=2, method=c("randomized", "standard"), niter=4) {
   if (radius < 1 || radius > 100) {
@@ -67,6 +68,11 @@ searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLinear"
   if (length(blockVar) != length(Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
   }
+  
+ 
+  cl <- makeCluster(ncores)
+  registerDoParallel(cl)
+  
   
   model <- loadModel(modelName)
   method <- match.arg(method)

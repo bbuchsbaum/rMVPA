@@ -16,4 +16,5 @@ Imports:
     itertools,
     parallel,
     foreach,
-    sda
+    sda,
+    doParallel

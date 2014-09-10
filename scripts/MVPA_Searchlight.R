@@ -20,6 +20,7 @@ setDefault("blockColumn", MVPA_CONFIG, "run")
 setDefault("autobalance", MVPA_CONFIG, FALSE)
 setDefault("tuneGrid", MVPA_CONFIG, NULL)
 setDefault("method_params", MVPA_CONFIG, list())
+setDefault("niter", MVPA_CONFIG, 4)
 
 MVPA_CONFIG$output <- makeOutputDir(MVPA_CONFIG$output)
 
