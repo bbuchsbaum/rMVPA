@@ -43,7 +43,7 @@ MVPA_CONFIG$model <- loadModel(MVPA_CONFIG$method)
 library(MVPA_CONFIG$model$library, character.only=TRUE)
 
 dataset <- MVPADataset(MVPA_CONFIG$train_datavec, MVPA_CONFIG$labels, MVPA_CONFIG$maskVolume, MVPA_CONFIG$blockVar)
-searchres <- searchlight(dataset$trainVec, dataset$Y, dataset$mask,dataset$blockVar, MVPA_CONFIG$radius, "sda_ranking", ncores=MVPA_CONFIG$ncores)
+searchres <- searchlight(dataset$trainVec, dataset$Y, dataset$mask,dataset$blockVar, MVPA_CONFIG$radius, MVPA_CONFIG$method, ncores=MVPA_CONFIG$ncores)
 
 
 
