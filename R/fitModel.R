@@ -264,6 +264,7 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
   }
 }
 
+#' @import neuroim
 fitModel <- function(model, bvec, Y, blockVar, voxelGrid, ncores=2, tuneGrid=NULL, tuneLength=NULL) {
   M <- series(bvec, voxelGrid) 
   result <- crossval(as.matrix(M), Y, split(1:length(blockVar), blockVar), model, ncores, tuneGrid,tuneLength)
