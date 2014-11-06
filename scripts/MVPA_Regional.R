@@ -9,25 +9,24 @@ config <- new.env()
 
 source(carg, config)
 
-setDefault("radius", config, 8)
 setDefault("table", config, "design.txt")
-setDefault("type", config, "standard")
 setDefault("method", config, "corsim")
 setDefault("ncores", config, 1)
 setDefault("labelColumn", config, "labels")
-setDefault("output", config, paste0("SearchOut_", config$labelColumn))
+setDefault("output", config, paste0("Out_", config$labelColumn))
 setDefault("blockColumn", config, "run")
 setDefault("autobalance", config, FALSE)
 setDefault("tuneGrid", config, NULL)
 setDefault("method_params", config, list())
-setDefault("niter", config, 4)
 
 config$output <- makeOutputDir(config$output)
+config$logFile <- file(paste0(config$output, "/rMVPA.log"), "w")
 
-config$logFile <- file(paste0(config$output, "/searchlight.log"), "w")
 
-
-config$maskVolume <- loadMask(config)
+config$ROIVolume <- loadMask(config)
+config$maskVolume <- LogicalBrainVolume(as.logical(config$ROIVolume > 0), space(config$ROIVolume))
+  
+  
 #config$maskVolume[,,c(1:11, 13:26)] <- 0
 
 config$full_design <- read.table(config$table, header=TRUE, comment.char=";")
@@ -44,12 +43,12 @@ config$model <- loadModel(config$method)
 library(config$model$library, character.only=TRUE)
 
 dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$blockVar)
-searchres <- mvpa_searchlight(dataset$trainVec, dataset$Y, dataset$mask,dataset$blockVar, config$radius, config$method, ncores=config$ncores, niter=config$niter, tuneGrid=config$tuneGrid)
+mvpa_res <- mvpa_regional(dataset$trainVec, dataset$Y, config$ROIVolume, dataset$blockVar, config$method, ncores=config$ncores, tuneGrid=config$tuneGrid)
 
 
-lapply(1:length(searchres), function(i) {
-  out <- paste0(config$output, "/", names(searchres)[i], ".nii")
-  writeVolume(searchres[[i]], out)  
+lapply(1:length(mvpa_res$outVols), function(i) {
+  out <- paste0(config$output, "/", names(mvpa_res$outVols)[i], ".nii")
+  writeVolume(mvpa_res$outVols[[i]], out)  
 })
 
 

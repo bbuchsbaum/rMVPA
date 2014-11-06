@@ -8,7 +8,7 @@
     if (nrow(vox) < 3) {
       NA
     } else {
-      result <- fitModel(model, bvec, Y, blockVar, vox, ncores)    
+      result <- fitMVPAModel(model, bvec, Y, blockVar, vox, ncores, fast=TRUE, finalFit=FALSE)    
       cen <- attr(vox, "center")
       c(cen, performance(result))  
     }
@@ -17,17 +17,17 @@
 }
   
 
-.doRandomized <- function(model, bvec, Y, blockVar, mask, radius, ncores) {
+.doRandomized <- function(model, bvec, Y, blockVar, mask, radius=8, ncores=1, tuneGrid=NULL) {
   searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="stop", .packages=c("rMVPA", model$library)) %dopar% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .combine=rbind, .errorhandling="stop", .packages=c("rMVPA", model$library)) %dopar% {   
     if (nrow(vox) < 3) {
       NULL
     } else {
       
-      fit <- fitModel(model, bvec, Y, blockVar, vox, ncores)
+      fit <- fitMVPAModel(model, bvec, Y, blockVar, vox, ncores, tuneGrid=tuneGrid, fast=TRUE, finalFit=FALSE)
       result <- t(performance(fit))
       out <- cbind(vox, result[rep(1, nrow(vox)),])
-      attr(out, "prob") <- fit$probs
+      #attr(out, "prob") <- fit$probs
       out
     }
   }
@@ -59,28 +59,45 @@
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(bvec, Y, mask, blockVar, modelName="svmLinear", ncores=2) {
+mvpa_regional <- function(bvec, Y, mask, blockVar, modelName="svmLinear", ncores=2, tuneGrid=NULL) {
   if (length(blockVar) != length(Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
   }
   
   regionSet <- sort(unique(mask[mask > 0]))
   model <- loadModel(modelName)
-  cl <- makeCluster(ncores)
+  cl <- makeCluster(ncores, outfile="")
   registerDoParallel(cl)
   
-  res <- foreach::foreach(roinum = regionSet, .verbose=FALSE, .errorhandling="stop", .packages=c("rMVPA", model$library)) %dopar% {   
+  res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", model$library)) %dopar% {   
     idx <- which(mask == roinum)
-    vox <- indexToGrid(mask, idx)
-    fit <- fitModel(model, bvec, Y, blockVar, vox)
-    result <- t(performance(fit))
+    if (length(idx) < 2) {
+      NULL
+    } else {
+      vox <- indexToGrid(mask, idx)
+      fit <- fitMVPAModel(model, bvec, Y, blockVar, vox, fast=TRUE, finalFit=TRUE, tuneGrid=tuneGrid)
+      result <- c(ROINUM=roinum, t(performance(fit))[1,])
+      
+    }
   }
+  
+  invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
+  validRes <- res[!invalid]
+  
+  perfMat <- do.call(rbind, validRes)
+  outVols <- lapply(2:ncol(perfMat), function(cnum) {
+     fill(mask, cbind(perfMat[, 1], perfMat[,cnum]))    
+  })
+  
+  names(outVols) <- colnames(perfMat)[2:ncol(perfMat)]
+  list(outVols = outVols)
+
 }
   
   
   
 #' mvpa_searchlight
-#' @param bvec a \code{BrainVector} instance, a 4-dimensional image where the first three dimensons are apce (x,y,z) and the 4th dimension is the dependent class/variable
+#' @param bvec a \code{BrainVector} instance, a 4-dimensional image where the first three dimensons are (x,y,z) and the 4th dimension is the dependent class/variable
 #' @param Y the dependent variable. If it is a factor, then classification analysis is performed. If it is a continuous variable then regression is performed.
 #' @param mask a \code{BrainVolume} instance indicating the inclusion mask for voxels entering the searchlight analysis. 
 #' @param blockVar an \code{integer} vector indicating the blocks to be used for cross-validation. This is usually a variable indicating the scanning "run". 
@@ -94,7 +111,7 @@ mvpa_regional <- function(bvec, Y, mask, blockVar, modelName="svmLinear", ncores
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLinear", ncores=2, method=c("randomized", "standard"), niter=4) {
+mvpa_searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLinear", ncores=2, method=c("randomized", "standard"), niter=4, tuneGrid=NULL) {
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }
@@ -117,7 +134,7 @@ mvpa_searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLi
     .doStandard(model, bvec, Y, blockVar, mask, radius, ncores)    
   } else {
     res <- lapply(1:niter, function(i) {
-      do.call(cbind, .doRandomized(model,bvec, Y, blockVar, mask, radius, ncores) )
+      do.call(cbind, .doRandomized(model,bvec, Y, blockVar, mask, radius, ncores, tuneGrid) )
     })
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {

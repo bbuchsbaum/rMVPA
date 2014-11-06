@@ -17,4 +17,5 @@ Imports:
     parallel,
     foreach,
     sda,
-    doParallel
+    doParallel,
+    MASS

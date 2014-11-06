@@ -18,8 +18,8 @@ makeOutputDir <- function(dirname) {
 }
 
 #' @export
-abort <- function(msg) {
-  logFile <- get("MVPA_CONFIG", .GlobalEnv)$logFile
+abort <- function(config, msg) {
+  logFile <- config$logFile
   writeLines(msg, logFile)
   close(logFile)
   print(msg)
@@ -27,8 +27,8 @@ abort <- function(msg) {
 }
 
 #' @export
-logit <- function(msg) {
-  writeLines(msg, get("MVPA_CONFIG", .GlobalEnv)$logFile)
+logit <- function(config, msg) {
+  writeLines(msg, config$logFile)
 }
 
 #' @export
@@ -104,9 +104,9 @@ loadBlockColumn <- function(config, design) {
 #' @export
 loadBrainData <- function(config, indices=NULL) {
   if (!file.exists(config$train_data)) {
-    abort(paste("training data", config$train_data, "not found."))
+    abort(config, paste("training data", config$train_data, "not found."))
   } else {
-    logit(paste("loading data file", config$train_data))
+    #logit(paste("loading data file", config$train_data))
     if (!is.null(indices)) {
       loadVector(config$train_data, indices=indices, mask=config$maskVolume)
     } else {
