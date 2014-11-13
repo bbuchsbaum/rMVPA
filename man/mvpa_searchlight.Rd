@@ -5,11 +5,11 @@
 \usage{
 mvpa_searchlight(bvec, Y, mask, blockVar, radius = 8,
   modelName = "svmLinear", ncores = 2, method = c("randomized",
-  "standard"), niter = 4)
+  "standard"), niter = 4, tuneGrid = NULL)
 
 mvpa_searchlight(bvec, Y, mask, blockVar, radius = 8,
   modelName = "svmLinear", ncores = 2, method = c("randomized",
-  "standard"), niter = 4)
+  "standard"), niter = 4, tuneGrid = NULL)
 }
 \arguments{
 \item{bvec}{a \code{BrainVector} instance, a 4-dimensional image where the first three dimensons are apce (x,y,z) and the 4th dimension is the dependent class/variable}

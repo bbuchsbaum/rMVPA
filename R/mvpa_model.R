@@ -52,7 +52,6 @@ MVPAModels$pca_lda <- list(type = "Classification",
                                  data.frame(ncomp=1:len)
                                },
                                fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                                 browser()
                                  pres <- prcomp(x, scale=TRUE)
                                  lda(pres$x[,1:param$ncomp])
                                },
@@ -83,7 +82,7 @@ MVPAModels$corsim <- list(type = "Classification",
                     library = "rMVPA", 
                     loop = NULL, 
                     parameters=data.frame(parameters=c("method", "robust"), class=c("character", "logical"), label=c("correlation type: pearson, spearman, or kendall", "mean or huber")),
-                    grid=function(x, y, len = NULL) if (len == 1) { data.frame(method="pearson") } else { expand.grid(method=c("pearson", "spearman", "kendall"), robust=c(TRUE, FALSE)) },
+                    grid=function(x, y, len = NULL) if (len == 1) { data.frame(method="pearson", robust=FALSE) } else { expand.grid(method=c("pearson", "spearman", "kendall"), robust=c(TRUE, FALSE)) },
                     fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) corsimFit(x,y, as.character(param$method), param$robust),
                     predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict.corsimFit(modelFit, as.matrix(newdata)),
                     prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
@@ -261,7 +260,7 @@ trainModel <- function(x, ...) {
 crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLength=1, fast=TRUE, finalFit=FALSE) {
   
   if (is.null(tuneGrid)) {
-    tuneGrid <- method$grid(tuneLength)
+    tuneGrid <- method$grid(X, Y, tuneLength)
   }
   
  
@@ -332,7 +331,7 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
 
 #' @import neuroim
 #' @export
-fitMVPAModel <- function(model, bvec, Y, blockVar, voxelGrid, ncores=2, tuneGrid=NULL, tuneLength=NULL, fast=TRUE, finalFit=FALSE) {
+fitMVPAModel <- function(model, bvec, Y, blockVar, voxelGrid, ncores=2, tuneGrid=NULL, tuneLength=1, fast=TRUE, finalFit=FALSE) {
   
   M <- series(bvec, voxelGrid) 
   
@@ -348,7 +347,9 @@ fitMVPAModel <- function(model, bvec, Y, blockVar, voxelGrid, ncores=2, tuneGrid
   }
   
   voxelGrid <- voxelGrid[hasVariance, ]
+  
   result <- crossval(as.matrix(M), Y, split(1:length(blockVar), blockVar), model, ncores, tuneGrid,tuneLength,fast=fast,finalFit=finalFit)  
+  
   if (is.factor(Y) && length(levels(Y)) == 2) {
     TwoWayClassificationResult(voxelGrid, model, Y, result$class, result$prob, result$modelFits)
   } else if (is.factor(Y) && length(levels(Y)) >= 3) {

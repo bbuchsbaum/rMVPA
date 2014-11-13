@@ -18,4 +18,5 @@ Imports:
     foreach,
     sda,
     doParallel,
-    MASS
+    MASS,
+    futile.logger

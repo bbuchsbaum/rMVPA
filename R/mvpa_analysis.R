@@ -1,10 +1,18 @@
 
 
-  
-  
+#' @export  
+matrixToVolumeList <- function(vox, mat, mask, default=NA) {
+  lapply(1:ncol(mat), function(i) {
+    vol <- array(default, dim(mask))   
+    vol[vox] <- mat[,i]
+    BrainVolume(vol, space(mask))
+  })
+}  
+
 .doStandard <- function(model, bvec, Y, blockVar, mask, radius, ncores) {
   searchIter <- itertools::ihasNext(Searchlight(mask, radius)) 
-  foreach::foreach(vox = searchIter, .combine=rbind, .verbose=FALSE) %dopar% {   
+  
+  res <- foreach::foreach(vox = searchIter, .combine=rbind, .verbose=FALSE) %dopar% {   
     if (nrow(vox) < 3) {
       NA
     } else {
@@ -14,12 +22,16 @@
     }
   }
   
+  vols <- matrixToVolumeList(res[,1:3], res[4:ncol(res)], mask)
+  names(vols) <- colnames(res)[4:ncol(res)]
+  vols
 }
   
 
 .doRandomized <- function(model, bvec, Y, blockVar, mask, radius=8, ncores=1, tuneGrid=NULL) {
   searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .combine=rbind, .errorhandling="stop", .packages=c("rMVPA", model$library)) %dopar% {   
+  
+  res <- foreach::foreach(vox = searchIter, .verbose=TRUE, .combine=rbind, .errorhandling="pass", .packages=c("rMVPA", model$library)) %dopar% {   
     if (nrow(vox) < 3) {
       NULL
     } else {
@@ -32,17 +44,32 @@
     }
   }
   
-  vols <- lapply(4:ncol(res), function(i) {
-    vol <- array(NA, dim(mask))
-    vol[res[,1:3]] <- res[,i]
-    vol
-  })
+  print(res)
   
+  vols <- matrixToVolumeList(res[,1:3], res[,4:ncol(res)], mask)
   names(vols) <- colnames(res)[4:ncol(res)]
   vols
   
   
 }
+
+#.doRegional <- function(regionSet, model) {
+#  res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", model$library)) %dopar% {   
+#    idx <- which(mask == roinum)
+#    if (length(idx) < 2) {
+#      NULL
+#    } else {
+#      vox <- indexToGrid(mask, idx)
+#      fit <- fitMVPAModel(model, bvec, Y, blockVar, vox, fast=TRUE, finalFit=TRUE, tuneGrid=tuneGrid)
+#      result <- c(ROINUM=roinum, t(performance(fit))[1,])    
+#      attr(result, "finalFit") <- fit
+#      result
+#    }
+#  }
+#}
+
+
+
   
 
 #' mvpa_regional
@@ -110,6 +137,7 @@ mvpa_regional <- function(bvec, Y, mask, blockVar, modelName="svmLinear", ncores
 #' @import foreach
 #' @import doParallel
 #' @import parallel
+#' @import futile.logger
 #' @export
 mvpa_searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLinear", ncores=2, method=c("randomized", "standard"), niter=4, tuneGrid=NULL) {
   if (radius < 1 || radius > 100) {
@@ -129,11 +157,15 @@ mvpa_searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLi
   method <- match.arg(method)
   
   
-  print(model)
+  flog.info("classification model is: %s", modelName)
+  flog.info("tuning grid is", tuneGrid, capture=TRUE)
+  
   res <- if (method == "standard") {
     .doStandard(model, bvec, Y, blockVar, mask, radius, ncores)    
   } else {
     res <- lapply(1:niter, function(i) {
+      flog.info("Running randomized searchlight iteration %s", i)
+      
       do.call(cbind, .doRandomized(model,bvec, Y, blockVar, mask, radius, ncores, tuneGrid) )
     })
    

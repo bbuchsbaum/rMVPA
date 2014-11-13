@@ -7,6 +7,17 @@ setDefault <- function(name, config, default) {
 }
 
 #' @export
+setArg <- function(name, config, args, default) {
+  if (is.null(config[[name]]) && is.null(args[[name]])) {
+    config[[name]] <- default
+  } else if (!is.null(args[[name]])) {
+    config[[name]] <- args[[name]]
+  } else if (is.null(config[[name]])) {
+    config[[name]] <- default
+  }    
+}
+
+#' @export
 makeOutputDir <- function(dirname) {
   if (!file.exists(dirname)) {
     system(paste("mkdir", dirname))
@@ -19,16 +30,12 @@ makeOutputDir <- function(dirname) {
 
 #' @export
 abort <- function(config, msg) {
-  logFile <- config$logFile
-  writeLines(msg, logFile)
-  close(logFile)
-  print(msg)
-  stop()
+  stop(msg)
 }
 
 #' @export
 logit <- function(config, msg) {
-  writeLines(msg, config$logFile)
+  #writeLines(msg, config$logFile)
 }
 
 #' @export
@@ -39,7 +46,7 @@ loadModel <- function(name) {
   } else if (length(caret::getModelInfo(name)) > 0) {
     caret::getModelInfo(name)[[name]]    
   } else {
-    abort("unrecognized model: ", name)
+    abort(paste("unrecognized model: ", name))
   }
 }
 
@@ -48,7 +55,7 @@ loadMask <- function(config) {
   if (file.exists(config$mask)) {
     mask <- loadVolume(config$mask)
   } else {
-    abort(paste("cannot find mask file named: ", config$mask))
+    stop(paste("cannot find mask file named: ", config$mask))
   }
   
   mask
@@ -65,10 +72,10 @@ loadDesign <- function(config) {
 
 #' @export
 loadLabels <- function(full_design, config) {
-  if (is.null(full_design[[config$labelColumn]])) {
-    abort(paste("Error: labelColumn", config$labelColumn, "not found"))
+  if (is.null(full_design[[config$label_column]])) {
+    abort(paste("Error: labelColumn", config$label_column, "not found"))
   } else {
-    labels <- full_design[[config$labelColumn]]
+    labels <- full_design[[config$label_column]]
   }
   labels
 }
@@ -92,11 +99,11 @@ loadSubset <- function(full_design, config) {
 
 #' @export
 loadBlockColumn <- function(config, design) {
-  if (is.null(design[[config$blockColumn]])) {
+  if (is.null(design[[config$block_column]])) {
     abort(paste("blockColumn variable named", config$blockColumn, "not found."))
   } else {  
-    config$nfolds <- length(unique(design[[config$blockColumn]]))
-    design[[config$blockColumn]]
+    config$nfolds <- length(unique(design[[config$block_column]]))
+    design[[config$block_column]]
   }
    
 }
