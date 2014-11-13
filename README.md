@@ -16,12 +16,14 @@ To install `rMVPA` from within R, use the `devtools` function `install_github`.
 
 From within R:
 
-> library(devtools)
-> install_github("rMVPA", "bbuchsbaum")
-
+```
+library(devtools)
+install_github("rMVPA", "bbuchsbaum")
+```
 
 ## Using `git` from the command line
 
-> git clone git@github.com:bbuchsbaum/rMVPA.git
-> R CMD install rMVPA
-
+```
+git clone git@github.com:bbuchsbaum/rMVPA.git
+R CMD install rMVPA
+```
