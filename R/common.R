@@ -116,7 +116,7 @@ loadBrainData <- function(config, indices=NULL) {
   if (!file.exists(config$train_data)) {
     abort(config, paste("training data", config$train_data, "not found."))
   } else {
-    #logit(paste("loading data file", config$train_data))
+    flog.info("loading data file %s", config$train_data)
     if (!is.null(indices)) {
       loadVector(config$train_data, indices=indices, mask=config$maskVolume)
     } else {

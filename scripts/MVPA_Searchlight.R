@@ -55,6 +55,8 @@ setArg("tune_grid", config, args, NULL)
 setArg("niter", config, args, 4)
 setArg("mask", config, args, NULL)
 
+configParams <- as.list(config)
+
 
 if (!is.null(args$tune_grid)) {
   params <- try(expand.grid(eval(parse(text=args$tune_grid))))
@@ -74,6 +76,8 @@ config$output <- makeOutputDir(config$output)
 
 
 #config$maskVolume[,,c(1:11, 13:26)] <- 0
+setArg("train_data", config, args, NULL)
+
 
 config$full_design <- read.table(config$table, header=TRUE, comment.char=";")
 config$train_subset <- loadSubset(config$full_design, config)
@@ -81,7 +85,7 @@ config$train_design <- config$full_design[config$train_subset,]
 config$labels <- loadLabels(config$train_design, config)
 config$blockVar <- loadBlockColumn(config, config$train_design)
 
-configParams <- as.list(config)
+
 
 config$maskVolume <- loadMask(config)
 config$train_datavec <- loadBrainData(config, indices=which(config$train_subset))
