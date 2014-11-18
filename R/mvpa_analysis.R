@@ -12,7 +12,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 .doStandard <- function(model, bvec, Y, blockVar, mask, radius, ncores) {
   searchIter <- itertools::ihasNext(Searchlight(mask, radius)) 
   
-  res <- foreach::foreach(vox = searchIter, .combine=rbind, .verbose=FALSE) %dopar% {   
+  res <- foreach::foreach(vox = searchIter, .combine=rbind, .verbose=FALSE) %do% {   
     if (nrow(vox) < 3) {
       NA
     } else {
@@ -31,11 +31,10 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 .doRandomized <- function(model, bvec, Y, blockVar, mask, radius=8, ncores=1, tuneGrid=NULL) {
   searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
   
-  res <- foreach::foreach(vox = searchIter, .verbose=TRUE, .combine=rbind, .errorhandling="pass", .packages=c("rMVPA", model$library)) %dopar% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=TRUE, .combine=rbind, .errorhandling="pass", .packages=c("rMVPA", model$library)) %do% {   
     if (nrow(vox) < 3) {
       NULL
-    } else {
-      
+    } else {     
       fit <- fitMVPAModel(model, bvec, Y, blockVar, vox, ncores, tuneGrid=tuneGrid, fast=TRUE, finalFit=FALSE)
       result <- t(performance(fit))
       out <- cbind(vox, result[rep(1, nrow(vox)),])
@@ -150,8 +149,8 @@ mvpa_searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLi
   }
   
  
-  cl <- makeCluster(ncores)
-  registerDoParallel(cl)
+  #cl <- makeCluster(ncores)
+  #registerDoParallel(cl)
   
   
   model <- loadModel(modelName)
@@ -164,11 +163,10 @@ mvpa_searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLi
   res <- if (method == "standard") {
     .doStandard(model, bvec, Y, blockVar, mask, radius, ncores)    
   } else {
-    res <- lapply(1:niter, function(i) {
-      flog.info("Running randomized searchlight iteration %s", i)
-      
+    res <- parallel::mclapply(1:niter, function(i) {
+      flog.info("Running randomized searchlight iteration %s", i)   
       do.call(cbind, .doRandomized(model,bvec, Y, blockVar, mask, radius, ncores, tuneGrid) )
-    })
+    }, mc.cores=ncores)
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {
       X <- do.call(cbind, lapply(res, function(M) M[,i]))
