@@ -58,6 +58,9 @@ if (!is.null(args$tune_grid)) {
 
 flog.info("Running regional mvpa with parameters: %s", str(as.list(config)))
 
+configParams <- as.list(config)
+
+
 config$output <- makeOutputDir(config$output)
 config$full_design <- read.table(config$table, header=TRUE, comment.char=";")
 config$train_subset <- loadSubset(config$full_design, config)
@@ -65,24 +68,27 @@ config$train_design <- config$full_design[config$train_subset,]
 config$labels <- loadLabels(config$train_design, config)
 config$blockVar <- loadBlockColumn(config, config$train_design)
 
-configParams <- as.list(config)
+
 
 config$ROIVolume <- loadMask(config)
 config$maskVolume <- LogicalBrainVolume(as.logical(config$ROIVolume > 0), space(config$ROIVolume))
 config$train_datavec <- loadBrainData(config, indices=which(config$train_subset))
-print(paste("subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))
+
+flog.info(paste("subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))
 
 caret_model <- loadModel(config$model)
-
 library(caret_model$library, character.only=TRUE)
 
-dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$blockVar)  
-mvpa_res <- mvpa_regional(dataset$trainVec, dataset$Y, config$ROIVolume, dataset$blockVar, config$method, ncores=config$ncores, tuneGrid=config$tuneGrid)
+#dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$blockVar)  
+mvpa_res <- mvpa_regional(config$train_datavec, config$labels, config$ROIVolume, config$blockVar, config$method, ncores=config$ncores, tuneGrid=config$tune_grid)
 
 
 lapply(1:length(mvpa_res$outVols), function(i) {
   out <- paste0(config$output, "/", names(mvpa_res$outVols)[i], ".nii")
   writeVolume(mvpa_res$outVols[[i]], out)  
 })
+
+write.table(mvpa_res$performance, paste0(paste0(config$output, "/performance_table.txt")))
+
 
 

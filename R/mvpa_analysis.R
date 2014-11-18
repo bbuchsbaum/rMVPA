@@ -112,12 +112,13 @@ mvpa_regional <- function(bvec, Y, mask, blockVar, modelName="corsim", ncores=2,
   validRes <- res[!invalid]
   
   perfMat <- do.call(rbind, validRes)
+  
   outVols <- lapply(2:ncol(perfMat), function(cnum) {
      fill(mask, cbind(perfMat[, 1], perfMat[,cnum]))    
   })
   
   names(outVols) <- colnames(perfMat)[2:ncol(perfMat)]
-  list(outVols = outVols)
+  list(outVols = outVols, performance=perfMat)
 
 }
   
