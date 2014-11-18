@@ -43,9 +43,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
       out
     }
   }
-  
-  print(res)
-  
+   
   vols <- matrixToVolumeList(res[,1:3], res[,4:ncol(res)], mask)
   names(vols) <- colnames(res)[4:ncol(res)]
   vols
