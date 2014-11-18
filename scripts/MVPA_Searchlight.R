@@ -58,7 +58,7 @@ setArg("mask", config, args, NULL)
 configParams <- as.list(config)
 
 
-if (!is.null(args$tune_grid)) {
+if (!is.null(args$tune_grid) && !args$tune_grid == "NULL") {
   params <- try(expand.grid(eval(parse(text=args$tune_grid))))
   if (inherits(params, "try-error")) {
     stop("could not parse tune_grid expresson: ", args$tune_grid)

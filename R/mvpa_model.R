@@ -202,7 +202,7 @@ MVPAModels$lda_thomaz <- list(type = "Classification",
                         fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { lda_thomaz(x,y, ...) },
                         predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { predict(modelFit, as.matrix(newdata))$class },
                         prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
-                          scores <- t(predict(modelFit, newdata)$scores)
+                          scores <- -t(predict(modelFit, newdata)$scores)
                           mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
                           probs <- exp(scores - mc)
                           zapsmall(probs/rowSums(probs))
