@@ -106,7 +106,7 @@ library(caret_model$library, character.only=TRUE)
 
 dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$blockVar)
 searchres <- mvpa_searchlight(dataset$trainVec, dataset$Y, dataset$mask,dataset$blockVar, 
-                              config$radius, config$model, ncores=config$pthreads, 
+                              config$radius, config$model, method=config$type, ncores=config$pthreads, 
                               niter=config$niter, tuneGrid=config$tune_grid)
 
 

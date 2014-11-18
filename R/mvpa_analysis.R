@@ -12,7 +12,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 .doStandard <- function(model, bvec, Y, blockVar, mask, radius, ncores) {
   searchIter <- itertools::ihasNext(Searchlight(mask, radius)) 
   
-  res <- foreach::foreach(vox = searchIter, .combine=rbind, .verbose=FALSE) %do% {   
+  res <- foreach::foreach(vox = searchIter, .combine=rbind, .verbose=FALSE) %dopar% {   
     if (nrow(vox) < 3) {
       NA
     } else {
@@ -31,7 +31,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 .doRandomized <- function(model, bvec, Y, blockVar, mask, radius=8, ncores=1, tuneGrid=NULL) {
   searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
   
-  res <- foreach::foreach(vox = searchIter, .verbose=TRUE, .combine=rbind, .errorhandling="pass", .packages=c("rMVPA", model$library)) %do% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .combine=rbind, .errorhandling="pass", .packages=c("rMVPA", model$library)) %do% {   
     if (nrow(vox) < 3) {
       NULL
     } else {     
@@ -149,8 +149,8 @@ mvpa_searchlight <- function(bvec, Y, mask, blockVar, radius=8, modelName="svmLi
   }
   
  
-  #cl <- makeCluster(ncores)
-  #registerDoParallel(cl)
+  cl <- makeCluster(ncores)
+  registerDoParallel(cl)
   
   
   model <- loadModel(modelName)
