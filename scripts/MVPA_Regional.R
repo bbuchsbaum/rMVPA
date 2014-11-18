@@ -24,6 +24,10 @@ opt <- parse_args(oparser, positional_arguments=TRUE)
 args <- opt$options
 
 config <- new.env()
+config$output <- makeOutputDir(config$output)
+flog.appender(appender.file(paste0(config$output, "/rMVPA.log")))
+
+
 
 if (!is.null(args$config)) {
   if (! file.exists(args$config)) {
@@ -61,7 +65,6 @@ flog.info("Running regional mvpa with parameters: %s", str(as.list(config)))
 configParams <- as.list(config)
 
 
-config$output <- makeOutputDir(config$output)
 config$full_design <- read.table(config$table, header=TRUE, comment.char=";")
 config$train_subset <- loadSubset(config$full_design, config)
 config$train_design <- config$full_design[config$train_subset,]

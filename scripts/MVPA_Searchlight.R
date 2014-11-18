@@ -39,6 +39,10 @@ if (!is.null(args$config)) {
   }
 }
 
+config$output <- makeOutputDir(config$output)
+
+flog.appender(appender.file(paste0(config$output, "/rMVPA.log")))
+
 flog.info("args are ", str(args), capture=TRUE)
 
 setArg("radius", config, args, 8)
@@ -88,6 +92,11 @@ config$blockVar <- loadBlockColumn(config, config$train_design)
 
 
 config$maskVolume <- loadMask(config)
+
+rowIndices <- which(config$train_subset)
+flog.info("number of trials: %s", length(rowIndices))
+flog.info("max trial index: %s", max(rowIndices))
+
 config$train_datavec <- loadBrainData(config, indices=which(config$train_subset))
 print(paste("subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))
 

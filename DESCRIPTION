@@ -19,4 +19,5 @@ Imports:
     sda,
     doParallel,
     MASS,
-    futile.logger
+    futile.logger,
+    io
