@@ -86,7 +86,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(bvec, Y, mask, blockVar, modelName="svmLinear", ncores=2, tuneGrid=NULL) {
+mvpa_regional <- function(bvec, Y, mask, blockVar, modelName="corsim", ncores=2, tuneGrid=NULL) {
   if (length(blockVar) != length(Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
   }

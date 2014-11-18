@@ -52,27 +52,78 @@ MVPAModels$pca_lda <- list(type = "Classification",
                                  data.frame(ncomp=1:len)
                                },
                                fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                                 pres <- prcomp(x, scale=TRUE)
-                                 lda(pres$x[,1:param$ncomp])
+                            
+                                 pres <- prcomp(as.matrix(x), scale=TRUE)
+
+                                 lda.fit <- lda(pres$x[,1:param$ncomp, drop=FALSE], y)
+                                 attr(lda.fit, "ncomp") <- param$ncomp
+                                 attr(lda.fit, "pcfit") <- pres
+                                 lda.fit
                                },
                                  
                                predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 modelFit$lev[predict(modelFit, as.matrix(newdata))$class]
+                                 compind <- seq(1, attr(modelFit, "ncomp"))
+                                 
+                                 pcfit <- attr(modelFit, "pcfit")
+                                 colnames(newdata) <- rownames(pcfit$rotation)
+                                 pcx <- predict(pcfit, newdata)[,compind,drop=FALSE]
+                                 predict(modelFit, pcx)$class
                                },
                                prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 predict(modelFit, as.matrix(newdata))$posterior
+                                 compind <- seq(1, attr(modelFit, "ncomp"))
+                                 pcfit <- attr(modelFit, "pcfit")
+                                 colnames(newdata) <- rownames(pcfit$rotation)
+                                 pcx <- predict(pcfit, newdata)[,compind,drop=FALSE]
+                                 predict(modelFit, pcx)$posterior                              
                                })
+
+
+MVPAModels$gpca_lda <- list(type = "Classification", 
+                               library = c("sGPCA", "MASS"), 
+                               loop = NULL, 
+                               parameters=data.frame(parameters=c("ncomp", "theta"), class=c("numeric", "numeric"), labels=c("number of PCs", "smoothing")),
+                               grid=function(x, y, len = NULL) {
+                                 data.frame(ncomp=5, theta=5)
+                               },
+                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+                                 args <- list(...)
+                                 vox <- args$vox
+                                 xs <- scale(x, scale=FALSE)
+                                 xc <- attr(xs, "scaled:center")
+                                 
+                                 R <- Exp.cov(vox,theta=param$theta)
+                                 er <- eigen(R,only.values=TRUE)
+                                 R <- R/max(er$values)
+                                 fit <- gpca(xs,diag(nrow(x)),R,K=param$ncomp)
+                          
+                                 lda.fit <-lda(fit$U, y)
+                                 attr(lda.fit, "centroid") <- xc
+                                 attr(lda.fit, "pcfit") <- fit
+                                 attr(lda.fit, "ncomp") <- param$ncomp
+                                 lda.fit
+                               },
+                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                 compind <- seq(1, attr(modelFit, "ncomp"))
+                                 pcx <- sweep(newdata, 2, attr(modelFit, "centroid")) %*% attr(modelFit, "pcfit")$V
+                                 predict(modelFit, pcx)$class 
+                               },
+                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                 compind <- seq(1, attr(modelFit, "ncomp"))
+                                 pcx <- sweep(newdata, 2, attr(modelFit, "centroid")) %*% attr(modelFit, "pcfit")$V
+                                 predict(modelFit, pcx)$posterior
+                               })
+
 
 MVPAModels$nearestMean <- list(type = "Classification", 
                           library = "klaR", 
                           loop = NULL, 
                           parameters=data.frame(parameters="gamma", class="numeric", labels="gamma"),
                           grid=function(x, y, len = NULL) {
-                            data.frame(gamma=.1)
+                            data.frame(gamma=.3)
                           },
                           fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) klaR::nm(x,y, param$gamma),
                           predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                            modelFit$lev[predict(modelFit, as.matrix(newdata))$class]
+                            predict(modelFit, as.matrix(newdata))$class
                           },
                           prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                             predict(modelFit, as.matrix(newdata))$posterior
@@ -244,17 +295,6 @@ performance.MultiWayClassificationResult <- function(x) {
 }
 
 
-#' create a classification model
-createModel <- function(method) {
-  ret <- list(method=method)
-  class(ret) <- c(method, "list")
-  ret
-}
-
-
-trainModel <- function(x, ...) {
-  UseMethod("trainModel")
-}
 
 #' @export
 crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLength=1, fast=TRUE, finalFit=FALSE) {
@@ -296,7 +336,7 @@ crossval <- function(X, Y, foldSplit, method, ncores=2, tuneGrid=NULL, tuneLengt
         caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE,allowParallel=FALSE, index=index)
       }
        
-      fit <- caret::train(as.data.frame(Xtrain), Ytrain, method=method, trControl=ctrl, tuneGrid=tuneGrid)
+      fit <- caret::train(as.data.frame(Xtrain), Ytrain, method=method, trControl=ctrl, tuneGrid=tuneGrid, ...)
       list(class=predict(fit, newdata=Xtest), probs=predict(fit, newdata=Xtest, type="prob"), fit=fit)
     }
        
@@ -359,20 +399,4 @@ fitMVPAModel <- function(model, bvec, Y, blockVar, voxelGrid, ncores=2, tuneGrid
   }
 }
 
-trainModel.default <- function(model, dset, voxelGrid, ncores=2) {
-  M <- series(dset$trainVec, voxelGrid)
-  fitlist <- crossval(M, dset$Y, dset$blockVar, model)
-}
 
-
-
-trainModel.lda_strimmer <- function(dset, voxelGrid, ncores=2) {
-  M <- series(dset$trainVec, voxelGrid)
-  ctrl <- caret::trainControl("none")
-  fit <- caret::train(x$x, x$y, method=MVPA.sda, trControl=ctrl, tuneLength=2)
-}
-
-trainModel.lda_thomaz <- function(x) {
-  ctrl <- caret::trainControl("none")
-  fit <- caret::train(x$x, x$y, method=MVPA.lda_thomaz, trControl=ctrl, tuneLength=0)
-}
