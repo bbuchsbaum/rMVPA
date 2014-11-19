@@ -12,6 +12,7 @@ option_list <- list(make_option(c("-r", "--radius"), type="numeric", help="the r
                     make_option(c("-t", "--table"), type="character", help="the file name of the design table"),
                     make_option(c("-s", "--type"), type="character", help="the type of searchlight: standard or randomized"),  
                     make_option(c("-d", "--train_data"), type="character", help="the name of the training data file as (4D .nii file)"),  
+                    make_option(c("-n", "--normalize"), type="character", help="center and scale each volume vector"),
                     make_option(c("-m", "--model"), type="character", help="name of the classifier model"),
                     make_option(c("-a", "--mask"), type="character", help="name of binary image mask file (.nii format)"),
                     make_option(c("-p", "--pthreads"), type="numeric", help="the number of parallel threads"),
@@ -53,6 +54,7 @@ setArg("pthreads", config, args, 1)
 setArg("label_column", config, args, "labels")
 setArg("output", config, args, paste0("searchlight_", config$labelColumn))
 setArg("block_column", config, args, "block")
+setArg("normalize", config, args, FALSE)
 #setDefault("autobalance", config, FALSE)
 setArg("tune_grid", config, args, NULL)
 #setDefault("method_params", config, list())
@@ -98,6 +100,12 @@ flog.info("number of trials: %s", length(rowIndices))
 flog.info("max trial index: %s", max(rowIndices))
 
 config$train_datavec <- loadBrainData(config, indices=which(config$train_subset))
+if (config$normalize) {
+  flog.info("Normalizing: entering and scaling each volume of training data")
+  norm_datavec <- do.call(cbind, eachVolume(config$train_datavec, function(x) scale(x), mask=config$maskVolume))
+  config$train_datavec <- SparseBrainVector(norm_datavec, space(config$train_datavec))
+}
+
 print(paste("subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))
 
 caret_model <- loadModel(config$model)
