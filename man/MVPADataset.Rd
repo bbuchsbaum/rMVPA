@@ -4,8 +4,6 @@
 \title{create an \code{MVPA} instance}
 \usage{
 MVPADataset(trainVec, Y, mask, blockVar)
-
-MVPADataset(trainVec, Y, mask, blockVar)
 }
 \arguments{
 \item{trainVec}{}
@@ -15,18 +13,8 @@ MVPADataset(trainVec, Y, mask, blockVar)
 \item{mask}{}
 
 \item{blockVar}{}
-
-\item{trainVec}{}
-
-\item{Y}{}
-
-\item{mask}{}
-
-\item{blockVar}{}
 }
 \description{
-create an \code{MVPA} instance
-
 create an \code{MVPA} instance
 }
 
