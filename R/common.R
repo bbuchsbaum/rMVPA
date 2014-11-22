@@ -1,5 +1,104 @@
 
 
+#' @export
+initializeConfiguration <- function(args) {
+  config <- new.env()
+  if (!is.null(args$config)) {
+    if (! file.exists(args$config)) {
+      flog.error("cannot find configuration file: %s", args$config)
+      stop()
+    } else {
+      source(args$config, config)
+      flog.info("found configuration file with parameters: %s", str(as.list(config)))
+    }
+  }
+  
+  config
+  
+}
+
+#' @export
+initializeStandardParameters <- function(config, args, analysisType) {
+  #setArg("radius", config, args, 8)
+  setArg("train_design", config, args, "mvpa_design.txt")
+  setArg("test_design", config, args, NULL)
+  #setArg("type", config, args, "randomized")
+  setArg("model", config, args, "corsim")
+  setArg("pthreads", config, args, 1)
+  setArg("label_column", config, args, "labels")
+  setArg("output", config, args, paste0(analysisType, "_", config$labelColumn))
+  setArg("block_column", config, args, "block")
+  setArg("normalize", config, args, FALSE)
+  #setDefault("autobalance", config, FALSE)
+  setArg("tune_grid", config, args, NULL)
+  #setDefault("method_params", config, list())
+  #setArg("niter", config, args, 4)
+  setArg("mask", config, args, NULL)
+  config
+}
+
+#' @export
+initializeData <- function(config) {
+  config$train_datavec <- loadBrainData(config, "train_data", indices=which(config$train_subset))
+  
+  if (!is.null(config$test_data)) {
+    flog.info("loading test data: %s", config$test_data)
+    config$test_datavec <- loadBrainData(config, "test_data", indices=which(config$test_subset))
+  }
+  
+  if (config$normalize) {
+    flog.info("Normalizing: centering and scaling each volume of training data")
+    norm_datavec <- do.call(cbind, eachVolume(config$train_datavec, function(x) scale(x), mask=config$maskVolume))
+    config$train_datavec <- SparseBrainVector(norm_datavec, space(config$train_datavec), mask=config$maskVolume)
+    
+    if (!is.null(config$test_data)) {
+      flog.info("Normalizing: centering and scaling each volume of test data")
+      norm_datavec <- do.call(cbind, eachVolume(config$test_datavec, function(x) scale(x), mask=config$maskVolume))
+      config$test_datavec <- SparseBrainVector(norm_datavec, space(config$test_datavec), mask=config$maskVolume)
+    }
+  }
+  
+  config
+
+  
+}
+
+#' @export
+initializeDesign <- function(config) {
+  config$full_train_design <- read.table(config$train_design, header=TRUE, comment.char=";")
+  config$train_subset <- loadSubset(config$full_train_design, config$train_subset)
+  config$train_design <- config$full_train_design[config$train_subset,]
+  config$labels <- loadLabels(config$train_design, config)
+  config$block <- loadBlockColumn(config, config$train_design)
+  
+  flog.info(paste("training subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))
+  
+  if (!is.null(config$test_design)) {
+    config$full_test_design <- read.table(config$test_design, header=TRUE, comment.char=";")
+    config$test_subset <- loadSubset(config$full_test_design, config$test_subset)
+    config$test_design <- config$full_test_design[config$test_subset,]
+    config$testLabels <- loadLabels(config$test_design, config)     
+    flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows."))
+    
+  }
+  
+  config
+  
+}
+
+#' @export
+initializeTuneGrid <- function(args, config) {
+  if (!is.null(args$tune_grid) && !args$tune_grid == "NULL") {
+    params <- try(expand.grid(eval(parse(text=args$tune_grid))))
+    if (inherits(params, "try-error")) {
+      stop("could not parse tune_grid expresson: ", args$tune_grid)
+    }
+    flog.info("tuning grid is", params, capture=TRUE)
+    config$tune_grid <- params
+  }
+  
+  config
+}
 
 
 #' @export
@@ -65,11 +164,11 @@ loadMask <- function(config) {
 }
 
 #' @export
-loadDesign <- function(config) {
-  if (!file.exists(config$table)) {
+loadDesign <- function(config, name) {
+  if (!file.exists(config[[name]])) {
     abort("cannot find table named", config$table)
   } else {
-    read.table(config$table, header=TRUE, comment.char=";")
+    read.table(config[[name]], header=TRUE, comment.char=";")
   }
 }
 
@@ -84,9 +183,10 @@ loadLabels <- function(full_design, config) {
 }
 
 #' @export
-loadSubset <- function(full_design, config) {
-  keep <- if(is.null(config$subset)) rep(TRUE, nrow(full_design)) else {
-    subexpr <- config$subset[[2]]
+loadSubset <- function(full_design, subset) {
+  
+  keep <- if(is.null(subset)) rep(TRUE, nrow(full_design)) else {
+    subexpr <- subset[[2]]
     keep <- eval(subexpr, full_design)
     if (sum(keep) == nrow(full_design)) {
       warning(paste("subset has same number of rows as full table"))
@@ -97,7 +197,6 @@ loadSubset <- function(full_design, config) {
   
   keep
   
-
 }
 
 #' @export
@@ -112,15 +211,17 @@ loadBlockColumn <- function(config, design) {
 }
 
 #' @export
-loadBrainData <- function(config, indices=NULL) {
-  if (!file.exists(config$train_data)) {
-    abort(config, paste("training data", config$train_data, "not found."))
+loadBrainData <- function(config, name, indices=NULL) {
+  fname <- config[[name]]
+  
+  if (!file.exists(fname)) {
+    abort(config, paste("training data", fname, "not found."))
   } else {
-    flog.info("loading data file %s", config$train_data)
+    flog.info("loading data file %s", fname)
     if (!is.null(indices)) {
-      loadVector(config$train_data, indices=indices, mask=config$maskVolume)
+      loadVector(fname, indices=indices, mask=config$maskVolume)
     } else {
-      loadVector(config$train_data, mask=config$maskVolume)
+      loadVector(fname, mask=config$maskVolume)
     }
     
   }

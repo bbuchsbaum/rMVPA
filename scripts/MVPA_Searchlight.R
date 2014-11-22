@@ -9,10 +9,12 @@
 .suppress(library(io))
 
 option_list <- list(make_option(c("-r", "--radius"), type="numeric", help="the radius in millimeters of the searchlight"),
-                    make_option(c("-t", "--table"), type="character", help="the file name of the design table"),
+                    make_option(c("-t", "--train_design"), type="character", help="the file name of the design table"),
+                    make_option("--test_design", type="character", help="the file name of the design table"),
                     make_option(c("-s", "--type"), type="character", help="the type of searchlight: standard or randomized"),  
-                    make_option(c("-d", "--train_data"), type="character", help="the name of the training data file as (4D .nii file)"),  
-                    make_option(c("-n", "--normalize"), type="character", help="center and scale each volume vector"),
+                    make_option("--train_data", type="character", help="the name of the training data file as (4D .nii file)"), 
+                    make_option("--test_data", type="character", help="the name of the testing data file as (4D .nii file)"),  
+                    make_option(c("-n", "--normalize"), action="store_true", type="logical", help="center and scale each volume vector"),
                     make_option(c("-m", "--model"), type="character", help="name of the classifier model"),
                     make_option(c("-a", "--mask"), type="character", help="name of binary image mask file (.nii format)"),
                     make_option(c("-p", "--pthreads"), type="numeric", help="the number of parallel threads"),
@@ -28,92 +30,48 @@ oparser <- OptionParser(usage = "MVPA_Searchlight.R [options]", option_list=opti
 opt <- parse_args(oparser, positional_arguments=TRUE)
 args <- opt$options
 
-config <- new.env()
+flog.info("command line args are ", args, capture=TRUE)
 
-if (!is.null(args$config)) {
-  if (! file.exists(args$config)) {
-    flog.error("cannot find configuration file: %s", args$config)
-    stop()
-  } else {
-    source(args$config, config)
-    flog.info("found configuration file with parameters: %s", str(as.list(config)))
-  }
-}
-
+config <- initializeConfiguration(args)
 config$output <- makeOutputDir(config$output)
+config <- initializeStandardParameters(config, args, "searchlight")
 
-flog.appender(appender.file(paste0(config$output, "/rMVPA.log")))
-
-flog.info("args are ", str(args), capture=TRUE)
-
-setArg("radius", config, args, 8)
-setArg("table", config, args, "mvpa_design.txt")
-setArg("type", config, args, "randomized")
-setArg("model", config, args, "corsim")
-setArg("pthreads", config, args, 1)
-setArg("label_column", config, args, "labels")
-setArg("output", config, args, paste0("searchlight_", config$labelColumn))
-setArg("block_column", config, args, "block")
-setArg("normalize", config, args, FALSE)
+#flog.appender(appender.file(paste0(config$output, "/rMVPA.log")))
+#flog.appender(appender.console(), name='my.logger')
 #setDefault("autobalance", config, FALSE)
-setArg("tune_grid", config, args, NULL)
+#setArg("tune_grid", config, args, NULL)
 #setDefault("method_params", config, list())
-setArg("niter", config, args, 4)
-setArg("mask", config, args, NULL)
+
+
+## Searchlight Specific Params
+setArg("niter", config, args, 16)
+setArg("radius", config, args, 8)
+setArg("type", config, args, "randomized")
+## Searchlight Specific Params
 
 configParams <- as.list(config)
 
+config <- initializeTuneGrid(args, config)
+config <- initializeDesign(config)
+config$maskVolume <- as(loadMask(config), "LogicalBrainVolume")
 
-if (!is.null(args$tune_grid) && !args$tune_grid == "NULL") {
-  params <- try(expand.grid(eval(parse(text=args$tune_grid))))
-  if (inherits(params, "try-error")) {
-    stop("could not parse tune_grid expresson: ", args$tune_grid)
-  }
-  flog.info("tuning grid is", params, capture=TRUE)
-  config$tune_grid <- params
-}
-
-flog.info("Running searchlight with parameters: %s", str(as.list(config)))
-
-
-config$output <- makeOutputDir(config$output)
-
-#config$logFile <- file(paste0(config$output, "/searchlight.log"), "w")
-
-
-#config$maskVolume[,,c(1:11, 13:26)] <- 0
-setArg("train_data", config, args, NULL)
-
-
-config$full_design <- read.table(config$table, header=TRUE, comment.char=";")
-config$train_subset <- loadSubset(config$full_design, config)
-config$train_design <- config$full_design[config$train_subset,]
-config$labels <- loadLabels(config$train_design, config)
-config$blockVar <- loadBlockColumn(config, config$train_design)
-
-
-
-config$maskVolume <- loadMask(config)
 
 rowIndices <- which(config$train_subset)
 flog.info("number of trials: %s", length(rowIndices))
 flog.info("max trial index: %s", max(rowIndices))
+flog.info("loading training data: %s", config$train_data)
+flog.info("mask contains %s voxels", sum(config$maskVolume))
 
-config$train_datavec <- loadBrainData(config, indices=which(config$train_subset))
-if (config$normalize) {
-  flog.info("Normalizing: entering and scaling each volume of training data")
-  norm_datavec <- do.call(cbind, eachVolume(config$train_datavec, function(x) scale(x), mask=config$maskVolume))
-  config$train_datavec <- SparseBrainVector(norm_datavec, space(config$train_datavec))
-}
+config <- initializeData(config)
 
-print(paste("subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))
+flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
 
-caret_model <- loadModel(config$model)
 
-library(caret_model$library, character.only=TRUE)
+dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid)
 
-dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$blockVar)
-searchres <- mvpa_searchlight(dataset$trainVec, dataset$Y, dataset$mask,dataset$blockVar, 
+#library(caret_model$library, character.only=TRUE)
+
+searchres <- mvpa_searchlight(config$train_datavec, config$labels, config$maskVolume, config$block, 
                               config$radius, config$model, method=config$type, ncores=config$pthreads, 
                               niter=config$niter, tuneGrid=config$tune_grid)
 

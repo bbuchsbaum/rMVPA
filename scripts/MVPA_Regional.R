@@ -82,7 +82,7 @@ config$train_datavec <- loadBrainData(config, indices=which(config$train_subset)
 if (config$normalize) {
   flog.info("Normalizing: entering and scaling each volume of training data")
   norm_datavec <- do.call(cbind, eachVolume(config$train_datavec, function(x) scale(x), mask=config$maskVolume))
-  config$train_datavec <- SparseBrainVector(norm_datavec, space(config$train_datavec))
+  config$train_datavec <- SparseBrainVector(norm_datavec, space(config$train_datavec), mask=config$maskVolume)
 }
 
 flog.info(paste("subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))

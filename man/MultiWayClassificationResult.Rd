@@ -4,10 +4,7 @@
 \title{create an \code{TwoWayClassification} instance}
 \usage{
 MultiWayClassificationResult(vox, model, observed, predicted, probs,
-  modelFits = NULL)
-
-MultiWayClassificationResult(vox, model, observed, predicted, probs,
-  modelFits = NULL)
+  finalFit = NULL)
 }
 \arguments{
 \item{vox}{}
@@ -20,19 +17,9 @@ MultiWayClassificationResult(vox, model, observed, predicted, probs,
 
 \item{probs}{}
 
-\item{vox}{}
-
-\item{model}{}
-
-\item{observed}{}
-
-\item{predicted}{}
-
-\item{probs}{}
+\item{finalFit}{}
 }
 \description{
-create an \code{TwoWayClassification} instance
-
 create an \code{TwoWayClassification} instance
 }
 
