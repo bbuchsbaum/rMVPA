@@ -226,7 +226,7 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
   testSets <- split(1:length(blockVar), blockVar)
   trainSets <- invertFolds(testSets, length(Y))
   
-  index <- invertFolds(testSets[-blockIndex], nrow(Xtrain))   
+  #index <- invertFolds(testSets[-blockIndex], nrow(Xtrain))   
   
   ret <- list(
     trainVec=trainVec,
@@ -305,6 +305,30 @@ RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid) {
   ret
 }
 
+#' @export
+RawPredictor <- function(fit, model) {
+  ret <- list(fit=fit,
+              model=model)
+  
+  class(ret) <- c("RawPredictor", "list")
+  ret
+}
+
+#' @export
+CaretPredictor <- function(fit) {
+  ret <- list(fit=fit)
+  
+  class(ret) <- c("CaretPredictor", "list")
+  ret
+}
+
+MVPAPredictor <- function(predictor, voxelGrid, brainSpace) {
+  ret <- list(predictor=predictor, voxelGrid=voxelGrid, brainSpace=brainSpace)
+  
+  class(ret) <- c("MVPAPredictor", "list")
+  ret
+}
+
 
 #' @export
 CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl,...) {
@@ -324,12 +348,32 @@ CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneContro
 }
 
 #' @export
-evaluateModel <- function(x) {
+evaluateModel <- function(x, newdata) {
   UseMethod("evaluateModel")
 }
 
 #' @export
-evaluateModel.RawModel <- function(x) {
+asPredictor <- function(x, voxelGrid) {
+  UseMethod("asPredictor")
+}
+
+#' @export
+asPredictor.RawModel <- function(x, voxelGrid. brainSpace) {
+  MVPAPredictor(RawPredictor(x$modelFit, x$model), voxelGrid, brainSpace)
+}
+
+#' @export
+asPredictor.CaretModel <- function(x, voxelGrid, brainSpace) {
+  MVPAPredictor(CaretPredictor(x$modelFit), voxelGrid, brainSpace)
+}
+
+
+#' @export
+evaluateModel.RawModel <- function(x, newdata=NULL) {
+  if (is.null(newdata)) {
+    newdata=x$Xtest
+  }
+  
   probs <- x$model$prob(x$modelFit, newdata=x$Xtest)     
   cpred <- apply(probs,1, which.max)
   cpred <- levels(x$Ytrain)[cpred]
@@ -337,13 +381,50 @@ evaluateModel.RawModel <- function(x) {
 }
 
 #' @export
-evaluateModel.CaretModel <- function(x) {
+evaluateModel.MVPAPredictor <- function(x, newdata) {
+  if (is.null(newdata)) {
+    stop("newdata cannot be null")
+  }
+  
+  X <- series(newdata,x$voxelGrid)
+  evaluateModel(x$predictor, X)
+}
+
+
+#' @export
+evaluateModel.RawPredictor <- function(x, newdata=NULL) {
+  if (is.null(newdata)) {
+    stop("newdata cannot be null")
+  }
+  
+  probs <- x$model$prob(x$fit, newdata=newdata)     
+  cpred <- apply(probs,1, which.max)
+  cpred <- levels(x$Ytrain)[cpred]
+  list(class=cpred, probs=probs)
+}
+
+
+#' @export
+evaluateModel.CaretModel <- function(x, newdata=NULL) {
+  if (is.null(newdata)) {
+    newdata=x$Xtest
+  }
+  
   list(class=predict(x$modelFit, newdata=x$Xtest), probs=predict(x$modelFit, newdata=x$Xtest, type="prob"))
 }
 
 #' @export
-evaluateModelList <- function(modelList) {
-  results <- lapply(modelList, evaluateModel)
+evaluateModel.CaretPredictor <- function(x, newdata=NULL) {
+  if (is.null(newdata)) {
+    stop("newdata cannot be null")
+  }
+  
+  list(class=predict(x$fit, newdata=newdata), probs=predict(x$fit, newdata=newdata, type="prob"))
+}
+
+#' @export
+evaluateModelList <- function(modelList, newdata=NULL) {
+  results <- lapply(modelList, evaluateModel, newdata)
   probMat <- do.call(rbind, lapply(results, "[[", "probs"))
   predClass <- unlist(lapply(results, "[[", "class"))
   list(class=predClass, probs=probMat)
@@ -400,8 +481,8 @@ performance.MultiWayClassificationResult <- function(x) {
 
 
 
-.noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE,allowParallel=FALSE)
-.cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE,allowParallel=FALSE)  
+.noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE)
+.cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE)  
 
 
 #' @export
@@ -429,27 +510,36 @@ fitFinalModel <- function(Xtrain, Ytrain,  method, Xtest=NULL, Ytest=NULL, tuneG
 }
   
 #' @export
-crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE, finalFit=FALSE, ...) {
+crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE, finalFit=FALSE, ncores=1, ...) {
  
   if (!is.factor(Y)) {
     stop("regression not supported yet") 
   }
    
+  .lapply <- if (ncores > 1) {
+      function(sets, FUN, ...) {
+        parallel::mclapply(sets, FUN, ..., mc.cores=ncores)
+      }
+    } else {
+      lapply      
+    }
+  
   fittedModels <- 
-    lapply(seq_along(testSets), function(blockIndex) {
+    .lapply(seq_along(testSets), function(blockIndex) {
       testIndices <- testSets[[blockIndex]]
       Xtrain <- X[-testIndices,]
       
       ret <- if (nrow(tuneGrid) == 1 && fast) {
-        RawModel(method, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid)        
+        print("fitting raw model")
+        RawModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid)        
       } else { 
           
         if (nrow(tuneGrid) == 1) {
-          CaretModel(method, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, .noneControl)
+          CaretModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, .noneControl)
         } else {
   
           index <- invertFolds(testSets[-blockIndex], nrow(Xtrain)) 
-          ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE,allowParallel=FALSE, index=index)
+          ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index)
           CaretModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, ctrl)
         }
         
@@ -462,10 +552,10 @@ crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE,
     ctrl <- if (nrow(tuneGrid) == 1) {
       .noneControl
     } else {
-      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE,allowParallel=FALSE, index=trainSets)
+      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=trainSets)
     }    
     
-    CaretModel(method, X, Y, NULL, NULL, tuneGrid, ctrl)
+    CaretModel(model, X, Y, NULL, NULL, tuneGrid, ctrl)
   } 
   
   result <- evaluateModelList(fittedModels)
@@ -475,7 +565,7 @@ crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE,
 
 #' @import neuroim
 #' @export
-fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=FALSE,...) {
+fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=FALSE, ncores=1) {
   
   M <- series(dataset$trainVec, voxelGrid) 
   
@@ -493,32 +583,33 @@ fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=F
     dataset$tuneGrid
   }
   
+  
   if (ncol(M) < 2) {
     stop("feature matrix must have at least two columns with nonzero variance")
   }
   
   voxelGrid <- voxelGrid[hasVariance, ]
   
-  result <- if (is.null(testVec)) {
-    crossValidate(M, dataset$Y, dataset$trainSets, dataset$testSets, model, tuneGrid, tuneLength, testVec=testVec, testY=testY, fast=fast,finalFit=finalFit)  
+  result <- if (is.null(dataset$testVec)) {
+    print("cross validating")
+    crossValidate(M, dataset$Y, dataset$trainSets, dataset$testSets, dataset$model, tuneGrid, tuneLength, testVec=dataset$testVec, testY=dataset$testY, fast=fast,finalFit=finalFit, ncores=ncores)  
   } else {
     Xtest <- series(dataset$testVec, voxelGrid)
     modelFit <- if (nrow(tuneGrid) == 1) {
-      fitFinalModel(M, dataset$Y,  dataset$model, dataset$Xtest, dataset$Ytest, tuneGrid)
+      fitFinalModel(M, dataset$Y,  dataset$model, Xtest, dataset$testY, tuneGrid)
     } else {      
-    
-      ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE,allowParallel=FALSE, index=dataset$trainSets) 
-      fitFinalModel(M, dataset$Y,  dataset$model, dataset$Xtest, dataset$Ytest, tuneGrid, tuneControl=ctrl)     
+      ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=dataset$trainSets) 
+      fitFinalModel(M, dataset$Y,  dataset$model, dataset$Xtest, dataset$testY, tuneGrid, tuneControl=ctrl)     
     }
     
     preds <- evaluateModel(modelFit)
-    list(class=preds$class, prob=preds$prob, observed=Ytest, modelFits=NULL, finalFit=modelFit)
+    list(class=preds$class, prob=preds$prob, observed=dataset$testY, modelFits=NULL, finalFit=modelFit)
   }
   
-  if (is.factor(Y) && length(levels(Y)) == 2) {
-    TwoWayClassificationResult(voxelGrid, model, result$observed, result$class, result$prob, result$finalFit)
-  } else if (is.factor(Y) && length(levels(Y)) >= 3) {
-    MultiWayClassificationResult(voxelGrid, model, result$observed, result$class, result$prob, result$finalFit)
+  if (is.factor(dataset$Y) && length(levels(dataset$Y)) == 2) {
+    TwoWayClassificationResult(voxelGrid, dataset$model, result$observed, result$class, result$prob, result$finalFit)
+  } else if (is.factor(dataset$Y) && length(levels(dataset$Y)) >= 3) {
+    MultiWayClassificationResult(voxelGrid, dataset$model, result$observed, result$class, result$prob, result$finalFit)
   } else {
     stop("regression not supported yet.")
   }

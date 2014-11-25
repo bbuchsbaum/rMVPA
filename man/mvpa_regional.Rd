@@ -3,20 +3,12 @@
 \alias{mvpa_regional}
 \title{mvpa_regional}
 \usage{
-mvpa_regional(trainVec, Y, mask, blockVar, modelName = "corsim", ncores = 2,
-  tuneGrid = NULL, testVec = NULL, testY)
+mvpa_regional(dataset, regionMask, ncores = 1)
 }
 \arguments{
-\item{train_vec}{a \code{BrainVector} instance, a 4-dimensional image where the first three dimensions are space (x,y,z) and the 4th dimension is the image/scan/condition.}
+\item{dataset}{a \code{MVPADataset} instance.}
 
-\item{Y}{the dependent variable. If it is a factor, then classification analysis is performed. If it is a continuous variable then regression is performed.}
-
-\item{mask}{a \code{BrainVolume} instance indicating the inclusion mask for voxels entering the searchlight analysis.}
-
-\item{blockVar}{an \code{integer} vector indicating the blocks to be used for cross-validation. This is usually a variable indicating the scanning "run".
-Must be same length as \code{Y}}
-
-\item{modelName}{the name of the classifcation model to be used}
+\item{regionMask}{a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.}
 
 \item{ncores}{the number of cores for parallel processign (default is 1)}
 }

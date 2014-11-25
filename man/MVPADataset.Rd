@@ -3,7 +3,8 @@
 \alias{MVPADataset}
 \title{create an \code{MVPA} instance}
 \usage{
-MVPADataset(trainVec, Y, mask, blockVar)
+MVPADataset(trainVec, Y, mask, blockVar, testVec, testY, modelName = "corsim",
+  tuneGrid = NULL)
 }
 \arguments{
 \item{trainVec}{}
@@ -13,6 +14,14 @@ MVPADataset(trainVec, Y, mask, blockVar)
 \item{mask}{}
 
 \item{blockVar}{}
+
+\item{testVec}{}
+
+\item{testY}{}
+
+\item{modelName}{}
+
+\item{tuneGrid}{}
 }
 \description{
 create an \code{MVPA} instance
