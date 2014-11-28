@@ -80,6 +80,15 @@ lapply(1:length(searchres), function(i) {
   writeVolume(searchres[[i]], out)  
 })
 
+
+if (!is.null(configParams$test_subset)) {
+  configParams$test_subset <- Reduce(paste, deparse(configParams$test_subset))
+}
+
+if (!is.null(configParams$train_subset)) {
+  configParams$train_subset <- Reduce(paste, deparse(configParams$train_subset))
+}
+
 configout <- paste0(config$output, "/config.yaml")
 qwrite(as.list(configParams), configout)
 
