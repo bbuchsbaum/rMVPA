@@ -322,8 +322,9 @@ CaretPredictor <- function(fit) {
   ret
 }
 
-MVPAPredictor <- function(predictor, voxelGrid, brainSpace) {
-  ret <- list(predictor=predictor, voxelGrid=voxelGrid, brainSpace=brainSpace)
+#' @export
+MVPAPredictor <- function(predictor, voxelGrid) {
+  ret <- list(predictor=predictor, voxelGrid=voxelGrid)
   
   class(ret) <- c("MVPAPredictor", "list")
   ret
@@ -358,13 +359,13 @@ asPredictor <- function(x, voxelGrid) {
 }
 
 #' @export
-asPredictor.RawModel <- function(x, voxelGrid. brainSpace) {
-  MVPAPredictor(RawPredictor(x$modelFit, x$model), voxelGrid, brainSpace)
+asPredictor.RawModel <- function(x, voxelGrid) {
+  MVPAPredictor(RawPredictor(x$modelFit, x$model), voxelGrid)
 }
 
 #' @export
 asPredictor.CaretModel <- function(x, voxelGrid, brainSpace) {
-  MVPAPredictor(CaretPredictor(x$modelFit), voxelGrid, brainSpace)
+  MVPAPredictor(CaretPredictor(x$modelFit), voxelGrid)
 }
 
 
@@ -439,7 +440,7 @@ performance <- function(x,...) {
 
 
 #' @export
-performance.TwoWayClassificationResult <- function(x) {
+performance.TwoWayClassificationResult <- function(x,...) {
   
   ncorrect <- sum(x$observed == x$predicted)
   ntotal <- length(x$observed)
@@ -454,7 +455,7 @@ performance.TwoWayClassificationResult <- function(x) {
 }
 
 #' @export
-performance.MultiWayClassificationResult <- function(x) {
+performance.MultiWayClassificationResult <- function(x,...) {
   obs <- as.character(x$observed)
   
   ncorrect <- sum(obs == x$predicted)
@@ -530,7 +531,6 @@ crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE,
       Xtrain <- X[-testIndices,]
       
       ret <- if (nrow(tuneGrid) == 1 && fast) {
-        print("fitting raw model")
         RawModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid)        
       } else { 
           
@@ -591,7 +591,6 @@ fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=F
   voxelGrid <- voxelGrid[hasVariance, ]
   
   result <- if (is.null(dataset$testVec)) {
-    print("cross validating")
     crossValidate(M, dataset$Y, dataset$trainSets, dataset$testSets, dataset$model, tuneGrid, tuneLength, testVec=dataset$testVec, testY=dataset$testY, fast=fast,finalFit=finalFit, ncores=ncores)  
   } else {
     Xtest <- series(dataset$testVec, voxelGrid)

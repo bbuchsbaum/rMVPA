@@ -22,7 +22,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
     }
   }
   
-  vols <- matrixToVolumeList(res[,1:3], res[4:ncol(res)], mask)
+  vols <- matrixToVolumeList(res[,1:3], res[4:ncol(res)], dataset$mask)
   names(vols) <- colnames(res)[4:ncol(res)]
   vols
 }
@@ -45,7 +45,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   
   #print(res)
    
-  vols <- matrixToVolumeList(res[,1:3], res[,4:ncol(res)], mask)
+  vols <- matrixToVolumeList(res[,1:3], res[,4:ncol(res)], dataset$mask)
   names(vols) <- colnames(res)[4:ncol(res)]
   vols
   
@@ -99,15 +99,17 @@ mvpa_regional <- function(dataset, regionMask, ncores=1) {
   
   #allowParallel <- if (length(regionSet) == 1) TRUE else FALSE
   
-  res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", dataset$model$library)) %dopar% {   
+  res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", dataset$model$library)) %do% {   
     idx <- which(regionMask == roinum)
     if (length(idx) < 2) {
       NULL
     } else {
       vox <- indexToGrid(regionMask, idx)
       fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=TRUE, ncores=mc.cores)
-      result <- c(ROINUM=roinum, t(performance(fit))[1,])     
-      attr(result, "modelFit") <- fit
+      result <- c(ROINUM=roinum, t(performance(fit))[1,]) 
+      
+      predictor <- asPredictor(fit$finalFit, vox)
+      attr(result, "predictor") <- predictor
       result
     }
   }
@@ -115,14 +117,24 @@ mvpa_regional <- function(dataset, regionMask, ncores=1) {
   invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
   validRes <- res[!invalid]
   
+  if (length(validRes) == 0) {
+    flog.error("Classification failed for all of %s ROIs", length(regionSet))
+    stop("error in mvpa_regional: aborting")
+  } 
+  
   perfMat <- do.call(rbind, validRes)
   
   outVols <- lapply(2:ncol(perfMat), function(cnum) {
-     fill(regionMask, cbind(perfMat[, 1], perfMat[,cnum]))    
+    fill(regionMask, cbind(perfMat[, 1], perfMat[,cnum]))    
   })
   
+  predictorList <- lapply(validRes, function(res) {
+    attr(res, "predictor")
+  })
+  
+  names(predictorList) <- regionSet[!invalid]
   names(outVols) <- colnames(perfMat)[2:ncol(perfMat)]
-  list(outVols = outVols, performance=perfMat)
+  list(outVols = outVols, performance=perfMat, predictorList=predictorList)
 
 }
   
@@ -168,7 +180,6 @@ mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard
   method <- match.arg(method)
   
   flog.info("classification model is: %s", dataset$model$label)
-  flog.info("tuning grid is", tuneGrid, capture=TRUE)
   
   res <- if (method == "standard") {
     .doStandard(dataset, radius, ncores)    
@@ -182,7 +193,7 @@ mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard
       X <- do.call(cbind, lapply(res, function(M) M[,i]))
       xmean <- rowMeans(X, na.rm=TRUE)
       xmean[is.na(xmean)] <- 0
-      BrainVolume(xmean, space(mask))
+      BrainVolume(xmean, space(dataset$mask))
     })
     
     names(Xall) <- colnames(res[[1]])

@@ -38,6 +38,8 @@ config <- initializeStandardParameters(config, args, "mvpa_regional")
 
 configParams <- as.list(config)
 
+
+
 config <- initializeTuneGrid(args, config)
 config <- initializeDesign(config)
 
@@ -69,8 +71,17 @@ lapply(1:length(mvpa_res$outVols), function(i) {
 })
 
 write.table(mvpa_res$performance, paste0(paste0(config$output, "/performance_table.txt")))
+saveRDS(mvpa_res$predictorList, paste0(config$output, "/predictorList.RDS"))
 
+if (!is.null(configParams$test_subset)) {
+  configParams$test_subset <- Reduce(paste, deparse(configParams$test_subset))
+}
+
+if (!is.null(configParams$train_subset)) {
+  configParams$train_subset <- Reduce(paste, deparse(configParams$train_subset))
+}
+        
 configout <- paste0(config$output, "/config.yaml")
-qwrite(as.list(configParams), configout)
+qwrite(configParams, configout)
 
 

@@ -39,11 +39,21 @@ initializeStandardParameters <- function(config, args, analysisType) {
 
 #' @export
 initializeData <- function(config) {
-  config$train_datavec <- loadBrainData(config, "train_data", indices=which(config$train_subset))
+  
+  if (!is.null(config$train_subset)) {
+    config$train_datavec <- loadBrainData(config, "train_data", indices=which(config$train_subset))    
+  } else {
+    config$train_datavec <- loadBrainData(config, "train_data")  
+  }
+  
   
   if (!is.null(config$test_data)) {
     flog.info("loading test data: %s", config$test_data)
-    config$test_datavec <- loadBrainData(config, "test_data", indices=which(config$test_subset))
+    if (!is.null(config$test_subset)) {
+      config$test_datavec <- loadBrainData(config, "test_data", indices=which(config$test_subset))
+    } else {
+      config$test_datavec <- loadBrainData(config, "test_data")
+    }
   }
   
   if (config$normalize) {

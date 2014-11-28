@@ -71,9 +71,8 @@ dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, c
 
 #library(caret_model$library, character.only=TRUE)
 
-searchres <- mvpa_searchlight(config$train_datavec, config$labels, config$maskVolume, config$block, 
-                              config$radius, config$model, method=config$type, ncores=config$pthreads, 
-                              niter=config$niter, tuneGrid=config$tune_grid)
+
+searchres <- mvpa_searchlight(dataset,config$radius,  config$type, config$niter, config$pthreads)
 
 
 lapply(1:length(searchres), function(i) {
