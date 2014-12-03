@@ -1,19 +1,24 @@
 
 
 #' @export
+#' @import stringr
 initializeConfiguration <- function(args) {
-  config <- new.env()
+  
   if (!is.null(args$config)) {
     if (! file.exists(args$config)) {
       flog.error("cannot find configuration file: %s", args$config)
       stop()
-    } else {
+    } else if (str_detect(args$config, "\\.yaml$")) {
+      confyaml <- qread(args$config)
+      config <- as.environment(confyaml)
+    } else if (str_detect(args$config, "\\.[rR]")) {
+      config <- new.env()
       source(args$config, config)
-      flog.info("found configuration file with parameters: %s", str(as.list(config)))
     }
   }
   
   config
+
   
 }
 
@@ -22,6 +27,8 @@ initializeStandardParameters <- function(config, args, analysisType) {
   #setArg("radius", config, args, 8)
   setArg("train_design", config, args, "mvpa_design.txt")
   setArg("test_design", config, args, NULL)
+  setArg("train_data", config, args, "mvpa_design.txt")
+  setArg("test_data", config, args, NULL)
   #setArg("type", config, args, "randomized")
   setArg("model", config, args, "corsim")
   setArg("pthreads", config, args, 1)

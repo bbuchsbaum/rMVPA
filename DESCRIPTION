@@ -20,4 +20,6 @@ Imports:
     doParallel,
     MASS,
     futile.logger,
-    io
+    io,
+    stringr
+    
