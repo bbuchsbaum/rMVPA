@@ -113,6 +113,21 @@ MVPAModels$gpca_lda <- list(type = "Classification",
                                  predict(modelFit, pcx)$posterior
                                })
 
+MVPAModels$liblinear <- list(type = "Classification", 
+                               library = "LiblineaR", 
+                               loop = NULL, 
+                               parameters=data.frame(parameters=c("type", "cost"), class=c("numeric", "numeric"), labels=c("model type", "cost of constraints violation")),
+                               grid=function(x, y, len = NULL) {
+                                 data.frame(type=0, cost=heuristicC(x))
+                               },
+                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) LiblineaR::LiblineaR(x,y,param$type, param$cost),
+                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                 predict(modelFit, as.matrix(newdata))$predictions
+                               },
+                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                 predict(modelFit, as.matrix(newdata), prob=TRUE)
+                               })
+
 
 MVPAModels$nearestMean <- list(type = "Classification", 
                           library = "klaR", 
