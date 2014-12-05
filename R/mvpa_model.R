@@ -579,12 +579,19 @@ fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=F
   M <- series(dataset$trainVec, voxelGrid) 
   
   if (ncol(M) < 2) {
-    stop("feature matrix must have at least two columns")
+    stop("feature matrix must have at least two columns: returning NullResult")
   }
   
 
-  hasVariance <- which(apply(M, 2, sd) > 0)
+  hasVariance <- which(apply(M, 2, sd, na.rm=TRUE) > 0)
   M <- M[, hasVariance, drop=FALSE]
+  
+  hasNA <- apply(M,1, function(x) any(is.na(x)))
+  numNAs <- sum(hasNA)
+  
+  if (numNAs > 0) {
+    stop("training data has NA values, aborting")
+  } 
   
   tuneGrid <- if (is.null(dataset$tuneGrid)) {
     tuneGrid <- dataset$model$grid(M, dataset$Y, tuneLength)
@@ -592,10 +599,8 @@ fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=F
     dataset$tuneGrid
   }
   
-  
   if (ncol(M) < 2) {
-    warning("feature matrix must have at least two columns with nonzero variance")
-    return(NullResult(voxelGrid, dataset$model, result$observed))
+    stop("feature matrix must have at least two columns with nonzero variance")
   }
   
   voxelGrid <- voxelGrid[hasVariance, ]

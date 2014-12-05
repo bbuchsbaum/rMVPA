@@ -35,14 +35,12 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
     if (nrow(vox) < 3) {
       NULL
     } else {     
-      fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE)
-      if (!inherits(fit, "NullResult")) {
-        result <- t(performance(fit))
-        out <- cbind(vox, result[rep(1, nrow(vox)),])
-        #attr(out, "prob") <- fit$probs
-        out
-      }
+      fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE)    
+      result <- t(performance(fit))
+      out <- cbind(vox, result[rep(1, nrow(vox)),])     
+      out
     }
+    
   }
   
   #print(res)
@@ -79,6 +77,15 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 # @import doParallel
 # @import parallel
 # @export
+#mvpa_random_ensemble <- function(dataset, radius=8, ncores=1, models=c("sda_notune", "corsim", "pls", "glmnet")) {
+#  if (length(dataset$blockVar) != length(dataset$Y)) {
+#    stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
+#  }
+  
+#  cl <- makeCluster(ncores)
+#  registerDoParallel(cl)
+  
+  
 
   
 
@@ -116,17 +123,13 @@ mvpa_regional <- function(dataset, regionMask, ncores=1) {
       NULL
     } else {
       vox <- indexToGrid(regionMask, idx)
-      fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=TRUE, ncores=mc.cores)
-      
-      if (!inherits(fit, "NullResult")) {
-        result <- c(ROINUM=roinum, t(performance(fit))[1,]) 
-      
-        predictor <- asPredictor(fit$finalFit, vox)
-        attr(result, "predictor") <- predictor  
-        predmat <- data.frame(ROI=rep(roinum, length(fit$observed)), observed=fit$observed, pred=fit$predicted, correct=fit$observed == fit$predicted, prob=fit$prob)
-        attr(result, "predmat") <- predmat
-        result
-      }
+      fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=TRUE, ncores=mc.cores)     
+      result <- c(ROINUM=roinum, t(performance(fit))[1,])     
+      predictor <- asPredictor(fit$finalFit, vox)
+      attr(result, "predictor") <- predictor  
+      predmat <- data.frame(ROI=rep(roinum, length(fit$observed)), observed=fit$observed, pred=fit$predicted, correct=fit$observed == fit$predicted, prob=fit$prob)
+      attr(result, "predmat") <- predmat
+      result    
     }
   }
   
