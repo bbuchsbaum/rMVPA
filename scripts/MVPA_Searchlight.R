@@ -34,7 +34,7 @@ args <- opt$options
 flog.info("command line args are ", args, capture=TRUE)
 
 config <- initializeConfiguration(args)
-config$output <- makeOutputDir(config$output)
+
 config <- initializeStandardParameters(config, args, "searchlight")
 
 #flog.appender(appender.file(paste0(config$output, "/rMVPA.log")))
@@ -75,6 +75,7 @@ dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, c
 
 searchres <- mvpa_searchlight(dataset,config$radius,  config$type, config$niter, config$pthreads)
 
+config$output <- makeOutputDir(config$output)
 
 lapply(1:length(searchres), function(i) {
   out <- paste0(config$output, "/", names(searchres)[i], ".nii")

@@ -246,6 +246,15 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
   ret
 }
 
+NullResult <- function(vox, model, observed) {
+  ret <- list(vox=vox,
+              model=model,
+              observed=observed)
+  class(ret) <- c("NullResult", "list")
+  ret
+  
+}
+
 #' create an \code{TwoWayClassification} instance
 #' @param vox
 #' @param model
@@ -575,7 +584,7 @@ fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=F
   
 
   hasVariance <- which(apply(M, 2, sd) > 0)
-  M <- M[, hasVariance]
+  M <- M[, hasVariance, drop=FALSE]
   
   tuneGrid <- if (is.null(dataset$tuneGrid)) {
     tuneGrid <- dataset$model$grid(M, dataset$Y, tuneLength)
@@ -585,7 +594,8 @@ fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=F
   
   
   if (ncol(M) < 2) {
-    stop("feature matrix must have at least two columns with nonzero variance")
+    warning("feature matrix must have at least two columns with nonzero variance")
+    return(NullResult(voxelGrid, dataset$model, result$observed))
   }
   
   voxelGrid <- voxelGrid[hasVariance, ]

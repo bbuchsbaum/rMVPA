@@ -228,10 +228,29 @@ loadBlockColumn <- function(config, design) {
 }
 
 #' @export
+#' 
+loadBrainDataSequence <- function(fnames, config) {
+  if (!all(file.exists(fnames))) {
+    offenders <- fnames[!file.exists(fnames)]
+    abort(config, paste("training data", offenders, "not found."))
+  }
+  
+  vecmat <- do.call(rbind, lapply(fnames, function(fname) {
+    flog.info("loading data file %s", fname)
+    mat <- as.matrix(loadVector(fname, mask=config$maskVolume))
+    flog.info("data file %s has %s voxels and %s samples", fname, ncol(mat), nrow(mat))
+    mat
+  }))
+  
+  SparseBrainVector(vecmat, space(config$maskVolume), mask=config$maskVolume)
+}
+
+#' @export
 loadBrainData <- function(config, name, indices=NULL) {
   fname <- config[[name]]
-  
-  if (!file.exists(fname)) {
+  if (length(fname) > 1) {
+    loadBrainDataSequence(fname, config)
+  } else if (!file.exists(fname)) {
     abort(config, paste("training data", fname, "not found."))
   } else {
     flog.info("loading data file %s", fname)

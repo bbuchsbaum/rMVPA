@@ -33,7 +33,7 @@ args <- opt$options
 flog.info("command line args are ", args, capture=TRUE)
 
 config <- initializeConfiguration(args)
-config$output <- makeOutputDir(config$output)
+
 config <- initializeStandardParameters(config, args, "mvpa_regional")
 
 configParams <- as.list(config)
@@ -43,10 +43,28 @@ configParams <- as.list(config)
 config <- initializeTuneGrid(args, config)
 config <- initializeDesign(config)
 
-
-
 rowIndices <- which(config$train_subset)
 config$ROIVolume <- loadMask(config)
+
+if (! is.null(config$roi_subset)) {
+  form <- try(eval(parse(text=config$roi_subset)))
+  if (inherits(form, "try-error")) {
+    flog.error("could not parse roi_subset parameter: %s", config$roi_subset)
+    stop()
+  }
+  
+  if (class(form) != "formula") {
+    flog.error("roi_subset argument must be an expression that starts with a ~ character")
+    stop()
+  }
+  
+  res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
+  
+  flog.info("roi_subset contains %s voxels", sum(res))
+  config$ROIVolume[!res] <- 0
+}
+
+
 config$maskVolume <- as(config$ROIVolume, "LogicalBrainVolume")
 
 config <- initializeData(config)
@@ -55,23 +73,31 @@ flog.info("number of trials: %s", length(rowIndices))
 flog.info("max trial index: %s", max(rowIndices))
 flog.info("loading training data: %s", config$train_data)
 flog.info("mask contains %s voxels", sum(config$maskVolume))
-flog.info("Region mask contains: %s ROIs", sum(unique(config$ROIVolume[config$ROIVolume > 0])))
+flog.info("Region mask contains: %s ROIs", length(unique(config$ROIVolume[config$ROIVolume > 0])))
 
 
 flog.info("Running regional MVPA with parameters:", configParams, capture=TRUE)
 
+if (length(config$labels) != dim(config$train_datavec)[4]) {
+  flog.error("Number of volumes: %s must equal number of labels: %s", dim(config$train_datavec)[4], length(config$labels))
+  stop()
+}
 
 dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid)
 mvpa_res <- mvpa_regional(dataset, config$ROIVolume, config$pthreads)
 
+config$output <- makeOutputDir(config$output)
 
 lapply(1:length(mvpa_res$outVols), function(i) {
   out <- paste0(config$output, "/", names(mvpa_res$outVols)[i], ".nii")
   writeVolume(mvpa_res$outVols[[i]], out)  
 })
 
-write.table(mvpa_res$performance, paste0(paste0(config$output, "/performance_table.txt")))
+write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
+write.table(format(mvpa_res$predMat,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/predMat_table.txt")), row.names=FALSE, quote=FALSE)
+
 saveRDS(mvpa_res$predictorList, paste0(config$output, "/predictorList.RDS"))
+
 
 if (!is.null(configParams$test_subset)) {
   configParams$test_subset <- Reduce(paste, deparse(configParams$test_subset))

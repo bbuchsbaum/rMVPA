@@ -36,10 +36,12 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
       NULL
     } else {     
       fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE)
-      result <- t(performance(fit))
-      out <- cbind(vox, result[rep(1, nrow(vox)),])
-      #attr(out, "prob") <- fit$probs
-      out
+      if (!inherits(fit, "NullResult")) {
+        result <- t(performance(fit))
+        out <- cbind(vox, result[rep(1, nrow(vox)),])
+        #attr(out, "prob") <- fit$probs
+        out
+      }
     }
   }
   
@@ -67,7 +69,16 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 #  }
 #}
 
-
+# mvpa_ensemble
+# @param dataset a \code{MVPADataset} instance.
+# @param regionMask a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
+# @param ncores the number of cores for parallel processign (default is 1)
+# @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
+# @import itertools 
+# @import foreach
+# @import doParallel
+# @import parallel
+# @export
 
   
 
@@ -99,18 +110,23 @@ mvpa_regional <- function(dataset, regionMask, ncores=1) {
   
   #allowParallel <- if (length(regionSet) == 1) TRUE else FALSE
   
-  res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", dataset$model$library)) %do% {   
+  res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", dataset$model$library)) %dopar% {   
     idx <- which(regionMask == roinum)
     if (length(idx) < 2) {
       NULL
     } else {
       vox <- indexToGrid(regionMask, idx)
       fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=TRUE, ncores=mc.cores)
-      result <- c(ROINUM=roinum, t(performance(fit))[1,]) 
       
-      predictor <- asPredictor(fit$finalFit, vox)
-      attr(result, "predictor") <- predictor
-      result
+      if (!inherits(fit, "NullResult")) {
+        result <- c(ROINUM=roinum, t(performance(fit))[1,]) 
+      
+        predictor <- asPredictor(fit$finalFit, vox)
+        attr(result, "predictor") <- predictor  
+        predmat <- data.frame(ROI=rep(roinum, length(fit$observed)), observed=fit$observed, pred=fit$predicted, correct=fit$observed == fit$predicted, prob=fit$prob)
+        attr(result, "predmat") <- predmat
+        result
+      }
     }
   }
   
@@ -123,6 +139,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1) {
   } 
   
   perfMat <- do.call(rbind, validRes)
+  predMat <- do.call(rbind, lapply(validRes, function(x) attr(x, "predmat")))
   
   outVols <- lapply(2:ncol(perfMat), function(cnum) {
     fill(regionMask, cbind(perfMat[, 1], perfMat[,cnum]))    
@@ -134,7 +151,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1) {
   
   names(predictorList) <- regionSet[!invalid]
   names(outVols) <- colnames(perfMat)[2:ncol(perfMat)]
-  list(outVols = outVols, performance=perfMat, predictorList=predictorList)
+  list(outVols = outVols, performance=perfMat, predictorList=predictorList, predMat=predMat)
 
 }
   
