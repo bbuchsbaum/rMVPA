@@ -32,9 +32,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .combine=rbind, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
-    if (nrow(vox) < 3) {
-      NULL
-    } else {     
+    if (nrow(vox) > 1) {   
       fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE)    
       result <- t(performance(fit))
       out <- cbind(vox, result[rep(1, nrow(vox)),])     
@@ -119,9 +117,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1) {
   
   res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", dataset$model$library)) %dopar% {   
     idx <- which(regionMask == roinum)
-    if (length(idx) < 2) {
-      NULL
-    } else {
+    if (length(idx) > 1) {
       vox <- indexToGrid(regionMask, idx)
       fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=TRUE, ncores=mc.cores)     
       result <- c(ROINUM=roinum, t(performance(fit))[1,])     
