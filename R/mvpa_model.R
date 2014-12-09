@@ -1,227 +1,5 @@
 
 
-#' @export
-#' @import MASS
-corsimFit <- function(x, y, method, robust) {
-  estimator <- if (robust) {
-    function(vec)  {
-      h <- try(huber(vec))
-      if (inherits(h, "try-error")) {
-        median(vec)
-      } else {
-        h$mu
-      }
-    }      
-  } else {
-    mean
-  }
-  
-  
-  list(conditionMeans = splitReduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)
-}
-
-#' @export
-predict.corsimFit <- function(modelFit, newData) {
-  res <- sapply(1:nrow(newData), function(i) {
-    pattern <- newData[i,]
-    which.max(cor(pattern, t(modelFit$conditionMeans), method=modelFit$method))
-  })
-  
-  modelFit$levs[res]
-}
-
-#' @export
-prob.corsimFit <- function(modelFit, newData) {
-  scores <- cor(t(newData), t(modelFit$conditionMeans), method=modelFit$method)
-  
-  mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
-  probs <- exp(scores - mc)
-  probs <- zapsmall(probs/rowSums(probs))
-  colnames(probs) <- modelFit$levs
-  probs
-}
-
-#' @export
-MVPAModels <- list()
-
-MVPAModels$pca_lda <- list(type = "Classification", 
-                               library = "MASS", 
-                               loop = NULL, 
-                               parameters=data.frame(parameters="ncomp", class="numeric", labels="ncomp"),
-                               grid=function(x, y, len = 5) {
-                                 data.frame(ncomp=1:len)
-                               },
-                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                            
-                                 pres <- prcomp(as.matrix(x), scale=TRUE)
-
-                                 lda.fit <- lda(pres$x[,1:param$ncomp, drop=FALSE], y)
-                                 attr(lda.fit, "ncomp") <- param$ncomp
-                                 attr(lda.fit, "pcfit") <- pres
-                                 lda.fit
-                               },
-                                 
-                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 compind <- seq(1, attr(modelFit, "ncomp"))
-                                 
-                                 pcfit <- attr(modelFit, "pcfit")
-                                 colnames(newdata) <- rownames(pcfit$rotation)
-                                 pcx <- predict(pcfit, newdata)[,compind,drop=FALSE]
-                                 predict(modelFit, pcx)$class
-                               },
-                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 compind <- seq(1, attr(modelFit, "ncomp"))
-                                 pcfit <- attr(modelFit, "pcfit")
-                                 colnames(newdata) <- rownames(pcfit$rotation)
-                                 pcx <- predict(pcfit, newdata)[,compind,drop=FALSE]
-                                 predict(modelFit, pcx)$posterior                              
-                               })
-
-
-MVPAModels$gpca_lda <- list(type = "Classification", 
-                               library = c("sGPCA", "MASS"), 
-                               loop = NULL, 
-                               parameters=data.frame(parameters=c("ncomp", "theta"), class=c("numeric", "numeric"), labels=c("number of PCs", "smoothing")),
-                               grid=function(x, y, len = NULL) {
-                                 data.frame(ncomp=5, theta=5)
-                               },
-                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                                 args <- list(...)
-                                 vox <- args$vox
-                                 xs <- scale(x, scale=FALSE)
-                                 xc <- attr(xs, "scaled:center")
-                                 
-                                 R <- Exp.cov(vox,theta=param$theta)
-                                 er <- eigen(R,only.values=TRUE)
-                                 R <- R/max(er$values)
-                                 fit <- gpca(xs,diag(nrow(x)),R,K=param$ncomp)
-                          
-                                 lda.fit <-lda(fit$U, y)
-                                 attr(lda.fit, "centroid") <- xc
-                                 attr(lda.fit, "pcfit") <- fit
-                                 attr(lda.fit, "ncomp") <- param$ncomp
-                                 lda.fit
-                               },
-                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 compind <- seq(1, attr(modelFit, "ncomp"))
-                                 pcx <- sweep(newdata, 2, attr(modelFit, "centroid")) %*% attr(modelFit, "pcfit")$V
-                                 predict(modelFit, pcx)$class 
-                               },
-                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 compind <- seq(1, attr(modelFit, "ncomp"))
-                                 pcx <- sweep(newdata, 2, attr(modelFit, "centroid")) %*% attr(modelFit, "pcfit")$V
-                                 predict(modelFit, pcx)$posterior
-                               })
-
-MVPAModels$liblinear <- list(type = "Classification", 
-                               library = "LiblineaR", 
-                               loop = NULL, 
-                               parameters=data.frame(parameters=c("type", "cost"), class=c("numeric", "numeric"), labels=c("model type", "cost of constraints violation")),
-                               grid=function(x, y, len = NULL) {
-                                 data.frame(type=0, cost=heuristicC(x))
-                               },
-                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) LiblineaR::LiblineaR(x,y,param$type, param$cost),
-                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 predict(modelFit, as.matrix(newdata))$predictions
-                               },
-                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 predict(modelFit, as.matrix(newdata), prob=TRUE)
-                               })
-
-
-MVPAModels$nearestMean <- list(type = "Classification", 
-                          library = "klaR", 
-                          loop = NULL, 
-                          parameters=data.frame(parameters="gamma", class="numeric", labels="gamma"),
-                          grid=function(x, y, len = NULL) {
-                            data.frame(gamma=.3)
-                          },
-                          fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) klaR::nm(x,y, param$gamma),
-                          predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                            predict(modelFit, as.matrix(newdata))$class
-                          },
-                          prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                            predict(modelFit, as.matrix(newdata))$posterior
-                          })
-    
-MVPAModels$corsim <- list(type = "Classification", 
-                    library = "rMVPA", 
-                    loop = NULL, 
-                    parameters=data.frame(parameters=c("method", "robust"), class=c("character", "logical"), label=c("correlation type: pearson, spearman, or kendall", "mean or huber")),
-                    grid=function(x, y, len = NULL) if (len == 1) { data.frame(method="pearson", robust=FALSE) } else { expand.grid(method=c("pearson", "spearman", "kendall"), robust=c(TRUE, FALSE)) },
-                    fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) corsimFit(x,y, as.character(param$method), param$robust),
-                    predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict.corsimFit(modelFit, as.matrix(newdata)),
-                    prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                      prob.corsimFit(modelFit, as.matrix(newdata))
-                    })
-
-
-MVPAModels$sda_notune <- list(type = "Classification", 
-                 library = "sda", 
-                 loop = NULL, 
-                 parameters=data.frame(parameters="parameter", class="character", label="parameter"),
-                 grid=function(x, y, len = NULL) data.frame(parameter="none"),
-                 fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) sda::sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...),
-                 predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict(modelFit, as.matrix(newdata), verbose=FALSE)$class,
-                 prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                    predict(modelFit, as.matrix(newdata),verbose=FALSE)$posterior
-                 })
-
-MVPAModels$sda_ranking <- list(type = "Classification", 
-                              library = "sda", 
-                              loop = NULL, 
-                              parameters=data.frame(parameters="parameter", class="character", label="parameter"),
-                              grid=function(x, y, len = NULL) data.frame(parameter="none"),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-              
-                                x <- as.matrix(x)                             
-                                ind <- if (ncol(x) > 20) {
-                                  rank <- sda::sda.ranking(Xtrain=x, L=y, fdr=TRUE, verbose=FALSE, ...)
-                                  hcind <- which.max(rank[,"HC"])
-                                  
-                                  keep.ind <- if (length(hcind) < 2) {
-                                    1:2
-                                  } else {
-                                    hcind                               
-                                  }                                                                
-                                  rank[keep.ind,"idx"]
-                                } else if (ncol(x) <= 3) {
-                                  1:ncol(x)
-                      
-                                } else {
-                                  rank <- sda::sda.ranking(Xtrain=x, L=y, fdr=FALSE, verbose=FALSE, ...)
-                                  rank[1:(ncol(x)/2), "idx"]
-                                }
-                                
-                                if (length(ind) < 2) {
-                                  browser()
-                                }
-                                fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
-                                attr(fit, "keep.ind") <- ind
-                                fit
-                              },
-                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {                        
-                                predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]), verbose=FALSE)$class
-                              },
-                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
-                              })
-
-
-              
-MVPAModels$lda_thomaz <- list(type = "Classification", 
-                        library = "sparsediscrim", 
-                        loop = NULL, 
-                        parameters=data.frame(parameters="parameter", class="character", label="parameter"),
-                        grid=function(x, y, len = NULL) data.frame(parameter="none"),
-                        fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { lda_thomaz(x,y, ...) },
-                        predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { predict(modelFit, as.matrix(newdata))$class },
-                        prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
-                          scores <- -t(predict(modelFit, newdata)$scores)
-                          mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
-                          probs <- exp(scores - mc)
-                          zapsmall(probs/rowSums(probs))
-                        })
 
 
 #' create an \code{MVPA} instance
@@ -270,21 +48,18 @@ NullResult <- function(vox, model, observed) {
   
 }
 
+
 #' create an \code{TwoWayClassification} instance
-#' @param vox
-#' @param model
 #' @param observed
 #' @param predicted
 #' @param probs
-#' @param finalFit
 #' @export
-TwoWayClassificationResult <- function(vox, model, observed, predicted, probs, finalFit=NULL) {
-  ret <- list(vox=vox,
-              model=model,
+TwoWayClassificationResult <- function(observed, predicted, probs) {
+  ret <- list(
               observed=observed,
               predicted=predicted,
-              probs=as.matrix(probs),
-              finalFit=finalFit)
+              probs=as.matrix(probs)
+              )
   
   class(ret) <- c("TwoWayClassificationResult", "list")
   ret
@@ -292,24 +67,31 @@ TwoWayClassificationResult <- function(vox, model, observed, predicted, probs, f
 }
 
 #' create an \code{TwoWayClassification} instance
-#' @param vox
-#' @param model
 #' @param observed
 #' @param predicted
 #' @param probs
-#' @param finalFit
+
 #' @export
-MultiWayClassificationResult <- function(vox, model, observed, predicted, probs, finalFit=NULL) {
-  ret <- list(vox=vox,
-              model=model,
+MultiWayClassificationResult <- function(observed, predicted, probs) {
+  ret <- list(
               observed=observed,
               predicted=predicted,
-              probs=as.matrix(probs),
-              finalFit=finalFit)
+              probs=as.matrix(probs)
+              )
   
   class(ret) <- c("MultiWayClassificationResult", "list")
   ret
   
+}
+
+classificationResult <- function(observed, predicted, probs) {
+  if (length(levels(as.factor(observed))) == 2) {
+    TwoWayClassificationResult(observed,predicted, probs)
+  } else if (length(levels(as.factor(observed))) > 2) {
+    MultiWayClassificationResult(observed,predicted, probs)
+  } else {
+    stop("observed data must be a factor with 2 or more levels")
+  }
 }
 
 
@@ -346,6 +128,16 @@ CaretPredictor <- function(fit) {
   ret
 }
 
+
+## should be a ListModel rather than ListPredictor
+#' @export
+ListPredictor <- function(fits) {
+  stopifnot(is.list(fits))
+  ret <- fits
+  class(ret) <- c("ListPredictor", "list")
+  ret
+}
+
 #' @export
 MVPAPredictor <- function(predictor, voxelGrid) {
   ret <- list(predictor=predictor, voxelGrid=voxelGrid)
@@ -371,6 +163,8 @@ CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneContro
   class(ret) <- c("CaretModel", "list")
   ret
 }
+
+
 
 #' @export
 evaluateModel <- function(x, newdata) {
@@ -399,7 +193,7 @@ evaluateModel.RawModel <- function(x, newdata=NULL) {
     newdata=x$Xtest
   }
   
-  probs <- x$model$prob(x$modelFit, newdata=x$Xtest)     
+  probs <- x$model$prob(x$modelFit, newdata)     
   cpred <- apply(probs,1, which.max)
   cpred <- levels(x$Ytrain)[cpred]
   list(class=cpred, probs=probs)
@@ -435,7 +229,26 @@ evaluateModel.CaretModel <- function(x, newdata=NULL) {
     newdata=x$Xtest
   }
   
-  list(class=predict(x$modelFit, newdata=x$Xtest), probs=predict(x$modelFit, newdata=x$Xtest, type="prob"))
+  list(class=predict(x$modelFit, newdata), probs=predict(x$modelFit, newdata, type="prob"))
+}
+
+
+
+#' @export
+evaluateModel.ListPredictor <- function(x, newdata=NULL) {
+  if (is.null(newdata)) {
+    stop("newdata cannot be null")
+  }
+  
+  res <- lapply(x, function(fit) {
+    evaluateModel(fit, newdata)$probs
+  })
+  
+  prob <- Reduce("+", res)/length(res)
+  winner <- apply(prob, 1, which.max)
+  class <- colnames(prob)[winner]
+  
+  list(class=class, probs=prob)
 }
 
 #' @export
@@ -533,6 +346,62 @@ fitFinalModel <- function(Xtrain, Ytrain,  method, Xtest=NULL, Ytest=NULL, tuneG
     CaretModel(method, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, ...)
   }
 }
+
+.get_lapply <- function(ncores=1) {
+  if (ncores > 1) {
+    function(sets, FUN, ...) {
+      parallel::mclapply(sets, FUN, ..., mc.cores=ncores)
+    }
+  } else {
+    lapply      
+  } 
+}
+
+trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE, tuneControl=.noneControl) {
+  ret <- if (nrow(tuneGrid) == 1 && fast) {
+    RawModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid)        
+  } else {     
+    CaretModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl)
+  }  
+}
+
+#' @export
+cvTrainAndTest <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE, ncores=1) {
+  if (!is.factor(Y)) {
+    stop("regression not supported yet") 
+  }
+  
+  .lapply <- .get_lapply(ncores)
+  
+  results <- 
+    .lapply(seq_along(testSets), function(blockIndex) {
+      testIndices <- testSets[[blockIndex]]
+      Xtrain <- X[-testIndices,]
+      Ytrain <- Y[-testIndices]
+      Xtest <- X[testIndices,]
+      Ytest <- Y[testIndices]
+      
+      ret <- if (nrow(tuneGrid) == 1 && fast) {
+        evaluateModel(trainModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, fast, .noneControl))        
+      } else {      
+        if (nrow(tuneGrid) == 1) {
+          evaluateModel(trainModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, fast=FALSE, tuneControl=.noneControl))
+        } else {       
+          index <- invertFolds(testSets[-blockIndex], nrow(Xtrain)) 
+          ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index)
+          evaluateModel(trainModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, fast=FALSE, tuneControl=ctrl))
+        }
+       
+      }
+      
+    })
+  
+  probMat <- do.call(rbind, lapply(results, "[[", "probs"))
+  predClass <- unlist(lapply(results, "[[", "class"))
+  list(class=predClass, probs=probMat)
+}
+  
+  
   
 #' @export
 crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE, finalFit=FALSE, ncores=1, ...) {
@@ -541,15 +410,9 @@ crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE,
     stop("regression not supported yet") 
   }
    
-  .lapply <- if (ncores > 1) {
-      function(sets, FUN, ...) {
-        parallel::mclapply(sets, FUN, ..., mc.cores=ncores)
-      }
-    } else {
-      lapply      
-    }
+  .lapply <- .get_lapply(ncores)
   
-  fittedModels <- 
+  blockFits <- 
     .lapply(seq_along(testSets), function(blockIndex) {
       testIndices <- testSets[[blockIndex]]
       Xtrain <- X[-testIndices,]
@@ -582,9 +445,29 @@ crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE,
     CaretModel(model, X, Y, NULL, NULL, tuneGrid, ctrl)
   } 
   
-  result <- evaluateModelList(fittedModels)
-  list(class=result$class, prob=result$prob, observed=Y, modelFits=fittedModels, finalFit=final)
+  result <- evaluateModelList(blockFits)
+  list(class=result$class, prob=result$prob, observed=Y, blockFits=blockFits, finalFit=ListPredictor(blockFits))
    
+}
+
+#' @export
+zeroVarianceColumns <- function(M) {
+  which(apply(M, 2, sd, na.rm=TRUE) == 0)
+}
+
+#' @export
+nonzeroVarianceColumns <- function(M) {
+  which(apply(M, 2, sd, na.rm=TRUE) > 0)
+}
+
+#' @export
+removeZeroVarianceColumns <- function(M) {
+  noVariance <- which(apply(M, 2, sd, na.rm=TRUE) == 0)
+  if (length(noVariance) > 0) {
+    M[, hasVariance, drop=FALSE]
+  } else {
+    M
+  }
 }
 
 #' @import neuroim
@@ -632,13 +515,13 @@ fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=F
     }
     
     preds <- evaluateModel(modelFit)
-    list(class=preds$class, prob=preds$prob, observed=dataset$testY, modelFits=NULL, finalFit=modelFit)
+    list(class=preds$class, prob=preds$prob, observed=dataset$testY, blockFits=NULL, finalFit=modelFit)
   }
   
   if (is.factor(dataset$Y) && length(levels(dataset$Y)) == 2) {
-    TwoWayClassificationResult(voxelGrid, dataset$model, result$observed, result$class, result$prob, result$finalFit)
+    TwoWayClassificationResult(voxelGrid, dataset$model, result$observed, result$class, result$prob, result$blockFits, result$finalFit)
   } else if (is.factor(dataset$Y) && length(levels(dataset$Y)) >= 3) {
-    MultiWayClassificationResult(voxelGrid, dataset$model, result$observed, result$class, result$prob, result$finalFit)
+    MultiWayClassificationResult(voxelGrid, dataset$model, result$observed, result$class, result$prob, result$blockFits, result$finalFit)
   } else {
     stop("regression not supported yet.")
   }

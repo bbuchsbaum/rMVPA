@@ -9,16 +9,32 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   })
 }  
 
+
+.runCV <- function(dataset, vox) {
+  X <- series(dataset$trainVec, vox)
+  valid.idx <- nonzeroVarianceColumns(X)
+  X <- X[,valid.idx]
+  vox <- vox[valid.idx,]
+  
+  if (ncol(X) == 0) {
+    stop("no valid columns")
+  } else {
+    tuneGrid <- if (!is.null(dataset$tuneGrid)) dataset$tuneGrid else dataset$model$grid(X0, dataset$Y, 1)
+    cvres <- cvTrainAndTest(X, dataset$Y, dataset$trainSets, dataset$testSets, dataset$model, tuneGrid, fast=TRUE, ncores=1)
+    result <- classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs)
+    perf <- t(performance(result))
+    out <- cbind(vox, perf[rep(1, nrow(vox)),])     
+    out
+  }
+}
+
+
 .doStandard <- function(dataset, radius, ncores) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
   res <- foreach::foreach(vox = searchIter, .combine=rbind, .verbose=FALSE) %dopar% {   
-    if (nrow(vox) < 3) {
-      NA
-    } else {
-      result <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE)    
-      cen <- attr(vox, "center")
-      c(cen, performance(result))  
+    if (nrow(vox) > 1) {
+      .runCV(dataset, vox)
     }
   }
   
@@ -32,21 +48,14 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .combine=rbind, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
-    if (nrow(vox) > 1) {   
-      fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE)    
-      result <- t(performance(fit))
-      out <- cbind(vox, result[rep(1, nrow(vox)),])     
-      out
+    if (nrow(vox) > 1) {  
+      .runCV(dataset,vox)
     }
-    
   }
-  
-  #print(res)
-   
+
   vols <- matrixToVolumeList(res[,1:3], res[,4:ncol(res)], dataset$mask)
   names(vols) <- colnames(res)[4:ncol(res)]
   vols
-  
   
 }
 
@@ -80,8 +89,33 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 #    stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
 #  }
   
-#  cl <- makeCluster(ncores)
-#  registerDoParallel(cl)
+#  searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
+  
+#  for (i in sort(unique(dataset$blockVar))) {
+#     idx <- which(dataset$blockVar != i)
+#   
+#     Ytrain <- dataset$Y[idx]
+#     Ytest <- dataset$Y[-idx]
+#     
+#     ## for each fold need to get cross-validated AUC
+#     ## determine weight on this basis
+#     ## then evaluat eon held out set.
+#     
+#     res <- lapply(searchIter, function(vox) { 
+#       print(nrow(vox))
+#       if (nrow(vox) > 1) {   
+#         X <- series(dataset$trainVec, vox)
+#         Xtrain <- X[idx,]
+#         Xtest <- X[-idx,]
+#         fit <- fitFinalModel(Xtrain, Ytrain,  dataset$model, Xtest=Xtest, Ytest=Ytest, tuneGrid=dataset$tuneGrid)
+#         preds <- evaluateModel(fit)   
+#         #Metrics::auc(Ytest == levels(Ytest)[2], preds$prob[,2]) - .5   
+#         preds$prob[,1]
+#       }    
+#     })
+#   
+  
+  
   
   
 
