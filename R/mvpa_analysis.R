@@ -32,11 +32,15 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 .doStandard <- function(dataset, radius, ncores) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
-  res <- foreach::foreach(vox = searchIter, .combine=rbind, .verbose=FALSE) %dopar% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %dopar% {   
     if (nrow(vox) > 1) {
       .runCV(dataset, vox)
     }
   }
+  
+  invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
+  validRes <- do.call(rbind, res[!invalid])
+  
   
   vols <- matrixToVolumeList(res[,1:3], res[4:ncol(res)], dataset$mask)
   names(vols) <- colnames(res)[4:ncol(res)]
