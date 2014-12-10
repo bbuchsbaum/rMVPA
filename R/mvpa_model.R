@@ -1,6 +1,73 @@
 
 
 
+.noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE)
+.cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE)  
+
+
+#' @export
+invertFolds <- function(foldSplit, len) {
+  index <- relist(1:length(unlist(foldSplit)), foldSplit)
+  allInd <- 1:len
+  index <- lapply(index, function(i) allInd[-i])
+}
+
+
+#' Create an exhaustive searchlight iterator
+#' @param X data matrix
+#' @param Y the labels
+#' @param blockVar variable denoting the cross-validation folds
+#' @export
+MatrixFoldIterator <- function(X, Y, blockVar, trainSets=NULL, testSets=NULL) {
+  
+  if (is.null(trainSets) & is.null(testSets)) {
+    testSets <- split(1:length(blockVar), blockVar)
+    trainSets <- invertFolds(testSets, length(blockVar))
+  }
+  
+  if (is.null(trainSets) && !is.null(testSets)) {
+    stop("must supply both trainSets and testSets")
+  }
+  
+  if (is.null(testSets) && !is.null(trainSets)) {
+    stop("must supply both trainSets and testSets")
+  }
+  
+  if (nrow(X) != length(Y)) {
+    stop("X matrix must have same number of rows as Y variable")
+  }
+  
+  
+  index <- 0
+  
+  .getTrainSets <- function() {
+    trainSets
+  }
+  .getTestSets <- function() {
+    testSets
+  }
+  
+  .getIndex <- function() {
+    index
+  }
+  
+  nextEl <- function() {
+    if (index < length(trainSets)) { 
+      index <<- index + 1
+      list(Xtrain=X[trainSets[[index]], ], Ytrain=Y[trainSets[[index]]], Xtest=X[testSets[[index]],], Ytest=Y[testSets[[index]]])
+
+    } else {
+      stop('StopIteration')
+    }
+  }
+  
+  obj <- list(X=X, Y=Y,nextElem=nextEl, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets)
+  class(obj) <- c("FoldIterator", 'abstractiter', 'iter')
+  obj
+  
+}
+
+
 
 #' create an \code{MVPA} instance
 #' @param trainVec
@@ -18,9 +85,7 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
   
   testSets <- split(1:length(blockVar), blockVar)
   trainSets <- invertFolds(testSets, length(Y))
-  
-  #index <- invertFolds(testSets[-blockIndex], nrow(Xtrain))   
-  
+   
   ret <- list(
     trainVec=trainVec,
     Y=Y,
@@ -33,8 +98,6 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
     testSets=testSets,
     trainSets=trainSets)
    
-    
-  
   class(ret) <- c("MVPADataset", "list")
   ret
 }
@@ -54,16 +117,17 @@ NullResult <- function(vox, model, observed) {
 #' @param predicted
 #' @param probs
 #' @export
-TwoWayClassificationResult <- function(observed, predicted, probs) {
+TwoWayClassificationResult <- function(observed, predicted, probs, predictor=NULL) {
   ret <- list(
               observed=observed,
               predicted=predicted,
-              probs=as.matrix(probs)
+              probs=as.matrix(probs),
+              predictor=predictor
               )
   
   class(ret) <- c("TwoWayClassificationResult", "list")
   ret
-  
+ 
 }
 
 #' create an \code{TwoWayClassification} instance
@@ -72,11 +136,12 @@ TwoWayClassificationResult <- function(observed, predicted, probs) {
 #' @param probs
 
 #' @export
-MultiWayClassificationResult <- function(observed, predicted, probs) {
+MultiWayClassificationResult <- function(observed, predicted, probs, predictor=NULL) {
   ret <- list(
               observed=observed,
               predicted=predicted,
-              probs=as.matrix(probs)
+              probs=as.matrix(probs),
+              predictor=predictor
               )
   
   class(ret) <- c("MultiWayClassificationResult", "list")
@@ -130,20 +195,20 @@ CaretPredictor <- function(fit) {
 }
 
 
-## should be a ListModel rather than ListPredictor
 #' @export
-ListPredictor <- function(fits) {
-  stopifnot(is.list(fits))
-  ret <- fits
-  class(ret) <- c("ListPredictor", "list")
+MVPAVoxelPredictor <- function(predictor, voxelGrid) {
+  ret <- list(predictor=predictor, voxelGrid=voxelGrid)
+  
+  class(ret) <- c("MVPAVoxelPredictor", "list")
   ret
 }
 
+
 #' @export
-MVPAPredictor <- function(predictor, voxelGrid) {
-  ret <- list(predictor=predictor, voxelGrid=voxelGrid)
-  
-  class(ret) <- c("MVPAPredictor", "list")
+ListModel <- function(fits) {
+  stopifnot(is.list(fits))
+  ret <- fits
+  class(ret) <- c("ListModel", "list")
   ret
 }
 
@@ -178,13 +243,13 @@ asPredictor <- function(x, voxelGrid) {
 }
 
 #' @export
-asPredictor.RawModel <- function(x, voxelGrid) {
-  MVPAPredictor(RawPredictor(x$modelFit, x$model), voxelGrid)
+asPredictor.RawModel <- function(x) {
+  RawPredictor(x$modelFit, x$model)
 }
 
 #' @export
 asPredictor.CaretModel <- function(x, voxelGrid, brainSpace) {
-  MVPAPredictor(CaretPredictor(x$modelFit), voxelGrid)
+  CaretPredictor(x$modelFit)
 }
 
 
@@ -201,7 +266,7 @@ evaluateModel.RawModel <- function(x, newdata=NULL) {
 }
 
 #' @export
-evaluateModel.MVPAPredictor <- function(x, newdata) {
+evaluateModel.MVPAVoxelPredictor <- function(x, newdata) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
@@ -236,7 +301,7 @@ evaluateModel.CaretModel <- function(x, newdata=NULL) {
 
 
 #' @export
-evaluateModel.ListPredictor <- function(x, newdata=NULL) {
+evaluateModel.ListModel <- function(x, newdata=NULL) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
@@ -320,16 +385,11 @@ performance.MultiWayClassificationResult <- function(x,...) {
 
 
 
-.noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE)
-.cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE)  
 
 
-#' @export
-invertFolds <- function(foldSplit, len) {
-  index <- relist(1:length(unlist(foldSplit)), foldSplit)
-  allInd <- 1:len
-  index <- lapply(index, function(i) allInd[-i])
-}
+
+
+
 
 #' @export
 fitFinalModel <- function(Xtrain, Ytrain,  method, Xtest=NULL, Ytest=NULL, tuneGrid=NULL, tuneControl=NULL, ...) {  
@@ -367,42 +427,99 @@ trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE,
 }
 
 #' @export
-cvTrainAndTest <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE, ncores=1) {
+cvTrainAndEvalExternal <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE) {
   if (!is.factor(Y)) {
     stop("regression not supported yet") 
   }
   
-  .lapply <- .get_lapply(ncores)
+  results <- if (nrow(tuneGrid) == 1) {
+    model <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast, .noneControl)
+    perf <- evaluateModel(model)
+    list(perf=perf, predictor=asPredictor(model))
+  } else {
+    index <- invertFolds(foldIterator$getTestSets(), nrow(foldIterator$X)) 
+    ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index)
+    model <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast=FALSE, ctrl)
+    perf <- evaluateModel(model)
+    list(perf=perf, predictor=asPredictor(model))              
+  } 
   
-  results <- 
-    .lapply(seq_along(testSets), function(blockIndex) {
-      testIndices <- testSets[[blockIndex]]
-      Xtrain <- X[-testIndices,]
-      Ytrain <- Y[-testIndices]
-      Xtest <- X[testIndices,]
-      Ytest <- Y[testIndices]
-      
-      ret <- if (nrow(tuneGrid) == 1 && fast) {
-        evaluateModel(trainModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, fast, .noneControl))        
-      } else {      
-        if (nrow(tuneGrid) == 1) {
-          evaluateModel(trainModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, fast=FALSE, tuneControl=.noneControl))
-        } else {       
-          index <- invertFolds(testSets[-blockIndex], nrow(Xtrain)) 
-          ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index)
-          evaluateModel(trainModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, fast=FALSE, tuneControl=ctrl))
-        }
-       
+  if (returnPredictor) {
+    list(class=results$class, probs=results$probs, predictor=results$predictor)
+  } else {
+    list(class=results$class, probs=results$probs)
+  }
+}
+
+#' @export
+cvTrainAndEvalInternal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE) {
+  if (!is.factor(Y)) {
+    stop("regression not supported yet") 
+  }
+  
+  results <- foreach::foreach(fold = foldIterator, .verbose=FALSE) %do% {   
+    if (nrow(tuneGrid) == 1 && fast) {
+      model <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl)
+      evaluateModel(model)        
+    } else {      
+      if (nrow(tuneGrid) == 1) {
+        model <- trainModel(model, fold$Xtrain, fold$Y, fold$Xtest, fold$YtestY, tuneGrid, fast=FALSE, tuneControl=.noneControl)
+        evaluateModel(model)
+      } else {
+        index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], nrow(fold$Xtrain)) 
+        ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index)
+        model <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=ctrl)
+        evaluateModel(model)
       }
-      
-    })
+    
+    }
+  }
   
   probMat <- do.call(rbind, lapply(results, "[[", "probs"))
   predClass <- unlist(lapply(results, "[[", "class"))
-  list(class=predClass, probs=probMat)
+  
+  if (returnPredictor) {
+    ctrl <- if (nrow(tuneGrid) == 1) {
+      .noneControl
+    } else {
+      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets())
+    }    
+    
+    model <- trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=FALSE, tuneControl=ctrl)
+    list(class=predClass, probs=probMat, predictor=asPredictor(model))
+  }
 }
   
   
+#   results <- 
+#     .lapply(seq_along(testSets), function(blockIndex) {
+#       testIndices <- testSets[[blockIndex]]
+#       Xtrain <- X[-testIndices,]
+#       Ytrain <- Y[-testIndices]
+#       Xtest <- X[testIndices,]
+#       Ytest <- Y[testIndices]
+#       
+#       ret <- if (nrow(tuneGrid) == 1 && fast) {
+#         evaluateModel(trainModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, fast, .noneControl))        
+#       } else {      
+#         if (nrow(tuneGrid) == 1) {
+#           evaluateModel(trainModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, fast=FALSE, tuneControl=.noneControl))
+#         } else {       
+#           index <- invertFolds(testSets[-blockIndex], nrow(Xtrain)) 
+#           ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index)
+#           evaluateModel(trainModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, fast=FALSE, tuneControl=ctrl))
+#         }
+#        
+#       }
+#       
+#     })
+#   
+#   probMat <- do.call(rbind, lapply(results, "[[", "probs"))
+#   predClass <- unlist(lapply(results, "[[", "class"))
+#   list(class=predClass, probs=probMat)
+# }
+#   
+#   
   
 #' @export
 crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE, finalFit=FALSE, ncores=1, ...) {

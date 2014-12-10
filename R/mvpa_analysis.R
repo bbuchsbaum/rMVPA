@@ -10,22 +10,45 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 }  
 
 
-.runCV <- function(dataset, vox) {
+.runCVEvaluate <- function(dataset, vox, returnPredictor=FALSE) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
+  
   X <- X[,valid.idx]
   vox <- vox[valid.idx,]
+  
+  foldIterator <- MatrixFoldIterator(X, dataset$Y,dataset$blockVar)
   
   if (ncol(X) == 0) {
     stop("no valid columns")
   } else {
     tuneGrid <- if (!is.null(dataset$tuneGrid)) dataset$tuneGrid else dataset$model$grid(X0, dataset$Y, 1)
-    cvres <- cvTrainAndTest(X, dataset$Y, dataset$trainSets, dataset$testSets, dataset$model, tuneGrid, fast=TRUE, ncores=1)
-    result <- classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs)
+    if (is.null(dataset$testVec)) {
+      result <- cvTrainAndEvalInternal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
+      classificationResult(dataset$Y, as.factor(result$class), result$probs,result$predictor)
+    } else {
+      Xtest <- series(dataset$testVec, vox) 
+      result <- cvTrainAndEvalExternal(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
+      classificationResult(dataset$testY, as.factor(result$class), result$probs, result$predictor)
+    }
+  
     perf <- t(performance(result))
     out <- cbind(vox, perf[rep(1, nrow(vox)),])     
+    
+    if (returnPredictor) {
+      attr(out, "predictor") <- result$predictor
+    }
+    
     out
   }
+}
+
+.convertResultsToVolumeList <- function(res, mask) {
+  invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
+  validRes <- do.call(rbind, res[!invalid])
+  vols <- matrixToVolumeList(res[,1:3], res[4:ncol(res)], mask)
+  names(vols) <- colnames(res)[4:ncol(res)]
+  vols
 }
 
 
@@ -34,17 +57,11 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %dopar% {   
     if (nrow(vox) > 1) {
-      .runCV(dataset, vox)
+      .runCVEvaluate(dataset, vox)
     }
   }
   
-  invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
-  validRes <- do.call(rbind, res[!invalid])
-  
-  
-  vols <- matrixToVolumeList(res[,1:3], res[4:ncol(res)], dataset$mask)
-  names(vols) <- colnames(res)[4:ncol(res)]
-  vols
+  .convertResultsToVolumeList(res, dataset$mask)
 }
   
 
@@ -54,16 +71,11 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
-      .runCV(dataset,vox)
+      .runCVEvaluate(dataset,vox)
     }
   }
   
-  invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
-  validRes <- do.call(rbind, res[!invalid])
-  
-  vols <- matrixToVolumeList(validRes[,1:3], validRes[,4:ncol(validRes)], dataset$mask)
-  names(vols) <- colnames(validRes)[4:ncol(validRes)]
-  vols
+  .convertResultsToVolumeList(res, dataset$mask)
   
 }
 
@@ -139,7 +151,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(dataset, regionMask, ncores=1, saveFits=FALSE) {
+mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
   if (length(dataset$blockVar) != length(dataset$Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
   }
