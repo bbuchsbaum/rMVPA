@@ -9,7 +9,10 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   })
 }  
 
-
+.computePerformance <- function(result, vox) {
+  perf <- t(performance(result))
+  out <- cbind(vox, perf[rep(1, nrow(vox)),])   
+}
 .runCVEvaluate <- function(dataset, vox, returnPredictor=FALSE) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
@@ -23,23 +26,24 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
     stop("no valid columns")
   } else {
     tuneGrid <- if (!is.null(dataset$tuneGrid)) dataset$tuneGrid else dataset$model$grid(X0, dataset$Y, 1)
-    if (is.null(dataset$testVec)) {
-      result <- cvTrainAndEvalInternal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
-      classificationResult(dataset$Y, as.factor(result$class), result$probs,result$predictor)
+    
+    result <- if (is.null(dataset$testVec)) {
+      cvres <- cvTrainAndEvalInternal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
+      classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs,cvres$predictor)
     } else {
       Xtest <- series(dataset$testVec, vox) 
-      result <- cvTrainAndEvalExternal(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
-      classificationResult(dataset$testY, as.factor(result$class), result$probs, result$predictor)
+      cvres <- cvTrainAndEvalExternal(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
+      classificationResult(dataset$testY, as.factor(cvres$class), cvres$probs, cvres$predictor)
     }
   
-    perf <- t(performance(result))
-    out <- cbind(vox, perf[rep(1, nrow(vox)),])     
+    #perf <- t(performance(result))
+    #out <- cbind(vox, perf[rep(1, nrow(vox)),])     
     
-    if (returnPredictor) {
-      attr(out, "predictor") <- result$predictor
-    }
+    #if (returnPredictor) {
+    #  attr(out, "predictor") <- result$predictor
+    #}
     
-    out
+    result
   }
 }
 
@@ -57,7 +61,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %dopar% {   
     if (nrow(vox) > 1) {
-      .runCVEvaluate(dataset, vox)
+      .computePerformance(.runCVEvaluate(dataset, vox), vox)
     }
   }
   
@@ -71,7 +75,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
-      .runCVEvaluate(dataset,vox)
+      .computePerformance(.runCVEvaluate(dataset,vox), vox)
     }
   }
   
@@ -173,10 +177,10 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
     idx <- which(regionMask == roinum)
     if (length(idx) > 1) {
       vox <- indexToGrid(regionMask, idx)
-      fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE, ncores=mc.cores)     
-      result <- c(ROINUM=roinum, t(performance(fit))[1,])     
-      predictor <- asPredictor(fit$finalFit, vox)
-      attr(result, "predictor") <- predictor  
+      #fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE, ncores=mc.cores)     
+      #result <- c(ROINUM=roinum, t(performance(fit))[1,])     
+      #predictor <- asPredictor(fit$finalFit, vox)
+      #attr(result, "predictor") <- predictor  
       predmat <- data.frame(ROI=rep(roinum, length(fit$observed)), observed=fit$observed, pred=fit$predicted, correct=fit$observed == fit$predicted, prob=fit$prob)
       attr(result, "predmat") <- predmat
       result    
