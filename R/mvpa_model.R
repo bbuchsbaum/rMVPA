@@ -84,6 +84,7 @@ MultiWayClassificationResult <- function(observed, predicted, probs) {
   
 }
 
+#' @export
 classificationResult <- function(observed, predicted, probs) {
   if (length(levels(as.factor(observed))) == 2) {
     TwoWayClassificationResult(observed,predicted, probs)

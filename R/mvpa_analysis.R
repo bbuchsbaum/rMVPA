@@ -47,14 +47,18 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 .doRandomized <- function(dataset, radius) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .combine=rbind, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
+      print(nrow(vox))
       .runCV(dataset,vox)
     }
   }
-
-  vols <- matrixToVolumeList(res[,1:3], res[,4:ncol(res)], dataset$mask)
-  names(vols) <- colnames(res)[4:ncol(res)]
+  
+  invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
+  validRes <- do.call(rbind, res[!invalid])
+  
+  vols <- matrixToVolumeList(validRes[,1:3], validRes[,4:ncol(validRes)], dataset$mask)
+  names(vols) <- colnames(validRes)[4:ncol(validRes)]
   vols
   
 }
@@ -131,7 +135,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(dataset, regionMask, ncores=1) {
+mvpa_regional <- function(dataset, regionMask, ncores=1, saveFits=FALSE) {
   if (length(dataset$blockVar) != length(dataset$Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
   }
@@ -153,7 +157,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1) {
     idx <- which(regionMask == roinum)
     if (length(idx) > 1) {
       vox <- indexToGrid(regionMask, idx)
-      fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=TRUE, ncores=mc.cores)     
+      fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE, ncores=mc.cores)     
       result <- c(ROINUM=roinum, t(performance(fit))[1,])     
       predictor <- asPredictor(fit$finalFit, vox)
       attr(result, "predictor") <- predictor  
@@ -234,10 +238,10 @@ mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard
   res <- if (method == "standard") {
     .doStandard(dataset, radius, ncores)    
   } else {
-    res <- parallel::mclapply(1:niter, function(i) {
+    res <- lapply(1:niter, function(i) {
       flog.info("Running randomized searchlight iteration %s", i)   
       do.call(cbind, .doRandomized(dataset, radius) )
-    }, mc.cores=ncores)
+    })
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {
       X <- do.call(cbind, lapply(res, function(M) M[,i]))
