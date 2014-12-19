@@ -1,5 +1,15 @@
 
 
+
+colACC <- function(X, Y) {
+  apply(X, 2, function(p) {
+    sum(p == Y)/length(Y)
+  })
+}
+
+
+
+
 #' @export  
 matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   lapply(1:ncol(mat), function(i) {
@@ -13,7 +23,11 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   perf <- t(performance(result))
   out <- cbind(vox, perf[rep(1, nrow(vox)),])   
 }
-.runCVEvaluate <- function(dataset, vox, returnPredictor=FALSE) {
+
+###
+#crossValidateROI <- 
+
+mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
   
@@ -25,24 +39,17 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   if (ncol(X) == 0) {
     stop("no valid columns")
   } else {
-    tuneGrid <- if (!is.null(dataset$tuneGrid)) dataset$tuneGrid else dataset$model$grid(X0, dataset$Y, 1)
+    tuneGrid <- if (!is.null(dataset$tuneGrid)) dataset$tuneGrid else dataset$model$grid(X, dataset$Y, 1)
     
     result <- if (is.null(dataset$testVec)) {
-      cvres <- cvTrainAndEvalInternal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
+      cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
       classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs,cvres$predictor)
     } else {
       Xtest <- series(dataset$testVec, vox) 
-      cvres <- cvTrainAndEvalExternal(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
+      cvres <- crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
       classificationResult(dataset$testY, as.factor(cvres$class), cvres$probs, cvres$predictor)
     }
-  
-    #perf <- t(performance(result))
-    #out <- cbind(vox, perf[rep(1, nrow(vox)),])     
-    
-    #if (returnPredictor) {
-    #  attr(out, "predictor") <- result$predictor
-    #}
-    
+     
     result
   }
 }
@@ -50,8 +57,13 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 .convertResultsToVolumeList <- function(res, mask) {
   invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
   validRes <- do.call(rbind, res[!invalid])
-  vols <- matrixToVolumeList(res[,1:3], res[4:ncol(res)], mask)
-  names(vols) <- colnames(res)[4:ncol(res)]
+  
+  if (nrow(validRes) == 0) {
+    stop("no valid results, all tasks failed")
+  }
+  
+  vols <- matrixToVolumeList(validRes[,1:3], validRes[,4:ncol(validRes)], mask)
+  names(vols) <- colnames(validRes)[4:ncol(validRes)]
   vols
 }
 
@@ -61,7 +73,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %dopar% {   
     if (nrow(vox) > 1) {
-      .computePerformance(.runCVEvaluate(dataset, vox), vox)
+      .computePerformance(mvpa_crossval(dataset, vox), vox)
     }
   }
   
@@ -69,13 +81,13 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 }
   
 
-.doRandomized <- function(dataset, radius) {
+.doRandomized <- function(dataset, radius, returnPredictor=FALSE) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
-      print(nrow(vox))
-      .computePerformance(.runCVEvaluate(dataset,vox), vox)
+       print(nrow(vox))
+      .computePerformance(mvpa_crossval(dataset,vox, returnPredictor), vox)
     }
   }
   
@@ -83,20 +95,74 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   
 }
 
-#.doRegional <- function(regionSet, model) {
-#  res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", model$library)) %dopar% {   
-#    idx <- which(mask == roinum)
-#    if (length(idx) < 2) {
-#      NULL
-#    } else {
-#      vox <- indexToGrid(mask, idx)
-#      fit <- fitMVPAModel(model, bvec, Y, blockVar, vox, fast=TRUE, finalFit=TRUE, tuneGrid=tuneGrid)
-#      result <- c(ROINUM=roinum, t(performance(fit))[1,])    
-#      attr(result, "finalFit") <- fit
-#      result
-#    }
-#  }
+
+
+#runSearchLight <- function(searchIter, blockNum, dataset, model, tuneGrid) {
+#    
 #}
+
+
+.searchEnsembleIteration <- function(dataset, trainInd, testInd, radius, model, tuneGrid) {
+  searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, rad))
+  
+  Ytrain <- dataset$Y[-testInd]
+  blockVar <- dataset$blockVar[-testInd]
+  
+  res <- lapply(searchIter, function(vox) { 
+    if (nrow(vox) > 2) {   
+      X <- series(dataset$trainVec, vox)
+      Xtrain <- X[-testInd,]    
+      foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, blockVar)
+      cvres <- try(crossval_internal(foldIterator, model, tuneGrid, fast=FALSE, ncores=1, returnPredictor=TRUE))
+      
+      if (!inherits(cvres, "try-error")) {    
+        cvres <- classificationResult(Ytrain, cvres$class, cvres$probs, cvres$predictor)
+        attr(cvres, "vox") <- vox
+        attr(cvres, "nvox") <- nrow(vox)
+        param_names <- names(tuneGrid)
+        attr(cvres, "radius") <- radius
+        attr(cvres, "param") <- paste(sapply(1:ncol(tuneGrid), function(i) paste(param_names[i], tuneGrid[,i], sep=":")), collapse="#")
+        cvres
+      }
+      
+      cvres
+    }
+  })
+  
+  res <- res[!sapply(res, function(x) is.null(x) || inherits(x, "try-error"))]
+  res
+
+}
+
+
+
+learners = list(
+  #pls=data.frame(ncomp=1:3),
+  #sda=data.frame(lambda=c(.1, .5, .9), diagonal=c(FALSE,FALSE, FALSE)),
+  #corsim=expand.grid(method=c("pearson", "kendall"), robust=c(TRUE, FALSE)),
+  #corsim=expand.grid(method=c("pearson", "kendall"), robust=c(TRUE, FALSE)),
+  #spls=expand.grid(K=2:4, eta=c(.1,.5,.9), kappa=.5),
+  #ada=expand.grid(iter=200, maxdepth=1:2,nu=.1))
+  #mlpWeightDecay=expand.grid(size = 4, decay=.001),
+  xgboost=expand.grid(nrounds=1:3, max.depth=c(1,2,3), eta=c(.001, .1,.8))
+)
+
+
+#sample_sphere <- function(vox, mask, radius) {
+#  ind <- sample(1:nrow(vox), 1) 
+#}
+
+
+.setupModels <- function(learnerSet) {
+  unlist(lapply(names(learnerSet), function(mname) {
+    model <- loadModel(mname)
+    params <- learnerSet[[mname]]
+    lapply(1:nrow(params), function(i) {
+      list(name=mname, model=model, tuneGrid=params[i,,drop=FALSE])
+    }) 
+  }), recursive=FALSE)
+  
+}
 
 # mvpa_ensemble
 # @param dataset a \code{MVPADataset} instance.
@@ -108,42 +174,124 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 # @import doParallel
 # @import parallel
 # @export
-#mvpa_random_ensemble <- function(dataset, radius=8, ncores=1, models=c("sda_notune", "corsim", "pls", "glmnet")) {
-#  if (length(dataset$blockVar) != length(dataset$Y)) {
-#    stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
-#  }
+mvpa_searchlight_ensemble <- function(dataset, radius=c(14,6), ncores=1, learnerSet = list(pls=data.frame(ncomp=1:4)), pruneFrac=.2, combiner=c("optAUC", "weightedAUC", "glmnet", "spls", "sda")) {
   
-#  searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
-  
-#  for (i in sort(unique(dataset$blockVar))) {
-#     idx <- which(dataset$blockVar != i)
-#   
-#     Ytrain <- dataset$Y[idx]
-#     Ytest <- dataset$Y[-idx]
-#     
-#     ## for each fold need to get cross-validated AUC
-#     ## determine weight on this basis
-#     ## then evaluat eon held out set.
-#     
-#     res <- lapply(searchIter, function(vox) { 
-#       print(nrow(vox))
-#       if (nrow(vox) > 1) {   
-#         X <- series(dataset$trainVec, vox)
-#         Xtrain <- X[idx,]
-#         Xtest <- X[-idx,]
-#         fit <- fitFinalModel(Xtrain, Ytrain,  dataset$model, Xtest=Xtest, Ytest=Ytest, tuneGrid=dataset$tuneGrid)
-#         preds <- evaluateModel(fit)   
-#         #Metrics::auc(Ytest == levels(Ytest)[2], preds$prob[,2]) - .5   
-#         preds$prob[,1]
-#       }    
-#     })
-#   
+  if (length(dataset$blockVar) != length(dataset$Y)) {
+    stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
+  }
   
   
+  ## setup models and tuning parameters from specification
+  models <- .setupModels(learnerSet)
+  
+   
+  summarizeResults <- function(resultList) {
+    data.frame(AUC=do.call(rbind, lapply(resultList, function(x) performance(x)))[,3],
+              nvox=sapply(resultList, function(x) attr(x, "nvox")),
+              model=sapply(resultList, function(x) attr(x, "modelname")),
+              params=sapply(resultList, function(x) attr(x, "param")),
+              radius=sapply(resultList, function(x) attr(x, "radius"))) 
+  }
+  
+  computeVoxelwiseAUC <- function(mask, AUC, radius, voxlist) {
+    auc <- array(0, dim(mask))
+    count <- array(0, dim(mask))
+    for (i in seq_along(AUC)) {
+      vox <- voxlist[[i]]
+      auc[vox] <- auc[vox] + AUC[i]/radius[i]
+      count[vox] <- count[vox] + 1
+    }
+    
+    BrainVolume(auc/count, space(mask))
+  }
   
   
-
   
+  blockIterator <- FoldIterator(dataset$blockVar)
+    
+  allres <- lapply(blockIterator, function(fold) { 
+    resultList <- unlist(lapply(radius, function(rad) {
+      unlist(lapply(models, function(model) {
+        searchResults <- .searchEnsembleIteration(dataset, fold$trainIndex, fold$testIndex, rad,  model$model, model$tuneGrid)     
+        searchResults <- lapply(searchResults, function(sr) { 
+          print(model$name)
+          attr(sr, "modelname") <- model$name 
+          sr
+        })
+      }), recursive=FALSE)
+    }), recursive=FALSE)
+    
+    resultFrame <- summarizeResults(resultList)    
+    perforder <- order(resultFrame$AUC, decreasing=TRUE)
+    #voxlist <- lapply(resultList, function(el) attr(el, "vox"))
+    #AUCvol <- computeVoxelwiseAUC(dataset$mask, resultFrame$AUC, resultFrame$radius, voxlist)
+    
+    #bestVox <- indexToGrid(dataset$mask, order(AUCvol, decreasing=TRUE)[1:25])
+     
+    keep <- if (length(perforder) > 50) {
+      sort(perforder[1:(pruneFrac * length(perforder))])
+    } else {
+      which(resultFrame$AUC > 0)
+    }
+    
+    Ytrain <- dataset$Y[fold$trainIndex]
+    Ytest <- dataset$Y[fold$testIndex] 
+    prunedList <- resultList[keep]
+    predlist <- lapply(prunedList, "[[", "probs")
+    
+    baggedWeights <- if (length(levels(Ytrain)) == 2) {
+      Pred <- do.call(cbind, lapply(predlist, function(x) x[,2]))
+      BaggedTwoClassOptAUC(Pred, ifelse(Ytrain == levels(Ytrain)[2], 1,0))
+    } else {
+      baggedWeights <- BaggedMultiClassOptAUC(predlist, Ytrain)
+    }
+    
+    baggedWeights <- baggedWeights/sum(baggedWeights)
+    
+    posWeights <- which(baggedWeights > 0)
+    baggedWeights <- baggedWeights[posWeights]
+    
+    positiveList <- prunedList[posWeights]
+    
+    predictorList <- if (calibrateProbs) {
+      lapply(positiveList, function(pred) {  
+        CalibratedPredictor(pred$predictor, pred$probs, Ytrain)
+      })
+    } else {
+      lapply(positiveList, "[[", "predictor")
+    }
+    
+    voxlist <- lapply(positiveList, function(el) attr(el, "vox"))
+    
+    ## extract test sets
+    testlist <- lapply(voxlist, function(vox) series(dataset$trainVec,vox)[fold$testIndex,])
+    
+    print(baggedWeights)
+    ## we should now rerun all models on the feature selected subset (top 10%?) based on baggedWeights
+        
+     p <- lapply(seq_along(fitlist), function(j) {
+       pred <- evaluateModel(predictorList[[j]], testlist[[j]])$probs
+       if (any(is.na(pred))) {
+         NULL
+       } else {
+         #baggedWeights[j] * pred
+         pred
+       }
+     })
+    
+    p <- p[!sapply(p, function(x) is.null(x))]
+    pfinal <- Reduce("+", p)
+    
+    #weightVol <- BrainVolume(array(0, dim(dataset$mask)), space(mask))
+    #for (i in 1:length(voxlist)) {
+    #  vox <- voxlist[[i]]
+    #  weightVol[vox] <- weightVol[vox] + (baggedWeights[i] * 1/log(nrow(vox)))
+    #}
+    weightVol <- (weightVol - min(weightVol))/(max(weightVol)-min(weightVol))
+    pfinal
+  
+  })
+}
 
 #' mvpa_regional
 #' @param dataset a \code{MVPADataset} instance.

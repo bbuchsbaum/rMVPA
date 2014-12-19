@@ -3,21 +3,14 @@
 \alias{MultiWayClassificationResult}
 \title{create an \code{TwoWayClassification} instance}
 \usage{
-MultiWayClassificationResult(vox, model, observed, predicted, probs,
-  finalFit = NULL)
+MultiWayClassificationResult(observed, predicted, probs, predictor = NULL)
 }
 \arguments{
-\item{vox}{}
-
-\item{model}{}
-
 \item{observed}{}
 
 \item{predicted}{}
 
 \item{probs}{}
-
-\item{finalFit}{}
 }
 \description{
 create an \code{TwoWayClassification} instance
