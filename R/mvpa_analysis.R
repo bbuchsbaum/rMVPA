@@ -325,6 +325,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
     idx <- which(regionMask == roinum)
     if (length(idx) > 1) {
       vox <- indexToGrid(regionMask, idx)
+      fit <- mvpa_crossval(dataset, vox, returnPredictor=savePredictors)
       #fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE, ncores=mc.cores)     
       #result <- c(ROINUM=roinum, t(performance(fit))[1,])     
       #predictor <- asPredictor(fit$finalFit, vox)
