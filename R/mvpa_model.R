@@ -1,11 +1,8 @@
 
 
 
-.noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE)
-.cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE)  
-
-
-
+.noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")
+.cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
 
 
 
@@ -145,6 +142,7 @@ MVPAVoxelPredictor <- function(predictor, voxelGrid) {
   ret
 }
 
+#' @export
 CalibratedPredictor <- function(predictor, calibrationX, calibrationY) {
   fits <- lapply(1:length(levels(calibrationY)), function(i) {
     print(i)
@@ -161,10 +159,10 @@ CalibratedPredictor <- function(predictor, calibrationX, calibrationY) {
 
 
 #' @export
-ListModel <- function(fits) {
+ListPredictor <- function(fits) {
   stopifnot(is.list(fits))
   ret <- fits
-  class(ret) <- c("ListModel", "list")
+  class(ret) <- c("ListPredictor", "list")
   ret
 }
 
@@ -285,7 +283,7 @@ evaluateModel.CaretModel <- function(x, newdata=NULL) {
 
 
 #' @export
-evaluateModel.ListModel <- function(x, newdata=NULL) {
+evaluateModel.ListPredictor <- function(x, newdata=NULL) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
@@ -294,11 +292,7 @@ evaluateModel.ListModel <- function(x, newdata=NULL) {
     evaluateModel(fit, newdata)$probs
   })
   
-  prob <- Reduce("+", res)/length(res)
-  winner <- apply(prob, 1, which.max)
-  class <- colnames(prob)[winner]
-  
-  list(class=class, probs=prob)
+  list(probs=res)
 }
 
 #' @export
@@ -370,7 +364,7 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
     list(perf=perf, predictor=asPredictor(fit))
   } else {
     index <- invertFolds(foldIterator$getTestSets(), nrow(foldIterator$X)) 
-    ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index)
+    ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
     fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast=FALSE, ctrl)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))              
@@ -396,7 +390,7 @@ crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1
         evaluateModel(fit)
       } else {
         index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], nrow(fold$Xtrain)) 
-        ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index)
+        ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResample="none")
         fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=ctrl)
         evaluateModel(fit)
       }

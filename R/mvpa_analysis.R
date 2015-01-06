@@ -103,7 +103,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE) {
 
 
 .searchEnsembleIteration <- function(dataset, trainInd, testInd, radius, model, tuneGrid) {
-  searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, rad))
+  searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
   Ytrain <- dataset$Y[-testInd]
   blockVar <- dataset$blockVar[-testInd]
@@ -113,7 +113,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE) {
       X <- series(dataset$trainVec, vox)
       Xtrain <- X[-testInd,]    
       foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, blockVar)
-      cvres <- try(crossval_internal(foldIterator, model, tuneGrid, fast=FALSE, ncores=1, returnPredictor=TRUE))
+      cvres <- try(crossval_internal(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=TRUE))
       
       if (!inherits(cvres, "try-error")) {    
         cvres <- classificationResult(Ytrain, cvres$class, cvres$probs, cvres$predictor)
@@ -161,10 +161,106 @@ learners = list(
       list(name=mname, model=model, tuneGrid=params[i,,drop=FALSE])
     }) 
   }), recursive=FALSE)
+}
+
+
+.summarizeResults <- function(resultList) {
+  data.frame(AUC=do.call(rbind, lapply(resultList, function(x) performance(x)))[,3],
+             nvox=sapply(resultList, function(x) attr(x, "nvox")),
+             model=sapply(resultList, function(x) attr(x, "modelname")),
+             params=sapply(resultList, function(x) attr(x, "param")),
+             radius=sapply(resultList, function(x) attr(x, "radius"))) 
+}
+
+metaCombine <- <- function(dataset, resultList, trainIndex, blockNum, pruneFrac=1, metaLearner="spls", tuneGrid=expand.grid(K=c(1,2,3,4,5), eta=c(.2, .7, .9), kappa=.5)) {
+  
+  Ytrain <- dataset$Y[fold$trainIndex]
+  #Ytest <- dataset$Y[fold$testIndex] 
+  
+  resultFrame <- .summarizeResults(resultList)
+  aucorder <- order(resultFrame$AUC, decreasing=TRUE)
+  nkeep <- pruneFrac * length(aucorder)
+  keep <- sort(aucorder[1:nkeep])
+
+  predmat <- do.call(cbind, lapply(resultList[keep], "[[", "probs"))
+  
+  foldIterator <- MatrixFoldIterator(predmat, Ytrain, dataset$blockVar[dataset$blockVar != blockNum])
+   
+  tuneControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets(), indexOut=foldIterator$getTestSets()) 
+  #modelFit <- trainModel(loadModel("spls"), predmat, Ytrain,  NULL, NULL, tuneGrid=expand.grid(K=c(1,2,3,4,5), eta=c(.2, .7, .9), kappa=.5), fast=FALSE, tuneControl)
+  modelFit <- trainModel(loadModel("gbm"), predmat, Ytrain,  NULL, NULL, tuneGrid=expand.grid(interaction.depth=c(1), n.trees=c(100), shrinkage=c(.01)), fast=FALSE, tuneControl)
+  modelFit <- trainModel(loadModel("rf"), predmat, Ytrain,  NULL, NULL, tuneGrid=expand.grid(ncomp=1:5), fast=FALSE, tuneControl)
+  
+  ensemblePredictor <- ListPredictor(lapply(resultList[keep], function(res) MVPAVoxelPredictor(res$predictor, attr(res, "vox"))))
+  
+  voxlist <- lapply(resultList[keep], function(el) attr(el, "vox"))
+  testlist <- lapply(voxlist, function(vox) series(dataset$trainVec,vox)[fold$testIndex,])
+  
+  allpreds <- do.call(cbind, lapply(seq_along(resultList[keep]), function(j) {
+    evaluateModel(resultList[keep][[j]]$predictor, testlist[[j]])$probs  
+  }))
+  
+  pfinal <- evaluateModel(modelFit, as.matrix(allpreds))
+  list(predictor=CaretPredictor(modelFit), 
+  
+}
+greedyCombine <- function(dataset, resultList, trainIndex, testIndex, calibrateProbs=FALSE, pruneFrac=1) {
+  resultFrame <- summarizeResults(resultList)    
+  perforder <- order(resultFrame$AUC, decreasing=TRUE)
+  
+  keep <- if (pruneFrac < 1) {
+    sort(perforder[1:(pruneFrac * length(perforder))])
+  } else {
+    1:length(resultList)
+  }
+  
+  Ytrain <- dataset$Y[trainIndex]
+  Ytest <- dataset$Y[testIndex] 
+  
+  prunedList <- resultList[keep]
+  predlist <- lapply(prunedList, "[[", "probs")
+  
+  baggedWeights <- if (length(levels(Ytrain)) == 2) {
+    Pred <- do.call(cbind, lapply(predlist, function(x) x[,2]))
+    BaggedTwoClassOptAUC(Pred, ifelse(Ytrain == levels(Ytrain)[2], 1,0))
+  } else {
+    baggedWeights <- BaggedMultiClassOptAUC(predlist, Ytrain)
+  }
+  
+  baggedWeights <- baggedWeights/sum(baggedWeights)
+  posWeights <- which(baggedWeights > 0)
+  baggedWeights <- baggedWeights[posWeights]
+   
+  positiveList <- prunedList[posWeights]
+  
+  predictorList <- if (calibrateProbs) {
+    lapply(positiveList, function(pred) {  
+      CalibratedPredictor(pred$predictor, pred$probs, Ytrain)
+    })
+  } else {
+    lapply(positiveList, "[[", "predictor")
+  }
+  
+  voxlist <- lapply(positiveList, function(el) attr(el, "vox"))
+  testlist <- lapply(voxlist, function(vox) series(dataset$trainVec,vox)[fold$testIndex,])
+  
+  p <- lapply(seq_along(predictorList), function(j) {
+    pred <- evaluateModel(predictorList[[j]], testlist[[j]])$probs
+    if (any(is.na(pred))) {
+      NULL
+    } else {
+      pred * baggedWeights[j]
+      #pred
+    }
+  })
+  
+  p <- p[!sapply(p, function(x) is.null(x))]
+  pfinal <- Reduce("+", p)
+  
   
 }
 
-# mvpa_ensemble
+# mvpa_searchlight_ensemble
 # @param dataset a \code{MVPADataset} instance.
 # @param regionMask a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
 # @param ncores the number of cores for parallel processign (default is 1)
@@ -173,8 +269,8 @@ learners = list(
 # @import foreach
 # @import doParallel
 # @import parallel
-# @export
-mvpa_searchlight_ensemble <- function(dataset, radius=c(14,6), ncores=1, learnerSet = list(pls=data.frame(ncomp=1:4)), pruneFrac=.2, combiner=c("optAUC", "weightedAUC", "glmnet", "spls", "sda")) {
+#' @export
+mvpa_searchlight_ensemble <- function(dataset, radius=c(14,10, 6), ncores=1, learnerSet = list(pls=data.frame(ncomp=1:4)), pruneFrac=.2, combiner=c("optAUC")) {
   
   if (length(dataset$blockVar) != length(dataset$Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
@@ -185,13 +281,7 @@ mvpa_searchlight_ensemble <- function(dataset, radius=c(14,6), ncores=1, learner
   models <- .setupModels(learnerSet)
   
    
-  summarizeResults <- function(resultList) {
-    data.frame(AUC=do.call(rbind, lapply(resultList, function(x) performance(x)))[,3],
-              nvox=sapply(resultList, function(x) attr(x, "nvox")),
-              model=sapply(resultList, function(x) attr(x, "modelname")),
-              params=sapply(resultList, function(x) attr(x, "param")),
-              radius=sapply(resultList, function(x) attr(x, "radius"))) 
-  }
+  
   
   computeVoxelwiseAUC <- function(mask, AUC, radius, voxlist) {
     auc <- array(0, dim(mask))
@@ -243,11 +333,12 @@ mvpa_searchlight_ensemble <- function(dataset, radius=c(14,6), ncores=1, learner
       Pred <- do.call(cbind, lapply(predlist, function(x) x[,2]))
       BaggedTwoClassOptAUC(Pred, ifelse(Ytrain == levels(Ytrain)[2], 1,0))
     } else {
-      baggedWeights <- BaggedMultiClassOptAUC(predlist, Ytrain)
+      #greedMultiClassOptAUC(predlist, Ytrain)
+      BaggedMultiClassOptAUC(predlist, Ytrain)
     }
-    
     baggedWeights <- baggedWeights/sum(baggedWeights)
     
+     
     posWeights <- which(baggedWeights > 0)
     baggedWeights <- baggedWeights[posWeights]
     
@@ -269,13 +360,13 @@ mvpa_searchlight_ensemble <- function(dataset, radius=c(14,6), ncores=1, learner
     print(baggedWeights)
     ## we should now rerun all models on the feature selected subset (top 10%?) based on baggedWeights
         
-     p <- lapply(seq_along(fitlist), function(j) {
+     p <- lapply(seq_along(predictorList), function(j) {
        pred <- evaluateModel(predictorList[[j]], testlist[[j]])$probs
        if (any(is.na(pred))) {
          NULL
        } else {
-         #baggedWeights[j] * pred
-         pred
+         pred * baggedWeights[j]
+         #pred
        }
      })
     

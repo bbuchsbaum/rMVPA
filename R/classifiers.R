@@ -114,6 +114,25 @@ MVPAModels$gpca_lda <- list(type = "Classification",
                               pcx <- sweep(newdata, 2, attr(modelFit, "centroid")) %*% attr(modelFit, "pcfit")$V
                               predict(modelFit, pcx)$posterior
                             })
+MVPAModels$wsrf <- list(type = "Classification", 
+                             library = "wsrf", 
+                             label="wsrf",
+                             loop = NULL, 
+                             parameters=data.frame(parameters=c("mtry"), class=c("numeric"), labels=c("number of variables at each split")),
+                             grid=function(x, y, len = NULL) {
+                               data.frame(mtry=8)
+                             },
+                             fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+                               form <- as.formula(paste(y, "~ ."))
+                               model.wsrf.1 <- wsrf(form, data=as.data.frame(x))
+                             }
+                             predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                               predict(modelFit, as.matrix(newdata), type="response")
+                             },
+                             prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                               predict(modelFit, as.matrix(newdata), type="prob")
+                             })
+
 
 MVPAModels$liblinear <- list(type = "Classification", 
                              library = "LiblineaR", 
@@ -253,3 +272,52 @@ MVPAModels$lda_thomaz <- list(type = "Classification",
                                 probs <- exp(scores - mc)
                                 zapsmall(probs/rowSums(probs))
                               })
+
+
+MVPAModels$pls_rf <- list(label = "PLS-RF",
+                                    library = c("pls", "randomForest"),
+                                    type = "Regression",
+                                    ## Tune over both parameters at the same time
+                                    parameters = data.frame(parameter = c('ncomp', 'mtry'),
+                                                            class = c("numeric", 'numeric'),
+                                                            label = c('#Components',
+                                                                      '#Randomly Selected Predictors')),
+                                    grid = function(x, y, len = NULL) {
+                                      grid <- expand.grid(ncomp = seq(1, min(ncol(x) - 1, len), by = 1),
+                                                          mtry = 1:len)
+                                      ## We can't have mtry > ncomp
+                                      grid <- subset(grid, mtry <= ncomp)
+                                    },
+                                    loop = NULL,
+                                    fit = function(x, y, wts, param, lev, last, classProbs, ...) {
+                                      ## First fit the pls model, generate the training set scores,
+                                      ## then attach what is needed to the random forest object to 
+                                      ## be used later
+                                      
+                                      ## plsr only has a formula interface so create one data frame
+                                      dat <- if(!is.data.frame(x)) x <- as.data.frame(x)
+                                      dat$y <- y
+                                      pre <- plsr(y~ ., data = dat, ncomp = param$ncomp)
+                                      scores <- predict(pre, x, type = "scores")
+                                      colnames(scores) <- paste("score", 1:param$ncomp, sep = "")
+                                      mod <- randomForest(scores, y, mtry = param$mtry, ...)
+                                      mod$projection <- pre$projection
+                                      mod
+                                    },
+                                    predict = function(modelFit, newdata, submodels = NULL) {
+                                      ## Now apply the same scaling to the new samples
+                                      scores <- as.matrix(newdata)  %*% modelFit$projection
+                                      colnames(scores) <- paste("score", 1:ncol(scores), sep = "")
+                                      scores <- as.data.frame(scores)
+                                      ## Predict the random forest model
+                                      predict(modelFit, scores)
+                                    },
+                                    prob = NULL,
+                                    varImp = NULL,
+                                    predictors = function(x, ...) rownames(x$projection),
+                                    levels = function(x) x$obsLevels,
+                                    sort = function(x) x[order(x[,1]),])
+
+
+
+

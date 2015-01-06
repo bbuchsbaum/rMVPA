@@ -96,7 +96,7 @@ greedyMultiClassOptim <- function(PredList, Y, iter = 100L, metric="AUC", oneByO
       weights[best] <- weights[best] + 1L
       pred          <- pred[[best]] * sum.weights
       maxtest       <- max(errors)
-      print(paste("iter:", sum.weights, "best:", maxtest))  
+      print(paste("iter:", sum.weights, "top:", best, "best:", maxtest))  
     }
   
     if(stopper > maxtest){
@@ -147,7 +147,7 @@ greedMultiClassOptAUC <- function(PredList, Y, iter = 100L, bagIter=20, bagFrac=
     weights[best] <- weights[best] + 1L
     pred          <- pred[[best]] * sum.weights
     maxtest       <- max(errors)
-    print(paste("iter:", sum.weights, "best:", maxtest))
+    print(paste("iter:", sum.weights, "top:", best, "best:", maxtest))  
     
   }
   
@@ -163,10 +163,10 @@ greedMultiClassOptAUC <- function(PredList, Y, iter = 100L, bagIter=20, bagFrac=
 
 
 #' @export
-BaggedMultiClassOptAUC <- function(PredList, Y, iter = 100L, bagIter=20, bagFrac=.5) {
+BaggedMultiClassOptAUC <- function(PredList, Y, iter = 15, bagIter=20, bagFrac=.5) {
   wtlist <- lapply(1:bagIter, function(i) {
     sam <- sort(sample(seq_along(PredList), bagFrac * length(PredList))) 
-    wts <- greedMultiClassOptAUC(PredList[sam], Y, iter=40)
+    wts <- greedMultiClassOptAUC(PredList[sam], Y, iter=15)
     ret <- numeric(length(PredList))
     ret[sam] <- wts
     ret
