@@ -172,7 +172,7 @@ learners = list(
              radius=sapply(resultList, function(x) attr(x, "radius"))) 
 }
 
-metaCombine <- <- function(dataset, resultList, trainIndex, blockNum, pruneFrac=1, metaLearner="spls", tuneGrid=expand.grid(K=c(1,2,3,4,5), eta=c(.2, .7, .9), kappa=.5)) {
+metaCombine <- function(dataset, resultList, trainIndex, blockNum, pruneFrac=1, metaLearner="spls", tuneGrid=expand.grid(K=c(1,2,3,4,5), eta=c(.2, .7, .9), kappa=.5)) {
   
   Ytrain <- dataset$Y[fold$trainIndex]
   #Ytest <- dataset$Y[fold$testIndex] 
@@ -201,9 +201,10 @@ metaCombine <- <- function(dataset, resultList, trainIndex, blockNum, pruneFrac=
   }))
   
   pfinal <- evaluateModel(modelFit, as.matrix(allpreds))
-  list(predictor=CaretPredictor(modelFit), 
+  #list(predictor=CaretPredictor(modelFit), 
   
 }
+
 greedyCombine <- function(dataset, resultList, trainIndex, testIndex, calibrateProbs=FALSE, pruneFrac=1) {
   resultFrame <- summarizeResults(resultList)    
   perforder <- order(resultFrame$AUC, decreasing=TRUE)
@@ -404,11 +405,11 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
   
   regionSet <- sort(as.integer(unique(regionMask[regionMask > 0])))
   
-  if (ncores > 1 && length(regionSet) == 1) {
-    mc.cores <- ncores
-  } else {
-    mc.cores <- 1
-  }
+  #if (ncores > 1 && length(regionSet) == 1) {
+  #  mc.cores <- ncores
+  #} else {
+  #  mc.cores <- 1
+  #}
   
   #allowParallel <- if (length(regionSet) == 1) TRUE else FALSE
   
@@ -416,14 +417,16 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
     idx <- which(regionMask == roinum)
     if (length(idx) > 1) {
       vox <- indexToGrid(regionMask, idx)
-      fit <- mvpa_crossval(dataset, vox, returnPredictor=savePredictors)
+      result <- mvpa_crossval(dataset, vox, returnPredictor=savePredictors)
       #fit <- fitMVPAModel(dataset, vox, fast=TRUE, finalFit=FALSE, ncores=mc.cores)     
-      #result <- c(ROINUM=roinum, t(performance(fit))[1,])     
-      #predictor <- asPredictor(fit$finalFit, vox)
-      #attr(result, "predictor") <- predictor  
-      predmat <- data.frame(ROI=rep(roinum, length(fit$observed)), observed=fit$observed, pred=fit$predicted, correct=fit$observed == fit$predicted, prob=fit$prob)
-      attr(result, "predmat") <- predmat
-      result    
+      perf <- c(ROINUM=roinum, t(performance(result))[1,])     
+      predmat <- data.frame(ROI=rep(roinum, length(result$observed)), observed=result$observed, pred=result$predicted, correct=result$observed == result$predicted, prob=result$prob)
+      
+      perf <- structure(perf,
+                predictor=result$predictor,
+                predmat=predmat)
+      
+      perf    
     }
   }
   

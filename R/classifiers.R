@@ -125,7 +125,7 @@ MVPAModels$wsrf <- list(type = "Classification",
                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
                                form <- as.formula(paste(y, "~ ."))
                                model.wsrf.1 <- wsrf(form, data=as.data.frame(x))
-                             }
+                             },
                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                                predict(modelFit, as.matrix(newdata), type="response")
                              },

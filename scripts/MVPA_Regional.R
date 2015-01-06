@@ -35,12 +35,11 @@ flog.info("command line args are ", args, capture=TRUE)
 config <- initializeConfiguration(args)
 
 config <- initializeStandardParameters(config, args, "mvpa_regional")
+config <- initializeTuneGrid(args, config)
 
 configParams <- as.list(config)
 
 
-
-config <- initializeTuneGrid(args, config)
 config <- initializeDesign(config)
 
 rowIndices <- which(config$train_subset)

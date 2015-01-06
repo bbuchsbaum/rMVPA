@@ -82,6 +82,14 @@ initializeData <- function(config) {
 
 #' @export
 initializeDesign <- function(config) {
+  if (is.character(config$train_subset)) {
+    config$train_subset <- eval(parse(text=config$train_subset))
+  }
+  
+  if (is.character(config$test_subset)) {
+    config$test_subset <- eval(parse(text=config$test_subset))
+  }
+  
   config$full_train_design <- read.table(config$train_design, header=TRUE, comment.char=";")
   config$train_subset <- loadSubset(config$full_train_design, config$train_subset)
   config$train_design <- config$full_train_design[config$train_subset,]
@@ -112,6 +120,14 @@ initializeTuneGrid <- function(args, config) {
     }
     flog.info("tuning grid is", params, capture=TRUE)
     config$tune_grid <- params
+  } else if (!is.data.frame(config$tune_grid)) {
+    params <- try(lapply(config$tune_grid, function(x) eval(parse(text=x))))
+    if (inherits(params, "try-error")) {
+      stop("could not parse tune_grid expresson: ", config$tune_grid)
+    }
+    
+    config$tune_grid <- expand.grid(params)
+    flog.info("tuning grid is", params, capture=TRUE)
   }
   
   config
@@ -201,6 +217,9 @@ loadLabels <- function(full_design, config) {
 
 #' @export
 loadSubset <- function(full_design, subset) {
+  if (is.character(subset)) {
+    subset <- eval(parse(text=subset))
+  }
   
   keep <- if(is.null(subset)) rep(TRUE, nrow(full_design)) else {
     subexpr <- subset[[2]]

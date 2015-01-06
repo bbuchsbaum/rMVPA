@@ -312,13 +312,6 @@ evaluateModelList <- function(modelList, newdata=NULL) {
   list(class=predClass, probs=probMat)
 }
 
-
-
-
-
-
-
-
 #' @export
 fitFinalModel <- function(Xtrain, Ytrain,  method, Xtest=NULL, Ytest=NULL, tuneGrid=NULL, tuneControl=NULL, ...) {  
  
@@ -356,6 +349,7 @@ trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE,
 }
 
 #' @export
+#' @import foreach
 crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE) {
  
   results <- if (nrow(tuneGrid) == 1) {
@@ -378,9 +372,10 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
 }
 
 #' @export
+#' @import foreach
 crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE) {
  
-  results <- foreach::foreach(fold = foldIterator, .verbose=FALSE) %do% {   
+  results <- foreach::foreach(fold = foldIterator, .verbose=FALSE) %dopar% {   
     if (nrow(tuneGrid) == 1 && fast) {
       fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl)
       evaluateModel(fit)        
@@ -390,7 +385,7 @@ crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1
         evaluateModel(fit)
       } else {
         index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], nrow(fold$Xtrain)) 
-        ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResample="none")
+        ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
         fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=ctrl)
         evaluateModel(fit)
       }
