@@ -393,14 +393,16 @@ crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1
     }
   }
   
-  probMat <- do.call(rbind, lapply(results, "[[", "probs"))
-  predClass <- unlist(lapply(results, "[[", "class"))
+  ## reorder predictions to match order of input features/labels
+  ord <- foldIterator$getTestOrder()
+  probMat <- do.call(rbind, lapply(results, "[[", "probs"))[ord,]
+  predClass <- unlist(lapply(results, "[[", "class"))[ord,]
   
   if (returnPredictor) {
     ctrl <- if (nrow(tuneGrid) == 1) {
       .noneControl
     } else {
-      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets())
+      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets(), returnData=FALSE, returnResamp="none")
     }    
     
     fit <- trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=FALSE, tuneControl=ctrl)
@@ -442,51 +444,51 @@ crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1
 #   
   
 #' @export
-crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE, finalFit=FALSE, ncores=1, ...) {
- 
-  if (!is.factor(Y)) {
-    stop("regression not supported yet") 
-  }
-   
-  .lapply <- .get_lapply(ncores)
-  
-  blockFits <- 
-    .lapply(seq_along(testSets), function(blockIndex) {
-      testIndices <- testSets[[blockIndex]]
-      Xtrain <- X[-testIndices,]
-      
-      ret <- if (nrow(tuneGrid) == 1 && fast) {
-        RawModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid)        
-      } else { 
-          
-        if (nrow(tuneGrid) == 1) {
-          CaretModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, .noneControl)
-        } else {
-  
-          index <- invertFolds(testSets[-blockIndex], nrow(Xtrain)) 
-          ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index)
-          CaretModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, ctrl)
-        }
-        
-      }
-    })
-  
-  
-  final <- if (finalFit) {
-    ## fit final model to whole data set
-    ctrl <- if (nrow(tuneGrid) == 1) {
-      .noneControl
-    } else {
-      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=trainSets)
-    }    
-    
-    CaretModel(model, X, Y, NULL, NULL, tuneGrid, ctrl)
-  } 
-  
-  result <- evaluateModelList(blockFits)
-  list(class=result$class, prob=result$prob, observed=Y, blockFits=blockFits, finalFit=ListPredictor(blockFits))
-   
-}
+# crossValidate <- function(X, Y, trainSets, testSets, model, tuneGrid, fast=TRUE, finalFit=FALSE, ncores=1, ...) {
+#  
+#   if (!is.factor(Y)) {
+#     stop("regression not supported yet") 
+#   }
+#    
+#   .lapply <- .get_lapply(ncores)
+#   
+#   blockFits <- 
+#     .lapply(seq_along(testSets), function(blockIndex) {
+#       testIndices <- testSets[[blockIndex]]
+#       Xtrain <- X[-testIndices,]
+#       
+#       ret <- if (nrow(tuneGrid) == 1 && fast) {
+#         RawModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid)        
+#       } else { 
+#           
+#         if (nrow(tuneGrid) == 1) {
+#           CaretModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, .noneControl)
+#         } else {
+#   
+#           index <- invertFolds(testSets[-blockIndex], nrow(Xtrain)) 
+#           ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index)
+#           CaretModel(model, Xtrain, Y[-testIndices], X[testIndices,], Y[testIndices], tuneGrid, ctrl)
+#         }
+#         
+#       }
+#     })
+#   
+#   
+#   final <- if (finalFit) {
+#     ## fit final model to whole data set
+#     ctrl <- if (nrow(tuneGrid) == 1) {
+#       .noneControl
+#     } else {
+#       caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=trainSets)
+#     }    
+#     
+#     CaretModel(model, X, Y, NULL, NULL, tuneGrid, ctrl)
+#   } 
+#   
+#   result <- evaluateModelList(blockFits)
+#   list(class=result$class, prob=result$prob, observed=Y, blockFits=blockFits, finalFit=ListPredictor(blockFits))
+#    
+# }
 
 #' @export
 zeroVarianceColumns <- function(M) {
