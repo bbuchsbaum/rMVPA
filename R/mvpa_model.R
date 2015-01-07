@@ -396,7 +396,7 @@ crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1
   ## reorder predictions to match order of input features/labels
   ord <- foldIterator$getTestOrder()
   probMat <- do.call(rbind, lapply(results, "[[", "probs"))[ord,]
-  predClass <- unlist(lapply(results, "[[", "class"))[ord,]
+  predClass <- unlist(lapply(results, "[[", "class"))[ord]
   
   if (returnPredictor) {
     ctrl <- if (nrow(tuneGrid) == 1) {
