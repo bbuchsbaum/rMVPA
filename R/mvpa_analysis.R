@@ -434,8 +434,10 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
   validRes <- res[!invalid]
   
   if (length(validRes) == 0) {
+    print(res)
     flog.error("Classification failed for all of %s ROIs", length(regionSet))
-    flog.error(attr(res[[1]], "condition"))
+    
+    
     stop("error in mvpa_regional: aborting")
   } 
   

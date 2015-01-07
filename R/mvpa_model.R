@@ -100,7 +100,9 @@ classificationResult <- function(observed, predicted, probs, predictor=NULL) {
 #' @export
 RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid) {
  
-  fit <- model$fit(Xtrain, Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE) 
+  fit <- model$fit(Xtrain, Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE)
+  
+  
 
   
   ret <- list(
@@ -111,6 +113,7 @@ RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid) {
               Ytest=Ytest,
               tuneGrid=tuneGrid,
               modelFit=fit)
+              
   
   class(ret) <- c("RawModel", "list")
   ret
