@@ -76,6 +76,7 @@ MatrixFoldIterator <- function(X, Y, blockVar, trainSets=NULL, testSets=NULL) {
   
   
   index <- 0
+  ord <- NULL
   
   .getTrainSets <- function() {
     trainSets
@@ -92,6 +93,12 @@ MatrixFoldIterator <- function(X, Y, blockVar, trainSets=NULL, testSets=NULL) {
     index <<- 0
   }
   
+  .getTestOrder <- function() {
+    if (is.null(ord))
+      ord <<- order(unlist(testSets))
+    ord
+  }
+  
   nextEl <- function() {
     if (index < length(trainSets)) { 
       index <<- index + 1
@@ -102,7 +109,7 @@ MatrixFoldIterator <- function(X, Y, blockVar, trainSets=NULL, testSets=NULL) {
     }
   }
   
-  obj <- list(X=X, Y=Y,nextElem=nextEl, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets, reset=.reset)
+  obj <- list(X=X, Y=Y,nextElem=nextEl, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset)
   class(obj) <- c("MatrixFoldIterator", 'abstractiter', 'iter')
   obj
   
