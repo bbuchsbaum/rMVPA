@@ -21,7 +21,7 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
   model <- loadModel(modelName)
   
   testSets <- split(1:length(blockVar), blockVar)
-  trainSets <- invertFolds(testSets, length(Y))
+  trainSets <- invertFolds(testSets, length(blockVar))
    
   ret <- list(
     trainVec=trainVec,
@@ -360,7 +360,7 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))
   } else {
-    index <- invertFolds(foldIterator$getTestSets(), nrow(foldIterator$X)) 
+    index <- invertFolds(foldIterator$getTestSets(), length(foldIterator$blockVar)) 
     ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
     fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast=FALSE, ctrl)
     perf <- evaluateModel(fit)

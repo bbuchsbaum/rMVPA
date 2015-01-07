@@ -1,8 +1,12 @@
 #' @export
 invertFolds <- function(foldSplit, len) {
-  index <- relist(1:length(unlist(foldSplit)), foldSplit)
-  allInd <- 1:len
-  index <- lapply(index, function(i) allInd[-i])
+  #index <- relist(1:length(unlist(foldSplit)), foldSplit)
+  #
+  #index <- lapply(index, function(i) allInd[-i])
+  allInd <- seq(1, len)
+  lapply(foldSplit, function(split) {
+    allInd[-split]
+  })
 }
 
 #' Create an iterator froma block variable for iterating through the folds during cross-validation
@@ -15,7 +19,7 @@ FoldIterator <- function(blockVar) {
    
    testSets <- split(1:length(blockVar), blockVar)
    
-   trainSets <- invertFolds(testSets, length(blockVar))
+   trainSets <- invertFolds(testSets, blockVar)
   
   .getTrainSets <- function() {
     trainSets
@@ -43,7 +47,7 @@ FoldIterator <- function(blockVar) {
     }
   }
   
-  obj <- list(nextElem=nextEl, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets, reset=.reset)
+  obj <- list(nextElem=nextEl, blockVar=blockVar, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets, reset=.reset)
   class(obj) <- c("FoldIterator", 'abstractiter', 'iter')
   obj
   
@@ -59,7 +63,7 @@ MatrixFoldIterator <- function(X, Y, blockVar, trainSets=NULL, testSets=NULL) {
   
   if (is.null(trainSets) & is.null(testSets)) {
     testSets <- split(1:length(blockVar), blockVar)
-    trainSets <- invertFolds(testSets, length(blockVar))
+    trainSets <- invertFolds(testSets, blockVar)
   }
   
   if (is.null(trainSets) && !is.null(testSets)) {
@@ -109,7 +113,7 @@ MatrixFoldIterator <- function(X, Y, blockVar, trainSets=NULL, testSets=NULL) {
     }
   }
   
-  obj <- list(X=X, Y=Y,nextElem=nextEl, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset)
+  obj <- list(X=X, Y=Y, blockVar=blockVar, nextElem=nextEl, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset)
   class(obj) <- c("MatrixFoldIterator", 'abstractiter', 'iter')
   obj
   
