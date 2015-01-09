@@ -21,7 +21,7 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
   model <- loadModel(modelName)
   
   testSets <- split(1:length(blockVar), blockVar)
-  trainSets <- invertFolds(testSets, length(blockVar))
+  trainSets <- invertFolds(testSets, 1:length(blockVar))
    
   ret <- list(
     trainVec=trainVec,
@@ -360,7 +360,7 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))
   } else {
-    index <- invertFolds(foldIterator$getTestSets(), length(foldIterator$blockVar)) 
+    index <- invertFolds(foldIterator$getTestSets(), 1:length(foldIterator$blockVar)) 
     ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
     fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast=FALSE, ctrl)
     perf <- evaluateModel(fit)
@@ -387,7 +387,7 @@ crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1
         fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=.noneControl)
         evaluateModel(fit)
       } else {
-        index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], nrow(fold$Xtrain)) 
+        index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], 1:nrow(fold$Xtrain)) 
         ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
         fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=ctrl)
         evaluateModel(fit)

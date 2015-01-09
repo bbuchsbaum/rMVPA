@@ -1,10 +1,8 @@
 #' @export
-invertFolds <- function(foldSplit, len) {
-  #index <- relist(1:length(unlist(foldSplit)), foldSplit)
-  #
-  #index <- lapply(index, function(i) allInd[-i])
-  allInd <- seq(1, len)
-  lapply(foldSplit, function(split) {
+invertFolds <- function(foldSplit, allInd) { 
+  index <-  relist(rank(unlist(foldSplit)), foldSplit)
+  
+  lapply(index, function(split) {
     allInd[-split]
   })
 }
@@ -19,7 +17,7 @@ FoldIterator <- function(blockVar) {
    
    testSets <- split(1:length(blockVar), blockVar)
    
-   trainSets <- invertFolds(testSets, blockVar)
+   trainSets <- invertFolds(testSets, 1:length(blockVar))
   
   .getTrainSets <- function() {
     trainSets
@@ -63,7 +61,7 @@ MatrixFoldIterator <- function(X, Y, blockVar, trainSets=NULL, testSets=NULL) {
   
   if (is.null(trainSets) & is.null(testSets)) {
     testSets <- split(1:length(blockVar), blockVar)
-    trainSets <- invertFolds(testSets, blockVar)
+    trainSets <- invertFolds(testSets, 1:length(blockVar))
   }
   
   if (is.null(trainSets) && !is.null(testSets)) {
