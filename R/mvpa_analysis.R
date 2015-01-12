@@ -60,7 +60,8 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE) {
   invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
   validRes <- do.call(rbind, res[!invalid])
   
-  if (nrow(validRes) == 0) {
+  if (length(validRes) == 0 || nrow(validRes) == 0) {
+    print(res)
     stop("no valid results, all tasks failed")
   }
   
@@ -438,8 +439,6 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
   if (length(validRes) == 0) {
     print(res)
     flog.error("Classification failed for all of %s ROIs", length(regionSet))
-    
-    
     stop("error in mvpa_regional: aborting")
   } 
   
