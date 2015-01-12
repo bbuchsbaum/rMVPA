@@ -502,6 +502,10 @@ mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard
   
   flog.info("classification model is: %s", dataset$model$label)
   
+  for (lib in dataset$model$library) {
+    library(lib)
+  }
+  
   res <- if (method == "standard") {
     .doStandard(dataset, radius, ncores)    
   } else {

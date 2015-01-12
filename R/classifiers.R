@@ -264,7 +264,7 @@ MVPAModels$lda_thomaz <- list(type = "Classification",
                               loop = NULL, 
                               parameters=data.frame(parameters="parameter", class="character", label="parameter"),
                               grid=function(x, y, len = NULL) data.frame(parameter="none"),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { lda_thomaz(x,y, ...) },
+                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { sparsediscrim::lda_thomaz(x,y, ...) },
                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { predict(modelFit, as.matrix(newdata))$class },
                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
                                 scores <- -t(predict(modelFit, newdata)$scores)

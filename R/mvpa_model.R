@@ -20,6 +20,9 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
   
   model <- loadModel(modelName)
   
+ 
+  
+  
   testSets <- split(1:length(blockVar), blockVar)
   trainSets <- invertFolds(testSets, 1:length(blockVar))
    
