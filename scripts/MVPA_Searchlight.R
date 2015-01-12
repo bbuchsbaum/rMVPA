@@ -50,9 +50,10 @@ setArg("radius", config, args, 8)
 setArg("type", config, args, "randomized")
 ## Searchlight Specific Params
 
-configParams <- as.list(config)
 
 config <- initializeTuneGrid(args, config)
+configParams <- as.list(config)
+
 config <- initializeDesign(config)
 config$maskVolume <- as(loadMask(config), "LogicalBrainVolume")
 
@@ -69,8 +70,6 @@ flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
 
 
 dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid)
-
-#library(caret_model$library, character.only=TRUE)
 
 
 searchres <- mvpa_searchlight(dataset,config$radius,  config$type, config$niter, config$pthreads)

@@ -120,7 +120,7 @@ initializeTuneGrid <- function(args, config) {
     }
     flog.info("tuning grid is", params, capture=TRUE)
     config$tune_grid <- params
-  } else if (!is.data.frame(config$tune_grid)) {
+  } else if (!is.null(config$tune_grid) && !is.data.frame(config$tune_grid)) {
     params <- try(lapply(config$tune_grid, function(x) eval(parse(text=x))))
     if (inherits(params, "try-error")) {
       stop("could not parse tune_grid expresson: ", config$tune_grid)

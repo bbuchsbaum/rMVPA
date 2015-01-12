@@ -17,9 +17,10 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
     vol[vox] <- mat[,i]
     BrainVolume(vol, space(mask))
   })
-}  
+} 
 
-.computePerformance <- function(result, vox) {
+#' @export 
+computePerformance <- function(result, vox) {
   perf <- t(performance(result))
   out <- cbind(vox, perf[rep(1, nrow(vox)),])   
 }
@@ -27,6 +28,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 ###
 #crossValidateROI <- 
 
+#' @export 
 mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
@@ -87,7 +89,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE) {
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
        print(nrow(vox))
-      .computePerformance(mvpa_crossval(dataset,vox, returnPredictor), vox)
+      computePerformance(mvpa_crossval(dataset,vox, returnPredictor), vox)
     }
   }
   
