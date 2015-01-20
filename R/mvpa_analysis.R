@@ -167,9 +167,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
   cl <- makeCluster(ncores)
   registerDoParallel(cl)
   
-  if (!is.null(dataset$model$init)) {
-    dataset$model$init()
-  }
+
   
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   regionSet <- sort(as.integer(unique(regionMask[regionMask > 0])))

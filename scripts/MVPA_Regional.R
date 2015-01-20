@@ -59,7 +59,7 @@ if (! is.null(config$roi_subset)) {
   
   res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
   
-  flog.info("roi_subset contains %s voxels", sum(res))
+  flog.info("roi_subset contains %s voxels", sum(res > 0))
   config$ROIVolume[!res] <- 0
 }
 

@@ -65,7 +65,7 @@ initializeData <- function(config) {
   
   if (config$normalize) {
     flog.info("Normalizing: centering and scaling each volume of training data")
-    norm_datavec <- do.call(cbind, eachVolume(config$train_datavec, function(x) scale(x), mask=config$maskVolume))
+    norm_datavec <- do.call(cbind, eachVolume(config$train_datavec, function(x) scale(x)[,1], mask=config$maskVolume))
     config$train_datavec <- SparseBrainVector(norm_datavec, space(config$train_datavec), mask=config$maskVolume)
     
     if (!is.null(config$test_data)) {
