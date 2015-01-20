@@ -5,6 +5,41 @@
 .cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
 
 
+#' create an \code{ClassificationModel} instance
+#' @param caretModel the underlying caret model object
+#' @export
+ClassificationModel <- function(caretModel) {
+  class(caretModel) <- c("ClassificationModel", "list")
+  caretModel
+}
+
+#' create an \code{EnsembleSearchlightModel} instance
+#' @param caretModel
+#' @export
+EnsembleSearchlightModel <- function(baseLearners=list(pls=data.frame(ncomp=1:4))) {
+  ret=list(baseLearners=baseLearners)
+  class(ret) <- c("EnsembleSearchlightModel", "list")
+  ret
+}
+
+#' create an \code{SimilarityModel} instance
+#' @param type the similarity metric (pearson, kendall, spearman)
+#' @export
+SimilarityModel <- function(type=c("pearson", "spearman", "kendall")) {
+  simFun <- if (is.function(type)) {
+    type
+  } else {
+    type=match.arg(type)
+    f <- function(x) {
+      cor(x, method=type)
+    }
+  }
+  ret <- list(simFun=simFun)
+  class(ret) <- c("SimilarityModel", "list")
+  ret
+}
+
+
 
 #' create an \code{MVPA} instance
 #' @param trainVec
@@ -21,8 +56,6 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
   model <- loadModel(modelName)
   
  
-  
-  
   testSets <- split(1:length(blockVar), blockVar)
   trainSets <- invertFolds(testSets, 1:length(blockVar))
    
@@ -49,6 +82,13 @@ NullResult <- function(vox, model, observed) {
   class(ret) <- c("NullResult", "list")
   ret
   
+}
+
+#' @export
+SimilarityResult <- function(sWithin, sBetween, simMat) {
+  ret <- list(sWithin=sWithin, sBetween=sBetween, simMat=simMat)
+  class(ret) <- c("SimilarityResult", "list")
+  ret
 }
 
 
@@ -104,9 +144,6 @@ classificationResult <- function(observed, predicted, probs, predictor=NULL) {
 RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid) {
  
   fit <- model$fit(Xtrain, Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE)
-  
-  
-
   
   ret <- list(
               model=model,
@@ -381,7 +418,7 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
 #' @import foreach
 crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE) {
  
-  results <- foreach::foreach(fold = foldIterator, .verbose=FALSE) %dopar% {   
+  results <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %dopar% {   
     if (nrow(tuneGrid) == 1 && fast) {
       fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl)
       evaluateModel(fit)        
@@ -516,61 +553,61 @@ removeZeroVarianceColumns <- function(M) {
   }
 }
 
-#' @import neuroim
-#' @export
-fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=FALSE, ncores=1) {
-  
-  M <- series(dataset$trainVec, voxelGrid) 
-  
-  if (ncol(M) < 2) {
-    stop("feature matrix must have at least two columns: returning NullResult")
-  }
-  
-
-  hasVariance <- which(apply(M, 2, sd, na.rm=TRUE) > 0)
-  M <- M[, hasVariance, drop=FALSE]
-  
-  hasNA <- apply(M,1, function(x) any(is.na(x)))
-  numNAs <- sum(hasNA)
-  
-  if (numNAs > 0) {
-    stop("training data has NA values, aborting")
-  } 
-  
-  tuneGrid <- if (is.null(dataset$tuneGrid)) {
-    tuneGrid <- dataset$model$grid(M, dataset$Y, tuneLength)
-  } else {
-    dataset$tuneGrid
-  }
-  
-  if (ncol(M) < 2) {
-    stop("feature matrix must have at least two columns with nonzero variance")
-  }
-  
-  voxelGrid <- voxelGrid[hasVariance, ]
-  
-  result <- if (is.null(dataset$testVec)) {
-    crossValidate(M, dataset$Y, dataset$trainSets, dataset$testSets, dataset$model, tuneGrid, tuneLength, testVec=dataset$testVec, testY=dataset$testY, fast=fast,finalFit=finalFit, ncores=ncores)  
-  } else {
-    Xtest <- series(dataset$testVec, voxelGrid)
-    modelFit <- if (nrow(tuneGrid) == 1) {
-      fitFinalModel(M, dataset$Y,  dataset$model, Xtest, dataset$testY, tuneGrid)
-    } else {      
-      ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=dataset$trainSets) 
-      fitFinalModel(M, dataset$Y,  dataset$model, dataset$Xtest, dataset$testY, tuneGrid, tuneControl=ctrl)     
-    }
-    
-    preds <- evaluateModel(modelFit)
-    list(class=preds$class, prob=preds$prob, observed=dataset$testY, blockFits=NULL, finalFit=modelFit)
-  }
-  
-  if (is.factor(dataset$Y) && length(levels(dataset$Y)) == 2) {
-    TwoWayClassificationResult(voxelGrid, dataset$model, result$observed, result$class, result$prob, result$blockFits, result$finalFit)
-  } else if (is.factor(dataset$Y) && length(levels(dataset$Y)) >= 3) {
-    MultiWayClassificationResult(voxelGrid, dataset$model, result$observed, result$class, result$prob, result$blockFits, result$finalFit)
-  } else {
-    stop("regression not supported yet.")
-  }
-}
+# #' @import neuroim
+# #' @export
+# fitMVPAModel <- function(dataset, voxelGrid, tuneLength=1, fast=TRUE, finalFit=FALSE, ncores=1) {
+#   
+#   M <- series(dataset$trainVec, voxelGrid) 
+#   
+#   if (ncol(M) < 2) {
+#     stop("feature matrix must have at least two columns: returning NullResult")
+#   }
+#   
+# 
+#   hasVariance <- which(apply(M, 2, sd, na.rm=TRUE) > 0)
+#   M <- M[, hasVariance, drop=FALSE]
+#   
+#   hasNA <- apply(M,1, function(x) any(is.na(x)))
+#   numNAs <- sum(hasNA)
+#   
+#   if (numNAs > 0) {
+#     stop("training data has NA values, aborting")
+#   } 
+#   
+#   tuneGrid <- if (is.null(dataset$tuneGrid)) {
+#     tuneGrid <- dataset$model$grid(M, dataset$Y, tuneLength)
+#   } else {
+#     dataset$tuneGrid
+#   }
+#   
+#   if (ncol(M) < 2) {
+#     stop("feature matrix must have at least two columns with nonzero variance")
+#   }
+#   
+#   voxelGrid <- voxelGrid[hasVariance, ]
+#   
+#   result <- if (is.null(dataset$testVec)) {
+#     crossValidate(M, dataset$Y, dataset$trainSets, dataset$testSets, dataset$model, tuneGrid, tuneLength, testVec=dataset$testVec, testY=dataset$testY, fast=fast,finalFit=finalFit, ncores=ncores)  
+#   } else {
+#     Xtest <- series(dataset$testVec, voxelGrid)
+#     modelFit <- if (nrow(tuneGrid) == 1) {
+#       fitFinalModel(M, dataset$Y,  dataset$model, Xtest, dataset$testY, tuneGrid)
+#     } else {      
+#       ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=dataset$trainSets) 
+#       fitFinalModel(M, dataset$Y,  dataset$model, dataset$Xtest, dataset$testY, tuneGrid, tuneControl=ctrl)     
+#     }
+#     
+#     preds <- evaluateModel(modelFit)
+#     list(class=preds$class, prob=preds$prob, observed=dataset$testY, blockFits=NULL, finalFit=modelFit)
+#   }
+#   
+#   if (is.factor(dataset$Y) && length(levels(dataset$Y)) == 2) {
+#     TwoWayClassificationResult(voxelGrid, dataset$model, result$observed, result$class, result$prob, result$blockFits, result$finalFit)
+#   } else if (is.factor(dataset$Y) && length(levels(dataset$Y)) >= 3) {
+#     MultiWayClassificationResult(voxelGrid, dataset$model, result$observed, result$class, result$prob, result$blockFits, result$finalFit)
+#   } else {
+#     stop("regression not supported yet.")
+#   }
+# }
 
 

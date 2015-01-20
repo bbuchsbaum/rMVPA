@@ -21,4 +21,5 @@ Imports:
     MASS,
     futile.logger,
     io,
-    stringr
+    stringr,
+    mefa4

@@ -182,11 +182,16 @@ MVPAModels$sda_notune <- list(type = "Classification",
                               loop = NULL, 
                               parameters=data.frame(parameters="parameter", class="character", label="parameter"),
                               grid=function(x, y, len = NULL) data.frame(parameter="none"),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) sda::sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...),
+                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {                       
+                                sda::sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...)
+                              },
                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict(modelFit, as.matrix(newdata), verbose=FALSE)$class,
                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                                 predict(modelFit, as.matrix(newdata),verbose=FALSE)$posterior
                               })
+
+
+
 
 MVPAModels$xgboost <- list(type = "Classification", 
                               library = "xgboost", 

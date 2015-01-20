@@ -174,12 +174,21 @@ logit <- function(config, msg) {
 }
 
 #' @export
-loadModel <- function(name) {
+loadModel <- function(name, config=NULL) {
   registry <- get("MVPAModels", .GlobalEnv)
-  if (!is.null(registry[[name]])) {
-    registry[[name]]       
+  
+  if (name == "searchlight_ensemble" || name == "search_ensemble") {
+    if (!is.null(config$learners)) {
+      EnsembleSearchlightModel(config$learners)
+    } else {
+      EnsembleSearchlightModel()
+    }
+  } else if (name == "pattern_sim" || name == "pattern_similarity") {
+    SimilarityModel()
+  } else if (!is.null(registry[[name]])) {
+    ClassificationModel(registry[[name]])       
   } else if (length(caret::getModelInfo(name)) > 0) {
-    caret::getModelInfo(name)[[name]]    
+    ClassificationModel(caret::getModelInfo(name)[[name]])    
   } else {
     abort(paste("unrecognized model: ", name))
   }

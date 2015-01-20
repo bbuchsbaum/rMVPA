@@ -93,9 +93,11 @@ lapply(1:length(mvpa_res$outVols), function(i) {
 })
 
 write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
-write.table(format(mvpa_res$predMat,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/predMat_table.txt")), row.names=FALSE, quote=FALSE)
+saveResults(mvpa_res$extendedResults, config$output)
 
-saveRDS(mvpa_res$predictorList, paste0(config$output, "/predictorList.RDS"))
+
+#write.table(format(mvpa_res$predMat,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/predMat_table.txt")), row.names=FALSE, quote=FALSE)
+#saveRDS(mvpa_res$predictorList, paste0(config$output, "/predictorList.RDS"))
 
 
 if (!is.null(configParams$test_subset)) {

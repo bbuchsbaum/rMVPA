@@ -11,7 +11,7 @@ mvpa_searchlight(dataset, radius = 8, method = c("randomized", "standard"),
 
 \item{radius}{the searchlight radus in mm}
 
-\item{ncores}{the number of cores for parallel processign (default is 1)}
+\item{ncores}{the number of cores for parallel processing (default is 1)}
 
 \item{method}{the type of searchlight (randomized, or standard)}
 

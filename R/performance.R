@@ -3,7 +3,10 @@ performance <- function(x,...) {
   UseMethod("performance")
 }
 
-
+#' @export
+performance.SimilarityResult <- function(x,...) {  
+  c(simWithin=x$sWithin, simDiff=x$sWithin - x$sBetween)
+}
 
 #' @export
 performance.TwoWayClassificationResult <- function(x,...) {
