@@ -201,6 +201,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
   if (sum(invalid) > 0) {
     flog.warn("Regional analysis failed for %s ROIs", sum(invalid))
     flog.warn("List of ROIs that failed to complete: ", regionSet[invalid], capture=TRUE)
+    print(res[invalid])
   }
   
   ## combine performance metrics into matrix
