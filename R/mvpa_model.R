@@ -408,9 +408,9 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
   } 
   
   if (returnPredictor) {
-    list(class=results$class, probs=results$probs, predictor=results$predictor)
+    list(class=results$perf$class, probs=results$perf$probs, predictor=results$predictor)
   } else {
-    list(class=results$class, probs=results$probs, predictor=NULL)
+    list(class=results$perf$class, probs=results$perf$probs, predictor=NULL)
   }
 }
 
