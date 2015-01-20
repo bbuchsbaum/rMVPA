@@ -321,7 +321,7 @@ combineResults.ClassificationModel <- function(model, resultList) {
   })
   
   predFrame <- as.data.frame(do.call(rbind, lapply(resultList, function(res) {
-    data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=res$observed == res$predicted, prob=res$prob)
+    data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=as.character(res$observed) == as.character(res$predicted), prob=res$prob)
   })))
   
   
