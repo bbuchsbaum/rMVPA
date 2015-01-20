@@ -59,8 +59,9 @@ if (! is.null(config$roi_subset)) {
   
   res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
   
-  flog.info("roi_subset contains %s voxels", sum(res > 0))
+  
   config$ROIVolume[!res] <- 0
+  flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
 }
 
 
@@ -68,7 +69,7 @@ config$maskVolume <- as(config$ROIVolume, "LogicalBrainVolume")
 
 config <- initializeData(config)
 
-flog.info("number of trials: %s", length(rowIndices))
+flog.info("number of training trials: %s", length(rowIndices))
 flog.info("max trial index: %s", max(rowIndices))
 flog.info("loading training data: %s", config$train_data)
 flog.info("mask contains %s voxels", sum(config$maskVolume))
