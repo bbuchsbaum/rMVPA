@@ -107,6 +107,10 @@ if (!is.null(configParams$test_subset)) {
 if (!is.null(configParams$train_subset)) {
   configParams$train_subset <- Reduce(paste, deparse(configParams$train_subset))
 }
+
+if (!is.null(configParams$roi_subset)) {
+  configParams$roi_subset <- Reduce(paste, deparse(configParams$roi_subset))
+}
         
 configout <- paste0(config$output, "/config.yaml")
 qwrite(configParams, configout)
