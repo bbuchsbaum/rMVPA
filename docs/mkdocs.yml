@@ -1,1 +1,7 @@
-site_name: My Docs
+site_name: rMVPA
+pages:
+- [index.md, Home]
+- [about.md, About]
+
+theme: readthedocs
+repo_url: https://github.com/bbuchsbaum/rMVPA/
