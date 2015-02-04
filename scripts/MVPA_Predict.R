@@ -34,15 +34,13 @@ outfile <- args$output
 
 preds <- evaluateModel(predictor, testvec)
 
-
 if (is.null(args$test_design)) {
   if (length(preds) == 1) {
     flog.info("Writing predictions to %s", args$output)
     p1 <- preds[[1]]
     oframe <- cbind(p1$class, p1$prob, rep(names(preds)[[1]], nrow(p1$prob)))
     names(oframe) <- c("pred_class", paste0("prob_", names(p1$prob)), "ROI")
-    
-    write.table(format(oframe,digits=2, scientific=FALSE, drop0trailing=TRUE), args$output, row.names=FALSE)
+    write.table(format(oframe, digits=2, scientific=FALSE, drop0trailing=TRUE), args$output, row.names=FALSE, quote=FALSE)
   } else {
     flog.info("Writing predictions to %s", args$output)
     oframe <- do.call(rbind, lapply(1:length(preds), function(i) {
@@ -50,9 +48,9 @@ if (is.null(args$test_design)) {
       oframe <- cbind(p1$class, p1$prob, rep(names(preds)[[i]], nrow(p1$prob)))
       names(oframe) <- c("pred_class", paste0("prob_", names(p1$prob)), "ROI")
       oframe
-    })
+    }))
     
-    write.table(format(oframe,  digits=2, scientific=FALSE, drop0trailing=TRUE), args$output, row.names=FALSE)
+    write.table(format(oframe,  digits=2, scientific=FALSE, drop0trailing=TRUE), args$output, row.names=FALSE,quote=FALSE)
   }
 } else {
   flog.info("test data will be evaluated against labels stored in: %s", args$test_design)
