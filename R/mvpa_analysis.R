@@ -20,8 +20,8 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 } 
 
 #' @export 
-computePerformance <- function(result, vox) {
-  perf <- t(performance(result))
+computePerformance <- function(result, vox, splitList=NULL) {
+  perf <- t(performance(result, splitList))
   out <- cbind(vox, perf[rep(1, nrow(vox)),])   
 }
 
@@ -96,7 +96,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE) {
   
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %dopar% {   
     if (nrow(vox) > 1) {
-      .computePerformance(runAnalysis(dataset$model, dataset, vox), vox)
+      .computePerformance(runAnalysis(dataset$model, dataset, vox), vox, dataset$testSplits)
     }
   }
   
@@ -107,10 +107,12 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE) {
 .doRandomized <- function(dataset, radius, returnPredictor=FALSE) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
+  
+  ## tight inner loop should probbaly avoid "foreach" as it has a lot of overhead.
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
-      computePerformance(runAnalysis(dataset$model, dataset, vox), vox)
+      computePerformance(runAnalysis(dataset$model, dataset, vox), vox, dataset$testSplits)
     }
   }
   
@@ -164,7 +166,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
   }
   
-  cl <- makeCluster(ncores)
+  cl <- makeCluster(ncores, outfile="",useXDR=FALSE, type="FORK")
   registerDoParallel(cl)
   
 
@@ -172,7 +174,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   regionSet <- sort(as.integer(unique(regionMask[regionMask > 0])))
   
-  res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", dataset$model$library)) %dopar% {   
+  res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
     idx <- which(regionMask == roinum)
     
     if (length(idx) > 1) {
@@ -180,8 +182,8 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
       
       result <- runAnalysis(dataset$model, dataset, vox, savePredictors)
       attr(result, "ROINUM") <- roinum
-      
-      perf <- c(ROINUM=roinum, t(performance(result))[1,])     
+      attr(result, "vox") <- vox
+      perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits))[1,])     
       perf <- structure(perf, result=result)
       perf    
     }
@@ -258,13 +260,12 @@ mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard
   }
   
  
-  cl <- makeCluster(ncores)
-  registerDoParallel(cl)
+  #cl <- makeCluster(ncores)
+  #registerDoParallel(cl)
   
   method <- match.arg(method)
   
   flog.info("classification model is: %s", dataset$model$label)
-  
   
   
   res <- if (method == "standard") {
@@ -316,8 +317,11 @@ combineResults.SimilarityModel <- function(model, resultList) {
 
 #' @export
 combineResults.ClassificationModel <- function(model, resultList) {
+  
+  rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
+  
   predictorList <- lapply(resultList, function(res) {
-    attr(res, "predictor")
+    MVPAVoxelPredictor(res$predictor, attr(res, "vox"))
   })
   
   predFrame <- as.data.frame(do.call(rbind, lapply(resultList, function(res) {
@@ -325,7 +329,7 @@ combineResults.ClassificationModel <- function(model, resultList) {
   })))
   
   
-  ret <- list(predictor=ListPredictor(predictorList), predictions=predFrame)
+  ret <- list(predictor=ListPredictor(predictorList, rois), predictions=predFrame)
   class(ret) <- c("ClassificationResultList", "list")
   ret
 }
@@ -339,7 +343,9 @@ combineResults.EnsembleSearchlightModel <- function(model, resultList) {
 #' @export
 saveResults.ClassificationResultList <- function(results, folder) {
   write.table(format(results$predictions,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(folder, "/prediction_table.txt")), row.names=FALSE, quote=FALSE)  
-  saveRDS(results$predictor, paste0(folder, "/predictor.RDS"))
+  if (!is.null(results$predictor)) {
+    saveRDS(results$predictor, paste0(folder, "/predictor.RDS"))
+  }
 }
 
 #' @export

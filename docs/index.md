@@ -7,7 +7,7 @@ The goal of rMVPA is to provide an easy to use library and set of scripts for co
 
 # Installation
 
-Installation is currently done through Github. First you need to install **git** for your operating system. You also need to install a recent version (R > 3.1) of the R programming language. The installation instructions below assume toyu are using a Unix-based operating system (MAc-OSX, Linux, etc.).
+Installation is currently done through Github. First you need to install **git** for your operating system. You also need to install a recent version (R > 3.1) of the R programming language. The installation instructions below assume toyu are using a Unix-based operating system (Mac-OSX, Linux, etc.).
 
 Open a terminal. Download the package with git:
 

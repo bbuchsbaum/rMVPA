@@ -69,7 +69,8 @@ config <- initializeData(config)
 flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
 
 
-dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid)
+dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
+                       testSplitVar=config$testSplitVar, testSplits=config$testSplits)
 
 for (lib in dataset$model$library) {
   library(lib, character.only = TRUE)
@@ -91,6 +92,10 @@ if (!is.null(configParams$test_subset)) {
 
 if (!is.null(configParams$train_subset)) {
   configParams$train_subset <- Reduce(paste, deparse(configParams$train_subset))
+}
+
+if (!is.null(configParams$split_by)) {
+  configParams$split_by <- Reduce(paste, deparse(configParams$split_by))
 }
 
 configout <- paste0(config$output, "/config.yaml")

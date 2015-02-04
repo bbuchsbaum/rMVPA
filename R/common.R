@@ -53,7 +53,6 @@ initializeData <- function(config) {
     config$train_datavec <- loadBrainData(config, "train_data")  
   }
   
-  
   if (!is.null(config$test_data)) {
     flog.info("loading test data: %s", config$test_data)
     if (!is.null(config$test_subset)) {
@@ -93,7 +92,7 @@ initializeDesign <- function(config) {
   config$full_train_design <- read.table(config$train_design, header=TRUE, comment.char=";")
   config$train_subset <- loadSubset(config$full_train_design, config$train_subset)
   config$train_design <- config$full_train_design[config$train_subset,]
-  config$labels <- loadLabels(config$train_design, config)
+  config$labels <- loadLabels(config$train_design, config)  
   config$block <- loadBlockColumn(config, config$train_design)
   
   flog.info(paste("training subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))
@@ -103,9 +102,29 @@ initializeDesign <- function(config) {
     config$test_subset <- loadSubset(config$full_test_design, config$test_subset)
     config$test_design <- config$full_test_design[config$test_subset,]
     config$testLabels <- loadLabels(config$test_design, config)     
-    flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows."))
+    flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows."))    
+  } else {
+    config$testLabels <- config$labels
+  }
+  
+  if (!is.null(config$split_by)) {
+    
+    form <- eval(parse(text=config$split_by))
+    flog.info("will split performance metrics by %s", as.character(form)[[2]])
+    vars <- all.vars(form[[2]])
+    des <- if (!is.null(config$test_design)) config$test_design else config$train_design
+    config$testSplitVar <- do.call("interaction", lapply(vars, function(vname) des[[vname]]))
+    flog.info("splitting levels are: %s", paste(levels(config$splittingVar), collapse=", "))
+    minSplits <- min(table(config$testSplitVar))
+    if (minSplits < 3) {
+      flog.error("splitting condiiton results in fewer than 3 observations in at least one set", table(config$splittingVar), capture=TRUE)
+      stop(paste("invalid split formula", config$split_by))
+    }
+    
+    config$testSplits <- split(1:length(config$testLabels), config$testSplitVar)
     
   }
+    
   
   config
   
@@ -227,11 +246,14 @@ loadLabels <- function(full_design, config) {
 #' @export
 loadSubset <- function(full_design, subset) {
   if (is.character(subset)) {
+    if (substr(subset, 1,1) != "~") {
+      subset <- paste0("~", subset)
+    }   
     subset <- eval(parse(text=subset))
-  }
+  } 
   
-  keep <- if(is.null(subset)) rep(TRUE, nrow(full_design)) else {
-    subexpr <- subset[[2]]
+  keep <- if(is.null(subset)) rep(TRUE, nrow(full_design)) else {  
+    subexpr <- subset[[2]]   
     keep <- eval(subexpr, full_design)
     if (sum(keep) == nrow(full_design)) {
       warning(paste("subset has same number of rows as full table"))
@@ -265,7 +287,7 @@ loadBrainDataSequence <- function(fnames, config) {
   
   vecmat <- do.call(rbind, lapply(fnames, function(fname) {
     flog.info("loading data file %s", fname)
-    mat <- as.matrix(loadVector(fname, mask=config$maskVolume))
+    mat <- neuroim::as.matrix(loadVector(fname, mask=config$maskVolume))
     flog.info("data file %s has %s voxels and %s samples", fname, ncol(mat), nrow(mat))
     mat
   }))

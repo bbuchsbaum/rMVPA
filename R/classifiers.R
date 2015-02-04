@@ -49,6 +49,7 @@ prob.corsimFit <- function(modelFit, newData) {
 MVPAModels$pca_lda <- list(type = "Classification", 
                            library = "MASS", 
                            loop = NULL, 
+                           label="pca_lda",
                            parameters=data.frame(parameters="ncomp", class="numeric", labels="ncomp"),
                            grid=function(x, y, len = 5) {
                              data.frame(ncomp=1:len)
@@ -114,24 +115,6 @@ MVPAModels$gpca_lda <- list(type = "Classification",
                               pcx <- sweep(newdata, 2, attr(modelFit, "centroid")) %*% attr(modelFit, "pcfit")$V
                               predict(modelFit, pcx)$posterior
                             })
-MVPAModels$wsrf <- list(type = "Classification", 
-                             library = "wsrf", 
-                             label="wsrf",
-                             loop = NULL, 
-                             parameters=data.frame(parameters=c("mtry"), class=c("numeric"), labels=c("number of variables at each split")),
-                             grid=function(x, y, len = NULL) {
-                               data.frame(mtry=8)
-                             },
-                             fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                               form <- as.formula(paste(y, "~ ."))
-                               model.wsrf.1 <- wsrf(form, data=as.data.frame(x))
-                             },
-                             predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                               predict(modelFit, as.matrix(newdata), type="response")
-                             },
-                             prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                               predict(modelFit, as.matrix(newdata), type="prob")
-                             })
 
 
 MVPAModels$liblinear <- list(type = "Classification", 
@@ -165,8 +148,9 @@ MVPAModels$nearestMean <- list(type = "Classification",
                                  predict(modelFit, as.matrix(newdata))$posterior
                                })
 
-MVPAModels$corsim <- list(type = "Classification", 
+MVPAModels$corclass <- list(type = "Classification", 
                           library = "rMVPA", 
+                          label="corclass",
                           loop = NULL, 
                           parameters=data.frame(parameters=c("method", "robust"), class=c("character", "logical"), label=c("correlation type: pearson, spearman, or kendall", "mean or huber")),
                           grid=function(x, y, len = NULL) if (len == 1) { data.frame(method="pearson", robust=FALSE) } else { expand.grid(method=c("pearson", "spearman", "kendall"), robust=c(TRUE, FALSE)) },

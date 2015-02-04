@@ -7,6 +7,7 @@
 .suppress(library(caret))
 .suppress(library(futile.logger))
 .suppress(library(io))
+.suppress(library(caret))
 
 option_list <- list(
                     make_option(c("-t", "--train_design"), type="character", help="the file name of the design table"),
@@ -23,6 +24,7 @@ option_list <- list(
                     make_option(c("-b", "--block_column"), type="character", help="the name of the column in the design file indicating the block variable used for cross-validation"),
                     make_option(c("-g", "--tune_grid"), type="character", help="string containing grid parameters in the following form: a=\\(1,2\\), b=\\('one', 'two'\\)"),
                     make_option(c("-i", "--niter"), type="character", help="number of randomized searchlight iterations"),
+                    make_option(c("--savePredictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
                     make_option(c("-c", "--config"), type="character", help="name of configuration file used to specify program parameters"))
 
 
@@ -35,6 +37,12 @@ flog.info("command line args are ", args, capture=TRUE)
 config <- initializeConfiguration(args)
 
 config <- initializeStandardParameters(config, args, "mvpa_regional")
+## Regional Specific Params
+setArg("savePredictors", config, args, FALSE)
+## Regional Specific Params
+
+
+
 config <- initializeTuneGrid(args, config)
 
 configParams <- as.list(config)
@@ -83,8 +91,10 @@ if (length(config$labels) != dim(config$train_datavec)[4]) {
   stop()
 }
 
-dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid)
-mvpa_res <- mvpa_regional(dataset, config$ROIVolume, config$pthreads)
+dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
+                       testSplitVar=config$testSplitVar, testSplits=config$testSplits)
+
+mvpa_res <- mvpa_regional(dataset, config$ROIVolume, config$pthreads, config$savePredictors)
 
 config$output <- makeOutputDir(config$output)
 
@@ -96,23 +106,25 @@ lapply(1:length(mvpa_res$outVols), function(i) {
 write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
 saveResults(mvpa_res$extendedResults, config$output)
 
+write.table(config$train_subset, paste0(config$output, "/train_table.txt"), row.names=FALSE, quote=FALSE)
+
+if (!is.null(config$test_subset)) {
+  write.table(config$test_subset, paste0(config$output, "/test_table.txt"), row.names=FALSE, quote=FALSE)
+}
+
+if (!is.null(config$mask)) {
+  file.copy(config$mask, paste0(config$output, "/", config$mask))
+}
 
 #write.table(format(mvpa_res$predMat,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/predMat_table.txt")), row.names=FALSE, quote=FALSE)
 #saveRDS(mvpa_res$predictorList, paste0(config$output, "/predictorList.RDS"))
 
-
-if (!is.null(configParams$test_subset)) {
-  configParams$test_subset <- Reduce(paste, deparse(configParams$test_subset))
+for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
+  if (!is.null(configParams[[varname]]) && is(configParams[[varname]], "formula")) {
+    configParams[[varname]] <- Reduce(paste, deparse(configParams[[varname]]))
+  }
 }
 
-if (!is.null(configParams$train_subset)) {
-  configParams$train_subset <- Reduce(paste, deparse(configParams$train_subset))
-}
-
-if (!is.null(configParams$roi_subset)) {
-  configParams$roi_subset <- Reduce(paste, deparse(configParams$roi_subset))
-}
-        
 configout <- paste0(config$output, "/config.yaml")
 qwrite(configParams, configout)
 

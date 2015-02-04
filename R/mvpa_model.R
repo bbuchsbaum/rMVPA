@@ -51,7 +51,7 @@ SimilarityModel <- function(type=c("pearson", "spearman", "kendall")) {
 #' @param modelName
 #' @param tuneGrid
 #' @export
-MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corsim", tuneGrid=NULL) {
+MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corclass", tuneGrid=NULL, testSplitVar=NULL, testSplits=NULL) {
   
   model <- loadModel(modelName)
   
@@ -69,7 +69,9 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
     model=model,
     tuneGrid=tuneGrid,
     testSets=testSets,
-    trainSets=trainSets)
+    trainSets=trainSets,
+    testSplitVar=testSplitVar,
+    testSplits=testSplits)
    
   class(ret) <- c("MVPADataset", "list")
   ret
@@ -140,10 +142,48 @@ classificationResult <- function(observed, predicted, probs, predictor=NULL) {
 }
 
 
+.purgeModel <- function(fit, label) {
+  if (label == "Partial Least Squares") {
+    fit$model = NULL
+  }
+  
+  fit
+}
+
+#' @export
+CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl,...) {
+  
+  if (model$library[1] == "gbm" && length(levels(Ytrain)) == 2) {
+    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, distribution="bernoulli", ...)
+  } else if (model$library[1] == "gbm" && length(levels(Ytrain)) > 2) {
+    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, distribution="multinomial", ...)
+  } else {
+    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, ...)
+  }
+  
+  fit$finalModel <- .purgeModel(fit$finalModel, model$label)
+  
+  ret <- list(
+    model=model,
+    Xtrain=Xtrain,
+    Ytrain=Ytrain,
+    Xtest=Xtest,
+    Ytest=Ytest,
+    tuneGrid=tuneGrid,
+    tuneControl=tuneControl,
+    modelFit=fit)
+  
+  class(ret) <- c("CaretModel", "list")
+  ret
+}
+
+
+
 #' @export
 RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid) {
  
   fit <- model$fit(Xtrain, Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE)
+  fit <- .purgeModel(fit, model$label)
   
   ret <- list(
               model=model,
@@ -202,38 +242,16 @@ CalibratedPredictor <- function(predictor, calibrationX, calibrationY) {
 
 
 #' @export
-ListPredictor <- function(fits) {
+ListPredictor <- function(fits, names=1:length(fits)) {
   stopifnot(is.list(fits))
   ret <- fits
+  names(ret) <- names
+  
   class(ret) <- c("ListPredictor", "list")
   ret
 }
 
 
-#' @export
-CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl,...) {
-
-  if (model$library[1] == "gbm" && length(levels(Ytrain)) == 2) {
-    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, distribution="bernoulli", ...)
-  } else if (model$library[1] == "gbm" && length(levels(Ytrain)) > 2) {
-    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, distribution="multinomial", ...)
-  } else {
-    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, ...)
-  }
-    
-  ret <- list(
-              model=model,
-              Xtrain=Xtrain,
-              Ytrain=Ytrain,
-              Xtest=Xtest,
-              Ytest=Ytest,
-              tuneGrid=tuneGrid,
-              tuneControl=tuneControl,
-              modelFit=fit)
-  
-  class(ret) <- c("CaretModel", "list")
-  ret
-}
 
 
 
@@ -332,10 +350,10 @@ evaluateModel.ListPredictor <- function(x, newdata=NULL) {
   }
   
   res <- lapply(x, function(fit) {
-    evaluateModel(fit, newdata)$probs
+    evaluateModel(fit, newdata)
   })
   
-  list(probs=res)
+  
 }
 
 #' @export
