@@ -143,7 +143,7 @@ classificationResult <- function(observed, predicted, probs, predictor=NULL) {
 
 
 .purgeModel <- function(fit, label) {
-  if (label == "Partial Least Squares") {
+  if (!is.null(label) && label == "Partial Least Squares") {
     fit$model = NULL
   }
   
@@ -436,7 +436,7 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
 #' @import foreach
 crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE) {
  
-  results <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %dopar% {   
+  results <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
     if (nrow(tuneGrid) == 1 && fast) {
       fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl)
       evaluateModel(fit)        

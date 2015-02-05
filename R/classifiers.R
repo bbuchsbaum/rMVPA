@@ -135,6 +135,7 @@ MVPAModels$liblinear <- list(type = "Classification",
 
 MVPAModels$nearestMean <- list(type = "Classification", 
                                library = "klaR", 
+                               label="nearestMean",
                                loop = NULL, 
                                parameters=data.frame(parameters="gamma", class="numeric", labels="gamma"),
                                grid=function(x, y, len = NULL) {
@@ -163,6 +164,7 @@ MVPAModels$corclass <- list(type = "Classification",
 
 MVPAModels$sda_notune <- list(type = "Classification", 
                               library = "sda", 
+                              label="sda_notune",
                               loop = NULL, 
                               parameters=data.frame(parameters="parameter", class="character", label="parameter"),
                               grid=function(x, y, len = NULL) data.frame(parameter="none"),
@@ -208,6 +210,7 @@ MVPAModels$xgboost <- list(type = "Classification",
 
 MVPAModels$sda_ranking <- list(type = "Classification", 
                                library = "sda", 
+                               label="sda_ranking",
                                loop = NULL, 
                                parameters=data.frame(parameters="parameter", class="character", label="parameter"),
                                grid=function(x, y, len = NULL) data.frame(parameter="none"),
