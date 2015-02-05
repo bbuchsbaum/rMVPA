@@ -143,7 +143,7 @@ classificationResult <- function(observed, predicted, probs, predictor=NULL) {
 
 
 .purgeModel <- function(fit, label) {
-  if (!is.null(label) && label == "Partial Least Squares") {
+  if (label == "Partial Least Squares") {
     fit$model = NULL
   }
   
@@ -315,6 +315,11 @@ evaluateModel.MVPAVoxelPredictor <- function(x, newdata) {
   }
   
   X <- series(newdata,x$voxelGrid)
+  
+  if (is.vector(X)) {
+    X <- matrix(X, nrow=1)
+  }
+  
   evaluateModel(x$predictor, X)
 }
 
