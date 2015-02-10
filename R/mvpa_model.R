@@ -251,6 +251,14 @@ ListPredictor <- function(fits, names=1:length(fits)) {
   ret
 }
 
+WeightedPredictor <- function(fits, names=1:length(fits), weights=rep(1/length(fits), length(fits))) {
+  ret <- fits
+  names(ret) <- names
+  attr(ret, "weights") <- weights
+  class(ret) <- c("WeightedPredictor", "list")
+  ret
+}
+
 
 
 
@@ -358,8 +366,27 @@ evaluateModel.ListPredictor <- function(x, newdata=NULL) {
     evaluateModel(fit, newdata)
   })
   
-  
 }
+
+#' @export
+evaluateModel.WeightedPredictor <- function(x, newdata=NULL) {
+  if (is.null(newdata)) {
+    stop("newdata cannot be null")
+  }
+  
+  wts <- attr(x, "weights")
+  preds <- lapply(1:length(x), function(i) {
+    evaluateModel(x[[i]], newdata)$probs * wts[i]
+  })
+  
+  prob <- preds[!sapply(preds, function(x) is.null(x))]
+  pfinal <- Reduce("+", prob)
+  
+  pclass <- names(pfinal)[apply(pfinal, 1, which.max)]
+  list(class=pclass, prob=pfinal)
+}
+
+
 
 #' @export
 evaluateModel.CaretPredictor <- function(x, newdata=NULL) {

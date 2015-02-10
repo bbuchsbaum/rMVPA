@@ -44,10 +44,7 @@ setArg("savePredictors", config, args, FALSE)
 
 
 config <- initializeTuneGrid(args, config)
-
 configParams <- as.list(config)
-
-
 config <- initializeDesign(config)
 
 rowIndices <- which(config$train_subset)

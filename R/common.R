@@ -45,6 +45,12 @@ initializeStandardParameters <- function(config, args, analysisType) {
 }
 
 #' @export
+normalizeSamples <- function(bvec, mask) {
+  norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
+  SparseBrainVector(norm_datavec, space(bvec), mask=mask)  
+}
+
+#' @export
 initializeData <- function(config) {
   
   if (!is.null(config$train_subset)) {
@@ -64,13 +70,11 @@ initializeData <- function(config) {
   
   if (config$normalize) {
     flog.info("Normalizing: centering and scaling each volume of training data")
-    norm_datavec <- do.call(cbind, eachVolume(config$train_datavec, function(x) scale(x)[,1], mask=config$maskVolume))
-    config$train_datavec <- SparseBrainVector(norm_datavec, space(config$train_datavec), mask=config$maskVolume)
+    config$train_datavec <- normalizeSamples(config$train_datavec, config$maskVolume)
     
     if (!is.null(config$test_data)) {
       flog.info("Normalizing: centering and scaling each volume of test data")
-      norm_datavec <- do.call(cbind, eachVolume(config$test_datavec, function(x) scale(x), mask=config$maskVolume))
-      config$test_datavec <- SparseBrainVector(norm_datavec, space(config$test_datavec), mask=config$maskVolume)
+      config$test_datavec <- normalizeSamples(config$test_datavec, config$maskVolume)
     }
   }
   

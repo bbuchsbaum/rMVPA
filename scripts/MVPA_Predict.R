@@ -26,8 +26,14 @@ flog.info("command line args are ", args, capture=TRUE)
 
 predictorName <- paste0(args$folder, "/predictor.RDS")
 predictor <- readRDS(predictorName)
-
+config <- qread(paste0(args$folder, "/config.yaml"))
 testvec <- loadVector(args$newdata)
+
+
+if (config$normalize) {
+  
+}
+
 
 outfile <- args$output
 
@@ -54,7 +60,7 @@ if (is.null(args$test_design)) {
   }
 } else {
   flog.info("test data will be evaluated against labels stored in: %s", args$test_design)
-  config <- qread(paste0(args$folder, "/config.yaml"))
+  
   flog.info(config, capture=TRUE)
   if (!is.null(args$test_subset)) {
     tdes <- read.table(args$test_design, header=TRUE)

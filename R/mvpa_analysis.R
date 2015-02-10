@@ -107,7 +107,6 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE) {
 .doRandomized <- function(dataset, radius, returnPredictor=FALSE) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
-  
   ## tight inner loop should probbaly avoid "foreach" as it has a lot of overhead.
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
