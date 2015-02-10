@@ -25,3 +25,15 @@ Imports:
     mefa4,
     optparse,
     Metrics
+Collate:
+    'classifiers.R'
+    'cluster.R'
+    'mvpa_model.R'
+    'common.R'
+    'ensemble.R'
+    'folds.R'
+    'mvpa_analysis.R'
+    'optim.R'
+    'performance.R'
+    'rMVPA.R'
+    'similarity.R'

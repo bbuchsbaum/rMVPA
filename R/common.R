@@ -1,4 +1,6 @@
-
+#' @include mvpa_model.R
+NULL
+ 
 
 #' @export
 #' @import stringr
