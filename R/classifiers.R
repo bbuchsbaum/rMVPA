@@ -1,6 +1,6 @@
 
 #' @export
-MVPAModels <- list()
+MVPAModels <- new.env()
 
 
 #' @export

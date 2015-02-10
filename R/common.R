@@ -198,7 +198,8 @@ logit <- function(config, msg) {
 
 #' @export
 loadModel <- function(name, config=NULL) {
-  registry <- get("MVPAModels", .GlobalEnv)
+  ##registry <- get("MVPAModels", .GlobalEnv)
+  registry <- rMVPA:::MVPAModels
   
   if (name == "searchlight_ensemble" || name == "search_ensemble") {
     if (!is.null(config$learners)) {
