@@ -1,4 +1,8 @@
 
+patSimHelper <- function(runs, labels) {
+  
+}
+
 #' @export
 #' @import mefa4
 patternSimilarity <- function(dataset, vox, simFun=cor) {
@@ -14,17 +18,18 @@ patternSimilarity <- function(dataset, vox, simFun=cor) {
     stop("no valid columns")
   } else {
     centroids <- lapply(foldIterator, function(fold) {
-      gmeans <- mefa4::groupMeans(fold$Xtest, 1, fold$Ytest)
+      mefa4::groupMeans(fold$Xtest, 1, fold$Ytest)
       run <- rep(fold$index, nrow(gmeans))
       list(gmeans=gmeans, run=run, labels=row.names(gmeans))
     })
-    
+     
     runs <- unlist(lapply(centroids, "[[", "run"))
     labels <- unlist(lapply(centroids, "[[", "labels"))
     gmeans <- do.call(rbind, lapply(centroids, "[[", "gmeans"))
     
     corMat <- simFun(t(gmeans))
-       
+    
+    
     runCoords <- do.call(rbind, lapply(runs, function(r1) {
       t(sapply(runs, function(r2) {
         c(r2,r1)
@@ -37,14 +42,28 @@ patternSimilarity <- function(dataset, vox, simFun=cor) {
       }))
     }))
     
-    crossrun <- apply(runCoords, 1, function(x) x[1] != x[2])
-    cwithin <- apply(labelCoords, 1, function(x) x[1] == x[2])
-    cbetween <- apply(labelCoords, 1, function(x) x[1] != x[2])
-   
-    cor.between <- mean(corMat[crossrun & cbetween])
-    cor.within <- mean(corMat[crossrun & cwithin])
+    lowerTri <- as.vector(lower.tri(corMat))
+    crossrun <- runCoords[,1] != runCoords[,2] & lowerTri
+    cwithin <- labelCoords[,1] == labelCoords[,2] & lowerTri
+    cbetween <- labelCoords[,1] != labelCoords[,2] & lowerTri
     
-    SimilarityResult(cor.within, cor.between, corMat)
+    
+    
+    crossFac <- factor(apply(runCoords, 1, paste0, collapse=":")) 
+    
+    validWithin <- crossrun & cwithin
+    validLevels <- levels(factor(crossFac[crossrun & cwithin]))
+    validBetween <- crossFac %in% validLevels & cbetween
+      
+        
+    withinMeans <- aggregate(corMat[validWithin] ~ crossFac[validWithin], FUN=mean)[,2]    
+    betweenMeans <- aggregate(corMat[validBetween] ~ crossFac[validBetween], FUN=mean)[,2]
+   
+    cor.between <- mean(betweenMeans)
+    cor.within <- mean(withinMeans)
+    
+    simWithinTable <- data.frame(label=names(which(validWithin)), sim=corMat[validWithin])
+    SimilarityResult(cor.within, cor.between, corMat, corTable, simWithinTable)
   }
   
 }

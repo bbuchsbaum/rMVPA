@@ -24,7 +24,8 @@ Imports:
     stringr,
     mefa4,
     optparse,
-    Metrics
+    Metrics,
+    memoise
 Collate:
     'classifiers.R'
     'cluster.R'
