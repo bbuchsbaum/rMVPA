@@ -304,11 +304,19 @@ combineResults.SimilarityModel <- function(model, resultList) {
   #ret <- list(sWithin=sWithin, sBetween=sBetween, simMat=simMat)
   rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
   
-  ret <- lapply(resultList, function(res) {
+  simMatList <- lapply(resultList, function(res) {
     res$simMat   
   })
   
-  names(ret) <- rois
+  simWithinList <- lapply(resultList, function(res) {
+    res$simWithinTable  
+  })
+  
+  names(simMatList) <- rois
+  names(simWithinList) <- rois
+  
+  ret <- list(simMatList=simMatList, simWithinList=simWithinList)
+  
   class(ret) <- c("SimilarityResultList", "list")
   ret
 }
@@ -349,6 +357,8 @@ saveResults.ClassificationResultList <- function(results, folder) {
 
 #' @export
 saveResults.SimilarityResultList <- function(results, folder) {
-  saveRDS(results, paste0(folder, "/similarityMatrices.RDS"))
+  saveRDS(results$simMatList, paste0(folder, "/similarityMatrices.RDS"))
+  omat <- as.data.frame(do.call(rbind, results$simWithinList))
+  write.table(omat, paste0(folder, "/similarityWithinTable.txt"))
 }
 

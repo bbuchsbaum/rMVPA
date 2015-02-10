@@ -88,7 +88,7 @@ NullResult <- function(vox, model, observed) {
 
 #' @export
 SimilarityResult <- function(sWithin, sBetween, simMat, simWithinTable) {
-  ret <- list(sWithin=sWithin, sBetween=sBetween, simMat=simMat, simWithinTable)
+  ret <- list(sWithin=sWithin, sBetween=sBetween, simMat=simMat, simWithinTable=simWithinTable)
   class(ret) <- c("SimilarityResult", "list")
   ret
 }

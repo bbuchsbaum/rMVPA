@@ -163,10 +163,10 @@ greedMultiClassOptAUC <- function(PredList, Y, iter = 100L, bagIter=20, bagFrac=
 
 
 #' @export
-BaggedMultiClassOptAUC <- function(PredList, Y, iter = 15, bagIter=20, bagFrac=.5) {
+BaggedMultiClassOptAUC <- function(PredList, Y, iter = 30, bagIter=30, bagFrac=.5) {
   wtlist <- lapply(1:bagIter, function(i) {
     sam <- sort(sample(seq_along(PredList), bagFrac * length(PredList))) 
-    wts <- greedMultiClassOptAUC(PredList[sam], Y, iter=15)
+    wts <- greedMultiClassOptAUC(PredList[sam], Y, iter=30)
     ret <- numeric(length(PredList))
     ret[sam] <- wts
     ret
@@ -177,7 +177,7 @@ BaggedMultiClassOptAUC <- function(PredList, Y, iter = 15, bagIter=20, bagFrac=.
 }
 
 #' @export
-BaggedTwoClassOptAUC <- function(X, Y, iter = 100L, bagIter=20, bagFrac=.5) {
+BaggedTwoClassOptAUC <- function(X, Y, iter = 100L, bagIter=30, bagFrac=.5) {
   wtlist <- lapply(1:bagIter, function(i) {
     sam <- sort(sample(1:ncol(X), bagFrac * ncol(X))) 
     wts <- greedyTwoClassOptim(X[,sam], Y, iter=30)
