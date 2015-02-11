@@ -76,7 +76,7 @@ for (lib in dataset$model$library) {
   library(lib, character.only = TRUE)
 }
 
-searchres <- mvpa_searchlight(dataset,config$radius,  config$type, config$niter, config$pthreads)
+searchres <- mvpa_searchlight(dataset, config$radius,  config$type, config$niter, config$pthreads)
 
 config$output <- makeOutputDir(config$output)
 
