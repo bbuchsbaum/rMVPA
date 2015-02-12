@@ -8,91 +8,36 @@ invertFolds <- function(foldSplit, allInd) {
 }
 
 #' Create an iterator froma block variable for iterating through the folds during cross-validation
-#' @param X data matrix
 #' @param Y the labels
 #' @param blockVar variable denoting the cross-validation folds
+#' @param nfolds the number of cross-validation folds: only relvant when blockVar is not supplied
+#' @param balance try to balance each training sample so that the frequency of labels is equal across groups
+#' @param bootstrap use bootstrap resampling of the training set
 #' @export
-FoldIterator <- function(blockVar) {
-   index <- 0
-   
-   testSets <- split(1:length(blockVar), blockVar)
-   
-   trainSets <- invertFolds(testSets, 1:length(blockVar))
+FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE) {
   
-  .getTrainSets <- function() {
-    trainSets
+  if (is.null(blockVar)) {
+    blockVar <- sample(1:length(Y))
+    blockVar <- createFolds(Y, k=nfolds, list=FALSE)
   }
-  
-  .getTestSets <- function() {
-    testSets
-  }
-  
-  .getIndex <- function() {
-    index
-  }
-  
-  .reset <- function() {
-    index <<- 0
-  }
-  
-  nextEl <- function() {
-    if (index < length(trainSets)) { 
-      index <<- index + 1
-      list(trainIndex=trainSets[[index]], testIndex=testSets[[index]])
-      
-    } else {
-      stop('StopIteration')
-    }
-  }
-  
-  obj <- list(nextElem=nextEl, blockVar=blockVar, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets, reset=.reset)
-  class(obj) <- c("FoldIterator", 'abstractiter', 'iter')
-  obj
-  
-}
-  
-
-#' Create an iterator from a matrix (X), a dependent variable (Y) and a splitting variable (blockVar)
-#' @param X data matrix
-#' @param Y the labels
-#' @param blockVar variable denoting the cross-validation folds
-#' @export
-MatrixFoldIterator <- function(X, Y, blockVar, trainSets=NULL, testSets=NULL) {
-  
-  if (is.null(trainSets) & is.null(testSets)) {
-    testSets <- split(1:length(blockVar), blockVar)
-    trainSets <- invertFolds(testSets, 1:length(blockVar))
-  }
-  
-  if (is.null(trainSets) && !is.null(testSets)) {
-    stop("must supply both trainSets and testSets")
-  }
-  
-  if (is.null(testSets) && !is.null(trainSets)) {
-    stop("must supply both trainSets and testSets")
-  }
-  
-  if (nrow(X) != length(Y)) {
-    stop("X matrix must have same number of rows as Y variable")
-  }
-  
   
   index <- 0
   ord <- NULL
   
+  testSets <- split(1:length(blockVar), blockVar)
+  
+  trainSets <- invertFolds(testSets, 1:length(blockVar))
+  
   .getTrainSets <- function() {
     trainSets
   }
+  
   .getTestSets <- function() {
     testSets
   }
   
   .getIndex <- function() {
     index
-  }
-  
-  .reset <- function() {
-    index <<- 0
   }
   
   .getTestOrder <- function() {
@@ -101,24 +46,71 @@ MatrixFoldIterator <- function(X, Y, blockVar, trainSets=NULL, testSets=NULL) {
     ord
   }
   
+  .reset <- function() {
+    index <<- 0
+  }
+  
   nextEl <- function() {
     if (index < length(trainSets)) { 
-      index <<- index + 1
-      list(Xtrain=X[trainSets[[index]], ], Ytrain=Y[trainSets[[index]]], Xtest=X[testSets[[index]],], Ytest=Y[testSets[[index]]], index=index)
+      index <<- index + 1    
+      trainIndex=trainSets[[index]]
+      
+      if (balance) {
+        trainIndex=trainSets[[index]]
+        trainIndex <- caret::upSample(trainIndex, Y[trainIndex])[,1]
+      }
+      
+      if (bootstrap) {
+        trainIndex <- sample(trainIndex, replace=TRUE)
+      }
+      
+      list(trainIndex=trainIndex, testIndex=testSets[[index]], Ytrain=Y[trainIndex])
       
     } else {
       stop('StopIteration')
     }
   }
   
-  obj <- list(X=X, Y=Y, blockVar=blockVar, nextElem=nextEl, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset)
+  obj <- list(nextElem=nextEl, blockVar=blockVar, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset)
+  class(obj) <- c("FoldIterator", 'abstractiter', 'iter')
+  obj
+  
+}
+  
+
+#' Create an iterator of training and test data from a data matrix \code{X}, a factor \code{Y}, and an optional precomputed blocking variable \code{blockVar} used for determining cross-validation folds.
+#' @param X the data matrix
+#' @param Y the labels
+#' @param blockVar variable denoting the cross-validation folds.
+#' @param nfolds the number of cross-validation folds: only relvant when blockVar is not supplied
+#' @param balance try to balance each training sample so that the frequency of labels is equal across groups
+#' @param bootstrap use bootstrap resampling of the training set
+#' @export
+MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE) {
+  
+  if (nrow(X) != length(Y)) {
+    stop("X matrix must have same number of rows as Y variable")
+  }
+  
+  foldIter = FoldIterator(Y, blockVar, nfolds=nfolds, balance=balance, bootstrap=bootstrap)
+
+  nextEl <- function() {
+    ret <- foldIter$nextElem()
+    ret$Xtrain <- X[ret$trainIndex,]
+    ret$Xtest <- X[ret$testIndex,]
+    ret
+  }
+  
+  obj <- list(X=X, Y=Y, blockVar=blockVar, nextElem=nextEl, index=foldIter$getIndex, 
+              getTrainSets=foldIter$getTrainSets, getTestSets=foldIter$getTestSets, 
+              getTestOrder=foldIter$getTestOrder, reset=foldIter$reset)
   class(obj) <- c("MatrixFoldIterator", 'abstractiter', 'iter')
   obj
   
 }
 
 
-#' Create an iterator from a matrix (X), a dependent variable (Y) and a splitting variable (blockVar)
+#' Create an iterator from a matrix \code{X}, a dependent variable \code{Y} and a splitting variable (blockVar)
 #' @param X data matrix
 #' @param Y the labels
 #' @param blockVar variable denoting the cross-validation folds

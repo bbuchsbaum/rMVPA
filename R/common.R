@@ -38,6 +38,7 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("output", config, args, paste0(analysisType, "_", config$labelColumn))
   setArg("block_column", config, args, "block")
   setArg("normalize", config, args, FALSE)
+  setArg("autobalance", config, args, FALSE)
   #setDefault("autobalance", config, FALSE)
   setArg("tune_grid", config, args, NULL)
   #setDefault("method_params", config, list())

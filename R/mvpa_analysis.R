@@ -35,26 +35,26 @@ runAnalysis <- function(object, dataset,...) {
 }
 
 #' @export
-runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE) {
+runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE,autobalance=FALSE, bootstrap=FALSE) {
   mvpa_crossval(dataset, vox, returnPredictor)
 }
 
 
 #' @export
-runAnalysis.SimilarityModel <- function(object, dataset, vox, returnPredictor=FALSE) {
+runAnalysis.SimilarityModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE) {
   patternSimilarity(dataset, vox, object$simFun)
 }
 
 
 #' @export 
-mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE) {
+mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
   
   X <- X[,valid.idx]
   vox <- vox[valid.idx,]
   
-  foldIterator <- MatrixFoldIterator(X, dataset$Y,dataset$blockVar)
+  foldIterator <- MatrixFoldIterator(X, dataset$Y,dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
   
   if (ncol(X) == 0) {
     stop("no valid columns")
@@ -249,7 +249,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
 #' @import parallel
 #' @import futile.logger
 #' @export
-mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard"), niter=4,ncores=2) {
+mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard"), niter=4, ncores=2, autobalance=FALSE) {
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }
@@ -272,7 +272,7 @@ mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard
   } else {
     res <- parallel::mclapply(1:niter, function(i) {
       flog.info("Running randomized searchlight iteration %s", i)   
-      do.call(cbind, .doRandomized(dataset, radius) )
+      do.call(cbind, .doRandomized(dataset, radius, autobalance) )
     }, mc.cores=ncores)
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {

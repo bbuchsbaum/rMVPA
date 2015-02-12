@@ -41,7 +41,7 @@ metaCombine <- function(dataset, resultList, fold, blockNum, pruneFrac=1, metaLe
   
   predmat <- do.call(cbind, lapply(resultList[keep], "[[", "probs"))
   
-  foldIterator <- MatrixFoldIterator(predmat, Ytrain, dataset$blockVar[dataset$blockVar != blockNum])
+  foldIterator <- MatrixFoldIterator(X=predmat, Y=Ytrain, blockVar=dataset$blockVar[dataset$blockVar != blockNum])
   
   tuneControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets(), indexOut=foldIterator$getTestSets()) 
   #modelFit <- trainModel(loadModel("spls"), predmat, Ytrain,  NULL, NULL, tuneGrid=expand.grid(K=c(1,2,3,4,5), eta=c(.2, .7, .9), kappa=.5), fast=FALSE, tuneControl)
@@ -178,13 +178,13 @@ superLearners = .setupModels(list(
 #' @export
 #' 
 ### TODO add argument sampleMethod - "exhaustive", "replacement"//sampleIter=1000
-mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, radius=c(14,10,6), ncores=1, pruneFrac=.2, combiner=c("optAUC")) {
+mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, radius=c(14,10,6), ncores=1, pruneFrac=.2, combiner=c("optAUC"), bootstrapSamples=TRUE, searchMethod=c("replacement", "exhaustive"), nsamples=100) {
   
   if (length(dataset$blockVar) != length(dataset$Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
   }
  
-  blockIterator <- FoldIterator(dataset$blockVar)
+  blockIterator <- FoldIterator(dataset$Y, blockVar=dataset$blockVar)
   
   allres <- lapply(blockIterator, function(fold) { 
     resultList <- unlist(parallel::mclapply(radius, function(rad) {

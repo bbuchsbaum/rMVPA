@@ -51,7 +51,7 @@ zscore <- args$zscore
 flog.info("number of blocks %s", length(levels(run)))
 flog.info("time point per block", table(run), capture=TRUE)
 flog.info("image matrix dim", dim(mat), capture=TRUE)
-flog.info("zscore %s", dzscore)
+flog.info("zscore %s", zscore)
 flog.info("polynomial order %s", polort)
 
 
