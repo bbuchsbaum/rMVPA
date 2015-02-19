@@ -2,7 +2,7 @@
 % Please edit documentation in R/folds.R
 \name{MatrixSplitIterator}
 \alias{MatrixSplitIterator}
-\title{Create an iterator from a matrix (X), a dependent variable (Y) and a splitting variable (blockVar)}
+\title{Create an iterator from a matrix \code{X}, a dependent variable \code{Y} and a splitting variable (blockVar)}
 \usage{
 MatrixSplitIterator(X, Y, blockVar)
 }
@@ -14,6 +14,6 @@ MatrixSplitIterator(X, Y, blockVar)
 \item{blockVar}{variable denoting the cross-validation folds}
 }
 \description{
-Create an iterator from a matrix (X), a dependent variable (Y) and a splitting variable (blockVar)
+Create an iterator from a matrix \code{X}, a dependent variable \code{Y} and a splitting variable (blockVar)
 }
 

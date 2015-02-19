@@ -142,14 +142,6 @@ classificationResult <- function(observed, predicted, probs, predictor=NULL) {
 }
 
 
-.purgeModel <- function(fit, label) {
-  if (label == "Partial Least Squares") {
-    fit$model = NULL
-  }
-  
-  fit
-}
-
 #' @export
 CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl,...) {
   
@@ -161,7 +153,7 @@ CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneContro
     fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, ...)
   }
   
-  fit$finalModel <- .purgeModel(fit$finalModel, model$label)
+  fit$finalModel <- cleanup(fit$finalModel)
   
   ret <- list(
     model=model,
@@ -183,7 +175,7 @@ CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneContro
 RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid) {
  
   fit <- model$fit(Xtrain, Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE)
-  fit <- .purgeModel(fit, model$label)
+  fit <- cleanup(fit)
   
   ret <- list(
               model=model,
@@ -251,6 +243,8 @@ ListPredictor <- function(fits, names=1:length(fits)) {
   ret
 }
 
+
+#' @export
 WeightedPredictor <- function(fits, names=1:length(fits), weights=rep(1/length(fits), length(fits))) {
   ret <- fits
   names(ret) <- names
@@ -376,13 +370,13 @@ evaluateModel.WeightedPredictor <- function(x, newdata=NULL) {
   
   wts <- attr(x, "weights")
   preds <- lapply(1:length(x), function(i) {
-    evaluateModel(x[[i]], newdata)$probs * wts[i]
+    evaluateModel(x[[i]], newdata)$prob * wts[i]
   })
   
   prob <- preds[!sapply(preds, function(x) is.null(x))]
   pfinal <- Reduce("+", prob)
   
-  pclass <- names(pfinal)[apply(pfinal, 1, which.max)]
+  pclass <- colnames(pfinal)[apply(pfinal, 1, which.max)]
   list(class=pclass, prob=pfinal)
 }
 
@@ -468,23 +462,24 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
 #' @import foreach
 crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE) {
  
-  results <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
+  resultList <- foreach::foreach(fold = foldIterator, .verbose=TRUE, .packages=c(model$library)) %do% {   
     if (nrow(tuneGrid) == 1 && fast) {
       fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl)
-      evaluateModel(fit)        
+      list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL)        
     } else {      
       if (nrow(tuneGrid) == 1) {
         fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=.noneControl)
-        evaluateModel(fit)
+        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL)    
       } else {
         index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], 1:nrow(fold$Xtrain)) 
         ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
         fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=ctrl)
-        evaluateModel(fit)
-      }
-    
+        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL)    
+      } 
     }
   }
+  
+  results <- lapply(resultList, "[[", "result")
   
   ## reorder predictions to match order of input features/labels
   ord <- foldIterator$getTestOrder()
@@ -495,11 +490,18 @@ crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1
     ctrl <- if (nrow(tuneGrid) == 1) {
       .noneControl
     } else {
-      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets(), returnData=FALSE, returnResamp="none")
+      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets(), returnData=FALSE, returnResamp="none", allowParallel=FALSE)
     }    
     
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=FALSE, tuneControl=ctrl)
+    #if (foldIterator$balance) {
+      ## resample
+    #}
+    
+    #wfit <- WeightedPredictor(lapply(resultList, "[[", "fit"))
+    
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=fast, tuneControl=ctrl)
     list(class=predClass, probs=probMat, predictor=asPredictor(fit))
+    #list(class=predClass, probs=probMat, predictor=wfit)
   } else {
     list(class=predClass, probs=probMat, predictor=NULL)
   }

@@ -4,7 +4,8 @@
 \alias{mvpa_regional}
 \title{mvpa_regional}
 \usage{
-mvpa_regional(dataset, regionMask, ncores = 1, savePredictors = FALSE)
+mvpa_regional(dataset, regionMask, ncores = 1, savePredictors = FALSE,
+  autobalance = FALSE)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}

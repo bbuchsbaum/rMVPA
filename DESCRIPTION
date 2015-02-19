@@ -28,6 +28,7 @@ Imports:
     memoise
 Collate:
     'classifiers.R'
+    'cleanup.R'
     'cluster.R'
     'mvpa_model.R'
     'common.R'

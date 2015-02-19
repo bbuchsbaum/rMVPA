@@ -121,12 +121,6 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
 
 
 
-#runSearchLight <- function(searchIter, blockNum, dataset, model, tuneGrid) {
-#    
-#}
-
-
-
 
 learners = list(
   #pls=data.frame(ncomp=1:3),
@@ -140,16 +134,6 @@ learners = list(
 )
 
 
-#sample_sphere <- function(vox, mask, radius) {
-#  ind <- sample(1:nrow(vox), 1) 
-#}
-
-
-
-
-
-
-
 #' mvpa_regional
 #' @param dataset a \code{MVPADataset} instance.
 #' @param regionMask a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
@@ -160,7 +144,7 @@ learners = list(
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
+mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE) {
   if (length(dataset$blockVar) != length(dataset$Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
   }
@@ -179,7 +163,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE) {
     if (length(idx) > 1) {
       vox <- indexToGrid(regionMask, idx)
       
-      result <- runAnalysis(dataset$model, dataset, vox, savePredictors)
+      result <- runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance)
       attr(result, "ROINUM") <- roinum
       attr(result, "vox") <- vox
       perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits))[1,])     

@@ -18,7 +18,7 @@ option_list <- list(
                     make_option(c("-n", "--normalize"), action="store_true", type="logical", help="center and scale each volume vector"),
                     make_option(c("-m", "--model"), type="character", help="name of the classifier model"),
                     make_option(c("-a", "--mask"), type="character", help="name of binary image mask file (.nii format)"),
-                    make_option(c("-b", "--autobalance"), action="store_true", type="logical", help="balance training samples by upsampling minority classes"),
+                    make_option(c("--autobalance"), action="store_true", type="logical", help="balance training samples by upsampling minority classes"),
                     make_option(c("-p", "--pthreads"), type="numeric", help="the number of parallel threads"),
                     make_option(c("-l", "--label_column"), type="character", help="the name of the column in the design file containing the training labels"),
                     make_option(c("-o", "--output"), type="character", help="the name of the output folder where results will be placed"),
@@ -36,8 +36,9 @@ args <- opt$options
 flog.info("command line args are ", args, capture=TRUE)
 
 config <- initializeConfiguration(args)
-
 config <- initializeStandardParameters(config, args, "mvpa_regional")
+
+
 ## Regional Specific Params
 setArg("savePredictors", config, args, FALSE)
 ## Regional Specific Params

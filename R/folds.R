@@ -50,28 +50,31 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
     index <<- 0
   }
   
+  
   nextEl <- function() {
     if (index < length(trainSets)) { 
       index <<- index + 1    
-      trainIndex=trainSets[[index]]
+      trainIndex <- trainSets[[index]]
+      testIndex <- testSets[[index]]
+       
+      if (bootstrap) {
+        trainIndex <- sort(sample(trainIndex, replace=TRUE))
+      }
       
       if (balance) {
-        trainIndex=trainSets[[index]]
         trainIndex <- caret::upSample(trainIndex, Y[trainIndex])[,1]
       }
       
-      if (bootstrap) {
-        trainIndex <- sample(trainIndex, replace=TRUE)
-      }
-      
-      list(trainIndex=trainIndex, testIndex=testSets[[index]], Ytrain=Y[trainIndex])
+     
+      list(trainIndex=trainIndex, testIndex=testIndex, Ytrain=Y[trainIndex], Ytest=Y[testIndex])
       
     } else {
       stop('StopIteration')
     }
   }
   
-  obj <- list(nextElem=nextEl, blockVar=blockVar, index=.getIndex, getTrainSets=.getTrainSets, getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset)
+  obj <- list(nextElem=nextEl, blockVar=blockVar, index=.getIndex, getTrainSets=.getTrainSets, 
+              getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset, balance=balance, bootstrap=bootstrap)
   class(obj) <- c("FoldIterator", 'abstractiter', 'iter')
   obj
   
@@ -101,9 +104,9 @@ MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bo
     ret
   }
   
-  obj <- list(X=X, Y=Y, blockVar=blockVar, nextElem=nextEl, index=foldIter$getIndex, 
+  obj <- list(X=X, Y=Y, blockVar=blockVar, nextElem=nextEl, index=foldIter$index, 
               getTrainSets=foldIter$getTrainSets, getTestSets=foldIter$getTestSets, 
-              getTestOrder=foldIter$getTestOrder, reset=foldIter$reset)
+              getTestOrder=foldIter$getTestOrder, reset=foldIter$reset, balance=foldIter$balance, bootstrap=foldIter$bootstrap)
   class(obj) <- c("MatrixFoldIterator", 'abstractiter', 'iter')
   obj
   

@@ -2,18 +2,25 @@
 % Please edit documentation in R/folds.R
 \name{MatrixFoldIterator}
 \alias{MatrixFoldIterator}
-\title{Create an iterator from a matrix (X), a dependent variable (Y) and a splitting variable (blockVar)}
+\title{Create an iterator of training and test data from a data matrix \code{X}, a factor \code{Y}, and an optional precomputed blocking variable \code{blockVar} used for determining cross-validation folds.}
 \usage{
-MatrixFoldIterator(X, Y, blockVar, trainSets = NULL, testSets = NULL)
+MatrixFoldIterator(X, Y, blockVar = NULL, nfolds = 10, balance = FALSE,
+  bootstrap = FALSE)
 }
 \arguments{
-\item{X}{data matrix}
+\item{X}{the data matrix}
 
 \item{Y}{the labels}
 
-\item{blockVar}{variable denoting the cross-validation folds}
+\item{blockVar}{variable denoting the cross-validation folds.}
+
+\item{nfolds}{the number of cross-validation folds: only relvant when blockVar is not supplied}
+
+\item{balance}{try to balance each training sample so that the frequency of labels is equal across groups}
+
+\item{bootstrap}{use bootstrap resampling of the training set}
 }
 \description{
-Create an iterator from a matrix (X), a dependent variable (Y) and a splitting variable (blockVar)
+Create an iterator of training and test data from a data matrix \code{X}, a factor \code{Y}, and an optional precomputed blocking variable \code{blockVar} used for determining cross-validation folds.
 }
 

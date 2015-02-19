@@ -25,8 +25,8 @@
   data.frame(AUC=do.call(rbind, lapply(resultList, function(x) performance(x)))[,3],
              nvox=sapply(resultList, function(x) attr(x, "nvox")),
              model=sapply(resultList, function(x) attr(x, "modelname")),
-             params=sapply(resultList, function(x) attr(x, "param")),
-             radius=sapply(resultList, function(x) attr(x, "radius"))) 
+             params=sapply(resultList, function(x) attr(x, "param")))
+          
 }
 
 metaCombine <- function(dataset, resultList, fold, blockNum, pruneFrac=1, metaLearner="spls", tuneGrid=expand.grid(K=c(1,2,3,4,5), eta=c(.2, .7, .9), kappa=.5)) {
@@ -106,34 +106,39 @@ greedyCombine <- function(dataset, resultList, trainIndex, testIndex, calibrateP
   }
   
   baggedPredictor <- WeightedPredictor(predictorList, weights=finalWeights)
-  testVec <- SparseBrainVector(do.call(cbind, takeVolume(dataset$trainVec,fold$testIndex)), space(dataset$mask), dataset$mask)
+  testVec <- takeVolume(dataset$trainVec, testIndex,merge=TRUE)
   testPreds <- evaluateModel(baggedPredictor, testVec)
   result <- classificationResult(Ytest, testPreds$class, testPreds$prob, baggedPredictor)
   
   weightVol <- BrainVolume(array(0, dim(dataset$mask)), space(mask))
+  countVol <- BrainVolume(array(0, dim(dataset$mask)), space(mask))
   
   for (i in 1:length(voxelList)) {
-    vox <- voxelList[[i]]
-    weightVol[vox] <- weightVol[vox] + (finalWeights[i] * 1/log(nrow(vox)))
+    vox <- voxelList[[i]]   
+    weightVol[vox] <- weightVol[vox] + finalWeights[i]
+    countVol[vox] <- countVol[vox] + 1
   }
   
-  weightVol <- (weightVol - min(weightVol))/(max(weightVol)-min(weightVol))
+  nz <- which(countVol > 0)
+  weightVol[nz] <- weightVol[nz]/countVol[nz]
+  
   list(result=result, weightVol=weightVol)
   
 }
 
 
-.searchEnsembleIteration <- function(dataset, mask, trainInd, testInd, radius, model, tuneGrid) {
-  searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
+.searchEnsembleIteration <- function(searchIter, dataset, trainInd, testInd, model, tuneGrid, autobalance=FALSE, bootstrap=FALSE) {
+  #searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
   
   Ytrain <- dataset$Y[-testInd]
   blockVar <- dataset$blockVar[-testInd]
   
   res <- lapply(searchIter, function(vox) { 
+    print(nrow(vox))
     if (nrow(vox) > 2) {   
       X <- series(dataset$trainVec, vox)
       Xtrain <- X[-testInd,]    
-      foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, blockVar)
+      foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, blockVar, balance=autobalance, bootstrap=bootstrap)
       cvres <- try(crossval_internal(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=TRUE))
       
       param_names=names(tuneGrid)
@@ -142,10 +147,9 @@ greedyCombine <- function(dataset, resultList, trainIndex, testIndex, calibrateP
           vox=vox,
           nvox=nrow(vox),
           param_names=param_names,
-          radius=radius,
+          #radius=radius,
           param=paste(sapply(1:ncol(tuneGrid), function(i) paste(param_names[i], tuneGrid[,i], sep=":")), collapse="#")
         )
-  
       }
       
       cvres
@@ -159,10 +163,9 @@ greedyCombine <- function(dataset, resultList, trainIndex, testIndex, calibrateP
 
 
 superLearners = .setupModels(list(
-  avNNet=expand.grid(size = c(2,4,8), decay=c(.01, .001, .0001), bag=FALSE),
-  pls=data.frame(ncomp=1:5),
-  sda=data.frame(lambda=c(.1, .5, .9), diagonal=c(FALSE,FALSE, FALSE)),
-  avNNet=expand.grid(size = c(2,4,8), decay=c(.01, .001, .0001)),
+  #avNNet=expand.grid(size = c(2,4,8), decay=c(.01, .001, .0001), bag=FALSE),
+  #pls=data.frame(ncomp=1:5),
+  sda=data.frame(lambda=c(.01, .1, .5, .9), diagonal=c(FALSE,FALSE,FALSE, FALSE)),
   spls=expand.grid(K=c(1:5), eta=c(.1,.3,.5,.7), kappa=.5)
 ))
 
@@ -178,7 +181,8 @@ superLearners = .setupModels(list(
 #' @export
 #' 
 ### TODO add argument sampleMethod - "exhaustive", "replacement"//sampleIter=1000
-mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, radius=c(14,10,6), ncores=1, pruneFrac=.2, combiner=c("optAUC"), bootstrapSamples=TRUE, searchMethod=c("replacement", "exhaustive"), nsamples=100) {
+mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, radius=12, ncores=1, pruneFrac=.2, 
+                                      combiner=c("optAUC"), bootstrapSamples=TRUE, searchMethod=c("replacement", "exhaustive"), nsamples=100, calibrateProbs=FALSE) {
   
   if (length(dataset$blockVar) != length(dataset$Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
@@ -187,9 +191,16 @@ mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, rad
   blockIterator <- FoldIterator(dataset$Y, blockVar=dataset$blockVar)
   
   allres <- lapply(blockIterator, function(fold) { 
-    resultList <- unlist(parallel::mclapply(radius, function(rad) {
-      unlist(lapply(modelSet, function(model) {
-        searchResults <- .searchEnsembleIteration(dataset, mask, fold$trainIndex, fold$testIndex, rad,  model$model, model$tuneGrid)     
+    resultList <- unlist(lapply(radius, function(rad) {
+      unlist(parallel::mclapply(modelSet, function(model) {
+        if (searchMethod == "exhaustive") {
+          searchIter <- itertools::ihasNext(RandomSearchlight(mask, rad))
+        } else if (searchMethod == "replacement") {
+          searchIter <- itertools::ihasNext(BootstrapSearchlight(mask, radius, nsamples))          
+        }
+        
+        searchResults <- .searchEnsembleIteration(searchIter, dataset, fold$trainIndex, fold$testIndex, model$model, model$tuneGrid, autobalance=autobalance, bootstrap=bootstrapSamples)     
+        
         searchResults <- lapply(searchResults, function(sr) { 
           print(model$name)
           attr(sr, "modelname") <- model$name 
@@ -199,16 +210,22 @@ mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, rad
     }), recursive=FALSE)
     
     
-    ens = greedyCombine(dataset, resultList, fold$trainIndex, fold$testIndex, calibrateProbs=calibrateProbs, pruneFrac=pruneFrac)
+    ens <- greedyCombine(dataset, resultList, fold$trainIndex, fold$testIndex, calibrateProbs=calibrateProbs, pruneFrac=pruneFrac)
         
   })
+  
+  weightVol <- Reduce("+", lapply(allres, function(x) x$weightVol))/length(allres)
 }
 
-runAnalysis.EnsembleSearchlightModel <- function(object, dataset, vox, returnPredictor=FALSE) {
+runAnalysis.EnsembleSearchlightModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, 
+                                                 searchMehod="replacement", nsamples=50, radius=12, pruneFrac=.2) {
+  browser()
   mask <- array(0, dim(dataset$mask))
   mask[vox] <- 1
   mask <- LogicalBrainVolume(mask, space(dataset$mask))
   modelSet <- .setupModels(object$baseLearners)
+  
+  res <- mvpa_searchlight_ensemble(modelSet, dataset, mask, radius=radius, pruneFrac=pruneFrac, combiner="optAUC", bootstrapSamples=TRUE, searchMethod=c("replacement", "exhaustive"), nsamples=100)
   
 }
 

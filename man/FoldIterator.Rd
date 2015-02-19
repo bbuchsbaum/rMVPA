@@ -4,14 +4,19 @@
 \alias{FoldIterator}
 \title{Create an iterator froma block variable for iterating through the folds during cross-validation}
 \usage{
-FoldIterator(blockVar)
+FoldIterator(Y, blockVar = NULL, nfolds = 10, balance = FALSE,
+  bootstrap = FALSE)
 }
 \arguments{
+\item{Y}{the labels}
+
 \item{blockVar}{variable denoting the cross-validation folds}
 
-\item{X}{data matrix}
+\item{nfolds}{the number of cross-validation folds: only relvant when blockVar is not supplied}
 
-\item{Y}{the labels}
+\item{balance}{try to balance each training sample so that the frequency of labels is equal across groups}
+
+\item{bootstrap}{use bootstrap resampling of the training set}
 }
 \description{
 Create an iterator froma block variable for iterating through the folds during cross-validation
