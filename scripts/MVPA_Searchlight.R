@@ -15,7 +15,7 @@ option_list <- list(make_option(c("-r", "--radius"), type="numeric", help="the r
                     make_option("--train_data", type="character", help="the name of the training data file as (4D .nii file)"), 
                     make_option("--test_data", type="character", help="the name of the testing data file as (4D .nii file)"),  
                     make_option(c("-n", "--normalize"), action="store_true", type="logical", help="center and scale each volume vector"),
-                    make_option(c("-b", "--autobalance"), action="store_true", type="logical", help="balance training samples by upsampling minority classes"),
+                    make_option(c("--autobalance"), action="store_true", type="logical", help="balance training samples by upsampling minority classes"),
                     #make_option(c("-z", "--zscore"), action="store_true", type="logical", help="z-score all voxels/features within block"),
                     make_option(c("-m", "--model"), type="character", help="name of the classifier model"),
                     make_option(c("-a", "--mask"), type="character", help="name of binary image mask file (.nii format)"),

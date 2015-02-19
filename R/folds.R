@@ -66,7 +66,7 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
       }
       
      
-      list(trainIndex=trainIndex, testIndex=testIndex, Ytrain=Y[trainIndex], Ytest=Y[testIndex])
+      list(trainIndex=trainIndex, testIndex=testIndex, Ytrain=Y[trainIndex], Ytest=Y[testIndex], index=index)
       
     } else {
       stop('StopIteration')
