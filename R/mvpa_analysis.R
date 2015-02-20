@@ -59,8 +59,12 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
   if (ncol(X) == 0) {
     stop("no valid columns")
   } else {
-    tuneGrid <- if (!is.null(dataset$tuneGrid)) dataset$tuneGrid else dataset$model$grid(X, dataset$Y, 1)
-    
+    tuneGrid <- if (!is.null(dataset$tuneGrid)) {
+      dataset$tuneGrid 
+    } else {
+      dataset$model$grid(X, dataset$Y, dataset$tuneLength)
+    }
+  
     result <- if (is.null(dataset$testVec)) {
       cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
       classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs,cvres$predictor)

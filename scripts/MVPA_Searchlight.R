@@ -36,7 +36,6 @@ args <- opt$options
 flog.info("command line args are ", args, capture=TRUE)
 
 config <- initializeConfiguration(args)
-
 config <- initializeStandardParameters(config, args, "searchlight")
 
 #flog.appender(appender.file(paste0(config$output, "/rMVPA.log")))
@@ -72,7 +71,7 @@ flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
 
 
 dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
-                       testSplitVar=config$testSplitVar, testSplits=config$testSplits)
+                       tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits)
 
 for (lib in dataset$model$library) {
   library(lib, character.only = TRUE)
