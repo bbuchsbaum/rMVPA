@@ -24,6 +24,7 @@ option_list <- list(make_option(c("-r", "--radius"), type="numeric", help="the r
                     make_option(c("-o", "--output"), type="character", help="the name of the output folder where results will be placed"),
                     make_option(c("-b", "--block_column"), type="character", help="the name of the column in the design file indicating the block variable used for cross-validation"),
                     make_option(c("-g", "--tune_grid"), type="character", help="string containing grid parameters in the following form: a=\\(1,2\\), b=\\('one', 'two'\\)"),
+                    make_option(c("--tune_length"), type="numeric", help="an integer denoting the number of levels for each model tuning parameter"),
                     make_option(c("-i", "--niter"), type="character", help="number of randomized searchlight iterations"),
                     make_option(c("-c", "--config"), type="character", help="name of configuration file used to specify program parameters"))
                   

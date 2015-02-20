@@ -39,6 +39,7 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("block_column", config, args, "block")
   setArg("normalize", config, args, FALSE)
   setArg("autobalance", config, args, FALSE)
+  setArg("tune_length", config, args, 1)
   #setDefault("autobalance", config, FALSE)
   setArg("tune_grid", config, args, NULL)
   #setDefault("method_params", config, list())

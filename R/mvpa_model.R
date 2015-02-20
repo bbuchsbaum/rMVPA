@@ -51,7 +51,7 @@ SimilarityModel <- function(type=c("pearson", "spearman", "kendall")) {
 #' @param modelName
 #' @param tuneGrid
 #' @export
-MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corclass", tuneGrid=NULL, testSplitVar=NULL, testSplits=NULL) {
+MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corclass", tuneGrid=NULL, tuneLength=1, testSplitVar=NULL, testSplits=NULL) {
   
   model <- loadModel(modelName)
   
