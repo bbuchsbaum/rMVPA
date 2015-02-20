@@ -68,6 +68,7 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
     testY=testY,
     model=model,
     tuneGrid=tuneGrid,
+    tuneLength=tuneLength,
     testSets=testSets,
     trainSets=trainSets,
     testSplitVar=testSplitVar,
