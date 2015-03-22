@@ -16,7 +16,7 @@ ClassificationModel <- function(caretModel) {
 #' create an \code{EnsembleSearchlightModel} instance
 #' @param caretModel
 #' @export
-EnsembleSearchlightModel <- function(baseLearners=list(pls=data.frame(ncomp=1:4))) {
+EnsembleSearchlightModel <- function(baseLearners=list(pls=data.frame(ncomp=1:5), lda_thomaz=1, sda=expand.grid(lambda=c(.01,.2,.5,.7), diagonal=FALSE))) {
   ret=list(baseLearners=baseLearners)
   class(ret) <- c("EnsembleSearchlightModel", "list")
   ret
@@ -463,7 +463,7 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
 #' @import foreach
 crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE) {
  
-  resultList <- foreach::foreach(fold = foldIterator, .verbose=TRUE, .packages=c(model$library)) %do% {   
+  resultList <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
     if (nrow(tuneGrid) == 1 && fast) {
       fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl)
       list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL)        

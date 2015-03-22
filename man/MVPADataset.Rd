@@ -5,8 +5,8 @@
 \title{create an \code{MVPA} instance}
 \usage{
 MVPADataset(trainVec, Y, mask, blockVar, testVec, testY,
-  modelName = "corclass", tuneGrid = NULL, testSplitVar = NULL,
-  testSplits = NULL)
+  modelName = "corclass", tuneGrid = NULL, tuneLength = 1,
+  testSplitVar = NULL, testSplits = NULL)
 }
 \arguments{
 \item{trainVec}{}

@@ -53,7 +53,7 @@ config <- initializeDesign(config)
 rowIndices <- which(config$train_subset)
 config$ROIVolume <- loadMask(config)
 
-if (! is.null(config$roi_subset)) {
+if (!is.null(config$roi_subset)) {
   form <- try(eval(parse(text=config$roi_subset)))
   if (inherits(form, "try-error")) {
     flog.error("could not parse roi_subset parameter: %s", config$roi_subset)
@@ -67,13 +67,26 @@ if (! is.null(config$roi_subset)) {
   
   res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
   
-  
   config$ROIVolume[!res] <- 0
   flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
 }
 
+if (!is.null(config$roi_grouping)) {
+  roilist <- lapply(1:length(config$roi_grouping), function(i) {
+    grp <- config$roi_grouping[[i]]
+    idx <- which(config$ROIVolume %in% grp)
+    vol <- makeVolume(refvol=config$ROIVolume)
+    vol[idx] <- i
+    vol
+  })
+  
+  config$ROIVolume <- roilist
+} else {
+  config$ROIVolume <- list(config$ROIVolume)
+}
 
-config$maskVolume <- as(config$ROIVolume, "LogicalBrainVolume")
+
+config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
 
 config <- initializeData(config)
 
@@ -81,7 +94,12 @@ flog.info("number of training trials: %s", length(rowIndices))
 flog.info("max trial index: %s", max(rowIndices))
 flog.info("loading training data: %s", config$train_data)
 flog.info("mask contains %s voxels", sum(config$maskVolume))
-flog.info("Region mask contains: %s ROIs", length(unique(config$ROIVolume[config$ROIVolume > 0])))
+
+for (i in seq_along(config$ROIVolume)) {
+  rvol <- config$ROIVolume[[i]]
+  flog.info("Region mask contains: %s ROIs", length(unique(rvol[rvol > 0])))
+}
+
 
 
 flog.info("Running regional MVPA with parameters:", configParams, capture=TRUE)
@@ -94,30 +112,6 @@ if (length(config$labels) != dim(config$train_datavec)[4]) {
 dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
                        tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits)
 
-mvpa_res <- mvpa_regional(dataset, config$ROIVolume, config$pthreads, config$savePredictors)
-
-config$output <- makeOutputDir(config$output)
-
-lapply(1:length(mvpa_res$outVols), function(i) {
-  out <- paste0(config$output, "/", names(mvpa_res$outVols)[i], ".nii")
-  writeVolume(mvpa_res$outVols[[i]], out)  
-})
-
-write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
-saveResults(mvpa_res$extendedResults, config$output)
-
-write.table(config$train_subset, paste0(config$output, "/train_table.txt"), row.names=FALSE, quote=FALSE)
-
-if (!is.null(config$test_subset)) {
-  write.table(config$test_subset, paste0(config$output, "/test_table.txt"), row.names=FALSE, quote=FALSE)
-}
-
-if (!is.null(config$mask)) {
-  file.copy(config$mask, paste0(config$output, "/", config$mask))
-}
-
-#write.table(format(mvpa_res$predMat,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/predMat_table.txt")), row.names=FALSE, quote=FALSE)
-#saveRDS(mvpa_res$predictorList, paste0(config$output, "/predictorList.RDS"))
 
 for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
   if (!is.null(configParams[[varname]]) && is(configParams[[varname]], "formula")) {
@@ -125,7 +119,41 @@ for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
   }
 }
 
-configout <- paste0(config$output, "/config.yaml")
-qwrite(configParams, configout)
+for (roinum in seq_along(config$ROIVolume)) {
+  roivol <- config$ROIVolume[[roinum]]
+  mvpa_res <- mvpa_regional(dataset, roivol, config$pthreads, config$savePredictors)
+  
+  if (length(config$ROIVolume) > 1) {
+    outdir <- paste0(config$output, "_roigroup_", roinum)
+    outdir <- makeOutputDir(outdir)
+  } else {
+    outdir <- makeOutputDir(config$output)
+  }
+    
+  lapply(1:length(mvpa_res$outVols), function(i) {
+    out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")
+    writeVolume(mvpa_res$outVols[[i]], out)  
+  })
+
+  write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
+  saveResults(mvpa_res$extendedResults, outdir)
+
+  write.table(config$train_subset, paste0(outdir, "/train_table.txt"), row.names=FALSE, quote=FALSE)
+
+  if (!is.null(config$test_subset)) {
+    write.table(config$test_subset, paste0(outdir, "/test_table.txt"), row.names=FALSE, quote=FALSE)
+  }
+
+  if (!is.null(config$mask)) {
+    file.copy(config$mask, paste0(outdir, "/", config$mask))
+  }
+
+  #write.table(format(mvpa_res$predMat,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/predMat_table.txt")), row.names=FALSE, quote=FALSE)
+  #saveRDS(mvpa_res$predictorList, paste0(config$output, "/predictorList.RDS"))
+
+
+  configout <- paste0(outdir, "/config.yaml")
+  qwrite(configParams, configout)
+}
 
 

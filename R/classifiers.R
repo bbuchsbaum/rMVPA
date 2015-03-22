@@ -256,10 +256,10 @@ MVPAModels$lda_thomaz <- list(type = "Classification",
                               loop = NULL, 
                               parameters=data.frame(parameters="parameter", class="character", label="parameter"),
                               grid=function(x, y, len = NULL) data.frame(parameter="none"),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { sparsediscrim::lda_thomaz(x,y, ...) },
-                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { predict(modelFit, as.matrix(newdata))$class },
+                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { lda_thomaz(x,y, ...) },
+                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { sparsediscrim:::predict.lda_thomaz(modelFit, as.matrix(newdata))$class },
                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
-                                scores <- -t(predict(modelFit, newdata)$scores)
+                                scores <- -t(sparsediscrim:::predict.lda_thomaz(modelFit, newdata)$scores)
                                 mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
                                 probs <- exp(scores - mc)
                                 zapsmall(probs/rowSums(probs))

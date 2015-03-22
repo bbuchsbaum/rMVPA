@@ -30,9 +30,11 @@ greedyTwoClassOptim <- function(X, Y, iter = 100L){
     weights[best] <- weights[best] + 1L
     pred          <- pred[,best] * sum.weights
     maxtest       <- max(errors)
-    print(paste("iter:", sum.weights, "best:", maxtest))
+    
     
   }
+  
+  print(paste("iter:", sum.weights, "best:", maxtest))
   
   if(stopper > maxtest){
     testresult <- round(maxtest/stopper, 5) * 100
@@ -96,8 +98,9 @@ greedyMultiClassOptim <- function(PredList, Y, iter = 100L, metric="AUC", oneByO
       weights[best] <- weights[best] + 1L
       pred          <- pred[[best]] * sum.weights
       maxtest       <- max(errors)
-      print(paste("iter:", sum.weights, "top:", best, "best:", maxtest))  
     }
+    
+    print(paste("iter:", sum.weights, "best:", maxtest))
   
     if(stopper > maxtest){
       testresult <- round(maxtest/stopper, 5) * 100

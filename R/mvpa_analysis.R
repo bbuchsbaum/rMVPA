@@ -157,11 +157,10 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
   registerDoParallel(cl)
   
 
-  
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   regionSet <- sort(as.integer(unique(regionMask[regionMask > 0])))
   
-  res <- foreach::foreach(roinum = regionSet, .verbose=TRUE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
+  res <- foreach::foreach(roinum = regionSet, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
     idx <- which(regionMask == roinum)
     
     if (length(idx) > 1) {
@@ -323,6 +322,7 @@ combineResults.ClassificationModel <- function(model, resultList) {
     data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=as.character(res$observed) == as.character(res$predicted), prob=res$prob)
   })))
   
+   
   
   ret <- list(predictor=ListPredictor(predictorList, rois), predictions=predFrame)
   class(ret) <- c("ClassificationResultList", "list")
@@ -332,7 +332,34 @@ combineResults.ClassificationModel <- function(model, resultList) {
 
 #' @export
 combineResults.EnsembleSearchlightModel <- function(model, resultList) {
+  rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
   
+  predictorList <- lapply(resultList, function(res) {
+    MVPAVoxelPredictor(res$predictor, attr(res, "vox"))
+  })
+  
+  predFrame <- as.data.frame(do.call(rbind, lapply(resultList, function(res) {
+    data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=as.character(res$observed) == as.character(res$predicted), prob=res$prob)
+  })))
+  
+  weightVol <- Reduce("+", lapply(resultList, function(res) attr(res, "weightVol")))
+  AUCVol <- Reduce("+", lapply(resultList, function(res) attr(res, "AUCVol")))
+  
+  ret <- list(predictor=ListPredictor(predictorList, rois), predictions=predFrame, weightVol=weightVol, AUCVol=AUCVol)
+  class(ret) <- c("EnsembleSearchlightResultList", "list")
+  ret
+  
+}
+
+#' @export
+saveResults.EnsembleSearchlightResultList <- function(results, folder) {
+  write.table(format(results$predictions,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(folder, "/prediction_table.txt")), row.names=FALSE, quote=FALSE)  
+  if (!is.null(results$predictor)) {
+    saveRDS(results$predictor, paste0(folder, "/predictor.RDS"))
+  }
+  
+  writeVolume(results$AUCVol, paste0(folder, "/AUC_Scores.nii"))
+  writeVolume(results$weightVol, paste0(folder, "/EnsembleWeights.nii"))
 }
 
 #' @export
