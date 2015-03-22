@@ -34,6 +34,7 @@ Collate:
     'common.R'
     'ensemble.R'
     'folds.R'
+    'model_params.R'
     'mvpa_analysis.R'
     'optim.R'
     'performance.R'

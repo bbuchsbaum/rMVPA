@@ -4,7 +4,9 @@
 \alias{EnsembleSearchlightModel}
 \title{create an \code{EnsembleSearchlightModel} instance}
 \usage{
-EnsembleSearchlightModel(baseLearners = list(pls = data.frame(ncomp = 1:4)))
+EnsembleSearchlightModel(baseLearners = list(pls = data.frame(ncomp = 1:5),
+  lda_thomaz = 1, sda = expand.grid(lambda = c(0.01, 0.2, 0.5, 0.7), diagonal =
+  FALSE)))
 }
 \arguments{
 \item{caretModel}{}
