@@ -27,7 +27,7 @@ option_list <- list(
                     make_option(c("--tune_length"), type="numeric", help="an integer denoting the number of levels for each model tuning parameter"),
                     make_option(c("-i", "--niter"), type="character", help="number of randomized searchlight iterations"),
                     make_option(c("--savePredictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
-                    make_option(c("--skipIfFolderExists"), type="logical", action="store_false", help="skip, if output folder already exists"),
+                    make_option(c("--skipIfFolderExists"), type="logical", action="store_true", help="skip, if output folder already exists"),
                     make_option(c("-c", "--config"), type="character", help="name of configuration file used to specify program parameters"))
 
 
@@ -121,6 +121,8 @@ for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
 }
 
 for (roinum in seq_along(config$ROIVolume)) {
+  
+  gc()
   
   if (config$skipIfFolderExists) {
     outdir <- paste0(config$output, "_roigroup_", roinum)
