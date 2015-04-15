@@ -127,7 +127,7 @@ for (roinum in seq_along(config$ROIVolume)) {
   if (config$skipIfFolderExists) {
     outdir <- paste0(config$output, "_roigroup_", roinum)
     if (file.exists(outdir)) {
-      flog.info("output folder %s already exists, sipping.", outdir)
+      flog.info("output folder %s already exists, skipping.", outdir)
       next
     }
   }
