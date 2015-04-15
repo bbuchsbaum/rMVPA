@@ -131,6 +131,7 @@ for (roinum in seq_along(config$ROIVolume)) {
       next
     }
   }
+  
   if (length(config$ROIVolume) > 1) {
     outdir <- paste0(config$output, "_roigroup_", roinum)
     outdir <- makeOutputDir(outdir)
@@ -158,7 +159,7 @@ for (roinum in seq_along(config$ROIVolume)) {
   }
 
   if (!is.null(config$mask)) {
-    file.copy(config$mask, paste0(outdir, "/", config$mask))
+    file.copy(config$mask, paste0(outdir, "/", basename(config$mask)))
   }
 
   #write.table(format(mvpa_res$predMat,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/predMat_table.txt")), row.names=FALSE, quote=FALSE)
