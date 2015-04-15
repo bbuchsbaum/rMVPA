@@ -35,6 +35,7 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("model", config, args, "corsim")
   setArg("pthreads", config, args, 1)
   setArg("label_column", config, args, "labels")
+  setArg("skipIfFolderExists", config, args, FALSE)
   setArg("output", config, args, paste0(analysisType, "_", config$labelColumn))
   setArg("block_column", config, args, "block")
   setArg("normalize", config, args, FALSE)
