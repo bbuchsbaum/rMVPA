@@ -37,9 +37,10 @@ selectFeatures.catscore <- function(obj, X, Y) {
     stop(paste("selectFeatures.catscore: unsupported cutoff.type: ", obj$cutoff.type))
   }
   
-  message("retaining ", sum(keep), "features in matrix with", ncol(X), "columns")
+  
   keep <- logical(ncol(X))
   keep[keep.idx] <- TRUE
+  message("retaining ", sum(keep), "features in matrix with", ncol(X), "columns")
   keep
    
 }
@@ -92,26 +93,25 @@ selectFeatures.FTest <- function(obj, X, Y) {
    scores <- numeric(length(idx))
    scores[idx] <- sda.1[,2]
    
-   composite <- scale(sda.1[,2]) + scale(logpvals[idx])
+   composite <- scale(score) + scale(logpvals)
+   print(cor(score, logpvals))
  
    keep.idx <- if (obj$cutoff.type == "top_k") {
      k <- min(ncol(X), obj$cutoff.value)
      order(composite, decreasing=TRUE)[1:k]
    } else if (obj$cutoff.type == "top_p") {
      if (obj$cutoff.value <= 0 || obj$cutoff.value > 1) {
-       stop("selectFeatures.FTest: with top_p, cutoff.value must be > 0 and <= 1")
+       stop("selectFeatures.catscoreFTest: with top_p, cutoff.value must be > 0 and <= 1")
      }
      k <- obj$cutoff.value * ncol(X)
      order(composite, decreasing=TRUE)[1:k]
    } else {
-     stop(paste("selectFeatures.catscore: unsupported cutoff.type: ", obj$cutoff.type))
+     stop(paste("selectFeatures.catscoreFTest: unsupported cutoff.type: ", obj$cutoff.type))
    }
    
    keep <- logical(ncol(X))
    keep[keep.idx] <- TRUE
    
    message("retaining ", sum(keep), "features in matrix with", ncol(X), "columns")
-   
    keep
-   
  }
