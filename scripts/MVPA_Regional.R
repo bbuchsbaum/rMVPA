@@ -110,8 +110,15 @@ if (length(config$labels) != dim(config$train_datavec)[4]) {
   stop()
 }
 
+featureSelector <- if (!is.null(config$feature_selector)) {
+  FeatureSelector(config$feature_selector$method, config$feature_selector$cutoff_type,config$feature_selector$cutoff_value)
+}
+
+flog.info("feature selector: ", featureSelector, capture=TRUE)
+
 dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
                        tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits)
+
 
 
 for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
@@ -141,9 +148,10 @@ for (roinum in seq_along(config$ROIVolume)) {
   
   
   roivol <- config$ROIVolume[[roinum]]
-  mvpa_res <- mvpa_regional(dataset, roivol, config$pthreads, config$savePredictors)
   
-    
+  
+  mvpa_res <- mvpa_regional(dataset, roivol, config$pthreads, config$savePredictors, autobalance=config$autobalance, bootstrap=FALSE, featureSelector=featureSelector)
+  
   lapply(1:length(mvpa_res$outVols), function(i) {
     out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")
     writeVolume(mvpa_res$outVols[[i]], out)  

@@ -5,7 +5,7 @@
 \title{mvpa_regional}
 \usage{
 mvpa_regional(dataset, regionMask, ncores = 1, savePredictors = FALSE,
-  autobalance = FALSE)
+  autobalance = FALSE, bootstrap = FALSE, featureSelector = NULL)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}

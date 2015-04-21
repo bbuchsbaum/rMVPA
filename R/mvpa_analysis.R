@@ -35,24 +35,25 @@ runAnalysis <- function(object, dataset,...) {
 }
 
 #' @export
-runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE,autobalance=FALSE, bootstrap=FALSE) {
-  mvpa_crossval(dataset, vox, returnPredictor)
+runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL) {
+  mvpa_crossval(dataset, vox, returnPredictor, autobalance, bootstrap, featureSelector)
 }
 
 
 #' @export
-runAnalysis.SimilarityModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE) {
+runAnalysis.SimilarityModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL) {
   patternSimilarity(dataset, vox, object$simFun)
 }
 
 
 #' @export 
-mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE) {
+mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
   
   X <- X[,valid.idx]
   vox <- vox[valid.idx,]
+  
   
   foldIterator <- MatrixFoldIterator(X, dataset$Y,dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
   
@@ -66,11 +67,11 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
     }
   
     result <- if (is.null(dataset$testVec)) {
-      cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
+      cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor, featureSelector=featureSelector)
       classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs,cvres$predictor)
     } else {
       Xtest <- series(dataset$testVec, vox) 
-      cvres <- crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor)
+      cvres <- crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor,featureSelector=featureSelector)
       classificationResult(dataset$testY, as.factor(cvres$class), cvres$probs, cvres$predictor)
     }
     
@@ -148,7 +149,8 @@ learners = list(
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE) {
+mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL) {
+  
   if (length(dataset$blockVar) != length(dataset$Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
   }
@@ -156,7 +158,6 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
   cl <- makeCluster(ncores, outfile="",useXDR=FALSE, type="FORK")
   registerDoParallel(cl)
   
-
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   regionSet <- sort(as.integer(unique(regionMask[regionMask > 0])))
   
@@ -166,7 +167,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
     if (length(idx) > 1) {
       vox <- indexToGrid(regionMask, idx)
       
-      result <- runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance)
+      result <- runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap, featureSelector)
       attr(result, "ROINUM") <- roinum
       attr(result, "vox") <- vox
       perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits))[1,])     
@@ -236,7 +237,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
 #' @import parallel
 #' @import futile.logger
 #' @export
-mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard"), niter=4, ncores=2, autobalance=FALSE) {
+mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard"), niter=4, ncores=2, autobalance=FALSE, bootstrap=FALSE) {
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }

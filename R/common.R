@@ -139,6 +139,11 @@ initializeDesign <- function(config) {
   
 }
 
+#initializeFeatureSelection <- function(args, grid) {
+#  if (!is.null(args$feature_selection) && !args$feature_selection == "NULL") {
+#    
+#}
+
 #' @export
 initializeTuneGrid <- function(args, config) {
   if (!is.null(args$tune_grid) && !args$tune_grid == "NULL") {
@@ -237,7 +242,7 @@ loadMask <- function(config) {
 #' @export
 loadDesign <- function(config, name) {
   if (!file.exists(config[[name]])) {
-    abort("cannot find table named", config$table)
+    stop(paste("cannot find table named", config$table))
   } else {
     read.table(config[[name]], header=TRUE, comment.char=";")
   }
@@ -246,7 +251,7 @@ loadDesign <- function(config, name) {
 #' @export
 loadLabels <- function(full_design, config) {
   if (is.null(full_design[[config$label_column]])) {
-    abort(paste("Error: labelColumn", config$label_column, "not found"))
+    stop(paste("Error: labelColumn", config$label_column, "not found"))
   } else {
     labels <- full_design[[config$label_column]]
   }

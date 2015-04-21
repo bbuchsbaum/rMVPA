@@ -144,7 +144,15 @@ classificationResult <- function(observed, predicted, probs, predictor=NULL) {
 
 
 #' @export
-CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl,...) {
+CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector=NULL, ...) {
+  
+  featureMask <- if (!is.null(featureSelector)) {
+    selectFeatures(featureSelector, Xtrain, Ytrain)
+  } else {
+    rep(TRUE, ncol(Xtrain))
+  }
+  
+  Xtrain <- Xtrain[,featureMask]
   
   if (model$library[1] == "gbm" && length(levels(Ytrain)) == 2) {
     fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, distribution="bernoulli", ...)
@@ -154,7 +162,7 @@ CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneContro
     fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, ...)
   }
   
-  fit$finalModel <- cleanup(fit$finalModel)
+  #fit$finalModel <- cleanup(fit$finalModel)
   
   ret <- list(
     model=model,
@@ -164,19 +172,28 @@ CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneContro
     Ytest=Ytest,
     tuneGrid=tuneGrid,
     tuneControl=tuneControl,
-    modelFit=fit)
+    modelFit=fit,
+    featureSelector=featureSelector,
+    featureMask=featureMask)
   
   class(ret) <- c("CaretModel", "list")
   ret
 }
 
 
-
 #' @export
-RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid) {
+RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector=NULL) {
+  
+  featureMask <- if (!is.null(featureSelector)) {
+    selectFeatures(featureSelector, Xtrain, Ytrain)
+  } else {
+    rep(TRUE, ncol(Xtrain))
+  }
  
+  Xtrain <- Xtrain[,featureMask]
+  
   fit <- model$fit(Xtrain, Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE)
-  fit <- cleanup(fit)
+  #fit <- cleanup(fit)
   
   ret <- list(
               model=model,
@@ -185,7 +202,9 @@ RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid) {
               Xtest=Xtest,
               Ytest=Ytest,
               tuneGrid=tuneGrid,
-              modelFit=fit)
+              modelFit=fit,
+              featureSelector=featureSelector,
+              featureMask=featureMask)
               
   
   class(ret) <- c("RawModel", "list")
@@ -193,17 +212,18 @@ RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid) {
 }
 
 #' @export
-RawPredictor <- function(fit, model) {
+RawPredictor <- function(fit, model, featureMask) {
   ret <- list(fit=fit,
-              model=model)
+              model=model,
+              featureMask=featureMask)
   
   class(ret) <- c("RawPredictor", "list")
   ret
 }
 
 #' @export
-CaretPredictor <- function(fit) {
-  ret <- list(fit=fit)
+CaretPredictor <- function(fit, featureMask) {
+  ret <- list(fit=fit, featureMask=featureMask)
   
   class(ret) <- c("CaretPredictor", "list")
   ret
@@ -270,12 +290,12 @@ asPredictor <- function(x, voxelGrid) {
 
 #' @export
 asPredictor.RawModel <- function(x) {
-  RawPredictor(x$modelFit, x$model)
+  RawPredictor(x$modelFit, x$model, x$featureMask)
 }
 
 #' @export
-asPredictor.CaretModel <- function(x, voxelGrid, brainSpace) {
-  CaretPredictor(x$modelFit)
+asPredictor.CaretModel <- function(x) {
+  CaretPredictor(x$modelFit, x$featureMask)
 }
 
 
@@ -285,7 +305,7 @@ evaluateModel.RawModel <- function(x, newdata=NULL) {
     newdata=x$Xtest
   }
   
-  probs <- x$model$prob(x$modelFit, newdata)  
+  probs <- x$model$prob(x$modelFit, newdata[,x$featureMask])  
   
   cpred <- apply(probs,1, function(x) {
     x[is.na(x)] <- 0
@@ -333,7 +353,7 @@ evaluateModel.RawPredictor <- function(x, newdata=NULL) {
     stop("newdata cannot be null")
   }
   
-  probs <- x$model$prob(x$fit, newdata=newdata)     
+  probs <- x$model$prob(x$fit, newdata=newdata[,x$featureMask])     
   cpred <- apply(probs,1, which.max)
   cpred <- levels(x$Ytrain)[cpred]
   list(class=cpred, probs=probs)
@@ -346,7 +366,7 @@ evaluateModel.CaretModel <- function(x, newdata=NULL) {
     newdata=x$Xtest
   }
   
-  list(class=predict(x$modelFit, newdata), probs=predict(x$modelFit, newdata, type="prob"))
+  list(class=predict(x$modelFit, newdata[,x$featureMask]), probs=predict(x$modelFit, newdata[,x$featureMask], type="prob"))
 }
 
 
@@ -370,6 +390,7 @@ evaluateModel.WeightedPredictor <- function(x, newdata=NULL) {
   }
   
   wts <- attr(x, "weights")
+  
   preds <- lapply(1:length(x), function(i) {
     evaluateModel(x[[i]], newdata)$prob * wts[i]
   })
@@ -389,7 +410,7 @@ evaluateModel.CaretPredictor <- function(x, newdata=NULL) {
     stop("newdata cannot be null")
   }
   
-  list(class=predict(x$fit, newdata=newdata), probs=predict(x$fit, newdata=newdata, type="prob"))
+  list(class=predict(x$fit, newdata=newdata[,x$featureMask]), probs=predict(x$fit, newdata=newdata[,x$featureMask], type="prob"))
 }
 
 #' @export
@@ -428,54 +449,54 @@ fitFinalModel <- function(Xtrain, Ytrain,  method, Xtest=NULL, Ytest=NULL, tuneG
 }
 
 #' @export
-trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE, tuneControl=.noneControl) {
+trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE, tuneControl=.noneControl, featureSelector=NULL) {
   ret <- if (nrow(tuneGrid) == 1 && fast) {
-    RawModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid)        
+    RawModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector)        
   } else {     
-    CaretModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl)
+    CaretModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector)
   }  
 }
 
 #' @export
 #' @import foreach
-crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE) {
+crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector=NULL) {
  
   results <- if (nrow(tuneGrid) == 1) {
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast, .noneControl)
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast, .noneControl, featureSelector)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))
   } else {
     index <- invertFolds(foldIterator$getTestSets(), 1:length(foldIterator$blockVar)) 
     ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast=FALSE, ctrl)
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast=FALSE, ctrl, featureSelector)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))              
   } 
   
   if (returnPredictor) {
-    list(class=results$perf$class, probs=results$perf$probs, predictor=results$predictor)
+    list(class=results$perf$class, probs=results$perf$probs, predictor=results$predictor, featureMask=results$predictor$featureMask)
   } else {
-    list(class=results$perf$class, probs=results$perf$probs, predictor=NULL)
+    list(class=results$perf$class, probs=results$perf$probs, predictor=NULL, featureMask=results$predictor$featureMask)
   }
 }
 
 #' @export
 #' @import foreach
-crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE) {
+crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector) {
  
   resultList <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
     if (nrow(tuneGrid) == 1 && fast) {
-      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl)
-      list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL)        
+      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl, featureSelector)
+      list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask)        
     } else {      
       if (nrow(tuneGrid) == 1) {
-        fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=.noneControl)
-        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL)    
+        fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=.noneControl, featureSelector)
+        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask)    
       } else {
         index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], 1:nrow(fold$Xtrain)) 
         ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
-        fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=ctrl)
-        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL)    
+        fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=ctrl,featureSelector)
+        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask)    
       } 
     }
   }
@@ -500,11 +521,12 @@ crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1
     
     #wfit <- WeightedPredictor(lapply(resultList, "[[", "fit"))
     
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=fast, tuneControl=ctrl)
-    list(class=predClass, probs=probMat, predictor=asPredictor(fit))
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=fast, tuneControl=ctrl, featureSelector)
+    list(class=predClass, probs=probMat, predictor=asPredictor(fit), featureMask=fit$featureMask)
     #list(class=predClass, probs=probMat, predictor=wfit)
   } else {
-    list(class=predClass, probs=probMat, predictor=NULL)
+    fmat <- do.call(cbind, lapply(resultList, "[[", "featureMask"))
+    list(class=predClass, probs=probMat, predictor=NULL, featureMask=rowMeans(fmat))
   }
 }
   

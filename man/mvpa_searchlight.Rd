@@ -5,7 +5,7 @@
 \title{mvpa_searchlight}
 \usage{
 mvpa_searchlight(dataset, radius = 8, method = c("randomized", "standard"),
-  niter = 4, ncores = 2, autobalance = FALSE)
+  niter = 4, ncores = 2, autobalance = FALSE, bootstrap = FALSE)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}
