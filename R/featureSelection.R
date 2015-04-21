@@ -14,31 +14,104 @@ selectFeatures <- function(obj, X, Y) {
   UseMethod("selectFeatures")
 }
 
+
+#featureMask <- function()
+
 #' @export
 #' @import sda
 selectFeatures.catscore <- function(obj, X, Y) {
   message("selecting features via catscore")
   sda.1 <- sda.ranking(X, Y)
   
-  keep <- if (obj$cutoff.type == "top_k") {
+  keep.idx <- if (obj$cutoff.type == "top_k") {
     k <- min(ncol(X), obj$cutoff.value)
-    idx <- sda.1[, "idx"][1:k]
-    keep <- logical(ncol(X))
-    keep[idx] <- TRUE
-    keep
+    sda.1[, "idx"][1:k]
   } else if (obj$cutoff.type == "top_p") {
     if (obj$cutoff.value <= 0 || obj$cutoff.value > 1) {
       stop("selectFeatures.catscore: with top_p, cutoff.value must be > 0 and <= 1")
     }
     k <- obj$cutoff.value * ncol(X)
-    idx <- sda.1[, "idx"][1:k]
-    keep <- logical(ncol(X))
-    keep[idx] <- TRUE
-    keep
+    sda.1[, "idx"][1:k]
+   
   } else {
     stop(paste("selectFeatures.catscore: unsupported cutoff.type: ", obj$cutoff.type))
   }
   
+  message("retaining ", sum(keep), "features in matrix with", ncol(X), "columns")
+  keep <- logical(ncol(X))
+  keep[keep.idx] <- TRUE
   keep
    
 }
+
+#' @export
+selectFeatures.FTest <- function(obj, X, Y) {
+  message("selecting features via FTest")
+ 
+  
+  pvals <- unlist(lapply(1:ncol(X), function(i) {
+    oneway.test(X[,i] ~ Y)$p.value
+  }))
+  
+  
+  
+ 
+  keep.idx <- if (obj$cutoff.type == "top_k") {
+    k <- min(ncol(X), obj$cutoff.value)
+    order(pvals)[1:k]
+  } else if (obj$cutoff.type == "top_p") {
+    if (obj$cutoff.value <= 0 || obj$cutoff.value > 1) {
+      stop("selectFeatures.FTest: with top_p, cutoff.value must be > 0 and <= 1")
+    }
+    k <- obj$cutoff.value * ncol(X)
+    order(pvals)[1:k]
+  } else {
+    stop(paste("selectFeatures.catscore: unsupported cutoff.type: ", obj$cutoff.type))
+  }
+  
+  keep <- logical(ncol(X))
+  keep[keep.idx] <- TRUE
+  
+  message("retaining ", sum(keep), "features in matrix with", ncol(X), "columns")
+  
+  keep
+  
+}
+
+
+#' @export
+ selectFeatures.catscore_FTest <- function(obj, X, Y) {
+   message("selecting features via catscoreFTest")
+   
+   logpvals <- unlist(lapply(1:ncol(X), function(i) {
+     -log(oneway.test(X[,i] ~ Y)$p.value)
+   }))
+   
+   sda.1 <- sda.ranking(X, Y)
+   idx <- sda.1[,1]
+   scores <- numeric(length(idx))
+   scores[idx] <- sda.1[,2]
+   
+   composite <- scale(sda.1[,2]) + scale(logpvals[idx])
+ 
+   keep.idx <- if (obj$cutoff.type == "top_k") {
+     k <- min(ncol(X), obj$cutoff.value)
+     order(composite, decreasing=TRUE)[1:k]
+   } else if (obj$cutoff.type == "top_p") {
+     if (obj$cutoff.value <= 0 || obj$cutoff.value > 1) {
+       stop("selectFeatures.FTest: with top_p, cutoff.value must be > 0 and <= 1")
+     }
+     k <- obj$cutoff.value * ncol(X)
+     order(composite, decreasing=TRUE)[1:k]
+   } else {
+     stop(paste("selectFeatures.catscore: unsupported cutoff.type: ", obj$cutoff.type))
+   }
+   
+   keep <- logical(ncol(X))
+   keep[keep.idx] <- TRUE
+   
+   message("retaining ", sum(keep), "features in matrix with", ncol(X), "columns")
+   
+   keep
+   
+ }
