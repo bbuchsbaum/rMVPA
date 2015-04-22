@@ -82,7 +82,7 @@ selectFeatures.FTest <- function(obj, X, Y) {
 
 #' @export
  selectFeatures.catscore_FTest <- function(obj, X, Y) {
-   message("selecting features via catscoreFTest")
+   message("selecting features via catscore_FTest")
    
    logpvals <- unlist(lapply(1:ncol(X), function(i) {
      -log(oneway.test(X[,i] ~ Y)$p.value)
@@ -93,8 +93,8 @@ selectFeatures.FTest <- function(obj, X, Y) {
    scores <- numeric(length(idx))
    scores[idx] <- sda.1[,2]
    
-   composite <- scale(score) + scale(logpvals)
-   print(cor(score, logpvals))
+   composite <- scale(scores) + scale(logpvals)
+   message(cor(scores, logpvals))
  
    keep.idx <- if (obj$cutoff.type == "top_k") {
      k <- min(ncol(X), obj$cutoff.value)
