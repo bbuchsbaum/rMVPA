@@ -55,7 +55,6 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
   
   model <- loadModel(modelName)
   
- 
   testSets <- split(1:length(blockVar), blockVar)
   trainSets <- invertFolds(testSets, 1:length(blockVar))
    
@@ -144,8 +143,11 @@ classificationResult <- function(observed, predicted, probs, predictor=NULL) {
 
 
 #' @export
-CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector=NULL, ...) {
-  
+CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector=NULL, parcels=NULL, ...) {
+  if (!is.null(parcels)) {
+    Xtrain <- groupMeans(Xtrain, 2, parcels)
+  }
+    
   featureMask <- if (!is.null(featureSelector)) {
     selectFeatures(featureSelector, Xtrain, Ytrain)
   } else {
@@ -174,7 +176,8 @@ CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneContro
     tuneControl=tuneControl,
     modelFit=fit,
     featureSelector=featureSelector,
-    featureMask=featureMask)
+    featureMask=featureMask,
+    parcels=parcels)
   
   class(ret) <- c("CaretModel", "list")
   ret
@@ -182,7 +185,13 @@ CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneContro
 
 
 #' @export
-RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector=NULL) {
+RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector=NULL, parcels=NULL) {
+  
+  if (!is.null(parcels)) {
+    message("computing parcellation", dim(Xtrain))
+    Xtrain <- groupMeans(Xtrain, 2, parcels)
+    message("computing parcellation", dim(Xtrain))
+  }
   
   featureMask <- if (!is.null(featureSelector)) {
     selectFeatures(featureSelector, Xtrain, Ytrain)
@@ -204,7 +213,8 @@ RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelec
               tuneGrid=tuneGrid,
               modelFit=fit,
               featureSelector=featureSelector,
-              featureMask=featureMask)
+              featureMask=featureMask,
+              parcels=parcels)
               
   
   class(ret) <- c("RawModel", "list")
@@ -212,18 +222,19 @@ RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelec
 }
 
 #' @export
-RawPredictor <- function(fit, model, featureMask) {
+RawPredictor <- function(fit, model, featureMask, parcels=NULL) {
   ret <- list(fit=fit,
               model=model,
-              featureMask=featureMask)
+              featureMask=featureMask,
+              parcels=parcels)
   
   class(ret) <- c("RawPredictor", "list")
   ret
 }
 
 #' @export
-CaretPredictor <- function(fit, featureMask) {
-  ret <- list(fit=fit, featureMask=featureMask)
+CaretPredictor <- function(fit, featureMask, parcels=NULL) {
+  ret <- list(fit=fit, featureMask=featureMask, parcels=parcels)
   
   class(ret) <- c("CaretPredictor", "list")
   ret
@@ -275,9 +286,6 @@ WeightedPredictor <- function(fits, names=1:length(fits), weights=rep(1/length(f
 }
 
 
-
-
-
 #' @export
 evaluateModel <- function(x, newdata) {
   UseMethod("evaluateModel")
@@ -290,12 +298,12 @@ asPredictor <- function(x, voxelGrid) {
 
 #' @export
 asPredictor.RawModel <- function(x) {
-  RawPredictor(x$modelFit, x$model, x$featureMask)
+  RawPredictor(x$modelFit, x$model, x$featureMask, x$parcels)
 }
 
 #' @export
 asPredictor.CaretModel <- function(x) {
-  CaretPredictor(x$modelFit, x$featureMask)
+  CaretPredictor(x$modelFit, x$featureMask, x$parcels)
 }
 
 
@@ -305,7 +313,12 @@ evaluateModel.RawModel <- function(x, newdata=NULL) {
     newdata=x$Xtest
   }
   
-  probs <- x$model$prob(x$modelFit, newdata[,x$featureMask])  
+  probs <- if (is.null(x$parcels)) {
+    x$model$prob(x$modelFit, newdata[,x$featureMask])  
+  } else {
+    reducedData <- groupMeans(newdata, 2, x$parcels)
+    x$model$prob(x$modelFit, reducedData[,x$featureMask])  
+  }
   
   cpred <- apply(probs,1, function(x) {
     x[is.na(x)] <- 0
@@ -353,7 +366,13 @@ evaluateModel.RawPredictor <- function(x, newdata=NULL) {
     stop("newdata cannot be null")
   }
   
-  probs <- x$model$prob(x$fit, newdata=newdata[,x$featureMask])     
+  probs <- if (is.null(x$parcels)) {
+    x$model$prob(x$fit, newdata=newdata[,x$featureMask])     
+  } else {
+    reducedData <- groupMeans(newdata, 2, x$parcels)
+    x$model$prob(x$modelFit, reducedData[,x$featureMask])  
+  }
+  
   cpred <- apply(probs,1, which.max)
   cpred <- levels(x$Ytrain)[cpred]
   list(class=cpred, probs=probs)
@@ -364,6 +383,10 @@ evaluateModel.RawPredictor <- function(x, newdata=NULL) {
 evaluateModel.CaretModel <- function(x, newdata=NULL) {
   if (is.null(newdata)) {
     newdata=x$Xtest
+  }
+  
+  if (!is.null(x$parcels)) {
+    newdata <- groupMeans(newdata, 2, x$parcels)
   }
   
   list(class=predict(x$modelFit, newdata[,x$featureMask]), probs=predict(x$modelFit, newdata[,x$featureMask], type="prob"))
@@ -410,6 +433,10 @@ evaluateModel.CaretPredictor <- function(x, newdata=NULL) {
     stop("newdata cannot be null")
   }
   
+  if (!is.null(x$parcels)) {
+    newdata <- groupMeans(newdata, 2, x$parcels)
+  }
+  
   list(class=predict(x$fit, newdata=newdata[,x$featureMask]), probs=predict(x$fit, newdata=newdata[,x$featureMask], type="prob"))
 }
 
@@ -449,54 +476,54 @@ fitFinalModel <- function(Xtrain, Ytrain,  method, Xtest=NULL, Ytest=NULL, tuneG
 }
 
 #' @export
-trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE, tuneControl=.noneControl, featureSelector=NULL) {
+trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE, tuneControl=.noneControl, featureSelector=NULL, parcels=NULL) {
   ret <- if (nrow(tuneGrid) == 1 && fast) {
-    RawModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector)        
+    RawModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector, parcels)        
   } else {     
-    CaretModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector)
+    CaretModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector, parcels)
   }  
 }
 
 #' @export
 #' @import foreach
-crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector=NULL) {
+crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector=NULL, parcels=NULL) {
  
   results <- if (nrow(tuneGrid) == 1) {
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast, .noneControl, featureSelector)
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast, .noneControl, featureSelector, parcels)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))
   } else {
     index <- invertFolds(foldIterator$getTestSets(), 1:length(foldIterator$blockVar)) 
     ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast=FALSE, ctrl, featureSelector)
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast=FALSE, ctrl, featureSelector, parcels)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))              
   } 
   
   if (returnPredictor) {
-    list(class=results$perf$class, probs=results$perf$probs, predictor=results$predictor, featureMask=results$predictor$featureMask)
+    list(class=results$perf$class, probs=results$perf$probs, predictor=results$predictor, featureMask=results$predictor$featureMask, parcels=parcels)
   } else {
-    list(class=results$perf$class, probs=results$perf$probs, predictor=NULL, featureMask=results$predictor$featureMask)
+    list(class=results$perf$class, probs=results$perf$probs, predictor=NULL, featureMask=results$predictor$featureMask, parcels=parcels)
   }
 }
 
 #' @export
 #' @import foreach
-crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector) {
+crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector, parcels=NULL) {
  
   resultList <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
     if (nrow(tuneGrid) == 1 && fast) {
-      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl, featureSelector)
-      list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask)        
+      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl, featureSelector, parcels)
+      list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask, parcels=parcels)        
     } else {      
       if (nrow(tuneGrid) == 1) {
         fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=.noneControl, featureSelector)
-        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask)    
+        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask, parcels=parcels)    
       } else {
         index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], 1:nrow(fold$Xtrain)) 
         ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
-        fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=ctrl,featureSelector)
-        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask)    
+        fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=ctrl,featureSelector, parcels)
+        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask, parcels=parcels)    
       } 
     }
   }
@@ -521,12 +548,12 @@ crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1
     
     #wfit <- WeightedPredictor(lapply(resultList, "[[", "fit"))
     
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=fast, tuneControl=ctrl, featureSelector)
-    list(class=predClass, probs=probMat, predictor=asPredictor(fit), featureMask=fit$featureMask)
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=fast, tuneControl=ctrl, featureSelector, parcels)
+    list(class=predClass, probs=probMat, predictor=asPredictor(fit), featureMask=fit$featureMask, parcels=parcels)
     #list(class=predClass, probs=probMat, predictor=wfit)
   } else {
     fmat <- do.call(cbind, lapply(resultList, "[[", "featureMask"))
-    list(class=predClass, probs=probMat, predictor=NULL, featureMask=rowMeans(fmat))
+    list(class=predClass, probs=probMat, predictor=NULL, featureMask=rowMeans(fmat), parcels=parcels)
   }
 }
   

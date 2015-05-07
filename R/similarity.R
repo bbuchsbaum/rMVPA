@@ -1,6 +1,7 @@
 
 patSimHelper <- memoise::memoise(function(runs, labels, cdim) {
   lowerTri <- as.vector(lower.tri(matrix(0, cdim[1], cdim[2])))
+  
   runCoords <- do.call(rbind, lapply(runs, function(r1) {
     t(sapply(runs, function(r2) {
       c(r2,r1)

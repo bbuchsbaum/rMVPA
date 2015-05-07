@@ -4,7 +4,7 @@ performance <- function(x,...) {
 }
 
 #' @export
-performance.SimilarityResult <- function(x, splitList=NULL) {  
+performance.SimilarityResult <- function(x, splitList=NULL, classMetrics=FALSE) {  
   simAll <- x$simWithinTable$sim
   names(simAll) <- paste0("sim_", x$simWithinTable$label)
   c(simWithin=x$sWithin, simDiff=x$sWithin - x$sBetween, simAll)
@@ -25,7 +25,7 @@ performance.SimilarityResult <- function(x, splitList=NULL) {
 }
 
 #' @export
-performance.TwoWayClassificationResult <- function(x,splitList=NULL) {
+performance.TwoWayClassificationResult <- function(x,splitList=NULL, classMetrics=FALSE) {
   if (is.null(splitList)) {
     .twowayPerf(x$observed, x$predicted, x$probs)
   } else {
@@ -53,7 +53,7 @@ combinedAUC <- function(Pred, Obs) {
   }))
 }
 
-.multiwayPerf <- function(observed, predicted, probs) {
+.multiwayPerf <- function(observed, predicted, probs, classMetrics=FALSE) {
   obs <- as.character(observed)
   
   ncorrect <- sum(obs == predicted)
@@ -65,6 +65,7 @@ combinedAUC <- function(Pred, Obs) {
                     p = maxClass/ntotal,
                     alternative = "greater")
   
+ 
   aucres <- sapply(1:ncol(probs), function(i) {
     lev <- levels(observed)[i]
     pos <- obs == lev
@@ -74,19 +75,24 @@ combinedAUC <- function(Pred, Obs) {
   })
   
   names(aucres) <- paste0("AUC_", colnames(probs))
-  c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), Combined_AUC=mean(aucres), aucres)
+  
+  if (classMetrics) {
+    c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), Combined_AUC=mean(aucres), aucres)
+  } else {
+    c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), Combined_AUC=mean(aucres))
+  }
 }
   
 
 #' @export
-performance.MultiWayClassificationResult <- function(x,splitList=NULL) {
+performance.MultiWayClassificationResult <- function(x,splitList=NULL, classMetrics=FALSE) {
   if (is.null(splitList)) {
-    .multiwayPerf(x$observed, x$predicted, x$probs)
+    .multiwayPerf(x$observed, x$predicted, x$probs, classMetrics)
   } else {
-    total <- .multiwayPerf(x$observed, x$predicted, x$probs)
+    total <- .multiwayPerf(x$observed, x$predicted, x$probs, classMetrics)
     subtots <- unlist(lapply(names(splitList), function(tag) {
       ind <- splitList[[tag]]
-      ret <- .multiwayPerf(x$observed[ind], x$predicted[ind], x$probs[ind,])
+      ret <- .multiwayPerf(x$observed[ind], x$predicted[ind], x$probs[ind,], classMetrics)
       names(ret) <- paste0(names(ret), "_", tag)
       ret
     }))

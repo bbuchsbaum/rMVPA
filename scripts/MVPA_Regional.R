@@ -18,6 +18,7 @@ option_list <- list(
                     make_option(c("-n", "--normalize"), action="store_true", type="logical", help="center and scale each volume vector"),
                     make_option(c("-m", "--model"), type="character", help="name of the classifier model"),
                     make_option(c("-a", "--mask"), type="character", help="name of binary image mask file (.nii format)"),
+                    make_option(c("--parcellation"), type="character", help="name of file containing integer-based image parcellation for cluster-based dimension reduction (.nii format)"),
                     make_option(c("--autobalance"), action="store_true", type="logical", help="balance training samples by upsampling minority classes"),
                     make_option(c("-p", "--pthreads"), type="numeric", help="the number of parallel threads"),
                     make_option(c("-l", "--label_column"), type="character", help="the name of the column in the design file containing the training labels"),
@@ -28,6 +29,7 @@ option_list <- list(
                     make_option(c("-i", "--niter"), type="character", help="number of randomized searchlight iterations"),
                     make_option(c("--savePredictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
                     make_option(c("--skipIfFolderExists"), type="logical", action="store_true", help="skip, if output folder already exists"),
+                    make_option(c("--output_class_metrics"), type="character", help="write out performance metrics for each class in multiclass settings"),
                     make_option(c("-c", "--config"), type="character", help="name of configuration file used to specify program parameters"))
 
 
@@ -84,6 +86,10 @@ if (!is.null(config$roi_grouping)) {
   config$ROIVolume <- roilist
 } else {
   config$ROIVolume <- list(config$ROIVolume)
+}
+
+parcellationVolume <- if (!is.null(config$parcellation)) {
+  loadVolume(config$parcellation)
 }
 
 
@@ -150,7 +156,9 @@ for (roinum in seq_along(config$ROIVolume)) {
   roivol <- config$ROIVolume[[roinum]]
   
   
-  mvpa_res <- mvpa_regional(dataset, roivol, config$pthreads, config$savePredictors, autobalance=config$autobalance, bootstrap=FALSE, featureSelector=featureSelector)
+  mvpa_res <- mvpa_regional(dataset, roivol, config$pthreads, config$savePredictors, 
+                            autobalance=config$autobalance, bootstrap=FALSE, 
+                            featureSelector=featureSelector, featureParcellation=parcellationVolume)
   
   lapply(1:length(mvpa_res$outVols), function(i) {
     out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")

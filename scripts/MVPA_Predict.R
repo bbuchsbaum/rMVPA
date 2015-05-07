@@ -31,13 +31,12 @@ testvec <- loadVector(args$newdata)
 
 
 if (config$normalize) {
-  
+  flog.info("normalizing test vector")
+  mask <- loadVolume(config$mask)
+  testvec <- normalizeSamples(testvec, mask)
 }
 
-
 outfile <- args$output
-
-
 preds <- evaluateModel(predictor, testvec)
 
 if (is.null(args$test_design)) {

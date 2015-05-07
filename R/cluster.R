@@ -8,10 +8,22 @@
                              c(0,0,-1))
 
 
+
+.TwoByTwoOffset <- rbind(c(1,0,0),
+                             c(-1,0,0),
+                             c(0,1,0),
+                             c(0,-1,0))
+                             
+
 dist_weighted_similarity <- function(centers, coords, decay=-.05) {
   csim <- cor(centers) + 1
   D <- as.matrix(dist(coords))
   exp(decay * D) * csim
+}
+
+get_surround <- function(vox, surround, vol) {
+  vs <- sweep(surround, 2, vox, "+")
+  vol[vs]
 }
 
 slic_gradient <- function(vox, bvec, mask, offset=.ThreeByThreeOffset) {
@@ -27,23 +39,33 @@ slic_gradient <- function(vox, bvec, mask, offset=.ThreeByThreeOffset) {
     NA
   } else {
     smat <- series(bvec, vs)
-    gx <- 1 - cor(smat[,1], smat[,2])
-    gy <- 1 - cor(smat[,3], smat[,4])
-    gz <- 1 - cor(smat[,5], smat[,6])
-    as.vector(gx + gy + gz)
+    
+    sum(sapply(seq(1, ncol(smat), by=2), function(k) {
+      1 - cor(smat[,k], smat[,k+1])
+    }))
   }
 }
 
 min_gradient <- function(bvec, vox, surround, mask) {
   voxneigb <- sweep(surround, 2, vox, "+")
   g <- apply(voxneigb, 1, slic_gradient, bvec, mask)
-  voxneigb[which.min(g),]
+  if (all(is.na(g))) {
+    vox 
+  } else {
+    as.vector(voxneigb[which.min(g),])
+  }
 }
 
-slic_iterate <- function(bvec, voxels, decay, featureCenters, nn.index, nn.dist) {
 
+slic_iterate <- function(bvec, voxels, decay, featureCenters, nn.index, nn.dist) {
+  message("decay", decay)
+
+  
   unlist(parallel::mclapply(1:nrow(voxels), function(i) {
-    print(i)
+    if (i %% 1000 == 0) {
+      message("iteration at: ", round(i/nrow(voxels) * 100), "%")
+    }
+    
     centers <- featureCenters[, nn.index[i,]]  
     vals <- series(bvec, voxels[i,,drop=FALSE])
     featsim <- cor(vals, centers)
@@ -61,7 +83,34 @@ avgcor <- function(bvec, mask.idx, clusters) {
   }))
 }
 
-slic_cluster <- function(mask, bvec, K=500, decay=-.05, iterations=10, nn=8) {
+shrink_vector <- function(mask, vgrid, bvec, k=5, iter=1, radius=NULL) {
+  if (is.null(radius)) {
+    radius <- floor(mean(spacing(mask)) * 2)
+  }
+
+  ovec <- bvec
+  
+  for (i in 1:iter) {
+    omat <- do.call(cbind, mclapply(1:nrow(vgrid), function(i) {
+      print(i)
+      vox <- vgrid[i,]
+      cvox <- RegionSphere(mask, vox, radius=radius, nonzero=TRUE)@coords
+      vals <- series(ovec, vox[1], vox[2], vox[3])
+      vmat <- series(ovec, cvox)
+      cres <- cor(vals, vmat)
+      rowMeans(series(ovec, cvox[order(cres, decreasing=TRUE)[1:k],]))
+    }))
+    
+    ovec <- SparseBrainVector(omat, space(mask), mask)
+  }
+  
+  ovec
+  
+}
+
+#' @export
+#' @import FNN
+slic_cluster <- function(mask, bvec, K=500, decay=-.05, iterations=10, nn=8, shrink=0) {
   mask.idx <- which(mask > 0)
   
   ## real coordinates
@@ -73,28 +122,37 @@ slic_cluster <- function(mask, bvec, K=500, decay=-.05, iterations=10, nn=8) {
   spatialCenters <- kmeansResult$centers
   spatialVoxCenters <- round(coordToGrid(mask, spatialCenters))
   
-  surround <- as.matrix(expand.grid(x=c(-1,0,1), y=c(-1,0,1), z=c(-1,0,1)))
+  #surround <- as.matrix(expand.grid(x=c(-1,0,1), y=c(-1,0,1), z=c(-1,0,1)))
+  surround <- as.matrix(cbind(as.matrix(expand.grid(x=c(-1,0), y=c(-1,0))), z=rep(0, 4)))
+  
+  if (shrink > 0) {
+    message("running ", shrink, "shrinkage iterations with k = ", 5)
+    bvec <- shrink_vector(mask, vgrid, bvec, k=5, iter=shrink)
+  }
   
   currentVoxCenters <- t(apply(spatialVoxCenters, 1, function(vox) min_gradient(bvec, vox, surround, mask)))
   currentVoxCoords <- neuroim::gridToCoord(mask, currentVoxCenters)
+  
+ 
+  
   featureCenters <- series(bvec, currentVoxCenters)
   
   clusterAssignments <- numeric(length(mask.idx))
   knnres <- get.knnx(currentVoxCoords, cgrid, nn)
   
-  print(avgcor(bvec, mask.idx, kmeansResult$cluster))
+  message("cluster average cor: ", avgcor(bvec, mask.idx, kmeansResult$cluster))
   
  
-  for (i in 1:10) {     
+  for (i in 1:iterations) {     
     print(i)
-    clusterAssignments <- slic_iterate(bvec, vgrid, -.05, featureCenters, knnres$nn.index, knnres$nn.dist)
-    print(avgcor(bvec, mask.idx, clusterAssignments))
+    clusterAssignments <- slic_iterate(bvec, vgrid, decay, featureCenters, knnres$nn.index, knnres$nn.dist)
+    message("cluster average cor: ", avgcor(bvec, mask.idx, clusterAssignments))
     
     voxsplit <- split(data.frame(vgrid), clusterAssignments)
-    featureCenters <- do.call(cbind, mclapply(voxsplit, function(vox) rowMeans(series(bvec, as.matrix(vox)))))
+    featureCenters <- do.call(cbind, parallel::mclapply(voxsplit, function(vox) rowMeans(series(bvec, as.matrix(vox)))))
     
-    currentVoxCoords <- do.call(rbind, mclapply(voxsplit, function(v) {     
-      colMeans(neuroim::gridToCoord(mask, v))
+    currentVoxCoords <- do.call(rbind, parallel::mclapply(voxsplit, function(v) {     
+      colMeans(neuroim::gridToCoord(mask, as.matrix(v)))
     }))
     
     knnres <- get.knnx(currentVoxCoords, cgrid, nn)

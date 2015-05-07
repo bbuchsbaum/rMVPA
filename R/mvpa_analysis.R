@@ -20,7 +20,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 } 
 
 #' @export 
-computePerformance <- function(result, vox, splitList=NULL) {
+computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE) {
   perf <- t(performance(result, splitList))
   out <- cbind(vox, perf[rep(1, nrow(vox)),])   
 }
@@ -35,25 +35,28 @@ runAnalysis <- function(object, dataset,...) {
 }
 
 #' @export
-runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL) {
-  mvpa_crossval(dataset, vox, returnPredictor, autobalance, bootstrap, featureSelector)
+runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL) {
+  mvpa_crossval(dataset, vox, returnPredictor, autobalance, bootstrap, featureSelector, parcels)
 }
 
 
 #' @export
-runAnalysis.SimilarityModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL) {
-  patternSimilarity(dataset, vox, object$simFun)
+runAnalysis.SimilarityModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL) {
+  patternSimilarity(dataset, vox, object$simFun, parcels)
 }
 
 
 #' @export 
-mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL) {
+mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
   
   X <- X[,valid.idx]
   vox <- vox[valid.idx,]
   
+  if (!is.null(parcels)) {
+    parcels <- parcels[valid.idx]
+  }
   
   foldIterator <- MatrixFoldIterator(X, dataset$Y,dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
   
@@ -67,11 +70,11 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
     }
   
     result <- if (is.null(dataset$testVec)) {
-      cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor, featureSelector=featureSelector)
+      cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor, featureSelector=featureSelector, parcels=parcels)
       classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs,cvres$predictor)
     } else {
       Xtest <- series(dataset$testVec, vox) 
-      cvres <- crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor,featureSelector=featureSelector)
+      cvres <- crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor,featureSelector=featureSelector, parcels=parcels)
       classificationResult(dataset$testY, as.factor(cvres$class), cvres$probs, cvres$predictor)
     }
     
@@ -96,12 +99,12 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
 }
 
 
-.doStandard <- function(dataset, radius, ncores) {
+.doStandard <- function(dataset, radius, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, parcels=NULL, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %dopar% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %do% {   
     if (nrow(vox) > 1) {
-      .computePerformance(runAnalysis(dataset$model, dataset, vox), vox, dataset$testSplits)
+      computePerformance(runAnalysis(dataset$model, dataset, vox, returnPredictor, autobalance, bootstrap, parcels), vox, dataset$testSplits, classMetrics)
     }
   }
   
@@ -109,14 +112,14 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
 }
   
 
-.doRandomized <- function(dataset, radius, returnPredictor=FALSE) {
+.doRandomized <- function(dataset, radius, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, parcels=NULL, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
-  ## tight inner loop should probbaly avoid "foreach" as it has a lot of overhead.
+  ## tight inner loop should probably avoid "foreach" as it has a lot of overhead, but c'est la vie for now.
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
-      computePerformance(runAnalysis(dataset$model, dataset, vox), vox, dataset$testSplits)
+      computePerformance(runAnalysis(dataset$model, dataset, vox, returnPredictor, autobalance, bootstrap, parcels), vox, dataset$testSplits, classMetrics)
     }
   }
   
@@ -143,16 +146,26 @@ learners = list(
 #' @param dataset a \code{MVPADataset} instance.
 #' @param regionMask a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
 #' @param ncores the number of cores for parallel processign (default is 1)
+#' @param savePredictors whether to return prediction model in result (default is \code{FALSE} to save memory)
+#' @param autobalance whether to subsample training set so that classes are balanced (default is \code{FALSE})
+#' @param bootstrap
+#' @param featureSelector an option \code{FeatureSelector} object that is used to subselect informative voxels in feature space.
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
 #' @import itertools 
 #' @import foreach
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL) {
+mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, featureParcellation=NULL, classMetrics=FALSE) {  
   
   if (length(dataset$blockVar) != length(dataset$Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
+  }
+  
+  if (!is.null(featureParcellation)) {
+    if (! all(dim(featureParcellation) == dim(regionMask))) {
+      stop("dimension of 'featureParcellation' must equals dimensions of 'regionMask'")
+    }
   }
   
   cl <- makeCluster(ncores, outfile="",useXDR=FALSE, type="FORK")
@@ -164,13 +177,17 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
   res <- foreach::foreach(roinum = regionSet, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
     idx <- which(regionMask == roinum)
     
+    parcels <- if (!is.null(featureParcellation)) {
+      featureParcellation[idx]
+    }
+    
     if (length(idx) > 1) {
       vox <- indexToGrid(regionMask, idx)
       
-      result <- runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap, featureSelector)
+      result <- runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap, featureSelector, parcels)
       attr(result, "ROINUM") <- roinum
       attr(result, "vox") <- vox
-      perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits))[1,])     
+      perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits, classMetrics))[1,])     
       perf <- structure(perf, result=result)
       perf    
     }
@@ -237,7 +254,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
 #' @import parallel
 #' @import futile.logger
 #' @export
-mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard"), niter=4, ncores=2, autobalance=FALSE, bootstrap=FALSE) {
+mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard"), niter=4, ncores=2, autobalance=FALSE, bootstrap=FALSE, featureParcellation=NULL, classMetrics=FALSE) {
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }
@@ -256,11 +273,11 @@ mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard
   
   
   res <- if (method == "standard") {
-    .doStandard(dataset, radius, ncores)    
+    .doStandard(dataset, radius, returnPredictor=FALSE, autobalance=autobalance, bootstrap=bootstrap, parcels = featureParcellation, classMetrics=classMetrics)    
   } else {
     res <- parallel::mclapply(1:niter, function(i) {
       flog.info("Running randomized searchlight iteration %s", i)   
-      do.call(cbind, .doRandomized(dataset, radius, autobalance) )
+      do.call(cbind, .doRandomized(dataset, radius, returnPredictor=FALSE, autobalance=autobalance, bootstrap=bootstrap, parcels = featureParcellation, classMetrics=classMetrics) )
     }, mc.cores=ncores)
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {

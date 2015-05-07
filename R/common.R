@@ -46,6 +46,7 @@ initializeStandardParameters <- function(config, args, analysisType) {
   #setDefault("method_params", config, list())
   #setArg("niter", config, args, 4)
   setArg("mask", config, args, NULL)
+  setArg("output_class_metrics", config, args, FALSE)
   config
 }
 
@@ -122,11 +123,11 @@ initializeDesign <- function(config) {
     flog.info("will split performance metrics by %s", as.character(form)[[2]])
     vars <- all.vars(form[[2]])
     des <- if (!is.null(config$test_design)) config$test_design else config$train_design
-    config$testSplitVar <- do.call("interaction", lapply(vars, function(vname) des[[vname]]))
-    flog.info("splitting levels are: %s", paste(levels(config$splittingVar), collapse=", "))
+    config$testSplitVar <- do.call("interaction", lapply(vars, function(vname) as.factor(des[[vname]])))
+    flog.info("splitting levels are: %s", paste(levels(config$testSplitVar), collapse=", "))
     minSplits <- min(table(config$testSplitVar))
     if (minSplits < 3) {
-      flog.error("splitting condiiton results in fewer than 3 observations in at least one set", table(config$splittingVar), capture=TRUE)
+      flog.error("splitting condition results in fewer than 3 observations in at least one set", table(config$splittingVar), capture=TRUE)
       stop(paste("invalid split formula", config$split_by))
     }
     
