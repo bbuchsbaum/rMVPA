@@ -5,7 +5,9 @@
 \title{mvpa_regional}
 \usage{
 mvpa_regional(dataset, regionMask, ncores = 1, savePredictors = FALSE,
-  autobalance = FALSE, bootstrap = FALSE, featureSelector = NULL)
+  autobalance = FALSE, bootstrap = FALSE, featureSelector = NULL,
+  featureParcellation = NULL, classMetrics = FALSE,
+  ensemblePredictor = FALSE)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}
@@ -13,6 +15,16 @@ mvpa_regional(dataset, regionMask, ncores = 1, savePredictors = FALSE,
 \item{regionMask}{a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.}
 
 \item{ncores}{the number of cores for parallel processign (default is 1)}
+
+\item{savePredictors}{whether to return prediction model in result (default is \code{FALSE} to save memory)}
+
+\item{autobalance}{whether to subsample training set so that classes are balanced (default is \code{FALSE})}
+
+\item{bootstrap}{}
+
+\item{featureSelector}{an option \code{FeatureSelector} object that is used to subselect informative voxels in feature space.}
+
+\item{ensemblePredictor}{whether returned predictor object averages over cross-validation blocks}
 }
 \value{
 a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)

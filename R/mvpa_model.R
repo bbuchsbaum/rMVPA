@@ -1,9 +1,6 @@
 
-
-
 .noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")
 .cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
-
 
 #' create an \code{ClassificationModel} instance
 #' @param caretModel the underlying caret model object
@@ -39,7 +36,14 @@ SimilarityModel <- function(type=c("pearson", "spearman", "kendall")) {
   ret
 }
 
-
+#dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE, bootstrap=FALSE, 
+#featureSelector=NULL, featureParcellation=NULL, classMetrics=FALSE, ensemblePredictor=FALSE) {  
+MVPAConfiguration <- function(modelName="corclass", tuneGrid=NULL, tuneLength=1, ncores=1, savePredictors=FALSE,ensemblePredictor=FALSE,
+                              autobalance=FALSE, bootstrapSamples=FALSE,
+                              featureSelector=NULL, featureParcellation=NULL, 
+                              saveClassMetrics=FALSE) {
+  ret <- list
+}
 
 #' create an \code{MVPA} instance
 #' @param trainVec
@@ -50,8 +54,10 @@ SimilarityModel <- function(type=c("pearson", "spearman", "kendall")) {
 #' @param testY
 #' @param modelName
 #' @param tuneGrid
+#' @param tuneGrid
 #' @export
-MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corclass", tuneGrid=NULL, tuneLength=1, testSplitVar=NULL, testSplits=NULL) {
+MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corclass", tuneGrid=NULL, tuneLength=1,testSplitVar=NULL,
+                        testSplits=NULL) {
   
   model <- loadModel(modelName)
   
@@ -486,7 +492,7 @@ trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE,
 
 #' @export
 #' @import foreach
-crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector=NULL, parcels=NULL) {
+crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
  
   results <- if (nrow(tuneGrid) == 1) {
     fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast, .noneControl, featureSelector, parcels)
@@ -509,7 +515,7 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
 
 #' @export
 #' @import foreach
-crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector, parcels=NULL) {
+crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector, parcels=NULL, ensemblePredictor=FALSE) {
  
   resultList <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
     if (nrow(tuneGrid) == 1 && fast) {
@@ -548,8 +554,13 @@ crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1
     
     #wfit <- WeightedPredictor(lapply(resultList, "[[", "fit"))
     
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=fast, tuneControl=ctrl, featureSelector, parcels)
-    list(class=predClass, probs=probMat, predictor=asPredictor(fit), featureMask=fit$featureMask, parcels=parcels)
+    fit <- if (ensemblePredictor) {
+      WeightedPredictor(lapply(resultList, "[[", "fit"))
+    } else {
+      asPredictor(trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=fast, tuneControl=ctrl, featureSelector, parcels))
+    }
+    
+    list(class=predClass, probs=probMat, predictor=fit, featureMask=fit$featureMask, parcels=parcels)
     #list(class=predClass, probs=probMat, predictor=wfit)
   } else {
     fmat <- do.call(cbind, lapply(resultList, "[[", "featureMask"))

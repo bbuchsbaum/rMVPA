@@ -35,19 +35,19 @@ runAnalysis <- function(object, dataset,...) {
 }
 
 #' @export
-runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL) {
-  mvpa_crossval(dataset, vox, returnPredictor, autobalance, bootstrap, featureSelector, parcels)
+runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
+  mvpa_crossval(dataset, vox, returnPredictor, autobalance, bootstrap, featureSelector, parcels, ensemblePredictor)
 }
 
 
 #' @export
-runAnalysis.SimilarityModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL) {
+runAnalysis.SimilarityModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
   patternSimilarity(dataset, vox, object$simFun, parcels)
 }
 
 
 #' @export 
-mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL) {
+mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
   
@@ -70,11 +70,13 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
     }
   
     result <- if (is.null(dataset$testVec)) {
-      cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor, featureSelector=featureSelector, parcels=parcels)
+      cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor, 
+                                 featureSelector=featureSelector, parcels=parcels, ensemblePredictor=ensemblePredictor)
       classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs,cvres$predictor)
     } else {
       Xtest <- series(dataset$testVec, vox) 
-      cvres <- crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor,featureSelector=featureSelector, parcels=parcels)
+      cvres <- crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor,
+                                 featureSelector=featureSelector, parcels=parcels,ensemblePredictor=ensemblePredictor)
       classificationResult(dataset$testY, as.factor(cvres$class), cvres$probs, cvres$predictor)
     }
     
@@ -150,13 +152,15 @@ learners = list(
 #' @param autobalance whether to subsample training set so that classes are balanced (default is \code{FALSE})
 #' @param bootstrap
 #' @param featureSelector an option \code{FeatureSelector} object that is used to subselect informative voxels in feature space.
+#' @param ensemblePredictor whether returned predictor object averages over cross-validation blocks
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
 #' @import itertools 
 #' @import foreach
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, featureParcellation=NULL, classMetrics=FALSE) {  
+mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE, bootstrap=FALSE, 
+                          featureSelector=NULL, featureParcellation=NULL, classMetrics=FALSE, ensemblePredictor=FALSE) {  
   
   if (length(dataset$blockVar) != length(dataset$Y)) {
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
@@ -184,7 +188,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
     if (length(idx) > 1) {
       vox <- indexToGrid(regionMask, idx)
       
-      result <- runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap, featureSelector, parcels)
+      result <- runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap, featureSelector, parcels, ensemblePredictor)
       attr(result, "ROINUM") <- roinum
       attr(result, "vox") <- vox
       perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits, classMetrics))[1,])     

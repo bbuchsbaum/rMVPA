@@ -70,7 +70,7 @@ combinedAUC <- function(Pred, Obs) {
     lev <- levels(observed)[i]
     pos <- obs == lev
     pclass <- probs[,i]
-    pother <- rowMeans(probs[,-i])
+    pother <- rowMeans(probs[,-i, drop=FALSE])
     Metrics::auc(as.numeric(pos), pclass - pother)-.5
   })
   

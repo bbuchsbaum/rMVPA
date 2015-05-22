@@ -29,7 +29,8 @@ option_list <- list(
                     make_option(c("-i", "--niter"), type="character", help="number of randomized searchlight iterations"),
                     make_option(c("--savePredictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
                     make_option(c("--skipIfFolderExists"), type="logical", action="store_true", help="skip, if output folder already exists"),
-                    make_option(c("--output_class_metrics"), type="character", help="write out performance metrics for each class in multiclass settings"),
+                    make_option(c("--output_class_metrics"), type="logical", help="write out performance metrics for each class in multiclass settings"),
+                    make_option(c("--ensemble_predictor"), type="logical", help="write out performance metrics for each class in multiclass settings"),
                     make_option(c("-c", "--config"), type="character", help="name of configuration file used to specify program parameters"))
 
 
@@ -158,7 +159,10 @@ for (roinum in seq_along(config$ROIVolume)) {
   
   mvpa_res <- mvpa_regional(dataset, roivol, config$pthreads, config$savePredictors, 
                             autobalance=config$autobalance, bootstrap=FALSE, 
-                            featureSelector=featureSelector, featureParcellation=parcellationVolume)
+                            featureSelector=featureSelector, 
+                            featureParcellation=parcellationVolume, 
+                            classMetrics=config$output_class_metrics,
+                            ensemblePredictor=config$ensemble_predictor)
   
   lapply(1:length(mvpa_res$outVols), function(i) {
     out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")
