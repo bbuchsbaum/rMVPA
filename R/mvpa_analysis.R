@@ -189,7 +189,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
       vox <- indexToGrid(regionMask, idx)
       result <- if (bootstrapReplications > 0) {
         bootres <- lapply(seq(1, bootstrapReplications), function(brep) {
-          message(paste("bootstrap replication: ", brep))
+          flog.info("bootstrap replication %s ", brep)
           runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap=TRUE, featureSelector, parcels, ensemblePredictor)
         })
         
