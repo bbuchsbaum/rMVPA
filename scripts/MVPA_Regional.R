@@ -9,6 +9,12 @@
 .suppress(library(io))
 .suppress(library(caret))
 
+## add "nestingDimension"
+## that means features are nested in  a single 3D block
+## series(x, ind) # returns unnested matrix.
+## needs then to be unravelled into featureMatrix.
+
+
 option_list <- list(
                     make_option(c("-t", "--train_design"), type="character", help="the file name of the design table"),
                     make_option("--test_design", type="character", help="the file name of the design table"),
@@ -30,7 +36,8 @@ option_list <- list(
                     make_option(c("--savePredictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
                     make_option(c("--skipIfFolderExists"), type="logical", action="store_true", help="skip, if output folder already exists"),
                     make_option(c("--output_class_metrics"), type="logical", help="write out performance metrics for each class in multiclass settings"),
-                    make_option(c("--ensemble_predictor"), type="logical", help="write out performance metrics for each class in multiclass settings"),
+                    make_option(c("--ensemble_predictor"), type="logical", help="predictor is based on average of all cross-validated runs"),
+                    make_option(c("--bootstrap_replications"), type="numeric", help="number of bootstrapped models to be computed for each crossvalidation fold"),
                     make_option(c("-c", "--config"), type="character", help="name of configuration file used to specify program parameters"))
 
 
@@ -109,7 +116,6 @@ for (i in seq_along(config$ROIVolume)) {
 }
 
 
-
 flog.info("Running regional MVPA with parameters:", configParams, capture=TRUE)
 
 if (length(config$labels) != dim(config$train_datavec)[4]) {
@@ -158,7 +164,8 @@ for (roinum in seq_along(config$ROIVolume)) {
   
   
   mvpa_res <- mvpa_regional(dataset, roivol, config$pthreads, config$savePredictors, 
-                            autobalance=config$autobalance, bootstrap=FALSE, 
+                            autobalance=config$autobalance, 
+                            bootstrapReplications=config$bootstrap_replications, 
                             featureSelector=featureSelector, 
                             featureParcellation=parcellationVolume, 
                             classMetrics=config$output_class_metrics,

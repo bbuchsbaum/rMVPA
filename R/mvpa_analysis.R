@@ -150,7 +150,7 @@ learners = list(
 #' @param ncores the number of cores for parallel processign (default is 1)
 #' @param savePredictors whether to return prediction model in result (default is \code{FALSE} to save memory)
 #' @param autobalance whether to subsample training set so that classes are balanced (default is \code{FALSE})
-#' @param bootstrap
+#' @param bootstrapReplications the number of bootstrapped samples per each cross-validation fold
 #' @param featureSelector an option \code{FeatureSelector} object that is used to subselect informative voxels in feature space.
 #' @param ensemblePredictor whether returned predictor object averages over cross-validation blocks
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
@@ -159,7 +159,7 @@ learners = list(
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE, bootstrap=FALSE, 
+mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE, bootstrapReplications=0, 
                           featureSelector=NULL, featureParcellation=NULL, classMetrics=FALSE, ensemblePredictor=FALSE) {  
   
   if (length(dataset$blockVar) != length(dataset$Y)) {
@@ -187,8 +187,20 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
     
     if (length(idx) > 1) {
       vox <- indexToGrid(regionMask, idx)
+      result <- if (bootstrapReplications > 0) {
+        bootres <- lapply(seq(1, bootstrapReplications), function(brep) {
+          message(paste("bootstrap replication: ", brep))
+          runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap=TRUE, featureSelector, parcels, ensemblePredictor)
+        })
+        
+        cprob <- Reduce("+", lapply(bootres, function(res) res$prob))/length(bootres)
+        preds <- colnames(cprob)[apply(cprob, 1, which.max)]
+        classificationResult(bootres[[1]]$observed, preds, cprob, if (savePredictors) WeightedPredictor(lapply(bootres, "[[", "predictor")))
+        
+      } else {
+        runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap=FALSE, featureSelector, parcels, ensemblePredictor)
+      }
       
-      result <- runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap, featureSelector, parcels, ensemblePredictor)
       attr(result, "ROINUM") <- roinum
       attr(result, "vox") <- vox
       perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits, classMetrics))[1,])     

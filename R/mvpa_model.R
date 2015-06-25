@@ -118,7 +118,7 @@ TwoWayClassificationResult <- function(observed, predicted, probs, predictor=NUL
  
 }
 
-#' create an \code{TwoWayClassification} instance
+#' create an \code{MultiWayClassification} instance
 #' @param observed
 #' @param predicted
 #' @param probs

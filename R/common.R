@@ -48,6 +48,7 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("mask", config, args, NULL)
   setArg("output_class_metrics", config, args, FALSE)
   setArg("ensemble_predictor", config, args, FALSE)
+  setArg("bootstrap_replications", config, args, 0)
   config
 }
 
