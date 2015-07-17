@@ -208,6 +208,9 @@ MVPAModels$xgboost <- list(type = "Classification",
                                 ret
                               })
 
+
+
+
 MVPAModels$sda_ranking <- list(type = "Classification", 
                                library = "sda", 
                                label="sda_ranking",
@@ -249,7 +252,27 @@ MVPAModels$sda_ranking <- list(type = "Classification",
                                  predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
                                })
 
-
+MVPAModels$mgsda <- list(type = "Classification", 
+                              library = "MGSDA", 
+                              loop = NULL, 
+                              parameters=data.frame(parameters="lambda", class="numeric", label="sparsity penalty"),
+                              grid=function(x, y, len = NULL) data.frame(lambda=seq(.001, .99, by=len)),
+                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { 
+                                ycodes <- as.integer(y)
+                                V <- MGSDA::dLDA(x,ycodes, lambda= param$lambda, ...) 
+                                modelFit$ycodes <- ycodes
+                                modelFit$V <- V
+                                modelFit$xtrain <- xtrain
+                                modelFit$ytrain <- y
+                                modelFit
+                              },
+                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {  
+                                preds <- MSGDA::classifiyV(modelFit$xtrain, modelFit$ycodes, newdata, modelFit$V)
+                                levels(modelFit$ytrain)[preds]
+                              },
+                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
+                               
+                              })
 
 MVPAModels$lda_thomaz <- list(type = "Classification", 
                               library = "sparsediscrim", 
@@ -312,4 +335,42 @@ MVPAModels$pls_rf <- list(label = "PLS-RF",
 
 
 
-
+# MVPAModels$gmd <- list(type = "Classification", 
+#                        library = "GMD", 
+#                        label="histogram distance",
+#                        loop=NULL,
+#                        parameters=data.frame(parameters="k", class="integer", label="number of nearest neighbors"),
+#                        grid=function(x, y, len = NULL) data.frame(k=5),
+#                        fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+#                          
+#                          #breaks <- gbreaks(as.vector(x),25)
+#                          #xh <- as.mhist(lapply(1:nrow(x), function(i) ghist(x[i,], breaks=breaks)))
+#                          #xh <- apply(x,1,function(vals) ghist(vals, n=20), simplify=FALSE)
+#                          #ind <- expand.grid(i=1:length(xh), j=1:length(xh))
+#                          #Dmat <- mapply(function(i,j) {
+#                          #  .Call("gmd0", xh[[i]], xh[[j]], 0, PACKAGE = "GMD")
+#                          #}, ind[,1], ind[,2])
+#                          list(x=x, y=y, levs=levels(y), k=param$k, breaks = gbreaks(as.vector(x),25))
+#                        },
+#                        predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {       
+#                          ret <- unlist(lapply(1:nrow(newdata), function(i) {
+#                            vals <- newdata[i,]
+#                            hvals <- ghist(vals, breaks=modelFit$breaks)
+#                            D <- apply(modelFit$x, 1, function(tvals) {
+#                              #.Call("gmd0", hvals, ghist(tvals, breaks=modelFit$breaks), 0, PACKAGE = "GMD")
+#                              gmdp(hvals, ghist(tvals, breaks=modelFit$breaks), sliding=FALSE)
+#                            })
+#                            
+#                            #ind <- order(D)[1:modelFit$k]
+#                            minD <- min(D)
+#                            agg <- aggregate(D ~ modelFit$y, FUN=median)
+#                            ord <- order(agg[,2])
+#                            modelFit$levs[ord[1]]
+#                            #names(which.max(table(modelFit$y[ind])))[1]
+#                          }))
+#                          
+#                        },
+#                        prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+#                          
+#                          #predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
+#                        })

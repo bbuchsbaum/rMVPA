@@ -14,7 +14,7 @@ invertFolds <- function(foldSplit, allInd) {
 #' @param balance try to balance each training sample so that the frequency of labels is equal across groups
 #' @param bootstrap use bootstrap resampling of the training set
 #' @export
-FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE) {
+FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
   
   if (is.null(blockVar)) {
     blockVar <- sample(1:length(Y))
@@ -58,7 +58,24 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
       testIndex <- testSets[[index]]
        
       if (bootstrap) {
-        trainIndex <- sort(sample(trainIndex, replace=TRUE))
+        
+        ## make sure that bootstrap samples have at least bootstrapMin instance of each class.
+        ## bit could be infinite loop....
+        for (i in 1:50) {
+          ind <- sort(sample(trainIndex, replace=TRUE))
+          stab <- table(Y[ind])
+          minClass <- min(stab)
+          if (length(stab) == length(levels(Y)) && minClass >= bootstrapMin) {
+            trainIndex <- ind
+            break
+          }
+          
+          if (i == 50) {
+            stop("error in bootstrap sampling: after 50 attempts could not find bootstrap sample with at least 'bootstrapMin' instances for every class.")
+          }
+          
+        }
+        
       }
       
       if (balance) {
