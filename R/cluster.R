@@ -131,7 +131,7 @@ slic_cluster <- function(mask, bvec, K=500, decay=-.05, iterations=10, nn=8, shr
   }
   
   currentVoxCenters <- t(apply(spatialVoxCenters, 1, function(vox) min_gradient(bvec, vox, surround, mask)))
-  currentVoxCoords <- neuroim::gridToCoord(mask, currentVoxCenters)
+  currentVoxCoords <- neuroim:::gridToCoord(mask, currentVoxCenters)
   
  
   
@@ -152,7 +152,7 @@ slic_cluster <- function(mask, bvec, K=500, decay=-.05, iterations=10, nn=8, shr
     featureCenters <- do.call(cbind, parallel::mclapply(voxsplit, function(vox) rowMeans(series(bvec, as.matrix(vox)))))
     
     currentVoxCoords <- do.call(rbind, parallel::mclapply(voxsplit, function(v) {     
-      colMeans(neuroim::gridToCoord(mask, as.matrix(v)))
+      colMeans(neuroim:::gridToCoord(mask, as.matrix(v)))
     }))
     
     knnres <- get.knnx(currentVoxCoords, cgrid, nn)
