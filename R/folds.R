@@ -13,6 +13,7 @@ invertFolds <- function(foldSplit, allInd) {
 #' @param nfolds the number of cross-validation folds: only relvant when blockVar is not supplied
 #' @param balance try to balance each training sample so that the frequency of labels is equal across groups
 #' @param bootstrap use bootstrap resampling of the training set
+#' @param bootstrapMin 
 #' @export
 FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
   
@@ -105,14 +106,15 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
 #' @param nfolds the number of cross-validation folds: only relvant when blockVar is not supplied
 #' @param balance try to balance each training sample so that the frequency of labels is equal across groups
 #' @param bootstrap use bootstrap resampling of the training set
+#' @param bootstrapMin 
 #' @export
-MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE) {
+MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
   
   if (nrow(X) != length(Y)) {
     stop("X matrix must have same number of rows as Y variable")
   }
   
-  foldIter = FoldIterator(Y, blockVar, nfolds=nfolds, balance=balance, bootstrap=bootstrap)
+  foldIter = FoldIterator(Y, blockVar, nfolds=nfolds, balance=balance, bootstrap=bootstrap, bootstrapMin)
 
   nextEl <- function() {
     ret <- foldIter$nextElem()
