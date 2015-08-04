@@ -79,7 +79,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
       foldIterator <- if (bootstrap) {
         ## temporary hack
         bootIndices <- sort(sample(1:nrow(X), nrow(X), replace=TRUE))
-        MatrixFoldIterator(X[bootIndices,], dataset$Y,dataset$blockVar[bootIndices])
+        MatrixFoldIterator(X[bootIndices,], dataset$Y[bootIndices], dataset$blockVar[bootIndices])
       } else {
         MatrixFoldIterator(X, dataset$Y,dataset$blockVar, autobalance=autobalance, bootstrap=bootstrap)
       }
