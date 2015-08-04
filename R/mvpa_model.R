@@ -493,7 +493,8 @@ trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE,
 #' @export
 #' @import foreach
 crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
- 
+  ## TODO bootstrap replications doesn't work because model is trained on full set
+  ## This should be handled upstream so that "foldIterator" retruns a bootstrapped sampled version of X.
   results <- if (nrow(tuneGrid) == 1) {
     fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast, .noneControl, featureSelector, parcels)
     perf <- evaluateModel(fit)

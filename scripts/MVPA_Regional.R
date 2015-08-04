@@ -193,6 +193,7 @@ for (roinum in seq_along(config$ROIVolume)) {
   #write.table(format(mvpa_res$predMat,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/predMat_table.txt")), row.names=FALSE, quote=FALSE)
   #saveRDS(mvpa_res$predictorList, paste0(config$output, "/predictorList.RDS"))
 
+  configParams$currentWorkingDir <- getwd()
 
   configout <- paste0(outdir, "/config.yaml")
   qwrite(configParams, configout)

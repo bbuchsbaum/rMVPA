@@ -58,7 +58,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
     parcels <- parcels[valid.idx]
   }
   
-  foldIterator <- MatrixFoldIterator(X, dataset$Y,dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
+  
   
   if (ncol(X) == 0) {
     stop("no valid columns")
@@ -70,10 +70,20 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
     }
   
     result <- if (is.null(dataset$testVec)) {
+      foldIterator <- MatrixFoldIterator(X, dataset$Y,dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
       cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor, 
                                  featureSelector=featureSelector, parcels=parcels, ensemblePredictor=ensemblePredictor)
       classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs,cvres$predictor)
     } else {
+      
+      foldIterator <- if (bootstrap) {
+        ## temporary hack
+        bootIndices <- sort(sample(1:nrow(X), nrow(X), replace=TRUE))
+        MatrixFoldIterator(X[bootIndices,], dataset$Y,dataset$blockVar[bootIndices])
+      } else {
+        MatrixFoldIterator(X, dataset$Y,dataset$blockVar, autobalance=autobalance, bootstrap=bootstrap)
+      }
+      
       Xtest <- series(dataset$testVec, vox) 
       cvres <- crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor,
                                  featureSelector=featureSelector, parcels=parcels,ensemblePredictor=ensemblePredictor)
