@@ -24,6 +24,8 @@ MVPADataset(trainVec, Y, mask, blockVar, testVec, testY,
 \item{modelName}{}
 
 \item{tuneGrid}{}
+
+\item{tuneGrid}{}
 }
 \description{
 create an \code{MVPA} instance

@@ -5,7 +5,7 @@
 \title{Create an iterator froma block variable for iterating through the folds during cross-validation}
 \usage{
 FoldIterator(Y, blockVar = NULL, nfolds = 10, balance = FALSE,
-  bootstrap = FALSE)
+  bootstrap = FALSE, bootstrapMin = 2)
 }
 \arguments{
 \item{Y}{the labels}
@@ -17,6 +17,8 @@ FoldIterator(Y, blockVar = NULL, nfolds = 10, balance = FALSE,
 \item{balance}{try to balance each training sample so that the frequency of labels is equal across groups}
 
 \item{bootstrap}{use bootstrap resampling of the training set}
+
+\item{bootstrapMin}{}
 }
 \description{
 Create an iterator froma block variable for iterating through the folds during cross-validation

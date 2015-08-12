@@ -36,14 +36,6 @@ SimilarityModel <- function(type=c("pearson", "spearman", "kendall")) {
   ret
 }
 
-#dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE, bootstrap=FALSE, 
-#featureSelector=NULL, featureParcellation=NULL, classMetrics=FALSE, ensemblePredictor=FALSE) {  
-MVPAConfiguration <- function(modelName="corclass", tuneGrid=NULL, tuneLength=1, ncores=1, savePredictors=FALSE,ensemblePredictor=FALSE,
-                              autobalance=FALSE, bootstrapSamples=FALSE,
-                              featureSelector=NULL, featureParcellation=NULL, 
-                              saveClassMetrics=FALSE) {
-  ret <- list
-}
 
 #' create an \code{MVPA} instance
 #' @param trainVec

@@ -2,7 +2,7 @@
 % Please edit documentation in R/mvpa_model.R
 \name{MultiWayClassificationResult}
 \alias{MultiWayClassificationResult}
-\title{create an \code{TwoWayClassification} instance}
+\title{create an \code{MultiWayClassification} instance}
 \usage{
 MultiWayClassificationResult(observed, predicted, probs, predictor = NULL)
 }
@@ -14,6 +14,6 @@ MultiWayClassificationResult(observed, predicted, probs, predictor = NULL)
 \item{probs}{}
 }
 \description{
-create an \code{TwoWayClassification} instance
+create an \code{MultiWayClassification} instance
 }
 

@@ -214,12 +214,15 @@ loadModel <- function(name, config=NULL) {
   ##registry <- get("MVPAModels", .GlobalEnv)
   registry <- rMVPA:::MVPAModels
   
+  ## total hack, for now.
   if (name == "searchlight_ensemble" || name == "search_ensemble") {
     if (!is.null(config$learners)) {
       EnsembleSearchlightModel(config$learners)
     } else {
       EnsembleSearchlightModel()
     }
+  #} else if (name == "roi_ensemble") {
+  #  stop()
   } else if (name == "pattern_sim" || name == "pattern_similarity") {
     SimilarityModel()
   } else if (!is.null(registry[[name]])) {

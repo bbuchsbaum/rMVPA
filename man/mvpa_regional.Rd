@@ -5,7 +5,7 @@
 \title{mvpa_regional}
 \usage{
 mvpa_regional(dataset, regionMask, ncores = 1, savePredictors = FALSE,
-  autobalance = FALSE, bootstrap = FALSE, featureSelector = NULL,
+  autobalance = FALSE, bootstrapReplications = 0, featureSelector = NULL,
   featureParcellation = NULL, classMetrics = FALSE,
   ensemblePredictor = FALSE)
 }
@@ -20,7 +20,7 @@ mvpa_regional(dataset, regionMask, ncores = 1, savePredictors = FALSE,
 
 \item{autobalance}{whether to subsample training set so that classes are balanced (default is \code{FALSE})}
 
-\item{bootstrap}{}
+\item{bootstrapReplications}{the number of bootstrapped samples per each cross-validation fold}
 
 \item{featureSelector}{an option \code{FeatureSelector} object that is used to subselect informative voxels in feature space.}
 

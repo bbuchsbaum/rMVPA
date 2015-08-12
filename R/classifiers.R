@@ -211,21 +211,22 @@ MVPAModels$xgboost <- list(type = "Classification",
 #' @import memoise
 #' @import sda
 memo_rank <- memoise(function(X, L,fdr) {
-  sda::sda_ranking(X,L,fdr=fdr,verbose=FALSE)
+  sda::sda.ranking(X,L,fdr=fdr,verbose=FALSE)
 })
 
 
-MVPAModels$sda_ranking <- list(type = "Classification", 
+MVPAModels$sparse_sda <- list(type = "Classification", 
                                library = "sda", 
-                               label="sda_sparse",
+                               label="sparse_sda",
                                loop = NULL, 
-                               parameters=data.frame(parameters=c("frac", class="numeric", label="fraction of features to keep (frac > 0 a frac <= 1)"),
-                               grid=function(x, y, len = NULL) data.frame(parameter="none"),
+                               parameters=data.frame(parameters=c("frac"), class="numeric", label="fraction of features to keep (frac > 0 a frac <= 1)"),
+                               grid=function(x, y, len = NULL) data.frame(frac=seq(.1,1,length.out=len)),
                                fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
                                  
                                  x <- as.matrix(x)                          
-                                 nkeep <- max(frac * ncol(x),1)
-                                 rank <- memo_rank(Xtrain=x, L=y, fdr=FALSE)
+                                 nkeep <- max(param$frac * ncol(x),1)
+                                 print(nkeep)
+                                 rank <- memo_rank(x, L=y, fdr=FALSE)
                                  ind <- rank[,"idx"][1:nkeep]
                                  
                                  fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)

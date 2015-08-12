@@ -5,7 +5,7 @@
 \title{Create an iterator of training and test data from a data matrix \code{X}, a factor \code{Y}, and an optional precomputed blocking variable \code{blockVar} used for determining cross-validation folds.}
 \usage{
 MatrixFoldIterator(X, Y, blockVar = NULL, nfolds = 10, balance = FALSE,
-  bootstrap = FALSE)
+  bootstrap = FALSE, bootstrapMin = 2)
 }
 \arguments{
 \item{X}{the data matrix}
@@ -19,6 +19,8 @@ MatrixFoldIterator(X, Y, blockVar = NULL, nfolds = 10, balance = FALSE,
 \item{balance}{try to balance each training sample so that the frequency of labels is equal across groups}
 
 \item{bootstrap}{use bootstrap resampling of the training set}
+
+\item{bootstrapMin}{}
 }
 \description{
 Create an iterator of training and test data from a data matrix \code{X}, a factor \code{Y}, and an optional precomputed blocking variable \code{blockVar} used for determining cross-validation folds.

@@ -45,6 +45,17 @@ selectFeatures.catscore <- function(obj, X, Y) {
    
 }
 
+#selectFeatures.FTest <- function(obj, X, Y) {
+#  Y <- as.factor(Y)
+#  
+#  rsum <- rowsums(X, Y)
+#  nlevs <- table(Y)
+#  m.i <- sweep(rsum, 1, nlevs, "/")
+#  v.i <- aggregate(X, list(Y), var)[-1]
+#}
+  
+  
+
 #' @export
 selectFeatures.FTest <- function(obj, X, Y) {
   message("selecting features via FTest")
