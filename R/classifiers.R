@@ -80,6 +80,28 @@ MVPAModels$pca_lda <- list(type = "Classification",
                              predict(modelFit, pcx)$posterior                              
                            })
 
+MVPAModels$clusterSVM <- list(type = "Classification", 
+                           library = "SwarmSVM", 
+                           loop = NULL, 
+                           label="clusterSVM",
+                           parameters=data.frame(parameters=c("K", "lambda", "cost"), 
+                                                 class=c("numeric", "numeric", "numeric"), 
+                                                 labels=c("number of clusters", "global regulzariaztion", "svm cost")),
+                           grid=function(x, y, len = 5) {
+                             expand.grid(K=1:len, lambda=seq(0,2, length.out=len), cost=1)
+                           },
+                           fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+                             clusterSVM(as.matrix(x), y, centers=param$K, lambda=param$lambda, cost=param$cost, type=0)
+                           },
+                           
+                           predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                             pred = predict(modelFit, as.matrix(newdata))$predictions
+                           },
+                           prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                             pred = predict(modelFit, as.matrix(newdata), prob=TRUE)$probabilities
+                                                        
+                           })
+
 
 MVPAModels$gpca_lda <- list(type = "Classification", 
                             library = c("sGPCA", "MASS"), 
