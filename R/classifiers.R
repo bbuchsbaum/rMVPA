@@ -207,8 +207,37 @@ MVPAModels$xgboost <- list(type = "Classification",
                                 colnames(ret) <- modelFit$levs
                                 ret
                               })
+#' @export
+#' @import memoise
+#' @import sda
+memo_rank <- memoise(function(X, L,fdr) {
+  sda::sda_ranking(X,L,fdr=fdr,verbose=FALSE)
+})
 
 
+MVPAModels$sda_ranking <- list(type = "Classification", 
+                               library = "sda", 
+                               label="sda_sparse",
+                               loop = NULL, 
+                               parameters=data.frame(parameters=c("frac", class="numeric", label="fraction of features to keep (frac > 0 a frac <= 1)"),
+                               grid=function(x, y, len = NULL) data.frame(parameter="none"),
+                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+                                 
+                                 x <- as.matrix(x)                          
+                                 nkeep <- max(frac * ncol(x),1)
+                                 rank <- memo_rank(Xtrain=x, L=y, fdr=FALSE)
+                                 ind <- rank[,"idx"][1:nkeep]
+                                 
+                                 fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
+                                 attr(fit, "keep.ind") <- ind
+                                 fit
+                               },
+                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {                        
+                                 predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]), verbose=FALSE)$class
+                               },
+                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                 predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
+                               })
 
 
 MVPAModels$sda_ranking <- list(type = "Classification", 
