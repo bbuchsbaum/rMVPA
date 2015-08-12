@@ -91,7 +91,7 @@ MVPAModels$clusterSVM <- list(type = "Classification",
                              expand.grid(K=1:len, lambda=seq(0,2, length.out=len), cost=1)
                            },
                            fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                             clusterSVM(as.matrix(x), y, centers=param$K, lambda=param$lambda, cost=param$cost, type=0)
+                             SwarmSVM::clusterSVM(as.matrix(x), y, centers=param$K, lambda=param$lambda, cost=param$cost, type=0)
                            },
                            
                            predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
