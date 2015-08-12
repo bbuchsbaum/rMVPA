@@ -179,40 +179,68 @@ MVPAModels$sda_notune <- list(type = "Classification",
 
 
 
-MVPAModels$xgboost <- list(type = "Classification", 
-                              library = "xgboost", 
-                              loop = NULL, 
-                              parameters=data.frame(parameters=c("nrounds", "max.depth", "eta"), class=c("numeric", "numeric", "numeric"), 
-                                                    label=c("max number of iterations", "maximum depth of tree", "step size")),
-                              grid=function(x, y, len = NULL) expand.grid(nrounds = seq(1,len),
-                                                                          max.depth = seq(1,len),
-                                                                          eta=1),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                                if (length(levels(y)) > 2) {
-                                  stop("xgboost does not support multiclass classification")
-                                }
-                                y0 <- ifelse(y == levels(y)[1], 1, 0)
-                                param$objective <- "binary:logistic"
-                                xgfit <- xgboost(x,y0,params=param, nrounds=param$nrounds)
-                                mfit <- list(xgfit=xgfit, levs=levels(y))
-                                
-                              },
-                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                p <- predict(modelFit$xgfit, as.matrix(newdata))
-                                ifelse(p > .5, modelFit$levs[1], modelFit$levs[2])
-                              },
-                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                p <- predict(modelFit$xgfit, as.matrix(newdata))
-                                ret <- cbind(p, 1-p)
-                                colnames(ret) <- modelFit$levs
-                                ret
-                              })
 #' @export
 #' @import memoise
 #' @import sda
 memo_rank <- memoise(function(X, L,fdr) {
   sda::sda.ranking(X,L,fdr=fdr,verbose=FALSE)
 })
+
+
+
+MVPAModels$glmnet_opt <- list(type = "Classification", 
+                              library = c("c060", "glmnet"), 
+                              label="glmnet_opt",
+                              loop = NULL, 
+                              parameters=data.frame(parameters="parameter", class="character", label="parameter"),
+                              grid=function(x, y, len = NULL) data.frame(parameter="none"),
+                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+                                bounds <- t(data.frame(alpha=c(0, 1)))
+                                fam <- if (length(levels(y) > 2)) {
+                                  "multinomial"
+                                } else {
+                                  "binomial"
+                                }
+                                colnames(bounds)<-c("lower","upper")
+                                x <- as.matrix(x)                          
+                                fit <- epsgo(Q.func="tune.glmnet.interval",
+                                             bounds=bounds,
+                                             parms.coding="none",
+                                             seed = 1234,
+                                             show="none",
+                                             fminlower = -100,
+                                             x = x, y = y, family = fam,
+                                             type.min = "lambda.1se",
+                                             foldid=createFolds(y,k=5,list=FALSE),
+                                             type.measure = "mse")
+                                sfit <- summary(fit, verbose=FALSE)
+                                fit <- glmnet(x,y, family=fam,alpha=sfit$opt.alpha, nlambda=20)
+                                fit$opt_lambda <- sfit$opt.lambda
+                                fit$opt_alpha <- sfit$opt.alpha
+                                fit
+                              },
+                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {                        
+                                out <- predict(modelFit, as.matrix(newdata), s=modelFit$opt_lambda, type="class")
+                                if (is.matrix(out)) {
+                                  out[,1]
+                                } else {
+                                  out
+                                }
+                              },
+                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                obsLevels <- if("classnames" %in% names(modelFit)) modelFit$classnames else NULL
+                                if(length(obsLevels) == 2) {
+                                  probs <- as.vector(probs)
+                                  probs <- as.data.frame(cbind(1-probs, probs))
+                                  colnames(probs) <- modelFit$obsLevels
+                                } else {
+                                  probs <- as.data.frame(probs[,,1,drop = FALSE])
+                                  names(probs) <- modelFit$obsLevels
+                                }
+                                
+                                probs
+                              })
+
 
 
 MVPAModels$sparse_sda <- list(type = "Classification", 
