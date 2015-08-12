@@ -250,30 +250,28 @@ MVPAModels$sda_ranking <- list(type = "Classification",
                                fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
                                  
                                  x <- as.matrix(x)                             
-                                 ind <- if (ncol(x) > 20) {
+                                 ind <- if (ncol(x) > 2) {
+                                   ## rank features
                                    rank <- sda::sda.ranking(Xtrain=x, L=y, fdr=TRUE, verbose=FALSE, ...)
+                                   
+                                   #thresh based on higher criticism
                                    hcind <- which.max(rank[,"HC"])
                                    
-                                   keep.ind <- if (length(hcind) < 2) {
-                                     1:2
-                                   } else {
-                                     hcind                               
-                                   }                                                                
-                                   rank[keep.ind,"idx"]
-                                 } else if (ncol(x) <= 3) {
-                                   1:ncol(x)
                                    
-                                 } else {
-                                   rank <- sda::sda.ranking(Xtrain=x, L=y, fdr=FALSE, verbose=FALSE, ...)
-                                   rank[1:(ncol(x)/2), "idx"]
-                                 }
-                                 
-                                 if (length(ind) < 2) {
-                                   browser()
-                                 }
-                                 fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
-                                 attr(fit, "keep.ind") <- ind
-                                 fit
+                                   keep.ind <- if (hcind < 2) {
+                                     seq(1, min(ncol(x), 2))
+                                   } else {
+                                     1:hcind                               
+                                   }   
+                                   rank[keep.ind,"idx"]
+                                } else {
+                                  ## keep everything
+                                  1:ncol(x)
+                                }
+                        
+                                fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
+                                attr(fit, "keep.ind") <- ind
+                                fit
                                },
                                predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {                        
                                  predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]), verbose=FALSE)$class
