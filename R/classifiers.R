@@ -91,7 +91,7 @@ MVPAModels$clusterSVM <- list(type = "Classification",
                              expand.grid(K=1:len, lambda=seq(0,2, length.out=len), cost=1)
                            },
                            fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                             SwarmSVM::clusterSVM(as.matrix(x), y, centers=param$K, lambda=param$lambda, cost=param$cost, type=0)
+                             SwarmSVM::clusterSVM(x=as.matrix(x), y=y, centers=param$K, lambda=param$lambda, cost=param$cost, type=0)
                            },
                            
                            predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
@@ -269,7 +269,7 @@ MVPAModels$sparse_sda <- list(type = "Classification",
                                library = "sda", 
                                label="sparse_sda",
                                loop = NULL, 
-                               parameters=data.frame(parameters=c("frac"), class="numeric", label="fraction of features to keep (frac > 0 a frac <= 1)"),
+                               parameters=data.frame(parameters=c("frac", "lambda"), class=c("numeric", "numeric"), label=c("fraction of features to keep (frac > 0 a frac <= 1)", "lambda")),
                                grid=function(x, y, len = NULL) data.frame(frac=seq(.1,1,length.out=len)),
                                fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
                                  
@@ -279,7 +279,7 @@ MVPAModels$sparse_sda <- list(type = "Classification",
                                  rank <- memo_rank(x, L=y, fdr=FALSE)
                                  ind <- rank[,"idx"][1:nkeep]
                                  
-                                 fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
+                                 fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, lambda=param$lambda, verbose=FALSE)
                                  attr(fit, "keep.ind") <- ind
                                  fit
                                },
