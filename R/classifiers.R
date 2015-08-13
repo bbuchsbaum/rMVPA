@@ -372,7 +372,7 @@ MVPAModels$hdrda <- list(type = "Classification",
                               loop = NULL, 
                               parameters=data.frame(parameters=c("lambda", "gamma"), class=c("numeric", "numeric"), label=c("HRDA pooling parameter", "shrinkage parameter")),
                               grid=function(x, y, len = NULL) expand.grid(lambda=seq(.99, .001, length.out=len), gamma=seq(.001, .99, length.out=len)),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { sparsediscrim:::hdrda(x,y, lambda=param$lambda, gamma=param$gamma...) },
+                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { sparsediscrim:::hdrda(x,y, lambda=param$lambda, gamma=param$gamma,...) },
                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { sparsediscrim:::predict.hdrda(modelFit, as.matrix(newdata))$class },
                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
                                 scores <- -t(sparsediscrim:::predict.hdrda(modelFit, newdata)$scores)
