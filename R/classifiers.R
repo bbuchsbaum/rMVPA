@@ -375,10 +375,8 @@ MVPAModels$hdrda <- list(type = "Classification",
                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { sparsediscrim:::hdrda(x,y, lambda=param$lambda, gamma=param$gamma,...) },
                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { sparsediscrim:::predict.hdrda(modelFit, as.matrix(newdata))$class },
                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
-                                scores <- -t(sparsediscrim:::predict.hdrda(modelFit, newdata)$scores)
-                                mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
-                                probs <- exp(scores - mc)
-                                zapsmall(probs/rowSums(probs))
+                                posterior <- sparsediscrim:::predict.hdrda(modelFit, newdata)$posterior
+                                t(apply(posterior,1, function(x) x/sum(x)))
                               })
 
 MVPAModels$pls_rf <- list(label = "PLS-RF",
