@@ -270,7 +270,7 @@ MVPAModels$sparse_sda <- list(type = "Classification",
                                label="sparse_sda",
                                loop = NULL, 
                                parameters=data.frame(parameters=c("frac", "lambda"), class=c("numeric", "numeric"), label=c("fraction of features to keep (frac > 0 a frac <= 1)", "lambda")),
-                               grid=function(x, y, len = NULL) data.frame(frac=seq(.1,1,length.out=len)),
+                               grid=function(x, y, len = NULL) expand.grid(frac=seq(.1,1,length.out=len), lambda=seq(.01,.99,length.out=len)),
                                fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
                                  
                                  x <- as.matrix(x)                          
@@ -366,6 +366,20 @@ MVPAModels$lda_thomaz <- list(type = "Classification",
                                 zapsmall(probs/rowSums(probs))
                               })
 
+MVPAModels$hdrda <- list(type = "Classification", 
+                              library = "sparsediscrim", 
+                              label="hdrda",
+                              loop = NULL, 
+                              parameters=data.frame(parameters=c("lambda", "gamma"), class=c("numeric", "numeric"), label=c("HRDA pooling parameter", "shrinkage parameter")),
+                              grid=function(x, y, len = NULL) expand.grid(lambda=seq(.99, .001, length.out=len), gamma=seq(.001, .99, length.out=len)),
+                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { sparsediscrim:::hdrda(x,y, lambda=param$lambda, gamma=param$gamma...) },
+                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { sparsediscrim:::predict.hdrda(modelFit, as.matrix(newdata))$class },
+                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
+                                scores <- -t(sparsediscrim:::predict.hdrda(modelFit, newdata)$scores)
+                                mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
+                                probs <- exp(scores - mc)
+                                zapsmall(probs/rowSums(probs))
+                              })
 
 MVPAModels$pls_rf <- list(label = "PLS-RF",
                                     library = c("pls", "randomForest"),
