@@ -21,7 +21,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 
 #' @export 
 computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE) {
-  perf <- t(performance(result, splitList))
+  perf <- t(performance(result, splitList, classMetrics))
   out <- cbind(vox, perf[rep(1, nrow(vox)),])   
 }
 
@@ -196,6 +196,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
     }
     
     if (length(idx) > 1) {
+      ## what if length is less than 1?
       vox <- indexToGrid(regionMask, idx)
       result <- if (bootstrapReplications > 0) {
         bootres <- lapply(seq(1, bootstrapReplications), function(brep) {
