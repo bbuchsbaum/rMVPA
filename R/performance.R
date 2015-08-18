@@ -53,6 +53,14 @@ combinedAUC <- function(Pred, Obs) {
   }))
 }
 
+combinedACC <- function(Pred, Obs) {
+  levs <- levels(as.factor(Obs))
+  maxind <- apply(Pred, 1, which.max)
+  pclass <- levs[maxind]
+  sum(pclass == Obs)/length(pclass)
+  
+}
+
 .multiwayPerf <- function(observed, predicted, probs, classMetrics=FALSE) {
   obs <- as.character(observed)
   

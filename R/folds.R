@@ -123,6 +123,12 @@ MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bo
     ret
   }
   
+  fullSample <- function() {
+    if (bootstrap) {
+      bootIndices <- sample(1:nrow(X), nrow(X), replace=TRUE)
+    }
+  }
+  
   
   
   obj <- list(X=X, Y=Y, blockVar=blockVar, nextElem=nextEl, index=foldIter$index, 

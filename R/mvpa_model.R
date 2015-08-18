@@ -1,7 +1,7 @@
 
-.noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none", trim=TRUE)
-.cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none", trim=TRUE)  
-.adaptiveControl <- caret::trainControl("adaptive_cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none", trim=TRUE)  
+.noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")
+.cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
+.adaptiveControl <- caret::trainControl("adaptive_cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
 
 
 #' create an \code{ClassificationModel} instance
@@ -510,7 +510,7 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
 
 #' @export
 #' @import foreach
-crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector, parcels=NULL, ensemblePredictor=FALSE) {
+crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
  
   resultList <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
     if (nrow(tuneGrid) == 1 && fast) {
