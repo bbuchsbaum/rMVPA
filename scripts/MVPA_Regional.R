@@ -15,6 +15,14 @@
 ## needs then to be unravelled into featureMatrix.
 
 
+## should be able to use "test_subset" without test_data
+## that means: train only on one subset and test only on another subset within single design
+
+## if train_design only, the "test_subset" subsets the the train_design. Check to make sure no overlap in columns.
+## if test_design provided, the test design must have matching test_data
+
+
+
 option_list <- list(
                     make_option(c("-t", "--train_design"), type="character", help="the file name of the design table"),
                     make_option("--test_design", type="character", help="the file name of the design table"),

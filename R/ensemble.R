@@ -1,4 +1,12 @@
 
+### lda ensemble
+### train n patches
+### best best n patches via greedy search
+### train lda on pairs of intra verus intraclass similarity vectors
+### combine with global classifier
+
+
+
 createModelSet <- function(modelName, ...) {
   dots <- list(...)
   tuneGrid <- expand.grid(dots)

@@ -75,7 +75,6 @@ greedyMultiClassOptim <- function(PredList, Y, iter = 100L, metric="AUC", oneByO
                       AUC=combinedAUC,
                       ACC=combinedACC)
   
-  print(metricFUN)
   
   if (oneByOne) {
     levs <- levels(Y)
