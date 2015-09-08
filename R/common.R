@@ -62,15 +62,20 @@ normalizeSamples <- function(bvec, mask) {
 initializeData <- function(config) {
   
   if (!is.null(config$train_subset)) {
-    config$train_datavec <- loadBrainData(config, "train_data", indices=which(config$train_subset))    
+    indices=which(config$train_subset)
+    flog.info("length of training subset %s", length(indices))
+    config$train_datavec <- loadBrainData(config, "train_data", indices=indices)    
   } else {
     config$train_datavec <- loadBrainData(config, "train_data")  
   }
   
   if (!is.null(config$test_data)) {
     flog.info("loading test data: %s", config$test_data)
+    indices=which(config$test_subset)
+    flog.info("length of test subset %s", length(indices))
+    
     if (!is.null(config$test_subset)) {
-      config$test_datavec <- loadBrainData(config, "test_data", indices=which(config$test_subset))
+      config$test_datavec <- loadBrainData(config, "test_data", indices=indices)
     } else {
       config$test_datavec <- loadBrainData(config, "test_data")
     }
@@ -101,13 +106,27 @@ initializeDesign <- function(config) {
     config$test_subset <- eval(parse(text=config$test_subset))
   }
   
+  ## full design
   config$full_train_design <- read.table(config$train_design, header=TRUE, comment.char=";")
+  ## subset of training samples
   config$train_subset <- loadSubset(config$full_train_design, config$train_subset)
+  ## training design
   config$train_design <- config$full_train_design[config$train_subset,]
+  ## training labels
   config$labels <- loadLabels(config$train_design, config)  
+  ## block variables for cross-validation
   config$block <- loadBlockColumn(config, config$train_design)
   
   flog.info(paste("training subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))
+  
+  #if (!is.null(config$test_subset) && is.null(config$test_design) && is.null(config$test_data)) {
+    ## test subset is taken from training design matrix
+  #  config$test_subset <- loadSubset(config$full_train_design, config$test_subset)
+    
+  #  config$test_design <- config$full_train_design[config$test_subset,]
+  #  config$full_test_design <- config$test_design
+  #  config$testLabels <- loadLabels(config$test_design, config)   
+  #}
   
   if (!is.null(config$test_design)) {
     config$full_test_design <- read.table(config$test_design, header=TRUE, comment.char=";")
