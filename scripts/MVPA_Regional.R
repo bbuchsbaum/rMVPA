@@ -99,10 +99,16 @@ if (!is.null(config$roi_grouping)) {
     vol
   })
   
+  if (is.null(names(config$roi_grouping))) {
+    names(roilist) <- paste0("roi_group_", seq_along(config$roi_grouping))
+  }
+  
   config$ROIVolume <- roilist
 } else {
   config$ROIVolume <- list(config$ROIVolume)
 }
+
+
 
 parcellationVolume <- if (!is.null(config$parcellation)) {
   loadVolume(config$parcellation)
@@ -125,6 +131,7 @@ for (i in seq_along(config$ROIVolume)) {
 
 
 flog.info("Running regional MVPA with parameters:", configParams, capture=TRUE)
+flog.info("With %s roi groups", length(config$ROIVolume))
 
 if (length(config$labels) != dim(config$train_datavec)[4]) {
   flog.error("Number of volumes: %s must equal number of labels: %s", dim(config$train_datavec)[4], length(config$labels))
@@ -151,23 +158,25 @@ for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
 
 for (roinum in seq_along(config$ROIVolume)) {
   
+
   gc()
   
+  if (length(config$ROIVolume) > 1) {
+    roiname <- names(config$ROIVolume)[roinum]
+    outdir <- paste0(config$output, "_roigroup_", roiname)
+  } else {
+    outdir <- config$output
+  }
+  
+  
   if (config$skipIfFolderExists) {
-    outdir <- paste0(config$output, "_roigroup_", roinum)
     if (file.exists(outdir)) {
       flog.info("output folder %s already exists, skipping.", outdir)
       next
     }
-  }
-  
-  if (length(config$ROIVolume) > 1) {
-    outdir <- paste0(config$output, "_roigroup_", roinum)
-    outdir <- makeOutputDir(outdir)
   } else {
-    outdir <- makeOutputDir(config$output)
-  }
-  
+    outdir <- makeOutputDir(outdir)
+  } 
   
   roivol <- config$ROIVolume[[roinum]]
   
