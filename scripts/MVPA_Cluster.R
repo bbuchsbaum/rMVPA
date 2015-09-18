@@ -26,6 +26,10 @@ if (!file.exists(args$input)) {
   stop()
 }
 
+if (is.null(args$output)) {
+  args$output <- paste0("clusout_K", args$k, ".nii")
+}
+
 if (!file.exists(args$mask)) {
   flog.error("cannot find mask file %s", args$mask)
   stop()
