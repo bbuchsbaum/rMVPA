@@ -24,12 +24,11 @@
 
 
 option_list <- list(
-                    make_option(c("-t", "--train_design"), type="character", help="the file name of the design table"),
-                    make_option("--test_design", type="character", help="the file name of the design table"),
-                    make_option(c("-s", "--type"), type="character", help="the type of searchlight: standard or randomized"),  
+                    make_option(c("-t", "--train_design"), type="character", help="the file name of the training design table"),
+                    make_option("--test_design", type="character", help="the file name of the test design table"),
                     make_option("--train_data", type="character", help="the name of the training data file as (4D .nii file)"), 
                     make_option("--test_data", type="character", help="the name of the testing data file as (4D .nii file)"),  
-                    make_option(c("-n", "--normalize"), action="store_true", type="logical", help="center and scale each volume vector"),
+                    make_option(c("-n", "--normalize"), action="store_true", type="logical", help="center and scale each image volume"),
                     make_option(c("-m", "--model"), type="character", help="name of the classifier model"),
                     make_option(c("-a", "--mask"), type="character", help="name of binary image mask file (.nii format)"),
                     make_option(c("--parcellation"), type="character", help="name of file containing integer-based image parcellation for cluster-based dimension reduction (.nii format)"),
@@ -43,9 +42,10 @@ option_list <- list(
                     make_option(c("-i", "--niter"), type="character", help="number of randomized searchlight iterations"),
                     make_option(c("--savePredictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
                     make_option(c("--skipIfFolderExists"), type="logical", action="store_true", help="skip, if output folder already exists"),
+                    ## should be skip_if_folder_exists or "overwrite_folder"
                     make_option(c("--output_class_metrics"), type="logical", help="write out performance metrics for each class in multiclass settings"),
-                    make_option(c("--ensemble_predictor"), type="logical", help="predictor is based on average of all cross-validated runs"),
-                    make_option(c("--bootstrap_replications"), type="numeric", help="number of bootstrapped models to be computed for each crossvalidation fold"),
+                    make_option(c("--ensemble_predictor"), type="logical", help="predictor is based on average prediction of all cross-validated runs"),
+                    make_option(c("--bootstrap_replications"), type="numeric", help="number of bootstrapped models to be computed for each cross-validation fold. Final model is average of bootstrapped models."),
                     make_option(c("-c", "--config"), type="character", help="name of configuration file used to specify program parameters"))
 
 
@@ -101,6 +101,8 @@ if (!is.null(config$roi_grouping)) {
   
   if (is.null(names(config$roi_grouping))) {
     names(roilist) <- paste0("roi_group_", seq_along(config$roi_grouping))
+  } else {
+    names(roilist) <- names(config$roi_grouping)
   }
   
   config$ROIVolume <- roilist
