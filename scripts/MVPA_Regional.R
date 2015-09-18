@@ -158,7 +158,6 @@ for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
 
 for (roinum in seq_along(config$ROIVolume)) {
   
-
   gc()
   
   if (length(config$ROIVolume) > 1) {
@@ -167,7 +166,6 @@ for (roinum in seq_along(config$ROIVolume)) {
   } else {
     outdir <- config$output
   }
-  
   
   if (config$skipIfFolderExists) {
     if (file.exists(outdir)) {
