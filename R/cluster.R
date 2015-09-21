@@ -92,7 +92,10 @@ shrink_vector <- function(mask, vgrid, bvec, k=5, iter=1, radius=NULL) {
   
   for (i in 1:iter) {
     omat <- do.call(cbind, mclapply(1:nrow(vgrid), function(i) {
-      print(i)
+      if (i %% 1000 == 0) {
+        message("shrinkage at: ", round(i/nrow(vgrid) * 100), "%")
+      }
+      
       vox <- vgrid[i,]
       cvox <- RegionSphere(mask, vox, radius=radius, nonzero=TRUE)@coords
       vals <- series(ovec, vox[1], vox[2], vox[3])
@@ -162,3 +165,10 @@ slic_cluster <- function(mask, bvec, K=500, decay=-.05, iterations=10, nn=8, shr
   list(clusvol=bv, clusters=clusterAssignments, centers = featureCenters, coordCenters=currentVoxCoords, voxelSets=voxsplit)
   
 }
+
+#' @export
+#' @import FNN
+#' 
+#' 
+# turbo_cluster <- function(mask, bvec, K=500, decay=-.05, iterations=10, nn=8, shrink=0) {
+#

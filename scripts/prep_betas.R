@@ -9,7 +9,7 @@
 
 option_list <- list(
   make_option(c("-d", "--design"), type="character", help="the name of the design file"),
-  make_option(c("-p", "--polort"), type="numeric", help="the order of the polynomial for regresising out low-frequency trends (default is 0)", default=0),
+  make_option(c("-p", "--polort"), type="numeric", help="the order of the polynomial for regressing out low-frequency trends (default is 0)", default=0),
   make_option(c("-z", "--zscore"), type="logical", action="store_true", help="z-score time series within each run (default is false)", default=FALSE),
   make_option(c("-b", "--block_column"), type="character", help="the name of the column in design file indicating the block number"),
   make_option(c("-o", "--output"), type="character", help="the name of the output image file, if missing a 'p' is prefixed to the input file"),

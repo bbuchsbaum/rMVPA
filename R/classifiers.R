@@ -208,6 +208,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {    
                                 x <- as.matrix(x)
                                 mfits <- lapply(seq(1, param$reps), function(i) {
+                                  message("fitting sda model ", i)
                                   row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
                                   fit <- sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...)
                                 
@@ -222,7 +223,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 prob <- preds[!sapply(preds, function(x) is.null(x))]
                                 pfinal <- Reduce("+", prob)/length(prob)
                                 
-                                pclass <- colnames(pfinal)[apply(pfinal, 1, which.max)]
+                                colnames(pfinal)[apply(pfinal, 1, which.max)]
                               },
                                 
                                 

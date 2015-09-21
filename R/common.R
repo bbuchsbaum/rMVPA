@@ -46,7 +46,7 @@ initializeStandardParameters <- function(config, args, analysisType) {
   #setDefault("method_params", config, list())
   #setArg("niter", config, args, 4)
   setArg("mask", config, args, NULL)
-  setArg("output_class_metrics", config, args, FALSE)
+  setArg("output_class_metrics", config, args, TRUE)
   setArg("ensemble_predictor", config, args, FALSE)
   setArg("bootstrap_replications", config, args, 0)
   config
@@ -119,14 +119,17 @@ initializeDesign <- function(config) {
   
   flog.info(paste("training subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))
   
-  #if (!is.null(config$test_subset) && is.null(config$test_design) && is.null(config$test_data)) {
+  if (!is.null(config$test_design) && is.null(config$test_data)) {
+    flog.error("test_design %s is supplied with no test_data")
+  }
+  if (!is.null(config$test_subset) && is.null(config$test_design) && is.null(config$test_data)) {
     ## test subset is taken from training design matrix
-  #  config$test_subset <- loadSubset(config$full_train_design, config$test_subset)
+    config$test_subset <- loadSubset(config$full_train_design, config$test_subset)
     
-  #  config$test_design <- config$full_train_design[config$test_subset,]
-  #  config$full_test_design <- config$test_design
-  #  config$testLabels <- loadLabels(config$test_design, config)   
-  #}
+    config$test_design <- config$full_train_design[config$test_subset,]
+    config$full_test_design <- config$test_design
+    config$testLabels <- loadLabels(config$test_design, config)   
+  }
   
   if (!is.null(config$test_design)) {
     config$full_test_design <- read.table(config$test_design, header=TRUE, comment.char=";")
