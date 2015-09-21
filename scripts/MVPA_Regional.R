@@ -128,7 +128,10 @@ flog.info("mask contains %s voxels", sum(config$maskVolume))
 
 for (i in seq_along(config$ROIVolume)) {
   rvol <- config$ROIVolume[[i]]
+  
   flog.info("Region mask contains: %s ROIs", length(unique(rvol[rvol > 0])))
+  flog.info(paste("ROIs are for group ", i, "are:"), rvol, capture=TRUE)
+ 
 }
 
 
