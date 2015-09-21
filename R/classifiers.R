@@ -201,13 +201,13 @@ MVPAModels$sda_notune <- list(type = "Classification",
 
 MVPAModels$sda_boot <- list(type = "Classification", 
                               library = "sda", 
-                              label="sda_notune",
+                              label="sda_boot",
                               loop = NULL, 
                               parameters=data.frame(parameters=c("reps"), class=c("numeric"), label=c("number of bootstap resamples")),
                               grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {    
                                 x <- as.matrix(x)
-                                mfits <- lapply(seq(1, param$nreps), function(i) {
+                                mfits <- lapply(seq(1, param$reps), function(i) {
                                   row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
                                   fit <- sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...)
                                 
