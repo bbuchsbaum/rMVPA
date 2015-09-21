@@ -199,7 +199,42 @@ MVPAModels$sda_notune <- list(type = "Classification",
                               })
 
 
-
+MVPAModels$sda_boot <- list(type = "Classification", 
+                              library = "sda", 
+                              label="sda_notune",
+                              loop = NULL, 
+                              parameters=data.frame(parameters=c("reps"), class=c("numeric"), label=c("number of bootstap resamples")),
+                              grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
+                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {    
+                                x <- as.matrix(x)
+                                mfits <- lapply(seq(1, param$nreps), function(i) {
+                                  row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
+                                  fit <- sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...)
+                                
+                                })
+                                
+                              },
+                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                preds <- lapply(modelFit, function(fit) {
+                                  predict(fit, as.matrix(newdata), verbose=FALSE)$posterior
+                                })
+                                
+                                prob <- preds[!sapply(preds, function(x) is.null(x))]
+                                pfinal <- Reduce("+", prob)/length(prob)
+                                
+                                pclass <- colnames(pfinal)[apply(pfinal, 1, which.max)]
+                              },
+                                
+                                
+                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                                preds <- lapply(modelFit, function(fit) {
+                                  predict(fit, as.matrix(newdata), verbose=FALSE)$posterior
+                                })
+                                
+                                prob <- preds[!sapply(preds, function(x) is.null(x))]
+                                pfinal <- Reduce("+", prob)/length(prob)
+                                
+                              })
 
 #' @export
 #' @import memoise
