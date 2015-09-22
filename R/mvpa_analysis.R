@@ -70,7 +70,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
     }
   
     result <- if (is.null(dataset$testVec)) {
-      foldIterator <- MatrixFoldIterator(X, dataset$Y,dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
+      foldIterator <- MatrixFoldIterator(X, dataset$Y, dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
       cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor, 
                                  featureSelector=featureSelector, parcels=parcels, ensemblePredictor=ensemblePredictor)
       classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs,cvres$predictor)
@@ -81,7 +81,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
         bootIndices <- sort(sample(1:nrow(X), nrow(X), replace=TRUE))
         MatrixFoldIterator(X[bootIndices,], dataset$Y[bootIndices], dataset$blockVar[bootIndices])
       } else {
-        MatrixFoldIterator(X, dataset$Y,dataset$blockVar, bootstrap=bootstrap)
+        MatrixFoldIterator(X, dataset$Y,dataset$blockVar, bootstrap=false)
       }
       
       Xtest <- series(dataset$testVec, vox) 

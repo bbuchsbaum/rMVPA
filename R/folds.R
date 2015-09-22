@@ -103,10 +103,10 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
 #' @param X the data matrix
 #' @param Y the labels
 #' @param blockVar variable denoting the cross-validation folds.
-#' @param nfolds the number of cross-validation folds: only relvant when blockVar is not supplied
+#' @param nfolds the number of cross-validation folds: only relevant when blockVar is not supplied
 #' @param balance try to balance each training sample so that the frequency of labels is equal across groups
 #' @param bootstrap use bootstrap resampling of the training set
-#' @param bootstrapMin 
+#' @param bootstrapMin the minumum number of clases per bootstrap iteration.
 #' @export
 MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
   
