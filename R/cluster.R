@@ -40,7 +40,7 @@ slic_gradient <- function(vox, bvec, mask, offset=.TwoByTwoOffset) {
     NA
   } else {
     smat <- series(bvec, vs)
-    s1 <- series(bvec, vox[1], vox[2], vox[3])[,1]
+    s1 <- series(bvec, vox[1], vox[2], vox[3])
     sum(1 - cor(s1,smat))
     #sum(sapply(seq(1, ncol(smat), by=2), function(k) {
     #  1 - cor(smat[,k], smat[,k+1])
