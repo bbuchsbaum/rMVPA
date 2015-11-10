@@ -40,7 +40,7 @@ selectFeatures.catscore <- function(obj, X, Y) {
   
   keep <- logical(ncol(X))
   keep[keep.idx] <- TRUE
-  message("retaining ", sum(keep), "features in matrix with", ncol(X), "columns")
+  message("retaining ", sum(keep), " features in matrix with ", ncol(X), " columns")
   keep
    
 }
@@ -72,6 +72,7 @@ selectFeatures.FTest <- function(obj, X, Y) {
   
   keep.idx <- if (obj$cutoff_type == "top_k" || obj$cutoff_type == "topk") {
     k <- min(ncol(X), obj$cutoff_value)
+    message("k =", k)
     order(pvals)[1:k]
   } else if (obj$cutoff_type == "top_p" || obj$cutoff_type == "topp") {
     if (obj$cutoff_value <= 0 || obj$cutoff_value > 1) {
@@ -80,14 +81,16 @@ selectFeatures.FTest <- function(obj, X, Y) {
     k <- obj$cutoff_value * ncol(X)
     order(pvals)[1:k]
   } else {
-    ## TODO should fail fast
+  
     stop(paste("selectFeatures.FTest: unsupported cutoff_type: ", obj$cutoff_type))
   }
+  
+  message("length(keep.idx)", length(keep.idx))
   
   keep <- logical(ncol(X))
   keep[keep.idx] <- TRUE
   
-  message("retaining ", sum(keep), " features in matrix with ", ncol(X), "columns")
+  message("retaining ", sum(keep), " features in matrix with ", ncol(X), " columns")
   
   keep
   
