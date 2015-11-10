@@ -22,6 +22,9 @@
 ## if test_design provided, the test design must have matching test_data
 
 
+## should output importance maps for methods that supply them (e.g. sda)
+
+
 
 option_list <- list(
                     make_option(c("-t", "--train_design"), type="character", help="the file name of the training design table"),

@@ -10,3 +10,4 @@ groupMeans <- function(X, margin, group) {
     stop("'margin' must be 1 or 2")
   }
 }
+

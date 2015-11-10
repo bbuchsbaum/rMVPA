@@ -57,34 +57,37 @@ selectFeatures.catscore <- function(obj, X, Y) {
   
 
 #' @export
+#' @importFrom assertthat assert_that
 selectFeatures.FTest <- function(obj, X, Y) {
   message("selecting features via FTest")
- 
+  message("cutoff type", obj$cutoff.type)
+  message("cutoff value", obj$cutoff.value)
+  
+  assert_that(obj$cutoff.type %in% c("topk", "top_k", "topp", "top_p"))
   
   pvals <- unlist(lapply(1:ncol(X), function(i) {
     oneway.test(X[,i] ~ Y)$p.value
   }))
   
   
-  
- 
-  keep.idx <- if (obj$cutoff.type == "top_k") {
+  keep.idx <- if (obj$cutoff.type == "top_k" || obj$cutoff.type == "topk") {
     k <- min(ncol(X), obj$cutoff.value)
     order(pvals)[1:k]
-  } else if (obj$cutoff.type == "top_p") {
+  } else if (obj$cutoff.type == "top_p" || obj$cutoff.type == "topp") {
     if (obj$cutoff.value <= 0 || obj$cutoff.value > 1) {
       stop("selectFeatures.FTest: with top_p, cutoff.value must be > 0 and <= 1")
     }
     k <- obj$cutoff.value * ncol(X)
     order(pvals)[1:k]
   } else {
-    stop(paste("selectFeatures.catscore: unsupported cutoff.type: ", obj$cutoff.type))
+    ## TODO should fail fast
+    stop(paste("selectFeatures.FTest: unsupported cutoff.type: ", obj$cutoff.type))
   }
   
   keep <- logical(ncol(X))
   keep[keep.idx] <- TRUE
   
-  message("retaining ", sum(keep), "features in matrix with", ncol(X), "columns")
+  message("retaining ", sum(keep), " features in matrix with ", ncol(X), "columns")
   
   keep
   

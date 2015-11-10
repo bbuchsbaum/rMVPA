@@ -421,6 +421,11 @@ evaluateModel.WeightedPredictor <- function(x, newdata=NULL) {
   prob <- preds[!sapply(preds, function(x) is.null(x))]
   pfinal <- Reduce("+", prob)
   
+  
+  ## TODO error ...
+  ## Error in colnames(pfinal)[apply(pfinal, 1, which.max)] : 
+  ##  invalid subscript type 'list'
+
   pclass <- colnames(pfinal)[apply(pfinal, 1, which.max)]
   list(class=pclass, prob=pfinal)
 }
@@ -512,7 +517,7 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=
 #' @import foreach
 crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
  
-  resultList <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
+  resultList <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %dopar% {   
     if (nrow(tuneGrid) == 1 && fast) {
       fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl, featureSelector, parcels)
       list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask, parcels=parcels)        
