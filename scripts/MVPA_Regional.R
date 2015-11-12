@@ -147,7 +147,7 @@ if (length(config$labels) != dim(config$train_datavec)[4]) {
 }
 
 featureSelector <- if (!is.null(config$feature_selector)) {
-  FeatureSelector(config$feature_selector$method, config$feature_selector$cutoff_type,config$feature_selector$cutoff_value)
+  FeatureSelector(config$feature_selector$method, config$feature_selector$cutoff_type, as.numeric(config$feature_selector$cutoff_value)
 }
 
 flog.info("feature selector: ", featureSelector, capture=TRUE)

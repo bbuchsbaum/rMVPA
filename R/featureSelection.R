@@ -65,6 +65,7 @@ selectFeatures.FTest <- function(obj, X, Y) {
   
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   
+  ## TODO speed this up... with matrix operations
   pvals <- unlist(lapply(1:ncol(X), function(i) {
     oneway.test(X[,i] ~ Y)$p.value
   }))
