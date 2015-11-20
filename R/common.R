@@ -330,14 +330,17 @@ loadBrainDataSequence <- function(fnames, config) {
     abort(config, paste("training data", offenders, "not found."))
   }
   
-  vecmat <- do.call(rbind, lapply(fnames, function(fname) {
+  
+  ### TODO make more efficients. This loads in all data then subsets.
+  vecmat <- do.call(rbind, lapply(1:length(fnames), function(i) {
+    fname <- fnames[i]
     flog.info("loading data file %s", fname)
     mat <- neuroim::as.matrix(loadVector(fname, mask=config$maskVolume))
     flog.info("data file %s has %s voxels and %s samples", fname, ncol(mat), nrow(mat))
     mat
   }))
   
-  SparseBrainVector(vecmat, space(config$maskVolume), mask=config$maskVolume)
+  SparseBrainVector(vecmat[config$train_subset,], space(config$maskVolume), mask=config$maskVolume)
 }
 
 #' @export
