@@ -51,7 +51,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
   
-  X <- X[,valid.idx]
+  X <- X[,valid.idx,drop=FALSE]
   vox <- vox[valid.idx,]
   
   if (!is.null(parcels)) {
@@ -79,7 +79,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
       foldIterator <- if (bootstrap) {
         ## temporary hack
         bootIndices <- sort(sample(1:nrow(X), nrow(X), replace=TRUE))
-        MatrixFoldIterator(X[bootIndices,], dataset$Y[bootIndices], dataset$blockVar[bootIndices])
+        MatrixFoldIterator(X[bootIndices,,drop=FALSE], dataset$Y[bootIndices], dataset$blockVar[bootIndices])
       } else {
         MatrixFoldIterator(X, dataset$Y,dataset$blockVar, bootstrap=false)
       }

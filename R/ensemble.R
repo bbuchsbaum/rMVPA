@@ -202,7 +202,7 @@ innerIteration <- function(dataset, vox, trainInd, testInd, model, tuneGrid, aut
   Ytrain <- dataset$Y[-testInd]
   blockVar <- dataset$blockVar[-testInd]
   X <- series(dataset$trainVec, vox)
-  Xtrain <- X[-testInd,] 
+  Xtrain <- X[-testInd,,drop=FALSE] 
   foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, blockVar, balance=autobalance, bootstrap=bootstrap)
   
   ## do we need to compute final pedictor?

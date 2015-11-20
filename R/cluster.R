@@ -1,5 +1,44 @@
 
 
+create_sparse_adjacency <- function(mask, dist_thresh=max(spacing(mask)), edgeweight="binary") {
+  library(FNN)
+  library(Matrix)
+  library(igraph)
+  
+  mask.idx <- which(mask > 0)
+  G <-  indexToCoord(mask, mask.idx)
+  G_knn <- FNN::get.knn(G,27)
+  
+  res <- mclapply(1:nrow(G), function(i) {
+    print(i)
+    nidx  <-  G_knn$nn.index[i,]
+    ndist <- G_knn$nn.dist[i,]
+    
+    #ovals <- mat[,nidx]
+    #vals <- mat[,i]
+    
+    keep <- ndist < dist_thresh
+    cbind(i, nidx[ndist < dist_thresh], rep(1, sum(keep)))
+    #sim <- as.vector(cor(vals,ovals))
+    #sim[sim < 0] <- 0
+    #wsim <- sim * exp(decay * ndist)
+    #cbind(i, nidx, wsim)
+    
+  })
+  
+  wmat <- do.call(rbind, res)
+  wmat <- Matrix::sparseMatrix(dims=c(nrow(G), nrow(G)), i=wmat[,1], j=wmat[,2], x=wmat[,3])
+  
+  wmat <- (wmat + t(wmat))/2
+  gg <- igraph::graph.adjacency(wmat, mode="undirected", weighted=TRUE)
+  
+  
+  
+  
+}
+  
+  
+  
 .ThreeByThreeOffset <- rbind(c(1,0,0),
                              c(-1,0,0),
                              c(0,1,0),
