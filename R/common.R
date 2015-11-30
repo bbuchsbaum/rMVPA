@@ -296,7 +296,7 @@ loadTestLabels <- function(full_design, config) {
   if (is.null(full_design[[config$test_label_column]])) {
     stop(paste("Error: labelColumn", config$label_column, "not found"))
   } else {
-    labels <- factor(full_design[[config$label_column]])
+    labels <- factor(full_design[[config$test_label_column]])
   }
   labels
 }
