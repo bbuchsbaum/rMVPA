@@ -343,14 +343,14 @@ loadBlockColumn <- function(config, design) {
 
 #' @export
 #' 
-loadBrainDataSequence <- function(fnames, config) {
+loadBrainDataSequence <- function(fnames, config, indices) {
   if (!all(file.exists(fnames))) {
     offenders <- fnames[!file.exists(fnames)]
-    abort(config, paste("training data", offenders, "not found."))
+    abort(config, paste("data files", offenders, "not found."))
   }
   
   
-  ### TODO make more efficients. This loads in all data then subsets.
+  ### TODO make more efficient. This loads in all data then subsets.
   vecmat <- do.call(rbind, lapply(1:length(fnames), function(i) {
     fname <- fnames[i]
     flog.info("loading data file %s", fname)
@@ -359,16 +359,16 @@ loadBrainDataSequence <- function(fnames, config) {
     mat
   }))
   
-  SparseBrainVector(vecmat[config$train_subset,], space(config$maskVolume), mask=config$maskVolume)
+  SparseBrainVector(vecmat[indices,], space(config$maskVolume), mask=config$maskVolume)
 }
 
 #' @export
 loadBrainData <- function(config, name, indices=NULL) {
   fname <- config[[name]]
   if (length(fname) > 1) {
-    loadBrainDataSequence(fname, config)
+    loadBrainDataSequence(fname, config, indices)
   } else if (!file.exists(fname)) {
-    abort(config, paste("training data", fname, "not found."))
+    abort(config, paste("datafile", fname, "not found."))
   } else {
     flog.info("loading data file %s", fname)
     if (!is.null(indices)) {

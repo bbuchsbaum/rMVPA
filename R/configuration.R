@@ -62,9 +62,8 @@ MVPASearchlightConfiguration <- function(modelName="sda_notune",
               iterations=iterations,
               method="randomized")
   
-  class(ret) <- "MVPAConfiguration"
+  class(ret) <- c("MVPASearchlightConfiguration", "MVPAConfiguration")
   ret
-  
 }
 
 
