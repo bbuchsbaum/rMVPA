@@ -21,6 +21,7 @@ option_list <- list(make_option(c("-r", "--radius"), type="numeric", help="the r
                     make_option(c("-a", "--mask"), type="character", help="name of binary image mask file (.nii format)"),
                     make_option(c("-p", "--pthreads"), type="numeric", help="the number of parallel threads"),
                     make_option(c("-l", "--label_column"), type="character", help="the name of the column in the design file containing the training labels"),
+                    make_option(c("--test_label_column"), type="character", help="the name of the column in the test design file containing the test labels"),
                     make_option(c("-o", "--output"), type="character", help="the name of the output folder where results will be placed"),
                     make_option(c("-b", "--block_column"), type="character", help="the name of the column in the design file indicating the block variable used for cross-validation"),
                     make_option(c("-g", "--tune_grid"), type="character", help="string containing grid parameters in the following form: a=\\(1,2\\), b=\\('one', 'two'\\)"),

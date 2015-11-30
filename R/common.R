@@ -52,6 +52,8 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("output_class_metrics", config, args, TRUE)
   setArg("ensemble_predictor", config, args, FALSE)
   setArg("bootstrap_replications", config, args, 0)
+  setArg("test_label_column", config, args, config$label_column)
+  
   config
 }
 
@@ -126,7 +128,7 @@ initializeDesign <- function(config) {
     flog.error("test_design %s is supplied with no test_data")
   }
   if (!is.null(config$test_subset) && is.null(config$test_design) && is.null(config$test_data)) {
-    ## test subset is taken from training design matrix
+    flog.info("test subset is taken from training design table")
     config$test_subset <- loadSubset(config$full_train_design, config$test_subset)
     
     config$test_design <- config$full_train_design[config$test_subset,]
@@ -135,10 +137,11 @@ initializeDesign <- function(config) {
   }
   
   if (!is.null(config$test_design)) {
+    flog.info("test design %s is specified", config$test_design)
     config$full_test_design <- read.table(config$test_design, header=TRUE, comment.char=";")
     config$test_subset <- loadSubset(config$full_test_design, config$test_subset)
     config$test_design <- config$full_test_design[config$test_subset,]
-    config$testLabels <- loadLabels(config$test_design, config)     
+    config$testLabels <- loadTestLabels(config$test_design, config)     
     flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows."))    
   } else {
     config$testLabels <- config$labels
@@ -282,6 +285,15 @@ loadDesign <- function(config, name) {
 #' @export
 loadLabels <- function(full_design, config) {
   if (is.null(full_design[[config$label_column]])) {
+    stop(paste("Error: labelColumn", config$label_column, "not found"))
+  } else {
+    labels <- factor(full_design[[config$label_column]])
+  }
+  labels
+}
+
+loadTestLabels <- function(full_design, config) {
+  if (is.null(full_design[[config$test_label_column]])) {
     stop(paste("Error: labelColumn", config$label_column, "not found"))
   } else {
     labels <- factor(full_design[[config$label_column]])
