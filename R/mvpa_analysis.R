@@ -27,12 +27,13 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 
 #' @export 
 computePerformance <- function(test_design, result, vox, splitList=NULL, classMetrics=FALSE, customPerformance=NULL) {
-  perf <- t(performance(result, splitList, classMetrics))
+  perf <- performance(result, splitList, classMetrics)
   
   if (!is.null(customPerformance)) {
     perf <- c(perf, customPerformance(test_design, result))
   }
-  out <- cbind(vox, perf[rep(1, nrow(vox)),])   
+  
+  out <- cbind(vox, t(perf)[rep(1, nrow(vox)),])   
 }
 
 #' run an MVPA analysis on ablock of data
@@ -69,8 +70,6 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
   if (!is.null(parcels)) {
     parcels <- parcels[valid.idx]
   }
-  
-  
   
   if (ncol(X) == 0) {
     stop("no valid columns")

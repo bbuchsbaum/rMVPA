@@ -117,6 +117,7 @@ initializeDesign <- function(config) {
   config$train_subset <- loadSubset(config$full_train_design, config$train_subset)
   ## training design
   config$train_design <- config$full_train_design[config$train_subset,]
+  
   ## training labels
   config$labels <- loadLabels(config$train_design, config)  
   ## block variables for cross-validation
@@ -126,7 +127,9 @@ initializeDesign <- function(config) {
   
   if (!is.null(config$test_design) && is.null(config$test_data)) {
     flog.error("test_design %s is supplied with no test_data")
+    stop()
   }
+  
   if (!is.null(config$test_subset) && is.null(config$test_design) && is.null(config$test_data)) {
     flog.info("test subset is taken from training design table")
     config$test_subset <- loadSubset(config$full_train_design, config$test_subset)
@@ -142,8 +145,11 @@ initializeDesign <- function(config) {
     config$test_subset <- loadSubset(config$full_test_design, config$test_subset)
     config$test_design <- config$full_test_design[config$test_subset,]
     config$testLabels <- loadTestLabels(config$test_design, config)     
-    flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows."))    
+    flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows.")) 
+    flog.info(paste("first 10 test labels: ", head(config$testLabels, 10), capture=TRUE))
+    
   } else {
+    flog.info("testing is cross-validation")
     config$testLabels <- config$labels
   }
   
