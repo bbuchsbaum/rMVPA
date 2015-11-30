@@ -51,7 +51,7 @@ SimilarityModel <- function(type=c("pearson", "spearman", "kendall")) {
 #' @param tuneGrid
 #' @export
 MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corclass", tuneGrid=NULL, tuneLength=1,testSplitVar=NULL,
-                        testSplits=NULL) {
+                        testSplits=NULL, trainDesign=NULL, testDesign=NULL) {
   
   model <- loadModel(modelName)
   
@@ -71,7 +71,9 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
     testSets=testSets,
     trainSets=trainSets,
     testSplitVar=testSplitVar,
-    testSplits=testSplits)
+    testSplits=testSplits,
+    trainDesign=trainDesign,
+    testDesign=testDesign)
    
   class(ret) <- c("MVPADataset", "list")
   ret
@@ -122,8 +124,7 @@ MultiWayClassificationResult <- function(observed, predicted, probs, predictor=N
               observed=observed,
               predicted=predicted,
               probs=as.matrix(probs),
-              predictor=predictor
-              )
+              predictor=predictor)
   
   class(ret) <- c("MultiWayClassificationResult", "list")
   ret
@@ -131,9 +132,9 @@ MultiWayClassificationResult <- function(observed, predicted, probs, predictor=N
 }
 
 #' @export
-classificationResult <- function(observed, predicted, probs, predictor=NULL) {
+classificationResult <- function(observed, predicted, probs,  predictor=NULL) {
   if (length(levels(as.factor(observed))) == 2) {
-    TwoWayClassificationResult(observed,predicted, probs, predictor)
+    TwoWayClassificationResult(observed,predicted, probs,  predictor)
   } else if (length(levels(as.factor(observed))) > 2) {
     MultiWayClassificationResult(observed,predicted, probs, predictor)
   } else {

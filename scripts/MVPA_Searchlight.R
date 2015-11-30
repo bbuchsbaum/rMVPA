@@ -71,8 +71,19 @@ config <- initializeData(config)
 flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
 
 
-dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
-                       tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits)
+dataset <- MVPADataset(config$train_datavec, 
+                       config$labels, 
+                       config$maskVolume, 
+                       config$block, 
+                       config$test_datavec, 
+                       config$testLabels, 
+                       modelName=config$model, 
+                       tuneGrid=config$tune_grid,
+                       tuneLength=config$tune_length, 
+                       testSplitVar=config$testSplitVar, 
+                       testSplits=config$testSplits,
+                       trainDesign=config$train_design,
+                       testDesign=config$test_design)
 
 for (lib in dataset$model$library) {
   library(lib, character.only = TRUE)
@@ -80,7 +91,11 @@ for (lib in dataset$model$library) {
 
 
 
-searchres <- mvpa_searchlight(dataset, config$radius,  config$type, config$niter, config$pthreads, autobalance=config$autobalance, bootstrap=FALSE, featureParcellation=NULL, classMetrics=config$output_class_metrics) 
+searchres <- mvpa_searchlight(dataset, config$radius,  config$type, config$niter, 
+                              config$pthreads, autobalance=config$autobalance, 
+                              bootstrap=FALSE, featureParcellation=NULL, 
+                              classMetrics=config$output_class_metrics,
+                              customPerformance=config$customPerformance)
 
 config$output <- makeOutputDir(config$output)
 

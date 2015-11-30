@@ -93,7 +93,7 @@ combinedACC <- function(Pred, Obs) {
   
 
 #' @export
-performance.MultiWayClassificationResult <- function(x,splitList=NULL, classMetrics=FALSE) {
+performance.MultiWayClassificationResult <- function(x, splitList=NULL, classMetrics=FALSE) {
   if (is.null(splitList)) {
     .multiwayPerf(x$observed, x$predicted, x$probs, classMetrics)
   } else {

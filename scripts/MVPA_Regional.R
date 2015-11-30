@@ -147,14 +147,17 @@ if (length(config$labels) != dim(config$train_datavec)[4]) {
 }
 
 featureSelector <- if (!is.null(config$feature_selector)) {
-  FeatureSelector(config$feature_selector$method, config$feature_selector$cutoff_type, as.numeric(config$feature_selector$cutoff_value)
+  FeatureSelector(config$feature_selector$method, config$feature_selector$cutoff_type, as.numeric(config$feature_selector$cutoff_value))
 }
 
 flog.info("feature selector: ", featureSelector, capture=TRUE)
 flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRUE)
 
-dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
-                       tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits)
+dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, 
+                       config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
+                       tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits, 
+                       trainDesign=config$train_design,
+                       testDesign=config$test_design)
 
 
 
