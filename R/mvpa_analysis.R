@@ -92,7 +92,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
         bootIndices <- sort(sample(1:nrow(X), nrow(X), replace=TRUE))
         MatrixFoldIterator(X[bootIndices,,drop=FALSE], dataset$Y[bootIndices], dataset$blockVar[bootIndices])
       } else {
-        MatrixFoldIterator(X, dataset$Y,dataset$blockVar, bootstrap=FALSE)
+        MatrixFoldIterator(X, dataset$Y, dataset$blockVar, bootstrap=FALSE)
       }
       
       Xtest <- series(dataset$testVec, vox) 
