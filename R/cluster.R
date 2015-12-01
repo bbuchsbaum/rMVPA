@@ -1,6 +1,43 @@
 
-
-create_sparse_adjacency <- function(mask, dist_thresh=max(spacing(mask)), edgeweight="binary") {
+create_sparse_similarity <- function(mask, bvec, dist_thresh=max(spacing(mask)), simfun=cov) {
+  library(FNN)
+  library(Matrix)
+  library(igraph)
+  
+  mask.idx <- which(mask > 0)
+  G <-  indexToCoord(mask, mask.idx)
+  
+  G_knn <- FNN::get.knn(G,27)
+  
+  res <- mclapply(1:nrow(G), function(i) {
+    print(i)
+    nidx  <-  G_knn$nn.index[i,]
+    ndist <- G_knn$nn.dist[i,]
+    
+    #ovals <- mat[,nidx]
+    #vals <- mat[,i]
+    
+    keep <- ndist < dist_thresh
+    
+    vals <- series(bvec, mask.idx[i] )
+    other <- series(bvec,mask.idx[nidx[ndist < dist_thresh] ])
+    cv <- as.vector(simfun(vals, other))
+    cbind(i, nidx[keep], cv)
+    #sim <- as.vector(cor(vals,ovals))
+    #sim[sim < 0] <- 0
+    #wsim <- sim * exp(decay * ndist)
+    #cbind(i, nidx, wsim)
+    
+  })
+  
+  wmat <- do.call(rbind, res)
+  wmat <- Matrix::sparseMatrix(dims=c(nrow(G), nrow(G)), i=wmat[,1], j=wmat[,2], x=wmat[,3])
+  
+  wmat <- (wmat + t(wmat))/2
+  gg <- igraph::graph.adjacency(wmat, mode="undirected", weighted=TRUE)
+  
+}
+create_sparse_adjacency <- function(mask, dist_thresh=max(spacing(mask)), weightfun="binary") {
   library(FNN)
   library(Matrix)
   library(igraph)
@@ -31,9 +68,6 @@ create_sparse_adjacency <- function(mask, dist_thresh=max(spacing(mask)), edgewe
   
   wmat <- (wmat + t(wmat))/2
   gg <- igraph::graph.adjacency(wmat, mode="undirected", weighted=TRUE)
-  
-  
-  
   
 }
   
