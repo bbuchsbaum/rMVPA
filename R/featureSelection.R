@@ -14,6 +14,13 @@ selectFeatures <- function(obj, X, Y) {
   UseMethod("selectFeatures")
 }
 
+## TODO requires that X has spatial structure.
+# @export
+# @import sda
+#selectFeatures.searchlight <- function(obj, X, Y) {
+#
+#}
+
 
 #featureMask <- function()
 
