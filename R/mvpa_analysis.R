@@ -125,7 +125,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
 .doStandard <- function(dataset, radius, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, parcels=NULL, classMetrics=FALSE, customPerformance=NULL) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %do% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %dopar% {   
     if (nrow(vox) > 1) {
       computePerformance(dataset$testDesign, runAnalysis(dataset$model, dataset, vox, returnPredictor, autobalance, bootstrap, parcels), vox, dataset$testSplits, classMetrics, customPerformance)
     }
