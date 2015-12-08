@@ -6,7 +6,8 @@
 \usage{
 mvpa_searchlight(dataset, radius = 8, method = c("randomized", "standard"),
   niter = 4, ncores = 2, autobalance = FALSE, bootstrap = FALSE,
-  featureParcellation = NULL, classMetrics = FALSE)
+  featureParcellation = NULL, classMetrics = FALSE,
+  customPerformance = NULL)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}

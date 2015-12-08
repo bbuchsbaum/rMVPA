@@ -6,7 +6,8 @@
 \usage{
 MVPADataset(trainVec, Y, mask, blockVar, testVec, testY,
   modelName = "corclass", tuneGrid = NULL, tuneLength = 1,
-  testSplitVar = NULL, testSplits = NULL)
+  testSplitVar = NULL, testSplits = NULL, trainDesign = NULL,
+  testDesign = NULL)
 }
 \description{
 create an \code{MVPA} instance

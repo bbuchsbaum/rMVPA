@@ -45,4 +45,4 @@ Collate:
     'rMVPA.R'
     'similarity.R'
     'utils.R'
-RoxygenNote: 5.0.0
+RoxygenNote: 5.0.1
