@@ -2,6 +2,191 @@
 NULL
  
 
+initializeROIGrouping <- function(config) {
+  if (!is.null(config$roi_grouping)) {
+    roilist <- lapply(1:length(config$roi_grouping), function(i) {
+      grp <- config$roi_grouping[[i]]
+      idx <- which(config$ROIVolume %in% grp)
+      vol <- makeVolume(refvol=config$ROIVolume)
+      vol[idx] <- i
+      vol
+    })
+    
+    if (is.null(names(config$roi_grouping))) {
+      names(roilist) <- paste0("roi_group_", seq_along(config$roi_grouping))
+    } else {
+      names(roilist) <- names(config$roi_grouping)
+    }
+    config$ROIVolume <- roilist
+  } else {
+    config$ROIVolume <- list(config$ROIVolume)
+  }
+}
+
+
+initializeROISubset <- function(config) {
+  if (!is.null(config$roi_subset)) {
+    form <- try(eval(parse(text=config$roi_subset)))
+    if (inherits(form, "try-error")) {
+      flog.error("could not parse roi_subset parameter: %s", config$roi_subset)
+      stop()
+    }
+    
+    if (class(form) != "formula") {
+      flog.error("roi_subset argument must be an expression that starts with a ~ character")
+      stop()
+    }
+    
+    res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
+    
+    config$ROIVolume[!res] <- 0
+    flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
+  }
+}
+
+
+#' @export
+initMVPARegional <- function(configFile, args, verbose=FALSE) {
+  if (!verbose) {
+    flog.threshold(ERROR)
+  } else {
+    flog.threshold(DEBUG)
+  }
+  
+  config <- initializeConfiguration(list(config=configFile))
+  config <- initializeStandardParameters(config, args, "mvpa_regional")
+
+  setArg("savePredictors", config, args, FALSE)
+  
+  config <- initializeTuneGrid(args, config)
+  configParams <- as.list(config)
+  config <- initializeDesign(config)
+  
+  rowIndices <- which(config$train_subset)
+  config$ROIVolume <- loadMask(config)
+  
+  initializeROISubset(config)
+  initializeROIGrouping(config)
+  
+  parcellationVolume <- if (!is.null(config$parcellation)) {
+    loadVolume(config$parcellation)
+  }
+  
+  config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
+  config <- initializeData(config)
+  
+  flog.info("number of training trials: %s", length(rowIndices))
+  
+  flog.info("max trial index: %s", max(rowIndices))
+  
+  flog.info("loading training data: %s", config$train_data)
+  
+  flog.info("mask contains %s voxels", sum(config$maskVolume))
+  
+  for (i in seq_along(config$ROIVolume)) {
+    rvol <- config$ROIVolume[[i]]
+    
+    flog.info("Region mask contains: %s ROIs", length(unique(rvol[rvol > 0])))
+    flog.info(paste("ROIs are for group ", i, "are:"), rvol, capture=TRUE)
+    
+  }
+  
+  flog.info("Running regional MVPA with parameters:", configParams, capture=TRUE)
+  
+  flog.info("With %s roi groups", length(config$ROIVolume))
+  
+  if (length(config$labels) != dim(config$train_datavec)[4]) {
+    flog.error("Number of volumes: %s must equal number of labels: %s", dim(config$train_datavec)[4], length(config$labels))
+    stop()
+  }
+  
+  featureSelector <- if (!is.null(config$feature_selector)) {
+    FeatureSelector(config$feature_selector$method, config$feature_selector$cutoff_type, as.numeric(config$feature_selector$cutoff_value))
+  }
+  
+  flog.info("feature selector: ", featureSelector, capture=TRUE)
+  
+  flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRUE)
+  
+  dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, 
+                         config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
+                         tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits, 
+                         trainDesign=config$train_design,
+                         testDesign=config$test_design)
+  
+  for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
+    if (!is.null(configParams[[varname]]) && is(configParams[[varname]], "formula")) {
+      configParams[[varname]] <- Reduce(paste, deparse(configParams[[varname]]))
+    }
+  }
+  
+  for (lib in dataset$model$library) {
+    library(lib, character.only = TRUE)
+  }
+  
+  list(dataset=dataset, config=config)
+  
+}
+
+
+#' @export
+initMVPASearchlight <- function(configFile, args, verbose=FALSE) {
+  if (!verbose) {
+    flog.threshold(ERROR)
+  } else {
+    flog.threshold(DEBUG)
+  }
+  
+  
+  config <- initializeConfiguration(list(config=configFile))
+  config <- initializeStandardParameters(config, args, "mvpa_searchlight")
+  
+  setArg("niter", config, args, 16)
+  setArg("radius", config, args, 8)
+  setArg("type", config, args, "randomized")
+  
+  config <- initializeTuneGrid(args, config)
+  configParams <- as.list(config)
+  config <- initializeDesign(config)
+  
+  config$maskVolume <- as(loadMask(config), "LogicalBrainVolume")
+  
+  
+  rowIndices <- which(config$train_subset)
+  config$ROIVolume <- loadMask(config)
+  
+  rowIndices <- which(config$train_subset)
+  flog.info("number of trials: %s", length(rowIndices))
+  flog.info("max trial index: %s", max(rowIndices))
+  flog.info("loading training data: %s", config$train_data)
+  flog.info("mask contains %s voxels", sum(config$maskVolume))
+  
+  config <- initializeData(config)
+  
+  flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
+  
+  
+  dataset <- MVPADataset(config$train_datavec, 
+                         config$labels, 
+                         config$maskVolume, 
+                         config$block, 
+                         config$test_datavec, 
+                         config$testLabels, 
+                         modelName=config$model, 
+                         tuneGrid=config$tune_grid,
+                         tuneLength=config$tune_length, 
+                         testSplitVar=config$testSplitVar, 
+                         testSplits=config$testSplits,
+                         trainDesign=config$train_design,
+                         testDesign=config$test_design)
+  
+  for (lib in dataset$model$library) {
+    library(lib, character.only = TRUE)
+  }
+  
+  list(dataset=dataset, config=config)
+}
+
 
 
 #' @export

@@ -153,7 +153,7 @@ greedyCombine <- function(dataset, resultList, trainIndex, testIndex, calibrateP
     BaggedTwoClassOptAUC(Pred, ifelse(Ytrain == levels(Ytrain)[2], 1,0))
   } else {
     #BaggedMultiClassOptAUC(predlist, Ytrain)
-    BaggedMultiClassOptACC(predlist, Ytrain)
+    BaggedMultiClassOptAUC(predlist, Ytrain)
   }
   
   baggedWeights <- baggedWeights/sum(baggedWeights)
@@ -317,19 +317,22 @@ mvpa_roi_ensemble <- function(dataset, regionMask, ncores=1,
 }
                               
 
-# mvpa_searchlight_ensemble
-# @param dataset a \code{MVPADataset} instance.
-# @param regionMask a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
-# @param ncores the number of cores for parallel processign (default is 1)
-# @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
-# @import itertools 
-# @import foreach
-# @import doParallel
-# @import parallel
+#' mvpa_searchlight_ensemble
+#' @param modelSet a list of classifiers
+#' @param dataset a \code{MVPADataset} instance.
+#' @param mask a \code{BrainVolume} a mask volume
+#' @param pruneFrac the percentage of models to retain for meta-classifier
+#' @param ncores the number of cores for parallel processign (default is 1)
+#' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
+#' @import itertools 
+#' @import foreach
+#' @import doParallel
+#' @import parallel
 #' @export
 #' 
 mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, radius=12, ncores=1, pruneFrac=.15, 
-                                      combiner=c("greedyAUC"), bootstrapSamples=TRUE, autobalance=autobalance, searchMethod=c("replacement", "exhaustive"), 
+                                      combiner=c("greedyAUC"), bootstrapSamples=TRUE, autobalance=autobalance, 
+                                      searchMethod=c("replacement", "exhaustive"), 
                                       nsamples=10, calibrateProbs=FALSE, returnPredictor=FALSE) {
   
   if (length(dataset$blockVar) != length(dataset$Y)) {
@@ -349,7 +352,11 @@ mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, rad
           searchIter <- itertools::ihasNext(BootstrapSearchlight(mask, radius, nsamples))          
         }
         
-        searchResults <- .searchEnsembleIteration(searchIter, dataset, fold$trainIndex, fold$testIndex, model$model, model$tuneGrid, autobalance=autobalance, bootstrap=bootstrapSamples)     
+        searchResults <- .searchEnsembleIteration(searchIter, dataset, 
+                                                  fold$trainIndex, fold$testIndex, 
+                                                  model$model, model$tuneGrid, 
+                                                  autobalance=autobalance, 
+                                                  bootstrap=bootstrapSamples)     
         
         searchResults <- lapply(searchResults, function(sr) { 
           attr(sr, "modelname") <- model$name 
@@ -367,6 +374,7 @@ mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, rad
   })
   
   weightVol <- Reduce("+", lapply(allres, function(x) x$weightVol))/length(allres)
+  
   AUCVol <- Reduce("+", lapply(allres, function(x) x$AUCVol))/length(allres)
   
   res <- mergeEnsembles(allres, returnPredictor)
