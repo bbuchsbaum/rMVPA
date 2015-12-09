@@ -326,7 +326,7 @@ evaluateModel.RawModel <- function(x, newdata=NULL) {
     which.max(x)    
   })
   
-  cpred <- levels(x$Ytrain)[cpred]
+  cpred <- colnames(probs)[cpred]
   list(class=cpred, probs=probs)
 }
 
@@ -375,7 +375,7 @@ evaluateModel.RawPredictor <- function(x, newdata=NULL) {
   }
   
   cpred <- apply(probs,1, which.max)
-  cpred <- levels(x$Ytrain)[cpred]
+  cpred <- colnames(probs)[cpred]
   list(class=cpred, probs=probs)
 }
 
