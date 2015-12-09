@@ -46,7 +46,7 @@ initializeROISubset <- function(config) {
 
 
 #' @export
-initMVPARegional <- function(configFile, args, verbose=FALSE) {
+initMVPARegional <- function(configFile, args=list(), verbose=FALSE) {
   if (!verbose) {
     flog.threshold(ERROR)
   } else {
@@ -130,7 +130,7 @@ initMVPARegional <- function(configFile, args, verbose=FALSE) {
 
 
 #' @export
-initMVPASearchlight <- function(configFile, args, verbose=FALSE) {
+initMVPASearchlight <- function(configFile, args=list(), verbose=FALSE) {
   if (!verbose) {
     flog.threshold(ERROR)
   } else {

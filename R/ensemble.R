@@ -5,7 +5,7 @@
 ### train lda on pairs of intra verus intraclass similarity vectors
 ### combine with global classifier
 
-
+## we need simple primitives that are combined. functions are too monolithic, hard to debug/understand.
 
 createModelSet <- function(modelName, ...) {
   dots <- list(...)
@@ -69,7 +69,10 @@ createEnsembleSpec <- function(...) {
 }
 
 
-
+naiveCombine <- function(dataset, resultList, fold, pruneFrac=1) {
+  AUC <- do.call(rbind, lapply(resultList, function(x) performance(x)))[,3]
+}
+  
 metaCombine <- function(dataset, resultList, fold, pruneFrac=1, metaLearner="spls", tuneGrid=expand.grid(K=c(1,2,3,4,5,6), eta=c(.2, .7, .9), kappa=.5)) {
   AUC <- do.call(rbind, lapply(resultList, function(x) performance(x)))[,3]
   Ytrain <- dataset$Y[fold$trainIndex]  
@@ -213,6 +216,8 @@ innerIteration <- function(dataset, vox, trainInd, testInd, model, tuneGrid, aut
                    
 }
 
+
+
 .searchEnsembleIteration <- function(searchIter, dataset, trainInd, testInd, model, tuneGrid, autobalance=FALSE, bootstrap=FALSE) {
   #searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
   
@@ -344,10 +349,10 @@ mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, rad
   
   ## generate an ensemble classifier for each training block
   allres <- lapply(blockIterator, function(fold) { 
-    resultList <- unlist(lapply(radius, function(rad) {
+    resultList <- 
       unlist(parallel::mclapply(modelSet, function(model) {
         if (searchMethod == "exhaustive") {
-          searchIter <- itertools::ihasNext(RandomSearchlight(mask, rad))
+          searchIter <- itertools::ihasNext(RandomSearchlight(mask, radius))
         } else if (searchMethod == "replacement") {
           searchIter <- itertools::ihasNext(BootstrapSearchlight(mask, radius, nsamples))          
         }
@@ -363,7 +368,6 @@ mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, rad
           sr
         })
       }), recursive=FALSE)
-    }), recursive=FALSE)
     
     if (combiner == "greedyAUC") {  
       ens <- greedyCombine(dataset, resultList, fold$trainIndex, fold$testIndex, calibrateProbs=calibrateProbs, pruneFrac=pruneFrac)
