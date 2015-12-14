@@ -52,6 +52,8 @@ selectFeatures.catscore <- function(obj, X, Y) {
    
 }
 
+
+
 #selectFeatures.FTest <- function(obj, X, Y) {
 #  Y <- as.factor(Y)
 #  

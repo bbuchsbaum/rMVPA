@@ -279,6 +279,7 @@ ListPredictor <- function(fits, names=1:length(fits)) {
 
 #' @export
 WeightedPredictor <- function(fits, names=1:length(fits), weights=rep(1/length(fits), length(fits))) {
+  stopifnot(length(weights) == length(fits))
   ret <- fits
   names(ret) <- names
   attr(ret, "weights") <- weights
