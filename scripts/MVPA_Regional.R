@@ -22,6 +22,9 @@
 ## if test_design provided, the test design must have matching test_data
 
 
+## should output importance maps for methods that supply them (e.g. sda)
+
+
 
 option_list <- list(
                     make_option(c("-t", "--train_design"), type="character", help="the file name of the training design table"),
@@ -35,6 +38,7 @@ option_list <- list(
                     make_option(c("--autobalance"), action="store_true", type="logical", help="balance training samples by upsampling minority classes"),
                     make_option(c("-p", "--pthreads"), type="numeric", help="the number of parallel threads"),
                     make_option(c("-l", "--label_column"), type="character", help="the name of the column in the design file containing the training labels"),
+                    make_option(c("--test_label_column"), type="character", help="the name of the column in the test design file containing the test labels"),
                     make_option(c("-o", "--output"), type="character", help="the name of the output folder where results will be placed"),
                     make_option(c("-b", "--block_column"), type="character", help="the name of the column in the design file indicating the block variable used for cross-validation"),
                     make_option(c("-g", "--tune_grid"), type="character", help="string containing grid parameters in the following form: a=\\(1,2\\), b=\\('one', 'two'\\)"),
@@ -148,14 +152,17 @@ if (length(config$labels) != dim(config$train_datavec)[4]) {
 }
 
 featureSelector <- if (!is.null(config$feature_selector)) {
-  FeatureSelector(config$feature_selector$method, config$feature_selector$cutoff_type,config$feature_selector$cutoff_value)
+  FeatureSelector(config$feature_selector$method, config$feature_selector$cutoff_type, as.numeric(config$feature_selector$cutoff_value))
 }
 
 flog.info("feature selector: ", featureSelector, capture=TRUE)
 flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRUE)
 
-dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
-                       tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits)
+dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, 
+                       config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
+                       tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits, 
+                       trainDesign=config$train_design,
+                       testDesign=config$test_design)
 
 
 

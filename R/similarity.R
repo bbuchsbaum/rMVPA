@@ -33,7 +33,7 @@ patternSimilarity <- function(dataset, vox, simFun=cor, parcels=NULL) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
   
-  X <- X[,valid.idx]
+  X <- X[,valid.idx,drop=FALSE]
   vox <- vox[valid.idx,]
   
   foldIterator <- MatrixFoldIterator(X, dataset$Y, dataset$blockVar)

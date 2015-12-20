@@ -11,7 +11,7 @@ option_list <- list(
   make_option(c("-k", "--clusters"), type="numeric", help="the number of clusters to compute"),
   make_option(c("-s", "--shrink"), type="numeric", help="number of shrinkage iterations (default = 0)", default=0),
   make_option(c("-m", "--mask"), type="character", help="the file name of the volumetric image mask"),
-  make_option(c("-e", "--exp"), type="numeric", help="the decay parameter for spatial penalty. Larger value increases the spatial 'pull' (default = .2)", default=.2),
+  make_option(c("-e", "--exp"), type="numeric", help="the decay parameter for spatial penalty. Larger value increases the spatial 'pull' (default = .05)", default=.05),
   make_option(c("-o", "--output"), type="character", help="the name of the output file containing the clustered image")
 )
 
@@ -39,7 +39,7 @@ if (!file.exists(args$mask)) {
 bvec <- loadVector(args$input)
 mask <- loadVolume(args$mask)
 
-res <- rMVPA:::slic_cluster(mask, bvec, args$clusters, decay=-(args$exp), nn=8, shrink=args$shrink)
+res <- rMVPA:::slic_cluster(mask, bvec, args$clusters, decay=(args$exp), nn=8, shrink=args$shrink)
 
 writeVolume(res$clusvol, args$output)
 

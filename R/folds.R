@@ -14,6 +14,7 @@ invertFolds <- function(foldSplit, allInd) {
 #' @param balance try to balance each training sample so that the frequency of labels is equal across groups
 #' @param bootstrap use bootstrap resampling of the training set
 #' @param bootstrapMin 
+#' @importFrom assertthat assert_that
 #' @export
 FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
   
@@ -21,6 +22,8 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
     blockVar <- sample(1:length(Y))
     blockVar <- createFolds(Y, k=nfolds, list=FALSE)
   }
+  
+  assert_that(length(blockVar) == length(Y))
   
   index <- 0
   ord <- NULL
@@ -74,16 +77,13 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
           if (i == 50) {
             stop("error in bootstrap sampling: after 50 attempts could not find bootstrap sample with at least 'bootstrapMin' instances for every class.")
           }
-          
         }
-        
       }
       
       if (balance) {
         trainIndex <- caret::upSample(trainIndex, Y[trainIndex])[,1]
       }
       
-     
       list(trainIndex=trainIndex, testIndex=testIndex, Ytrain=Y[trainIndex], Ytest=Y[testIndex], index=index)
       
     } else {
@@ -114,6 +114,7 @@ MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bo
     stop("X matrix must have same number of rows as Y variable")
   }
   
+  
   foldIter = FoldIterator(Y, blockVar, nfolds=nfolds, balance=balance, bootstrap=bootstrap, bootstrapMin)
 
   nextEl <- function() {
@@ -129,8 +130,7 @@ MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bo
     }
   }
   
-  
-  
+
   obj <- list(X=X, Y=Y, blockVar=blockVar, nextElem=nextEl, index=foldIter$index, 
               getTrainSets=foldIter$getTrainSets, getTestSets=foldIter$getTestSets, 
               getTestOrder=foldIter$getTestOrder, reset=foldIter$reset, balance=foldIter$balance, bootstrap=foldIter$bootstrap)
@@ -138,6 +138,44 @@ MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bo
   obj
   
 }
+
+
+#' @export
+NestedMatrixIterator <- function(X, Y, blockVar, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
+  blockids <- sort(unique(blockVar))
+  
+  if (nrow(X) != length(Y)) {
+    stop("X matrix must have same number of rows as Y variable")
+  }
+  
+  
+  index <- 0
+  
+  blockNumber <- function() { index }
+  
+  nextEl <- function() {
+    if (index < length(blockids)) {
+      index <<- index + 1
+      curBlock <- blockids[index]
+      train.idx <- which(blockVar != curBlock)
+      iter <- MatrixFoldIterator(X[train.idx,], Y[train.idx], blockVar=blockVar[train.idx], nfolds=NULL, balance=balance, bootstrap=bootstrap, bootstrapMin=bootstrapMin)
+      
+      attr(iter, "train_indices") <- train.idx
+      attr(iter, "test_indices") <- seq(1, length(Y))[-train.idx]
+      iter
+    } else {
+      stop('StopIteration')
+    }
+  }
+  
+  obj <- list(nextElem=nextEl, blockNumber=blockNumber)
+  class(obj) <- c("NestedMatrixFoldIterator", 'abstractiter', 'iter')
+  obj
+  
+}
+  
+  
+  
 
 
 #' Create an iterator from a matrix \code{X}, a dependent variable \code{Y} and a splitting variable (blockVar)

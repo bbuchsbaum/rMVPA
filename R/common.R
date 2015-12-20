@@ -2,6 +2,193 @@
 NULL
  
 
+initializeROIGrouping <- function(config) {
+  if (!is.null(config$roi_grouping)) {
+    roilist <- lapply(1:length(config$roi_grouping), function(i) {
+      grp <- config$roi_grouping[[i]]
+      idx <- which(config$ROIVolume %in% grp)
+      vol <- makeVolume(refvol=config$ROIVolume)
+      vol[idx] <- i
+      vol
+    })
+    
+    if (is.null(names(config$roi_grouping))) {
+      names(roilist) <- paste0("roi_group_", seq_along(config$roi_grouping))
+    } else {
+      names(roilist) <- names(config$roi_grouping)
+    }
+    config$ROIVolume <- roilist
+  } else {
+    config$ROIVolume <- list(config$ROIVolume)
+  }
+}
+
+
+initializeROISubset <- function(config) {
+  if (!is.null(config$roi_subset)) {
+    form <- try(eval(parse(text=config$roi_subset)))
+    if (inherits(form, "try-error")) {
+      flog.error("could not parse roi_subset parameter: %s", config$roi_subset)
+      stop()
+    }
+    
+    if (class(form) != "formula") {
+      flog.error("roi_subset argument must be an expression that starts with a ~ character")
+      stop()
+    }
+    
+    res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
+    
+    config$ROIVolume[!res] <- 0
+    flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
+  }
+}
+
+
+#' @export
+initMVPARegional <- function(configFile, args=list(), verbose=FALSE) {
+  if (!verbose) {
+    flog.threshold(ERROR)
+  } else {
+    flog.threshold(DEBUG)
+  }
+  
+  config <- initializeConfiguration(list(config=configFile))
+  config <- initializeStandardParameters(config, args, "mvpa_regional")
+
+  setArg("savePredictors", config, args, FALSE)
+  
+  config <- initializeTuneGrid(args, config)
+  configParams <- as.list(config)
+  config <- initializeDesign(config)
+  
+  rowIndices <- which(config$train_subset)
+  config$ROIVolume <- loadMask(config)
+  
+  initializeROISubset(config)
+  initializeROIGrouping(config)
+  
+  parcellationVolume <- if (!is.null(config$parcellation)) {
+    loadVolume(config$parcellation)
+  }
+  
+  config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
+  config <- initializeData(config)
+  
+  flog.info("number of training trials: %s", length(rowIndices))
+  
+  flog.info("max trial index: %s", max(rowIndices))
+  
+  flog.info("loading training data: %s", config$train_data)
+  
+  flog.info("mask contains %s voxels", sum(config$maskVolume))
+  
+  for (i in seq_along(config$ROIVolume)) {
+    rvol <- config$ROIVolume[[i]]
+    
+    flog.info("Region mask contains: %s ROIs", length(unique(rvol[rvol > 0])))
+    flog.info(paste("ROIs are for group ", i, "are:"), rvol, capture=TRUE)
+    
+  }
+  
+  flog.info("Running regional MVPA with parameters:", configParams, capture=TRUE)
+  
+  flog.info("With %s roi groups", length(config$ROIVolume))
+  
+  if (length(config$labels) != dim(config$train_datavec)[4]) {
+    flog.error("Number of volumes: %s must equal number of labels: %s", dim(config$train_datavec)[4], length(config$labels))
+    stop()
+  }
+  
+  featureSelector <- if (!is.null(config$feature_selector)) {
+    FeatureSelector(config$feature_selector$method, config$feature_selector$cutoff_type, as.numeric(config$feature_selector$cutoff_value))
+  }
+  
+  flog.info("feature selector: ", featureSelector, capture=TRUE)
+  
+  flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRUE)
+  
+  dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, 
+                         config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
+                         tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits, 
+                         trainDesign=config$train_design,
+                         testDesign=config$test_design)
+  
+  for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
+    if (!is.null(configParams[[varname]]) && is(configParams[[varname]], "formula")) {
+      configParams[[varname]] <- Reduce(paste, deparse(configParams[[varname]]))
+    }
+  }
+  
+  for (lib in dataset$model$library) {
+    library(lib, character.only = TRUE)
+  }
+  
+  list(dataset=dataset, config=config)
+  
+}
+
+
+#' @export
+initMVPASearchlight <- function(configFile, args=list(), verbose=FALSE) {
+  if (!verbose) {
+    flog.threshold(ERROR)
+  } else {
+    flog.threshold(DEBUG)
+  }
+  
+  
+  config <- initializeConfiguration(list(config=configFile))
+  config <- initializeStandardParameters(config, args, "mvpa_searchlight")
+  
+  setArg("niter", config, args, 16)
+  setArg("radius", config, args, 8)
+  setArg("type", config, args, "randomized")
+  
+  config <- initializeTuneGrid(args, config)
+  configParams <- as.list(config)
+  config <- initializeDesign(config)
+  
+  config$maskVolume <- as(loadMask(config), "LogicalBrainVolume")
+  
+  
+  rowIndices <- which(config$train_subset)
+  config$ROIVolume <- loadMask(config)
+  
+  rowIndices <- which(config$train_subset)
+  flog.info("number of trials: %s", length(rowIndices))
+  flog.info("max trial index: %s", max(rowIndices))
+  flog.info("loading training data: %s", config$train_data)
+  flog.info("mask contains %s voxels", sum(config$maskVolume))
+  
+  config <- initializeData(config)
+  
+  flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
+  
+  
+  dataset <- MVPADataset(config$train_datavec, 
+                         config$labels, 
+                         config$maskVolume, 
+                         config$block, 
+                         config$test_datavec, 
+                         config$testLabels, 
+                         modelName=config$model, 
+                         tuneGrid=config$tune_grid,
+                         tuneLength=config$tune_length, 
+                         testSplitVar=config$testSplitVar, 
+                         testSplits=config$testSplits,
+                         trainDesign=config$train_design,
+                         testDesign=config$test_design)
+  
+  for (lib in dataset$model$library) {
+    library(lib, character.only = TRUE)
+  }
+  
+  list(dataset=dataset, config=config)
+}
+
+
+
 #' @export
 #' @import stringr
 initializeConfiguration <- function(args) {
@@ -36,6 +223,7 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("pthreads", config, args, 1)
   setArg("label_column", config, args, "labels")
   setArg("skipIfFolderExists", config, args, FALSE)
+  setArg("customPerformance", config, args, NULL)
   setArg("output", config, args, paste0(analysisType, "_", config$labelColumn))
   setArg("block_column", config, args, "block")
   setArg("normalize", config, args, FALSE)
@@ -49,6 +237,8 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("output_class_metrics", config, args, TRUE)
   setArg("ensemble_predictor", config, args, FALSE)
   setArg("bootstrap_replications", config, args, 0)
+  setArg("test_label_column", config, args, config$label_column)
+  
   config
 }
 
@@ -112,6 +302,7 @@ initializeDesign <- function(config) {
   config$train_subset <- loadSubset(config$full_train_design, config$train_subset)
   ## training design
   config$train_design <- config$full_train_design[config$train_subset,]
+  
   ## training labels
   config$labels <- loadLabels(config$train_design, config)  
   ## block variables for cross-validation
@@ -121,9 +312,11 @@ initializeDesign <- function(config) {
   
   if (!is.null(config$test_design) && is.null(config$test_data)) {
     flog.error("test_design %s is supplied with no test_data")
+    stop()
   }
+  
   if (!is.null(config$test_subset) && is.null(config$test_design) && is.null(config$test_data)) {
-    ## test subset is taken from training design matrix
+    flog.info("test subset is taken from training design table")
     config$test_subset <- loadSubset(config$full_train_design, config$test_subset)
     
     config$test_design <- config$full_train_design[config$test_subset,]
@@ -132,12 +325,16 @@ initializeDesign <- function(config) {
   }
   
   if (!is.null(config$test_design)) {
+    flog.info("test design %s is specified", config$test_design)
     config$full_test_design <- read.table(config$test_design, header=TRUE, comment.char=";")
     config$test_subset <- loadSubset(config$full_test_design, config$test_subset)
     config$test_design <- config$full_test_design[config$test_subset,]
-    config$testLabels <- loadLabels(config$test_design, config)     
-    flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows."))    
+    config$testLabels <- loadTestLabels(config$test_design, config)     
+    flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows.")) 
+    flog.info(paste("first 10 test labels: ", head(config$testLabels, 10), capture=TRUE))
+    
   } else {
+    flog.info("testing is cross-validation")
     config$testLabels <- config$labels
   }
   
@@ -286,6 +483,15 @@ loadLabels <- function(full_design, config) {
   labels
 }
 
+loadTestLabels <- function(full_design, config) {
+  if (is.null(full_design[[config$test_label_column]])) {
+    stop(paste("Error: labelColumn", config$label_column, "not found"))
+  } else {
+    labels <- factor(full_design[[config$test_label_column]])
+  }
+  labels
+}
+
 #' @export
 loadSubset <- function(full_design, subset) {
   if (is.character(subset)) {
@@ -322,29 +528,32 @@ loadBlockColumn <- function(config, design) {
 
 #' @export
 #' 
-loadBrainDataSequence <- function(fnames, config) {
+loadBrainDataSequence <- function(fnames, config, indices) {
   if (!all(file.exists(fnames))) {
     offenders <- fnames[!file.exists(fnames)]
-    abort(config, paste("training data", offenders, "not found."))
+    abort(config, paste("data files", offenders, "not found."))
   }
   
-  vecmat <- do.call(rbind, lapply(fnames, function(fname) {
+  
+  ### TODO make more efficient. This loads in all data then subsets.
+  vecmat <- do.call(rbind, lapply(1:length(fnames), function(i) {
+    fname <- fnames[i]
     flog.info("loading data file %s", fname)
     mat <- neuroim::as.matrix(loadVector(fname, mask=config$maskVolume))
     flog.info("data file %s has %s voxels and %s samples", fname, ncol(mat), nrow(mat))
     mat
   }))
   
-  SparseBrainVector(vecmat, space(config$maskVolume), mask=config$maskVolume)
+  SparseBrainVector(vecmat[indices,], space(config$maskVolume), mask=config$maskVolume)
 }
 
 #' @export
 loadBrainData <- function(config, name, indices=NULL) {
   fname <- config[[name]]
   if (length(fname) > 1) {
-    loadBrainDataSequence(fname, config)
+    loadBrainDataSequence(fname, config, indices)
   } else if (!file.exists(fname)) {
-    abort(config, paste("training data", fname, "not found."))
+    abort(config, paste("datafile", fname, "not found."))
   } else {
     flog.info("loading data file %s", fname)
     if (!is.null(indices)) {

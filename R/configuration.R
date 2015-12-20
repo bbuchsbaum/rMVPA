@@ -32,4 +32,39 @@ MVPAConfiguration <- function(modelName="corclass",
               
 }
 
+MVPASearchlightConfiguration <- function(modelName="sda_notune", 
+                              tuneGrid=NULL, 
+                              tuneLength=1, 
+                              ncores=1, 
+                              savePredictors=FALSE,
+                              ensemblePredictor=FALSE,
+                              balanceSamples=FALSE, 
+                              bootstrapSamples=FALSE,
+                              featureSelector=NULL, 
+                              featureParcellation=NULL, 
+                              saveClassMetrics=FALSE,
+                              modelControl=NULL,
+                              radius=8,
+                              iterations=16) {
+  
+  ret <- list(modelName=modelName,
+              tuneGrid=tuneGrid,
+              tuneLength=tuneLength,
+              ncores=ncores,
+              savePredictors=savePredictors,
+              balanceSamples=balanceSamples,
+              bootstrapSamples=bootstrapSamples,
+              featureSelector=featureSelector,
+              featureParcellation=featureParcellation,
+              saveClassMetrics=saveClassMetrics,
+              modelControl=modelControl,
+              radius=radius,
+              iterations=iterations,
+              method="randomized")
+  
+  class(ret) <- c("MVPASearchlightConfiguration", "MVPAConfiguration")
+  ret
+}
+
+
 

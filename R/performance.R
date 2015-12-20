@@ -64,6 +64,7 @@ combinedACC <- function(Pred, Obs) {
 .multiwayPerf <- function(observed, predicted, probs, classMetrics=FALSE) {
   obs <- as.character(observed)
   
+  
   ncorrect <- sum(obs == predicted)
   ntotal <- length(obs)
   maxClass <- max(table(obs))
@@ -84,6 +85,9 @@ combinedACC <- function(Pred, Obs) {
   
   names(aucres) <- paste0("AUC_", colnames(probs))
   
+  
+  
+  
   if (classMetrics) {
     c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), Combined_AUC=mean(aucres), aucres)
   } else {
@@ -93,7 +97,8 @@ combinedACC <- function(Pred, Obs) {
   
 
 #' @export
-performance.MultiWayClassificationResult <- function(x,splitList=NULL, classMetrics=FALSE) {
+performance.MultiWayClassificationResult <- function(x, splitList=NULL, classMetrics=FALSE) {
+  stopifnot(length(x$observed) == length(x$predicted))
   if (is.null(splitList)) {
     .multiwayPerf(x$observed, x$predicted, x$probs, classMetrics)
   } else {

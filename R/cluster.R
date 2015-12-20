@@ -1,5 +1,77 @@
 
-
+create_sparse_similarity <- function(mask, bvec, dist_thresh=max(spacing(mask)), simfun=cov) {
+  library(FNN)
+  library(Matrix)
+  library(igraph)
+  
+  mask.idx <- which(mask > 0)
+  G <-  indexToCoord(mask, mask.idx)
+  
+  G_knn <- FNN::get.knn(G,200)
+  
+  res <- mclapply(1:nrow(G), function(i) {
+    print(i)
+    nidx  <-  G_knn$nn.index[i,]
+    ndist <- G_knn$nn.dist[i,]
+    
+    #ovals <- mat[,nidx]
+    #vals <- mat[,i]
+    
+    keep <- ndist < dist_thresh
+    
+    vals <- series(bvec, mask.idx[i] )
+    other <- series(bvec,mask.idx[nidx[keep] ])
+    cv <- as.vector(simfun(vals, other))
+    cbind(i, nidx[keep], cv)
+    #sim <- as.vector(cor(vals,ovals))
+    #sim[sim < 0] <- 0
+    #wsim <- sim * exp(decay * ndist)
+    #cbind(i, nidx, wsim)
+    
+  })
+  
+  wmat <- do.call(rbind, res)
+  wmat <- Matrix::sparseMatrix(dims=c(nrow(G), nrow(G)), i=wmat[,1], j=wmat[,2], x=wmat[,3])
+  
+  gg <- igraph::graph.adjacency(wmat, mode="undirected", weighted=TRUE)
+  
+}
+create_sparse_adjacency <- function(mask, dist_thresh=max(spacing(mask)), weightfun="binary") {
+  library(FNN)
+  library(Matrix)
+  library(igraph)
+  
+  mask.idx <- which(mask > 0)
+  G <-  indexToCoord(mask, mask.idx)
+  G_knn <- FNN::get.knn(G,27)
+  
+  res <- mclapply(1:nrow(G), function(i) {
+    print(i)
+    nidx  <-  G_knn$nn.index[i,]
+    ndist <- G_knn$nn.dist[i,]
+    
+    #ovals <- mat[,nidx]
+    #vals <- mat[,i]
+    
+    keep <- ndist < dist_thresh
+    cbind(i, nidx[ndist < dist_thresh], rep(1, sum(keep)))
+    #sim <- as.vector(cor(vals,ovals))
+    #sim[sim < 0] <- 0
+    #wsim <- sim * exp(decay * ndist)
+    #cbind(i, nidx, wsim)
+    
+  })
+  
+  wmat <- do.call(rbind, res)
+  wmat <- Matrix::sparseMatrix(dims=c(nrow(G), nrow(G)), i=wmat[,1], j=wmat[,2], x=wmat[,3])
+  
+  wmat <- (wmat + t(wmat))/2
+  gg <- igraph::graph.adjacency(wmat, mode="undirected", weighted=TRUE)
+  
+}
+  
+  
+  
 .ThreeByThreeOffset <- rbind(c(1,0,0),
                              c(-1,0,0),
                              c(0,1,0),
@@ -10,23 +82,24 @@
 
 
 .TwoByTwoOffset <- rbind(c(1,0,0),
-                             c(-1,0,0),
-                             c(0,1,0),
-                             c(0,-1,0))
+                         c(-1,0,0),
+                         c(0,1,0),
+                         c(0,-1,0))
                              
 
-dist_weighted_similarity <- function(centers, coords, decay=-.05) {
+dist_weighted_similarity <- function(centers, coords, decay=.05) {
   csim <- cor(centers) + 1
   D <- as.matrix(dist(coords))
-  exp(decay * D) * csim
+  exp(-decay * D) * csim
 }
+
 
 get_surround <- function(vox, surround, vol) {
   vs <- sweep(surround, 2, vox, "+")
   vol[vs]
 }
 
-slic_gradient <- function(vox, bvec, mask, offset=.ThreeByThreeOffset) {
+slic_gradient <- function(vox, bvec, mask, offset=.TwoByTwoOffset) {
   vs <- sweep(offset, 2, vox, "+")
   vsr <- apply(vs,2,range)
   
@@ -39,10 +112,11 @@ slic_gradient <- function(vox, bvec, mask, offset=.ThreeByThreeOffset) {
     NA
   } else {
     smat <- series(bvec, vs)
-    
-    sum(sapply(seq(1, ncol(smat), by=2), function(k) {
-      1 - cor(smat[,k], smat[,k+1])
-    }))
+    s1 <- series(bvec, vox[1], vox[2], vox[3])
+    sum(1 - cor(s1,smat))
+    #sum(sapply(seq(1, ncol(smat), by=2), function(k) {
+    #  1 - cor(smat[,k], smat[,k+1])
+    #}))
   }
 }
 
@@ -69,7 +143,7 @@ slic_iterate <- function(bvec, voxels, decay, featureCenters, nn.index, nn.dist)
     centers <- featureCenters[, nn.index[i,]]  
     vals <- series(bvec, voxels[i,,drop=FALSE])
     featsim <- cor(vals, centers)
-    scores <- exp(decay * nn.dist[i,]) * (featsim+1)^2
+    scores <-  (exp(-decay * nn.dist[i,])) + featsim
     (nn.index[i,])[which.max(scores)]
   }))
   
@@ -91,12 +165,12 @@ shrink_vector <- function(mask, vgrid, bvec, k=5, iter=1, radius=NULL) {
   ovec <- bvec
   
   for (i in 1:iter) {
-    omat <- do.call(cbind, mclapply(1:nrow(vgrid), function(i) {
-      if (i %% 1000 == 0) {
-        message("shrinkage at: ", round(i/nrow(vgrid) * 100), "%")
+    omat <- do.call(cbind, mclapply(1:nrow(vgrid), function(j) {
+      if (j %% 1000 == 0) {
+        message("shrinkage at: ", round(j/nrow(vgrid) * 100), "%")
       }
       
-      vox <- vgrid[i,]
+      vox <- vgrid[j,]
       cvox <- RegionSphere(mask, vox, radius=radius, nonzero=TRUE)@coords
       vals <- series(ovec, vox[1], vox[2], vox[3])
       vmat <- series(ovec, cvox)
@@ -113,7 +187,7 @@ shrink_vector <- function(mask, vgrid, bvec, k=5, iter=1, radius=NULL) {
 
 #' @export
 #' @import FNN
-slic_cluster <- function(mask, bvec, K=500, decay=-.05, iterations=10, nn=8, shrink=0) {
+slic_cluster <- function(mask, bvec, K=500, decay=.05, iterations=10, nn=8, shrink=0) {
   mask.idx <- which(mask > 0)
   
   ## real coordinates
@@ -126,7 +200,7 @@ slic_cluster <- function(mask, bvec, K=500, decay=-.05, iterations=10, nn=8, shr
   spatialVoxCenters <- round(coordToGrid(mask, spatialCenters))
   
   #surround <- as.matrix(expand.grid(x=c(-1,0,1), y=c(-1,0,1), z=c(-1,0,1)))
-  surround <- as.matrix(cbind(as.matrix(expand.grid(x=c(-1,0), y=c(-1,0))), z=rep(0, 4)))
+  surround <- as.matrix(cbind(as.matrix(expand.grid(x=c(-1,0,1), y=c(-1,0,1))), z=rep(0, 9)))
   
   if (shrink > 0) {
     message("running ", shrink, "shrinkage iterations with k = ", 5)

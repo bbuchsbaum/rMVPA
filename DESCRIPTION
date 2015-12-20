@@ -22,6 +22,7 @@ Imports:
     futile.logger,
     io,
     stringr,
+    Matrix,
     mefa4,
     optparse,
     Metrics,
@@ -44,3 +45,4 @@ Collate:
     'rMVPA.R'
     'similarity.R'
     'utils.R'
+RoxygenNote: 5.0.1
