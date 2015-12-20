@@ -7,9 +7,6 @@ colACC <- function(X, Y) {
   })
 }
 
-
-
-
 #' @export  
 matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   lapply(1:ncol(mat), function(i) {
