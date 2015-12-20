@@ -8,13 +8,7 @@ colACC <- function(X, Y) {
 }
 
 
-#####
-### TODO simpify running of custom scripts
-### need way to generate custom metrics
-## config <- MVPASearchlightConfiguration(radius=8, method="randomized", iterations=16, model="sda_notune")
-## dataset <- MVPADataset(train_vec, test_vec,...)
-## mvpa_searchlight(dataset,config)
-## 
+
 
 #' @export  
 matrixToVolumeList <- function(vox, mat, mask, default=NA) {
@@ -26,14 +20,9 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 } 
 
 #' @export 
-computePerformance <- function(test_design, result, vox, splitList=NULL, classMetrics=FALSE, customPerformance=NULL) {
-  perf <- performance(result, splitList, classMetrics)
-  
-  if (!is.null(customPerformance)) {
-    perf <- c(perf, customPerformance(test_design, result))
-  }
-  
-  out <- cbind(vox, t(perf)[rep(1, nrow(vox)),])   
+computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE) {
+  perf <- t(performance(result, splitList, classMetrics))
+  out <- cbind(vox, perf[rep(1, nrow(vox)),])   
 }
 
 #' run an MVPA analysis on ablock of data
@@ -46,9 +35,7 @@ runAnalysis <- function(object, dataset,...) {
 }
 
 #' @export
-runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE, 
-                                            autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, 
-                                            parcels=NULL, ensemblePredictor=FALSE) {
+runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
   mvpa_crossval(dataset, vox, returnPredictor, autobalance, bootstrap, featureSelector, parcels, ensemblePredictor)
 }
 
@@ -64,12 +51,14 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
   
-  X <- X[,valid.idx,drop=FALSE]
+  X <- X[,valid.idx]
   vox <- vox[valid.idx,]
   
   if (!is.null(parcels)) {
     parcels <- parcels[valid.idx]
   }
+  
+  
   
   if (ncol(X) == 0) {
     stop("no valid columns")
@@ -90,9 +79,9 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
       foldIterator <- if (bootstrap) {
         ## temporary hack
         bootIndices <- sort(sample(1:nrow(X), nrow(X), replace=TRUE))
-        MatrixFoldIterator(X[bootIndices,,drop=FALSE], dataset$Y[bootIndices], dataset$blockVar[bootIndices])
+        MatrixFoldIterator(X[bootIndices,], dataset$Y[bootIndices], dataset$blockVar[bootIndices])
       } else {
-        MatrixFoldIterator(X, dataset$Y, dataset$blockVar, bootstrap=FALSE)
+        MatrixFoldIterator(X, dataset$Y,dataset$blockVar, bootstrap=false)
       }
       
       Xtest <- series(dataset$testVec, vox) 
@@ -122,12 +111,12 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
 }
 
 
-.doStandard <- function(dataset, radius, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, parcels=NULL, classMetrics=FALSE, customPerformance=NULL) {
+.doStandard <- function(dataset, radius, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, parcels=NULL, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %dopar% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %do% {   
     if (nrow(vox) > 1) {
-      computePerformance(dataset$testDesign, runAnalysis(dataset$model, dataset, vox, returnPredictor, autobalance, bootstrap, parcels), vox, dataset$testSplits, classMetrics, customPerformance)
+      computePerformance(runAnalysis(dataset$model, dataset, vox, returnPredictor, autobalance, bootstrap, parcels), vox, dataset$testSplits, classMetrics)
     }
   }
   
@@ -135,14 +124,14 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
 }
   
 
-.doRandomized <- function(dataset, radius, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, parcels=NULL, classMetrics=FALSE,customPerformance=NULL) {
+.doRandomized <- function(dataset, radius, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, parcels=NULL, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
   ## tight inner loop should probably avoid "foreach" as it has a lot of overhead, but c'est la vie for now.
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
-      computePerformance(dataset$testDesign, runAnalysis(dataset$model, dataset, vox, returnPredictor, autobalance, bootstrap, parcels), vox, dataset$testSplits, classMetrics, customPerformance)
+      computePerformance(runAnalysis(dataset$model, dataset, vox, returnPredictor, autobalance, bootstrap, parcels), vox, dataset$testSplits, classMetrics)
     }
   }
   
@@ -234,6 +223,12 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
   invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
   validRes <- res[!invalid]
   
+  
+  
+  ## insert metalearner code?
+  ## learns over set of predicted probabilities
+  
+  
   if (length(validRes) == 0) {
     print(res)
     flog.error("Regional analysis failed for all of %s ROIs", length(regionSet))
@@ -292,8 +287,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
 #' @import parallel
 #' @import futile.logger
 #' @export
-mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard"), niter=4, ncores=2, autobalance=FALSE, 
-                             bootstrap=FALSE, featureParcellation=NULL, classMetrics=FALSE, customPerformance=NULL) {
+mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard"), niter=4, ncores=2, autobalance=FALSE, bootstrap=FALSE, featureParcellation=NULL, classMetrics=FALSE) {
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }
@@ -312,11 +306,11 @@ mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard
   
   
   res <- if (method == "standard") {
-    .doStandard(dataset, radius, returnPredictor=FALSE, autobalance=autobalance, bootstrap=bootstrap, parcels = featureParcellation, classMetrics=classMetrics,customPerformance=customPerformance)    
+    .doStandard(dataset, radius, returnPredictor=FALSE, autobalance=autobalance, bootstrap=bootstrap, parcels = featureParcellation, classMetrics=classMetrics)    
   } else {
     res <- parallel::mclapply(1:niter, function(i) {
       flog.info("Running randomized searchlight iteration %s", i)   
-      do.call(cbind, .doRandomized(dataset, radius, returnPredictor=FALSE, autobalance=autobalance, bootstrap=bootstrap, parcels = featureParcellation, classMetrics=classMetrics, customPerformance=customPerformance) )
+      do.call(cbind, .doRandomized(dataset, radius, returnPredictor=FALSE, autobalance=autobalance, bootstrap=bootstrap, parcels = featureParcellation, classMetrics=classMetrics) )
     }, mc.cores=ncores)
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {
