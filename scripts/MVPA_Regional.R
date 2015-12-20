@@ -88,6 +88,10 @@ if (!is.null(config$roi_subset)) {
   
   config$ROIVolume[!res] <- 0
   flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
+  if (sum(config$ROIVolume <= 1)) {
+    flog.info("ROI must contain more than one voxel, aborting.")
+    stop()
+  }
 }
 
 if (!is.null(config$roi_grouping)) {

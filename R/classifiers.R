@@ -1,4 +1,8 @@
 
+## use R6 to wrap models
+## 
+
+
 #' @export
 MVPAModels <- new.env()
 
