@@ -109,8 +109,8 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
   learner <- lookupMetaLearner(method)
   
   res <- lapply(blocks, function(block) {
-    heldout <- which(blockVar == block)
-    trainInd <- which(blockVar != block)
+    heldout <- which(x$blockVar == block)
+    trainInd <- which(x$blockVar != block)
     
     sres <- lapply(x$resultList, function(result) {
       subResult(result, trainInd)
