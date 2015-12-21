@@ -160,8 +160,8 @@ flog.info("feature selector: ", featureSelector, capture=TRUE)
 flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRUE)
 
 consensusLearner <- if (!is.null(config$consensus_learner)) {
+  flog.info("Will train a %s consensus classifier on ROI results", config$consensus_learner$method)
   ConsensusLearner(config$consensus_learner$method, config$consensus_learner$params)
-  flog.info("Will train a consensus classifier on ROI results")
 }
 
 flog.info("consensus learner: ", consensusLearner, capture=TRUE)
