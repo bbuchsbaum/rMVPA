@@ -158,12 +158,16 @@ featureSelector <- if (!is.null(config$feature_selector)) {
 flog.info("feature selector: ", featureSelector, capture=TRUE)
 flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRUE)
 
+consensusLearner <- if (!is.null(config$consensus_learner)) {
+  ConsensusLearner(config$consensus_learner$method, config$consensus_learner$params)
+}
+
+
 dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, 
                        config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
                        tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits, 
                        trainDesign=config$train_design,
                        testDesign=config$test_design)
-
 
 
 for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
@@ -203,10 +207,19 @@ for (roinum in seq_along(config$ROIVolume)) {
                             classMetrics=config$output_class_metrics,
                             ensemblePredictor=config$ensemble_predictor)
   
+  
   lapply(1:length(mvpa_res$outVols), function(i) {
     out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")
     writeVolume(mvpa_res$outVols[[i]], out)  
   })
+  
+  if (!is.null(consensusLearner)) {
+    consResult <- consensusWeights(mvpa_res$resultSet, consensusLearner$method)
+    consPerf <- c(ROINUM="ROI_CONSENSUS", t(performance(consResult, dataset$testSplits, config$output_class_metrics))[1,])   
+    write.table(format(consPerf,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/consensus_performance.txt")), row.names=FALSE, quote=FALSE)
+    consWeights <- data.frame(ROINUM=mvpa_res$performance$ROINUM, weights=consResult$finalWeights)
+    write.table(format(consWeights,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/consensus_weights.txt")), row.names=FALSE, quote=FALSE)
+  }
 
   write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
   saveResults(mvpa_res$extendedResults, outdir)

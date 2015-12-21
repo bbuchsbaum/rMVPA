@@ -3,6 +3,20 @@
 .cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
 .adaptiveControl <- caret::trainControl("adaptive_cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
 
+#' create an \code{ClassificationResultSet} instance
+#' @param blockVar the cross-vlidation blocking variable
+#' @param resultList a list of type \code{ClassificationResult} 
+#' @export
+ClassificationResultSet <- function(blockVar, resultList) {
+  ret <- list(
+    blockVar=blockVar,
+    resultList=resultList)
+  
+  class(ret) <- c("ClassificationResultSet", "list")
+  ret
+}
+
+
 
 #' create an \code{ClassificationModel} instance
 #' @param caretModel the underlying caret model object
@@ -109,10 +123,41 @@ TwoWayClassificationResult <- function(observed, predicted, probs, predictor=NUL
               predictor=predictor
               )
   
-  class(ret) <- c("TwoWayClassificationResult", "list")
+  class(ret) <- c("TwoWayClassificationResult", "ClassificationResult", "list")
   ret
- 
 }
+
+
+#' @export
+subResult <- function(x, indices) {
+  UseMethod("subResult")
+}
+
+
+#' @export
+subResult.MultiWayClassificationResult <- function(x, indices) {
+  ret <- list(
+    observed=x$observed[indices],
+    predicted=x$predicted[indices],
+    probs=as.matrix(x$probs)[indices,],
+    predictor=NULL)
+  
+  class(ret) <- c("MultiWayClassificationResult", "ClassificationResult", "list")
+  ret
+}
+
+#' @export
+subResult.TwoWayClassificationResult <- function(x, indices) {
+  ret <- list(
+    observed=x$observed[indices],
+    predicted=x$predicted[indices],
+    probs=as.matrix(x$probs)[indices,],
+    predictor=NULL)
+  
+  class(ret) <- c("TwoWayClassificationResult", "ClassificationResult", "list")
+  ret
+}
+
 
 #' create an \code{MultiWayClassification} instance
 #' @param observed
@@ -126,10 +171,11 @@ MultiWayClassificationResult <- function(observed, predicted, probs, predictor=N
               probs=as.matrix(probs),
               predictor=predictor)
   
-  class(ret) <- c("MultiWayClassificationResult", "list")
+  class(ret) <- c("MultiWayClassificationResult", "ClassificationResult", "list")
   ret
-  
 }
+
+
 
 #' @export
 classificationResult <- function(observed, predicted, probs,  predictor=NULL) {

@@ -5,8 +5,8 @@
 \title{mvpa_searchlight_ensemble}
 \usage{
 mvpa_searchlight_ensemble(modelSet = superLearners, dataset, mask,
-  radius = 12, ncores = 1, pruneFrac = 0.15, combiner = c("greedyAUC"),
-  bootstrapSamples = TRUE, autobalance = autobalance,
+  radius = 12, ncores = 1, pruneFrac = 0.15, combiner = c("greedy",
+  "glmnet", "naive")[1], bootstrapSamples = TRUE, autobalance = autobalance,
   searchMethod = c("replacement", "exhaustive"), nsamples = 10,
   calibrateProbs = FALSE, returnPredictor = FALSE)
 }

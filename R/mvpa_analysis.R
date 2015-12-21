@@ -54,9 +54,7 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
   if (!is.null(parcels)) {
     parcels <- parcels[valid.idx]
   }
-  
-  
-  
+
   if (ncol(X) == 0) {
     stop("no valid columns")
   } else {
@@ -220,12 +218,6 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
   invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
   validRes <- res[!invalid]
   
-  
-  
-  ## insert metalearner code?
-  ## learns over set of predicted probabilities
-  
-  
   if (length(validRes) == 0) {
     print(res)
     flog.error("Regional analysis failed for all of %s ROIs", length(regionSet))
@@ -238,6 +230,12 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
     print(res[invalid])
   }
   
+  
+  ## extract additonal results
+  results <- lapply(validRes, function(res) {
+    attr(res, "result")
+  })
+ 
   ## combine performance metrics into matrix
   perfMat <- do.call(rbind, validRes)
   
@@ -245,16 +243,12 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
   outVols <- lapply(2:ncol(perfMat), function(cnum) {
     fill(regionMask, cbind(perfMat[, 1], perfMat[,cnum]))    
   })
+  
+  resultSet <- ClassificationResultSet(dataset$blockVar, results)
 
-  ## extract additonal results
-  resultList <- lapply(validRes, function(res) {
-    attr(res, "result")
-  })
-  
-  
-  extendedResults <- combineResults(dataset$model, resultList)
+  extendedResults <- combineResults(dataset$model, results)
   names(outVols) <- colnames(perfMat)[2:ncol(perfMat)]
-  list(outVols = outVols, performance=perfMat, extendedResults=extendedResults)
+  list(outVols = outVols, performance=perfMat, resultSet=resultSet, extendedResults=extendedResults)
 
 }
 

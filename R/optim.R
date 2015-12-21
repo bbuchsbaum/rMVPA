@@ -170,10 +170,10 @@ greedMultiClassOptAUC <- function(PredList, Y, iter = 100L){
 
 
 #' @export
-BaggedMultiClassOptAUC <- function(PredList, Y, iter = 30, bagIter=30, bagFrac=.5) {
+BaggedMultiClassOptAUC <- function(PredList, Y, iter = 20, bagIter=10, bagFrac=.5) {
   wtlist <- lapply(1:bagIter, function(i) {
     sam <- sort(sample(seq_along(PredList), bagFrac * length(PredList))) 
-    wts <- greedyMultiClassOptim(PredList[sam], Y, iter=30, metric="AUC")
+    wts <- greedyMultiClassOptim(PredList[sam], Y, iter=iter, metric="AUC")
     ret <- numeric(length(PredList))
     ret[sam] <- wts
     ret
@@ -184,10 +184,10 @@ BaggedMultiClassOptAUC <- function(PredList, Y, iter = 30, bagIter=30, bagFrac=.
 }
 
 #' @export
-BaggedMultiClassOptACC <- function(PredList, Y, iter = 30, bagIter=30, bagFrac=.5) {
+BaggedMultiClassOptACC <- function(PredList, Y, iter = 20, bagIter=10, bagFrac=.5) {
   wtlist <- lapply(1:bagIter, function(i) {
     sam <- sort(sample(seq_along(PredList), bagFrac * length(PredList))) 
-    wts <- greedyMultiClassOptim(PredList[sam], Y, iter=30, metric="ACC")
+    wts <- greedyMultiClassOptim(PredList[sam], Y, iter=iter, metric="ACC")
     ret <- numeric(length(PredList))
     ret[sam] <- wts
     ret
@@ -198,7 +198,7 @@ BaggedMultiClassOptACC <- function(PredList, Y, iter = 30, bagIter=30, bagFrac=.
 }
 
 #' @export
-BaggedTwoClassOptAUC <- function(X, Y, iter = 100L, bagIter=30, bagFrac=.5) {
+BaggedTwoClassOptAUC <- function(X, Y, iter = 20L, bagIter=20, bagFrac=.5) {
   wtlist <- lapply(1:bagIter, function(i) {
     sam <- sort(sample(1:ncol(X), bagFrac * ncol(X))) 
     wts <- greedyTwoClassOptim(X[,sam], Y, iter=30)
@@ -212,10 +212,10 @@ BaggedTwoClassOptAUC <- function(X, Y, iter = 100L, bagIter=30, bagFrac=.5) {
 }
 
 #' @export
-BaggedTwoClassOptACC <- function(X, Y, iter = 100L, bagIter=30, bagFrac=.5) {
+BaggedTwoClassOptACC <- function(X, Y, iter = 20, bagIter=20, bagFrac=.5) {
   wtlist <- lapply(1:bagIter, function(i) {
     sam <- sort(sample(1:ncol(X), bagFrac * ncol(X))) 
-    wts <- greedyTwoClassOptim(X[,sam], Y, iter=30)
+    wts <- greedyTwoClassOptim(X[,sam], Y, iter=iter)
     ret <- numeric(ncol(X))
     ret[sam] <- wts
     ret

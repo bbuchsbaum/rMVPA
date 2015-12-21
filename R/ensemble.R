@@ -7,6 +7,11 @@
 
 ## we need simple primitives that are combined. functions are too monolithic, hard to debug/understand.
 
+
+
+
+
+
 createModelSet <- function(modelName, ...) {
   dots <- list(...)
   tuneGrid <- expand.grid(dots)
@@ -69,39 +74,99 @@ createEnsembleSpec <- function(...) {
 }
 
 
-AUCCombine <- function(dataset, resultList, fold, pruneFrac=.5, power=2) {
-  AUC <- do.call(rbind, lapply(resultList, function(x) performance(x)))[,3]
- 
-  aucorder <- order(AUC, decreasing=TRUE)
-
-  nkeep <- pruneFrac * length(aucorder)
-  keep <- sort(aucorder[1:nkeep])
+#' @export
+ConsensusLearner <- function(method, params=list()) {
+  ret <- list(
+    method=method,
+    params=params
+  )
   
-  positiveList <- resultList[keep]
-  
-  predictorList <- lapply(positiveList, function(pred) {  
-      MVPAVoxelPredictor(pred$predictor, attr(pred, "vox"))      
-  })
-  
-  finalWeights <- AUC[keep]
-  finalWeights <- finalWeights^power
-  finalWeights <- finalWeights/sum(finalWeights)
-  
-  ## weighted predictor based on finalWeights
-  WeightedPredictor(predictorList, weights=finalWeights)
-
+  class(ret) <- c("ConsensusLearner", "list")
+  ret
 }
 
-glmnetCombine <- function(dataset, resultList, fold, pruneFrac=1, alpha=1) {
-  AUC <- do.call(rbind, lapply(resultList, function(x) performance(x)))[,3]
+
+#' @export
+consensusWeights <- function(x,...) {
+  UseMethod("consensusWeights")
+}
+
+
+#' @export
+consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmnet", "equal_weights", "auc_weights")[1], ...) {
+  blocks <- sort(unique(x$blockVar))
+  observed <- x$resultList[[1]]$observed
   
-  Ytrain <- as.character(dataset$Y[fold$trainIndex])  
+  lookupMetaLearner <- function(method) {
+    switch(method,
+           "greedy"=greedyWeights,
+           "glmnet"=glmnetWeights,
+           "auc_weights"=AUCWeights,
+           "equal_weights"=equalWeights)
+    
+  }
+  
+  learner <- lookupMetaLearner(method)
+  
+  res <- lapply(blocks, function(block) {
+    heldout <- which(blockVar == block)
+    trainInd <- which(blockVar != block)
+    
+    sres <- lapply(x$resultList, function(result) {
+      subResult(result, trainInd)
+    })
+    
+    bvar <- x$blockVar[trainInd]
+    
+    wts <- learner(sres, ...)
+    probset <- lapply(x$resultList, function(x) x$probs[heldout,])
+    wtprob <- Reduce("+", lapply(1:length(probset), function(i) probset[[i]] * wts[i]))
+    list(prob=wtprob, weights=wts, testInd=heldout)
+  })
+  
+  prob <- do.call(rbind, lapply(res, "[[", "prob"))
+  ind <- unlist(lapply(res, "[[", "testInd"))
+  weights <- do.call(rbind, lapply(res, "[[", "weights"))
+  maxid <- apply(prob,1,which.max)
+  predclass <- colnames(prob)[maxid]
+  finalWeights <- colMeans(weights)
+  finalWeights <- finalWeights/sum(finalWeights)
+  
+  if (!is.null(resultList[[1]]$predictor)) {
+    predictor <- WeightedPredictor(lapply(resultList, "[[", "pred"), weights=finalWeights)
+    classificationResult(observed, predclass, prob=prob[ind,], predictor=predictor)
+  } else {
+    classificationResult(observed, predclass, prob=prob[ind,])
+  }
+}
+  
+equalWeights <- function(resultList) {
+  wts <- rep(1/lwngth(resultList))/length(resultList)
+}
+
+AUCWeights <- function(resultList, pruneFrac=1, power=2) {
+  AUC <- unlist(lapply(resultList, function(x) performance(x)[3]))
+  
   aucorder <- order(AUC, decreasing=TRUE)
-  nkeep <- pruneFrac * length(aucorder)
-  keep <- sort(aucorder[1:nkeep])
+  finalWeights <- AUC
   
+  if (pruneFrac < 1) {
+    nkeep <- pruneFrac * length(aucorder)
+    keep <- sort(aucorder[1:nkeep])
+    finalWeights[-keep] <- 0
+  }
   
-  probset <- lapply(resultList[keep], "[[", "probs")
+  finalWeights[finalWeights < 0] <- 0
+  
+  finalWeights <- finalWeights^power
+  finalWeights <- finalWeights/sum(finalWeights)
+  finalWeights
+}
+
+
+glmnetWeights <- function(resultList, alpha=.5) {
+  Ytrain <- as.character(resultList[[1]]$observed)
+  probset <- lapply(resultList, "[[", "probs")
   
   posmat <- do.call(rbind, lapply(seq_along(Ytrain), function(i) {
     lab <- Ytrain[i]
@@ -110,7 +175,7 @@ glmnetCombine <- function(dataset, resultList, fold, pruneFrac=1, alpha=1) {
   
   negmat <- do.call(rbind, lapply(seq_along(Ytrain), function(i) {
     lab <- Ytrain[i]
-    idx <- which(colnames(probset[[j]]) != lab)
+    idx <- which(colnames(probset[[1]]) != lab)
     colMeans(sapply(seq_along(probset), function(j) probset[[j]][i,idx]))
   }))
   
@@ -120,10 +185,29 @@ glmnetCombine <- function(dataset, resultList, fold, pruneFrac=1, alpha=1) {
   lambda.min <- cvres$lambda.min
   weights <- coef(cvres$glmnet.fit, s=lambda.min)[-1,1]
   weights <- weights/sum(weights)
+}
+
   
-  positiveList <- resultList[keep]
+AUCCombine <- function(resultList, blockVar, pruneFrac=.5, power=2) {
+  finalWeights <- AUCWeights(resultList, blockVar, pruneFrac, power)
+  posWeights <- which(finalWeights>0)
+  
+  positiveList <- resultList[posWeights]
+  
+  predictorList <- lapply(positiveList, function(pred) {  
+      MVPAVoxelPredictor(pred$predictor, attr(pred, "vox"))      
+  })
+  
+  ## weighted predictor based on finalWeights
+  WeightedPredictor(predictorList, weights=finalWeights[posWeights])
+
+}
+
+
+  
+glmnetCombine <- function(resultList, alpha=.5) {
+  weights <- glmnetWeights(resultList, alpha)
   positiveList <- positiveList[weights > 0]
-  
   
   predictorList <- lapply(positiveList, function(pred) {  
     MVPAVoxelPredictor(pred$predictor, attr(pred, "vox"))      
@@ -132,6 +216,50 @@ glmnetCombine <- function(dataset, resultList, fold, pruneFrac=1, alpha=1) {
   WeightedPredictor(predictorList, weights=weights[weights>0])
   
 }
+
+greedyWeights <- function(resultList, pruneFrac=1) {
+  
+  stopifnot(pruneFrac > 0 && pruneFrac <= 1)
+  AUC <- unlist(lapply(resultList, function(x) performance(x)[3]))
+  Ytrain <- as.character(resultList[[1]]$observed)
+ 
+  ## order from highest to lowest
+  perforder <- order(AUC, decreasing=TRUE)
+  
+  ## results to keep according to 'pruneFrac'
+  keep <- sort(perforder[1:(pruneFrac * length(perforder))])
+  prunedList <- resultList[keep]
+  
+  predlist <- lapply(prunedList, "[[", "probs")
+  
+  baggedWeights <- if (length(levels(Ytrain)) == 2) {
+    Pred <- do.call(cbind, lapply(predlist, function(x) x[,2]))
+    BaggedTwoClassOptAUC(Pred, ifelse(Ytrain == levels(Ytrain)[2], 1,0))
+  } else {
+    BaggedMultiClassOptAUC(predlist, Ytrain)
+  }
+  
+  baggedWeights/sum(baggedWeights)
+}
+
+
+greedyCombine <- function(resultList, pruneFrac=1) {
+  stopifnot(pruneFrac > 0 && pruneFrac <= 1)
+  weights <- greedyWeights(resultList, pruneFrac)
+  posIndices <- which(weights > 0)
+  
+  ## weights for final model
+  finalWeights <- weights[posIndices]
+  positiveList <- resultList[posIndices]
+  
+  predictorList <- lapply(positiveList, function(pred) {  
+    MVPAVoxelPredictor(pred$predictor, attr(pred, "vox"))      
+  })
+  
+  ## weighted predictor based on finalWeights
+  WeightedPredictor(predictorList, weights=finalWeights)
+}
+
   
   
 metaCombine <- function(dataset, resultList, fold, pruneFrac=1, metaLearner="spls", tuneGrid=expand.grid(K=c(1,2,3,4,5,6), eta=c(.2, .7, .9), kappa=.5)) {
@@ -190,51 +318,6 @@ computeWeightVol <- function(ensemble, mask) {
   weightVol
 }
 
-greedyCombine <- function(dataset, resultList, fold, pruneFrac=.33) {
-   
-  stopifnot(pruneFrac > 0 && pruneFrac <= 1)
-  
-  ## compute AUC for resultSet
-  AUC <- do.call(rbind, lapply(resultList, function(x) performance(x)))[,3]
-  
-  ## order from highest to lowest
-  perforder <- order(AUC, decreasing=TRUE)
-  
-  ## results to keep according to 'pruneFrac'
-  keep <- sort(perforder[1:(pruneFrac * length(perforder))])
- 
-  Ytrain <- dataset$Y[fold$trainIndex]
-  prunedList <- resultList[keep]
-  
-  predlist <- lapply(prunedList, "[[", "probs")
-  
-  baggedWeights <- if (length(levels(fold$Ytrain)) == 2) {
-    Pred <- do.call(cbind, lapply(predlist, function(x) x[,2]))
-    BaggedTwoClassOptAUC(Pred, ifelse(fold$Ytrain == levels(fold$Ytrain)[2], 1,0))
-  } else {
-    BaggedMultiClassOptAUC(predlist, fold$Ytrain)
-  }
-  
-  baggedWeights <- baggedWeights/sum(baggedWeights)
-  
-  posIndices <- which(baggedWeights > 0)
-  
-  ## weights for final model
-  finalWeights <- baggedWeights[posIndices]
-  
-  ## full set of weights
-  allWeights <- numeric(length(resultList))
-  allWeights[keep[posIndices]] <- finalWeights
-  
-  positiveList <- prunedList[posIndices]
-  
-  predictorList <- lapply(positiveList, function(pred) {  
-      MVPAVoxelPredictor(pred$predictor, attr(pred, "vox"))      
-  })
-  
-  ## weighted predictor based on finalWeights
-  WeightedPredictor(predictorList, weights=finalWeights)
-}
 
 innerIteration <- function(dataset, vox, trainInd, testInd, model, tuneGrid, autobalance, bootstrap) {
   Ytrain <- dataset$Y[-testInd]
