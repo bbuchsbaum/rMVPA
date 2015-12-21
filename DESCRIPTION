@@ -20,6 +20,7 @@ Imports:
     doParallel,
     MASS,
     futile.logger,
+    glmnet,
     io,
     stringr,
     Matrix,

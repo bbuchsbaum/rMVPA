@@ -163,7 +163,7 @@ AUCWeights <- function(resultList, pruneFrac=1, power=2) {
   finalWeights
 }
 
-
+#' @importFrom glmnet cv.glmnet 
 glmnetWeights <- function(resultList, alpha=.5) {
   Ytrain <- as.character(resultList[[1]]$observed)
   probset <- lapply(resultList, "[[", "probs")
@@ -181,7 +181,7 @@ glmnetWeights <- function(resultList, alpha=.5) {
   
   fullmat <- rbind(posmat, negmat)
   y0 <- factor(rep(c("pos", "neg"), each=nrow(posmat)))
-  cvres <- cv.glmnet(fullmat, y0, family="binomial", lower.limits=0, alpha=alpha)
+  cvres <- glmnet::cv.glmnet(fullmat, y0, family="binomial", lower.limits=0, alpha=alpha)
   lambda.min <- cvres$lambda.min
   weights <- coef(cvres$glmnet.fit, s=lambda.min)[-1,1]
   weights <- weights/sum(weights)
