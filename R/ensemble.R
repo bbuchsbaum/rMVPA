@@ -132,8 +132,8 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
   finalWeights <- colMeans(weights)
   finalWeights <- finalWeights/sum(finalWeights)
   
-  if (!is.null(resultList[[1]]$predictor)) {
-    predictor <- WeightedPredictor(lapply(resultList, "[[", "pred"), weights=finalWeights)
+  if (!is.null(x$resultList[[1]]$predictor)) {
+    predictor <- WeightedPredictor(lapply(x$resultList, "[[", "pred"), weights=finalWeights)
     classificationResult(observed, predclass, prob=prob[ind,], predictor=predictor)
   } else {
     classificationResult(observed, predclass, prob=prob[ind,])
