@@ -160,7 +160,10 @@ flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRU
 
 consensusLearner <- if (!is.null(config$consensus_learner)) {
   ConsensusLearner(config$consensus_learner$method, config$consensus_learner$params)
+  flog.info("Will train a consensus classifier on ROI results")
 }
+
+flog.info("consensus learner: ", consensusLearner, capture=TRUE)
 
 
 dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, 
