@@ -141,7 +141,7 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
 }
   
 equalWeights <- function(resultList) {
-  wts <- rep(1/lwngth(resultList))/length(resultList)
+  wts <- rep(1/length(resultList))/length(resultList)
 }
 
 AUCWeights <- function(resultList, pruneFrac=1, power=2) {
