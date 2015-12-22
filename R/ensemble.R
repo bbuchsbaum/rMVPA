@@ -132,16 +132,18 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
   finalWeights <- colMeans(weights)
   finalWeights <- finalWeights/sum(finalWeights)
   
-  if (!is.null(x$resultList[[1]]$predictor)) {
+  result <- if (!is.null(x$resultList[[1]]$predictor)) {
     predictor <- WeightedPredictor(lapply(x$resultList, "[[", "pred"), weights=finalWeights)
     classificationResult(observed, predclass, prob=prob[ind,], predictor=predictor)
   } else {
     classificationResult(observed, predclass, prob=prob[ind,])
   }
+  
+  list(result=result, weights=finalWeights)
 }
   
 equalWeights <- function(resultList) {
-  wts <- rep(1/length(resultList))/length(resultList)
+  wts <- rep(1,length(resultList))/length(resultList)
 }
 
 AUCWeights <- function(resultList, pruneFrac=1, power=2) {

@@ -218,10 +218,12 @@ for (roinum in seq_along(config$ROIVolume)) {
   })
   
   if (!is.null(consensusLearner)) {
+    rois <- sapply(mvpa_res$resultSet$resultList, attr, "ROINUM")
     consResult <- consensusWeights(mvpa_res$resultSet, consensusLearner$method)
-    consPerf <- c(ROINUM="ROI_CONSENSUS", t(performance(consResult, dataset$testSplits, config$output_class_metrics))[1,])   
+    consPerf <- performance(consResult$result, dataset$testSplits, config$output_class_metrics)
+    consPerf <- as.data.frame(t(consPerf))
     write.table(format(consPerf,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/consensus_performance.txt")), row.names=FALSE, quote=FALSE)
-    consWeights <- data.frame(ROINUM=mvpa_res$performance$ROINUM, weights=consResult$finalWeights)
+    consWeights <- data.frame(ROINUM=rois, weights=consResult$weights)
     write.table(format(consWeights,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/consensus_weights.txt")), row.names=FALSE, quote=FALSE)
   }
 
