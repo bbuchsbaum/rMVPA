@@ -23,6 +23,32 @@ test_that("mvpa_regional with 5 ROIS runs without error", {
   
 })
 
+test_that("mvpa_regional with 5 ROIS runs and sparse_sda without error", {
+  
+  model <- loadModel("sparse_sda")
+  dataset <- gen_dataset(c(10,10,2), 100, 3)
+  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  dataset$model = model
+  dataset$tuneGrid <- expand.grid(frac=c(.2,.5,.8), lambda=c(.01, .2, .8))
+  regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
+  
+  res <- mvpa_regional(dataset, regionMask, crossVal)
+  
+})
+
+test_that("mvpa_regional with 5 ROIS runs and clusterSVM without error", {
+  
+  model <- loadModel("clusterSVM")
+  dataset <- gen_dataset(c(10,10,2), 100, 3)
+  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  dataset$model = model
+  dataset$tuneGrid <- expand.grid(K=c(2,3,4), lambda=c(.001, .01, .2, .8), cost=1)
+  regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
+  
+  res <- mvpa_regional(dataset, regionMask, crossVal)
+  
+})
+
 test_that("mvpa_regional with 5 ROIS and consensus learning runs without error", {
   
   dataset <- gen_dataset(c(10,10,2), 100, 3)
