@@ -119,6 +119,13 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
     bvar <- x$blockVar[trainInd]
     
     wts <- learner(sres, ...)
+    
+    
+    if (all(wts==0)) {
+      warning("consensus weights are all zero, assigning equals weight to each classifier")
+      wts <- rep(1, length(wts))/length(wts)
+    }
+    
     probset <- lapply(x$resultList, function(x) x$probs[heldout,])
     wtprob <- Reduce("+", lapply(1:length(probset), function(i) probset[[i]] * wts[i]))
     list(prob=wtprob, weights=wts, testInd=heldout)
@@ -276,7 +283,7 @@ metaCombine <- function(dataset, resultList, fold, pruneFrac=1, metaLearner="spl
   foldIterator <- MatrixFoldIterator(X=predmat, Y=Ytrain, blockVar=dataset$blockVar[dataset$blockVar != fold$index])
   
   tuneControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets(), indexOut=foldIterator$getTestSets()) 
-  modelFit <- trainModel(loadModel(metaLearner), predmat, Ytrain,  NULL, NULL, tuneGrid=tuneGrid, fast=FALSE, tuneControl)
+  modelFit <- trainModel(loadModel(metaLearner), predmat, Ytrain,  NULL, NULL, tuneGrid=tuneGrid, tuneControl)
   
   
   ## need a MetaPredictor class
@@ -329,7 +336,7 @@ innerIteration <- function(dataset, vox, trainInd, testInd, model, tuneGrid, aut
   foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, blockVar, balance=autobalance, bootstrap=bootstrap)
   
   ## do we need to compute final pedictor?
-  res <- try(crossval_internal(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=TRUE, featureSelector=NULL))
+  res <- try(crossval_internal(foldIterator, model, tuneGrid, returnPredictor=TRUE, featureSelector=NULL))
   
   structure(classificationResult(Ytrain, res$class, res$probs, res$predictor),
                      vox=vox)
@@ -393,7 +400,6 @@ mergeEnsembles <- function(ensembleSet, testOrder, returnPredictor=FALSE) {
 }                 
 
 mvpa_roi_ensemble <- function(dataset, regionMask, 
-                              ncores=1, 
                               pruneFrac=.5, 
                               combiner="greedyAUC", 
                               bootstrapSamples=TRUE,
@@ -405,8 +411,8 @@ mvpa_roi_ensemble <- function(dataset, regionMask,
     stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
   }
   
-  cl <- makeCluster(ncores, outfile="",useXDR=FALSE, type="FORK")
-  registerDoParallel(cl)
+  #cl <- makeCluster(ncores, outfile="",useXDR=FALSE, type="FORK")
+  #registerDoParallel(cl)
   
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   regionSet <- sort(as.integer(unique(regionMask[regionMask > 0])))
@@ -482,7 +488,7 @@ combineResults <- function(dataset, resultList, fold, pruneFrac, combiner, ...) 
 #' @import parallel
 #' @importFrom assertthat assert_that
 #' @export
-mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, radius=12, ncores=1, pruneFrac=.15, 
+mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, radius=12, pruneFrac=.15, 
                                       combiner=c("greedy", "glmnet", "naive")[1], 
                                       bootstrapSamples=TRUE, autobalance=autobalance, 
                                       searchMethod=c("replacement", "exhaustive"), 

@@ -94,12 +94,8 @@ for (lib in dataset$model$library) {
 cl <- makeCluster(config$pthreads, outfile="",useXDR=FALSE, type="FORK")
 registerDoParallel(cl)
 
-
-searchres <- mvpa_searchlight(dataset, config$radius,  config$type, config$niter, 
-                              autobalance=config$autobalance, 
-                              bootstrap=FALSE, featureParcellation=NULL, 
-                              classMetrics=config$output_class_metrics,
-                              customPerformance=config$customPerformance)
+crossVal <- BlockedCrossValidation(dataset$blockVar, balance=config$autobalance)
+searchres <- mvpa_searchlight(dataset, crossVal, config$radius,  method=config$type, niter=config$niter, classMetrics=config$output_class_metrics)
 
 config$output <- makeOutputDir(config$output)
 
