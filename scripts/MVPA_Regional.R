@@ -8,7 +8,7 @@
 .suppress(library(futile.logger))
 .suppress(library(io))
 .suppress(library(caret))
-
+.suppress(library(doParallel))
 ## add "nestingDimension"
 ## that means features are nested in  a single 3D block
 ## series(x, ind) # returns unnested matrix.
@@ -121,12 +121,20 @@ if (!is.null(config$roi_grouping)) {
 
 
 
+
+config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
+
 parcellationVolume <- if (!is.null(config$parcellation)) {
   loadVolume(config$parcellation)
 }
 
+if (!is.null(parcellationVolume)) {
+  if (!all(dim(parcellationVolume) == dim(config$maskVolume))) {
+    flog.error("dimensions of parcellation volume must equal dimensions of mask volume")
+    stop() 
+  }
+}
 
-config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
 
 config <- initializeData(config)
 
@@ -168,7 +176,7 @@ flog.info("consensus learner: ", consensusLearner, capture=TRUE)
 
 
 dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, 
-                       config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
+                       config$testLabels, modelName=config$model, parcellation=parcellationVolume, tuneGrid=config$tune_grid,
                        tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits, 
                        trainDesign=config$train_design,
                        testDesign=config$test_design)
@@ -179,6 +187,11 @@ for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
     configParams[[varname]] <- Reduce(paste, deparse(configParams[[varname]]))
   }
 }
+
+
+cl <- makeCluster(config$pthreads, outfile="",useXDR=FALSE, type="FORK")
+registerDoParallel(cl)
+
 
 for (roinum in seq_along(config$ROIVolume)) {
   
@@ -201,21 +214,11 @@ for (roinum in seq_along(config$ROIVolume)) {
   } 
   
   roivol <- config$ROIVolume[[roinum]]
+ 
+  ## need to handle bootstrap reps
+  crossVal <- BlockedCrossValidation(dataset$blockVar, balance=config$autobalance)
   
-  
-  mvpa_res <- mvpa_regional(dataset, roivol, config$pthreads, config$savePredictors, 
-                            autobalance=config$autobalance, 
-                            bootstrapReplications=config$bootstrap_replications, 
-                            featureSelector=featureSelector, 
-                            featureParcellation=parcellationVolume, 
-                            classMetrics=config$output_class_metrics,
-                            ensemblePredictor=config$ensemble_predictor)
-  
-  
-  lapply(1:length(mvpa_res$outVols), function(i) {
-    out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")
-    writeVolume(mvpa_res$outVols[[i]], out)  
-  })
+  mvpa_res <- mvpa_regional(dataset, roivol, crossVal, config$savePredictors, featureSelector=featureSelector, classMetrics=config$output_class_metrics)
   
   if (!is.null(consensusLearner)) {
     rois <- sapply(mvpa_res$resultSet$resultList, attr, "ROINUM")
@@ -229,6 +232,12 @@ for (roinum in seq_along(config$ROIVolume)) {
 
   write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
   saveResults(mvpa_res$extendedResults, outdir)
+  
+  lapply(1:length(mvpa_res$outVols), function(i) {
+    out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")
+    writeVolume(mvpa_res$outVols[[i]], out)  
+  })
+  
 
   write.table(config$train_subset, paste0(outdir, "/train_table.txt"), row.names=FALSE, quote=FALSE)
 

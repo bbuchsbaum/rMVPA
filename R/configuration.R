@@ -1,36 +1,4 @@
 
-# BootstrapSampler <- R6Class("BootstrapSampler",
-#                             public=list(
-#                               dataset=NA,
-#               
-#                               initialize= function(dataset) {
-#                                 dataset=daatset
-#                               },
-#                               
-#                             )
-#                               
-                              
-# MVPASearchlight <- R6Class("MVPASearchlight",
-#                         public = list(
-#                           dataset=NA,
-#                           radius=8,
-#                           method="standard",
-#                           niter=16,
-#                           
-#                           initialize = function(dataset, model) {
-#                             if (!missing(name)) self$name <- name
-#                             if (!missing(hair)) self$hair <- hair
-#                             self$greet()
-#                           },
-#                           set_hair = function(val) {
-#                             self$hair <- val
-#                           },
-#                           greet = function() {
-#                             cat(paste0("Hello, my name is ", self$name, ".\n"))
-#                           }
-#                         )
-# )
-
 
 MVPAConfiguration <- function(modelName="corclass", 
                               tuneGrid=NULL, 

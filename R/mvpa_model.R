@@ -64,7 +64,7 @@ SimilarityModel <- function(type=c("pearson", "spearman", "kendall")) {
 #' @param tuneGrid
 #' @param tuneGrid
 #' @export
-MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corclass", tuneGrid=NULL, tuneLength=1,testSplitVar=NULL,
+MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corclass", parcellation=NULL, tuneGrid=NULL, tuneLength=1, testSplitVar=NULL,
                         testSplits=NULL, trainDesign=NULL, testDesign=NULL) {
   
   model <- loadModel(modelName)
@@ -80,6 +80,7 @@ MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="
     testVec=testVec,
     testY=testY,
     model=model,
+    parcellation=parcellation,
     tuneGrid=tuneGrid,
     tuneLength=tuneLength,
     testSets=testSets,
@@ -537,8 +538,8 @@ fitFinalModel <- function(Xtrain, Ytrain,  method, Xtest=NULL, Ytest=NULL, tuneG
 }
 
 #' @export
-trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE, tuneControl=.noneControl, featureSelector=NULL, parcels=NULL) {
-  ret <- if (nrow(tuneGrid) == 1 && fast) {
+trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl=.noneControl, featureSelector=NULL, parcels=NULL) {
+  ret <- if (nrow(tuneGrid) == 1) {
     RawModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector, parcels)        
   } else {     
     CaretModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector, parcels)
@@ -547,81 +548,94 @@ trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, fast=TRUE,
 
 #' @export
 #' @import foreach
-crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
+crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, featureSelector=NULL, parcels=NULL) {
   ## TODO bootstrap replications doesn't work because model is trained on full set
   ## This should be handled upstream so that "foldIterator" retruns a bootstrapped sampled version of X.
   results <- if (nrow(tuneGrid) == 1) {
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast, .noneControl, featureSelector, parcels)
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, .noneControl, featureSelector, parcels)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))
   } else {
-    index <- invertFolds(foldIterator$getTestSets(), 1:length(foldIterator$blockVar)) 
-    ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, fast=FALSE, ctrl, featureSelector, parcels)
+    
+    ### this is a bit dicey. Requires existence of "blockVar", fails for 2-fold cross-validation
+    ctrl <- if (foldIterator$nfolds == 2) {
+      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")
+    } else {
+      index <- invertFolds(foldIterator$getTestSets(), 1:length(foldIterator$blockVar)) 
+      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
+    }
+      
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, ctrl, featureSelector, parcels)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))              
   } 
   
-  if (returnPredictor) {
-    list(class=results$perf$class, probs=results$perf$probs, predictor=results$predictor, featureMask=results$predictor$featureMask, parcels=parcels)
-  } else {
-    list(class=results$perf$class, probs=results$perf$probs, predictor=NULL, featureMask=results$predictor$featureMask, parcels=parcels)
-  }
+  result <- list(
+    prediction = results$perf,
+    predictor  =  results$predictor,
+    featureMask = result$predictor$featureMask
+  )
+  
+  result
+
 }
 
 #' @export
 #' @import foreach
-crossval_internal <- function(foldIterator, model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
+crossval_internal <- function(foldIterator, model, tuneGrid, featureSelector=NULL, parcels=NULL) {
  
+  ### loop over folds
   resultList <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
-    if (nrow(tuneGrid) == 1 && fast) {
-      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast, .noneControl, featureSelector, parcels)
-      list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask, parcels=parcels)        
-    } else {      
-      if (nrow(tuneGrid) == 1) {
-        fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=.noneControl, featureSelector)
-        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask, parcels=parcels)    
+    if (nrow(tuneGrid) == 1) {
+      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid,  .noneControl, featureSelector, parcels)
+      list(result=evaluateModel(fit), fit = asPredictor(fit), featureMask=fit$featureMask, parcels=parcels, testIndices=fold$testIndex)        
+    } else {    
+      ctrl <- if (foldIterator$nfolds == 2) {
+        caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")
       } else {
         index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], 1:nrow(fold$Xtrain)) 
-        ctrl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
-        fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, fast=FALSE, tuneControl=ctrl,featureSelector, parcels)
-        list(result=evaluateModel(fit), fit = if (returnPredictor) asPredictor(fit) else NULL, featureMask=fit$featureMask, parcels=parcels)    
-      } 
-    }
+        caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
+      }
+     
+      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, tuneControl=ctrl,featureSelector, parcels)
+      list(result=evaluateModel(fit), fit = asPredictor(fit), featureMask=fit$featureMask, parcels=parcels,testIndices=fold$testIndex)    
+    } 
   }
   
-  results <- lapply(resultList, "[[", "result")
+  result <- list(
+    prediction = lapply(resultList, "[[", "result"),
+    predictor  =  lapply(resultList, "[[", "fit"),
+    testIndices = lapply(resultList, "[[", "testIndices"),
+    featureMask = lapply(resultList, "[[", "featureMask")
+  )
   
+  result
+  
+  ## results <- lapply(resultList, "[[", "result")
   ## reorder predictions to match order of input features/labels
-  ord <- foldIterator$getTestOrder()
-  probMat <- do.call(rbind, lapply(results, "[[", "probs"))[ord,]
-  predClass <- unlist(lapply(results, "[[", "class"))[ord]
+  #ord <- foldIterator$getTestOrder()
+  #probMat <- do.call(rbind, lapply(results, "[[", "probs"))[ord,]
+  #predClass <- unlist(lapply(results, "[[", "class"))[ord]
   
-  if (returnPredictor) {
-    ctrl <- if (nrow(tuneGrid) == 1) {
-      .noneControl
-    } else {
-      caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets(), returnData=FALSE, returnResamp="none", allowParallel=FALSE)
-    }    
+  #if (returnPredictor) {
+  #  ctrl <- if (nrow(tuneGrid) == 1) {
+  #    .noneControl
+  #  } else {
+  #    caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets(), returnData=FALSE, returnResamp="none", allowParallel=FALSE)
+  #  }    
     
-    #if (foldIterator$balance) {
-      ## resample
-    #}
-    
-    #wfit <- WeightedPredictor(lapply(resultList, "[[", "fit"))
-    
-    fit <- if (ensemblePredictor) {
-      WeightedPredictor(lapply(resultList, "[[", "fit"))
-    } else {
-      asPredictor(trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, fast=fast, tuneControl=ctrl, featureSelector, parcels))
-    }
-    
-    list(class=predClass, probs=probMat, predictor=fit, featureMask=fit$featureMask, parcels=parcels)
-    #list(class=predClass, probs=probMat, predictor=wfit)
-  } else {
-    fmat <- do.call(cbind, lapply(resultList, "[[", "featureMask"))
-    list(class=predClass, probs=probMat, predictor=NULL, featureMask=rowMeans(fmat), parcels=parcels)
-  }
+  #  fit <- if (ensemblePredictor) {
+  #    WeightedPredictor(lapply(resultList, "[[", "fit"))
+  #  } else {
+  #    asPredictor(trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, tuneControl=ctrl, featureSelector, parcels))
+  #  }
+  #  
+  #  list(class=predClass, probs=probMat, predictor=fit, featureMask=fit$featureMask, parcels=parcels)
+  #  list(class=predClass, probs=probMat, predictor=wfit)
+  #} else {
+  #  fmat <- do.call(cbind, lapply(resultList, "[[", "featureMask"))
+  #  list(class=predClass, probs=probMat, predictor=NULL, featureMask=rowMeans(fmat), parcels=parcels)
+  #}
 }
   
 

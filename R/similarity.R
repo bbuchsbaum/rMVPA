@@ -29,7 +29,10 @@ patSimHelper <- memoise::memoise(function(runs, labels, cdim) {
 
 #' @export
 #' @import mefa4
-patternSimilarity <- function(dataset, vox, simFun=cor, parcels=NULL) {
+patternSimilarity <- function(dataset, vox, simFun=cor) {
+  
+  ## TODO deals with parcels.
+  
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
   

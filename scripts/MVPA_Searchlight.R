@@ -91,9 +91,12 @@ for (lib in dataset$model$library) {
 }
 
 
+cl <- makeCluster(config$pthreads, outfile="",useXDR=FALSE, type="FORK")
+registerDoParallel(cl)
+
 
 searchres <- mvpa_searchlight(dataset, config$radius,  config$type, config$niter, 
-                              config$pthreads, autobalance=config$autobalance, 
+                              autobalance=config$autobalance, 
                               bootstrap=FALSE, featureParcellation=NULL, 
                               classMetrics=config$output_class_metrics,
                               customPerformance=config$customPerformance)

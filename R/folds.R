@@ -1,3 +1,41 @@
+
+#' @export
+BlockedCrossValidation <- function(blockVar, balance=FALSE, bootstrap=FALSE) {
+  ret <- list(blockVar=blockVar, balance=balance, bootstrap=bootstrap, nfolds=length(unique(blockVar)))
+  class(ret) <- c("BlockedCrossValidation", "CrossValidation", "list")
+  ret
+}
+
+
+#' @export
+KFoldCrossValidation <- function(len, nfolds=10, balance=FALSE, bootstrap=FALSE) {
+  blockVar <- sample(rep(seq(1, nfolds), length.out=len))
+  ret <- list(blockVar=blockVar, balance=balance, bootstrap=bootstrap, nfolds=nfolds)
+  class(ret) <- c("KFoldCrossValidation", "CrossValidation", "list")
+  ret
+}
+
+#' @export
+foldIter <- function(obj, Y) {
+  UseMethod("foldIter")
+}
+
+
+#' @export
+matrixIter <- function(obj, Y, X) {
+  UseMethod("matrixIter")
+}
+
+#' @export
+foldIter.CrossValidation <- function(obj, Y) {
+  FoldIterator(Y, obj$blockVar, balance=obj$balance, bootstrap=obj$bootstrap)
+}
+
+#' @export
+matrixIter.CrossValidation <- function(obj, Y, X) {
+  MatrixFoldIterator(X, Y,obj$blockVar, balance=obj$balance, bootstrap=obj$bootstrap )
+}
+
 #' @export
 invertFolds <- function(foldSplit, allInd) { 
   index <-  relist(rank(unlist(foldSplit)), foldSplit)
@@ -16,13 +54,8 @@ invertFolds <- function(foldSplit, allInd) {
 #' @param bootstrapMin 
 #' @importFrom assertthat assert_that
 #' @export
-FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
-  
-  if (is.null(blockVar)) {
-    blockVar <- sample(1:length(Y))
-    blockVar <- createFolds(Y, k=nfolds, list=FALSE)
-  }
-  
+FoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
+
   assert_that(length(blockVar) == length(Y))
   
   index <- 0
@@ -54,8 +87,8 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
     index <<- 0
   }
   
-  
   nextEl <- function() {
+    
     if (index < length(trainSets)) { 
       index <<- index + 1    
       trainIndex <- trainSets[[index]]
@@ -69,6 +102,7 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
           ind <- sort(sample(trainIndex, replace=TRUE))
           stab <- table(Y[ind])
           minClass <- min(stab)
+          
           if (length(stab) == length(levels(Y)) && minClass >= bootstrapMin) {
             trainIndex <- ind
             break
@@ -92,7 +126,8 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
   }
   
   obj <- list(nextElem=nextEl, blockVar=blockVar, index=.getIndex, getTrainSets=.getTrainSets, 
-              getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset, balance=balance, bootstrap=bootstrap)
+              getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset, balance=balance, bootstrap=bootstrap, nfolds=length(testSets))
+  
   class(obj) <- c("FoldIterator", 'abstractiter', 'iter')
   obj
   
@@ -108,14 +143,14 @@ FoldIterator <- function(Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=F
 #' @param bootstrap use bootstrap resampling of the training set
 #' @param bootstrapMin the minumum number of clases per bootstrap iteration.
 #' @export
-MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
+MatrixFoldIterator <- function(X, Y, blockVar, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
   
   if (nrow(X) != length(Y)) {
     stop("X matrix must have same number of rows as Y variable")
   }
   
   
-  foldIter = FoldIterator(Y, blockVar, nfolds=nfolds, balance=balance, bootstrap=bootstrap, bootstrapMin)
+  foldIter = FoldIterator(Y, blockVar, balance=balance, bootstrap=bootstrap, bootstrapMin)
 
   nextEl <- function() {
     ret <- foldIter$nextElem()
@@ -133,7 +168,8 @@ MatrixFoldIterator <- function(X, Y, blockVar=NULL, nfolds=10, balance=FALSE, bo
 
   obj <- list(X=X, Y=Y, blockVar=blockVar, nextElem=nextEl, index=foldIter$index, 
               getTrainSets=foldIter$getTrainSets, getTestSets=foldIter$getTestSets, 
-              getTestOrder=foldIter$getTestOrder, reset=foldIter$reset, balance=foldIter$balance, bootstrap=foldIter$bootstrap)
+              getTestOrder=foldIter$getTestOrder, reset=foldIter$reset, balance=foldIter$balance, bootstrap=foldIter$bootstrap, nfolds=foldIter$nfolds)
+  
   class(obj) <- c("MatrixFoldIterator", 'abstractiter', 'iter')
   obj
   

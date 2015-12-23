@@ -8,7 +8,7 @@ Maintainer: Bradley R. Buchsbaum <brad.buchsbaum@gmail.com>
 Description: An R package to facilitate multivoxel pattern analysis of
     neuroimaging data in R.
 License: GPL (>= 2)
-Imports:
+Imports: 
     caret,
     neuroim,
     randomForest,
@@ -27,8 +27,10 @@ Imports:
     mefa4,
     optparse,
     Metrics,
-    memoise
-Collate:
+    memoise,
+    e1071,
+    RUnit
+Collate: 
     'classifiers.R'
     'cleanup.R'
     'cluster.R'
@@ -38,6 +40,7 @@ Collate:
     'ensemble.R'
     'featureSelection.R'
     'folds.R'
+    'lss_sim.R'
     'mvpa_analysis.R'
     'optim.R'
     'performance.R'
@@ -45,3 +48,4 @@ Collate:
     'similarity.R'
     'utils.R'
 RoxygenNote: 5.0.1
+Suggests: testthat

@@ -32,64 +32,84 @@ runAnalysis <- function(object, dataset,...) {
 }
 
 #' @export
-runAnalysis.ClassificationModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
-  mvpa_crossval(dataset, vox, returnPredictor, autobalance, bootstrap, featureSelector, parcels, ensemblePredictor)
+runAnalysis.ClassificationModel <- function(object, dataset, vox, crossVal, featureSelector=NULL) {
+  result <- mvpa_crossval(dataset, vox, crossVal, featureSelector)
+  
+  observed <- if (is.null(dataset$testVec)) {
+    dataset$Y
+  } else {
+    dataset$testY
+  }
+  
+  prob <- matrix(0, length(observed), length(levels(dataset$Y)))
+  colnames(prob) <- levels(dataset$Y)
+  
+  for (i in seq_along(result$prediction)) {
+    p <- as.matrix(result$prediction[[i]]$probs)
+    testInd <- result$testIndices[[i]]
+    prob[testInd,] <- prob[testInd,] + p
+  }
+  
+  prob <- t(apply(prob, 1, function(vals) vals/sum(vals)))
+  maxid <- apply(prob, 1, which.max)
+  pclass <- levels(dataset$Y)[maxid]
+  
+  pred <- if (length(result$predictor) > 1) {
+    WeightedPredictor(result$predictor)
+  } else {
+    result$predictor
+  }
+  
+  classificationResult(observed, pclass, prob, pred)
 }
 
 
 #' @export
-runAnalysis.SimilarityModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
-  patternSimilarity(dataset, vox, object$simFun, parcels)
+runAnalysis.SimilarityModel <- function(object, dataset, vox, featureSelector=NULL) {
+  patternSimilarity(dataset, vox, object$simFun)
 }
 
+genTuneGrid <- function(dataset, X) {
+  if (!is.null(dataset$tuneGrid)) {
+    dataset$tuneGrid 
+  } else {
+    dataset$model$grid(X, dataset$Y, dataset$tuneLength)
+  }
+}
 
-#' @export 
-mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, featureSelector=NULL, parcels=NULL, ensemblePredictor=FALSE) {
+#' @export
+mvpa_crossval <- function(dataset, vox, crossVal, featureSelector = NULL) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
-  
+    
   X <- X[,valid.idx]
-  vox <- vox[valid.idx,]
-  
-  if (!is.null(parcels)) {
-    parcels <- parcels[valid.idx]
-  }
-
+    
   if (ncol(X) == 0) {
     stop("no valid columns")
-  } else {
-    tuneGrid <- if (!is.null(dataset$tuneGrid)) {
-      dataset$tuneGrid 
-    } else {
-      dataset$model$grid(X, dataset$Y, dataset$tuneLength)
-    }
-  
-    result <- if (is.null(dataset$testVec)) {
-      foldIterator <- MatrixFoldIterator(X, dataset$Y, dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
-      cvres <- crossval_internal(foldIterator, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor, 
-                                 featureSelector=featureSelector, parcels=parcels, ensemblePredictor=ensemblePredictor)
-      classificationResult(dataset$Y, as.factor(cvres$class), cvres$probs,cvres$predictor)
-    } else {
-      
-      foldIterator <- if (bootstrap) {
-        ## temporary hack
-        bootIndices <- sort(sample(1:nrow(X), nrow(X), replace=TRUE))
-        MatrixFoldIterator(X[bootIndices,], dataset$Y[bootIndices], dataset$blockVar[bootIndices])
-      } else {
-        MatrixFoldIterator(X, dataset$Y,dataset$blockVar, bootstrap=false)
-      }
-      
-      Xtest <- series(dataset$testVec, vox) 
-      cvres <- crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, fast=TRUE, ncores=1, returnPredictor=returnPredictor,
-                                 featureSelector=featureSelector, parcels=parcels,ensemblePredictor=ensemblePredictor)
-      classificationResult(dataset$testY, as.factor(cvres$class), cvres$probs, cvres$predictor)
-    }
-    
-    result
   }
-  
+    
+  vox <- vox[valid.idx,]
+    
+  parcels <- if (!is.null(dataset$parcellation)) {
+    dataset$parcellation[vox]
+  }
+    
+    
+  tuneGrid <- genTuneGrid(dataset, X)
+  foldIterator <- matrixIter(crossVal, dataset$Y, X)
+    
+  result <- if (is.null(dataset$testVec)) {
+      ### train and test on one set.
+    crossval_internal(foldIterator, dataset$model, tuneGrid, featureSelector = featureSelector, parcels =parcels)
+  } else {
+    ### train on one set, test on the other.
+    Xtest <- series(dataset$testVec, vox)
+    crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, featureSelector = featureSelector, parcels =parcels)
+  }
+    
+  result
 }
-  
+
   
 .convertResultsToVolumeList <- function(res, mask) {
   invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
@@ -106,12 +126,13 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
 }
 
 
-.doStandard <- function(dataset, radius, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, parcels=NULL, classMetrics=FALSE) {
+.doStandard <- function(dataset, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %do% {   
     if (nrow(vox) > 1) {
-      computePerformance(runAnalysis(dataset$model, dataset, vox, returnPredictor, autobalance, bootstrap, parcels), vox, dataset$testSplits, classMetrics)
+      print(nrow(vox))
+      computePerformance(runAnalysis(dataset$model, dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)
     }
   }
   
@@ -119,14 +140,14 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
 }
   
 
-.doRandomized <- function(dataset, radius, returnPredictor=FALSE, autobalance=FALSE, bootstrap=FALSE, parcels=NULL, classMetrics=FALSE) {
+.doRandomized <- function(dataset, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
   ## tight inner loop should probably avoid "foreach" as it has a lot of overhead, but c'est la vie for now.
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
-      computePerformance(runAnalysis(dataset$model, dataset, vox, returnPredictor, autobalance, bootstrap, parcels), vox, dataset$testSplits, classMetrics)
+      computePerformance(runAnalysis(dataset$model, dataset, vox,crossVal), vox, dataset$testSplits, classMetrics)
     }
   }
   
@@ -135,24 +156,12 @@ mvpa_crossval <- function(dataset, vox, returnPredictor=FALSE, autobalance=FALSE
 }
 
 
-
-
-learners = list(
-  #pls=data.frame(ncomp=1:3),
-  #sda=data.frame(lambda=c(.1, .5, .9), diagonal=c(FALSE,FALSE, FALSE)),
-  #corsim=expand.grid(method=c("pearson", "kendall"), robust=c(TRUE, FALSE)),
-  #corsim=expand.grid(method=c("pearson", "kendall"), robust=c(TRUE, FALSE)),
-  #spls=expand.grid(K=2:4, eta=c(.1,.5,.9), kappa=.5),
-  #ada=expand.grid(iter=200, maxdepth=1:2,nu=.1))
-  #mlpWeightDecay=expand.grid(size = 4, decay=.001),
-  xgboost=expand.grid(nrounds=1:3, max.depth=c(1,2,3), eta=c(.001, .1,.8))
-)
+## TODO mvpa_hiearchical ??
 
 
 #' mvpa_regional
 #' @param dataset a \code{MVPADataset} instance.
 #' @param regionMask a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
-#' @param ncores the number of cores for parallel processign (default is 1)
 #' @param savePredictors whether to return prediction model in result (default is \code{FALSE} to save memory)
 #' @param autobalance whether to subsample training set so that classes are balanced (default is \code{FALSE})
 #' @param bootstrapReplications the number of bootstrapped samples per each cross-validation fold
@@ -164,21 +173,13 @@ learners = list(
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, autobalance=FALSE, bootstrapReplications=0, 
-                          featureSelector=NULL, featureParcellation=NULL, classMetrics=FALSE, ensemblePredictor=FALSE) {  
+mvpa_regional <- function(dataset, regionMask, crossVal=KFoldCrossValidation(length(dataset$Y)), savePredictors=FALSE, featureSelector=NULL, classMetrics=FALSE) {  
   
-  if (length(dataset$blockVar) != length(dataset$Y)) {
-    stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
-  }
-  
-  if (!is.null(featureParcellation)) {
-    if (! all(dim(featureParcellation) == dim(regionMask))) {
+  if (!is.null(dataset$parcellation)) {
+    if (! all(dim(dataset$parcellation) == dim(regionMask))) {
       stop("dimension of 'featureParcellation' must equals dimensions of 'regionMask'")
     }
   }
-  
-  cl <- makeCluster(ncores, outfile="",useXDR=FALSE, type="FORK")
-  registerDoParallel(cl)
   
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   regionSet <- sort(as.integer(unique(regionMask[regionMask > 0])))
@@ -186,27 +187,12 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
   res <- foreach::foreach(roinum = regionSet, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
     idx <- which(regionMask == roinum)
     
-    parcels <- if (!is.null(featureParcellation)) {
-      featureParcellation[idx]
-    }
-    
     if (length(idx) > 1) {
       ## what if length is less than 1?
       vox <- indexToGrid(regionMask, idx)
-      result <- if (bootstrapReplications > 0) {
-        bootres <- lapply(seq(1, bootstrapReplications), function(brep) {
-          flog.info("bootstrap replication %s ", brep)
-          runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap=TRUE, featureSelector, parcels, ensemblePredictor)
-        })
-        
-        cprob <- Reduce("+", lapply(bootres, function(res) res$prob))/length(bootres)
-        preds <- colnames(cprob)[apply(cprob, 1, which.max)]
-        classificationResult(bootres[[1]]$observed, preds, cprob, if (savePredictors) WeightedPredictor(lapply(bootres, "[[", "predictor")))
-        
-      } else {
-        runAnalysis(dataset$model, dataset, vox, savePredictors, autobalance, bootstrap=FALSE, featureSelector, parcels, ensemblePredictor)
-      }
       
+      result <- runAnalysis(dataset$model, dataset, vox, crossVal, featureSelector)
+    
       attr(result, "ROINUM") <- roinum
       attr(result, "vox") <- vox
       perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits, classMetrics))[1,])     
@@ -248,7 +234,7 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
 
   extendedResults <- combineResults(dataset$model, results)
   names(outVols) <- colnames(perfMat)[2:ncol(perfMat)]
-  list(outVols = outVols, performance=perfMat, resultSet=resultSet, extendedResults=extendedResults)
+  list(outVols = outVols, performance=perfMat, resultSet=resultSet, extendedResults=extendedResults, invalid=regionSet[invalid])
 
 }
 
@@ -264,7 +250,6 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
 ##        Must be same length as \code{Y}
 #' @param radius the searchlight radus in mm
 ## @param modelName the name of the classifcation model to be used
-#' @param ncores the number of cores for parallel processing (default is 1)
 #' @param method the type of searchlight (randomized, or standard)
 #' @param niter the number of searchlight iterations for 'randomized' method
 ## @param tuneGrid parameter search grid for optimization of classifier tuning parameters
@@ -278,31 +263,24 @@ mvpa_regional <- function(dataset, regionMask, ncores=1, savePredictors=FALSE, a
 #' @import parallel
 #' @import futile.logger
 #' @export
-mvpa_searchlight <- function(dataset, radius=8, method=c("randomized", "standard"), niter=4, ncores=2, autobalance=FALSE, bootstrap=FALSE, featureParcellation=NULL, classMetrics=FALSE) {
+mvpa_searchlight <- function(dataset, crossVal, radius=8, method=c("randomized", "standard"),  niter=4, classMetrics=FALSE) {
+  stopifnot(niter > 1)
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }
   
-  if (length(dataset$blockVar) != length(dataset$Y)) {
-    stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(dataset$Y), "!=", length(dataset$blockVar)))
-  }
-  
- 
-  #cl <- makeCluster(ncores)
-  #registerDoParallel(cl)
   
   method <- match.arg(method)
-  
   flog.info("classification model is: %s", dataset$model$label)
   
   
   res <- if (method == "standard") {
-    .doStandard(dataset, radius, returnPredictor=FALSE, autobalance=autobalance, bootstrap=bootstrap, parcels = featureParcellation, classMetrics=classMetrics)    
+    .doStandard(dataset, radius, crossVal, classMetrics=classMetrics)    
   } else {
     res <- parallel::mclapply(1:niter, function(i) {
       flog.info("Running randomized searchlight iteration %s", i)   
-      do.call(cbind, .doRandomized(dataset, radius, returnPredictor=FALSE, autobalance=autobalance, bootstrap=bootstrap, parcels = featureParcellation, classMetrics=classMetrics) )
-    }, mc.cores=ncores)
+      do.call(cbind, .doRandomized(dataset, radius, crossVal, classMetrics=classMetrics) )
+    })
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {
       X <- do.call(cbind, lapply(res, function(M) M[,i]))

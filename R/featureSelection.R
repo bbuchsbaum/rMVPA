@@ -82,7 +82,6 @@ selectFeatures.FTest <- function(obj, X, Y) {
   
   keep.idx <- if (obj$cutoff_type == "top_k" || obj$cutoff_type == "topk") {
     k <- min(ncol(X), obj$cutoff_value)
-    message("k =", k)
     order(pvals)[1:k]
   } else if (obj$cutoff_type == "top_p" || obj$cutoff_type == "topp") {
     if (obj$cutoff_value <= 0 || obj$cutoff_value > 1) {

@@ -86,8 +86,6 @@ combinedACC <- function(Pred, Obs) {
   names(aucres) <- paste0("AUC_", colnames(probs))
   
   
-  
-  
   if (classMetrics) {
     c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres), aucres)
   } else {
