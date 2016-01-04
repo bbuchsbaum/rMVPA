@@ -28,6 +28,12 @@ selectFeatures <- function(obj, X, Y) {
 #' @import sda
 selectFeatures.catscore <- function(obj, X, Y) {
   message("selecting features via catscore")
+  
+  if (is.numeric(Y)) {
+    medY <- median(Y)
+    Y <- factor(ifelse(Y > medY, "high", "low"))
+  }
+  
   sda.1 <- sda.ranking(X, Y)
   
   keep.idx <- if (obj$cutoff_type == "top_k") {
@@ -74,6 +80,11 @@ selectFeatures.FTest <- function(obj, X, Y) {
   
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   
+  if (is.numeric(Y)) {
+    medY <- median(Y)
+    Y <- factor(ifelse(Y > medY, "high", "low"))
+  }
+  
   ## TODO speed this up... with matrix operations
   pvals <- unlist(lapply(1:ncol(X), function(i) {
     oneway.test(X[,i] ~ Y)$p.value
@@ -109,6 +120,11 @@ selectFeatures.FTest <- function(obj, X, Y) {
 #' @export
  selectFeatures.catscore_FTest <- function(obj, X, Y) {
    message("selecting features via catscore_FTest")
+   
+   if (is.numeric(Y)) {
+     medY <- median(Y)
+     Y <- factor(ifelse(Y > medY, "high", "low"))
+   }
    
    logpvals <- unlist(lapply(1:ncol(X), function(i) {
      -log(oneway.test(X[,i] ~ Y)$p.value)
