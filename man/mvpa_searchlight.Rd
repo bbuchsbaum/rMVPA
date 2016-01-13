@@ -4,9 +4,8 @@
 \alias{mvpa_searchlight}
 \title{mvpa_searchlight}
 \usage{
-mvpa_searchlight(dataset, radius = 8, method = c("randomized", "standard"),
-  niter = 4, ncores = 2, autobalance = FALSE, bootstrap = FALSE,
-  featureParcellation = NULL, classMetrics = FALSE)
+mvpa_searchlight(dataset, crossVal, radius = 8, method = c("randomized",
+  "standard"), niter = 4, classMetrics = FALSE)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}
@@ -16,8 +15,6 @@ mvpa_searchlight(dataset, radius = 8, method = c("randomized", "standard"),
 \item{method}{the type of searchlight (randomized, or standard)}
 
 \item{niter}{the number of searchlight iterations for 'randomized' method}
-
-\item{ncores}{the number of cores for parallel processing (default is 1)}
 }
 \value{
 a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)

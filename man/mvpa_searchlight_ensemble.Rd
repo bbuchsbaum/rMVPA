@@ -5,8 +5,8 @@
 \title{mvpa_searchlight_ensemble}
 \usage{
 mvpa_searchlight_ensemble(modelSet = superLearners, dataset, mask,
-  radius = 12, ncores = 1, pruneFrac = 0.15, combiner = c("greedy",
-  "glmnet", "naive")[1], bootstrapSamples = TRUE, autobalance = autobalance,
+  radius = 12, pruneFrac = 0.15, combiner = c("greedy", "glmnet",
+  "naive")[1], bootstrapSamples = TRUE, autobalance = autobalance,
   searchMethod = c("replacement", "exhaustive"), nsamples = 10,
   calibrateProbs = FALSE, returnPredictor = FALSE)
 }
@@ -17,9 +17,9 @@ mvpa_searchlight_ensemble(modelSet = superLearners, dataset, mask,
 
 \item{mask}{a \code{BrainVolume} a mask volume}
 
-\item{ncores}{the number of cores for parallel processign (default is 1)}
-
 \item{pruneFrac}{the percentage of models to retain for meta-classifier}
+
+\item{ncores}{the number of cores for parallel processign (default is 1)}
 }
 \value{
 a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)

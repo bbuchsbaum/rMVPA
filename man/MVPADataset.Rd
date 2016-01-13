@@ -5,9 +5,9 @@
 \title{create an \code{MVPA} instance}
 \usage{
 MVPADataset(trainVec, Y, mask, blockVar, testVec, testY,
-  modelName = "corclass", tuneGrid = NULL, tuneLength = 1,
-  testSplitVar = NULL, testSplits = NULL, trainDesign = NULL,
-  testDesign = NULL)
+  modelName = "corclass", parcellation = NULL, tuneGrid = NULL,
+  tuneLength = 1, testSplitVar = NULL, testSplits = NULL,
+  trainDesign = NULL, testDesign = NULL)
 }
 \description{
 create an \code{MVPA} instance

@@ -4,25 +4,22 @@
 \alias{mvpa_regional}
 \title{mvpa_regional}
 \usage{
-mvpa_regional(dataset, regionMask, ncores = 1, savePredictors = FALSE,
-  autobalance = FALSE, bootstrapReplications = 0, featureSelector = NULL,
-  featureParcellation = NULL, classMetrics = FALSE,
-  ensemblePredictor = FALSE)
+mvpa_regional(dataset, regionMask,
+  crossVal = KFoldCrossValidation(length(dataset$Y)),
+  savePredictors = FALSE, featureSelector = NULL, classMetrics = FALSE)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}
 
 \item{regionMask}{a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.}
 
-\item{ncores}{the number of cores for parallel processign (default is 1)}
-
 \item{savePredictors}{whether to return prediction model in result (default is \code{FALSE} to save memory)}
+
+\item{featureSelector}{an option \code{FeatureSelector} object that is used to subselect informative voxels in feature space.}
 
 \item{autobalance}{whether to subsample training set so that classes are balanced (default is \code{FALSE})}
 
 \item{bootstrapReplications}{the number of bootstrapped samples per each cross-validation fold}
-
-\item{featureSelector}{an option \code{FeatureSelector} object that is used to subselect informative voxels in feature space.}
 
 \item{ensemblePredictor}{whether returned predictor object averages over cross-validation blocks}
 }
