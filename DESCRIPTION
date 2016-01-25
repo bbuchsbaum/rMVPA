@@ -29,7 +29,9 @@ Imports:
     Metrics,
     memoise,
     e1071,
-    RUnit
+    RUnit,
+    R6,
+    sp
 Collate:
     'classifiers.R'
     'cleanup.R'
@@ -40,6 +42,7 @@ Collate:
     'ensemble.R'
     'featureSelection.R'
     'folds.R'
+    'models.R'
     'mvpa_analysis.R'
     'optim.R'
     'performance.R'

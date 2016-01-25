@@ -10,8 +10,6 @@
 
 
 
-
-
 createModelSet <- function(modelName, ...) {
   dots <- list(...)
   tuneGrid <- expand.grid(dots)
@@ -36,22 +34,22 @@ createEnsembleSpec <- function(...) {
 
 
 
-.setupModels <- function(learnerSet) {
-  unlist(lapply(names(learnerSet), function(mname) {
-    model <- loadModel(mname)
-    params <- learnerSet[[mname]]
-    if (is.data.frame(params)) {
-      lapply(1:nrow(params), function(i) {
-        list(name=mname, model=model, tuneGrid=params[i,,drop=FALSE])
-      }) 
-    } else {
-      mgrid <- model$grid(matrix(rnorm(100*100), 100, 100),rep(1,100), params)
-      lapply(1:nrow(mgrid), function(i) {
-        list(name=mname, model=model, tuneGrid=mgrid[i,,drop=FALSE])
-      })
-    }
-  }), recursive=FALSE)
-}
+# .setupModels <- function(learnerSet) {
+#   unlist(lapply(names(learnerSet), function(mname) {
+#     model <- loadModel(mname)
+#     params <- learnerSet[[mname]]
+#     if (is.data.frame(params)) {
+#       lapply(1:nrow(params), function(i) {
+#         list(name=mname, model=model, tuneGrid=params[i,,drop=FALSE])
+#       }) 
+#     } else {
+#       mgrid <- model$grid(matrix(rnorm(100*100), 100, 100),rep(1,100), params)
+#       lapply(1:nrow(mgrid), function(i) {
+#         list(name=mname, model=model, tuneGrid=mgrid[i,,drop=FALSE])
+#       })
+#     }
+#   }), recursive=FALSE)
+# }
 
 .computeVoxelwiseAUC <- function(mask, AUC, radius, voxlist) {
   auc <- array(0, dim(mask))
@@ -75,7 +73,7 @@ createEnsembleSpec <- function(...) {
 
 
 #' @export
-ConsensusLearner <- function(method, params=list()) {
+ConsensusLearner <- function(method="glmnet", params=list()) {
   ret <- list(
     method=method,
     params=params
@@ -374,12 +372,12 @@ ensembleIteration <- function(searchIter, dataset, fold, modelspec, autobalance=
 
 
 
-superLearners = .setupModels(list(
+#superLearners = .setupModels(list(
   #avNNet=expand.grid(size = c(2,3,4), decay=c(.01, .001, .0001), bag=FALSE),
-  pls=data.frame(ncomp=1:5),
-  sda=data.frame(lambda=c(.01, .1, .5, .9), diagonal=c(FALSE,FALSE,FALSE, FALSE))
+  #pls=data.frame(ncomp=1:5),
+  #sda=data.frame(lambda=c(.01, .1, .5, .9), diagonal=c(FALSE,FALSE,FALSE, FALSE))
   #spls=expand.grid(K=c(1:5), eta=c(.1,.3,.5,.7), kappa=.5)
-))
+#))
 
 mergeEnsembles <- function(ensembleSet, testOrder, returnPredictor=FALSE) {
   
@@ -537,18 +535,18 @@ mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, rad
   res
 }
 
-#' @export
-runAnalysis.EnsembleSearchlightModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, 
-                                                 searchMethod="replacement", nsamples=50, radius=12, pruneFrac=.1, bootstrap=FALSE) {
-  mask <- array(0, dim(dataset$mask))
-  mask[vox] <- 1
-  mask <- LogicalBrainVolume(mask, space(dataset$mask))
-  modelSet <- .setupModels(object$baseLearners)
-  
-  mvpa_searchlight_ensemble(modelSet, dataset, mask, radius=radius, pruneFrac=pruneFrac, combiner="greedy", bootstrapSamples=bootstrap, 
-                            autobalance=autobalance, searchMethod=searchMethod, nsamples=nsamples, returnPredictor)
-  
-}
+# #' @export
+# runAnalysis.EnsembleSearchlightModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, 
+#                                                  searchMethod="replacement", nsamples=50, radius=12, pruneFrac=.1, bootstrap=FALSE) {
+#   mask <- array(0, dim(dataset$mask))
+#   mask[vox] <- 1
+#   mask <- LogicalBrainVolume(mask, space(dataset$mask))
+#   modelSet <- .setupModels(object$baseLearners)
+#   
+#   mvpa_searchlight_ensemble(modelSet, dataset, mask, radius=radius, pruneFrac=pruneFrac, combiner="greedy", bootstrapSamples=bootstrap, 
+#                             autobalance=autobalance, searchMethod=searchMethod, nsamples=nsamples, returnPredictor)
+#   
+# }
 
 
 ## could have an ensemble of ensembles

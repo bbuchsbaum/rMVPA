@@ -22,63 +22,10 @@ computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE) 
   out <- cbind(vox, perf[rep(1, nrow(vox)),])   
 }
 
-#' run an MVPA analysis on ablock of data
-#' @param object the model object
-#' @param dataset the MVPADataset instance
-#' @return a result object
-#' @export
-runAnalysis <- function(object, dataset,...) {
-  UseMethod("runAnalysis")
-}
-
-#' @export
-runAnalysis.ClassificationModel <- function(object, dataset, vox, crossVal, featureSelector=NULL) {
-  result <- mvpa_crossval(dataset, vox, crossVal, featureSelector)
-  
-  observed <- if (is.null(dataset$testVec)) {
-    dataset$Y
-  } else {
-    dataset$testY
-  }
-  
-  prob <- matrix(0, length(observed), length(levels(dataset$Y)))
-  colnames(prob) <- levels(dataset$Y)
-  
-  for (i in seq_along(result$prediction)) {
-    p <- as.matrix(result$prediction[[i]]$probs)
-    testInd <- result$testIndices[[i]]
-    prob[testInd,] <- prob[testInd,] + p
-  }
-  
-  prob <- t(apply(prob, 1, function(vals) vals/sum(vals)))
-  maxid <- apply(prob, 1, which.max)
-  pclass <- levels(dataset$Y)[maxid]
-  
-  pred <- if (length(result$predictor) > 1) {
-    WeightedPredictor(result$predictor)
-  } else {
-    result$predictor
-  }
-  
-  classificationResult(observed, pclass, prob, pred)
-}
 
 
 #' @export
-runAnalysis.SimilarityModel <- function(object, dataset, vox, featureSelector=NULL) {
-  patternSimilarity(dataset, vox, object$simFun)
-}
-
-genTuneGrid <- function(dataset, X) {
-  if (!is.null(dataset$tuneGrid)) {
-    dataset$tuneGrid 
-  } else {
-    dataset$model$grid(X, dataset$Y, dataset$tuneLength)
-  }
-}
-
-#' @export
-mvpa_crossval <- function(dataset, vox, crossVal, featureSelector = NULL) {
+mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureSelector = NULL) {
   X <- series(dataset$trainVec, vox)
   valid.idx <- nonzeroVarianceColumns(X)
     
@@ -95,16 +42,19 @@ mvpa_crossval <- function(dataset, vox, crossVal, featureSelector = NULL) {
   }
     
     
-  tuneGrid <- genTuneGrid(dataset, X)
+  if (is.null(tuneGrid)) {
+    tuneGrid <- model$grid(X, dataset$Y, 1)
+  }
+  
   foldIterator <- matrixIter(crossVal, dataset$Y, X)
     
   result <- if (is.null(dataset$testVec)) {
       ### train and test on one set.
-    crossval_internal(foldIterator, dataset$model, tuneGrid, featureSelector = featureSelector, parcels =parcels)
+    crossval_internal(foldIterator, model, tuneGrid, featureSelector = featureSelector, parcels = parcels)
   } else {
     ### train on one set, test on the other.
     Xtest <- series(dataset$testVec, vox)
-    crossval_external(foldIterator, Xtest, dataset$testY, dataset$model, tuneGrid, featureSelector = featureSelector, parcels =parcels)
+    crossval_external(foldIterator, Xtest, dataset$testY, model, tuneGrid, featureSelector = featureSelector, parcels =parcels)
   }
     
   result
@@ -126,13 +76,13 @@ mvpa_crossval <- function(dataset, vox, crossVal, featureSelector = NULL) {
 }
 
 
-.doStandard <- function(dataset, radius, crossVal, classMetrics=FALSE) {
+.doStandard <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %do% {   
     if (nrow(vox) > 1) {
       print(nrow(vox))
-      computePerformance(runAnalysis(dataset$model, dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)
+      computePerformance(model$run(dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)
     }
   }
   
@@ -140,14 +90,14 @@ mvpa_crossval <- function(dataset, vox, crossVal, featureSelector = NULL) {
 }
   
 
-.doRandomized <- function(dataset, radius, crossVal, classMetrics=FALSE) {
+.doRandomized <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
   ## tight inner loop should probably avoid "foreach" as it has a lot of overhead, but c'est la vie for now.
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
-      computePerformance(runAnalysis(dataset$model, dataset, vox,crossVal), vox, dataset$testSplits, classMetrics)
+      computePerformance(model$run(dataset, vox,crossVal), vox, dataset$testSplits, classMetrics)
     }
   }
   
@@ -173,7 +123,8 @@ mvpa_crossval <- function(dataset, vox, crossVal, featureSelector = NULL) {
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(dataset, regionMask, crossVal=KFoldCrossValidation(length(dataset$Y)), savePredictors=FALSE, featureSelector=NULL, classMetrics=FALSE) {  
+mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidation(length(dataset$Y)), 
+                          savePredictors=FALSE, featureSelector=NULL, classMetrics=FALSE) {  
   
   if (!is.null(dataset$parcellation)) {
     if (! all(dim(dataset$parcellation) == dim(regionMask))) {
@@ -191,10 +142,11 @@ mvpa_regional <- function(dataset, regionMask, crossVal=KFoldCrossValidation(len
       ## what if length is less than 1?
       vox <- indexToGrid(regionMask, idx)
       
-      result <- runAnalysis(dataset$model, dataset, vox, crossVal, featureSelector)
+      result <- model$run(dataset, vox, crossVal, featureSelector)
     
       attr(result, "ROINUM") <- roinum
       attr(result, "vox") <- vox
+      
       perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits, classMetrics))[1,])     
       perf <- structure(perf, result=result)
       perf    
@@ -232,9 +184,12 @@ mvpa_regional <- function(dataset, regionMask, crossVal=KFoldCrossValidation(len
   
   resultSet <- ClassificationResultSet(dataset$blockVar, results)
 
-  extendedResults <- combineResults(dataset$model, results)
+  extendedResults <- model$combineResults(results)
   names(outVols) <- colnames(perfMat)[2:ncol(perfMat)]
-  list(outVols = outVols, performance=perfMat, resultSet=resultSet, extendedResults=extendedResults, invalid=regionSet[invalid])
+  list(outVols = outVols, performance=perfMat, 
+       resultSet=resultSet, 
+       extendedResults=extendedResults, 
+       invalid=regionSet[invalid])
 
 }
 
@@ -263,7 +218,7 @@ mvpa_regional <- function(dataset, regionMask, crossVal=KFoldCrossValidation(len
 #' @import parallel
 #' @import futile.logger
 #' @export
-mvpa_searchlight <- function(dataset, crossVal, radius=8, method=c("randomized", "standard"),  niter=4, classMetrics=FALSE) {
+mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("randomized", "standard"),  niter=4, classMetrics=FALSE) {
   stopifnot(niter > 1)
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
@@ -271,15 +226,16 @@ mvpa_searchlight <- function(dataset, crossVal, radius=8, method=c("randomized",
   
   
   method <- match.arg(method)
-  flog.info("classification model is: %s", dataset$model$label)
+  
+  flog.info("classification model is: %s", model$model_name)
   
   
   res <- if (method == "standard") {
-    .doStandard(dataset, radius, crossVal, classMetrics=classMetrics)    
+    .doStandard(dataset, model, radius, crossVal, classMetrics=classMetrics)    
   } else {
     res <- parallel::mclapply(1:niter, function(i) {
       flog.info("Running randomized searchlight iteration %s", i)   
-      do.call(cbind, .doRandomized(dataset, radius, crossVal, classMetrics=classMetrics) )
+      do.call(cbind, .doRandomized(dataset, model, radius, crossVal, classMetrics=classMetrics) )
     })
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {
@@ -296,104 +252,77 @@ mvpa_searchlight <- function(dataset, crossVal, radius=8, method=c("randomized",
   
 }
 
-#' @export
-combineResults <- function(resultObject, resultList, ...) {
-  UseMethod("combineResults")
-}
 
-#' @export
-saveResults <- function(results, folder) {
-  UseMethod("saveResults")
-}
-
-#' @export
-combineResults.SimilarityModel <- function(model, resultList) {
-  #ret <- list(sWithin=sWithin, sBetween=sBetween, simMat=simMat)
-  rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
-  
-  simMatList <- lapply(resultList, function(res) {
-    res$simMat   
-  })
-  
-  simWithinList <- lapply(resultList, function(res) {
-    res$simWithinTable  
-  })
-  
-  names(simMatList) <- rois
-  names(simWithinList) <- rois
-  
-  ret <- list(simMatList=simMatList, simWithinList=simWithinList)
-  
-  class(ret) <- c("SimilarityResultList", "list")
-  ret
-}
+# #' @export
+# combineResults.SimilarityModel <- function(model, resultList) {
+#   #ret <- list(sWithin=sWithin, sBetween=sBetween, simMat=simMat)
+#   rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
+#   
+#   simMatList <- lapply(resultList, function(res) {
+#     res$simMat   
+#   })
+#   
+#   simWithinList <- lapply(resultList, function(res) {
+#     res$simWithinTable  
+#   })
+#   
+#   names(simMatList) <- rois
+#   names(simWithinList) <- rois
+#   
+#   ret <- list(simMatList=simMatList, simWithinList=simWithinList)
+#   
+#   class(ret) <- c("SimilarityResultList", "list")
+#   ret
+# }
+# 
+# 
 
 
-#' @export
-combineResults.ClassificationModel <- function(model, resultList) {
-  
-  rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
-  
-  predictorList <- lapply(resultList, function(res) {
-    MVPAVoxelPredictor(res$predictor, attr(res, "vox"))
-  })
-  
-  predFrame <- as.data.frame(do.call(rbind, lapply(resultList, function(res) {
-    data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=as.character(res$observed) == as.character(res$predicted), prob=res$prob)
-  })))
-  
-   
-  
-  ret <- list(predictor=ListPredictor(predictorList, rois), predictions=predFrame)
-  class(ret) <- c("ClassificationResultList", "list")
-  ret
-}
 
-
-#' @export
-combineResults.EnsembleSearchlightModel <- function(model, resultList) {
-  rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
-  
-  predictorList <- lapply(resultList, function(res) {
-    MVPAVoxelPredictor(res$predictor, attr(res, "vox"))
-  })
-  
-  predFrame <- as.data.frame(do.call(rbind, lapply(resultList, function(res) {
-    data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=as.character(res$observed) == as.character(res$predicted), prob=res$prob)
-  })))
-  
-  weightVol <- Reduce("+", lapply(resultList, function(res) attr(res, "weightVol")))
-  AUCVol <- Reduce("+", lapply(resultList, function(res) attr(res, "AUCVol")))
-  
-  ret <- list(predictor=ListPredictor(predictorList, rois), predictions=predFrame, weightVol=weightVol, AUCVol=AUCVol)
-  class(ret) <- c("EnsembleSearchlightResultList", "list")
-  ret
-  
-}
-
-#' @export
-saveResults.EnsembleSearchlightResultList <- function(results, folder) {
-  write.table(format(results$predictions,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(folder, "/prediction_table.txt")), row.names=FALSE, quote=FALSE)  
-  if (!is.null(results$predictor)) {
-    saveRDS(results$predictor, paste0(folder, "/predictor.RDS"))
-  }
-  
-  writeVolume(results$AUCVol, paste0(folder, "/AUC_Scores.nii"))
-  writeVolume(results$weightVol, paste0(folder, "/EnsembleWeights.nii"))
-}
-
-#' @export
-saveResults.ClassificationResultList <- function(results, folder) {
-  write.table(format(results$predictions,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(folder, "/prediction_table.txt")), row.names=FALSE, quote=FALSE)  
-  if (!is.null(results$predictor)) {
-    saveRDS(results$predictor, paste0(folder, "/predictor.RDS"))
-  }
-}
-
-#' @export
-saveResults.SimilarityResultList <- function(results, folder) {
-  saveRDS(results$simMatList, paste0(folder, "/similarityMatrices.RDS"))
-  omat <- as.data.frame(do.call(rbind, results$simWithinList))
-  write.table(omat, paste0(folder, "/similarityWithinTable.txt"))
-}
+# #' @export
+# combineResults.EnsembleSearchlightModel <- function(model, resultList) {
+#   rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
+#   
+#   predictorList <- lapply(resultList, function(res) {
+#     MVPAVoxelPredictor(res$predictor, attr(res, "vox"))
+#   })
+#   
+#   predFrame <- as.data.frame(do.call(rbind, lapply(resultList, function(res) {
+#     data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=as.character(res$observed) == as.character(res$predicted), prob=res$prob)
+#   })))
+#   
+#   weightVol <- Reduce("+", lapply(resultList, function(res) attr(res, "weightVol")))
+#   AUCVol <- Reduce("+", lapply(resultList, function(res) attr(res, "AUCVol")))
+#   
+#   ret <- list(predictor=ListPredictor(predictorList, rois), predictions=predFrame, weightVol=weightVol, AUCVol=AUCVol)
+#   class(ret) <- c("EnsembleSearchlightResultList", "list")
+#   ret
+#   
+# }
+# 
+# #' @export
+# saveResults.EnsembleSearchlightResultList <- function(results, folder) {
+#   write.table(format(results$predictions,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(folder, "/prediction_table.txt")), row.names=FALSE, quote=FALSE)  
+#   if (!is.null(results$predictor)) {
+#     saveRDS(results$predictor, paste0(folder, "/predictor.RDS"))
+#   }
+#   
+#   writeVolume(results$AUCVol, paste0(folder, "/AUC_Scores.nii"))
+#   writeVolume(results$weightVol, paste0(folder, "/EnsembleWeights.nii"))
+# }
+# 
+# #' @export
+# saveResults.ClassificationResultList <- function(results, folder) {
+#   write.table(format(results$predictions,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(folder, "/prediction_table.txt")), row.names=FALSE, quote=FALSE)  
+#   if (!is.null(results$predictor)) {
+#     saveRDS(results$predictor, paste0(folder, "/predictor.RDS"))
+#   }
+# }
+# 
+# #' @export
+# saveResults.SimilarityResultList <- function(results, folder) {
+#   saveRDS(results$simMatList, paste0(folder, "/similarityMatrices.RDS"))
+#   omat <- as.data.frame(do.call(rbind, results$simWithinList))
+#   write.table(omat, paste0(folder, "/similarityWithinTable.txt"))
+# }
 

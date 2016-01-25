@@ -1,4 +1,14 @@
 
+#' @export
+spearman_cor <- function(x, y=NULL, use="everything") {
+  cor(x,y,use, method="spearman")
+}
+
+#' @export
+kendall_cor <- function(x, y=NULL, use="everything") {
+  cor(x,y,use, method="kendall")
+}
+
 patSimHelper <- memoise::memoise(function(runs, labels, cdim) {
   lowerTri <- as.vector(lower.tri(matrix(0, cdim[1], cdim[2])))
   
@@ -28,8 +38,18 @@ patSimHelper <- memoise::memoise(function(runs, labels, cdim) {
 })
 
 #' @export
-#' @import mefa4
-patternSimilarity <- function(dataset, vox, simFun=cor) {
+patternSimilarity <- function(dataset, vox, simFun=cor, contrastMatrix=NULL) {
+  
+  if (is.null(contrastMatrix)) {
+    contrastMatrix <- diag(length(levels(dataset$Y)))
+    colnames(contrastMatrix) <- levels(dataset$Y)
+    utri <- upper.tri(contrastMatrix)
+    ltri <- lower.tri(contrastMatrix)
+    contrastMatrix[utri] <- length(levels(dataset$Y))/sum(utri)/-2
+    contrastMatrix[ltri] <- length(levels(dataset$Y))/sum(ltri)/-2
+  }
+  
+  assertthat::assert_that(sum(contrastMatrix) < 1e-6)
   
   ## TODO deals with parcels.
   
@@ -39,34 +59,23 @@ patternSimilarity <- function(dataset, vox, simFun=cor) {
   X <- X[,valid.idx,drop=FALSE]
   vox <- vox[valid.idx,]
   
+
   foldIterator <- MatrixFoldIterator(X, dataset$Y, dataset$blockVar)
   
   if (ncol(X) == 0) {
     stop("no valid columns")
   } else {
-    centroids <- lapply(foldIterator, function(fold) {
-      gmeans = mefa4::groupMeans(fold$Xtest, 1, fold$Ytest)
-      run <- rep(fold$index, nrow(gmeans))
-      list(gmeans=gmeans, run=run, labels=row.names(gmeans))
+    
+    corMats <- lapply(foldIterator, function(fold) {
+      gmeans_test <- groupMeans(fold$Xtest, 1, fold$Ytest)
+      gmeans_train <- groupMeans(fold$Xtrain, 1, fold$Ytrain)
+      cmat <- simFun(t(gmeans_test), t(gmeans_train))
     })
      
-    runs <- unlist(lapply(centroids, "[[", "run"))
-    labels <- unlist(lapply(centroids, "[[", "labels"))
-    gmeans <- do.call(rbind, lapply(centroids, "[[", "gmeans"))
-    
-    corMat <- simFun(t(gmeans))   
-    #lowerTri <- as.vector(lower.tri(corMat))
-    
-    ret <- patSimHelper(runs,labels, dim(corMat))
-          
-    withinMeans <- aggregate(corMat[ret$validWithin] ~ ret$crossFac[ret$validWithin], FUN=mean)[,2]    
-    betweenMeans <- aggregate(corMat[ret$validBetween] ~ ret$crossFac[ret$validBetween], FUN=mean)[,2]
-   
-    cor.between <- mean(betweenMeans)
-    cor.within <- mean(withinMeans)
-    
-    simWithinTable <- data.frame(label=names(which(ret$validWithin)), sim=corMat[ret$validWithin])
-    SimilarityResult(cor.within, cor.between, corMat, simWithinTable)
+    corMat <- Reduce("+", corMats)/length(corMats)
+    cons <- sapply(corMats, function(cmat) sum(cmat * contrastMatrix))
+  
+    SimilarityResult(corMat=corMat, avgContrast=mean(cons), sdContrast=sd(cons))
   }
   
 }

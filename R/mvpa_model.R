@@ -1,6 +1,9 @@
 
+
 .noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")
+
 .cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
+
 .adaptiveControl <- caret::trainControl("adaptive_cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
 
 #' create an \code{ClassificationResultSet} instance
@@ -21,36 +24,35 @@ ClassificationResultSet <- function(blockVar, resultList) {
 #' create an \code{ClassificationModel} instance
 #' @param caretModel the underlying caret model object
 #' @export
-ClassificationModel <- function(caretModel) {
-  class(caretModel) <- c("ClassificationModel", "list")
-  caretModel
-}
+#ClassificationModel <- function(caretModel) {
+#  class(caretModel) <- c("ClassificationModel", "list")
+#  caretModel
+#}
 
 #' create an \code{EnsembleSearchlightModel} instance
 #' @param caretModel
 #' @export
-EnsembleSearchlightModel <- function(baseLearners=list(pls=data.frame(ncomp=1:5), lda_thomaz=1, sda=expand.grid(lambda=c(.01,.2,.5,.7), diagonal=FALSE))) {
-  ret=list(baseLearners=baseLearners)
-  class(ret) <- c("EnsembleSearchlightModel", "list")
-  ret
-}
+#EnsembleSearchlightModel <- function(baseLearners=list(pls=data.frame(ncomp=1:5), lda_thomaz=1, sda=expand.grid(lambda=c(.01,.2,.5,.7), diagonal=FALSE))) {
+#  ret=list(baseLearners=baseLearners)
+#  class(ret) <- c("EnsembleSearchlightModel", "list")
+#  ret
+#}
 
 #' create an \code{SimilarityModel} instance
 #' @param type the similarity metric (pearson, kendall, spearman)
 #' @export
-SimilarityModel <- function(type=c("pearson", "spearman", "kendall")) {
-  simFun <- if (is.function(type)) {
-    type
-  } else {
-    type=match.arg(type)
-    f <- function(x) {
-      cor(x, method=type)
-    }
-  }
-  ret <- list(simFun=simFun)
-  class(ret) <- c("SimilarityModel", "list")
-  ret
-}
+#  simFun <- if (is.function(type)) {
+#    type
+#  } else {
+#    type=match.arg(type)
+#    f <- function(x) {
+#      cor(x, method=type)
+#    }
+#  }
+#  ret <- list(simFun=simFun)
+#  class(ret) <- c("SimilarityModel", "list")
+#  ret
+#}
 
 
 #' create an \code{MVPA} instance
@@ -61,13 +63,21 @@ SimilarityModel <- function(type=c("pearson", "spearman", "kendall")) {
 #' @param testVec
 #' @param testY
 #' @param modelName
+#' @param parcellation
 #' @param tuneGrid
-#' @param tuneGrid
+#' @param tuneLength
+#' @param testSplitVar
+#' @param testSplits
+#' @param trainDesign
+#' @param testDesign
 #' @export
 MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corclass", parcellation=NULL, tuneGrid=NULL, tuneLength=1, testSplitVar=NULL,
                         testSplits=NULL, trainDesign=NULL, testDesign=NULL) {
   
+  ## separate model from data
   model <- loadModel(modelName)
+  ## separate model from data
+  
   
   testSets <- split(1:length(blockVar), blockVar)
   trainSets <- invertFolds(testSets, 1:length(blockVar))
@@ -104,8 +114,8 @@ NullResult <- function(vox, model, observed) {
 }
 
 #' @export
-SimilarityResult <- function(sWithin, sBetween, simMat, simWithinTable) {
-  ret <- list(sWithin=sWithin, sBetween=sBetween, simMat=simMat, simWithinTable=simWithinTable)
+SimilarityResult <- function(corMat, avgContrast, sdContrast) {
+  ret <- list(corMat=corMat, avgContrast=avgContrast, sdContrast=sdContrast)
   class(ret) <- c("SimilarityResult", "list")
   ret
 }
@@ -204,16 +214,8 @@ CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneContro
   
   Xtrain <- Xtrain[,featureMask]
   
-  if (model$library[1] == "gbm" && length(levels(Ytrain)) == 2) {
-    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, distribution="bernoulli", ...)
-  } else if (model$library[1] == "gbm" && length(levels(Ytrain)) > 2) {
-    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, distribution="multinomial", ...)
-  } else {
-    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, ...)
-  }
-  
-  #fit$finalModel <- cleanup(fit$finalModel)
-  
+  fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, ...)
+
   ret <- list(
     model=model,
     Xtrain=Xtrain,

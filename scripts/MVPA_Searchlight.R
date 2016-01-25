@@ -7,6 +7,8 @@
 .suppress(library(optparse))
 .suppress(library(futile.logger))
 .suppress(library(io))
+.suppress(library(doParallel))
+
 
 option_list <- list(make_option(c("-r", "--radius"), type="numeric", help="the radius in millimeters of the searchlight"),
                     make_option(c("-t", "--train_design"), type="character", help="the file name of the design table"),
