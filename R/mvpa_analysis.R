@@ -220,6 +220,7 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
 #' @export
 mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("randomized", "standard"),  niter=4, classMetrics=FALSE) {
   stopifnot(niter > 1)
+  
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }
@@ -233,10 +234,10 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
   res <- if (method == "standard") {
     .doStandard(dataset, model, radius, crossVal, classMetrics=classMetrics)    
   } else {
-    res <- parallel::mclapply(1:niter, function(i) {
+    res <- foreach::foreach(1:niter) %dopar% {
       flog.info("Running randomized searchlight iteration %s", i)   
       do.call(cbind, .doRandomized(dataset, model, radius, crossVal, classMetrics=classMetrics) )
-    })
+    }
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {
       X <- do.call(cbind, lapply(res, function(M) M[,i]))
