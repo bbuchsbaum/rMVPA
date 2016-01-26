@@ -191,7 +191,11 @@ glmnetWeights <- function(resultList, alpha=.5) {
   cvres <- glmnet::cv.glmnet(fullmat, y0, family="binomial", lower.limits=0, alpha=alpha)
   lambda.min <- cvres$lambda.min
   weights <- coef(cvres$glmnet.fit, s=lambda.min)[-1,1]
-  weights <- weights/sum(weights)
+  if (all(weights == 0)) {
+    weights <- rep(1/length(weights), length(weights))
+  } else {
+    weights <- weights/sum(weights)
+  }
 }
 
   

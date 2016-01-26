@@ -37,14 +37,13 @@ test_that("mvpa_regional with 5 ROIS runs and sparse_sda without error", {
 
 test_that("mvpa_regional with 5 ROIS runs and clusterSVM without error", {
   
-  model <- loadModel("clusterSVM")
+  model <- loadModel("clusterSVM", list(tuneGrid=expand.grid(K=c(2,3), lambda=c(.001, .01), cost=1)))
   dataset <- gen_dataset(c(10,10,2), 100, 3)
   crossVal <- BlockedCrossValidation(dataset$blockVar)
-  dataset$model = model
-  dataset$tuneGrid <- expand.grid(K=c(2,3,4), lambda=c(.001, .01, .2, .8), cost=1)
+
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
   
-  res <- mvpa_regional(dataset, regionMask, crossVal)
+  res <- mvpa_regional(dataset, model, regionMask, crossVal)
   
 })
 
@@ -53,7 +52,11 @@ test_that("mvpa_regional with 5 ROIS and consensus learning runs without error",
   dataset <- gen_dataset(c(10,10,2), 100, 3)
   crossVal <- BlockedCrossValidation(dataset$blockVar)
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
-  res <- mvpa_regional(dataset, regionMask, crossVal)
+  
+  model <- loadModel("sda")
+  res <- mvpa_regional(dataset, model, regionMask, crossVal)
+  
+  
   consResult1 <- consensusWeights(res$resultSet, "glmnet")
   consResult2 <- consensusWeights(res$resultSet, "greedy")
   consResult3 <- consensusWeights(res$resultSet, "auc_weights")
