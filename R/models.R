@@ -1,5 +1,6 @@
 
 #' @export
+#' @import R6
 MVPADataset <- R6::R6Class("MVPADataset",
                            public = list(
                              trainVec=NULL,
@@ -45,6 +46,7 @@ MVPADataset <- R6::R6Class("MVPADataset",
 
 
 #' @export
+#' @import R6
 BaseModel <- R6::R6Class("BaseModel",
                          public = list(
                            model_name=NA,
@@ -68,6 +70,7 @@ BaseModel <- R6::R6Class("BaseModel",
                          ))
 
 #' @export
+#' @import R6
 CaretModelWrapper <- R6::R6Class(
   "CaretModelWrapper",
   inherit = BaseModel,
@@ -166,48 +169,58 @@ CaretModelWrapper <- R6::R6Class(
 )
 
 
-#' @export
-RSAModel <- R6::R6Class(
-  "RSAModel",
-  inherit = BaseModel,
-  public = list(
-    model_name = "RSA",
-    simFun = NA,
-    contrastMatrix=NULL,
-    
-    initialize = function(simFun = cor, contrastMatrix=NULL) {
-      self$simFun = simFun
-    },
-    
-    run = function(dataset, vox, crossVal, featureSelector = NULL) {
-      patternSimilarity(dataset, vox, self$simFun, self$contrastMatrix)
-    },
-    
-    
-    performance = function(simResult) {
-      list(avgContrast=simResult$avgContrast, effContrast=simResult$avgContrast/simResult$sdContrast)
-    },
-    
-    
-    combineResults = function(resultList) {
-      rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
-      corMatList <- lapply(resultList, function(res) {
-           res$corMat   
-      })
-         
-
-      #   names(simMatList) <- rois
-      #   names(simWithinList) <- rois
-      #   
-      #   ret <- list(simMatList=simMatList, simWithinList=simWithinList)
-      #   
-      #   class(ret) <- c("SimilarityResultList", "list")
-      #   ret
-      # }
-      # 
-    }
-  )
-)
+# #' @export
+# RSAModel <- R6::R6Class(
+#   "RSAModel",
+#   inherit = BaseModel,
+#   
+#   public = list(
+#     model_name = "RSA",
+#     simFun = NA,
+#     contrastMatrix=NULL,
+#     
+#     initialize = function(simFun = cor, contrastMatrix=NULL) {
+#       self$simFun = simFun
+#     },
+#     
+#     run = function(dataset, vox, crossVal, featureSelector = NULL) {
+#       patternSimilarity(dataset, vox, self$simFun, self$contrastMatrix)
+#     },
+#     
+#     
+#     performance = function(simResult) {
+#       list(avgContrast=simResult$avgContrast, effContrast=simResult$avgContrast/simResult$sdContrast)
+#     },
+#     
+#     
+#     combineResults = function(resultList) {
+#       rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
+#       
+#       corMatList <- lapply(resultList, function(res) {
+#            res$corMat   
+#       })
+#       
+#       lapply(resultList, function(res) {
+#         data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=as.character(res$observed) == as.character(res$predicted), prob=res$prob)
+#         
+#       
+#       
+#       
+#       
+#          
+# 
+#       #   names(simMatList) <- rois
+#       #   names(simWithinList) <- rois
+#       #   
+#       #   ret <- list(simMatList=simMatList, simWithinList=simWithinList)
+#       #   
+#       #   class(ret) <- c("SimilarityResultList", "list")
+#       #   ret
+#       # }
+#       # 
+#     }
+#   )
+# )
 
 
 

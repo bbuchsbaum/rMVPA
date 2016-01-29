@@ -4,7 +4,7 @@
 \alias{mvpa_regional}
 \title{mvpa_regional}
 \usage{
-mvpa_regional(dataset, regionMask,
+mvpa_regional(dataset, model, regionMask,
   crossVal = KFoldCrossValidation(length(dataset$Y)),
   savePredictors = FALSE, featureSelector = NULL, classMetrics = FALSE)
 }
