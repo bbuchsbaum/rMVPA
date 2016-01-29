@@ -29,7 +29,6 @@ Imports:
     Metrics,
     memoise,
     e1071,
-    RUnit,
     R6,
     sp
 Collate:
