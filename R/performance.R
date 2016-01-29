@@ -5,9 +5,9 @@ performance <- function(x,...) {
 
 #' @export
 performance.SimilarityResult <- function(x, splitList=NULL, classMetrics=FALSE) {  
-  simAll <- x$simWithinTable$sim
-  names(simAll) <- paste0("sim_", x$simWithinTable$label)
-  c(simWithin=x$sWithin, simDiff=x$sWithin - x$sBetween, simAll)
+  #simAll <- x$simWithinTable$sim
+  #names(simAll) <- paste0("sim_", x$simWithinTable$label)
+  #c(simWithin=x$sWithin, simDiff=x$sWithin - x$sBetween, simAll)
 }
 
 .twowayPerf <- function(observed, predicted, probs) {

@@ -73,39 +73,35 @@ config <- initializeData(config)
 
 flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
 
-
-dataset <- MVPADataset(config$train_datavec, 
+dataset <- MVPADataset$new(config$train_datavec, 
                        config$labels, 
                        config$maskVolume, 
                        config$block, 
                        config$test_datavec, 
                        config$testLabels, 
-                       modelName=config$model, 
-                       tuneGrid=config$tune_grid,
-                       tuneLength=config$tune_length, 
+                       #parcellation=config$parcellation,
                        testSplitVar=config$testSplitVar, 
                        testSplits=config$testSplits,
                        trainDesign=config$train_design,
                        testDesign=config$test_design)
 
-for (lib in dataset$model$library) {
-  library(lib, character.only = TRUE)
-}
-
+model <- loadModel(config$model, list(tuneGrid=config$tuneGrid))
 
 cl <- makeCluster(config$pthreads, outfile="",useXDR=FALSE, type="FORK")
 registerDoParallel(cl)
 
 crossVal <- BlockedCrossValidation(dataset$blockVar, balance=config$autobalance)
-searchres <- mvpa_searchlight(dataset, crossVal, config$radius,  method=config$type, niter=config$niter, classMetrics=config$output_class_metrics)
+
+searchres <- mvpa_searchlight(dataset, model, crossVal, config$radius,  
+                              method=config$type, niter=config$niter, 
+                              classMetrics=config$output_class_metrics)
 
 config$output <- makeOutputDir(config$output)
 
-lapply(1:length(searchres), function(i) {
+for (i in 1:length(searchres)) {
   out <- paste0(config$output, "/", names(searchres)[i], ".nii")
   writeVolume(searchres[[i]], out)  
-})
-
+}
 
 if (!is.null(configParams$test_subset)) {
   configParams$test_subset <- Reduce(paste, deparse(configParams$test_subset))

@@ -1,4 +1,8 @@
 
+
+#' @param blockVar
+#' @param balance
+#' @param bootstrap
 #' @export
 BlockedCrossValidation <- function(blockVar, balance=FALSE, bootstrap=FALSE) {
   ret <- list(blockVar=blockVar, balance=balance, bootstrap=bootstrap, nfolds=length(unique(blockVar)))
@@ -8,6 +12,9 @@ BlockedCrossValidation <- function(blockVar, balance=FALSE, bootstrap=FALSE) {
 
 
 #' @export
+#' @param len
+#' @param balance
+#' @param boostrap
 KFoldCrossValidation <- function(len, nfolds=10, balance=FALSE, bootstrap=FALSE) {
   blockVar <- sample(rep(seq(1, nfolds), length.out=len))
   ret <- list(blockVar=blockVar, balance=balance, bootstrap=bootstrap, nfolds=nfolds)

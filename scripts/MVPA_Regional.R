@@ -43,7 +43,6 @@ option_list <- list(
                     make_option(c("-b", "--block_column"), type="character", help="the name of the column in the design file indicating the block variable used for cross-validation"),
                     make_option(c("-g", "--tune_grid"), type="character", help="string containing grid parameters in the following form: a=\\(1,2\\), b=\\('one', 'two'\\)"),
                     make_option(c("--tune_length"), type="numeric", help="an integer denoting the number of levels for each model tuning parameter"),
-                    make_option(c("-i", "--niter"), type="character", help="number of randomized searchlight iterations"),
                     make_option(c("--savePredictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
                     make_option(c("--skipIfFolderExists"), type="logical", action="store_true", help="skip, if output folder already exists"),
                     ## should be skip_if_folder_exists or "overwrite_folder"
@@ -174,13 +173,19 @@ consensusLearner <- if (!is.null(config$consensus_learner)) {
 
 flog.info("consensus learner: ", consensusLearner, capture=TRUE)
 
+dataset <- MVPADataset$new(config$train_datavec, 
+                           config$labels, 
+                           config$maskVolume, 
+                           config$block, 
+                           config$test_datavec, 
+                           config$testLabels, 
+                           parcellation=parcellationVolume,
+                           testSplitVar=config$testSplitVar, 
+                           testSplits=config$testSplits,
+                           trainDesign=config$train_design,
+                           testDesign=config$test_design)
 
-dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, 
-                       config$testLabels, modelName=config$model, parcellation=parcellationVolume, tuneGrid=config$tune_grid,
-                       tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits, 
-                       trainDesign=config$train_design,
-                       testDesign=config$test_design)
-
+model <- loadModel(config$model, list(tuneGrid=config$tuneGrid))
 
 for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
   if (!is.null(configParams[[varname]]) && is(configParams[[varname]], "formula")) {
@@ -218,7 +223,7 @@ for (roinum in seq_along(config$ROIVolume)) {
   ## need to handle bootstrap reps
   crossVal <- BlockedCrossValidation(dataset$blockVar, balance=config$autobalance)
   
-  mvpa_res <- mvpa_regional(dataset, roivol, crossVal, config$savePredictors, featureSelector=featureSelector, classMetrics=config$output_class_metrics)
+  mvpa_res <- mvpa_regional(dataset, model, roivol, crossVal, config$savePredictors, featureSelector=featureSelector, classMetrics=config$output_class_metrics)
   
   if (!is.null(consensusLearner)) {
     rois <- sapply(mvpa_res$resultSet$resultList, attr, "ROINUM")
@@ -231,7 +236,8 @@ for (roinum in seq_along(config$ROIVolume)) {
   }
 
   write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
-  saveResults(mvpa_res$extendedResults, outdir)
+  
+  model$saveResults(mvpa_res$extendedResults, outdir)
   
   lapply(1:length(mvpa_res$outVols), function(i) {
     out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")

@@ -79,6 +79,10 @@ CaretModelWrapper <- R6::R6Class(
       self$model <- model
       if (!missing(tuneGrid))
         self$tuneGrid = tuneGrid
+      
+      for (lib in self$model$library) {
+        library(lib, character.only = TRUE)
+      }
     },
     
     fit = function(x, y, ...) {
@@ -177,6 +181,11 @@ RSAModel <- R6::R6Class(
     
     run = function(dataset, vox, crossVal, featureSelector = NULL) {
       patternSimilarity(dataset, vox, self$simFun, self$contrastMatrix)
+    },
+    
+    
+    performance = function(simResult) {
+      list(avgContrast=simResult$avgContrast, effContrast=simResult$avgContrast/simResult$sdContrast)
     },
     
     

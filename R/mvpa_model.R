@@ -55,55 +55,6 @@ ClassificationResultSet <- function(blockVar, resultList) {
 #}
 
 
-#' create an \code{MVPA} instance
-#' @param trainVec
-#' @param Y
-#' @param mask
-#' @param blockVar
-#' @param testVec
-#' @param testY
-#' @param modelName
-#' @param parcellation
-#' @param tuneGrid
-#' @param tuneLength
-#' @param testSplitVar
-#' @param testSplits
-#' @param trainDesign
-#' @param testDesign
-#' @export
-MVPADataset <- function(trainVec, Y, mask, blockVar, testVec, testY, modelName="corclass", parcellation=NULL, tuneGrid=NULL, tuneLength=1, testSplitVar=NULL,
-                        testSplits=NULL, trainDesign=NULL, testDesign=NULL) {
-  
-  ## separate model from data
-  model <- loadModel(modelName)
-  ## separate model from data
-  
-  
-  testSets <- split(1:length(blockVar), blockVar)
-  trainSets <- invertFolds(testSets, 1:length(blockVar))
-   
-  ret <- list(
-    trainVec=trainVec,
-    Y=Y,
-    mask=mask,
-    blockVar=blockVar,
-    testVec=testVec,
-    testY=testY,
-    model=model,
-    parcellation=parcellation,
-    tuneGrid=tuneGrid,
-    tuneLength=tuneLength,
-    testSets=testSets,
-    trainSets=trainSets,
-    testSplitVar=testSplitVar,
-    testSplits=testSplits,
-    trainDesign=trainDesign,
-    testDesign=testDesign)
-   
-  class(ret) <- c("MVPADataset", "list")
-  ret
-}
-
 NullResult <- function(vox, model, observed) {
   ret <- list(vox=vox,
               model=model,
@@ -171,6 +122,7 @@ subResult.TwoWayClassificationResult <- function(x, indices) {
 
 
 #' create an \code{MultiWayClassification} instance
+#' 
 #' @param observed
 #' @param predicted
 #' @param probs
