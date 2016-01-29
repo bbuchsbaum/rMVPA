@@ -280,7 +280,7 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
 
 
 
-# #' @export
+
 # combineResults.EnsembleSearchlightModel <- function(model, resultList) {
 #   rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
 #   

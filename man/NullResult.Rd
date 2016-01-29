@@ -8,8 +8,6 @@ NullResult(vox, model, observed)
 }
 \arguments{
 \item{caretModel}{the underlying caret model object}
-
-\item{type}{the similarity metric (pearson, kendall, spearman)}
 }
 \description{
 create an \code{ClassificationModel} instance

@@ -29,18 +29,18 @@ ClassificationResultSet <- function(blockVar, resultList) {
 #  caretModel
 #}
 
-#' create an \code{EnsembleSearchlightModel} instance
-#' @param caretModel
-#' @export
+# create an \code{EnsembleSearchlightModel} instance
+# @param caretModel
+# @export
 #EnsembleSearchlightModel <- function(baseLearners=list(pls=data.frame(ncomp=1:5), lda_thomaz=1, sda=expand.grid(lambda=c(.01,.2,.5,.7), diagonal=FALSE))) {
 #  ret=list(baseLearners=baseLearners)
 #  class(ret) <- c("EnsembleSearchlightModel", "list")
 #  ret
 #}
 
-#' create an \code{SimilarityModel} instance
-#' @param type the similarity metric (pearson, kendall, spearman)
-#' @export
+# create an \code{SimilarityModel} instance
+# @param type the similarity metric (pearson, kendall, spearman)
+# @export
 #  simFun <- if (is.function(type)) {
 #    type
 #  } else {

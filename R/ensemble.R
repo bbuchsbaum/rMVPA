@@ -539,7 +539,7 @@ mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, rad
   res
 }
 
-# #' @export
+
 # runAnalysis.EnsembleSearchlightModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, 
 #                                                  searchMethod="replacement", nsamples=50, radius=12, pruneFrac=.1, bootstrap=FALSE) {
 #   mask <- array(0, dim(dataset$mask))
