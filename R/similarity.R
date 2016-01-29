@@ -60,7 +60,7 @@ patternSimilarity <- function(dataset, vox, simFun=cor, contrastMatrix=NULL) {
   vox <- vox[valid.idx,]
   
 
-  foldIterator <- MatrixFoldIterator(X, dataset$Y, dataset$blockVar)
+  foldIterator <- MatrixFoldIterator(X, dataset$Y, vox, dataset$blockVar)
   
   if (ncol(X) == 0) {
     stop("no valid columns")

@@ -10,14 +10,14 @@ FeatureSelector <- function(method, cutoff_type, cutoff_value) {
 }
 
 #' @export
-selectFeatures <- function(obj, X, Y) {
+selectFeatures <- function(obj, X, Y, vox) {
   UseMethod("selectFeatures")
 }
 
 ## TODO requires that X has spatial structure.
 # @export
 # @import sda
-#selectFeatures.searchlight <- function(obj, X, Y) {
+#selectFeatures.searchlight <- function(obj, X, Y, vox) {
 #
 #}
 
@@ -26,7 +26,7 @@ selectFeatures <- function(obj, X, Y) {
 
 #' @export
 #' @import sda
-selectFeatures.catscore <- function(obj, X, Y) {
+selectFeatures.catscore <- function(obj, X, Y, vox=NULL) {
   message("selecting features via catscore")
   
   if (is.numeric(Y)) {
@@ -73,7 +73,7 @@ selectFeatures.catscore <- function(obj, X, Y) {
 
 #' @export
 #' @importFrom assertthat assert_that
-selectFeatures.FTest <- function(obj, X, Y) {
+selectFeatures.FTest <- function(obj, X, Y, vox=NULL) {
   message("selecting features via FTest")
   message("cutoff type", obj$cutoff_type)
   message("cutoff value", obj$cutoff_value)
@@ -118,7 +118,7 @@ selectFeatures.FTest <- function(obj, X, Y) {
 
 
 #' @export
- selectFeatures.catscore_FTest <- function(obj, X, Y) {
+ selectFeatures.catscore_FTest <- function(obj, X, Y, vox=NULL) {
    message("selecting features via catscore_FTest")
    
    if (is.numeric(Y)) {

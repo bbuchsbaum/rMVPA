@@ -120,7 +120,7 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
     
     
     if (all(wts==0)) {
-      warning("consensus weights are all zero, assigning equals weight to each classifier")
+      warning("consensus weights are all zero, assigning equal weight to each classifier")
       wts <- rep(1, length(wts))/length(wts)
     }
     
@@ -282,7 +282,7 @@ metaCombine <- function(dataset, resultList, fold, pruneFrac=1, metaLearner="spl
   
   predmat <- do.call(cbind, lapply(resultList[keep], "[[", "probs"))
   
-  foldIterator <- MatrixFoldIterator(X=predmat, Y=Ytrain, blockVar=dataset$blockVar[dataset$blockVar != fold$index])
+  foldIterator <- MatrixFoldIterator(X=predmat, Y=Ytrain, NULL, blockVar=dataset$blockVar[dataset$blockVar != fold$index])
   
   tuneControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets(), indexOut=foldIterator$getTestSets()) 
   modelFit <- trainModel(loadModel(metaLearner), predmat, Ytrain,  NULL, NULL, tuneGrid=tuneGrid, tuneControl)
@@ -335,7 +335,7 @@ innerIteration <- function(dataset, vox, trainInd, testInd, model, tuneGrid, aut
   blockVar <- dataset$blockVar[-testInd]
   X <- series(dataset$trainVec, vox)
   Xtrain <- X[-testInd,,drop=FALSE] 
-  foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, blockVar, balance=autobalance, bootstrap=bootstrap)
+  foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, vox, blockVar, balance=autobalance, bootstrap=bootstrap)
   
   ## do we need to compute final pedictor?
   res <- try(crossval_internal(foldIterator, model, tuneGrid, returnPredictor=TRUE, featureSelector=NULL))

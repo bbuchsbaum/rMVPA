@@ -46,7 +46,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
     tuneGrid <- model$grid(X, dataset$Y, 1)
   }
   
-  foldIterator <- matrixIter(crossVal, dataset$Y, X)
+  foldIterator <- matrixIter(crossVal, dataset$Y, X, vox)
     
   result <- if (is.null(dataset$testVec)) {
       ### train and test on one set.
@@ -234,7 +234,7 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
   res <- if (method == "standard") {
     .doStandard(dataset, model, radius, crossVal, classMetrics=classMetrics)    
   } else {
-    res <- foreach::foreach(1:niter) %dopar% {
+    res <- foreach::foreach(i=1:niter) %dopar% {
       flog.info("Running randomized searchlight iteration %s", i)   
       do.call(cbind, .doRandomized(dataset, model, radius, crossVal, classMetrics=classMetrics) )
     }
