@@ -79,7 +79,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
 .doStandard <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %do% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %dopar% {   
     if (nrow(vox) > 1) {
       print(nrow(vox))
       computePerformance(model$run(dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)
@@ -97,7 +97,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
-      computePerformance(model$run(dataset, vox,crossVal), vox, dataset$testSplits, classMetrics)
+      computePerformance(model$run(dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)
     }
   }
   
@@ -238,6 +238,7 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
       flog.info("Running randomized searchlight iteration %s", i)   
       do.call(cbind, .doRandomized(dataset, model, radius, crossVal, classMetrics=classMetrics) )
     }
+    
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {
       X <- do.call(cbind, lapply(res, function(M) M[,i]))

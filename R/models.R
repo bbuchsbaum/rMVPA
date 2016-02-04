@@ -107,35 +107,42 @@ CaretModelWrapper <- R6::R6Class(
     run = function(dataset, vox, crossVal, featureSelector = NULL) {
       result <- mvpa_crossval(dataset, vox, crossVal, self$model, self$tuneGrid, featureSelector)
       
-      observed <-
-        if (is.null(dataset$testVec)) {
-          dataset$Y
-        } else {
-          dataset$testY
-        }
+      observed <- if (is.null(dataset$testVec)) dataset$Y else dataset$testY
       
-      prob <- matrix(0, length(observed), length(levels(dataset$Y)))
-      colnames(prob) <- levels(dataset$Y)
-      
-      for (i in seq_along(result$prediction)) {
-        p <- as.matrix(result$prediction[[i]]$probs)
-        testInd <- result$testIndices[[i]]
-        prob[testInd,] <- prob[testInd,] + p
-      }
-      
-      prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
-      maxid <- apply(prob, 1, which.max)
-      pclass <- levels(dataset$Y)[maxid]
-      
-      pred <-
+      predictor <-
         if (length(result$predictor) > 1) {
           WeightedPredictor(result$predictor)
         } else {
           result$predictor
         }
       
-      classificationResult(observed, pclass, prob, pred)
-    },
+      if (is.factor(observed)) {
+        prob <- matrix(0, length(observed), length(levels(dataset$Y)))
+        colnames(prob) <- levels(dataset$Y)
+      
+        for (i in seq_along(result$prediction)) {
+          p <- as.matrix(result$prediction[[i]]$probs)
+          testInd <- result$testIndices[[i]]
+          prob[testInd,] <- prob[testInd,] + p
+        }
+      
+        prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
+        maxid <- apply(prob, 1, which.max)
+        pclass <- levels(dataset$Y)[maxid]
+        classificationResult(observed, pclass, prob, predictor)
+      } else {
+        
+        preds <- numeric(length(observed))
+        for (i in seq_along(result$prediction)) {
+          testInd <- result$testIndices[[i]]
+          preds[testInd] <- result$prediction[[i]]$preds
+        }
+        
+        classificationResult(observed, preds, NULL, predictor)
+        
+      
+    }
+  },
     
     performance = function(result) {
       

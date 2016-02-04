@@ -1,6 +1,15 @@
 library(neuroim)
 
 
+gen_regression_dataset <- function(D, nobs, spacing=c(1,1,1), folds=5) {
+  mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
+  bspace <- BrainSpace(c(D,nobs), spacing)
+  bvec <- BrainVector(mat, bspace)
+  mask <- as.logical(BrainVolume(array(rep(1, prod(D)), D), BrainSpace(D, spacing)))
+  Y <- rnorm(nobs)
+  blockVar <- rep(1:folds, length.out=nobs)
+  MVPADataset$new(trainVec=bvec, Y=Y, mask=mask, blockVar=blockVar, testVec=NULL, testY=NULL)
+}
 
 gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
   mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
@@ -62,6 +71,18 @@ test_that("randomized mvpa_searchlight and tune_grid runs without error", {
   res <- mvpa_searchlight(dataset, model, crossVal, radius=3, niter=2,method="randomized")
   
 })
+
+test_that("randomized mvpa_searchlight works with regressiob", {
+  
+  dataset <- gen_regression_dataset(c(4,4,4), 100, folds=3)
+  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  tuneGrid <- expand.grid(ncomp=1)
+  model <- loadModel("pls", list(tuneGrid=tuneGrid))
+  
+  res <- mvpa_searchlight(dataset, model, crossVal, radius=3, niter=2,method="randomized")
+  
+})
+
 
 
 

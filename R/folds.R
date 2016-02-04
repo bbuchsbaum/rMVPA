@@ -64,6 +64,7 @@ invertFolds <- function(foldSplit, allInd) {
 FoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
 
   assert_that(length(blockVar) == length(Y))
+  assert_that(length(unique(blockVar)) > 1)
   
   index <- 0
   ord <- NULL
@@ -179,6 +180,39 @@ MatrixFoldIterator <- function(X, Y, vox, blockVar, balance=FALSE, bootstrap=FAL
               getTestOrder=foldIter$getTestOrder, reset=foldIter$reset, balance=foldIter$balance, bootstrap=foldIter$bootstrap, nfolds=foldIter$nfolds)
   
   class(obj) <- c("MatrixFoldIterator", 'abstractiter', 'iter')
+  obj
+  
+}
+
+#' @export
+NestedFoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
+  blockids <- sort(unique(blockVar))
+  
+  if (length(Y) != length(blockVar)) {
+    stop("Y must have same length as blockVar")
+  }
+  
+  
+  index <- 0
+  
+  blockNumber <- function() { index }
+  
+  nextEl <- function() {
+    if (index < length(blockids)) {
+      index <<- index + 1
+      curBlock <- blockids[index]
+      train.idx <- which(blockVar != curBlock)
+      iter <- FoldIterator(Y[train.idx], blockVar=blockVar[train.idx], balance=balance, bootstrap=bootstrap, bootstrapMin=bootstrapMin)
+      attr(iter, "train_indices") <- train.idx
+      attr(iter, "test_indices") <- seq(1, length(Y))[-train.idx]
+      iter
+    } else {
+      stop('StopIteration')
+    }
+  }
+  
+  obj <- list(nextElem=nextEl, blockNumber=blockNumber)
+  class(obj) <- c("NestedFoldIterator", 'abstractiter', 'iter')
   obj
   
 }

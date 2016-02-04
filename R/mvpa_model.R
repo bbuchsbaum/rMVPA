@@ -7,7 +7,7 @@
 .adaptiveControl <- caret::trainControl("adaptive_cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
 
 #' create an \code{ClassificationResultSet} instance
-#' @param blockVar the cross-vlidation blocking variable
+#' @param blockVar the cross-validation blocking variable
 #' @param resultList a list of type \code{ClassificationResult} 
 #' @export
 ClassificationResultSet <- function(blockVar, resultList) {
@@ -138,11 +138,22 @@ MultiWayClassificationResult <- function(observed, predicted, probs, predictor=N
   ret
 }
 
+RegressionResult <- function(observed, predicted, predictor=NULL) {
+  ret <- list(
+    observed=observed,
+    predicted=predicted,
+    predictor=predictor)
+  class(ret) <- c("RegressionResult", "ClassificationResult", "list")
+  ret
+}
+  
 
 
 #' @export
 classificationResult <- function(observed, predicted, probs,  predictor=NULL) {
-  if (length(levels(as.factor(observed))) == 2) {
+  if (is.numeric(observed)) {
+    RegressionResult(observed, predicted, predictor)
+  } else if (length(levels(as.factor(observed))) == 2) {
     TwoWayClassificationResult(observed,predicted, probs,  predictor)
   } else if (length(levels(as.factor(observed))) > 2) {
     MultiWayClassificationResult(observed,predicted, probs, predictor)
@@ -181,7 +192,12 @@ CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneContro
     featureMask=featureMask,
     parcels=parcels)
   
-  class(ret) <- c("CaretModel", "list")
+  if (is.factor(Ytrain)) {
+    class(ret) <- c("CaretModel", "list")
+  } else {
+    class(ret) <- c("CaretRegressionModel", "list")
+  }
+  
   ret
 }
 
@@ -192,7 +208,6 @@ RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelec
   if (!is.null(parcels)) {
     message("computing parcellation", dim(Xtrain))
     Xtrain <- groupMeans(Xtrain, 2, parcels)
-    message("computing parcellation", dim(Xtrain))
   }
   
   featureMask <- if (!is.null(featureSelector)) {
@@ -204,6 +219,7 @@ RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelec
   Xtrain <- Xtrain[,featureMask]
   
   fit <- model$fit(Xtrain, Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE)
+  
   #fit <- cleanup(fit)
   
   ret <- list(
@@ -218,30 +234,44 @@ RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelec
               featureMask=featureMask,
               parcels=parcels)
               
-  
-  class(ret) <- c("RawModel", "list")
+  if (is.factor(Ytrain)) {
+    ret$modelFit$problemType <- "Classification"
+    class(ret) <- c("RawModel", "list")
+  } else {
+    ret$modelFit$problemType <- "Regression"
+    class(ret) <- c("RawRegressionModel", "list")
+  }
+
   ret
 }
 
 #' @export
 RawPredictor <- function(fit, model, featureMask, parcels=NULL) {
-  ret <- list(fit=fit,
-              model=model,
-              featureMask=featureMask,
-              parcels=parcels)
-  
+  ret <- list(fit=fit, model=model, featureMask=featureMask,parcels=parcels)
   class(ret) <- c("RawPredictor", "list")
+  ret
+}
+
+#' @export
+RawRegressionPredictor <- function(fit, model, featureMask, parcels=NULL) {
+  ret <- list(fit=fit, model=model, featureMask=featureMask,parcels=parcels)
+  class(ret) <- c("RawRegressionPredictor", "list")
   ret
 }
 
 #' @export
 CaretPredictor <- function(fit, featureMask, parcels=NULL) {
   ret <- list(fit=fit, featureMask=featureMask, parcels=parcels)
-  
   class(ret) <- c("CaretPredictor", "list")
   ret
 }
 
+#' @export
+CaretRegressionPredictor <- function(fit, featureMask, parcels=NULL) {
+  ret <- list(fit=fit, featureMask=featureMask, parcels=parcels)
+  class(ret) <- c("CaretRegressionPredictor", "list")
+  ret
+}
 
 #' @export
 MVPAVoxelPredictor <- function(predictor, voxelGrid) {
@@ -305,8 +335,35 @@ asPredictor.RawModel <- function(x) {
 }
 
 #' @export
+asPredictor.RawRegressionModel <- function(x) {
+  RawRegressionPredictor(x$modelFit, x$model, x$featureMask, x$parcels)
+}
+
+
+#' @export
 asPredictor.CaretModel <- function(x) {
   CaretPredictor(x$modelFit, x$featureMask, x$parcels)
+}
+
+#' @export
+asPredictor.CaretRegressionModel <- function(x) {
+  CaretRegressionPredictor(x$modelFit, x$featureMask, x$parcels)
+}
+
+#' @export
+evaluateModel.RawRegressionModel <- function(x, newdata=NULL) {
+  if (is.null(newdata)) {
+    newdata=x$Xtest
+  }
+  
+  preds <- if (is.null(x$parcels)) {
+    x$model$predict(x$modelFit, newdata[,x$featureMask])  
+  } else {
+    reducedData <- groupMeans(newdata, 2, x$parcels)
+    x$model$predict(x$modelFit, reducedData[,x$featureMask])  
+  }
+  
+  list(preds=preds)
 }
 
 
@@ -381,6 +438,36 @@ evaluateModel.RawPredictor <- function(x, newdata=NULL) {
   list(class=cpred, probs=probs)
 }
 
+#' @export
+evaluateModel.RawRegressionPredictor <- function(x, newdata=NULL) {
+  if (is.null(newdata)) {
+    stop("newdata cannot be null")
+  }
+  
+  preds <- if (is.null(x$parcels)) {
+    x$model$predict(x$modelFit, newdata[,x$featureMask])  
+  } else {
+    reducedData <- groupMeans(newdata, 2, x$parcels)
+    x$model$predict(x$modelFit, reducedData[,x$featureMask])  
+  }
+  
+  list(preds=preds)
+}
+
+
+
+#' @export
+evaluateModel.CaretRegressionModel <- function(x, newdata=NULL) {
+  if (is.null(newdata)) {
+    newdata=x$Xtest
+  }
+  
+  if (!is.null(x$parcels)) {
+    newdata <- groupMeans(newdata, 2, x$parcels)
+  }
+  
+  list(preds=predict(x$modelFit, newdata[,x$featureMask]))
+}
 
 #' @export
 evaluateModel.CaretModel <- function(x, newdata=NULL) {
@@ -424,11 +511,7 @@ evaluateModel.WeightedPredictor <- function(x, newdata=NULL) {
   prob <- preds[!sapply(preds, function(x) is.null(x))]
   pfinal <- Reduce("+", prob)
   
-  
-  ## TODO error ...
-  ## Error in colnames(pfinal)[apply(pfinal, 1, which.max)] : 
-  ##  invalid subscript type 'list'
-  
+
   cnames <- colnames(pfinal)
   maxids <- apply(pfinal, 1, which.max)
   len <- sapply(maxids, length)
@@ -454,6 +537,19 @@ evaluateModel.CaretPredictor <- function(x, newdata=NULL) {
   }
   
   list(class=predict(x$fit, newdata=newdata[,x$featureMask]), probs=predict(x$fit, newdata=newdata[,x$featureMask], type="prob"))
+}
+
+#' @export
+evaluateModel.CaretRegressionPredictor <- function(x, newdata=NULL) {
+  if (is.null(newdata)) {
+    stop("newdata cannot be null")
+  }
+  
+  if (!is.null(x$parcels)) {
+    newdata <- groupMeans(newdata, 2, x$parcels)
+  }
+  
+  list(preds=predict(x$fit, newdata=newdata[,x$featureMask]))
 }
 
 #' @export
@@ -540,7 +636,7 @@ crossval_internal <- function(foldIterator, model, tuneGrid, featureSelector=NUL
   }
   
   result <- list(
-    prediction = lapply(resultList, "[[", "result"),
+    prediction =  lapply(resultList, "[[", "result"),
     predictor  =  lapply(resultList, "[[", "fit"),
     testIndices = lapply(resultList, "[[", "testIndices"),
     featureMask = lapply(resultList, "[[", "featureMask")

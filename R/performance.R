@@ -24,6 +24,14 @@ performance.SimilarityResult <- function(x, splitList=NULL, classMetrics=FALSE) 
   
 }
 
+performance.RegressionResult <- function(x, splitList, classMetrics=FALSE) {
+  R2 <- 1 - sum((x$observed - x$predicted)^2)/sum((x$observed-mean(x$observed))^2)
+  rmse <- sqrt(mean((x$observed-x$predicted)^2))
+  rcor <- cor(x$observed, x$predicted, method="spearman")
+  c(R2=R2, RMSE=rmse, spearcor=rcor)
+}
+
+
 #' @export
 performance.TwoWayClassificationResult <- function(x,splitList=NULL, classMetrics=FALSE) {
   if (is.null(splitList)) {

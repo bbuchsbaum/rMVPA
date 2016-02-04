@@ -106,6 +106,14 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
   
   learner <- lookupMetaLearner(method)
   
+  ### rethink...
+  ### use NestedMatrixIterator here
+  ### loop through, generate new probabilities for each roi
+  ### predict on held out data
+  ### store predicted probs
+  ### fit meta-learner
+  ### make consensus prediction on heldout data using fitted weights
+  
   res <- lapply(blocks, function(block) {
     heldout <- which(x$blockVar == block)
     trainInd <- which(x$blockVar != block)
@@ -142,9 +150,10 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
     classificationResult(observed, predclass, prob=prob[ind,], predictor=predictor)
   } else {
     classificationResult(observed, predclass, prob=prob[ind,])
+    predictor <- NULL
   }
   
-  list(result=result, weights=finalWeights)
+  list(result=result, weights=finalWeights, predictor=predictor)
 }
   
 equalWeights <- function(resultList) {
