@@ -234,10 +234,11 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
   res <- if (method == "standard") {
     .doStandard(dataset, model, radius, crossVal, classMetrics=classMetrics)    
   } else {
-    res <- foreach::foreach(i=1:niter) %dopar% {
+    
+    res <- parallel::mclapply(1:niter, function(i) {
       flog.info("Running randomized searchlight iteration %s", i)   
       do.call(cbind, .doRandomized(dataset, model, radius, crossVal, classMetrics=classMetrics) )
-    }
+    })
     
    
     Xall <- lapply(1:ncol(res[[1]]), function(i) {
