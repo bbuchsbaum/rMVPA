@@ -73,6 +73,12 @@ config <- initializeData(config)
 
 flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
 
+if (is.numeric(config$labels)) {
+  flog.info("labels are continuous, running a regression analysis:")
+} else {
+  config$labels <- as.factor(config$labels)
+}
+
 dataset <- MVPADataset$new(config$train_datavec, 
                        config$labels, 
                        config$maskVolume, 
