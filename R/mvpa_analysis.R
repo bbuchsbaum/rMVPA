@@ -79,7 +79,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
 .doStandard <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE) %dopar% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
     if (nrow(vox) > 1) {
       print(nrow(vox))
       computePerformance(model$run(dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)
@@ -94,7 +94,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
   ## tight inner loop should probably avoid "foreach" as it has a lot of overhead, but c'est la vie for now.
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", dataset$model$library)) %do% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "caret", "neuroim", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
       computePerformance(model$run(dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)

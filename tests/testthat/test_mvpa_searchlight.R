@@ -76,8 +76,8 @@ test_that("randomized mvpa_searchlight works with regressiob", {
   
   dataset <- gen_regression_dataset(c(4,4,4), 100, folds=3)
   crossVal <- BlockedCrossValidation(dataset$blockVar)
-  tuneGrid <- expand.grid(ncomp=1)
-  model <- loadModel("pls", list(tuneGrid=tuneGrid))
+  tuneGrid <- data.frame(alpha=.5, lambda=.1)
+  model <- loadModel("glmnet", list(tuneGrid=tuneGrid))
   
   res <- mvpa_searchlight(dataset, model, crossVal, radius=3, niter=2,method="randomized")
   
