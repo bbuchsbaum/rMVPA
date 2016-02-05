@@ -155,9 +155,15 @@ CaretModelWrapper <- R6::R6Class(
         MVPAVoxelPredictor(res$predictor, attr(res, "vox"))
       })
       
-      predFrame <- as.data.frame(do.call(rbind, lapply(resultList, function(res) {
-        data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=as.character(res$observed) == as.character(res$predicted), prob=res$prob)
-      })))
+      predFrame <- if (is.factor(resultLit[[1]]$observed)) {
+          as.data.frame(do.call(rbind, lapply(resultList, function(res) {
+            data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=as.character(res$observed) == as.character(res$predicted), prob=res$prob)
+          })))
+      } else {
+        as.data.frame(do.call(rbind, lapply(resultList, function(res) {
+          data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted)
+        })))
+      }
       
     
       ret <- list(predictor=ListPredictor(predictorList, rois), predictions=predFrame)
