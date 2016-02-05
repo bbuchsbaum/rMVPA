@@ -91,7 +91,7 @@ dataset <- MVPADataset$new(config$train_datavec,
                        trainDesign=config$train_design,
                        testDesign=config$test_design)
 
-model <- loadModel(config$model, list(tuneGrid=config$tuneGrid))
+model <- loadModel(config$model, list(tuneGrid=config$tune_grid))
 
 cl <- makeCluster(config$pthreads, outfile="",useXDR=FALSE, type="FORK")
 registerDoParallel(cl)

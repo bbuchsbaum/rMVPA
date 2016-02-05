@@ -67,7 +67,6 @@ test_that("mvpa_regional with 5 ROIS and consensus learning runs without error",
   model <- loadModel("sda")
   res <- mvpa_regional(dataset, model, regionMask, crossVal)
   
-  
   consResult1 <- consensusWeights(res$resultSet, "glmnet")
   consResult2 <- consensusWeights(res$resultSet, "greedy")
   consResult3 <- consensusWeights(res$resultSet, "auc_weights")
@@ -113,7 +112,7 @@ test_that("mvpa_regional with regression and 5 ROIs runs without error", {
   crossVal <- BlockedCrossValidation(dataset$blockVar)
   
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
-  model <- loadModel("pls", list(tuneGrid=data.frame(ncomp=2)))
+  model <- loadModel("glmnet", list(tuneGrid=expand.grid(alpha=c(.1,.5), lambda=c(.001,.2,.5))))
   res <- mvpa_regional(dataset, model, regionMask, crossVal)
   
 })
