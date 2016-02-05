@@ -185,7 +185,7 @@ dataset <- MVPADataset$new(config$train_datavec,
                            trainDesign=config$train_design,
                            testDesign=config$test_design)
 
-model <- loadModel(config$model, list(tuneGrid=config$tuneGrid))
+model <- loadModel(config$model, list(tuneGrid=config$tune_grid))
 
 for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
   if (!is.null(configParams[[varname]]) && is(configParams[[varname]], "formula")) {
