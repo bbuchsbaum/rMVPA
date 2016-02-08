@@ -604,9 +604,10 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, featu
   } 
   
   result <- list(
-    prediction = results$perf,
-    predictor  =  results$predictor,
-    featureMask = results$predictor$featureMask
+    prediction = list(results$perf),
+    predictor  =  list(results$predictor),
+    testIndices = list(1:length(Ytest)),
+    featureMask = list(results$predictor$featureMask)
   )
   
   result
