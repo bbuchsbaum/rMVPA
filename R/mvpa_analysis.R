@@ -228,7 +228,7 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
   
   method <- match.arg(method)
   
-  flog.info("classification model is: %s", model$model_name)
+  flog.info("model is: %s", model$model_name)
   
   
   res <- if (method == "standard") {

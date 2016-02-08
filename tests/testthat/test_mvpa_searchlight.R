@@ -72,11 +72,11 @@ test_that("randomized mvpa_searchlight and tune_grid runs without error", {
   
 })
 
-test_that("randomized mvpa_searchlight works with regressiob", {
+test_that("randomized mvpa_searchlight works with regression", {
   
   dataset <- gen_regression_dataset(c(4,4,4), 100, folds=3)
   crossVal <- BlockedCrossValidation(dataset$blockVar)
-  tuneGrid <- data.frame(alpha=.5, lambda=.1)
+  tuneGrid <- expand.grid(alpha=.5, lambda=c(.1,.2,32))
   model <- loadModel("glmnet", list(tuneGrid=tuneGrid))
   
   res <- mvpa_searchlight(dataset, model, crossVal, radius=3, niter=2,method="randomized")
