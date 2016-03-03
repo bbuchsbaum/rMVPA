@@ -25,10 +25,11 @@ computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE) 
 
 
 #' @export
-mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureSelector = NULL) {
+mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureSelector = NULL, subIndices=NULL) {
+  
   X <- series(dataset$trainVec, vox)
+  
   valid.idx <- nonzeroVarianceColumns(X)
-    
   X <- X[,valid.idx]
     
   if (ncol(X) == 0) {
@@ -41,20 +42,19 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
     dataset$parcellation[vox]
   }
     
-    
   if (is.null(tuneGrid)) {
-    tuneGrid <- model$grid(X, dataset$Y, 1)
+    tuneGrid <- model$grid(X, Y, 1)
   }
   
-  foldIterator <- matrixIter(crossVal, dataset$Y, X, vox)
+  foldIterator <- matrixIter(crossVal, dataset$Y, X, vox, subIndices)
     
   result <- if (is.null(dataset$testVec)) {
-      ### train and test on one set.
+    ### train and test on one set.
     crossval_internal(foldIterator, model, tuneGrid, featureSelector = featureSelector, parcels = parcels)
   } else {
     ### train on one set, test on the other.
     Xtest <- series(dataset$testVec, vox)
-    crossval_external(foldIterator, Xtest, dataset$testY, model, tuneGrid, featureSelector = featureSelector, parcels =parcels)
+    crossval_external(foldIterator, Xtest, dataset$testY, model, tuneGrid, featureSelector = featureSelector, parcels = parcels)
   }
     
   result
@@ -186,7 +186,8 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
 
   extendedResults <- model$combineResults(results)
   names(outVols) <- colnames(perfMat)[2:ncol(perfMat)]
-  list(outVols = outVols, performance=perfMat, 
+  list(outVols = outVols, 
+       performance=perfMat, 
        resultSet=resultSet, 
        extendedResults=extendedResults, 
        invalid=regionSet[invalid])

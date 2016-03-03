@@ -320,7 +320,7 @@ WeightedPredictor <- function(fits, names=1:length(fits), weights=rep(1/length(f
 
 
 #' @export
-evaluateModel <- function(x, newdata) {
+evaluateModel <- function(x, newdata,...) {
   UseMethod("evaluateModel")
 }
 
@@ -374,6 +374,8 @@ evaluateModel.RawModel <- function(x, newdata=NULL) {
   }
   
   probs <- if (is.null(x$parcels)) {
+    print(paste("newdata dim:", dim(newdata)))
+    print(paste("length feature mask:", length(x$featureMask)))
     x$model$prob(x$modelFit, newdata[,x$featureMask])  
   } else {
     reducedData <- groupMeans(newdata, 2, x$parcels)
@@ -390,12 +392,12 @@ evaluateModel.RawModel <- function(x, newdata=NULL) {
 }
 
 #' @export
-evaluateModel.CalibratedPredictor <- function(x, newdata) {
+evaluateModel.CalibratedPredictor <- function(x, newdata,...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
   
-  Preds <- evaluateModel(x$predictor, newdata)$probs
+  Preds <- evaluateModel(x$predictor, newdata,...)$probs
   Pcal <- do.call(cbind, lapply(1:ncol(Preds), function(i) {
     predict(x$calfits[[i]], data.frame(x0=Preds[,i]), type="response")
   }))
@@ -405,12 +407,16 @@ evaluateModel.CalibratedPredictor <- function(x, newdata) {
 }
 
 #' @export
-evaluateModel.MVPAVoxelPredictor <- function(x, newdata) {
+evaluateModel.MVPAVoxelPredictor <- function(x, newdata, subIndices=NULL) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
   
-  X <- series(newdata,x$voxelGrid)
+  X <- if (!is.null(subIndices)) {
+    series(newdata,x$voxelGrid)[subIndices,]
+  } else {
+    series(newdata,x$voxelGrid)
+  }
   
   if (is.vector(X)) {
     X <- matrix(X, nrow=1)
@@ -421,7 +427,7 @@ evaluateModel.MVPAVoxelPredictor <- function(x, newdata) {
 
 
 #' @export
-evaluateModel.RawPredictor <- function(x, newdata=NULL) {
+evaluateModel.RawPredictor <- function(x, newdata=NULL,...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
@@ -485,19 +491,19 @@ evaluateModel.CaretModel <- function(x, newdata=NULL) {
 
 
 #' @export
-evaluateModel.ListPredictor <- function(x, newdata=NULL) {
+evaluateModel.ListPredictor <- function(x, newdata=NULL,...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
   
   res <- lapply(x, function(fit) {
-    evaluateModel(fit, newdata)
+    evaluateModel(fit, newdata,...)
   })
   
 }
 
 #' @export
-evaluateModel.WeightedPredictor <- function(x, newdata=NULL) {
+evaluateModel.WeightedPredictor <- function(x, newdata=NULL, ...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
@@ -505,7 +511,7 @@ evaluateModel.WeightedPredictor <- function(x, newdata=NULL) {
   wts <- attr(x, "weights")
   
   preds <- lapply(1:length(x), function(i) {
-    evaluateModel(x[[i]], newdata)$prob * wts[i]
+    evaluateModel(x[[i]], newdata, ...)$prob * wts[i]
   })
   
   prob <- preds[!sapply(preds, function(x) is.null(x))]
@@ -527,7 +533,7 @@ evaluateModel.WeightedPredictor <- function(x, newdata=NULL) {
 
 
 #' @export
-evaluateModel.CaretPredictor <- function(x, newdata=NULL) {
+evaluateModel.CaretPredictor <- function(x, newdata=NULL,...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
@@ -620,6 +626,9 @@ crossval_internal <- function(foldIterator, model, tuneGrid, featureSelector=NUL
  
   ### loop over folds
   resultList <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
+
+    ## tind <- if (!is.null(subIndices)) subIndices[fold$testIndex] else fold$testIndex
+    
     if (nrow(tuneGrid) == 1) {
       fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid,  .noneControl, featureSelector, parcels, foldIterator$vox)
       list(result=evaluateModel(fit), fit = asPredictor(fit), featureMask=fit$featureMask, parcels=parcels, testIndices=fold$testIndex)        
@@ -645,31 +654,6 @@ crossval_internal <- function(foldIterator, model, tuneGrid, featureSelector=NUL
   
   result
   
-  ## results <- lapply(resultList, "[[", "result")
-  ## reorder predictions to match order of input features/labels
-  #ord <- foldIterator$getTestOrder()
-  #probMat <- do.call(rbind, lapply(results, "[[", "probs"))[ord,]
-  #predClass <- unlist(lapply(results, "[[", "class"))[ord]
-  
-  #if (returnPredictor) {
-  #  ctrl <- if (nrow(tuneGrid) == 1) {
-  #    .noneControl
-  #  } else {
-  #    caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=foldIterator$getTrainSets(), returnData=FALSE, returnResamp="none", allowParallel=FALSE)
-  #  }    
-    
-  #  fit <- if (ensemblePredictor) {
-  #    WeightedPredictor(lapply(resultList, "[[", "fit"))
-  #  } else {
-  #    asPredictor(trainModel(model, foldIterator$X, foldIterator$Y, NULL, NULL, tuneGrid, tuneControl=ctrl, featureSelector, parcels))
-  #  }
-  #  
-  #  list(class=predClass, probs=probMat, predictor=fit, featureMask=fit$featureMask, parcels=parcels)
-  #  list(class=predClass, probs=probMat, predictor=wfit)
-  #} else {
-  #  fmat <- do.call(cbind, lapply(resultList, "[[", "featureMask"))
-  #  list(class=predClass, probs=probMat, predictor=NULL, featureMask=rowMeans(fmat), parcels=parcels)
-  #}
 }
   
 

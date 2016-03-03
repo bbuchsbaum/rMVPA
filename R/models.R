@@ -104,10 +104,14 @@ CaretModelWrapper <- R6::R6Class(
       self$model$prob(modelFit,newdata@data)
     },
     
-    run = function(dataset, vox, crossVal, featureSelector = NULL) {
-      result <- mvpa_crossval(dataset, vox, crossVal, self$model, self$tuneGrid, featureSelector)
+    run = function(dataset, vox, crossVal, featureSelector = NULL, subIndices=NULL) {
+      result <- mvpa_crossval(dataset, vox, crossVal, self$model, self$tuneGrid, featureSelector, subIndices)
       
-      observed <- if (is.null(dataset$testVec)) dataset$Y else dataset$testY
+      observed <- if (is.null(dataset$testVec)) {
+        if (is.null(subIndices)) dataset$Y else dataset$Y[subIndices] 
+      } else {
+        dataset$testY
+      }
       
       predictor <-
         if (length(result$predictor) > 1) {
@@ -117,6 +121,7 @@ CaretModelWrapper <- R6::R6Class(
         }
       
       if (is.factor(observed)) {
+       
         prob <- matrix(0, length(observed), length(levels(dataset$Y)))
         colnames(prob) <- levels(dataset$Y)
       
@@ -125,6 +130,7 @@ CaretModelWrapper <- R6::R6Class(
           testInd <- result$testIndices[[i]]
           prob[testInd,] <- prob[testInd,] + p
         }
+       
       
         prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
         maxid <- apply(prob, 1, which.max)
@@ -165,7 +171,6 @@ CaretModelWrapper <- R6::R6Class(
         })))
       }
       
-    
       ret <- list(predictor=ListPredictor(predictorList, rois), predictions=predFrame)
       class(ret) <- c("ClassificationResultList", "list")
       ret

@@ -223,11 +223,18 @@ for (roinum in seq_along(config$ROIVolume)) {
   ## need to handle bootstrap reps
   crossVal <- BlockedCrossValidation(dataset$blockVar, balance=config$autobalance)
   
-  mvpa_res <- mvpa_regional(dataset, model, roivol, crossVal, config$savePredictors, featureSelector=featureSelector, classMetrics=config$output_class_metrics)
+  mvpa_res <- mvpa_regional(dataset, model, roivol, crossVal, config$savePredictors, 
+                            featureSelector=featureSelector, classMetrics=config$output_class_metrics)
   
   if (!is.null(consensusLearner)) {
-    rois <- sapply(mvpa_res$resultSet$resultList, attr, "ROINUM")
-    consResult <- consensusWeights(mvpa_res$resultSet, consensusLearner$method)
+    consResult <- mvpa_regional_consensus(dataset, model, roivol, 
+                                          featureSelector=featureSelector, 
+                                          classMetrics=config$output_class_metrics,
+                                          method=consensusLearner$method)
+    
+    saveRDS(consResult$result$predictor, paste0(config$output, "/consensusPredictor.RDS"))
+    #rois <- sapply(mvpa_res$resultSet$resultList, attr, "ROINUM")
+    #consResult <- consensusWeights(mvpa_res$resultSet, consensusLearner$method)
     consPerf <- performance(consResult$result, dataset$testSplits, config$output_class_metrics)
     consPerf <- as.data.frame(t(consPerf))
     write.table(format(consPerf,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/consensus_performance.txt")), row.names=FALSE, quote=FALSE)

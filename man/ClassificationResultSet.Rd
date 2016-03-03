@@ -7,7 +7,7 @@
 ClassificationResultSet(blockVar, resultList)
 }
 \arguments{
-\item{blockVar}{the cross-vlidation blocking variable}
+\item{blockVar}{the cross-validation blocking variable}
 
 \item{resultList}{a list of type \code{ClassificationResult}}
 }

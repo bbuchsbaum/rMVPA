@@ -73,14 +73,27 @@ test_that("mvpa_regional with 5 ROIS and consensus learning runs without error",
   consResult4 <- consensusWeights(res$resultSet, "equal_weights")
  
 })
+
+test_that("mvpa_regional_consensus with 5 ROIS runs without error", {
+  
+  dataset <- gen_dataset(c(10,10,2), 100, 3)
+  regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
+  
+  model <- loadModel("sda")
+  res <- mvpa_regional_consensus(dataset, model, regionMask)
+  
+})
+
+
+
 test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topk=10", {
   
   dataset <- gen_dataset(c(10,10,2), 100, 3)
   crossVal <- BlockedCrossValidation(dataset$blockVar)
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
-  
+  model <- loadModel("sda")
   fsel <- FeatureSelector("FTest", "topk", 10)
-  res <- mvpa_regional(dataset, regionMask, crossVal, featureSelector=fsel)
+  res <- mvpa_regional(dataset, model, regionMask, crossVal, featureSelector=fsel)
   
 })
 
@@ -89,9 +102,10 @@ test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topk=10", {
   dataset <- gen_dataset(c(10,10,2), 100, 3)
   crossVal <- BlockedCrossValidation(dataset$blockVar)
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
+  model <- loadModel("sda")
   
   fsel <- FeatureSelector("FTest", "topk", 10)
-  res <- mvpa_regional(dataset, regionMask, crossVal, featureSelector=fsel)
+  res <- mvpa_regional(dataset, model, regionMask, crossVal, featureSelector=fsel)
 })
 
 test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topp=.4", {

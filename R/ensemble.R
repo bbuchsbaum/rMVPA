@@ -89,11 +89,32 @@ consensusWeights <- function(x,...) {
   UseMethod("consensusWeights")
 }
 
+innerIteration <- function(dataset, vox, trainInd, testInd, model, tuneGrid, autobalance, bootstrap) {
+  Ytrain <- dataset$Y[-testInd]
+  blockVar <- dataset$blockVar[-testInd]
+  X <- series(dataset$trainVec, vox)
+  Xtrain <- X[-testInd,,drop=FALSE] 
+  foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, vox, blockVar, balance=autobalance, bootstrap=bootstrap)
+  
+  ## do we need to compute final pedictor?
+  res <- try(crossval_internal(foldIterator, model, tuneGrid, returnPredictor=TRUE, featureSelector=NULL))
+  
+  structure(classificationResult(Ytrain, res$class, res$probs, res$predictor),
+            vox=vox)
+  
+}
 
 #' @export
-consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmnet", "equal_weights", "auc_weights")[1], ...) {
-  blocks <- sort(unique(x$blockVar))
-  observed <- x$resultList[[1]]$observed
+mvpa_regional_consensus <- function(dataset, model, regionMask, autobalance=FALSE, bootstrap=FALSE, 
+                                    savePredictors=TRUE, classMetrics=TRUE, featureSelector=NULL,
+                                    method=c("greedy", "glmnet", "equal_weights", "auc_weights"), ...) {
+  
+  if (length(dataset$blockVar) != length(dataset$Y)) {
+    stop(paste("length of 'labels' must equal length of 'cross validation blocks'", length(Y), "!=", length(blockVar)))
+  }
+  
+  method <- match.arg(method)
+  crossVal <- BlockedCrossValidation(dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
   
   lookupMetaLearner <- function(method) {
     switch(method,
@@ -106,13 +127,87 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
   
   learner <- lookupMetaLearner(method)
   
-  ### rethink...
-  ### use NestedMatrixIterator here
-  ### loop through, generate new probabilities for each roi
-  ### predict on held out data
-  ### store predicted probs
-  ### fit meta-learner
-  ### make consensus prediction on heldout data using fitted weights
+  regionSet <- sort(as.integer(unique(regionMask[regionMask > 0])))
+
+  blockIterator <- FoldIterator(dataset$Y, blockVar=dataset$blockVar)
+  
+  Xtest <- series(dataset$trainVec, which(regionMask>0))
+  
+  ## loop over blocks
+  ensembleSet <- foreach::foreach(fold = blockIterator, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
+    
+    ## loop over rois
+    resultList <- lapply(regionSet, function(roinum) {
+      idx <- which(regionMask == roinum)
+      
+      ## choke on length == 1
+      if (length(idx) < 2) {
+        stop(paste("ROI number", roinum, "has less than 2 voxels, aborting."))
+      }
+      
+      vox <- indexToGrid(regionMask, idx)
+      ## train on sub indices
+      result <- model$run(dataset, vox, crossVal, featureSelector, subIndices=fold$trainIndex)
+      
+      attr(result, "ROINUM") <- roinum
+      attr(result, "vox") <- vox
+      result
+     
+    })
+    
+    ## learn consensus weights
+    wts <- learner(resultList, ...)
+ 
+    if (all(wts==0)) {
+      warning("consensus weights are all zero, assigning equal weight to each classifier")
+      wts <- rep(1, length(wts))/length(wts)
+    }
+    
+    combined <- model$combineResults(resultList)
+   
+    ## create weighted predictor for this fold
+    wpred <- WeightedPredictor(combined$predictor, weights=wts)
+    
+    ## predict on held out data
+    fullPred <- evaluateModel(wpred, dataset$trainVec, subIndices=fold$testIndex)
+    roiPred <- evaluateModel(combined$predictor, dataset$trainVec, subIndices=fold$testIndex)
+    
+    list(predictor=wpred, predictions=fullPred, roiPred=roiPred, weights=wts)
+  
+  }
+
+  prob <- do.call(rbind, lapply(ensembleSet, function(x) x$predictions$prob))
+  #roiProb <- do.call(rbind, lapply(ensembleSet, function(x) x$roiPred$prob))
+  testInd <- unlist(blockIterator$getTestSets())
+  prob <- prob[testInd,]
+  finalWeights <- colMeans(do.call(rbind, lapply(ensembleSet, function(e) unlist(e$weights))))
+                    
+  maxid <- apply(prob,1,which.max)
+  predclass <- colnames(prob)[maxid]
+  
+  finalPredictor <- WeightedPredictor(lapply(ensembleSet, "[[", "predictor"))
+  result <- classificationResult(dataset$Y, predclass, prob=prob, predictor=finalPredictor)
+
+  list(result=result, weights=finalWeights)
+
+}
+
+#' @export
+consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmnet", "equal_weights", "auc_weights")[1], ...) {
+  blocks <- sort(unique(x$blockVar))
+  observed <- x$resultList[[1]]$observed
+  
+  method <- match.arg(method)
+  lookupMetaLearner <- function(method) {
+    switch(method,
+           "greedy"=greedyWeights,
+           "glmnet"=glmnetWeights,
+           "auc_weights"=AUCWeights,
+           "equal_weights"=equalWeights)
+    
+  }
+  
+  learner <- lookupMetaLearner(method)
   
   res <- lapply(blocks, function(block) {
     heldout <- which(x$blockVar == block)
@@ -125,7 +220,6 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
     bvar <- x$blockVar[trainInd]
     
     wts <- learner(sres, ...)
-    
     
     if (all(wts==0)) {
       warning("consensus weights are all zero, assigning equal weight to each classifier")
@@ -153,7 +247,7 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
     predictor <- NULL
   }
   
-  list(result=result, weights=finalWeights, predictor=predictor)
+  list(result=result, weights=finalWeights)
 }
   
 equalWeights <- function(resultList) {
@@ -200,6 +294,7 @@ glmnetWeights <- function(resultList, alpha=.5) {
   cvres <- glmnet::cv.glmnet(fullmat, y0, family="binomial", lower.limits=0, alpha=alpha)
   lambda.min <- cvres$lambda.min
   weights <- coef(cvres$glmnet.fit, s=lambda.min)[-1,1]
+  
   if (all(weights == 0)) {
     weights <- rep(1/length(weights), length(weights))
   } else {
@@ -339,20 +434,6 @@ computeWeightVol <- function(ensemble, mask) {
 }
 
 
-innerIteration <- function(dataset, vox, trainInd, testInd, model, tuneGrid, autobalance, bootstrap) {
-  Ytrain <- dataset$Y[-testInd]
-  blockVar <- dataset$blockVar[-testInd]
-  X <- series(dataset$trainVec, vox)
-  Xtrain <- X[-testInd,,drop=FALSE] 
-  foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, vox, blockVar, balance=autobalance, bootstrap=bootstrap)
-  
-  ## do we need to compute final pedictor?
-  res <- try(crossval_internal(foldIterator, model, tuneGrid, returnPredictor=TRUE, featureSelector=NULL))
-  
-  structure(classificationResult(Ytrain, res$class, res$probs, res$predictor),
-                     vox=vox)
-                   
-}
 
 
 
@@ -406,7 +487,6 @@ mergeEnsembles <- function(ensembleSet, testOrder, returnPredictor=FALSE) {
   } else {
     classificationResult(observed, predicted, probs)
   }
-  
   
 }                 
 
