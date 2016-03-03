@@ -233,7 +233,7 @@ for (roinum in seq_along(config$ROIVolume)) {
                                           method=consensusLearner$method)
     
     saveRDS(consResult$result$predictor, paste0(config$output, "/consensusPredictor.RDS"))
-    #rois <- sapply(mvpa_res$resultSet$resultList, attr, "ROINUM")
+    rois <- sapply(mvpa_res$resultSet$resultList, attr, "ROINUM")
     #consResult <- consensusWeights(mvpa_res$resultSet, consensusLearner$method)
     consPerf <- performance(consResult$result, dataset$testSplits, config$output_class_metrics)
     consPerf <- as.data.frame(t(consPerf))
