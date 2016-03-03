@@ -193,13 +193,13 @@ mvpa_regional_consensus <- function(dataset, model, regionMask, autobalance=FALS
 }
 
 #' @export
-consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmnet", "equal_weights", "auc_weights")[1], ...) {
+consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmnet", "equal_weights", "auc_weights"), ...) {
   blocks <- sort(unique(x$blockVar))
   observed <- x$resultList[[1]]$observed
   
   method <- match.arg(method)
-  lookupMetaLearner <- function(method) {
-    switch(method,
+  lookupMetaLearner <- function(meth) {
+    switch(meth,
            "greedy"=greedyWeights,
            "glmnet"=glmnetWeights,
            "auc_weights"=AUCWeights,
