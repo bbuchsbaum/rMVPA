@@ -374,8 +374,6 @@ evaluateModel.RawModel <- function(x, newdata=NULL) {
   }
   
   probs <- if (is.null(x$parcels)) {
-    print(paste("newdata dim:", dim(newdata)))
-    print(paste("length feature mask:", length(x$featureMask)))
     x$model$prob(x$modelFit, newdata[,x$featureMask])  
   } else {
     reducedData <- groupMeans(newdata, 2, x$parcels)

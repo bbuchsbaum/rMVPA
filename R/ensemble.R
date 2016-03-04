@@ -132,9 +132,9 @@ mvpa_regional_consensus <- function(dataset, model, regionMask, autobalance=FALS
   blockIterator <- FoldIterator(dataset$Y, blockVar=dataset$blockVar)
   
   Xtest <- series(dataset$trainVec, which(regionMask>0))
-  
+  #browser()
   ## loop over blocks
-  ensembleSet <- foreach::foreach(fold = blockIterator, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
+  ensembleSet <- foreach::foreach(fold = blockIterator, .verbose=FALSE, .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
     
     ## loop over rois
     resultList <- lapply(regionSet, function(roinum) {
@@ -175,6 +175,8 @@ mvpa_regional_consensus <- function(dataset, model, regionMask, autobalance=FALS
     list(predictor=wpred, predictions=fullPred, roiPred=roiPred, weights=wts)
   
   }
+  
+  #browser()
 
   prob <- do.call(rbind, lapply(ensembleSet, function(x) x$predictions$prob))
   #roiProb <- do.call(rbind, lapply(ensembleSet, function(x) x$roiPred$prob))
@@ -291,9 +293,13 @@ glmnetWeights <- function(resultList, alpha=.5) {
   
   fullmat <- rbind(posmat, negmat)
   y0 <- factor(rep(c("pos", "neg"), each=nrow(posmat)))
-  cvres <- glmnet::cv.glmnet(fullmat, y0, family="binomial", lower.limits=0, alpha=alpha)
-  lambda.min <- cvres$lambda.min
-  weights <- coef(cvres$glmnet.fit, s=lambda.min)[-1,1]
+
+  ctrl <- trainControl(method="cv", number=5, repeats=20)
+  cvres <- caret::train(fullmat, y0, method="glmnet", tuneLength=8, trControl=ctrl, lower.limits=0)
+  
+  #cvres <- glmnet::cv.glmnet(fullmat, y0, family="binomial", lower.limits=0, alpha=alpha)
+  #lambda.min <- cvres$lambda.min
+  weights <- coef(cvres$finalModel, s=cvres$bestTune$lambda)[-1,1]
   
   if (all(weights == 0)) {
     weights <- rep(1/length(weights), length(weights))

@@ -127,8 +127,8 @@ CaretModelWrapper <- R6::R6Class(
       
         for (i in seq_along(result$prediction)) {
           p <- as.matrix(result$prediction[[i]]$probs)
-          testInd <- result$testIndices[[i]]
-          prob[testInd,] <- prob[testInd,] + p
+          tind <- result$testIndices[[i]]
+          prob[tind,] <- prob[tind,] + p
         }
        
       
