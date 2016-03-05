@@ -2,9 +2,16 @@
 % Please edit documentation in R/featureSelection.R
 \name{selectFeatures}
 \alias{selectFeatures}
+\alias{selectFeatures.FTest}
+\alias{selectFeatures.catscore}
 \title{selectFeatures}
 \usage{
-selectFeatures(obj, X, Y, vox)
+selectFeatures(obj, X, Y, vox, ...)
+
+\method{selectFeatures}{catscore}(obj, X, Y, vox = NULL,
+  ranking.score = c("entropy", "avg", "max"))
+
+\method{selectFeatures}{FTest}(obj, X, Y, vox = NULL)
 }
 \arguments{
 \item{obj}{the \code{FeatureSelection} object}
@@ -14,16 +21,22 @@ selectFeatures(obj, X, Y, vox)
 \item{Y}{the dependent variable as a \code{factor} or \code{numeric} variable.}
 
 \item{vox}{optional coordinates associated with rows of \code{X} matrix.}
+
+\item{ranking.score}{the feature score: entropy, avg, or max.}
+
+\item{additional}{arguments}
 }
 \value{
 a \code{logical} vector indicating the columns of \code{X} matrix that were selected.
 }
 \description{
-Give a \code{FeatureSelection} spec and a dataset return the set of selected features as a binary vector.
+Given a \code{FeatureSelection} specification object and a dataset return the set of selected features as a binary vector.
 }
 \examples{
-fsel <- FeatureSelector("FTest", "top_k", 1000)
+fsel <- FeatureSelector("FTest", "top_k", 10)
+X <- matrix(rnorm(100*100), 100, 100)
+Y <- factor(rep(c("a", "b"), each=50))
 featureMask <- selectFeatures(fsel, X, Y)
-
+sum(featureMask) == 10
 }
 

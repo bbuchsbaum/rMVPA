@@ -22,20 +22,20 @@ corsimFit <- function(x, y, method, robust) {
       }
     }      
   } else {
-    mean
+    "mean"
   }
   
-  
-  list(conditionMeans = splitReduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)
+  if (estimator == "mean") {
+    list(conditionMeans=groupMeans(X, 1, Y), levs=levels(y), method=method, robust=robust)
+  } else {
+    list(conditionMeans = splitReduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)
+  }
 }
 
 
 predict_corsimFit <- function(modelFit, newData) {
-  res <- sapply(1:nrow(newData), function(i) {
-    pattern <- newData[i,]
-    which.max(cor(pattern, t(modelFit$conditionMeans), method=modelFit$method))
-  })
-  
+  cres <- cor(t(newData), t(modelFit$conditionMeans), method=modelFit$method)
+  res <- max.col(cres)
   modelFit$levs[res]
 }
 

@@ -7,6 +7,13 @@ colACC <- function(X, Y) {
   })
 }
 
+#' matrixToVolumeList 
+#' Convenience function to convert a matrix to a list of \code{BrainVolume} instances.
+#' 
+#' @param vox a matrix of voxel coordinates with same number of rows as \code{mat} argument.
+#' @param mat a matrix of values where each column is to be converted to \code{BrainVolume} instance.
+#' @param mask a mask which is used to define the spatial geometry of the output volume
+#' @param default the default value in the ouput volume. e.g. the value for coordinates not contained in \code{vox}
 #' @export  
 matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   lapply(1:ncol(mat), function(i) {
@@ -16,14 +23,23 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   })
 } 
 
-#' @export 
+
 computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE) {
   perf <- t(performance(result, splitList, classMetrics))
   out <- cbind(vox, perf[rep(1, nrow(vox)),])   
 }
 
-
-
+#' mvpa_crossval
+#' 
+#' cross_validation for an MVPA analysis.
+#' 
+#' @param dataset an instance of type \code{MVPADataset}
+#' @param vox a set of voxel coordinates defining the subset of the image dataset to use.
+#' @param crossVal a cross-validation instance such as \code{BlockedCrossValidation}
+#' @param model a caret model object
+#' @param tuneGrid an optional caret-formatted \code{data.frame} containing parameters to be tuned
+#' @param featureSelector an optional \code{FeatureSelector} instance for selecting relevant features
+#' @param subIndices an optional vector of row indices (observations) to run cross-validation on.
 #' @export
 mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureSelector = NULL, subIndices=NULL) {
   
@@ -111,12 +127,13 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
 
 #' mvpa_regional
 #' @param dataset a \code{MVPADataset} instance.
+#' @param model a \code{BaseModel} instance usually of type \code{CaretModelWrapper}
 #' @param regionMask a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
+#' @param crossVal
 #' @param savePredictors whether to return prediction model in result (default is \code{FALSE} to save memory)
-#' @param autobalance whether to subsample training set so that classes are balanced (default is \code{FALSE})
-#' @param bootstrapReplications the number of bootstrapped samples per each cross-validation fold
 #' @param featureSelector an option \code{FeatureSelector} object that is used to subselect informative voxels in feature space.
-#' @param ensemblePredictor whether returned predictor object averages over cross-validation blocks
+#' @param classMetrics
+#' 
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
 #' @import itertools 
 #' @import foreach
@@ -198,14 +215,7 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
   
 #' mvpa_searchlight
 #' @param dataset a \code{MVPADataset} instance.
-## @param trainVec a \code{BrainVector} instance, a 4-dimensional image where the first three dimensons are (x,y,z) and the 4th dimension is the dependent class/variable
-## @param Y the dependent variable for training data. If it is a factor, then classification analysis is performed. If it is a continuous variable then regression is performed.
-##        the length of \code{Y} must be the same as the length of the 4th dimension of \code{train_vec}
-## @param mask a \code{BrainVolume} instance indicating the inclusion mask for voxels entering the searchlight analysis. 
-## @param blockVar an \code{integer} vector indicating the blocks to be used for cross-validation. This is usually a variable indicating the scanning "run". 
-##        Must be same length as \code{Y}
 #' @param radius the searchlight radus in mm
-## @param modelName the name of the classifcation model to be used
 #' @param method the type of searchlight (randomized, or standard)
 #' @param niter the number of searchlight iterations for 'randomized' method
 ## @param tuneGrid parameter search grid for optimization of classifier tuning parameters

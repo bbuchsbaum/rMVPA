@@ -7,6 +7,15 @@
 #' @examples 
 #' fsel <- FeatureSelector("FTest", "top_k", 1000)
 #' fsel <- FeatureSelector("FTest", "top_p", .1)
+#' class(fsel) == "FTest"
+#' @return a list with class name equal to the \code{method} arguments
+#' @details 
+#' 
+#' The available feature selection methods are:
+#' 
+#' Ftest: computes a one-way ANOVA for every column in feature matrix
+#' catscore: computes a correlation adjusted t-test for every column in matrix using \code{sda.tanking} from he \code{sda} package.
+#' 
 #' @export
 FeatureSelector <- function(method, cutoff_type, cutoff_value) {
   ret <- list(
@@ -18,11 +27,12 @@ FeatureSelector <- function(method, cutoff_type, cutoff_value) {
 
 #' selectFeatures
 #' 
-#' Give a \code{FeatureSelection} spec and a dataset return the set of selected features as a binary vector.
+#' Given a \code{FeatureSelection} specification object and a dataset return the set of selected features as a binary vector.
 #' @param obj the \code{FeatureSelection} object
 #' @param X the training features as a \code{matrix}
 #' @param Y the dependent variable as a \code{factor} or \code{numeric} variable.
 #' @param vox optional coordinates associated with rows of \code{X} matrix.
+#' @param additional arguments
 #' @return a \code{logical} vector indicating the columns of \code{X} matrix that were selected.
 #' @examples 
 #' fsel <- FeatureSelector("FTest", "top_k", 10)
@@ -31,7 +41,7 @@ FeatureSelector <- function(method, cutoff_type, cutoff_value) {
 #' featureMask <- selectFeatures(fsel, X, Y)
 #' sum(featureMask) == 10
 #' @export
-selectFeatures <- function(obj, X, Y, vox) {
+selectFeatures <- function(obj, X, Y, vox, ...) {
   UseMethod("selectFeatures")
 }
 
@@ -45,11 +55,14 @@ selectFeatures <- function(obj, X, Y, vox) {
 
 
 
-#featureMask <- function()
+
 
 #' @export
+#' @param ranking.score the feature score: entropy, avg, or max.
+#' @rdname selectFeatures
 #' @import sda
-selectFeatures.catscore <- function(obj, X, Y, vox=NULL) {
+selectFeatures.catscore <- function(obj, X, Y, vox=NULL, ranking.score=c("entropy", "avg", "max")) {
+  ranking.score <- match.arg(ranking.score)
   message("selecting features via catscore")
   
   if (is.numeric(Y)) {
@@ -57,7 +70,7 @@ selectFeatures.catscore <- function(obj, X, Y, vox=NULL) {
     Y <- factor(ifelse(Y > medY, "high", "low"))
   }
   
-  sda.1 <- sda.ranking(X, Y)
+  sda.1 <- sda.ranking(X, Y, ranking.score=ranking.score)
   
   keep.idx <- if (obj$cutoff_type == "top_k") {
     k <- min(ncol(X), obj$cutoff_value)
@@ -95,6 +108,7 @@ selectFeatures.catscore <- function(obj, X, Y, vox=NULL) {
   
 
 #' @export
+#' @rdname selectFeatures
 #' @importFrom assertthat assert_that
 selectFeatures.FTest <- function(obj, X, Y, vox=NULL) {
   message("selecting features via FTest")
@@ -141,42 +155,42 @@ selectFeatures.FTest <- function(obj, X, Y, vox=NULL) {
 
 
 #' @export
- selectFeatures.catscore_FTest <- function(obj, X, Y, vox=NULL) {
-   message("selecting features via catscore_FTest")
-   
-   if (is.numeric(Y)) {
-     medY <- median(Y)
-     Y <- factor(ifelse(Y > medY, "high", "low"))
-   }
-   
-   logpvals <- unlist(lapply(1:ncol(X), function(i) {
-     -log(oneway.test(X[,i] ~ Y)$p.value)
-   }))
-   
-   sda.1 <- sda.ranking(X, Y)
-   idx <- sda.1[,1]
-   scores <- numeric(length(idx))
-   scores[idx] <- sda.1[,2]
-   
-   composite <- scale(scores) + scale(logpvals)
-   message(cor(scores, logpvals))
- 
-   keep.idx <- if (obj$cutoff_type == "top_k") {
-     k <- min(ncol(X), obj$cutoff_value)
-     order(composite, decreasing=TRUE)[1:k]
-   } else if (obj$cutoff_type == "top_p") {
-     if (obj$cutoff_value <= 0 || obj$cutoff_value > 1) {
-       stop("selectFeatures.catscoreFTest: with top_p, cutoff_value must be > 0 and <= 1")
-     }
-     k <- obj$cutoff_value * ncol(X)
-     order(composite, decreasing=TRUE)[1:k]
-   } else {
-     stop(paste("selectFeatures.catscoreFTest: unsupported cutoff_type: ", obj$cutoff_type))
-   }
-   
-   keep <- logical(ncol(X))
-   keep[keep.idx] <- TRUE
-   
-   message("retaining ", sum(keep), "features in matrix with", ncol(X), "columns")
-   keep
- }
+# selectFeatures.catscore_FTest <- function(obj, X, Y, vox=NULL) {
+#    message("selecting features via catscore_FTest")
+#    
+#    if (is.numeric(Y)) {
+#      medY <- median(Y)
+#      Y <- factor(ifelse(Y > medY, "high", "low"))
+#    }
+#    
+#    logpvals <- unlist(lapply(1:ncol(X), function(i) {
+#      -log(oneway.test(X[,i] ~ Y)$p.value)
+#    }))
+#    
+#    sda.1 <- sda.ranking(X, Y)
+#    idx <- sda.1[,1]
+#    scores <- numeric(length(idx))
+#    scores[idx] <- sda.1[,2]
+#    
+#    composite <- scale(scores) + scale(logpvals)
+#    message(cor(scores, logpvals))
+#  
+#    keep.idx <- if (obj$cutoff_type == "top_k") {
+#      k <- min(ncol(X), obj$cutoff_value)
+#      order(composite, decreasing=TRUE)[1:k]
+#    } else if (obj$cutoff_type == "top_p") {
+#      if (obj$cutoff_value <= 0 || obj$cutoff_value > 1) {
+#        stop("selectFeatures.catscoreFTest: with top_p, cutoff_value must be > 0 and <= 1")
+#      }
+#      k <- obj$cutoff_value * ncol(X)
+#      order(composite, decreasing=TRUE)[1:k]
+#    } else {
+#      stop(paste("selectFeatures.catscoreFTest: unsupported cutoff_type: ", obj$cutoff_type))
+#    }
+#    
+#    keep <- logical(ncol(X))
+#    keep[keep.idx] <- TRUE
+#    
+#    message("retaining ", sum(keep), "features in matrix with", ncol(X), "columns")
+#    keep
+#  }

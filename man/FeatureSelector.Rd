@@ -14,12 +14,22 @@ FeatureSelector(method, cutoff_type, cutoff_value)
 
 \item{cutoff_value}{the numeric vale of the threshold cutoff}
 }
+\value{
+a list with class name equal to the \code{method} arguments
+}
 \description{
 FeatureSelector
 Creates a feature selection specification
 }
+\details{
+The available feature selection methods are:
+
+Ftest: computes a one-way ANOVA for every column in feature matrix
+catscore: computes a correlation adjusted t-test for every column in matrix using \code{sda.tanking} from he \code{sda} package.
+}
 \examples{
 fsel <- FeatureSelector("FTest", "top_k", 1000)
 fsel <- FeatureSelector("FTest", "top_p", .1)
+class(fsel) == "FTest"
 }
 

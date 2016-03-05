@@ -11,17 +11,15 @@ mvpa_regional(dataset, model, regionMask,
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}
 
+\item{model}{a \code{BaseModel} instance usually of type \code{CaretModelWrapper}}
+
 \item{regionMask}{a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.}
 
 \item{savePredictors}{whether to return prediction model in result (default is \code{FALSE} to save memory)}
 
 \item{featureSelector}{an option \code{FeatureSelector} object that is used to subselect informative voxels in feature space.}
 
-\item{autobalance}{whether to subsample training set so that classes are balanced (default is \code{FALSE})}
-
-\item{bootstrapReplications}{the number of bootstrapped samples per each cross-validation fold}
-
-\item{ensemblePredictor}{whether returned predictor object averages over cross-validation blocks}
+\item{classMetrics}{}
 }
 \value{
 a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
