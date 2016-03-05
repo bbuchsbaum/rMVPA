@@ -1,5 +1,12 @@
 
-
+#' FeatureSelector
+#' Creates a feature selection specification
+#' @param method the type of feature selection
+#' @param cutoff_type the type of threshold used to select features.
+#' @param cutoff_value the numeric vale of the threshold cutoff
+#' @examples 
+#' fsel <- FeatureSelector("FTest", "top_k", 1000)
+#' fsel <- FeatureSelector("FTest", "top_p", .1)
 #' @export
 FeatureSelector <- function(method, cutoff_type, cutoff_value) {
   ret <- list(
@@ -9,6 +16,20 @@ FeatureSelector <- function(method, cutoff_type, cutoff_value) {
   ret
 }
 
+#' selectFeatures
+#' 
+#' Give a \code{FeatureSelection} spec and a dataset return the set of selected features as a binary vector.
+#' @param obj the \code{FeatureSelection} object
+#' @param X the training features as a \code{matrix}
+#' @param Y the dependent variable as a \code{factor} or \code{numeric} variable.
+#' @param vox optional coordinates associated with rows of \code{X} matrix.
+#' @return a \code{logical} vector indicating the columns of \code{X} matrix that were selected.
+#' @examples 
+#' fsel <- FeatureSelector("FTest", "top_k", 10)
+#' X <- matrix(rnorm(100*100), 100, 100)
+#' Y <- factor(rep(c("a", "b"), each=50))
+#' featureMask <- selectFeatures(fsel, X, Y)
+#' sum(featureMask) == 10
 #' @export
 selectFeatures <- function(obj, X, Y, vox) {
   UseMethod("selectFeatures")

@@ -29,8 +29,8 @@ corsimFit <- function(x, y, method, robust) {
   list(conditionMeans = splitReduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)
 }
 
-#' @export
-predict.corsimFit <- function(modelFit, newData) {
+
+predict_corsimFit <- function(modelFit, newData) {
   res <- sapply(1:nrow(newData), function(i) {
     pattern <- newData[i,]
     which.max(cor(pattern, t(modelFit$conditionMeans), method=modelFit$method))
@@ -39,8 +39,8 @@ predict.corsimFit <- function(modelFit, newData) {
   modelFit$levs[res]
 }
 
-#' @export
-prob.corsimFit <- function(modelFit, newData) {
+
+prob_corsimFit <- function(modelFit, newData) {
   scores <- cor(t(newData), t(modelFit$conditionMeans), method=modelFit$method)
   
   mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
@@ -184,9 +184,9 @@ MVPAModels$corclass <- list(type = "Classification",
                           parameters=data.frame(parameters=c("method", "robust"), class=c("character", "logical"), label=c("correlation type: pearson, spearman, or kendall", "mean or huber")),
                           grid=function(x, y, len = NULL) if (len == 1) { data.frame(method="pearson", robust=FALSE) } else { expand.grid(method=c("pearson", "spearman", "kendall"), robust=c(TRUE, FALSE)) },
                           fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) corsimFit(x,y, as.character(param$method), param$robust),
-                          predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict.corsimFit(modelFit, as.matrix(newdata)),
+                          predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict_corsimFit(modelFit, as.matrix(newdata)),
                           prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                            prob.corsimFit(modelFit, as.matrix(newdata))
+                            prob_corsimFit(modelFit, as.matrix(newdata))
                           })
 
 
