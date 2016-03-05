@@ -1,9 +1,19 @@
+
+
+#' performance
+#' 
+#' Compute performance metrics from a classiifcation result
+#' 
+#' @param x the result
 #' @export
 performance <- function(x,...) {
   UseMethod("performance")
 }
 
 #' @export
+#' @param x
+#' @param splitList
+#' @param classMetrics
 performance.SimilarityResult <- function(x, splitList=NULL, classMetrics=FALSE) {  
   #simAll <- x$simWithinTable$sim
   #names(simAll) <- paste0("sim_", x$simWithinTable$label)
@@ -24,6 +34,10 @@ performance.SimilarityResult <- function(x, splitList=NULL, classMetrics=FALSE) 
   
 }
 
+#' @export
+#' @param x
+#' @param splitList
+#' @param classMetrics
 performance.RegressionResult <- function(x, splitList, classMetrics=FALSE) {
   R2 <- 1 - sum((x$observed - x$predicted)^2)/sum((x$observed-mean(x$observed))^2)
   rmse <- sqrt(mean((x$observed-x$predicted)^2))

@@ -1,3 +1,8 @@
+
+#' groupMeans
+#' compute the average vector, splitting a matrix for each level of a grouping variable
+#' @param X the matrix
+#' @param margin the margin to average over (1 for rows, 2 for columns)
 #' @export
 groupMeans <- function(X, margin, group) {
   if (margin == 1) {

@@ -44,7 +44,8 @@ initializeROISubset <- function(config) {
   }
 }
 
-
+#' @param configFile an 'MVPA_Regional' configuration file
+#' @param args list of addiitonal override arguments
 #' @export
 initMVPARegional <- function(configFile, args=list(), verbose=FALSE) {
   if (!verbose) {
@@ -538,6 +539,12 @@ loadBrainDataSequence <- function(fnames, config, indices) {
   SparseBrainVector(vecmat[indices,], space(config$maskVolume), mask=config$maskVolume)
 }
 
+#' loadBrainData
+#' 
+#' load 4D brain data from one of more image provided in \code{name} argument
+#' 
+#' @param config configuration file
+#' @param name 
 #' @export
 loadBrainData <- function(config, name, indices=NULL) {
   fname <- config[[name]]

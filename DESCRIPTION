@@ -24,7 +24,6 @@ Imports:
     io,
     stringr,
     Matrix,
-    mefa4,
     optparse,
     Metrics,
     memoise,
