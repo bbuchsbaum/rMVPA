@@ -32,11 +32,9 @@ Imports:
     sp
 Collate:
     'classifiers.R'
-    'cleanup.R'
     'cluster.R'
     'mvpa_model.R'
     'common.R'
-    'configuration.R'
     'ensemble.R'
     'featureSelection.R'
     'folds.R'
