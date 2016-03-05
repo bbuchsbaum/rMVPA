@@ -26,7 +26,7 @@ corsimFit <- function(x, y, method, robust) {
   }
   
   if (estimator == "mean") {
-    list(conditionMeans=groupMeans(X, 1, Y), levs=levels(y), method=method, robust=robust)
+    list(conditionMeans=groupMeans(x, 1, y), levs=levels(y), method=method, robust=robust)
   } else {
     list(conditionMeans = splitReduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)
   }

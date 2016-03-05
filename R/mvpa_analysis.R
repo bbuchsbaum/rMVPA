@@ -126,6 +126,9 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
 
 
 #' mvpa_regional
+#' 
+#' Run a separate MVPA analysis for multiple disjoint regions of interest.
+#' 
 #' @param dataset a \code{MVPADataset} instance.
 #' @param model a \code{BaseModel} instance usually of type \code{CaretModelWrapper}
 #' @param regionMask a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
@@ -215,9 +218,12 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
   
 #' mvpa_searchlight
 #' @param dataset a \code{MVPADataset} instance.
+#' @param model
+#' @param crossVal
 #' @param radius the searchlight radus in mm
 #' @param method the type of searchlight (randomized, or standard)
 #' @param niter the number of searchlight iterations for 'randomized' method
+#' @param classMetrics
 ## @param tuneGrid parameter search grid for optimization of classifier tuning parameters
 ## @param testVec a \code{BrainVector} with the same spatial dimension as shape as \code{trainVec}. If supplied, this data will be held out as a test set.
 ## @param testY the dependent variable for test data. If supplied, this variable to evaluate classifier model trained on \code{trainVec}. 
@@ -236,11 +242,9 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }
   
-  
   method <- match.arg(method)
   
   flog.info("model is: %s", model$model_name)
-  
   
   res <- if (method == "standard") {
     .doStandard(dataset, model, radius, crossVal, classMetrics=classMetrics)    
