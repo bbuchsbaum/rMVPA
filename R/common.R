@@ -44,6 +44,9 @@ initializeROISubset <- function(config) {
   }
 }
 
+
+#' initMVPARegional
+#' 
 #' @param configFile an 'MVPA_Regional' configuration file
 #' @param args list of addiitonal override arguments
 #' @export

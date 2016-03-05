@@ -2,6 +2,7 @@
 % Please edit documentation in R/common.R
 \name{initMVPARegional}
 \alias{initMVPARegional}
+\title{initMVPARegional}
 \usage{
 initMVPARegional(configFile, args = list(), verbose = FALSE)
 }
@@ -9,5 +10,8 @@ initMVPARegional(configFile, args = list(), verbose = FALSE)
 \item{configFile}{an 'MVPA_Regional' configuration file}
 
 \item{args}{list of addiitonal override arguments}
+}
+\description{
+initMVPARegional
 }
 
