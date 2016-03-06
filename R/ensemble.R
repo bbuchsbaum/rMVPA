@@ -1,13 +1,4 @@
 
-### lda ensemble
-### train n patches
-### best best n patches via greedy search
-### train lda on pairs of intra verus intraclass similarity vectors
-### combine with global classifier
-
-## we need simple primitives that are combined. functions are too monolithic, hard to debug/understand.
-
-
 
 
 createModelSet <- function(modelName, ...) {
@@ -71,7 +62,11 @@ createEnsembleSpec <- function(...) {
           
 }
 
-
+#' ConsensusLearner
+#' 
+#' construct specification object for a consensus learner
+#' @param method the consensus method
+#' @param params additional parameters for the method
 #' @export
 ConsensusLearner <- function(method="glmnet", params=list()) {
   ret <- list(
@@ -83,7 +78,13 @@ ConsensusLearner <- function(method="glmnet", params=list()) {
   ret
 }
 
-
+#' consensusWeights
+#' 
+#' compute consensusWeights for a set of classification results
+#' 
+#' @param x the result set
+#' @param ... addiitonal args
+#' 
 #' @export
 consensusWeights <- function(x,...) {
   UseMethod("consensusWeights")

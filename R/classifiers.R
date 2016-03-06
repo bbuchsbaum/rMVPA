@@ -25,7 +25,7 @@ corsimFit <- function(x, y, method, robust) {
     "mean"
   }
   
-  if (estimator == "mean") {
+  if (is.character(estimator)) {
     list(conditionMeans=groupMeans(x, 1, y), levs=levels(y), method=method, robust=robust)
   } else {
     list(conditionMeans = splitReduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)
@@ -60,13 +60,17 @@ MVPAModels$pca_lda <- list(type = "Classification",
                            grid=function(x, y, len = 5) {
                              data.frame(ncomp=1:len)
                            },
+                           
                            fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                             
-                             pres <- prcomp(as.matrix(x), scale=TRUE)
-                             
-                             lda.fit <- lda(pres$x[,1:param$ncomp, drop=FALSE], y)
+                             scmat <- scale(as.matrix(x))
+                             pres <- svd::propack.svd(scmat, neig=param$ncomp)
+                             #pres <- prcomp(as.matrix(x), scale=TRUE)
+                             #lda.fit <- lda(pres$x[,1:param$ncomp, drop=FALSE], y)
+                             lda.fit <- lda(pres$u[, 1:param$ncomp, drop=FALSE], y)
                              attr(lda.fit, "ncomp") <- param$ncomp
                              attr(lda.fit, "pcfit") <- pres
+                             attr(lda.fit, "center") <- attr(scmat, "scaled:center")
+                             attr(lda.fit, "scale") <- attr(scmat, "scaled:scale")
                              lda.fit
                            },
                            
@@ -74,15 +78,17 @@ MVPAModels$pca_lda <- list(type = "Classification",
                              compind <- seq(1, attr(modelFit, "ncomp"))
                              
                              pcfit <- attr(modelFit, "pcfit")
-                             colnames(newdata) <- rownames(pcfit$rotation)
-                             pcx <- predict(pcfit, newdata)[,compind,drop=FALSE]
+                             #colnames(newdata) <- rownames(pcfit$rotation)
+                             #pcx <- predict(pcfit, newdata)[,compind,drop=FALSE]
+                             pcx <- scale(newdata, attr(pcfit, "center"), attr(pcfit, "scale")) %*% pcfit$v
                              predict(modelFit, pcx)$class
                            },
                            prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                              compind <- seq(1, attr(modelFit, "ncomp"))
                              pcfit <- attr(modelFit, "pcfit")
-                             colnames(newdata) <- rownames(pcfit$rotation)
-                             pcx <- predict(pcfit, newdata)[,compind,drop=FALSE]
+                             #colnames(newdata) <- rownames(pcfit$rotation)
+                             #pcx <- predict(pcfit, newdata)[,compind,drop=FALSE]
+                             pcx <- scale(newdata, attr(modelFit, "center"), attr(modelFit, "scale")) %*% pcfit$v
                              predict(modelFit, pcx)$posterior                              
                            })
 
