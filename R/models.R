@@ -47,27 +47,30 @@ MVPADataset <- R6::R6Class("MVPADataset",
 
 #' @export
 #' @import R6
-BaseModel <- R6::R6Class("BaseModel",
-                         public = list(
-                           model_name=NA,
-                           
-                           initialize = function(name) {
-                             self$model_name <- name
-                           },
-                           
-                           #fit = function(x, y, ...) { stop("unimplemented") },
-                           
-                           #predict = function(modelFit,newdata) { stop("unimplemented") },
-                           
-                           #prob = function(modelFit, newdata) { stop("unimplemnted") },
-                           
-                           run = function(dataset, vox, crossVal, featureSelector = NULL) { stop("unimplemented") },
-                           
-                           combineResults = function(resultList) { stop("unimplemented ") },
-                           
-                           saveResults = function(results, folder) { stop("unimplemented") }
-                           
-                         ))
+BaseModel <- R6::R6Class(
+  "BaseModel",
+  public = list(
+    model_name = NA,
+    
+    initialize = function(name) {
+      self$model_name <- name
+    },
+    
+    
+    run = function(dataset, vox, crossVal, featureSelector = NULL) {
+      stop("unimplemented")
+    },
+    
+    combineResults = function(resultList) {
+      stop("unimplemented ")
+    },
+    
+    saveResults = function(results, folder) {
+      stop("unimplemented")
+    }
+    
+  )
+)
 
 #' @export
 #' @import R6
@@ -153,8 +156,8 @@ CaretModelWrapper <- R6::R6Class(
         classificationResult(observed, preds, NULL, predictor)
         
       
-    }
-  },
+      }
+    },
     
     performance = function(result) {
       

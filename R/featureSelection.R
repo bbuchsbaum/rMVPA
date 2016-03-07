@@ -22,6 +22,8 @@ matrixAnova <- function(Y, mat) {
   list(F=F, pval=pval)
 }
 
+
+
 #' FeatureSelector
 #' Creates a feature selection specification
 #' @param method the type of feature selection

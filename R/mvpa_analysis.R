@@ -11,7 +11,7 @@ colACC <- function(X, Y) {
 #' Convenience function to convert a matrix to a list of \code{BrainVolume} instances.
 #' 
 #' @param vox a matrix of voxel coordinates with same number of rows as \code{mat} argument.
-#' @param mat a matrix of values where each column is to be converted to \code{BrainVolume} instance.
+#' @param mat a matrix of values where each column is to be converted to \code{\linkS4class{BrainVolume}} instance.
 #' @param mask a mask which is used to define the spatial geometry of the output volume
 #' @param default the default value in the ouput volume. e.g. the value for coordinates not contained in \code{vox}
 #' @export  
@@ -52,7 +52,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
     stop("no valid columns")
   }
     
-  vox <- vox[valid.idx,]
+  vox <- vox[valid.idx]
     
   parcels <- if (!is.null(dataset$parcellation)) {
     dataset$parcellation[vox]
@@ -98,6 +98,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
     if (nrow(vox) > 1) {
       print(nrow(vox))
+      vox <- ROIVolume(space(dataset$mask), vox)
       computePerformance(model$run(dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)
     }
   }
@@ -113,6 +114,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "caret", "neuroim", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
+      vox <- ROIVolume(space(dataset$mask), vox)
       computePerformance(model$run(dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)
     }
   }
