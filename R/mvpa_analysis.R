@@ -163,12 +163,12 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
     
     if (length(idx) > 1) {
       ## what if length is less than 1?
-      vox <- indexToGrid(regionMask, idx)
+      vox <- ROIVolume(space(regionMask), indexToGrid(regionMask, idx))
       
       result <- model$run(dataset, vox, crossVal, featureSelector)
     
       attr(result, "ROINUM") <- roinum
-      attr(result, "vox") <- vox
+      attr(result, "vox") <- coords(vox)
       
       perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits, classMetrics))[1,])     
       perf <- structure(perf, result=result)

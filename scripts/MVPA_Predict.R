@@ -58,13 +58,21 @@ if (is.null(args$test_design)) {
     write.table(format(oframe,  digits=2, scientific=FALSE, drop0trailing=TRUE), args$output, row.names=FALSE,quote=FALSE)
   }
 } else {
+  
   flog.info("test data will be evaluated against labels stored in: %s", args$test_design)
   
-  flog.info(config, capture=TRUE)
-  if (!is.null(args$test_subset)) {
-    tdes <- read.table(args$test_design, header=TRUE)
-    tdes <- tdes[loadSubset(tdes, args$test_subset),]
-  }
+  
+  tdes <- read.table(args$test_design, header=TRUE)
+  oframe <- do.call(rbind, lapply(1:length(preds), function(i) {
+    cbind(tdes, constructPredictionFrame(preds[i]))
+  }))
+  
+  oframe$pred_correct <- ifelse(oframe$pred_class == oframe[[config$label_column]], 1, 0)
+  
+  plabs <- sapply(oframe[[config$label_column]], function(lab) paste0("prob_", lab))
+  oframe$prob_item <- sapply(1:length(plabs), function(i) oframe[i, plabs[[i]]])
+  write.table(format(oframe,  digits=2, scientific=FALSE, drop0trailing=TRUE), args$output, row.names=FALSE,quote=FALSE)
+  
   
   
 }
