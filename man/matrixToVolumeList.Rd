@@ -10,7 +10,7 @@ matrixToVolumeList(vox, mat, mask, default = NA)
 \arguments{
 \item{vox}{a matrix of voxel coordinates with same number of rows as \code{mat} argument.}
 
-\item{mat}{a matrix of values where each column is to be converted to \code{BrainVolume} instance.}
+\item{mat}{a matrix of values where each column is to be converted to \code{\linkS4class{BrainVolume}} instance.}
 
 \item{mask}{a mask which is used to define the spatial geometry of the output volume}
 

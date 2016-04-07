@@ -25,6 +25,6 @@ mvpa_regional(dataset, model, regionMask,
 a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
 }
 \description{
-mvpa_regional
+Run a separate MVPA analysis for multiple disjoint regions of interest.
 }
 

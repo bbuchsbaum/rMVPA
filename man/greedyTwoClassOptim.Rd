@@ -7,11 +7,11 @@
 greedyTwoClassOptim(X, Y, iter = 100L, metricFUN = "AUC")
 }
 \arguments{
+\item{X}{the matrix of predictors}
+
 \item{Y}{the dependent variable}
 
 \item{iter}{an integer for the number of iterations}
-
-\item{Pred}{the matrix of predictors}
 }
 \value{
 A numeric of the weights for each model.

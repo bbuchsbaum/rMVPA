@@ -17,8 +17,6 @@ FoldIterator(Y, blockVar, balance = FALSE, bootstrap = FALSE,
 \item{bootstrap}{use bootstrap resampling of the training set}
 
 \item{bootstrapMin}{}
-
-\item{nfolds}{the number of cross-validation folds: only relvant when blockVar is not supplied}
 }
 \description{
 Create an iterator from a block variable for iterating through the folds during cross-validation

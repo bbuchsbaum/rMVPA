@@ -12,7 +12,7 @@ MatrixFoldIterator(X, Y, vox, blockVar, balance = FALSE, bootstrap = FALSE,
 
 \item{Y}{the labels}
 
-\item{vox}{the coordinates}
+\item{vox}{the voxel coordinates}
 
 \item{blockVar}{variable denoting the cross-validation folds.}
 
