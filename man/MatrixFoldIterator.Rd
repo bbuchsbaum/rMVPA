@@ -2,7 +2,7 @@
 % Please edit documentation in R/folds.R
 \name{MatrixFoldIterator}
 \alias{MatrixFoldIterator}
-\title{Create an iterator of training and test data from a data matrix \code{X}, a factor \code{Y}, and an optional precomputed blocking variable \code{blockVar} used for determining cross-validation folds.}
+\title{MatrixFoldIterator}
 \usage{
 MatrixFoldIterator(X, Y, vox, blockVar, balance = FALSE, bootstrap = FALSE,
   bootstrapMin = 2)

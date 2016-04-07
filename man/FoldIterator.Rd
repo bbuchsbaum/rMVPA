@@ -2,7 +2,7 @@
 % Please edit documentation in R/folds.R
 \name{FoldIterator}
 \alias{FoldIterator}
-\title{Create an iterator from a block variable for iterating through the folds during cross-validation}
+\title{FoldIterator}
 \usage{
 FoldIterator(Y, blockVar, balance = FALSE, bootstrap = FALSE,
   bootstrapMin = 2)

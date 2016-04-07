@@ -2,6 +2,7 @@
 % Please edit documentation in R/folds.R
 \name{KFoldCrossValidation}
 \alias{KFoldCrossValidation}
+\title{KFoldCrossValidation}
 \usage{
 KFoldCrossValidation(len, nfolds = 10, balance = FALSE, bootstrap = FALSE)
 }
@@ -9,5 +10,8 @@ KFoldCrossValidation(len, nfolds = 10, balance = FALSE, bootstrap = FALSE)
 \item{len}{the number of observations}
 
 \item{balance}{}
+}
+\description{
+KFoldCrossValidation
 }
 

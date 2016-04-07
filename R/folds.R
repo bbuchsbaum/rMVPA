@@ -13,7 +13,8 @@ BlockedCrossValidation <- function(blockVar, balance=FALSE, bootstrap=FALSE) {
   ret
 }
 
-
+#' KFoldCrossValidation
+#' 
 #' @export
 #' @param len the number of observations
 #' @param balance 
@@ -70,6 +71,8 @@ invertFolds <- function(foldSplit, allInd) {
   })
 }
 
+#' FoldIterator
+#' 
 #' Create an iterator from a block variable for iterating through the folds during cross-validation
 #' @param Y the labels
 #' @param blockVar variable denoting the cross-validation folds
@@ -158,7 +161,8 @@ FoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, bootstrap
   
 }
   
-
+#' MatrixFoldIterator
+#' 
 #' Create an iterator of training and test data from a data matrix \code{X}, a factor \code{Y}, and an optional precomputed blocking variable \code{blockVar} used for determining cross-validation folds.
 #' @param X the data matrix
 #' @param Y the labels
@@ -202,6 +206,7 @@ MatrixFoldIterator <- function(X, Y, vox, blockVar, balance=FALSE, bootstrap=FAL
 }
 
 #' NestedFoldIterator
+#' 
 #' @param Y
 #' @param blockVar
 #' @param balance
@@ -241,6 +246,7 @@ NestedFoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, boo
 }
 
 #' NestedMatrixIterator
+#' 
 #' @param X
 #' @param Y
 #' @param vox
