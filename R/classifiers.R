@@ -238,13 +238,18 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 mfits <- lapply(seq(1, param$reps), function(i) {
                                   message("fitting sda model ", i)
                                   row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
-                                  fit <- sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...)
-                                
+                                  sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...)
                                 })
+                                
+                                ret <- list(fits=mfits)
+                                class(ret) <- "sda_boot"
+                                ret
                                 
                               },
                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                preds <- lapply(modelFit, function(fit) {
+                                message("inside sda_boot predict")
+                                preds <- lapply(modelFit$fits, function(fit) {
+                                  print(class(fit))
                                   predict(fit, as.matrix(newdata), verbose=FALSE)$posterior
                                 })
                                 
@@ -256,12 +261,12 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 
                                 
                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                preds <- lapply(modelFit, function(fit) {
+                                preds <- lapply(modelFit$fits, function(fit) {
                                   predict(fit, as.matrix(newdata), verbose=FALSE)$posterior
                                 })
                                 
                                 prob <- preds[!sapply(preds, function(x) is.null(x))]
-                                pfinal <- Reduce("+", prob)/length(prob)
+                                Reduce("+", prob)/length(prob)
                                 
                               })
 
