@@ -235,11 +235,24 @@ MVPAModels$sda_boot <- list(type = "Classification",
                               grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {    
                                 x <- as.matrix(x)
-                                mfits <- lapply(seq(1, param$reps), function(i) {
+                                mfits <- list()
+                                count <- 1
+                                failures <- 0
+                                while (count < param$reps) {
                                   message("fitting sda model ", i)
                                   row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
-                                  sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...)
-                                })
+                                  ret <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...))
+                                  if (!inherits(ret, "try-error")) {
+                                    mfits[[count]] <- ret
+                                    count <- count + 1
+                                  } else {
+                                    failures <- failures + 1
+                                    if (failures > 10) {
+                                      return(ret)
+                                    }
+                                  }
+                                }
+                              
                                 
                                 ret <- list(fits=mfits)
                                 class(ret) <- "sda_boot"
