@@ -240,7 +240,11 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 failures <- 0
                                 while (count < param$reps) {
                                   message("fitting sda model ", count)
-                                  row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
+                                  #row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
+                                  smat <- replicate(10, {sample(1:nrow(x), nrow(x), replace=TRUE)})
+                                  sdsam <- apply(smat, 2, function(sam) sd(table(y[sam])))
+                                  row.idx <- smat[, which.min(sdsam)]
+                                  
                                   ret <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...))
                                   if (!inherits(ret, "try-error")) {
                                     mfits[[count]] <- ret
