@@ -100,7 +100,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
     if (nrow(vox) > 1) {
       print(nrow(vox))
       vox <- ROIVolume(space(dataset$mask), vox)
-      computePerformance(model$run(dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)
+      computePerformance(model$run(dataset, vox, crossVal), coords(vox), dataset$testSplits, classMetrics)
     }
   }
   
@@ -116,7 +116,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
     if (nrow(vox) > 1) {  
       print(nrow(vox))
       vox <- ROIVolume(space(dataset$mask), vox)
-      computePerformance(model$run(dataset, vox, crossVal), vox, dataset$testSplits, classMetrics)
+      computePerformance(model$run(dataset, vox, crossVal), coords(vox), dataset$testSplits, classMetrics)
     }
   }
   

@@ -238,10 +238,10 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 mfits <- list()
                                 count <- 1
                                 failures <- 0
-                                while (count < param$reps) {
+                                while (count <= param$reps) {
                                   message("fitting sda model ", count)
                                   #row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
-                                  smat <- replicate(10, {sample(1:nrow(x), nrow(x), replace=TRUE)})
+                                  smat <- replicate(5, {sample(1:nrow(x), nrow(x), replace=TRUE)})
                                   sdsam <- apply(smat, 2, function(sam) sd(table(y[sam])))
                                   row.idx <- smat[, which.min(sdsam)]
                                   
