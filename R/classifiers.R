@@ -239,13 +239,14 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 count <- 1
                                 failures <- 0
                                 while (count < param$reps) {
-                                  message("fitting sda model ", i)
+                                  message("fitting sda model ", count)
                                   row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
                                   ret <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...))
                                   if (!inherits(ret, "try-error")) {
                                     mfits[[count]] <- ret
                                     count <- count + 1
                                   } else {
+                                    message("sda model fit error, retry attempt: ", failures + 1)
                                     failures <- failures + 1
                                     if (failures > 10) {
                                       return(ret)
