@@ -80,8 +80,6 @@ selectFeatures <- function(obj, X, Y, vox, ...) {
 
 
 
-
-
 #' @export
 #' @param ranking.score the feature score: entropy, avg, or max.
 #' @rdname selectFeatures
@@ -141,8 +139,8 @@ selectFeatures.catscore <- function(obj, X, Y, vox=NULL, ranking.score=c("entrop
 #' @importFrom assertthat assert_that
 selectFeatures.FTest <- function(obj, X, Y, vox=NULL) {
   message("selecting features via FTest")
-  message("cutoff type", obj$cutoff_type)
-  message("cutoff value", obj$cutoff_value)
+  message("cutoff type ", obj$cutoff_type)
+  message("cutoff value ", obj$cutoff_value)
   
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   
@@ -151,13 +149,8 @@ selectFeatures.FTest <- function(obj, X, Y, vox=NULL) {
     Y <- factor(ifelse(Y > medY, "high", "low"))
   }
   
-  ## TODO speed this up... with matrix operations
-  #pvals <- unlist(lapply(1:ncol(X), function(i) {
-  #  oneway.test(X[,i] ~ Y)$p.value
-  #}))
   
   pvals <- matrixAnova(Y,X)$pval
-  
   
   keep.idx <- if (obj$cutoff_type == "top_k" || obj$cutoff_type == "topk") {
     k <- min(ncol(X), obj$cutoff_value)
@@ -173,7 +166,7 @@ selectFeatures.FTest <- function(obj, X, Y, vox=NULL) {
     stop(paste("selectFeatures.FTest: unsupported cutoff_type: ", obj$cutoff_type))
   }
   
-  message("length(keep.idx)", length(keep.idx))
+  message("length(keep.idx) ", length(keep.idx))
   
   keep <- logical(ncol(X))
   keep[keep.idx] <- TRUE

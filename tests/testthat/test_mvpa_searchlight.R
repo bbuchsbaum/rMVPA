@@ -18,8 +18,29 @@ gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
   mask <- as.logical(BrainVolume(array(rep(1, prod(D)), D), BrainSpace(D, spacing)))
   Y <- sample(factor(rep(letters[1:nlevels], length.out=nobs)))
   blockVar <- rep(1:folds, length.out=nobs)
-  MVPADataset$new(trainVec=bvec, Y=Y, mask=mask, blockVar=blockVar, testVec=NULL, testY=NULL)
+  
+  
+  MVPADataset$new(trainVec=bvec, mask=mask, blockVar=blockVar, testVec=NULL, testY=NULL)
 }
+
+gen_dataset_with_test <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5, splitvar=TRUE) {
+  mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
+  bspace <- BrainSpace(c(D,nobs), spacing)
+  bvec <- BrainVector(mat, bspace)
+  mask <- as.logical(BrainVolume(array(rep(1, prod(D)), D), BrainSpace(D, spacing)))
+  Y <- sample(factor(rep(letters[1:nlevels], length.out=nobs)))
+  
+  blockVar <- rep(1:folds, length.out=nobs)
+  if (splitvar) {
+    tsplit <- factor(rep(1:5, length.out=length(Y)))
+    testSplits <- split(1:length(Y), tsplit)
+    MVPADataset$new(trainVec=bvec, Y=Y, testVec=bvec, testY=Y, mask=mask, blockVar=blockVar, testSplitVar=tsplit, 
+                    testSplits=testSplits)
+  } else {
+    MVPADataset$new(trainVec=bvec, Y=Y, testVec=bvec, testY=Y, mask=mask, blockVar=blockVar)
+  }
+}
+
 
 test_that("standard mvpa_searchlight runs without error", {
   
@@ -82,6 +103,30 @@ test_that("randomized mvpa_searchlight works with regression", {
   res <- mvpa_searchlight(dataset, model, crossVal, radius=3, niter=2,method="randomized")
   
 })
+
+test_that("mvpa_searchlight works with testset", {
+  
+  dataset <- gen_dataset_with_test(c(4,4,4), 100, 3, folds=3)
+  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  tuneGrid <- expand.grid(alpha=.5, lambda=c(.1,.2,32))
+  model <- loadModel("glmnet", list(tuneGrid=tuneGrid))
+  
+  res <- mvpa_searchlight(dataset, model, crossVal, radius=3, niter=2,method="standard")
+  
+})
+
+test_that("mvpa_searchlight works with testset and split_var", {
+  
+  dataset <- gen_dataset_with_test(c(4,4,4), 100, 3, folds=3, splitvar=TRUE)
+  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  tuneGrid <- expand.grid(alpha=.5, lambda=c(.1))
+  model <- loadModel("glmnet", list(tuneGrid=tuneGrid))
+  
+  res <- mvpa_searchlight(dataset, model, crossVal, radius=3, niter=2,method="randomized", classMetrics=TRUE)
+  
+})
+
+
 
 
 

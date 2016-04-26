@@ -25,23 +25,6 @@ createEnsembleSpec <- function(...) {
 
 
 
-# .setupModels <- function(learnerSet) {
-#   unlist(lapply(names(learnerSet), function(mname) {
-#     model <- loadModel(mname)
-#     params <- learnerSet[[mname]]
-#     if (is.data.frame(params)) {
-#       lapply(1:nrow(params), function(i) {
-#         list(name=mname, model=model, tuneGrid=params[i,,drop=FALSE])
-#       }) 
-#     } else {
-#       mgrid <- model$grid(matrix(rnorm(100*100), 100, 100),rep(1,100), params)
-#       lapply(1:nrow(mgrid), function(i) {
-#         list(name=mname, model=model, tuneGrid=mgrid[i,,drop=FALSE])
-#       })
-#     }
-#   }), recursive=FALSE)
-# }
-
 .computeVoxelwiseAUC <- function(mask, AUC, radius, voxlist) {
   auc <- array(0, dim(mask))
   count <- array(0, dim(mask))
@@ -133,7 +116,7 @@ mvpa_regional_consensus <- function(dataset, model, regionMask, autobalance=FALS
   blockIterator <- FoldIterator(dataset$Y, blockVar=dataset$blockVar)
   
   Xtest <- series(dataset$trainVec, which(regionMask>0))
-  #browser()
+  
   ## loop over blocks
   ensembleSet <- foreach::foreach(fold = blockIterator, .verbose=FALSE, .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
     
