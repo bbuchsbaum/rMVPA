@@ -513,7 +513,8 @@ loadSubset <- function(full_design, subset) {
 #' @export
 loadBlockColumn <- function(config, design) {
   if (is.null(design[[config$block_column]])) {
-    abort(paste("blockColumn variable named", config$blockColumn, "not found."))
+    message(paste("blockColumn variable named", config$blockColumn, "not found."))
+    stop()
   } else {  
     config$nfolds <- length(unique(design[[config$block_column]]))
     design[[config$block_column]]
@@ -526,7 +527,8 @@ loadBlockColumn <- function(config, design) {
 loadBrainDataSequence <- function(fnames, config, indices) {
   if (!all(file.exists(fnames))) {
     offenders <- fnames[!file.exists(fnames)]
-    abort(config, paste("data files", offenders, "not found."))
+    message(paste("data files", offenders, "not found."))
+    stop()
   }
   
   
