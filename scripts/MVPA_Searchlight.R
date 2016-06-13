@@ -78,6 +78,10 @@ if (is.numeric(config$labels)) {
   config$labels <- as.factor(config$labels)
 }
 
+if (!is.null(config$custom_performance)) {
+  flog.info("custom performance function provided: ", config$custom_performance)
+}
+
 dataset <- MVPADataset$new(config$train_datavec, 
                        config$labels, 
                        config$maskVolume, 
@@ -90,7 +94,7 @@ dataset <- MVPADataset$new(config$train_datavec,
                        trainDesign=config$train_design,
                        testDesign=config$test_design)
 
-model <- loadModel(config$model, list(tuneGrid=config$tune_grid))
+model <- loadModel(config$model, list(tuneGrid=config$tune_grid, custom_performance=config$custom_performance))
 
 cl <- makeCluster(config$pthreads, outfile="",useXDR=FALSE, type="FORK")
 registerDoParallel(cl)

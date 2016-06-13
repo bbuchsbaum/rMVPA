@@ -51,7 +51,10 @@ test_that("mvpa_regional with 5 ROIS with sda_boot and custom_performance runs w
   crossVal <- BlockedCrossValidation(dataset$blockVar)
   
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
-  model <- loadModel("sda_boot", list(custom_performance = function(x) c(y=1, tt=44)))
+  model <- loadModel("sda_boot", list(custom_performance = function(x) {
+    print(x$prob)
+    c(y=1, tt=44)
+  }))
   res <- mvpa_regional(dataset, model, regionMask, crossVal)
   
 })
