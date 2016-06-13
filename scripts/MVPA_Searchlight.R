@@ -44,9 +44,6 @@ config <- initializeStandardParameters(config, args, "searchlight")
 
 #flog.appender(appender.file(paste0(config$output, "/rMVPA.log")))
 #flog.appender(appender.console(), name='my.logger')
-#setDefault("autobalance", config, FALSE)
-#setArg("tune_grid", config, args, NULL)
-#setDefault("method_params", config, list())
 
 
 ## Searchlight Specific Params
@@ -64,6 +61,7 @@ config$maskVolume <- as(loadMask(config), "LogicalBrainVolume")
 
 
 rowIndices <- which(config$train_subset)
+
 flog.info("number of trials: %s", length(rowIndices))
 flog.info("max trial index: %s", max(rowIndices))
 flog.info("loading training data: %s", config$train_data)
@@ -74,8 +72,9 @@ config <- initializeData(config)
 flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
 
 if (is.numeric(config$labels)) {
-  flog.info("labels are continuous, running a regression analysis:")
+  flog.info("labels are continuous, running a regression analysis.")
 } else {
+  flog.info("labels are categorical, running a classification analysis.")
   config$labels <- as.factor(config$labels)
 }
 

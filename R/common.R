@@ -227,7 +227,7 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("pthreads", config, args, 1)
   setArg("label_column", config, args, "labels")
   setArg("skipIfFolderExists", config, args, FALSE)
-  setArg("customPerformance", config, args, NULL)
+  #setArg("comparison_label_column", config, args, NULL)
   setArg("output", config, args, paste0(analysisType, "_", config$labelColumn))
   setArg("block_column", config, args, "block")
   setArg("normalize", config, args, FALSE)
@@ -241,7 +241,9 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("output_class_metrics", config, args, TRUE)
   setArg("ensemble_predictor", config, args, FALSE)
   setArg("bootstrap_replications", config, args, 0)
-  setArg("test_label_column", config, args, config$label_column)
+  setArg("custom_performance", config, args, NULL)
+  #setArg("test_label_column", config, args, config$label_column)
+  #setArg("test_comparison_label_column", config, args, NULL)
   
   config
 }
@@ -438,13 +440,13 @@ loadModel <- function(name, config=NULL) {
   registry <- rMVPA:::MVPAModels
   
   if (!is.null(registry[[name]])) {
-    CaretModelWrapper$new(registry[[name]], config$tuneGrid)       
+    CaretModelWrapper$new(registry[[name]], config$tuneGrid, config$custom_performance)       
   } else if (length(caret::getModelInfo(name)) > 0) {
-    CaretModelWrapper$new(caret::getModelInfo(name)[[name]], config$tuneGrid)    
+    CaretModelWrapper$new(caret::getModelInfo(name)[[name]], config$tuneGrid, config$custom_performance)    
   } else if (name == "RSA" || name == "rsa") {
-    
+    stop()
   } else {
-    abort(paste("unrecognized model: ", name))
+    stop(paste("unrecognized model: ", name))
   }
 }
 
@@ -468,23 +470,51 @@ loadDesign <- function(config, name) {
   }
 }
 
+loadFromDesign <- function(full_design, name, type) {
+  if (is.null(full_design[[name]])) {
+    stop(paste("Error:", type, " ", name, " not found"))
+  } else {
+    full_design[[name]]
+  }
+  
+}
+
 #' @export
 loadLabels <- function(full_design, config) {
   if (is.null(full_design[[config$label_column]])) {
-    stop(paste("Error: labelColumn", config$label_column, "not found"))
+    stop(paste("Error: label_column", config$label_column, "not found"))
   } else {
-    labels <- full_design[[config$label_column]]
+    full_design[[config$label_column]]
   }
-  labels
+  
+}
+
+#' @export
+loadComparisonLabels <- function(full_design, config) {
+  if (is.null(full_design[[config$comparison_label_column]])) {
+    stop(paste("Error: comparison_label_column", config$comparison_label_column, "not found"))
+  } else {
+    full_design[[config$comparison_label__column]]
+  }
+  
 }
 
 loadTestLabels <- function(full_design, config) {
   if (is.null(full_design[[config$test_label_column]])) {
-    stop(paste("Error: labelColumn", config$label_column, "not found"))
+    stop(paste("Error: test_label_column", config$test_label_column, "not found"))
   } else {
-    labels <- full_design[[config$test_label_column]]
+    full_design[[config$test_label_column]]
   }
-  labels
+  
+}
+
+loadTestComparisonLabels <- function(full_design, config) {
+  if (is.null(full_design[[config$test_comparison_label_column]])) {
+    stop(paste("Error: test_comparison_label_column", config$test_comparison_label_column, "not found"))
+  } else {
+    full_design[[config$test_comparison_label_column]]
+  }
+  
 }
 
 #' @export

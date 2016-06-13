@@ -14,7 +14,8 @@ MVPADataset <- R6::R6Class("MVPADataset",
                              testSplits=NULL, 
                              trainDesign=NULL, 
                              testDesign=NULL,
-                      
+                             #comparisonY=NULL,
+                             #testComparisonY=NULL,
                              initialize=function(trainVec,
                                                Y,
                                                mask=NULL, 
@@ -26,6 +27,8 @@ MVPADataset <- R6::R6Class("MVPADataset",
                                                testSplits=NULL, 
                                                trainDesign=NULL, 
                                                testDesign=NULL) {
+                                               #comparisonY=NULL,
+                                               #testComparisonY=NULL) {
                               self$trainVec=trainVec
                               self$Y=Y
                               self$mask=mask
@@ -37,12 +40,10 @@ MVPADataset <- R6::R6Class("MVPADataset",
                               self$testSplits=testSplits
                               self$trainDesign=testDesign
                               self$testDesign=testDesign
-                             
+                              #self$comparisonY=comparisonY
+                              #self$testComparisonY=testComparisonY
                     
                            }))
-
-
-
 
 
 #' @export
@@ -55,7 +56,6 @@ BaseModel <- R6::R6Class(
     initialize = function(name) {
       self$model_name <- name
     },
-    
     
     run = function(dataset, vox, crossVal, featureSelector = NULL) {
       stop("unimplemented")
@@ -80,11 +80,18 @@ CaretModelWrapper <- R6::R6Class(
   public = list(
     model = NA,
     tuneGrid = NULL,
-    initialize = function(model, tuneGrid) {
+    customPerformance = NULL,
+    initialize = function(model, tuneGrid, customPerformance=NULL) { 
       self$model_name <- model$label
       self$model <- model
+      
       if (!missing(tuneGrid))
         self$tuneGrid = tuneGrid
+      
+      if (!is.null(customPerformance)) {
+        assert_that(is.function(customPerformance)) 
+        self$customPerformance = customPerformance
+      }
       
       for (lib in self$model$library) {
         library(lib, character.only = TRUE)
@@ -116,6 +123,12 @@ CaretModelWrapper <- R6::R6Class(
         dataset$testY
       }
       
+      testDesign <- if (is.null(dataset$testVec)) {
+        if (is.null(subIndices)) dataset$trainDesign else dataset$trainDesign[subIndices] 
+      } else {
+        dataset$testDesign
+      }
+      
       predictor <-
         if (length(result$predictor) > 1) {
           WeightedPredictor(result$predictor)
@@ -137,14 +150,9 @@ CaretModelWrapper <- R6::R6Class(
       
         prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
         maxid <- apply(prob, 1, which.max)
-        #len <- sapply(maxid, length)
-        #if (any(len == 0)) {
-        #  maxid[len == 0] <- NA
-        #}
-        #maxid <- unlist(maxid)
-        
+      
         pclass <- levels(dataset$Y)[maxid]
-        classificationResult(observed, pclass, prob, predictor)
+        classificationResult(observed, pclass, prob, testDesign, predictor)
       } else {
         
         preds <- numeric(length(observed))
@@ -153,13 +161,12 @@ CaretModelWrapper <- R6::R6Class(
           preds[testInd] <- result$prediction[[i]]$preds
         }
         
-        classificationResult(observed, preds, NULL, predictor)
+        RegressionResult(observed, preds, testDesign, predictor)
         
-      
       }
     },
     
-    performance = function(result) {
+    performance = function(result, vox, splitList=NULL, classMetrics=NULL) {
       
     },
     

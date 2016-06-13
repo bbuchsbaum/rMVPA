@@ -21,40 +21,6 @@ ClassificationResultSet <- function(blockVar, resultList) {
 
 
 
-#' create an \code{ClassificationModel} instance
-#' @param caretModel the underlying caret model object
-#' @export
-#ClassificationModel <- function(caretModel) {
-#  class(caretModel) <- c("ClassificationModel", "list")
-#  caretModel
-#}
-
-# create an \code{EnsembleSearchlightModel} instance
-# @param caretModel
-# @export
-#EnsembleSearchlightModel <- function(baseLearners=list(pls=data.frame(ncomp=1:5), lda_thomaz=1, sda=expand.grid(lambda=c(.01,.2,.5,.7), diagonal=FALSE))) {
-#  ret=list(baseLearners=baseLearners)
-#  class(ret) <- c("EnsembleSearchlightModel", "list")
-#  ret
-#}
-
-# create an \code{SimilarityModel} instance
-# @param type the similarity metric (pearson, kendall, spearman)
-# @export
-#  simFun <- if (is.function(type)) {
-#    type
-#  } else {
-#    type=match.arg(type)
-#    f <- function(x) {
-#      cor(x, method=type)
-#    }
-#  }
-#  ret <- list(simFun=simFun)
-#  class(ret) <- c("SimilarityModel", "list")
-#  ret
-#}
-
-
 NullResult <- function(vox, model, observed) {
   ret <- list(vox=vox,
               model=model,
@@ -77,11 +43,12 @@ SimilarityResult <- function(corMat, avgContrast, sdContrast) {
 #' @param predicted
 #' @param probs
 #' @export
-TwoWayClassificationResult <- function(observed, predicted, probs, predictor=NULL) {
+TwoWayClassificationResult <- function(observed, predicted, probs, testDesign, predictor=NULL) {
   ret <- list(
               observed=observed,
               predicted=predicted,
               probs=as.matrix(probs),
+              testDesign=testDesign,
               predictor=predictor
               )
   
@@ -102,6 +69,7 @@ subResult.MultiWayClassificationResult <- function(x, indices) {
     observed=x$observed[indices],
     predicted=x$predicted[indices],
     probs=as.matrix(x$probs)[indices,],
+    testDesign=x$testDesign[indices,],
     predictor=NULL)
   
   class(ret) <- c("MultiWayClassificationResult", "ClassificationResult", "list")
@@ -114,6 +82,7 @@ subResult.TwoWayClassificationResult <- function(x, indices) {
     observed=x$observed[indices],
     predicted=x$predicted[indices],
     probs=as.matrix(x$probs)[indices,],
+    testDesign=x$testDesign[indices,],
     predictor=NULL)
   
   class(ret) <- c("TwoWayClassificationResult", "ClassificationResult", "list")
@@ -127,21 +96,23 @@ subResult.TwoWayClassificationResult <- function(x, indices) {
 #' @param predicted
 #' @param probs
 #' @export
-MultiWayClassificationResult <- function(observed, predicted, probs, predictor=NULL) {
+MultiWayClassificationResult <- function(observed, predicted, probs,  testDesign, predictor=NULL) {
   ret <- list(
               observed=observed,
               predicted=predicted,
               probs=as.matrix(probs),
+              testDesign=testDesign,
               predictor=predictor)
   
   class(ret) <- c("MultiWayClassificationResult", "ClassificationResult", "list")
   ret
 }
 
-RegressionResult <- function(observed, predicted, predictor=NULL) {
+RegressionResult <- function(observed, predicted, testDesign, predictor=NULL) {
   ret <- list(
     observed=observed,
     predicted=predicted,
+    testDesign=testDesign,
     predictor=predictor)
   class(ret) <- c("RegressionResult", "ClassificationResult", "list")
   ret
@@ -150,13 +121,13 @@ RegressionResult <- function(observed, predicted, predictor=NULL) {
 
 
 #' @export
-classificationResult <- function(observed, predicted, probs,  predictor=NULL) {
+classificationResult <- function(observed, predicted, probs, testDesign,predictor=NULL) {
   if (is.numeric(observed)) {
-    RegressionResult(observed, predicted, predictor)
+    RegressionResult(observed, predicted, testDesign, predictor)
   } else if (length(levels(as.factor(observed))) == 2) {
-    TwoWayClassificationResult(observed,predicted, probs,  predictor)
+    TwoWayClassificationResult(observed, predicted, probs,  testDesign, predictor)
   } else if (length(levels(as.factor(observed))) > 2) {
-    MultiWayClassificationResult(observed,predicted, probs, predictor)
+    MultiWayClassificationResult(observed,predicted, probs, testDesign, predictor)
   } else {
     stop("observed data must be a factor with 2 or more levels")
   }

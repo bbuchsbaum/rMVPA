@@ -24,8 +24,11 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 } 
 
 
-computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE) {
+computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE, customFun=NULL) {
   perf <- t(performance(result, splitList, classMetrics))
+  if (!is.null(customFun)) {
+    perf <- cbind(perf, t(customPerformance(result, customFun, splitList)))
+  }
   out <- cbind(vox, perf[rep(1, nrow(vox)),])   
 }
 
@@ -77,7 +80,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
   result
 }
 
-  
+# helper method to convert result list to a list of BrainVolumes 
 .convertResultsToVolumeList <- function(res, mask) {
   invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
   validRes <- do.call(rbind, res[!invalid])
@@ -93,6 +96,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
 }
 
 
+#' standard searchlight
 .doStandard <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
@@ -100,7 +104,10 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
     if (nrow(vox) > 1) {
       print(nrow(vox))
       vox <- ROIVolume(space(dataset$mask), vox)
-      computePerformance(model$run(dataset, vox, crossVal), coords(vox), dataset$testSplits, classMetrics)
+      result <- model$run(dataset, vox, crossVal)
+      perf <- computePerformance(result, coords(vox), dataset$testSplits, classMetrics, model$customPerformance)
+
+      
     }
   }
   
@@ -112,11 +119,12 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
   ## tight inner loop should probably avoid "foreach" as it has a lot of overhead, but c'est la vie for now.
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "caret", "neuroim", dataset$model$library)) %do% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "caret", "neuroim", dataset$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
       vox <- ROIVolume(space(dataset$mask), vox)
-      computePerformance(model$run(dataset, vox, crossVal), coords(vox), dataset$testSplits, classMetrics)
+      result <- model$run(dataset, vox, crossVal)
+      perf <- computePerformance(result, coords(vox), dataset$testSplits, classMetrics, model$customPerformance)
     }
   }
   
@@ -170,7 +178,17 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
       attr(result, "ROINUM") <- roinum
       attr(result, "vox") <- coords(vox)
       
-      perf <- c(ROINUM=roinum, t(performance(result, dataset$testSplits, classMetrics))[1,])     
+     
+      perf <- if (!is.null(model$customPerformance)) {
+        standard <- performance(result, dataset$testSplits, classMetrics)
+        custom_perf <- customPerformance(result, model$customPerformance, dataset$testSplits)
+        c(standard, custom_perf)
+      } else {
+        t(performance(result, dataset$testSplits, classMetrics))[1,]
+  
+      }
+      
+      perf <- c(ROINUM=roinum, perf)     
       perf <- structure(perf, result=result)
       perf    
     }

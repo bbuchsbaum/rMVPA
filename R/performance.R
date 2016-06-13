@@ -45,13 +45,32 @@ performance.RegressionResult <- function(x, splitList, classMetrics=FALSE) {
   c(R2=R2, RMSE=rmse, spearcor=rcor)
 }
 
+#' @export
+#' 
+customPerformance <- function(x, customFun, splitList=NULL) {
+  if (is.null(splitList)) {
+    customFun(x)
+  } else {
+    total <- customFun(x)
+    subtots <- unlist(lapply(names(splitList), function(tag) {
+      ind <- splitList[[tag]]
+      ret <- customFun(subResult(x, ind))
+      names(ret) <- paste0(names(ret), "_", tag)
+      ret
+    }))
+    
+    c(total, subtots)
+  }
+  
+}
 
 #' @export
-performance.TwoWayClassificationResult <- function(x,splitList=NULL, classMetrics=FALSE) {
+performance.TwoWayClassificationResult <- function(x,splitList=NULL, classMetrics=FALSE, customFun=NULL) {
   if (is.null(splitList)) {
-    .twowayPerf(x$observed, x$predicted, x$probs)
+    ret <- .twowayPerf(x$observed, x$predicted, x$probs)
   } else {
     total <- .twowayPerf(x$observed, x$predicted, x$probs)
+    
     subtots <- unlist(lapply(names(splitList), function(tag) {
       ind <- splitList[[tag]]
       ret <- .twowayPerf(x$observed[ind], x$predicted[ind], x$probs[ind,])
@@ -59,10 +78,30 @@ performance.TwoWayClassificationResult <- function(x,splitList=NULL, classMetric
       ret
     }))
     
-    c(total, subtots)
-  
+    ret <- c(total, subtots)
   }
  
+}
+
+#' @export
+performance.MultiWayClassificationResult <- function(x, splitList=NULL, classMetrics=FALSE) {
+  stopifnot(length(x$observed) == length(x$predicted))
+  
+  if (is.null(splitList)) {
+    .multiwayPerf(x$observed, x$predicted, x$probs, classMetrics)
+  } else {
+    total <- .multiwayPerf(x$observed, x$predicted, x$probs, classMetrics)
+    subtots <- unlist(lapply(names(splitList), function(tag) {
+      ind <- splitList[[tag]]
+      ret <- .multiwayPerf(x$observed[ind], x$predicted[ind], x$probs[ind,], classMetrics)
+      names(ret) <- paste0(names(ret), "_", tag)
+      ret
+    }))
+    
+    c(total, subtots)
+    
+  }
+  
 }
 
 combinedAUC <- function(Pred, Obs) {
@@ -116,25 +155,6 @@ combinedACC <- function(Pred, Obs) {
 }
   
 
-#' @export
-performance.MultiWayClassificationResult <- function(x, splitList=NULL, classMetrics=FALSE) {
-  stopifnot(length(x$observed) == length(x$predicted))
-  
-  if (is.null(splitList)) {
-    .multiwayPerf(x$observed, x$predicted, x$probs, classMetrics)
-  } else {
-    total <- .multiwayPerf(x$observed, x$predicted, x$probs, classMetrics)
-    subtots <- unlist(lapply(names(splitList), function(tag) {
-      ind <- splitList[[tag]]
-      ret <- .multiwayPerf(x$observed[ind], x$predicted[ind], x$probs[ind,], classMetrics)
-      names(ret) <- paste0(names(ret), "_", tag)
-      ret
-    }))
-    
-    c(total, subtots)
-    
-  }
-  
-}
+
 
 

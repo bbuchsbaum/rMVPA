@@ -20,7 +20,7 @@ gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
   blockVar <- rep(1:folds, length.out=nobs)
   
   
-  MVPADataset$new(trainVec=bvec, mask=mask, blockVar=blockVar, testVec=NULL, testY=NULL)
+  MVPADataset$new(trainVec=bvec, Y=Y,mask=mask, blockVar=blockVar, testVec=NULL, testY=NULL)
 }
 
 gen_dataset_with_test <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5, splitvar=TRUE) {
@@ -56,6 +56,19 @@ test_that("randomized mvpa_searchlight runs without error", {
   dataset <- gen_dataset(c(5,5,1), 100, 2)
   crossVal <- BlockedCrossValidation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL))
+  res <- mvpa_searchlight(dataset, model, crossVal, radius=3, method="randomized")
+  
+})
+
+test_that("randomized mvpa_searchlight runs with custom_performance", {
+  
+  custom <- function(x) {
+    c(xres=mean(rnorm(100)), yres=max(rnorm(100)))
+  }
+  
+  dataset <- gen_dataset(c(5,5,1), 100, 2)
+  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  model <- loadModel("sda_notune", list(tuneGrid=NULL, custom_performance=custom))
   res <- mvpa_searchlight(dataset, model, crossVal, radius=3, method="randomized")
   
 })
