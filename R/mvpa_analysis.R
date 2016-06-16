@@ -55,10 +55,10 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
     stop("mvpa_crossval: no valid columns in data matrix")
   }
     
-  if (is.matrix(vox)) {
-    vox <- vox[valid.idx]
+  vox <- if (is.matrix(vox)) {
+    vox[valid.idx,]
   } else {
-    vox <- vox[valid.idx]
+    vox[valid.idx]
   }
   
   parcels <- if (!is.null(dataset$parcellation)) {
