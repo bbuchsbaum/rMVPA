@@ -37,7 +37,7 @@ computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE, 
 #' cross_validation for an MVPA analysis.
 #' 
 #' @param dataset an instance of type \code{MVPADataset}
-#' @param vox a set of voxel coordinates defining the subset of the image dataset to use.
+#' @param vox a \code{matrix} of voxel coordinates or \code{vector} of ids defining the subset of the image dataset to use.
 #' @param crossVal a cross-validation instance such as \code{BlockedCrossValidation}
 #' @param model a caret model object
 #' @param tuneGrid an optional caret-formatted \code{data.frame} containing parameters to be tuned
@@ -52,12 +52,15 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
   X <- X[,valid.idx]
     
   if (ncol(X) == 0) {
-    stop("no valid columns")
+    stop("mvpa_crossval: no valid columns in data matrix")
   }
     
+  if (is.matrix(vox)) {
+    vox <- vox[valid.idx]
+  } else {
+    vox <- vox[valid.idx]
+  }
   
-  vox <- vox[valid.idx]
-    
   parcels <- if (!is.null(dataset$parcellation)) {
     dataset$parcellation[vox]
   }
@@ -100,7 +103,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
 .doStandard <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "neuroim", "caret", model$model$library)) %dopar% {   
     if (nrow(vox) > 1) {
       print(nrow(vox))
       vox <- ROIVolume(space(dataset$mask), vox)
@@ -119,7 +122,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
   ## tight inner loop should probably avoid "foreach" as it has a lot of overhead, but c'est la vie for now.
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "caret", "neuroim", dataset$model$library)) %do% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "caret", "neuroim", model$model$library)) %do% {   
     if (nrow(vox) > 1) {  
       print(nrow(vox))
       vox <- ROIVolume(space(dataset$mask), vox)

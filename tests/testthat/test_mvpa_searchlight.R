@@ -20,7 +20,8 @@ gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
   blockVar <- rep(1:folds, length.out=nobs)
   
   
-  MVPADataset$new(trainVec=bvec, Y=Y,mask=mask, blockVar=blockVar, testVec=NULL, testY=NULL)
+  MVPADataset$new(trainVec=bvec, Y=Y,mask=mask, blockVar=blockVar, testVec=NULL, testY=NULL, 
+                  trainDesign=data.frame(Y=Y), testDesign=data.frame(Y=Y))
 }
 
 gen_dataset_with_test <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5, splitvar=TRUE) {
@@ -63,7 +64,12 @@ test_that("randomized mvpa_searchlight runs without error", {
 test_that("randomized mvpa_searchlight runs with custom_performance", {
   
   custom <- function(x) {
-    c(xres=mean(rnorm(100)), yres=max(rnorm(100)))
+    cnames <- colnames(x$probs)
+    y <- x$testDesign$Y
+    
+    p1 <- x$probs[cbind(1:nrow(x$probs), as.integer(y))]
+    ret <- c(m1 = mean(p1), m2=max(p1))
+    ret
   }
   
   dataset <- gen_dataset(c(5,5,1), 100, 2)
