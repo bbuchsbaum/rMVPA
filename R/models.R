@@ -1,9 +1,9 @@
 
 
 
-
 #' @export
 #' @import R6
+#' @import neuroim
 MVPADataset <- R6::R6Class("MVPADataset",
                            public = list(
                              trainVec=NULL,Y=NULL,mask=NULL, 
@@ -48,29 +48,69 @@ MVPADataset <- R6::R6Class("MVPADataset",
                            
                            trainChunk = function(vox) {
                              mat <- series(self$trainVec, vox)
-                             mat
+                             cds <- if (is.vector(vox)) {
+                               cds <- indexToGrid(space(self$mask), vox)
+                             } else {
+                               vox
+                             }
+                             neuroim::ROIVolume(space(self$mask), cds, data=mat)
+                             
                            },
                            
                            testChunk = function(vox) {
+                             assertthat::assert_that(!is.null(self$testVec))
+                             cds <- if (is.vector(vox)) {
+                               cds <- indexToGrid(space(self$mask), vox)
+                             } else {
+                               vox
+                             }
                              mat <- series(self$testVec, vox)
-                             mat
+                             neuroim::ROIVolume(space(self$mask), cds, data=mat)
+                           },
+                           
+                           convertScores = function(ids, resultTable) {
+                             ret <- lapply(1:ncol(resultTable), function(i) {
+                               vol <- array(NA, dim(self$mask))   
+                               vol[ids] <- resultTable[,i]
+                               BrainVolume(vol, space(self$mask))
+                             })
+                             
+                             names(ret) <- colnames(resultTable)
+                             ret
+                           },
+                           
+                           averageOverIterations = function(vols) {
+                             nmetrics <- length(vols[[1]])
+                             lapply(1:nmetrics, function(i) {
+                               X <- do.call(cbind, lapply(vols, function(v) v[[i]]))
+                               xmean <- rowMeans(X, na.rm=TRUE)
+                               xmean[is.na(xmean)] <- 0
+                               BrainVolume(xmean, space(self$mask))
+                             })
+                             
                            }
+                           
+                           
+                           
+                           
+                           
+                           
                            
 ))
 
 #' @export
+#' @import neuroim
 #' @import R6
 MVPASurfaceDataset <- R6::R6Class("MVPASurfaceDataset",
                            public = list(
-                             geometry=NULL,trainVec=NULL, Y=NULL,
+                             trainVec=NULL, Y=NULL,
                              mask=NULL, blockVar=NULL,testVec=NULL,
                              testY=NULL,parcellation=NULL, 
                              testSplitVar=NULL,testSplits=NULL, 
                              trainDesign=NULL, testDesign=NULL,
-                             initialize=function(geometry,
-                                                 trainVec,
+                             initialize=function(trainVec,
                                                  Y,
-                                                 mask, 
+                                                 mask=NULL, 
                                                  blockVar=NULL,
                                                  testVec=NULL,
                                                  testY=NULL,
@@ -96,9 +136,9 @@ MVPASurfaceDataset <- R6::R6Class("MVPASurfaceDataset",
                            
                            searchlight = function(radius, method=c("randomized", "standard")) {
                              if (method == "randomized") {
-                               neuroim::RandomSurfaceSearchlight(self$geometry, radius, self$mask)
+                               neuroim::RandomSurfaceSearchlight(self$trainVec@geometry, radius, self$mask)
                              } else if (method == "standard") {
-                               neuroim::SurfaceSearchlight(self$geometry, radius, self$mask)
+                               neuroim::SurfaceSearchlight(self$trainVec@geometry, radius, self$mask)
                              } else {
                                stop(paste("unrecognized method: ", method))
                              }
@@ -106,15 +146,44 @@ MVPASurfaceDataset <- R6::R6Class("MVPASurfaceDataset",
                            
                            trainChunk = function(ids) {
                              mat <- series(self$trainVec, ids)
-                             attr(mat, "ids") <- ids
-                             mat
+                             neuroim::ROISurface(geometry=self$trainVec@geometry,indices=ids,data=as.matrix(mat))
                            },
                            
-                           testChunk = function(vox) {
+                           testChunk = function(ids) {
+                             assertthat::assert_that(!is.null(self$testVec))
                              mat <- series(self$testVec, vox)
-                             attr(mat, "ids") <- ids
-                             mat
+                             neuroim::ROISurface(geometry=self$testVec@geometry,indices=ids,data=as.matrix(mat))
+                           },
+                           
+                           convertScores = function(ids, resultTable) {
+                             assert_that(length(ids) == nrow(resultTable))
+                             ord <- order(ids)
+                             df1 <- as.data.frame(cbind(ids[ord], resultTable[ord,]))
+                             names(df1) <- c("node", colnames(resultTable))
+                             df1
+                           },
+                           averageOverIterations = function(tbls) {
+                             #allnodes <- sort(unique(unlist(lapply(tbls, function(x) x[,1]))))
+                             
+            
+                             nodes <- tbls[[1]][,1]
+                             nmetrics <- ncol(tbls[[1]]) - 1
+                             scores <- lapply(tbls, function(x) x[,-1])
+                             
+                             out <- do.call(cbind, lapply(1:nmetrics, function(i) {
+                               X <- do.call(cbind, lapply(scores, function(sc) sc[,i]))
+                               xmean <- rowMeans(X, na.rm=TRUE)
+                               xmean[is.na(xmean)] <- 0
+                               xmean
+                             }))
+                             
+                             out <- as.data.frame(cbind(nodes, out))
+                             colnames(out) <- c("node", colnames(scores[[1]]))
+                             out
+                             
                            }
+                           
+                           
 ))
 
 
@@ -173,7 +242,7 @@ CaretModelWrapper <- R6::R6Class(
     },
     
     fit = function(x, y, ...) {
-      self$model$fit(x@data,y, ...)
+      self$model$fit(x,y, ...)
     },
     
     grid = function(x, y, len) {
@@ -181,15 +250,15 @@ CaretModelWrapper <- R6::R6Class(
     },
     
     predict = function(modelFit,newdata) {
-      self$model$predict(modelFit, newdata@data)
+      self$model$predict(modelFit, newdata)
     },
     
     prob = function(modelFit, newdata) {
-      self$model$prob(modelFit,newdata@data)
+      self$model$prob(modelFit,newdata)
     },
     
-    run = function(dataset, vox, crossVal, featureSelector = NULL, subIndices=NULL) {
-      result <- mvpa_crossval(dataset, vox, crossVal, self$model, self$tuneGrid, featureSelector, subIndices)
+    run = function(dataset, roi, crossVal, featureSelector = NULL, subIndices=NULL) {
+      result <- mvpa_crossval(dataset, roi, crossVal, self$model, self$tuneGrid, featureSelector, subIndices)
       
       observed <- if (is.null(dataset$testVec)) {
         if (is.null(subIndices)) dataset$Y else dataset$Y[subIndices] 
@@ -221,12 +290,12 @@ CaretModelWrapper <- R6::R6Class(
           prob[tind,] <- prob[tind,] + p
         }
        
-      
         prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
         maxid <- apply(prob, 1, which.max)
       
         pclass <- levels(dataset$Y)[maxid]
         classificationResult(observed, pclass, prob, testDesign, predictor)
+        
       } else {
         
         preds <- numeric(length(observed))

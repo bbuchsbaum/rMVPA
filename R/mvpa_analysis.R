@@ -17,12 +17,17 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
 } 
 
 # helper function to compute performance metric for a classifcation result
-computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE, customFun=NULL) {
+computePerformance <- function(result, splitList=NULL, classMetrics=FALSE, customFun=NULL) {
   perf <- t(performance(result, splitList, classMetrics))
+  
   if (!is.null(customFun)) {
-    perf <- cbind(perf, t(customPerformance(result, customFun, splitList)))
+    cbind(perf, t(customPerformance(result, customFun, splitList)))
+  } else {
+    perf
   }
-  out <- cbind(vox, perf[rep(1, nrow(vox)),])   
+  
+  
+  ##out <- cbind(vox, perf[rep(1, nrow(vox)),])   
 }
 
 #' mvpa_crossval
@@ -30,7 +35,7 @@ computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE, 
 #' workhorse function for cross_validation in an MVPA analysis
 #' 
 #' @param dataset an instance of type \code{MVPADataset}
-#' @param vox a \code{matrix} of voxel coordinates or \code{vector} of ids defining the subset of the image dataset to use.
+#' @param ROI a class of type \code{ROIVolume} or \code{ROISurface} contianing the training data.
 #' @param crossVal a cross-validation instance of type \code{CrossValidation}
 #' @param model a \code{caret} model object
 #' @param tuneGrid an optional caret-formatted \code{data.frame} containing parameters to be tuned
@@ -43,93 +48,116 @@ computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE, 
 #' featureMask 
 #'  
 #' @export
-mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureSelector = NULL, subIndices=NULL) {
+mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureSelector = NULL, subIndices=NULL) {
   
-  X <- series(dataset$trainVec, vox)
-  
-  valid.idx <- nonzeroVarianceColumns(X)
-  X <- X[,valid.idx]
-    
-  if (ncol(X) == 0) {
+ 
+  ## valid subset
+  valid.idx <- nonzeroVarianceColumns(values(ROI))
+ 
+  if (length(valid.idx) == 0) {
     stop("mvpa_crossval: no valid columns in data matrix")
   }
-    
-  vox <- if (is.matrix(vox)) {
-    vox[valid.idx,]
-  } else {
-    vox[valid.idx]
+  
+  if (length(valid.idx) != length(ROI)) {
+    ## subset ROI using valid coordinates
+    ROI <- ROI[valid.idx]
   }
+    
   
   parcels <- if (!is.null(dataset$parcellation)) {
-    dataset$parcellation[vox]
+    stop("parcellation not supported")
+    ## subset parcellation with ROI
+    dataset$parcellation[ROI]
   }
     
   if (is.null(tuneGrid)) {
-    tuneGrid <- model$grid(X, Y, 1)
+    ## should move within crossval_
+    tuneGrid <- model$grid(values(ROI), Y, 1)
   }
   
-  foldIterator <- matrixIter(crossVal, dataset$Y, X, subIndices)
-    
+  
   result <- if (is.null(dataset$testVec)) {
     ### train and test on one set.
-    crossval_internal(foldIterator, model, tuneGrid, featureSelector = featureSelector, parcels = parcels)
+    crossval_internal(crossVal, dataset$Y, ROI, subIndices, model, tuneGrid, 
+                      featureSelector = featureSelector, parcels = parcels)
   } else {
     ### train on one set, test on the other.
-    Xtest <- series(dataset$testVec, vox)
-    crossval_external(foldIterator, Xtest, dataset$testY, model, tuneGrid, featureSelector = featureSelector, parcels = parcels)
+    testROI <- dataset$testChunk(indices(ROI))
+    crossval_external(crossVal, dataset$Y, ROI, dataset$testY, testROI, subIndices, model, tuneGrid, 
+                      featureSelector = featureSelector, parcels = parcels)
   }
+  
+  ## attr(result, "valid.idx") <- valid.idx
     
   result
 }
 
 # helper method to convert result list to a list of BrainVolumes 
-.convertResultsToVolumeList <- function(res, mask) {
-  invalid <- sapply(res, function(x) inherits(x, "simpleError") || is.null(x))
-  validRes <- do.call(rbind, res[!invalid])
-  
-  if (length(validRes) == 0 || nrow(validRes) == 0) {
-    print(res)
-    stop("no valid results, all tasks failed")
-  }
-  
+.convertResultsToVolumeList <- function(validRes, mask) {
   vols <- matrixToVolumeList(validRes[,1:3], validRes[,4:ncol(validRes)], mask)
   names(vols) <- colnames(validRes)[4:ncol(validRes)]
   vols
 }
 
+.extractValidResults <- function(results) {
+  invalid <- sapply(results, function(x) inherits(x, "simpleError") || is.null(x))
+  validRes <- results[!invalid]
+  
+  if (length(validRes) == 0) {
+    print(results)
+    stop("no valid results, all tasks failed")
+  }
+  
+  validRes
+  
+}
+
 
 # standard searchlight
 .doStandard <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
-  searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
+  searchIter <- itertools::ihasNext(dataset$searchlight(radius, "standard")) 
   
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "neuroim", "caret", model$model$library)) %dopar% {   
-    if (nrow(vox) > 1) {
-      print(nrow(vox))
-      vox <- ROIVolume(space(dataset$mask), vox)
-      result <- model$run(dataset, vox, crossVal)
-      perf <- computePerformance(result, coords(vox), dataset$testSplits, classMetrics, model$customPerformance)
-    }
+    roi <- dataset$trainChunk(vox)
+    if (length(roi) > 1) {
+      print(length(roi))
+      result <- try(model$run(dataset, roi, crossVal))
+      perf <- computePerformance(result, dataset$testSplits, classMetrics, model$customPerformance)
+      center <- attr(vox, "center.index")
+      list(perf=perf, center=center)
+    } 
   }
   
-  .convertResultsToVolumeList(res, dataset$mask)
+  validRes <- .extractValidResults(res)
+  perfmat <- do.call(rbind, lapply(validRes, "[[", "perf"))
+  ids <- sapply(validRes, "[[", "center")
+  dataset$convertScores(ids, perfmat)
 }
   
 # randomized searchlight
 .doRandomized <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
-  searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
+  searchIter <- itertools::ihasNext(dataset$searchlight(radius, "randomized"))
   
   ## tight inner loop should probably avoid "foreach" as it has a lot of overhead, but c'est la vie for now.
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "caret", "neuroim", model$model$library)) %do% {   
-    if (nrow(vox) > 1) {  
-      print(nrow(vox))
-      vox <- ROIVolume(space(dataset$mask), vox)
-      result <- model$run(dataset, vox, crossVal)
-      perf <- computePerformance(result, coords(vox), dataset$testSplits, classMetrics, model$customPerformance)
+    roi <- dataset$trainChunk(vox)
+    if (length(roi) > 1) {  
+      print(length(roi))
+      result <- try(model$run(dataset, roi, crossVal))
+      perf <- computePerformance(result, dataset$testSplits, classMetrics, model$customPerformance)
+      perf <- perf[rep(1, length(roi)),]
+      list(perf=perf, vox=indices(roi))
+    } else {
+      list(perf=NA, vox=indices(roi))
     }
   }
   
-  .convertResultsToVolumeList(res, dataset$mask)
-  
+  validRes <- .extractValidResults(res)
+  perfmat <- do.call(rbind, lapply(validRes, "[[", "perf"))
+  ids <- unlist(lapply(validRes, "[[", "vox"))
+  dataset$convertScores(ids, perfmat)
+ 
+
 }
 
 
@@ -171,12 +199,14 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
     
     if (length(idx) > 1) {
       ## what if length is less than 1?
-      vox <- ROIVolume(space(regionMask), indexToGrid(regionMask, idx))
       
-      result <- model$run(dataset, vox, crossVal, featureSelector)
+      roi <- dataset$trainChunk(idx)
+      #vox <- ROIVolume(space(regionMask), indexToGrid(regionMask, idx))
+      
+      result <- model$run(dataset, roi, crossVal, featureSelector)
     
       attr(result, "ROINUM") <- roinum
-      attr(result, "vox") <- coords(vox)
+      attr(result, "vox") <- idx
       
      
       perf <- if (!is.null(model$customPerformance)) {
@@ -270,23 +300,26 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
     
     res <- foreach(i = 1:niter) %dopar% {
       flog.info("Running randomized searchlight iteration %s", i)   
-      do.call(cbind, .doRandomized(dataset, model, radius, crossVal, classMetrics=classMetrics) )
+      .doRandomized(dataset, model, radius, crossVal, classMetrics=classMetrics)
     }
     
-    ## average over iterations
-    Xall <- lapply(1:ncol(res[[1]]), function(i) {
-      X <- do.call(cbind, lapply(res, function(M) M[,i]))
-      xmean <- rowMeans(X, na.rm=TRUE)
-      xmean[is.na(xmean)] <- 0
-      BrainVolume(xmean, space(dataset$mask))
-    })
-    
-    names(Xall) <- colnames(res[[1]])
-    Xall
-    
+    dataset$averageOverIterations(res)
   }
   
 }
+
+# average_over_iterations <- function(dataset, result) {
+#   Xall <- lapply(1:ncol(result[[1]]), function(i) {
+#     X <- do.call(cbind, lapply(result, function(M) M[,i]))
+#     xmean <- rowMeans(X, na.rm=TRUE)
+#     xmean[is.na(xmean)] <- 0
+#     BrainVolume(xmean, space(dataset$mask))
+#   })
+#   
+#   names(Xall) <- colnames(result[[1]])
+#   Xall
+#   
+# }
 
 
 

@@ -1,12 +1,12 @@
 
 
-.noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")
+.noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none", allowParallel=FALSE)
 
-.cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
+.cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE)  
 
-.adaptiveControl <- caret::trainControl("adaptive_cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")  
+.adaptiveControl <- caret::trainControl("adaptive_cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE)  
 
-#' create an \code{ClassificationResultSet} instance
+#' Create an \code{ClassificationResultSet} instance
 #' @param blockVar the cross-validation blocking variable
 #' @param resultList a list of type \code{ClassificationResult} 
 #' @export
@@ -96,7 +96,7 @@ subResult.TwoWayClassificationResult <- function(x, indices) {
 #' @param predicted
 #' @param probs
 #' @export
-MultiWayClassificationResult <- function(observed, predicted, probs,  testDesign, predictor=NULL) {
+MultiWayClassificationResult <- function(observed, predicted, probs,  testDesign=NULL, predictor=NULL) {
   ret <- list(
               observed=observed,
               predicted=predicted,
@@ -108,7 +108,7 @@ MultiWayClassificationResult <- function(observed, predicted, probs,  testDesign
   ret
 }
 
-RegressionResult <- function(observed, predicted, testDesign, predictor=NULL) {
+RegressionResult <- function(observed, predicted, testDesign=NULL, predictor=NULL) {
   ret <- list(
     observed=observed,
     predicted=predicted,
@@ -121,7 +121,7 @@ RegressionResult <- function(observed, predicted, testDesign, predictor=NULL) {
 
 
 #' @export
-classificationResult <- function(observed, predicted, probs, testDesign,predictor=NULL) {
+classificationResult <- function(observed, predicted, probs, testDesign=NULL,predictor=NULL) {
   if (is.numeric(observed)) {
     RegressionResult(observed, predicted, testDesign, predictor)
   } else if (length(levels(as.factor(observed))) == 2) {
@@ -134,7 +134,7 @@ classificationResult <- function(observed, predicted, probs, testDesign,predicto
 }
 
 
-
+# wraps a caret model fit
 CaretModel <- function(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector=NULL, featureMask=NULL, parcels=NULL) {
   ret <- list( model=model, Xtrain=Xtrain,Ytrain=Ytrain,Xtest=Xtest,Ytest=Ytest,tuneGrid=tuneGrid,
     tuneControl=tuneControl,modelFit=fit,featureSelector=featureSelector,featureMask=featureMask,parcels=parcels)
@@ -146,6 +146,8 @@ CaretModel <- function(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneC
   ret
 }
 
+
+# wraps a model fit that was not bypassed caret 'train' faunction
 RawModel <- function(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector=NULL, featureMask=NULL, parcels=NULL) {
   
   ret <- list(model=model, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest, tuneGrid=tuneGrid,modelFit=fit,
@@ -163,27 +165,32 @@ RawModel <- function(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, feature
 }
 
 
-trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, 
+trainModel <- function(model, ROI, Ytrain, testROI, Ytest, tuneGrid, 
                        tuneControl=.noneControl, featureSelector=NULL, parcels=NULL, ...) {
   if (!is.null(parcels)) {
-    message("computing parcellation", dim(Xtrain))
-    Xtrain <- groupMeans(Xtrain, 2, parcels)
+    stop("parcels not supported yet")
+    #message("computing parcel means", dim(ROI@data))
+    #Xtrain <- groupMeans(ROI@data, 2, parcels)
   }
   
   featureMask <- if (!is.null(featureSelector)) {
-    selectFeatures(featureSelector, Xtrain, Ytrain)
+    selectFeatures(featureSelector, ROI, Ytrain)
   } else {
-    rep(TRUE, ncol(Xtrain))
+    rep(TRUE, length(ROI))
   }
   
-  Xtrain <- Xtrain[,featureMask]
+  if (length(featureMask) != length(ROI)) {
+    ## subset ROI 
+    ROI <- ROI[featureMask]
+  } 
   
   if (nrow(tuneGrid) == 1) {
-    fit <- model$fit(Xtrain, Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE)
-    RawModel(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector, featureMask, parcels )
+    ## if model needs "structural" ROI information, then this is the "dead end" as ROI is stripped to a matrix.
+    fit <- model$fit(values(ROI), Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE)
+    RawModel(model, fit, values(ROI), Ytrain, values(testROI), Ytest, tuneGrid, featureSelector, featureMask, parcels )
   } else {     
-    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, ...)
-    CaretModel(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector, featureMask, parcels )
+    fit <- caret::train(values(ROI), Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, ...)
+    CaretModel(model, fit, values(ROI), Ytrain, values(testROI), Ytest, tuneGrid, tuneControl, featureSelector, featureMask, parcels )
   }  
 }
 
@@ -317,10 +324,10 @@ evaluateModel.RawModel <- function(x, newdata=NULL) {
   }
   
   probs <- if (is.null(x$parcels)) {
-    x$model$prob(x$modelFit, newdata[,x$featureMask])  
+    x$model$prob(x$modelFit, newdata[, x$featureMask])  
   } else {
     reducedData <- groupMeans(newdata, 2, x$parcels)
-    x$model$prob(x$modelFit, reducedData[,x$featureMask])  
+    x$model$prob(x$modelFit, reducedData[, x$featureMask])  
   }
   
   cpred <- apply(probs,1, function(x) {
@@ -519,8 +526,12 @@ evaluateModelList <- function(modelList, newdata=NULL) {
 
 
 #' Carry out external cross-validation defined by a \code{FoldIterator} instance and a separate test data set.
-#' 
-#' @param foldIterator the \code{FoldIterator} object that defines the splits of training and test samples.
+#' @param crossVal the \code{CrossValidation} object that defines the splits of training and test samples.
+#' @param Y the labels or values of dependent variable for the training data.
+#' @param ROI a region of interest of type \code{ROIVolume} or \code{ROISurface} that encapsulates the training data.
+#' @param testY the labels or values of dependent variable for the test data.
+#' @param testROI a region of interest of type \code{ROIVolume} or \code{ROISurface} that encapsulates the test data.
+#' @param subIndices an integer vector containg the subset of rows to train model on. if \code{NULL}, train on all rows.
 #' @param Xtest the test data \code{matrix}
 #' @param Ytest the test data labels (continuous or factor variables permitted, depending on supplied \code{model}.
 #' @param model a \code{caret} model object
@@ -531,27 +542,32 @@ evaluateModelList <- function(modelList, newdata=NULL) {
 #' @details this function should not typically be called by user code.
 #' @import foreach
 #' @export
-crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, featureSelector=NULL, parcels=NULL) {
+crossval_external <- function(crossVal, Y, ROI, Ytest, testROI, subIndices=NULL, model, tuneGrid, featureSelector=NULL, parcels=NULL) {
   ## TODO bootstrap replications doesn't work because model is trained on full set
   ## This should be handled upstream so that "foldIterator" retruns a bootstrapped sampled version of X.
   
+  if (!is.null(subIndices)) {
+    ROI <- ROI[,subIndices]
+  }
+  
   results <- if (nrow(tuneGrid) == 1) {
     ## no parameter tuning required. train model of full data set.
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, .noneControl, featureSelector, parcels)
+    fit <- trainModel(model, ROI, Y, testROI, Ytest, tuneGrid, .noneControl, featureSelector, parcels)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))
   } else {
+    foldIterator <- foldIter(crossVal, Y, subIndices)
     ## parameter tuning required. Will be performed on training blocks defined in foldIterator.
     ctrl <- if (foldIterator$nfolds <= 2) {
       ## with two or fewer blocks, will perform parameter tuning using default caret cross-validation.
       caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")
     } else {
-      ## training folds stroed as list of indices and provided to caret cross-validation engine.
+      ## training folds stored as list of indices and provided to caret cross-validation engine.
       index <- invertFolds(foldIterator$getTestSets(), 1:length(foldIterator$blockVar)) 
       caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
     }
-      
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, ctrl, featureSelector, parcels)
+    
+    fit <- trainModel(model, ROI, foldIterator$Y, testROI, Ytest, tuneGrid, ctrl, featureSelector, parcels)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))              
   } 
@@ -560,16 +576,20 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, featu
     prediction = list(results$perf),
     predictor  =  list(results$predictor),
     testIndices = list(1:length(Ytest)),
-    featureMask = list(results$predictor$featureMask)
+    featureMask = list(results$predictor$featureMask),
+    subIndices = subIndices
   )
   
   result
 
 }
 
-#' Carry out internal cross-validation defined by a \code{FoldIterator} instance.
+#' Carry out internal cross-validation defined by a \code{CrossValidation} instance.
 #' 
-#' @param foldIterator the \code{FoldIterator} object that defines the splits of training and test samples.
+#' @param crossVal the \code{CrossValidation} object that defines the splits of training and test samples.
+#' @param Y the labels or values of dependent variable.
+#' @param ROI a region of interest of type \code{ROIVolume} or \code{ROISurface} that encapsulates the training data.
+#' @param subIndices an integer vector containg the subset of rows to train model on.
 #' @param model a \code{caret} model object
 #' @param tuneGrid model tuning parameters stored in a \code{data.frame}
 #' @param featureSelector an optional \code{FeatureSelector} instance
@@ -577,25 +597,25 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, featu
 #' @export
 #' @details this function should not typically be called by user code.
 #' @import foreach
-crossval_internal <- function(foldIterator, model, tuneGrid, featureSelector=NULL, parcels=NULL) {
- 
+crossval_internal <- function(crossVal, Y, ROI, subIndices, model, tuneGrid, featureSelector=NULL, parcels=NULL) {
+  foldIterator <- foldIter(crossVal, Y, subIndices)
+  
   ### loop over folds
   resultList <- foreach::foreach(fold = foldIterator, .verbose=FALSE, .packages=c(model$library)) %do% {   
-
-    ## tind <- if (!is.null(subIndices)) subIndices[fold$testIndex] else fold$testIndex
-    
     if (nrow(tuneGrid) == 1) {
-      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid,  .noneControl, featureSelector, parcels)
+      ## subset ROI with training indices
+      fit <- try(trainModel(model, ROI[,fold$trainIndex], fold$Ytrain, ROI[, fold$testIndex], fold$Ytest, 
+                        tuneGrid,  .noneControl, featureSelector, parcels))
       list(result=evaluateModel(fit), fit = asPredictor(fit), featureMask=fit$featureMask, parcels=parcels, testIndices=fold$testIndex)        
     } else {    
       ctrl <- if (foldIterator$nfolds == 2) {
         caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")
       } else {
-        index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], 1:nrow(fold$Xtrain)) 
+        index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], seq_along(fold$Ytrain)) 
         caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
       }
      
-      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, tuneControl=ctrl, featureSelector, parcels)
+      fit <- trainModel(model, ROI[, fold$trainIndex], fold$Ytrain, ROI[, fold$testIndex], fold$Ytest, tuneGrid, tuneControl=ctrl, featureSelector, parcels)
       list(result=evaluateModel(fit), fit = asPredictor(fit), featureMask=fit$featureMask, parcels=parcels,testIndices=fold$testIndex)    
     } 
   }
@@ -604,6 +624,7 @@ crossval_internal <- function(foldIterator, model, tuneGrid, featureSelector=NUL
     prediction =  lapply(resultList, "[[", "result"),
     predictor  =  lapply(resultList, "[[", "fit"),
     testIndices = lapply(resultList, "[[", "testIndices"),
+    ## redundant
     featureMask = lapply(resultList, "[[", "featureMask")
   )
   

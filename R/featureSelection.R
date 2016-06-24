@@ -54,18 +54,20 @@ FeatureSelector <- function(method, cutoff_type, cutoff_value) {
 #' 
 #' Given a \code{FeatureSelection} specification object and a dataset return the set of selected features as a binary vector.
 #' @param obj the \code{FeatureSelection} object
-#' @param X the training features as a \code{matrix}
+#' @param ROI region of interest containing training features, a class of type \code{ROIVolume} or \code{ROISurface}
 #' @param Y the dependent variable as a \code{factor} or \code{numeric} variable.
 #' @param additional arguments
 #' @return a \code{logical} vector indicating the columns of \code{X} matrix that were selected.
 #' @examples 
 #' fsel <- FeatureSelector("FTest", "top_k", 10)
-#' X <- matrix(rnorm(100*100), 100, 100)
+#' coords <- rbind(c(1,1,1), c(2,2,2), c(3,3,3))
+#' 
+#' ROI <- ROIVolume(BrainSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
 #' Y <- factor(rep(c("a", "b"), each=50))
-#' featureMask <- selectFeatures(fsel, X, Y)
+#' featureMask <- selectFeatures(fsel, ROI, Y)
 #' sum(featureMask) == 10
 #' @export
-selectFeatures <- function(obj, X, Y, ...) {
+selectFeatures <- function(obj, ROI, Y, ...) {
   UseMethod("selectFeatures")
 }
 
@@ -86,6 +88,8 @@ selectFeatures <- function(obj, X, Y, ...) {
 selectFeatures.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg", "max")) {
   ranking.score <- match.arg(ranking.score)
   message("selecting features via catscore")
+  
+  X <- X@data
   
   if (is.numeric(Y)) {
     medY <- median(Y)
@@ -117,29 +121,24 @@ selectFeatures.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg"
 }
 
 
+ 
 
-#selectFeatures.FTest <- function(obj, X, Y) {
-#  Y <- as.factor(Y)
-#  
-#  rsum <- rowsums(X, Y)
-#  nlevs <- table(Y)
-#  m.i <- sweep(rsum, 1, nlevs, "/")
-#  v.i <- aggregate(X, list(Y), var)[-1]
-#}
-  
-
-#selectFeatures.FisherKernel <- function(obj, X, Y, vox, radius=8) {
+#selectFeatures.FisherKernel <- function(obj, ROI, Y, vox, radius=8) {
 #  fres <- matrixAnova(Y,X)
 #  search <- Searchlight
 #}
 
+
+
 #' @export
 #' @rdname selectFeatures
 #' @importFrom assertthat assert_that
-selectFeatures.FTest <- function(obj, X, Y) {
+selectFeatures.FTest <- function(obj, ROI, Y) {
   message("selecting features via FTest")
   message("cutoff type ", obj$cutoff_type)
   message("cutoff value ", obj$cutoff_value)
+  
+  X <- ROI@data
   
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   
@@ -148,7 +147,7 @@ selectFeatures.FTest <- function(obj, X, Y) {
     Y <- factor(ifelse(Y > medY, "high", "low"))
   }
   
-  
+ 
   pvals <- matrixAnova(Y,X)$pval
   
   keep.idx <- if (obj$cutoff_type == "top_k" || obj$cutoff_type == "topk") {

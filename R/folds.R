@@ -118,7 +118,8 @@ FoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, bootstrap
   nextEl <- function() {
     
     if (index < length(trainSets)) { 
-      index <<- index + 1    
+      index <<- index + 1  
+      
       trainIndex <- trainSets[[index]]
       testIndex <- testSets[[index]]
        
@@ -153,7 +154,7 @@ FoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, bootstrap
     }
   }
   
-  obj <- list(nextElem=nextEl, blockVar=blockVar, index=.getIndex, getTrainSets=.getTrainSets, 
+  obj <- list(Y=Y, nextElem=nextEl, blockVar=blockVar, index=.getIndex, getTrainSets=.getTrainSets, 
               getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset, balance=balance, bootstrap=bootstrap, nfolds=length(testSets))
   
   class(obj) <- c("FoldIterator", 'abstractiter', 'iter')
