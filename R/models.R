@@ -1,21 +1,15 @@
 
+
+
+
 #' @export
 #' @import R6
 MVPADataset <- R6::R6Class("MVPADataset",
                            public = list(
-                             trainVec=NULL,
-                             Y=NULL,
-                             mask=NULL, 
-                             blockVar=NULL,
-                             testVec=NULL,
-                             testY=NULL,
-                             parcellation=NULL, 
-                             testSplitVar=NULL,
-                             testSplits=NULL, 
-                             trainDesign=NULL, 
-                             testDesign=NULL,
-                             #comparisonY=NULL,
-                             #testComparisonY=NULL,
+                             trainVec=NULL,Y=NULL,mask=NULL, 
+                             blockVar=NULL,testVec=NULL,testY=NULL,
+                             parcellation=NULL,testSplitVar=NULL,testSplits=NULL, 
+                             trainDesign=NULL, testDesign=NULL,
                              initialize=function(trainVec,
                                                Y,
                                                mask=NULL, 
@@ -27,8 +21,7 @@ MVPADataset <- R6::R6Class("MVPADataset",
                                                testSplits=NULL, 
                                                trainDesign=NULL, 
                                                testDesign=NULL) {
-                                               #comparisonY=NULL,
-                                               #testComparisonY=NULL) {
+                                               
                               self$trainVec=trainVec
                               self$Y=Y
                               self$mask=mask
@@ -40,10 +33,89 @@ MVPADataset <- R6::R6Class("MVPADataset",
                               self$testSplits=testSplits
                               self$trainDesign=testDesign
                               self$testDesign=testDesign
-                              #self$comparisonY=comparisonY
-                              #self$testComparisonY=testComparisonY
+                            
                     
-                           }))
+                           },
+                           searchlight = function(radius, method=c("randomized", "standard")) {
+                             if (method == "randomized") {
+                               neuroim::RandomSearchlight(self$mask, radius)
+                             } else if (method == "standard") {
+                               neuroim::Searchlight(self$mask, radius)
+                             } else {
+                               stop(paste("unrecognized method: ", method))
+                             }
+                           },
+                           
+                           trainChunk = function(vox) {
+                             mat <- series(self$trainVec, vox)
+                             mat
+                           },
+                           
+                           testChunk = function(vox) {
+                             mat <- series(self$testVec, vox)
+                             mat
+                           }
+                           
+))
+
+#' @export
+#' @import R6
+MVPASurfaceDataset <- R6::R6Class("MVPASurfaceDataset",
+                           public = list(
+                             geometry=NULL,trainVec=NULL, Y=NULL,
+                             mask=NULL, blockVar=NULL,testVec=NULL,
+                             testY=NULL,parcellation=NULL, 
+                             testSplitVar=NULL,testSplits=NULL, 
+                             trainDesign=NULL, testDesign=NULL,
+                             initialize=function(geometry,
+                                                 trainVec,
+                                                 Y,
+                                                 mask, 
+                                                 blockVar=NULL,
+                                                 testVec=NULL,
+                                                 testY=NULL,
+                                                 parcellation=NULL, 
+                                                 testSplitVar=NULL,
+                                                 testSplits=NULL, 
+                                                 trainDesign=NULL, 
+                                                 testDesign=NULL) {
+                               
+                               self$trainVec=trainVec
+                               self$Y=Y
+                               self$mask=mask
+                               self$blockVar=blockVar
+                               self$testVec=testVec
+                               self$testY=testY
+                               self$parcellation=parcellation
+                               self$testSplitVar=testSplitVar
+                               self$testSplits=testSplits
+                               self$trainDesign=testDesign
+                               self$testDesign=testDesign
+                               
+                             },
+                           
+                           searchlight = function(radius, method=c("randomized", "standard")) {
+                             if (method == "randomized") {
+                               neuroim::RandomSurfaceSearchlight(self$geometry, radius, self$mask)
+                             } else if (method == "standard") {
+                               neuroim::SurfaceSearchlight(self$geometry, radius, self$mask)
+                             } else {
+                               stop(paste("unrecognized method: ", method))
+                             }
+                           },
+                           
+                           trainChunk = function(ids) {
+                             mat <- series(self$trainVec, ids)
+                             attr(mat, "ids") <- ids
+                             mat
+                           },
+                           
+                           testChunk = function(vox) {
+                             mat <- series(self$testVec, vox)
+                             attr(mat, "ids") <- ids
+                             mat
+                           }
+))
 
 
 #' @export
@@ -79,8 +151,10 @@ CaretModelWrapper <- R6::R6Class(
   inherit = BaseModel,
   public = list(
     model = NA,
+    model_name = NULL,
     tuneGrid = NULL,
     customPerformance = NULL,
+    
     initialize = function(model, tuneGrid, customPerformance=NULL) { 
       self$model_name <- model$label
       self$model <- model

@@ -1,4 +1,5 @@
 library(neuroim)
+library(testthat)
 
 gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
   mat <- array(rnorm(prod(D)*nobs), c(D,nobs))

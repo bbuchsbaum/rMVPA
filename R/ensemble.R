@@ -78,7 +78,7 @@ innerIteration <- function(dataset, vox, trainInd, testInd, model, tuneGrid, aut
   blockVar <- dataset$blockVar[-testInd]
   X <- series(dataset$trainVec, vox)
   Xtrain <- X[-testInd,,drop=FALSE] 
-  foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, vox, blockVar, balance=autobalance, bootstrap=bootstrap)
+  foldIterator <- MatrixFoldIterator(Xtrain, Ytrain, blockVar, balance=autobalance, bootstrap=bootstrap)
   
   ## do we need to compute final pedictor?
   res <- try(crossval_internal(foldIterator, model, tuneGrid, returnPredictor=TRUE, featureSelector=NULL))
@@ -456,13 +456,6 @@ ensembleIteration <- function(searchIter, dataset, fold, modelspec, autobalance=
 
 
 
-#superLearners = .setupModels(list(
-  #avNNet=expand.grid(size = c(2,3,4), decay=c(.01, .001, .0001), bag=FALSE),
-  #pls=data.frame(ncomp=1:5),
-  #sda=data.frame(lambda=c(.01, .1, .5, .9), diagonal=c(FALSE,FALSE,FALSE, FALSE))
-  #spls=expand.grid(K=c(1:5), eta=c(.1,.3,.5,.7), kappa=.5)
-#))
-
 mergeEnsembles <- function(ensembleSet, testOrder, returnPredictor=FALSE) {
   
   #testOrder <- blockIterator$getTestOrder()
@@ -619,17 +612,6 @@ mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, rad
 }
 
 
-# runAnalysis.EnsembleSearchlightModel <- function(object, dataset, vox, returnPredictor=FALSE, autobalance=FALSE, 
-#                                                  searchMethod="replacement", nsamples=50, radius=12, pruneFrac=.1, bootstrap=FALSE) {
-#   mask <- array(0, dim(dataset$mask))
-#   mask[vox] <- 1
-#   mask <- LogicalBrainVolume(mask, space(dataset$mask))
-#   modelSet <- .setupModels(object$baseLearners)
-#   
-#   mvpa_searchlight_ensemble(modelSet, dataset, mask, radius=radius, pruneFrac=pruneFrac, combiner="greedy", bootstrapSamples=bootstrap, 
-#                             autobalance=autobalance, searchMethod=searchMethod, nsamples=nsamples, returnPredictor)
-#   
-# }
 
 
 ## could have an ensemble of ensembles

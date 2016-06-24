@@ -12,6 +12,7 @@ gen_regression_dataset <- function(D, nobs, spacing=c(1,1,1), folds=5) {
 }
 
 gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
+  
   mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
   bspace <- BrainSpace(c(D,nobs), spacing)
   bvec <- BrainVector(mat, bspace)
@@ -22,6 +23,27 @@ gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
   
   MVPADataset$new(trainVec=bvec, Y=Y,mask=mask, blockVar=blockVar, testVec=NULL, testY=NULL, 
                   trainDesign=data.frame(Y=Y), testDesign=data.frame(Y=Y))
+}
+
+gen_surface_dataset <- function(nobs, nlevels, folds=5) {
+  library(neuroim)
+  fname <- system.file("extdata/std.lh.smoothwm.asc", package="neuroim")
+  geom <- loadSurface(fname)
+  nvert <- nrow(vertices(geom))
+  mat <- matrix(rnorm(nvert*nobs), nvert, nobs)
+  
+  bvec <- BrainSurfaceVector(geom, 1:nvert, mat)
+  Y <- sample(factor(rep(letters[1:nlevels], length.out=nobs)))
+  blockVar <- rep(1:folds, length.out=nobs)
+  
+  dataset <- MVPASurfaceDataset$new(
+                                    trainVec=bvec, 
+                                    Y=Y, mask=indices(bvec), 
+                                    blockVar=blockVar, 
+                                    trainDesign=data.frame(Y=Y), 
+                                    testDesign=data.frame(Y=Y))
+  
+  
 }
 
 gen_dataset_with_test <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5, splitvar=TRUE) {
@@ -49,6 +71,24 @@ test_that("standard mvpa_searchlight runs without error", {
   crossVal <- BlockedCrossValidation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL))
   res <- mvpa_searchlight(dataset, model, crossVal, radius=3, method="standard")
+  
+})
+
+test_that("standard surface-based mvpa_searchlight runs without error", {
+  
+  dataset <- gen_surface_dataset(100, 6)
+  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  model <- loadModel("sda_notune", list(tuneGrid=NULL))
+  res <- mvpa_searchlight(dataset, model, crossVal, radius=3, method="standard")
+  
+})
+
+test_that("randomized surface-based mvpa_searchlight runs without error", {
+  
+  dataset <- gen_surface_dataset(100, 12)
+  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  model <- loadModel("sda_notune", list(tuneGrid=NULL))
+  res <- mvpa_searchlight(dataset, model, crossVal, radius=7, method="randomized")
   
 })
 
@@ -130,7 +170,7 @@ test_that("mvpa_searchlight works with testset", {
   tuneGrid <- expand.grid(alpha=.5, lambda=c(.1,.2,32))
   model <- loadModel("glmnet", list(tuneGrid=tuneGrid))
   
-  res <- mvpa_searchlight(dataset, model, crossVal, radius=3, niter=2,method="standard")
+  res <- mvpa_searchlight(dataset, model, crossVal, radius=3, method="standard")
   
 })
 

@@ -134,76 +134,22 @@ classificationResult <- function(observed, predicted, probs, testDesign,predicto
 }
 
 
-#' @export
-CaretModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector=NULL, parcels=NULL, vox=NULL,...) {
-  if (!is.null(parcels)) {
-    Xtrain <- groupMeans(Xtrain, 2, parcels)
-  }
-    
-  featureMask <- if (!is.null(featureSelector)) {
-    selectFeatures(featureSelector, Xtrain, Ytrain, vox)
-  } else {
-    rep(TRUE, ncol(Xtrain))
-  }
-  
-  Xtrain <- Xtrain[,featureMask]
-  
-  fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, ...)
 
-  ret <- list(
-    model=model,
-    Xtrain=Xtrain,
-    Ytrain=Ytrain,
-    Xtest=Xtest,
-    Ytest=Ytest,
-    tuneGrid=tuneGrid,
-    tuneControl=tuneControl,
-    modelFit=fit,
-    featureSelector=featureSelector,
-    featureMask=featureMask,
-    parcels=parcels)
-  
+CaretModel <- function(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector=NULL, featureMask=NULL, parcels=NULL) {
+  ret <- list( model=model, Xtrain=Xtrain,Ytrain=Ytrain,Xtest=Xtest,Ytest=Ytest,tuneGrid=tuneGrid,
+    tuneControl=tuneControl,modelFit=fit,featureSelector=featureSelector,featureMask=featureMask,parcels=parcels)
   if (is.factor(Ytrain)) {
     class(ret) <- c("CaretModel", "list")
   } else {
     class(ret) <- c("CaretRegressionModel", "list")
   }
-  
   ret
 }
 
-
-#' @export
-RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector=NULL, parcels=NULL, vox=NULL) {
+RawModel <- function(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector=NULL, featureMask=NULL, parcels=NULL) {
   
-  if (!is.null(parcels)) {
-    message("computing parcellation", dim(Xtrain))
-    Xtrain <- groupMeans(Xtrain, 2, parcels)
-  }
-  
-  featureMask <- if (!is.null(featureSelector)) {
-    selectFeatures(featureSelector, Xtrain, Ytrain, vox)
-  } else {
-    rep(TRUE, ncol(Xtrain))
-  }
- 
-  Xtrain <- Xtrain[,featureMask]
-  
-  fit <- model$fit(Xtrain, Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE)
-  
-  #fit <- cleanup(fit)
-  
-  ret <- list(
-              model=model,
-              Xtrain=Xtrain,
-              Ytrain=Ytrain,
-              Xtest=Xtest,
-              Ytest=Ytest,
-              tuneGrid=tuneGrid,
-              modelFit=fit,
-              featureSelector=featureSelector,
-              featureMask=featureMask,
-              parcels=parcels)
+  ret <- list(model=model, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest, tuneGrid=tuneGrid,modelFit=fit,
+              featureSelector=featureSelector,featureMask=featureMask,parcels=parcels)
               
   if (is.factor(Ytrain)) {
     ret$modelFit$problemType <- "Classification"
@@ -215,6 +161,32 @@ RawModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelec
 
   ret
 }
+
+
+trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, 
+                       tuneControl=.noneControl, featureSelector=NULL, parcels=NULL, ...) {
+  if (!is.null(parcels)) {
+    message("computing parcellation", dim(Xtrain))
+    Xtrain <- groupMeans(Xtrain, 2, parcels)
+  }
+  
+  featureMask <- if (!is.null(featureSelector)) {
+    selectFeatures(featureSelector, Xtrain, Ytrain)
+  } else {
+    rep(TRUE, ncol(Xtrain))
+  }
+  
+  Xtrain <- Xtrain[,featureMask]
+  
+  if (nrow(tuneGrid) == 1) {
+    fit <- model$fit(Xtrain, Ytrain, NULL, tuneGrid, lev=levels(Ytrain), classProbs=TRUE)
+    RawModel(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector, featureMask, parcels )
+  } else {     
+    fit <- caret::train(Xtrain, Ytrain, method=model, trControl=tuneControl, tuneGrid=tuneGrid, ...)
+    CaretModel(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector, featureMask, parcels )
+  }  
+}
+
 
 #' @export
 RawPredictor <- function(fit, model, featureMask, parcels=NULL) {
@@ -545,35 +517,41 @@ evaluateModelList <- function(modelList, newdata=NULL) {
   } 
 }
 
-#' @export
-trainModel <- function(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl=.noneControl, featureSelector=NULL, parcels=NULL, vox=NULL) {
-  ret <- if (nrow(tuneGrid) == 1) {
-    RawModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, featureSelector, parcels, vox)        
-  } else {     
-    CaretModel(model, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector, parcels, vox)
-  }  
-}
 
+#' Carry out external cross-validation defined by a \code{FoldIterator} instance and a separate test data set.
+#' 
+#' @param foldIterator the \code{FoldIterator} object that defines the splits of training and test samples.
+#' @param Xtest the test data \code{matrix}
+#' @param Ytest the test data labels (continuous or factor variables permitted, depending on supplied \code{model}.
+#' @param model a \code{caret} model object
+#' @param tuneGrid model tuning parameters stored in a \code{data.frame}
+#' @param featureSelector an optional \code{FeatureSelector} instance
+#' @param parcels an optional parcellation object
 #' @export
+#' @details this function should not typically be called by user code.
 #' @import foreach
+#' @export
 crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, featureSelector=NULL, parcels=NULL) {
   ## TODO bootstrap replications doesn't work because model is trained on full set
   ## This should be handled upstream so that "foldIterator" retruns a bootstrapped sampled version of X.
+  
   results <- if (nrow(tuneGrid) == 1) {
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, .noneControl, featureSelector, parcels, foldIterator$vox)
+    ## no parameter tuning required. train model of full data set.
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, .noneControl, featureSelector, parcels)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))
   } else {
-    
-    ### this is a bit dicey. Requires existence of "blockVar", fails for 2-fold cross-validation
-    ctrl <- if (foldIterator$nfolds == 2) {
+    ## parameter tuning required. Will be performed on training blocks defined in foldIterator.
+    ctrl <- if (foldIterator$nfolds <= 2) {
+      ## with two or fewer blocks, will perform parameter tuning using default caret cross-validation.
       caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none")
     } else {
+      ## training folds stroed as list of indices and provided to caret cross-validation engine.
       index <- invertFolds(foldIterator$getTestSets(), 1:length(foldIterator$blockVar)) 
       caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
     }
       
-    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, ctrl, featureSelector, parcels, foldIterator$vox)
+    fit <- trainModel(model, foldIterator$X, foldIterator$Y, Xtest, Ytest, tuneGrid, ctrl, featureSelector, parcels)
     perf <- evaluateModel(fit)
     list(perf=perf, predictor=asPredictor(fit))              
   } 
@@ -589,7 +567,15 @@ crossval_external <- function(foldIterator, Xtest, Ytest, model, tuneGrid, featu
 
 }
 
+#' Carry out internal cross-validation defined by a \code{FoldIterator} instance.
+#' 
+#' @param foldIterator the \code{FoldIterator} object that defines the splits of training and test samples.
+#' @param model a \code{caret} model object
+#' @param tuneGrid model tuning parameters stored in a \code{data.frame}
+#' @param featureSelector an optional \code{FeatureSelector} instance
+#' @param parcels an optional parcellation object
 #' @export
+#' @details this function should not typically be called by user code.
 #' @import foreach
 crossval_internal <- function(foldIterator, model, tuneGrid, featureSelector=NULL, parcels=NULL) {
  
@@ -599,7 +585,7 @@ crossval_internal <- function(foldIterator, model, tuneGrid, featureSelector=NUL
     ## tind <- if (!is.null(subIndices)) subIndices[fold$testIndex] else fold$testIndex
     
     if (nrow(tuneGrid) == 1) {
-      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid,  .noneControl, featureSelector, parcels, foldIterator$vox)
+      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid,  .noneControl, featureSelector, parcels)
       list(result=evaluateModel(fit), fit = asPredictor(fit), featureMask=fit$featureMask, parcels=parcels, testIndices=fold$testIndex)        
     } else {    
       ctrl <- if (foldIterator$nfolds == 2) {
@@ -609,7 +595,7 @@ crossval_internal <- function(foldIterator, model, tuneGrid, featureSelector=NUL
         caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
       }
      
-      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, tuneControl=ctrl,featureSelector, parcels, foldIterator$vox)
+      fit <- trainModel(model, fold$Xtrain, fold$Ytrain, fold$Xtest, fold$Ytest, tuneGrid, tuneControl=ctrl, featureSelector, parcels)
       list(result=evaluateModel(fit), fit = asPredictor(fit), featureMask=fit$featureMask, parcels=parcels,testIndices=fold$testIndex)    
     } 
   }

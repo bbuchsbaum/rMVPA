@@ -7,14 +7,7 @@ colACC <- function(X, Y) {
   })
 }
 
-#' matrixToVolumeList 
-#' Convenience function to convert a matrix to a list of \code{BrainVolume} instances.
-#' 
-#' @param vox a matrix of voxel coordinates with same number of rows as \code{mat} argument.
-#' @param mat a matrix of values where each column is to be converted to \code{\linkS4class{BrainVolume}} instance.
-#' @param mask a mask which is used to define the spatial geometry of the output volume
-#' @param default the default value in the ouput volume. e.g. the value for coordinates not contained in \code{vox}
-#' @export  
+
 matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   lapply(1:ncol(mat), function(i) {
     vol <- array(default, dim(mask))   
@@ -23,7 +16,7 @@ matrixToVolumeList <- function(vox, mat, mask, default=NA) {
   })
 } 
 
-
+# helper function to compute performance metric for a classifcation result
 computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE, customFun=NULL) {
   perf <- t(performance(result, splitList, classMetrics))
   if (!is.null(customFun)) {
@@ -34,15 +27,21 @@ computePerformance <- function(result, vox, splitList=NULL, classMetrics=FALSE, 
 
 #' mvpa_crossval
 #' 
-#' cross_validation for an MVPA analysis.
+#' workhorse function for cross_validation in an MVPA analysis
 #' 
 #' @param dataset an instance of type \code{MVPADataset}
 #' @param vox a \code{matrix} of voxel coordinates or \code{vector} of ids defining the subset of the image dataset to use.
-#' @param crossVal a cross-validation instance such as \code{BlockedCrossValidation}
-#' @param model a caret model object
+#' @param crossVal a cross-validation instance of type \code{CrossValidation}
+#' @param model a \code{caret} model object
 #' @param tuneGrid an optional caret-formatted \code{data.frame} containing parameters to be tuned
 #' @param featureSelector an optional \code{FeatureSelector} instance for selecting relevant features
-#' @param subIndices an optional vector of row indices (observations) to run cross-validation on.
+#' @param subIndices an optional subset vector of row indices (observations) to run cross-validation on.
+#' @return a list consisting of the following named elements:
+#' prediction
+#' predictor  
+#' testIndices 
+#' featureMask 
+#'  
 #' @export
 mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureSelector = NULL, subIndices=NULL) {
   
@@ -69,7 +68,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
     tuneGrid <- model$grid(X, Y, 1)
   }
   
-  foldIterator <- matrixIter(crossVal, dataset$Y, X, vox, subIndices)
+  foldIterator <- matrixIter(crossVal, dataset$Y, X, subIndices)
     
   result <- if (is.null(dataset$testVec)) {
     ### train and test on one set.
@@ -99,7 +98,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
 }
 
 
-#' standard searchlight
+# standard searchlight
 .doStandard <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(Searchlight(dataset$mask, radius)) 
   
@@ -109,15 +108,13 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
       vox <- ROIVolume(space(dataset$mask), vox)
       result <- model$run(dataset, vox, crossVal)
       perf <- computePerformance(result, coords(vox), dataset$testSplits, classMetrics, model$customPerformance)
-
-      
     }
   }
   
   .convertResultsToVolumeList(res, dataset$mask)
 }
   
-
+# randomized searchlight
 .doRandomized <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(RandomSearchlight(dataset$mask, radius))
   
@@ -136,7 +133,7 @@ mvpa_crossval <- function(dataset, vox, crossVal, model, tuneGrid=NULL, featureS
 }
 
 
-## TODO mvpa_hiearchical ??
+## mvpa_hiearchical ??
 
 
 #' mvpa_regional
@@ -248,10 +245,6 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
 #' @param method the type of searchlight (randomized, or standard)
 #' @param niter the number of searchlight iterations for 'randomized' method
 #' @param classMetrics
-## @param tuneGrid parameter search grid for optimization of classifier tuning parameters
-## @param testVec a \code{BrainVector} with the same spatial dimension as shape as \code{trainVec}. If supplied, this data will be held out as a test set.
-## @param testY the dependent variable for test data. If supplied, this variable to evaluate classifier model trained on \code{trainVec}. 
-##        \code{testY} must be the same as the length of the 4th dimension of \code{test_vec}.
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
 #' @import itertools 
 #' @import foreach
@@ -280,7 +273,7 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
       do.call(cbind, .doRandomized(dataset, model, radius, crossVal, classMetrics=classMetrics) )
     }
     
-   
+    ## average over iterations
     Xall <- lapply(1:ncol(res[[1]]), function(i) {
       X <- do.call(cbind, lapply(res, function(M) M[,i]))
       xmean <- rowMeans(X, na.rm=TRUE)
@@ -296,76 +289,6 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
 }
 
 
-# #' @export
-# combineResults.SimilarityModel <- function(model, resultList) {
-#   #ret <- list(sWithin=sWithin, sBetween=sBetween, simMat=simMat)
-#   rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
-#   
-#   simMatList <- lapply(resultList, function(res) {
-#     res$simMat   
-#   })
-#   
-#   simWithinList <- lapply(resultList, function(res) {
-#     res$simWithinTable  
-#   })
-#   
-#   names(simMatList) <- rois
-#   names(simWithinList) <- rois
-#   
-#   ret <- list(simMatList=simMatList, simWithinList=simWithinList)
-#   
-#   class(ret) <- c("SimilarityResultList", "list")
-#   ret
-# }
-# 
-# 
 
 
-
-
-# combineResults.EnsembleSearchlightModel <- function(model, resultList) {
-#   rois <- sapply(resultList, function(res) attr(res, "ROINUM"))
-#   
-#   predictorList <- lapply(resultList, function(res) {
-#     MVPAVoxelPredictor(res$predictor, attr(res, "vox"))
-#   })
-#   
-#   predFrame <- as.data.frame(do.call(rbind, lapply(resultList, function(res) {
-#     data.frame(ROI=rep(attr(res, "ROINUM"), length(res$observed)), observed=res$observed, pred=res$predicted, correct=as.character(res$observed) == as.character(res$predicted), prob=res$prob)
-#   })))
-#   
-#   weightVol <- Reduce("+", lapply(resultList, function(res) attr(res, "weightVol")))
-#   AUCVol <- Reduce("+", lapply(resultList, function(res) attr(res, "AUCVol")))
-#   
-#   ret <- list(predictor=ListPredictor(predictorList, rois), predictions=predFrame, weightVol=weightVol, AUCVol=AUCVol)
-#   class(ret) <- c("EnsembleSearchlightResultList", "list")
-#   ret
-#   
-# }
-# 
-# #' @export
-# saveResults.EnsembleSearchlightResultList <- function(results, folder) {
-#   write.table(format(results$predictions,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(folder, "/prediction_table.txt")), row.names=FALSE, quote=FALSE)  
-#   if (!is.null(results$predictor)) {
-#     saveRDS(results$predictor, paste0(folder, "/predictor.RDS"))
-#   }
-#   
-#   writeVolume(results$AUCVol, paste0(folder, "/AUC_Scores.nii"))
-#   writeVolume(results$weightVol, paste0(folder, "/EnsembleWeights.nii"))
-# }
-# 
-# #' @export
-# saveResults.ClassificationResultList <- function(results, folder) {
-#   write.table(format(results$predictions,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(folder, "/prediction_table.txt")), row.names=FALSE, quote=FALSE)  
-#   if (!is.null(results$predictor)) {
-#     saveRDS(results$predictor, paste0(folder, "/predictor.RDS"))
-#   }
-# }
-# 
-# #' @export
-# saveResults.SimilarityResultList <- function(results, folder) {
-#   saveRDS(results$simMatList, paste0(folder, "/similarityMatrices.RDS"))
-#   omat <- as.data.frame(do.call(rbind, results$simWithinList))
-#   write.table(omat, paste0(folder, "/similarityWithinTable.txt"))
-# }
 
