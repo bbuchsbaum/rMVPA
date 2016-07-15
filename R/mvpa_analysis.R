@@ -139,7 +139,7 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
   searchIter <- itertools::ihasNext(dataset$searchlight(radius, "randomized"))
   
   ## tight inner loop should probably avoid "foreach" as it has a lot of overhead, but c'est la vie for now.
-  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "caret", "neuroim", model$model$library)) %do% {   
+  res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "caret", "neuroim", model$model$library)) %do% {   
     roi <- dataset$trainChunk(vox)
     if (length(roi) > 1) {  
       print(length(roi))
@@ -257,6 +257,7 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
 
   extendedResults <- model$combineResults(results)
   names(outVols) <- colnames(perfMat)[2:ncol(perfMat)]
+  
   list(outVols = outVols, 
        performance=perfMat, 
        resultSet=resultSet, 
