@@ -122,16 +122,7 @@ test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topk=10", {
   
 })
 
-test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topk=10", {
-  
-  dataset <- gen_dataset(c(10,10,2), 100, 3)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
-  regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
-  model <- loadModel("sda")
-  
-  fsel <- FeatureSelector("FTest", "topk", 10)
-  res <- mvpa_regional(dataset, model, regionMask, crossVal, featureSelector=fsel)
-})
+
 
 test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topp=.4", {
   

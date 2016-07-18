@@ -179,10 +179,16 @@ trainModel <- function(model, ROI, Ytrain, testROI, Ytest, tuneGrid,
     rep(TRUE, length(ROI))
   }
   
-  if (length(featureMask) != length(ROI)) {
+  if (sum(featureMask) != length(ROI)) {
     ## subset ROI 
     ROI <- ROI[featureMask]
   } 
+  
+  
+  
+  print(paste("Number of features: ", sum(featureMask)))
+  print(paste("length of ROI: ", length(ROI)))
+  
   
   if (nrow(tuneGrid) == 1) {
     ## if model needs "structural" ROI information, then this is the "dead end" as ROI is stripped to a matrix.
