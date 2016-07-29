@@ -81,12 +81,14 @@ MVPADataset <- R6::R6Class("MVPADataset",
                            
                            averageOverIterations = function(vols) {
                              nmetrics <- length(vols[[1]])
-                             lapply(1:nmetrics, function(i) {
+                             res <- lapply(1:nmetrics, function(i) {
                                X <- do.call(cbind, lapply(vols, function(v) v[[i]]))
                                xmean <- rowMeans(X, na.rm=TRUE)
                                xmean[is.na(xmean)] <- 0
                                BrainVolume(xmean, space(self$mask))
                              })
+                             
+                             names(res) <- names(vols[[1]])
                              
                            }
                            
