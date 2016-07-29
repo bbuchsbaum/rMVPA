@@ -89,6 +89,7 @@ MVPADataset <- R6::R6Class("MVPADataset",
                              })
                              
                              names(res) <- names(vols[[1]])
+                             res
                              
                            }
                            
