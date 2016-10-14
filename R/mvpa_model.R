@@ -186,8 +186,8 @@ trainModel <- function(model, ROI, Ytrain, testROI, Ytest, tuneGrid,
   
   
   
-  print(paste("Number of features: ", sum(featureMask)))
-  print(paste("length of ROI: ", length(ROI)))
+  #print(paste("Number of features: ", sum(featureMask)))
+  #print(paste("length of ROI: ", length(ROI)))
   
   
   if (nrow(tuneGrid) == 1) {

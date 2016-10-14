@@ -231,7 +231,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                               library = "sda", 
                               label="sda_boot",
                               loop = NULL, 
-                              parameters=data.frame(parameters=c("reps"), class=c("numeric"), label=c("number of bootstap resamples")),
+                              parameters=data.frame(parameters=c("reps", "frac"), class=c("numeric", "numeric"), label=c("number of bootstap resamples", "fraction of features to select")),
                               grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {    
                                 x <- as.matrix(x)
@@ -242,10 +242,25 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   message("fitting sda model ", count)
                                   #row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
                                   smat <- replicate(5, {sample(1:nrow(x), nrow(x), replace=TRUE)})
+                                  
                                   sdsam <- apply(smat, 2, function(sam) sd(table(y[sam])))
                                   row.idx <- smat[, which.min(sdsam)]
                                   
-                                  ret <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...))
+                                  ret <- if (frac < 1) {
+                                    nkeep <- max(param$frac * ncol(x),1)
+                                    #print(nkeep)
+                                    rank <- memo_rank(x, L=y, fdr=FALSE)
+                                    ind <- rank[,"idx"][1:nkeep]
+                                  
+                                    fit <- sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y, lambda=param$lambda, verbose=FALSE)
+                                    attr(fit, "keep.ind") <- ind
+                                    fit
+                                  } else {
+                                    fit <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...))
+                                    attr(fit, "keep.ind") <- 1:ncol(x)
+                                    fit
+                                  }
+                                  
                                   if (!inherits(ret, "try-error")) {
                                     mfits[[count]] <- ret
                                     count <- count + 1

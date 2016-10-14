@@ -242,7 +242,7 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("ensemble_predictor", config, args, FALSE)
   setArg("bootstrap_replications", config, args, 0)
   setArg("custom_performance", config, args, NULL)
-  #setArg("test_label_column", config, args, config$label_column)
+  setArg("test_label_column", config, args, config$label_column)
   #setArg("test_comparison_label_column", config, args, NULL)
   
   config
@@ -302,6 +302,8 @@ initializeDesign <- function(config) {
     config$test_subset <- eval(parse(text=config$test_subset))
   }
   
+  
+  
   ## full design
   config$full_train_design <- read.table(config$train_design, header=TRUE, comment.char=";")
   ## subset of training samples
@@ -314,27 +316,31 @@ initializeDesign <- function(config) {
   ## block variables for cross-validation
   config$block <- loadBlockColumn(config, config$train_design)
   
-  flog.info(paste("training subset contains", nrow(config$train_design), "of", nrow(config$full_design), "rows."))
+  flog.info(paste("training subset contains", nrow(config$train_design), "of", nrow(config$full_train_design), "rows."))
   
   if (!is.null(config$test_design) && is.null(config$test_data)) {
     flog.error("test_design %s is supplied with no test_data")
     stop()
   }
   
-  if (!is.null(config$test_subset) && is.null(config$test_design) && is.null(config$test_data)) {
-    flog.info("test subset is taken from training design table")
-    config$test_subset <- loadSubset(config$full_train_design, config$test_subset)
-    
-    config$test_design <- config$full_train_design[config$test_subset,]
-    config$full_test_design <- config$test_design
-    config$testLabels <- loadLabels(config$test_design, config)   
-  }
+  #if (!is.null(config$test_subset) && is.null(config$test_design) && is.null(config$test_data)) {
+  #  flog.info("test subset is taken from training design table")
+  #  config$test_subset <- loadSubset(config$full_train_design, config$test_subset)
+  #  
+  #  config$test_design <- config$full_train_design[config$test_subset,]
+  #  config$full_test_design <- config$test_design
+  #  config$testLabels <- loadLabels(config$test_design, config)   
+  #}
   
   if (!is.null(config$test_design)) {
     flog.info("test design %s is specified", config$test_design)
     config$full_test_design <- read.table(config$test_design, header=TRUE, comment.char=";")
+    flog.info(paste("test design contains", nrow(config$test_design), "rows."))
     config$test_subset <- loadSubset(config$full_test_design, config$test_subset)
     config$test_design <- config$full_test_design[config$test_subset,]
+    
+    flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows."))
+    
     config$testLabels <- loadTestLabels(config$test_design, config)     
     flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows.")) 
     flog.info(paste("first 10 test labels: ", head(config$testLabels, 10), capture=TRUE))
@@ -354,7 +360,8 @@ initializeDesign <- function(config) {
     flog.info("splitting levels are: %s", paste(levels(config$testSplitVar), collapse=", "))
     minSplits <- min(table(config$testSplitVar))
     if (minSplits < 3) {
-      flog.error("splitting condition results in fewer than 3 observations in at least one set", table(config$splittingVar), capture=TRUE)
+      flog.error("error: splitting condition results in fewer than 3 observations in at least one set", 
+                 table(config$splittingVar), capture=TRUE)
       stop(paste("invalid split formula", config$split_by))
     }
     
