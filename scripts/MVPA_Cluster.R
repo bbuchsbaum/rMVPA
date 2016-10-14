@@ -9,7 +9,7 @@
 option_list <- list(
   make_option(c("-i", "--input"), type="character", help="the file name of the 4D image vecgtor to cluster"),
   make_option(c("-k", "--clusters"), type="numeric", help="the number of clusters to compute"),
-  make_option(c("--algo"), type="character", help="algorithm to use (slic or turbol default is slic)", default="slic"),
+  make_option(c("--algo"), type="character", help="algorithm to use (slic or turbo default is slic)", default="slic"),
   make_option(c("-s", "--shrink"), type="numeric", help="number of shrinkage iterations (default = 0)", default=0),
   make_option(c("-m", "--mask"), type="character", help="the file name of the volumetric image mask"),
   make_option(c("-e", "--exp"), type="numeric", help="the decay parameter for spatial penalty. Larger value increases the spatial 'pull' (default = .05)", default=.05),

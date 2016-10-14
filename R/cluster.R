@@ -256,13 +256,18 @@ computeCentroids <- function(bvec, mask.idx, grid, clusters, assignment) {
 #' @import FNN
 #' @import assertthat
 #' 
-turbo_cluster <- function(mask, bvec, K=500, lambda=.5, iterations=25, connectivity=27) {
+turbo_cluster <- function(mask, bvec, K=500, lambda=.5, iterations=25, connectivity=27, shrink=0) {
   assert_that(lambda >= 0 && lambda <= 1)
   assert_that(connectivity > 1 & connectivity <= 27)
   
   mask.idx <- which(mask > 0)
   grid <- indexToCoord(mask, mask.idx)
   vgrid <- indexToGrid(mask, mask.idx)
+  
+  if (shrink > 0) {
+    message("running ", shrink, "shrinkage iterations with k = ", 5)
+    bvec <- shrink_vector(mask, vgrid, bvec, k=5, iter=shrink)
+  }
   
   kres <- kmeans(grid, K, iter.max=500)
   kvol <- BrainVolume(kres$cluster, space(mask), indices=mask.idx)
