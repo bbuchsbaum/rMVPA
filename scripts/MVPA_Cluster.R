@@ -41,7 +41,7 @@ if (!file.exists(args$mask)) {
 bvec <- loadVector(args$input)
 mask <- loadVolume(args$mask)
 
-if  (args$algo == "slic") {
+res <- if  (args$algo == "slic") {
   rMVPA:::slic_cluster(mask, bvec, args$clusters, decay=(args$exp), nn=8, shrink=args$shrink)
 } else {
   rMVPA:::turbo_cluster(mask, bvec, args$clusters, lambda=as.numeric(args$lambda))
