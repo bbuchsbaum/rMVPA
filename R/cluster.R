@@ -242,21 +242,34 @@ slic_cluster <- function(mask, bvec, K=500, decay=.05, iterations=10, nn=8, shri
   
 }
 
-computeCentroids <- function(bvec, mask.idx, grid, clusters, assignment) {
-  lapply(clusters, function(id) {
+computeCentroids <- function(bvec, mask.idx, grid, clusters, assignment, medoid=FALSE) {
+  if (!medoid) {
+    lapply(clusters, function(id) {
+      idx <- which(assignment == id)
+      mat <- series(bvec, mask.idx[idx])
+      coords <- grid[idx,,drop=FALSE]
+      list(center=rowMeans(mat), centroid=colMeans(coords))
+    })
+  } else {
+    lapply(clusters, function(id) {
+      idx <- which(assignment == id)
+      mat <- series(bvec, mask.idx[idx])
+      coords <- grid[idx,,drop=FALSE]
+      coords_dist <- as.matrix(dist(coords))
+      coords_medoid_ind <- which.min(rowSums(coords_dist))
+      Dmat <- 1-cor(mat)
+      mat_medoid_ind <- which.min(rowSums(Dmat))
+      list(center=mat[,mat_medoid_ind], centroid=coords[coords_medoid_ind,])
+    })
     
-    idx <- which(assignment == id)
-    mat <- series(bvec, mask.idx[idx])
-    coords <- grid[idx,,drop=FALSE]
-    list(center=rowMeans(mat), centroid=colMeans(coords))
-  })
+  }
 }
 
 #' @export
 #' @import FNN
 #' @import assertthat
 #' 
-turbo_cluster <- function(mask, bvec, K=500, lambda=.5, iterations=25, connectivity=27, shrink=0) {
+turbo_cluster <- function(mask, bvec, K=500, lambda=.5, iterations=25, connectivity=27, shrink=0, use_medoid=FALSE) {
   assert_that(lambda >= 0 && lambda <= 1)
   assert_that(connectivity > 1 & connectivity <= 27)
   
@@ -280,7 +293,7 @@ turbo_cluster <- function(mask, bvec, K=500, lambda=.5, iterations=25, connectiv
   switches <- 1
   iter.max <- iterations
   
-  centroids <- computeCentroids(bvec, mask.idx, grid, sort(unique(kres$cluster)), kres$cluster)
+  centroids <- computeCentroids(bvec, mask.idx, grid, sort(unique(kres$cluster)), kres$cluster, medoid=use_medoid)
   sp_centroids <- do.call(rbind, lapply(centroids, "[[", "centroid"))
   
   denom <- max(get.knn(sp_centroids, k=1)$nn.dist[,1])
@@ -325,7 +338,7 @@ turbo_cluster <- function(mask, bvec, K=500, lambda=.5, iterations=25, connectiv
     
     
     
-    centroids <- computeCentroids(bvec, mask.idx, grid, sort(unique(newclus)), newclus)
+    centroids <- computeCentroids(bvec, mask.idx, grid, sort(unique(newclus)), newclus, medoid=use_medoid)
     switches <- sum(newclus != curclus)
     
     curclus <- newclus

@@ -14,7 +14,8 @@ option_list <- list(
   make_option(c("-m", "--mask"), type="character", help="the file name of the volumetric image mask"),
   make_option(c("-e", "--exp"), type="numeric", help="the decay parameter for spatial penalty. Larger value increases the spatial 'pull' (default = .05)", default=.05),
   make_option(c("-l", "--lambda"), type="numeric", help="lambda parameter for turbo algorithm. Must be between 0-1.", default=.5),
-  make_option(c("-o", "--output"), type="character", help="the name of the output file containing the clustered image")
+  make_option(c("-o", "--output"), type="character", help="the name of the output file containing the clustered image"),
+  make_option(c("--medoid"), type="logical", action="store_true", help="use medoid to define cluster centers? (default is FALSE)", default=FALSE)
 )
 
 oparser <- OptionParser(usage = "MVPA_Cluster.R [options]", option_list=option_list)
@@ -44,7 +45,7 @@ mask <- loadVolume(args$mask)
 res <- if  (args$algo == "slic") {
   rMVPA:::slic_cluster(mask, bvec, args$clusters, decay=(args$exp), nn=8, shrink=args$shrink)
 } else {
-  rMVPA:::turbo_cluster(mask, bvec, args$clusters, lambda=as.numeric(args$lambda))
+  rMVPA:::turbo_cluster(mask, bvec, args$clusters, lambda=as.numeric(args$lambda), use_medoid=args$medoid)
 }
 
 writeVolume(res$clusvol, args$output)
