@@ -265,6 +265,9 @@ computeCentroids <- function(bvec, mask.idx, grid, clusters, assignment, medoid=
   }
 }
 
+## try multiple kmeans initializations, choose one with best intra-cluster correlation.
+
+
 #' @export
 #' @import FNN
 #' @import assertthat
