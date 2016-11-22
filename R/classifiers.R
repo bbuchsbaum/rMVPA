@@ -231,7 +231,9 @@ MVPAModels$sda_boot <- list(type = "Classification",
                               library = "sda", 
                               label="sda_boot",
                               loop = NULL, 
-                              parameters=data.frame(parameters=c("reps", "frac"), class=c("numeric", "numeric"), label=c("number of bootstap resamples", "fraction of features to select")),
+                              parameters=data.frame(parameters=c("reps", "frac"), 
+                                                    class=c("numeric", "numeric"), 
+                                                    label=c("number of bootstap resamples", "fraction of features to select")),
                               grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {    
                                 x <- as.matrix(x)
@@ -246,7 +248,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   sdsam <- apply(smat, 2, function(sam) sd(table(y[sam])))
                                   row.idx <- smat[, which.min(sdsam)]
                                   
-                                  ret <- if (frac < 1) {
+                                  ret <- if (param$frac < 1) {
                                     nkeep <- max(param$frac * ncol(x),1)
                                     #print(nkeep)
                                     rank <- memo_rank(x, L=y, fdr=FALSE)
