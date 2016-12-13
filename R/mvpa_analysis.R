@@ -112,7 +112,7 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
   
 }
 
-#' @importFrom purrr accumulate
+
 .doClustered <- function(dataset, model, nclusters, crossVal, classMetrics=FALSE, ncores=1) {
   
   count <- numeric(nrow(dataset$testDesign))
@@ -142,7 +142,7 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
       result[indices]
     }, resultSet, ind)
     
-    result <- purrr::reduce(rlist, merge_results)
+    result <- Reduce(merge_results, rlist)
     result$predicted <- predicted_class(result$probs)
     perf <- computePerformance(result, dataset$testSplits, classMetrics, model$customPerformance)
   })
