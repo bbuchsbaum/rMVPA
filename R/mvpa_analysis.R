@@ -115,7 +115,11 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
 
 .doClustered <- function(dataset, model, nclusters, crossVal, classMetrics=FALSE, ncores=1) {
   
-  count <- numeric(nrow(dataset$testDesign))
+  #count <- if (!is.null(datasettestDesign)) {
+  #  numeric(nrow(dataset$testDesign))
+  #} else {
+  #  
+  #}
    
   iterlist <- lapply(nclusters, function(nc) neuroim::ClusteredSearchlight(dataset$mask, nc))
   index_mat <- do.call(cbind, lapply(iterlist, function(it) it$clusters))
