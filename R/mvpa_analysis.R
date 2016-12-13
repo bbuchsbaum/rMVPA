@@ -115,28 +115,24 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
 
 .doClustered <- function(dataset, model, nclusters, crossVal, classMetrics=FALSE, ncores=1) {
   
-  #count <- if (!is.null(datasettestDesign)) {
-  #  numeric(nrow(dataset$testDesign))
-  #} else {
-  #  
-  #}
+ 
    
   iterlist <- lapply(nclusters, function(nc) neuroim:::ClusteredSearchlight(dataset$mask, nc))
   index_mat <- do.call(cbind, lapply(iterlist, function(it) it$clusters))
   
                      
-  
-  resultSet <- lapply(iterlist, function(searchIter) {
+  resultSet <- foreach(searchIter = iterlist) %dopar% {
+    message("running clustered iterator")
     res <- lapply(searchIter, function(vox) {
+      message("num vox: ", nrow(vox))
       roi <- dataset$trainChunk(vox)
-      ind <- attr(vox, "indices")
       result <- try(model$run(dataset, roi, crossVal))
       result$predictor <- NULL
       result
     })
     
     res
-  })
+  }
   
 
   perfList <- lapply(1:nrow(index_mat), function(i) {

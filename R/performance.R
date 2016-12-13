@@ -81,11 +81,13 @@ customPerformance <- function(x, customFun, splitList=NULL) {
   
 }
 
+#' @export
 merge_results.TwoWayClassificationResult <- function(x,y) {
   probs <- (x$probs + y$probs)/2
   TwoWayClassificationResult(observed=x$observed, predicted=NULL, probs=probs, testDesign=x$testDesign, predictor=x$predictor)
 }
 
+#' @export
 merge_results.MultiWayClassificationResult <- function(x,y) {
   probs <- (x$probs + y$probs)/2
   MultiWayClassificationResult(observed=x$observed, predicted=NULL, probs=probs, testDesign=x$testDesign, predictor=x$predictor)
