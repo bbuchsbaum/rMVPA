@@ -121,7 +121,7 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
   #  
   #}
    
-  iterlist <- lapply(nclusters, function(nc) neuroim::ClusteredSearchlight(dataset$mask, nc))
+  iterlist <- lapply(nclusters, function(nc) neuroim:::ClusteredSearchlight(dataset$mask, nc))
   index_mat <- do.call(cbind, lapply(iterlist, function(it) it$clusters))
   
                      
