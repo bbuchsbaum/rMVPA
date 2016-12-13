@@ -2,6 +2,7 @@
 % Please edit documentation in R/mvpa_analysis.R
 \name{mvpa_clustered_searchlight}
 \alias{mvpa_clustered_searchlight}
+\title{mvpa_clustered_searchlight}
 \usage{
 mvpa_clustered_searchlight(dataset, model, crossVal, nclusters = NULL,
   classMetrics = FALSE)
@@ -10,5 +11,8 @@ mvpa_clustered_searchlight(dataset, model, crossVal, nclusters = NULL,
 \item{dataset}{a \code{MVPADataset} instance.}
 
 \item{nclusters}{a vector of integers indicating the number of clusters for each searchlight iteration.}
+}
+\description{
+mvpa_clustered_searchlight
 }
 

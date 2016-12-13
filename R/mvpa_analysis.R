@@ -310,7 +310,8 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
 }
 
 
-
+#' mvpa_clustered_searchlight
+#' 
 #' @param dataset a \code{MVPADataset} instance.
 #' @param model
 #' @param crossVal
@@ -332,6 +333,7 @@ mvpa_clustered_searchlight <- function(dataset, model, crossVal, nclusters = NUL
   
   
 #' mvpa_searchlight
+#' 
 #' @param dataset a \code{MVPADataset} instance.
 #' @param model
 #' @param crossVal
