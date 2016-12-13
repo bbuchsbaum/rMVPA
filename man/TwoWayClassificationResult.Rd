@@ -4,7 +4,8 @@
 \alias{TwoWayClassificationResult}
 \title{create an \code{TwoWayClassification} instance}
 \usage{
-TwoWayClassificationResult(observed, predicted, probs, predictor = NULL)
+TwoWayClassificationResult(observed, predicted, probs, testDesign,
+  predictor = NULL)
 }
 \description{
 create an \code{TwoWayClassification} instance

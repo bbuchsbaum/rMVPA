@@ -7,6 +7,13 @@
 NestedFoldIterator(Y, blockVar, balance = FALSE, bootstrap = FALSE,
   bootstrapMin = 2)
 }
+\arguments{
+\item{Y}{a \code{vector} of labels}
+
+\item{blockVar}{an index variable indicating the cross-validation folds.}
+
+\item{balance}{try to balance each training sample so that the frequency of labels is equal across groups}
+}
 \description{
 NestedFoldIterator
 }

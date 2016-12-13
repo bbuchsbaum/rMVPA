@@ -1,4 +1,10 @@
 
+#' predicted_class
+#' @param prob a matrix of predicted probabilities with column names indicating the classes
+predicted_class <- function(prob) {
+  maxid <- apply(prob, 1, which.max)
+  pclass <- colnames(prob)[maxid]
+}
 
 #' performance
 #' 
@@ -8,6 +14,17 @@
 #' @export
 performance <- function(x,...) {
   UseMethod("performance")
+}
+
+#' merge_results
+#' 
+#' merge two classiifcation results
+#' 
+#' @param x the first result
+#' @param y the second result
+#' @export
+merge_results <- function(x, y, ...) {
+  UseMethod("merge_results")
 }
 
 #' @export
@@ -62,6 +79,16 @@ customPerformance <- function(x, customFun, splitList=NULL) {
     c(total, subtots)
   }
   
+}
+
+merge_results.TwoWayClassificationResult <- function(x,y) {
+  probs <- (x$probs + y$probs)/2
+  TwoWayClassificationResult(observed=x$observed, predicted=NULL, probs=probs, testDesign=x$testDesign, predictor=x$predictor)
+}
+
+merge_results.MultiWayClassificationResult <- function(x,y) {
+  probs <- (x$probs + y$probs)/2
+  MultiWayClassificationResult(observed=x$observed, predicted=NULL, probs=probs, testDesign=x$testDesign, predictor=x$predictor)
 }
 
 #' @export
@@ -124,7 +151,6 @@ combinedACC <- function(Pred, Obs) {
 
 .multiwayPerf <- function(observed, predicted, probs, classMetrics=FALSE) {
   obs <- as.character(observed)
-  
   
   ncorrect <- sum(obs == predicted)
   ntotal <- length(obs)

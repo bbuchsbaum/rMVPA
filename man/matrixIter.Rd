@@ -4,7 +4,7 @@
 \alias{matrixIter}
 \title{matrixIter}
 \usage{
-matrixIter(obj, Y, X, vox, subIndices)
+matrixIter(obj, Y, X, subIndices)
 }
 \description{
 matrixIter

@@ -6,21 +6,19 @@
 \alias{selectFeatures.catscore}
 \title{selectFeatures}
 \usage{
-selectFeatures(obj, X, Y, vox, ...)
+selectFeatures(obj, ROI, Y, ...)
 
-\method{selectFeatures}{catscore}(obj, X, Y, vox = NULL,
-  ranking.score = c("entropy", "avg", "max"))
+\method{selectFeatures}{catscore}(obj, X, Y, ranking.score = c("entropy",
+  "avg", "max"))
 
-\method{selectFeatures}{FTest}(obj, X, Y, vox = NULL)
+\method{selectFeatures}{FTest}(obj, ROI, Y)
 }
 \arguments{
 \item{obj}{the \code{FeatureSelection} object}
 
-\item{X}{the training features as a \code{matrix}}
+\item{ROI}{region of interest containing training features, a class of type \code{ROIVolume} or \code{ROISurface}}
 
 \item{Y}{the dependent variable as a \code{factor} or \code{numeric} variable.}
-
-\item{vox}{optional coordinates associated with rows of \code{X} matrix.}
 
 \item{ranking.score}{the feature score: entropy, avg, or max.}
 
@@ -34,9 +32,11 @@ Given a \code{FeatureSelection} specification object and a dataset return the se
 }
 \examples{
 fsel <- FeatureSelector("FTest", "top_k", 10)
-X <- matrix(rnorm(100*100), 100, 100)
+coords <- rbind(c(1,1,1), c(2,2,2), c(3,3,3))
+
+ROI <- ROIVolume(BrainSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
 Y <- factor(rep(c("a", "b"), each=50))
-featureMask <- selectFeatures(fsel, X, Y)
+featureMask <- selectFeatures(fsel, ROI, Y)
 sum(featureMask) == 10
 }
 

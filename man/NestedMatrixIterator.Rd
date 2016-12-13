@@ -4,8 +4,13 @@
 \alias{NestedMatrixIterator}
 \title{NestedMatrixIterator}
 \usage{
-NestedMatrixIterator(X, Y, vox, blockVar, balance = FALSE,
-  bootstrap = FALSE, bootstrapMin = 2)
+NestedMatrixIterator(X, Y, blockVar, balance = FALSE, bootstrap = FALSE,
+  bootstrapMin = 2)
+}
+\arguments{
+\item{X}{the data \cdoe{matrix}}
+
+\item{Y}{a vector of labels}
 }
 \description{
 NestedMatrixIterator

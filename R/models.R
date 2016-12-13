@@ -295,7 +295,6 @@ CaretModelWrapper <- R6::R6Class(
        
         prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
         maxid <- apply(prob, 1, which.max)
-      
         pclass <- levels(dataset$Y)[maxid]
         classificationResult(observed, pclass, prob, testDesign, predictor)
         

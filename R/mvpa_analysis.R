@@ -112,6 +112,51 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
   
 }
 
+#' @importFrom purrr accumulate
+.doClustered <- function(dataset, model, nclusters, crossVal, classMetrics=FALSE, ncores=1) {
+  
+  count <- numeric(nrow(dataset$testDesign))
+   
+  iterlist <- lapply(nclusters, function(nc) neuroim::ClusteredSearchlight(dataset$mask, nc))
+  index_mat <- do.call(cbind, lapply(iterlist, function(it) it$clusters))
+  
+                     
+  
+  resultSet <- lapply(iterlist, function(searchIter) {
+    res <- lapply(searchIter, function(vox) {
+      roi <- dataset$trainChunk(vox)
+      ind <- attr(vox, "indices")
+      result <- try(model$run(dataset, roi, crossVal))
+      result$predictor <- NULL
+      result
+    })
+    
+    res
+  })
+  
+
+  perfList <- lapply(1:nrow(index_mat), function(i) {
+    ind <- index_mat[i,]
+    
+    rlist <- mapply(function(result, indices) {
+      result[indices]
+    }, resultSet, ind)
+    
+    result <- purrr::reduce(rlist, merge_results)
+    result$predicted <- predicted_class(result$probs)
+    perf <- computePerformance(result, dataset$testSplits, classMetrics, model$customPerformance)
+  })
+  
+  
+  validRes <- .extractValidResults(perfList)
+  perfmat <- do.call(rbind, validRes)
+  ##ids <- sapply(validRes, "[[", "center")
+  
+  ## fix only use valid indices
+  dataset$convertScores(which(dataset$mask != 0), perfmat)
+  
+}
+
 
 # standard searchlight
 .doStandard <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
@@ -120,7 +165,6 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
   res <- foreach::foreach(vox = searchIter, .verbose=FALSE, .packages=c("rMVPA", "MASS", "neuroim", "caret", model$model$library)) %dopar% {   
     roi <- dataset$trainChunk(vox)
     if (length(roi) > 1) {
-      print(length(roi))
       result <- try(model$run(dataset, roi, crossVal))
       perf <- computePerformance(result, dataset$testSplits, classMetrics, model$customPerformance)
       center <- attr(vox, "center.index")
@@ -157,7 +201,6 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
   ids <- unlist(lapply(validRes, "[[", "vox"))
   dataset$convertScores(ids, perfmat)
  
-
 }
 
 
@@ -266,6 +309,26 @@ mvpa_regional <- function(dataset, model, regionMask, crossVal=KFoldCrossValidat
 
 }
 
+
+
+#' @param dataset a \code{MVPADataset} instance.
+#' @param model
+#' @param crossVal
+#' @param nclusters a vector of integers indicating the number of clusters for each searchlight iteration.
+#' @param classMetrics
+#' @export
+mvpa_clustered_searchlight <- function(dataset, model, crossVal, nclusters = NULL, classMetrics=FALSE) {
+  if (is.null(nclusters)) {
+    nvox <- sum(dataset$mask != 0)
+    maxc <- min(floor(nvox/10),nvox)
+    minc <- min(ceiling(nvox/100), nvox)
+    nclusters <- round(seq(minc, maxc, length.out=5))
+  }
+  
+  .doClustered(dataset, model, nclusters, crossVal, classMetrics=classMetrics) 
+  
+  
+}
   
   
 #' mvpa_searchlight

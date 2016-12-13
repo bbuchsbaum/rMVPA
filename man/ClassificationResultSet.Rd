@@ -2,7 +2,7 @@
 % Please edit documentation in R/mvpa_model.R
 \name{ClassificationResultSet}
 \alias{ClassificationResultSet}
-\title{create an \code{ClassificationResultSet} instance}
+\title{Create an \code{ClassificationResultSet} instance}
 \usage{
 ClassificationResultSet(blockVar, resultList)
 }
@@ -12,6 +12,6 @@ ClassificationResultSet(blockVar, resultList)
 \item{resultList}{a list of type \code{ClassificationResult}}
 }
 \description{
-create an \code{ClassificationResultSet} instance
+Create an \code{ClassificationResultSet} instance
 }
 

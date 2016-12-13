@@ -2,19 +2,18 @@
 % Please edit documentation in R/folds.R
 \name{MatrixFoldIterator}
 \alias{MatrixFoldIterator}
-\title{MatrixFoldIterator}
+\title{Create an iterator of train/test splits from a data matrix \code{X}, a vector \code{Y}, and an optional 
+blocking variable \code{blockVar} used for determining cross-validation folds.}
 \usage{
-MatrixFoldIterator(X, Y, vox, blockVar, balance = FALSE, bootstrap = FALSE,
+MatrixFoldIterator(X, Y, blockVar, balance = FALSE, bootstrap = FALSE,
   bootstrapMin = 2)
 }
 \arguments{
 \item{X}{the data matrix}
 
-\item{Y}{the labels}
+\item{Y}{the label vector}
 
-\item{vox}{the voxel coordinates}
-
-\item{blockVar}{variable denoting the cross-validation folds.}
+\item{blockVar}{an index variable indicating the cross-validation folds.}
 
 \item{balance}{try to balance each training sample so that the frequency of labels is equal across groups}
 
@@ -25,6 +24,7 @@ MatrixFoldIterator(X, Y, vox, blockVar, balance = FALSE, bootstrap = FALSE,
 \item{nfolds}{the number of cross-validation folds: only relevant when blockVar is not supplied}
 }
 \description{
-Create an iterator of training and test data from a data matrix \code{X}, a factor \code{Y}, and an optional precomputed blocking variable \code{blockVar} used for determining cross-validation folds.
+Create an iterator of train/test splits from a data matrix \code{X}, a vector \code{Y}, and an optional 
+blocking variable \code{blockVar} used for determining cross-validation folds.
 }
 

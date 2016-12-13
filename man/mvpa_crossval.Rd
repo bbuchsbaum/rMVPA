@@ -4,25 +4,32 @@
 \alias{mvpa_crossval}
 \title{mvpa_crossval}
 \usage{
-mvpa_crossval(dataset, vox, crossVal, model, tuneGrid = NULL,
+mvpa_crossval(dataset, ROI, crossVal, model, tuneGrid = NULL,
   featureSelector = NULL, subIndices = NULL)
 }
 \arguments{
 \item{dataset}{an instance of type \code{MVPADataset}}
 
-\item{vox}{a set of voxel coordinates defining the subset of the image dataset to use.}
+\item{ROI}{a class of type \code{ROIVolume} or \code{ROISurface} contianing the training data.}
 
-\item{crossVal}{a cross-validation instance such as \code{BlockedCrossValidation}}
+\item{crossVal}{a cross-validation instance of type \code{CrossValidation}}
 
-\item{model}{a caret model object}
+\item{model}{a \code{caret} model object}
 
 \item{tuneGrid}{an optional caret-formatted \code{data.frame} containing parameters to be tuned}
 
 \item{featureSelector}{an optional \code{FeatureSelector} instance for selecting relevant features}
 
-\item{subIndices}{an optional vector of row indices (observations) to run cross-validation on.}
+\item{subIndices}{an optional subset vector of row indices (observations) to run cross-validation on.}
+}
+\value{
+a list consisting of the following named elements:
+prediction
+predictor  
+testIndices 
+featureMask
 }
 \description{
-cross_validation for an MVPA analysis.
+workhorse function for cross_validation in an MVPA analysis
 }
 

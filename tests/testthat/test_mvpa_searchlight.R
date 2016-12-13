@@ -101,6 +101,15 @@ test_that("randomized mvpa_searchlight runs without error", {
   
 })
 
+test_that("clustered mvpa_searchlight runs without error", {
+  
+  dataset <- gen_dataset(c(5,5,1), 100, 2)
+  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  model <- loadModel("sda_notune", list(tuneGrid=NULL))
+  res <- mvpa_clustered_searchlight(dataset, model, crossVal, nclusters=c(2,3,4))
+  
+})
+
 test_that("randomized mvpa_searchlight runs with custom_performance", {
   
   custom <- function(x) {

@@ -4,7 +4,8 @@
 \alias{MultiWayClassificationResult}
 \title{create an \code{MultiWayClassification} instance}
 \usage{
-MultiWayClassificationResult(observed, predicted, probs, predictor = NULL)
+MultiWayClassificationResult(observed, predicted, probs, testDesign = NULL,
+  predictor = NULL)
 }
 \description{
 create an \code{MultiWayClassification} instance
