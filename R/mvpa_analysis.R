@@ -54,8 +54,8 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
   ## valid subset
   valid.idx <- nonzeroVarianceColumns(values(ROI))
  
-  if (length(valid.idx) == 0) {
-    stop("mvpa_crossval: no valid columns in data matrix")
+  if (length(valid.idx) < 2) {
+    stop("mvpa_crossval: fewer than 2 valid columns in data matrix")
   }
   
   if (length(valid.idx) != length(ROI)) {
@@ -161,9 +161,10 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
     resultSet <- foreach(searchIter = iterlist) %dopar% {
       message("running randomized2 searchlight iterator")
       res <- lapply(searchIter, function(vox) {
-        message("num vox: ", nrow(vox))
+        
         roi <- dataset$trainChunk(vox)
         if (length(roi) > 1) {
+          message("num vox: ", nrow(vox))
           result <- try(model$run(dataset, roi, crossVal))
           result$predictor <- NULL
           list(result = result,
