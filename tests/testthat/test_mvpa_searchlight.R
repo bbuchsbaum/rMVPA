@@ -14,6 +14,13 @@ gen_regression_dataset <- function(D, nobs, spacing=c(1,1,1), folds=5) {
 gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
   
   mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
+  xbad <- array(runif(prod(D)) < .01, D)
+  xbad.ind <- which(xbad, arr.ind=TRUE)
+  for (i in 1:nrow(xbad.ind)) {
+    ind <- xbad.ind[i,]
+    mat[ind[1], ind[2], ind[3],] <- 0
+  }
+  
   bspace <- BrainSpace(c(D,nobs), spacing)
   bvec <- BrainVector(mat, bspace)
   mask <- as.logical(BrainVolume(array(rep(1, prod(D)), D), BrainSpace(D, spacing)))
@@ -103,10 +110,10 @@ test_that("randomized mvpa_searchlight runs without error", {
 
 test_that("randomized2 mvpa_searchlight runs without error", {
   
-  dataset <- gen_dataset(c(5,5,1), 100, 2)
+  dataset <- gen_dataset(c(15,15,5), 100, 2)
   crossVal <- BlockedCrossValidation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL))
-  res <- mvpa_searchlight(dataset, model, crossVal, radius=4, method="randomized2")
+  res <- mvpa_searchlight(dataset, model, crossVal, niter=8, radius=6, method="randomized2")
   
 })
 

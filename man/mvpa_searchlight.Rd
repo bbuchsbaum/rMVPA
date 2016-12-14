@@ -5,14 +5,15 @@
 \title{mvpa_searchlight}
 \usage{
 mvpa_searchlight(dataset, model, crossVal, radius = 8,
-  method = c("randomized", "standard"), niter = 4, classMetrics = FALSE)
+  method = c("randomized", "randomized2", "standard"), niter = 4,
+  classMetrics = FALSE)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}
 
 \item{radius}{the searchlight radus in mm}
 
-\item{method}{the type of searchlight (randomized, or standard)}
+\item{method}{the type of searchlight (randomized, randomized2, or standard)}
 
 \item{niter}{the number of searchlight iterations for 'randomized' method}
 }

@@ -154,51 +154,45 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
   
 }
 
-
+#' @importFrom tibble data_frame
+#' @importFrom magrittr %>%
+#' @importFrom dplyr select mutate rowwise arrange do
 .doRandomized2 <- function(dataset, model, radius, crossVal, niter, classMetrics = FALSE) {
     iterlist <- replicate(niter, dataset$searchlight(radius, "randomized"), simplify = FALSE)
 
-    resultSet <- foreach(searchIter = iterlist) %dopar% {
-      message("running randomized2 searchlight iterator")
-      res <- lapply(searchIter, function(vox) {
-        
-        roi <- dataset$trainChunk(vox)
-        if (length(roi) > 1) {
-          message("num vox: ", nrow(vox))
-          result <- try(model$run(dataset, roi, crossVal))
-          result$predictor <- NULL
-          list(result = result,
-               indices = attr(vox, "indices"))
-        } else {
-          list(result = NA,
-               indices = attr(vox, "indices"))
-        }
-      })
-      
+    resultSet <- foreach(searchIter=iterlist) %:% foreach(vox=searchIter, .combine=rbind, .packages=c("dplyr", "tibble")) %do% { 
+      roi <- dataset$trainChunk(vox)
+      if (length(roi) > 1) {
+        result <- try(model$run(dataset, roi, crossVal))
+        result$predictor <- NULL
+        tibble::data_frame(result = list(result),
+             indices = list(attr(vox, "indices")))
+      } else {
+        tibble::data_frame(result = NA,
+             indices = list(attr(vox, "indices")))
+      }
     }
     
-    index_mat <- do.call(cbind, lapply(resultSet, function(result) {
-      indlist <- lapply(result, "[[", "indices")
-      M <-
-        do.call(rbind, lapply(1:length(indlist), function(i)
-          cbind(indlist[[i]], i)))
-      ord <- order(M[, 1])
-      M[ord, 2]
-    }))
+    index_mat <- as.matrix(do.call(cbind, lapply(resultSet, function(result) {
+      result %>% mutate(rn=row_number()) %>% rowwise() %>% 
+        do(tibble::data_frame(indices=.$indices, rn=.$rn)) %>% arrange(indices) %>% select(rn)
+    })))
     
+  
     
     perfList <- lapply(1:nrow(index_mat), function(i) {
-      print(i)
+     
       ind <- index_mat[i, ]
       
-      rlist <- mapply(function(result, indices) {
-        lapply(result[indices], "[[", "result")
+      rlist <- mapply(function(result, i) {
+        result$result[i]
       }, resultSet, ind)
       
       rlist <- rlist[sapply(rlist, length) != 1]
       
       result <- Reduce(merge_results, rlist)
       result$predicted <- predicted_class(result$probs)
+      
       perf <-
         computePerformance(result,
                            dataset$testSplits,
@@ -210,10 +204,8 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
     perfmat <- do.call(rbind, validRes)
     
     dataset$convertScores(which(dataset$mask != 0), perfmat)
-    
-  }
 
-
+}
 
 # standard searchlight
 .doStandard <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {

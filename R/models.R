@@ -270,7 +270,7 @@ CaretModelWrapper <- R6::R6Class(
       }
       
       testDesign <- if (is.null(dataset$testVec)) {
-        if (is.null(subIndices)) dataset$trainDesign else dataset$trainDesign[subIndices] 
+        if (is.null(subIndices)) dataset$trainDesign else dataset$trainDesign[subIndices,] 
       } else {
         dataset$testDesign
       }
