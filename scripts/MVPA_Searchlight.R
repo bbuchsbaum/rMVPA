@@ -101,7 +101,8 @@ registerDoParallel(cl)
 
 crossVal <- BlockedCrossValidation(dataset$blockVar, balance=config$autobalance)
 
-if (config$type %in% c("standard", "randomized")) {
+if (config$type %in% c("standard", "randomized", "randomized2")) {
+  flog.info("searchlight type: ", config$type)
   searchres <- mvpa_searchlight(dataset, model, crossVal, config$radius,  
                               method=config$type, niter=config$niter, 
                               classMetrics=config$output_class_metrics)

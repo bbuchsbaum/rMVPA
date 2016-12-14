@@ -115,8 +115,6 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
 
 .doClustered <- function(dataset, model, nclusters, crossVal, classMetrics=FALSE, ncores=1) {
   
- 
-   
   iterlist <- lapply(nclusters, function(nc) neuroim:::ClusteredSearchlight(dataset$mask, nc))
   index_mat <- do.call(cbind, lapply(iterlist, function(it) it$clusters))
   
@@ -150,12 +148,70 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
   
   validRes <- .extractValidResults(perfList)
   perfmat <- do.call(rbind, validRes)
-  ##ids <- sapply(validRes, "[[", "center")
-  
+ 
   ## fix only use valid indices
   dataset$convertScores(which(dataset$mask != 0), perfmat)
   
 }
+
+
+.doRandomized2 <- function(dataset, model, radius, crossVal, niter, classMetrics = FALSE) {
+    iterlist <- replicate(niter, dataset$searchlight(radius, "randomized"), simplify = FALSE)
+
+    resultSet <- foreach(searchIter = iterlist) %dopar% {
+      message("running randomized2 searchlight iterator")
+      res <- lapply(searchIter, function(vox) {
+        message("num vox: ", nrow(vox))
+        roi <- dataset$trainChunk(vox)
+        if (length(roi) > 1) {
+          result <- try(model$run(dataset, roi, crossVal))
+          result$predictor <- NULL
+          list(result = result,
+               indices = attr(vox, "indices"))
+        } else {
+          list(result = NA,
+               indices = attr(vox, "indices"))
+        }
+      })
+      
+    }
+    
+    index_mat <- do.call(cbind, lapply(resultSet, function(result) {
+      indlist <- lapply(result, "[[", "indices")
+      M <-
+        do.call(rbind, lapply(1:length(indlist), function(i)
+          cbind(indlist[[i]], i)))
+      ord <- order(M[, 1])
+      M[ord, 2]
+    }))
+    
+    
+    perfList <- lapply(1:nrow(index_mat), function(i) {
+      print(i)
+      ind <- index_mat[i, ]
+      
+      rlist <- mapply(function(result, indices) {
+        lapply(result[indices], "[[", "result")
+      }, resultSet, ind)
+      
+      rlist <- rlist[sapply(rlist, length) != 1]
+      
+      result <- Reduce(merge_results, rlist)
+      result$predicted <- predicted_class(result$probs)
+      perf <-
+        computePerformance(result,
+                           dataset$testSplits,
+                           classMetrics,
+                           model$customPerformance)
+    })
+    
+    validRes <- .extractValidResults(perfList)
+    perfmat <- do.call(rbind, validRes)
+    
+    dataset$convertScores(which(dataset$mask != 0), perfmat)
+    
+  }
+
 
 
 # standard searchlight
@@ -177,7 +233,9 @@ mvpa_crossval <- function(dataset, ROI, crossVal, model, tuneGrid=NULL, featureS
   ids <- sapply(validRes, "[[", "center")
   dataset$convertScores(ids, perfmat)
 }
-  
+
+
+
 # randomized searchlight
 .doRandomized <- function(dataset, model, radius, crossVal, classMetrics=FALSE) {
   searchIter <- itertools::ihasNext(dataset$searchlight(radius, "randomized"))
@@ -338,7 +396,7 @@ mvpa_clustered_searchlight <- function(dataset, model, crossVal, nclusters = NUL
 #' @param model
 #' @param crossVal
 #' @param radius the searchlight radus in mm
-#' @param method the type of searchlight (randomized, or standard)
+#' @param method the type of searchlight (randomized, randomized2, or standard)
 #' @param niter the number of searchlight iterations for 'randomized' method
 #' @param classMetrics
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
@@ -346,9 +404,9 @@ mvpa_clustered_searchlight <- function(dataset, model, crossVal, nclusters = NUL
 #' @import foreach
 #' @import doParallel
 #' @import parallel
-#' @import futile.logger
+#' @import futile.logger flog.info
 #' @export
-mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("randomized", "standard"),  
+mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("randomized", "randomized2", "standard"),  
                              niter=4, classMetrics=FALSE) {
   stopifnot(niter > 1)
   
@@ -362,7 +420,7 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
   
   res <- if (method == "standard") {
     .doStandard(dataset, model, radius, crossVal, classMetrics=classMetrics)    
-  } else {
+  } else if (method == "randomized") {
     
     res <- foreach(i = 1:niter) %dopar% {
       flog.info("Running randomized searchlight iteration %s", i)   
@@ -370,6 +428,8 @@ mvpa_searchlight <- function(dataset, model, crossVal, radius=8, method=c("rando
     }
     
     dataset$averageOverIterations(res)
+  } else if (method == "randomized2") {
+    .doRandomized2(dataset, model, radius, crossVal, niter, classMetrics=classMetrics)  
   }
   
 }

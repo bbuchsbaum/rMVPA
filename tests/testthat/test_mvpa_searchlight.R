@@ -97,7 +97,16 @@ test_that("randomized mvpa_searchlight runs without error", {
   dataset <- gen_dataset(c(5,5,1), 100, 2)
   crossVal <- BlockedCrossValidation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL))
-  res <- mvpa_searchlight(dataset, model, crossVal, radius=3, method="randomized")
+  res <- mvpa_searchlight(dataset, model, crossVal, radius=4, method="randomized")
+  
+})
+
+test_that("randomized2 mvpa_searchlight runs without error", {
+  
+  dataset <- gen_dataset(c(5,5,1), 100, 2)
+  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  model <- loadModel("sda_notune", list(tuneGrid=NULL))
+  res <- mvpa_searchlight(dataset, model, crossVal, radius=4, method="randomized2")
   
 })
 
