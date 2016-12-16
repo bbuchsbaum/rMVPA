@@ -6,26 +6,6 @@ predicted_class <- function(prob) {
   pclass <- colnames(prob)[maxid]
 }
 
-#' performance
-#' 
-#' Compute performance metrics from a classiifcation result
-#' 
-#' @param x the result
-#' @export
-performance <- function(x,...) {
-  UseMethod("performance")
-}
-
-#' merge_results
-#' 
-#' merge two classiifcation results
-#' 
-#' @param x the first result
-#' @param y the second result
-#' @export
-merge_results <- function(x, y, ...) {
-  UseMethod("merge_results")
-}
 
 #' @export
 #' @param x
@@ -94,7 +74,7 @@ merge_results.MultiWayClassificationResult <- function(x,y) {
 }
 
 #' @export
-performance.TwoWayClassificationResult <- function(x,splitList=NULL, classMetrics=FALSE, customFun=NULL) {
+performance.TwoWayClassificationResult <- function(x, splitList=NULL, classMetrics=FALSE, customFun=NULL) {
   if (is.null(splitList)) {
     ret <- .twowayPerf(x$observed, x$predicted, x$probs)
   } else {

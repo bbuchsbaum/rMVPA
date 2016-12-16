@@ -11,6 +11,19 @@ gen_regression_dataset <- function(D, nobs, spacing=c(1,1,1), folds=5) {
   MVPADataset$new(trainVec=bvec, Y=Y, mask=mask, blockVar=blockVar, testVec=NULL, testY=NULL)
 }
 
+
+gen_new_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
+  mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
+  bspace <- BrainSpace(c(D,nobs), spacing)
+  bvec <- BrainVector(mat, bspace)
+  mask <- as.logical(BrainVolume(array(rep(1, prod(D)), D), BrainSpace(D, spacing)))
+  Y <- sample(factor(rep(letters[1:nlevels], length.out=nobs)))
+  blockVar <- rep(1:folds, length.out=nobs)
+  
+  des <- mvpa_design(Y, data.frame(Y=Y, block_var=blockVar))
+  mvpa_dataset(bvec, mask=mask, design=des)
+}
+  
 gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
   
   mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
@@ -209,6 +222,14 @@ test_that("mvpa_searchlight works with testset and split_var", {
   res <- mvpa_searchlight(dataset, model, crossVal, radius=3, niter=2,method="randomized", classMetrics=TRUE)
   
 })
+
+
+test_that("searchlight with modelr approach", {
+  dataset <- gen_new_dataset(c(5,5,5), 100, 3, folds=5)
+  model <- loadModel("glmnet")$model
+  voxiter <- lapply(neuroim::RandomSearchlight(dataset$mask, 3), function(x) x)
+  sam <- get_samples(dataset, voxiter)
+  sam %>% rowwise() %>% do(as.data.frame(.$sample))
 
 
 

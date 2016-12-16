@@ -54,7 +54,7 @@ test_that("mvpa_regional with 5 ROIS with sda_boot and custom_performance runs w
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
   model <- loadModel("sda_boot", list(custom_performance = function(x) {
     print(names(x$prob))
-    print(x$testDesign[[]])
+    #print(x$testDesign[[]])
   }))
   res <- mvpa_regional(dataset, model, regionMask, crossVal)
   

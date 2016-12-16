@@ -304,10 +304,10 @@ turbo_cluster <- function(mask, bvec, K=500, lambda=.5, iterations=25, connectiv
   
   curclus <- kvol[mask.idx]
   
+  
+  ## port iteration to rcpp
   while (iter < iter.max && switches > 0) {
     message("turboclust, iteration: ", iter)
-    
-    
     
     newclus <- sapply(1:nrow(vgrid), function(i) {
       
