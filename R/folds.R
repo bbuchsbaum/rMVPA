@@ -1,14 +1,49 @@
+#' @export
+#' @param block_var the blocking variable (an integer vector)
+#' @importFrom modelr resample
+#' @rdname crossv_block
+crossv_block <- function(data, block_var, id = ".id", exclude_block=NULL) {
+ 
+  if (!length(block_var) == nrow(data)) {
+    stop("length of `block_var` must be equal to row(data).", call. = FALSE)
+  }
+  
+  if (!is.null(exclude_block)) {
+    idx <- seq_len(nrow(data))
+    keep <- block_var != exclude_block
+    idx <- idx[keep]
+    fold_idx <- split(idx, block_var[keep])
+  } else {
+    idx <- seq_len(nrow(data))
+    fold_idx <- split(idx, block_var)
+  }
+  
+  
+  fold <- function(test) {
+    list(
+      train = modelr::resample(data, setdiff(idx, test)),
+      test = modelr::resample(data, test)
+    )
+  }
+  
+  cols <- purrr::transpose(purrr::map(fold_idx, fold))
+  cols[[id]] <- modelr:::id(length(fold_idx))
+  
+  tibble::as_data_frame(cols)
+}
+
+
 
 #' BlockedCrossValidation
 #' 
 #' construct a cross-validation specification
 #' 
-#' @param blockVar an integer vector of indicating the cross-vlaidation blocks. Each block is indicating by an unique integer.
+#' @param block_var an integer vector of indicating the cross-validation blocks. Each block is indicating by an unique integer.
 #' @param balance logical indicating whether cross-validation blocks should automatically balanced, using undersampling if necessary.
 #' @param bootstrap logical indicating whether training samples should be sampled with replacement.
 #' @export
-BlockedCrossValidation <- function(blockVar, balance=FALSE, bootstrap=FALSE) {
-  ret <- list(blockVar=blockVar, balance=balance, bootstrap=bootstrap, nfolds=length(unique(blockVar)))
+BlockedCrossValidation <- function(block_var, balance=FALSE, bootstrap=FALSE) {
+  ret <- list(block_var=block_var, balance=balance, bootstrap=bootstrap, nfolds=length(unique(block_var)))
   class(ret) <- c("BlockedCrossValidation", "CrossValidation", "list")
   ret
 }
@@ -20,10 +55,23 @@ BlockedCrossValidation <- function(blockVar, balance=FALSE, bootstrap=FALSE) {
 #' @param balance 
 #' @param boostrap
 KFoldCrossValidation <- function(len, nfolds=10, balance=FALSE, bootstrap=FALSE) {
-  blockVar <- sample(rep(seq(1, nfolds), length.out=len))
-  ret <- list(blockVar=blockVar, balance=balance, bootstrap=bootstrap, nfolds=nfolds)
+  block_var <- sample(rep(seq(1, nfolds), length.out=len))
+  ret <- list(block_var=block_var, balance=balance, bootstrap=bootstrap, nfolds=nfolds)
   class(ret) <- c("KFoldCrossValidation", "CrossValidation", "list")
   ret
+}
+
+#' crossval_samples
+#' 
+#' @export
+crossval_samples <- function(obj, data) { UseMethod("crossval_samples") }
+
+crossval_samples.KFoldCrossValidation <- function(obj, data) { 
+  modelr::crossv_kfold(data, obj$nfolds)
+}
+
+crossval_samples.BlockedCrossValidation <- function(obj, data, exclude_block=NULL) { 
+  crossv_block(data, obj$block_var, exclude_block=exclude_block)
 }
 
 #' foldIter
@@ -44,18 +92,18 @@ matrixIter <- function(obj, Y, X, subIndices) {
 #' @export
 foldIter.CrossValidation <- function(obj, Y, subIndices=NULL) {
   if (!is.null(subIndices)) {
-    FoldIterator(Y[subIndices], obj$blockVar[subIndices], balance=obj$balance, bootstrap=obj$bootstrap)
+    FoldIterator(Y[subIndices], obj$block_var[subIndices], balance=obj$balance, bootstrap=obj$bootstrap)
   } else {
-    FoldIterator(Y, obj$blockVar, balance=obj$balance, bootstrap=obj$bootstrap)
+    FoldIterator(Y, obj$block_var, balance=obj$balance, bootstrap=obj$bootstrap)
   }
 }
 
 #' @export
 matrixIter.CrossValidation <- function(obj, Y, X, subIndices=NULL) {
   if (!is.null(subIndices)) {
-    MatrixFoldIterator(X[subIndices,,drop=FALSE], Y[subIndices], obj$blockVar[subIndices], balance=obj$balance, bootstrap=obj$bootstrap )
+    MatrixFoldIterator(X[subIndices,,drop=FALSE], Y[subIndices], obj$block_var[subIndices], balance=obj$balance, bootstrap=obj$bootstrap )
   } else {
-    MatrixFoldIterator(X, Y,obj$blockVar, balance=obj$balance, bootstrap=obj$bootstrap )
+    MatrixFoldIterator(X, Y,obj$block_var, balance=obj$balance, bootstrap=obj$bootstrap )
   }
 }
 
@@ -75,23 +123,23 @@ invertFolds <- function(foldSplit, allInd) {
 #' 
 #' Create an iterator from a block variable for iterating through the folds during cross-validation
 #' @param Y the labels
-#' @param blockVar variable denoting the cross-validation folds
+#' @param block_var variable denoting the cross-validation folds
 #' @param balance try to balance each training sample so that the frequency of labels is equal across groups
 #' @param bootstrap use bootstrap resampling of the training set
 #' @param bootstrapMin 
 #' @importFrom assertthat assert_that
 #' @export
-FoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
+FoldIterator <- function(Y, block_var,  balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
 
-  assert_that(length(blockVar) == length(Y))
-  assert_that(length(unique(blockVar)) > 1)
+  assert_that(length(block_var) == length(Y))
+  assert_that(length(unique(block_var)) > 1)
   
   index <- 0
   ord <- NULL
   
-  testSets <- split(1:length(blockVar), blockVar)
+  testSets <- split(1:length(block_var), block_var)
   
-  trainSets <- invertFolds(testSets, 1:length(blockVar))
+  trainSets <- invertFolds(testSets, 1:length(block_var))
   
   .getTrainSets <- function() {
     trainSets
@@ -154,7 +202,7 @@ FoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, bootstrap
     }
   }
   
-  obj <- list(Y=Y, nextElem=nextEl, blockVar=blockVar, index=.getIndex, getTrainSets=.getTrainSets, 
+  obj <- list(Y=Y, nextElem=nextEl, block_var=block_var, index=.getIndex, getTrainSets=.getTrainSets, 
               getTestSets=.getTestSets, getTestOrder=.getTestOrder, reset=.reset, balance=balance, bootstrap=bootstrap, nfolds=length(testSets))
   
   class(obj) <- c("FoldIterator", 'abstractiter', 'iter')
@@ -164,24 +212,24 @@ FoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, bootstrap
   
 
 #' Create an iterator of train/test splits from a data matrix \code{X}, a vector \code{Y}, and an optional 
-#' blocking variable \code{blockVar} used for determining cross-validation folds.
+#' blocking variable \code{block_var} used for determining cross-validation folds.
 #' 
 #' @param X the data matrix
 #' @param Y the label vector
-#' @param blockVar an index variable indicating the cross-validation folds.
-#' @param nfolds the number of cross-validation folds: only relevant when blockVar is not supplied
+#' @param block_var an index variable indicating the cross-validation folds.
+#' @param nfolds the number of cross-validation folds: only relevant when block_var is not supplied
 #' @param balance try to balance each training sample so that the frequency of labels is equal across groups
 #' @param bootstrap use bootstrap resampling of the training set
 #' @param bootstrapMin the minumum number of clases per bootstrap iteration.
 #' @export
-MatrixFoldIterator <- function(X, Y, blockVar, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
+MatrixFoldIterator <- function(X, Y, block_var, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
   
   if (nrow(X) != length(Y)) {
     stop("X matrix must have same number of rows as Y variable")
   }
   
   
-  foldIter = FoldIterator(Y, blockVar, balance=balance, bootstrap=bootstrap, bootstrapMin)
+  foldIter = FoldIterator(Y, block_var, balance=balance, bootstrap=bootstrap, bootstrapMin)
 
   nextEl <- function() {
     ret <- foldIter$nextElem()
@@ -197,7 +245,7 @@ MatrixFoldIterator <- function(X, Y, blockVar, balance=FALSE, bootstrap=FALSE, b
   }
   
 
-  obj <- list(X=X, Y=Y, blockVar=blockVar, nextElem=nextEl, index=foldIter$index, 
+  obj <- list(X=X, Y=Y, block_var=block_var, nextElem=nextEl, index=foldIter$index, 
               getTrainSets=foldIter$getTrainSets, getTestSets=foldIter$getTestSets, 
               getTestOrder=foldIter$getTestOrder, reset=foldIter$reset, balance=foldIter$balance, bootstrap=foldIter$bootstrap, nfolds=foldIter$nfolds)
   
@@ -209,16 +257,16 @@ MatrixFoldIterator <- function(X, Y, blockVar, balance=FALSE, bootstrap=FALSE, b
 #' NestedFoldIterator
 #' 
 #' @param Y a \code{vector} of labels
-#' @param blockVar an index variable indicating the cross-validation folds.
+#' @param block_var an index variable indicating the cross-validation folds.
 #' @param balance try to balance each training sample so that the frequency of labels is equal across groups
 #' @param bootstrap
 #' @param bootstrapMin
 #' @export
-NestedFoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
-  blockids <- sort(unique(blockVar))
+NestedFoldIterator <- function(Y, block_var,  balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
+  blockids <- sort(unique(block_var))
   
-  if (length(Y) != length(blockVar)) {
-    stop("Y must have same length as blockVar")
+  if (length(Y) != length(block_var)) {
+    stop("Y must have same length as block_var")
   }
   
   
@@ -230,8 +278,8 @@ NestedFoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, boo
     if (index < length(blockids)) {
       index <<- index + 1
       curBlock <- blockids[index]
-      train.idx <- which(blockVar != curBlock)
-      iter <- FoldIterator(Y[train.idx], blockVar=blockVar[train.idx], balance=balance, bootstrap=bootstrap, bootstrapMin=bootstrapMin)
+      train.idx <- which(block_var != curBlock)
+      iter <- FoldIterator(Y[train.idx], block_var=block_var[train.idx], balance=balance, bootstrap=bootstrap, bootstrapMin=bootstrapMin)
       attr(iter, "train_indices") <- train.idx
       attr(iter, "test_indices") <- seq(1, length(Y))[-train.idx]
       iter
@@ -250,13 +298,13 @@ NestedFoldIterator <- function(Y, blockVar,  balance=FALSE, bootstrap=FALSE, boo
 #' 
 #' @param X the data \cdoe{matrix}
 #' @param Y a vector of labels
-#' @param blockVar
+#' @param block_var
 #' @param balance
 #' @param bootstrap
 #' @param bootstrapMin
 #' @export
-NestedMatrixIterator <- function(X, Y, blockVar, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
-  blockids <- sort(unique(blockVar))
+NestedMatrixIterator <- function(X, Y, block_var, balance=FALSE, bootstrap=FALSE, bootstrapMin=2) {
+  blockids <- sort(unique(block_var))
   
   if (nrow(X) != length(Y)) {
     stop("X matrix must have same number of rows as Y variable")
@@ -271,8 +319,8 @@ NestedMatrixIterator <- function(X, Y, blockVar, balance=FALSE, bootstrap=FALSE,
     if (index < length(blockids)) {
       index <<- index + 1
       curBlock <- blockids[index]
-      train.idx <- which(blockVar != curBlock)
-      iter <- MatrixFoldIterator(X[train.idx,], Y[train.idx],  blockVar=blockVar[train.idx], balance=balance, bootstrap=bootstrap, bootstrapMin=bootstrapMin)
+      train.idx <- which(block_var != curBlock)
+      iter <- MatrixFoldIterator(X[train.idx,], Y[train.idx],  block_var=block_var[train.idx], balance=balance, bootstrap=bootstrap, bootstrapMin=bootstrapMin)
       
       attr(iter, "train_indices") <- train.idx
       attr(iter, "test_indices") <- seq(1, length(Y))[-train.idx]

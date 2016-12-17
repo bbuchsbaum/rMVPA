@@ -31,18 +31,24 @@ Imports:
     R6,
     sp
 Collate:
+    'allgeneric.R'
+    'caret_wrapper.R'
     'classifiers.R'
     'cluster.R'
     'mvpa_model.R'
     'common.R'
+    'dataset.R'
+    'design.R'
     'ensemble.R'
     'featureSelection.R'
     'folds.R'
     'models.R'
     'mvpa_analysis.R'
+    'mvpa_iterate.R'
     'optim.R'
     'performance.R'
     'rMVPA.R'
+    'resample.R'
     'similarity.R'
     'utils.R'
 RoxygenNote: 5.0.1

@@ -1,49 +1,17 @@
-#' @export
-#' @param block_var the blocking variable (an integer vector)
-#' @rdname crossv_block
-crossv_block <- function(data, block_var, id = ".id", exclude_block=NULL) {
-  
-  if (!length(block_var) == nrow(data)) {
-    stop("length of `block_var` must be equal to row(data).", call. = FALSE)
-  }
-  
-  if (!is.null(exclude_block)) {
-    idx <- seq_len(nrow(data))
-    keep <- block_var != exclude_block
-    idx <- idx[keep]
-    fold_idx <- split(idx, block_var[keep])
-  } else {
-    idx <- seq_len(nrow(data))
-    fold_idx <- split(idx, block_var)
-  }
-  
-  
-  fold <- function(test) {
-    list(
-      train = resample(data, setdiff(idx, test)),
-      test = resample(data, test)
-    )
-  }
-  
-  cols <- purrr::transpose(purrr::map(fold_idx, fold))
-  cols[[id]] <- modelr:::id(length(fold_idx))
-  
-  tibble::as_data_frame(cols)
-}
-
 
 
 
 
 #' @export
 get_samples.mvpa_dataset <- function(obj, voxlist) {
+
   ret <- lapply(voxlist, function(vox) {
     sam <- data_sample(obj, vox)
   })
   
   n <- length(ret)
   df <- tibble::data_frame(sample = ret)
-  df[[id]] <- modelr:::id(n)
+  df[[".id"]] <- modelr:::id(n)
   df
   
 }
@@ -72,7 +40,7 @@ print.data_sample <- function(x, ...) {
 
 #' @export
 as_roi.data_sample <- function(x, ...) {
-  
+ 
   train_mat <- series(x$data$train_data, x$vox)
   
   test_mat <- if (has_test_set(x$data)) {

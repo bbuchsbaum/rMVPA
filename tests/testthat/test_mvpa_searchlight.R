@@ -227,11 +227,16 @@ test_that("mvpa_searchlight works with testset and split_var", {
 test_that("searchlight with modelr approach", {
   dataset <- gen_new_dataset(c(5,5,5), 100, 3, folds=5)
   model <- loadModel("glmnet")$model
+  
+  cval <- BlockedCrossValidation(rep(1:10, each=10))
+  tgrid <- expand.grid(alpha=seq(0,1, by=.1), lambda=c(.01,.001))
+  mspec <- model_spec(model,crossval=cval, tune_grid=tgrid)
+  
   voxiter <- lapply(neuroim::RandomSearchlight(dataset$mask, 3), function(x) x)
   sam <- get_samples(dataset, voxiter)
   sam %>% rowwise() %>% do(as.data.frame(.$sample))
 
-
+})
 
 
 

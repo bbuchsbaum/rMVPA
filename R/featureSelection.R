@@ -71,15 +71,6 @@ selectFeatures <- function(obj, ROI, Y, ...) {
   UseMethod("selectFeatures")
 }
 
-## TODO requires that X has spatial structure.
-# @export
-# @import sda
-#selectFeatures.searchlight <- function(obj, X, Y) {
-#
-#}
-
-
-
 
 #' @export
 #' @param ranking.score the feature score: entropy, avg, or max.

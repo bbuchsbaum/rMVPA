@@ -1,4 +1,25 @@
 
+#' @export
+select_features <- function(obj, roi, Y, ...) {
+  UseMethod("select_features")
+}
+
+#' @export
+train_model <- function(obj,...) {
+  UseMethod("train_model")
+}
+
+
+#' @export
+fit_model <- function(obj, roi_x, y, wts, param, lev, last, classProbs, ...) {
+  UseMethod("fit_model")
+}
+
+#' @export
+tune_grid <- function(obj, x,y,len) {
+  UseMethod("tune_grid")
+}
+
 
 #' @export
 has_test_set <- function(obj) {
