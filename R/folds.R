@@ -1,13 +1,44 @@
 #' @export
+#' @param k Number of folds (an integer).
+crossv_k <- function(data, y, k = 5, id = ".id") {
+  if (!is.numeric(k) || length(k) != 1) {
+    stop("`k` must be a single integer.", call. = FALSE)
+  }
+  
+  n <- nrow(data)
+  folds <- sample(rep(1:k, length.out = n))
+  
+  idx <- seq_len(n)
+  fold_idx <- split(idx, folds)
+  
+  fold <- function(test) {
+    tidx <- setdiff(idx, test)
+    list(
+      ytrain = y[tidx],
+      ytest = y[test],
+      train = resample(data, setdiff(idx, test)),
+      test = resample(data, test)
+    )
+  }
+  
+  cols <- purrr::transpose(purrr::map(fold_idx, fold))
+  cols[[id]] <- modelr:::id(k)
+  
+  tibble::as_data_frame(cols)
+}
+
+
+#' @export
 #' @param block_var the blocking variable (an integer vector)
 #' @importFrom modelr resample
 #' @rdname crossv_block
-crossv_block <- function(data, block_var, id = ".id", exclude_block=NULL) {
+crossv_block <- function(data, y, block_var, id = ".id", exclude_block=NULL) {
  
-  if (!length(block_var) == nrow(data)) {
-    stop("length of `block_var` must be equal to row(data).", call. = FALSE)
+  if (!length(block_var) == length(y)) {
+    stop("length of `block_var` must be equal to length(y)", call. = FALSE)
   }
   
+
   if (!is.null(exclude_block)) {
     idx <- seq_len(nrow(data))
     keep <- block_var != exclude_block
@@ -20,8 +51,11 @@ crossv_block <- function(data, block_var, id = ".id", exclude_block=NULL) {
   
   
   fold <- function(test) {
+    tidx <- setdiff(idx, test)
     list(
-      train = modelr::resample(data, setdiff(idx, test)),
+      ytrain = y[tidx],
+      ytest = y[test],
+      train = modelr::resample(data, tidx),
       test = modelr::resample(data, test)
     )
   }
@@ -64,14 +98,16 @@ KFoldCrossValidation <- function(len, nfolds=10, balance=FALSE, bootstrap=FALSE)
 #' crossval_samples
 #' 
 #' @export
-crossval_samples <- function(obj, data) { UseMethod("crossval_samples") }
+crossval_samples <- function(obj, data, y) { UseMethod("crossval_samples") }
 
-crossval_samples.KFoldCrossValidation <- function(obj, data) { 
-  modelr::crossv_kfold(data, obj$nfolds)
+
+## todo need to implement local version which stores 'y' variable in data.frame (train, test, y_train, y_test)
+crossval_samples.KFoldCrossValidation <- function(obj, data,y) { 
+  crossv_k(data, y, obj$nfolds)
 }
 
-crossval_samples.BlockedCrossValidation <- function(obj, data, exclude_block=NULL) { 
-  crossv_block(data, obj$block_var, exclude_block=exclude_block)
+crossval_samples.BlockedCrossValidation <- function(obj, data, y, exclude_block=NULL) { 
+  crossv_block(data, y, obj$block_var, exclude_block=exclude_block)
 }
 
 #' foldIter

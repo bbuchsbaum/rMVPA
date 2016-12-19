@@ -9,6 +9,16 @@ train_model <- function(obj,...) {
   UseMethod("train_model")
 }
 
+#' @export
+y_train <- function(obj) {
+  UseMethod("y_train")
+}
+
+#' @export
+y_test <- function(obj) {
+  UseMethod("y_test")
+}
+
 
 #' @export
 fit_model <- function(obj, roi_x, y, wts, param, lev, last, classProbs, ...) {

@@ -32,7 +32,6 @@ Imports:
     sp
 Collate:
     'allgeneric.R'
-    'caret_wrapper.R'
     'classifiers.R'
     'cluster.R'
     'mvpa_model.R'
@@ -42,6 +41,7 @@ Collate:
     'ensemble.R'
     'featureSelection.R'
     'folds.R'
+    'model_spec.R'
     'models.R'
     'mvpa_analysis.R'
     'mvpa_iterate.R'

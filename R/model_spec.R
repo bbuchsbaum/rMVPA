@@ -26,8 +26,8 @@ select_features.model_spec <- function(obj, roi, Y) {
 }
 
 #' @export
-fit_model.model_spec <- function(obj, x, y, wts, param, lev, last, classProbs, ...) {
-   obj$model$fit(x,y,wts,param,lev, last, classProbs, ...)
+fit_model.model_spec <- function(obj, x, y, wts, param, classProbs, ...) {
+   obj$model$fit(x,y,wts=wts,param=param,classProbs=classProbs, ...)
 }
 
 crossval_samples.model_spec <- function(obj) { crossval_samples(obj$crossval) }
@@ -38,41 +38,49 @@ crossval_samples.model_spec <- function(obj) { crossval_samples(obj$crossval) }
   
 
 #' @param obj an instance of class \code{model_spec}
-#' @param roi_train training data, and instance of class \code{ROIVolume} or \code{ROISurface}
-#' @param Ytrain the dependent variable
+#' @param train_dat training data, and instance of class \code{ROIVolume} or \code{ROISurface}
+#' @param y the dependent variable
+#' @param indices the spatial indices associated with each column
+#' @param
 #' @param wts
 #' @export
-train_model.model_spec <- function(obj, roi_train, Ytrain, param=NULL, wts=NULL) {
+train_model.model_spec <- function(obj, train_dat, y, indices, param=NULL, wts=NULL) {
  
   if (!is.null(obj$feature_selector)) {
-    feature_mask <- select_features(obj, roi_train, Ytrain)
-    roi_train <- roi_train[feature_mask]
+    feature_mask <- select_features(obj, train_dat, y)
+    train_dat <- train_dat[,feature_mask]
   } else {
-    feature_mask <- rep(TRUE, length(roi_train))
+    feature_mask <- rep(TRUE, ncol(train_dat))
   }
 
   if (is.null(param)) {
     param <- tune_grid(obj)[1,]
   }
   
-  fit <- fit_model(obj, values(ROI), Ytrain, wts=wtsL, param=param, lev=levels(Ytrain), classProbs=TRUE)
-  model_fit(obj$model, fit, param, indices(roi_train), feature_mask)
+  fit <- fit_model(obj, train_dat, y, wts=wts, param=param, classProbs=TRUE)
+  model_fit(obj$model, fit, param, indices, feature_mask)
 }
 
 #' @export
-predict.model_fit <- function(x, newdata, sub_indices) {
-  mat <- if (is.matrix(newdata)) {
+predict.model_fit <- function(x, newdata, sub_indices=NULL) {
+  
+  mat <- if (inherits(newdata, "BrainVector") || inherits(newdata, "BrainSurfaceVector")) {
+    series(newdata, x$fit$vox_ind)
+  } else {
     newdata
-  } else if (inherits(newdata, "BrainVector") || inherits(newdata, "BrainSurfaceVector")) {
-    series(newdata, model_fit$vox_ind)
-  } 
+  }
   
   if (!is.null(sub_indices)) {
     assert_that(is.vector(sub_indices))
     mat <- mat[sub_indices,,drop=FALSE]
   }
   
-  probs <- x$model$prob(x$modelFit, mat[, x$featureMask,drop=FALSE]) 
+  if (!is.null(x$feature_mask)) {
+    mat <- mat[, x$feature_mask,drop=FALSE]
+  }
+  
+
+  probs <- x$model$prob(x$fit,mat) 
   cpred <- max.col(probs)
   cpred <- colnames(probs)[cpred]
   list(class=cpred, probs=probs)

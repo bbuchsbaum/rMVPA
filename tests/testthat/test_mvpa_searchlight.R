@@ -20,7 +20,7 @@ gen_new_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
   Y <- sample(factor(rep(letters[1:nlevels], length.out=nobs)))
   blockVar <- rep(1:folds, length.out=nobs)
   
-  des <- mvpa_design(Y, data.frame(Y=Y, block_var=blockVar))
+  des <- mvpa_design(data.frame(Y=Y, block_var=blockVar), y_train=Y)
   mvpa_dataset(bvec, mask=mask, design=des)
 }
   
@@ -232,7 +232,7 @@ test_that("searchlight with modelr approach", {
   tgrid <- expand.grid(alpha=seq(0,1, by=.1), lambda=c(.01,.001))
   mspec <- model_spec(model,crossval=cval, tune_grid=tgrid)
   
-  voxiter <- lapply(neuroim::RandomSearchlight(dataset$mask, 3), function(x) x)
+  vox_iter <- lapply(neuroim::RandomSearchlight(dataset$mask, 3), function(x) x)
   sam <- get_samples(dataset, voxiter)
   sam %>% rowwise() %>% do(as.data.frame(.$sample))
 

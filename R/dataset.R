@@ -1,15 +1,21 @@
 
 
 
-
 has_test_set.mvpa_dataset <- function(obj) {
-  !is.null(obj$design$testY) 
+  !is.null(obj$design$y_test) 
 }
 
+y_train.mvpa_dataset <- function(obj) y_train(obj$design)
+
+y_test.mvpa_dataset <- function(obj) y_test(obj$design)
 
 
+#' @param train_data
+#' @param test_data
+#' @param mask
+#' @param design
 #' @importFrom assertthat assert_that
-mvpa_dataset <- function(train_data, test_data=NULL, mask, design) {
+mvpa_dataset <- function(train_data,test_data=NULL, mask, design) {
   assert_that(inherits(design, "mvpa_design"))
   
   ret <- list(
