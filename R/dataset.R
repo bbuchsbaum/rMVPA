@@ -1,5 +1,13 @@
 
-
+sp_vol_matrix <- function(mat, refspace, indices, coords) {
+  structure(mat,
+            refspace=refspace,
+            indices=indices,
+            coords=coords,
+            class=c("sp_vol_matrix", "matrix"))
+            
+  
+}
 
 has_test_set.mvpa_dataset <- function(obj) {
   !is.null(obj$design$y_test) 
