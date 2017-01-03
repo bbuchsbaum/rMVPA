@@ -1,5 +1,5 @@
 
-mvpa_crossval <- function(dset, roi, mspec) {
+internal_crossval <- function(dset, roi, mspec) {
   param <- mspec$tune_grid[1,]
   
   samples <- crossval_samples(mspec$crossval, as.data.frame(values(roi$train_roi)), y_train(dset))
