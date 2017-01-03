@@ -46,16 +46,29 @@ crossval_samples.model_spec <- function(obj) { crossval_samples(obj$crossval) }
 #' @export
 train_model.model_spec <- function(obj, train_dat, y, indices, param=NULL, wts=NULL) {
  
+  if (is.null(param)) {
+    param <- tune_grid(obj)[1,]
+  }
+  
+  if (is.character(y)) {
+    y <- as.factor(y)
+  }
+  
+  type - if (is.factor(y)) {
+    "classification"
+  } else if (is.numeric(y)) {
+    "regression"
+  } else {
+    stop("'y' must be a numeric vector or factor")
+  }
+  
   if (!is.null(obj$feature_selector)) {
     feature_mask <- select_features(obj, train_dat, y)
     train_dat <- train_dat[,feature_mask]
   } else {
     feature_mask <- rep(TRUE, ncol(train_dat))
   }
-
-  if (is.null(param)) {
-    param <- tune_grid(obj)[1,]
-  }
+  
   
   fit <- fit_model(obj, train_dat, y, wts=wts, param=param, classProbs=TRUE)
   model_fit(obj$model, fit, param, indices, feature_mask)
@@ -91,14 +104,16 @@ predict.model_fit <- function(x, newdata, sub_indices=NULL) {
 #' 
 #' @param model the caret-style model object
 #' @param fit the model fit 
+#' @param model_type the problem type: classification or regression
 #' @param param the model parameters
 #' @param vox_ind the the voxel indices indicating the data coordinates
 #' @param feature_mask a logical mask indicating the selected subset of columns
 #' @export
-model_fit <- function(model, fit, param, vox_ind, feature_mask=NULL) {
+model_fit <- function(model, fit, model_type=c("classification", "regression"), param, vox_ind, feature_mask=NULL) {
   ret <- list(
     model=model,
     fit=fit,
+    model_type=match.arg(model_type),
     param=param,
     vox_ind=vox_ind,
     feature_mask=feature_mask)
