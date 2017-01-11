@@ -6,11 +6,16 @@ internal_crossval <- function(dset, roi, mspec) {
   ind <- indices(roi$train_roi)
   
   ret <- samples %>% rowwise() %>% do( {
-    browser()
     result <- train_model(mspec, as_data_frame(.$train), .$ytrain, indices=ind, param=param)
     print(class(result))
-   
-    tibble::as_tibble(predict(result, as_data_frame(.$test), NULL))
+    browser()
+    ## keep predictor?
+    pred <- predict(result, as_data_frame(.$test), NULL)
+    plist <- lapply(pred, list)
+    plist$y_true <- list(.$ytest)
+    plist$test_ind=list(as.integer(.$test))
+    tibble::as_tibble(plist) %>% mutate_(y_true=list(.$ytest), test_ind=list(as.integer(.$test)))
+    
   })
 }
   

@@ -4,9 +4,9 @@
 \alias{mvpa_searchlight}
 \title{mvpa_searchlight}
 \usage{
-mvpa_searchlight(dataset, model, crossVal, radius = 8,
+mvpa_searchlight(dataset, model, crossval, radius = 8,
   method = c("randomized", "randomized2", "standard"), niter = 4,
-  classMetrics = FALSE)
+  class_metrics = FALSE)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}

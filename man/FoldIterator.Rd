@@ -4,13 +4,13 @@
 \alias{FoldIterator}
 \title{FoldIterator}
 \usage{
-FoldIterator(Y, blockVar, balance = FALSE, bootstrap = FALSE,
+FoldIterator(Y, block_var, balance = FALSE, bootstrap = FALSE,
   bootstrapMin = 2)
 }
 \arguments{
 \item{Y}{the labels}
 
-\item{blockVar}{variable denoting the cross-validation folds}
+\item{block_var}{variable denoting the cross-validation folds}
 
 \item{balance}{try to balance each training sample so that the frequency of labels is equal across groups}
 

@@ -4,13 +4,13 @@
 \alias{NestedFoldIterator}
 \title{NestedFoldIterator}
 \usage{
-NestedFoldIterator(Y, blockVar, balance = FALSE, bootstrap = FALSE,
+NestedFoldIterator(Y, block_var, balance = FALSE, bootstrap = FALSE,
   bootstrapMin = 2)
 }
 \arguments{
 \item{Y}{a \code{vector} of labels}
 
-\item{blockVar}{an index variable indicating the cross-validation folds.}
+\item{block_var}{an index variable indicating the cross-validation folds.}
 
 \item{balance}{try to balance each training sample so that the frequency of labels is equal across groups}
 }

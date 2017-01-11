@@ -4,7 +4,7 @@
 \alias{mvpa_crossval}
 \title{mvpa_crossval}
 \usage{
-mvpa_crossval(dataset, ROI, crossVal, model, tuneGrid = NULL,
+mvpa_crossval(dataset, ROI, crossval, model, tuneGrid = NULL,
   featureSelector = NULL, subIndices = NULL)
 }
 \arguments{
@@ -12,7 +12,7 @@ mvpa_crossval(dataset, ROI, crossVal, model, tuneGrid = NULL,
 
 \item{ROI}{a class of type \code{ROIVolume} or \code{ROISurface} contianing the training data.}
 
-\item{crossVal}{a cross-validation instance of type \code{CrossValidation}}
+\item{crossval}{a cross-validation instance of type \code{CrossValidation}}
 
 \item{model}{a \code{caret} model object}
 

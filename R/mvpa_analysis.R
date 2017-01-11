@@ -399,7 +399,7 @@ mvpa_clustered_searchlight <- function(dataset, model, crossval, nclusters = NUL
 #' @import foreach
 #' @import doParallel
 #' @import parallel
-#' @import futile.logger flog.info
+#' @importFrom futile.logger flog.info
 #' @export
 mvpa_searchlight <- function(dataset, model, crossval, radius=8, method=c("randomized", "randomized2", "standard"),  
                              niter=4, class_metrics=FALSE) {

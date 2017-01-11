@@ -54,7 +54,7 @@ train_model.model_spec <- function(obj, train_dat, y, indices, param=NULL, wts=N
     y <- as.factor(y)
   }
   
-  type - if (is.factor(y)) {
+  mtype <- if (is.factor(y)) {
     "classification"
   } else if (is.numeric(y)) {
     "regression"
@@ -71,11 +71,11 @@ train_model.model_spec <- function(obj, train_dat, y, indices, param=NULL, wts=N
   
   
   fit <- fit_model(obj, train_dat, y, wts=wts, param=param, classProbs=TRUE)
-  model_fit(obj$model, fit, param, indices, feature_mask)
+  model_fit(obj$model, y, fit, mtype, param, indices, feature_mask)
 }
 
 #' @export
-predict.model_fit <- function(x, newdata, sub_indices=NULL) {
+predict.class_model_fit <- function(x, newdata, sub_indices=NULL) {
   
   mat <- if (inherits(newdata, "BrainVector") || inherits(newdata, "BrainSurfaceVector")) {
     series(newdata, x$fit$vox_ind)
@@ -92,10 +92,10 @@ predict.model_fit <- function(x, newdata, sub_indices=NULL) {
     mat <- mat[, x$feature_mask,drop=FALSE]
   }
   
-
   probs <- x$model$prob(x$fit,mat) 
+  names(probs) <- levels(x$y)
   cpred <- max.col(probs)
-  cpred <- colnames(probs)[cpred]
+  cpred <- levels(x$y)[cpred]
   list(class=cpred, probs=probs)
 }
 
@@ -103,22 +103,31 @@ predict.model_fit <- function(x, newdata, sub_indices=NULL) {
 #' the result of a single model fit to a chunk of data
 #' 
 #' @param model the caret-style model object
+#' @param y the predictand
 #' @param fit the model fit 
 #' @param model_type the problem type: classification or regression
 #' @param param the model parameters
 #' @param vox_ind the the voxel indices indicating the data coordinates
 #' @param feature_mask a logical mask indicating the selected subset of columns
 #' @export
-model_fit <- function(model, fit, model_type=c("classification", "regression"), param, vox_ind, feature_mask=NULL) {
+model_fit <- function(model, y, fit, model_type=c("classification", "regression"), param, vox_ind, feature_mask=NULL) {
+  model_type=match.arg(model_type)
+  
   ret <- list(
     model=model,
+    y=y,
     fit=fit,
-    model_type=match.arg(model_type),
+    model_type=model_type,
     param=param,
     vox_ind=vox_ind,
     feature_mask=feature_mask)
   
-  class(ret) <- "model_fit"
+  if (model_type == "classification") {
+    
+    class(ret) <- c("class_model_fit", "model_fit")
+  } else {
+    class(ret) <- c("regression_model_fit", "model_fit")
+  }
   ret
   
 }

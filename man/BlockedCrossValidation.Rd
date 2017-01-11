@@ -4,10 +4,10 @@
 \alias{BlockedCrossValidation}
 \title{BlockedCrossValidation}
 \usage{
-BlockedCrossValidation(blockVar, balance = FALSE, bootstrap = FALSE)
+BlockedCrossValidation(block_var, balance = FALSE, bootstrap = FALSE)
 }
 \arguments{
-\item{blockVar}{an integer vector of indicating the cross-vlaidation blocks. Each block is indicating by an unique integer.}
+\item{block_var}{an integer vector of indicating the cross-validation blocks. Each block is indicating by an unique integer.}
 
 \item{balance}{logical indicating whether cross-validation blocks should automatically balanced, using undersampling if necessary.}
 

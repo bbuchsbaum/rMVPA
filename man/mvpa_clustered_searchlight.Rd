@@ -4,8 +4,8 @@
 \alias{mvpa_clustered_searchlight}
 \title{mvpa_clustered_searchlight}
 \usage{
-mvpa_clustered_searchlight(dataset, model, crossVal, nclusters = NULL,
-  classMetrics = FALSE)
+mvpa_clustered_searchlight(dataset, model, crossval, nclusters = NULL,
+  class_metrics = FALSE)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}

@@ -4,22 +4,22 @@
 \alias{mvpa_regional}
 \title{mvpa_regional}
 \usage{
-mvpa_regional(dataset, model, regionMask,
-  crossVal = KFoldCrossValidation(length(dataset$Y)),
-  savePredictors = FALSE, featureSelector = NULL, classMetrics = FALSE)
+mvpa_regional(dataset, model, region_mask,
+  crossval = KFoldCrossValidation(length(dataset$Y)),
+  savePredictors = FALSE, featureSelector = NULL, class_metrics = FALSE)
 }
 \arguments{
 \item{dataset}{a \code{MVPADataset} instance.}
 
 \item{model}{a \code{BaseModel} instance usually of type \code{CaretModelWrapper}}
 
-\item{regionMask}{a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.}
+\item{region_mask}{a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.}
 
 \item{savePredictors}{whether to return prediction model in result (default is \code{FALSE} to save memory)}
 
 \item{featureSelector}{an option \code{FeatureSelector} object that is used to subselect informative voxels in feature space.}
 
-\item{classMetrics}{}
+\item{class_metrics}{}
 }
 \value{
 a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)

@@ -41,10 +41,10 @@ print.data_sample <- function(x, ...) {
 #' @export
 as_roi.data_sample <- function(x, ...) {
  
-  train_mat <- series(x$data$train_data, x$vox)
+  train_roi <- series_roi(x$data$train_data, x$vox)
   
-  test_mat <- if (has_test_set(x$data)) {
-    series(x$data$test_data, x$vox)
+  test_roi <- if (has_test_set(x$data)) {
+    series_roi(x$data$test_data, x$vox)
   }
   
   cds <- if (is.vector(x$vox)) {
@@ -53,12 +53,12 @@ as_roi.data_sample <- function(x, ...) {
     x$vox
   }
 
-  if (is.null(test_mat)) {
-    list(train_roi=neuroim::ROIVolume(space(x$data$mask), cds, data=train_mat),
+  if (is.null(test_roi)) {
+    list(train_roi=train_roi,
          test_roi=NULL)
   } else {
-    list(train_roi=neuroim::ROIVolume(space(x$data$mask), cds, data=train_mat),
-        test_roi=neuroim::ROIVolume(space(x$data$mask), cds, data=test_mat))
+    list(train_roi=train_roi,
+         test_roi=test_roi)
   }
   
   

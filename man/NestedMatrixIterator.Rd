@@ -4,7 +4,7 @@
 \alias{NestedMatrixIterator}
 \title{NestedMatrixIterator}
 \usage{
-NestedMatrixIterator(X, Y, blockVar, balance = FALSE, bootstrap = FALSE,
+NestedMatrixIterator(X, Y, block_var, balance = FALSE, bootstrap = FALSE,
   bootstrapMin = 2)
 }
 \arguments{
