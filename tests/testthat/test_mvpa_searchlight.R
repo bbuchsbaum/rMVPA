@@ -233,7 +233,7 @@ test_that("searchlight with modelr approach", {
   mspec <- model_spec(model,crossval=cval, tune_grid=tgrid)
   
   vox_iter <- lapply(neuroim::RandomSearchlight(dataset$mask, 3), function(x) x)
-  sam <- get_samples(dataset, voxiter)
+  sam <- get_samples(dataset, vox_iter)
   sam %>% rowwise() %>% do(as.data.frame(.$sample))
 
 })
