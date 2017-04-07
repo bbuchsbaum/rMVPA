@@ -68,7 +68,7 @@ crossv_block <- function(data, y, block_var, id = ".id", exclude_block=NULL) {
 
 
 
-#' BlockedCrossValidation
+#' blocked_cross_validation
 #' 
 #' construct a cross-validation specification using a predefined blocking variable
 #' 
@@ -76,9 +76,9 @@ crossv_block <- function(data, y, block_var, id = ".id", exclude_block=NULL) {
 #' @param balance logical indicating whether cross-validation blocks should automatically balanced, using undersampling if necessary.
 #' @param bootstrap logical indicating whether training samples should be sampled with replacement.
 #' @export
-BlockedCrossValidation <- function(block_var, balance=FALSE, bootstrap=FALSE) {
+blocked_cross_validation <- function(block_var, balance=FALSE, bootstrap=FALSE) {
   ret <- list(block_var=block_var, balance=balance, bootstrap=bootstrap, nfolds=length(unique(block_var)))
-  class(ret) <- c("BlockedCrossValidation", "CrossValidation", "list")
+  class(ret) <- c("blocked_cross_validation", "CrossValidation", "list")
   ret
 }
 
@@ -106,7 +106,7 @@ crossval_samples.KFoldCrossValidation <- function(obj, data,y) {
   crossv_k(data, y, obj$nfolds)
 }
 
-crossval_samples.BlockedCrossValidation <- function(obj, data, y, exclude_block=NULL) { 
+crossval_samples.blocked_cross_validation <- function(obj, data, y, exclude_block=NULL) { 
   crossv_block(data, y, obj$block_var, exclude_block=exclude_block)
 }
 

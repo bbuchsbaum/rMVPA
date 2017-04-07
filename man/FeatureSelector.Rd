@@ -2,8 +2,7 @@
 % Please edit documentation in R/featureSelection.R
 \name{FeatureSelector}
 \alias{FeatureSelector}
-\title{FeatureSelector
-Creates a feature selection specification}
+\title{FeatureSelector}
 \usage{
 FeatureSelector(method, cutoff_type, cutoff_value)
 }
@@ -18,7 +17,6 @@ FeatureSelector(method, cutoff_type, cutoff_value)
 a list with class name equal to the \code{method} arguments
 }
 \description{
-FeatureSelector
 Creates a feature selection specification
 }
 \details{

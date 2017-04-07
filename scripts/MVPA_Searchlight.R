@@ -99,7 +99,7 @@ model <- loadModel(config$model, list(tuneGrid=config$tune_grid, custom_performa
 cl <- makeCluster(config$pthreads, outfile="",useXDR=FALSE, type="FORK")
 registerDoParallel(cl)
 
-crossVal <- BlockedCrossValidation(dataset$blockVar, balance=config$autobalance)
+crossVal <- blocked_cross_validation(dataset$blockVar, balance=config$autobalance)
 
 if (config$type %in% c("standard", "randomized", "randomized2")) {
   flog.info("searchlight type: ", config$type)

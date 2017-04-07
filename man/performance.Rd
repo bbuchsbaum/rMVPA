@@ -10,6 +10,6 @@ performance(x, ...)
 \item{x}{the result to evaluate performance of}
 }
 \description{
-Compute performance metrics from a classiifcation result
+Compute performance metrics from a classification/regression result
 }
 

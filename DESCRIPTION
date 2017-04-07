@@ -33,7 +33,6 @@ Imports:
 Collate:
     'allgeneric.R'
     'classifiers.R'
-    'cluster.R'
     'mvpa_model.R'
     'common.R'
     'dataset.R'

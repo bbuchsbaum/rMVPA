@@ -30,6 +30,7 @@ fit_model.model_spec <- function(obj, x, y, wts, param, classProbs, ...) {
    obj$model$fit(x,y,wts=wts,param=param,classProbs=classProbs, ...)
 }
 
+#' @export
 crossval_samples.model_spec <- function(obj) { crossval_samples(obj$crossval) }
 
 
@@ -41,7 +42,7 @@ crossval_samples.model_spec <- function(obj) { crossval_samples(obj$crossval) }
 #' @param train_dat training data, and instance of class \code{ROIVolume} or \code{ROISurface}
 #' @param y the dependent variable
 #' @param indices the spatial indices associated with each column
-#' @param
+#' @param param
 #' @param wts
 #' @export
 train_model.model_spec <- function(obj, train_dat, y, indices, param=NULL, wts=NULL) {
@@ -133,28 +134,34 @@ model_fit <- function(model, y, fit, model_type=c("classification", "regression"
 }
 
 #' @param model
+#' @param model_type
 #' @param crossval
 #' @param feature_selector
 #' @param tune_grid
 #' @param custom_performance
 #' @export
-model_spec <- function(model, crossval, feature_selector=NULL, tune_grid=NULL, custom_performance=NULL) {
+model_spec <- function(model, model_type=c("classification", "regression"), 
+                       crossval, 
+                       feature_selector=NULL, tune_grid=NULL, 
+                       custom_performance=NULL, split_groups=NULL) {
   
   if (!is.null(custom_performance)) {
     assert_that(is.function(custom_performance)) 
   }
   
+  model_type <- match.arg(model_type)
+  
   ret <- list(model=model,
+              model_type=model_type,
        model_name=model$label,
        tune_grid=tune_grid,
        feature_selector=feature_selector,
        crossval=crossval,
-       custom_performance=custom_performance)
+       custom_performance=custom_performance,
+       split_groups=split_groups)
   
   class(ret) <- "model_spec"
   ret
   
 }
 
-
-#mvpa_crossval <- function()

@@ -83,7 +83,7 @@ innerIteration <- function(dataset, vox, trainInd, testInd, model, tuneGrid, aut
   ## do we need to compute final pedictor?
   res <- try(crossval_internal(foldIterator, model, tuneGrid, returnPredictor=TRUE, featureSelector=NULL))
   
-  structure(classificationResult(Ytrain, res$class, res$probs, res$predictor),
+  structure(classification_result(Ytrain, res$class, res$probs, res$predictor),
             vox=vox)
   
 }
@@ -98,7 +98,7 @@ mvpa_regional_consensus <- function(dataset, model, regionMask, autobalance=FALS
   }
   
   method <- match.arg(method)
-  crossVal <- BlockedCrossValidation(dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
+  crossVal <- blocked_cross_validation(dataset$blockVar, balance=autobalance, bootstrap=bootstrap)
   
   lookupMetaLearner <- function(method) {
     switch(method,
@@ -172,7 +172,7 @@ mvpa_regional_consensus <- function(dataset, model, regionMask, autobalance=FALS
   predclass <- colnames(prob)[maxid]
   
   finalPredictor <- WeightedPredictor(lapply(ensembleSet, "[[", "predictor"))
-  result <- classificationResult(dataset$Y, predclass, prob=prob, predictor=finalPredictor)
+  result <- classification_result(dataset$Y, predclass, prob=prob, predictor=finalPredictor)
 
   list(result=result, weights=finalWeights)
 
@@ -227,9 +227,9 @@ consensusWeights.ClassificationResultSet <- function(x, method=c("greedy", "glmn
   
   result <- if (!is.null(x$resultList[[1]]$predictor)) {
     predictor <- WeightedPredictor(lapply(x$resultList, "[[", "pred"), weights=finalWeights)
-    classificationResult(observed, predclass, prob=prob[ind,], predictor=predictor)
+    classification_result(observed, predclass, prob=prob[ind,], predictor=predictor)
   } else {
-    classificationResult(observed, predclass, prob=prob[ind,])
+    classification_result(observed, predclass, prob=prob[ind,])
     predictor <- NULL
   }
   
@@ -390,7 +390,7 @@ metaCombine <- function(dataset, resultList, fold, pruneFrac=1, metaLearner="spl
   ## need a MetaPredicotr class
   
   
-  result <- classificationResult(fold$Ytest, pfinal$class, pfinal$probs)
+  result <- classification_result(fold$Ytest, pfinal$class, pfinal$probs)
   
   ## may fail if we purge data from pls models.
   #vimp <- caret::varImp(modelFit$modelFit)$importance
@@ -437,7 +437,7 @@ ensembleIteration <- function(searchIter, dataset, fold, modelspec, autobalance=
       cvres <- innerIteration(dataset, vox, fold$trainIndex, fold$testIndex, modelspec$model, modelspec$tuneGrid, autobalance, bootstrap)
       param_names=names(modelspec$tuneGrid)
       if (!inherits(cvres, "try-error")) {    
-        cvres <- structure(classificationResult(Ytrain, cvres$predicted, cvres$probs, cvres$predictor),
+        cvres <- structure(classification_result(Ytrain, cvres$predicted, cvres$probs, cvres$predictor),
           vox=vox,
           nvox=nrow(vox),
           modelname=modelspec$model$name,
@@ -466,9 +466,9 @@ mergeEnsembles <- function(ensembleSet, testOrder, returnPredictor=FALSE) {
   if (returnPredictor) {
     ## predictor equally weights each ensemble
     predictor <- WeightedPredictor(lapply(ensembleSet, function(x) x$result$predictor))
-    classificationResult(observed, predicted, probs, predictor)
+    classification_result(observed, predicted, probs, predictor)
   } else {
-    classificationResult(observed, predicted, probs)
+    classification_result(observed, predicted, probs)
   }
   
 }                 
@@ -598,7 +598,7 @@ mvpa_searchlight_ensemble <- function(modelSet=superLearners, dataset, mask, rad
   testInd <- unlist(blockIterator$getTestSets())
   pclass <- unlist(lapply(allres, function(x) x$preds$class))[testInd]
   prob <- do.call(rbind, lapply(allres, function(x) x$preds$prob))[testInd,]
-  result <- classificationResult(dataset$Y, pclass, prob)
+  result <- classification_result(dataset$Y, pclass, prob)
   
   weightvol <- Reduce("+", lapply(allres, function(x) x$weightvol))/length(allres)
   

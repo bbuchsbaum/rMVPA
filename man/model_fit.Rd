@@ -4,11 +4,13 @@
 \alias{model_fit}
 \title{the result of a single model fit to a chunk of data}
 \usage{
-model_fit(model, fit, model_type = c("classification", "regression"), param,
-  vox_ind, feature_mask = NULL)
+model_fit(model, y, fit, model_type = c("classification", "regression"),
+  param, vox_ind, feature_mask = NULL)
 }
 \arguments{
 \item{model}{the caret-style model object}
+
+\item{y}{the predictand}
 
 \item{fit}{the model fit}
 

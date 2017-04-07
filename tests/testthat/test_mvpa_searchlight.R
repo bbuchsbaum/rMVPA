@@ -88,7 +88,7 @@ gen_dataset_with_test <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5, s
 test_that("standard mvpa_searchlight runs without error", {
   
   dataset <- gen_dataset(c(5,5,1), 100, 2)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL))
   res <- mvpa_searchlight(dataset, model, crossVal, radius=3, method="standard")
   
@@ -97,7 +97,7 @@ test_that("standard mvpa_searchlight runs without error", {
 test_that("standard surface-based mvpa_searchlight runs without error", {
   
   dataset <- gen_surface_dataset(100, 6)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL))
   res <- mvpa_searchlight(dataset, model, crossVal, radius=3, method="standard")
   
@@ -106,7 +106,7 @@ test_that("standard surface-based mvpa_searchlight runs without error", {
 test_that("randomized surface-based mvpa_searchlight runs without error", {
   
   dataset <- gen_surface_dataset(100, 12)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL))
   res <- mvpa_searchlight(dataset, model, crossVal, radius=7, method="randomized")
   
@@ -115,7 +115,7 @@ test_that("randomized surface-based mvpa_searchlight runs without error", {
 test_that("randomized mvpa_searchlight runs without error", {
   
   dataset <- gen_dataset(c(5,5,1), 100, 2)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL))
   res <- mvpa_searchlight(dataset, model, crossVal, radius=4, method="randomized")
   
@@ -124,7 +124,7 @@ test_that("randomized mvpa_searchlight runs without error", {
 test_that("randomized2 mvpa_searchlight runs without error", {
   
   dataset <- gen_dataset(c(15,15,5), 100, 2)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL))
   res <- mvpa_searchlight(dataset, model, crossVal, niter=8, radius=6, method="randomized2")
   
@@ -133,7 +133,7 @@ test_that("randomized2 mvpa_searchlight runs without error", {
 test_that("clustered mvpa_searchlight runs without error", {
   
   dataset <- gen_dataset(c(5,5,1), 100, 2)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL))
   res <- mvpa_clustered_searchlight(dataset, model, crossVal, nclusters=c(2,3,4))
   
@@ -151,7 +151,7 @@ test_that("randomized mvpa_searchlight runs with custom_performance", {
   }
   
   dataset <- gen_dataset(c(5,5,1), 100, 2)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   model <- loadModel("sda_notune", list(tuneGrid=NULL, custom_performance=custom))
   res <- mvpa_searchlight(dataset, model, crossVal, radius=3, method="randomized")
   
@@ -160,7 +160,7 @@ test_that("randomized mvpa_searchlight runs with custom_performance", {
 test_that("standard mvpa_searchlight and tune_grid runs without error", {
   
   dataset <- gen_dataset(c(2,2,1), 50, 2, folds=3)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   tuneGrid <- expand.grid(lambda=c(.1,.8), diagonal=c(TRUE))
   model <- loadModel("sda", list(tuneGrid=tuneGrid))
   
@@ -171,7 +171,7 @@ test_that("standard mvpa_searchlight and tune_grid runs without error", {
 test_that("standard mvpa_searchlight and tune_grid with two-fold cross-validation runs without error", {
   
   dataset <- gen_dataset(c(2,2,1), 50, 2, folds=2)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   
   tuneGrid <- expand.grid(lambda=c(.1,.8), diagonal=c(TRUE))
   model <- loadModel("sda", list(tuneGrid=tuneGrid))
@@ -182,7 +182,7 @@ test_that("standard mvpa_searchlight and tune_grid with two-fold cross-validatio
 test_that("randomized mvpa_searchlight and tune_grid runs without error", {
   
   dataset <- gen_dataset(c(2,2,1), 100, 2, folds=3)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   tuneGrid <- expand.grid(lambda=c(.1,.8), diagonal=c(TRUE))
   model <- loadModel("sda", list(tuneGrid=tuneGrid))
   
@@ -193,7 +193,7 @@ test_that("randomized mvpa_searchlight and tune_grid runs without error", {
 test_that("randomized mvpa_searchlight works with regression", {
   
   dataset <- gen_regression_dataset(c(4,4,4), 100, folds=3)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   tuneGrid <- expand.grid(alpha=.5, lambda=c(.1,.2,32))
   model <- loadModel("glmnet", list(tuneGrid=tuneGrid))
   
@@ -204,7 +204,7 @@ test_that("randomized mvpa_searchlight works with regression", {
 test_that("mvpa_searchlight works with testset", {
   
   dataset <- gen_dataset_with_test(c(4,4,4), 100, 3, folds=3)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   tuneGrid <- expand.grid(alpha=.5, lambda=c(.1,.2,32))
   model <- loadModel("glmnet", list(tuneGrid=tuneGrid))
   
@@ -215,7 +215,7 @@ test_that("mvpa_searchlight works with testset", {
 test_that("mvpa_searchlight works with testset and split_var", {
   
   dataset <- gen_dataset_with_test(c(4,4,4), 100, 3, folds=3, splitvar=TRUE)
-  crossVal <- BlockedCrossValidation(dataset$blockVar)
+  crossVal <- blocked_cross_validation(dataset$blockVar)
   tuneGrid <- expand.grid(alpha=.5, lambda=c(.1))
   model <- loadModel("glmnet", list(tuneGrid=tuneGrid))
   
@@ -228,9 +228,9 @@ test_that("searchlight with modelr approach", {
   dataset <- gen_new_dataset(c(5,5,5), 100, 3, folds=5)
   model <- loadModel("glmnet")$model
   
-  cval <- BlockedCrossValidation(rep(1:10, each=10))
+  cval <- blocked_cross_validation(rep(1:10, each=10))
   tgrid <- expand.grid(alpha=seq(0,1, by=.1), lambda=c(.01,.001))
-  mspec <- model_spec(model,crossval=cval, tune_grid=tgrid)
+  mspec <- model_spec(model, model_type="classification", crossval=cval, tune_grid=tgrid)
   
   vox_iter <- lapply(neuroim::RandomSearchlight(dataset$mask, 3), function(x) x)
   sam <- get_samples(dataset, vox_iter)

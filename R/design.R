@@ -1,7 +1,7 @@
 
 #' @export
 has_test_set.mvpa_design <- function(obj) {
-  !is.null(obj$testY) 
+  !is.null(obj$y_test) 
 }
 
 y_train.mvpa_design <- function(obj) obj$y_train
@@ -24,25 +24,4 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   des
 }
 
-# 
-# #' @import formula.tools
-# mvpa_external_design <-
-#   function(Y,
-#            train_design,
-#            Ytest,
-#            test_design,
-#            block_var,
-#            split_formula = NULL) {
-#     des <- list(
-#       Y = Y,
-#       train_design = train_design,
-#       Ytest = Ytest,
-#       test_design = train_design,
-#       split_formula = split_formula,
-#       block_var = block_var
-#     )
-#     
-#     class(des, "mvpa_external_design", "mvpa_design")
-#     des
-#   }
 

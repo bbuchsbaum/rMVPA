@@ -38,12 +38,12 @@ SimilarityResult <- function(corMat, avgContrast, sdContrast) {
 }
 
 
-#' create an \code{TwoWayClassification} instance
+#' create an \code{binary_classification_result} instance
 #' @param observed
 #' @param predicted
 #' @param probs
 #' @export
-TwoWayClassificationResult <- function(observed, predicted, probs, testDesign, predictor=NULL) {
+binary_classification_result <- function(observed, predicted, probs, testDesign, predictor=NULL) {
   ret <- list(
               observed=observed,
               predicted=predicted,
@@ -52,7 +52,7 @@ TwoWayClassificationResult <- function(observed, predicted, probs, testDesign, p
               predictor=predictor
               )
   
-  class(ret) <- c("TwoWayClassificationResult", "ClassificationResult", "list")
+  class(ret) <- c("binary_classification_result", "classification_result", "list")
   ret
 }
 
@@ -64,7 +64,7 @@ subResult <- function(x, indices) {
 
 
 #' @export
-subResult.MultiWayClassificationResult <- function(x, indices) {
+subResult.multiway_classification_result <- function(x, indices) {
   ret <- list(
     observed=x$observed[indices],
     predicted=x$predicted[indices],
@@ -72,12 +72,12 @@ subResult.MultiWayClassificationResult <- function(x, indices) {
     testDesign=x$testDesign[indices,],
     predictor=NULL)
   
-  class(ret) <- c("MultiWayClassificationResult", "ClassificationResult", "list")
+  class(ret) <- c("multiway_classification_result", "classification_result", "list")
   ret
 }
 
 #' @export
-subResult.TwoWayClassificationResult <- function(x, indices) {
+subResult.binary_classification_result <- function(x, indices) {
   ret <- list(
     observed=x$observed[indices],
     predicted=x$predicted[indices],
@@ -85,18 +85,18 @@ subResult.TwoWayClassificationResult <- function(x, indices) {
     testDesign=x$testDesign[indices,],
     predictor=NULL)
   
-  class(ret) <- c("TwoWayClassificationResult", "ClassificationResult", "list")
+  class(ret) <- c("binary_classification_result", "classification_result", "list")
   ret
 }
 
 
-#' create an \code{MultiWayClassification} instance
+#' create an \code{multiway_classification_result} instance
 #' 
 #' @param observed
 #' @param predicted
 #' @param probs
 #' @export
-MultiWayClassificationResult <- function(observed, predicted, probs,  testDesign=NULL, predictor=NULL) {
+multiway_classification_result <- function(observed, predicted, probs,  testDesign=NULL, predictor=NULL) {
   ret <- list(
               observed=observed,
               predicted=predicted,
@@ -104,30 +104,30 @@ MultiWayClassificationResult <- function(observed, predicted, probs,  testDesign
               testDesign=testDesign,
               predictor=predictor)
   
-  class(ret) <- c("MultiWayClassificationResult", "ClassificationResult", "list")
+  class(ret) <- c("multiway_classification_result", "classification_result", "list")
   ret
 }
 
-RegressionResult <- function(observed, predicted, testDesign=NULL, predictor=NULL) {
+regression_result <- function(observed, predicted, testDesign=NULL, predictor=NULL) {
   ret <- list(
     observed=observed,
     predicted=predicted,
     testDesign=testDesign,
     predictor=predictor)
-  class(ret) <- c("RegressionResult", "ClassificationResult", "list")
+  class(ret) <- c("regression_result", "classification_result", "list")
   ret
 }
   
 
 
 #' @export
-classificationResult <- function(observed, predicted, probs, testDesign=NULL,predictor=NULL) {
+classification_result <- function(observed, predicted, probs, testDesign=NULL,predictor=NULL) {
   if (is.numeric(observed)) {
-    RegressionResult(observed, predicted, testDesign, predictor)
+    regression_result(observed, predicted, testDesign, predictor)
   } else if (length(levels(as.factor(observed))) == 2) {
-    TwoWayClassificationResult(observed, predicted, probs,  testDesign, predictor)
+    binary_classification_result(observed, predicted, probs,  testDesign, predictor)
   } else if (length(levels(as.factor(observed))) > 2) {
-    MultiWayClassificationResult(observed,predicted, probs, testDesign, predictor)
+    multiway_classification_result(observed,predicted, probs, testDesign, predictor)
   } else {
     stop("observed data must be a factor with 2 or more levels")
   }

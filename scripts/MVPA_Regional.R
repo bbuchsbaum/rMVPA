@@ -229,7 +229,7 @@ for (roinum in seq_along(config$ROIVolume)) {
   roivol <- config$ROIVolume[[roinum]]
  
   ## need to handle bootstrap reps
-  crossVal <- BlockedCrossValidation(dataset$blockVar, balance=config$autobalance)
+  crossVal <- blocked_cross_validation(dataset$blockVar, balance=config$autobalance)
   
   mvpa_res <- mvpa_regional(dataset, model, roivol, crossVal, config$savePredictors, 
                             featureSelector=featureSelector, classMetrics=config$output_class_metrics)
