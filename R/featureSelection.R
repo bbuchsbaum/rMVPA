@@ -25,6 +25,7 @@ matrixAnova <- function(Y, mat) {
 
 
 #' FeatureSelector
+#' 
 #' Creates a feature selection specification
 #' @param method the type of feature selection
 #' @param cutoff_type the type of threshold used to select features.
