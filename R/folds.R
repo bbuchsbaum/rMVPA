@@ -70,9 +70,9 @@ crossv_block <- function(data, y, block_var, id = ".id", exclude_block=NULL) {
 
 #' BlockedCrossValidation
 #' 
-#' construct a cross-validation specification
+#' construct a cross-validation specification using a predefined blocking variable
 #' 
-#' @param block_var an integer vector of indicating the cross-validation blocks. Each block is indicating by an unique integer.
+#' @param block_var an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.
 #' @param balance logical indicating whether cross-validation blocks should automatically balanced, using undersampling if necessary.
 #' @param bootstrap logical indicating whether training samples should be sampled with replacement.
 #' @export
