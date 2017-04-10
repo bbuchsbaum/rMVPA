@@ -201,7 +201,7 @@ model_fit <- function(model, y, fit, model_type=c("classification", "regression"
 model_spec <- function(model, model_type=c("classification", "regression"), 
                        crossval, 
                        feature_selector=NULL, tune_grid=NULL, 
-                       custom_performance=NULL, split_groups=NULL) {
+                       custom_performance=NULL) {
   
   if (!is.null(custom_performance)) {
     assert_that(is.function(custom_performance)) 
@@ -211,12 +211,11 @@ model_spec <- function(model, model_type=c("classification", "regression"),
   
   ret <- list(model=model,
               model_type=model_type,
-       model_name=model$label,
-       tune_grid=tune_grid,
-       feature_selector=feature_selector,
-       crossval=crossval,
-       custom_performance=custom_performance,
-       split_groups=split_groups)
+              model_name=model$label,
+              tune_grid=tune_grid,
+              feature_selector=feature_selector,
+              crossval=crossval,
+              custom_performance=custom_performance)
   
   class(ret) <- "model_spec"
   ret
