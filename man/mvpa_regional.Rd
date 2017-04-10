@@ -5,7 +5,7 @@
 \title{mvpa_regional}
 \usage{
 mvpa_regional(dataset, model, region_mask,
-  crossval = KFoldCrossValidation(length(dataset$Y)),
+  crossval = kfold_cross_validation(length(dataset$Y)),
   savePredictors = FALSE, featureSelector = NULL, class_metrics = FALSE)
 }
 \arguments{

@@ -1,3 +1,27 @@
+
+mclass_summary <- function (data, lev = NULL, model = NULL) {
+  if (!all(levels(data[, "pred"]) == levels(data[, "obs"]))) 
+    stop("levels of observed and predicted data do not match")
+  has_class_probs <- all(lev %in% colnames(data))
+  
+  if (has_class_probs) {
+    caret:::requireNamespaceQuietStop("ModelMetrics")
+    prob_stats <- lapply(levels(data[, "pred"]), function(x) {
+      obs <- ifelse(data[, "obs"] == x, 1, 0)
+      prob <- data[, x]
+      AUCs <- try(ModelMetrics::auc(obs, data[, x]), silent = TRUE)
+      return(AUCs)
+    })
+    roc <- mean(unlist(prob_stats))
+  } else {
+    stop("Cannot compute AUC. Class probabilities unavailable for model: ", model)
+  }
+  
+  c(AUC=roc)
+}
+
+
+
 #' @export
 load_libs.caret_model_wrapper <- function(x) {
   for (lib in x$model$library) {
@@ -25,18 +49,37 @@ select_features.model_spec <- function(obj, roi, Y) {
   }
 }
 
-#' @export
-fit_model.model_spec <- function(obj, x, y, wts, param, classProbs, ...) {
-   obj$model$fit(x,y,wts=wts,param=param,classProbs=classProbs, ...)
-}
 
 #' @export
 crossval_samples.model_spec <- function(obj) { crossval_samples(obj$crossval) }
 
-
-#tune_model.model_spec <- function(obj, roi_train, Ytrain, blocking_var=NULL) {
-#}
+get_control <- function(y, nreps) {
+  if (is.factor(y) && length(levels(y)) == 2) {
+    ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE, summaryFunction=caret::twoClassSummary)
+    metric <- "AUC"
+  } else if (is.factor(y) && length(levels(y)) > 2) {
+    ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE, summaryFunction=mclass_summary)
+    metric <- "AUC"
+  } else {
+    ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE)
+    metric = "RMSE"
+  }
   
+  list(ctrl=ctrl, metric=metric)
+}
+
+tune_model <- function(mspec, x, y, wts, param, nreps=2) {
+  ctrl <- get_control(y, nreps)
+  cfit <-caret::train(as.data.frame(x), y, method=mspec$model, weights=wts, metric=ctrl$metric, trControl=ctrl$ctrl, tuneGrid=param)
+  cfit$bestTune
+}
+
+#' @export
+fit_model.model_spec <- function(obj, x, y, wts, param, classProbs, ...) {
+  obj$model$fit(x,y,wts=wts,param=param,classProbs=classProbs, ...)
+}
+
+
 
 #' train_model
 #' 
@@ -48,14 +91,33 @@ crossval_samples.model_spec <- function(obj) { crossval_samples(obj$crossval) }
 #' @param wts
 #' @export
 train_model.model_spec <- function(obj, train_dat, y, indices, param=NULL, wts=NULL) {
- 
+  
   if (is.null(param)) {
-    param <- tune_grid(obj)[1,]
+    param <- tune_grid(obj)
   }
   
   if (is.character(y)) {
     y <- as.factor(y)
   }
+  
+  
+  ## feature selection
+  if (!is.null(obj$feature_selector)) {
+    feature_mask <- select_features(obj, train_dat, y)
+    train_dat <- train_dat[,feature_mask]
+  } else {
+    feature_mask <- rep(TRUE, ncol(train_dat))
+  }
+  
+  
+  ## parameter_tuning
+  best_param <- if (!is.vector(param) && !is.null(nrow(param)) && nrow(param) > 1) {
+    tune_model(obj, train_dat[, feature_mask], y, wts, param)
+  } else {
+    param
+  }
+  
+  print(best_param)
   
   mtype <- if (is.factor(y)) {
     "classification"
@@ -65,16 +127,10 @@ train_model.model_spec <- function(obj, train_dat, y, indices, param=NULL, wts=N
     stop("'y' must be a numeric vector or factor")
   }
   
-  if (!is.null(obj$feature_selector)) {
-    feature_mask <- select_features(obj, train_dat, y)
-    train_dat <- train_dat[,feature_mask]
-  } else {
-    feature_mask <- rep(TRUE, ncol(train_dat))
-  }
+
   
-  
-  fit <- fit_model(obj, train_dat, y, wts=wts, param=param, classProbs=TRUE)
-  model_fit(obj$model, y, fit, mtype, param, indices, feature_mask)
+  fit <- fit_model(obj, train_dat, y, wts=wts, param=best_param, classProbs=TRUE)
+  model_fit(obj$model, y, fit, mtype, best_param, indices, feature_mask)
 }
 
 #' @export

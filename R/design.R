@@ -6,7 +6,7 @@ has_test_set.mvpa_design <- function(obj) {
 
 y_train.mvpa_design <- function(obj) obj$y_train
 
-y_test.mvpa_design <- function(obj) obj$y_test
+y_test.mvpa_design <- function(obj) if (is.null(obj$y_test)) obj$y_train else obj$ytest
 
 
 #' @export

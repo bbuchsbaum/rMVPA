@@ -12,6 +12,6 @@ merge_results(x, y, ...)
 \item{y}{the second result}
 }
 \description{
-merge two classiifcation results
+merge two classification results
 }
 

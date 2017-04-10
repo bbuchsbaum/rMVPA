@@ -16,6 +16,9 @@ train_model <- function(obj,...) {
 }
 
 
+
+
+
 #' y_train
 #' 
 #' @export
@@ -112,5 +115,13 @@ as_roi <- function(obj,...) {
 get_searchlight <- function(obj, ...) {
   UseMethod("get_searchlight")
 }
+
+
+#' wrap_output
+#' 
+wrap_output <- function(obj, vals, ...) {
+  UseMethod("wrap_output")
+}
+
 
 

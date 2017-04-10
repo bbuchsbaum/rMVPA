@@ -1,11 +1,7 @@
 
 wrap_result <- function(result_table, dataset, predictor=NULL) {
   print(nrow(result_table))
-  observed <- if (is.null(dataset$test_data)) {
-    dataset$design$y_train
-  } else {
-    dataset$design$y_test
-  }
+  observed <- y_test(dataset)
   
   if (is.factor(observed)) {
     prob <- matrix(0, length(observed), length(levels(observed)))
@@ -40,7 +36,6 @@ wrap_result <- function(result_table, dataset, predictor=NULL) {
 #' 
 internal_crossval <- function(dset, roi, mspec, id, keep_predictor) {
   print(id)
-  param <- mspec$tune_grid[1,]
   
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(dset))
   ind <- indices(roi$train_roi)
@@ -49,8 +44,8 @@ internal_crossval <- function(dset, roi, mspec, id, keep_predictor) {
     if (ncol(.$train) < 2) {
       data.frame()
     } else {
-      result <- train_model(mspec, as_data_frame(.$train), .$ytrain, indices=ind, param=param)
-      pred <- predict(result, as_data_frame(.$test), NULL)
+      result <- train_model(mspec, tibble::as_tibble(.$train), .$ytrain, indices=ind, param=mspec$tune_grid)
+      pred <- predict(result, tibble::as_tibble(.$test), NULL)
       plist <- lapply(pred, list)
       plist$y_true <- list(.$ytest)
       plist$test_ind=list(as.integer(.$test))

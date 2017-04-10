@@ -1,5 +1,12 @@
 
 
+
+wrap_out <- function(perf_mat, dataset, ids) {
+  out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids))
+  names(out) <- colnames(perf_mat)
+  out
+}
+
 do_randomized <- function(dataset, model_spec, radius, niter) {
   ret <- foreach (i = 1:niter) %dopar% {
     slight <- get_searchlight(dataset, "randomized", radius)
@@ -12,20 +19,21 @@ do_randomized <- function(dataset, model_spec, radius, niter) {
   
   all_ind <- sort(unlist(results$indices))
   ind_set <- unique(all_ind)
+  ind_count <- table(all_ind)
   
   ncols <- length(results$performance[[1]])
-  omat <- Matrix::sparseMatrix(i=rep(ind_set, each=ncols), j=rep(1:ncols, length(ind_set)), 
+  perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, each=ncols), j=rep(1:ncols, length(ind_set)), 
                                x=rep(0, length(ind_set)*ncols), dims=c(length(ind_set), ncols))
   
   for (i in 1:nrow(results)) {
-    print(i)
     ind <- results$indices[[i]]
     m <- kronecker(matrix(results$performance[[i]], 1, ncols), rep(1,length(ind)))
-    omat[ind,] <- omat[ind,] + m
+    perf_mat[ind,] <- perf_mat[ind,] + m
   }
   
-  colnames(omat) <- names(results$performance[[1]])
-  list(indices=ind_set, result_mat=omat)
+  perf_mat[ind_set,] <- sweep(perf_mat[ind_set,], 1, as.integer(ind_count), FUN="/")
+  colnames(perf_mat) <- names(results$performance[[1]])
+  wrap_out(perf_mat, dataset, ind_set)
     
 }
 
@@ -36,6 +44,8 @@ do_standard <- function(dataset, model_spec, radius) {
   len <- sapply(vox_iter, length)
   cind <- sapply(vox_iter, attr, "center.index")
   ret <- mvpa_iterate(dataset, vox_iter, model_spec, cind)
+  perf_mat <- ret %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
+  wrap_out(perf_mat, dataset, ret[["id"]])
 }
 
 
@@ -66,9 +76,9 @@ run_searchlight <- function(dataset, model_spec, radius=8, method=c("randomized"
   flog.info("model is: %s", model$model_name)
   
   res <- if (method == "standard") {
-    do_standard(dataset, model, radius)    
+    do_standard(dataset, model_spec, radius)    
   } else if (method == "randomized") {
-    do_randomized(dataset, model, radius, niter)
+    do_randomized(dataset, model_spec, radius, niter)
   } 
   
 }
