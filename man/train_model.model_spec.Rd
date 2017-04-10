@@ -2,6 +2,7 @@
 % Please edit documentation in R/model_spec.R
 \name{train_model.model_spec}
 \alias{train_model.model_spec}
+\title{train_model}
 \usage{
 \method{train_model}{model_spec}(obj, train_dat, y, indices, param = NULL,
   wts = NULL)
@@ -14,5 +15,8 @@
 \item{y}{the dependent variable}
 
 \item{indices}{the spatial indices associated with each column}
+}
+\description{
+train_model
 }
 

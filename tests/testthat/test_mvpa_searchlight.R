@@ -229,12 +229,9 @@ test_that("searchlight with modelr approach", {
   model <- loadModel("glmnet")$model
   
   cval <- blocked_cross_validation(rep(1:10, each=10))
-  tgrid <- expand.grid(alpha=seq(0,1, by=.1), lambda=c(.01,.001))
+  tgrid <- model$grid(x=matrix(rnorm(100*80), 100, 80), y=dataset$design$y_train, 3)
   mspec <- model_spec(model, model_type="classification", crossval=cval, tune_grid=tgrid)
-  
-  vox_iter <- lapply(neuroim::RandomSearchlight(dataset$mask, 3), function(x) x)
-  sam <- get_samples(dataset, vox_iter)
-  sam %>% rowwise() %>% do(as.data.frame(.$sample))
+  res <- run_searchlight(dataset, mspec, radius=3, method="randomized", niter=4)
 
 })
 
