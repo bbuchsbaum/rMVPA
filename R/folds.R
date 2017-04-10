@@ -82,16 +82,16 @@ blocked_cross_validation <- function(block_var, balance=FALSE, bootstrap=FALSE) 
   ret
 }
 
-#' KFoldCrossValidation
+#' kfold_cross_validation
 #' 
 #' @export
 #' @param len the number of observations
 #' @param balance 
 #' @param boostrap
-KFoldCrossValidation <- function(len, nfolds=10, balance=FALSE, bootstrap=FALSE) {
+kfold_cross_validation <- function(len, nfolds=10, balance=FALSE, bootstrap=FALSE) {
   block_var <- sample(rep(seq(1, nfolds), length.out=len))
   ret <- list(block_var=block_var, balance=balance, bootstrap=bootstrap, nfolds=nfolds)
-  class(ret) <- c("KFoldCrossValidation", "CrossValidation", "list")
+  class(ret) <- c("kfold_cross_validation", "CrossValidation", "list")
   ret
 }
 
@@ -102,7 +102,7 @@ crossval_samples <- function(obj, data, y) { UseMethod("crossval_samples") }
 
 
 ## todo need to implement local version which stores 'y' variable in data.frame (train, test, y_train, y_test)
-crossval_samples.KFoldCrossValidation <- function(obj, data,y) { 
+crossval_samples.kfold_cross_validation <- function(obj, data,y) { 
   crossv_k(data, y, obj$nfolds)
 }
 

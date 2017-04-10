@@ -275,7 +275,7 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
 #' @import doParallel
 #' @import parallel
 #' @export
-mvpa_regional <- function(dataset, model, region_mask, crossval=KFoldCrossValidation(length(dataset$Y)), 
+mvpa_regional <- function(dataset, model, region_mask, crossval=kfold_cross_validation(length(dataset$Y)), 
                           savePredictors=FALSE, featureSelector=NULL, class_metrics=FALSE) {  
   
   if (!is.null(dataset$parcellation)) {

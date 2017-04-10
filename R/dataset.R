@@ -74,9 +74,9 @@ mvpa_surface_dataset <- function(train_data,test_data=NULL, mask, design) {
 get_searchlight.mvpa_dataset <- function(x, type=c("standard", "randomized"), radius=8) {
   type <- match.arg(type)
   if (type == "standard") {
-    neuroim::Searchlight(x$mask, radius=8)
+    neuroim::Searchlight(x$mask, radius=radius)
   } else {
-    neuroim::RandomSearchlight(x$mask, radius=8)
+    neuroim::RandomSearchlight(x$mask, radius=radius)
   }
 }
 

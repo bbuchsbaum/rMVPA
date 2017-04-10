@@ -38,6 +38,8 @@ crossval_samples.model_spec <- function(obj) { crossval_samples(obj$crossval) }
 #}
   
 
+#' train_model
+#' 
 #' @param obj an instance of class \code{model_spec}
 #' @param train_dat training data, and instance of class \code{ROIVolume} or \code{ROISurface}
 #' @param y the dependent variable

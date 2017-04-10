@@ -1,10 +1,41 @@
 
 
 do_randomized <- function(dataset, model_spec, radius, niter) {
-  foreach (i = 1:niter) %dopar% {
-    vox_iter <- lapply(neuroim::RandomSearchlight(dataset$mask, radius), function(x) x)
-    mvpa_iterate(dataset, vox_iter, model_spec)
+  ret <- foreach (i = 1:niter) %dopar% {
+    slight <- get_searchlight(dataset, "randomized", radius)
+    vox_iter <- lapply(slight, function(x) x)
+    cind <- sapply(vox_iter, attr, "center.index")
+    mvpa_iterate(dataset, vox_iter, model_spec, cind)
+  }
+  
+  results <- dplyr::bind_rows(ret)
+  
+  all_ind <- sort(unlist(results$indices))
+  ind_set <- unique(all_ind)
+  
+  ncols <- length(results$performance[[1]])
+  omat <- Matrix::sparseMatrix(i=rep(ind_set, each=ncols), j=rep(1:ncols, length(ind_set)), 
+                               x=rep(0, length(ind_set)*ncols), dims=c(length(ind_set), ncols))
+  
+  for (i in 1:nrow(results)) {
+    print(i)
+    ind <- results$indices[[i]]
+    m <- kronecker(matrix(results$performance[[i]], 1, ncols), rep(1,length(ind)))
+    omat[ind,] <- omat[ind,] + m
+  }
+  
+  colnames(omat) <- names(results$performance[[1]])
+  list(indices=ind_set, result_mat=omat)
     
+}
+
+
+do_standard <- function(dataset, model_spec, radius) {
+  slight <- get_searchlight(dataset, "standard", radius)
+  vox_iter <- lapply(slight, function(x) x)
+  len <- sapply(vox_iter, length)
+  cind <- sapply(vox_iter, attr, "center.index")
+  ret <- mvpa_iterate(dataset, vox_iter, model_spec, cind)
 }
 
 
@@ -22,7 +53,7 @@ do_randomized <- function(dataset, model_spec, radius, niter) {
 #' @import parallel
 #' @importFrom futile.logger flog.info
 #' @export
-run_searchlight <- function(dataset, model_spec,radius=8, method=c("randomized", "randomized2", "standard"),  
+run_searchlight <- function(dataset, model_spec, radius=8, method=c("randomized", "standard"),  
                              niter=4) {
   stopifnot(niter > 1)
   
@@ -35,17 +66,9 @@ run_searchlight <- function(dataset, model_spec,radius=8, method=c("randomized",
   flog.info("model is: %s", model$model_name)
   
   res <- if (method == "standard") {
-    .doStandard(dataset, model, radius, crossval, class_metrics=class_metrics)    
+    do_standard(dataset, model, radius)    
   } else if (method == "randomized") {
-    
-    res <- foreach(i = 1:niter) %dopar% {
-      flog.info("Running randomized searchlight iteration %s", i)   
-      .doRandomized(dataset, model, radius, crossval, class_metrics=class_metrics)
-    }
-    
-    dataset$averageOverIterations(res)
-  } else if (method == "randomized2") {
-    .doRandomized2(dataset, model, radius, crossval, niter, class_metrics=class_metrics)  
-  }
+    do_randomized(dataset, model, radius, niter)
+  } 
   
 }

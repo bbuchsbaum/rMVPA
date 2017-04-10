@@ -1,5 +1,6 @@
 
 wrap_result <- function(result_table, dataset, predictor=NULL) {
+  print(nrow(result_table))
   observed <- if (is.null(dataset$test_data)) {
     dataset$design$y_train
   } else {
@@ -16,8 +17,6 @@ wrap_result <- function(result_table, dataset, predictor=NULL) {
       prob[tind,] <- prob[tind,] + p
     }
   
-    ## if there are multiple predictions on the same sample, this average over predictions
-    
     prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
     maxid <- apply(prob, 1, which.max)
     pclass <- levels(observed)[maxid]
@@ -29,39 +28,54 @@ wrap_result <- function(result_table, dataset, predictor=NULL) {
         preds[tind] <- result$prediction[[i]]$preds
       }
       
-      counts <- table(unlist(result_table$test_ind[[i]]))
+      counts <- table(unlist(result_table$test_ind))
       preds <- preds/counts
-      regression_result(observed, preds, testDesign, predictor)
+      regression_result(observed, preds, dataset$design$test_design, predictor)
   }
 }
 
 
-#' @importFrom dplyr rowwise
-internal_crossval <- function(dset, roi, mspec, keep_predictor) {
+#' @importFrom dplyr rowwise, do
+#' @importFrom tibble as_tibble
+#' 
+internal_crossval <- function(dset, roi, mspec, id, keep_predictor) {
+  print(id)
   param <- mspec$tune_grid[1,]
   
-  samples <- crossval_samples(mspec$crossval, as.data.frame(values(roi$train_roi)), y_train(dset))
+  samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(dset))
   ind <- indices(roi$train_roi)
   
-  ret <- samples %>% rowwise() %>% do( {
-    result <- train_model(mspec, as_data_frame(.$train), .$ytrain, indices=ind, param=param)
-    pred <- predict(result, as_data_frame(.$test), NULL)
-    plist <- lapply(pred, list)
-    plist$y_true <- list(.$ytest)
-    plist$test_ind=list(as.integer(.$test))
-    tibble::as_tibble(plist) 
+  ret <- samples %>% dplyr::rowwise() %>% dplyr::do( {
+    if (ncol(.$train) < 2) {
+      data.frame()
+    } else {
+      result <- train_model(mspec, as_data_frame(.$train), .$ytrain, indices=ind, param=param)
+      pred <- predict(result, as_data_frame(.$test), NULL)
+      plist <- lapply(pred, list)
+      plist$y_true <- list(.$ytest)
+      plist$test_ind=list(as.integer(.$test))
+      tibble::as_tibble(plist) 
+    }
     
   })
   
-  cres <- wrap_result(ret,dset)
-  tibble::tibble(result=list(cres), indices=list(ind))
+  if (nrow(ret) == 0) {
+    tibble::tibble()
+  } else {
+    cres <- wrap_result(ret,dset)
+    #tibble::tibble(result=list(cres), indices=list(ind), performance=list(as_tibble(as.list(performance(cres)))))
+    tibble::tibble(result=list(cres), indices=list(ind), performance=list(performance(cres)), id=id)
+  }
 }
   
   
 #' @export
-mvpa_iterate <- function(dset, vox_iter, mod_spec) {
+#' @importFrom dplyr do, rowwise
+mvpa_iterate <- function(dset, vox_iter, mod_spec, ids=1:length(vox_iter)) {
   sframe <- get_samples(dset, vox_iter)
-  ret <- sframe %>% rowwise() %>% do(internal_crossval(dset, as_roi(.$sample), mod_spec))
+
+  ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
+    dplyr::rowwise() %>% dplyr::do(internal_crossval(dset, as_roi(.$sample), mod_spec, .$rnum, FALSE))
   ## table(unlist(ret$indices))
   ret
   

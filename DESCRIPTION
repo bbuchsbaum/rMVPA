@@ -48,6 +48,7 @@ Collate:
     'performance.R'
     'rMVPA.R'
     'resample.R'
+    'searchlight.R'
     'similarity.R'
     'utils.R'
 RoxygenNote: 5.0.1
