@@ -59,12 +59,21 @@ has_test_set <- function(obj) {
 
 #' performance
 #' 
-#' Compute performance metrics from a classification/regression result
+#' Calculate performance metrics from a classification/regression result
 #' 
 #' @param x the result to evaluate performance of
 #' @export
 performance <- function(x,...) {
   UseMethod("performance")
+}
+
+
+#' compute_performance
+#' 
+#' Delegate calculation of performance metrics
+#' 
+compute_performance <- function(x, result) {
+  UseMethod("compute_performance")
 }
 
 #' merge_results

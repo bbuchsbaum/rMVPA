@@ -31,7 +31,7 @@ load_libs.caret_model_wrapper <- function(x) {
 
 
 #' @export
-tune_grid.model_spec <- function(obj, x,y,len) {
+tune_grid.mvpa_model <- function(obj, x,y,len) {
   if (is.null(obj$tune_grid)) {
     obj$model$grid(x,y,len)
   } else {
@@ -41,7 +41,7 @@ tune_grid.model_spec <- function(obj, x,y,len) {
 
 
 #' @export
-select_features.model_spec <- function(obj, roi, Y) {
+select_features.mvpa_model <- function(obj, roi, Y) {
   if (!is.null(obj$feature_selector)) {
     selectFeatures(obj$feature_selector, roi, Y)
   } else {
@@ -51,12 +51,12 @@ select_features.model_spec <- function(obj, roi, Y) {
 
 
 #' @export
-crossval_samples.model_spec <- function(obj) { crossval_samples(obj$crossval) }
+crossval_samples.mvpa_model <- function(obj) { crossval_samples(obj$crossval) }
 
 get_control <- function(y, nreps) {
   if (is.factor(y) && length(levels(y)) == 2) {
     ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE, summaryFunction=caret::twoClassSummary)
-    metric <- "AUC"
+    metric <- "ROC"
   } else if (is.factor(y) && length(levels(y)) > 2) {
     ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE, summaryFunction=mclass_summary)
     metric <- "AUC"
@@ -75,7 +75,7 @@ tune_model <- function(mspec, x, y, wts, param, nreps=2) {
 }
 
 #' @export
-fit_model.model_spec <- function(obj, x, y, wts, param, classProbs, ...) {
+fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
   obj$model$fit(x,y,wts=wts,param=param,classProbs=classProbs, ...)
 }
 
@@ -83,14 +83,14 @@ fit_model.model_spec <- function(obj, x, y, wts, param, classProbs, ...) {
 
 #' train_model
 #' 
-#' @param obj an instance of class \code{model_spec}
+#' @param obj an instance of class \code{mvpa_model}
 #' @param train_dat training data, and instance of class \code{ROIVolume} or \code{ROISurface}
 #' @param y the dependent variable
 #' @param indices the spatial indices associated with each column
 #' @param param
 #' @param wts
 #' @export
-train_model.model_spec <- function(obj, train_dat, y, indices, param=NULL, wts=NULL) {
+train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=NULL) {
   
   if (is.null(param)) {
     param <- tune_grid(obj)
@@ -100,19 +100,28 @@ train_model.model_spec <- function(obj, train_dat, y, indices, param=NULL, wts=N
     y <- as.factor(y)
   }
   
-  
-  ## feature selection
-  if (!is.null(obj$feature_selector)) {
-    feature_mask <- select_features(obj, train_dat, y)
-    train_dat <- train_dat[,feature_mask]
+  nzero <- nonzeroVarianceColumns2(train_dat)
+ 
+  ## feature selection and variable screening
+  feature_mask <- if (!is.null(obj$feature_selector)) {
+    nz <- which(nzero)
+    fsel <- select_features(obj, train_dat[,nz], y)
+    mask <- logical(ncol(train_dat))
+    mask[nz[fsel]] <- TRUE
+    mask
   } else {
-    feature_mask <- rep(TRUE, ncol(train_dat))
+    nzero
   }
   
+  if (sum(feature_mask) < 2) {
+    stop("training data must have more than one valid feature")
+  }
+  
+  train_dat <- train_dat[,feature_mask]
   
   ## parameter_tuning
   best_param <- if (!is.vector(param) && !is.null(nrow(param)) && nrow(param) > 1) {
-    tune_model(obj, train_dat[, feature_mask], y, wts, param)
+    tune_model(obj, train_dat, y, wts, param)
   } else {
     param
   }
@@ -126,8 +135,6 @@ train_model.model_spec <- function(obj, train_dat, y, indices, param=NULL, wts=N
   } else {
     stop("'y' must be a numeric vector or factor")
   }
-  
-
   
   fit <- fit_model(obj, train_dat, y, wts=wts, param=best_param, classProbs=TRUE)
   model_fit(obj$model, y, fit, mtype, best_param, indices, feature_mask)
@@ -147,15 +154,39 @@ predict.class_model_fit <- function(x, newdata, sub_indices=NULL) {
     mat <- mat[sub_indices,,drop=FALSE]
   }
   
+
   if (!is.null(x$feature_mask)) {
     mat <- mat[, x$feature_mask,drop=FALSE]
   }
-  
+ 
   probs <- x$model$prob(x$fit,mat) 
   names(probs) <- levels(x$y)
   cpred <- max.col(probs)
   cpred <- levels(x$y)[cpred]
   list(class=cpred, probs=probs)
+}
+
+#' @export
+predict.regression_model_fit <- function(x, newdata, sub_indices=NULL) {
+  
+  mat <- if (inherits(newdata, "BrainVector") || inherits(newdata, "BrainSurfaceVector")) {
+    series(newdata, x$fit$vox_ind)
+  } else {
+    newdata
+  }
+  
+  if (!is.null(sub_indices)) {
+    assert_that(is.vector(sub_indices))
+    mat <- mat[sub_indices,,drop=FALSE]
+  }
+  
+  
+  if (!is.null(x$feature_mask)) {
+    mat <- mat[, x$feature_mask,drop=FALSE]
+  }
+  
+
+  list(preds=x$model$predict(x$fit,mat) )
 }
 
 
@@ -188,9 +219,41 @@ model_fit <- function(model, y, fit, model_type=c("classification", "regression"
     class(ret) <- c("regression_model_fit", "model_fit")
   }
   ret
-  
 }
 
+
+get_multiclass_perf <- function(class_metrics=TRUE, split_list=NULL) {
+  function(result) {
+    performance(result, split_list, class_metrics)
+  }
+}
+
+
+get_binary_perf <- function(split_list=NULL) {
+  function(result) {
+    performance(result, split_list)
+  }
+}
+
+get_regression_perf <- function(split_list=NULL) {
+  function(result) {
+    performance(result, split_list)
+  }
+}
+
+get_custom_perf <- function(fun, split_list) {
+  function(result) {
+    custom_performance(result, fun, split_list)
+  }
+}
+
+
+compute_performance.mvpa_model <- function(x, result) {
+  x$performance(result)
+}
+
+#' mvpa_model
+#' 
 #' @param model
 #' @param model_type
 #' @param crossval
@@ -198,26 +261,41 @@ model_fit <- function(model, y, fit, model_type=c("classification", "regression"
 #' @param tune_grid
 #' @param custom_performance
 #' @export
-model_spec <- function(model, model_type=c("classification", "regression"), 
+mvpa_model <- function(model, 
+                       dataset,
+                       model_type=c("classification", "regression"), 
                        crossval, 
-                       feature_selector=NULL, tune_grid=NULL, 
-                       custom_performance=NULL) {
+                       feature_selector=NULL, 
+                       tune_grid=NULL, 
+                       performance=NULL,
+                       class_metrics=TRUE) {
   
-  if (!is.null(custom_performance)) {
-    assert_that(is.function(custom_performance)) 
+  perf <- if (!is.null(performance)) {
+    assert_that(is.function(performance)) 
+    get_custom_perf(performance, dataset$design$split_by)
+  } else if (is.numeric(dataset$design$y_train)) {
+    get_regression_perf(dataset$design$split_by)
+  } else if (length(levels(dataset$design$y_train)) > 2) {
+    get_multiclass_perf(class_metrics, dataset$design$split_by)
+  } else if (length(levels(dataset$design$y_train)) == 2) {
+    get_binary_perf(dataset$design$split_by)
+  } else {
+    stop("performance method not found")
   }
   
   model_type <- match.arg(model_type)
+ 
   
   ret <- list(model=model,
+              dataset=dataset,
               model_type=model_type,
               model_name=model$label,
               tune_grid=tune_grid,
               feature_selector=feature_selector,
               crossval=crossval,
-              custom_performance=custom_performance)
+              performance=perf)
   
-  class(ret) <- "model_spec"
+  class(ret) <- "mvpa_model"
   ret
   
 }

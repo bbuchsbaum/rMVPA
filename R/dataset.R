@@ -26,6 +26,7 @@ y_train.mvpa_dataset <- function(obj) y_train(obj$design)
 y_test.mvpa_dataset <- function(obj) y_test(obj$design)
 
 #' mvpa_dataset
+#' 
 #' @param train_data
 #' @param test_data
 #' @param mask

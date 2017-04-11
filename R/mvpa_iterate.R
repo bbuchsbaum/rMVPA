@@ -19,9 +19,9 @@ wrap_result <- function(result_table, dataset, predictor=NULL) {
     classification_result(observed, pclass, prob, dataset$design$test_design, predictor)
   } else {
       preds <- numeric(length(observed))
-      for (i in seq_along(result_table$prediction)) {
+      for (i in seq_along(result_table$preds)) {
         tind <- result_table$test_ind[[i]]
-        preds[tind] <- result$prediction[[i]]$preds
+        preds[tind] <- result_table$preds[[i]]
       }
       
       counts <- table(unlist(result_table$test_ind))
@@ -31,13 +31,38 @@ wrap_result <- function(result_table, dataset, predictor=NULL) {
 }
 
 
+#' extern_crossval
+#' 
+external_crossval <- function(roi, mspec, id, keep_predictor) {
+  xtrain <- tibble::as_tibble(values(roi$train_roi))
+  
+  if (ncol(xtrain) < 2) {
+    return(tibble::tibble())
+  }
+  
+  dset <- mspec$dataset
+  
+  ytrain <- y_train(dset)
+  ytest <- y_test(dset)
+  ind <- indices(roi$train_roi)
+  result <- train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid)
+  pred <- predict(result, tibble::as_tibble(values(roi$test_roi)), NULL)
+  plist <- lapply(pred, list)
+  plist$y_true <- list(ytest)
+  plist$test_ind=list(as.integer(seq_along(ytest)))
+  ret <- tibble::as_tibble(plist) 
+  cres <- wrap_result(ret,dset)
+  tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id)
+}
+ 
+
+
 #' @importFrom dplyr rowwise, do
 #' @importFrom tibble as_tibble
 #' 
-internal_crossval <- function(dset, roi, mspec, id, keep_predictor) {
+internal_crossval <- function(roi, mspec, id, keep_predictor) {
   print(id)
-  
-  samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(dset))
+  samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(mspec$dataset))
   ind <- indices(roi$train_roi)
   
   ret <- samples %>% dplyr::rowwise() %>% dplyr::do( {
@@ -57,21 +82,23 @@ internal_crossval <- function(dset, roi, mspec, id, keep_predictor) {
   if (nrow(ret) == 0) {
     tibble::tibble()
   } else {
-    cres <- wrap_result(ret,dset)
+    cres <- wrap_result(ret,mspec$dataset)
     #tibble::tibble(result=list(cres), indices=list(ind), performance=list(as_tibble(as.list(performance(cres)))))
-    tibble::tibble(result=list(cres), indices=list(ind), performance=list(performance(cres)), id=id)
+    tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id)
   }
 }
   
   
 #' @export
 #' @importFrom dplyr do, rowwise
-mvpa_iterate <- function(dset, vox_iter, mod_spec, ids=1:length(vox_iter)) {
-  sframe <- get_samples(dset, vox_iter)
+mvpa_iterate <- function(mod_spec, vox_iter, ids=1:length(vox_iter)) {
+  sframe <- get_samples(mod_spec$dataset, vox_iter)
 
+  do_fun <- if (has_test_set(mod_spec$dataset)) external_crossval else internal_crossval
+  
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
-    dplyr::rowwise() %>% dplyr::do(internal_crossval(dset, as_roi(.$sample), mod_spec, .$rnum, FALSE))
-  ## table(unlist(ret$indices))
+    dplyr::rowwise() %>% dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, FALSE))
+    ## table(unlist(ret$indices))
   ret
   
 }

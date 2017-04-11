@@ -1,6 +1,7 @@
 
 
 matrixAnova <- function(Y, mat) {
+  Y <- as.factor(Y)
   K <- length(levels(Y))
   N <- length(Y)
   

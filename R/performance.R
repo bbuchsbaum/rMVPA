@@ -8,27 +8,31 @@ predicted_class <- function(prob) {
   pclass <- colnames(prob)[maxid]
 }
 
-#' @export
+#' performance
+#' 
 #' @param x
-#' @param splitList
-#' @param classMetrics
-performance.regression_result <- function(x, splitList) {
+#' @param split_list
+#' @export
+#' @rdname performance-methods
+performance.regression_result <- function(x, split_list) {
   R2 <- 1 - sum((x$observed - x$predicted)^2)/sum((x$observed-mean(x$observed))^2)
   rmse <- sqrt(mean((x$observed-x$predicted)^2))
   rcor <- cor(x$observed, x$predicted, method="spearman")
   c(R2=R2, RMSE=rmse, spearcor=rcor)
 }
 
-#' @export
+
+#' custom_performance
 #' 
-customPerformance <- function(x, customFun, splitList=NULL) {
-  if (is.null(splitList)) {
-    customFun(x)
+#' @export
+custom_performance <- function(x, custom_fun, split_list=NULL) {
+  if (is.null(split_list)) {
+    custom_fun(x)
   } else {
-    total <- customFun(x)
-    subtots <- unlist(lapply(names(splitList), function(tag) {
-      ind <- splitList[[tag]]
-      ret <- customFun(subResult(x, ind))
+    total <- custom_fun(x)
+    subtots <- unlist(lapply(names(split_list), function(tag) {
+      ind <- split_list[[tag]]
+      ret <- custom_fun(subResult(x, ind))
       names(ret) <- paste0(names(ret), "_", tag)
       ret
     }))
@@ -51,14 +55,16 @@ merge_results.multiway_classification_result <- function(x,y) {
 }
 
 #' @export
-performance.binary_classification_result <- function(x, splitList=NULL, classMetrics=FALSE, customFun=NULL) {
-  if (is.null(splitList)) {
+performance.binary_classification_result <- function(x, split_list=NULL) {
+  stopifnot(length(x$observed) == length(x$predicted))
+  
+  if (is.null(split_list)) {
     ret <- binary_perf(x$observed, x$predicted, x$probs)
   } else {
     total <- binary_perf(x$observed, x$predicted, x$probs)
     
-    subtots <- unlist(lapply(names(splitList), function(tag) {
-      ind <- splitList[[tag]]
+    subtots <- unlist(lapply(names(split_list), function(tag) {
+      ind <- split_list[[tag]]
       ret <- binary_perf(x$observed[ind], x$predicted[ind], x$probs[ind,])
       names(ret) <- paste0(names(ret), "_", tag)
       ret
@@ -66,22 +72,21 @@ performance.binary_classification_result <- function(x, splitList=NULL, classMet
     
     ret <- c(total, subtots)
   }
- 
 }
 
 
 
 #' @export
-performance.multiway_classification_result <- function(x, splitList=NULL, classMetrics=FALSE) {
+performance.multiway_classification_result <- function(x, split_list=NULL, class_metrics=FALSE) {
   stopifnot(length(x$observed) == length(x$predicted))
-  
-  if (is.null(splitList)) {
-    multiclass_perf(x$observed, x$predicted, x$probs, classMetrics)
+ 
+  if (is.null(split_list)) {
+    multiclass_perf(x$observed, x$predicted, x$probs, class_metrics)
   } else {
-    total <- multiclass_perf(x$observed, x$predicted, x$probs, classMetrics)
-    subtots <- unlist(lapply(names(splitList), function(tag) {
-      ind <- splitList[[tag]]
-      ret <- multiclass_perf(x$observed[ind], x$predicted[ind], x$probs[ind,], classMetrics)
+    total <- multiclass_perf(x$observed, x$predicted, x$probs, class_metrics)
+    subtots <- unlist(lapply(names(split_list), function(tag) {
+      ind <- split_list[[tag]]
+      ret <- multiclass_perf(x$observed[ind], x$predicted[ind], x$probs[ind,], class_metrics)
       names(ret) <- paste0(names(ret), "_", tag)
       ret
     }))
@@ -124,7 +129,7 @@ binary_perf <- function(observed, predicted, probs) {
   
 }
 
-multiclass_perf <- function(observed, predicted, probs, classMetrics=FALSE) {
+multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   obs <- as.character(observed)
   
   ncorrect <- sum(obs == predicted)
@@ -148,7 +153,7 @@ multiclass_perf <- function(observed, predicted, probs, classMetrics=FALSE) {
   names(aucres) <- paste0("AUC_", colnames(probs))
   
   
-  if (classMetrics) {
+  if (class_metrics) {
     c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres), aucres)
   } else {
     c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres))

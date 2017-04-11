@@ -639,17 +639,24 @@ crossval_internal <- function(crossVal, Y, ROI, subIndices, model, tuneGrid, fea
 }
   
 
-#' @export
+
 zeroVarianceColumns <- function(M) {
   which(apply(M, 2, sd, na.rm=TRUE) == 0)
 }
 
-#' @export
+
+zeroVarianceColumns2 <- function(M) {
+  apply(M, 2, sd, na.rm=TRUE) == 0
+}
+
 nonzeroVarianceColumns <- function(M) {
   which(apply(M, 2, sd, na.rm=TRUE) > 0)
 }
 
-#' @export
+nonzeroVarianceColumns2 <- function(M) {
+  apply(M, 2, sd, na.rm=TRUE) > 0
+}
+
 removeZeroVarianceColumns <- function(M) {
   noVariance <- which(apply(M, 2, sd, na.rm=TRUE) == 0)
   if (length(noVariance) > 0) {

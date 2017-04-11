@@ -76,9 +76,9 @@ crossv_block <- function(data, y, block_var, id = ".id", exclude_block=NULL) {
 #' @param balance logical indicating whether cross-validation blocks should automatically balanced, using undersampling if necessary.
 #' @param bootstrap logical indicating whether training samples should be sampled with replacement.
 #' @export
-blocked_cross_validation <- function(block_var, balance=FALSE, bootstrap=FALSE) {
-  ret <- list(block_var=block_var, balance=balance, bootstrap=bootstrap, nfolds=length(unique(block_var)))
-  class(ret) <- c("blocked_cross_validation", "CrossValidation", "list")
+blocked_cross_validation <- function(block_var) {
+  ret <- list(block_var=block_var, nfolds=length(unique(block_var)))
+  class(ret) <- c("blocked_cross_validation", "cross_validation", "list")
   ret
 }
 
@@ -88,10 +88,10 @@ blocked_cross_validation <- function(block_var, balance=FALSE, bootstrap=FALSE) 
 #' @param len the number of observations
 #' @param balance 
 #' @param boostrap
-kfold_cross_validation <- function(len, nfolds=10, balance=FALSE, bootstrap=FALSE) {
+kfold_cross_validation <- function(len, nfolds=10) {
   block_var <- sample(rep(seq(1, nfolds), length.out=len))
-  ret <- list(block_var=block_var, balance=balance, bootstrap=bootstrap, nfolds=nfolds)
-  class(ret) <- c("kfold_cross_validation", "CrossValidation", "list")
+  ret <- list(block_var=block_var, nfolds=nfolds)
+  class(ret) <- c("kfold_cross_validation", "cross_validation", "list")
   ret
 }
 
