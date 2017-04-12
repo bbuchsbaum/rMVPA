@@ -5,14 +5,14 @@ matrixAnova <- function(Y, x) {
   k <- max(Y)
   ni <- tabulate(Y)
   n <- dim(x)[1]
-  sx2 <- colsums(x^2)
+  sx2 <- colSums(x^2)
   m <- rowsum(x, Y)
-  a <- colsums(m^2/ni)
-  b <- colsums(m)^2/n
+  a <- colSums(m^2/ni)
+  b <- colSums(m)^2/n
   mst <- (a - b)/(k - 1)
   mse <- (sx2 - a)/(n - k)
   fa <- mst/mse
-  pvalue <- pf(fa, k - 1, n - k, lower.tail = FALSE, log.p = logged)
+  pvalue <- pf(fa, k - 1, n - k, lower.tail = FALSE, log.p = FALSE)
   tab <- cbind(fa, pvalue)
   colnames(tab) <- c("Ftest", "pval")
   if (!is.null(colnames(x))) 
@@ -81,7 +81,7 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
   ranking.score <- match.arg(ranking.score)
   message("selecting features via catscore")
   
-  X <- X@data
+  X <- X
   
   if (is.numeric(Y)) {
     medY <- median(Y)
@@ -113,25 +113,21 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
 }
 
 
- 
-
 #select_features.FisherKernel <- function(obj, ROI, Y, vox, radius=8) {
 #  fres <- matrixAnova(Y,X)
 #  search <- Searchlight
 #}
 
 
-
 #' @export
 #' @rdname select_features
 #' @importFrom assertthat assert_that
-select_features.FTest <- function(obj, ROI, Y) {
+select_features.FTest <- function(obj, X, Y) {
   message("selecting features via FTest")
   message("cutoff type ", obj$cutoff_type)
   message("cutoff value ", obj$cutoff_value)
   
-  X <- ROI@data
-  
+ 
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   
   if (is.numeric(Y)) {
@@ -139,8 +135,7 @@ select_features.FTest <- function(obj, ROI, Y) {
     Y <- factor(ifelse(Y > medY, "high", "low"))
   }
   
- 
-  pvals <- matrixAnova(Y,X)$pval
+  pvals <- matrixAnova(Y,X)[,2]
   
   keep.idx <- if (obj$cutoff_type == "top_k" || obj$cutoff_type == "topk") {
     k <- min(ncol(X), obj$cutoff_value)

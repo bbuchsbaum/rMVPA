@@ -17,8 +17,6 @@ train_model <- function(obj,...) {
 
 
 
-
-
 #' y_train
 #' 
 #' @export
@@ -132,5 +130,10 @@ wrap_output <- function(obj, vals, ...) {
   UseMethod("wrap_output")
 }
 
+#' merge_predictions
+#' 
+merge_predictions <- function(obj1, rest, ...) {
+  UseMethod("merge_predictions")
+}
 
 

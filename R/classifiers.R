@@ -282,9 +282,9 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 
                               },
                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                message("inside sda_boot predict")
+                      
                                 preds <- lapply(modelFit$fits, function(fit) {
-                                  print(class(fit))
+                            
                                   predict(fit, as.matrix(newdata), verbose=FALSE)$posterior
                                 })
                                 
@@ -379,7 +379,7 @@ MVPAModels$sparse_sda <- list(type = "Classification",
                                  
                                  x <- as.matrix(x)                          
                                  nkeep <- max(param$frac * ncol(x),1)
-                                 print(nkeep)
+                                 
                                  rank <- memo_rank(x, L=y, fdr=FALSE)
                                  ind <- rank[,"idx"][1:nkeep]
                                  

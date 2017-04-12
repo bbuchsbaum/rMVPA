@@ -31,7 +31,7 @@ load_libs.caret_model_wrapper <- function(x) {
 
 
 #' @export
-tune_grid.mvpa_model <- function(obj, x,y,len) {
+tune_grid.mvpa_model <- function(obj, x,y,len=1) {
   if (is.null(obj$tune_grid)) {
     obj$model$grid(x,y,len)
   } else {
@@ -43,7 +43,7 @@ tune_grid.mvpa_model <- function(obj, x,y,len) {
 #' @export
 select_features.mvpa_model <- function(obj, roi, Y) {
   if (!is.null(obj$feature_selector)) {
-    selectFeatures(obj$feature_selector, roi, Y)
+    select_features(obj$feature_selector, roi, Y)
   } else {
     rep(TRUE, length(roi))
   }
@@ -51,7 +51,9 @@ select_features.mvpa_model <- function(obj, roi, Y) {
 
 
 #' @export
-crossval_samples.mvpa_model <- function(obj) { crossval_samples(obj$crossval) }
+crossval_samples.mvpa_model <- function(obj) { 
+  crossval_samples(obj$crossval) 
+}
 
 get_control <- function(y, nreps) {
   if (is.factor(y) && length(levels(y)) == 2) {
@@ -68,17 +70,18 @@ get_control <- function(y, nreps) {
   list(ctrl=ctrl, metric=metric)
 }
 
+
+
 tune_model <- function(mspec, x, y, wts, param, nreps=2) {
   ctrl <- get_control(y, nreps)
   cfit <-caret::train(as.data.frame(x), y, method=mspec$model, weights=wts, metric=ctrl$metric, trControl=ctrl$ctrl, tuneGrid=param)
   cfit$bestTune
 }
 
-#' @export
+
 fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
   obj$model$fit(x,y,wts=wts,param=param,classProbs=classProbs, ...)
 }
-
 
 
 #' train_model
@@ -93,7 +96,7 @@ fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
 train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=NULL) {
   
   if (is.null(param)) {
-    param <- tune_grid(obj)
+    param <- tune_grid(obj, train_dat, y, len=1)
   }
   
   if (is.character(y)) {
@@ -126,7 +129,6 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=N
     param
   }
   
-  print(best_param)
   
   mtype <- if (is.factor(y)) {
     "classification"
@@ -139,6 +141,8 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=N
   fit <- fit_model(obj, train_dat, y, wts=wts, param=best_param, classProbs=TRUE)
   model_fit(obj$model, y, fit, mtype, best_param, indices, feature_mask)
 }
+
+
 
 #' @export
 predict.class_model_fit <- function(x, newdata, sub_indices=NULL) {
@@ -154,7 +158,6 @@ predict.class_model_fit <- function(x, newdata, sub_indices=NULL) {
     mat <- mat[sub_indices,,drop=FALSE]
   }
   
-
   if (!is.null(x$feature_mask)) {
     mat <- mat[, x$feature_mask,drop=FALSE]
   }
@@ -163,7 +166,9 @@ predict.class_model_fit <- function(x, newdata, sub_indices=NULL) {
   names(probs) <- levels(x$y)
   cpred <- max.col(probs)
   cpred <- levels(x$y)[cpred]
-  list(class=cpred, probs=probs)
+  ret <- list(class=cpred, probs=probs)
+  class(ret) <- c("classification_prediction", "prediction", "list")
+  ret
 }
 
 #' @export
@@ -185,8 +190,56 @@ predict.regression_model_fit <- function(x, newdata, sub_indices=NULL) {
     mat <- mat[, x$feature_mask,drop=FALSE]
   }
   
+  ret <- list(preds=x$model$predict(x$fit,mat))
+  class(ret) <- c("regression_prediction", "prediction", "list")
+  ret
+}
 
-  list(preds=x$model$predict(x$fit,mat) )
+
+#' @export
+merge_predictions.regression_prediction <- function(obj1, rest, weights=rep(1,length(rest)+1)/(length(rest)+1)) {
+  allobj <- c(obj1, rest)
+  assert_that(all(sapply(allobj, function(obj) inherits(obj, "regression_prediction"))))
+  
+  preds <- lapply(1:length(allobj), function(i) {
+    predict(allobj[[i]], newdata, ...)$pred * weights[i]
+  })
+  
+  final_pred <- rowMeans(do.call(cbind, preds))
+  ret <- list(preds=final_pred)
+  class(ret) <- c("regression_prediction", "prediction", "list")
+  ret
+}
+
+
+#' @export
+merge_predictions.classification_prediction <- function(obj1, rest, weights=rep(1,length(rest)+1)/(length(rest)+1)) {
+  allobj <- c(obj1, rest)
+  assert_that(all(sapply(allobj, function(obj) inherits(obj, "classification_prediction"))))
+  
+  
+  preds <- lapply(1:length(allobj), function(i) {
+    predict(allobj[[i]], newdata, ...)$prob * weights[i]
+  })
+  
+  prob <- preds[!sapply(preds, function(x) is.null(x))]
+  pfinal <- Reduce("+", prob)
+  
+  cnames <- colnames(pfinal)
+  maxids <- apply(pfinal, 1, which.max)
+  len <- sapply(maxids, length)
+  
+  if (any(len == 0)) {
+    maxids[len == 0] <- NA
+  }
+  
+  maxids <- unlist(maxids)
+  
+  pclass <- cnames[maxids]
+  ret <- list(class=pclass, probs=pfinal)
+  class(ret) <- c("classification_prediction", "prediction", "list")
+  ret
+  
 }
 
 
@@ -213,7 +266,6 @@ model_fit <- function(model, y, fit, model_type=c("classification", "regression"
     feature_mask=feature_mask)
   
   if (model_type == "classification") {
-    
     class(ret) <- c("class_model_fit", "model_fit")
   } else {
     class(ret) <- c("regression_model_fit", "model_fit")
@@ -222,12 +274,56 @@ model_fit <- function(model, y, fit, model_type=c("classification", "regression"
 }
 
 
+#' @export
+weighted_model <- function(fits, names=1:length(fits), weights=rep(1/length(fits), length(fits))) {
+  stopifnot(length(weights) == length(fits))
+  ret <- fits
+  names(ret) <- names
+  attr(ret, "weights") <- weights
+  class(ret) <- c("weighted_model", "list")
+  ret
+}
+
+
+
+#' @export
+list_model <- function(fits, names=1:length(fits)) {
+  stopifnot(is.list(fits))
+  ret <- fits
+  names(ret) <- names
+  class(ret) <- c("list_model", "list")
+  ret
+}
+
+#' @export
+predict.weighted_model <- function(x, newdata=NULL, ...) {
+  if (is.null(newdata)) {
+    stop("newdata cannot be null")
+  }
+
+  preds <- lapply(x$fits, function(fit) predict(fit, newdata, ...))
+  merge_predictions(preds[[1]], preds[2:length(preds)], attr(x, "weights"))
+  
+}
+
+#' @export
+predict.list_model <- function(x, newdata=NULL,...) {
+  if (is.null(newdata)) {
+    stop("newdata cannot be null")
+  }
+  
+  res <- lapply(x, function(fit) {
+    predict(fit, newdata,...)
+  })
+  
+}
+
+
 get_multiclass_perf <- function(class_metrics=TRUE, split_list=NULL) {
   function(result) {
     performance(result, split_list, class_metrics)
   }
 }
-
 
 get_binary_perf <- function(split_list=NULL) {
   function(result) {

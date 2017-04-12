@@ -2,7 +2,7 @@
 
 combine_regional_results = function(results, ids) {
   if (is.factor(results$result[[1]]$observed)) {
-    results %>% rowwise() %>% do( {
+    results %>% dplyr::rowwise() %>% dplyr::do( {
       tib1 <- tibble(
           ROINUM=rep(.$id, length(.$result$observed)),
           observed=.$result$observed,
@@ -14,13 +14,13 @@ combine_regional_results = function(results, ids) {
       cbind(tib1, tib2)
     })
   } else {
-    results %>% rowwise() %>% do( {
+   
+    results %>% dplyr::rowwise() %>% dplyr::do(
       tibble(
         ROINUM=rep(.$id, length(.$result$observed)),
         observed=.$result$observed,
-        predicted=.$result$predicted,
-      )
-    })
+        predicted=.$result$predicted)
+    )
   }
 }
 
@@ -32,7 +32,7 @@ combine_regional_results = function(results, ids) {
 #' 
 #' @param model_spec a \code{mvpa_model} instance
 #' @param region_mask a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
-#' @param save_predictors whether to return prediction model for every ROI (default is \code{FALSE} to save memory)
+#' @param returns_fits whether to return model fit for every ROI (default is \code{FALSE} to save memory)
 #' 
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
 #' @import itertools 
@@ -40,7 +40,7 @@ combine_regional_results = function(results, ids) {
 #' @import doParallel
 #' @import parallel
 #' @export
-run_regional <- function(model_spec, region_mask, save_predictors=FALSE) {  
+run_regional <- function(model_spec, region_mask, return_fits=FALSE) {  
   
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   region_set <- sort(as.integer(unique(region_mask[region_mask > 0])))
@@ -57,8 +57,9 @@ run_regional <- function(model_spec, region_mask, save_predictors=FALSE) {
     vox_iter <- vox_iter[lens >= 2]
   }
   
+  
   ## run mvpa for each region
-  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set)
+  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set, return_fits)
   
   ## compile performance results
   perf_mat <- do.call(rbind, results$performance)
@@ -70,5 +71,9 @@ run_regional <- function(model_spec, region_mask, save_predictors=FALSE) {
   ## compile full prediction table
   prediction_table <- combine_regional_results(results, results$id)
   
-  list(performance_table=as_tibble(perf_mat), prediction_table=prediction_table, vol_results=vols)
+  fits <- if (return_fits) {
+    lapply(results$result, "[[", "predictor")
+  }
+  
+  list(performance_table=as_tibble(perf_mat), prediction_table=prediction_table, vol_results=vols, fits=fits)
 }

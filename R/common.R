@@ -457,6 +457,22 @@ loadModel <- function(name, config=NULL) {
   }
 }
 
+
+#' load_model
+#' @export
+load_model <- function(name) {
+  registry <- rMVPA:::MVPAModels
+  
+  if (!is.null(registry[[name]])) {
+    registry[[name]]   
+  } else if (length(caret::getModelInfo(name)) > 0) {
+    caret::getModelInfo(name)[[name]] 
+  } else {
+    stop(paste("unrecognized model: ", name))
+  }
+  
+}
+
 #' @export
 loadMask <- function(config) {
   if (file.exists(config$mask)) {

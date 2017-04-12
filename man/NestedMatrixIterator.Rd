@@ -8,7 +8,7 @@ NestedMatrixIterator(X, Y, block_var, balance = FALSE, bootstrap = FALSE,
   bootstrapMin = 2)
 }
 \arguments{
-\item{X}{the data \cdoe{matrix}}
+\item{X}{the data \code{matrix}}
 
 \item{Y}{a vector of labels}
 }

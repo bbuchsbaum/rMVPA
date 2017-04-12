@@ -9,7 +9,7 @@ loadBrainData(config, name, indices = NULL)
 \arguments{
 \item{config}{configuration file}
 
-\item{name}{}
+\item{name}{name of file}
 }
 \description{
 load 4D brain data from one of more image provided in \code{name} argument

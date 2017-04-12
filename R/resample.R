@@ -1,10 +1,6 @@
 
 
-
-
-#' @export
-get_samples.mvpa_dataset <- function(obj, voxlist) {
-
+.get_samples <- function(obj, voxlist) {
   ret <- lapply(voxlist, function(vox) {
     sam <- data_sample(obj, vox)
   })
@@ -13,7 +9,16 @@ get_samples.mvpa_dataset <- function(obj, voxlist) {
   df <- tibble::data_frame(sample = ret)
   df[[".id"]] <- modelr:::id(n)
   df
-  
+}
+
+#' @export
+get_samples.mvpa_dataset <- function(obj, voxlist) {
+  .get_samples(obj, voxlist)
+}
+
+#' @export
+get_samples.mvpa_surface_dataset <- function(obj, voxlist) {
+  .get_samples(obj, voxlist)
 }
 
 
@@ -27,6 +32,7 @@ data_sample.mvpa_dataset <- function(obj, vox) {
     class = "data_sample"
   )
 }
+
 
 
 #' @export

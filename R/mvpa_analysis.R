@@ -174,7 +174,7 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
     }
     
     index_mat <- as.matrix(do.call(cbind, lapply(resultSet, function(result) {
-      result %>% mutate(rn=row_number()) %>% rowwise() %>% 
+      result %>% mutate(rn=row_number()) %>% dplyr::rowwise() %>% 
         do(tibble::data_frame(indices=.$indices, rn=.$rn)) %>% arrange(indices) %>% select(rn)
     })))
     

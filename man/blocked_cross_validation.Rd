@@ -4,7 +4,7 @@
 \alias{blocked_cross_validation}
 \title{blocked_cross_validation}
 \usage{
-blocked_cross_validation(block_var, balance = FALSE, bootstrap = FALSE)
+blocked_cross_validation(block_var)
 }
 \arguments{
 \item{block_var}{an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.}

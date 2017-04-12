@@ -75,7 +75,7 @@ run_searchlight <- function(model_spec, radius=8, method=c("randomized", "standa
     stopifnot(niter > 1)
   }
   
-  flog.info("model is: %s", model$model_name)
+  flog.info("model is: %s", model_spec$model$label)
   
   res <- if (method == "standard") {
     do_standard(model_spec, radius)    

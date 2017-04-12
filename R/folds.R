@@ -1,5 +1,12 @@
-#' @export
+
+#' crossv_k
+#' 
+#' @param data
+#' @param y
 #' @param k Number of folds (an integer).
+#' @param id
+#' 
+#' @export
 crossv_k <- function(data, y, k = 5, id = ".id") {
   if (!is.numeric(k) || length(k) != 1) {
     stop("`k` must be a single integer.", call. = FALSE)
@@ -27,7 +34,8 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
   tibble::as_data_frame(cols)
 }
 
-
+#' crossv_block
+#' 
 #' @export
 #' @param block_var the blocking variable (an integer vector)
 #' @importFrom modelr resample
@@ -332,7 +340,7 @@ NestedFoldIterator <- function(Y, block_var,  balance=FALSE, bootstrap=FALSE, bo
 
 #' NestedMatrixIterator
 #' 
-#' @param X the data \cdoe{matrix}
+#' @param X the data \code{matrix}
 #' @param Y a vector of labels
 #' @param block_var
 #' @param balance

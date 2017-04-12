@@ -2,10 +2,14 @@
 % Please edit documentation in R/folds.R
 \name{crossv_block}
 \alias{crossv_block}
+\title{crossv_block}
 \usage{
 crossv_block(data, y, block_var, id = ".id", exclude_block = NULL)
 }
 \arguments{
 \item{block_var}{the blocking variable (an integer vector)}
+}
+\description{
+crossv_block
 }
 

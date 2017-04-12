@@ -54,7 +54,9 @@ mvpa_dataset <- function(train_data,test_data=NULL, mask, design) {
 #' @param test_data
 #' @param mask
 #' @param design
+#' @param hemisphere
 #' @importFrom assertthat assert_that
+#' @export
 mvpa_surface_dataset <- function(train_data, test_data=NULL, mask, design, hemisphere=c("lh", "rh")) {
   assert_that(inherits(design, "mvpa_design"))
   
@@ -67,7 +69,7 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask, design, hemis
     hemisphere=hemisphere
   )
   
-  class(ret) <- c("mvpa_surface_dataset", "list")
+  class(ret) <- c("mvpa_surface_dataset", "mvpa_dataset", "list")
   ret
   
 }
@@ -89,9 +91,9 @@ get_searchlight.mvpa_dataset <- function(x, type=c("standard", "randomized"), ra
 get_searchlight.mvpa_surface_dataset <- function(x, type=c("standard", "randomized"), radius=8) {
   type <- match.arg(type)
   if (type == "standard") {
-    neurosurf::SurfaceSearchlight(geometry(x$train_data), radius)
+    neurosurf::SurfaceSearchlight(geometry(x$train_data), radius, nodeset=which(x$mask>0))
   } else {
-    neurosurf::RandomSurfaceSearchlight(geometry(x$train_data), radius)
+    neurosurf::RandomSurfaceSearchlight(geometry(x$train_data), radius, nodeset=which(x$mask>0))
   }
 }
 

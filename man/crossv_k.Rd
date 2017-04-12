@@ -2,10 +2,16 @@
 % Please edit documentation in R/folds.R
 \name{crossv_k}
 \alias{crossv_k}
+\title{crossv_k}
 \usage{
 crossv_k(data, y, k = 5, id = ".id")
 }
 \arguments{
 \item{k}{Number of folds (an integer).}
+
+\item{id}{}
+}
+\description{
+crossv_k
 }
 

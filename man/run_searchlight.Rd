@@ -4,13 +4,11 @@
 \alias{run_searchlight}
 \title{run_searchlight}
 \usage{
-run_searchlight(dataset, model_spec, radius = 8, method = c("randomized",
+run_searchlight(model_spec, radius = 8, method = c("randomized",
   "standard"), niter = 4)
 }
 \arguments{
-\item{dataset}{a \code{mvpa_dataset} instance.}
-
-\item{model_spec}{a \code{model_spec} instance.}
+\item{model_spec}{a \code{mvpa_model} instance.}
 
 \item{radius}{the searchlight radus in millimeters.}
 

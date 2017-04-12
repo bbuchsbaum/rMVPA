@@ -14,7 +14,7 @@ parse_variable <- function(var, design) {
     var <- if (length(vnames) > 1) {
       do.call("interaction", c(lapply(vnames, function(vname) as.factor(design[[vname]])), sep=":"))
     } else {
-      as.factor(design[[vnames]])
+      design[[vnames]]
     }
     var
   } else if (is.character(var)) {
@@ -27,6 +27,12 @@ parse_variable <- function(var, design) {
 
 #' mvpa_design
 #' 
+#' @param train_design
+#' @param y_train
+#' @param test_design
+#' @param y_test
+#' @param block_var
+#' @param split_by
 #' 
 #' @export
 mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, block_var=NULL, split_by=NULL) {
@@ -47,9 +53,12 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   
   if (!is.null(split_by)) {
     des <- if (!is.null(test_design)) test_design else train_design
-    print(names(des))
     split_var <- parse_variable(split_by, des)
     split_by <- split(1:nrow(des), split_var)
+  }
+  
+  if (!is.null(block_var)) {
+    block_var <- parse_variable(block_var, train_design)
   }
   
   des <- list(

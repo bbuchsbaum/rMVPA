@@ -21,119 +21,6 @@ ClassificationResultSet <- function(blockVar, resultList) {
 
 
 
-NullResult <- function(vox, model, observed) {
-  ret <- list(vox=vox,
-              model=model,
-              observed=observed)
-  class(ret) <- c("NullResult", "list")
-  ret
-  
-}
-
-#' @export
-SimilarityResult <- function(corMat, avgContrast, sdContrast) {
-  ret <- list(corMat=corMat, avgContrast=avgContrast, sdContrast=sdContrast)
-  class(ret) <- c("SimilarityResult", "list")
-  ret
-}
-
-
-#' create an \code{binary_classification_result} instance
-#' @param observed
-#' @param predicted
-#' @param probs
-#' @export
-binary_classification_result <- function(observed, predicted, probs, testDesign, predictor=NULL) {
-  ret <- list(
-              observed=observed,
-              predicted=predicted,
-              probs=as.matrix(probs),
-              testDesign=testDesign,
-              predictor=predictor
-              )
-  
-  class(ret) <- c("binary_classification_result", "classification_result", "list")
-  ret
-}
-
-
-#' @export
-subResult <- function(x, indices) {
-  UseMethod("subResult")
-}
-
-
-#' @export
-subResult.multiway_classification_result <- function(x, indices) {
-  ret <- list(
-    observed=x$observed[indices],
-    predicted=x$predicted[indices],
-    probs=as.matrix(x$probs)[indices,],
-    testDesign=x$testDesign[indices,],
-    predictor=NULL)
-  
-  class(ret) <- c("multiway_classification_result", "classification_result", "list")
-  ret
-}
-
-#' @export
-subResult.binary_classification_result <- function(x, indices) {
-  ret <- list(
-    observed=x$observed[indices],
-    predicted=x$predicted[indices],
-    probs=as.matrix(x$probs)[indices,],
-    testDesign=x$testDesign[indices,],
-    predictor=NULL)
-  
-  class(ret) <- c("binary_classification_result", "classification_result", "list")
-  ret
-}
-
-
-#' create an \code{multiway_classification_result} instance
-#' 
-#' @param observed
-#' @param predicted
-#' @param probs
-#' @export
-multiway_classification_result <- function(observed, predicted, probs,  testDesign=NULL, predictor=NULL) {
-  ret <- list(
-              observed=observed,
-              predicted=predicted,
-              probs=as.matrix(probs),
-              testDesign=testDesign,
-              predictor=predictor)
-  
-  class(ret) <- c("multiway_classification_result", "classification_result", "list")
-  ret
-}
-
-regression_result <- function(observed, predicted, testDesign=NULL, predictor=NULL) {
-  ret <- list(
-    observed=observed,
-    predicted=predicted,
-    testDesign=testDesign,
-    predictor=predictor)
-  class(ret) <- c("regression_result", "classification_result", "list")
-  ret
-}
-  
-
-
-#' @export
-classification_result <- function(observed, predicted, probs, testDesign=NULL,predictor=NULL) {
-  if (is.numeric(observed)) {
-    regression_result(observed, predicted, testDesign, predictor)
-  } else if (length(levels(as.factor(observed))) == 2) {
-    binary_classification_result(observed, predicted, probs,  testDesign, predictor)
-  } else if (length(levels(as.factor(observed))) > 2) {
-    multiway_classification_result(observed,predicted, probs, testDesign, predictor)
-  } else {
-    stop("observed data must be a factor with 2 or more levels")
-  }
-}
-
-
 # wraps a caret model fit
 CaretModel <- function(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector=NULL, featureMask=NULL, parcels=NULL) {
   ret <- list( model=model, Xtrain=Xtrain,Ytrain=Ytrain,Xtest=Xtest,Ytest=Ytest,tuneGrid=tuneGrid,
@@ -174,7 +61,7 @@ trainModel <- function(model, ROI, Ytrain, testROI, Ytest, tuneGrid,
   }
   
   featureMask <- if (!is.null(featureSelector)) {
-    selectFeatures(featureSelector, ROI, Ytrain)
+    select_features(featureSelector, ROI, Ytrain)
   } else {
     rep(TRUE, length(ROI))
   }
@@ -457,7 +344,7 @@ evaluateModel.ListPredictor <- function(x, newdata=NULL,...) {
 }
 
 #' @export
-evaluateModel.WeightedPredictor <- function(x, newdata=NULL, ...) {
+predict.WeightedPredictor <- function(x, newdata=NULL, ...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
