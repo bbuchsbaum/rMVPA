@@ -586,7 +586,7 @@ loadBrainDataSequence <- function(fnames, config, indices) {
 #' load 4D brain data from one of more image provided in \code{name} argument
 #' 
 #' @param config configuration file
-#' @param name 
+#' @param name name of file
 #' @export
 loadBrainData <- function(config, name, indices=NULL) {
   fname <- config[[name]]
