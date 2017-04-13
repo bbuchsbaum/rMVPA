@@ -21,14 +21,9 @@ binary_classification_result <- function(observed, predicted, probs, testDesign,
 }
 
 
-#' @export
-subResult <- function(x, indices) {
-  UseMethod("subResult")
-}
 
 
-#' @export
-subResult.multiway_classification_result <- function(x, indices) {
+sub_result.multiway_classification_result <- function(x, indices) {
   ret <- list(
     observed=x$observed[indices],
     predicted=x$predicted[indices],
@@ -40,8 +35,7 @@ subResult.multiway_classification_result <- function(x, indices) {
   ret
 }
 
-#' @export
-subResult.binary_classification_result <- function(x, indices) {
+sub_result.binary_classification_result <- function(x, indices) {
   ret <- list(
     observed=x$observed[indices],
     predicted=x$predicted[indices],
