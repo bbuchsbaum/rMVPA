@@ -25,4 +25,3 @@ model_fit(model, y, fit, model_type = c("classification", "regression"),
 \description{
 the result of a single model fit to a chunk of data
 }
-

@@ -14,6 +14,5 @@ merge_results(x, y, ...)
 \item{extra}{args}
 }
 \description{
-merge two classification results
+merge two classification/regression results
 }
-

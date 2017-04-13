@@ -11,4 +11,3 @@ mvpa_model(model, dataset, model_type = c("classification", "regression"),
 \description{
 mvpa_model
 }
-

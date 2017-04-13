@@ -13,4 +13,3 @@ mvpa_design(train_design, y_train, test_design = NULL, y_test = NULL,
 \description{
 mvpa_design
 }
-

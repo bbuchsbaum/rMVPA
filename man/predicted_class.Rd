@@ -12,4 +12,3 @@ predicted_class(prob)
 \description{
 predicted_class
 }
-

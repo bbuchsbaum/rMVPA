@@ -9,4 +9,3 @@ external_crossval(roi, mspec, id, return_fit = FALSE)
 \description{
 extern_crossval
 }
-

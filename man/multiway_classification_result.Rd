@@ -10,4 +10,3 @@ multiway_classification_result(observed, predicted, probs, testDesign = NULL,
 \description{
 create an \code{multiway_classification_result} instance
 }
-

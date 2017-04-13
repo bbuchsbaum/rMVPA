@@ -7,6 +7,5 @@
 fit_model(obj, roi_x, y, wts, param, lev, last, classProbs, ...)
 }
 \description{
-fit_model
+fit a classification or regression model
 }
-

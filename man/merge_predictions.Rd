@@ -14,6 +14,5 @@ merge_predictions(obj1, rest, ...)
 \item{...}{extra args}
 }
 \description{
-merge_predictions
+combine predictions from several models applied to the same test set.
 }
-

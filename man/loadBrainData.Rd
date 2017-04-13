@@ -14,4 +14,3 @@ loadBrainData(config, name, indices = NULL)
 \description{
 load 4D brain data from one of more image provided in \code{name} argument
 }
-

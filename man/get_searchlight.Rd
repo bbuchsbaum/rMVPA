@@ -12,6 +12,5 @@ get_searchlight(obj, ...)
 \item{...}{extra args}
 }
 \description{
-get_searchlight
+get a searchlight object appropriate for a given input dataset (e.g. volumetric or surface).
 }
-

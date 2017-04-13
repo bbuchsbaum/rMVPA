@@ -12,6 +12,5 @@ performance(x, ...)
 \item{...}{extra args}
 }
 \description{
-Calculate performance metrics from a classification/regression result
+Compute appropriate performance metrics such as accuracy/AUC/RMSE from a classification/regression result
 }
-

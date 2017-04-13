@@ -12,6 +12,5 @@ as_roi(obj, ...)
 \item{...}{extra args}
 }
 \description{
-as_roi
+convert to an \code{ROIVolume} or \code{ROISurface} object
 }
-

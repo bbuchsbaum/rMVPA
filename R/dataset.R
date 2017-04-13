@@ -105,7 +105,7 @@ wrap_output.mvpa_dataset <- function(obj, vals, indices) {
   BrainVolume(vals, space(obj$mask), indices=indices)
 }
 
-wrap_output.mvpa_surface_dataset <- function(x, vals, indices) {
+wrap_output.mvpa_surface_dataset <- function(obj, vals, indices) {
   BrainSurface(geometry=geometry(obj$train_data), indices=indices, data=vals)
 }
 

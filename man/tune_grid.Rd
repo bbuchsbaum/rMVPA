@@ -7,6 +7,5 @@
 tune_grid(obj, x, y, len)
 }
 \description{
-tune_grid
+extract the parameter grid to optimize.
 }
-

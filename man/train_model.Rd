@@ -7,6 +7,5 @@
 train_model(obj, ...)
 }
 \description{
-train_model
+train a classification or regression model
 }
-

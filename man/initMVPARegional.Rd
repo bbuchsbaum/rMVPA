@@ -14,4 +14,3 @@ initMVPARegional(configFile, args = list(), verbose = FALSE)
 \description{
 initMVPARegional
 }
-

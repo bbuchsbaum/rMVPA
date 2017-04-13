@@ -14,4 +14,3 @@ regression_result(observed, predicted, testDesign = NULL, predictor = NULL)
 \description{
 create an \code{regression_result} instance
 }
-

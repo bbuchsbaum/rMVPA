@@ -1,6 +1,3 @@
-#' @include mvpa_model.R
-NULL
- 
 
 initializeROIGrouping <- function(config) {
   if (!is.null(config$roi_grouping)) {

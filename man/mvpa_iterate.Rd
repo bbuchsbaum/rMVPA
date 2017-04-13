@@ -19,4 +19,3 @@ mvpa_iterate(mod_spec, vox_list, ids = 1:length(vox_iter),
 \description{
 Fit a model for each of a list of voxels sets
 }
-

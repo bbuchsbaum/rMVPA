@@ -7,6 +7,5 @@
 y_test(obj)
 }
 \description{
-y_test
+extract the test labels/response.
 }
-

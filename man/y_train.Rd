@@ -7,6 +7,5 @@
 y_train(obj)
 }
 \description{
-y_train
+extract the training labels/response
 }
-
