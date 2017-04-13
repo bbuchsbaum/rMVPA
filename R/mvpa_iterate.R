@@ -48,24 +48,26 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   result <- try(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid))
   
   if (inherits(result, "try-error")) {
-    warning(result)
-    return(data.frame())
-  }
-  
-  pred <- predict(result, tibble::as_tibble(values(roi$test_roi)), NULL)
-  plist <- lapply(pred, list)
-  plist$y_true <- list(ytest)
-  plist$test_ind=list(as.integer(seq_along(ytest)))
-  
-  ret <- tibble::as_tibble(plist) 
-  
-  cres <- if (return_fit) {
-    wrap_result(ret, dset, result$fit)
+    tibble::tibble(result=list(), indices=list(ind), performance=list(), id=id, 
+                   error=TRUE, error_message=attr(result, "condition")$message)
   } else {
-    wrap_result(ret,dset)
-  }
   
-  tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id)
+    pred <- predict(result, tibble::as_tibble(values(roi$test_roi)), NULL)
+    plist <- lapply(pred, list)
+    plist$y_true <- list(ytest)
+    plist$test_ind=list(as.integer(seq_along(ytest)))
+  
+    ret <- tibble::as_tibble(plist) 
+  
+    cres <- if (return_fit) {
+      wrap_result(ret, dset, result$fit)
+    } else {
+      wrap_result(ret,dset)
+    }
+  
+    tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, 
+                 error=FALSE, error_message="")
+  }
 }
  
 
@@ -91,6 +93,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
         plist <- lapply(pred, list)
         plist$y_true <- list(.$ytest)
         plist$test_ind=list(as.integer(.$test))
+        
         if (return_fit) {
           plist$fit <- list(result)
         }
