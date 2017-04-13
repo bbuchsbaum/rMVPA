@@ -2,6 +2,8 @@
 
 #' select_features
 #' 
+#' performance feature selection on a training ROI.
+#' 
 #' @export
 select_features <- function(obj, roi, Y, ...) {
   UseMethod("select_features")
@@ -9,6 +11,8 @@ select_features <- function(obj, roi, Y, ...) {
 
 
 #' train_model
+#' 
+#' train a classification or regression model
 #' 
 #' @export
 train_model <- function(obj,...) {
@@ -19,6 +23,8 @@ train_model <- function(obj,...) {
 
 #' y_train
 #' 
+#' extract the training labels/response
+#' 
 #' @export
 y_train <- function(obj) {
   UseMethod("y_train")
@@ -27,6 +33,8 @@ y_train <- function(obj) {
 
 #' y_test
 #' 
+#' extract the test labels/response.
+#' 
 #' @export
 y_test <- function(obj) {
   UseMethod("y_test")
@@ -34,13 +42,16 @@ y_test <- function(obj) {
 
 #' fit_model
 #' 
-#' @export
+#' fit a classification or regression model
+#' 
 fit_model <- function(obj, roi_x, y, wts, param, lev, last, classProbs, ...) {
   UseMethod("fit_model")
 }
 
 
 #' tune_grid
+#' 
+#' extract the parameter grid to optimize.
 #' 
 #' @export
 tune_grid <- function(obj, x,y,len) {
@@ -57,7 +68,7 @@ has_test_set <- function(obj) {
 
 #' performance
 #' 
-#' Calculate performance metrics from a classification/regression result
+#' Compute appropriate performance metrics such as accuracy/AUC/RMSE from a classification/regression result
 #' 
 #' @param x the result to evaluate performance of
 #' @param ... extra args
@@ -79,7 +90,7 @@ compute_performance <- function(obj, result) {
 
 #' merge_results
 #' 
-#' merge two classification results
+#' merge two classification/regression results
 #' 
 #' @param x the first result
 #' @param y the second result
@@ -120,6 +131,8 @@ extract_sample <- function(obj,...) {
 
 #' as_roi
 #' 
+#' convert to an \code{ROIVolume} or \code{ROISurface} object
+#' 
 #' @param obj the object to convert
 #' @param ... extra args
 #' @export
@@ -129,6 +142,8 @@ as_roi <- function(obj,...) {
 
 
 #' get_searchlight
+#' 
+#' get a searchlight object appropriate for a given input dataset (e.g. volumetric or surface).
 #' 
 #' @param obj the object
 #' @param ... extra args
@@ -148,6 +163,9 @@ wrap_output <- function(obj, vals, ...) {
 }
 
 #' merge_predictions
+#' 
+#' combine predictions from several models applied to the same test set.
+#' 
 #' @param obj1 the first object
 #' @param rest the rest of the objects
 #' @param ... extra args
@@ -157,6 +175,9 @@ merge_predictions <- function(obj1, rest, ...) {
 
 
 #' sub_result
+#' 
+#' exctract a row-wise subset of a classification/regression result object.
+#' 
 #' @param x the result object to subset
 #' @param indices the row indices
 sub_result <- function(x, indices) {
