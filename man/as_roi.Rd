@@ -6,6 +6,11 @@
 \usage{
 as_roi(obj, ...)
 }
+\arguments{
+\item{obj}{the object to convert}
+
+\item{...}{extra args}
+}
 \description{
 as_roi
 }

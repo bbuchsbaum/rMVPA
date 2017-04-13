@@ -1,6 +1,3 @@
-
-
-
 colACC <- function(X, Y) {
   apply(X, 2, function(p) {
     sum(p == Y)/length(Y)
@@ -50,10 +47,10 @@ computePerformance <- function(result, splitList=NULL, class_metrics=FALSE, cust
 #' @export
 mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureSelector = NULL, subIndices=NULL) {
   
- 
+  
   ## valid subset
   valid.idx <- nonzeroVarianceColumns(values(ROI))
- 
+  
   if (length(valid.idx) < 2) {
     stop("mvpa_crossval: fewer than 2 valid columns in data matrix")
   }
@@ -62,14 +59,14 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
     ## subset ROI using valid coordinates
     ROI <- ROI[valid.idx]
   }
-    
+  
   
   parcels <- if (!is.null(dataset$parcellation)) {
     stop("parcellation not supported")
     ## subset parcellation with ROI
     dataset$parcellation[ROI]
   }
-    
+  
   if (is.null(tuneGrid)) {
     ## should move within crossval_
     tuneGrid <- model$grid(values(ROI), Y, 1)
@@ -88,7 +85,7 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
   }
   
   ## attr(result, "valid.idx") <- valid.idx
-    
+  
   result
 }
 
@@ -118,7 +115,7 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
   iterlist <- lapply(nclusters, function(nc) neuroim:::ClusteredSearchlight(dataset$mask, nc))
   index_mat <- do.call(cbind, lapply(iterlist, function(it) it$clusters))
   
-                     
+  
   resultSet <- foreach(searchIter = iterlist) %dopar% {
     message("running clustered iterator")
     res <- lapply(searchIter, function(vox) {
@@ -132,7 +129,7 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
     res
   }
   
-
+  
   perfList <- lapply(1:nrow(index_mat), function(i) {
     ind <- index_mat[i,]
     
@@ -148,7 +145,7 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
   
   validRes <- .extractValidResults(perfList)
   perfmat <- do.call(rbind, validRes)
- 
+  
   ## fix only use valid indices
   dataset$convertScores(which(dataset$mask != 0), perfmat)
   
@@ -158,52 +155,52 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select mutate rowwise arrange do
 .doRandomized2 <- function(dataset, model, radius, crossval, niter, class_metrics = FALSE) {
-    iterlist <- replicate(niter, dataset$searchlight(radius, "randomized"), simplify = FALSE)
-
-    resultSet <- foreach(searchIter=iterlist) %:% foreach(vox=searchIter, .combine=rbind, .packages=c("dplyr", "tibble")) %do% { 
-      roi <- dataset$trainChunk(vox)
-      if (length(roi) > 1) {
-        result <- try(model$run(dataset, roi, crossval))
-        result$predictor <- NULL
-        tibble::data_frame(result = list(result),
-             indices = list(attr(vox, "indices")))
-      } else {
-        tibble::data_frame(result = NA,
-             indices = list(attr(vox, "indices")))
-      }
-    }
-    
-    index_mat <- as.matrix(do.call(cbind, lapply(resultSet, function(result) {
-      result %>% mutate(rn=row_number()) %>% dplyr::rowwise() %>% 
-        do(tibble::data_frame(indices=.$indices, rn=.$rn)) %>% arrange(indices) %>% select(rn)
-    })))
-    
+  iterlist <- replicate(niter, dataset$searchlight(radius, "randomized"), simplify = FALSE)
   
-    perfList <- lapply(1:nrow(index_mat), function(i) {
-     
-      ind <- index_mat[i, ]
-      
-      rlist <- mapply(function(result, i) {
-        result$result[i]
-      }, resultSet, ind)
-      
-      rlist <- rlist[sapply(rlist, length) != 1]
-      
-      result <- Reduce(merge_results, rlist)
-      result$predicted <- predicted_class(result$probs)
-      
-      perf <-
-        computePerformance(result,
-                           dataset$testSplits,
-                           class_metrics,
-                           model$customPerformance)
-    })
+  resultSet <- foreach(searchIter=iterlist) %:% foreach(vox=searchIter, .combine=rbind, .packages=c("dplyr", "tibble")) %do% { 
+    roi <- dataset$trainChunk(vox)
+    if (length(roi) > 1) {
+      result <- try(model$run(dataset, roi, crossval))
+      result$predictor <- NULL
+      tibble::data_frame(result = list(result),
+                         indices = list(attr(vox, "indices")))
+    } else {
+      tibble::data_frame(result = NA,
+                         indices = list(attr(vox, "indices")))
+    }
+  }
+  
+  index_mat <- as.matrix(do.call(cbind, lapply(resultSet, function(result) {
+    result %>% mutate(rn=row_number()) %>% dplyr::rowwise() %>% 
+      do(tibble::data_frame(indices=.$indices, rn=.$rn)) %>% arrange(indices) %>% select(rn)
+  })))
+  
+  
+  perfList <- lapply(1:nrow(index_mat), function(i) {
     
-    validRes <- .extractValidResults(perfList)
-    perfmat <- do.call(rbind, validRes)
+    ind <- index_mat[i, ]
     
-    dataset$convertScores(which(dataset$mask != 0), perfmat)
-
+    rlist <- mapply(function(result, i) {
+      result$result[i]
+    }, resultSet, ind)
+    
+    rlist <- rlist[sapply(rlist, length) != 1]
+    
+    result <- Reduce(merge_results, rlist)
+    result$predicted <- predicted_class(result$probs)
+    
+    perf <-
+      computePerformance(result,
+                         dataset$testSplits,
+                         class_metrics,
+                         model$customPerformance)
+  })
+  
+  validRes <- .extractValidResults(perfList)
+  perfmat <- do.call(rbind, validRes)
+  
+  dataset$convertScores(which(dataset$mask != 0), perfmat)
+  
 }
 
 # standard searchlight
@@ -250,7 +247,7 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
   perfmat <- do.call(rbind, lapply(validRes, "[[", "perf"))
   ids <- unlist(lapply(validRes, "[[", "vox"))
   dataset$convertScores(ids, perfmat)
- 
+  
 }
 
 
@@ -300,18 +297,18 @@ mvpa_regional <- function(dataset, model, region_mask, crossval=kfold_cross_vali
       #vox <- ROIVolume(space(region_mask), indexToGrid(region_mask, idx))
       
       result <- model$run(dataset, roi, crossval, featureSelector)
-    
+      
       attr(result, "ROINUM") <- roinum
       attr(result, "vox") <- idx
       
-     
+      
       perf <- if (!is.null(model$customPerformance)) {
         standard <- performance(result, dataset$testSplits, class_metrics)
         custom_perf <- customPerformance(result, model$customPerformance, dataset$testSplits)
         c(standard, custom_perf)
       } else {
         t(performance(result, dataset$testSplits, class_metrics))[1,]
-  
+        
       }
       
       perf <- c(ROINUM=roinum, perf)     
@@ -340,7 +337,7 @@ mvpa_regional <- function(dataset, model, region_mask, crossval=kfold_cross_vali
   results <- lapply(validRes, function(res) {
     attr(res, "result")
   })
- 
+  
   ## combine performance metrics into matrix
   perfMat <- do.call(rbind, validRes)
   
@@ -350,7 +347,7 @@ mvpa_regional <- function(dataset, model, region_mask, crossval=kfold_cross_vali
   })
   
   resultSet <- ClassificationResultSet(dataset$blockVar, results)
-
+  
   extendedResults <- model$combineResults(results)
   names(outVols) <- colnames(perfMat)[2:ncol(perfMat)]
   
@@ -359,7 +356,7 @@ mvpa_regional <- function(dataset, model, region_mask, crossval=kfold_cross_vali
        resultSet=resultSet, 
        extendedResults=extendedResults, 
        invalid=regionSet[invalid])
-
+  
 }
 
 
@@ -383,8 +380,8 @@ mvpa_clustered_searchlight <- function(dataset, model, crossval, nclusters = NUL
   
   
 }
-  
-  
+
+
 #' mvpa_searchlight
 #' 
 #' @param dataset a \code{MVPADataset} instance.

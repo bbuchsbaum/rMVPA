@@ -47,6 +47,7 @@ Collate:
     'mvpa_result.R'
     'optim.R'
     'performance.R'
+    'predictor.R'
     'rMVPA.R'
     'regional.R'
     'resample.R'

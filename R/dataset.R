@@ -17,20 +17,24 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
   
 }
 
+#' @export
 has_test_set.mvpa_dataset <- function(obj) {
   !is.null(obj$design$y_test) 
 }
 
+#' @export
 y_train.mvpa_dataset <- function(obj) y_train(obj$design)
 
+
+#' @export
 y_test.mvpa_dataset <- function(obj) y_test(obj$design)
 
 #' mvpa_dataset
 #' 
-#' @param train_data
-#' @param test_data
-#' @param mask
-#' @param design
+#' @param train_data the training data set: a \code{BrainVector} instance
+#' @param test_data the test data set: a \code{BrainVector} instance
+#' @param mask the set of voxels to include: a \code{BrainVolume} instance
+#' @param design the design: a \code{mvpa_design} instance
 #' @importFrom assertthat assert_that
 mvpa_dataset <- function(train_data,test_data=NULL, mask, design) {
   assert_that(inherits(design, "mvpa_design"))

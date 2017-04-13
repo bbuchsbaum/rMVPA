@@ -4,8 +4,12 @@ has_test_set.mvpa_design <- function(obj) {
   !is.null(obj$y_test) 
 }
 
+
+#' @export
 y_train.mvpa_design <- function(obj) obj$y_train
 
+
+#' @export
 y_test.mvpa_design <- function(obj) if (is.null(obj$y_test)) obj$y_train else obj$y_test
 
 parse_variable <- function(var, design) {

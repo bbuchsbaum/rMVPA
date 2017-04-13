@@ -22,8 +22,8 @@ mclass_summary <- function (data, lev = NULL, model = NULL) {
 
 
 
-#' @export
-load_libs.caret_model_wrapper <- function(x) {
+
+load_caret_libs <- function(x) {
   for (lib in x$model$library) {
     library(lib, character.only = TRUE)
   }
@@ -344,8 +344,8 @@ get_custom_perf <- function(fun, split_list) {
 }
 
 
-compute_performance.mvpa_model <- function(x, result) {
-  x$performance(result)
+compute_performance.mvpa_model <- function(obj, result) {
+  obj$performance(result)
 }
 
 #' mvpa_model

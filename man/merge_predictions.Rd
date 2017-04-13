@@ -6,6 +6,13 @@
 \usage{
 merge_predictions(obj1, rest, ...)
 }
+\arguments{
+\item{obj1}{the first object}
+
+\item{rest}{the rest of the objects}
+
+\item{...}{extra args}
+}
 \description{
 merge_predictions
 }

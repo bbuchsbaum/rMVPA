@@ -4,7 +4,12 @@
 \alias{compute_performance}
 \title{compute_performance}
 \usage{
-compute_performance(x, result)
+compute_performance(obj, result)
+}
+\arguments{
+\item{obj}{the object}
+
+\item{result}{the 'result' to evaluate}
 }
 \description{
 Delegate calculation of performance metrics

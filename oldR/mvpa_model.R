@@ -1,5 +1,3 @@
-
-
 .noneControl <- caret::trainControl("none", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none", allowParallel=FALSE)
 
 .cvControl <- caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE)  
@@ -24,7 +22,7 @@ ClassificationResultSet <- function(blockVar, resultList) {
 # wraps a caret model fit
 CaretModel <- function(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, tuneControl, featureSelector=NULL, featureMask=NULL, parcels=NULL) {
   ret <- list( model=model, Xtrain=Xtrain,Ytrain=Ytrain,Xtest=Xtest,Ytest=Ytest,tuneGrid=tuneGrid,
-    tuneControl=tuneControl,modelFit=fit,featureSelector=featureSelector,featureMask=featureMask,parcels=parcels)
+               tuneControl=tuneControl,modelFit=fit,featureSelector=featureSelector,featureMask=featureMask,parcels=parcels)
   if (is.factor(Ytrain)) {
     class(ret) <- c("CaretModel", "list")
   } else {
@@ -39,7 +37,7 @@ RawModel <- function(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, feature
   
   ret <- list(model=model, Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest, Ytest=Ytest, tuneGrid=tuneGrid,modelFit=fit,
               featureSelector=featureSelector,featureMask=featureMask,parcels=parcels)
-              
+  
   if (is.factor(Ytrain)) {
     ret$modelFit$problemType <- "Classification"
     class(ret) <- c("RawModel", "list")
@@ -47,7 +45,7 @@ RawModel <- function(model, fit, Xtrain, Ytrain, Xtest, Ytest, tuneGrid, feature
     ret$modelFit$problemType <- "Regression"
     class(ret) <- c("RawRegressionModel", "list")
   }
-
+  
   ret
 }
 
@@ -133,7 +131,7 @@ CalibratedPredictor <- function(predictor, calibrationX, calibrationY) {
     ## scam
     gam(y0 ~ s(x0), data=df1, family=binomial())
   })
-      
+  
   ret <- list(calfits=fits, predictor=predictor)
   class(ret) <- c("CalibratedPredictor", "list")
   ret
@@ -244,7 +242,7 @@ evaluateModel.CalibratedPredictor <- function(x, newdata,...) {
   }))
   
   sweep(Pcal, 1, rowSums(Pcal), "/")
-
+  
 }
 
 #' @export
@@ -358,7 +356,7 @@ predict.WeightedPredictor <- function(x, newdata=NULL, ...) {
   prob <- preds[!sapply(preds, function(x) is.null(x))]
   pfinal <- Reduce("+", prob)
   
-
+  
   cnames <- colnames(pfinal)
   maxids <- apply(pfinal, 1, which.max)
   len <- sapply(maxids, length)
@@ -474,7 +472,7 @@ crossval_external <- function(crossVal, Y, ROI, Ytest, testROI, subIndices=NULL,
   )
   
   result
-
+  
 }
 
 #' Carry out internal cross-validation defined by a \code{CrossValidation} instance.
@@ -498,7 +496,7 @@ crossval_internal <- function(crossVal, Y, ROI, subIndices, model, tuneGrid, fea
     if (nrow(tuneGrid) == 1) {
       ## subset ROI with training indices
       fit <- try(trainModel(model, ROI[,fold$trainIndex], fold$Ytrain, ROI[, fold$testIndex], fold$Ytest, 
-                        tuneGrid,  .noneControl, featureSelector, parcels))
+                            tuneGrid,  .noneControl, featureSelector, parcels))
       list(result=evaluateModel(fit), fit = asPredictor(fit), featureMask=fit$featureMask, parcels=parcels, testIndices=fold$testIndex)        
     } else {    
       ctrl <- if (foldIterator$nfolds == 2) {
@@ -507,7 +505,7 @@ crossval_internal <- function(crossVal, Y, ROI, subIndices, model, tuneGrid, fea
         index <- invertFolds(foldIterator$getTestSets()[-foldIterator$index()], seq_along(fold$Ytrain)) 
         caret::trainControl("cv", verboseIter=TRUE, classProbs=TRUE, index=index, returnData=FALSE, returnResamp="none")
       }
-     
+      
       fit <- trainModel(model, ROI[, fold$trainIndex], fold$Ytrain, ROI[, fold$testIndex], fold$Ytest, tuneGrid, tuneControl=ctrl, featureSelector, parcels)
       list(result=evaluateModel(fit), fit = asPredictor(fit), featureMask=fit$featureMask, parcels=parcels,testIndices=fold$testIndex)    
     } 
@@ -524,7 +522,7 @@ crossval_internal <- function(crossVal, Y, ROI, subIndices, model, tuneGrid, fea
   result
   
 }
-  
+
 
 
 zeroVarianceColumns <- function(M) {

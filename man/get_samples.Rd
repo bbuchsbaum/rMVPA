@@ -6,6 +6,11 @@
 \usage{
 get_samples(obj, voxiter)
 }
+\arguments{
+\item{obj}{the object}
+
+\item{voxiter}{the list of voxel/index sets}
+}
 \description{
 get_samples
 }

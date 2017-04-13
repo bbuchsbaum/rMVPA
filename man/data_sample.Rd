@@ -6,6 +6,11 @@
 \usage{
 data_sample(obj, vox)
 }
+\arguments{
+\item{obj}{the object}
+
+\item{vox}{the voxel indices}
+}
 \description{
 data_sample
 }

@@ -6,6 +6,11 @@
 \usage{
 extract_sample(obj, ...)
 }
+\arguments{
+\item{obj}{the object}
+
+\item{...}{extra args}
+}
 \description{
 extract_sample
 }

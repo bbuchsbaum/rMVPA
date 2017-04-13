@@ -1,13 +1,5 @@
 
-#' @export
-spearman_cor <- function(x, y=NULL, use="everything") {
-  cor(x,y,use, method="spearman")
-}
 
-#' @export
-kendall_cor <- function(x, y=NULL, use="everything") {
-  cor(x,y,use, method="kendall")
-}
 
 #' patSimHelper <- memoise::memoise(function(runs, labels, cdim) {
 #'   lowerTri <- as.vector(lower.tri(matrix(0, cdim[1], cdim[2])))
@@ -79,4 +71,3 @@ kendall_cor <- function(x, y=NULL, use="everything") {
 #'   }
 #'   
 #' }
-

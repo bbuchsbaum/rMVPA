@@ -6,6 +6,13 @@
 \usage{
 wrap_output(obj, vals, ...)
 }
+\arguments{
+\item{obj}{the object}
+
+\item{vals}{the values to wrap}
+
+\item{...}{extra args}
+}
 \description{
 wrap_output
 }

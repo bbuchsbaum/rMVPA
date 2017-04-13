@@ -7,6 +7,9 @@
 mvpa_design(train_design, y_train, test_design = NULL, y_test = NULL,
   block_var = NULL, split_by = NULL)
 }
+\arguments{
+\item{split_by}{}
+}
 \description{
 mvpa_design
 }

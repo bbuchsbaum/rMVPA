@@ -10,6 +10,8 @@ merge_results(x, y, ...)
 \item{x}{the first result}
 
 \item{y}{the second result}
+
+\item{extra}{args}
 }
 \description{
 merge two classification results

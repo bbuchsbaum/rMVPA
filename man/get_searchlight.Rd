@@ -6,6 +6,11 @@
 \usage{
 get_searchlight(obj, ...)
 }
+\arguments{
+\item{obj}{the object}
+
+\item{...}{extra args}
+}
 \description{
 get_searchlight
 }

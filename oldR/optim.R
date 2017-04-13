@@ -14,11 +14,11 @@
 #' y <- sample(c('Y', 'N'), 5, replace=TRUE)
 #' greedyOptAUC(x, y)
 greedyTwoClassOptim <- function(X, Y, iter = 100L, metricFUN="AUC"){ 
-   
+  
   #metricFun <- Metrics::auc
   metricFun <- switch(metric,
                       AUC=Metrics::auc)
-                      #ACC=combinedACC)
+  #ACC=combinedACC)
   
   N           <- ncol(X)
   weights     <- rep(0L, N)
@@ -89,13 +89,13 @@ greedyMultiClassOptim <- function(PredList, Y, iter = 100L, metric="AUC", oneByO
     rowMeans(do.call(cbind, wts))
     
   } else {
-  
+    
     N           <- length(PredList)
     weights     <- rep(0L, N)
     pred        <- matrix(0, length(Y), ncol(PredList[[1]]))
     sum.weights <- 0L
     stopper     <- max(unlist(lapply(PredList, function(p) metricFun(p, Y))))
-  
+    
     while(sum.weights < iter) { 
       sum.weights   <- sum.weights + 1L
       pred          <- lapply(1:length(PredList), function(i) (PredList[[i]] + pred) * 1L/sum.weights)
@@ -107,14 +107,14 @@ greedyMultiClassOptim <- function(PredList, Y, iter = 100L, metric="AUC", oneByO
     }
     
     print(paste("iter:", sum.weights, "best:", maxtest))
-  
+    
     if(stopper > maxtest){
       testresult <- round(maxtest/stopper, 5) * 100
       wstr <- paste0("Optimized weights not better than best model. Ensembled result is ",
-                   testresult, "%", " of best model AUC. Try more iterations.")
+                     testresult, "%", " of best model AUC. Try more iterations.")
       message(wstr)
     }
-  
+    
     weights/sum(weights)
   }
 }
@@ -178,5 +178,3 @@ BaggedTwoClassOptACC <- function(X, Y, iter = 20, bagIter=20, bagFrac=.5) {
   wts <- rowSums(do.call(cbind, wtlist))
   
 }
-
-
