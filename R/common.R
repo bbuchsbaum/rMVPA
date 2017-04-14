@@ -214,33 +214,27 @@ initializeConfiguration <- function(args) {
 
 #' @export
 initializeStandardParameters <- function(config, args, analysisType) {
-  #setArg("radius", config, args, 8)
   setArg("train_design", config, args, "mvpa_design.txt")
   setArg("test_design", config, args, NULL)
   setArg("train_data", config, args, "mvpa_design.txt")
   setArg("test_data", config, args, NULL)
-  #setArg("type", config, args, "randomized")
   setArg("model", config, args, "corsim")
   setArg("pthreads", config, args, 1)
   setArg("label_column", config, args, "labels")
   setArg("skipIfFolderExists", config, args, FALSE)
-  #setArg("comparison_label_column", config, args, NULL)
   setArg("output", config, args, paste0(analysisType, "_", config$labelColumn))
   setArg("block_column", config, args, "block")
   setArg("normalize", config, args, FALSE)
   setArg("autobalance", config, args, FALSE)
   setArg("tune_length", config, args, 1)
-  #setDefault("autobalance", config, FALSE)
   setArg("tune_grid", config, args, NULL)
-  #setDefault("method_params", config, list())
-  #setArg("niter", config, args, 4)
   setArg("mask", config, args, NULL)
   setArg("output_class_metrics", config, args, TRUE)
   setArg("ensemble_predictor", config, args, FALSE)
   setArg("bootstrap_replications", config, args, 0)
   setArg("custom_performance", config, args, NULL)
   setArg("test_label_column", config, args, config$label_column)
-  #setArg("test_comparison_label_column", config, args, NULL)
+  setArg("data_mode", config, args, "image")
   
   config
 }
@@ -303,13 +297,16 @@ initializeDesign <- function(config) {
   
   ## full design
   config$full_train_design <- read.table(config$train_design, header=TRUE, comment.char=";")
+  
   ## subset of training samples
   config$train_subset <- loadSubset(config$full_train_design, config$train_subset)
+  
   ## training design
   config$train_design <- config$full_train_design[config$train_subset,]
   
   ## training labels
   config$labels <- loadLabels(config$train_design, config)  
+  
   ## block variables for cross-validation
   config$block <- loadBlockColumn(config, config$train_design)
   
@@ -380,11 +377,14 @@ initializeDesign <- function(config) {
 initializeTuneGrid <- function(args, config) {
   if (!is.null(args$tune_grid) && !args$tune_grid == "NULL") {
     params <- try(expand.grid(eval(parse(text=args$tune_grid))))
+    
     if (inherits(params, "try-error")) {
       stop("could not parse tune_grid expresson: ", args$tune_grid)
     }
+    
     flog.info("tuning grid is", params, capture=TRUE)
     config$tune_grid <- params
+    
   } else if (!is.null(config$tune_grid) && !is.data.frame(config$tune_grid)) {
     params <- try(lapply(config$tune_grid, function(x) eval(parse(text=x))))
     if (inherits(params, "try-error")) {
@@ -470,6 +470,14 @@ load_model <- function(name) {
   
 }
 
+
+load_mask <- function(config) {
+  if (config$data_mode == "image") {
+    as.logical(loadVolume(config$mask))
+  } else if (config$data_mode == "surface") {
+    
+  }
+}
 #' @export
 loadMask <- function(config) {
   if (file.exists(config$mask)) {
@@ -509,15 +517,6 @@ loadLabels <- function(full_design, config) {
   
 }
 
-#' @export
-loadComparisonLabels <- function(full_design, config) {
-  if (is.null(full_design[[config$comparison_label_column]])) {
-    stop(paste("Error: comparison_label_column", config$comparison_label_column, "not found"))
-  } else {
-    full_design[[config$comparison_label__column]]
-  }
-  
-}
 
 loadTestLabels <- function(full_design, config) {
   if (is.null(full_design[[config$test_label_column]])) {
@@ -528,14 +527,6 @@ loadTestLabels <- function(full_design, config) {
   
 }
 
-loadTestComparisonLabels <- function(full_design, config) {
-  if (is.null(full_design[[config$test_comparison_label_column]])) {
-    stop(paste("Error: test_comparison_label_column", config$test_comparison_label_column, "not found"))
-  } else {
-    full_design[[config$test_comparison_label_column]]
-  }
-  
-}
 
 #' @export
 loadSubset <- function(full_design, subset) {

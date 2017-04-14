@@ -34,12 +34,47 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
   tibble::as_data_frame(cols)
 }
 
+
+
+crossv_twofold <- function(data, y, block_var, block_ind, id = ".id", nreps=10, exclude_block=NULL) {
+  if (!length(block_var) == length(y)) {
+    stop("length of `block_var` must be equal to length(y)", call. = FALSE)
+  }
+  
+  nhalf <- floor(length(blockind)/2)
+  assert_that(nhalf > 0)
+  
+  fold_sets <- combn(length(block_ind), nhalf)
+  
+  fold_idx <- lapply(1:nreps, function(i) {
+    bind <- fold_sets[, sample(1:ncol(fold_sets), 1)]
+    which(block_var %in% bind)
+  })
+  
+  idx <- seq_len(nrow(data))
+  
+  fold <- function(test) {
+    tidx <- setdiff(idx, test)
+    list(
+      ytrain = y[tidx],
+      ytest = y[test],
+      train = modelr::resample(data, tidx),
+      test = modelr::resample(data, test)
+    )
+  }
+  
+  cols <- purrr::transpose(purrr::map(fold_idx, fold))
+  cols[[id]] <- modelr:::id(length(fold_idx))
+  
+  tibble::as_data_frame(cols)
+  
+  
+}
+
+
 #' crossv_block
 #' 
-#' @export
-#' @param block_var the blocking variable (an integer vector)
 #' @importFrom modelr resample
-#' @rdname crossv_block
 crossv_block <- function(data, y, block_var, id = ".id", exclude_block=NULL) {
  
   if (!length(block_var) == length(y)) {
@@ -81,12 +116,18 @@ crossv_block <- function(data, y, block_var, id = ".id", exclude_block=NULL) {
 #' construct a cross-validation specification using a predefined blocking variable
 #' 
 #' @param block_var an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.
-#' @param balance logical indicating whether cross-validation blocks should automatically balanced, using undersampling if necessary.
-#' @param bootstrap logical indicating whether training samples should be sampled with replacement.
 #' @export
 blocked_cross_validation <- function(block_var) {
-  ret <- list(block_var=block_var, nfolds=length(unique(block_var)))
+  ret <- list(block_var=block_var, nfolds=length(unique(block_var)), block_ind=sort(unique(block_var)))
   class(ret) <- c("blocked_cross_validation", "cross_validation", "list")
+  ret
+}
+
+
+twofold_blocked_cross_validation <- function(block_var, nreps=10) {
+  block_var <- as.integer(block_var)
+  ret <- list(block_var=block_var, nfolds=2, nreps=nreps, blockids=sort(unique(block_var)))
+  class(ret) <- c("twofold_blocked_cross_validation", "cross_validation", "list")
   ret
 }
 
@@ -118,5 +159,10 @@ crossval_samples.kfold_cross_validation <- function(obj, data,y) {
 #' @export
 crossval_samples.blocked_cross_validation <- function(obj, data, y, exclude_block=NULL) { 
   crossv_block(data, y, obj$block_var, exclude_block=exclude_block)
+}
+
+#' @export
+crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y, exclude_block=NULL) { 
+  crossv_block(data, y, obj$block_var, obj$block_ind)
 }
 

@@ -17,17 +17,7 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
   
 }
 
-#' @export
-has_test_set.mvpa_dataset <- function(obj) {
-  !is.null(obj$design$y_test) 
-}
 
-#' @export
-y_train.mvpa_dataset <- function(obj) y_train(obj$design)
-
-
-#' @export
-y_test.mvpa_dataset <- function(obj) y_test(obj$design)
 
 #' mvpa_dataset
 #' 
@@ -61,7 +51,7 @@ mvpa_dataset <- function(train_data,test_data=NULL, mask, design) {
 #' @param hemisphere
 #' @importFrom assertthat assert_that
 #' @export
-mvpa_surface_dataset <- function(train_data, test_data=NULL, mask, design, hemisphere=c("lh", "rh")) {
+mvpa_surface_dataset <- function(train_data, test_data=NULL, mask, hemisphere=c("lh", "rh")) {
   assert_that(inherits(design, "mvpa_design"))
   
   hemisphere <- match.arg(hemisphere)
@@ -69,7 +59,6 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask, design, hemis
     train_data=train_data,
     test_data=test_data,
     mask=mask,
-    design=design,
     hemisphere=hemisphere
   )
   
