@@ -6,6 +6,12 @@
 \usage{
 train_model(obj, ...)
 }
+\arguments{
+\item{obj}{the model specification}
+
+\item{...}{extra args}
+}
 \description{
 train a classification or regression model
 }
+

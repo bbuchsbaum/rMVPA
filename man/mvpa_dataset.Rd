@@ -18,3 +18,4 @@ mvpa_dataset(train_data, test_data = NULL, mask, design)
 \description{
 mvpa_dataset
 }
+

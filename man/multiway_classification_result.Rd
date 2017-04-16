@@ -4,9 +4,10 @@
 \alias{multiway_classification_result}
 \title{create an \code{multiway_classification_result} instance}
 \usage{
-multiway_classification_result(observed, predicted, probs, testDesign = NULL,
+multiway_classification_result(observed, predicted, probs, test_design = NULL,
   predictor = NULL)
 }
 \description{
 create an \code{multiway_classification_result} instance
 }
+

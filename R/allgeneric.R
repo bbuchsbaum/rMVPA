@@ -2,8 +2,12 @@
 
 #' select_features
 #' 
-#' performance feature selection on a training ROI.
+#' feature selection on a training ROI.
 #' 
+#' @param obj an object of class \code{feature_selector}
+#' @param roi the roi data, a class of inheriting from \code{ROI} class.
+#' @param Y the response variable
+#' @param ... extra args
 #' @export
 select_features <- function(obj, roi, Y, ...) {
   UseMethod("select_features")
@@ -13,7 +17,8 @@ select_features <- function(obj, roi, Y, ...) {
 #' train_model
 #' 
 #' train a classification or regression model
-#' 
+#' @param obj the model specification
+#' @param ... extra args
 #' @export
 train_model <- function(obj,...) {
   UseMethod("train_model")
@@ -25,6 +30,7 @@ train_model <- function(obj,...) {
 #' 
 #' extract the training labels/response
 #' 
+#' @param the obj to extract training response variable from.
 #' @export
 y_train <- function(obj) {
   UseMethod("y_train")
@@ -34,7 +40,7 @@ y_train <- function(obj) {
 #' y_test
 #' 
 #' extract the test labels/response.
-#' 
+#' @param the obj to extract test response variable from.
 #' @export
 y_test <- function(obj) {
   UseMethod("y_test")
@@ -44,6 +50,14 @@ y_test <- function(obj) {
 #' 
 #' fit a classification or regression model
 #' 
+#' @param obj
+#' @param roi_x
+#' @param y
+#' @param wts
+#' @param lev
+#' @param last
+#' @param classProbs
+#' @param ...
 fit_model <- function(obj, roi_x, y, wts, param, lev, last, classProbs, ...) {
   UseMethod("fit_model")
 }
@@ -60,6 +74,7 @@ tune_grid <- function(obj, x,y,len) {
 
 #' has_test_set
 #' 
+#' @param obj
 #' @export
 has_test_set <- function(obj) {
   UseMethod("has_test_set")
@@ -94,7 +109,7 @@ compute_performance <- function(obj, result) {
 #' 
 #' @param x the first result
 #' @param y the second result
-#' @param extra args
+#' @param ... extra args
 #' @export
 merge_results <- function(x, y, ...) {
   UseMethod("merge_results")
@@ -143,7 +158,7 @@ as_roi <- function(obj,...) {
 
 #' get_searchlight
 #' 
-#' get a searchlight object appropriate for a given input dataset (e.g. volumetric or surface).
+#' generate a searchlight iterator appropriate for a given input dataset (e.g. volumetric or surface).
 #' 
 #' @param obj the object
 #' @param ... extra args

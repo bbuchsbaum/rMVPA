@@ -30,8 +30,7 @@ wrap_result <- function(result_table, dataset, fit=NULL) {
 }
 
 
-#' extern_crossval
-#' 
+#' external_crossval
 external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   xtrain <- tibble::as_tibble(values(roi$train_roi))
   
@@ -122,7 +121,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   
 #' mvpa_iterate
 #' 
-#' Fit a model for each of a list of voxels sets
+#' Fit a classification/regression model for each of a list of voxels sets
 #' 
 #' @param mod_spec a class of type \code{mvpa_model}
 #' @param vox_list a \code{list} of voxel indices/coordinates
@@ -139,8 +138,6 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits
 
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
     dplyr::rowwise() %>% 
-    # mutate(len=length(attr(sample[["vox"]], "indices"))) %>% 
-    # filter(len >= 2)
     dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, return_fits))
   
   ret

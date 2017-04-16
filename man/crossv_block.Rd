@@ -6,9 +6,7 @@
 \usage{
 crossv_block(data, y, block_var, id = ".id", exclude_block = NULL)
 }
-\arguments{
-\item{block_var}{the blocking variable (an integer vector)}
-}
 \description{
 crossv_block
 }
+

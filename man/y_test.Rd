@@ -6,6 +6,10 @@
 \usage{
 y_test(obj)
 }
+\arguments{
+\item{the}{obj to extract test response variable from.}
+}
 \description{
 extract the test labels/response.
 }
+

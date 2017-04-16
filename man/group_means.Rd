@@ -14,3 +14,4 @@ group_means(X, margin, group)
 \description{
 compute the average vector, splitting a matrix for each level of a grouping variable
 }
+

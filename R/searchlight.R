@@ -104,7 +104,7 @@ run_searchlight <- function(model_spec, radius=8, method=c("randomized", "standa
   method <- match.arg(method)
   
   if (method == "randomized") {
-    stopifnot(niter > 1)
+    assert_that(niter > 1)
   }
   
   flog.info("model is: %s", model_spec$model$label)

@@ -2,9 +2,8 @@
 % Please edit documentation in R/allgeneric.R, R/feature_selection.R
 \name{select_features}
 \alias{select_features}
-\alias{select_features}
-\alias{select_features.catscore}
 \alias{select_features.FTest}
+\alias{select_features.catscore}
 \title{select_features}
 \usage{
 select_features(obj, ROI, Y, ...)
@@ -17,13 +16,21 @@ select_features(obj, ROI, Y, ...)
 \method{select_features}{FTest}(obj, X, Y)
 }
 \arguments{
-\item{obj}{the \code{feature_selection} object}
+\item{obj}{an object of class \code{feature_selector}}
 
 \item{ROI}{region of interest containing training features, a class of type \code{ROIVolume} or \code{ROISurface}}
 
-\item{Y}{the dependent variable as a \code{factor} or \code{numeric} variable.}
+\item{Y}{the response variable}
+
+\item{...}{extra args}
 
 \item{ranking.score}{the feature score: entropy, avg, or max.}
+
+\item{roi}{the roi data, a class of inheriting from \code{ROI} class.}
+
+\item{obj}{the \code{feature_selection} object}
+
+\item{Y}{the dependent variable as a \code{factor} or \code{numeric} variable.}
 
 \item{additional}{arguments}
 }
@@ -31,7 +38,7 @@ select_features(obj, ROI, Y, ...)
 a \code{logical} vector indicating the columns of \code{X} matrix that were selected.
 }
 \description{
-performance feature selection on a training ROI.
+feature selection on a training ROI.
 
 Given a \code{feature_selection} specification object and a dataset return the set of selected features as a binary vector.
 }
@@ -44,3 +51,4 @@ Y <- factor(rep(c("a", "b"), each=50))
 featureMask <- select_features(fsel, ROI, Y)
 sum(featureMask) == 10
 }
+

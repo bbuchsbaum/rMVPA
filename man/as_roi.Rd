@@ -14,3 +14,4 @@ as_roi(obj, ...)
 \description{
 convert to an \code{ROIVolume} or \code{ROISurface} object
 }
+

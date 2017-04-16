@@ -12,5 +12,6 @@ get_searchlight(obj, ...)
 \item{...}{extra args}
 }
 \description{
-get a searchlight object appropriate for a given input dataset (e.g. volumetric or surface).
+generate a searchlight iterator appropriate for a given input dataset (e.g. volumetric or surface).
 }
+

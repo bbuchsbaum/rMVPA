@@ -45,13 +45,13 @@ custom_performance <- function(x, custom_fun, split_list=NULL) {
 #' @export
 merge_results.binary_classification_result <- function(x,y) {
   probs <- (x$probs + y$probs)/2
-  binary_classification_result(observed=x$observed, predicted=NULL, probs=probs, testDesign=x$testDesign, predictor=x$predictor)
+  binary_classification_result(observed=x$observed, predicted=NULL, probs=probs, test_design=x$test_design, predictor=x$predictor)
 }
 
 #' @export
 merge_results.multiway_classification_result <- function(x,y) {
   probs <- (x$probs + y$probs)/2
-  multiway_classification_result(observed=x$observed, predicted=NULL, probs=probs, testDesign=x$testDesign, predictor=x$predictor)
+  multiway_classification_result(observed=x$observed, predicted=NULL, probs=probs, test_design=x$test_design, predictor=x$predictor)
 }
 
 #' @export

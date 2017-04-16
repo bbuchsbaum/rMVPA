@@ -4,9 +4,10 @@
 \alias{mvpa_surface_dataset}
 \title{mvpa_surface_dataset}
 \usage{
-mvpa_surface_dataset(train_data, test_data = NULL, mask, design,
+mvpa_surface_dataset(train_data, test_data = NULL, mask,
   hemisphere = c("lh", "rh"))
 }
 \description{
 mvpa_surface_dataset
 }
+

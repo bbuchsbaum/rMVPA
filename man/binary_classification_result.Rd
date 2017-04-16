@@ -4,7 +4,7 @@
 \alias{binary_classification_result}
 \title{binary_classification_result}
 \usage{
-binary_classification_result(observed, predicted, probs, testDesign,
+binary_classification_result(observed, predicted, probs, test_design,
   predictor = NULL)
 }
 \arguments{
@@ -13,7 +13,12 @@ binary_classification_result(observed, predicted, probs, testDesign,
 \item{predicted}{the predicted classes}
 
 \item{probs}{the predicted probabilities}
+
+\item{test_design}{the design associated with test responses}
+
+\item{predictor}{an object used to predict new responses}
 }
 \description{
 create an \code{binary_classification_result} instance
 }
+

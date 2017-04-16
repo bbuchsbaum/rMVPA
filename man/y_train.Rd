@@ -6,6 +6,10 @@
 \usage{
 y_train(obj)
 }
+\arguments{
+\item{the}{obj to extract training response variable from.}
+}
 \description{
 extract the training labels/response
 }
+

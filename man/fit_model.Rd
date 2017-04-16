@@ -9,3 +9,4 @@ fit_model(obj, roi_x, y, wts, param, lev, last, classProbs, ...)
 \description{
 fit a classification or regression model
 }
+

@@ -4,7 +4,7 @@
 \alias{regression_result}
 \title{create an \code{regression_result} instance}
 \usage{
-regression_result(observed, predicted, testDesign = NULL, predictor = NULL)
+regression_result(observed, predicted, test_design = NULL, predictor = NULL)
 }
 \arguments{
 \item{observed}{the observed values}
@@ -14,3 +14,4 @@ regression_result(observed, predicted, testDesign = NULL, predictor = NULL)
 \description{
 create an \code{regression_result} instance
 }
+

@@ -28,9 +28,8 @@ Imports:
     Metrics,
     memoise,
     e1071,
-    R6,
     sp
-Collate: 
+Collate:
     'allgeneric.R'
     'classifiers.R'
     'common.R'
@@ -38,7 +37,6 @@ Collate:
     'dataset.R'
     'design.R'
     'feature_selection.R'
-    'model_spec.R'
     'mvpa_iterate.R'
     'mvpa_result.R'
     'performance.R'
@@ -47,6 +45,6 @@ Collate:
     'resample.R'
     'searchlight.R'
     'utils.R'
-RoxygenNote: 6.0.1.9000
+RoxygenNote: 5.0.1
 Suggests:
     testthat

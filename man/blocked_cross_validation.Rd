@@ -8,11 +8,8 @@ blocked_cross_validation(block_var)
 }
 \arguments{
 \item{block_var}{an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.}
-
-\item{balance}{logical indicating whether cross-validation blocks should automatically balanced, using undersampling if necessary.}
-
-\item{bootstrap}{logical indicating whether training samples should be sampled with replacement.}
 }
 \description{
 construct a cross-validation specification using a predefined blocking variable
 }
+

@@ -9,3 +9,4 @@ custom_performance(x, custom_fun, split_list = NULL)
 \description{
 custom_performance
 }
+
