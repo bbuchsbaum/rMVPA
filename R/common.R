@@ -523,7 +523,7 @@ load_image_data <- function(config, name, indices=NULL) {
   }
 }
 
-load_surface_data
+load_surface_data <- function(name)
 load_surface_data_series
 
 
