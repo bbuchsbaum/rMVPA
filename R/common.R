@@ -192,10 +192,10 @@ initMVPASearchlight <- function(configFile, args=list(), verbose=FALSE) {
 
 #' @export
 #' @import stringr
-initializeConfiguration <- function(args) {
+initialize_configuration <- function(args) {
   
   if (!is.null(args$config)) {
-    if (! file.exists(args$config)) {
+    if (!file.exists(args$config)) {
       flog.error("cannot find configuration file: %s", args$config)
       stop()
     } else if (str_detect(args$config, "\\.yaml$")) {
@@ -209,11 +209,10 @@ initializeConfiguration <- function(args) {
   
   config
 
-  
 }
 
 #' @export
-initializeStandardParameters <- function(config, args, analysisType) {
+initialize_standard_parameters <- function(config, args, analysisType) {
   setArg("train_design", config, args, "mvpa_design.txt")
   setArg("test_design", config, args, NULL)
   setArg("train_data", config, args, "mvpa_design.txt")
@@ -221,32 +220,31 @@ initializeStandardParameters <- function(config, args, analysisType) {
   setArg("model", config, args, "corsim")
   setArg("pthreads", config, args, 1)
   setArg("label_column", config, args, "labels")
-  setArg("skipIfFolderExists", config, args, FALSE)
+  setArg("skip_if_folder_exists", config, args, FALSE)
   setArg("output", config, args, paste0(analysisType, "_", config$labelColumn))
   setArg("block_column", config, args, "block")
-  setArg("normalize", config, args, FALSE)
-  setArg("autobalance", config, args, FALSE)
+  setArg("normalize_samples", config, args, FALSE)
   setArg("tune_length", config, args, 1)
   setArg("tune_grid", config, args, NULL)
   setArg("mask", config, args, NULL)
   setArg("output_class_metrics", config, args, TRUE)
-  setArg("ensemble_predictor", config, args, FALSE)
+  setArg("split_by", config, args, NULL)
   setArg("bootstrap_replications", config, args, 0)
   setArg("custom_performance", config, args, NULL)
-  setArg("test_label_column", config, args, config$label_column)
+  setArg("test_label_column", config, args, NULL)
   setArg("data_mode", config, args, "image")
   
   config
 }
 
 #' @export
-normalizeSamples <- function(bvec, mask) {
+normalize_samples <- function(bvec, mask) {
   norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
   SparseBrainVector(norm_datavec, space(bvec), mask=mask)  
 }
 
 #' @export
-initializeData <- function(config) {
+initialize_data <- function(config) {
   
   if (!is.null(config$train_subset)) {
     indices=which(config$train_subset)
@@ -270,11 +268,11 @@ initializeData <- function(config) {
   
   if (config$normalize) {
     flog.info("Normalizing: centering and scaling each volume of training data")
-    config$train_datavec <- normalizeSamples(config$train_datavec, config$maskVolume)
+    config$train_datavec <- normalize_samples(config$train_datavec, config$maskVolume)
     
     if (!is.null(config$test_data)) {
       flog.info("Normalizing: centering and scaling each volume of test data")
-      config$test_datavec <- normalizeSamples(config$test_datavec, config$maskVolume)
+      config$test_datavec <- normalize_samples(config$test_datavec, config$maskVolume)
     }
   }
   
@@ -284,7 +282,7 @@ initializeData <- function(config) {
 }
 
 #' @export
-initializeDesign <- function(config) {
+initialize_design <- function(config) {
   if (is.character(config$train_subset)) {
     config$train_subset <- eval(parse(text=config$train_subset))
   }
@@ -293,22 +291,21 @@ initializeDesign <- function(config) {
     config$test_subset <- eval(parse(text=config$test_subset))
   }
   
-  
-  
+
   ## full design
   config$full_train_design <- read.table(config$train_design, header=TRUE, comment.char=";")
   
   ## subset of training samples
-  config$train_subset <- loadSubset(config$full_train_design, config$train_subset)
+  config$train_subset <- load_subset(config$full_train_design, config$train_subset)
   
   ## training design
   config$train_design <- config$full_train_design[config$train_subset,]
   
   ## training labels
-  config$labels <- loadLabels(config$train_design, config)  
+  #config$labels <- load_labels(config$train_design, config)  
   
   ## block variables for cross-validation
-  config$block <- loadBlockColumn(config, config$train_design)
+  #config$block <- loadBlockColumn(config, config$train_design)
   
   flog.info(paste("training subset contains", nrow(config$train_design), "of", nrow(config$full_train_design), "rows."))
   
@@ -319,7 +316,7 @@ initializeDesign <- function(config) {
   
   #if (!is.null(config$test_subset) && is.null(config$test_design) && is.null(config$test_data)) {
   #  flog.info("test subset is taken from training design table")
-  #  config$test_subset <- loadSubset(config$full_train_design, config$test_subset)
+  #  config$test_subset <- load_subset(config$full_train_design, config$test_subset)
   #  
   #  config$test_design <- config$full_train_design[config$test_subset,]
   #  config$full_test_design <- config$test_design
@@ -330,41 +327,29 @@ initializeDesign <- function(config) {
     flog.info("test design %s is specified", config$test_design)
     config$full_test_design <- read.table(config$test_design, header=TRUE, comment.char=";")
     flog.info(paste("test design contains", nrow(config$test_design), "rows."))
-    config$test_subset <- loadSubset(config$full_test_design, config$test_subset)
+    config$test_subset <- load_subset(config$full_test_design, config$test_subset)
     config$test_design <- config$full_test_design[config$test_subset,]
     
     flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows."))
     
-    config$testLabels <- loadTestLabels(config$test_design, config)     
-    flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows.")) 
-    flog.info(paste("first 10 test labels: ", head(config$testLabels, 10), capture=TRUE))
+    #config$testLabels <- loadTestLabels(config$test_design, config)     
+    #flog.info(paste("test subset contains", nrow(config$test_design), "of", nrow(config$full_test_design), "rows.")) 
+    #flog.info(paste("first 10 test labels: ", head(config$testLabels, 10), capture=TRUE))
     
   } else {
     flog.info("testing is cross-validation")
-    config$testLabels <- config$labels
+    #config$testLabels <- config$labels
   }
   
-  if (!is.null(config$split_by)) {
-    
-    form <- eval(parse(text=config$split_by))
-    flog.info("will split performance metrics by %s", as.character(form)[[2]])
-    vars <- all.vars(form[[2]])
-    des <- if (!is.null(config$test_design)) config$test_design else config$train_design
-    config$testSplitVar <- do.call("interaction", lapply(vars, function(vname) as.factor(des[[vname]])))
-    flog.info("splitting levels are: %s", paste(levels(config$testSplitVar), collapse=", "))
-    minSplits <- min(table(config$testSplitVar))
-    if (minSplits < 3) {
-      flog.error("error: splitting condition results in fewer than 3 observations in at least one set", 
-                 table(config$splittingVar), capture=TRUE)
-      stop(paste("invalid split formula", config$split_by))
-    }
-    
-    config$testSplits <- split(1:length(config$testLabels), config$testSplitVar)
-    
-  }
+  
+  design = mvpa_design(train_design=config$train_design, 
+              y_train=config$label_column, 
+              test_design=config$test_design, 
+              y_test=config$test_label_column, 
+              block_var=config$block_column, 
+              split_by=config$split_by)
     
   
-  config
   
 }
 
@@ -374,7 +359,7 @@ initializeDesign <- function(config) {
 #}
 
 #' @export
-initializeTuneGrid <- function(args, config) {
+initialize_tune_grid <- function(args, config) {
   if (!is.null(args$tune_grid) && !args$tune_grid == "NULL") {
     params <- try(expand.grid(eval(parse(text=args$tune_grid))))
     
@@ -400,14 +385,14 @@ initializeTuneGrid <- function(args, config) {
 
 
 #' @export
-setDefault <- function(name, config, default) {
+set_default <- function(name, config, default) {
   if (is.null(config[[name]])) {
     config[[name]]<- default
   }
 }
 
 #' @export
-setArg <- function(name, config, args, default) {
+set_arg <- function(name, config, args, default) {
   if (is.null(config[[name]]) && is.null(args[[name]])) {
     config[[name]] <- default
   } else if (!is.null(args[[name]])) {
@@ -418,7 +403,7 @@ setArg <- function(name, config, args, default) {
 }
 
 #' @export
-makeOutputDir <- function(dirname) {
+make_output_dir <- function(dirname) {
   if (!file.exists(dirname)) {
     system(paste("mkdir", dirname))
     dirname
@@ -428,31 +413,6 @@ makeOutputDir <- function(dirname) {
   }
 }
 
-#' @export
-abort <- function(config, msg) {
-  stop(msg)
-}
-
-#' @export
-logit <- function(config, msg) {
-  #writeLines(msg, config$logFile)
-}
-
-#' @export
-loadModel <- function(name, config=NULL) {
-  ##registry <- get("MVPAModels", .GlobalEnv)
-  registry <- rMVPA:::MVPAModels
-  
-  if (!is.null(registry[[name]])) {
-    CaretModelWrapper$new(registry[[name]], config$tuneGrid, config$custom_performance)       
-  } else if (length(caret::getModelInfo(name)) > 0) {
-    CaretModelWrapper$new(caret::getModelInfo(name)[[name]], config$tuneGrid, config$custom_performance)    
-  } else if (name == "RSA" || name == "rsa") {
-    stop()
-  } else {
-    stop(paste("unrecognized model: ", name))
-  }
-}
 
 
 #' load_model
@@ -478,58 +438,22 @@ load_mask <- function(config) {
     
   }
 }
-#' @export
-loadMask <- function(config) {
-  if (file.exists(config$mask)) {
-    mask <- loadVolume(config$mask)
-  } else {
-    stop(paste("cannot find mask file named: ", config$mask))
-  }
-  
-  mask
-}
 
-#' @export
-loadDesign <- function(config, name) {
+
+
+load_design <- function(config, name) {
   if (!file.exists(config[[name]])) {
-    stop(paste("cannot find table named", config$table))
+    futile.logger::flog.error(paste("cannot find table named: ", name))
+    stop()
   } else {
     read.table(config[[name]], header=TRUE, comment.char=";")
   }
 }
 
-loadFromDesign <- function(full_design, name, type) {
-  if (is.null(full_design[[name]])) {
-    stop(paste("Error:", type, " ", name, " not found"))
-  } else {
-    full_design[[name]]
-  }
-  
-}
-
-#' @export
-loadLabels <- function(full_design, config) {
-  if (is.null(full_design[[config$label_column]])) {
-    stop(paste("Error: label_column", config$label_column, "not found"))
-  } else {
-    full_design[[config$label_column]]
-  }
-  
-}
-
-
-loadTestLabels <- function(full_design, config) {
-  if (is.null(full_design[[config$test_label_column]])) {
-    stop(paste("Error: test_label_column", config$test_label_column, "not found"))
-  } else {
-    full_design[[config$test_label_column]]
-  }
-  
-}
 
 
 #' @export
-loadSubset <- function(full_design, subset) {
+load_subset <- function(full_design, subset) {
   if (is.character(subset)) {
     if (substr(subset, 1,1) != "~") {
       subset <- paste0("~", subset)
@@ -551,21 +475,10 @@ loadSubset <- function(full_design, subset) {
   
 }
 
-#' @export
-loadBlockColumn <- function(config, design) {
-  if (is.null(design[[config$block_column]])) {
-    message(paste("blockColumn variable named", config$blockColumn, "not found."))
-    stop()
-  } else {  
-    config$nfolds <- length(unique(design[[config$block_column]]))
-    design[[config$block_column]]
-  }
-   
-}
 
 #' @export
 #' 
-loadBrainDataSequence <- function(fnames, config, indices) {
+load_image_data_series <- function(fnames, config, indices) {
   if (!all(file.exists(fnames))) {
     offenders <- fnames[!file.exists(fnames)]
     message(paste("data files", offenders, "not found."))
@@ -585,19 +498,20 @@ loadBrainDataSequence <- function(fnames, config, indices) {
   SparseBrainVector(vecmat[indices,], space(config$maskVolume), mask=config$maskVolume)
 }
 
-#' loadBrainData
+#' load_image_data
 #' 
 #' load 4D brain data from one of more image provided in \code{name} argument
 #' 
 #' @param config configuration file
 #' @param name name of file
 #' @export
-loadBrainData <- function(config, name, indices=NULL) {
+load_image_data <- function(config, name, indices=NULL) {
   fname <- config[[name]]
   if (length(fname) > 1) {
-    loadBrainDataSequence(fname, config, indices)
+    load_image_data_series(fname, config, indices)
   } else if (!file.exists(fname)) {
-    abort(config, paste("datafile", fname, "not found."))
+    flog.error("datafile %s not found.", fname)
+    stop()
   } else {
     flog.info("loading data file %s", fname)
     if (!is.null(indices)) {
@@ -608,6 +522,10 @@ loadBrainData <- function(config, name, indices=NULL) {
     
   }
 }
+
+load_surface_data
+load_surface_data_series
+
 
 
   
