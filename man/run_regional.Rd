@@ -19,4 +19,3 @@ a named list of \code{BrainVolume} objects, where each name indicates the perfor
 \description{
 Run a separate MVPA analysis for multiple disjoint regions of interest.
 }
-

@@ -16,4 +16,3 @@ merge_predictions(obj1, rest, ...)
 \description{
 combine predictions from several models applied to the same test set.
 }
-

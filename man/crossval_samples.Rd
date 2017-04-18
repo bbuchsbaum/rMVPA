@@ -9,4 +9,3 @@ crossval_samples(obj, data, y)
 \description{
 crossval_samples
 }
-

@@ -1,10 +1,11 @@
 
-wrap_result <- function(result_table, dataset, fit=NULL) {
-  observed <- y_test(dataset)
+wrap_result <- function(result_table, design, fit=NULL) {
+
+  observed <- y_test(design)
   
   if (is.factor(observed)) {
-    prob <- matrix(0, length(observed), length(levels(observed)))
-    colnames(prob) <- levels(observed)
+    prob <- matrix(0, length(observed), length(levels(observed)), dimnames=list(list(), levels(observed)))
+    #colnames(prob) <- levels(observed)
   
     for (i in seq_along(result_table$probs)) {
       p <- as.matrix(result_table$probs[[i]])
@@ -15,7 +16,8 @@ wrap_result <- function(result_table, dataset, fit=NULL) {
     prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
     maxid <- apply(prob, 1, which.max)
     pclass <- levels(observed)[maxid]
-    classification_result(observed, pclass, prob, dataset$design$test_design, fit)
+   
+    classification_result(observed, pclass, prob, design$test_design, fit)
   } else {
       preds <- numeric(length(observed))
       for (i in seq_along(result_table$preds)) {
@@ -25,7 +27,7 @@ wrap_result <- function(result_table, dataset, fit=NULL) {
       
       counts <- table(unlist(result_table$test_ind))
       preds <- preds/counts
-      regression_result(observed, preds, dataset$design$test_design, fit)
+      regression_result(observed, preds, design$test_design, fit)
   }
 }
 
@@ -40,8 +42,8 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   
   dset <- mspec$dataset
   
-  ytrain <- y_train(dset)
-  ytest <- y_test(dset)
+  ytrain <- y_train(mspec)
+  ytest <- y_test(mspec)
   ind <- indices(roi$train_roi)
   
   result <- try(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid))
@@ -59,9 +61,9 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
     ret <- tibble::as_tibble(plist) 
   
     cres <- if (return_fit) {
-      wrap_result(ret, dset, result$fit)
+      wrap_result(ret, mspec$design, result$fit)
     } else {
-      wrap_result(ret,dset)
+      wrap_result(ret, mspec$design)
     }
   
     tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, 
@@ -76,7 +78,7 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
 internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   
   ## generate cross-validation samples
-  samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(mspec$dataset))
+  samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(mspec))
   
   ## get ROI indices
   ind <- indices(roi$train_roi)
@@ -88,6 +90,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
       result <- try(train_model(mspec, tibble::as_tibble(.$train), .$ytrain, indices=ind, param=mspec$tune_grid))
       
       if (inherits(result, "try-error")) {
+        flog.debug("error: %s", attr(result, "condition")$message)
         ## error encountered, store error messages
         tibble(class=list(NULL), probs=list(NULL), y_true=list(.$ytest), fit=list(NULL), error=TRUE, error_message=attr(result, "condition")$message)
       } else {
@@ -109,10 +112,12 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   } else {
     cres <- if (return_fit) {
       predictor <- weighted_model(ret$fit)
-      wrap_result(ret, mspec$dataset, predictor)
+      wrap_result(ret, mspec$design, predictor)
     } else {
-      wrap_result(ret,mspec$dataset)
+   
+      wrap_result(ret, mspec$design)
     }
+    
   
     tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, error=FALSE, error_message="~")
   }

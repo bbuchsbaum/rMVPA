@@ -30,4 +30,3 @@ fsel <- feature_selector("FTest", "top_k", 1000)
 fsel <- feature_selector("FTest", "top_p", .1)
 class(fsel) == "FTest"
 }
-

@@ -10,4 +10,3 @@ mvpa_surface_dataset(train_data, test_data = NULL, mask,
 \description{
 mvpa_surface_dataset
 }
-

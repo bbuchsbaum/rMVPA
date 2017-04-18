@@ -1,4 +1,23 @@
 
+setDefault <- function(name, config, default) {
+  if (is.null(config[[name]])) {
+    config[[name]]<- default
+  }
+}
+
+
+setArg <- function(name, config, args, default) {
+  if (is.null(config[[name]]) && is.null(args[[name]])) {
+    config[[name]] <- default
+  } else if (!is.null(args[[name]])) {
+    config[[name]] <- args[[name]]
+  } else if (is.null(config[[name]])) {
+    config[[name]] <- default
+  }    
+}
+
+
+
 initializeROIGrouping <- function(config) {
   if (!is.null(config$roi_grouping)) {
     roilist <- lapply(1:length(config$roi_grouping), function(i) {
@@ -218,18 +237,17 @@ initialize_standard_parameters <- function(config, args, analysisType) {
   setArg("train_data", config, args, "mvpa_design.txt")
   setArg("test_data", config, args, NULL)
   setArg("model", config, args, "corsim")
+  setArg("feature_selector", config, args, NULL)
   setArg("pthreads", config, args, 1)
   setArg("label_column", config, args, "labels")
   setArg("skip_if_folder_exists", config, args, FALSE)
   setArg("output", config, args, paste0(analysisType, "_", config$labelColumn))
   setArg("block_column", config, args, "block")
   setArg("normalize_samples", config, args, FALSE)
-  setArg("tune_length", config, args, 1)
   setArg("tune_grid", config, args, NULL)
   setArg("mask", config, args, NULL)
-  setArg("output_class_metrics", config, args, TRUE)
+  setArg("class_metrics", config, args, TRUE)
   setArg("split_by", config, args, NULL)
-  setArg("bootstrap_replications", config, args, 0)
   setArg("custom_performance", config, args, NULL)
   setArg("test_label_column", config, args, NULL)
   setArg("data_mode", config, args, "image")
@@ -337,18 +355,18 @@ initialize_design <- function(config) {
     #flog.info(paste("first 10 test labels: ", head(config$testLabels, 10), capture=TRUE))
     
   } else {
-    flog.info("testing is cross-validation")
+    flog.info("testing is via internal cross-validation")
     #config$testLabels <- config$labels
   }
   
   
-  design = mvpa_design(train_design=config$train_design, 
+   design <- mvpa_design(train_design=config$train_design, 
               y_train=config$label_column, 
               test_design=config$test_design, 
               y_test=config$test_label_column, 
               block_var=config$block_column, 
               split_by=config$split_by)
-    
+   
   
   
 }
@@ -413,6 +431,20 @@ make_output_dir <- function(dirname) {
   }
 }
 
+initialize_crossval <- function(config) {
+  cval <- if (is.null(config$crossval) && !is.null(config$design$block_var)) {
+    flog.info("cross-validation type: cross validation using predefined blocking variable")
+    blocked_cross_validation(config$design$block_var)
+  } else if (!is.null(config$crossval)) {
+    assert_that(inherits(config$crossval, "cross_validation"))
+  } else {
+    flog.info("cross-validation type: 5 fold cross-validation using random splits")
+    kfold_cross_validation(nobs(config$design))
+  }
+  
+  cval
+}
+
 
 
 #' load_model
@@ -435,10 +467,9 @@ load_mask <- function(config) {
   if (config$data_mode == "image") {
     as.logical(loadVolume(config$mask))
   } else if (config$data_mode == "surface") {
-    
+    NULL
   }
 }
-
 
 
 load_design <- function(config, name) {
@@ -450,8 +481,17 @@ load_design <- function(config, name) {
   }
 }
 
-
-
+load_mvpa_model <- function(config, dataset) {
+  mod <- load_model(config$model)
+  mvp_mod <- mvpa_model(mod,dataset, design=config$design, 
+                        model_type=config$model_type,
+                        crossval=config$crossval,
+                        feature_selector=config$feature_selector, 
+                        tune_grid=config$tune_grid,
+                        performance=config$performance,
+                        class_metrics=config$class_metrics)
+  
+}
 #' @export
 load_subset <- function(full_design, subset) {
   if (is.character(subset)) {
@@ -523,8 +563,20 @@ load_image_data <- function(config, name, indices=NULL) {
   }
 }
 
-load_surface_data <- function(name)
-load_surface_data_series
+load_surface_data <- function(config, name, nodeind=NULL, colind=NULL) {
+  tdat <- config[[name]]
+  sections <- names(tdat)
+  flog.info("surface sections: ", sections, capture=TRUE)
+  surfaces <- lapply(sections, function(section) {
+    neurosurf::loadSurface(tdat[[section]]$geometry, tdat[[section]]$data, nodeind=nodeind, colind=colind)
+  })
+  
+  surfaces
+    
+}
+
+
+#load_surface_data_series
 
 
 

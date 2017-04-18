@@ -17,6 +17,5 @@ mvpa_iterate(mod_spec, vox_list, ids = 1:length(vox_iter),
 \item{return_fits}{return the model fit for each voxel set?}
 }
 \description{
-Fit a model for each of a list of voxels sets
+Fit a classification/regression model for each of a list of voxels sets
 }
-

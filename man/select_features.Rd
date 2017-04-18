@@ -2,8 +2,9 @@
 % Please edit documentation in R/allgeneric.R, R/feature_selection.R
 \name{select_features}
 \alias{select_features}
-\alias{select_features.FTest}
+\alias{select_features}
 \alias{select_features.catscore}
+\alias{select_features.FTest}
 \title{select_features}
 \usage{
 select_features(obj, ROI, Y, ...)
@@ -51,4 +52,3 @@ Y <- factor(rep(c("a", "b"), each=50))
 featureMask <- select_features(fsel, ROI, Y)
 sum(featureMask) == 10
 }
-

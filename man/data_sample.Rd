@@ -14,4 +14,3 @@ data_sample(obj, vox)
 \description{
 data_sample
 }
-

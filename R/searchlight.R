@@ -12,7 +12,11 @@ wrap_out <- function(perf_mat, dataset, ids) {
 do_randomized <- function(model_spec, radius, niter) {
   ret <- foreach (i = 1:niter) %dopar% {
     flog.info("searchlight iteration: %i", i)
+    flog.debug("constructing searchlight.")
+    
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
+    flog.debug("done.")
+    
     vox_iter <- lapply(slight, function(x) x)
     
     len <- sapply(vox_iter, function(x) attr(x, "length"))

@@ -14,4 +14,3 @@ crossv_k(data, y, k = 5, id = ".id")
 \description{
 crossv_k
 }
-

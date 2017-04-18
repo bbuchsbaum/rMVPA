@@ -36,7 +36,7 @@ mvpa_dataset <- function(train_data,test_data=NULL, mask, design) {
     design=design
   )
   
-  class(ret) <- c("mvpa_dataset", "list")
+  class(ret) <- c("mvpa_image_dataset", "mvpa_dataset", "list")
   ret
     
 }
@@ -51,10 +51,15 @@ mvpa_dataset <- function(train_data,test_data=NULL, mask, design) {
 #' @param hemisphere
 #' @importFrom assertthat assert_that
 #' @export
-mvpa_surface_dataset <- function(train_data, test_data=NULL, mask, hemisphere=c("lh", "rh")) {
-  assert_that(inherits(design, "mvpa_design"))
+mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, hemisphere=c("lh", "rh")) {
   
   hemisphere <- match.arg(hemisphere)
+  
+  if (is.null(mask)) {
+    mask <- numeric(length(nodes(train_data@geometry)))
+    mask[indices(train_data)] <- 1
+  }
+  
   ret <- list(
     train_data=train_data,
     test_data=test_data,
@@ -66,6 +71,29 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask, hemisphere=c(
   ret
   
 }
+
+print.mvpa_surface_dataset <- function(x) {
+  cat("mvpa_surface_dataset:", "\n")
+  cat("  train_data: ")
+  print(x$train_data)
+  if (is.null(x$test_data)) {
+    cat("  test_data: none. \n")
+  } else {
+    cat("\n")
+    cat("  test_data: ")
+    print(x$test_data)
+  }
+  
+  mids <- table(x$mask[x$mask!=0])
+  midstr <- paste0(names(mids), "/", mids)
+  
+  cat("  hemisphere: ", x$hemisphere, "\n")
+  cat("  mask areas: ", midstr, "\n")
+  cat("  mask cardinality: ", sum(x$mask>0), "\n")
+}
+
+
+
 
 
 #' @export
@@ -96,6 +124,11 @@ wrap_output.mvpa_dataset <- function(obj, vals, indices) {
 
 wrap_output.mvpa_surface_dataset <- function(obj, vals, indices) {
   BrainSurface(geometry=geometry(obj$train_data), indices=indices, data=vals)
+}
+
+#' @export
+has_test_set.mvpa_dataset <- function(obj) {
+  !is.null(obj$test_data) 
 }
 
 

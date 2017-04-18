@@ -14,4 +14,3 @@ get_searchlight(obj, ...)
 \description{
 generate a searchlight iterator appropriate for a given input dataset (e.g. volumetric or surface).
 }
-

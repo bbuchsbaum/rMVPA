@@ -14,4 +14,3 @@ compute_performance(obj, result)
 \description{
 Delegate calculation of performance metrics
 }
-

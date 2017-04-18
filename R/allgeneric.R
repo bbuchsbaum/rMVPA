@@ -199,5 +199,15 @@ sub_result <- function(x, indices) {
   UseMethod("sub_result")
 }
 
+#' nobs
+#' 
+#' get number of observations 
+#' 
+#' @param x the object
+#' @export
+nobs <- function(x) {
+  UseMethod("nobs")
+}
+
 
 

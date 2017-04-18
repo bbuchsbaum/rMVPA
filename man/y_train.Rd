@@ -12,4 +12,3 @@ y_train(obj)
 \description{
 extract the training labels/response
 }
-

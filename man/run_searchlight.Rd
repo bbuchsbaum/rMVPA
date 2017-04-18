@@ -22,4 +22,3 @@ a named list of \code{BrainVolume} objects, where each element contains a perfor
 \description{
 run_searchlight
 }
-

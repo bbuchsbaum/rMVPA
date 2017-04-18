@@ -1,4 +1,13 @@
 
+
+#' @export
+#' 
+#' 
+nobs.mvpa_design <- function(obj) {
+  length(obj$y_train)
+}
+
+
 #' @export
 has_test_set.mvpa_design <- function(obj) {
   !is.null(obj$y_test) 

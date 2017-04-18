@@ -16,4 +16,3 @@ merge_results(x, y, ...)
 \description{
 merge two classification/regression results
 }
-

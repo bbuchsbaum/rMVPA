@@ -14,4 +14,3 @@ train_model(obj, ...)
 \description{
 train a classification or regression model
 }
-

@@ -26,4 +26,3 @@ mvpa_design
 \examples{
 
 }
-

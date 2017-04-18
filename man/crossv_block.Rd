@@ -9,4 +9,3 @@ crossv_block(data, y, block_var, id = ".id", exclude_block = NULL)
 \description{
 crossv_block
 }
-

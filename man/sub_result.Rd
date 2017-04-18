@@ -14,4 +14,3 @@ sub_result(x, indices)
 \description{
 exctract a row-wise subset of a classification/regression result object.
 }
-

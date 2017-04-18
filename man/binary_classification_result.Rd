@@ -21,4 +21,3 @@ binary_classification_result(observed, predicted, probs, test_design,
 \description{
 create an \code{binary_classification_result} instance
 }
-

@@ -2,11 +2,10 @@
 % Please edit documentation in R/mvpa_iterate.R
 \name{external_crossval}
 \alias{external_crossval}
-\title{extern_crossval}
+\title{external_crossval}
 \usage{
 external_crossval(roi, mspec, id, return_fit = FALSE)
 }
 \description{
-extern_crossval
+external_crossval
 }
-

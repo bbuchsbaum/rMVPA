@@ -12,6 +12,5 @@ group_means(X, margin, group)
 \item{margin}{the margin to average over (1 for rows, 2 for columns)}
 }
 \description{
-compute the average vector, splitting a matrix for each level of a grouping variable
+Given a matrix, compute the average vector for each level of a grouping variable.
 }
-

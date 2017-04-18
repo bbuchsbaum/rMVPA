@@ -1,5 +1,5 @@
 
-get_multiclass_perf <- function(class_metrics=TRUE, split_list=NULL) {
+get_multiclass_perf <- function(split_list=NULL, class_metrics=TRUE) {
   function(result) {
     performance(result, split_list, class_metrics)
   }
@@ -12,6 +12,7 @@ get_binary_perf <- function(split_list=NULL) {
 }
 
 get_regression_perf <- function(split_list=NULL) {
+
   function(result) {
     performance(result, split_list)
   }
@@ -69,6 +70,8 @@ y_test.mvpa_model <- function(obj) y_test(obj$design)
 #' mvpa_model
 #' 
 #' @param model
+#' @param dataset
+#' @param design
 #' @param model_type
 #' @param crossval
 #' @param feature_selector
@@ -87,16 +90,17 @@ mvpa_model <- function(model,
   
   assert_that(inherits(design, "mvpa_design"))
   assert_that(inherits(dataset, "mvpa_dataset"))
+  assert_that(is.logical(class_metrics))
   
   perf <- if (!is.null(performance)) {
     assert_that(is.function(performance)) 
-    get_custom_perf(performance, design$split_by)
+    get_custom_perf(performance, design$split_groups)
   } else if (is.numeric(design$y_train)) {
-    get_regression_perf(design$split_by)
+    get_regression_perf(design$split_groups)
   } else if (length(levels(design$y_train)) > 2) {
-    get_multiclass_perf(class_metrics, design$split_by)
+    get_multiclass_perf(design$split_groups, class_metrics)
   } else if (length(levels(design$y_train)) == 2) {
-    get_binary_perf(design$split_by)
+    get_binary_perf(design$split_groups)
   } else {
     stop("performance method not found")
   }

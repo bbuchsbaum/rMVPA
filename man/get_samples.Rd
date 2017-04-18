@@ -14,4 +14,3 @@ get_samples(obj, voxiter)
 \description{
 get_samples
 }
-

@@ -12,4 +12,3 @@ y_test(obj)
 \description{
 extract the test labels/response.
 }
-

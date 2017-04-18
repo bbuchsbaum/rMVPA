@@ -8,4 +8,3 @@
 \description{
 The rMVPA package provides tools for running region-of-interest and searchlight MVPA analyses.
 }
-

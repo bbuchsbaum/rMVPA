@@ -12,4 +12,3 @@ blocked_cross_validation(block_var)
 \description{
 construct a cross-validation specification using a predefined blocking variable
 }
-
