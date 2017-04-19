@@ -1,4 +1,5 @@
 library(futile.logger)
+library(neurosurf)
 args <- list()
 args$config = "~/Dropbox/dual_aud/1009a/config_search.R"
 
@@ -16,11 +17,12 @@ config_params <- as.list(config)
 
 config$design <- initialize_design(config)
 
-config$crossval <- initialize_crossval(config)
+config$crossval <- initialize_crossval(config, config$design)
 surfdat <- load_surface_data(config, "train_data")
 
 lh_dset <- mvpa_surface_dataset(surfdat[[1]], hemisphere="lh")
 rh_dset <- mvpa_surface_dataset(surfdat[[2]], hemisphere="rh")
 
 mod1 <- load_mvpa_model(config, lh_dset)
-res <- run_searchlight(mod1, method="randomized", radius=12, niter=8)
+res <- run_searchlight(mod1, method="randomized", radius=16, niter=2)
+

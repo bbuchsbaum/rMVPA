@@ -168,6 +168,8 @@ get_searchlight <- function(obj, ...) {
 }
 
 
+
+
 #' wrap_output
 #' 
 #' @param obj the object

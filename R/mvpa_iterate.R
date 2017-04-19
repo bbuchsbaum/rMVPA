@@ -4,8 +4,8 @@ wrap_result <- function(result_table, design, fit=NULL) {
   observed <- y_test(design)
   
   if (is.factor(observed)) {
-    prob <- matrix(0, length(observed), length(levels(observed)), dimnames=list(list(), levels(observed)))
-    #colnames(prob) <- levels(observed)
+    prob <- matrix(0, length(observed), length(levels(observed)))
+    colnames(prob) <- levels(observed)
   
     for (i in seq_along(result_table$probs)) {
       p <- as.matrix(result_table$probs[[i]])
@@ -14,9 +14,9 @@ wrap_result <- function(result_table, design, fit=NULL) {
     }
   
     prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
-    maxid <- apply(prob, 1, which.max)
+    maxid <- max.col(prob)
     pclass <- levels(observed)[maxid]
-   
+  
     classification_result(observed, pclass, prob, design$test_design, fit)
   } else {
       preds <- numeric(length(observed))

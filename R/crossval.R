@@ -36,18 +36,19 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
 
 
 
-crossv_twofold <- function(data, y, block_var, block_ind, id = ".id", nreps=10, exclude_block=NULL) {
+crossv_twofold <- function(data, y, block_var, block_ind, id = ".id", nreps=15, exclude_block=NULL) {
   if (!length(block_var) == length(y)) {
     stop("length of `block_var` must be equal to length(y)", call. = FALSE)
   }
   
-  nhalf <- floor(length(blockind)/2)
+  nhalf <- floor(length(block_ind)/2)
   assert_that(nhalf > 0)
   
   fold_sets <- combn(length(block_ind), nhalf)
+  cols <- sample(1:ncol(fold_sets), nreps)
   
   fold_idx <- lapply(1:nreps, function(i) {
-    bind <- fold_sets[, sample(1:ncol(fold_sets), 1)]
+    bind <- fold_sets[, cols[i]]
     which(block_var %in% bind)
   })
   
@@ -124,9 +125,10 @@ blocked_cross_validation <- function(block_var) {
 }
 
 
+#' @export
 twofold_blocked_cross_validation <- function(block_var, nreps=10) {
   block_var <- as.integer(block_var)
-  ret <- list(block_var=block_var, nfolds=2, nreps=nreps, blockids=sort(unique(block_var)))
+  ret <- list(block_var=block_var, nfolds=2, nreps=nreps, block_ind=sort(unique(block_var)))
   class(ret) <- c("twofold_blocked_cross_validation", "cross_validation", "list")
   ret
 }
@@ -163,6 +165,6 @@ crossval_samples.blocked_cross_validation <- function(obj, data, y, exclude_bloc
 
 #' @export
 crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y, exclude_block=NULL) { 
-  crossv_block(data, y, obj$block_var, obj$block_ind)
+  crossv_twofold(data, y, obj$block_var, obj$block_ind,exclude_block=exclude_block)
 }
 

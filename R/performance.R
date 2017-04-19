@@ -143,7 +143,8 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   
  
   aucres <- sapply(1:ncol(probs), function(i) {
-    lev <- levels(observed)[i]
+   
+    lev <- try(levels(observed)[i])
     pos <- obs == lev
     pclass <- probs[,i]
     pother <- rowMeans(probs[,-i, drop=FALSE])

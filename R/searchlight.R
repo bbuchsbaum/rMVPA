@@ -10,7 +10,8 @@ wrap_out <- function(perf_mat, dataset, ids) {
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
 do_randomized <- function(model_spec, radius, niter) {
-  ret <- foreach (i = 1:niter) %dopar% {
+  print("lapply")
+  ret <- lapply(1:niter, function(i) {
     flog.info("searchlight iteration: %i", i)
     flog.debug("constructing searchlight.")
     
@@ -23,7 +24,7 @@ do_randomized <- function(model_spec, radius, niter) {
     vox_iter <- vox_iter[len >= 2]
     cind <- sapply(vox_iter, attr, "center.index")
     mvpa_iterate(model_spec, vox_iter, cind)
-  }
+  })
   
   
   

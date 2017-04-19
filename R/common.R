@@ -431,12 +431,26 @@ make_output_dir <- function(dirname) {
   }
 }
 
-initialize_crossval <- function(config) {
-  cval <- if (is.null(config$crossval) && !is.null(config$design$block_var)) {
+initialize_crossval <- function(config, des=NULL) {
+  cval <- if (is.null(config$cross_validation) && !is.null(des$block_var)) {
     flog.info("cross-validation type: cross validation using predefined blocking variable")
-    blocked_cross_validation(config$design$block_var)
-  } else if (!is.null(config$crossval)) {
-    assert_that(inherits(config$crossval, "cross_validation"))
+    blocked_cross_validation(des$block_var)
+  } else if (!is.null(config$cross_validation)) {
+    assertthat::assert_that(!is.null(des))
+    cval <- config$cross_validation
+    
+    if (cval$name == "twofold" || cval$name == "two_fold" || cval$name == "two_fold_blocked_cross_validation") {
+      if (is.null(cval$nreps)) {
+        cval$nreps <- 10
+      }
+      twofold_blocked_cross_validation(des$block_var, cval$nreps)
+    } else if (cval$name == "blocked" || cval$name == "blocked_cross_validation") {
+      blocked_cross_validation(des$block_var)
+    } else {
+      flog.error("unrecognized cross_validation type: %s", cval$name)
+      stop()
+    }
+    
   } else {
     flog.info("cross-validation type: 5 fold cross-validation using random splits")
     kfold_cross_validation(nobs(config$design))
