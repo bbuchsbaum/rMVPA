@@ -96,7 +96,7 @@ do_standard <- function(model_spec, radius) {
 #' @import foreach
 #' @import doParallel
 #' @import parallel
-#' @importFrom futile.logger flog.info
+#' @importFrom futile.logger flog.info flog.error flog.debug
 #' @export
 run_searchlight <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4) {
   
@@ -114,8 +114,10 @@ run_searchlight <- function(model_spec, radius=8, method=c("randomized", "standa
   flog.info("model is: %s", model_spec$model$label)
   
   res <- if (method == "standard") {
+    flog.info("running standard searchlight with %s radius ", radius)
     do_standard(model_spec, radius)    
   } else if (method == "randomized") {
+    flog.info("running randomized searchlight with %s radius and %s iterations", radius, niter)
     do_randomized(model_spec, radius, niter)
   } 
   
