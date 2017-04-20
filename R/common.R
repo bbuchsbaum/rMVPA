@@ -1,21 +1,4 @@
 
-setDefault <- function(name, config, default) {
-  if (is.null(config[[name]])) {
-    config[[name]]<- default
-  }
-}
-
-
-setArg <- function(name, config, args, default) {
-  if (is.null(config[[name]]) && is.null(args[[name]])) {
-    config[[name]] <- default
-  } else if (!is.null(args[[name]])) {
-    config[[name]] <- args[[name]]
-  } else if (is.null(config[[name]])) {
-    config[[name]] <- default
-  }    
-}
-
 
 
 initializeROIGrouping <- function(config) {
@@ -402,14 +385,14 @@ initialize_tune_grid <- function(args, config) {
 }
 
 
-#' @export
+
 set_default <- function(name, config, default) {
   if (is.null(config[[name]])) {
     config[[name]]<- default
   }
 }
 
-#' @export
+
 set_arg <- function(name, config, args, default) {
   if (is.null(config[[name]]) && is.null(args[[name]])) {
     config[[name]] <- default
@@ -420,7 +403,7 @@ set_arg <- function(name, config, args, default) {
   }    
 }
 
-#' @export
+
 make_output_dir <- function(dirname) {
   if (!file.exists(dirname)) {
     system(paste("mkdir", dirname))

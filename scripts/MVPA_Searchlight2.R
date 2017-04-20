@@ -39,13 +39,18 @@ args <- opt$options
 
 flog.info("command line args are ", args, capture=TRUE)
 
+
+## set up configuration 
 config <- rMVPA:::initialize_configuration(args)
+
+## set default parameters
 config <- rMVPA:::initialize_standard_parameters(config, args, "searchlight")
 
-## Searchlight Specific Params
-rMVPA:::setArg("niter", config, args, 16)
-rMVPA:::setArg("radius", config, args, 8)
-rMVPA:::setArg("type", config, args, "randomized")
+## set Searchlight specific params
+rMVPA:::set_arg("niter", config, args, 16)
+rMVPA:::set_arg("radius", config, args, 8)
+rMVPA:::set_arg("type", config, args, "randomized")
+
 
 config$tune_grid <- rMVPA:::initialize_tune_grid(args, config)
 config_params <- as.list(config)
@@ -53,10 +58,10 @@ config_params <- as.list(config)
 config$design <- rMVPA:::initialize_design(config)
 
 
-
-config$design <- initialize_design(config)
-
-config$maskVolume <- as(loadMask(config), "LogicalBrainVolume")
+if (config$data_mode == "image")
+  config$mask_volume <- as(load_mask(config), "LogicalBrainVolume")
+  flog.info("image mask contains %s voxels", sum(config$mask_volume))
+}
 
 row_indices <- which(config$train_subset)
 
@@ -65,7 +70,7 @@ flog.info("max trial index: %s", max(row_indices))
 flog.info("loading training data: %s", config$train_data)
 
 
-flog.info("mask contains %s voxels", sum(config$maskVolume))
+
 
 config <- initialize_data(config)
 
