@@ -360,7 +360,7 @@ initialize_design <- function(config) {
   }
   
   
-   design <- mvpa_design(train_design=config$train_design, 
+   mvpa_design(train_design=config$train_design, 
               y_train=config$label_column, 
               test_design=config$test_design, 
               y_test=config$test_label_column, 
@@ -386,7 +386,7 @@ initialize_tune_grid <- function(args, config) {
     }
     
     flog.info("tuning grid is", params, capture=TRUE)
-    config$tune_grid <- params
+    tune_grid <- params
     
   } else if (!is.null(config$tune_grid) && !is.data.frame(config$tune_grid)) {
     params <- try(lapply(config$tune_grid, function(x) eval(parse(text=x))))
@@ -394,11 +394,11 @@ initialize_tune_grid <- function(args, config) {
       stop("could not parse tune_grid expresson: ", config$tune_grid)
     }
     
-    config$tune_grid <- expand.grid(params)
+    tune_grid <- expand.grid(params)
     flog.info("tuning grid is", params, capture=TRUE)
   }
   
-  config
+  tune_grid
 }
 
 

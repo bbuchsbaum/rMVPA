@@ -39,36 +39,35 @@ args <- opt$options
 
 flog.info("command line args are ", args, capture=TRUE)
 
-config <- initializeConfiguration(args)
-config <- initializeStandardParameters(config, args, "searchlight")
-
-#flog.appender(appender.file(paste0(config$output, "/rMVPA.log")))
-#flog.appender(appender.console(), name='my.logger')
-
+config <- rMVPA:::initialize_configuration(args)
+config <- rMVPA:::initialize_standard_parameters(config, args, "searchlight")
 
 ## Searchlight Specific Params
-setArg("niter", config, args, 16)
-setArg("radius", config, args, 8)
-setArg("type", config, args, "randomized")
+rMVPA:::setArg("niter", config, args, 16)
+rMVPA:::setArg("radius", config, args, 8)
+rMVPA:::setArg("type", config, args, "randomized")
+
+config$tune_grid <- rMVPA:::initialize_tune_grid(args, config)
+config_params <- as.list(config)
+
+config$design <- rMVPA:::initialize_design(config)
 
 
-## Searchlight Specific Params
-config <- initializeTuneGrid(args, config)
-configParams <- as.list(config)
 
-config <- initializeDesign(config)
+config$design <- initialize_design(config)
 
 config$maskVolume <- as(loadMask(config), "LogicalBrainVolume")
 
+row_indices <- which(config$train_subset)
 
-rowIndices <- which(config$train_subset)
-
-flog.info("number of trials: %s", length(rowIndices))
-flog.info("max trial index: %s", max(rowIndices))
+flog.info("number of trials: %s", length(row_indices))
+flog.info("max trial index: %s", max(row_indices))
 flog.info("loading training data: %s", config$train_data)
+
+
 flog.info("mask contains %s voxels", sum(config$maskVolume))
 
-config <- initializeData(config)
+config <- initialize_data(config)
 
 flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
 
@@ -94,13 +93,8 @@ dataset <- mvpa_dataset(config$train_datavec,
                         config$test_datavec,
                         mask=config$maskVolume)
                         
-                        
 model <- load_model(config$model)
 
-cl <- makeCluster(config$pthreads, outfile="",useXDR=FALSE, type="FORK")
-registerDoParallel(cl)
-
-crossVal <- blocked_cross_validation(dataset$blockVar, balance=config$autobalance)
 
 if (config$type %in% c("standard", "randomized", "randomized2")) {
   flog.info("searchlight type: ", config$type)
