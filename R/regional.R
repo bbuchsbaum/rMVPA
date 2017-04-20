@@ -3,20 +3,20 @@
 combine_regional_results = function(results, ids) {
   if (is.factor(results$result[[1]]$observed)) {
     results %>% dplyr::rowwise() %>% dplyr::do( {
-      tib1 <- tibble(
+      tib1 <- tibble::tibble(
           ROINUM=rep(.$id, length(.$result$observed)),
           observed=.$result$observed,
           predicted=.$result$predicted,
           correct=as.character(.$result$observed) == as.character(.$result$predicted)
       )
-      tib2 <- as_tibble(.$result$probs)
+      tib2 <- tibble::as_tibble(.$result$probs)
       names(tib2) <- paste0("prob_", names(tib2))
       cbind(tib1, tib2)
     })
   } else {
    
     results %>% dplyr::rowwise() %>% dplyr::do(
-      tibble(
+      tibble::tibble(
         ROINUM=rep(.$id, length(.$result$observed)),
         observed=.$result$observed,
         predicted=.$result$predicted)

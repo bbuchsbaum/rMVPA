@@ -12,8 +12,6 @@ mvpa_dataset(train_data, test_data = NULL, mask, design)
 \item{test_data}{the test data set: a \code{BrainVector} instance}
 
 \item{mask}{the set of voxels to include: a \code{BrainVolume} instance}
-
-\item{design}{the design: a \code{mvpa_design} instance}
 }
 \description{
 mvpa_dataset

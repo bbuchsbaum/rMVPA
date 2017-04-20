@@ -24,7 +24,6 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 #' @param train_data the training data set: a \code{BrainVector} instance
 #' @param test_data the test data set: a \code{BrainVector} instance
 #' @param mask the set of voxels to include: a \code{BrainVolume} instance
-#' @param design the design: a \code{mvpa_design} instance
 #' @importFrom assertthat assert_that
 mvpa_dataset <- function(train_data,test_data=NULL, mask, design) {
   assert_that(inherits(design, "mvpa_design"))
@@ -32,8 +31,7 @@ mvpa_dataset <- function(train_data,test_data=NULL, mask, design) {
   ret <- list(
     train_data=train_data,
     test_data=test_data,
-    mask=mask,
-    design=design
+    mask=mask
   )
   
   class(ret) <- c("mvpa_image_dataset", "mvpa_dataset", "list")
@@ -51,9 +49,9 @@ mvpa_dataset <- function(train_data,test_data=NULL, mask, design) {
 #' @param hemisphere
 #' @importFrom assertthat assert_that
 #' @export
-mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, hemisphere=c("lh", "rh")) {
+mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="") {
   
-  hemisphere <- match.arg(hemisphere)
+  
   
   if (is.null(mask)) {
     mask <- numeric(length(nodes(train_data@geometry)))
@@ -64,7 +62,7 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, hemisphe
     train_data=train_data,
     test_data=test_data,
     mask=mask,
-    hemisphere=hemisphere
+    name=name
   )
   
   class(ret) <- c("mvpa_surface_dataset", "mvpa_dataset", "list")
@@ -87,7 +85,7 @@ print.mvpa_surface_dataset <- function(x) {
   mids <- table(x$mask[x$mask!=0])
   midstr <- paste0(names(mids), "/", mids)
   
-  cat("  hemisphere: ", x$hemisphere, "\n")
+  cat("  name: ", x$name, "\n")
   cat("  mask areas: ", midstr, "\n")
   cat("  mask cardinality: ", sum(x$mask>0), "\n")
 }

@@ -8,6 +8,24 @@ mvpa_model(model, dataset, design, model_type = c("classification",
   "regression"), crossval, feature_selector = NULL, tune_grid = NULL,
   performance = NULL, class_metrics = TRUE)
 }
+\arguments{
+\item{model}{a caret-based classification or regression model}
+
+\item{dataset}{a \code{mvpa_dataset} instance}
+
+\item{design}{a \code{mvpa_design} instance}
+
+\item{model_type}{a \code{character} string indicating problem type: 'classification' or 
+regression'}
+
+\item{crossval}{a \code{cross_validation} instance}
+
+\item{feature_selector}{an optional \code{feature_selector} instance}
+
+\item{tune_grid}{an optional parameter tuning grid as a \code{data.frame}}
+
+\item{custom_performance}{a custom function for computing performance metrics.}
+}
 \description{
 mvpa_model
 }

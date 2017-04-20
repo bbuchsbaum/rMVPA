@@ -4,25 +4,23 @@ args <- list()
 args$config = "~/Dropbox/dual_aud/1009a/config_search.R"
 
 config <- initialize_configuration(args)
-config$model <- "sda_notune"
+config$model <- "corsim"
+config$model_type = "classification"
 config <- initialize_standard_parameters(config, args, "searchlight")
 
 ## Searchlight Specific Params
-setArg("niter", config, args, 16)
-setArg("radius", config, args, 8)
-setArg("type", config, args, "randomized")
+set_arg("niter", config, args, 16)
+set_arg("radius", config, args, 8)
+set_arg("type", config, args, "randomized")
 
-config <- initialize_tune_grid(args, config)
+config$tune_grid <- initialize_tune_grid(args, config)
 config_params <- as.list(config)
 
-config$design <- initialize_design(config)
+design <- initialize_design(config)
 
-config$crossval <- initialize_crossval(config, config$design)
-surfdat <- load_surface_data(config, "train_data")
+crossval <- initialize_crossval(config, design)
+surfdat <- initialize_surface_data(config)
 
-lh_dset <- mvpa_surface_dataset(surfdat[[1]], hemisphere="lh")
-rh_dset <- mvpa_surface_dataset(surfdat[[2]], hemisphere="rh")
-
-mod1 <- load_mvpa_model(config, lh_dset)
-res <- run_searchlight(mod1, method="randomized", radius=16, niter=2)
+mod1 <- load_mvpa_model(config, dataset=surfdat[[1]], design=design, crossval=crossval, feature_selector=NULL)
+res <- run_searchlight(mod1, method="randomized", radius=8, niter=2)
 

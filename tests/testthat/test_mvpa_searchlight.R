@@ -68,7 +68,7 @@ gen_surface_dataset <- function(nobs, nlevels, folds=5) {
   
   des <- mvpa_design(train_design=data.frame(Y=Y, blockVar=blockVar), y_train= ~ Y, block_var=~blockVar)
   mask <- rep(1, nvert)
-  dataset <- mvpa_surface_dataset(bvec, mask=mask, design=des, hemisphere="lh")
+  dataset <- mvpa_surface_dataset(bvec, mask=mask, design=des, name="lh")
   
   
 }

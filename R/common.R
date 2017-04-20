@@ -59,7 +59,7 @@ initMVPARegional <- function(configFile, args=list(), verbose=FALSE) {
   config <- initializeConfiguration(list(config=configFile))
   config <- initializeStandardParameters(config, args, "mvpa_regional")
 
-  setArg("savePredictors", config, args, FALSE)
+  set_arg("savePredictors", config, args, FALSE)
   
   config <- initializeTuneGrid(args, config)
   configParams <- as.list(config)
@@ -144,9 +144,9 @@ initMVPASearchlight <- function(configFile, args=list(), verbose=FALSE) {
   config <- initializeConfiguration(list(config=configFile))
   config <- initializeStandardParameters(config, args, "mvpa_searchlight")
   
-  setArg("niter", config, args, 16)
-  setArg("radius", config, args, 8)
-  setArg("type", config, args, "randomized")
+  set_arg("niter", config, args, 16)
+  set_arg("radius", config, args, 8)
+  set_arg("type", config, args, "randomized")
   
   config <- initializeTuneGrid(args, config)
   configParams <- as.list(config)
@@ -215,71 +215,138 @@ initialize_configuration <- function(args) {
 
 #' @export
 initialize_standard_parameters <- function(config, args, analysisType) {
-  setArg("train_design", config, args, "mvpa_design.txt")
-  setArg("test_design", config, args, NULL)
-  setArg("train_data", config, args, "mvpa_design.txt")
-  setArg("test_data", config, args, NULL)
-  setArg("model", config, args, "corsim")
-  setArg("feature_selector", config, args, NULL)
-  setArg("pthreads", config, args, 1)
-  setArg("label_column", config, args, "labels")
-  setArg("skip_if_folder_exists", config, args, FALSE)
-  setArg("output", config, args, paste0(analysisType, "_", config$labelColumn))
-  setArg("block_column", config, args, "block")
-  setArg("normalize_samples", config, args, FALSE)
-  setArg("tune_grid", config, args, NULL)
-  setArg("mask", config, args, NULL)
-  setArg("class_metrics", config, args, TRUE)
-  setArg("split_by", config, args, NULL)
-  setArg("custom_performance", config, args, NULL)
-  setArg("test_label_column", config, args, NULL)
-  setArg("data_mode", config, args, "image")
+  set_arg("train_design", config, args, "mvpa_design.txt")
+  set_arg("test_design", config, args, NULL)
+  set_arg("train_data", config, args, "mvpa_design.txt")
+  set_arg("test_data", config, args, NULL)
+  set_arg("model", config, args, "corsim")
+  set_arg("feature_selector", config, args, NULL)
+  set_arg("pthreads", config, args, 1)
+  set_arg("label_column", config, args, "labels")
+  set_arg("skip_if_folder_exists", config, args, FALSE)
+  set_arg("output", config, args, paste0(analysisType, "_", config$labelColumn))
+  set_arg("block_column", config, args, "block")
+  set_arg("normalize_samples", config, args, FALSE)
+  set_arg("tune_grid", config, args, NULL)
+  set_arg("mask", config, args, NULL)
+  set_arg("class_metrics", config, args, TRUE)
+  set_arg("split_by", config, args, NULL)
+  set_arg("custom_performance", config, args, NULL)
+  set_arg("test_label_column", config, args, NULL)
+  set_arg("data_mode", config, args, "image")
   
   config
 }
 
 #' @export
-normalize_samples <- function(bvec, mask) {
+normalize_image_samples <- function(bvec, mask) {
   norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
   SparseBrainVector(norm_datavec, space(bvec), mask=mask)  
 }
 
-#' @export
-initialize_data <- function(config) {
-  
+normalize_surface_samples <- function(bvec, mask) {
+  mat <- scale(bvec@data[indices(bvec), ])
+  BrainSurfaceVector(geometry(bvec), indices=indices(bvec), mat)
+}
+
+initialize_surface_data <- function(config) {
   if (!is.null(config$train_subset)) {
-    indices=which(config$train_subset)
+    indices <- which(config$train_subset)
     flog.info("length of training subset %s", length(indices))
-    config$train_datavec <- loadBrainData(config, "train_data", indices=indices)    
-  } else {
-    config$train_datavec <- loadBrainData(config, "train_data")  
   }
   
+  train_surfaces <- load_surface_data(config, "train_data", colind=indices) 
+  
+  if (!is.null(config$test_data)) {
+    flog.info("loading test surface data: %s", config$test_data)
+    indices <- which(config$test_subset)
+    flog.info("length of test subset %s", length(indices))
+    
+    test_surfaces <- if (!is.null(config$test_subset)) {
+      load_surface_data(config, "test_data", colind=indices)
+    } else {
+      load_surface_data(config, "test_data")
+    }
+    
+  } else {
+    test_surfaces <- NULL
+  }
+  
+  if (config$normalize_samples) {
+    flog.info("Normalizing: centering and scaling each volume of training data")
+    ret <- lapply(train_surfaces, normalize_surface_samples)
+    names(ret) <- names(train_surfaces)
+    train_surfaces <- ret
+    
+    if (!is.null(test_datavec)) {
+      flog.info("Normalizing: centering and scaling each volume of test data")
+      ret <- lapply(test_surfaces, normalize_surface_samples)
+      names(ret) <- names(test_surfaces)
+      test_surfaces <- ret
+    }
+  }
+  
+  if (!is.null(test_surfaces) && !(length(train_surfaces) == length(test_surfaces))) {
+    flog.info("number of training surfaces: %s", length(train_surfaces))
+    flog.info("number of test surfaces: %s", length(test_surfaces))
+    flog.error("number of training surface entries must equal number of test surface entries")
+    stop()
+  }
+  
+  ret <- lapply(1:length(train_surfaces), function(i) {
+    mvpa_surface_dataset(train_surfaces[[i]], test_surfaces[[i]], name=names(train_surfaces)[i])
+  })
+  
+  names(ret) <- names(train_surfaces)
+  ret
+
+ 
+}
+
+initialize_feature_selection <- function(config) {
+  if (!is.null(config$feature_selector)) {
+    feature_selector(config$feature_selector$method, config$feature_selector$cutoff_type, as.numeric(config$feature_selector$cutoff_value))
+  } else {
+    NULL
+  }
+}
+
+
+#' @export
+initialize_image_data <- function(config, mask) {
+  if (!is.null(config$train_subset)) {
+    indices <- which(config$train_subset)
+    flog.info("length of training subset %s", length(indices))
+  }
+  
+  train_datavec <- load_image_data(config, "train_data", indices=indices)    
+
   if (!is.null(config$test_data)) {
     flog.info("loading test data: %s", config$test_data)
     indices=which(config$test_subset)
     flog.info("length of test subset %s", length(indices))
     
     if (!is.null(config$test_subset)) {
-      config$test_datavec <- loadBrainData(config, "test_data", indices=indices)
+      test_datavec <- load_image_data(config, "test_data", indices=indices)
     } else {
-      config$test_datavec <- loadBrainData(config, "test_data")
+      test_datavec <- load_image_data(config, "test_data")
     }
+  } else {
+    test_datavec <- NULL
   }
   
   if (config$normalize) {
     flog.info("Normalizing: centering and scaling each volume of training data")
-    config$train_datavec <- normalize_samples(config$train_datavec, config$maskVolume)
+    train_datavec <- normalize_image_samples(train_datavec, mask)
     
-    if (!is.null(config$test_data)) {
+    if (!is.null(test_datavec)) {
       flog.info("Normalizing: centering and scaling each volume of test data")
-      config$test_datavec <- normalize_samples(config$test_datavec, config$maskVolume)
+      test_datavec <- normalize_image_samples(test_datavec, mask)
     }
   }
   
-  config
+  mvpa_dataset(train_datavec, test_datavec, mask=mask)
 
-  
 }
 
 #' @export
@@ -354,11 +421,6 @@ initialize_design <- function(config) {
   
 }
 
-#initializeFeatureSelection <- function(args, grid) {
-#  if (!is.null(args$feature_selection) && !args$feature_selection == "NULL") {
-#    
-#}
-
 #' @export
 initialize_tune_grid <- function(args, config) {
   if (!is.null(args$tune_grid) && !args$tune_grid == "NULL") {
@@ -369,7 +431,7 @@ initialize_tune_grid <- function(args, config) {
     }
     
     flog.info("tuning grid is", params, capture=TRUE)
-    tune_grid <- params
+    params
     
   } else if (!is.null(config$tune_grid) && !is.data.frame(config$tune_grid)) {
     params <- try(lapply(config$tune_grid, function(x) eval(parse(text=x))))
@@ -377,11 +439,13 @@ initialize_tune_grid <- function(args, config) {
       stop("could not parse tune_grid expresson: ", config$tune_grid)
     }
     
-    tune_grid <- expand.grid(params)
+    expand.grid(params)
     flog.info("tuning grid is", params, capture=TRUE)
+  } else {
+    NULL
   }
   
-  tune_grid
+  
 }
 
 
@@ -478,18 +542,19 @@ load_design <- function(config, name) {
   }
 }
 
-load_mvpa_model <- function(config, dataset) {
+load_mvpa_model <- function(config, dataset, design, crossval, feature_selector) {
   mod <- load_model(config$model)
-  mvp_mod <- mvpa_model(mod,dataset, design=config$design, 
+  mvp_mod <- mvpa_model(mod,dataset, design=design, 
                         model_type=config$model_type,
-                        crossval=config$crossval,
-                        feature_selector=config$feature_selector, 
+                        crossval=crossval,
+                        feature_selector=feature_selector, 
                         tune_grid=config$tune_grid,
                         performance=config$performance,
                         class_metrics=config$class_metrics)
   
 }
-#' @export
+
+
 load_subset <- function(full_design, subset) {
   if (is.character(subset)) {
     if (substr(subset, 1,1) != "~") {
@@ -568,6 +633,7 @@ load_surface_data <- function(config, name, nodeind=NULL, colind=NULL) {
     neurosurf::loadSurface(tdat[[section]]$geometry, tdat[[section]]$data, nodeind=nodeind, colind=colind)
   })
   
+  names(surfaces) <- sections
   surfaces
     
 }

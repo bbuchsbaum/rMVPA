@@ -92,7 +92,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
       if (inherits(result, "try-error")) {
         flog.debug("error: %s", attr(result, "condition")$message)
         ## error encountered, store error messages
-        tibble(class=list(NULL), probs=list(NULL), y_true=list(.$ytest), fit=list(NULL), error=TRUE, error_message=attr(result, "condition")$message)
+        tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(.$ytest), fit=list(NULL), error=TRUE, error_message=attr(result, "condition")$message)
       } else {
         pred <- predict(result, tibble::as_tibble(.$test), NULL)
         plist <- lapply(pred, list)

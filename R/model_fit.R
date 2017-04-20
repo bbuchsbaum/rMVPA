@@ -255,6 +255,13 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=N
   }
   
   nzero <- nonzeroVarianceColumns2(train_dat)
+  dup <- !duplicated(t(train_dat))
+  
+  nzero <- nzero & dup
+  
+  if (sum(nzero) < 2) {
+    stop("training data must have more than one valid feature")
+  }
   
   ## feature selection and variable screening
   feature_mask <- if (!is.null(obj$feature_selector)) {

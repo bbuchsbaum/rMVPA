@@ -130,6 +130,7 @@ binary_perf <- function(observed, predicted, probs) {
 }
 
 multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
+
   obs <- as.character(observed)
   
   ncorrect <- sum(obs == predicted)
