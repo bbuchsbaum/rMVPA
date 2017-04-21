@@ -104,6 +104,25 @@ if (is.numeric(design$y_train)) {
 }
 
 
+write_output <- function(searchres, name="", output, data_mode="image") {
+  if (data_mode == "image") {
+    for (i in 1:length(searchres)) {
+      out <- paste0(output, "/", names(searchres)[i], "_", name, ".nii")
+      writeVolume(searchres[[i]], out)  
+    }
+  } else if (data_mode == "surface") {
+    for (i in 1:length(searchres)) {
+      out <- paste0(output, "/", names(searchres)[i], "_", name)
+      neurosurf::writeSurfaceData(searchres[[i]], out, name)  
+    }
+  } else {
+    stop(paste("wrong data_mode:", data_mode))
+  }
+}
+
+
+output <- rMVPA:::make_output_dir(config$output)
+
 for (i in 1:length(dataset)) {
   dset <- dataset[[i]]
   if (names(dataset)[i] != "") {
@@ -111,32 +130,30 @@ for (i in 1:length(dataset)) {
   } else {
     flog.info("running searchlight")
   }
-  
-  
+
   mvpa_mod <- rMVPA:::load_mvpa_model(config, dset, design,crossval,feature_selector)
   searchres <- rMVPA:::run_searchlight(mvpa_mod, radius=config$radius, method=config$type, niter=config$niter)
-
-  output <- makeOutputDir(paste0(names(dataset)[i], "_", config$output))
-  
-  for (i in 1:length(searchres)) {
-    out <- paste0(output, "/", names(searchres)[i], ".nii")
-    writeVolume(searchres[[i]], out)  
-  }
-  if (!is.null(configParams$test_subset)) {
-    configParams$test_subset <- Reduce(paste, deparse(config_params$test_subset))
-  }
-  
-  if (!is.null(configParams$train_subset)) {
-    configParams$train_subset <- Reduce(paste, deparse(config_params$train_subset))
-  }
-  
-  if (!is.null(configParams$split_by)) {
-    config_params$split_by <- Reduce(paste, deparse(config_params$split_by))
-  }
-  
-  configout <- paste0(config$output, "/config.yaml")
-  qwrite(as.list(configParams), configout)
+  write_output(searchres, name=names(dataset)[i], output, data_mode=config$data_mode)
 }
+
+if (!is.null(config_params$test_subset)) {
+  config_params$test_subset <- Reduce(paste, deparse(config_params$test_subset))
+}
+
+if (!is.null(config_params$train_subset)) {
+  config_params$train_subset <- Reduce(paste, deparse(config_params$train_subset))
+}
+
+if (!is.null(config_params$split_by)) {
+  config_params$split_by <- Reduce(paste, deparse(config_params$split_by))
+}
+
+if (purrr::is_formula(config_params$label_column)) {
+  config_params$label_column= Reduce(paste, deparse(config_params$label_column))
+}
+
+configout <- paste0(config$output, "/config.yaml")
+qwrite(as.list(config_params), configout)
 
 
 

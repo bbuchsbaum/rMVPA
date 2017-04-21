@@ -64,10 +64,6 @@ prob_corsimFit <- function(modelFit, newData) {
   probs <- exp(sweep(scores, 1, mc, "-"))
   probs <- zapsmall(probs/rowSums(probs))
   colnames(probs) <- modelFit$levs
-  
-  if (any(is.na(probs))) {
-    browser()
-  }
   probs
 }
 
