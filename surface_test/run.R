@@ -22,5 +22,5 @@ crossval <- initialize_crossval(config, design)
 surfdat <- initialize_surface_data(config)
 
 mod1 <- load_mvpa_model(config, dataset=surfdat[[1]], design=design, crossval=crossval, feature_selector=NULL)
-res <- run_searchlight(mod1, method="randomized", radius=8, niter=2)
+res <- run_searchlight(mod1, method="randomized", radius=14, niter=2)
 

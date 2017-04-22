@@ -10,7 +10,6 @@ wrap_out <- function(perf_mat, dataset, ids) {
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
 do_randomized <- function(model_spec, radius, niter) {
-  print("lapply")
   ret <- lapply(1:niter, function(i) {
     flog.info("searchlight iteration: %i", i)
     flog.debug("constructing searchlight.")
@@ -26,11 +25,10 @@ do_randomized <- function(model_spec, radius, niter) {
     mvpa_iterate(model_spec, vox_iter, cind)
   })
   
-  
-  
+
   results <- dplyr::bind_rows(ret)
-  good_results <- results %>% filter(!error)
-  bad_results <- results %>% filter(error == TRUE)
+  good_results <- results %>% dplyr::filter(!error)
+  bad_results <- results %>% dplyr::filter(error == TRUE)
   
   if (nrow(bad_results) > 0) {
     futile.logger::flog.info(bad_results$error_message)
@@ -48,8 +46,8 @@ do_randomized <- function(model_spec, radius, niter) {
   perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, each=ncols), j=rep(1:ncols, length(ind_set)), 
                                x=rep(0, length(ind_set)*ncols), dims=c(length(model_spec$dataset$mask), ncols))
   
-  
-  for (i in 1:nrow(results)) {
+
+  for (i in 1:nrow(good_results)) {
     ind <- good_results$indices[[i]]
     m <- kronecker(matrix(good_results$performance[[i]], 1, ncols), rep(1,length(ind)))
     perf_mat[ind,] <- perf_mat[ind,] + m
