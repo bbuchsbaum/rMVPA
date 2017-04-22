@@ -90,7 +90,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
       result <- try(train_model(mspec, tibble::as_tibble(.$train), .$ytrain, indices=ind, param=mspec$tune_grid))
       
       if (inherits(result, "try-error")) {
-        flog.debug("error: %s", attr(result, "condition")$message)
+        flog.warning("error fitting model %s : %s", id, attr(result, "condition")$message)
         ## error encountered, store error messages
         tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(.$ytest), fit=list(NULL), error=TRUE, error_message=attr(result, "condition")$message)
       } else {
