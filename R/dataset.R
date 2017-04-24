@@ -18,6 +18,30 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 }
 
 
+gen_image_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), 
+                              spacing=c(1,1,1), blocks=5, nlevels=5) {
+  response_type <- match.arg(response_type)
+  
+  mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
+  bspace <- BrainSpace(c(D,nobs), spacing)
+  bvec <- BrainVector(mat, bspace)
+  
+  mask <- as.logical(BrainVolume(array(rep(1, prod(D)), D), BrainSpace(D, spacing)))
+  
+  Y <- if (response_type == "categorical") {
+    sample(factor(rep(letters[1:nlevels], length.out=nobs)))
+  } else {
+    rnorm(length(obs))
+  }
+  
+  block_var <- rep(1:folds, length.out=nobs)
+  des <- mvpa_design(data.frame(Y=Y), block_var=block_var, y_train= ~ Y)
+  dset <- mvpa_dataset(bvec, mask=mask)
+  list(dataset=dset, design=des)
+}
+
+
+
 
 #' mvpa_dataset
 #' 
@@ -25,7 +49,7 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 #' @param test_data the test data set: a \code{BrainVector} instance
 #' @param mask the set of voxels to include: a \code{BrainVolume} instance
 #' @importFrom assertthat assert_that
-mvpa_dataset <- function(train_data,test_data=NULL, mask, design) {
+mvpa_dataset <- function(train_data,test_data=NULL, mask) {
   assert_that(inherits(design, "mvpa_design"))
   
   ret <- list(
