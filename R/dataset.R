@@ -18,9 +18,11 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 }
 
 
-gen_image_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), 
+gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), data_mode=c("image", "surface"),
                               spacing=c(1,1,1), blocks=5, nlevels=5) {
+  
   response_type <- match.arg(response_type)
+  data_mode <- match.arg(data_mode)
   
   mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
   bspace <- BrainSpace(c(D,nobs), spacing)
