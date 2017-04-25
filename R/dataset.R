@@ -17,7 +17,13 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
   
 }
 
-
+#' @param D the data dimensions
+#' @param nobs the number of observations
+#' @param response_type 'categorical' or 'continuous'
+#' @param data_mode 'image' or 'surface'
+#' @param spacing
+#' @param blocks
+#' @param nlevels
 gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), data_mode=c("image", "surface"),
                               spacing=c(1,1,1), blocks=5, nlevels=5) {
   
