@@ -17,7 +17,9 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
   
 }
 
-#' @param D the data dimensions
+#' gen_sample_dataset
+#' 
+#' @param D the data dimension(s)
 #' @param nobs the number of observations
 #' @param response_type 'categorical' or 'continuous'
 #' @param data_mode 'image' or 'surface'
@@ -25,16 +27,39 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 #' @param blocks
 #' @param nlevels
 gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), data_mode=c("image", "surface"),
-                              spacing=c(1,1,1), blocks=5, nlevels=5) {
+                              spacing=c(1,1,1), blocks=5, nlevels=5, external_test=FALSE) {
   
   response_type <- match.arg(response_type)
   data_mode <- match.arg(data_mode)
   
-  mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
-  bspace <- BrainSpace(c(D,nobs), spacing)
-  bvec <- BrainVector(mat, bspace)
   
-  mask <- as.logical(BrainVolume(array(rep(1, prod(D)), D), BrainSpace(D, spacing)))
+  if (data_mode == "image") {
+    mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
+    bspace <- neuroim::BrainSpace(c(D,nobs), spacing)
+    bvec <- neuroim::BrainVector(mat, bspace)
+    mask <- as.logical(neuroim::BrainVolume(array(rep(1, prod(D)), D), neuroim::BrainSpace(D, spacing)))
+    
+    if (external_test) {
+      mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
+      testvec <- neuroim::BrainVector(mat, bspace)
+      dset <- mvpa_dataset(train_data=bvec, test_data=testvec, mask=mask)
+    } else {
+      dset <- mvpa_dataset(train_data=bvec,mask=mask)
+    }
+  } else {
+    fname <- system.file("extdata/std.lh.smoothwm.asc", package="neuroim")
+    geom <- neurosurf::loadSurface(fname)
+    nvert <- nrow(neurosurf::vertices(geom))
+    mat <- matrix(rnorm(nvert*nobs), nvert, nobs)
+    bvec <- neurosurf::BrainSurfaceVector(geom, 1:nvert, mat)
+    
+    if (external_test) {
+      test_data <- neurosurf::BrainSurfaceVector(geom, 1:nvert, matrix(rnorm(nvert*nobs), nvert, nobs))
+      dset <- mvpa_surface_dataset(train_data=bvec, test_data=test_data)
+    } else {
+      dset <- mvpa_surface_dataset(train_data=bvec)
+    }
+  }
   
   Y <- if (response_type == "categorical") {
     sample(factor(rep(letters[1:nlevels], length.out=nobs)))
@@ -42,9 +67,14 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     rnorm(length(obs))
   }
   
-  block_var <- rep(1:folds, length.out=nobs)
-  des <- mvpa_design(data.frame(Y=Y), block_var=block_var, y_train= ~ Y)
-  dset <- mvpa_dataset(bvec, mask=mask)
+  block_var <- rep(1:blocks, length.out=nobs)
+  
+  if (external_test) {
+    des <- mvpa_design(data.frame(Y=Y, block_var=block_var), test_design=data.frame(Y = sample(Y)), block_var= "block_var", y_train= ~ Y, y_test = ~ Y)
+  } else {
+    des <- mvpa_design(data.frame(Y=Y), block_var="block_var", y_train= ~ Y)
+  }
+  
   list(dataset=dset, design=des)
 }
 
@@ -58,8 +88,10 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
 #' @param mask the set of voxels to include: a \code{BrainVolume} instance
 #' @importFrom assertthat assert_that
 mvpa_dataset <- function(train_data,test_data=NULL, mask) {
-  assert_that(inherits(design, "mvpa_design"))
-  
+  assert_that(inherits(train_data, "BrainVector"))
+  if (!is.null(test_data)) {
+    assert_that(inherits(test_data, "BrainVector"))
+  }
   ret <- list(
     train_data=train_data,
     test_data=test_data,
@@ -83,7 +115,11 @@ mvpa_dataset <- function(train_data,test_data=NULL, mask) {
 #' @export
 mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="") {
   
+  assert_that(inherits(train_data, "BrainSurfaceVector"))
   
+  if (!is.null(test_data)) {
+    assert_that(inherits(test_data, "BrainSurfaceVector"))
+  }
   
   if (is.null(mask)) {
     mask <- numeric(length(nodes(train_data@geometry)))

@@ -41,9 +41,8 @@ option_list <- list(
                     make_option(c("--save_predictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
                     make_option(c("--skip_if_folder_exists"), type="logical", action="store_true", help="skip, if output folder already exists"),
                     ## should be skip_if_folder_exists or "overwrite_folder"
-                    make_option(c("--output_class_metrics"), type="logical", help="write out performance metrics for each class in multiclass settings"),
+                    make_option(c("--class_metrics"), type="logical", help="write out performance metrics for each class in multiclass settings"),
                     make_option(c("--ensemble_predictor"), type="logical", help="predictor is based on average prediction of all cross-validated runs"),
-                    make_option(c("--bootstrap_replications"), type="numeric", help="number of bootstrapped models to be computed for each cross-validation fold. Final model is average of bootstrapped models."),
                     make_option(c("-c", "--config"), type="character", help="name of configuration file used to specify program parameters"))
 
 
@@ -136,18 +135,6 @@ if (!is.null(config$roi_grouping)) {
 
 config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
 
-parcellationVolume <- if (!is.null(config$parcellation)) {
-  loadVolume(config$parcellation)
-}
-
-if (!is.null(parcellationVolume)) {
-  if (!all(dim(parcellationVolume) == dim(config$maskVolume))) {
-    flog.error("dimensions of parcellation volume must equal dimensions of mask volume")
-    stop() 
-  }
-}
-
-
 config <- initializeData(config)
 
 flog.info("number of training trials: %s", length(rowIndices))
@@ -181,42 +168,12 @@ featureSelector <- if (!is.null(config$feature_selector)) {
 flog.info("feature selector: ", featureSelector, capture=TRUE)
 flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRUE)
 
-consensusLearner <- if (!is.null(config$consensus_learner)) {
-  flog.info("Will train a %s consensus classifier on ROI results", config$consensus_learner$method)
-  ConsensusLearner(config$consensus_learner$method, config$consensus_learner$params)
-}
-
-flog.info("consensus learner: ", consensusLearner, capture=TRUE)
 
 if (!is.null(config$custom_performance)) {
   flog.info("custom performance function provided: ", config$custom_performance)
 }
 
 
-dataset <- MVPADataset$new(config$train_datavec, 
-                           config$labels, 
-                           config$maskVolume, 
-                           config$block, 
-                           config$test_datavec, 
-                           config$testLabels, 
-                           parcellation=parcellationVolume,
-                           testSplitVar=config$testSplitVar, 
-                           testSplits=config$testSplits,
-                           trainDesign=config$train_design,
-                           testDesign=config$test_design)
-
-model <- loadModel(config$model, list(tuneGrid=config$tune_grid, custom_performance=config$custom_performance))
-
-
-for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
-  if (!is.null(configParams[[varname]]) && is(configParams[[varname]], "formula")) {
-    configParams[[varname]] <- Reduce(paste, deparse(configParams[[varname]]))
-  }
-}
-
-
-cl <- makeCluster(config$pthreads, outfile="",useXDR=FALSE, type="FORK")
-registerDoParallel(cl)
 
 
 for (roinum in seq_along(config$ROIVolume)) {
@@ -230,7 +187,7 @@ for (roinum in seq_along(config$ROIVolume)) {
     outdir <- config$output
   }
   
-  if (config$skipIfFolderExists) {
+  if (config$skip_if_folder_exists) {
     if (file.exists(outdir)) {
       flog.info("output folder %s already exists, skipping.", outdir)
       next
@@ -247,25 +204,8 @@ for (roinum in seq_along(config$ROIVolume)) {
   mvpa_res <- mvpa_regional(dataset, model, roivol, crossVal, config$savePredictors, 
                             featureSelector=featureSelector, classMetrics=config$output_class_metrics)
   
-  if (!is.null(consensusLearner)) {
-    consResult <- mvpa_regional_consensus(dataset, model, roivol, 
-                                          featureSelector=featureSelector, 
-                                          classMetrics=config$output_class_metrics,
-                                          method=consensusLearner$method)
-    
-    saveRDS(consResult$result$predictor, paste0(config$output, "/consensusPredictor.RDS"))
-    rois <- sapply(mvpa_res$resultSet$resultList, attr, "ROINUM")
-    #consResult <- consensusWeights(mvpa_res$resultSet, consensusLearner$method)
-    consPerf <- performance(consResult$result, dataset$testSplits, config$output_class_metrics)
-    consPerf <- as.data.frame(t(consPerf))
-    write.table(format(consPerf,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/consensus_performance.txt")), row.names=FALSE, quote=FALSE)
-    consWeights <- data.frame(ROINUM=rois, weights=consResult$weights)
-    write.table(format(consWeights,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/consensus_weights.txt")), row.names=FALSE, quote=FALSE)
-  }
-
-  write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
   
-  model$saveResults(mvpa_res$extendedResults, outdir)
+  write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
   
   lapply(1:length(mvpa_res$outVols), function(i) {
     out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")
@@ -282,9 +222,6 @@ for (roinum in seq_along(config$ROIVolume)) {
   if (!is.null(config$mask)) {
     file.copy(config$mask, paste0(outdir, "/", basename(config$mask)))
   }
-
-  #write.table(format(mvpa_res$predMat,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/predMat_table.txt")), row.names=FALSE, quote=FALSE)
-  #saveRDS(mvpa_res$predictorList, paste0(config$output, "/predictorList.RDS"))
 
   configParams$currentWorkingDir <- getwd()
 
