@@ -31,7 +31,7 @@ combine_regional_results = function(results, ids) {
 #' Run a separate MVPA analysis for multiple disjoint regions of interest.
 #' 
 #' @param model_spec a \code{mvpa_model} instance
-#' @param region_mask a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
+#' @param region_mask a \code{BrainVolume} or \code{BrainSurface} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
 #' @param returns_fits whether to return model fit for every ROI (default is \code{FALSE} to save memory)
 #' 
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
@@ -43,13 +43,15 @@ combine_regional_results = function(results, ids) {
 run_regional <- function(model_spec, region_mask, return_fits=FALSE) {  
   
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
-  region_set <- sort(as.integer(unique(region_mask[region_mask > 0])))
+  
+  region_vec <- as.vector(region_mask)
+  region_set <- sort(as.integer(unique(region_vec[region_vec > 0])))
   
   if (length(region_set) < 1) {
     stop("run_regional: invalid ROI mask, number of ROIs = 0")
   }
   
-  vox_iter <- lapply(region_set, function(rnum) which(region_mask == rnum))
+  vox_iter <- lapply(region_set, function(rnum) which(region_vec == rnum))
   lens <- sapply(vox_iter, length)
   
   if (any(lens < 2)) {
@@ -61,12 +63,15 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
   ## run mvpa for each region
   results <- mvpa_iterate(model_spec, vox_iter, ids=region_set, return_fits)
   
+
   ## compile performance results
   perf_mat <- do.call(rbind, results$performance)
   
   ## generate volumetric results
   vols <- lapply(1:ncol(perf_mat), function(i) fill(region_mask, cbind(results$id, perf_mat[,i])))
   names(vols) <- colnames(perf_mat)
+  
+  perf_mat <- tibble::as_tibble(perf_mat) %>% dplyr::mutate(ROINUM = unlist(results$id)) %>% dplyr::select(ROINUM, dplyr::everything())
   
   ## compile full prediction table
   prediction_table <- combine_regional_results(results, results$id)
@@ -75,5 +80,5 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
     lapply(results$result, "[[", "predictor")
   }
   
-  list(performance_table=as_tibble(perf_mat), prediction_table=prediction_table, vol_results=vols, fits=fits)
+  list(performance_table=perf_mat, prediction_table=prediction_table, vol_results=vols, fits=fits)
 }

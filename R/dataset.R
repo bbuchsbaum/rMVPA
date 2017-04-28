@@ -69,10 +69,11 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
   
   block_var <- rep(1:blocks, length.out=nobs)
   
-  if (external_test) {
-    des <- mvpa_design(data.frame(Y=Y, block_var=block_var), test_design=data.frame(Y = sample(Y)), block_var= "block_var", y_train= ~ Y, y_test = ~ Y)
+  des <- if (external_test) {
+    mvpa_design(data.frame(Y=Y, block_var=block_var), test_design=data.frame(Y = sample(Y)), 
+                       block_var= "block_var", y_train= ~ Y, y_test = ~ Y)
   } else {
-    des <- mvpa_design(data.frame(Y=Y), block_var="block_var", y_train= ~ Y)
+    mvpa_design(data.frame(Y=Y, block_var=block_var), block_var="block_var", y_train= ~ Y)
   }
   
   list(dataset=dset, design=des)

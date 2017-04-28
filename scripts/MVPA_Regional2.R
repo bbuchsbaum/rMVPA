@@ -66,6 +66,8 @@ config$tune_grid <- rMVPA:::initialize_tune_grid(args, config)
 config_params <- as.list(config)
 config$design <- rMVPA:::initialize_design(config)
 
+flog.info("loading training data: %s", config$train_data)
+
 if (config$data_mode == "image") {
   mask_volume <- as(load_mask(config), "LogicalBrainVolume")
   dataset <- rMVPA:::initialize_image_data(config, mask)
@@ -78,6 +80,7 @@ if (config$data_mode == "image") {
   flog.error("unrecognized data_mode: %s", config$data_mode)
 }
 
+print(dataset)
 
 row_indices <- which(config$train_subset)
 
@@ -87,146 +90,102 @@ flog.info("max trial index: %s", max(row_indices))
 
 #config$ROIVolume <- loadMask(config)
 
-if (!is.null(config$roi_subset)) {
-  form <- try(eval(parse(text=config$roi_subset)))
-  if (inherits(form, "try-error")) {
-    flog.error("could not parse roi_subset parameter: %s", config$roi_subset)
-    stop()
-  }
-  
-  if (class(form) != "formula") {
-    flog.error("roi_subset argument must be an expression that starts with a ~ character")
-    stop()
-  }
-  
-  res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
-  
-  config$ROIVolume[!res] <- 0
-  flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
-  
-  if (sum(config$ROIVolume) <= 1) {
-    flog.info("ROI must contain more than one voxel, aborting.")
-    stop()
-  }
-}
-
-if (!is.null(config$roi_grouping)) {
-  roilist <- lapply(1:length(config$roi_grouping), function(i) {
-    grp <- config$roi_grouping[[i]]
-    idx <- which(config$ROIVolume %in% grp)
-    vol <- makeVolume(refvol=config$ROIVolume)
-    vol[idx] <- i
-    vol
-  })
-  
-  if (is.null(names(config$roi_grouping))) {
-    names(roilist) <- paste0("roi_group_", seq_along(config$roi_grouping))
-  } else {
-    names(roilist) <- names(config$roi_grouping)
-  }
-  
-  config$ROIVolume <- roilist
-} else {
-  config$ROIVolume <- list(config$ROIVolume)
-}
+# if (!is.null(config$roi_subset)) {
+#   form <- try(eval(parse(text=config$roi_subset)))
+#   if (inherits(form, "try-error")) {
+#     flog.error("could not parse roi_subset parameter: %s", config$roi_subset)
+#     stop()
+#   }
+#   
+#   if (class(form) != "formula") {
+#     flog.error("roi_subset argument must be an expression that starts with a ~ character")
+#     stop()
+#   }
+#   
+#   res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
+#   
+#   config$ROIVolume[!res] <- 0
+#   flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
+#   
+#   if (sum(config$ROIVolume) <= 1) {
+#     flog.info("ROI must contain more than one voxel, aborting.")
+#     stop()
+#   }
+# }
 
 
-
-
-config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
-
-config <- initializeData(config)
-
-flog.info("number of training trials: %s", length(rowIndices))
-flog.info("max trial index: %s", max(rowIndices))
-flog.info("loading training data: %s", config$train_data)
-flog.info("mask contains %s voxels", sum(config$maskVolume))
-
-for (i in seq_along(config$ROIVolume)) {
-  rvol <- config$ROIVolume[[i]]
-  
-  flog.info("Region mask contains: %s ROIs", length(unique(rvol[rvol > 0])))
-  flog.info(paste("ROIs are for group ", i, "are:"), rvol, capture=TRUE)
- 
-}
-
-
-flog.info("Running regional MVPA with parameters:", configParams, capture=TRUE)
-flog.info("With %s roi groups", length(config$ROIVolume))
-
-if (length(config$labels) != dim(config$train_datavec)[4]) {
-  flog.error("Number of volumes: %s must equal number of labels: %s", dim(config$train_datavec)[4], length(config$labels))
-  stop()
-}
-
-featureSelector <- if (!is.null(config$feature_selector)) {
-  FeatureSelector(config$feature_selector$method, 
-                  config$feature_selector$cutoff_type, 
-                  as.numeric(config$feature_selector$cutoff_value))
-}
-
-flog.info("feature selector: ", featureSelector, capture=TRUE)
-flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRUE)
-
+#config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
+#config <- initializeData(config)
 
 if (!is.null(config$custom_performance)) {
   flog.info("custom performance function provided: ", config$custom_performance)
 }
 
+flog.info("initializing design structure")
 
+design <- mvpa_design(train_design=config$train_design,
+                      y_train=config$label_column,
+                      test_design=config$test_design,
+                      y_test=config$test_label_column,
+                      block_var=config$block_column,
+                      split_by=config$split_by)
 
+crossval <- rMVPA:::initialize_crossval(config, design)
+feature_selector <- rMVPA:::initialize_feature_selection(config)
 
-for (roinum in seq_along(config$ROIVolume)) {
-  
-  gc()
-  
-  if (length(config$ROIVolume) > 1) {
-    roiname <- names(config$ROIVolume)[roinum]
-    outdir <- paste0(config$output, "_roigroup_", roiname)
-  } else {
-    outdir <- config$output
-  }
-  
-  if (config$skip_if_folder_exists) {
-    if (file.exists(outdir)) {
-      flog.info("output folder %s already exists, skipping.", outdir)
-      next
+if (is.numeric(design$y_train)) {
+  flog.info("labels are continuous, running a regression analysis.")
+} else {
+  flog.info("labels are categorical, running a classification analysis.")
+}
+
+write_output <- function(res, name="", output, data_mode="image") {
+  if (data_mode == "image") {
+    for (i in 1:length(res)) {
+      out <- paste0(output, "/", names(res)[i], "_", name, ".nii")
+      writeVolume(res[[i]], out)  
+    }
+  } else if (data_mode == "surface") {
+    for (i in 1:length(res)) {
+      out <- paste0(output, "/", names(res)[i], "_", name)
+      neurosurf::writeSurfaceData(res[[i]], out)  
     }
   } else {
-    outdir <- makeOutputDir(outdir)
-  } 
-  
-  roivol <- config$ROIVolume[[roinum]]
- 
-  ## need to handle bootstrap reps
-  crossVal <- blocked_cross_validation(dataset$blockVar, balance=config$autobalance)
-  
-  mvpa_res <- mvpa_regional(dataset, model, roivol, crossVal, config$savePredictors, 
-                            featureSelector=featureSelector, classMetrics=config$output_class_metrics)
-  
-  
-  write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
-  
-  lapply(1:length(mvpa_res$outVols), function(i) {
-    out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")
-    writeVolume(mvpa_res$outVols[[i]], out)  
-  })
-  
-
-  write.table(config$train_subset, paste0(outdir, "/train_table.txt"), row.names=FALSE, quote=FALSE)
-
-  if (!is.null(config$test_subset)) {
-    write.table(config$test_subset, paste0(outdir, "/test_table.txt"), row.names=FALSE, quote=FALSE)
+    stop(paste("wrong data_mode:", data_mode))
   }
-
-  if (!is.null(config$mask)) {
-    file.copy(config$mask, paste0(outdir, "/", basename(config$mask)))
-  }
-
-  configParams$currentWorkingDir <- getwd()
-
-  configout <- paste0(outdir, "/config.yaml")
-  qwrite(configParams, configout)
 }
+
+
+output <- rMVPA:::make_output_dir(config$output)
+
+for (i in 1:length(dataset)) {
+  dset <- dataset[[i]]
+  dname <- names(dataset)[i]
+  
+  if (names(dataset)[i] != "") {
+    flog.info("running mvpa_regional for %s dataset: ", names(dataset)[i])
+  } else {
+    flog.info("running mvpa_regional")
+  }
+  
+  flog.info("number of regions is %s", length(unique(as.vector(dset$mask))))
+  
+  mvpa_mod <- rMVPA:::load_mvpa_model(config, dset, design,crossval,feature_selector)
+  regional_res <- rMVPA:::run_regional(mvpa_mod, dset$mask, return_fits=TRUE)
+  
+  print(regional_res$performance)
+  
+  write_output(regional_res$vol_results, name=names(dataset)[i], output, data_mode=config$data_mode)
+  
+  
+  write.table(format(regional_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), 
+              paste0(paste0(output, paste0("/", dname, "_performance_table.txt"))), row.names=FALSE, quote=FALSE)
+  
+  write.table(format(regional_res$prediction_table,  digits=2, scientific=FALSE, drop0trailing=TRUE), 
+              paste0(paste0(output, paste0("/", dname, "_prediction_table.txt"))), row.names=FALSE, quote=FALSE)
+  
+}
+ 
+  
 
 

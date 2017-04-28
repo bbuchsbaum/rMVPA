@@ -53,11 +53,11 @@ as_roi.data_sample <- function(x, ...) {
     series_roi(x$data$test_data, x$vox)
   }
   
-  cds <- if (is.vector(x$vox)) {
-    cds <- indexToGrid(space(x$data$mask), x$vox)
-  } else {
-    x$vox
-  }
+  #cds <- if (is.vector(x$vox)) {
+  #  cds <- indexToGrid(space(x$data$mask), x$vox)
+  #} else {
+  #  x$vox
+  #}
 
   if (is.null(test_roi)) {
     list(train_roi=train_roi,

@@ -293,9 +293,19 @@ initialize_surface_data <- function(config) {
     stop()
   }
   
-  ret <- lapply(1:length(train_surfaces), function(i) {
-    mvpa_surface_dataset(train_surfaces[[i]], test_surfaces[[i]], name=names(train_surfaces)[i])
-  })
+  ret <- if (!is.null(config$mask)) {
+    flog.info("loading mask: %s ", config$mask)
+    masksurf <- load_surface_mask(config$mask, train_surfaces)
+    
+    lapply(seq_along(train_surfaces), function(i) {
+      mvpa_surface_dataset(train_surfaces[[i]], test_surfaces[[i]], name=names(train_surfaces)[i], mask=masksurf[[i]])
+    })
+    
+  } else {
+    lapply(seq_along(train_surfaces), function(i) {
+      mvpa_surface_dataset(train_surfaces[[i]], test_surfaces[[i]], name=names(train_surfaces)[i])
+    })
+  }
   
   names(ret) <- names(train_surfaces)
   ret
@@ -625,10 +635,26 @@ load_image_data <- function(config, name, indices=NULL) {
   }
 }
 
+load_surface_mask <- function(masklist, train_surf) {
+  sections <- names(train_surf)
+  assert_that(all(names(sections) == names(masklist)))
+  
+  masksurfaces <- lapply(sections, function(section) {
+    msurf <- neurosurf::loadSurface(train_surf[[section]]@geometry, masklist[[section]])
+    flog.info("mask for %s has %s regions", section, length(unique(msurf@data)))
+    msurf
+  })
+  
+  names(masksurfaces) <- sections
+  masksurfaces
+}
+
 load_surface_data <- function(config, name, nodeind=NULL, colind=NULL) {
   tdat <- config[[name]]
   sections <- names(tdat)
+  
   flog.info("surface sections: ", sections, capture=TRUE)
+  
   surfaces <- lapply(sections, function(section) {
     neurosurf::loadSurface(tdat[[section]]$geometry, tdat[[section]]$data, nodeind=nodeind, colind=colind)
   })
