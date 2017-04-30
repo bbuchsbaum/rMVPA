@@ -61,10 +61,10 @@ gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
 test_that("mvpa_regional with 5 ROIS runs without error", {
   
   dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="image", response_type="categorical")
-  cval <- blocked_cross_validation(dset$design$block_var)
+  cval <- twofold_blocked_cross_validation(dset$design$block_var)
   
   region_mask <- BrainVolume(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
-  model <- load_model("sda_notune")
+  model <- load_model("sda")
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec, region_mask, return_fits=TRUE)
   
@@ -78,7 +78,7 @@ test_that("surface_based mvpa_regional with 5 ROIS runs without error", {
   maskid <- sample(1:5, size=length(dset$dataset$mask), replace=TRUE)
   region_mask <- BrainSurface(dset$dataset$train_data@geometry, indices=nodes(dset$dataset$train_data@geometry), data=maskid)
   
-  model <- load_model("sda_notune")
+  model <- load_model("sda")
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec, region_mask, return_fits=TRUE)
   

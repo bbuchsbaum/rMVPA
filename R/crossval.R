@@ -45,6 +45,7 @@ crossv_twofold <- function(data, y, block_var, block_ind, id = ".id", nreps=15, 
   assert_that(nhalf > 0)
   
   fold_sets <- combn(length(block_ind), nhalf)
+  nreps <- min(nreps, ncol(fold_sets))
   cols <- sample(1:ncol(fold_sets), nreps)
   
   fold_idx <- lapply(1:nreps, function(i) {
