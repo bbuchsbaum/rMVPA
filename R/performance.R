@@ -116,14 +116,17 @@ combinedACC <- function(Pred, Obs) {
 }
 
 binary_perf <- function(observed, predicted, probs) {
-  ncorrect <- sum(observed == predicted)
-  ntotal <- length(observed)
-  maxClass <- max(table(observed))
+  obs <- as.character(observed)
+  ncorrect <- sum(obs == predicted)
+  ntotal <- length(obs)
+  maxClass <- max(table(obs))
   
   out <- binom.test(ncorrect,
                     ntotal,
                     p = maxClass/ntotal,
                     alternative = "greater")
+  
+  
   
   c(ZAccuracy=-qnorm(out$p.value), Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
   

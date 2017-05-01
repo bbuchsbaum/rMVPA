@@ -27,7 +27,7 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 #' @param blocks
 #' @param nlevels
 gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), data_mode=c("image", "surface"),
-                              spacing=c(1,1,1), blocks=5, nlevels=5, external_test=FALSE) {
+                              spacing=c(1,1,1), blocks=5, nlevels=5, external_test=FALSE, ntest_obs=nobs) {
   
   response_type <- match.arg(response_type)
   data_mode <- match.arg(data_mode)
@@ -40,7 +40,8 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     mask <- as.logical(neuroim::BrainVolume(array(rep(1, prod(D)), D), neuroim::BrainSpace(D, spacing)))
     
     if (external_test) {
-      mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
+      mat <- array(rnorm(prod(D)*ntest_obs), c(D,ntest_obs))
+      bspace <- neuroim::BrainSpace(c(D,ntest_obs), spacing)
       testvec <- neuroim::BrainVector(mat, bspace)
       dset <- mvpa_dataset(train_data=bvec, test_data=testvec, mask=mask)
     } else {
@@ -54,7 +55,7 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     bvec <- neurosurf::BrainSurfaceVector(geom, 1:nvert, mat)
     
     if (external_test) {
-      test_data <- neurosurf::BrainSurfaceVector(geom, 1:nvert, matrix(rnorm(nvert*nobs), nvert, nobs))
+      test_data <- neurosurf::BrainSurfaceVector(geom, 1:nvert, matrix(rnorm(nvert*ntest_obs), nvert, ntest_obs))
       dset <- mvpa_surface_dataset(train_data=bvec, test_data=test_data)
     } else {
       dset <- mvpa_surface_dataset(train_data=bvec)
@@ -67,11 +68,18 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     rnorm(length(obs))
   }
   
+  Ytest <- if (response_type == "categorical") {
+    sample(factor(rep(letters[1:nlevels], length.out=ntest_obs)))
+  } else {
+    rnorm(length(ntest_obs))
+  }
+  
   block_var <- rep(1:blocks, length.out=nobs)
   
   des <- if (external_test) {
-    mvpa_design(data.frame(Y=Y, block_var=block_var), test_design=data.frame(Y = sample(Y)), 
-                       block_var= "block_var", y_train= ~ Y, y_test = ~ Y)
+    message("external test")
+    mvpa_design(data.frame(Y=Y, block_var=block_var), test_design=data.frame(Ytest = Ytest), 
+                       block_var= "block_var", y_train= ~ Y, y_test = ~ Ytest)
   } else {
     mvpa_design(data.frame(Y=Y, block_var=block_var), block_var="block_var", y_train= ~ Y)
   }

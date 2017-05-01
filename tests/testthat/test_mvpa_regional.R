@@ -1,7 +1,7 @@
 library(neuroim)
 library(neurosurf)
 library(testthat)
-
+library(assertthat)
 
 
 test_that("mvpa_regional with 5 ROIS runs without error", {
@@ -70,12 +70,25 @@ test_that("mvpa_regional with 5 ROIS runs and sparse_sda without error", {
   
 })
 
-test_that("mvpa_regional with 5 ROIS runs and random forest without error", {
+test_that("mvpa_regional with 5 ROIS and random forest without error", {
   
   model <- load_model("rf")
   dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3)
   cval <- blocked_cross_validation(dataset$design$block_var)
 
+  regionMask <- BrainVolume(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, 
+                      tune_grid=data.frame(mtry=c(2,4,6)))
+  res <- run_regional(mspec, regionMask)
+  
+})
+
+test_that("mvpa_regional with 5 ROIS runs and external test set", {
+  
+  model <- load_model("rf")
+  dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3, ntest_obs=200, external_test=TRUE)
+  cval <- blocked_cross_validation(dataset$design$block_var)
+  
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, 
                       tune_grid=data.frame(mtry=c(2,4,6)))

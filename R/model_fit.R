@@ -48,7 +48,7 @@ get_control <- function(y, nreps) {
 
 
 
-tune_model <- function(mspec, x, y, wts, param, nreps=2) {
+tune_model <- function(mspec, x, y, wts, param, nreps=10) {
   ctrl <- get_control(y, nreps)
   cfit <-caret::train(as.data.frame(x), y, method=mspec$model, weights=wts, metric=ctrl$metric, trControl=ctrl$ctrl, tuneGrid=param)
   cfit$bestTune

@@ -155,7 +155,6 @@ write_output <- function(res, name="", output, data_mode="image") {
   }
 }
 
-
 output <- rMVPA:::make_output_dir(config$output)
 
 for (i in 1:length(dataset)) {

@@ -51,7 +51,7 @@ parse_variable <- function(var, design) {
 #' 
 #' @export
 mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, block_var=NULL, split_by=NULL) {
-  
+ 
   y_train <- if (!purrr::is_formula(y_train) && length(y_train) > 1) {
     y_train
   } else {
@@ -60,7 +60,7 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   
   if (!is.null(y_test)) {
     assert_that(!is.null(test_design))
-    y_test <- if (!purrr::is_formula(y_train) && length(y_test) > 1) {
+    y_test <- if (!purrr::is_formula(y_test) && length(y_test) > 1) {
       y_test
     } else {
       parse_variable(y_test, test_design)
@@ -85,7 +85,7 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   if (!is.null(block_var)) {
     block_var <- parse_variable(block_var, train_design)
   }
-  
+ 
   des <- list(
     train_design=tibble::as_tibble(train_design),
     y_train=y_train,

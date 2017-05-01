@@ -232,7 +232,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
   set_arg("class_metrics", config, args, TRUE)
   set_arg("split_by", config, args, NULL)
   set_arg("custom_performance", config, args, NULL)
-  set_arg("test_label_column", config, args, NULL)
+  set_arg("test_label_column", config, args, config$label_column)
   set_arg("data_mode", config, args, "image")
   
   config
@@ -245,8 +245,12 @@ normalize_image_samples <- function(bvec, mask) {
 }
 
 normalize_surface_samples <- function(bvec, mask) {
-  mat <- scale(bvec@data[indices(bvec), ])
-  BrainSurfaceVector(geometry(bvec), indices=indices(bvec), mat)
+  mat <- scale(bvec@data[indices(bvec), ,drop=FALSE])
+  
+  m2 <- matrix(0, length(nodes(bvec)), ncol(bvec@data))
+  m2[indices(bvec),] <- mat
+  
+  BrainSurfaceVector(geometry(bvec), indices=indices(bvec), m2)
 }
 
 initialize_surface_data <- function(config) {
@@ -273,13 +277,13 @@ initialize_surface_data <- function(config) {
   }
   
   if (config$normalize_samples) {
-    flog.info("Normalizing: centering and scaling each volume of training data")
+    flog.info("Normalizing: centering and scaling each surface of training data")
     ret <- lapply(train_surfaces, normalize_surface_samples)
     names(ret) <- names(train_surfaces)
     train_surfaces <- ret
     
-    if (!is.null(test_datavec)) {
-      flog.info("Normalizing: centering and scaling each volume of test data")
+    if (!is.null(test_surfaces)) {
+      flog.info("Normalizing: centering and scaling each surface of test data")
       ret <- lapply(test_surfaces, normalize_surface_samples)
       names(ret) <- names(test_surfaces)
       test_surfaces <- ret
@@ -392,6 +396,12 @@ initialize_design <- function(config) {
     stop()
   }
   
+  if (is.null(config$test_design) && !is.null(config$test_data)) {
+    flog.error("test_data %s is supplied with no test_design")
+    stop()
+  }
+  
+  
   #if (!is.null(config$test_subset) && is.null(config$test_design) && is.null(config$test_data)) {
   #  flog.info("test subset is taken from training design table")
   #  config$test_subset <- load_subset(config$full_train_design, config$test_subset)
@@ -404,7 +414,8 @@ initialize_design <- function(config) {
   if (!is.null(config$test_design)) {
     flog.info("test design %s is specified", config$test_design)
     config$full_test_design <- read.table(config$test_design, header=TRUE, comment.char=";")
-    flog.info(paste("test design contains", nrow(config$test_design), "rows."))
+    flog.info(paste("test design contains", nrow(config$full_test_design), "rows."))
+    
     config$test_subset <- load_subset(config$full_test_design, config$test_subset)
     config$test_design <- config$full_test_design[config$test_subset,]
     
@@ -449,8 +460,11 @@ initialize_tune_grid <- function(args, config) {
       stop("could not parse tune_grid expresson: ", config$tune_grid)
     }
     
-    expand.grid(params)
     flog.info("tuning grid is", params, capture=TRUE)
+    expand.grid(params)
+    
+  } else if (is.data.frame(config$tune_grid)) {
+    config$tune_grid
   } else {
     NULL
   }
