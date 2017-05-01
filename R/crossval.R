@@ -130,7 +130,7 @@ blocked_cross_validation <- function(block_var, exclude=NULL) {
 
 
 #' @export
-twofold_blocked_cross_validation <- function(block_var, nreps=10, exclude=exclude) {
+twofold_blocked_cross_validation <- function(block_var, nreps=10, exclude=NULL) {
   block_var <- as.integer(block_var)
   ret <- list(block_var=block_var, nfolds=2, nreps=nreps, block_ind=sort(unique(block_var)), exclude=exclude)
   class(ret) <- c("twofold_blocked_cross_validation", "cross_validation", "list")

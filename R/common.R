@@ -427,14 +427,14 @@ initialize_design <- function(config) {
     #flog.info(paste("first 10 test labels: ", head(config$testLabels, 10), capture=TRUE))
     
   } else {
-    has_test <- TRUE
+    has_test <- FALSE
     flog.info("testing is via internal cross-validation")
     #config$testLabels <- config$labels
   }
   
   
   if (has_test) {
-  
+    
     mvpa_design(train_design=config$train_design, 
               y_train=config$label_column, 
               test_design=config$test_design, 
@@ -521,10 +521,12 @@ initialize_crossval <- function(config, des=NULL) {
     cval <- config$cross_validation
     
     if (cval$name == "twofold" || cval$name == "two_fold" || cval$name == "two_fold_blocked_cross_validation") {
+      flog.info("cross-validation type: twofold cross-validation.")
       if (is.null(cval$nreps)) {
         cval$nreps <- 10
       }
-      twofold_blocked_cross_validation(des$block_var, cval$nreps)
+      flog.info("cross-validation reps: %s ", cval$nreps)
+      twofold_blocked_cross_validation(block_var=des$block_var, nreps=cval$nreps)
     } else if (cval$name == "blocked" || cval$name == "blocked_cross_validation") {
       blocked_cross_validation(des$block_var)
     } else {
@@ -534,7 +536,7 @@ initialize_crossval <- function(config, des=NULL) {
     
   } else {
     flog.info("cross-validation type: 5 fold cross-validation using random splits")
-    kfold_cross_validation(nobs(config$design))
+    kfold_cross_validation(nobs(des))
   }
   
   cval

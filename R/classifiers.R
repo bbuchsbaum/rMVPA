@@ -41,7 +41,7 @@ corsimFit <- function(x, y, method, robust) {
     "mean"
   }
   
-  if (is.character(estimator)) {
+  if (estimator == "mean") {
     list(conditionMeans=group_means(x, 1, y), levs=levels(y), method=method, robust=robust)
   } else {
     list(conditionMeans = splitReduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)

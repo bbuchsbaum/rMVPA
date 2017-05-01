@@ -64,7 +64,11 @@ rMVPA:::set_arg("save_predictors", config, args, FALSE)
 
 config$tune_grid <- rMVPA:::initialize_tune_grid(args, config)
 config_params <- as.list(config)
+
+flog.info("initializing design structure")
 config$design <- rMVPA:::initialize_design(config)
+design <- config$design
+
 
 flog.info("loading training data: %s", config$train_data)
 
@@ -81,7 +85,6 @@ if (config$data_mode == "image") {
 }
 
 print(dataset)
-
 row_indices <- which(config$train_subset)
 
 flog.info("number of trials: %s", length(row_indices))
@@ -121,14 +124,6 @@ if (!is.null(config$custom_performance)) {
   flog.info("custom performance function provided: ", config$custom_performance)
 }
 
-flog.info("initializing design structure")
-
-design <- mvpa_design(train_design=config$train_design,
-                      y_train=config$label_column,
-                      test_design=config$test_design,
-                      y_test=config$test_label_column,
-                      block_var=config$block_column,
-                      split_by=config$split_by)
 
 crossval <- rMVPA:::initialize_crossval(config, design)
 feature_selector <- rMVPA:::initialize_feature_selection(config)
