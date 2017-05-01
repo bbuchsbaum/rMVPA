@@ -412,6 +412,7 @@ initialize_design <- function(config) {
   #}
   
   if (!is.null(config$test_design)) {
+    has_test <- TRUE
     flog.info("test design %s is specified", config$test_design)
     config$full_test_design <- read.table(config$test_design, header=TRUE, comment.char=";")
     flog.info(paste("test design contains", nrow(config$full_test_design), "rows."))
@@ -426,17 +427,26 @@ initialize_design <- function(config) {
     #flog.info(paste("first 10 test labels: ", head(config$testLabels, 10), capture=TRUE))
     
   } else {
+    has_test <- TRUE
     flog.info("testing is via internal cross-validation")
     #config$testLabels <- config$labels
   }
   
   
-   mvpa_design(train_design=config$train_design, 
+  if (has_test) {
+  
+    mvpa_design(train_design=config$train_design, 
               y_train=config$label_column, 
               test_design=config$test_design, 
               y_test=config$test_label_column, 
               block_var=config$block_column, 
               split_by=config$split_by)
+  } else {
+    mvpa_design(train_design=config$train_design, 
+                y_train=config$label_column, 
+                block_var=config$block_column, 
+                split_by=config$split_by)
+  }
    
   
   
