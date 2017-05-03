@@ -143,6 +143,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits
 
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
     dplyr::rowwise() %>% 
+    do(function(x) { flog.info("mvpa_iterate: %s ", .$rnum); x }) %>%
     dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, return_fits))
   
   ret
