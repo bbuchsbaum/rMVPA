@@ -77,6 +77,7 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
 #' @importFrom tibble as_tibble
 internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   
+  
   ## generate cross-validation samples
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(mspec))
   
@@ -103,7 +104,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
         plist$error_message <- "~"
         tibble::as_tibble(plist) 
       }
-    })
+  })
   
 
   if (any(ret$error)) {
@@ -117,6 +118,8 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
    
       wrap_result(ret, mspec$design)
     }
+    
+
     
   
     tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, error=FALSE, error_message="~")
@@ -143,7 +146,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits
 
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
     dplyr::rowwise() %>% 
-    do(function(x) { flog.info("mvpa_iterate: %s ", .$rnum); x }) %>%
+    #do(function(x) { flog.info("mvpa_iterate: %s ", .$rnum); x }) %>%
     dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, return_fits))
   
   ret
