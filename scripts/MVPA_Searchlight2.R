@@ -63,10 +63,10 @@ config$design <- rMVPA:::initialize_design(config)
 
 if (config$data_mode == "image") {
   mask_volume <- as(load_mask(config), "LogicalBrainVolume")
-  dataset <- rMVPA:::initialize_image_data(config, mask)
+  dataset <- rMVPA:::initialize_image_data(config, mask_volume)
   dataset <- list(dataset)
   names(dataset) <- ""
-  flog.info("image mask contains %s voxels", sum(config$mask_volume))
+  flog.info("image mask contains %s voxels", sum(mask_volume))
 } else if (config$data_mode == "surface") {
   dataset <- rMVPA:::initialize_surface_data(config)
 } else {
