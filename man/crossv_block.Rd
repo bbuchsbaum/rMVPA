@@ -4,7 +4,7 @@
 \alias{crossv_block}
 \title{crossv_block}
 \usage{
-crossv_block(data, y, block_var, id = ".id", exclude_block = NULL)
+crossv_block(data, y, block_var, id = ".id", exclude = NULL)
 }
 \description{
 crossv_block

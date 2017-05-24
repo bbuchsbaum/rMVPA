@@ -9,7 +9,7 @@ run_regional(model_spec, region_mask, return_fits = FALSE)
 \arguments{
 \item{model_spec}{a \code{mvpa_model} instance}
 
-\item{region_mask}{a \code{BrainVolume} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.}
+\item{region_mask}{a \code{BrainVolume} or \code{BrainSurface} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.}
 
 \item{returns_fits}{whether to return model fit for every ROI (default is \code{FALSE} to save memory)}
 }

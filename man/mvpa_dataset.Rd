@@ -4,7 +4,7 @@
 \alias{mvpa_dataset}
 \title{mvpa_dataset}
 \usage{
-mvpa_dataset(train_data, test_data = NULL, mask, design)
+mvpa_dataset(train_data, test_data = NULL, mask)
 }
 \arguments{
 \item{train_data}{the training data set: a \code{BrainVector} instance}

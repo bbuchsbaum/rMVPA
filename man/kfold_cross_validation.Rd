@@ -4,7 +4,7 @@
 \alias{kfold_cross_validation}
 \title{kfold_cross_validation}
 \usage{
-kfold_cross_validation(len, nfolds = 10)
+kfold_cross_validation(len, nfolds = 10, exclude = NULL)
 }
 \arguments{
 \item{len}{the number of observations}
