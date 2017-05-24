@@ -232,7 +232,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
   set_arg("class_metrics", config, args, TRUE)
   set_arg("split_by", config, args, NULL)
   set_arg("custom_performance", config, args, NULL)
-  set_arg("test_label_column", config, args, config$label_column)
+  set_arg("test_label_column", config, args, NULL)
   set_arg("data_mode", config, args, "image")
   
   config
