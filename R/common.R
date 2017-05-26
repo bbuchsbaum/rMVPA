@@ -605,7 +605,10 @@ load_subset <- function(full_design, subset) {
     if (sum(keep) == nrow(full_design)) {
       warning(paste("subset has same number of rows as full table"))
     }
-    
+    if (sum(keep) <= 1) {
+      futile.error("train_subset %s results in design with only 1 row.", as.character(subexpr))
+      stop()
+    }
     keep
   }
   

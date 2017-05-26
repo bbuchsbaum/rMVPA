@@ -2,7 +2,7 @@
 
 
 wrap_out <- function(perf_mat, dataset, ids) {
-  out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids))
+  out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[ids,i], ids))
   names(out) <- colnames(perf_mat)
   out
 }
@@ -38,13 +38,17 @@ do_randomized <- function(model_spec, radius, niter) {
     futile.logger::flog.error("no valid results for randomized searchlight, exiting.")
   }
   
+  #browser()
+  
   all_ind <- sort(unlist(good_results$indices))
   ind_set <- unique(all_ind)
   ind_count <- table(all_ind)
   
   ncols <- length(good_results$performance[[1]])
-  perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, each=ncols), j=rep(1:ncols, length(ind_set)), 
+  perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, ncols), j=rep(1:ncols, each=length(ind_set)), 
                                x=rep(0, length(ind_set)*ncols), dims=c(length(model_spec$dataset$mask), ncols))
+  
+  #perf_mat <- matrix(0, length(ind_set), ncols)
   
 
   for (i in 1:nrow(good_results)) {
@@ -107,7 +111,7 @@ run_searchlight <- function(model_spec, radius=8, method=c("randomized", "standa
   method <- match.arg(method)
   
   if (method == "randomized") {
-    assert_that(niter > 1)
+    assert_that(niter >= 1)
   }
   
   flog.info("model is: %s", model_spec$model$label)

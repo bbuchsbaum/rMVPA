@@ -7,6 +7,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
     prob <- matrix(0, length(observed), length(levels(observed)))
     colnames(prob) <- levels(observed)
   
+    
     for (i in seq_along(result_table$probs)) {
       p <- as.matrix(result_table$probs[[i]])
       tind <- result_table$test_ind[[i]]

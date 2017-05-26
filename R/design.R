@@ -58,6 +58,19 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
     parse_variable(y_train, train_design)
   }
   
+  if (is.factor(y_train)) {
+   
+    if (length(table(droplevels(y_train))) <= 1) {
+      stop(paste("error: y_train factor must have at least 2 levels with one or more training instances"))
+    }
+    
+    ytab <- table(levels(y_train))
+    if (any(ytab == 0)) {
+      flog.info("y_train: ", table(y_train), capture=TRUE)
+      stop(paste("error: y_train factor must have at least 1 training instance for every factor level"))
+    }
+  }
+  
   if (!is.null(y_test)) {
     assert_that(!is.null(test_design))
     y_test <- if (!purrr::is_formula(y_test) && length(y_test) > 1) {
