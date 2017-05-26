@@ -107,12 +107,12 @@ if (is.numeric(design$y_train)) {
 write_output <- function(searchres, name="", output, data_mode="image") {
   if (data_mode == "image") {
     for (i in 1:length(searchres)) {
-      out <- paste0(output, "/", names(searchres)[i], "_", name, ".nii")
-      writeVolume(searchres[[i]], out)  
+      oname <- if (name != "") paste0(output, "/", names(searchres)[i], "_", name, ".nii") else paste0(output, "/", names(searchres)[i], ".nii")
+      writeVolume(searchres[[i]], oname)  
     }
   } else if (data_mode == "surface") {
     for (i in 1:length(searchres)) {
-      out <- paste0(output, "/", names(searchres)[i], "_", name)
+      out <- paste0(output, "/", names(searchres)[i])
       neurosurf::writeSurfaceData(searchres[[i]], out, name)  
     }
   } else {
