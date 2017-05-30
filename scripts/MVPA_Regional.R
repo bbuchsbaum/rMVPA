@@ -2,17 +2,15 @@
 
 .suppress <- suppressPackageStartupMessages
 .suppress(library(neuroim))
+.suppress(library(neurosurf))
 .suppress(library(rMVPA))
 .suppress(library(optparse))
 .suppress(library(caret))
 .suppress(library(futile.logger))
 .suppress(library(io))
-.suppress(library(caret))
 .suppress(library(doParallel))
-## add "nestingDimension"
-## that means features are nested in  a single 3D block
-## series(x, ind) # returns unnested matrix.
-## needs then to be unravelled into featureMatrix.
+
+
 
 
 ## should be able to use "test_subset" without test_data
@@ -20,7 +18,6 @@
 
 ## if train_design only, the "test_subset" subsets the the train_design. Check to make sure no overlap in columns.
 ## if test_design provided, the test design must have matching test_data
-
 
 ## should output importance maps for methods that supply them (e.g. sda)
 
@@ -34,8 +31,6 @@ option_list <- list(
                     make_option(c("-n", "--normalize"), action="store_true", type="logical", help="center and scale each image volume"),
                     make_option(c("-m", "--model"), type="character", help="name of the classifier model"),
                     make_option(c("-a", "--mask"), type="character", help="name of binary image mask file (.nii format)"),
-                    make_option(c("--parcellation"), type="character", help="name of file containing integer-based image parcellation for cluster-based dimension reduction (.nii format)"),
-                    make_option(c("--autobalance"), action="store_true", type="logical", help="balance training samples by upsampling minority classes"),
                     make_option(c("-p", "--pthreads"), type="numeric", help="the number of parallel threads"),
                     make_option(c("-l", "--label_column"), type="character", help="the name of the column in the design file containing the training labels"),
                     make_option(c("--test_label_column"), type="character", help="the name of the column in the test design file containing the test labels"),
@@ -43,12 +38,11 @@ option_list <- list(
                     make_option(c("-b", "--block_column"), type="character", help="the name of the column in the design file indicating the block variable used for cross-validation"),
                     make_option(c("-g", "--tune_grid"), type="character", help="string containing grid parameters in the following form: a=\\(1,2\\), b=\\('one', 'two'\\)"),
                     make_option(c("--tune_length"), type="numeric", help="an integer denoting the number of levels for each model tuning parameter"),
-                    make_option(c("--savePredictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
-                    make_option(c("--skipIfFolderExists"), type="logical", action="store_true", help="skip, if output folder already exists"),
+                    make_option(c("--save_predictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
+                    make_option(c("--skip_if_folder_exists"), type="logical", action="store_true", help="skip, if output folder already exists"),
                     ## should be skip_if_folder_exists or "overwrite_folder"
-                    make_option(c("--output_class_metrics"), type="logical", help="write out performance metrics for each class in multiclass settings"),
+                    make_option(c("--class_metrics"), type="logical", help="write out performance metrics for each class in multiclass settings"),
                     make_option(c("--ensemble_predictor"), type="logical", help="predictor is based on average prediction of all cross-validated runs"),
-                    make_option(c("--bootstrap_replications"), type="numeric", help="number of bootstrapped models to be computed for each cross-validation fold. Final model is average of bootstrapped models."),
                     make_option(c("-c", "--config"), type="character", help="name of configuration file used to specify program parameters"))
 
 
@@ -58,225 +52,134 @@ args <- opt$options
 
 flog.info("command line args are ", args, capture=TRUE)
 
-config <- initializeConfiguration(args)
-config <- initializeStandardParameters(config, args, "mvpa_regional")
+## set up configuration 
+config <- rMVPA:::initialize_configuration(args)
+## set default parameters
+config <- rMVPA:::initialize_standard_parameters(config, args, "mvpa_regional")
 
 
 ## Regional Specific Params
-setArg("savePredictors", config, args, FALSE)
-## Regional Specific Params
+rMVPA:::set_arg("save_predictors", config, args, FALSE)
 
 
+config$tune_grid <- rMVPA:::initialize_tune_grid(args, config)
+config_params <- as.list(config)
 
-config <- initializeTuneGrid(args, config)
-configParams <- as.list(config)
-config <- initializeDesign(config)
-
-rowIndices <- which(config$train_subset)
-config$ROIVolume <- loadMask(config)
-
-if (!is.null(config$roi_subset)) {
-  form <- try(eval(parse(text=config$roi_subset)))
-  if (inherits(form, "try-error")) {
-    flog.error("could not parse roi_subset parameter: %s", config$roi_subset)
-    stop()
-  }
-  
-  if (class(form) != "formula") {
-    flog.error("roi_subset argument must be an expression that starts with a ~ character")
-    stop()
-  }
-  
-  res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
-  
-  config$ROIVolume[!res] <- 0
-  flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
-  
-  if (sum(config$ROIVolume) <= 1) {
-    flog.info("ROI must contain more than one voxel, aborting.")
-    stop()
-  }
-}
-
-if (!is.null(config$roi_grouping)) {
-  roilist <- lapply(1:length(config$roi_grouping), function(i) {
-    grp <- config$roi_grouping[[i]]
-    idx <- which(config$ROIVolume %in% grp)
-    vol <- makeVolume(refvol=config$ROIVolume)
-    vol[idx] <- i
-    vol
-  })
-  
-  if (is.null(names(config$roi_grouping))) {
-    names(roilist) <- paste0("roi_group_", seq_along(config$roi_grouping))
-  } else {
-    names(roilist) <- names(config$roi_grouping)
-  }
-  
-  config$ROIVolume <- roilist
-} else {
-  config$ROIVolume <- list(config$ROIVolume)
-}
+flog.info("initializing design structure")
+config$design <- rMVPA:::initialize_design(config)
+design <- config$design
 
 
-
-
-config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
-
-parcellationVolume <- if (!is.null(config$parcellation)) {
-  loadVolume(config$parcellation)
-}
-
-if (!is.null(parcellationVolume)) {
-  if (!all(dim(parcellationVolume) == dim(config$maskVolume))) {
-    flog.error("dimensions of parcellation volume must equal dimensions of mask volume")
-    stop() 
-  }
-}
-
-
-config <- initializeData(config)
-
-flog.info("number of training trials: %s", length(rowIndices))
-flog.info("max trial index: %s", max(rowIndices))
 flog.info("loading training data: %s", config$train_data)
-flog.info("mask contains %s voxels", sum(config$maskVolume))
 
-for (i in seq_along(config$ROIVolume)) {
-  rvol <- config$ROIVolume[[i]]
-  
-  flog.info("Region mask contains: %s ROIs", length(unique(rvol[rvol > 0])))
-  flog.info(paste("ROIs are for group ", i, "are:"), rvol, capture=TRUE)
- 
+if (config$data_mode == "image") {
+  mask_volume <- as(load_mask(config), "LogicalBrainVolume")
+  dataset <- rMVPA:::initialize_image_data(config, mask)
+  dataset <- list(dataset)
+  names(dataset) <- ""
+  flog.info("image mask contains %s voxels", sum(config$mask_volume))
+} else if (config$data_mode == "surface") {
+  dataset <- rMVPA:::initialize_surface_data(config)
+} else {
+  flog.error("unrecognized data_mode: %s", config$data_mode)
 }
 
+print(dataset)
+row_indices <- which(config$train_subset)
 
-flog.info("Running regional MVPA with parameters:", configParams, capture=TRUE)
-flog.info("With %s roi groups", length(config$ROIVolume))
+flog.info("number of trials: %s", length(row_indices))
+flog.info("max trial index: %s", max(row_indices))
 
-if (length(config$labels) != dim(config$train_datavec)[4]) {
-  flog.error("Number of volumes: %s must equal number of labels: %s", dim(config$train_datavec)[4], length(config$labels))
-  stop()
-}
 
-featureSelector <- if (!is.null(config$feature_selector)) {
-  FeatureSelector(config$feature_selector$method, 
-                  config$feature_selector$cutoff_type, 
-                  as.numeric(config$feature_selector$cutoff_value))
-}
+#config$ROIVolume <- loadMask(config)
 
-flog.info("feature selector: ", featureSelector, capture=TRUE)
-flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRUE)
+# if (!is.null(config$roi_subset)) {
+#   form <- try(eval(parse(text=config$roi_subset)))
+#   if (inherits(form, "try-error")) {
+#     flog.error("could not parse roi_subset parameter: %s", config$roi_subset)
+#     stop()
+#   }
+#   
+#   if (class(form) != "formula") {
+#     flog.error("roi_subset argument must be an expression that starts with a ~ character")
+#     stop()
+#   }
+#   
+#   res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
+#   
+#   config$ROIVolume[!res] <- 0
+#   flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
+#   
+#   if (sum(config$ROIVolume) <= 1) {
+#     flog.info("ROI must contain more than one voxel, aborting.")
+#     stop()
+#   }
+# }
 
-consensusLearner <- if (!is.null(config$consensus_learner)) {
-  flog.info("Will train a %s consensus classifier on ROI results", config$consensus_learner$method)
-  ConsensusLearner(config$consensus_learner$method, config$consensus_learner$params)
-}
 
-flog.info("consensus learner: ", consensusLearner, capture=TRUE)
+#config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
+#config <- initializeData(config)
 
 if (!is.null(config$custom_performance)) {
   flog.info("custom performance function provided: ", config$custom_performance)
 }
 
 
-dataset <- MVPADataset$new(config$train_datavec, 
-                           config$labels, 
-                           config$maskVolume, 
-                           config$block, 
-                           config$test_datavec, 
-                           config$testLabels, 
-                           parcellation=parcellationVolume,
-                           testSplitVar=config$testSplitVar, 
-                           testSplits=config$testSplits,
-                           trainDesign=config$train_design,
-                           testDesign=config$test_design)
+crossval <- rMVPA:::initialize_crossval(config, design)
+feature_selector <- rMVPA:::initialize_feature_selection(config)
 
-model <- loadModel(config$model, list(tuneGrid=config$tune_grid, custom_performance=config$custom_performance))
-
-
-for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
-  if (!is.null(configParams[[varname]]) && is(configParams[[varname]], "formula")) {
-    configParams[[varname]] <- Reduce(paste, deparse(configParams[[varname]]))
-  }
+if (is.numeric(design$y_train)) {
+  flog.info("labels are continuous, running a regression analysis.")
+} else {
+  flog.info("labels are categorical, running a classification analysis.")
 }
 
-
-cl <- makeCluster(config$pthreads, outfile="",useXDR=FALSE, type="FORK")
-registerDoParallel(cl)
-
-
-for (roinum in seq_along(config$ROIVolume)) {
-  
-  gc()
-  
-  if (length(config$ROIVolume) > 1) {
-    roiname <- names(config$ROIVolume)[roinum]
-    outdir <- paste0(config$output, "_roigroup_", roiname)
-  } else {
-    outdir <- config$output
-  }
-  
-  if (config$skipIfFolderExists) {
-    if (file.exists(outdir)) {
-      flog.info("output folder %s already exists, skipping.", outdir)
-      next
+write_output <- function(res, name="", output, data_mode="image") {
+  if (data_mode == "image") {
+    for (i in 1:length(res)) {
+      out <- paste0(output, "/", names(res)[i], "_", name, ".nii")
+      writeVolume(res[[i]], out)  
+    }
+  } else if (data_mode == "surface") {
+    for (i in 1:length(res)) {
+      out <- paste0(output, "/", names(res)[i], "_", name)
+      neurosurf::writeSurfaceData(res[[i]], out)  
     }
   } else {
-    outdir <- makeOutputDir(outdir)
-  } 
-  
-  roivol <- config$ROIVolume[[roinum]]
- 
-  ## need to handle bootstrap reps
-  crossVal <- blocked_cross_validation(dataset$blockVar, balance=config$autobalance)
-  
-  mvpa_res <- mvpa_regional(dataset, model, roivol, crossVal, config$savePredictors, 
-                            featureSelector=featureSelector, classMetrics=config$output_class_metrics)
-  
-  if (!is.null(consensusLearner)) {
-    consResult <- mvpa_regional_consensus(dataset, model, roivol, 
-                                          featureSelector=featureSelector, 
-                                          classMetrics=config$output_class_metrics,
-                                          method=consensusLearner$method)
-    
-    saveRDS(consResult$result$predictor, paste0(config$output, "/consensusPredictor.RDS"))
-    rois <- sapply(mvpa_res$resultSet$resultList, attr, "ROINUM")
-    #consResult <- consensusWeights(mvpa_res$resultSet, consensusLearner$method)
-    consPerf <- performance(consResult$result, dataset$testSplits, config$output_class_metrics)
-    consPerf <- as.data.frame(t(consPerf))
-    write.table(format(consPerf,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/consensus_performance.txt")), row.names=FALSE, quote=FALSE)
-    consWeights <- data.frame(ROINUM=rois, weights=consResult$weights)
-    write.table(format(consWeights,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/consensus_weights.txt")), row.names=FALSE, quote=FALSE)
+    stop(paste("wrong data_mode:", data_mode))
   }
-
-  write.table(format(mvpa_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(outdir, "/performance_table.txt")), row.names=FALSE, quote=FALSE)
-  
-  model$saveResults(mvpa_res$extendedResults, outdir)
-  
-  lapply(1:length(mvpa_res$outVols), function(i) {
-    out <- paste0(outdir, "/", names(mvpa_res$outVols)[i], ".nii")
-    writeVolume(mvpa_res$outVols[[i]], out)  
-  })
-  
-
-  write.table(config$train_subset, paste0(outdir, "/train_table.txt"), row.names=FALSE, quote=FALSE)
-
-  if (!is.null(config$test_subset)) {
-    write.table(config$test_subset, paste0(outdir, "/test_table.txt"), row.names=FALSE, quote=FALSE)
-  }
-
-  if (!is.null(config$mask)) {
-    file.copy(config$mask, paste0(outdir, "/", basename(config$mask)))
-  }
-
-  #write.table(format(mvpa_res$predMat,  digits=2, scientific=FALSE, drop0trailing=TRUE), paste0(paste0(config$output, "/predMat_table.txt")), row.names=FALSE, quote=FALSE)
-  #saveRDS(mvpa_res$predictorList, paste0(config$output, "/predictorList.RDS"))
-
-  configParams$currentWorkingDir <- getwd()
-
-  configout <- paste0(outdir, "/config.yaml")
-  qwrite(configParams, configout)
 }
+
+output <- rMVPA:::make_output_dir(config$output)
+
+for (i in 1:length(dataset)) {
+  dset <- dataset[[i]]
+  dname <- names(dataset)[i]
+  
+  if (names(dataset)[i] != "") {
+    flog.info("running mvpa_regional for %s dataset: ", names(dataset)[i])
+  } else {
+    flog.info("running mvpa_regional")
+  }
+  
+  flog.info("number of regions is %s", length(unique(as.vector(dset$mask))))
+  
+  mvpa_mod <- rMVPA:::load_mvpa_model(config, dset, design,crossval,feature_selector)
+  regional_res <- rMVPA:::run_regional(mvpa_mod, dset$mask, return_fits=TRUE)
+  
+  print(regional_res$performance)
+  
+  write_output(regional_res$vol_results, name=names(dataset)[i], output, data_mode=config$data_mode)
+  
+  
+  write.table(format(regional_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), 
+              paste0(paste0(output, paste0("/", dname, "_performance_table.txt"))), row.names=FALSE, quote=FALSE)
+  
+  write.table(format(regional_res$prediction_table,  digits=2, scientific=FALSE, drop0trailing=TRUE), 
+              paste0(paste0(output, paste0("/", dname, "_prediction_table.txt"))), row.names=FALSE, quote=FALSE)
+  
+}
+ 
+  
 
 
