@@ -59,6 +59,8 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
     vox_iter <- vox_iter[lens >= 2]
   }
   
+  flog.info("model is: %s", model_spec$model$label)
+  
   
   ## run mvpa for each region
   results <- mvpa_iterate(model_spec, vox_iter, ids=region_set, return_fits)

@@ -60,9 +60,14 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   
   if (is.factor(y_train)) {
    
-    y_train <- droplevels(y_train)
+    if (any(table(y_train) == 0)) {
+      flog.warning("y_train: ", table(y_train), capture=TRUE)
+      flog.warning("y_train factor has at least one level with zero training instances: dropping unused levels.")
+      y_train <- droplevels(y_train)
+    }
     
     if (length(table(y_train)) <= 1) {
+      flog.error("y_train: ", table(y_train), capture=TRUE)
       stop(paste("error: y_train factor must have at least 2 levels with one or more training instances"))
     }
     
