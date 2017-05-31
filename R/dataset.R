@@ -198,7 +198,11 @@ wrap_output.mvpa_dataset <- function(obj, vals, indices) {
 }
 
 wrap_output.mvpa_surface_dataset <- function(obj, vals, indices) {
-  BrainSurface(geometry=geometry(obj$train_data), indices=indices, data=vals)
+  ## bit of a hack
+  dvals <- numeric(length(nodes(geometry(obj$train_data))))
+  dvals[indices] <- vals
+  ## bit of a hack
+  BrainSurface(geometry=geometry(obj$train_data), indices=indices, data=dvals)
 }
 
 #' @export
