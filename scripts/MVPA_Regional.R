@@ -164,9 +164,14 @@ for (i in 1:length(dataset)) {
     flog.info("running mvpa_regional")
   }
   
-  flog.info("number of regions is %s", length(unique(as.vector(dset$mask))))
+  mvals <- as.vector(dset$mask)
+  
+  flog.info("number of regions is %s", length(table(mvals[mvals != 0])))
   
   mvpa_mod <- rMVPA:::load_mvpa_model(config, dset, design,crossval,feature_selector)
+  
+  flog.info("mvpa model: ", mvpa_mod, capture=TRUE)
+  
   regional_res <- rMVPA:::run_regional(mvpa_mod, dset$mask, return_fits=TRUE)
   
   print(regional_res$performance)

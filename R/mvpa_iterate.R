@@ -141,6 +141,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits=FALSE) {
   assert_that(length(ids) == length(vox_list))
   
+  
   sframe <- get_samples(mod_spec$dataset, vox_list)
 
   do_fun <- if (has_test_set(mod_spec$dataset)) external_crossval else internal_crossval
