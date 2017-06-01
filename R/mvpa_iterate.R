@@ -37,9 +37,9 @@ wrap_result <- function(result_table, design, fit=NULL) {
 external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   xtrain <- tibble::as_tibble(values(roi$train_roi))
   
-  if (ncol(xtrain) < 2) {
-    return(tibble::tibble())
-  }
+  #if (ncol(xtrain) < 2) {
+  #  return(tibble::tibble())
+  #}
   
   dset <- mspec$dataset
   
