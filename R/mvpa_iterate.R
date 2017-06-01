@@ -50,8 +50,10 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   result <- try(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid))
   
   if (inherits(result, "try-error")) {
-    tibble::tibble(result=list(), indices=list(ind), performance=list(), id=id, 
-                   error=TRUE, error_message=attr(result, "condition")$message)
+    #browser()
+    emessage <- attr(result, "condition")$message
+    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), id=id, 
+                   error=TRUE, error_message=emessage)
   } else {
   
     pred <- predict(result, tibble::as_tibble(values(roi$test_roi)), NULL)
@@ -94,7 +96,8 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
       if (inherits(result, "try-error")) {
         flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
         ## error encountered, store error messages
-        tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(.$ytest), fit=list(NULL), error=TRUE, error_message=attr(result, "condition")$message)
+        emessage <- attr(result, "condition")$message
+        tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(.$ytest), fit=list(NULL), error=TRUE, error_message=emessage)
       } else {
         pred <- predict(result, tibble::as_tibble(.$test), NULL)
         plist <- lapply(pred, list)

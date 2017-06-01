@@ -194,13 +194,13 @@ test_that("randomized mvpa_searchlight works with regression", {
 })
 
 test_that("mvpa_searchlight works with testset", {
+  dataset <- gen_sample_dataset(c(4,4,4), 100, response_type="categorical", data_mode="surface", blocks=5, nlevels=4, external_test=TRUE, nobs=100)
   
-  dataset <- gen_dataset_with_test(c(4,4,4), 100, 3, folds=3)
   cval <- blocked_cross_validation(dataset$design$block_var)
-  tuneGrid <- expand.grid(alpha=.5, lambda=c(.1,.2))
-  model <- load_model("glmnet")$model
-  mspec <- mvpa_model(model, dataset, model_type="classification", crossval=cval, tune_grid=tuneGrid)
-  res <- run_searchlight( mspec, radius=3, method="standard")
+
+  model <- load_model("lda_thomaz")
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
+  res <- run_searchlight( mspec, radius=6, method="randomized")
   
 })
 
