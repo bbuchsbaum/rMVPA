@@ -28,7 +28,8 @@ Imports:
     Metrics,
     memoise,
     e1071,
-    sp
+    sp,
+    modelr
 Collate:
     'allgeneric.R'
     'classifiers.R'
@@ -49,4 +50,5 @@ Collate:
     'utils.R'
 RoxygenNote: 6.0.1.9000
 Suggests:
-    testthat
+    testthat,
+    covr

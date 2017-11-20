@@ -1,4 +1,6 @@
 
+
+#' @keywords @internal
 roi_volume_matrix <- function(mat, refspace, indices, coords) {
   structure(mat,
             refspace=refspace,
@@ -8,6 +10,7 @@ roi_volume_matrix <- function(mat, refspace, indices, coords) {
             
 }
 
+#' @keywords @internal
 roi_surface_matrix <- function(mat, refspace, indices, coords) {
   structure(mat,
             refspace=refspace,
@@ -23,9 +26,12 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 #' @param nobs the number of observations
 #' @param response_type 'categorical' or 'continuous'
 #' @param data_mode 'image' or 'surface'
-#' @param spacing
-#' @param blocks
-#' @param nlevels
+#' @param spacing the voxel spacing
+#' @param blocks the number of 'blocks' in the data
+#' @param nlevels the number of category levels
+#' @param external_test is the test set 'external' to the training set
+#' @param ntest_obs number of test observations (only relevant if \code{external_test} is true)
+#' @export
 gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), data_mode=c("image", "surface"),
                               spacing=c(1,1,1), blocks=5, nlevels=5, external_test=FALSE, ntest_obs=nobs) {
   
@@ -65,13 +71,13 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
   Y <- if (response_type == "categorical") {
     sample(factor(rep(letters[1:nlevels], length.out=nobs)))
   } else {
-    rnorm(length(obs))
+    rnorm(nobs)
   }
   
   Ytest <- if (response_type == "categorical") {
     sample(factor(rep(letters[1:nlevels], length.out=ntest_obs)))
   } else {
-    rnorm(length(ntest_obs))
+    rnorm(ntest_obs)
   }
   
   block_var <- rep(1:blocks, length.out=nobs)
@@ -92,24 +98,27 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
 
 #' mvpa_dataset
 #' 
+#' A data structure that encapsulate a standard (volumetric) training dataset, an optional test dataset and a voxel 'mask'.
+#' 
 #' @param train_data the training data set: a \code{BrainVector} instance
 #' @param test_data the test data set: a \code{BrainVector} instance
 #' @param mask the set of voxels to include: a \code{BrainVolume} instance
 #' @importFrom assertthat assert_that
-mvpa_dataset <- function(train_data,test_data=NULL, mask) {
+#' @export
+mvpa_dataset <- function(train_data, test_data=NULL, mask) {
   assert_that(inherits(train_data, "BrainVector"))
   if (!is.null(test_data)) {
     assert_that(inherits(test_data, "BrainVector"))
   }
-  ret <- list(
-    train_data=train_data,
-    test_data=test_data,
-    mask=mask
+  ret <- structure(
+    list(
+      train_data=train_data,
+      test_data=test_data,
+      mask=mask
+    ),
+    class=c("mvpa_image_dataset", "mvpa_dataset", "list")
   )
-  
-  class(ret) <- c("mvpa_image_dataset", "mvpa_dataset", "list")
-  ret
-    
+
 }
 
 
@@ -135,16 +144,35 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="")
     mask[indices(train_data)] <- 1
   }
   
-  ret <- list(
-    train_data=train_data,
-    test_data=test_data,
-    mask=mask,
-    name=name
+  structure(
+    list(
+      train_data=train_data,
+      test_data=test_data,
+      mask=mask,
+      name=name
+    ),
+    class=c("mvpa_surface_dataset", "mvpa_dataset", "list")
   )
+
   
-  class(ret) <- c("mvpa_surface_dataset", "mvpa_dataset", "list")
-  ret
+}
+
+print.mvpa_dataset <- function(x) {
+  cat("mvpa_dataset:", "\n")
+  cat("  train_data: ")
+  print(x$train_data)
+  if (is.null(x$test_data)) {
+    cat("  test_data: none. \n")
+  } else {
+    cat("\n")
+    cat("  test_data: ")
+    print(x$test_data)
+  }
   
+  mids <- table(x$mask[x$mask!=0])
+  midstr <- paste0(names(mids), "/", mids)
+  cat("  mask areas: ", midstr, "\n")
+  cat("  mask cardinality: ", sum(x$mask>0), "\n")
 }
 
 print.mvpa_surface_dataset <- function(x) {
@@ -175,6 +203,7 @@ print.mvpa_surface_dataset <- function(x) {
 get_searchlight.mvpa_dataset <- function(x, type=c("standard", "randomized"), radius=8) {
   type <- match.arg(type)
   if (type == "standard") {
+    browser()
     neuroim::Searchlight(x$mask, radius=radius)
   } else {
     neuroim::RandomSearchlight(x$mask, radius=radius)
