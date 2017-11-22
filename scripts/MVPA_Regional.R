@@ -75,7 +75,8 @@ flog.info("loading training data: %s", config$train_data)
 
 
 if (config$data_mode == "image") {
-  mask_volume <- load_mask(config)
+  region_mask <- load_mask(config)
+  mask_volume <- as(region_mask, "LogicalBrainVolume")
   dataset <- rMVPA:::initialize_image_data(config, mask_volume)
   dataset <- list(dataset)
   names(dataset) <- ""
@@ -172,7 +173,7 @@ for (i in 1:length(dataset)) {
   
   flog.info("mvpa model: ", mvpa_mod, capture=TRUE)
   
-  regional_res <- rMVPA:::run_regional(mvpa_mod, dset$mask, return_fits=TRUE)
+  regional_res <- rMVPA:::run_regional(mvpa_mod, region_mask, return_fits=TRUE)
   
   print(regional_res$performance)
   
