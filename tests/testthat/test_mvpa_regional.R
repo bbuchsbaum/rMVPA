@@ -152,10 +152,10 @@ test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topp=.4", {
 
 test_that("mvpa_regional with regression and 5 ROIs runs without error", {
   
-  dataset <- gen_regression_dataset(c(10,10,2), 100)
+  dataset <- gen_sample_dataset(c(10,10,2), 100, response_type="continuous")
   cval <- blocked_cross_validation(dataset$design$block_var)
   
-  regionMask <- BrainVolume(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
+  regionMask <- BrainVolume(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   tune_grid <- expand.grid(alpha=c(.1,.5), lambda=c(.001,.2,.5))
   model <- load_model("glmnet")
   mspec <- mvpa_model(model, dataset, model_type="regression", crossval=cval, tune_grid=tune_grid)

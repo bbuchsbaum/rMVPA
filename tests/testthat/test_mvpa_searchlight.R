@@ -78,10 +78,10 @@ gen_surface_dataset <- function(nobs, nlevels, folds=5) {
 
 test_that("standard mvpa_searchlight runs without error", {
   
-  dataset <- gen_dataset(c(5,5,5), 100, 2)
+  dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("sda_notune")
-  mspec <- mvpa_model(model, dataset,model_type="classification", crossval=cval)
+  mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
   res <- run_searchlight(mspec,radius=3, method="standard")
   
 })
@@ -149,7 +149,7 @@ test_that("randomized mvpa_searchlight runs without error", {
 
 test_that("standard mvpa_searchlight and tune_grid runs without error", {
   
-  dataset <- gen_dataset(c(3,3,3), 50, 2, folds=3)
+  dataset <- gen_sample_dataset(c(3,3,3), 50, 2, blocks=3)
   cval <- blocked_cross_validation(dataset$design$block_var)
   tuneGrid <- expand.grid(lambda=c(.1,.8), diagonal=c(TRUE, FALSE))
   model <- load_model("sda")
@@ -172,7 +172,7 @@ test_that("standard mvpa_searchlight and tune_grid with two-fold cross-validatio
 
 test_that("randomized mvpa_searchlight and tune_grid runs without error", {
   
-  dataset <- gen_dataset(c(2,2,6), 100, 2, folds=2)
+  dataset <- gen_sample_dataset(c(2,2,6), 100, 2, blocks=2)
   cval <- blocked_cross_validation(dataset$design$block_var)
   
   tuneGrid <- expand.grid(lambda=c(.1,.8), diagonal=c(TRUE, FALSE))
@@ -184,7 +184,7 @@ test_that("randomized mvpa_searchlight and tune_grid runs without error", {
 
 test_that("randomized mvpa_searchlight works with regression", {
   
-  dataset <- gen_regression_dataset(c(4,4,4), 100, folds=3)
+  dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3, response_type="continuous")
   crossVal <- blocked_cross_validation(dataset$design$block_var)
   tuneGrid <- expand.grid(alpha=.5, lambda=c(.1,.01))
   model <- load_model("glmnet")$model
@@ -206,7 +206,7 @@ test_that("mvpa_searchlight works with testset", {
 
 test_that("mvpa_searchlight works with testset and split_var", {
   
-  dataset <- gen_dataset_with_test(c(4,4,4), 100, 3, folds=3, splitvar=TRUE)
+  dataset <- gen_dataset_with_test(c(4,4,4), 100, 3, blocks=3, splitvar=TRUE)
   crossVal <- blocked_cross_validation(dataset$blockVar)
   tuneGrid <- expand.grid(alpha=.5, lambda=c(.1))
   model <- load_model("glmnet")$model
