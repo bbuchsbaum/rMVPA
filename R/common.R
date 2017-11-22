@@ -567,7 +567,7 @@ load_model <- function(name) {
 #' @export
 load_mask <- function(config) {
   if (config$data_mode == "image") {
-    as.logical(loadVolume(config$mask))
+    loadVolume(config$mask)
   } else if (config$data_mode == "surface") {
     NULL
   }
