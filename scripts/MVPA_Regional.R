@@ -179,12 +179,19 @@ for (i in 1:length(dataset)) {
   
   write_output(regional_res$vol_results, name=names(dataset)[i], output, data_mode=config$data_mode)
   
+  out_perf <-
+    if (dname != "")
+      paste0(paste0(output, paste0("/", dname, "_performance_table.txt")))
+  else paste0(output, "/" , "performance_table.txt")
   
-  write.table(format(regional_res$performance,  digits=2, scientific=FALSE, drop0trailing=TRUE), 
-              paste0(paste0(output, paste0("/", dname, "_performance_table.txt"))), row.names=FALSE, quote=FALSE)
+  out_pred <-
+    if (dname != "")
+      paste0(paste0(output, paste0("/", dname, "_prediction_table.txt")))
+  else paste0(output, "/" , "prediction_table.txt")
   
-  write.table(format(regional_res$prediction_table,  digits=2, scientific=FALSE, drop0trailing=TRUE), 
-              paste0(paste0(output, paste0("/", dname, "_prediction_table.txt"))), row.names=FALSE, quote=FALSE)
+  write.table(regional_res$performance, out_perf, row.names=FALSE, quote=FALSE)
+  
+  write.table(regional_res$prediction_table, out_pred, row.names=FALSE, quote=FALSE)
   
 }
  
