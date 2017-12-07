@@ -7,10 +7,12 @@
 #' @param id
 #' 
 #' @export
-crossv_k <- function(data, y, k = 5, id = ".id") {
+crossv_k <- function(data, y, k = 5, id = ".id", exclude=NULL) {
   if (!is.numeric(k) || length(k) != 1) {
     stop("`k` must be a single integer.", call. = FALSE)
   }
+  
+  ## TODO handle exclude argument
   
   n <- nrow(data)
   folds <- sample(rep(1:k, length.out = n))

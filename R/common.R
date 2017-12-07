@@ -351,7 +351,7 @@ initialize_image_data <- function(config, mask) {
     test_datavec <- NULL
   }
   
-  if (config$normalize) {
+  if (config$normalize_samples) {
     flog.info("Normalizing: centering and scaling each volume of training data")
     train_datavec <- normalize_image_samples(train_datavec, as.logical(mask))
     
