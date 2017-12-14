@@ -3,7 +3,7 @@ Type: Package
 Title: Multivoxel Pattern Analysis in R
 Version: 0.1.1
 Date: 2016-03-04
-Author: Bradley R. Buchsbaum
+Authors@R: person("Bradley", "R.", "Buchsbaum", role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 Maintainer: Bradley R. Buchsbaum <brad.buchsbaum@gmail.com>
 Description: An R package to facilitate multivoxel pattern analysis of
     neuroimaging data in R.

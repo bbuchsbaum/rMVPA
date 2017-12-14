@@ -560,6 +560,7 @@ load_model <- function(name) {
   }
   
   ret$label <- name
+  
   ret
   
 }

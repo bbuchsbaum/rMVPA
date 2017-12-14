@@ -127,7 +127,7 @@ test_that("mvpa_regional with 5 ROIS runs and external test set", {
 test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topk=10", {
   
   dataset <- gen_sample_dataset(c(10,10,5), nobs=100, nlevels=6)
-  crossVal <- blocked_cross_validation(dataset$design$block_var)
+  cval <- blocked_cross_validation(dataset$design$block_var)
   regionMask <- BrainVolume(sample(1:10, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   model <- load_model("sda")
   fsel <- feature_selector("FTest", "topk", 10)
@@ -140,7 +140,7 @@ test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topk=10", {
 
 test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topp=.4", {
   dataset <- gen_sample_dataset(c(10,10,10), nobs=100, nlevels=2)
-  crossVal <- blocked_cross_validation(dataset$design$block_var)
+  cval <- blocked_cross_validation(dataset$design$block_var)
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   model <- load_model("sda_notune")
   fsel <- feature_selector("FTest", "topp", .4)
@@ -158,7 +158,7 @@ test_that("mvpa_regional with regression and 5 ROIs runs without error", {
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   tune_grid <- expand.grid(alpha=c(.1,.5), lambda=c(.001,.2,.5))
   model <- load_model("glmnet")
-  mspec <- mvpa_model(model, dataset, model_type="regression", crossval=cval, tune_grid=tune_grid)
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tune_grid)
   res <- run_regional(mspec, regionMask)
   
 })

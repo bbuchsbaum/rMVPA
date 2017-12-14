@@ -203,7 +203,6 @@ print.mvpa_surface_dataset <- function(x) {
 get_searchlight.mvpa_dataset <- function(x, type=c("standard", "randomized"), radius=8) {
   type <- match.arg(type)
   if (type == "standard") {
-    browser()
     neuroim::Searchlight(x$mask, radius=radius)
   } else {
     neuroim::RandomSearchlight(x$mask, radius=radius)
@@ -223,7 +222,7 @@ get_searchlight.mvpa_surface_dataset <- function(x, type=c("standard", "randomiz
 }
 
 wrap_output.mvpa_dataset <- function(obj, vals, indices) {
-  BrainVolume(vals, space(obj$mask), indices=indices)
+  BrainVolume(vals[indices], space(obj$mask), indices=indices)
 }
 
 wrap_output.mvpa_surface_dataset <- function(obj, vals, indices) {

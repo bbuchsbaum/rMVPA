@@ -2,7 +2,7 @@
 
 
 wrap_out <- function(perf_mat, dataset, ids) {
-  out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[ids,i], ids))
+  out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids))
   names(out) <- colnames(perf_mat)
   out
 }
@@ -65,15 +65,16 @@ do_randomized <- function(model_spec, radius, niter) {
 
 
 do_standard <- function(model_spec, radius) {
+  #browser()
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
   vox_iter <- lapply(slight, function(x) x)
   len <- sapply(vox_iter, function(x) attr(x, "length"))
   vox_iter <- vox_iter[len > 2]
   cind <- sapply(vox_iter, attr, "center.index")
   ret <- mvpa_iterate(model_spec, vox_iter, cind)
-  
-  good_results <- ret %>% filter(!error)
-  bad_results <- ret %>% filter(error == TRUE)
+
+  good_results <- ret %>% dplyr::filter(!error)
+  bad_results <- ret %>% dplyr::filter(error == TRUE)
   
   if (nrow(bad_results) > 0) {
     flog.info(bad_results$error_message)
@@ -83,6 +84,7 @@ do_standard <- function(model_spec, radius) {
     flog.error("no valid results for randomized searchlight, exiting.")
   }
   
+  #browser()
   perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
   wrap_out(perf_mat, model_spec$dataset, ret[["id"]])
 }

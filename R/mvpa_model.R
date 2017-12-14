@@ -89,6 +89,8 @@ mvpa_model <- function(model,
                        performance=NULL,
                        class_metrics=TRUE) {
   
+  assert_that(!is.null(model$fit))
+  
   assert_that(inherits(design, "mvpa_design"))
   assert_that(inherits(dataset, "mvpa_dataset"))
   assert_that(is.logical(class_metrics))
