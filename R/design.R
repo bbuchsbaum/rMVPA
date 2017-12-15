@@ -80,6 +80,8 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   }
   
   if (!is.null(y_test)) {
+    
+    ## must have a test_design
     assert_that(!is.null(test_design))
     y_test <- if (!purrr::is_formula(y_test) && length(y_test) > 1) {
       y_test
@@ -124,8 +126,14 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
 print.mvpa_design <- function(x) {
   cat("mvpa_design:", "\n")
   cat("  training observations: ", length(x$y_train), "\n")
+  if (is.factor(x$y_train)) {
+    cat(" training levels: ", levels(x$y_train), "\n")
+  }
   if (!is.null(x$y_test)) {
     cat("  test observations: ", length(x$y_test), "\n")
+    if (is.factor(x$y_test)) {
+      cat(" test levels: ", levels(x$y_test), "\n")
+    }
   } else {
     cat("  no test observations. \n")
   }

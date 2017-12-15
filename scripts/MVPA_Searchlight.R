@@ -93,16 +93,7 @@ if (!is.null(config$custom_performance)) {
 
 flog.info("initializing design structure")
 
-#design <- mvpa_design(train_design=config$train_design,
-#                      y_train=config$label_column,
-#                      test_design=config$test_design,
-#                      y_test=config$test_label_column,
-#                      block_var=config$block_column,
-#                      split_by=config$split_by)
-
 design <- config$design
-
-
 
 crossval <- rMVPA:::initialize_crossval(config, design)
 feature_selector <- rMVPA:::initialize_feature_selection(config)

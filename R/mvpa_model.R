@@ -105,6 +105,7 @@ mvpa_model <- function(model,
   } else if (length(levels(design$y_train)) == 2) {
     get_binary_perf(design$split_groups)
   } else {
+    flog.info("class of design$ytrain: %s", class(design$ytrain))
     stop("performance method not found")
   }
   
