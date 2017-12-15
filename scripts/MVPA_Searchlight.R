@@ -40,6 +40,7 @@ args <- opt$options
 
 flog.info("command line args are ", args, capture=TRUE)
 
+## TODO check that 'test_label_column' is valid, if test_data is present
 
 ## set up configuration 
 config <- rMVPA:::initialize_configuration(args)
@@ -78,6 +79,11 @@ row_indices <- which(config$train_subset)
 flog.info("number of trials: %s", length(row_indices))
 flog.info("max trial index: %s", max(row_indices))
 
+if (! is.null(config$test_label_column)) {
+  flog.info("test_label_column: %s", config$test_label_column)
+  #flog.info("test_design has %s rows", nrow(config$test_design))
+}
+
 
 flog.info("Running searchlight with parameters:", config_params, capture=TRUE)
 
@@ -87,12 +93,16 @@ if (!is.null(config$custom_performance)) {
 
 flog.info("initializing design structure")
 
-design <- mvpa_design(train_design=config$train_design,
-                      y_train=config$label_column,
-                      test_design=config$test_design,
-                      y_test=config$test_label_column,
-                      block_var=config$block_column,
-                      split_by=config$split_by)
+#design <- mvpa_design(train_design=config$train_design,
+#                      y_train=config$label_column,
+#                      test_design=config$test_design,
+#                      y_test=config$test_label_column,
+#                      block_var=config$block_column,
+#                      split_by=config$split_by)
+
+design <- config$design
+
+
 
 crossval <- rMVPA:::initialize_crossval(config, design)
 feature_selector <- rMVPA:::initialize_feature_selection(config)

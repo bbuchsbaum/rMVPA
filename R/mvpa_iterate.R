@@ -35,12 +35,10 @@ wrap_result <- function(result_table, design, fit=NULL) {
 
 #' external_crossval
 external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
+  flog.info("external cross-validation")
+  
   xtrain <- tibble::as_tibble(values(roi$train_roi))
-  
-  #if (ncol(xtrain) < 2) {
-  #  return(tibble::tibble())
-  #}
-  
+ 
   dset <- mspec$dataset
   
   ytrain <- y_train(mspec)
@@ -50,7 +48,6 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   result <- try(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid))
   
   if (inherits(result, "try-error")) {
-    #browser()
     emessage <- attr(result, "condition")$message
     tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), id=id, 
                    error=TRUE, error_message=emessage)
