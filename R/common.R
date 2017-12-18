@@ -385,12 +385,7 @@ initialize_design <- function(config) {
   ## training design
   config$train_design <- config$full_train_design[config$train_subset,]
   
-  ## training labels
-  #config$labels <- load_labels(config$train_design, config)  
-  
-  ## block variables for cross-validation
-  #config$block <- loadBlockColumn(config, config$train_design)
-  
+ 
   flog.info(paste("training subset contains", nrow(config$train_design), "of", nrow(config$full_train_design), "rows."))
   
   if (!is.null(config$test_design) && is.null(config$test_data)) {

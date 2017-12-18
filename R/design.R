@@ -31,6 +31,9 @@ parse_variable <- function(var, design) {
     }
     var
   } else if (is.character(var) && length(var) == 1) {
+    if (is.null(design[[var]])) {
+      stop(paste("`design` does not contain variable named: ", var))
+    }
     design[[var]]
   } else {
     stop("'var' must be a formula, factor, or character vector")
@@ -123,6 +126,8 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   des
 }
 
+
+#' @export
 print.mvpa_design <- function(x) {
   cat("mvpa_design:", "\n")
   cat("  training observations: ", length(x$y_train), "\n")
