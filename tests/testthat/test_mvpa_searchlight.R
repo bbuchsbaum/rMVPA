@@ -98,10 +98,10 @@ test_that("standard surface-based mvpa_searchlight runs without error", {
 
 test_that("randomized surface-based mvpa_searchlight runs without error", {
   
-  dataset <- gen_surface_dataset(100, nobs=100)
+  dataset <- gen_sample_dataset(D=100, nobs=100, data_mode="surface")
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("sda_notune")
-  mspec <- mvpa_model(model, dataset,model_type="classification", crossval=cval)
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design,model_type="classification", crossval=cval)
   res <- run_searchlight(mspec, radius=8, method="randomized", niter=5)
   
 })
@@ -185,10 +185,10 @@ test_that("randomized mvpa_searchlight and tune_grid runs without error", {
 test_that("randomized mvpa_searchlight works with regression", {
   
   dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3, response_type="continuous")
-  crossVal <- blocked_cross_validation(dataset$design$block_var)
+  cval <- blocked_cross_validation(dataset$design$block_var)
   tuneGrid <- expand.grid(alpha=.5, lambda=c(.1,.01))
   model <- load_model("glmnet")
-  mspec <- model_spec(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tuneGrid)
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tuneGrid)
   res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
   
 })

@@ -50,14 +50,14 @@ y_test <- function(obj) {
 #' 
 #' fit a classification or regression model
 #' 
-#' @param obj
-#' @param roi_x
-#' @param y
-#' @param wts
-#' @param lev
-#' @param last
-#' @param classProbs
-#' @param ...
+#' @param obj a model fitting object
+#' @param roi_x an ROI containing the training data
+#' @param y the response vector
+#' @param wts a set of case weights
+#' @param lev unused
+#' @param last unused
+#' @param classProbs unused 
+#' @param ... extra args
 fit_model <- function(obj, roi_x, y, wts, param, lev, last, classProbs, ...) {
   UseMethod("fit_model")
 }
@@ -67,6 +67,10 @@ fit_model <- function(obj, roi_x, y, wts, param, lev, last, classProbs, ...) {
 #' 
 #' extract the parameter grid to optimize.
 #' 
+#' @param obj the model object
+#' @param x the training data
+#' @param y the response vector
+#' @param len the number of elements in the tuning grid
 #' @export
 tune_grid <- function(obj, x,y,len) {
   UseMethod("tune_grid")
@@ -74,7 +78,7 @@ tune_grid <- function(obj, x,y,len) {
 
 #' has_test_set
 #' 
-#' @param obj
+#' @param obj the object
 #' @export
 has_test_set <- function(obj) {
   UseMethod("has_test_set")
@@ -150,7 +154,6 @@ extract_sample <- function(obj,...) {
 #' 
 #' @param obj the object to convert
 #' @param ... extra args
-#' @export
 as_roi <- function(obj,...) {
   UseMethod("as_roi")
 }

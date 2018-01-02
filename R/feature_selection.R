@@ -78,17 +78,17 @@ select_features <- function(obj, ROI, Y, ...) {
 #' @rdname select_features
 #' @import sda
 select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg", "max")) {
+  assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   ranking.score <- match.arg(ranking.score)
   message("selecting features via catscore")
-  
-  X <- X
   
   if (is.numeric(Y)) {
     medY <- median(Y)
     Y <- factor(ifelse(Y > medY, "high", "low"))
   }
   
-  sda.1 <- sda.ranking(X, Y, ranking.score=ranking.score)
+  
+  sda.1 <- sda.ranking(as.matrix(X), Y, ranking.score=ranking.score, fdr=FALSE, verbose=FALSE)
   
   keep.idx <- if (obj$cutoff_type == "top_k") {
     k <- min(ncol(X), obj$cutoff_value)
@@ -97,7 +97,7 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
     if (obj$cutoff_value <= 0 || obj$cutoff_value > 1) {
       stop("select_features.catscore: with top_p, cutoff_value must be > 0 and <= 1")
     }
-    k <- obj$cutoff_value * ncol(X)
+    k <- max(obj$cutoff_value * ncol(X),1)
     sda.1[, "idx"][1:k]
    
   } else {

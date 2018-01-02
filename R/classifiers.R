@@ -30,7 +30,7 @@ MVPAModels <- new.env()
 corsimFit <- function(x, y, method, robust) {
   estimator <- if (robust) {
     function(vec)  {
-      h <- try(huber(vec))
+      h <- try(MASS::huber(vec))
       if (inherits(h, "try-error")) {
         median(vec)
       } else {
@@ -41,7 +41,7 @@ corsimFit <- function(x, y, method, robust) {
     "mean"
   }
   
-  if (estimator == "mean") {
+  if (identical("mean", estimator)) {
     list(conditionMeans=group_means(x, 1, y), levs=levels(y), method=method, robust=robust)
   } else {
     list(conditionMeans = splitReduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)

@@ -6,6 +6,12 @@
 \usage{
 load_model(name)
 }
+\arguments{
+\item{name}{the name of the model}
+}
 \description{
 load_model
+}
+\examples{
+load_model("sda")
 }

@@ -6,6 +6,9 @@
 \usage{
 has_test_set(obj)
 }
+\arguments{
+\item{obj}{the object}
+}
 \description{
 has_test_set
 }

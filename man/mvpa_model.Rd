@@ -24,7 +24,9 @@ regression'}
 
 \item{tune_grid}{an optional parameter tuning grid as a \code{data.frame}}
 
-\item{custom_performance}{a custom function for computing performance metrics.}
+\item{performance}{an optional custom function for computing performance metrics.}
+
+\item{class_metrics}{\code{logical} flag indicating whether to compute performance metrics for each class.}
 }
 \description{
 mvpa_model

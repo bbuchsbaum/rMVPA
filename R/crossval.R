@@ -1,12 +1,11 @@
 
 #' crossv_k
 #' 
-#' @param data
-#' @param y
+#' @param data the training data
+#' @param y the response vector
 #' @param k Number of folds (an integer).
-#' @param id
-#' 
-#' @export
+#' @param id a character id
+#' @param exclude optional vector indicating rows to exclude.
 crossv_k <- function(data, y, k = 5, id = ".id", exclude=NULL) {
   if (!is.numeric(k) || length(k) != 1) {
     stop("`k` must be a single integer.", call. = FALSE)
@@ -118,11 +117,12 @@ crossv_block <- function(data, y, block_var, id = ".id", exclude=NULL) {
 
 
 
-#' blocked_cross_validation
-#' 
+ 
 #' construct a cross-validation specification using a predefined blocking variable
 #' 
 #' @param block_var an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.
+#' @param exclude exclude an optional vector indicating rows to exclude. 
+#' @rdname cross_validation
 #' @export
 blocked_cross_validation <- function(block_var, exclude=NULL) {
   ret <- list(block_var=block_var, nfolds=length(unique(block_var)), block_ind=sort(unique(block_var)), exclude=exclude)
@@ -131,7 +131,9 @@ blocked_cross_validation <- function(block_var, exclude=NULL) {
 }
 
 
-#' @export
+#' @export 
+#' @inheritParams blocked_cross_validation
+#' @rdname cross_validation
 twofold_blocked_cross_validation <- function(block_var, nreps=10, exclude=NULL) {
   block_var <- as.integer(block_var)
   ret <- list(block_var=block_var, nfolds=2, nreps=nreps, block_ind=sort(unique(block_var)), exclude=exclude)
@@ -139,12 +141,13 @@ twofold_blocked_cross_validation <- function(block_var, nreps=10, exclude=NULL) 
   ret
 }
 
-#' kfold_cross_validation
+#' construct a cross-validation specification that randomly partitions input set into \code{nfolds} folds.
 #' 
 #' @export
-#' @param len the number of observations
-#' @param balance 
-#' @param boostrap
+#' @param len the number of observations.
+#' @param nfolds the number of cross-validation folds.
+#' @param exclude an optional vector indicating rows to exclude.
+#' @rdname cross_validation
 kfold_cross_validation <- function(len, nfolds=10, exclude=NULL) {
   block_var <- sample(rep(seq(1, nfolds), length.out=len))
   ret <- list(block_var=block_var, nfolds=nfolds, exclude=exclude)
@@ -166,7 +169,6 @@ nest <- function(cval) {
 #' 
 #' @export
 crossval_samples <- function(obj, data, y) { UseMethod("crossval_samples") }
-
 
 ## todo need to implement local version which stores 'y' variable in data.frame (train, test, y_train, y_test)
 #' @export

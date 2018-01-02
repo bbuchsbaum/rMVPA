@@ -10,7 +10,7 @@ test_that("mvpa_regional with 5 ROIS runs without error", {
   cval <- twofold_blocked_cross_validation(dset$design$block_var)
   
   region_mask <- BrainVolume(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
-  model <- load_model("sda")
+  model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec, region_mask, return_fits=TRUE)
   
@@ -24,7 +24,7 @@ test_that("surface_based mvpa_regional with 5 ROIS runs without error", {
   maskid <- sample(1:5, size=length(dset$dataset$mask), replace=TRUE)
   region_mask <- BrainSurface(dset$dataset$train_data@geometry, indices=nodes(dset$dataset$train_data@geometry), data=maskid)
   
-  model <- load_model("sda")
+  model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec, region_mask, return_fits=TRUE)
   
@@ -83,6 +83,33 @@ test_that("mvpa_regional with 5 ROIS and random forest without error", {
   
 })
 
+test_that("mvpa_regional with 5 ROIS and random forest and k-fold cross-validation without error", {
+  
+  model <- load_model("rf")
+  dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3)
+  cval <- kfold_cross_validation(length(dataset$design$block_var), nfolds=4)
+  
+  regionMask <- BrainVolume(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, 
+                      tune_grid=data.frame(mtry=c(2,4,6)))
+  res <- run_regional(mspec, regionMask)
+  
+})
+
+test_that("mvpa_regional with 5 ROIS and corclass and k-fold cross-validation without error", {
+  
+  model <- load_model("corclass")
+  tune_grid <- expand.grid(method=c("pearson", "kendall", "spearman"), robust=c(TRUE,FALSE))
+  dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3)
+  cval <- kfold_cross_validation(length(dataset$design$block_var), nfolds=4)
+  
+  regionMask <- BrainVolume(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, 
+                      tune_grid=tune_grid)
+  res <- run_regional(mspec, regionMask)
+  
+})
+
 test_that("mvpa_regional with 5 ROIS runs and external test set", {
   
   model <- load_model("rf")
@@ -92,6 +119,8 @@ test_that("mvpa_regional with 5 ROIS runs and external test set", {
   regionMask <- BrainVolume(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, 
                       tune_grid=data.frame(mtry=c(2,4,6)))
+  
+  expect_true(has_test_set(dataset$design))
   res <- run_regional(mspec, regionMask)
   
 })
@@ -136,6 +165,19 @@ test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topk=10", {
   
 })
 
+test_that("mvpa_regional with 5 ROIs and catscore FeatureSelection with top_p=.1", {
+  
+  dataset <- gen_sample_dataset(c(10,10,5), nobs=100, nlevels=6)
+  cval <- blocked_cross_validation(dataset$design$block_var)
+  regionMask <- BrainVolume(sample(1:10, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
+  model <- load_model("sda")
+  fsel <- feature_selector("catscore", "top_p", .1)
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, feature_selector=fsel)
+  res <- run_regional(mspec, regionMask, return_fits=TRUE)
+  
+})
+
+
 
 
 test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topp=.4", {
@@ -160,6 +202,8 @@ test_that("mvpa_regional with regression and 5 ROIs runs without error", {
   model <- load_model("glmnet")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tune_grid)
   res <- run_regional(mspec, regionMask)
+  expect_equal(nobs(dataset$design), 100)
+  expect_true(!is.null(res))
   
 })
 

@@ -6,6 +6,11 @@
 \usage{
 \method{performance}{regression_result}(x, split_list)
 }
+\arguments{
+\item{x}{the result object}
+
+\item{split_list}{split results by indexed sub-groups.}
+}
 \description{
 performance
 }

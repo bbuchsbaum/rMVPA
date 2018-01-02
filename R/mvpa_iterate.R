@@ -1,3 +1,15 @@
+try_warning  <- function(expr) {
+  warn <- err <- NULL
+  value <- withCallingHandlers(
+    tryCatch(expr, error=function(e) {
+      err <<- e
+      NULL
+    }), warning=function(w) {
+      warn <<- paste0(warn, str_trim(as.character(w)), sep=";")
+      invokeRestart("muffleWarning")
+    })
+  list(value=value, warning=warn, error=err)
+}
 
 wrap_result <- function(result_table, design, fit=NULL) {
 
@@ -45,12 +57,13 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   ytest <- y_test(mspec)
   ind <- indices(roi$train_roi)
   
-  result <- try(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid))
+  result <- try_warning(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid))
   
-  if (inherits(result, "try-error")) {
+  if (!is.null(result$error)) {
     emessage <- attr(result, "condition")$message
     tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), id=id, 
-                   error=TRUE, error_message=emessage)
+                   error=TRUE, error_message=emessage, 
+                   warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
   } else {
   
     pred <- predict(result, tibble::as_tibble(values(roi$test_roi)), NULL)
@@ -67,7 +80,8 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
     }
   
     tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, 
-                 error=FALSE, error_message="~")
+                 error=FALSE, error_message="~", 
+                 warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
   }
 }
  
@@ -116,13 +130,9 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
       predictor <- weighted_model(ret$fit)
       wrap_result(ret, mspec$design, predictor)
     } else {
-   
       wrap_result(ret, mspec$design)
     }
     
-
-    
-  
     tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, error=FALSE, error_message="~")
   }
 }

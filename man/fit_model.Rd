@@ -6,6 +6,23 @@
 \usage{
 fit_model(obj, roi_x, y, wts, param, lev, last, classProbs, ...)
 }
+\arguments{
+\item{obj}{a model fitting object}
+
+\item{roi_x}{an ROI containing the training data}
+
+\item{y}{the response vector}
+
+\item{wts}{a set of case weights}
+
+\item{lev}{unused}
+
+\item{last}{unused}
+
+\item{classProbs}{unused}
+
+\item{...}{extra args}
+}
 \description{
 fit a classification or regression model
 }

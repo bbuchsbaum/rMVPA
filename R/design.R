@@ -38,11 +38,14 @@ parse_variable <- function(var, design) {
   
 }
 
+
+
+
 #' mvpa_design
 #' 
-#' @param train_design a \code{data.frame} containing training variables
+#' @param train_design a \code{data.frame} containing training variables.
 #' @param y_train a \code{formula}, \code{character} name or \code{factor} designating the training response.
-#' @param test_design an optional \code{data.frame} containing test variables
+#' @param test_design an optional \code{data.frame} containing test variables.
 #' @param y_test an optional \code{formula}, \code{character} name or \code{factor} designating the test response.
 #' @param block_var an optional \code{formula}, \code{character} name or \code{integer} vector designating the block structure.
 #' @param split_by an optional \code{formula} indicating grouping structure for evaluating test performance.

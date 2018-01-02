@@ -124,11 +124,10 @@ mvpa_dataset <- function(train_data, test_data=NULL, mask) {
 
 #' mvpa_surface_dataset
 #' 
-#' @param train_data
-#' @param test_data
-#' @param mask
-#' @param design
-#' @param hemisphere
+#' @param train_data the training data, must inherit from \code{BrainSurfaceVector} in \code{neurosurf} package.
+#' @param test_data optional test data, must inherit from \code{BrainSurfaceVector} in \code{neurosurf} package.
+#' @param mask a binary mask equal to the number of nodes in the training/test data set.
+#' @name a name to identify the dataset (e.g. "lh" or "rh" to indicate hemisphere)
 #' @importFrom assertthat assert_that
 #' @export
 mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="") {
@@ -226,9 +225,14 @@ wrap_output.mvpa_dataset <- function(obj, vals, indices) {
 }
 
 wrap_output.mvpa_surface_dataset <- function(obj, vals, indices) {
-  ## bit of a hack
+  
   dvals <- numeric(length(nodes(geometry(obj$train_data))))
-  dvals[indices] <- vals
+  
+  #if (length(indices) != length(vals)) {
+  #  browser()
+  #}
+  
+  dvals[indices] <- vals[indices]
   ## bit of a hack
   BrainSurface(geometry=geometry(obj$train_data), indices=indices, data=dvals)
 }

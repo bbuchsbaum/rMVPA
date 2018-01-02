@@ -60,6 +60,21 @@
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    Articles
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="../articles/Searchlight Analysis.html">Vignette Title</a>
+    </li>
+    <li>
+      <a href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a>
+    </li>
+  </ul>
+</li>
       </ul>
       
       <ul class="nav navbar-nav navbar-right">
@@ -84,12 +99,38 @@
 
     <pre class="usage"><span class='fu'>multiway_classification_result</span>(<span class='no'>observed</span>, <span class='no'>predicted</span>, <span class='no'>probs</span>, <span class='kw'>test_design</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
   <span class='kw'>predictor</span> <span class='kw'>=</span> <span class='kw'>NULL</span>)</pre>
-        
+    
+    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a> Arguments</h2>
+    <table class="ref-arguments">
+    <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>observed</th>
+      <td><p>the observed labels</p></td>
+    </tr>
+    <tr>
+      <th>predicted</th>
+      <td><p>the predicted labels</p></td>
+    </tr>
+    <tr>
+      <th>probs</th>
+      <td><p>a <code>matrix</code> of predicted probabilities, one column per level.</p></td>
+    </tr>
+    <tr>
+      <th>test_design</th>
+      <td><p>an optional design for the test data.</p></td>
+    </tr>
+    <tr>
+      <th>predictor</th>
+      <td><p>an optional predictor object.</p></td>
+    </tr>
+    </table>
+    
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
+      <li><a href="#arguments">Arguments</a></li>
                 </ul>
 
   </div>

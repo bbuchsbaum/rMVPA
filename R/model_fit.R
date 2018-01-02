@@ -47,7 +47,16 @@ get_control <- function(y, nreps) {
 }
 
 
-
+#' tune_model
+#' 
+#' find the best tuning parameters for a model specification
+#' 
+#' @param mspec the model specification which derives from class \code{mvpa_model}
+#' @param x the training data matrix
+#' @param y the response vector
+#' @param wts optional class weights (if underlying model supports it)
+#' @param param the tuning grid, should be a \code{data.frame} where parameter names are indicated by column names.
+#' @param nreps the number of bootstrap replications
 tune_model <- function(mspec, x, y, wts, param, nreps=10) {
   ctrl <- get_control(y, nreps)
   cfit <-caret::train(as.data.frame(x), y, method=mspec$model, weights=wts, metric=ctrl$metric, trControl=ctrl$ctrl, tuneGrid=param)
@@ -241,10 +250,12 @@ predict.list_model <- function(x, newdata=NULL,...) {
 #' @param train_dat training data, and instance of class \code{ROIVolume} or \code{ROISurface}
 #' @param y the dependent variable
 #' @param indices the spatial indices associated with each column
-#' @param param
-#' @param wts
+#' @param param optional tuning parameters
+#' @param wts optional case weights
+#' @param tune_reps the number of bootstrap replications for parameter tuning (only used when param is not \code{NULL})
 #' @export
-train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=NULL) {
+#' @describeIn train_model train an mvpa_model
+train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=NULL, tune_reps=10) {
   
   if (is.null(param)) {
     param <- tune_grid(obj, train_dat, y, len=1)
@@ -282,7 +293,8 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=N
   
   ## parameter_tuning
   best_param <- if (!is.vector(param) && !is.null(nrow(param)) && nrow(param) > 1) {
-    tune_model(obj, train_dat, y, wts, param)
+    bp <- tune_model(obj, train_dat, y, wts, param, nreps)
+    flog.info("best tuning parameter: ", bp, capture=TRUE)
   } else {
     param
   }
