@@ -186,3 +186,18 @@ crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y) {
   crossv_twofold(data, y, obj$block_var, obj$block_ind,exclude=obj$exclude)
 }
 
+print.blocked_cross_validation <- function(x) {
+  cat("cross-validation: blocked \n")
+  cat("  nfolds: ", x$nfolds, "\n")
+}
+
+print.twofold_cross_validation <- function(x) {
+  cat("cross-validation: repeated two-fold \n")
+  cat("  nfolds: ", 2, "\n")
+  cat("  nreps: ", x$nreps, "\n")
+}
+
+print.kfold_cross_validation <- function(x) {
+  cat("cross-validation: k fold \n")
+  cat("  nfolds: ", x$k, "\n")
+}

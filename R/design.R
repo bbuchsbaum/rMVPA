@@ -135,7 +135,7 @@ print.mvpa_design <- function(x) {
   cat("mvpa_design:", "\n")
   cat("  training observations: ", length(x$y_train), "\n")
   if (is.factor(x$y_train)) {
-    cat(" training levels: ", levels(x$y_train), "\n")
+    cat("  training levels: ", levels(x$y_train), "\n")
   }
   if (!is.null(x$y_test)) {
     cat("  test observations: ", length(x$y_test), "\n")
