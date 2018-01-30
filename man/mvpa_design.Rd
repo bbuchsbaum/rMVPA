@@ -8,11 +8,11 @@ mvpa_design(train_design, y_train, test_design = NULL, y_test = NULL,
   block_var = NULL, split_by = NULL)
 }
 \arguments{
-\item{train_design}{a \code{data.frame} containing training variables}
+\item{train_design}{a \code{data.frame} containing training variables.}
 
 \item{y_train}{a \code{formula}, \code{character} name or \code{factor} designating the training response.}
 
-\item{test_design}{an optional \code{data.frame} containing test variables}
+\item{test_design}{an optional \code{data.frame} containing test variables.}
 
 \item{y_test}{an optional \code{formula}, \code{character} name or \code{factor} designating the test response.}
 
