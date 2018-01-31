@@ -46,6 +46,7 @@ Collate:
     'rMVPA.R'
     'regional.R'
     'resample.R'
+    'rsa_model.R'
     'searchlight.R'
     'utils.R'
 RoxygenNote: 6.0.1.9000
