@@ -42,8 +42,6 @@ parse_variable <- function(var, design) {
 }
 
 
-
-
 #' mvpa_design
 #' 
 #' @param train_design a \code{data.frame} containing training variables.
@@ -127,6 +125,17 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   
   class(des) <- c("mvpa_design", "list")
   des
+}
+
+#' @export
+print.rsa_design <- function(x) {
+  cat("rsa_design:", "\n")
+  cat("  formula: ", deparse(x$formula), "\n")
+  cat("  variables: ", names(x$data), "\n")
+  cat("  block var: ", capture.output(str(x$block_var)), "\n")
+  if (!is.null(x$split_by))
+    cat("  split_by", x$split_by)
+  
 }
 
 

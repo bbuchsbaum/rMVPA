@@ -87,9 +87,9 @@ predict.class_model_fit <- function(x, newdata, sub_indices=NULL) {
   if (!is.null(x$feature_mask)) {
     mat <- mat[, x$feature_mask,drop=FALSE]
   }
- 
+  
   probs <- x$model$prob(x$fit,mat) 
-  names(probs) <- levels(x$y)
+  colnames(probs) <- levels(x$y)
   cpred <- max.col(probs)
   cpred <- levels(x$y)[cpred]
   ret <- list(class=cpred, probs=probs)
@@ -244,6 +244,11 @@ predict.list_model <- function(x, newdata=NULL,...) {
   
 }
 
+
+
+
+
+
 #' train_model
 #' 
 #' @param obj an instance of class \code{mvpa_model}
@@ -293,8 +298,9 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=N
   
   ## parameter_tuning
   best_param <- if (!is.vector(param) && !is.null(nrow(param)) && nrow(param) > 1) {
-    bp <- tune_model(obj, train_dat, y, wts, param, nreps)
+    bp <- tune_model(obj, train_dat, y, wts, param, tune_reps)
     flog.info("best tuning parameter: ", bp, capture=TRUE)
+    bp
   } else {
     param
   }

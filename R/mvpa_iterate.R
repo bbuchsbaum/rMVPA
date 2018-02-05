@@ -65,8 +65,8 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
                    error=TRUE, error_message=emessage, 
                    warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
   } else {
-  
-    pred <- predict(result, tibble::as_tibble(values(roi$test_roi)), NULL)
+   
+    pred <- predict(result$value, tibble::as_tibble(values(roi$test_roi)), NULL)
     plist <- lapply(pred, list)
     plist$y_true <- list(ytest)
     plist$test_ind=list(as.integer(seq_along(ytest)))

@@ -2,28 +2,115 @@
 
 
 
+#' rsa_design
+#' 
+#' @param formula a formula expression specifying the dissimilarity-based regression function
+#' @param data a named list containing the dissimilarity matrices and any other auxiliary variables
+#' @param block_var an optional \code{formula}, \code{character} name or \code{integer} vector designating the block structure.
+# @param time_var an optional \code{formula}, \code{character} name or \code{integer} vector indicating the temporal structure.
+#' @param split_by an optional \code{formula} indicating grouping structure for evaluating test performance.
+#' @importFrom assertthat assert_that
+rsa_design <- function(formula, data, block_var=NULL, split_by=NULL) {
+  assert_that(purrr::is_formula(formula))
+  
+  ## check that all variables are either matrices, "dist", or vectors
+  nr <- sapply(data, function(x) {
+    if (is.matrix(x)) {
+      nrow(x)
+    } else if (inherits(x, "dist")) {
+      attr(x, "Size")
+    } else if (is.vector(x)) {
+      length(x)
+    } else {
+      stop(paste("illegal variable type", class(x)))
+    }
+  })
+  
+  assert_that(all(nr == nr[1]), msg="all elements in 'data' must have the same number of rows")
+  
+  check_split <- function(split_var) {
+    minSplits <- min(table(split_var))
+    if (minSplits < 3) {
+      stop(paste("error: splitting condition results in fewer than 3 observations in at least one set"))
+    }
+  }
+  
+  split_groups <- if (!is.null(split_by)) {
+    split_var <- parse_variable(split_by, data)
+    split(seq_along(split_var), split_var)
+  } 
+  
+  #time_var <- if (!is.null(time_var)) {
+  #  parse_variable(time_var, data)
+  #} 
+  
+  block_var <- if (!is.null(block_var)) {
+    parse_variable(block_var, data)
+  }
+  
+  
+  des <- list(
+    formula=formula,
+    data=data,
+    split_by=split_by,
+    split_groups=split_groups,
+    #time_var=time_var,
+    block_var=block_var
+  )
+  
+  mmat <- rsa_model_mat(des)
+  des$model_mat <- mmat
+  class(des) <- c("rsa_design", "list")
+  des
+}
+
+rsa_model_mat <- function(rsa_des) {
+
+  rvars <- labels(terms(rsa_des$formula))
+  vset <- lapply(rvars, function(x) eval(parse(text=x, list2env(rsa_des$data))))
+  
+  vmatlist <- lapply(vset, function(v) {
+    if (inherits(v, "dist")) {
+      ## an distance matrix of class "dist"
+      as.vector(v)
+    } else if (isSymmetric(v)) {
+      ## a full distance matrix
+      v[lower.tri(v)]
+    } else {
+      as.dist(v)
+    }
+  })
+  
+  names(vmatlist) <- rvars
+  vmatlist
+}
 
 
 #' rsa_model
 #' 
-#' @param Rmat a square relationship matrix with dimensions equal to number of trials in design.
-#' @param is_dist \code{TRUE} if the \code{Rmat} a distance matrix
 #' @param dataset a \code{mvpa_dataset} instance
 #' @param design a \code{rsa_design} instance
-#' @param model a estimation model
-#' @param crossval a \code{cross_validation} instance
-#' @param performance an optional custom function for computing performance metrics.
-#' @export
-rsa_model <- function(Rmat, 
-                      is_dist=TRUE,
-                      dataset,
-                      design,
-                      crossval, 
-                      tune_grid=NULL, 
-                      performance=NULL,
-                      class_metrics=TRUE) {
+rsa_model <- function(dataset,
+                      design) {
   
-  stop("not implemented")
+  assert_that(inherits(dataset, "mvpa_dataset"))
+  structure(list(dataset=dataset,
+                 design=design),
+            class=c("rsa_model", "list"))
   
   
 }
+
+
+
+
+train_model.rsa_model <- function(obj, train_dat, indices, wts, vmethod=c("pearson", "spearman"), pmethod=c("lm", "rankreg", "pearson", "spearman")) {
+  dtrain <- 1 - cor(train_dat, method="spearman")
+  dvec <- dtrain[lower.tri(dtrain)]
+  
+  form <- paste("dvec", deparse(obj$design$formula))
+  res <- rfit(form, data=obj$design$model_mat)
+  
+}
+
+
