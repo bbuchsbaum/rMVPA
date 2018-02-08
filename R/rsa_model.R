@@ -1,16 +1,23 @@
 
 
-
+sanitize <- function(name) {
+  name <- gsub(":", ".", name)
+  name <- gsub(" ", "", name)
+  name <- gsub("[\\(\\)]", ".", name, perl=TRUE)
+  name <- gsub(",", "_", name)
+  name <- gsub("\\.$", "", name)
+  name
+}
 
 #' rsa_design
 #' 
 #' @param formula a formula expression specifying the dissimilarity-based regression function
 #' @param data a named list containing the dissimilarity matrices and any other auxiliary variables
 #' @param block_var an optional \code{formula}, \code{character} name or \code{integer} vector designating the block structure.
-# @param time_var an optional \code{formula}, \code{character} name or \code{integer} vector indicating the temporal structure.
 #' @param split_by an optional \code{formula} indicating grouping structure for evaluating test performance.
+#' @param keep_intra_run a \code{logical} indicating whether to exclude within-run comparisons
 #' @importFrom assertthat assert_that
-rsa_design <- function(formula, data, block_var=NULL, split_by=NULL) {
+rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_run=FALSE) {
   assert_that(purrr::is_formula(formula))
   
   ## check that all variables are either matrices, "dist", or vectors
@@ -48,6 +55,10 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL) {
     parse_variable(block_var, data)
   }
   
+  include <- if (!is.null(block_var) && !keep_intra_run) {
+    as.vector(dist(block_var)) != 0
+  }
+  
   
   des <- list(
     formula=formula,
@@ -55,7 +66,8 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL) {
     split_by=split_by,
     split_groups=split_groups,
     #time_var=time_var,
-    block_var=block_var
+    block_var=block_var,
+    include=include
   )
   
   mmat <- rsa_model_mat(des)
@@ -67,7 +79,8 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL) {
 rsa_model_mat <- function(rsa_des) {
 
   rvars <- labels(terms(rsa_des$formula))
-  vset <- lapply(rvars, function(x) eval(parse(text=x, list2env(rsa_des$data))))
+  denv <- list2env(rsa_des$data)
+  vset <- lapply(rvars, function(x) eval(parse(text=x), denv))
   
   vmatlist <- lapply(vset, function(v) {
     if (inherits(v, "dist")) {
@@ -77,11 +90,11 @@ rsa_model_mat <- function(rsa_des) {
       ## a full distance matrix
       v[lower.tri(v)]
     } else {
-      as.dist(v)
+      dist(v)
     }
   })
   
-  names(vmatlist) <- rvars
+  names(vmatlist) <- sanitize(rvars)
   vmatlist
 }
 
@@ -102,15 +115,5 @@ rsa_model <- function(dataset,
 }
 
 
-
-
-train_model.rsa_model <- function(obj, train_dat, indices, wts, vmethod=c("pearson", "spearman"), pmethod=c("lm", "rankreg", "pearson", "spearman")) {
-  dtrain <- 1 - cor(train_dat, method="spearman")
-  dvec <- dtrain[lower.tri(dtrain)]
-  
-  form <- paste("dvec", deparse(obj$design$formula))
-  res <- rfit(form, data=obj$design$model_mat)
-  
-}
 
 

@@ -4,7 +4,8 @@
 \alias{rsa_design}
 \title{rsa_design}
 \usage{
-rsa_design(formula, data, block_var = NULL, split_by = NULL)
+rsa_design(formula, data, block_var = NULL, split_by = NULL,
+  keep_intra_run = FALSE)
 }
 \arguments{
 \item{formula}{a formula expression specifying the dissimilarity-based regression function}
@@ -14,6 +15,8 @@ rsa_design(formula, data, block_var = NULL, split_by = NULL)
 \item{block_var}{an optional \code{formula}, \code{character} name or \code{integer} vector designating the block structure.}
 
 \item{split_by}{an optional \code{formula} indicating grouping structure for evaluating test performance.}
+
+\item{keep_intra_run}{a \code{logical} indicating whether to exclude within-run comparisons}
 }
 \description{
 rsa_design

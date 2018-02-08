@@ -19,7 +19,6 @@ wrap_result <- function(result_table, design, fit=NULL) {
     prob <- matrix(0, length(observed), length(levels(observed)))
     colnames(prob) <- levels(observed)
   
-    
     for (i in seq_along(result_table$probs)) {
       p <- as.matrix(result_table$probs[[i]])
       tind <- result_table$test_ind[[i]]
@@ -55,6 +54,7 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   
   ytrain <- y_train(mspec)
   ytest <- y_test(mspec)
+  
   ind <- indices(roi$train_roi)
   
   result <- try_warning(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid))
@@ -164,3 +164,4 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits
   ret
   
 }
+

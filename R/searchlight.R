@@ -9,7 +9,7 @@ wrap_out <- function(perf_mat, dataset, ids) {
 
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
-do_randomized <- function(model_spec, radius, niter) {
+do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate,...) {
   ret <- lapply(1:niter, function(i) {
     flog.info("searchlight iteration: %i", i)
     flog.debug("constructing searchlight.")
@@ -22,7 +22,7 @@ do_randomized <- function(model_spec, radius, niter) {
     len <- sapply(vox_iter, function(x) attr(x, "length"))
     vox_iter <- vox_iter[len >= 2]
     cind <- sapply(vox_iter, attr, "center.index")
-    mvpa_iterate(model_spec, vox_iter, cind)
+    mvpa_fun(model_spec, vox_iter, cind,...)
   })
   
 
@@ -64,14 +64,14 @@ do_randomized <- function(model_spec, radius, niter) {
 }
 
 
-do_standard <- function(model_spec, radius) {
+do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate,...) {
   #browser()
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
   vox_iter <- lapply(slight, function(x) x)
   len <- sapply(vox_iter, function(x) attr(x, "length"))
   vox_iter <- vox_iter[len > 2]
   cind <- sapply(vox_iter, attr, "center.index")
-  ret <- mvpa_iterate(model_spec, vox_iter, cind)
+  ret <- mvpa_fun(model_spec, vox_iter, cind,...)
 
   good_results <- ret %>% dplyr::filter(!error)
   bad_results <- ret %>% dplyr::filter(error == TRUE)
@@ -90,21 +90,13 @@ do_standard <- function(model_spec, radius) {
 }
 
 
-#' run_searchlight
-#' 
-#' @param model_spec a \code{mvpa_model} instance.
-#' @param radius the searchlight radus in millimeters.
-#' @param method the type of searchlight (randomized or standard)
-#' @param niter the number of searchlight iterations (used only for 'randomized' method)
-#' @return a named list of \code{BrainVolume} objects, where each element contains a performance metric (e.g. AUC or Accuracy) at every voxel location.
 #' @import itertools 
 #' @import foreach
 #' @import doParallel
 #' @import parallel
 #' @importFrom futile.logger flog.info flog.error flog.debug
 #' @export
-run_searchlight <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4) {
-  
+run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4) {
   
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
@@ -127,3 +119,38 @@ run_searchlight <- function(model_spec, radius=8, method=c("randomized", "standa
   } 
   
 }
+
+#' @import itertools 
+#' @import foreach
+#' @import doParallel
+#' @import parallel
+#' @importFrom futile.logger flog.info flog.error flog.debug
+#' @export
+run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, 
+                                      distmethod=c("spearman", "person"), 
+                                      regtype=c("lm", "rfit", "pearson", "spearman")) {
+  
+  regtype <- match.arg(regtype)
+  distmethod <- match.arg(distmethod)
+  
+  if (radius < 1 || radius > 100) {
+    stop(paste("radius", radius, "outside allowable range (1-100)"))
+  }
+  
+  method <- match.arg(method)
+  
+  if (method == "randomized") {
+    assert_that(niter >= 1)
+  }
+  
+  res <- if (method == "standard") {
+    flog.info("running standard searchlight with %s radius ", radius)
+    do_standard(model_spec, radius, mvpa_fun=rsa_iterate, regtype, distmethod)    
+  } else if (method == "randomized") {
+    flog.info("running randomized searchlight with %s radius and %s iterations", radius, niter)
+    do_randomized(model_spec, radius, niter, mvpa_fun=rsa_iterate, regtype,distmethod)
+  } 
+  
+}
+
+

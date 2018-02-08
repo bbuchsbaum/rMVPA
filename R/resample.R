@@ -48,9 +48,6 @@ print.data_sample <- function(x, ...) {
 as_roi.data_sample <- function(x, ...) {
   
   train_roi <- try(series_roi(x$data$train_data, x$vox))
-  #if (inherits(train_roi, "try-error")) {
-  #  browser()
-  #}
   
   test_roi <- if (has_test_set(x$data)) {
     series_roi(x$data$test_data, x$vox)

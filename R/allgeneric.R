@@ -215,4 +215,20 @@ nobs <- function(x) {
 }
 
 
+#' run_searchlight
+#' 
+#' execute a searchlight analysis
+#' 
+#' @param model_spec a \code{mvpa_model} instance.
+#' @param radius the searchlight radus in millimeters.
+#' @param method the type of searchlight (randomized or standard)
+#' @param niter the number of searchlight iterations (used only for 'randomized' method)
+#' @param extra args
+#' @return a named list of \code{BrainVolume} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.
+#' @export
+run_searchlight <- function(model_spec, radius, method, niter,...) {
+  UseMethod("run_searchlight")
+}
+
+
 
