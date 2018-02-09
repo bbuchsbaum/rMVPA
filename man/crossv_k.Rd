@@ -4,12 +4,18 @@
 \alias{crossv_k}
 \title{crossv_k}
 \usage{
-crossv_k(data, y, k = 5, id = ".id")
+crossv_k(data, y, k = 5, id = ".id", exclude = NULL)
 }
 \arguments{
+\item{data}{the training data}
+
+\item{y}{the response vector}
+
 \item{k}{Number of folds (an integer).}
 
-\item{id}{}
+\item{id}{a character id}
+
+\item{exclude}{optional vector indicating rows to exclude.}
 }
 \description{
 crossv_k

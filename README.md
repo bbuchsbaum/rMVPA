@@ -14,12 +14,13 @@ Multivoxel Pattern Analysis in R
 
 ## Using devtools
 
-To install `rMVPA` from within R, use the `devtools` function `install_github`.
+To install `rMVPA` from within R, use the `devtools` function `install_github`. You will need the development version of `neuroim` as well.
 
 From within R:
 
 ```
 library(devtools)
+install_github("bbuchsbaum/neuroim")
 install_github("bbuchsbaum/rMVPA")
 ```
 

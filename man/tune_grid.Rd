@@ -6,6 +6,15 @@
 \usage{
 tune_grid(obj, x, y, len)
 }
+\arguments{
+\item{obj}{the model object}
+
+\item{x}{the training data}
+
+\item{y}{the response vector}
+
+\item{len}{the number of elements in the tuning grid}
+}
 \description{
 extract the parameter grid to optimize.
 }

@@ -16,6 +16,16 @@ gen_sample_dataset(D, nobs, response_type = c("categorical", "continuous"),
 \item{response_type}{'categorical' or 'continuous'}
 
 \item{data_mode}{'image' or 'surface'}
+
+\item{spacing}{the voxel spacing}
+
+\item{blocks}{the number of 'blocks' in the data}
+
+\item{nlevels}{the number of category levels}
+
+\item{external_test}{is the test set 'external' to the training set}
+
+\item{ntest_obs}{number of test observations (only relevant if \code{external_test} is true)}
 }
 \description{
 gen_sample_dataset

@@ -60,6 +60,21 @@
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    Articles
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="../articles/Searchlight Analysis.html">Vignette Title</a>
+    </li>
+    <li>
+      <a href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a>
+    </li>
+  </ul>
+</li>
       </ul>
       
       <ul class="nav navbar-nav navbar-right">
@@ -104,6 +119,26 @@
     <tr>
       <th>data_mode</th>
       <td><p>'image' or 'surface'</p></td>
+    </tr>
+    <tr>
+      <th>spacing</th>
+      <td><p>the voxel spacing</p></td>
+    </tr>
+    <tr>
+      <th>blocks</th>
+      <td><p>the number of 'blocks' in the data</p></td>
+    </tr>
+    <tr>
+      <th>nlevels</th>
+      <td><p>the number of category levels</p></td>
+    </tr>
+    <tr>
+      <th>external_test</th>
+      <td><p>is the test set 'external' to the training set</p></td>
+    </tr>
+    <tr>
+      <th>ntest_obs</th>
+      <td><p>number of test observations (only relevant if <code>external_test</code> is true)</p></td>
     </tr>
     </table>
     

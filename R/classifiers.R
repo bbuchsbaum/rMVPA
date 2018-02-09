@@ -30,7 +30,7 @@ MVPAModels <- new.env()
 corsimFit <- function(x, y, method, robust) {
   estimator <- if (robust) {
     function(vec)  {
-      h <- try(huber(vec))
+      h <- try(MASS::huber(vec))
       if (inherits(h, "try-error")) {
         median(vec)
       } else {
@@ -41,7 +41,7 @@ corsimFit <- function(x, y, method, robust) {
     "mean"
   }
   
-  if (estimator == "mean") {
+  if (identical("mean", estimator)) {
     list(conditionMeans=group_means(x, 1, y), levs=levels(y), method=method, robust=robust)
   } else {
     list(conditionMeans = splitReduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)
@@ -369,7 +369,7 @@ MVPAModels$sparse_sda <- list(type = "Classification",
                                parameters=data.frame(parameters=c("frac", "lambda"), class=c("numeric", "numeric"), label=c("fraction of features to keep (frac > 0 a frac <= 1)", "lambda")),
                                grid=function(x, y, len = NULL) expand.grid(frac=seq(.1,1,length.out=len), lambda=seq(.01,.99,length.out=len)),
                                fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                                 
+                                 print(param)
                                  x <- as.matrix(x)                          
                                  nkeep <- max(param$frac * ncol(x),1)
                                  

@@ -10,8 +10,8 @@ predicted_class <- function(prob) {
 
 #' performance
 #' 
-#' @param x
-#' @param split_list
+#' @param x the result object
+#' @param split_list split results by indexed sub-groups.
 #' @export
 #' @rdname performance-methods
 performance.regression_result <- function(x, split_list) {

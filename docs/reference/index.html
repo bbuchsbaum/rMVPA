@@ -60,6 +60,21 @@
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    Articles
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="../articles/Searchlight Analysis.html">Vignette Title</a>
+    </li>
+    <li>
+      <a href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a>
+    </li>
+  </ul>
+</li>
       </ul>
       
       <ul class="nav navbar-nav navbar-right">
@@ -99,27 +114,33 @@
         <tr>
           <!--  -->
           <td>
+            <p><code><a href="a-name-to-identify-the-dataset-open-paren-e.g.-quote-lh-quote-or-quote-rh-quote-to-indicate-hemisphere-close-paren.html">mvpa_surface_dataset</a></code> </p>
+          </td>
+          <td><p>mvpa_surface_dataset</p></td>
+        </tr><tr>
+          <!--  -->
+          <td>
             <p><code><a href="as_roi.html">as_roi</a></code> </p>
           </td>
           <td><p>as_roi</p></td>
         </tr><tr>
           <!--  -->
           <td>
-            <p><code><a href="binary_classification_result.html">binary_classification_result</a></code> </p>
+            <p><code><a href="classification_result.html">classification_result</a></code> <code><a href="classification_result.html">binary_classification_result</a></code> <code><a href="classification_result.html">multiway_classification_result</a></code> <code><a href="classification_result.html">regression_result</a></code> </p>
           </td>
-          <td><p>binary_classification_result</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="blocked_cross_validation.html">blocked_cross_validation</a></code> </p>
-          </td>
-          <td><p>blocked_cross_validation</p></td>
+          <td><p>create a <code>classification_result</code> instance</p></td>
         </tr><tr>
           <!--  -->
           <td>
             <p><code><a href="compute_performance.html">compute_performance</a></code> </p>
           </td>
           <td><p>compute_performance</p></td>
+        </tr><tr>
+          <!--  -->
+          <td>
+            <p><code><a href="cross_validation.html">blocked_cross_validation</a></code> <code><a href="cross_validation.html">twofold_blocked_cross_validation</a></code> <code><a href="cross_validation.html">kfold_cross_validation</a></code> </p>
+          </td>
+          <td><p>construct a cross-validation specification using a predefined blocking variable</p></td>
         </tr><tr>
           <!--  -->
           <td>
@@ -207,40 +228,6 @@
         </tr><tr>
           <!--  -->
           <td>
-            <p><code><a href="initialize_configuration.html">initialize_configuration</a></code> </p>
-          </td>
-          <td><p>initializeROISubset &lt;- function(config) 
-  if (!is.null(config$roi_subset)) 
-    form &lt;- try(eval(parse(text=config$roi_subset)))
-    if (inherits(form, "try-error")) 
-      flog.error("could not parse roi_subset parameter: <!-- %s", config$roi_subset) -->
-      stop()
-    
-    
-    if (class(form) != "formula") 
-      flog.error("roi_subset argument must be an expression that starts with a ~ character")
-      stop()
-    
-    
-    res &lt;- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
-    
-    config$ROIVolume[!res] &lt;- 0
-    flog.info("roi_subset contains <!-- %s voxels", sum(config$ROIVolume &gt; 0)) --></p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="kfold_cross_validation.html">kfold_cross_validation</a></code> </p>
-          </td>
-          <td><p>kfold_cross_validation</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="load_image_data.html">load_image_data</a></code> </p>
-          </td>
-          <td><p>load_image_data</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
             <p><code><a href="load_model.html">load_model</a></code> </p>
           </td>
           <td><p>load_model</p></td>
@@ -262,12 +249,6 @@
             <p><code><a href="model_fit.html">model_fit</a></code> </p>
           </td>
           <td><p>the result of a single model fit to a chunk of data</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="multiway_classification_result.html">multiway_classification_result</a></code> </p>
-          </td>
-          <td><p>create an <code>multiway_classification_result</code> instance</p></td>
         </tr><tr>
           <!--  -->
           <td>
@@ -295,12 +276,6 @@
         </tr><tr>
           <!--  -->
           <td>
-            <p><code><a href="mvpa_surface_dataset.html">mvpa_surface_dataset</a></code> </p>
-          </td>
-          <td><p>mvpa_surface_dataset</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
             <p><code><a href="nobs.html">nobs</a></code> </p>
           </td>
           <td><p>nobs</p></td>
@@ -322,12 +297,6 @@
             <p><code><a href="predicted_class.html">predicted_class</a></code> </p>
           </td>
           <td><p>predicted_class</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="regression_result.html">regression_result</a></code> </p>
-          </td>
-          <td><p>create an <code>regression_result</code> instance</p></td>
         </tr><tr>
           <!--  -->
           <td>
@@ -361,12 +330,6 @@
         </tr><tr>
           <!--  -->
           <td>
-            <p><code><a href="train_model.mvpa_model.html">train_model</a></code> </p>
-          </td>
-          <td><p>train_model</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
             <p><code><a href="train_model.html">train_model</a></code> </p>
           </td>
           <td><p>train_model</p></td>
@@ -376,6 +339,12 @@
             <p><code><a href="tune_grid.html">tune_grid</a></code> </p>
           </td>
           <td><p>tune_grid</p></td>
+        </tr><tr>
+          <!--  -->
+          <td>
+            <p><code><a href="tune_model.html">tune_model</a></code> </p>
+          </td>
+          <td><p>tune_model</p></td>
         </tr><tr>
           <!--  -->
           <td>

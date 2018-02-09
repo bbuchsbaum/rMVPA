@@ -1,0 +1,51 @@
+---
+title: "Searchlight Analysis"
+author: "Bradley Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Searchlight Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Searchlight Analysis
+```{r, echo=FALSE, message=FALSE}
+devtools::load_all()
+library(neuroim)
+```
+
+### Generate a volumetric dataset with 100 observations and two classes
+
+
+```{r}
+
+
+#library(rMVPA)
+
+dataset <- gen_sample_dataset(D=c(10,10,10), nobs = 100, blocks=5, nlevels=2)
+print(dataset)
+```
+
+### Create a cross-validation object using a pre-defined blocking variable
+
+```{r}
+block <- dataset$design$block_var
+crossval <- blocked_cross_validation(block)
+crossval
+```
+
+### Construct an `mvpa_model` object with a Shrinkage Discriminant Analysis classifier (`sda_notune`) 
+
+```{r}
+model <- mvpa_model(model=load_model("sda_notune"), dataset=dataset$dataset, design=dataset$design, crossval=crossval)
+```
+
+### Run the searchlight analysis
+
+```{r}
+
+result <- run_searchlight(model, radius=5, method="standard")
+
+

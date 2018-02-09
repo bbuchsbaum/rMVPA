@@ -14,5 +14,5 @@ mvpa_dataset(train_data, test_data = NULL, mask)
 \item{mask}{the set of voxels to include: a \code{BrainVolume} instance}
 }
 \description{
-mvpa_dataset
+A data structure that encapsulate a standard (volumetric) training dataset, an optional test dataset and a voxel 'mask'.
 }

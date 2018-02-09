@@ -41,11 +41,12 @@ parse_variable <- function(var, design) {
   
 }
 
+
 #' mvpa_design
 #' 
-#' @param train_design a \code{data.frame} containing training variables
+#' @param train_design a \code{data.frame} containing training variables.
 #' @param y_train a \code{formula}, \code{character} name or \code{factor} designating the training response.
-#' @param test_design an optional \code{data.frame} containing test variables
+#' @param test_design an optional \code{data.frame} containing test variables.
 #' @param y_test an optional \code{formula}, \code{character} name or \code{factor} designating the test response.
 #' @param block_var an optional \code{formula}, \code{character} name or \code{integer} vector designating the block structure.
 #' @param split_by an optional \code{formula} indicating grouping structure for evaluating test performance.
@@ -126,13 +127,24 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   des
 }
 
+#' @export
+print.rsa_design <- function(x) {
+  cat("rsa_design:", "\n")
+  cat("  formula: ", deparse(x$formula), "\n")
+  cat("  variables: ", names(x$data), "\n")
+  cat("  block var: ", capture.output(str(x$block_var)), "\n")
+  if (!is.null(x$split_by))
+    cat("  split_by", x$split_by)
+  
+}
+
 
 #' @export
 print.mvpa_design <- function(x) {
   cat("mvpa_design:", "\n")
   cat("  training observations: ", length(x$y_train), "\n")
   if (is.factor(x$y_train)) {
-    cat(" training levels: ", levels(x$y_train), "\n")
+    cat("  training levels: ", levels(x$y_train), "\n")
   }
   if (!is.null(x$y_test)) {
     cat("  test observations: ", length(x$y_test), "\n")
