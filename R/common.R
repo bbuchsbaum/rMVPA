@@ -631,12 +631,12 @@ load_image_data_series <- function(fnames, config, indices, mask_volume) {
   vecmat <- do.call(rbind, lapply(seq_along(fnames), function(i) {
     fname <- fnames[i]
     flog.info("loading data file %s", fname)
-    mat <- neuroim::as.matrix(loadVector(fname, mask=config$mask_volume))
+    mat <- neuroim::as.matrix(loadVector(fname, mask=mask_volume))
     flog.info("data file %s has %s voxels and %s samples", fname, nrow(mat), ncol(mat))
     mat
   }))
   
-  SparseBrainVector(vecmat[indices,], space(config$mask_volume), mask=mask_volume)
+  SparseBrainVector(vecmat[indices,], space(mask_volume), mask=mask_volume)
 }
 
 
