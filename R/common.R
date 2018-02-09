@@ -632,7 +632,7 @@ load_image_data_series <- function(fnames, config, indices) {
     fname <- fnames[i]
     flog.info("loading data file %s", fname)
     mat <- neuroim::as.matrix(loadVector(fname, mask=config$maskVolume))
-    flog.info("data file %s has %s voxels and %s samples", fname, ncol(mat), nrow(mat))
+    flog.info("data file %s has %s voxels and %s samples", fname, nrow(mat), ncol(mat))
     mat
   }))
   
