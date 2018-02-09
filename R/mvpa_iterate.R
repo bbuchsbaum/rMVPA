@@ -35,8 +35,6 @@ wrap_result <- function(result_table, design, fit=NULL) {
 
 #' external_crossval
 external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
-  flog.info("external cross-validation")
-  
   xtrain <- tibble::as_tibble(values(roi$train_roi))
  
   dset <- mspec$dataset
