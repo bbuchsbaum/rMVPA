@@ -165,15 +165,18 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits
   
 }
 
-
+#' @importFrom Rfit rfit
 run_rfit <- function(dvec, obj) {
   form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
+  vnames <- names(obj$design$model_mat)
   obj$design$model_mat$dvec <- dvec
-  
+  browser()
   res <- if (!is.null(obj$design$include)) {
-    rfit(form, data=obj$design$model_mat, subset=obj$design$include)
+    dt <- obj$design$model_mat
+    subs <- obj$design$include == TRUE
+    Rfit::rfit(form, data=obj$design$model_mat, subset=obj$design$include)
   } else {
-    rfit(form, data=obj$design$model_mat)
+    Rfit::rfit(form, data=obj$design$model_mat)
   }
   
   coef(res)[-1]
@@ -185,9 +188,9 @@ run_lm <- function(dvec, obj) {
   obj$design$model_mat$dvec <- dvec
   
   res <- if (!is.null(obj$design$include)) {
-    rfit(form, data=obj$design$model_mat, subset=obj$design$include)
+    lm(form, data=obj$design$model_mat, subset=obj$design$include)
   } else {
-    rfit(form, data=obj$design$model_mat)
+    lm(form, data=obj$design$model_mat)
   }
   
   res <- coef(summary(res))[-1,3]
@@ -208,9 +211,12 @@ run_cor <- function(dvec, obj, method) {
 
 
 #' @export
-train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("lm", "rfit", "pearson", "spearman"), distmethod=c("pearson", "spearman")) {
+train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("lm", "rfit", "pearson", "spearman"), 
+                                  distmethod=c("pearson", "spearman")) {
   method <- match.arg(method)
   distmethod <- match.arg(distmethod)
+  print(paste("train_model rsa method", method))
+  
   
   dtrain <- 1 - cor(t(train_dat), method=distmethod)
   dvec <- dtrain[lower.tri(dtrain)]
@@ -227,10 +233,11 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
 
 
 
-do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
+do_rsa <- function(roi, mod_spec, rnum, method=method, distmethod=distmethod) {
+  print(paste("rsa method", method))
   xtrain <- tibble::as_tibble(values(roi$train_roi))
   ind <- indices(roi$train_roi)
-  ret <- train_model(mod_spec, xtrain, ind, method, distmethod)
+  ret <- train_model(mod_spec, xtrain, ind, method=method, distmethod=distmethod)
   tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")
 }
 
@@ -246,9 +253,13 @@ do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
 #' @param distmethod the method used to computer distances between oservations, one of: \code{pearson}, \code{spearman}
 #' @importFrom dplyr do rowwise
 #' @export
-rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), regtype=c("rfit", "lm", "pearson", "spearman"), distmethod=c("spearman", "pearson")) {
+rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), regtype=c("rfit", "lm", "pearson", "spearman"), 
+                        distmethod=c("spearman", "pearson")) {
+ 
   distmethod <- match.arg(distmethod)
   regtype <- match.arg(regtype)
+  
+  print(paste("regtype", regtype))
   
   assert_that(length(ids) == length(vox_list))
   sframe <- get_samples(mod_spec$dataset, vox_list)
