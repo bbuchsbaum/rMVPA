@@ -63,7 +63,7 @@ config$design <- rMVPA:::initialize_design(config)
 #flog.info("loading training data: %s", config$train_data)
 
 if (config$data_mode == "image") {
-  mask_volume <- as(load_mask(config), "LogicalBrainVolume")
+  mask_volume <- as(rMVPA:::load_mask(config), "LogicalBrainVolume")
   dataset <- rMVPA:::initialize_image_data(config, mask_volume)
   dataset <- list(dataset)
   names(dataset) <- ""

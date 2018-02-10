@@ -334,7 +334,7 @@ initialize_image_data <- function(config, mask) {
     flog.info("length of training subset %s", length(indices))
   }
   
-  train_datavec <- load_image_data(config, "train_data", indices=indices)    
+  train_datavec <- load_image_data(config, "train_data", mask_volume=mask, indices=indices)    
 
   if (!is.null(config$test_data)) {
     flog.info("loading test data: %s", config$test_data)
@@ -342,9 +342,9 @@ initialize_image_data <- function(config, mask) {
     flog.info("length of test subset %s", length(indices))
     
     if (!is.null(config$test_subset)) {
-      test_datavec <- load_image_data(config, "test_data", indices=indices)
+      test_datavec <- load_image_data(config, "test_data", mask_volume=mask, indices=indices)
     } else {
-      test_datavec <- load_image_data(config, "test_data")
+      test_datavec <- load_image_data(config, "test_data", mask_volume=mask)
     }
   } else {
     test_datavec <- NULL
@@ -619,7 +619,7 @@ load_subset <- function(full_design, subset) {
 }
 
 
-load_image_data_series <- function(fnames, config, indices) {
+load_image_data_series <- function(fnames, config, indices, mask_volume) {
   if (!all(file.exists(fnames))) {
     offenders <- fnames[!file.exists(fnames)]
     message(paste("data files", offenders, "not found."))
@@ -631,28 +631,28 @@ load_image_data_series <- function(fnames, config, indices) {
   vecmat <- do.call(rbind, lapply(seq_along(fnames), function(i) {
     fname <- fnames[i]
     flog.info("loading data file %s", fname)
-    mat <- neuroim::as.matrix(loadVector(fname, mask=config$maskVolume))
-    flog.info("data file %s has %s voxels and %s samples", fname, ncol(mat), nrow(mat))
+    mat <- neuroim::as.matrix(loadVector(fname, mask=mask_volume))
+    flog.info("data file %s has %s voxels and %s samples", fname, nrow(mat), ncol(mat))
     mat
   }))
   
-  SparseBrainVector(vecmat[indices,], space(config$maskVolume), mask=config$maskVolume)
+  SparseBrainVector(vecmat[indices,], space(mask_volume), mask=mask_volume)
 }
 
 
-load_image_data <- function(config, name, indices=NULL) {
+load_image_data <- function(config, name, mask_volume, indices=NULL) {
   fname <- config[[name]]
   if (length(fname) > 1) {
-    load_image_data_series(fname, config, indices)
+    load_image_data_series(fname, config, indices, mask_volume=mask_volume)
   } else if (!file.exists(fname)) {
     flog.error("datafile %s not found.", fname)
     stop()
   } else {
     flog.info("loading data file %s", fname)
     if (!is.null(indices)) {
-      loadVector(fname, indices=indices, mask=config$maskVolume)
+      loadVector(fname, indices=indices, mask=mask_volume)
     } else {
-      loadVector(fname, mask=config$maskVolume)
+      loadVector(fname, mask=mask_volume)
     }
     
   }

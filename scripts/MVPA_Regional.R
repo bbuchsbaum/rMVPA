@@ -75,7 +75,7 @@ flog.info("loading training data: %s", config$train_data)
 
 
 if (config$data_mode == "image") {
-  region_mask <- load_mask(config)
+  region_mask <- rMVPA:::load_mask(config)
   mask_volume <- as(region_mask, "LogicalBrainVolume")
   dataset <- rMVPA:::initialize_image_data(config, mask_volume)
   dataset <- list(dataset)
