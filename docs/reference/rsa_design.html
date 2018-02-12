@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>create a <code>classification_result</code> instance — classification_result • rMVPA</title>
+<title>rsa_design — rsa_design • rMVPA</title>
 
 <!-- jquery -->
 <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script>
@@ -90,46 +90,38 @@
       <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>create a <code>classification_result</code> instance</h1>
+    <h1>rsa_design</h1>
     </div>
 
     
-    <p>create a <code>classification_result</code> instance</p>
+    <p>rsa_design</p>
     
 
-    <pre class="usage"><span class='fu'>classification_result</span>(<span class='no'>observed</span>, <span class='no'>predicted</span>, <span class='no'>probs</span>, <span class='kw'>test_design</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>predictor</span> <span class='kw'>=</span> <span class='kw'>NULL</span>)
-
-<span class='fu'>binary_classification_result</span>(<span class='no'>observed</span>, <span class='no'>predicted</span>, <span class='no'>probs</span>, <span class='kw'>test_design</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>predictor</span> <span class='kw'>=</span> <span class='kw'>NULL</span>)
-
-<span class='fu'>multiway_classification_result</span>(<span class='no'>observed</span>, <span class='no'>predicted</span>, <span class='no'>probs</span>, <span class='kw'>test_design</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>predictor</span> <span class='kw'>=</span> <span class='kw'>NULL</span>)
-
-<span class='fu'>regression_result</span>(<span class='no'>observed</span>, <span class='no'>predicted</span>, <span class='kw'>test_design</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>predictor</span> <span class='kw'>=</span> <span class='kw'>NULL</span>)</pre>
+    <pre class="usage"><span class='fu'>rsa_design</span>(<span class='no'>formula</span>, <span class='no'>data</span>, <span class='kw'>block_var</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>split_by</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
+  <span class='kw'>keep_intra_run</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a> Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>observed</th>
-      <td><p>the observed values.</p></td>
+      <th>formula</th>
+      <td><p>a formula expression specifying the dissimilarity-based regression function</p></td>
     </tr>
     <tr>
-      <th>predicted</th>
-      <td><p>the predicted values.</p></td>
+      <th>data</th>
+      <td><p>a named list containing the dissimilarity matrices and any other auxiliary variables</p></td>
     </tr>
     <tr>
-      <th>probs</th>
-      <td><p>a <code>matrix</code> of predicted probabilities, one column per level.</p></td>
+      <th>block_var</th>
+      <td><p>an optional <code>formula</code>, <code>character</code> name or <code>integer</code> vector designating the block structure.</p></td>
     </tr>
     <tr>
-      <th>test_design</th>
-      <td><p>an optional design for the test data.</p></td>
+      <th>split_by</th>
+      <td><p>an optional <code>formula</code> indicating grouping structure for evaluating test performance.</p></td>
     </tr>
     <tr>
-      <th>predictor</th>
-      <td><p>an optional predictor object.</p></td>
+      <th>keep_intra_run</th>
+      <td><p>a <code>logical</code> indicating whether to exclude within-run comparisons</p></td>
     </tr>
     </table>
     

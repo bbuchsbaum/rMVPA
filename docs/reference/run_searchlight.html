@@ -94,11 +94,10 @@
     </div>
 
     
-    <p>run_searchlight</p>
+    <p>execute a searchlight analysis</p>
     
 
-    <pre class="usage"><span class='fu'>run_searchlight</span>(<span class='no'>model_spec</span>, <span class='kw'>radius</span> <span class='kw'>=</span> <span class='fl'>8</span>, <span class='kw'>method</span> <span class='kw'>=</span> <span class='fu'>c</span>(<span class='st'>"randomized"</span>,
-  <span class='st'>"standard"</span>), <span class='kw'>niter</span> <span class='kw'>=</span> <span class='fl'>4</span>)</pre>
+    <pre class="usage"><span class='fu'>run_searchlight</span>(<span class='no'>model_spec</span>, <span class='no'>radius</span>, <span class='no'>method</span>, <span class='no'>niter</span>, <span class='no'>...</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a> Arguments</h2>
     <table class="ref-arguments">
@@ -119,11 +118,15 @@
       <th>niter</th>
       <td><p>the number of searchlight iterations (used only for 'randomized' method)</p></td>
     </tr>
+    <tr>
+      <th>extra</th>
+      <td><p>args</p></td>
+    </tr>
     </table>
     
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>a named list of <code>BrainVolume</code> objects, where each element contains a performance metric (e.g. AUC or Accuracy) at every voxel location.</p>
+    <p>a named list of <code>BrainVolume</code> objects, where each element contains a performance metric (e.g. AUC) at every voxel location.</p>
     
 
   </div>

@@ -68,16 +68,64 @@
       <h1>Searchlight Analysis</h1>
                         <h4 class="author">Bradley Buchsbaum</h4>
             
-            <h4 class="date">2018-01-01</h4>
+            <h4 class="date">2018-02-08</h4>
           </div>
 
     
     
 <div class="contents">
-<div id="vignette-info" class="section level2">
+<div id="searchlight-analysis" class="section level2">
 <h2 class="hasAnchor">
-<a href="#vignette-info" class="anchor"></a>Vignette Info</h2>
-<p>Note the various macros within the <code>vignette</code> section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the <code>title</code> field and the <code>\VignetteIndexEntry</code> to match the title of your vignette.</p>
+<a href="#searchlight-analysis" class="anchor"></a>Searchlight Analysis</h2>
+<div id="generate-a-volumetric-dataset-with-100-observations-and-two-classes" class="section level3">
+<h3 class="hasAnchor">
+<a href="#generate-a-volumetric-dataset-with-100-observations-and-two-classes" class="anchor"></a>Generate a volumetric dataset with 100 observations and two classes</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#library(rMVPA)</span>
+
+dataset &lt;-<span class="st"> </span><span class="kw"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span>(<span class="dt">D=</span><span class="kw">c</span>(<span class="dv">10</span>,<span class="dv">10</span>,<span class="dv">10</span>), <span class="dt">nobs =</span> <span class="dv">100</span>, <span class="dt">blocks=</span><span class="dv">5</span>, <span class="dt">nlevels=</span><span class="dv">2</span>)
+<span class="kw">print</span>(dataset)</code></pre></div>
+<pre><code>## $dataset
+## mvpa_dataset: 
+##   train_data: DenseBrainVector 
+##   Type           : DenseBrainVector 
+##   Dimension      : 10 10 10 100 
+##   Spacing        : 1  X  1  X  1 
+##   Origin         : 0  X  0  X  0 
+##   Axes           : Left-to-Right Posterior-to-Anterior Inferior-to-Superior 
+##   Coordinate Transform : 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 
+##   test_data: none. 
+##   mask areas:  TRUE/1000 
+##   mask cardinality:  1000 
+## 
+## $design
+## mvpa_design: 
+##   training observations:  100 
+##   training levels:  a b 
+##   no test observations. 
+##   training response:   Factor w/ 2 levels "a","b": 2 2 1 1 2 1 1 1 2 1 ... 
+##   block var:   int [1:100] 1 2 3 4 5 1 2 3 4 5 ...</code></pre>
+</div>
+<div id="create-a-cross-validation-object-using-a-pre-defined-blocking-variable" class="section level3">
+<h3 class="hasAnchor">
+<a href="#create-a-cross-validation-object-using-a-pre-defined-blocking-variable" class="anchor"></a>Create a cross-validation object using a pre-defined blocking variable</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">block &lt;-<span class="st"> </span>dataset<span class="op">$</span>design<span class="op">$</span>block_var
+crossval &lt;-<span class="st"> </span><span class="kw"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span>(block)
+crossval</code></pre></div>
+<pre><code>## cross-validation: blocked 
+##   nfolds:  5</code></pre>
+</div>
+<div id="construct-an-mvpa_model-object-with-a-shrinkage-discriminant-analysis-classifier-sda_notune" class="section level3">
+<h3 class="hasAnchor">
+<a href="#construct-an-mvpa_model-object-with-a-shrinkage-discriminant-analysis-classifier-sda_notune" class="anchor"></a>Construct an <code>mvpa_model</code> object with a Shrinkage Discriminant Analysis classifier (<code>sda_notune</code>)</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/mvpa_model.html">mvpa_model</a></span>(<span class="dt">model=</span><span class="kw"><a href="../reference/load_model.html">load_model</a></span>(<span class="st">"sda_notune"</span>), <span class="dt">dataset=</span>dataset<span class="op">$</span>dataset, <span class="dt">design=</span>dataset<span class="op">$</span>design, <span class="dt">crossval=</span>crossval)</code></pre></div>
+</div>
+<div id="run-the-searchlight-analysis" class="section level3">
+<h3 class="hasAnchor">
+<a href="#run-the-searchlight-analysis" class="anchor"></a>Run the searchlight analysis</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model, <span class="dt">radius=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="st">"standard"</span>)</code></pre></div>
+<pre><code>## INFO [2018-02-08 08:35:38] model is: sda_notune
+## INFO [2018-02-08 08:35:38] running standard searchlight with 5 radius</code></pre>
+</div>
 </div>
 </div>
   </div>
@@ -87,7 +135,7 @@
       <h2 class="hasAnchor">
 <a href="#tocnav" class="anchor"></a>Contents</h2>
       <ul class="nav nav-pills nav-stacked">
-<li><a href="#vignette-info">Vignette Info</a></li>
+<li><a href="#searchlight-analysis">Searchlight Analysis</a></li>
       </ul>
 </div>
       </div>

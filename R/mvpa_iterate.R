@@ -55,7 +55,7 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   
   ind <- indices(roi$train_roi)
   
-  result <- try_warning(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid))
+  result <- try_warning(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
   
   if (!is.null(result$error)) {
     emessage <- attr(result, "condition")$message
@@ -100,7 +100,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   ret <- samples %>% dplyr::rowwise() %>% dplyr::do( {
     
       ## fit model for cross-validation sample
-      result <- try(train_model(mspec, tibble::as_tibble(.$train), .$ytrain, indices=ind, param=mspec$tune_grid))
+      result <- try(train_model(mspec, tibble::as_tibble(.$train), .$ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
       
       if (inherits(result, "try-error")) {
         flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
@@ -166,17 +166,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits
 #' @importFrom Rfit rfit
 run_rfit <- function(dvec, obj) {
   form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
-  vnames <- names(obj$design$model_mat)
   obj$design$model_mat$dvec <- dvec
-  browser()
-  res <- if (!is.null(obj$design$include)) {
-    dt <- obj$design$model_mat
-    subs <- obj$design$include == TRUE
-    Rfit::rfit(form, data=obj$design$model_mat, subset=obj$design$include)
-  } else {
-    Rfit::rfit(form, data=obj$design$model_mat)
-  }
-  
+  res <- Rfit::rfit(form, data=obj$design$model_mat)
   coef(res)[-1]
 }
 
@@ -184,25 +175,15 @@ run_lm <- function(dvec, obj) {
   form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
   vnames <- names(obj$design$model_mat)
   obj$design$model_mat$dvec <- dvec
-  
-  res <- if (!is.null(obj$design$include)) {
-    lm(form, data=obj$design$model_mat, subset=obj$design$include)
-  } else {
-    lm(form, data=obj$design$model_mat)
-  }
-  
+ 
+  res <- lm(form, data=obj$design$model_mat)
   res <- coef(summary(res))[-1,3]
   names(res) <- vnames
   res
 }
 
 run_cor <- function(dvec, obj, method) {
-  res <- if (!is.null(obj$design$include)) {
-    sapply(obj$design$model_mat, function(x) cor(dvec[obj$design$include], x[obj$design$include]))
-  } else {
-    sapply(obj$design$model_mat, function(x) cor(dvec, x, method=method))
-  }
-  
+  res <- sapply(obj$design$model_mat, function(x) cor(dvec, x, method=method))
   names(res) <- names(obj$design$model_mat)
   res
 }
@@ -219,13 +200,15 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
   dtrain <- 1 - cor(t(train_dat), method=distmethod)
   dvec <- dtrain[lower.tri(dtrain)]
   
+  if (! is.null(obj$design$include)) {
+    dvec <- dvec[obj$design$include]
+  }
+  
   switch(method,
          rfit=run_rfit(dvec, obj),
          lm=run_lm(dvec,obj),
          pearson=run_cor(dvec,obj,"pearson"),
          spearman=run_cor(dvec,obj,"spearman"))
-  
-  
   
 }
 

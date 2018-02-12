@@ -77,6 +77,7 @@ y_test.mvpa_model <- function(obj) y_test(obj$design)
 #' @param crossval a \code{cross_validation} instance
 #' @param feature_selector an optional \code{feature_selector} instance
 #' @param tune_grid an optional parameter tuning grid as a \code{data.frame}
+#' @param tune_reps the number of replications used during paramter tuning. Only relevant if \code{tune_grid} supplied.
 #' @param performance an optional custom function for computing performance metrics.
 #' @param class_metrics \code{logical} flag indicating whether to compute performance metrics for each class.
 #' @export
@@ -87,6 +88,7 @@ mvpa_model <- function(model,
                        crossval, 
                        feature_selector=NULL, 
                        tune_grid=NULL, 
+                       tune_reps=5,
                        performance=NULL,
                        class_metrics=TRUE) {
   
@@ -119,6 +121,7 @@ mvpa_model <- function(model,
               model_type=model_type,
               model_name=model$label,
               tune_grid=tune_grid,
+              tune_reps=tune_reps,
               feature_selector=feature_selector,
               crossval=crossval,
               performance=perf)

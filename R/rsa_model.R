@@ -90,9 +90,13 @@ rsa_model_mat <- function(rsa_des) {
       ## a full distance matrix
       v[lower.tri(v)]
     } else {
-      dist(v)
+      as.vector(dist(v))
     }
   })
+  
+  if (!is.null(rsa_des$include)) {
+    vmatlist <- lapply(vmatlist, function(v) v[rsa_des$include])
+  }
   
   names(vmatlist) <- sanitize(rvars)
   vmatlist

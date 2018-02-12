@@ -143,11 +143,11 @@ twofold_blocked_cross_validation <- function(block_var, nreps=10, exclude=NULL) 
 
 #' construct a cross-validation specification that randomly partitions input set into \code{nfolds} folds.
 #' 
-#' @export
 #' @param len the number of observations.
 #' @param nfolds the number of cross-validation folds.
 #' @param exclude an optional vector indicating rows to exclude.
 #' @rdname cross_validation
+#' @export
 kfold_cross_validation <- function(len, nfolds=10, exclude=NULL) {
   block_var <- sample(rep(seq(1, nfolds), length.out=len))
   ret <- list(block_var=block_var, nfolds=nfolds, exclude=exclude)
@@ -167,6 +167,9 @@ nest <- function(cval) {
 
 #' crossval_samples
 #' 
+#' @param obj the cross-validation control object
+#' @param data the data to split up
+#' @param y the response variable
 #' @export
 crossval_samples <- function(obj, data, y) { UseMethod("crossval_samples") }
 
@@ -186,18 +189,28 @@ crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y) {
   crossv_twofold(data, y, obj$block_var, obj$block_ind,exclude=obj$exclude)
 }
 
+
+#' @export
 print.blocked_cross_validation <- function(x) {
   cat("cross-validation: blocked \n")
+  cat("  nobservations: ", length(x$block_var))
   cat("  nfolds: ", x$nfolds, "\n")
+  cat("  block sizes: ", table(x$block_var))
 }
 
+
+#' @export
 print.twofold_cross_validation <- function(x) {
   cat("cross-validation: repeated two-fold \n")
+  cat("  nobservations: ", length(x$block_var))
   cat("  nfolds: ", 2, "\n")
   cat("  nreps: ", x$nreps, "\n")
 }
 
+
+#' @export
 print.kfold_cross_validation <- function(x) {
   cat("cross-validation: k fold \n")
-  cat("  nfolds: ", x$k, "\n")
+  cat("  nobservations: ", length(x$block_var), "\n")
+  cat("  nfolds: ", x$nfolds, "\n")
 }
