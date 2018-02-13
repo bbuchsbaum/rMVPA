@@ -1,8 +1,0 @@
-site_name: rMVPA
-pages:
-- [index.md, Home]
-- [about.md, About]
-- [searchlight.md, SearchLight Analyses]
-
-theme: readthedocs
-repo_url: https://github.com/bbuchsbaum/rMVPA/
