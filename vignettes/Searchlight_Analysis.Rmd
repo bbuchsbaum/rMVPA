@@ -12,8 +12,8 @@ vignette: >
 
 ## Searchlight Analysis
 ```{r, echo=FALSE, message=FALSE}
-devtools::load_all()
 library(neuroim)
+library(rMVPA)
 ```
 
 ### Generate a volumetric dataset with 100 observations and two classes
@@ -24,7 +24,7 @@ To generate a dataset we use the `gen_sample_dataset` function. We are creating 
 ```{r}
 
 
-#library(rMVPA)
+
 dataset <- gen_sample_dataset(D=c(6,6,6), nobs = 80, blocks=4, nlevels=2)
 print(dataset)
 ```
