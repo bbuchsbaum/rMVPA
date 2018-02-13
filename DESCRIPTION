@@ -29,7 +29,8 @@ Imports:
     memoise,
     e1071,
     sp,
-    modelr
+    modelr,
+    Rfit
 Collate:
     'allgeneric.R'
     'classifiers.R'
