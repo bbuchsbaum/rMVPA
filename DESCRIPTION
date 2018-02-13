@@ -57,4 +57,6 @@ Suggests:
     knitr,
     rmarkdown,
     roxygen2
+Remotes:
+    bbuchsbaum/neuroim
 VignetteBuilder: knitr
