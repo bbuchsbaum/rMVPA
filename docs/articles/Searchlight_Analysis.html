@@ -45,9 +45,6 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
-      <a href="../articles/Searchlight%20Analysis.html">Vignette Title</a>
-    </li>
-    <li>
       <a href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a>
     </li>
   </ul>
@@ -68,7 +65,7 @@
       <h1>Searchlight Analysis</h1>
                         <h4 class="author">Bradley Buchsbaum</h4>
             
-            <h4 class="date">2018-02-08</h4>
+            <h4 class="date">2018-02-13</h4>
           </div>
 
     
@@ -80,52 +77,155 @@
 <div id="generate-a-volumetric-dataset-with-100-observations-and-two-classes" class="section level3">
 <h3 class="hasAnchor">
 <a href="#generate-a-volumetric-dataset-with-100-observations-and-two-classes" class="anchor"></a>Generate a volumetric dataset with 100 observations and two classes</h3>
+<p>To generate a dataset we use the <code>gen_sample_dataset</code> function. We are creating a 4-dimensional neuroimaging dataset, with 6-by-6-by-6 spatial dimensions and 80 observations in the 4th dimension. These 80 observations are divided into 4 blocks, each consisting of 20 trials. The generated <code>y</code> variable is a <code>factor</code> with 2 levels (‘a’ and ‘b’). the <code>gen_sample_dataset</code> function creates a list with two elements: an <code>mvpa_dataset</code> object (<code>dataset</code>) and an <code>mvpa_design</code> object (<code>design</code>). The first contains information about the data itself and the second contains information about the experimental design.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#library(rMVPA)</span>
-
-dataset &lt;-<span class="st"> </span><span class="kw"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span>(<span class="dt">D=</span><span class="kw">c</span>(<span class="dv">10</span>,<span class="dv">10</span>,<span class="dv">10</span>), <span class="dt">nobs =</span> <span class="dv">100</span>, <span class="dt">blocks=</span><span class="dv">5</span>, <span class="dt">nlevels=</span><span class="dv">2</span>)
+dataset &lt;-<span class="st"> </span><span class="kw"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span>(<span class="dt">D=</span><span class="kw">c</span>(<span class="dv">6</span>,<span class="dv">6</span>,<span class="dv">6</span>), <span class="dt">nobs =</span> <span class="dv">80</span>, <span class="dt">blocks=</span><span class="dv">4</span>, <span class="dt">nlevels=</span><span class="dv">2</span>)
 <span class="kw">print</span>(dataset)</code></pre></div>
 <pre><code>## $dataset
 ## mvpa_dataset: 
 ##   train_data: DenseBrainVector 
 ##   Type           : DenseBrainVector 
-##   Dimension      : 10 10 10 100 
+##   Dimension      : 6 6 6 80 
 ##   Spacing        : 1  X  1  X  1 
 ##   Origin         : 0  X  0  X  0 
 ##   Axes           : Left-to-Right Posterior-to-Anterior Inferior-to-Superior 
 ##   Coordinate Transform : 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 
 ##   test_data: none. 
-##   mask areas:  TRUE/1000 
-##   mask cardinality:  1000 
+##   mask areas:  TRUE/216 
+##   mask cardinality:  216 
 ## 
 ## $design
 ## mvpa_design: 
-##   training observations:  100 
+##   training observations:  80 
 ##   training levels:  a b 
 ##   no test observations. 
-##   training response:   Factor w/ 2 levels "a","b": 2 2 1 1 2 1 1 1 2 1 ... 
-##   block var:   int [1:100] 1 2 3 4 5 1 2 3 4 5 ...</code></pre>
+##   training response:   Factor w/ 2 levels "a","b": 2 1 1 2 2 2 1 1 2 1 ... 
+##   block var:   int [1:80] 1 2 3 4 1 2 3 4 1 2 ...</code></pre>
 </div>
-<div id="create-a-cross-validation-object-using-a-pre-defined-blocking-variable" class="section level3">
+<div id="create-a-cross-validation-object-using-a-pre-defined-blocking-variable-" class="section level3">
 <h3 class="hasAnchor">
-<a href="#create-a-cross-validation-object-using-a-pre-defined-blocking-variable" class="anchor"></a>Create a cross-validation object using a pre-defined blocking variable</h3>
+<a href="#create-a-cross-validation-object-using-a-pre-defined-blocking-variable-" class="anchor"></a>Create a cross-validation object using a pre-defined blocking variable.</h3>
+<p>Most MVPA analyses involve the collection of fMRI data over a series of scanning runs, or “blocks”. Due to intra-block serial correlations, it makes sense to take advantage of this block structure for cross-validation. In other words, we want to train the classifier on <code>k-1</code> blocks and test on the set of trials for all <code>k</code> held out blocks. This is a form of leave-one-group-out cross-validation, which is encapsulated in the <code>blocked_cross_validation</code> function.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">block &lt;-<span class="st"> </span>dataset<span class="op">$</span>design<span class="op">$</span>block_var
 crossval &lt;-<span class="st"> </span><span class="kw"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span>(block)
 crossval</code></pre></div>
 <pre><code>## cross-validation: blocked 
-##   nfolds:  5</code></pre>
+##   nobservations:  80  nfolds:  4 
+##   block sizes:  20 20 20 20</code></pre>
 </div>
 <div id="construct-an-mvpa_model-object-with-a-shrinkage-discriminant-analysis-classifier-sda_notune" class="section level3">
 <h3 class="hasAnchor">
 <a href="#construct-an-mvpa_model-object-with-a-shrinkage-discriminant-analysis-classifier-sda_notune" class="anchor"></a>Construct an <code>mvpa_model</code> object with a Shrinkage Discriminant Analysis classifier (<code>sda_notune</code>)</h3>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/mvpa_model.html">mvpa_model</a></span>(<span class="dt">model=</span><span class="kw"><a href="../reference/load_model.html">load_model</a></span>(<span class="st">"sda_notune"</span>), <span class="dt">dataset=</span>dataset<span class="op">$</span>dataset, <span class="dt">design=</span>dataset<span class="op">$</span>design, <span class="dt">crossval=</span>crossval)</code></pre></div>
+<p>The “sda_notune” model is an <code>sda</code> model where the <code>lambda</code> parameter is estimated from the training data. See documentation in the <code>sda</code> package.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sda_model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_model.html">load_model</a></span>(<span class="st">"sda_notune"</span>) 
+model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/mvpa_model.html">mvpa_model</a></span>(<span class="dt">model=</span>sda_model, <span class="dt">dataset=</span>dataset<span class="op">$</span>dataset, <span class="dt">design=</span>dataset<span class="op">$</span>design, <span class="dt">crossval=</span>crossval)</code></pre></div>
 </div>
-<div id="run-the-searchlight-analysis" class="section level3">
+<div id="run-a-standard-searchlight-analysis" class="section level3">
 <h3 class="hasAnchor">
-<a href="#run-the-searchlight-analysis" class="anchor"></a>Run the searchlight analysis</h3>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model, <span class="dt">radius=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="st">"standard"</span>)</code></pre></div>
-<pre><code>## INFO [2018-02-08 08:35:38] model is: sda_notune
-## INFO [2018-02-08 08:35:38] running standard searchlight with 5 radius</code></pre>
+<a href="#run-a-standard-searchlight-analysis" class="anchor"></a>Run a standard searchlight analysis</h3>
+<p>The output of <code>run_searchlight</code> is a list of image volumes containing performance measures for each spherical searchlight. For a two-class classification problem, there are three output measures: <code>Accuracy</code>, <code>ZAccuracy</code>, and <code>AUC</code> (<code>AUC</code> has .5 subtracted from it, so that it is centered at 0 under the null hypothesis). The first is the raw cross-validated accuracy measure for each centroid; the second is the z-statistic based on the binomial test of significance, assuming chance accuracy is <code>1/nclasses</code>; and AUC is the area under the curve statistic. The <code>radius</code> argument indicates the radius in <code>mm</code> of the spherical searchlight. Finally, <code>method</code> indicates the searchlight scheme, which can be <code>standard</code> or <code>randomized</code>. See below for more information about the randomized searchlight.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model, <span class="dt">radius=</span><span class="dv">4</span>, <span class="dt">method=</span><span class="st">"standard"</span>)</code></pre></div>
+<pre><code>## INFO [2018-02-13 07:10:05] model is: sda_notune
+## INFO [2018-02-13 07:10:05] running standard searchlight with 4 radius</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result</code></pre></div>
+<pre><code>## $ZAccuracy
+## BrainVolume
+##   Type           : DenseBrainVolume 
+##   Dimension      : 6 6 6 
+##   Spacing        : 1  X  1  X  1 
+##   Origin         : 0  X  0  X  0 
+##   Axes           : Left-to-Right Posterior-to-Anterior Inferior-to-Superior 
+## 
+## $Accuracy
+## BrainVolume
+##   Type           : DenseBrainVolume 
+##   Dimension      : 6 6 6 
+##   Spacing        : 1  X  1  X  1 
+##   Origin         : 0  X  0  X  0 
+##   Axes           : Left-to-Right Posterior-to-Anterior Inferior-to-Superior 
+## 
+## $AUC
+## BrainVolume
+##   Type           : DenseBrainVolume 
+##   Dimension      : 6 6 6 
+##   Spacing        : 1  X  1  X  1 
+##   Origin         : 0  X  0  X  0 
+##   Axes           : Left-to-Right Posterior-to-Anterior Inferior-to-Superior</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">hist</span>(result<span class="op">$</span>AUC)</code></pre></div>
+<p><img src="Searchlight_Analysis_files/figure-html/unnamed-chunk-5-1.png" width="672"></p>
 </div>
+</div>
+<div id="run-a-randomized-searchlight-analysis" class="section level2">
+<h2 class="hasAnchor">
+<a href="#run-a-randomized-searchlight-analysis" class="anchor"></a>Run a randomized searchlight analysis</h2>
+<p>A randomized searchlight analysis is an iterative procedure in which searchlight regions are sampled <em>without replacement</em> from the voxel set. A classification analysis is run for each region, and the result is recorded for the center voxel and <em>all other voxels in the region</em>. This is done for each of <code>niter</code> times, where each iteration involves an exhaustive sampling of the voxel set. The performance at each voxel is the average performance for the set of analyses in which the given voxel was included as a feature. The result will be similar to the standard searchlight procedure, but emphasizes the contribution of a given voxel across different local contexts to classification performance. This should in principle offer slightly better spatial localization than the standard searchlight. The randomized searchlight procedure can also be faster, due to the iterative sampling procedure.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model, <span class="dt">radius=</span><span class="dv">4</span>, <span class="dt">method=</span><span class="st">"randomized"</span>, <span class="dt">niter=</span><span class="dv">8</span>)</code></pre></div>
+<pre><code>## INFO [2018-02-13 07:10:47] model is: sda_notune
+## INFO [2018-02-13 07:10:47] running randomized searchlight with 4 radius and 8 iterations
+## INFO [2018-02-13 07:10:47] searchlight iteration: 1
+## INFO [2018-02-13 07:10:47] searchlight iteration: 2
+## INFO [2018-02-13 07:10:48] searchlight iteration: 3
+## INFO [2018-02-13 07:10:48] searchlight iteration: 4
+## INFO [2018-02-13 07:10:49] searchlight iteration: 5
+## INFO [2018-02-13 07:10:50] searchlight iteration: 6
+## INFO [2018-02-13 07:10:50] searchlight iteration: 7
+## INFO [2018-02-13 07:10:51] searchlight iteration: 8</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result</code></pre></div>
+<pre><code>## $ZAccuracy
+## BrainVolume
+##   Type           : DenseBrainVolume 
+##   Dimension      : 6 6 6 
+##   Spacing        : 1  X  1  X  1 
+##   Origin         : 0  X  0  X  0 
+##   Axes           : Left-to-Right Posterior-to-Anterior Inferior-to-Superior 
+## 
+## $Accuracy
+## BrainVolume
+##   Type           : DenseBrainVolume 
+##   Dimension      : 6 6 6 
+##   Spacing        : 1  X  1  X  1 
+##   Origin         : 0  X  0  X  0 
+##   Axes           : Left-to-Right Posterior-to-Anterior Inferior-to-Superior 
+## 
+## $AUC
+## BrainVolume
+##   Type           : DenseBrainVolume 
+##   Dimension      : 6 6 6 
+##   Spacing        : 1  X  1  X  1 
+##   Origin         : 0  X  0  X  0 
+##   Axes           : Left-to-Right Posterior-to-Anterior Inferior-to-Superior</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">hist</span>(result<span class="op">$</span>AUC)</code></pre></div>
+<p><img src="Searchlight_Analysis_files/figure-html/unnamed-chunk-6-1.png" width="672"></p>
+</div>
+<div id="using-different-classifiers" class="section level2">
+<h2 class="hasAnchor">
+<a href="#using-different-classifiers" class="anchor"></a>Using different classifiers</h2>
+<p>All of the classifiers available in the <code>caret</code> package can be used (in theory) for a searchlight analysis. For example, we can run an analysis using a linear support vector machine as follows:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">svm_model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_model.html">load_model</a></span>(<span class="st">"svmLinear"</span>) 
+model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/mvpa_model.html">mvpa_model</a></span>(<span class="dt">model=</span>svm_model, <span class="dt">dataset=</span>dataset<span class="op">$</span>dataset, <span class="dt">design=</span>dataset<span class="op">$</span>design, <span class="dt">crossval=</span>crossval)
+result_svm &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model, <span class="dt">radius=</span><span class="dv">4</span>, <span class="dt">method=</span><span class="st">"randomized"</span>, <span class="dt">niter=</span><span class="dv">2</span>)</code></pre></div>
+<pre><code>## INFO [2018-02-13 07:10:53] model is: svmLinear
+## INFO [2018-02-13 07:10:53] running randomized searchlight with 4 radius and 2 iterations
+## INFO [2018-02-13 07:10:53] searchlight iteration: 1
+## INFO [2018-02-13 07:10:55] searchlight iteration: 2</code></pre>
+<p>Here we use a random forest classifier. To fix the tuning parameter <code>mtry</code> at a known value, we supply a <code>tune_grid</code> argument to the <code>mvpa_model</code> function. Here, we set <code>mtry</code> to <code>2</code>. Sinc ethere is only one value, it means that this parameter will be fixed. If we supply a grid of values, then the paramter will be tuned for each searchlight sample. Since parameter tuning is costly in terms of computing time, this is not a recommended approach unless one has a great deal of computing power or one is running the searchlight over a small mask.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">rf_model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_model.html">load_model</a></span>(<span class="st">"rf"</span>) 
+model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/mvpa_model.html">mvpa_model</a></span>(<span class="dt">model=</span>rf_model, <span class="dt">dataset=</span>dataset<span class="op">$</span>dataset, <span class="dt">design=</span>dataset<span class="op">$</span>design, <span class="dt">crossval=</span>crossval, <span class="dt">tune_grid=</span><span class="kw">data.frame</span>(<span class="dt">mtry=</span><span class="dv">2</span>))
+result_rf &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model, <span class="dt">radius=</span><span class="dv">4</span>, <span class="dt">method=</span><span class="st">"randomized"</span>, <span class="dt">niter=</span><span class="dv">2</span>)</code></pre></div>
+<pre><code>## INFO [2018-02-13 07:10:57] model is: rf
+## INFO [2018-02-13 07:10:57] running randomized searchlight with 4 radius and 2 iterations
+## INFO [2018-02-13 07:10:57] searchlight iteration: 1
+## INFO [2018-02-13 07:10:59] searchlight iteration: 2</code></pre>
+<p>Here we specify a range of values for the <code>mtry</code> tuning parameter. In this case, by supplying the <code>tune_reps</code> argument to <code>mvpa_model</code> we control the number of resamples used to tune the model parameters. The default is 10, but here we speed up execution time by reducing it to 2. In general, more resamples are required to reliably estimate optimal tuning parameters. This means for a whole-brain searchlight, parameter tuning is <strong>generally</strong> impractical. This is why the classiifer <code>sda_notune</code> is a good choice for searchlight analyses, since it “works well” with default tuning parameters.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">grid &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">mtry=</span><span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">4</span>,<span class="dv">6</span>,<span class="dv">8</span>))
+model2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/mvpa_model.html">mvpa_model</a></span>(<span class="dt">model=</span>rf_model, <span class="dt">dataset=</span>dataset<span class="op">$</span>dataset, <span class="dt">design=</span>dataset<span class="op">$</span>design, <span class="dt">crossval=</span>crossval, <span class="dt">tune_grid=</span>grid, <span class="dt">tune_reps=</span><span class="dv">2</span>)
+
+result_rf_tuned &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model2, <span class="dt">radius=</span><span class="dv">6</span>, <span class="dt">method=</span><span class="st">"randomized"</span>, <span class="dt">niter=</span><span class="dv">1</span>)</code></pre></div>
+</div>
+<div id="cross-validation-schemes" class="section level2">
+<h2 class="hasAnchor">
+<a href="#cross-validation-schemes" class="anchor"></a>Cross-validation schemes</h2>
+<p>So far we have used the <code>blocked_cross_validation</code> for setting up cross-validation. This is often the natural choice for fMRI designs.</p>
 </div>
 </div>
   </div>
@@ -136,6 +236,9 @@ crossval</code></pre></div>
 <a href="#tocnav" class="anchor"></a>Contents</h2>
       <ul class="nav nav-pills nav-stacked">
 <li><a href="#searchlight-analysis">Searchlight Analysis</a></li>
+      <li><a href="#run-a-randomized-searchlight-analysis">Run a randomized searchlight analysis</a></li>
+      <li><a href="#using-different-classifiers">Using different classifiers</a></li>
+      <li><a href="#cross-validation-schemes">Cross-validation schemes</a></li>
       </ul>
 </div>
       </div>
