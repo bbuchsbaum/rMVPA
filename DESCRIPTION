@@ -9,6 +9,9 @@ Description: An R package to facilitate multivoxel pattern analysis of
     neuroimaging data in R.
 License: GPL (>= 2)
 Imports:
+    assertthat,
+    dplyr,
+    tibble,
     caret,
     neuroim,
     randomForest,
