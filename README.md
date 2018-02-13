@@ -1,6 +1,6 @@
 
 Multivoxel Pattern Analysis in R
-================================
+--------------------------------
 
 [![codecov](https://codecov.io/gh/rMVPA/NA/branch/master/graph/badge.svg)](https://codecov.io/github/bbuchsbaum/rMVPA?branch=master) [![Build Status](https://travis-ci.org/rMVPA/NA.svg?branch=master)](https://travis-ci.org/bbuchsbaum/rMVPA)
 
@@ -14,8 +14,7 @@ Documentation and vignettes: <http://rmvpa.bbuchsbaum.org>
 
 ### Installation
 
-Using devtools
---------------
+### Using devtools
 
 To install `rMVPA` from within R, use the `devtools` function `install_github`. You will need the development version of `neuroim` as well.
 
@@ -25,8 +24,7 @@ From within R:
     install_github("bbuchsbaum/neuroim")
     install_github("bbuchsbaum/rMVPA")
 
-Using `git` from the command line
----------------------------------
+### Using `git` from the command line
 
     git clone git@github.com:bbuchsbaum/rMVPA.git
     R CMD install rMVPA
