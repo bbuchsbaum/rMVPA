@@ -6,6 +6,13 @@
 \usage{
 crossval_samples(obj, data, y)
 }
+\arguments{
+\item{obj}{the cross-validation control object}
+
+\item{data}{the data to split up}
+
+\item{y}{the response variable}
+}
 \description{
 crossval_samples
 }

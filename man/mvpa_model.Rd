@@ -6,7 +6,7 @@
 \usage{
 mvpa_model(model, dataset, design, model_type = c("classification",
   "regression"), crossval, feature_selector = NULL, tune_grid = NULL,
-  performance = NULL, class_metrics = TRUE)
+  tune_reps = 5, performance = NULL, class_metrics = TRUE)
 }
 \arguments{
 \item{model}{a caret-based classification or regression model}
@@ -23,6 +23,8 @@ regression'}
 \item{feature_selector}{an optional \code{feature_selector} instance}
 
 \item{tune_grid}{an optional parameter tuning grid as a \code{data.frame}}
+
+\item{tune_reps}{the number of replications used during paramter tuning. Only relevant if \code{tune_grid} supplied.}
 
 \item{performance}{an optional custom function for computing performance metrics.}
 
