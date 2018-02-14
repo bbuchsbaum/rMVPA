@@ -63,7 +63,7 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 #' fsel <- feature_selector("FTest", "top_k", 10)
 #' coords <- rbind(c(1,1,1), c(2,2,2), c(3,3,3))
 #' 
-#' ROI <- neuroim::ROIVolume(BrainSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
+#' ROI <- neuroim::ROIVolume(neuroim::BrainSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
 #' Y <- factor(rep(c("a", "b"), each=50))
 #' featureMask <- select_features(fsel, ROI, Y)
 #' sum(featureMask) == 10
