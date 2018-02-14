@@ -67,6 +67,7 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 #' Y <- factor(rep(c("a", "b"), each=50))
 #' featureMask <- select_features(fsel, ROI@data, Y)
 #' sum(featureMask) == 2
+#' 
 #' @export
 select_features <- function(obj, ROI, Y, ...) {
   UseMethod("select_features")
