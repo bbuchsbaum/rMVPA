@@ -61,5 +61,6 @@ Suggests:
     rmarkdown,
     roxygen2
 Remotes:
-    bbuchsbaum/neuroim
+    bbuchsbaum/neuroim,
+    bbuchsbaum/neurosurf
 VignetteBuilder: knitr
