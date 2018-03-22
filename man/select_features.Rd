@@ -2,7 +2,6 @@
 % Please edit documentation in R/allgeneric.R, R/feature_selection.R
 \name{select_features}
 \alias{select_features}
-\alias{select_features}
 \alias{select_features.catscore}
 \alias{select_features.FTest}
 \title{select_features}
@@ -44,11 +43,11 @@ feature selection on a training ROI.
 Given a \code{feature_selection} specification object and a dataset return the set of selected features as a binary vector.
 }
 \examples{
-fsel <- feature_selector("FTest", "top_k", 10)
+fsel <- feature_selector("FTest", "top_k", 2)
 coords <- rbind(c(1,1,1), c(2,2,2), c(3,3,3))
 
-ROI <- ROIVolume(BrainSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
+ROI <- neuroim::ROIVector(neuroim::BrainSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
 Y <- factor(rep(c("a", "b"), each=50))
-featureMask <- select_features(fsel, ROI, Y)
-sum(featureMask) == 10
+featureMask <- select_features(fsel, ROI@data, Y)
+sum(featureMask) == 2
 }

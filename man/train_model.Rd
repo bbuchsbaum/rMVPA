@@ -31,8 +31,6 @@ train_model(obj, ...)
 }
 \description{
 train a classification or regression model
-
-train_model
 }
 \section{Methods (by class)}{
 \itemize{
