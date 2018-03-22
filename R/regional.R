@@ -57,6 +57,7 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
   if (any(lens < 2)) {
     warning(paste("some ROIs have less than two voxels, removing them from list: ", paste(region_set[lens < 2], collapse=",")))
     vox_iter <- vox_iter[lens >= 2]
+    region_set <- region_set[lens >= 2]
   }
   
   flog.info("model is: %s", model_spec$model$label)
