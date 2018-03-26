@@ -77,10 +77,11 @@ flog.info("loading training data: %s", config$train_data)
 if (config$data_mode == "image") {
   region_mask <- rMVPA:::load_mask(config)
   mask_volume <- as(region_mask, "LogicalBrainVolume")
-  dataset <- rMVPA:::initialize_image_data(config, mask_volume)
+  dataset <- rMVPA:::initialize_image_data(config, region_mask)
   dataset <- list(dataset)
   names(dataset) <- ""
   flog.info("image mask contains %s voxels", sum(mask_volume))
+  flog.info("image mask contains %s regions", length(table(region_mask)) - 1)
 } else if (config$data_mode == "surface") {
   dataset <- rMVPA:::initialize_surface_data(config)
 } else {

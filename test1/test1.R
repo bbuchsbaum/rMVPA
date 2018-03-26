@@ -1,5 +1,6 @@
 library(neuroim)
 
+PATH <- 
 bvec <- loadVector("s3_rbetas_all.nii.gz")
 mask <- loadVolume("global_mask.nii")
 des <- read.table("mvpa_design.txt", header=TRUE)
