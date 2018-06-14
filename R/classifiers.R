@@ -241,13 +241,13 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   sdsam <- apply(smat, 2, function(sam) sd(table(y[sam])))
                                   row.idx <- smat[, which.min(sdsam)]
                                   
-                                  ret <- if (param$frac < 1) {
+                                  ret <- if (param$frac > 0 && param$frac < 1) {
                                     nkeep <- max(param$frac * ncol(x),1)
                                     #print(nkeep)
                                     rank <- memo_rank(x, L=y, fdr=FALSE)
                                     ind <- rank[,"idx"][1:nkeep]
                                   
-                                    fit <- sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y, lambda=param$lambda, verbose=FALSE)
+                                    fit <- sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y, verbose=FALSE,...)
                                     attr(fit, "keep.ind") <- ind
                                     fit
                                   } else {

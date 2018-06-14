@@ -334,7 +334,9 @@ initialize_image_data <- function(config, mask) {
     flog.info("length of training subset %s", length(indices))
   }
   
-  train_datavec <- load_image_data(config, "train_data", mask_volume=mask, indices=indices)    
+  mask_volume <- as(mask, "LogicalBrainVolume")
+  
+  train_datavec <- load_image_data(config, "train_data", mask_volume=mask_volume, indices=indices)    
 
   if (!is.null(config$test_data)) {
     flog.info("loading test data: %s", config$test_data)
@@ -342,9 +344,9 @@ initialize_image_data <- function(config, mask) {
     flog.info("length of test subset %s", length(indices))
     
     if (!is.null(config$test_subset)) {
-      test_datavec <- load_image_data(config, "test_data", mask_volume=mask, indices=indices)
+      test_datavec <- load_image_data(config, "test_data", mask_volume=mask_volume, indices=indices)
     } else {
-      test_datavec <- load_image_data(config, "test_data", mask_volume=mask)
+      test_datavec <- load_image_data(config, "test_data", mask_volume=mask_volume)
     }
   } else {
     test_datavec <- NULL
@@ -352,11 +354,11 @@ initialize_image_data <- function(config, mask) {
   
   if (config$normalize_samples) {
     flog.info("Normalizing: centering and scaling each volume of training data")
-    train_datavec <- normalize_image_samples(train_datavec, as.logical(mask))
+    train_datavec <- normalize_image_samples(train_datavec, mask_volume)
     
     if (!is.null(test_datavec)) {
       flog.info("Normalizing: centering and scaling each volume of test data")
-      test_datavec <- normalize_image_samples(test_datavec, as.logical(mask))
+      test_datavec <- normalize_image_samples(test_datavec, mask_volume)
     }
   }
   

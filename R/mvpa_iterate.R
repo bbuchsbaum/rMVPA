@@ -148,7 +148,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
 #' @importFrom dplyr do rowwise
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits=FALSE) {
-  assert_that(length(ids) == length(vox_list))
+  assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   
   
   sframe <- get_samples(mod_spec$dataset, vox_list)
@@ -244,7 +244,7 @@ rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), regtype=c("r
   
   print(paste("regtype", regtype))
   
-  assert_that(length(ids) == length(vox_list))
+  assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   sframe <- get_samples(mod_spec$dataset, vox_list)
   
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
