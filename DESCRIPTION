@@ -14,8 +14,6 @@ Imports:
     tibble,
     caret,
     neuroim,
-    randomForest,
-    iterators,
     itertools,
     parallel,
     foreach,
@@ -23,15 +21,13 @@ Imports:
     doParallel,
     MASS,
     futile.logger,
-    glmnet,
-    io,
     stringr,
     Matrix,
-    optparse,
     Metrics,
     memoise,
-    e1071,
-    sp,
+    purrr,
+    ModelMetrics,
+    matrixStats,
     modelr,
     Rfit
 Collate:
@@ -59,7 +55,13 @@ Suggests:
     covr,
     knitr,
     rmarkdown,
-    roxygen2
+    roxygen2,
+    glmnet,
+    io,
+    e1071,
+    randomForest,
+    iterators,
+    optparse
 Remotes:
     bbuchsbaum/neuroim,
     bbuchsbaum/neurosurf

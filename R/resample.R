@@ -12,13 +12,13 @@
 }
 
 #' @export
-get_samples.mvpa_dataset <- function(obj, voxlist) {
-  .get_samples(obj, voxlist)
+get_samples.mvpa_dataset <- function(obj, vox_list) {
+  .get_samples(obj, vox_list)
 }
 
 #' @export
-get_samples.mvpa_surface_dataset <- function(obj, voxlist) {
-  .get_samples(obj, voxlist)
+get_samples.mvpa_surface_dataset <- function(obj, vox_list) {
+  .get_samples(obj, vox_list)
 }
 
 

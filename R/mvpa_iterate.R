@@ -45,15 +45,16 @@ wrap_result <- function(result_table, design, fit=NULL) {
 
 
 #' external_crossval
+#' @nord
 external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
-  xtrain <- tibble::as_tibble(values(roi$train_roi))
+  xtrain <- tibble::as_tibble(neuroim::values(roi$train_roi))
  
   dset <- mspec$dataset
   
   ytrain <- y_train(mspec)
   ytest <- y_test(mspec)
   
-  ind <- indices(roi$train_roi)
+  ind <- neuroim::indices(roi$train_roi)
   
   result <- try_warning(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
   
@@ -64,7 +65,7 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
                    warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
   } else {
    
-    pred <- predict(result$value, tibble::as_tibble(values(roi$test_roi)), NULL)
+    pred <- predict(result$value, tibble::as_tibble(neuroim::values(roi$test_roi)), NULL)
     plist <- lapply(pred, list)
     plist$y_true <- list(ytest)
     plist$test_ind=list(as.integer(seq_along(ytest)))
@@ -94,7 +95,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(mspec))
   
   ## get ROI indices
-  ind <- indices(roi$train_roi)
+  ind <- neuroim::indices(roi$train_roi)
   
   
   ret <- samples %>% dplyr::rowwise() %>% dplyr::do( {
@@ -191,7 +192,7 @@ run_cor <- function(dvec, obj, method) {
 
 #' @export
 train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("lm", "rfit", "pearson", "spearman"), 
-                                  distmethod=c("pearson", "spearman")) {
+                                  distmethod=c("pearson", "spearman"), ...) {
   method <- match.arg(method)
   distmethod <- match.arg(distmethod)
   print(paste("train_model rsa method", method))
@@ -213,7 +214,8 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
 }
 
 
-
+#' @importFrom neuroim indices values
+#' 
 do_rsa <- function(roi, mod_spec, rnum, method=method, distmethod=distmethod) {
   print(paste("rsa method", method))
   xtrain <- tibble::as_tibble(values(roi$train_roi))

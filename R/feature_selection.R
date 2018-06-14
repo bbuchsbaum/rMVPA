@@ -55,7 +55,7 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 #' 
 #' Given a \code{feature_selection} specification object and a dataset return the set of selected features as a binary vector.
 #' @param obj the \code{feature_selection} object
-#' @param ROI region of interest containing training features, a class of type \code{ROIVolume} or \code{ROISurface}
+#' @param X region of interest containing training features, a class of type \code{ROIVolume} or \code{ROISurface} or \code{matrix}
 #' @param Y the dependent variable as a \code{factor} or \code{numeric} variable.
 #' @param additional arguments
 #' @return a \code{logical} vector indicating the columns of \code{X} matrix that were selected.
@@ -69,7 +69,7 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 #' sum(featureMask) == 2
 #' 
 #' @export
-select_features <- function(obj, ROI, Y, ...) {
+select_features <- function(obj, X, Y, ...) {
   UseMethod("select_features")
 }
 

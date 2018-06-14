@@ -10,6 +10,8 @@ group_means(X, margin, group)
 \item{X}{the matrix}
 
 \item{margin}{the margin to average over (1 for rows, 2 for columns)}
+
+\item{group}{the grouping variable, a \code{factor} or \code{integer} vector}
 }
 \description{
 Given a matrix, compute the average vector for each level of a grouping variable.

@@ -5,6 +5,7 @@
 #' 
 #' @param X the matrix
 #' @param margin the margin to average over (1 for rows, 2 for columns)
+#' @param group the grouping variable, a \code{factor} or \code{integer} vector
 #' @export
 group_means <- function(X, margin, group) {
   if (margin == 1) {

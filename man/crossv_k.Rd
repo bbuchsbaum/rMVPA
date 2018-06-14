@@ -18,5 +18,5 @@ crossv_k(data, y, k = 5, id = ".id", exclude = NULL)
 \item{exclude}{optional vector indicating rows to exclude.}
 }
 \description{
-crossv_k
+sample dataset using k-fold cross-validation
 }

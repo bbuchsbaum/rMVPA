@@ -6,6 +6,13 @@
 \usage{
 custom_performance(x, custom_fun, split_list = NULL)
 }
+\arguments{
+\item{x}{the result object}
+
+\item{custom_fun}{the function used to compute performance metrics, i.e. \code{custom_fun(x)}}
+
+\item{split_list}{the splitting groups}
+}
 \description{
 custom_performance
 }

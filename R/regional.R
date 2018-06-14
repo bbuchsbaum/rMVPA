@@ -40,7 +40,7 @@ combine_regional_results = function(results, ids) {
 #' @import doParallel
 #' @import parallel
 #' @export
-run_regional <- function(model_spec, region_mask, return_fits=FALSE) {  
+run_regional <- function(model_spec, region_mask, returns_fits=FALSE) {  
   
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   
@@ -63,7 +63,7 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
   
   
   ## run mvpa for each region
-  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set, return_fits)
+  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set, returns_fits)
   
 
   ## compile performance results
@@ -78,7 +78,7 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
   ## compile full prediction table
   prediction_table <- combine_regional_results(results, results$id)
   
-  fits <- if (return_fits) {
+  fits <- if (returns_fits) {
     lapply(results$result, "[[", "predictor")
   }
   

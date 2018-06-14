@@ -40,18 +40,19 @@ tune_grid.mvpa_model <- function(obj, x,y,len=1) {
 
 
 #' @export
-select_features.mvpa_model <- function(obj, roi, Y) {
+select_features.mvpa_model <- function(obj, X, Y) {
   if (!is.null(obj$feature_selector)) {
-    select_features(obj$feature_selector, roi, Y)
+    select_features(obj$feature_selector, X, Y)
   } else {
-    rep(TRUE, length(roi))
+    ## todo check 'length' function in ROIVector
+    rep(TRUE, length(X))
   }
 }
 
 
 #' @export
-crossval_samples.mvpa_model <- function(obj) { 
-  crossval_samples(obj$crossval) 
+crossval_samples.mvpa_model <- function(obj,data,y) { 
+  crossval_samples(obj$crossval,data,y) 
 }
 
 #' @export

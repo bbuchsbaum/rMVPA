@@ -1,6 +1,8 @@
 
 #' crossv_k
 #' 
+#' sample dataset using k-fold cross-validation 
+#' 
 #' @param data the training data
 #' @param y the response vector
 #' @param k Number of folds (an integer).
@@ -35,11 +37,24 @@ crossv_k <- function(data, y, k = 5, id = ".id", exclude=NULL) {
   tibble::as_data_frame(cols)
 }
 
-
-
+#' crossv_twofold
+#' 
+#' sample dataset via repeated two-fold cross-validation
+#' @import utils
+#' @inheritParams crossv_k
+#' @examples 
+#' 
+#' X <- data.frame(x1=rnorm(100), x2=rnorm(100))
+#' y <- rep(letters[1:4], 25)
+#' block_var <- rep(1:4, each=25)
+#' cv <- crossv_twofold(X,y,block_var, nreps=10)
 crossv_twofold <- function(data, y, block_var, block_ind, id = ".id", nreps=15, exclude=NULL) {
   if (!length(block_var) == length(y)) {
     stop("length of `block_var` must be equal to length(y)", call. = FALSE)
+  }
+  
+  if (missing(block_ind)) {
+    block_ind <- seq(1, length(sort(unique(block_var))))
   }
   
   if (!is.null(exclude)) {
@@ -49,7 +64,7 @@ crossv_twofold <- function(data, y, block_var, block_ind, id = ".id", nreps=15, 
   nhalf <- floor(length(block_ind)/2)
   assert_that(nhalf > 0)
   
-  fold_sets <- combn(block_ind, nhalf)
+  fold_sets <- utils::combn(block_ind, nhalf)
   nreps <- min(nreps, ncol(fold_sets))
   cols <- sample(1:ncol(fold_sets), nreps)
   
@@ -81,7 +96,15 @@ crossv_twofold <- function(data, y, block_var, block_ind, id = ".id", nreps=15, 
 
 #' crossv_block
 #' 
+#' @inheritParams crossv_k
 #' @importFrom modelr resample
+#' @keywords internal
+#' @examples 
+#' 
+#' X <- data.frame(x1=rnorm(100), x2=rnorm(100))
+#' y <- rep(letters[1:4], 25)
+#' block_var <- rep(1:4, each=25)
+#' cv <- crossv_block(X,y,block_var)
 crossv_block <- function(data, y, block_var, id = ".id", exclude=NULL) {
  
   if (!length(block_var) == length(y)) {
@@ -117,11 +140,12 @@ crossv_block <- function(data, y, block_var, id = ".id", exclude=NULL) {
 
 
 
- 
-#' construct a cross-validation specification using a predefined blocking variable
+#' blocked_cross_validation
+#' 
+#' Construct a cross-validation specification using a predefined blocking variable
 #' 
 #' @param block_var an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.
-#' @param exclude exclude an optional vector indicating rows to exclude. 
+#' @param exclude an optional vector indicating rows to exclude. 
 #' @rdname cross_validation
 #' @export
 blocked_cross_validation <- function(block_var, exclude=NULL) {
@@ -130,9 +154,35 @@ blocked_cross_validation <- function(block_var, exclude=NULL) {
   ret
 }
 
-
+#' custom_cross_validation
+#' 
+#' Construct a cross-validation specification that used a user-supplied set of training and test indices.
+#' 
 #' @export 
 #' @inheritParams blocked_cross_validation
+#' @param sample_set a \code{list} of training and test sample indices
+#' @rdname cross_validation
+#' @export
+custom_cross_validation <- function(sample_set) {
+  assert_that(is.list(sample_set))
+  for (el in sample_set) {
+    assert_that(all(names(el) == c("train", "test")))
+  }
+  
+  ret <- list(sample_set=sample_set, nfolds=length(sample_set))
+  class(ret) <- c("custom_cross_validation", "cross_validation", "list")
+  ret
+  
+}
+  
+  
+#' twofold_blocked_cross_validation
+#' 
+#' Construct a cross-validation specification that randomly partitions input set into two sets of blocks.
+#' 
+#' @export 
+#' @inheritParams blocked_cross_validation
+#' @params nreps the number of twofold spits
 #' @rdname cross_validation
 twofold_blocked_cross_validation <- function(block_var, nreps=10, exclude=NULL) {
   block_var <- as.integer(block_var)
@@ -141,7 +191,9 @@ twofold_blocked_cross_validation <- function(block_var, nreps=10, exclude=NULL) 
   ret
 }
 
-#' construct a cross-validation specification that randomly partitions input set into \code{nfolds} folds.
+#' kfold_cross_validation
+#' 
+#' Construct a cross-validation specification that randomly partitions input set into \code{nfolds} folds.
 #' 
 #' @param len the number of observations.
 #' @param nfolds the number of cross-validation folds.
@@ -185,13 +237,30 @@ crossval_samples.blocked_cross_validation <- function(obj, data, y) {
 }
 
 #' @export
+crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id") {
+  fold <- function(train, test) {
+    list(
+      ytrain = y[train],
+      ytest = y[test],
+      train = resample(data, train),
+      test = resample(data, test)
+    )
+  }
+  
+  cols <- purrr::transpose(purrr::map(obj$sample_set, function(el) fold(el$train, el$test)))
+  cols[[id]] <- modelr:::id(length(obj$sample_set))
+  
+  tibble::as_data_frame(cols)
+}
+
+#' @export
 crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y) { 
   crossv_twofold(data, y, obj$block_var, obj$block_ind,exclude=obj$exclude)
 }
 
 
 #' @export
-print.blocked_cross_validation <- function(x) {
+print.blocked_cross_validation <- function(x,...) {
   cat("cross-validation: blocked \n")
   cat("  nobservations: ", length(x$block_var))
   cat("  nfolds: ", x$nfolds, "\n")
@@ -200,7 +269,7 @@ print.blocked_cross_validation <- function(x) {
 
 
 #' @export
-print.twofold_cross_validation <- function(x) {
+print.twofold_cross_validation <- function(x,...) {
   cat("cross-validation: repeated two-fold \n")
   cat("  nobservations: ", length(x$block_var))
   cat("  nfolds: ", 2, "\n")
@@ -209,7 +278,7 @@ print.twofold_cross_validation <- function(x) {
 
 
 #' @export
-print.kfold_cross_validation <- function(x) {
+print.kfold_cross_validation <- function(x,...) {
   cat("cross-validation: k fold \n")
   cat("  nobservations: ", length(x$block_var), "\n")
   cat("  nfolds: ", x$nfolds, "\n")

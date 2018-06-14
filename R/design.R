@@ -3,8 +3,8 @@
 #' @export
 #' 
 #' 
-nobs.mvpa_design <- function(obj) {
-  length(obj$y_train)
+nobs.mvpa_design <- function(x) {
+  length(x$y_train)
 }
 
 
@@ -128,7 +128,7 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
 }
 
 #' @export
-print.rsa_design <- function(x) {
+print.rsa_design <- function(x,...) {
   cat("rsa_design:", "\n")
   cat("  formula: ", deparse(x$formula), "\n")
   cat("  variables: ", names(x$data), "\n")
@@ -140,7 +140,7 @@ print.rsa_design <- function(x) {
 
 
 #' @export
-print.mvpa_design <- function(x) {
+print.mvpa_design <- function(x,...) {
   cat("mvpa_design:", "\n")
   cat("  training observations: ", length(x$y_train), "\n")
   if (is.factor(x$y_train)) {

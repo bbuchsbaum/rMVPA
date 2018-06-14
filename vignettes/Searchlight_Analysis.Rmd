@@ -41,7 +41,8 @@ crossval
 
 ### Construct an `mvpa_model` object with a Shrinkage Discriminant Analysis classifier (`sda_notune`)
 
-The "sda_notune" model is an `sda` model where the `lambda` parameter is estimated from the training data. See documentation in the `sda` package.
+The "sda_notune" model is an `sda` model where the `lambda` parameter is estimated from the training data. See documentation in the [sda package](https://cran.r-project.org/web/packages/sda/index.html)
+ package.
 
 ```{r}
 sda_model <- load_model("sda_notune") 
@@ -50,7 +51,7 @@ model <- mvpa_model(model=sda_model, dataset=dataset$dataset, design=dataset$des
 
 ### Run a standard searchlight analysis
 
-The output of `run_searchlight` is a list of image volumes containing performance measures for each spherical searchlight. For a two-class classification problem, there are three output measures: `Accuracy`, `ZAccuracy`, and `AUC` (`AUC` has .5 subtracted from it, so that it is centered at 0 under the null hypothesis). The first is the raw cross-validated accuracy measure for each centroid; the second is the z-statistic based on the binomial test of significance, assuming chance accuracy is `1/nclasses`; and AUC is the area under the curve statistic. The `radius` argument indicates the radius in `mm` of the spherical searchlight. Finally, `method` indicates the searchlight scheme, which can be `standard` or `randomized`. See below for more information about the randomized searchlight.
+The output of `run_searchlight` is a list of image volumes containing performance measures for each spherical searchlight. For a two-class classification problem, there are three output measures: `Accuracy`, `ZAccuracy`, and `AUC` (`AUC` has .5 subtracted from it, so that it is centered at 0 rather than .5). The first is the raw cross-validated accuracy measure for each centroid; the second is the z-statistic based on the binomial test of significance, assuming chance accuracy is `1/nclasses`; and AUC is the area under the curve statistic. The `radius` argument indicates the radius in `mm` of the spherical searchlight. Finally, `method` indicates the searchlight scheme, which can be `standard` or `randomized`. See below for more information about the randomized searchlight.
 
 ```{r}
 result <- run_searchlight(model, radius=4, method="standard")

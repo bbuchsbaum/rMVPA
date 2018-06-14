@@ -96,7 +96,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate,...) {
 #' @import parallel
 #' @importFrom futile.logger flog.info flog.error flog.debug
 #' @export
-run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4) {
+run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, ...) {
   
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
@@ -128,7 +128,7 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomize
 #' @export
 run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, 
                                       distmethod=c("spearman", "person"), 
-                                      regtype=c("lm", "rfit", "pearson", "spearman")) {
+                                      regtype=c("lm", "rfit", "pearson", "spearman"),...) {
   
   regtype <- match.arg(regtype)
   distmethod <- match.arg(distmethod)

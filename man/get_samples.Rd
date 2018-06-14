@@ -4,12 +4,12 @@
 \alias{get_samples}
 \title{get_samples}
 \usage{
-get_samples(obj, voxiter)
+get_samples(obj, vox_list)
 }
 \arguments{
 \item{obj}{the object}
 
-\item{voxiter}{the list of voxel/index sets}
+\item{vox_list}{the list of voxel/index sets}
 }
 \description{
 get_samples

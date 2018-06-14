@@ -123,9 +123,9 @@ merge_results <- function(x, y, ...) {
 #' get_samples
 #' 
 #' @param obj the object
-#' @param voxiter the list of voxel/index sets
+#' @param vox_list the list of voxel/index sets
 #' @export
-get_samples <- function(obj, voxiter) {
+get_samples <- function(obj, vox_list) {
   UseMethod("get_samples")
 }
 
@@ -223,7 +223,7 @@ nobs <- function(x) {
 #' @param radius the searchlight radus in millimeters.
 #' @param method the type of searchlight (randomized or standard)
 #' @param niter the number of searchlight iterations (used only for 'randomized' method)
-#' @param extra args
+#' @param ... extra args
 #' @return a named list of \code{BrainVolume} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.
 #' @export
 run_searchlight <- function(model_spec, radius, method, niter,...) {

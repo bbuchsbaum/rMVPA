@@ -4,7 +4,7 @@
 \alias{run_regional}
 \title{run_regional}
 \usage{
-run_regional(model_spec, region_mask, return_fits = FALSE)
+run_regional(model_spec, region_mask, returns_fits = FALSE)
 }
 \arguments{
 \item{model_spec}{a \code{mvpa_model} instance}

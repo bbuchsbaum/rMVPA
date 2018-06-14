@@ -9,3 +9,4 @@ crossv_block(data, y, block_var, id = ".id", exclude = NULL)
 \description{
 crossv_block
 }
+\keyword{internal}

@@ -86,6 +86,20 @@ test_that("standard mvpa_searchlight runs without error", {
   
 })
 
+test_that("standard mvpa_searchlight and custom cross-validation runs without error", {
+  
+  dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
+  sample_set <- replicate(5, {
+    list(train=sample(1:80), test=sample(81:100))
+  }, simplify=FALSE)
+  cval <- custom_cross_validation(sample_set)
+ 
+  model <- load_model("sda_notune")
+  mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
+  res <- run_searchlight(mspec,radius=4, method="standard")
+  
+})
+
 test_that("standard surface-based mvpa_searchlight runs without error", {
   
   dataset <- gen_sample_dataset(D=0, nobs=100,data_mode="surface")

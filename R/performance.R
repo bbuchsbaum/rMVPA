@@ -14,7 +14,7 @@ predicted_class <- function(prob) {
 #' @param split_list split results by indexed sub-groups.
 #' @export
 #' @rdname performance-methods
-performance.regression_result <- function(x, split_list) {
+performance.regression_result <- function(x, split_list,...) {
   R2 <- 1 - sum((x$observed - x$predicted)^2)/sum((x$observed-mean(x$observed))^2)
   rmse <- sqrt(mean((x$observed-x$predicted)^2))
   rcor <- cor(x$observed, x$predicted, method="spearman")
@@ -23,7 +23,9 @@ performance.regression_result <- function(x, split_list) {
 
 
 #' custom_performance
-#' 
+#' @param x the result object
+#' @param custom_fun the function used to compute performance metrics, i.e. \code{custom_fun(x)}
+#' @param split_list the splitting groups
 #' @export
 custom_performance <- function(x, custom_fun, split_list=NULL) {
   if (is.null(split_list)) {
@@ -43,19 +45,19 @@ custom_performance <- function(x, custom_fun, split_list=NULL) {
 }
 
 #' @export
-merge_results.binary_classification_result <- function(x,y) {
+merge_results.binary_classification_result <- function(x,y,...) {
   probs <- (x$probs + y$probs)/2
   binary_classification_result(observed=x$observed, predicted=NULL, probs=probs, test_design=x$test_design, predictor=x$predictor)
 }
 
 #' @export
-merge_results.multiway_classification_result <- function(x,y) {
+merge_results.multiway_classification_result <- function(x,y,...) {
   probs <- (x$probs + y$probs)/2
   multiway_classification_result(observed=x$observed, predicted=NULL, probs=probs, test_design=x$test_design, predictor=x$predictor)
 }
 
 #' @export
-performance.binary_classification_result <- function(x, split_list=NULL) {
+performance.binary_classification_result <- function(x, split_list=NULL,...) {
   stopifnot(length(x$observed) == length(x$predicted))
   
   if (is.null(split_list)) {
@@ -77,7 +79,7 @@ performance.binary_classification_result <- function(x, split_list=NULL) {
 
 
 #' @export
-performance.multiway_classification_result <- function(x, split_list=NULL, class_metrics=FALSE) {
+performance.multiway_classification_result <- function(x, split_list=NULL, class_metrics=FALSE,...) {
   stopifnot(length(x$observed) == length(x$predicted))
  
   if (is.null(split_list)) {

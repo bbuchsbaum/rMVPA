@@ -15,7 +15,7 @@ run_searchlight(model_spec, radius, method, niter, ...)
 
 \item{niter}{the number of searchlight iterations (used only for 'randomized' method)}
 
-\item{extra}{args}
+\item{...}{extra args}
 }
 \value{
 a named list of \code{BrainVolume} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.

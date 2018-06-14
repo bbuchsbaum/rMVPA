@@ -8,7 +8,7 @@
 train_model(obj, ...)
 
 \method{train_model}{mvpa_model}(obj, train_dat, y, indices, param = NULL,
-  wts = NULL, tune_reps = 10)
+  wts = NULL, tune_reps = 10, ...)
 }
 \arguments{
 \item{obj}{the model specification}
@@ -28,9 +28,13 @@ train_model(obj, ...)
 \item{tune_reps}{the number of bootstrap replications for parameter tuning (only used when param is not \code{NULL})}
 
 \item{obj}{an instance of class \code{mvpa_model}}
+
+\item{...}{extra args}
 }
 \description{
 train a classification or regression model
+
+train_model
 }
 \section{Methods (by class)}{
 \itemize{

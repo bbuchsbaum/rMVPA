@@ -258,9 +258,10 @@ predict.list_model <- function(x, newdata=NULL,...) {
 #' @param param optional tuning parameters
 #' @param wts optional case weights
 #' @param tune_reps the number of bootstrap replications for parameter tuning (only used when param is not \code{NULL})
+#' @param ... extra args
 #' @export
 #' @describeIn train_model train an mvpa_model
-train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=NULL, tune_reps=10) {
+train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=NULL, tune_reps=10,...) {
   
   if (is.null(param)) {
     param <- tune_grid(obj, train_dat, y, len=1)

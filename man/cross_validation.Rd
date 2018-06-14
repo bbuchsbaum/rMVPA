@@ -15,7 +15,7 @@ kfold_cross_validation(len, nfolds = 10, exclude = NULL)
 \arguments{
 \item{block_var}{an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.}
 
-\item{exclude}{exclude an optional vector indicating rows to exclude.}
+\item{exclude}{an optional vector indicating rows to exclude.}
 
 \item{len}{the number of observations.}
 

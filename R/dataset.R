@@ -156,7 +156,7 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="")
   
 }
 
-print.mvpa_dataset <- function(x) {
+print.mvpa_dataset <- function(x,...) {
   cat("mvpa_dataset:", "\n")
   cat("  train_data: ")
   print(x$train_data)
@@ -174,7 +174,7 @@ print.mvpa_dataset <- function(x) {
   cat("  mask cardinality: ", sum(x$mask>0), "\n")
 }
 
-print.mvpa_surface_dataset <- function(x) {
+print.mvpa_surface_dataset <- function(x,...) {
   cat("mvpa_surface_dataset:", "\n")
   cat("  train_data: ")
   print(x$train_data)
@@ -199,24 +199,25 @@ print.mvpa_surface_dataset <- function(x) {
 
 
 #' @export
-get_searchlight.mvpa_dataset <- function(x, type=c("standard", "randomized"), radius=8) {
+get_searchlight.mvpa_dataset <- function(obj, type=c("standard", "randomized"), radius=8,...) {
   type <- match.arg(type)
   if (type == "standard") {
-    neuroim::Searchlight(x$mask, radius=radius)
+    neuroim::Searchlight(obj$mask, radius=radius)
   } else {
-    neuroim::RandomSearchlight(x$mask, radius=radius)
+    neuroim::RandomSearchlight(obj$mask, radius=radius)
   }
 }
 
 
 
 #' @export
-get_searchlight.mvpa_surface_dataset <- function(x, type=c("standard", "randomized"), radius=8) {
+
+get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "randomized"), radius=8,...) {
   type <- match.arg(type)
   if (type == "standard") {
-    neurosurf::SurfaceSearchlight(geometry(x$train_data), radius, nodeset=which(x$mask>0))
+    neurosurf::SurfaceSearchlight(geometry(obj$train_data), radius, nodeset=which(obj$mask>0))
   } else {
-    neurosurf::RandomSurfaceSearchlight(geometry(x$train_data), radius, nodeset=which(x$mask>0))
+    neurosurf::RandomSurfaceSearchlight(geometry(obj$train_data), radius, nodeset=which(obj$mask>0))
   }
 }
 

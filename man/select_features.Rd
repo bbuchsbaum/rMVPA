@@ -2,13 +2,14 @@
 % Please edit documentation in R/allgeneric.R, R/feature_selection.R
 \name{select_features}
 \alias{select_features}
+\alias{select_features}
 \alias{select_features.catscore}
 \alias{select_features.FTest}
 \title{select_features}
 \usage{
-select_features(obj, ROI, Y, ...)
+select_features(obj, X, Y, ...)
 
-select_features(obj, ROI, Y, ...)
+select_features(obj, X, Y, ...)
 
 \method{select_features}{catscore}(obj, X, Y, ranking.score = c("entropy",
   "avg", "max"))
@@ -18,7 +19,7 @@ select_features(obj, ROI, Y, ...)
 \arguments{
 \item{obj}{an object of class \code{feature_selector}}
 
-\item{ROI}{region of interest containing training features, a class of type \code{ROIVolume} or \code{ROISurface}}
+\item{X}{region of interest containing training features, a class of type \code{ROIVolume} or \code{ROISurface} or \code{matrix}}
 
 \item{Y}{the response variable}
 
@@ -50,4 +51,5 @@ ROI <- neuroim::ROIVector(neuroim::BrainSpace(c(10,10,10)), coords=coords, matri
 Y <- factor(rep(c("a", "b"), each=50))
 featureMask <- select_features(fsel, ROI@data, Y)
 sum(featureMask) == 2
+
 }

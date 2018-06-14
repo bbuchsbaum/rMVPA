@@ -525,6 +525,8 @@ initialize_crossval <- function(config, des=NULL) {
       twofold_blocked_cross_validation(block_var=des$block_var, nreps=cval$nreps)
     } else if (cval$name == "blocked" || cval$name == "blocked_cross_validation") {
       blocked_cross_validation(des$block_var)
+    } else if (cval$name == "custom" || cval$name == "custom_cross_validation") {
+      custom_cross_validation(cval$sample_set)
     } else {
       flog.error("unrecognized cross_validation type: %s", cval$name)
       stop()
