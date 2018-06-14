@@ -432,7 +432,7 @@ initialize_design <- function(config) {
   
   
   if (has_test) {
-    
+    ## todo what if we don't have/need "block_column"
     mvpa_design(train_design=config$train_design, 
               y_train=config$label_column, 
               test_design=config$test_design, 
@@ -440,6 +440,7 @@ initialize_design <- function(config) {
               block_var=config$block_column, 
               split_by=config$split_by)
   } else {
+    ## todo what if we don't have/need "block_column"
     mvpa_design(train_design=config$train_design, 
                 y_train=config$label_column, 
                 block_var=config$block_column, 

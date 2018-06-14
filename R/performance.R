@@ -81,7 +81,7 @@ performance.binary_classification_result <- function(x, split_list=NULL,...) {
 #' @export
 performance.multiway_classification_result <- function(x, split_list=NULL, class_metrics=FALSE,...) {
   stopifnot(length(x$observed) == length(x$predicted))
- 
+
   if (is.null(split_list)) {
     multiclass_perf(x$observed, x$predicted, x$probs, class_metrics)
   } else {
@@ -121,35 +121,35 @@ binary_perf <- function(observed, predicted, probs) {
   obs <- as.character(observed)
   ncorrect <- sum(obs == predicted)
   ntotal <- length(obs)
-  maxClass <- max(table(obs))
+  #maxClass <- max(table(obs))
   
-  out <- binom.test(ncorrect,
-                    ntotal,
-                    p = maxClass/ntotal,
-                    alternative = "greater")
+  #out <- binom.test(ncorrect,
+  #                  ntotal,
+  #                  p = maxClass/ntotal,
+  #                  alternative = "greater")
   
   
   
-  c(ZAccuracy=-qnorm(out$p.value), Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
+  #c(ZAccuracy=-qnorm(out$p.value), Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
+  c(Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
   
 }
 
 multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
-
+  
   obs <- as.character(observed)
   
-  ncorrect <- sum(obs == predicted)
+  #ncorrect <- sum(obs == predicted)
   ntotal <- length(obs)
-  maxClass <- max(table(obs))
+  #maxClass <- max(table(obs))
   
-  out <- binom.test(ncorrect,
-                    ntotal,
-                    p = maxClass/ntotal,
-                    alternative = "greater")
+  #out <- binom.test(ncorrect,
+  #                  ntotal,
+  #                  p = maxClass/ntotal,
+  #                  alternative = "greater")
   
  
   aucres <- sapply(1:ncol(probs), function(i) {
-   
     lev <- try(levels(observed)[i])
     pos <- obs == lev
     pclass <- probs[,i]
@@ -161,9 +161,11 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   
   
   if (class_metrics) {
-    c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres), aucres)
+    #c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres), aucres)
+    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres), aucres)
   } else {
-    c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres))
+    #c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres))
+    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres))
   }
 }
   

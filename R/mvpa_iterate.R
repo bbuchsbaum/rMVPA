@@ -20,7 +20,6 @@ wrap_result <- function(result_table, design, fit=NULL) {
   observed <- y_test(design)
   testind <- unique(sort(unlist(result_table$test_ind)))
   
-  
   if (is.factor(observed)) {
     prob <- matrix(0, length(testind), length(levels(observed)))
     colnames(prob) <- levels(observed)
@@ -45,7 +44,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
       for (i in seq_along(result_table$preds)) {
         #tind <- result_table$test_ind[[i]]
         tind <- match(result_table$test_ind[[i]], testind)
-        preds[tind] <- result_table$preds[[i]]
+        preds[tind] <- preds[tind] + result_table$preds[[i]]
       }
       
       ## TODO check me

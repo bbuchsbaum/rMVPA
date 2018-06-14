@@ -33,7 +33,7 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 #' @param ntest_obs number of test observations (only relevant if \code{external_test} is true)
 #' @export
 gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), data_mode=c("image", "surface"),
-                              spacing=c(1,1,1), blocks=5, nlevels=5, external_test=FALSE, ntest_obs=nobs) {
+                              spacing=c(1,1,1), blocks=5, nlevels=5, external_test=FALSE, ntest_obs=nobs, split_by=NULL) {
   
   response_type <- match.arg(response_type)
   data_mode <- match.arg(data_mode)
@@ -85,9 +85,9 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
   des <- if (external_test) {
     message("external test")
     mvpa_design(data.frame(Y=Y, block_var=block_var), test_design=data.frame(Ytest = Ytest), 
-                       block_var= "block_var", y_train= ~ Y, y_test = ~ Ytest)
+                       block_var= "block_var", y_train= ~ Y, y_test = ~ Ytest, split_by=split_by)
   } else {
-    mvpa_design(data.frame(Y=Y, block_var=block_var), block_var="block_var", y_train= ~ Y)
+    mvpa_design(data.frame(Y=Y, block_var=block_var), block_var="block_var", y_train= ~ Y, split_by=split_by)
   }
   
   list(dataset=dset, design=des)
