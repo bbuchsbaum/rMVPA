@@ -1,3 +1,5 @@
+
+#' @keywords internal
 try_warning  <- function(expr) {
   warn <- err <- NULL
   value <- withCallingHandlers(
@@ -11,33 +13,43 @@ try_warning  <- function(expr) {
   list(value=value, warning=warn, error=err)
 }
 
-wrap_result <- function(result_table, design, fit=NULL) {
 
+#' @keywords internal
+wrap_result <- function(result_table, design, fit=NULL) {
+ 
   observed <- y_test(design)
+  testind <- unique(sort(unlist(result_table$test_ind)))
+  
   
   if (is.factor(observed)) {
-    prob <- matrix(0, length(observed), length(levels(observed)))
+    prob <- matrix(0, length(testind), length(levels(observed)))
     colnames(prob) <- levels(observed)
   
     for (i in seq_along(result_table$probs)) {
       p <- as.matrix(result_table$probs[[i]])
-      tind <- result_table$test_ind[[i]]
+      tind <- match(result_table$test_ind[[i]], testind)
       prob[tind,] <- prob[tind,] + p
     }
-  
+    
+    ## probs must sum to one, can divide by sum.
     prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
     maxid <- max.col(prob)
     pclass <- levels(observed)[maxid]
   
-    classification_result(observed, pclass, prob, design$test_design, fit)
+    classification_result(observed[testind], pclass, prob, design$test_design, fit)
   } else {
-      preds <- numeric(length(observed))
+    
+      testind <- unique(sort(unlist(result_table$test_ind)))
+      preds <- numeric(length(testind))
+      
       for (i in seq_along(result_table$preds)) {
-        tind <- result_table$test_ind[[i]]
+        #tind <- result_table$test_ind[[i]]
+        tind <- match(result_table$test_ind[[i]], testind)
         preds[tind] <- result_table$preds[[i]]
       }
       
-      counts <- table(unlist(result_table$test_ind))
+      ## TODO check me
+      counts <- table(sort(unlist(result_table$test_ind)))
       preds <- preds/counts
       regression_result(observed, preds, design$test_design, fit)
   }
@@ -85,13 +97,14 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
 }
  
 
-
+#' @keywords internal
 #' @importFrom dplyr rowwise do
 #' @importFrom tibble as_tibble
 internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   
   
   ## generate cross-validation samples
+  
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(mspec))
   
   ## get ROI indices
@@ -99,7 +112,7 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   
   
   ret <- samples %>% dplyr::rowwise() %>% dplyr::do( {
-    
+      
       ## fit model for cross-validation sample
       result <- try(train_model(mspec, tibble::as_tibble(.$train), .$ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
       
@@ -172,6 +185,8 @@ run_rfit <- function(dvec, obj) {
   coef(res)[-1]
 }
 
+
+#' @keywords internal
 run_lm <- function(dvec, obj) {
   form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
   vnames <- names(obj$design$model_mat)
@@ -183,6 +198,7 @@ run_lm <- function(dvec, obj) {
   res
 }
 
+#' @keywords internal
 run_cor <- function(dvec, obj, method) {
   res <- sapply(obj$design$model_mat, function(x) cor(dvec, x, method=method))
   names(res) <- names(obj$design$model_mat)
