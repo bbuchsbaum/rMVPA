@@ -94,7 +94,7 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
                  error=FALSE, error_message="~", 
                  warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
     } else {
-      tibble::tibble(result=list(cres), indices=list(ind), performance=list(), id=id, 
+      tibble::tibble(result=list(cres), indices=list(ind), performance=list(NULL), id=id, 
                      error=FALSE, error_message="~", 
                      warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
     }
@@ -106,7 +106,6 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @importFrom dplyr rowwise do
 #' @importFrom tibble as_tibble
 internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE) {
-  print(paste("compute performance: ", compute_performance))
   
   ## generate cross-validation samples
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(mspec))
@@ -157,7 +156,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
                    id=id, error=FALSE, error_message="~")
     } else {
       tibble::tibble(result=list(cres), indices=list(ind), 
-                     performance=list(), 
+                     performance=list(NULL), 
                      id=id, error=FALSE, error_message="~")
     }
   }

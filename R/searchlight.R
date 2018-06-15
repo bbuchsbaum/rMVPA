@@ -26,7 +26,6 @@ combine_randomized <- function(model_spec, good_results) {
   perf_mat[ind_set,] <- sweep(perf_mat[ind_set,], 1, as.integer(ind_count), FUN="/")
   colnames(perf_mat) <- names(good_results$performance[[1]])
   wrap_out(perf_mat, model_spec$dataset, ind_set)
-  
 }
 
 #' @keywords internal
@@ -51,7 +50,6 @@ pool_randomized <- function(model_spec, good_results) {
     do.call(ff, z2)
   })
     
-
   perf_list <- lapply(merged_results, performance)
   perf_mat <- do.call(rbind, perf_list)
   colnames(perf_mat) <- names(perf_list[[1]])
@@ -77,7 +75,7 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
     mvpa_fun(model_spec, vox_iter, cind,...)
   })
   
-
+ 
   results <- dplyr::bind_rows(ret)
   good_results <- results %>% dplyr::filter(!error)
   bad_results <- results %>% dplyr::filter(error == TRUE)
@@ -91,6 +89,12 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
   }
   
   combiner(model_spec, good_results)
+}
+
+#' @keywords performance
+combine_standard <- function(good_results, bad_results) {
+  perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
+  wrap_out(perf_mat, model_spec$dataset, ret[["id"]])
 }
 
 
