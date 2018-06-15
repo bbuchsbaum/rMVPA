@@ -430,6 +430,10 @@ initialize_design <- function(config) {
     #config$testLabels <- config$labels
   }
   
+  if (!is.null(config$split_by)) {
+    flog.info("splitting performance metrics by %s: ", deparse(config$split_by))
+  }
+  
   
   if (has_test) {
     ## todo what if we don't have/need "block_column"
