@@ -8,7 +8,7 @@ wrap_out <- function(perf_mat, dataset, ids) {
 }
 
 #' @keywords internal
-combine_randomized <- function(model_spec, good_results) {
+combine_randomized <- function(model_spec, good_results, bad_results) {
   all_ind <- sort(unlist(good_results$indices))
   ind_count <- table(all_ind)
   ind_set <- unique(all_ind)
@@ -29,7 +29,7 @@ combine_randomized <- function(model_spec, good_results) {
 }
 
 #' @keywords internal
-pool_randomized <- function(model_spec, good_results) {
+pool_randomized <- function(model_spec, good_results, bad_results) {
   all_ind <- sort(unlist(good_results$indices))
   ind_count <- table(all_ind)
   ind_set <- unique(all_ind)
@@ -42,12 +42,16 @@ pool_randomized <- function(model_spec, good_results) {
   respsets <- split(indmap[,1], indmap[,2])
     
   merged_results <- lapply(respsets, function(r1) {
-    first <- r1[1]
-    rest <- r1[2:length(r1)]
-    z1 <- good_results$result[[first]]
-    z2 <- good_results$result[rest]
-    ff <- purrr:::partial(merge_results, x=z1)
-    do.call(ff, z2)
+    if (length(r1) > 1) {
+      first <- r1[1]
+      rest <- r1[2:length(r1)]
+      z1 <- good_results$result[[first]]
+      z2 <- good_results$result[rest]
+      ff <- purrr:::partial(merge_results, x=z1)
+      do.call(ff, z2)
+    } else {
+      good_results$result[[r1[1]]]
+    }
   })
     
   perf_list <- lapply(merged_results, performance)
@@ -92,14 +96,14 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
 }
 
 #' @keywords performance
-combine_standard <- function(good_results, bad_results) {
+combine_standard <- function(model_spec, good_results, bad_results) {
   perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
   wrap_out(perf_mat, model_spec$dataset, ret[["id"]])
 }
 
 
 #' @keywords internal
-do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, ...) {
+do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ...) {
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
   vox_iter <- lapply(slight, function(x) x)
   len <- sapply(vox_iter, function(x) attr(x, "length"))
@@ -118,8 +122,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, ...) {
     flog.error("no valid results for randomized searchlight, exiting.")
   }
   
-  perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
-  wrap_out(perf_mat, model_spec$dataset, ret[["id"]])
+  combiner(model_spec, good_results, bad_results)
 }
 
 
@@ -128,9 +131,9 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, ...) {
 #' @import doParallel
 #' @import parallel
 #' @importFrom futile.logger flog.info flog.error flog.debug
-#' @param pool_estimates
+#' @param combiner a function that combines results into an appropriate output.
 #' @export
-run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, ...) {
+run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, combiner=NULL, ...) {
   
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
@@ -145,11 +148,20 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomize
   flog.info("model is: %s", model_spec$model$label)
   
   res <- if (method == "standard") {
+    if (is.null(combiner)) {
+      combiner <- combine_standard
+    }
+    
     flog.info("running standard searchlight with %s radius ", radius)
     do_standard(model_spec, radius)    
   } else if (method == "randomized") {
+    
+    if (is.null(combiner)) {
+      combiner <- pool_randomized
+    }
+    
     flog.info("running randomized searchlight with %s radius and %s iterations", radius, niter)
-    do_randomized(model_spec, radius, niter, combiner=pool_randomized, compute_performance=FALSE)
+    do_randomized(model_spec, radius, niter, combiner=combiner, compute_performance=FALSE)
   } 
   
 }
