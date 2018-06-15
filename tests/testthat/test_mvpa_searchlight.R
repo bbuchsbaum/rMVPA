@@ -128,9 +128,8 @@ test_that("randomized mvpa_searchlight runs without error", {
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
   res <- run_searchlight(mspec,radius=3, method="randomized", niter=4)
-  res <- run_searchlight(mspec,radius=3, method="randomized", niter=1)
-  
-  
+
+
 })
 
 

@@ -58,7 +58,7 @@ pool_results <- function(good_results) {
 #' @keywords internal
 pool_randomized <- function(model_spec, good_results, bad_results) {
   merged_results <- pool_results(good_results)
-  perf_list <- lapply(merged_results, performance)
+  perf_list <- lapply(merged_results, function(res) compute_performance(model_spec, res))
   
   all_ind <- sort(unlist(good_results$indices))
   ind_set <- unique(all_ind)
