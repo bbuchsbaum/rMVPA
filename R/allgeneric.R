@@ -214,6 +214,16 @@ nobs <- function(x) {
   UseMethod("nobs")
 }
 
+#' nresponses
+#' 
+#' get number of responses or category levels for the dependent variable
+#' 
+#' @param x the object
+#' @export
+nresponses <- function(x) {
+  UseMethod("nresponses")
+}
+
 
 #' run_searchlight
 #' 

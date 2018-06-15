@@ -1,21 +1,22 @@
 
 
-
+#' @keywords internal
 wrap_out <- function(perf_mat, dataset, ids) {
   out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids))
   names(out) <- colnames(perf_mat)
   out
 }
 
+#' @keywords internal
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
-do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate,...) {
+do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, ...) {
+ 
   ret <- lapply(1:niter, function(i) {
     flog.info("searchlight iteration: %i", i)
     flog.debug("constructing searchlight.")
     
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
-    flog.debug("done.")
     
     vox_iter <- lapply(slight, function(x) x)
     
@@ -24,6 +25,8 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate,...) 
     cind <- sapply(vox_iter, attr, "center.index")
     mvpa_fun(model_spec, vox_iter, cind,...)
   })
+  
+  
   
 
   results <- dplyr::bind_rows(ret)
@@ -38,7 +41,19 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate,...) 
     futile.logger::flog.error("no valid results for randomized searchlight, exiting.")
   }
   
-  #browser()
+  
+  ## pooled estimate
+  # resp_array <- array(0, c(sum(model_spec$dataset$mask), length(y_test(model_spec)), 
+                           nresponses(model_spec$design)))
+  #for (i in 1:nrow(good_results)) {
+  #  ind <- good_results$indices[[i]]
+  #  resp_array[ind,,] <- resp_array[ind,,] + aperm(replicate(length(ind), good_results$result[[i]]$probs), c(3,1,2))
+  #}
+  
+  #all_ind <- sort(unlist(good_results$indices))
+  #nall_ind <- table(all_ind)
+  #resp_array <- sweep(resp_array, c(1), STATS=nall_ind, FUN="/")
+  
   
   all_ind <- sort(unlist(good_results$indices))
   ind_set <- unique(all_ind)
@@ -57,6 +72,7 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate,...) 
     perf_mat[ind,] <- perf_mat[ind,] + m
   }
   
+  
   perf_mat[ind_set,] <- sweep(perf_mat[ind_set,], 1, as.integer(ind_count), FUN="/")
   colnames(perf_mat) <- names(good_results$performance[[1]])
   wrap_out(perf_mat, model_spec$dataset, ind_set)
@@ -64,8 +80,8 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate,...) 
 }
 
 
-do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate,...) {
-  #browser()
+#' @keywords internal
+do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, ...) {
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
   vox_iter <- lapply(slight, function(x) x)
   len <- sapply(vox_iter, function(x) attr(x, "length"))
@@ -84,7 +100,6 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate,...) {
     flog.error("no valid results for randomized searchlight, exiting.")
   }
   
-  #browser()
   perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
   wrap_out(perf_mat, model_spec$dataset, ret[["id"]])
 }
@@ -144,10 +159,10 @@ run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized
   }
   
   res <- if (method == "standard") {
-    flog.info("running standard searchlight with %s radius ", radius)
+    flog.info("running standard RSA searchlight with %s radius ", radius)
     do_standard(model_spec, radius, mvpa_fun=rsa_iterate, regtype, distmethod)    
   } else if (method == "randomized") {
-    flog.info("running randomized searchlight with %s radius and %s iterations", radius, niter)
+    flog.info("running randomized RSA searchlight with %s radius and %s iterations", radius, niter)
     do_randomized(model_spec, radius, niter, mvpa_fun=rsa_iterate, regtype,distmethod)
   } 
   

@@ -108,7 +108,7 @@ combinedAUC <- function(Pred, Obs) {
     Metrics::auc(as.numeric(pos), pclass - pother)-.5
   }))
 }
-
+#' @keywords internal
 combinedACC <- function(Pred, Obs) {
   levs <- levels(as.factor(Obs))
   maxind <- apply(Pred, 1, which.max)
@@ -117,6 +117,8 @@ combinedACC <- function(Pred, Obs) {
   
 }
 
+
+#' @keywords internal
 binary_perf <- function(observed, predicted, probs) {
   obs <- as.character(observed)
   ncorrect <- sum(obs == predicted)
@@ -129,12 +131,12 @@ binary_perf <- function(observed, predicted, probs) {
   #                  alternative = "greater")
   
   
-  
   #c(ZAccuracy=-qnorm(out$p.value), Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
   c(Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
   
 }
 
+#' @keywords internal
 multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   
   obs <- as.character(observed)
