@@ -128,7 +128,7 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   des <- list(
     train_design=tibble::as_tibble(train_design),
     y_train=y_train,
-    test_design=tibble::as_tibble(test_design),
+    test_design=if (!is.null(test_design)) tibble::as_tibble(test_design) else NULL,
     y_test=y_test,
     split_by=split_by,
     split_groups=split_groups,

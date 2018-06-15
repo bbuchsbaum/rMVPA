@@ -138,7 +138,61 @@ crossv_block <- function(data, y, block_var, id = ".id", exclude=NULL) {
   tibble::as_data_frame(cols)
 }
 
+#' crossv_bootstrap_block
+#' 
+#' @inheritParams crossv_k
+#' @importFrom modelr resample
+#' @param nreps number of bootstrap replications
+#' @keywords internal
+#' @examples 
+crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id") {
+  
+  if (!length(block_var) == length(y)) {
+    stop("length of `block_var` must be equal to length(y)", call. = FALSE)
+  }
+  
+  idx <- seq_len(nrow(data))
+  block_idx <- split(idx, block_var)
+  
+  assert_that(length(block_idx) > 1, msg="crossv_bootstrap_block: must have more than one block to bootstrap.")
+  
+  fold_idx <- lapply(1:length(block_idx), function(heldout) {
+    replicate(nreps, sample(unlist(block_idx[-heldout]), replace=TRUE), simplify=FALSE)
+  })
+  
+  fold_idx <- lapply(unlist(fold_idx, recursive=FALSE), sort)
+  
+  
+  fold <- function(test) {
+    tidx <- setdiff(idx, test)
+    list(
+      ytrain = y[tidx],
+      ytest = y[test],
+      train = modelr::resample(data, tidx),
+      test = modelr::resample(data, test)
+    )
+  }
+  
+  cols <- purrr::transpose(purrr::map(fold_idx, fold))
+  cols[[id]] <- modelr:::id(length(fold_idx))
+  
+  tibble::as_data_frame(cols)
+}
 
+#' bootstrap_blocked_cross_validation
+#' 
+#' Construct a cross-validation specification using a predefined blocking variable with bootstrap resamples
+#' 
+#' @param block_var an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.
+#' @param nreps the number of bootstrap replications
+#' @param exclude an optional vector indicating rows to exclude. 
+#' @rdname cross_validation
+#' @export
+bootstrap_blocked_cross_validation <- function(block_var, nreps=10, exclude=NULL) {
+  ret <- list(block_var=block_var, nfolds=length(unique(block_var)), block_ind=sort(unique(block_var)), nreps=nreps, exclude=exclude)
+  class(ret) <- c("bootstrap_blocked_cross_validation", "cross_validation", "list")
+  ret
+}
 
 #' blocked_cross_validation
 #' 
@@ -234,6 +288,11 @@ crossval_samples.kfold_cross_validation <- function(obj, data,y) {
 #' @export
 crossval_samples.blocked_cross_validation <- function(obj, data, y) { 
   crossv_block(data, y, obj$block_var, exclude=obj$exclude)
+}
+
+#' @export
+crossval_samples.bootstrap_blocked_cross_validation <- function(obj, data, y) { 
+  crossv_bootstrap_block(data, y, block_var=obj$block_var, nreps=obj$nreps, exclude=obj$exclude)
 }
 
 #' @export
