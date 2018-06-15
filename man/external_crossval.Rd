@@ -4,7 +4,8 @@
 \alias{external_crossval}
 \title{external_crossval}
 \usage{
-external_crossval(roi, mspec, id, return_fit = FALSE)
+external_crossval(roi, mspec, id, compute_performance = TRUE,
+  return_fit = FALSE)
 }
 \description{
 external_crossval

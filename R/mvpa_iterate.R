@@ -57,7 +57,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
 
 #' external_crossval
 #' @nord
-external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
+external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE) {
   xtrain <- tibble::as_tibble(neuroim::values(roi$train_roi))
  
   dset <- mspec$dataset
@@ -89,9 +89,15 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
       wrap_result(ret, mspec$design)
     }
   
-    tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, 
+    if (compute_performance) {
+      tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, 
                  error=FALSE, error_message="~", 
                  warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
+    } else {
+      tibble::tibble(result=list(cres), indices=list(ind), performance=list(), id=id, 
+                     error=FALSE, error_message="~", 
+                     warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
+    }
   }
 }
  
@@ -99,8 +105,8 @@ external_crossval <- function(roi, mspec, id, return_fit=FALSE) {
 #' @keywords internal
 #' @importFrom dplyr rowwise do
 #' @importFrom tibble as_tibble
-internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
-  
+internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE) {
+  print(paste("compute performance: ", compute_performance))
   
   ## generate cross-validation samples
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(mspec))
@@ -145,10 +151,15 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
       wrap_result(ret, mspec$design)
     }
     
-    
-    tibble::tibble(result=list(cres), indices=list(ind), 
+    if (compute_performance) {
+      tibble::tibble(result=list(cres), indices=list(ind), 
                    performance=list(compute_performance(mspec, cres)), 
                    id=id, error=FALSE, error_message="~")
+    } else {
+      tibble::tibble(result=list(cres), indices=list(ind), 
+                     performance=list(), 
+                     id=id, error=FALSE, error_message="~")
+    }
   }
 }
   
@@ -160,10 +171,12 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
 #' @param mod_spec a class of type \code{mvpa_model}
 #' @param vox_list a \code{list} of voxel indices/coordinates
 #' @param ids a \code{vector} of ids for each voxel set
+#' @param compute_performance compute and store performance measures for each voxel set
 #' @param return_fits return the model fit for each voxel set?
+
 #' @importFrom dplyr do rowwise
 #' @export
-mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits=FALSE) {
+mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), compute_performance=TRUE, return_fits=FALSE) {
   assert_that(length(ids) == length(vox_list), 
               msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   
@@ -174,7 +187,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
     dplyr::rowwise() %>% 
     #do(function(x) { flog.info("mvpa_iterate: %s ", .$rnum); x }) %>%
-    dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, return_fits))
+    dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, compute_performance=compute_performance, return_fit=return_fits))
   
   ret
   

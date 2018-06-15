@@ -6,7 +6,7 @@
 \usage{
 gen_sample_dataset(D, nobs, response_type = c("categorical", "continuous"),
   data_mode = c("image", "surface"), spacing = c(1, 1, 1), blocks = 5,
-  nlevels = 5, external_test = FALSE, ntest_obs = nobs)
+  nlevels = 5, external_test = FALSE, ntest_obs = nobs, split_by = NULL)
 }
 \arguments{
 \item{D}{the data dimension(s)}

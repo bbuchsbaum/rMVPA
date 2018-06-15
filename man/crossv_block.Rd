@@ -6,7 +6,23 @@
 \usage{
 crossv_block(data, y, block_var, id = ".id", exclude = NULL)
 }
+\arguments{
+\item{data}{the training data}
+
+\item{y}{the response vector}
+
+\item{id}{a character id}
+
+\item{exclude}{optional vector indicating rows to exclude.}
+}
 \description{
 crossv_block
+}
+\examples{
+
+X <- data.frame(x1=rnorm(100), x2=rnorm(100))
+y <- rep(letters[1:4], 25)
+block_var <- rep(1:4, each=25)
+cv <- crossv_block(X,y,block_var)
 }
 \keyword{internal}

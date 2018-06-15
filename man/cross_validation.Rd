@@ -2,11 +2,14 @@
 % Please edit documentation in R/crossval.R
 \name{blocked_cross_validation}
 \alias{blocked_cross_validation}
+\alias{custom_cross_validation}
 \alias{twofold_blocked_cross_validation}
 \alias{kfold_cross_validation}
-\title{construct a cross-validation specification using a predefined blocking variable}
+\title{blocked_cross_validation}
 \usage{
 blocked_cross_validation(block_var, exclude = NULL)
+
+custom_cross_validation(sample_set)
 
 twofold_blocked_cross_validation(block_var, nreps = 10, exclude = NULL)
 
@@ -17,6 +20,8 @@ kfold_cross_validation(len, nfolds = 10, exclude = NULL)
 
 \item{exclude}{an optional vector indicating rows to exclude.}
 
+\item{sample_set}{a \code{list} of training and test sample indices}
+
 \item{len}{the number of observations.}
 
 \item{nfolds}{the number of cross-validation folds.}
@@ -24,7 +29,11 @@ kfold_cross_validation(len, nfolds = 10, exclude = NULL)
 \item{exclude}{an optional vector indicating rows to exclude.}
 }
 \description{
-construct a cross-validation specification using a predefined blocking variable
+Construct a cross-validation specification using a predefined blocking variable
 
-construct a cross-validation specification that randomly partitions input set into \code{nfolds} folds.
+Construct a cross-validation specification that used a user-supplied set of training and test indices.
+
+Construct a cross-validation specification that randomly partitions input set into two sets of blocks.
+
+Construct a cross-validation specification that randomly partitions input set into \code{nfolds} folds.
 }

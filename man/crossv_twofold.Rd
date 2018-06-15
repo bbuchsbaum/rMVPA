@@ -23,6 +23,6 @@ sample dataset via repeated two-fold cross-validation
 
 X <- data.frame(x1=rnorm(100), x2=rnorm(100))
 y <- rep(letters[1:4], 25)
-block_var <- rep(1:4, each=20)
+block_var <- rep(1:4, each=25)
 cv <- crossv_twofold(X,y,block_var, nreps=10)
 }

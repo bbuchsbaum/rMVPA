@@ -4,14 +4,12 @@
 \alias{merge_results}
 \title{merge_results}
 \usage{
-merge_results(x, y, ...)
+merge_results(x, ...)
 }
 \arguments{
 \item{x}{the first result}
 
-\item{y}{the second result}
-
-\item{...}{extra args}
+\item{...}{the rest}
 }
 \description{
 merge two classification/regression results

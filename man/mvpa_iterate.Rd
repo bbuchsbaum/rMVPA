@@ -5,7 +5,7 @@
 \title{mvpa_iterate}
 \usage{
 mvpa_iterate(mod_spec, vox_list, ids = 1:length(vox_iter),
-  return_fits = FALSE)
+  compute_performance = TRUE, return_fits = FALSE)
 }
 \arguments{
 \item{mod_spec}{a class of type \code{mvpa_model}}
@@ -14,8 +14,10 @@ mvpa_iterate(mod_spec, vox_list, ids = 1:length(vox_iter),
 
 \item{ids}{a \code{vector} of ids for each voxel set}
 
+\item{compute_performance}{compute and store performance measures for each voxel set}
+
 \item{return_fits}{return the model fit for each voxel set?}
 }
 \description{
-Fit a classification/regression model for each of a list of voxels sets
+Fit a classification/regression model for each voxel set in a list
 }
