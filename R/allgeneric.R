@@ -112,10 +112,9 @@ compute_performance <- function(obj, result) {
 #' merge two classification/regression results
 #' 
 #' @param x the first result
-#' @param y the second result
-#' @param ... extra args
+#' @param ... the rest
 #' @export
-merge_results <- function(x, y, ...) {
+merge_results <- function(x, ...) {
   UseMethod("merge_results")
 }
 
@@ -212,6 +211,16 @@ sub_result <- function(x, indices) {
 #' @export
 nobs <- function(x) {
   UseMethod("nobs")
+}
+
+#' nresponses
+#' 
+#' get number of responses or category levels for the dependent variable
+#' 
+#' @param x the object
+#' @export
+nresponses <- function(x) {
+  UseMethod("nresponses")
 }
 
 

@@ -1,12 +1,22 @@
 
 
 #' @export
-#' 
-#' 
 nobs.mvpa_design <- function(x) {
   length(x$y_train)
 }
 
+#' @export
+nresponses.mvpa_design <- function(x) {
+  if (is.factor(x$y_train)) {
+    length(levels(x$y_train))
+  } else if (is.vector(x$y_train)) {
+    y
+  } else if (is.matrix(x$y_train)) {
+    ncol(x$y_train)
+  } else {
+    stop()
+  }
+}
 
 #' @export
 has_test_set.mvpa_design <- function(obj) {

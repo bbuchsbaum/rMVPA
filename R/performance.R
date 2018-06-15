@@ -45,15 +45,25 @@ custom_performance <- function(x, custom_fun, split_list=NULL) {
 }
 
 #' @export
-merge_results.binary_classification_result <- function(x,y,...) {
-  probs <- (x$probs + y$probs)/2
-  binary_classification_result(observed=x$observed, predicted=NULL, probs=probs, test_design=x$test_design, predictor=x$predictor)
+merge_results.binary_classification_result <- function(x,...) {
+  rlist <- list(x,...)
+  probs <- Reduce("+", lapply(rlist, function(x) x$probs))/length(rlist)
+  
+  mc <- max.col(probs)
+  predicted <- levels(x$observed)[mc]
+  binary_classification_result(observed=x$observed, predicted=predicted, probs=probs, test_design=x$test_design, predictor=x$predictor)
 }
 
 #' @export
-merge_results.multiway_classification_result <- function(x,y,...) {
-  probs <- (x$probs + y$probs)/2
-  multiway_classification_result(observed=x$observed, predicted=NULL, probs=probs, test_design=x$test_design, predictor=x$predictor)
+merge_results.multiway_classification_result <- function(x,...) {
+  
+  rlist <- list(x,...)
+  probs <- Reduce("+", lapply(rlist, function(x) x$probs))/length(rlist)
+  mc <- max.col(probs)
+  predicted <- levels(x$observed)[mc]
+  
+  multiway_classification_result(observed=x$observed, predicted=predicted, probs=probs, 
+                                 test_design=x$test_design, predictor=x$predictor)
 }
 
 #' @export
@@ -108,7 +118,7 @@ combinedAUC <- function(Pred, Obs) {
     Metrics::auc(as.numeric(pos), pclass - pother)-.5
   }))
 }
-
+#' @keywords internal
 combinedACC <- function(Pred, Obs) {
   levs <- levels(as.factor(Obs))
   maxind <- apply(Pred, 1, which.max)
@@ -117,6 +127,8 @@ combinedACC <- function(Pred, Obs) {
   
 }
 
+
+#' @keywords internal
 binary_perf <- function(observed, predicted, probs) {
   obs <- as.character(observed)
   ncorrect <- sum(obs == predicted)
@@ -129,12 +141,12 @@ binary_perf <- function(observed, predicted, probs) {
   #                  alternative = "greater")
   
   
-  
   #c(ZAccuracy=-qnorm(out$p.value), Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
   c(Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
   
 }
 
+#' @keywords internal
 multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   
   obs <- as.character(observed)

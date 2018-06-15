@@ -103,17 +103,17 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
   
   
   ## generate cross-validation samples
-  
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(mspec))
   
   ## get ROI indices
   ind <- neuroim::indices(roi$train_roi)
   
-  
   ret <- samples %>% dplyr::rowwise() %>% dplyr::do( {
       
       ## fit model for cross-validation sample
-      result <- try(train_model(mspec, tibble::as_tibble(.$train), .$ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
+      result <- try(train_model(mspec, tibble::as_tibble(.$train), .$ytrain, 
+                                indices=ind, param=mspec$tune_grid, 
+                                tune_reps=mspec$tune_reps))
       
       if (inherits(result, "try-error")) {
         flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
@@ -135,7 +135,8 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
 
   if (any(ret$error)) {
     emessage <- ret$error_message[which(ret$error)[1]]
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), error=TRUE, error_message=emessage)
+    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), 
+                   error=TRUE, error_message=emessage)
   } else {
     cres <- if (return_fit) {
       predictor <- weighted_model(ret$fit)
@@ -144,14 +145,17 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
       wrap_result(ret, mspec$design)
     }
     
-    tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, error=FALSE, error_message="~")
+    
+    tibble::tibble(result=list(cres), indices=list(ind), 
+                   performance=list(compute_performance(mspec, cres)), 
+                   id=id, error=FALSE, error_message="~")
   }
 }
   
   
 #' mvpa_iterate
 #' 
-#' Fit a classification/regression model for each of a list of voxels sets
+#' Fit a classification/regression model for each voxel set in a list
 #' 
 #' @param mod_spec a class of type \code{mvpa_model}
 #' @param vox_list a \code{list} of voxel indices/coordinates
@@ -160,8 +164,8 @@ internal_crossval <- function(roi, mspec, id, return_fit=FALSE) {
 #' @importFrom dplyr do rowwise
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), return_fits=FALSE) {
-  assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
-  
+  assert_that(length(ids) == length(vox_list), 
+              msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   
   sframe <- get_samples(mod_spec$dataset, vox_list)
 
@@ -230,7 +234,6 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
 
 
 #' @importFrom neuroim indices values
-#' 
 do_rsa <- function(roi, mod_spec, rnum, method=method, distmethod=distmethod) {
   print(paste("rsa method", method))
   xtrain <- tibble::as_tibble(values(roi$train_roi))
