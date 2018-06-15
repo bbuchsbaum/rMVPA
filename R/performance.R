@@ -45,15 +45,25 @@ custom_performance <- function(x, custom_fun, split_list=NULL) {
 }
 
 #' @export
-merge_results.binary_classification_result <- function(x,y,...) {
-  probs <- (x$probs + y$probs)/2
-  binary_classification_result(observed=x$observed, predicted=NULL, probs=probs, test_design=x$test_design, predictor=x$predictor)
+merge_results.binary_classification_result <- function(x,...) {
+  rlist <- list(x,...)
+  probs <- Reduce("+", lapply(rlist, function(x) x$probs))/length(rlist)
+  
+  mc <- max.col(probs)
+  predicted <- levels(x$observed)[mc]
+  binary_classification_result(observed=x$observed, predicted=predicted, probs=probs, test_design=x$test_design, predictor=x$predictor)
 }
 
 #' @export
-merge_results.multiway_classification_result <- function(x,y,...) {
-  probs <- (x$probs + y$probs)/2
-  multiway_classification_result(observed=x$observed, predicted=NULL, probs=probs, test_design=x$test_design, predictor=x$predictor)
+merge_results.multiway_classification_result <- function(x,...) {
+  
+  rlist <- list(x,...)
+  probs <- Reduce("+", lapply(rlist, function(x) x$probs))/length(rlist)
+  mc <- max.col(probs)
+  predicted <- levels(x$observed)[mc]
+  
+  multiway_classification_result(observed=x$observed, predicted=predicted, probs=probs, 
+                                 test_design=x$test_design, predictor=x$predictor)
 }
 
 #' @export

@@ -10,7 +10,7 @@ wrap_out <- function(perf_mat, dataset, ids) {
 #' @keywords internal
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
-do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, ...) {
+do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, pooled_estimate=TRUE, ...) {
  
   ret <- lapply(1:niter, function(i) {
     flog.info("searchlight iteration: %i", i)
@@ -26,8 +26,6 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, ...)
     mvpa_fun(model_spec, vox_iter, cind,...)
   })
   
-  
-  
 
   results <- dplyr::bind_rows(ret)
   good_results <- results %>% dplyr::filter(!error)
@@ -41,41 +39,47 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, ...)
     futile.logger::flog.error("no valid results for randomized searchlight, exiting.")
   }
   
-  
-  ## pooled estimate
-  # resp_array <- array(0, c(sum(model_spec$dataset$mask), length(y_test(model_spec)), 
-                           nresponses(model_spec$design)))
-  #for (i in 1:nrow(good_results)) {
-  #  ind <- good_results$indices[[i]]
-  #  resp_array[ind,,] <- resp_array[ind,,] + aperm(replicate(length(ind), good_results$result[[i]]$probs), c(3,1,2))
-  #}
-  
-  #all_ind <- sort(unlist(good_results$indices))
-  #nall_ind <- table(all_ind)
-  #resp_array <- sweep(resp_array, c(1), STATS=nall_ind, FUN="/")
-  
-  
   all_ind <- sort(unlist(good_results$indices))
-  ind_set <- unique(all_ind)
   ind_count <- table(all_ind)
+  ind_set <- unique(all_ind)
   
-  ncols <- length(good_results$performance[[1]])
-  perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, ncols), j=rep(1:ncols, each=length(ind_set)), 
-                               x=rep(0, length(ind_set)*ncols), dims=c(length(model_spec$dataset$mask), ncols))
+  if (pooled_estimate) {
+    indmap <- do.call(rbind, lapply(1:nrow(good_results), function(i) {
+      ind <- good_results$indices[[i]]
+      cbind(i, ind)
+    }))
   
-  #perf_mat <- matrix(0, length(ind_set), ncols)
-  
+    respsets <- split(indmap[,1], indmap[,2])
+    
+    merged_results <- lapply(respsets, function(r1) {
+      first <- r1[1]
+      rest <- r1[2:length(r1)]
+      z1 <- good_results$result[[first]]
+      z2 <- good_results$result[rest]
+      ff <- purrr:::partial(merge_results, x=z1)
+      do.call(ff, z2)
+    })
+    
+    perf_list <- lapply(merged_results, performance)
+    perf_mat <- do.call(rbind, perf_list)
+    colnames(perf_mat) <- names(perf_list[[1]])
+    wrap_out(perf_mat, model_spec$dataset, ind_set)
 
-  for (i in 1:nrow(good_results)) {
-    ind <- good_results$indices[[i]]
-    m <- kronecker(matrix(good_results$performance[[i]], 1, ncols), rep(1,length(ind)))
-    perf_mat[ind,] <- perf_mat[ind,] + m
+  } else {
+    ncols <- length(good_results$performance[[1]])
+    perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, ncols), j=rep(1:ncols, each=length(ind_set)), 
+                               x=rep(0, length(ind_set)*ncols), dims=c(length(model_spec$dataset$mask), ncols))
+    for (i in 1:nrow(good_results)) {
+      ind <- good_results$indices[[i]]
+      m <- kronecker(matrix(good_results$performance[[i]], 1, ncols), rep(1,length(ind)))
+      perf_mat[ind,] <- perf_mat[ind,] + m
+    }
+  
+  
+    perf_mat[ind_set,] <- sweep(perf_mat[ind_set,], 1, as.integer(ind_count), FUN="/")
+    colnames(perf_mat) <- names(good_results$performance[[1]])
+    wrap_out(perf_mat, model_spec$dataset, ind_set)
   }
-  
-  
-  perf_mat[ind_set,] <- sweep(perf_mat[ind_set,], 1, as.integer(ind_count), FUN="/")
-  colnames(perf_mat) <- names(good_results$performance[[1]])
-  wrap_out(perf_mat, model_spec$dataset, ind_set)
     
 }
 
