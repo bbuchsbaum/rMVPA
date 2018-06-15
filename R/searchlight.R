@@ -28,8 +28,8 @@ combine_randomized <- function(model_spec, good_results, bad_results) {
   wrap_out(perf_mat, model_spec$dataset, ind_set)
 }
 
-#' @keywords internal
-pool_randomized <- function(model_spec, good_results, bad_results) {
+#' pool classiifer results collected over a set of overlapping indices
+pool_results <- function(good_results) {
   all_ind <- sort(unlist(good_results$indices))
   ind_count <- table(all_ind)
   ind_set <- unique(all_ind)
@@ -40,7 +40,7 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   }))
   
   respsets <- split(indmap[,1], indmap[,2])
-    
+  
   merged_results <- lapply(respsets, function(r1) {
     if (length(r1) > 1) {
       first <- r1[1]
@@ -53,9 +53,23 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
       good_results$result[[r1[1]]]
     }
   })
-    
+}
+
+#' @keywords internal
+pool_randomized <- function(model_spec, good_results, bad_results) {
+  merged_results <- pool_results(good_results)
   perf_list <- lapply(merged_results, performance)
-  perf_mat <- do.call(rbind, perf_list)
+  
+  all_ind <- sort(unlist(good_results$indices))
+  ind_set <- unique(all_ind)
+  
+  ncols <- length(perf_list[[1]])
+  pmat <- do.call(rbind, perf_list)
+  
+  perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, ncols), j=rep(1:ncols, each=length(ind_set)), 
+                                   x=as.vector(pmat), dims=c(length(model_spec$dataset$mask), ncols))
+  
+  
   colnames(perf_mat) <- names(perf_list[[1]])
   wrap_out(perf_mat, model_spec$dataset, ind_set)
 }
@@ -191,7 +205,7 @@ run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized
   
   res <- if (method == "standard") {
     flog.info("running standard RSA searchlight with %s radius ", radius)
-    do_standard(model_spec, radius, mvpa_fun=rsa_iterate, regtype, distmethod)    
+    do_standard(model_spec, radius, mvpa_fun=rsa_iterate, combiner=combine_standard, regtype, distmethod)    
   } else if (method == "randomized") {
     flog.info("running randomized RSA searchlight with %s radius and %s iterations", radius, niter)
     do_randomized(model_spec, radius, niter, mvpa_fun=rsa_iterate, combiner=combine_randomized, regtype,distmethod)
