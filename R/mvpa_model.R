@@ -132,5 +132,23 @@ mvpa_model <- function(model,
   
 }
 
+#' @export
+print.mvpa_model <- function(x) {
+  cat("mvpa_model object. \n")
+  cat("model: ", x$model_name, "\n")
+  cat("model type: ", x$model_type, "\n")
+  if (!is.null(x$tune_grid)) {
+    cat("tune_reps: ", x$tune_reps, "\n")
+    cat("tune_grid: ", "\n")
+    print(x$tune_grid)
+  }
+  
+  print(x$crossval)
+  print(x$dataset)
+  print(x$design)
+}
+  
+  
+
 
 

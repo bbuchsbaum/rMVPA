@@ -1,0 +1,75 @@
+---
+title: "Searchlight Analysis"
+author: "Bradley Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Searchlight Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Cross-Validation Approaches
+
+```{r, echo=FALSE, message=FALSE}
+library(neuroim)
+library(devtools)
+load_all()
+```
+
+### Blocked Cross-Validation
+
+In fMRI analyses images are generally acquired over a number of scans or "runs" that form natural breaks in the data. Due to temporal auto-correlation in the data, it is generally not a good idea to train and test a classifier on trials collected in the same run. Therefore, when dividing the data into data blocks for cross-validation, it is natural to use scanning "run" as a means of splitting up the data into training and test folds.
+
+There is a special data structure to help set this up called `blocked_cross_validation`. All we need is an variable that indcates the block index of each trial in the experiment. For example, imagine we have five scans/blocks, each with 100 images.
+
+```{r, echo=FALSE, message=FALSE}
+
+block_var <- rep(1:5, each=100)
+cval <- blocked_cross_validation(block_var)
+print(cval)
+
+```
+
+Now, to generate cross-validation samples, we use the `crossval_sample` generic function. We need to give it data for the independent variables, `data` and a response variable `y`. The result will be a `data.frame` (or `tibble` to be precise) that contains in each row the samples necessary to conduct a complete leave-one-block out cross-validation analysis.
+
+```{r, echo=FALSE, message=FALSE}
+
+dat <- data.frame(x1=rnorm(500), x2=rnorm(500), x3=rnorm(500))
+y <- rep(letters[1:5], length.out=500)
+sam <- crossval_samples(cval, dat,y)
+sam
+
+```
+
+Notice that the `data.frame` contains five variable: `ytrain`, `ytest`, `train`, `test` and `.id` which contains the training responses, the test responses, the training data, the test data, and a integer id variable respectively. The first four variables are `list`elements because they actually contain vector- or matrix- valued elements in each cell. Indeed, the `train` and `test` variables are actually of type `resample`, a class that is used to access the underlying data on demand. For example, to access training data for the first cross-validation fold, we can do the following:
+
+```{r, echo=FALSE, message=FALSE}
+train_dat <- as.data.frame(sam$train[[1]])
+print(train_dat[1:5,])
+```
+
+But we can also loop throw the cross-validation sets using `dplyr`, fit an `sda` model and put the fitted model into a new data.frame. 
+
+```{r, echo=FALSE, message=FALSE}
+library(dplyr)
+
+model_fits <- sam %>% rowwise() %>% do({
+  train_dat <- as.data.frame(.$train)
+  y_train <- .$ytrain
+  fit <- sda::sda(as.matrix(train_dat), y_train)
+  tibble::tibble(fit=list(fit))
+})
+  
+```
+
+
+
+
+
+
+
+
+
+
