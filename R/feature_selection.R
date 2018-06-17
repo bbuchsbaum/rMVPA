@@ -40,7 +40,7 @@ matrixAnova <- function(Y, x) {
 #' The available feature selection methods are:
 #' 
 #' Ftest: computes a one-way ANOVA for every column in feature matrix
-#' catscore: computes a correlation adjusted t-test for every column in matrix using \code{sda.tanking} from he \code{sda} package.
+#' catscore: computes a correlation adjusted t-test for every column in matrix using \code{sda.ranking} from the \code{sda} package.
 #' 
 #' @export
 feature_selector <- function(method, cutoff_type, cutoff_value) {
@@ -54,6 +54,7 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 #' select_features
 #' 
 #' Given a \code{feature_selection} specification object and a dataset return the set of selected features as a binary vector.
+#' 
 #' @param obj the \code{feature_selection} object
 #' @param X region of interest containing training features, a class of type \code{ROIVolume} or \code{ROISurface} or \code{matrix}
 #' @param Y the dependent variable as a \code{factor} or \code{numeric} variable.

@@ -311,6 +311,14 @@ print.blocked_cross_validation <- function(x,...) {
 }
 
 #' @export
+print.twofold_blocked_cross_validation <- function(x,...) {
+  cat("twofold cross-validation: blocked \n")
+  cat("  nobservations: ", length(x$block_var), "\n")
+  cat("  nreps: ", x$nreps, "\n")
+  cat("  block sizes: ", table(x$block_var), "\n")
+}
+
+#' @export
 print.bootstrap_blocked_cross_validation <- function(x,...) {
   cat("cross-validation: bootstrap blocked \n")
   cat("  n observations: ", length(x$block_var))

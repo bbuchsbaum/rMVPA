@@ -1,0 +1,37 @@
+---
+title: "Feature Selection"
+author: "Bradley Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Feature Selection}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Feature Selection
+
+```{r, echo=FALSE, message=FALSE}
+library(neuroim)
+library(devtools)
+load_all()
+```
+
+Feature selection is used to select a subset of variables to include into a classification or regression model. This can be useful when one has many irrelevant features and one wants to quickly reduce the problem to a more manageable size. Alternatively, if one wants to impose a limit on the total number of included features (say, 1000) across  a set of classification tasks (e.g. over a group of subjects) then it can be useful to use a feature selection before running the analysis. Note that to avoid bias, feature selection must be incorported into cross-validation procedure such that feature selection is carried out for each training fold. This is automatically done in the analysis pileplines provided in `rMVPA`.
+
+### Creating a `feature_selector` object
+
+To use feature selection in `rMVPA` we must construct a `feature_selector` instance which specifies the feature selection method and the criteria for variable inclusion. There are two ways of specificying a threshold of `cutoff` value for variable inclusion: the first, called `top_k`, selects features by including the top *k* most important features according to a feature importance algorithm; the second, called `top_p` selects feature by including a proportion *p* of all variables after ranking them by feature importance. Thus, if *p* is .1, we would include the top 10% of all features. 
+
+First, we demonstrate setting up feature selection using the `top_k` method, using k=1000, and the univariate F-test for feature ranking:
+
+```{r}
+
+fsel <- feature_selector(method="F-test",cutoff_type = "top_k", cutoff_value = 1000)
+
+
+```
+
+
+

@@ -4,7 +4,7 @@
 #' predicted_class
 #' @param prob a matrix of predicted probabilities with column names indicating the classes
 predicted_class <- function(prob) {
-  maxid <- apply(prob, 1, which.max)
+  maxid <- max.col(prob, ties.method="random")
   pclass <- colnames(prob)[maxid]
 }
 
@@ -23,6 +23,9 @@ performance.regression_result <- function(x, split_list,...) {
 
 
 #' custom_performance
+#' 
+#' applies a user-supplied performance metric to a prediction result
+#' 
 #' @param x the result object
 #' @param custom_fun the function used to compute performance metrics, i.e. \code{custom_fun(x)}
 #' @param split_list the splitting groups
@@ -109,6 +112,7 @@ performance.multiway_classification_result <- function(x, split_list=NULL, class
   
 }
 
+#'   @keywords internal
 combinedAUC <- function(Pred, Obs) {
   mean(sapply(1:ncol(Pred), function(i) {
     lev <- levels(Obs)[i]
@@ -118,7 +122,9 @@ combinedAUC <- function(Pred, Obs) {
     Metrics::auc(as.numeric(pos), pclass - pother)-.5
   }))
 }
-#' @keywords internal
+
+
+#'   @keywords internal
 combinedACC <- function(Pred, Obs) {
   levs <- levels(as.factor(Obs))
   maxind <- apply(Pred, 1, which.max)

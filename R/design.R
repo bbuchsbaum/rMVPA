@@ -31,6 +31,7 @@ y_train.mvpa_design <- function(obj) obj$y_train
 #' @export
 y_test.mvpa_design <- function(obj) if (is.null(obj$y_test)) obj$y_train else obj$y_test
 
+#' @keywords internal
 parse_variable <- function(var, design) {
   if (purrr::is_formula(var)) {
     vnames <- all.vars(var[[2]])
@@ -56,11 +57,13 @@ parse_variable <- function(var, design) {
 
 #' mvpa_design
 #' 
+#' Construct an MVPA design object that defines the classification/regression problem.
+#' 
 #' @param train_design a \code{data.frame} containing training variables.
 #' @param y_train a \code{formula}, \code{character} name or \code{factor} designating the training response.
 #' @param test_design an optional \code{data.frame} containing test variables.
 #' @param y_test an optional \code{formula}, \code{character} name or \code{factor} designating the test response.
-#' @param block_var an optional \code{formula}, \code{character} name or \code{integer} vector designating the block structure.
+#' @param block_var an optional \code{formula}, \code{character} name or \code{integer} vector designating the blocking variable.
 #' @param split_by an optional \code{formula} indicating grouping structure for evaluating test performance.
 #' 
 #' @examples 
