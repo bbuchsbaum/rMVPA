@@ -32,7 +32,7 @@ combine_regional_results = function(results, ids) {
 #' 
 #' @param model_spec a \code{mvpa_model} instance
 #' @param region_mask a \code{BrainVolume} or \code{BrainSurface} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
-#' @param returns_fits whether to return model fit for every ROI (default is \code{FALSE} to save memory)
+#' @param return_fits whether to return model fit for every ROI (default is \code{FALSE} to save memory)
 #' 
 #' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
 #' @import itertools 
@@ -40,7 +40,7 @@ combine_regional_results = function(results, ids) {
 #' @import doParallel
 #' @import parallel
 #' @export
-run_regional <- function(model_spec, region_mask, returns_fits=FALSE) {  
+run_regional <- function(model_spec, region_mask, return_fits=FALSE) {  
   
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   
@@ -63,7 +63,7 @@ run_regional <- function(model_spec, region_mask, returns_fits=FALSE) {
   flog.info("model is: %s", model_spec$model$label)
   
   ## run mvpa for each region
-  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set, returns_fits, compute_performance=TRUE)
+  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set,compute_performance=TRUE, return_fits = return_fits)
   
 
   ## compile performance results
@@ -78,7 +78,7 @@ run_regional <- function(model_spec, region_mask, returns_fits=FALSE) {
   ## compile full prediction table
   prediction_table <- combine_regional_results(results, results$id)
   
-  fits <- if (returns_fits) {
+  fits <- if (return_fits) {
     lapply(results$result, "[[", "predictor")
   }
   
