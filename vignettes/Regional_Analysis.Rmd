@@ -1,0 +1,74 @@
+---
+title: "Regional Analysis"
+author: "Bradley Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Searchlight Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## MVPA Analysis on Regions of Interest
+
+```{r, echo=FALSE, message=FALSE}
+library(neuroim)
+library(devtools)
+load_all()
+```
+
+If we have one or more pre-defined regions of interests (ROIs) we can use `rMVPA` to run a clasisifation/regression model in each region, yielding peformance measures for each region.
+
+### Generate a volumetric dataset with 100 observations and two classes
+
+To generate a dataset we use the `gen_sample_dataset` function. We are creating a 4-dimensional neuroimaging dataset, with 6-by-6-by-6 spatial dimensions and 80 observations in the 4th dimension. These 80 observations are divided into 4 blocks, each consisting of 20 trials. The generated `y` variable is a `factor` with 2 levels ('a' and 'b'). the `gen_sample_dataset` function creates a list with two elements: an `mvpa_dataset` object (`dataset`) and an `mvpa_design` object (`design`). The first contains information about the data itself and the second contains information about the experimental design.
+
+
+
+```{r}
+
+dset <- gen_sample_dataset(D=c(6,6,6), nobs = 80, blocks=4, nlevels=2)
+print(dset)
+```
+
+```
+
+Now we generate an arbitrary set of ROIs by assigning each voxel in the input mask a value ranging from 1 to 3. 
+
+```{r}
+
+mask <- dset$dataset$mask
+nvox <- sum(mask)
+
+region_mask <- neuroim::BrainVolume(sample(1:3,replace=TRUE,size=nvox), space(mask), indices=which(mask>0))
+table(region_mask)
+
+```
+
+The `region_mask` volume now defines a set of three ROIs where each ROI is defined by an integer value. Next, we can run a classification/regression model within each ROI using the `run_regional` function:
+
+```{r, message=FALSE, results='hide'}
+
+
+mod <- load_model("sda")
+tune_grid <- data.frame(lambda=.01, diagonal=FALSE)
+cval <- blocked_cross_validation(dset$design$block_var)
+mspec <- mvpa_model(mod, dataset=dset$dataset, design=dset$design, tune_grid=tune_grid,crossval=cval)
+res <- run_regional(mspec,region_mask)
+
+```
+
+`run_regional` produces seeveral output values, including `performance_table`, which includes cross-validated performance metrics for each ROI:
+
+```{r}
+print(res$performance_table)
+
+```
+
+To get fine-grained information, the individual predictions for each ROI and trial are included in `prediction_table`:
+
+```{r}
+print(res$prediction_table)
+```
+

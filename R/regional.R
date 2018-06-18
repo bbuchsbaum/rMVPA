@@ -62,9 +62,8 @@ run_regional <- function(model_spec, region_mask, returns_fits=FALSE) {
   
   flog.info("model is: %s", model_spec$model$label)
   
-  
   ## run mvpa for each region
-  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set, returns_fits)
+  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set, returns_fits, compute_performance=TRUE)
   
 
   ## compile performance results

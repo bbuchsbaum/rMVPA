@@ -1,5 +1,5 @@
 
-
+#' @keywords iternal
 matrixAnova <- function(Y, x) {
   Y <- as.numeric(Y)
   k <- max(Y)

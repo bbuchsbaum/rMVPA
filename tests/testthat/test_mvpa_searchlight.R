@@ -82,7 +82,7 @@ test_that("standard mvpa_searchlight runs without error", {
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
-  res <- run_searchlight(mspec,radius=4, method="standard")
+  res <- run_searchlight(mspec,radius=4, method="standard", ncores=2)
   
 })
 

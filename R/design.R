@@ -68,6 +68,14 @@ parse_variable <- function(var, design) {
 #' 
 #' @examples 
 #' 
+#' df1 <- data.frame(y=rep(letters[1:4], 5), x1=rnorm(20), x2=rnorm(20), block=rep(1:4, each=5))
+#' des <- mvpa_design(df1, ~ y, block_var = ~ block)
+#' 
+#' ## with a test set
+#' 
+#' testdes <- data.frame(y=sample(letters[1:4]), 10)
+#' des <- mvpa_design(df1, ~ y, block_var = ~ block, test_design=testdes, y_test= ~ y)
+#' 
 #' @export
 mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, block_var=NULL, split_by=NULL) {
  
@@ -164,7 +172,7 @@ print.mvpa_design <- function(x,...) {
   if (!is.null(x$y_test)) {
     cat("  test observations: ", length(x$y_test), "\n")
     if (is.factor(x$y_test)) {
-      cat(" test levels: ", levels(x$y_test), "\n")
+      cat("  test levels: ", levels(x$y_test), "\n")
     }
   } else {
     cat("  no test observations. \n")

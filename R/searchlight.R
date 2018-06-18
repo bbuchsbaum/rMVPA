@@ -93,6 +93,8 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
     mvpa_fun(model_spec, vox_iter, cind,...)
   })
   
+  nmodels <- sum(unlist(sapply(ret, nrow)))
+  message("number of models fit: ", nmodels)
  
   results <- dplyr::bind_rows(ret)
   good_results <- results %>% dplyr::filter(!error)

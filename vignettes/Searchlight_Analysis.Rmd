@@ -65,7 +65,7 @@ hist(result$AUC)
 
 ## Run a randomized searchlight analysis
 
-A randomized searchlight analysis is an iterative procedure in which searchlight regions are sampled *without replacement* from the voxel set. A classification analysis is run for each region, and the result is recorded for the center voxel and *all other voxels in the region*. This is done for each of `niter` times, where each iteration involves an exhaustive sampling of the voxel set. The performance at each voxel is the average performance for the set of analyses in which the given voxel was included as a feature. The result will be similar to the standard searchlight procedure, but emphasizes the contribution of a given voxel across different local contexts to classification performance. This should in principle offer slightly better spatial localization than the standard searchlight. The randomized searchlight procedure can also be faster, due to the iterative sampling procedure.
+A randomized searchlight analysis is an iterative procedure in which searchlight regions are sampled *without replacement* from the voxel set. A classification analysis is run for each region, and the result is recorded for the center voxel and *all other voxels in the region*. This is done for each of `niter` times, where each iteration involves an exhaustive sampling of the voxel set. The performance at each voxel is the average performance for the set of analyses in which the given voxel was included as a feature. The result will be similar to the standard searchlight procedure, but emphasizes the contribution of a given voxel across different local contexts to classification performance. This should in principle offer slightly better spatial localization than the standard searchlight. The randomized searchlight procedure can also be faster, because the total number of estimated models is a function of `nvoxels/radius * niter`, which will be smaller than `nvoxels` for many choices of `radius` and `niter`.
 
 ```{r}
 result <- run_searchlight(model, radius=4, method="randomized", niter=8)
@@ -77,7 +77,7 @@ hist(result$AUC)
 
 ## Using different classifiers
 
-All of the classifiers available in the `caret` package can be used (in theory) for a searchlight analysis. For example, we can run an analysis using a linear support vector machine as follows:
+All of the classifiers available in the `caret` package can be used (in theory) for a searchlight analysis. For example, we can run an analysis using a linear support vector (`svmLinear`) machine as follows:
 
 ```{r}
 svm_model <- load_model("svmLinear") 
@@ -105,6 +105,3 @@ result_rf_tuned <- run_searchlight(model2, radius=6, method="randomized", niter=
 
 ```
 
-## Cross-validation schemes
-
-So far we have used the `blocked_cross_validation` for setting up cross-validation. This is often the natural choice for fMRI designs.

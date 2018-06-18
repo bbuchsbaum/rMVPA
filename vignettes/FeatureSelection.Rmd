@@ -24,14 +24,46 @@ Feature selection is used to select a subset of variables to include into a clas
 
 To use feature selection in `rMVPA` we must construct a `feature_selector` instance which specifies the feature selection method and the criteria for variable inclusion. There are two ways of specificying a threshold of `cutoff` value for variable inclusion: the first, called `top_k`, selects features by including the top *k* most important features according to a feature importance algorithm; the second, called `top_p` selects feature by including a proportion *p* of all variables after ranking them by feature importance. Thus, if *p* is .1, we would include the top 10% of all features. 
 
-First, we demonstrate setting up feature selection using the `top_k` method, using k=1000, and the univariate F-test for feature ranking:
+First, we demonstrate setting creatinga `feature_selector` using the `top_k` method, using k=10, and the univariate F-test for feature ranking:
 
 ```{r}
 
-fsel <- feature_selector(method="F-test",cutoff_type = "top_k", cutoff_value = 1000)
-
+fsel <- feature_selector(method="FTest",cutoff_type = "top_k", cutoff_value = 10)
+fsel
 
 ```
+
+To apply feature selection to some data, we do as follows:
+
+```{r, message=FALSE}
+
+## create a dependent variable.
+Y <- factor(rep(letters[1:4], 25))
+
+## create a feature matrix
+X <- matrix(rnorm(100*100), 100, 100)
+
+## select_features returns a logical vector with selected features as TRUE and otherwise FALSE
+res <- select_features(fsel,X,Y)
+
+## the total number of TRUE values should equal the cutoff_value of 10.
+print(sum(res))
+```
+
+Now we select feature using a proprtion cutoff using the `top_p` option.
+
+```{r}
+
+fsel <- feature_selector(method="FTest",cutoff_type = "top_p", cutoff_value = .1)
+res <- select_features(fsel,X,Y)
+
+## the total number of TRUE values should equal the cutoff_value of 10.
+print(sum(res)/ncol(X))
+
+```
+
+
+
 
 
 

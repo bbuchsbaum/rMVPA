@@ -172,7 +172,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @param ids a \code{vector} of ids for each voxel set
 #' @param compute_performance compute and store performance measures for each voxel set
 #' @param return_fits return the model fit for each voxel set?
-
+#' @param ncores number of cores to use.
 #' @importFrom dplyr do rowwise
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), compute_performance=TRUE, return_fits=FALSE) {
@@ -182,13 +182,27 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), compute_per
   sframe <- get_samples(mod_spec$dataset, vox_list)
 
   do_fun <- if (has_test_set(mod_spec$dataset)) external_crossval else internal_crossval
-
+  
+  # if (ncores > 1) {
+  #   message("mvpa_iterate: ncores", ncores)
+  #   cl <- multidplyr::create_cluster(ncores)
+  #   multidplyr::cluster_copy(ids)
+  #   sframe <- multidplyr::partition(sframe, cluster=cl)
+  # }
+  
+  
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
     dplyr::rowwise() %>% 
     #do(function(x) { flog.info("mvpa_iterate: %s ", .$rnum); x }) %>%
-    dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, compute_performance=compute_performance, return_fit=return_fits))
-  
+    dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, compute_performance=compute_performance, return_fit=return_fits)) 
+    
   ret
+  
+  # if (ncores > 1) {
+  #   collect(ret)
+  # } else {
+  #   ret
+  # }
   
 }
 
