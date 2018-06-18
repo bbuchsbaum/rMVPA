@@ -17,8 +17,6 @@ mvpa_iterate(mod_spec, vox_list, ids = 1:length(vox_iter),
 \item{compute_performance}{compute and store performance measures for each voxel set}
 
 \item{return_fits}{return the model fit for each voxel set?}
-
-\item{ncores}{number of cores to use.}
 }
 \description{
 Fit a classification/regression model for each voxel set in a list

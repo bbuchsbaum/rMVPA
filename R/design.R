@@ -77,6 +77,7 @@ parse_variable <- function(var, design) {
 #' des <- mvpa_design(df1, ~ y, block_var = ~ block, test_design=testdes, y_test= ~ y)
 #' 
 #' @export
+#' @importFrom futile.logger flog.warning
 mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, block_var=NULL, split_by=NULL) {
  
   y_train <- if (!purrr::is_formula(y_train) && length(y_train) > 1) {
@@ -88,20 +89,20 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   if (is.factor(y_train)) {
    
     if (any(table(y_train) == 0)) {
-      flog.warning("y_train: ", table(y_train), capture=TRUE)
-      flog.warning("y_train factor has at least one level with zero training instances: dropping unused levels.")
+      futile.logger::flog.warning("y_train: ", table(y_train), capture=TRUE)
+      futile.logger::flog.warning("y_train factor has at least one level with zero training instances: dropping unused levels.")
       y_train <- droplevels(y_train)
     }
     
     if (length(table(y_train)) <= 1) {
-      flog.error("y_train: ", table(y_train), capture=TRUE)
+      #futile.logger::flog.error("y_train: ", table(y_train), capture=TRUE)
       stop(paste("error: y_train factor must have at least 2 levels with one or more training instances"))
     }
     
     ytab <- table(levels(y_train))
     
     if (any(ytab == 0)) {
-      flog.info("y_train: ", table(y_train), capture=TRUE)
+      futile.logger::flog.info("y_train: ", table(y_train), capture=TRUE)
       stop(paste("error: y_train factor must have at least 1 training instance for every factor level"))
     }
   }

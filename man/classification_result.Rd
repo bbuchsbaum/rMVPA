@@ -7,16 +7,17 @@
 \alias{regression_result}
 \title{create a \code{classification_result} instance}
 \usage{
-classification_result(observed, predicted, probs, test_design = NULL,
-  predictor = NULL)
+classification_result(observed, predicted, probs, testind = NULL,
+  test_design = NULL, predictor = NULL)
 
-binary_classification_result(observed, predicted, probs, test_design = NULL,
-  predictor = NULL)
+binary_classification_result(observed, predicted, probs, testind = NULL,
+  test_design = NULL, predictor = NULL)
 
-multiway_classification_result(observed, predicted, probs, test_design = NULL,
-  predictor = NULL)
+multiway_classification_result(observed, predicted, probs, testind = NULL,
+  test_design = NULL, predictor = NULL)
 
-regression_result(observed, predicted, test_design = NULL, predictor = NULL)
+regression_result(observed, predicted, testind = NULL, test_design = NULL,
+  predictor = NULL)
 }
 \arguments{
 \item{observed}{the observed values.}
@@ -24,6 +25,8 @@ regression_result(observed, predicted, test_design = NULL, predictor = NULL)
 \item{predicted}{the predicted values.}
 
 \item{probs}{a \code{matrix} of predicted probabilities, one column per level.}
+
+\item{testind}{the row indices of the test observations}
 
 \item{test_design}{an optional design for the test data.}
 
