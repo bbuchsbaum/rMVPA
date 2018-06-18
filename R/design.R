@@ -183,7 +183,7 @@ print.mvpa_design <- function(x,...) {
   if (!is.null(x$block_var))
     cat("  block var: ", capture.output(str(x$block_var)), "\n")
   if (!is.null(x$split_by))
-    cat("  split_by", x$split_by)
+    cat("  split_by: ", deparse(x$split_by))
   
 }
 
