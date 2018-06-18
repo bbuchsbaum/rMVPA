@@ -14,5 +14,5 @@ custom_performance(x, custom_fun, split_list = NULL)
 \item{split_list}{the splitting groups}
 }
 \description{
-custom_performance
+applies a user-supplied performance metric to a prediction result
 }

@@ -12,8 +12,6 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
     stop("`k` must be a single integer.", call. = FALSE)
   }
   
-  ## TODO handle exclude argument
-  
   n <- nrow(data)
   folds <- sample(rep(1:k, length.out = n))
   

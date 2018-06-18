@@ -4,8 +4,7 @@
 \alias{crossv_twofold}
 \title{crossv_twofold}
 \usage{
-crossv_twofold(data, y, block_var, block_ind, id = ".id", nreps = 15,
-  exclude = NULL)
+crossv_twofold(data, y, block_var, block_ind, id = ".id", nreps = 15)
 }
 \arguments{
 \item{data}{the training data}
@@ -13,8 +12,6 @@ crossv_twofold(data, y, block_var, block_ind, id = ".id", nreps = 15,
 \item{y}{the response vector}
 
 \item{id}{a character id}
-
-\item{exclude}{optional vector indicating rows to exclude.}
 }
 \description{
 sample dataset via repeated two-fold cross-validation

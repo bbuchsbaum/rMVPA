@@ -4,7 +4,7 @@
 \alias{crossv_k}
 \title{crossv_k}
 \usage{
-crossv_k(data, y, k = 5, id = ".id", exclude = NULL)
+crossv_k(data, y, k = 5, id = ".id")
 }
 \arguments{
 \item{data}{the training data}
@@ -14,8 +14,6 @@ crossv_k(data, y, k = 5, id = ".id", exclude = NULL)
 \item{k}{Number of folds (an integer).}
 
 \item{id}{a character id}
-
-\item{exclude}{optional vector indicating rows to exclude.}
 }
 \description{
 sample dataset using k-fold cross-validation

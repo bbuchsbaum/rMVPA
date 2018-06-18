@@ -149,7 +149,13 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' @import parallel
 #' @importFrom futile.logger flog.info flog.error flog.debug
 #' @param combiner a function that combines results into an appropriate output.
+#' 
+#' @references 
+#' Björnsdotter, M., Rylander, K., & Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.
+#' 
+#' Kriegeskorte, N., Goebel, R., & Bandettini, P. (2006). Information-based functional brain mapping. Proceedings of the National academy of Sciences of the United States of America, 103(10), 3863-3868.
 #' @export
+#' @rdname run_searchlight
 run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, combiner=NULL, ...) {
   
   if (radius < 1 || radius > 100) {

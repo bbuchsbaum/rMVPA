@@ -4,7 +4,7 @@
 \alias{crossv_block}
 \title{crossv_block}
 \usage{
-crossv_block(data, y, block_var, id = ".id", exclude = NULL)
+crossv_block(data, y, block_var, id = ".id")
 }
 \arguments{
 \item{data}{the training data}
@@ -12,8 +12,6 @@ crossv_block(data, y, block_var, id = ".id", exclude = NULL)
 \item{y}{the response vector}
 
 \item{id}{a character id}
-
-\item{exclude}{optional vector indicating rows to exclude.}
 }
 \description{
 crossv_block

@@ -16,13 +16,21 @@ mvpa_design(train_design, y_train, test_design = NULL, y_test = NULL,
 
 \item{y_test}{an optional \code{formula}, \code{character} name or \code{factor} designating the test response.}
 
-\item{block_var}{an optional \code{formula}, \code{character} name or \code{integer} vector designating the block structure.}
+\item{block_var}{an optional \code{formula}, \code{character} name or \code{integer} vector designating the blocking variable.}
 
 \item{split_by}{an optional \code{formula} indicating grouping structure for evaluating test performance.}
 }
 \description{
-mvpa_design
+Construct an MVPA design object that defines the classification/regression problem.
 }
 \examples{
+
+df1 <- data.frame(y=rep(letters[1:4], 5), x1=rnorm(20), x2=rnorm(20), block=rep(1:4, each=5))
+des <- mvpa_design(df1, ~ y, block_var = ~ block)
+
+## with a test set
+
+testdes <- data.frame(y=sample(letters[1:4]), 10)
+des <- mvpa_design(df1, ~ y, block_var = ~ block, test_design=testdes, y_test= ~ y)
 
 }

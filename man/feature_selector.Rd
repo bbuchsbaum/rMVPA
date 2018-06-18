@@ -23,7 +23,7 @@ Creates a feature selection specification
 The available feature selection methods are:
 
 Ftest: computes a one-way ANOVA for every column in feature matrix
-catscore: computes a correlation adjusted t-test for every column in matrix using \code{sda.tanking} from he \code{sda} package.
+catscore: computes a correlation adjusted t-test for every column in matrix using \code{sda.ranking} from the \code{sda} package.
 }
 \examples{
 fsel <- feature_selector("FTest", "top_k", 1000)
