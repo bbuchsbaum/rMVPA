@@ -86,7 +86,7 @@ performance.binary_classification_result <- function(x, split_list=NULL,...) {
     subtots <- unlist(lapply(names(split_list), function(tag) {
       ind <- split_list[[tag]]
       if (!is.null(x$testind)) {
-        ind <- which(ind %in% x$testind)
+        ind <- which(x$testind %in% ind)
       }
       ret <- binary_perf(x$observed[ind], x$predicted[ind], x$probs[ind,])
       names(ret) <- paste0(names(ret), "_", tag)
@@ -111,7 +111,7 @@ performance.multiway_classification_result <- function(x, split_list=NULL, class
       ind <- split_list[[tag]]
       
       if (!is.null(x$testind)) {
-        ind <- which(ind %in% x$testind)
+        ind <- which(x$testind %in% ind)
       }
       
       ret <- multiclass_perf(x$observed[ind], x$predicted[ind], x$probs[ind,], class_metrics)
