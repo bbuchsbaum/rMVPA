@@ -103,7 +103,7 @@ performance.multiway_classification_result <- function(x, split_list=NULL, class
     subtots <- unlist(lapply(names(split_list), function(tag) {
       ind <- split_list[[tag]]
       
-      if (!is.null(x$testind) && length(x$testind) != nrow(x$prob)) {
+      if (!is.null(x$testind)) {
         ind <- match(ind, x$testind)
       }
       
