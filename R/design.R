@@ -77,7 +77,7 @@ parse_variable <- function(var, design) {
 #' des <- mvpa_design(df1, ~ y, block_var = ~ block, test_design=testdes, y_test= ~ y)
 #' 
 #' @export
-#' @importFrom futile.logger flog.warning
+#' @importFrom futile.logger flog.warn
 mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, block_var=NULL, split_by=NULL) {
  
   y_train <- if (!purrr::is_formula(y_train) && length(y_train) > 1) {
@@ -89,8 +89,8 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   if (is.factor(y_train)) {
    
     if (any(table(y_train) == 0)) {
-      futile.logger::flog.warning("y_train: ", table(y_train), capture=TRUE)
-      futile.logger::flog.warning("y_train factor has at least one level with zero training instances: dropping unused levels.")
+      futile.logger::flog.warn("y_train: ", table(y_train), capture=TRUE)
+      futile.logger::flog.warn("y_train factor has at least one level with zero training instances: dropping unused levels.")
       y_train <- droplevels(y_train)
     }
     
