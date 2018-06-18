@@ -15,6 +15,10 @@ predicted_class <- function(prob) {
 #' @export
 #' @rdname performance-methods
 performance.regression_result <- function(x, split_list,...) {
+  if (!is.null(split_list)) {
+    ## TODO: add support
+    stop("split_by not supported for regression analyses yet.")
+  }
   R2 <- 1 - sum((x$observed - x$predicted)^2)/sum((x$observed-mean(x$observed))^2)
   rmse <- sqrt(mean((x$observed-x$predicted)^2))
   rcor <- cor(x$observed, x$predicted, method="spearman")
@@ -81,6 +85,9 @@ performance.binary_classification_result <- function(x, split_list=NULL,...) {
     
     subtots <- unlist(lapply(names(split_list), function(tag) {
       ind <- split_list[[tag]]
+      if (!is.null(x$testind)) {
+        ind <- match(ind, x$testind)
+      }
       ret <- binary_perf(x$observed[ind], x$predicted[ind], x$probs[ind,])
       names(ret) <- paste0(names(ret), "_", tag)
       ret
