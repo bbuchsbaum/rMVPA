@@ -35,7 +35,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
     maxid <- max.col(prob)
     pclass <- levels(observed)[maxid]
   
-    classification_result(observed[testind], pclass, prob, design$test_design, fit)
+    classification_result(observed[testind], pclass, prob, testind=testind, design$test_design, fit)
   } else {
     
       testind <- unique(sort(unlist(result_table$test_ind)))
@@ -50,7 +50,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
       ## TODO check me
       counts <- table(sort(unlist(result_table$test_ind)))
       preds <- preds/counts
-      regression_result(observed, preds, design$test_design, fit)
+      regression_result(observed, preds, testind=testind, test_design=design$test_design, fit)
   }
 }
 
@@ -190,6 +190,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), compute_per
   #   sframe <- multidplyr::partition(sframe, cluster=cl)
   # }
   
+  ### using pmap
+  #ret <- sframe %>% dplyr::mutate(rnum=ids) %>% unname %>% pmap(., ~ do_fun(as_roi(..1), mod_spec, ..3, compute_performance=compute_performance,
+  #                                                                          return_fit=return_fits))
   
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
     dplyr::rowwise() %>% 
@@ -197,12 +200,6 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), compute_per
     dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, compute_performance=compute_performance, return_fit=return_fits)) 
     
   ret
-  
-  # if (ncores > 1) {
-  #   collect(ret)
-  # } else {
-  #   ret
-  # }
   
 }
 

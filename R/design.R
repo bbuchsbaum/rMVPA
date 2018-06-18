@@ -125,7 +125,7 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   }
   
   if (!is.null(split_by)) {
-    des <- if (!is.null(test_design)) test_design else train_design
+    des <- if (!is.null(test_design) && nrow(test_design) > 0) test_design else train_design
     split_var <- parse_variable(split_by, des)
     split_groups <- split(1:nrow(des), split_var)
   } else {

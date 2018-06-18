@@ -54,7 +54,8 @@ merge_results.binary_classification_result <- function(x,...) {
   
   mc <- max.col(probs)
   predicted <- levels(x$observed)[mc]
-  binary_classification_result(observed=x$observed, predicted=predicted, probs=probs, test_design=x$test_design, predictor=x$predictor)
+  binary_classification_result(observed=x$observed, predicted=predicted, probs=probs, testind=x$testind, 
+                               test_design=x$test_design, predictor=x$predictor)
 }
 
 #' @export
@@ -66,7 +67,7 @@ merge_results.multiway_classification_result <- function(x,...) {
   predicted <- levels(x$observed)[mc]
   
   multiway_classification_result(observed=x$observed, predicted=predicted, probs=probs, 
-                                 test_design=x$test_design, predictor=x$predictor)
+                                 testind=x$testind,  test_design=x$test_design, predictor=x$predictor)
 }
 
 #' @export
@@ -101,6 +102,11 @@ performance.multiway_classification_result <- function(x, split_list=NULL, class
     total <- multiclass_perf(x$observed, x$predicted, x$probs, class_metrics)
     subtots <- unlist(lapply(names(split_list), function(tag) {
       ind <- split_list[[tag]]
+      
+      if (!is.null(x$testind) && length(x$testind) != nrow(x$prob)) {
+        ind <- match(ind, x$testind)
+      }
+      
       ret <- multiclass_perf(x$observed[ind], x$predicted[ind], x$probs[ind,], class_metrics)
       names(ret) <- paste0(names(ret), "_", tag)
       ret

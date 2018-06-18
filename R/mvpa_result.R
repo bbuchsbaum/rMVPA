@@ -3,17 +3,18 @@
 #' @param observed the observed values.
 #' @param predicted the predicted values.
 #' @param probs a \code{matrix} of predicted probabilities, one column per level.
+#' @param testind the row indices of the test observations
 #' @param test_design an optional design for the test data.
 #' @param predictor an optional predictor object.
 #' @rdname classification_result
 #' @export
-classification_result <- function(observed, predicted, probs, test_design=NULL,predictor=NULL) {
+classification_result <- function(observed, predicted, probs, testind=NULL, test_design=NULL,predictor=NULL) {
   if (is.numeric(observed)) {
-    regression_result(observed, predicted, test_design, predictor)
+    regression_result(observed, predicted, testind, test_design, predictor)
   } else if (length(levels(as.factor(observed))) == 2) {
-    binary_classification_result(observed, predicted, probs,  test_design, predictor)
+    binary_classification_result(observed, predicted, probs,  testind, test_design, predictor)
   } else if (length(levels(as.factor(observed))) > 2) {
-    multiway_classification_result(observed,predicted, probs, test_design, predictor)
+    multiway_classification_result(observed,predicted, probs, testind, test_design, predictor)
   } else {
     stop("observed data must be a factor with 2 or more levels")
   }
@@ -23,11 +24,12 @@ classification_result <- function(observed, predicted, probs, test_design=NULL,p
 #' @inheritParams classification_result
 #' @rdname classification_result
 #' @export
-binary_classification_result <- function(observed, predicted, probs, test_design=NULL, predictor=NULL) {
+binary_classification_result <- function(observed, predicted, probs, testind=NULL, test_design=NULL, predictor=NULL) {
   ret <- list(
     observed=observed,
     predicted=predicted,
     probs=as.matrix(probs),
+    testind=testind,
     test_design=test_design,
     predictor=predictor
   )
@@ -44,6 +46,7 @@ sub_result.multiway_classification_result <- function(x, indices) {
     observed=x$observed[indices],
     predicted=x$predicted[indices],
     probs=as.matrix(x$probs)[indices,],
+    testind=testind,
     test_design=x$test_design[indices,],
     predictor=x$predictor)
   
@@ -56,6 +59,7 @@ sub_result.binary_classification_result <- function(x, indices) {
     observed=x$observed[indices],
     predicted=x$predicted[indices],
     probs=as.matrix(x$probs)[indices,],
+    testind=testind,
     test_design=x$test_design[indices,],
     predictor=x$predictor)
   
@@ -68,11 +72,12 @@ sub_result.binary_classification_result <- function(x, indices) {
 #' @inheritParams classification_result
 #' @rdname classification_result
 #' @export
-multiway_classification_result <- function(observed, predicted, probs,  test_design=NULL, predictor=NULL) {
+multiway_classification_result <- function(observed, predicted, probs,testind=NULL, test_design=NULL, predictor=NULL) {
   ret <- list(
     observed=observed,
     predicted=predicted,
     probs=as.matrix(probs),
+    testind=testind,
     test_design=test_design,
     predictor=predictor)
   
@@ -84,11 +89,12 @@ multiway_classification_result <- function(observed, predicted, probs,  test_des
 #' @inheritParams classification_result
 #' @rdname classification_result
 #' @export
-regression_result <- function(observed, predicted, test_design=NULL, predictor=NULL) {
+regression_result <- function(observed, predicted, testind=NULL, test_design=NULL, predictor=NULL) {
   ret <- list(
     observed=observed,
     predicted=predicted,
     test_design=test_design,
+    testind=testind,
     predictor=predictor)
   class(ret) <- c("regression_result", "classification_result", "list")
   ret
