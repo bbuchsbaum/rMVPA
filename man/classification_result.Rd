@@ -5,7 +5,7 @@
 \alias{binary_classification_result}
 \alias{multiway_classification_result}
 \alias{regression_result}
-\title{create a \code{classification_result} instance}
+\title{Create a \code{classification_result} instance}
 \usage{
 classification_result(observed, predicted, probs, testind = NULL,
   test_design = NULL, predictor = NULL)
@@ -20,18 +20,37 @@ regression_result(observed, predicted, testind = NULL, test_design = NULL,
   predictor = NULL)
 }
 \arguments{
-\item{observed}{the observed values.}
+\item{observed}{a vector of observed/true values.}
 
-\item{predicted}{the predicted values.}
+\item{predicted}{a vector of the predicted values.}
 
 \item{probs}{a \code{matrix} of predicted probabilities, one column per level.}
 
-\item{testind}{the row indices of the test observations}
+\item{testind}{the row indices of the test observations.}
 
 \item{test_design}{an optional design for the test data.}
 
 \item{predictor}{an optional predictor object.}
 }
 \description{
-create a \code{classification_result} instance
+Create a \code{classification_result} instance
+}
+\examples{
+
+## a vector of observed values
+yobs <- factor(rep(letters[1:4], 5))
+
+## predicted probabilities
+probs <- data.frame(a=runif(1:20), b=runif(1:20), c=runif(1:20), d=runif(1:20))
+probs <- sweep(probs, 1, rowSums(probs), "/")
+
+## get the max probability per row and use this to determine the predicted class
+maxcol <- max.col(probs)
+predicted <- levels(yobs)[maxcol]
+
+## construct a classification result
+cres <- classification_result(yobs, predicted, probs)
+
+## compute default performance measures (Accuracy, AUC)
+performance(cres)
 }
