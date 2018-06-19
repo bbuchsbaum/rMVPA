@@ -56,7 +56,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
 
 
 #' external_crossval
-#' @nord
+#' @keywords internal
 external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE) {
   xtrain <- tibble::as_tibble(neuroim::values(roi$train_roi))
  
