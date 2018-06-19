@@ -54,6 +54,7 @@ rMVPA:::set_arg("radius", config, args, 8)
 rMVPA:::set_arg("type", config, args, "randomized")
 
 
+## tuning parameters for classiifer optimization
 config$tune_grid <- rMVPA:::initialize_tune_grid(args, config)
 
 config_params <- as.list(config)
@@ -61,7 +62,6 @@ config_params <- as.list(config)
 config$design <- rMVPA:::initialize_design(config)
 
 #flog.info("loading training data: %s", config$train_data)
-
 if (config$data_mode == "image") {
   mask_volume <- as(rMVPA:::load_mask(config), "LogicalBrainVolume")
   dataset <- rMVPA:::initialize_image_data(config, mask_volume)
@@ -74,9 +74,10 @@ if (config$data_mode == "image") {
   flog.error("unrecognized data_mode: %s", config$data_mode)
 }
 
+## the indices of the included observations
 row_indices <- which(config$train_subset)
 
-flog.info("number of trials: %s", length(row_indices))
+flog.info("number of included trials: %s", length(row_indices))
 flog.info("max trial index: %s", max(row_indices))
 
 if (! is.null(config$test_label_column)) {
