@@ -18,13 +18,25 @@
 <!-- Font Awesome icons -->
 <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
 
+<!-- clipboard.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.7.1/clipboard.min.js" integrity="sha384-cV+rhyOuRHc9Ub/91rihWcGmMmCXDeksTtCihMupQHSsi8GIIRDG0ThDc3HGQFJ3" crossorigin="anonymous"></script>
+
+<!-- sticky kit -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script>
 
 <!-- pkgdown -->
 <link href="../pkgdown.css" rel="stylesheet">
-<script src="../jquery.sticky-kit.min.js"></script>
 <script src="../pkgdown.js"></script>
-  
-  
+
+
+
+<meta property="og:title" content="mvpa_iterate — mvpa_iterate" />
+
+<meta property="og:description" content="Fit a classification/regression model for each voxel set in a list" />
+<meta name="twitter:card" content="summary" />
+
+
+
 <!-- mathjax -->
 <script src='https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>
 
@@ -47,8 +59,12 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="../index.html">rMVPA</a>
+      <span class="navbar-brand">
+        <a class="navbar-link" href="../index.html">rMVPA</a>
+        <span class="label label-default" data-toggle="tooltip" data-placement="bottom" title="Released package">0.1.1</span>
+      </span>
     </div>
+
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
@@ -68,6 +84,15 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/CrossValidation.html">Cross-Validation Schemes</a>
+    </li>
+    <li>
+      <a href="../articles/FeatureSelection.html">Feature Selection</a>
+    </li>
+    <li>
+      <a href="../articles/Regional_Analysis.html">Regional Analysis</a>
+    </li>
+    <li>
       <a href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a>
     </li>
   </ul>
@@ -77,6 +102,7 @@
       <ul class="nav navbar-nav navbar-right">
         
       </ul>
+      
     </div><!--/.nav-collapse -->
   </div><!--/.container -->
 </div><!--/.navbar -->
@@ -84,20 +110,24 @@
       
       </header>
 
-      <div class="row">
+<div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>mvpa_iterate</h1>
+    
+    <div class="hidden name"><code>mvpa_iterate.Rd</code></div>
     </div>
 
+    <div class="ref-description">
     
-    <p>Fit a classification/regression model for each of a list of voxels sets</p>
+    <p>Fit a classification/regression model for each voxel set in a list</p>
     
+    </div>
 
     <pre class="usage"><span class='fu'>mvpa_iterate</span>(<span class='no'>mod_spec</span>, <span class='no'>vox_list</span>, <span class='kw'>ids</span> <span class='kw'>=</span> <span class='fl'>1</span>:<span class='fu'>length</span>(<span class='no'>vox_iter</span>),
-  <span class='kw'>return_fits</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>)</pre>
+  <span class='kw'>compute_performance</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>return_fits</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>)</pre>
     
-    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a> Arguments</h2>
+    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
@@ -111,6 +141,10 @@
     <tr>
       <th>ids</th>
       <td><p>a <code>vector</code> of ids for each voxel set</p></td>
+    </tr>
+    <tr>
+      <th>compute_performance</th>
+      <td><p>compute and store performance measures for each voxel set</p></td>
     </tr>
     <tr>
       <th>return_fits</th>
@@ -135,11 +169,14 @@
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="http://hadley.github.io/pkgdown/">pkgdown</a>.</p>
+  <p>Site built with <a href="http://pkgdown.r-lib.org/">pkgdown</a>.</p>
 </div>
 
       </footer>
    </div>
 
+  
+
   </body>
 </html>
+

@@ -30,6 +30,8 @@ kfold_cross_validation(len, nfolds = 10)
 \item{nfolds}{the number of cross-validation folds.}
 
 \item{block_var}{an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.}
+
+\item{nreps}{the number of twofold spits}
 }
 \description{
 Construct a cross-validation specification using a predefined blocking variable with bootstrap resamples
@@ -41,4 +43,16 @@ Construct a cross-validation specification that used a user-supplied set of trai
 Construct a cross-validation specification that randomly partitions input set into two sets of blocks.
 
 Construct a cross-validation specification that randomly partitions input set into \code{nfolds} folds.
+}
+\examples{
+
+blockvar <- rep(1:5, each=10)
+nreps <- 5
+cval <- twofold_blocked_cross_validation(blockvar, nreps=nreps)
+samples <- crossval_samples(cval, as.data.frame(matrix(rnorm(50*50),50,50)), y=rep(letters[1:5],10))
+stopifnot(nrow(samples) == nreps)
+
+cval <- kfold_cross_validation(len=100, nfolds=10)
+samples <- crossval_samples(cval, data=as.data.frame(matrix(rnorm(100*10), 100, 10)), y=rep(letters[1:5],20))
+stopifnot(nrow(samples) == 10)
 }

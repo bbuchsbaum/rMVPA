@@ -18,13 +18,25 @@
 <!-- Font Awesome icons -->
 <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
 
+<!-- clipboard.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.7.1/clipboard.min.js" integrity="sha384-cV+rhyOuRHc9Ub/91rihWcGmMmCXDeksTtCihMupQHSsi8GIIRDG0ThDc3HGQFJ3" crossorigin="anonymous"></script>
+
+<!-- sticky kit -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script>
 
 <!-- pkgdown -->
 <link href="../pkgdown.css" rel="stylesheet">
-<script src="../jquery.sticky-kit.min.js"></script>
 <script src="../pkgdown.js"></script>
-  
-  
+
+
+
+<meta property="og:title" content="run_searchlight — run_searchlight" />
+
+<meta property="og:description" content="execute a searchlight analysis" />
+<meta name="twitter:card" content="summary" />
+
+
+
 <!-- mathjax -->
 <script src='https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>
 
@@ -47,8 +59,12 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="../index.html">rMVPA</a>
+      <span class="navbar-brand">
+        <a class="navbar-link" href="../index.html">rMVPA</a>
+        <span class="label label-default" data-toggle="tooltip" data-placement="bottom" title="Released package">0.1.1</span>
+      </span>
     </div>
+
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
@@ -68,6 +84,15 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/CrossValidation.html">Cross-Validation Schemes</a>
+    </li>
+    <li>
+      <a href="../articles/FeatureSelection.html">Feature Selection</a>
+    </li>
+    <li>
+      <a href="../articles/Regional_Analysis.html">Regional Analysis</a>
+    </li>
+    <li>
       <a href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a>
     </li>
   </ul>
@@ -77,6 +102,7 @@
       <ul class="nav navbar-nav navbar-right">
         
       </ul>
+      
     </div><!--/.nav-collapse -->
   </div><!--/.container -->
 </div><!--/.navbar -->
@@ -84,19 +110,27 @@
       
       </header>
 
-      <div class="row">
+<div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>run_searchlight</h1>
+    
+    <div class="hidden name"><code>run_searchlight.Rd</code></div>
     </div>
 
+    <div class="ref-description">
     
     <p>execute a searchlight analysis</p>
     
+    </div>
 
-    <pre class="usage"><span class='fu'>run_searchlight</span>(<span class='no'>model_spec</span>, <span class='no'>radius</span>, <span class='no'>method</span>, <span class='no'>niter</span>, <span class='no'>...</span>)</pre>
+    <pre class="usage"><span class='fu'>run_searchlight</span>(<span class='no'>model_spec</span>, <span class='no'>radius</span>, <span class='no'>method</span>, <span class='no'>niter</span>, <span class='no'>...</span>)
+
+<span class='co'># S3 method for mvpa_model</span>
+<span class='fu'>run_searchlight</span>(<span class='no'>model_spec</span>, <span class='kw'>radius</span> <span class='kw'>=</span> <span class='fl'>8</span>,
+  <span class='kw'>method</span> <span class='kw'>=</span> <span class='fu'>c</span>(<span class='st'>"randomized"</span>, <span class='st'>"standard"</span>), <span class='kw'>niter</span> <span class='kw'>=</span> <span class='fl'>4</span>, <span class='kw'>combiner</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='no'>...</span>)</pre>
     
-    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a> Arguments</h2>
+    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
@@ -116,14 +150,23 @@
       <td><p>the number of searchlight iterations (used only for 'randomized' method)</p></td>
     </tr>
     <tr>
-      <th>extra</th>
-      <td><p>args</p></td>
+      <th>...</th>
+      <td><p>extra args</p></td>
+    </tr>
+    <tr>
+      <th>combiner</th>
+      <td><p>a function that combines results into an appropriate output.</p></td>
     </tr>
     </table>
     
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
     <p>a named list of <code>BrainVolume</code> objects, where each element contains a performance metric (e.g. AUC) at every voxel location.</p>
+    
+    <h2 class="hasAnchor" id="references"><a class="anchor" href="#references"></a>References</h2>
+
+    <p>Björnsdotter, M., Rylander, K., &amp; Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.</p>
+<p>Kriegeskorte, N., Goebel, R., &amp; Bandettini, P. (2006). Information-based functional brain mapping. Proceedings of the National academy of Sciences of the United States of America, 103(10), 3863-3868.</p>
     
 
   </div>
@@ -133,6 +176,8 @@
       <li><a href="#arguments">Arguments</a></li>
       
       <li><a href="#value">Value</a></li>
+
+      <li><a href="#references">References</a></li>
           </ul>
 
   </div>
@@ -144,11 +189,14 @@
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="http://hadley.github.io/pkgdown/">pkgdown</a>.</p>
+  <p>Site built with <a href="http://pkgdown.r-lib.org/">pkgdown</a>.</p>
 </div>
 
       </footer>
    </div>
 
+  
+
   </body>
 </html>
+

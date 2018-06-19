@@ -26,15 +26,17 @@ combine_regional_results = function(results, ids) {
 
 
 
-#' run_regional
+#' ROI_based MVPA analysis
 #' 
 #' Run a separate MVPA analysis for multiple disjoint regions of interest.
 #' 
 #' @param model_spec a \code{mvpa_model} instance
-#' @param region_mask a \code{BrainVolume} or \code{BrainSurface} where each region is identified by a unique integer. Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
+#' @param region_mask a \code{BrainVolume} or \code{BrainSurface} where each region is identified by a unique integer. 
+#'        Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
 #' @param return_fits whether to return model fit for every ROI (default is \code{FALSE} to save memory)
 #' 
-#' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label (e.g. accuracy, AUC)
+#' @return a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label 
+#'         (e.g. Accuracy, AUC)
 #' @import itertools 
 #' @import foreach
 #' @import doParallel

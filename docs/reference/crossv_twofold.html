@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>tune_grid — tune_grid • rMVPA</title>
+<title>crossv_twofold — crossv_twofold • rMVPA</title>
 
 <!-- jquery -->
 <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script>
@@ -30,9 +30,9 @@
 
 
 
-<meta property="og:title" content="tune_grid — tune_grid" />
+<meta property="og:title" content="crossv_twofold — crossv_twofold" />
 
-<meta property="og:description" content="extract the parameter grid to optimize." />
+<meta property="og:description" content="sample dataset via repeated two-fold cross-validation" />
 <meta name="twitter:card" content="summary" />
 
 
@@ -113,28 +113,24 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>tune_grid</h1>
+    <h1>crossv_twofold</h1>
     
-    <div class="hidden name"><code>tune_grid.Rd</code></div>
+    <div class="hidden name"><code>crossv_twofold.Rd</code></div>
     </div>
 
     <div class="ref-description">
     
-    <p>extract the parameter grid to optimize.</p>
+    <p>sample dataset via repeated two-fold cross-validation</p>
     
     </div>
 
-    <pre class="usage"><span class='fu'>tune_grid</span>(<span class='no'>obj</span>, <span class='no'>x</span>, <span class='no'>y</span>, <span class='no'>len</span>)</pre>
+    <pre class="usage"><span class='fu'>crossv_twofold</span>(<span class='no'>data</span>, <span class='no'>y</span>, <span class='no'>block_var</span>, <span class='no'>block_ind</span>, <span class='kw'>id</span> <span class='kw'>=</span> <span class='st'>".id"</span>, <span class='kw'>nreps</span> <span class='kw'>=</span> <span class='fl'>15</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>obj</th>
-      <td><p>the model object</p></td>
-    </tr>
-    <tr>
-      <th>x</th>
+      <th>data</th>
       <td><p>the training data</p></td>
     </tr>
     <tr>
@@ -142,18 +138,26 @@
       <td><p>the response vector</p></td>
     </tr>
     <tr>
-      <th>len</th>
-      <td><p>the number of elements in the tuning grid</p></td>
+      <th>id</th>
+      <td><p>a character id</p></td>
     </tr>
     </table>
     
 
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'>
+<span class='no'>X</span> <span class='kw'>&lt;-</span> <span class='fu'>data.frame</span>(<span class='kw'>x1</span><span class='kw'>=</span><span class='fu'>rnorm</span>(<span class='fl'>100</span>), <span class='kw'>x2</span><span class='kw'>=</span><span class='fu'>rnorm</span>(<span class='fl'>100</span>))
+<span class='no'>y</span> <span class='kw'>&lt;-</span> <span class='fu'>rep</span>(<span class='no'>letters</span>[<span class='fl'>1</span>:<span class='fl'>4</span>], <span class='fl'>25</span>)
+<span class='no'>block_var</span> <span class='kw'>&lt;-</span> <span class='fu'>rep</span>(<span class='fl'>1</span>:<span class='fl'>4</span>, <span class='kw'>each</span><span class='kw'>=</span><span class='fl'>25</span>)
+<span class='no'>cv</span> <span class='kw'>&lt;-</span> <span class='fu'>crossv_twofold</span>(<span class='no'>X</span>,<span class='no'>y</span>,<span class='no'>block_var</span>, <span class='kw'>nreps</span><span class='kw'>=</span><span class='fl'>10</span>)</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
       <li><a href="#arguments">Arguments</a></li>
-                </ul>
+            
+      <li><a href="#examples">Examples</a></li>
+    </ul>
 
   </div>
 </div>

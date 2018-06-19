@@ -130,7 +130,6 @@ crossv_block <- function(data, y, block_var, id = ".id") {
 #' @importFrom modelr resample
 #' @param nreps number of bootstrap replications
 #' @keywords internal
-#' @examples 
 crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id") {
   
   if (!length(block_var) == length(y)) {
@@ -220,8 +219,15 @@ custom_cross_validation <- function(sample_set) {
 #' 
 #' @export 
 #' @inheritParams blocked_cross_validation
-#' @params nreps the number of twofold spits
+#' @param nreps the number of twofold spits
 #' @rdname cross_validation
+#' @examples 
+#' 
+#' blockvar <- rep(1:5, each=10)
+#' nreps <- 5
+#' cval <- twofold_blocked_cross_validation(blockvar, nreps=nreps)
+#' samples <- crossval_samples(cval, as.data.frame(matrix(rnorm(50*50),50,50)), y=rep(letters[1:5],10))
+#' stopifnot(nrow(samples) == nreps)
 twofold_blocked_cross_validation <- function(block_var, nreps=10) {
   block_var <- as.integer(block_var)
   ret <- list(block_var=block_var, nfolds=2, nreps=nreps, block_ind=sort(unique(block_var)))
@@ -236,6 +242,11 @@ twofold_blocked_cross_validation <- function(block_var, nreps=10) {
 #' @param len the number of observations.
 #' @param nfolds the number of cross-validation folds.
 #' @rdname cross_validation
+#' @examples 
+#' 
+#' cval <- kfold_cross_validation(len=100, nfolds=10)
+#' samples <- crossval_samples(cval, data=as.data.frame(matrix(rnorm(100*10), 100, 10)), y=rep(letters[1:5],20))
+#' stopifnot(nrow(samples) == 10)
 #' @export
 kfold_cross_validation <- function(len, nfolds=10) {
   block_var <- sample(rep(seq(1, nfolds), length.out=len))
@@ -296,7 +307,7 @@ crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id") {
 
 #' @export
 crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y) { 
-  crossv_twofold(data, y, obj$block_var, obj$block_ind)
+  crossv_twofold(data, y, obj$block_var, obj$block_ind, nreps=obj$nreps)
 }
 
 

@@ -18,13 +18,22 @@
 <!-- Font Awesome icons -->
 <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
 
+<!-- clipboard.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.7.1/clipboard.min.js" integrity="sha384-cV+rhyOuRHc9Ub/91rihWcGmMmCXDeksTtCihMupQHSsi8GIIRDG0ThDc3HGQFJ3" crossorigin="anonymous"></script>
+
+<!-- sticky kit -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script>
 
 <!-- pkgdown -->
 <link href="../pkgdown.css" rel="stylesheet">
-<script src="../jquery.sticky-kit.min.js"></script>
 <script src="../pkgdown.js"></script>
-  
-  
+
+
+
+<meta property="og:title" content="Function reference" />
+
+
+
 <!-- mathjax -->
 <script src='https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>
 
@@ -47,8 +56,12 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="../index.html">rMVPA</a>
+      <span class="navbar-brand">
+        <a class="navbar-link" href="../index.html">rMVPA</a>
+        <span class="label label-default" data-toggle="tooltip" data-placement="bottom" title="Released package">0.1.1</span>
+      </span>
     </div>
+
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
@@ -68,6 +81,15 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/CrossValidation.html">Cross-Validation Schemes</a>
+    </li>
+    <li>
+      <a href="../articles/FeatureSelection.html">Feature Selection</a>
+    </li>
+    <li>
+      <a href="../articles/Regional_Analysis.html">Regional Analysis</a>
+    </li>
+    <li>
       <a href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a>
     </li>
   </ul>
@@ -77,6 +99,7 @@
       <ul class="nav navbar-nav navbar-right">
         
       </ul>
+      
     </div><!--/.nav-collapse -->
   </div><!--/.container -->
 </div><!--/.navbar -->
@@ -84,304 +107,318 @@
       
       </header>
 
-      <div class="row">
-  <div class="col-md-9">
+<div class="row">
+  <div class="contents col-md-9">
     <div class="page-header">
-      <h1>
-        Reference
-        <small>version&nbsp;0.1.1</small>
-      </h1>
+      <h1>Reference</h1>
     </div>
 
-    <div class="contents">
-      <table class="ref-index">
+    <table class="ref-index">
 
-      <colgroup>
-        <col class="alias" />
-        <col class="title" />
-      </colgroup>
+    <colgroup>
+      
+      <col class="alias" />
+      <col class="title" />
+    </colgroup>
 
-      <tbody>
-        <tr>
-          <th colspan="2">
-            <h2 id="section-all-functions" class="hasAnchor"><a href="#section-all-functions" class="anchor"></a>All functions</h2>
-            <p class="section-desc"></p>
-          </th>
-        </tr>
-        <tr>
-          <!--  -->
-          <td>
-            <p><code><a href="a-name-to-identify-the-dataset-open-paren-e.g.-quote-lh-quote-or-quote-rh-quote-to-indicate-hemisphere-close-paren.html">mvpa_surface_dataset</a></code> </p>
-          </td>
-          <td><p>mvpa_surface_dataset</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="as_roi.html">as_roi</a></code> </p>
-          </td>
-          <td><p>as_roi</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="classification_result.html">classification_result</a></code> <code><a href="classification_result.html">binary_classification_result</a></code> <code><a href="classification_result.html">multiway_classification_result</a></code> <code><a href="classification_result.html">regression_result</a></code> </p>
-          </td>
-          <td><p>create a <code>classification_result</code> instance</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="compute_performance.html">compute_performance</a></code> </p>
-          </td>
-          <td><p>compute_performance</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="cross_validation.html">blocked_cross_validation</a></code> <code><a href="cross_validation.html">twofold_blocked_cross_validation</a></code> <code><a href="cross_validation.html">kfold_cross_validation</a></code> </p>
-          </td>
-          <td><p>construct a cross-validation specification using a predefined blocking variable</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="crossv_block.html">crossv_block</a></code> </p>
-          </td>
-          <td><p>crossv_block</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="crossv_k.html">crossv_k</a></code> </p>
-          </td>
-          <td><p>crossv_k</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="crossval_samples.html">crossval_samples</a></code> </p>
-          </td>
-          <td><p>crossval_samples</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="custom_performance.html">custom_performance</a></code> </p>
-          </td>
-          <td><p>custom_performance</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="data_sample.html">data_sample</a></code> </p>
-          </td>
-          <td><p>data_sample</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="external_crossval.html">external_crossval</a></code> </p>
-          </td>
-          <td><p>external_crossval</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="extract_sample.html">extract_sample</a></code> </p>
-          </td>
-          <td><p>extract_sample</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="feature_selector.html">feature_selector</a></code> </p>
-          </td>
-          <td><p>feature_selector</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="fit_model.html">fit_model</a></code> </p>
-          </td>
-          <td><p>fit_model</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="gen_sample_dataset.html">gen_sample_dataset</a></code> </p>
-          </td>
-          <td><p>gen_sample_dataset</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="get_samples.html">get_samples</a></code> </p>
-          </td>
-          <td><p>get_samples</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="get_searchlight.html">get_searchlight</a></code> </p>
-          </td>
-          <td><p>get_searchlight</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="group_means.html">group_means</a></code> </p>
-          </td>
-          <td><p>group_means</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="has_test_set.html">has_test_set</a></code> </p>
-          </td>
-          <td><p>has_test_set</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="load_model.html">load_model</a></code> </p>
-          </td>
-          <td><p>load_model</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="merge_predictions.html">merge_predictions</a></code> </p>
-          </td>
-          <td><p>merge_predictions</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="merge_results.html">merge_results</a></code> </p>
-          </td>
-          <td><p>merge_results</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="model_fit.html">model_fit</a></code> </p>
-          </td>
-          <td><p>the result of a single model fit to a chunk of data</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="mvpa_dataset.html">mvpa_dataset</a></code> </p>
-          </td>
-          <td><p>mvpa_dataset</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="mvpa_design.html">mvpa_design</a></code> </p>
-          </td>
-          <td><p>mvpa_design</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="mvpa_iterate.html">mvpa_iterate</a></code> </p>
-          </td>
-          <td><p>mvpa_iterate</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="mvpa_model.html">mvpa_model</a></code> </p>
-          </td>
-          <td><p>mvpa_model</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="nobs.html">nobs</a></code> </p>
-          </td>
-          <td><p>nobs</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="performance-methods.html">performance</a></code> </p>
-          </td>
-          <td><p>performance</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="performance.html">performance</a></code> </p>
-          </td>
-          <td><p>performance</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="predicted_class.html">predicted_class</a></code> </p>
-          </td>
-          <td><p>predicted_class</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="rMVPA.html">rMVPA</a></code> </p>
-          </td>
-          <td><p>rMVPA: A package for multi-voxel pattern analysis (MVPA)</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="rsa_design.html">rsa_design</a></code> </p>
-          </td>
-          <td><p>rsa_design</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="rsa_iterate.html">rsa_iterate</a></code> </p>
-          </td>
-          <td><p>rsa_iterate</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="rsa_model.html">rsa_model</a></code> </p>
-          </td>
-          <td><p>rsa_model</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="run_regional.html">run_regional</a></code> </p>
-          </td>
-          <td><p>run_regional</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="run_searchlight.html">run_searchlight</a></code> </p>
-          </td>
-          <td><p>run_searchlight</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="select_features.html">select_features</a></code> </p>
-          </td>
-          <td><p>select_features</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="sub_result.html">sub_result</a></code> </p>
-          </td>
-          <td><p>sub_result</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="train_model.html">train_model</a></code> </p>
-          </td>
-          <td><p>train_model</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="tune_grid.html">tune_grid</a></code> </p>
-          </td>
-          <td><p>tune_grid</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="tune_model.html">tune_model</a></code> </p>
-          </td>
-          <td><p>tune_model</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="wrap_output.html">wrap_output</a></code> </p>
-          </td>
-          <td><p>wrap_output</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="y_test.html">y_test</a></code> </p>
-          </td>
-          <td><p>y_test</p></td>
-        </tr><tr>
-          <!--  -->
-          <td>
-            <p><code><a href="y_train.html">y_train</a></code> </p>
-          </td>
-          <td><p>y_train</p></td>
-        </tr>
-      </tbody>
-      </table>
-    </div>
+    <tbody>
+      <tr>
+        <th colspan="2">
+          <h2 id="section-all-functions" class="hasAnchor"><a href="#section-all-functions" class="anchor"></a>All functions</h2>
+          <p class="section-desc"></p>
+        </th>
+      </tr>
+      <tr>
+        
+        <td>
+          <p><code><a href="a-name-to-identify-the-dataset-open-paren-e.g.-quote-lh-quote-or-quote-rh-quote-to-indicate-hemisphere-close-paren.html">mvpa_surface_dataset()</a></code> </p>
+        </td>
+        <td><p>mvpa_surface_dataset</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="as_roi.html">as_roi()</a></code> </p>
+        </td>
+        <td><p>as_roi</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="classification_result.html">classification_result()</a></code> <code><a href="classification_result.html">binary_classification_result()</a></code> <code><a href="classification_result.html">multiway_classification_result()</a></code> <code><a href="classification_result.html">regression_result()</a></code> </p>
+        </td>
+        <td><p>create a <code>classification_result</code> instance</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="combinedACC.html">combinedACC()</a></code> </p>
+        </td>
+        <td><p>@keywords internal</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="combinedAUC.html">combinedAUC()</a></code> </p>
+        </td>
+        <td><p>@keywords internal</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="compute_performance.html">compute_performance()</a></code> </p>
+        </td>
+        <td><p>compute_performance</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="cross_validation.html">bootstrap_blocked_cross_validation()</a></code> <code><a href="cross_validation.html">blocked_cross_validation()</a></code> <code><a href="cross_validation.html">custom_cross_validation()</a></code> <code><a href="cross_validation.html">twofold_blocked_cross_validation()</a></code> <code><a href="cross_validation.html">kfold_cross_validation()</a></code> </p>
+        </td>
+        <td><p>bootstrap_blocked_cross_validation</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="crossv_k.html">crossv_k()</a></code> </p>
+        </td>
+        <td><p>crossv_k</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="crossv_twofold.html">crossv_twofold()</a></code> </p>
+        </td>
+        <td><p>crossv_twofold</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="crossval_samples.html">crossval_samples()</a></code> </p>
+        </td>
+        <td><p>crossval_samples</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="custom_performance.html">custom_performance()</a></code> </p>
+        </td>
+        <td><p>custom_performance</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="data_sample.html">data_sample()</a></code> </p>
+        </td>
+        <td><p>data_sample</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="extract_sample.html">extract_sample()</a></code> </p>
+        </td>
+        <td><p>extract_sample</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="feature_selector.html">feature_selector()</a></code> </p>
+        </td>
+        <td><p>feature_selector</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="fit_model.html">fit_model()</a></code> </p>
+        </td>
+        <td><p>fit_model</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="gen_sample_dataset.html">gen_sample_dataset()</a></code> </p>
+        </td>
+        <td><p>gen_sample_dataset</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="get_samples.html">get_samples()</a></code> </p>
+        </td>
+        <td><p>get_samples</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="get_searchlight.html">get_searchlight()</a></code> </p>
+        </td>
+        <td><p>get_searchlight</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="group_means.html">group_means()</a></code> </p>
+        </td>
+        <td><p>group_means</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="has_test_set.html">has_test_set()</a></code> </p>
+        </td>
+        <td><p>has_test_set</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="load_model.html">load_model()</a></code> </p>
+        </td>
+        <td><p>load_model</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="merge_predictions.html">merge_predictions()</a></code> </p>
+        </td>
+        <td><p>merge_predictions</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="merge_results.html">merge_results()</a></code> </p>
+        </td>
+        <td><p>merge_results</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="model_fit.html">model_fit()</a></code> </p>
+        </td>
+        <td><p>the result of a single model fit to a chunk of data</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="mvpa_dataset.html">mvpa_dataset()</a></code> </p>
+        </td>
+        <td><p>mvpa_dataset</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="mvpa_design.html">mvpa_design()</a></code> </p>
+        </td>
+        <td><p>mvpa_design</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="mvpa_iterate.html">mvpa_iterate()</a></code> </p>
+        </td>
+        <td><p>mvpa_iterate</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="mvpa_model.html">mvpa_model()</a></code> </p>
+        </td>
+        <td><p>mvpa_model</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="nobs.html">nobs()</a></code> </p>
+        </td>
+        <td><p>nobs</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="nresponses.html">nresponses()</a></code> </p>
+        </td>
+        <td><p>nresponses</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="performance-methods.html">performance(<i>&lt;regression_result&gt;</i>)</a></code> </p>
+        </td>
+        <td><p>performance</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="performance.html">performance()</a></code> </p>
+        </td>
+        <td><p>performance</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="pool_results.html">pool_results()</a></code> </p>
+        </td>
+        <td><p>pool classiifer results collected over a set of overlapping indices</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="predicted_class.html">predicted_class()</a></code> </p>
+        </td>
+        <td><p>predicted_class</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="rMVPA.html">rMVPA</a></code> </p>
+        </td>
+        <td><p>rMVPA: A package for multi-voxel pattern analysis (MVPA)</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="rsa_design.html">rsa_design()</a></code> </p>
+        </td>
+        <td><p>rsa_design</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="rsa_iterate.html">rsa_iterate()</a></code> </p>
+        </td>
+        <td><p>rsa_iterate</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="rsa_model.html">rsa_model()</a></code> </p>
+        </td>
+        <td><p>rsa_model</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="run_regional.html">run_regional()</a></code> </p>
+        </td>
+        <td><p>ROI_based MVPA analysis</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="run_searchlight.html">run_searchlight()</a></code> </p>
+        </td>
+        <td><p>run_searchlight</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="select_features.html">select_features()</a></code> <code><a href="select_features.html">select_features()</a></code> </p>
+        </td>
+        <td><p>select_features</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="sub_result.html">sub_result()</a></code> </p>
+        </td>
+        <td><p>sub_result</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="train_model.html">train_model()</a></code> </p>
+        </td>
+        <td><p>train_model</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="tune_grid.html">tune_grid()</a></code> </p>
+        </td>
+        <td><p>tune_grid</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="tune_model.html">tune_model()</a></code> </p>
+        </td>
+        <td><p>tune_model</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="wrap_output.html">wrap_output()</a></code> </p>
+        </td>
+        <td><p>wrap_output</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="y_test.html">y_test()</a></code> </p>
+        </td>
+        <td><p>y_test</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="y_train.html">y_train()</a></code> </p>
+        </td>
+        <td><p>y_train</p></td>
+      </tr>
+    </tbody>
+    </table>
   </div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
@@ -398,11 +435,14 @@
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="http://hadley.github.io/pkgdown/">pkgdown</a>.</p>
+  <p>Site built with <a href="http://pkgdown.r-lib.org/">pkgdown</a>.</p>
 </div>
 
       </footer>
    </div>
 
+  
+
   </body>
 </html>
+

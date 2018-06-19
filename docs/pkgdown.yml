@@ -1,0 +1,9 @@
+pandoc: 1.19.2.1
+pkgdown: 1.1.0.9000
+pkgdown_sha: bcf6299e76d4a398aadfc476b3ac22d253a91d35
+articles:
+  CrossValidation: CrossValidation.html
+  FeatureSelection: FeatureSelection.html
+  Regional_Analysis: Regional_Analysis.html
+  Searchlight_Analysis: Searchlight_Analysis.html
+
