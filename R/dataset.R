@@ -124,10 +124,12 @@ mvpa_dataset <- function(train_data, test_data=NULL, mask) {
 
 #' mvpa_surface_dataset
 #' 
+#' Cnstruct a MVPA dataset with a surface-based dataset.
+#' 
 #' @param train_data the training data, must inherit from \code{BrainSurfaceVector} in \code{neurosurf} package.
 #' @param test_data optional test data, must inherit from \code{BrainSurfaceVector} in \code{neurosurf} package.
 #' @param mask a binary mask equal to the number of nodes in the training/test data set.
-#' @name a name to identify the dataset (e.g. "lh" or "rh" to indicate hemisphere)
+#' @param a name to identify the dataset (e.g. "lh" or "rh" to indicate hemisphere)
 #' @importFrom assertthat assert_that
 #' @export
 mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="") {
@@ -156,6 +158,7 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="")
   
 }
 
+#' @export
 print.mvpa_dataset <- function(x,...) {
   cat("mvpa_dataset:", "\n")
   cat("  train_data: ")
@@ -174,6 +177,7 @@ print.mvpa_dataset <- function(x,...) {
   cat("  mask cardinality: ", sum(x$mask>0), "\n")
 }
 
+#' @export
 print.mvpa_surface_dataset <- function(x,...) {
   cat("mvpa_surface_dataset:", "\n")
   cat("  train_data: ")
@@ -193,8 +197,6 @@ print.mvpa_surface_dataset <- function(x,...) {
   cat("  mask areas: ", midstr, "\n")
   cat("  mask cardinality: ", sum(x$mask>0), "\n")
 }
-
-
 
 
 

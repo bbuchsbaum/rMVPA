@@ -108,6 +108,7 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
     futile.logger::flog.error("no valid results for randomized searchlight, exiting.")
   }
   
+  ## could simple merge all searchlights to produce global classification measure  
   combiner(model_spec, good_results)
 }
 

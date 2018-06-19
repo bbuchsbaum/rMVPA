@@ -74,8 +74,6 @@ gen_surface_dataset <- function(nobs, nlevels, folds=5) {
 }
 
 
-
-
 test_that("standard mvpa_searchlight runs without error", {
   
   dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
