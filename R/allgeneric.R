@@ -5,11 +5,11 @@
 #' feature selection on a training ROI.
 #' 
 #' @param obj an object of class \code{feature_selector}
-#' @param roi the roi data, a class of inheriting from \code{ROI} class.
+#' @param X the data, generally a matrix.
 #' @param Y the response variable
 #' @param ... extra args
 #' @export
-select_features <- function(obj, roi, Y, ...) {
+select_features <- function(obj, X, Y, ...) {
   UseMethod("select_features")
 }
 

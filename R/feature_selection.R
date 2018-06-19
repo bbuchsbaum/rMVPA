@@ -69,6 +69,9 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 #' featureMask <- select_features(fsel, ROI@data, Y)
 #' sum(featureMask) == 2
 #' 
+#' fsel2 <- feature_selector("FTest", "top_p", .1)
+#' featureMask <- select_features(fsel2, ROI, Y)
+#' 
 #' @export
 select_features <- function(obj, X, Y, ...) {
   UseMethod("select_features")
@@ -121,9 +124,10 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
 #}
 
 
-#' @export
+
 #' @rdname select_features
 #' @importFrom assertthat assert_that
+#' @export
 select_features.FTest <- function(obj, X, Y) {
   message("selecting features via FTest")
   message("cutoff type ", obj$cutoff_type)
