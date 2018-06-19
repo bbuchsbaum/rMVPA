@@ -7,7 +7,7 @@ combine_regional_results = function(results, ids) {
       tib1 <- tibble::tibble(
           ROINUM=rep(.$id, length(.$result$observed)),
           observed=.$result$observed,
-          pobserved=sapply(seq_along(.$result$predicted), function(i) .$result$prob[i, .$result$predicted[i]]),
+          pobserved=sapply(seq_along(.$result$observed), function(i) .$result$probs[i, .$result$observed[i]]),
           predicted=.$result$predicted,
           correct=as.character(.$result$observed) == as.character(.$result$predicted)
       )
@@ -28,7 +28,7 @@ combine_regional_results = function(results, ids) {
 
 
 
-#' ROI_based MVPA analysis
+#' Region of interest based MVPA analysis
 #' 
 #' Run a separate MVPA analysis for multiple disjoint regions of interest.
 #' 
