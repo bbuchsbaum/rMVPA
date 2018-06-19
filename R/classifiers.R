@@ -244,7 +244,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   
                                   ret <- if (param$frac > 0 && param$frac < 1) {
                                     nkeep <- max(param$frac * ncol(x),1)
-                                    #print(nkeep)
+                              
                                     rank <- memo_rank(x, L=y, fdr=FALSE)
                                     ind <- rank[,"idx"][1:nkeep]
                                   
@@ -279,7 +279,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                       
                                 preds <- lapply(modelFit$fits, function(fit) {
                                   ind <- attr(fit, "keep.ind")
-                                  predict(fit, as.matrix(newdata)[,keep], verbose=FALSE)$posterior
+                                  predict(fit, as.matrix(newdata)[,ind], verbose=FALSE)$posterior
                                 })
                                 
                                 prob <- preds[!sapply(preds, function(x) is.null(x))]

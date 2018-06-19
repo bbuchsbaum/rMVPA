@@ -207,5 +207,37 @@ test_that("mvpa_regional with regression and 5 ROIs runs without error", {
   
 })
 
+test_that("standard mvpa_regional and custom cross-validation runs without error", {
+  
+  dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
+  sample_set <- replicate(5, {
+    list(train=sample(1:80), test=sample(1:100))
+  }, simplify=FALSE)
+  
+  regionMask <- BrainVolume(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
+  cval <- custom_cross_validation(sample_set)
+  
+  model <- load_model("sda_notune")
+  mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
+  res <- run_regional(mspec,regionMask)
+  
+})
+
+test_that("standard mvpa_regional and custom cross-validation and splitting var runs without error", {
+  
+  dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3, split_by=factor(rep(1:4, each=25)))
+  sample_set <- replicate(5, {
+    list(train=sample(1:80), test=sample(1:100))
+  }, simplify=FALSE)
+  
+  regionMask <- BrainVolume(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
+  cval <- custom_cross_validation(sample_set)
+  
+  model <- load_model("sda_notune")
+  mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
+  res <- run_regional(mspec,regionMask)
+  
+})
+
 
 
