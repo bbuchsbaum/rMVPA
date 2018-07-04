@@ -182,21 +182,17 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), compute_per
 
   do_fun <- if (has_test_set(mod_spec$dataset)) external_crossval else internal_crossval
   
-  # if (ncores > 1) {
-  #   message("mvpa_iterate: ncores", ncores)
-  #   cl <- multidplyr::create_cluster(ncores)
-  #   multidplyr::cluster_copy(ids)
-  #   sframe <- multidplyr::partition(sframe, cluster=cl)
-  # }
-  
+
   ### using pmap
-  #ret <- sframe %>% dplyr::mutate(rnum=ids) %>% unname %>% pmap(., ~ do_fun(as_roi(..1), mod_spec, ..3, compute_performance=compute_performance,
-  #                                                                          return_fit=return_fits))
-  
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
-    dplyr::rowwise() %>% 
-    #do(function(x) { flog.info("mvpa_iterate: %s ", .$rnum); x }) %>%
-    dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, compute_performance=compute_performance, return_fit=return_fits)) 
+    unname %>% furrr::future_pmap(., ~ do_fun(as_roi(..1), mod_spec, ..3, 
+                                              compute_performance=compute_performance,
+                                              return_fit=return_fits))
+  
+  #ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
+  #  dplyr::rowwise() %>% 
+  #do(function(x) { flog.info("mvpa_iterate: %s ", .$rnum); x }) %>%
+  #  dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, compute_performance=compute_performance, return_fit=return_fits)) 
     
   ret
   

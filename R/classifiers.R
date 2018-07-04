@@ -228,7 +228,8 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                                     class=c("numeric", "numeric"), 
                                                     label=c("number of bootstap resamples", "fraction of features to select")),
                               grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {    
+                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {   
+                                
                                 x <- as.matrix(x)
                                 mfits <- list()
                                 count <- 1
@@ -243,7 +244,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   
                                   ret <- if (param$frac > 0 && param$frac < 1) {
                                     nkeep <- max(param$frac * ncol(x),1)
-                                    #print(nkeep)
+                              
                                     rank <- memo_rank(x, L=y, fdr=FALSE)
                                     ind <- rank[,"idx"][1:nkeep]
                                   
@@ -277,20 +278,22 @@ MVPAModels$sda_boot <- list(type = "Classification",
                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                       
                                 preds <- lapply(modelFit$fits, function(fit) {
-                            
-                                  predict(fit, as.matrix(newdata), verbose=FALSE)$posterior
+                                  ind <- attr(fit, "keep.ind")
+                                  predict(fit, as.matrix(newdata)[,ind], verbose=FALSE)$posterior
                                 })
                                 
                                 prob <- preds[!sapply(preds, function(x) is.null(x))]
                                 pfinal <- Reduce("+", prob)/length(prob)
                                 
                                 colnames(pfinal)[apply(pfinal, 1, which.max)]
+                            
                               },
                                 
                                 
                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
                                 preds <- lapply(modelFit$fits, function(fit) {
-                                  predict(fit, as.matrix(newdata), verbose=FALSE)$posterior
+                                  ind <- attr(fit, "keep.ind")
+                                  predict(fit, as.matrix(newdata)[,ind], verbose=FALSE)$posterior
                                 })
                                 
                                 prob <- preds[!sapply(preds, function(x) is.null(x))]

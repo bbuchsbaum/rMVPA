@@ -77,9 +77,11 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
 #' @keywords internal
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
+#' @import furrr
 do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, combiner=pool_randomized, ...) {
  
-  ret <- lapply(1:niter, function(i) {
+  
+  ret <- furrr::future_map(1:niter, function(i) {
     flog.info("searchlight iteration: %i", i)
     flog.debug("constructing searchlight.")
     
