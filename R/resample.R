@@ -44,7 +44,7 @@ print.data_sample <- function(x, ...) {
   }
 }
 
-
+#' @export
 as_roi.data_sample <- function(x, ...) {
   
   train_roi <- try(series_roi(x$data$train_data, x$vox))
