@@ -103,7 +103,7 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
  
 
 #' @keywords internal
-#' @importFrom dplyr rowwise do
+#' @importFrom dplyr rowwise do bind_rows
 #' @importFrom tibble as_tibble
 internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE) {
   
@@ -113,10 +113,9 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   ## get ROI indices
   ind <- neuroim::indices(roi$train_roi)
   
-  ret <- samples %>% dplyr::rowwise() %>% dplyr::do( {
-      
+  ret <- samples %>% pmap(function(ytrain, ytest, train, test, .id) {
       ## fit model for cross-validation sample
-      result <- try(train_model(mspec, tibble::as_tibble(.$train), .$ytrain, 
+      result <- try(train_model(mspec, tibble::as_tibble(train), ytrain, 
                                 indices=ind, param=mspec$tune_grid, 
                                 tune_reps=mspec$tune_reps))
       
@@ -124,18 +123,19 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
         flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
         ## error encountered, store error messages
         emessage <- attr(result, "condition")$message
-        tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(.$ytest), fit=list(NULL), error=TRUE, error_message=emessage)
+        tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest), 
+                       fit=list(NULL), error=TRUE, error_message=emessage)
       } else {
-        pred <- predict(result, tibble::as_tibble(.$test), NULL)
+        pred <- predict(result, tibble::as_tibble(test), NULL)
         plist <- lapply(pred, list)
-        plist$y_true <- list(.$ytest)
-        plist$test_ind <- list(as.integer(.$test))
+        plist$y_true <- list(ytest)
+        plist$test_ind <- list(as.integer(test))
         plist$fit <- if (return_fit) list(result) else list(NULL)
         plist$error <- FALSE
         plist$error_message <- "~"
         tibble::as_tibble(plist) 
       }
-  })
+  }) %>% dplyr::bind_rows()
   
 
   if (any(ret$error)) {
@@ -160,6 +160,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
                      id=id, error=FALSE, error_message="~")
     }
   }
+  
 }
   
   
@@ -172,7 +173,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @param ids a \code{vector} of ids for each voxel set
 #' @param compute_performance compute and store performance measures for each voxel set
 #' @param return_fits return the model fit for each voxel set?
-#' @importFrom dplyr do rowwise
+#' @importFrom dplyr bind_rows
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), compute_performance=TRUE, return_fits=FALSE) {
   assert_that(length(ids) == length(vox_list), 
@@ -182,18 +183,13 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), compute_per
 
   do_fun <- if (has_test_set(mod_spec$dataset)) external_crossval else internal_crossval
   
-
-  ### using pmap
-  ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
-    unname %>% furrr::future_pmap(., ~ do_fun(as_roi(..1), mod_spec, ..3, 
-                                              compute_performance=compute_performance,
-                                              return_fit=return_fits))
+  ### iterate over rows using parallel map with futures
+  ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
+    do_fun(as_roi(sample), mod_spec, .id, 
+           compute_performance=compute_performance,
+           return_fit=return_fits)
+  }) %>% dplyr::bind_rows()
   
-  #ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
-  #  dplyr::rowwise() %>% 
-  #do(function(x) { flog.info("mvpa_iterate: %s ", .$rnum); x }) %>%
-  #  dplyr::do(do_fun(as_roi(.$sample), mod_spec, .$rnum, compute_performance=compute_performance, return_fit=return_fits)) 
-    
   ret
   
 }
@@ -232,8 +228,6 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
                                   distmethod=c("pearson", "spearman"), ...) {
   method <- match.arg(method)
   distmethod <- match.arg(distmethod)
-  print(paste("train_model rsa method", method))
-  
   
   dtrain <- 1 - cor(t(train_dat), method=distmethod)
   dvec <- dtrain[lower.tri(dtrain)]
@@ -253,7 +247,6 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
 
 #' @importFrom neuroim indices values
 do_rsa <- function(roi, mod_spec, rnum, method=method, distmethod=distmethod) {
-  print(paste("rsa method", method))
   xtrain <- tibble::as_tibble(values(roi$train_roi))
   ind <- indices(roi$train_roi)
   ret <- train_model(mod_spec, xtrain, ind, method=method, distmethod=distmethod)
@@ -283,9 +276,10 @@ rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), regtype=c("r
   assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   sframe <- get_samples(mod_spec$dataset, vox_list)
   
-  ret <- sframe %>% dplyr::mutate(rnum=ids) %>% 
-    dplyr::rowwise() %>% 
-    dplyr::do(do_rsa(as_roi(.$sample), mod_spec, .$rnum, regtype, distmethod))
+  ## iterate over searchlights using parallel futures
+  ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
+    do_rsa(as_roi(sample), mod_spec, rnum, regtype, distmethod)
+  }) %>% dplyr::bind_rows()
 }
 
 
