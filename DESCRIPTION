@@ -29,7 +29,8 @@ Imports:
     ModelMetrics,
     matrixStats,
     modelr,
-    Rfit
+    Rfit,
+    rflann
 Collate:
     'allgeneric.R'
     'classifiers.R'
@@ -61,8 +62,10 @@ Suggests:
     e1071,
     randomForest,
     iterators,
-    optparse
+    optparse,
+    roxygen2
 Remotes:
     bbuchsbaum/neuroim,
-    bbuchsbaum/neurosurf
+    bbuchsbaum/neurosurf,
+    YeeJeremy/rflann
 VignetteBuilder: knitr
