@@ -26,6 +26,7 @@ Imports:
     Metrics,
     memoise,
     purrr,
+    furrr,
     ModelMetrics,
     matrixStats,
     modelr,
