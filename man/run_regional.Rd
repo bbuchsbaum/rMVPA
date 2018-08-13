@@ -2,7 +2,7 @@
 % Please edit documentation in R/regional.R
 \name{run_regional}
 \alias{run_regional}
-\title{ROI_based MVPA analysis}
+\title{Region of interest based MVPA analysis}
 \usage{
 run_regional(model_spec, region_mask, return_fits = FALSE)
 }

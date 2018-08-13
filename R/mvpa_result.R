@@ -68,7 +68,7 @@ sub_result.multiway_classification_result <- function(x, indices) {
     observed=x$observed[indices],
     predicted=x$predicted[indices],
     probs=as.matrix(x$probs)[indices,],
-    testind=testind[indices],
+    testind=x$testind[indices],
     test_design=x$test_design[indices,],
     predictor=x$predictor)
   
@@ -82,7 +82,7 @@ sub_result.binary_classification_result <- function(x, indices) {
     observed=x$observed[indices],
     predicted=x$predicted[indices],
     probs=as.matrix(x$probs)[indices,],
-    testind=testind[indices],
+    testind=x$testind[indices],
     test_design=x$test_design[indices,],
     predictor=x$predictor)
   

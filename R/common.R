@@ -132,7 +132,7 @@
 # }
 # 
 # 
-# #' @export
+# # @export
 # initMVPASearchlight <- function(configFile, args=list(), verbose=FALSE) {
 #   if (!verbose) {
 #     flog.threshold(ERROR)
@@ -213,7 +213,8 @@ initialize_configuration <- function(args) {
 
 }
 
-#' @export
+
+#' @noRd
 initialize_standard_parameters <- function(config, args, analysisType) {
   set_arg("train_design", config, args, "mvpa_design.txt")
   set_arg("test_design", config, args, NULL)
@@ -238,14 +239,14 @@ initialize_standard_parameters <- function(config, args, analysisType) {
   config
 }
 
-#' @export
+#' @noRd
 normalize_image_samples <- function(bvec, mask) {
   norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
   SparseBrainVector(norm_datavec, space(bvec), mask=mask)  
 }
 
 
-#' @export
+#' @noRd
 normalize_surface_samples <- function(bvec, mask) {
   mat <- scale(bvec@data[indices(bvec), ,drop=FALSE])
   
@@ -554,7 +555,7 @@ initialize_crossval <- function(config, des=NULL) {
 #' @examples load_model("sda")
 #' @export
 load_model <- function(name) {
-  registry <- rMVPA:::MVPAModels
+  registry <- MVPAModels
   
   ret <- if (!is.null(registry[[name]])) {
     registry[[name]]   

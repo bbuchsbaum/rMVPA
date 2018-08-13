@@ -11,16 +11,16 @@ crossv_block(data, y, block_var, id = ".id")
 
 \item{y}{the response vector}
 
+\item{block_var}{an \code{integer} \code{vector} defining the cross-validation blocks}
+
 \item{id}{a character id}
 }
 \description{
 crossv_block
 }
 \examples{
-
 X <- data.frame(x1=rnorm(100), x2=rnorm(100))
 y <- rep(letters[1:4], 25)
 block_var <- rep(1:4, each=25)
 cv <- crossv_block(X,y,block_var)
 }
-\keyword{internal}

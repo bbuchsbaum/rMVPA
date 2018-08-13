@@ -4,14 +4,21 @@
 \alias{crossv_twofold}
 \title{crossv_twofold}
 \usage{
-crossv_twofold(data, y, block_var, block_ind, id = ".id", nreps = 15)
+crossv_twofold(data, y, block_var, block_ind = NULL, id = ".id",
+  nreps = 15)
 }
 \arguments{
 \item{data}{the training data}
 
 \item{y}{the response vector}
 
+\item{block_var}{an \code{integer} \code{vector} defining the cross-validation blocks}
+
+\item{block_ind}{the ordered \code{integer} ids of the blocks}
+
 \item{id}{a character id}
+
+\item{nreps}{the number of resamples}
 }
 \description{
 sample dataset via repeated two-fold cross-validation

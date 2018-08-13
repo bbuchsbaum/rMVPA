@@ -31,6 +31,7 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 #' @param nlevels the number of category levels
 #' @param external_test is the test set 'external' to the training set
 #' @param ntest_obs number of test observations (only relevant if \code{external_test} is true)
+#' @param split_by compute performance measures for each level of factor
 #' @export
 gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), data_mode=c("image", "surface"),
                               spacing=c(1,1,1), blocks=5, nlevels=5, external_test=FALSE, ntest_obs=nobs, split_by=NULL) {
@@ -129,7 +130,7 @@ mvpa_dataset <- function(train_data, test_data=NULL, mask) {
 #' @param train_data the training data, must inherit from \code{BrainSurfaceVector} in \code{neurosurf} package.
 #' @param test_data optional test data, must inherit from \code{BrainSurfaceVector} in \code{neurosurf} package.
 #' @param mask a binary mask equal to the number of nodes in the training/test data set.
-#' @param a name to identify the dataset (e.g. "lh" or "rh" to indicate hemisphere)
+#' @param name label to identify the dataset (e.g. "lh" or "rh" to indicate hemisphere)
 #' @importFrom assertthat assert_that
 #' @export
 mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="") {
@@ -223,10 +224,17 @@ get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "random
   }
 }
 
+#' @keywords internal
+#' @noRd
+#' @import neuroim
 wrap_output.mvpa_dataset <- function(obj, vals, indices) {
   BrainVolume(vals[indices], space(obj$mask), indices=indices)
 }
 
+
+#' @keywords internal
+#' @noRd
+#' @importFrom neurosurf nodes geometry BrainSurface
 wrap_output.mvpa_surface_dataset <- function(obj, vals, indices) {
   
   dvals <- numeric(length(nodes(geometry(obj$train_data))))

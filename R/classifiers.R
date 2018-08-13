@@ -21,12 +21,13 @@ colHuber <- function(x,k=1.5, tol=1e-04) {
 
 
 
-#' @export
+#' @noRd
 MVPAModels <- new.env()
 
 
-#' @export
+
 #' @import MASS
+#' @noRd
 corsimFit <- function(x, y, method, robust) {
   estimator <- if (robust) {
     function(vec)  {
@@ -301,9 +302,10 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 
                               })
 
-#' @export
+
 #' @importFrom memoise memoise
 #' @import sda
+#' @noRd
 memo_rank <- memoise(function(X, L,fdr) {
   sda::sda.ranking(X,L,fdr=fdr,verbose=FALSE)
 })

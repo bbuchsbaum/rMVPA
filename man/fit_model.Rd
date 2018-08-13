@@ -15,6 +15,8 @@ fit_model(obj, roi_x, y, wts, param, lev, last, classProbs, ...)
 
 \item{wts}{a set of case weights}
 
+\item{param}{tuning parameters}
+
 \item{lev}{unused}
 
 \item{last}{unused}

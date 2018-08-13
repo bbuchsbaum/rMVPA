@@ -39,18 +39,22 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
 #' sample dataset via repeated two-fold cross-validation
 #' @import utils
 #' @inheritParams crossv_k
+#' @param block_var an \code{integer} \code{vector} defining the cross-validation blocks
+#' @param block_ind the ordered \code{integer} ids of the blocks
+#' @param nreps the number of resamples
+#' @export
 #' @examples 
 #' 
 #' X <- data.frame(x1=rnorm(100), x2=rnorm(100))
 #' y <- rep(letters[1:4], 25)
 #' block_var <- rep(1:4, each=25)
 #' cv <- crossv_twofold(X,y,block_var, nreps=10)
-crossv_twofold <- function(data, y, block_var, block_ind, id = ".id", nreps=15) {
+crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps=15) {
   if (!length(block_var) == length(y)) {
     stop("length of `block_var` must be equal to length(y)", call. = FALSE)
   }
   
-  if (missing(block_ind)) {
+  if (is.null(block_ind)) {
     block_ind <- seq(1, length(sort(unique(block_var))))
   }
 
@@ -89,11 +93,11 @@ crossv_twofold <- function(data, y, block_var, block_ind, id = ".id", nreps=15) 
 
 #' crossv_block
 #' 
-#' @inheritParams crossv_k
+#' @inheritParams crossv_twofold
 #' @importFrom modelr resample
-#' @keywords internal
+#' @export
 #' @examples 
-#' 
+
 #' X <- data.frame(x1=rnorm(100), x2=rnorm(100))
 #' y <- rep(letters[1:4], 25)
 #' block_var <- rep(1:4, each=25)
@@ -126,9 +130,8 @@ crossv_block <- function(data, y, block_var, id = ".id") {
 
 #' crossv_bootstrap_block
 #' 
-#' @inheritParams crossv_k
+#' @inheritParams crossv_twofold
 #' @importFrom modelr resample
-#' @param nreps number of bootstrap replications
 #' @keywords internal
 crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id") {
   
@@ -168,8 +171,6 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id") {
 #' 
 #' Construct a cross-validation specification using a predefined blocking variable with bootstrap resamples
 #' 
-#' @param block_var an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.
-#' @param nreps the number of bootstrap replications
 #' @rdname cross_validation
 #' @export
 bootstrap_blocked_cross_validation <- function(block_var, nreps=10) {
@@ -195,7 +196,6 @@ blocked_cross_validation <- function(block_var) {
 #' 
 #' Construct a cross-validation specification that used a user-supplied set of training and test indices.
 #' 
-#' @export 
 #' @inheritParams blocked_cross_validation
 #' @param sample_set a \code{list} of training and test sample indices
 #' @rdname cross_validation
@@ -265,31 +265,24 @@ kfold_cross_validation <- function(len, nfolds=10) {
 #   clist
 # }
 
-#' crossval_samples
-#' 
-#' @param obj the cross-validation control object
-#' @param data the data to split up
-#' @param y the response variable
-#' @export
-crossval_samples <- function(obj, data, y) { UseMethod("crossval_samples") }
 
 #' @export
-crossval_samples.kfold_cross_validation <- function(obj, data,y) { 
+crossval_samples.kfold_cross_validation <- function(obj, data,y,...) { 
   crossv_k(data, y, obj$nfolds)
 }
 
 #' @export
-crossval_samples.blocked_cross_validation <- function(obj, data, y) { 
+crossval_samples.blocked_cross_validation <- function(obj, data, y,...) { 
   crossv_block(data, y, obj$block_var)
 }
 
 #' @export
-crossval_samples.bootstrap_blocked_cross_validation <- function(obj, data, y) { 
+crossval_samples.bootstrap_blocked_cross_validation <- function(obj, data, y,...) { 
   crossv_bootstrap_block(data, y, block_var=obj$block_var, nreps=obj$nreps)
 }
 
 #' @export
-crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id") {
+crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id",...) {
   fold <- function(train, test) {
     list(
       ytrain = y[train],
@@ -306,7 +299,7 @@ crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id") {
 }
 
 #' @export
-crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y) { 
+crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y,...) { 
   crossv_twofold(data, y, obj$block_var, obj$block_ind, nreps=obj$nreps)
 }
 

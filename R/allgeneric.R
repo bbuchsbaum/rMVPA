@@ -1,17 +1,33 @@
 
 
+
 #' select_features
 #' 
-#' feature selection on a training ROI.
+#' Given a \code{feature_selection} specification object and a dataset return the set of selected features as a binary vector.
 #' 
-#' @param obj an object of class \code{feature_selector}
-#' @param X the data, generally a matrix.
-#' @param Y the response variable
-#' @param ... extra args
+#' @param obj the \code{feature_selection} object
+#' @param X region of interest containing training features, a class of type \code{ROIVolume} or \code{ROISurface} or \code{matrix}
+#' @param Y the dependent variable as a \code{factor} or \code{numeric} variable.
+#' @param ... additional arguments
+#' @return a \code{logical} vector indicating the columns of \code{X} matrix that were selected.
+#' @examples 
+#' 
+#' fsel <- feature_selector("FTest", "top_k", 2)
+#' coords <- rbind(c(1,1,1), c(2,2,2), c(3,3,3))
+#' 
+#' ROI <- neuroim::ROIVector(neuroim::BrainSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
+#' Y <- factor(rep(c("a", "b"), each=50))
+#' featureMask <- select_features(fsel, ROI@data, Y)
+#' sum(featureMask) == 2
+#' 
+#' fsel2 <- feature_selector("FTest", "top_p", .1)
+#' featureMask <- select_features(fsel2, ROI@data, Y)
+#' 
 #' @export
 select_features <- function(obj, X, Y, ...) {
   UseMethod("select_features")
 }
+
 
 
 #' train_model
@@ -30,7 +46,7 @@ train_model <- function(obj,...) {
 #' 
 #' extract the training labels/response
 #' 
-#' @param the obj to extract training response variable from.
+#' @param obj the object to extract training response variable from.
 #' @export
 y_train <- function(obj) {
   UseMethod("y_train")
@@ -40,7 +56,7 @@ y_train <- function(obj) {
 #' y_test
 #' 
 #' extract the test labels/response.
-#' @param the obj to extract test response variable from.
+#' @param obj the object to extract test response variable from.
 #' @export
 y_test <- function(obj) {
   UseMethod("y_test")
@@ -54,6 +70,7 @@ y_test <- function(obj) {
 #' @param roi_x an ROI containing the training data
 #' @param y the response vector
 #' @param wts a set of case weights
+#' @param param tuning parameters
 #' @param lev unused
 #' @param last unused
 #' @param classProbs unused 
@@ -238,6 +255,19 @@ nresponses <- function(x) {
 run_searchlight <- function(model_spec, radius, method, niter,...) {
   UseMethod("run_searchlight")
 }
+
+
+#' crossval_samples
+#' 
+#' @param obj the cross-validation control object
+#' @param data the data to split up
+#' @param y the response variable
+#' @param ... extra args
+#' @export
+crossval_samples <- function(obj, data, y,...) { 
+  UseMethod("crossval_samples") 
+}
+
 
 
 

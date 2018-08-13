@@ -26,10 +26,6 @@ train_model(obj, ...)
 \item{wts}{optional case weights}
 
 \item{tune_reps}{the number of bootstrap replications for parameter tuning (only used when param is not \code{NULL})}
-
-\item{obj}{an instance of class \code{mvpa_model}}
-
-\item{...}{extra args}
 }
 \description{
 train a classification or regression model

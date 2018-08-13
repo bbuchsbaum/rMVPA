@@ -44,7 +44,8 @@ print.data_sample <- function(x, ...) {
   }
 }
 
-#' @export
+#' @keywords internal
+#' @noRd
 as_roi.data_sample <- function(x, ...) {
   
   train_roi <- try(series_roi(x$data$train_data, x$vox))
@@ -70,7 +71,8 @@ as_roi.data_sample <- function(x, ...) {
   
 }
 
-#' @export
+#' @keywords internal
+#' @noRd
 as.data.frame.data_sample <- function(x, ...) {
   train_mat <- series(x$data$train_data, x$vox)
   

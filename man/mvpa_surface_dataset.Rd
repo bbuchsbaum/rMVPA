@@ -13,7 +13,7 @@ mvpa_surface_dataset(train_data, test_data = NULL, mask = NULL, name = "")
 
 \item{mask}{a binary mask equal to the number of nodes in the training/test data set.}
 
-\item{a}{name to identify the dataset (e.g. "lh" or "rh" to indicate hemisphere)}
+\item{name}{label to identify the dataset (e.g. "lh" or "rh" to indicate hemisphere)}
 }
 \description{
 Cnstruct a MVPA dataset with a surface-based dataset.

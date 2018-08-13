@@ -28,7 +28,9 @@ combine_randomized <- function(model_spec, good_results, bad_results) {
   wrap_out(perf_mat, model_spec$dataset, ind_set)
 }
 
-#' pool classiifer results collected over a set of overlapping indices
+# pool classiifer results collected over a set of overlapping indices
+#' @keywords internal
+#' @noRd
 pool_results <- function(good_results) {
   all_ind <- sort(unlist(good_results$indices))
   ind_count <- table(all_ind)
@@ -47,7 +49,7 @@ pool_results <- function(good_results) {
       rest <- r1[2:length(r1)]
       z1 <- good_results$result[[first]]
       z2 <- good_results$result[rest]
-      ff <- purrr:::partial(merge_results, x=z1)
+      ff <- purrr::partial(merge_results, x=z1)
       do.call(ff, z2)
     } else {
       good_results$result[[r1[1]]]

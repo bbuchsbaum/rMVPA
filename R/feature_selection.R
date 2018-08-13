@@ -1,6 +1,7 @@
 
 #' @keywords iternal
 matrixAnova <- function(Y, x) {
+  x <- as.matrix(x)
   Y <- as.numeric(Y)
   k <- max(Y)
   ni <- tabulate(Y)
@@ -51,38 +52,13 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
   ret
 }
 
-#' select_features
-#' 
-#' Given a \code{feature_selection} specification object and a dataset return the set of selected features as a binary vector.
-#' 
-#' @param obj the \code{feature_selection} object
-#' @param X region of interest containing training features, a class of type \code{ROIVolume} or \code{ROISurface} or \code{matrix}
-#' @param Y the dependent variable as a \code{factor} or \code{numeric} variable.
-#' @param additional arguments
-#' @return a \code{logical} vector indicating the columns of \code{X} matrix that were selected.
-#' @examples 
-#' fsel <- feature_selector("FTest", "top_k", 2)
-#' coords <- rbind(c(1,1,1), c(2,2,2), c(3,3,3))
-#' 
-#' ROI <- neuroim::ROIVector(neuroim::BrainSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
-#' Y <- factor(rep(c("a", "b"), each=50))
-#' featureMask <- select_features(fsel, ROI@data, Y)
-#' sum(featureMask) == 2
-#' 
-#' fsel2 <- feature_selector("FTest", "top_p", .1)
-#' featureMask <- select_features(fsel2, ROI, Y)
-#' 
-#' @export
-select_features <- function(obj, X, Y, ...) {
-  UseMethod("select_features")
-}
 
 
 #' @export
 #' @param ranking.score the feature score: entropy, avg, or max.
 #' @rdname select_features
 #' @import sda
-select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg", "max")) {
+select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg", "max"),...) {
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   ranking.score <- match.arg(ranking.score)
   message("selecting features via catscore")
@@ -128,7 +104,7 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
 #' @rdname select_features
 #' @importFrom assertthat assert_that
 #' @export
-select_features.FTest <- function(obj, X, Y) {
+select_features.FTest <- function(obj, X, Y,...) {
   message("selecting features via FTest")
   message("cutoff type ", obj$cutoff_type)
   message("cutoff value ", obj$cutoff_value)

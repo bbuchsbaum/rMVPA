@@ -8,13 +8,12 @@ predicted_class <- function(prob) {
   pclass <- colnames(prob)[maxid]
 }
 
-#' performance
-#' 
+
 #' @param x the result object
-#' @param split_list split results by indexed sub-groups.
+#' @param split_list split results by indexed sub-groups
 #' @export
 #' @rdname performance-methods
-performance.regression_result <- function(x, split_list,...) {
+performance.regression_result <- function(x, split_list) {
   if (!is.null(split_list)) {
     ## TODO: add support
     stop("split_by not supported for regression analyses yet.")
@@ -125,7 +124,8 @@ performance.multiway_classification_result <- function(x, split_list=NULL, class
   
 }
 
-#'   @keywords internal
+#' @keywords internal
+#' @noRd
 combinedAUC <- function(Pred, Obs) {
   mean(sapply(1:ncol(Pred), function(i) {
     lev <- levels(Obs)[i]
@@ -137,7 +137,8 @@ combinedAUC <- function(Pred, Obs) {
 }
 
 
-#'   @keywords internal
+#' @keywords internal
+#' @noRd
 combinedACC <- function(Pred, Obs) {
   levs <- levels(as.factor(Obs))
   maxind <- apply(Pred, 1, which.max)

@@ -26,6 +26,8 @@ gen_sample_dataset(D, nobs, response_type = c("categorical", "continuous"),
 \item{external_test}{is the test set 'external' to the training set}
 
 \item{ntest_obs}{number of test observations (only relevant if \code{external_test} is true)}
+
+\item{split_by}{compute performance measures for each level of factor}
 }
 \description{
 gen_sample_dataset

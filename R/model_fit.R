@@ -5,7 +5,7 @@ mclass_summary <- function (data, lev = NULL, model = NULL) {
   has_class_probs <- all(lev %in% colnames(data))
   
   if (has_class_probs) {
-    caret:::requireNamespaceQuietStop("ModelMetrics")
+    caret::requireNamespaceQuietStop("ModelMetrics")
     prob_stats <- lapply(levels(data[, "pred"]), function(x) {
       obs <- ifelse(data[, "obs"] == x, 1, 0)
       prob <- data[, x]
@@ -71,7 +71,8 @@ fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
 
 
 #' @export
-predict.class_model_fit <- function(x, newdata, sub_indices=NULL) {
+#' @param sub_indices the subset of row indices to compute predictions on
+predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   
   mat <- if (inherits(newdata, "BrainVector") || inherits(newdata, "BrainSurfaceVector")) {
     series(newdata, x$fit$vox_ind)
@@ -98,7 +99,7 @@ predict.class_model_fit <- function(x, newdata, sub_indices=NULL) {
 }
 
 #' @export
-predict.regression_model_fit <- function(x, newdata, sub_indices=NULL) {
+predict.regression_model_fit <- function(object, newdata, sub_indices=NULL) {
   
   mat <- if (inherits(newdata, "BrainVector") || inherits(newdata, "BrainSurfaceVector")) {
     series(newdata, x$fit$vox_ind)
@@ -199,7 +200,13 @@ model_fit <- function(model, y, fit, model_type=c("classification", "regression"
   ret
 }
 
-
+#' weighted_model
+#' 
+#' a consensus model formed as a weighted average of a set of models
+#' 
+#' @param fits a list of model fits
+#' @param names a list of names, one per model fit
+#' @param weights a vector of weights, one per model fit
 #' @export
 weighted_model <- function(fits, names=1:length(fits), weights=rep(1/length(fits), length(fits))) {
   stopifnot(length(weights) == length(fits))
@@ -210,8 +217,10 @@ weighted_model <- function(fits, names=1:length(fits), weights=rep(1/length(fits
   ret
 }
 
-
-
+#' a list of model fits
+#' 
+#' @param fits a list of fits
+#' @param names the names of the fits
 #' @export
 list_model <- function(fits, names=1:length(fits)) {
   stopifnot(is.list(fits))
@@ -222,7 +231,7 @@ list_model <- function(fits, names=1:length(fits)) {
 }
 
 #' @export
-predict.weighted_model <- function(x, newdata=NULL, ...) {
+predict.weighted_model <- function(object, newdata=NULL, ...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
@@ -233,7 +242,7 @@ predict.weighted_model <- function(x, newdata=NULL, ...) {
 }
 
 #' @export
-predict.list_model <- function(x, newdata=NULL,...) {
+predict.list_model <- function(object, newdata=NULL,...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
@@ -251,14 +260,12 @@ predict.list_model <- function(x, newdata=NULL,...) {
 
 #' train_model
 #' 
-#' @param obj an instance of class \code{mvpa_model}
 #' @param train_dat training data, and instance of class \code{ROIVolume} or \code{ROISurface}
 #' @param y the dependent variable
 #' @param indices the spatial indices associated with each column
 #' @param param optional tuning parameters
 #' @param wts optional case weights
 #' @param tune_reps the number of bootstrap replications for parameter tuning (only used when param is not \code{NULL})
-#' @param ... extra args
 #' @export
 #' @describeIn train_model train an mvpa_model
 train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=NULL, tune_reps=10,...) {

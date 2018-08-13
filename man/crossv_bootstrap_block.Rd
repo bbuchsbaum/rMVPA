@@ -11,7 +11,9 @@ crossv_bootstrap_block(data, y, block_var, nreps = 5, id = ".id")
 
 \item{y}{the response vector}
 
-\item{nreps}{number of bootstrap replications}
+\item{block_var}{an \code{integer} \code{vector} defining the cross-validation blocks}
+
+\item{nreps}{the number of resamples}
 
 \item{id}{a character id}
 }

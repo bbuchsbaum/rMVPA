@@ -26,11 +26,13 @@ Imports:
     Metrics,
     memoise,
     purrr,
+    furrr,
     ModelMetrics,
     matrixStats,
     modelr,
     Rfit,
-    rflann
+    rflann,
+    neurosurf
 Collate:
     'allgeneric.R'
     'classifiers.R'
@@ -62,8 +64,7 @@ Suggests:
     e1071,
     randomForest,
     iterators,
-    optparse,
-    roxygen2
+    optparse
 Remotes:
     bbuchsbaum/neuroim,
     bbuchsbaum/neurosurf,
