@@ -28,3 +28,4 @@ From within R:
 
     git clone git@github.com:bbuchsbaum/rMVPA.git
     R CMD install rMVPA
+
