@@ -674,7 +674,7 @@ load_surface_mask <- function(masklist, train_surf) {
   assert_that(all(names(sections) == names(masklist)))
   
   masksurfaces <- lapply(sections, function(section) {
-    msurf <- neurosurf::loadSurface(train_surf[[section]]@geometry, masklist[[section]])
+    msurf <- neurosurf::read_surf_data(train_surf[[section]]@geometry, masklist[[section]])
     flog.info("mask for %s has %s regions", section, length(unique(msurf@data)))
     msurf
   })
@@ -690,7 +690,8 @@ load_surface_data <- function(config, name, nodeind=NULL, colind=NULL) {
   flog.info("surface sections: ", sections, capture=TRUE)
   
   surfaces <- lapply(sections, function(section) {
-    neurosurf::loadSurface(tdat[[section]]$geometry, tdat[[section]]$data, nodeind=nodeind, colind=colind)
+    ## TODO check me
+    neurosurf::read_surf_data(tdat[[section]]$geometry, tdat[[section]]$data, nodeind=nodeind, colind=colind)
   })
   
   names(surfaces) <- sections

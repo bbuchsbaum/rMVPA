@@ -56,7 +56,7 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     }
   } else {
     fname <- system.file("extdata/std.lh.smoothwm.asc", package="neuroim2")
-    geom <- neurosurf::loadSurface(fname)
+    geom <- neurosurf::read_surf_geometry(fname)
     nvert <- nrow(neurosurf::vertices(geom))
     mat <- matrix(rnorm(nvert*nobs), nvert, nobs)
     bvec <- neurosurf::NeuroSurfaceVector(geom, 1:nvert, mat)
