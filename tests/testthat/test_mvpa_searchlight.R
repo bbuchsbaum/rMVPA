@@ -62,7 +62,7 @@ gen_surface_dataset <- function(nobs, nlevels, folds=5) {
   nvert <- nrow(vertices(geom))
   mat <- matrix(rnorm(nvert*nobs), nvert, nobs)
   
-  bvec <- BrainSurfaceVector(geom, 1:nvert, mat)
+  bvec <- NeuroSurfaceVector(geom, 1:nvert, mat)
   Y <- sample(factor(rep(letters[1:nlevels], length.out=nobs)))
   blockVar <- rep(1:folds, length.out=nobs)
   

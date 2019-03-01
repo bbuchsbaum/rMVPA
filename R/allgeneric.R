@@ -15,7 +15,7 @@
 #' fsel <- feature_selector("FTest", "top_k", 2)
 #' coords <- rbind(c(1,1,1), c(2,2,2), c(3,3,3))
 #' 
-#' ROI <- neuroim::ROIVector(neuroim::BrainSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
+#' ROI <- neuroim2::ROIVec(neuroim2::NeuroSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
 #' Y <- factor(rep(c("a", "b"), each=50))
 #' featureMask <- select_features(fsel, ROI@data, Y)
 #' sum(featureMask) == 2
@@ -250,7 +250,7 @@ nresponses <- function(x) {
 #' @param method the type of searchlight (randomized or standard)
 #' @param niter the number of searchlight iterations (used only for 'randomized' method)
 #' @param ... extra args
-#' @return a named list of \code{BrainVolume} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.
+#' @return a named list of \code{NeuroVol} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.
 #' @export
 run_searchlight <- function(model_spec, radius, method, niter,...) {
   UseMethod("run_searchlight")

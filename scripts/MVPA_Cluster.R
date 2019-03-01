@@ -39,8 +39,8 @@ if (!file.exists(args$mask)) {
 }
 
 
-bvec <- loadVector(args$input)
-mask <- loadVolume(args$mask)
+bvec <- read_vec(args$input)
+mask <- read_vol(args$mask)
 
 res <- if  (args$algo == "slic") {
   rMVPA:::slic_cluster(mask, bvec, args$clusters, decay=(args$exp), nn=8, shrink=args$shrink)

@@ -124,7 +124,7 @@ if (!is.null(config$roi_grouping)) {
 config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
 
 parcellationVolume <- if (!is.null(config$parcellation)) {
-  loadVolume(config$parcellation)
+  read_vol(config$parcellation)
 }
 
 if (!is.null(parcellationVolume)) {

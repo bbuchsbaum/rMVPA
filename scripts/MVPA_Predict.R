@@ -27,12 +27,12 @@ flog.info("command line args are ", args, capture=TRUE)
 predictorName <- paste0(args$folder, "/predictor.RDS")
 predictor <- readRDS(predictorName)
 config <- qread(paste0(args$folder, "/config.yaml"))
-testvec <- loadVector(args$newdata)
+testvec <- read_vec(args$newdata)
 
 
 if (config$normalize) {
   flog.info("normalizing test vector")
-  mask <- loadVolume(config$mask)
+  mask <- read_vol(config$mask)
   testvec <- normalizeSamples(testvec, mask)
 }
 

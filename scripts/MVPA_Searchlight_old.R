@@ -2,7 +2,7 @@
 
 
 .suppress <- suppressPackageStartupMessages
-.suppress(library(neuroim))
+.suppress(library(neuroim2))
 .suppress(library(rMVPA))
 .suppress(library(optparse))
 .suppress(library(futile.logger))
@@ -57,7 +57,7 @@ config <- initializeTuneGrid(args, config)
 configParams <- as.list(config)
 
 config <- initializeDesign(config)
-config$maskVolume <- as(loadMask(config), "LogicalBrainVolume")
+config$maskVolume <- as(loadMask(config), "LogicalNeuroVol")
 
 
 rowIndices <- which(config$train_subset)

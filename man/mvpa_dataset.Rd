@@ -7,11 +7,11 @@
 mvpa_dataset(train_data, test_data = NULL, mask)
 }
 \arguments{
-\item{train_data}{the training data set: a \code{BrainVector} instance}
+\item{train_data}{the training data set: a \code{NeuroVec} instance}
 
-\item{test_data}{the test data set: a \code{BrainVector} instance}
+\item{test_data}{the test data set: a \code{NeuroVec} instance}
 
-\item{mask}{the set of voxels to include: a \code{BrainVolume} instance}
+\item{mask}{the set of voxels to include: a \code{NeuroVol} instance}
 }
 \description{
 A data structure that encapsulate a standard (volumetric) training dataset, an optional test dataset and a voxel 'mask'.

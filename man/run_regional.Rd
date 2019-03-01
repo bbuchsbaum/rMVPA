@@ -9,13 +9,13 @@ run_regional(model_spec, region_mask, return_fits = FALSE)
 \arguments{
 \item{model_spec}{a \code{mvpa_model} instance}
 
-\item{region_mask}{a \code{BrainVolume} or \code{BrainSurface} where each region is identified by a unique integer. 
+\item{region_mask}{a \code{NeuroVol} or \code{NeuroSurface} where each region is identified by a unique integer. 
 Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.}
 
 \item{return_fits}{whether to return model fit for every ROI (default is \code{FALSE} to save memory)}
 }
 \value{
-a named list of \code{BrainVolume} objects, where each name indicates the performance metric and label 
+a named list of \code{NeuroVol} objects, where each name indicates the performance metric and label 
         (e.g. Accuracy, AUC)
 }
 \description{

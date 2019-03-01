@@ -8,6 +8,7 @@ predicted_class <- function(prob) {
   pclass <- colnames(prob)[maxid]
 }
 
+#' performance
 
 #' @param x the result object
 #' @param split_list split results by indexed sub-groups

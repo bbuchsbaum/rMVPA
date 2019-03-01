@@ -38,7 +38,7 @@ if (!is.null(args$design)) {
 
 mask <- loadVolume(args$mask)
 mask.idx <- which(mask>0)
-mat <- as.matrix(loadVector(inputFile))
+mat <- as.matrix(read_vec(inputFile))
 mat <- mat[mask.idx,]
 
 global <- colMeans(mat)

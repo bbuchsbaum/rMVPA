@@ -242,7 +242,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
 #' @noRd
 normalize_image_samples <- function(bvec, mask) {
   norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
-  SparseBrainVector(norm_datavec, space(bvec), mask=mask)  
+  SparseNeuroVec(norm_datavec, space(bvec), mask=mask)  
 }
 
 
@@ -253,7 +253,7 @@ normalize_surface_samples <- function(bvec, mask) {
   m2 <- matrix(0, length(nodes(bvec)), ncol(bvec@data))
   m2[indices(bvec),] <- mat
   
-  BrainSurfaceVector(geometry(bvec), indices=indices(bvec), m2)
+  NeuroSurfaceVector(geometry(bvec), indices=indices(bvec), m2)
 }
 
 initialize_surface_data <- function(config) {
@@ -335,7 +335,7 @@ initialize_image_data <- function(config, mask) {
     flog.info("length of training subset %s", length(indices))
   }
   
-  mask_volume <- as(mask, "LogicalBrainVolume")
+  mask_volume <- as(mask, "LogicalNeuroVol")
   
   train_datavec <- load_image_data(config, "train_data", mask_volume=mask_volume, indices=indices)    
 
@@ -574,7 +574,7 @@ load_model <- function(name) {
 
 load_mask <- function(config) {
   if (config$data_mode == "image") {
-    loadVolume(config$mask)
+    read_vol(config$mask)
   } else if (config$data_mode == "surface") {
     NULL
   }
@@ -641,12 +641,13 @@ load_image_data_series <- function(fnames, config, indices, mask_volume) {
   vecmat <- do.call(rbind, lapply(seq_along(fnames), function(i) {
     fname <- fnames[i]
     flog.info("loading data file %s", fname)
-    mat <- neuroim::as.matrix(loadVector(fname, mask=mask_volume))
+    ## TODO does as.matrix do the right thing? must return nonzero subset...
+    mat <- neuroim2::as.matrix(read_vec(fname, mask=mask_volume))
     flog.info("data file %s has %s voxels and %s samples", fname, nrow(mat), ncol(mat))
     mat
   }))
   
-  SparseBrainVector(vecmat[indices,], space(mask_volume), mask=mask_volume)
+  SparseNeuroVec(vecmat[indices,], space(mask_volume), mask=mask_volume)
 }
 
 
@@ -660,9 +661,9 @@ load_image_data <- function(config, name, mask_volume, indices=NULL) {
   } else {
     flog.info("loading data file %s", fname)
     if (!is.null(indices)) {
-      loadVector(fname, indices=indices, mask=mask_volume)
+      read_vec(fname, indices=indices, mask=mask_volume)
     } else {
-      loadVector(fname, mask=mask_volume)
+      read_vec(fname, mask=mask_volume)
     }
     
   }

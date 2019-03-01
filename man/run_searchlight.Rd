@@ -8,7 +8,8 @@
 run_searchlight(model_spec, radius, method, niter, ...)
 
 \method{run_searchlight}{mvpa_model}(model_spec, radius = 8,
-  method = c("randomized", "standard"), niter = 4, combiner = NULL, ...)
+  method = c("randomized", "standard"), niter = 4, combiner = NULL,
+  ...)
 }
 \arguments{
 \item{model_spec}{a \code{mvpa_model} instance.}
@@ -24,7 +25,7 @@ run_searchlight(model_spec, radius, method, niter, ...)
 \item{combiner}{a function that combines results into an appropriate output.}
 }
 \value{
-a named list of \code{BrainVolume} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.
+a named list of \code{NeuroVol} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.
 }
 \description{
 execute a searchlight analysis

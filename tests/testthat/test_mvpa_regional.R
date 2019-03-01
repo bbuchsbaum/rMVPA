@@ -22,7 +22,7 @@ test_that("surface_based mvpa_regional with 5 ROIS runs without error", {
   cval <- blocked_cross_validation(dset$design$block_var)
   
   maskid <- sample(1:5, size=length(dset$dataset$mask), replace=TRUE)
-  region_mask <- BrainSurface(dset$dataset$train_data@geometry, indices=nodes(dset$dataset$train_data@geometry), data=maskid)
+  region_mask <- NeuroSurface(dset$dataset$train_data@geometry, indices=nodes(dset$dataset$train_data@geometry), data=maskid)
   
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)

@@ -42,27 +42,27 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
   
   if (data_mode == "image") {
     mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
-    bspace <- neuroim::BrainSpace(c(D,nobs), spacing)
-    bvec <- neuroim::BrainVector(mat, bspace)
-    mask <- as.logical(neuroim::BrainVolume(array(rep(1, prod(D)), D), neuroim::BrainSpace(D, spacing)))
+    bspace <- neuroim2::NeuroSpace(c(D,nobs), spacing)
+    bvec <- neuroim2::NeuroVec(mat, bspace)
+    mask <- as.logical(neuroim22::NeuroVol(array(rep(1, prod(D)), D), neuroim2::NeuroSpace(D, spacing)))
     
     if (external_test) {
       mat <- array(rnorm(prod(D)*ntest_obs), c(D,ntest_obs))
-      bspace <- neuroim::BrainSpace(c(D,ntest_obs), spacing)
-      testvec <- neuroim::BrainVector(mat, bspace)
+      bspace <- neuroim2::NeuroSpace(c(D,ntest_obs), spacing)
+      testvec <- neuroim2::NeuroVec(mat, bspace)
       dset <- mvpa_dataset(train_data=bvec, test_data=testvec, mask=mask)
     } else {
       dset <- mvpa_dataset(train_data=bvec,mask=mask)
     }
   } else {
-    fname <- system.file("extdata/std.lh.smoothwm.asc", package="neuroim")
+    fname <- system.file("extdata/std.lh.smoothwm.asc", package="neuroim2")
     geom <- neurosurf::loadSurface(fname)
     nvert <- nrow(neurosurf::vertices(geom))
     mat <- matrix(rnorm(nvert*nobs), nvert, nobs)
-    bvec <- neurosurf::BrainSurfaceVector(geom, 1:nvert, mat)
+    bvec <- neurosurf::NeuroSurfaceVector(geom, 1:nvert, mat)
     
     if (external_test) {
-      test_data <- neurosurf::BrainSurfaceVector(geom, 1:nvert, matrix(rnorm(nvert*ntest_obs), nvert, ntest_obs))
+      test_data <- neurosurf::NeuroSurfaceVector(geom, 1:nvert, matrix(rnorm(nvert*ntest_obs), nvert, ntest_obs))
       dset <- mvpa_surface_dataset(train_data=bvec, test_data=test_data)
     } else {
       dset <- mvpa_surface_dataset(train_data=bvec)
@@ -101,15 +101,15 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
 #' 
 #' A data structure that encapsulate a standard (volumetric) training dataset, an optional test dataset and a voxel 'mask'.
 #' 
-#' @param train_data the training data set: a \code{BrainVector} instance
-#' @param test_data the test data set: a \code{BrainVector} instance
-#' @param mask the set of voxels to include: a \code{BrainVolume} instance
+#' @param train_data the training data set: a \code{NeuroVec} instance
+#' @param test_data the test data set: a \code{NeuroVec} instance
+#' @param mask the set of voxels to include: a \code{NeuroVol} instance
 #' @importFrom assertthat assert_that
 #' @export
 mvpa_dataset <- function(train_data, test_data=NULL, mask) {
-  assert_that(inherits(train_data, "BrainVector"))
+  assert_that(inherits(train_data, "NeuroVec"))
   if (!is.null(test_data)) {
-    assert_that(inherits(test_data, "BrainVector"))
+    assert_that(inherits(test_data, "NeuroVec"))
   }
   ret <- structure(
     list(
@@ -127,18 +127,18 @@ mvpa_dataset <- function(train_data, test_data=NULL, mask) {
 #' 
 #' Cnstruct a MVPA dataset with a surface-based dataset.
 #' 
-#' @param train_data the training data, must inherit from \code{BrainSurfaceVector} in \code{neurosurf} package.
-#' @param test_data optional test data, must inherit from \code{BrainSurfaceVector} in \code{neurosurf} package.
+#' @param train_data the training data, must inherit from \code{NeuroSurfaceVector} in \code{neurosurf} package.
+#' @param test_data optional test data, must inherit from \code{NeuroSurfaceVector} in \code{neurosurf} package.
 #' @param mask a binary mask equal to the number of nodes in the training/test data set.
 #' @param name label to identify the dataset (e.g. "lh" or "rh" to indicate hemisphere)
 #' @importFrom assertthat assert_that
 #' @export
 mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="") {
   
-  assert_that(inherits(train_data, "BrainSurfaceVector"))
+  assert_that(inherits(train_data, "NeuroSurfaceVector"))
   
   if (!is.null(test_data)) {
-    assert_that(inherits(test_data, "BrainSurfaceVector"))
+    assert_that(inherits(test_data, "NeuroSurfaceVector"))
   }
   
   if (is.null(mask)) {
@@ -205,9 +205,9 @@ print.mvpa_surface_dataset <- function(x,...) {
 get_searchlight.mvpa_dataset <- function(obj, type=c("standard", "randomized"), radius=8,...) {
   type <- match.arg(type)
   if (type == "standard") {
-    neuroim::Searchlight(obj$mask, radius=radius)
+    neuroim2::Searchlight(obj$mask, radius=radius)
   } else {
-    neuroim::RandomSearchlight(obj$mask, radius=radius)
+    neuroim2::RandomSearchlight(obj$mask, radius=radius)
   }
 }
 
@@ -226,15 +226,15 @@ get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "random
 
 #' @keywords internal
 #' @noRd
-#' @import neuroim
+#' @import neuroim2
 wrap_output.mvpa_dataset <- function(obj, vals, indices) {
-  BrainVolume(vals[indices], space(obj$mask), indices=indices)
+  NeuroVol(vals[indices], space(obj$mask), indices=indices)
 }
 
 
 #' @keywords internal
 #' @noRd
-#' @importFrom neurosurf nodes geometry BrainSurface
+#' @importFrom neurosurf nodes geometry NeuroSurface
 wrap_output.mvpa_surface_dataset <- function(obj, vals, indices) {
   
   dvals <- numeric(length(nodes(geometry(obj$train_data))))
@@ -245,7 +245,7 @@ wrap_output.mvpa_surface_dataset <- function(obj, vals, indices) {
   
   dvals[indices] <- vals[indices]
   ## bit of a hack
-  BrainSurface(geometry=geometry(obj$train_data), indices=indices, data=dvals)
+  NeuroSurface(geometry=geometry(obj$train_data), indices=indices, data=dvals)
 }
 
 #' @export
