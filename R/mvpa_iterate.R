@@ -108,7 +108,7 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE) {
   
   ## generate cross-validation samples
-  samples <- crossval_samples(mspec$crossval, tibble::as_tibble(values(roi$train_roi)), y_train(mspec))
+  samples <- crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi)), y_train(mspec))
   
   ## get ROI indices
   ind <- neuroim2::indices(roi$train_roi)
@@ -247,7 +247,7 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
 
 #' @importFrom neuroim2 indices values
 do_rsa <- function(roi, mod_spec, rnum, method=method, distmethod=distmethod) {
-  xtrain <- tibble::as_tibble(values(roi$train_roi))
+  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi))
   ind <- indices(roi$train_roi)
   ret <- train_model(mod_spec, xtrain, ind, method=method, distmethod=distmethod)
   tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")

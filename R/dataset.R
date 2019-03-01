@@ -44,7 +44,7 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
     bspace <- neuroim2::NeuroSpace(c(D,nobs), spacing)
     bvec <- neuroim2::NeuroVec(mat, bspace)
-    mask <- as.logical(neuroim22::NeuroVol(array(rep(1, prod(D)), D), neuroim2::NeuroSpace(D, spacing)))
+    mask <- as.logical(neuroim2::NeuroVol(array(rep(1, prod(D)), D), neuroim2::NeuroSpace(D, spacing)))
     
     if (external_test) {
       mat <- array(rnorm(prod(D)*ntest_obs), c(D,ntest_obs))
@@ -205,9 +205,9 @@ print.mvpa_surface_dataset <- function(x,...) {
 get_searchlight.mvpa_dataset <- function(obj, type=c("standard", "randomized"), radius=8,...) {
   type <- match.arg(type)
   if (type == "standard") {
-    neuroim2::Searchlight(obj$mask, radius=radius)
+    neuroim2::searchlight(obj$mask, radius=radius,...)
   } else {
-    neuroim2::RandomSearchlight(obj$mask, radius=radius)
+    neuroim2::random_searchlight(obj$mask, radius=radius,...)
   }
 }
 

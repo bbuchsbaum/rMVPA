@@ -76,7 +76,7 @@ fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
 predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   
   mat <- if (inherits(newdata, "NeuroVec") || inherits(newdata, "NeuroSurfaceVector")) {
-    series(newdata, x$fit$vox_ind)
+    series(newdata, object$fit$vox_ind)
   } else {
     newdata
   }
@@ -86,14 +86,14 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
     mat <- mat[sub_indices,,drop=FALSE]
   }
   
-  if (!is.null(x$feature_mask)) {
-    mat <- mat[, x$feature_mask,drop=FALSE]
+  if (!is.null(object$feature_mask)) {
+    mat <- mat[, object$feature_mask,drop=FALSE]
   }
   
-  probs <- x$model$prob(x$fit,mat) 
-  colnames(probs) <- levels(x$y)
+  probs <- object$model$prob(object$fit,mat) 
+  colnames(probs) <- levels(object$y)
   cpred <- max.col(probs)
-  cpred <- levels(x$y)[cpred]
+  cpred <- levels(object$y)[cpred]
   ret <- list(class=cpred, probs=probs)
   class(ret) <- c("classification_prediction", "prediction", "list")
   ret

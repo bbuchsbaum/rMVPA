@@ -1,11 +1,11 @@
-library(neuroim)
+library(neuroim2)
 library(neurosurf)
 
 gen_regression_dataset <- function(D, nobs, spacing=c(1,1,1), folds=5) {
   mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
-  bspace <- BrainSpace(c(D,nobs), spacing)
-  bvec <- BrainVector(mat, bspace)
-  mask <- as.logical(BrainVolume(array(rep(1, prod(D)), D), BrainSpace(D, spacing)))
+  bspace <- NeuroSpace(c(D,nobs), spacing)
+  bvec <- NeuroVec(mat, bspace)
+  mask <- as.logical(NeuroVol(array(rep(1, prod(D)), D), NeuroSpace(D, spacing)))
   Y <- rnorm(nobs)
   blockVar <- rep(1:folds, length.out=nobs)
   des <- mvpa_design(data.frame(Y=Y), block_var=blockVar, y_train= ~ Y)
@@ -14,9 +14,9 @@ gen_regression_dataset <- function(D, nobs, spacing=c(1,1,1), folds=5) {
 
 gen_dataset_with_test <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5, splitvar=TRUE) {
   mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
-  bspace <- BrainSpace(c(D,nobs), spacing)
-  bvec <- BrainVector(mat, bspace)
-  mask <- as.logical(BrainVolume(array(rep(1, prod(D)), D), BrainSpace(D, spacing)))
+  bspace <- NeuroSpace(c(D,nobs), spacing)
+  bvec <- NeuroVec(mat, bspace)
+  mask <- as.logical(NeuroVol(array(rep(1, prod(D)), D), NeuroSpace(D, spacing)))
   Y <- sample(factor(rep(letters[1:nlevels], length.out=nobs)))
   Ytest <- rev(Y)
   blockVar <- rep(1:folds, length.out=nobs)
@@ -45,9 +45,9 @@ gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
     mat[ind[1], ind[2], ind[3],] <- 0
   }
   
-  bspace <- BrainSpace(c(D,nobs), spacing)
-  bvec <- BrainVector(mat, bspace)
-  mask <- as.logical(BrainVolume(array(rep(1, prod(D)), D), BrainSpace(D, spacing)))
+  bspace <- NeuroSpace(c(D,nobs), spacing)
+  bvec <- NeuroVec(mat, bspace)
+  mask <- as.logical(NeuroVol(array(rep(1, prod(D)), D), NeuroSpace(D, spacing)))
   Y <- sample(factor(rep(letters[1:nlevels], length.out=nobs)))
   blockVar <- rep(1:folds, length.out=nobs)
   
