@@ -89,12 +89,13 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
     
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
     
-    vox_iter <- lapply(slight, function(x) x)
+    #vox_iter <- lapply(slight, function(x) x)
     
-    len <- sapply(vox_iter, function(x) attr(x, "length"))
-    vox_iter <- vox_iter[len >= 2]
-    cind <- sapply(vox_iter, attr, "center.index")
-    mvpa_fun(model_spec, vox_iter, cind,...)
+    #len <- sapply(vox_iter, function(x) attr(x, "length"))
+    #vox_iter <- vox_iter[len >= 2]
+    #cind <- sapply(vox_iter, attr, "center.index")
+    cind <- which(model_spec$dataset$mask > 0)
+    mvpa_fun(model_spec, slight, cind,...)
   })
   
   nmodels <- sum(unlist(sapply(ret, nrow)))
