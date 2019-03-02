@@ -81,7 +81,7 @@ as.data.frame.data_sample <- function(x, ...) {
   }
   
   cds <- if (is.vector(x$vox)) {
-    cds <- indexToGrid(space(x$data$mask), x$vox)
+    cds <- index_to_grid(space(x$data$mask), x$vox)
   } else {
     x$vox
   }

@@ -103,7 +103,7 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
 predict.regression_model_fit <- function(object, newdata, sub_indices=NULL) {
   
   mat <- if (inherits(newdata, "NeuroVec") || inherits(newdata, "NeuroSurfaceVector")) {
-    series(newdata, x$fit$vox_ind)
+    series(newdata, object$fit$vox_ind)
   } else {
     newdata
   }
@@ -114,11 +114,11 @@ predict.regression_model_fit <- function(object, newdata, sub_indices=NULL) {
   }
   
   
-  if (!is.null(x$feature_mask)) {
-    mat <- mat[, x$feature_mask,drop=FALSE]
+  if (!is.null(object$feature_mask)) {
+    mat <- mat[, object$feature_mask,drop=FALSE]
   }
   
-  ret <- list(preds=x$model$predict(x$fit,mat))
+  ret <- list(preds=object$model$predict(object$fit,mat))
   class(ret) <- c("regression_prediction", "prediction", "list")
   ret
 }

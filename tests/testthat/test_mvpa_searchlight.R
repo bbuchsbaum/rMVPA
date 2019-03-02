@@ -208,12 +208,12 @@ test_that("randomized mvpa_searchlight works with regression", {
 })
 
 test_that("mvpa_searchlight works with testset", {
-  require("sparsediscrim")
-  dataset <- gen_sample_dataset(c(4,4,4), 100, response_type="categorical", data_mode="surface", blocks=5, nlevels=4, external_test=TRUE, nobs=100)
+  require("sda")
+  dataset <- gen_sample_dataset(c(4,4,4), 100, response_type="categorical", data_mode="image", blocks=5, nlevels=4, external_test=TRUE, nobs=100)
   
   cval <- blocked_cross_validation(dataset$design$block_var)
 
-  model <- load_model("lda_thomaz")
+  model <- load_model("sda")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
   res <- run_searchlight( mspec, radius=6, method="randomized")
   

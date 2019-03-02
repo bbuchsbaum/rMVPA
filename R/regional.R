@@ -74,7 +74,7 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
   perf_mat <- do.call(rbind, results$performance)
   
   ## generate volumetric results
-  vols <- lapply(1:ncol(perf_mat), function(i) fill(region_mask, cbind(results$id, perf_mat[,i])))
+  vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask, cbind(results$id, perf_mat[,i])))
   names(vols) <- colnames(perf_mat)
   
   perf_mat <- tibble::as_tibble(perf_mat) %>% dplyr::mutate(ROINUM = unlist(results$id)) %>% dplyr::select(ROINUM, dplyr::everything())
