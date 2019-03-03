@@ -35,7 +35,7 @@ test_that("mvpa_regional with 5 ROIS with sda_boot runs without error", {
   dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3,response_type="categorical")
   cval <- blocked_cross_validation(dataset$design$block_var)
   
-  regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), neuroim::space(dataset$dataset$mask))
+  regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), neuroim2::space(dataset$dataset$mask))
   model <- load_model("sda_boot")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec, regionMask)

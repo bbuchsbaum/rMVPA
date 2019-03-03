@@ -13,7 +13,7 @@ vignette: >
 ## MVPA Analysis on Regions of Interest
 
 ```{r, echo=FALSE, message=FALSE}
-library(neuroim)
+library(neuroim2)
 library(devtools)
 load_all()
 ```
@@ -41,7 +41,7 @@ Now we generate an arbitrary set of ROIs by assigning each voxel in the input ma
 mask <- dset$dataset$mask
 nvox <- sum(mask)
 
-region_mask <- neuroim::BrainVolume(sample(1:3,replace=TRUE,size=nvox), space(mask), indices=which(mask>0))
+region_mask <- neuroim2::NeuroVol(sample(1:3,replace=TRUE,size=nvox), space(mask), indices=which(mask>0))
 table(region_mask)
 
 ```

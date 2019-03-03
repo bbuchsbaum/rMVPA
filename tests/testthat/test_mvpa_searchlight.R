@@ -57,7 +57,7 @@ gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
 
 gen_surface_dataset <- function(nobs, nlevels, folds=5) {
   library(neurosurf)
-  fname <- system.file("extdata/std.lh.smoothwm.asc", package="neuroim")
+  fname <- system.file("extdata/std.lh.smoothwm.asc", package="neuroim2")
   geom <- read_surf_geometry(fname)
   nvert <- nrow(vertices(geom))
   mat <- matrix(rnorm(nvert*nobs), nvert, nobs)

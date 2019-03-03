@@ -13,7 +13,7 @@ vignette: >
 ## Cross-Validation Approaches
 
 ```{r, echo=FALSE, message=FALSE}
-library(neuroim)
+library(neuroim2)
 library(devtools)
 load_all()
 ```
