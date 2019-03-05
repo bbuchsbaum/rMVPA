@@ -1,5 +1,4 @@
 
-
 #' @keywords internal
 wrap_out <- function(perf_mat, dataset, ids) {
   out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids))
@@ -162,7 +161,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' @param combiner a function that combines results into an appropriate output.
 #' 
 #' @references 
-#' Björnsdotter, M., Rylander, K., & Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.
+#' Bjornsdotter, M., Rylander, K., & Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.
 #' 
 #' Kriegeskorte, N., Goebel, R., & Bandettini, P. (2006). Information-based functional brain mapping. Proceedings of the National academy of Sciences of the United States of America, 103(10), 3863-3868.
 #' @export
@@ -232,5 +231,3 @@ run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized
   } 
   
 }
-
-

@@ -5,7 +5,7 @@ mclass_summary <- function (data, lev = NULL, model = NULL) {
   has_class_probs <- all(lev %in% colnames(data))
   
   if (has_class_probs) {
-    caret::requireNamespaceQuietStop("ModelMetrics")
+    caret:::requireNamespaceQuietStop("ModelMetrics")
     prob_stats <- lapply(levels(data[, "pred"]), function(x) {
       obs <- ifelse(data[, "obs"] == x, 1, 0)
       prob <- data[, x]

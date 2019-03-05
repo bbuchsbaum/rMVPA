@@ -22,7 +22,8 @@ test_that("surface_based mvpa_regional with 5 ROIS runs without error", {
   cval <- blocked_cross_validation(dset$design$block_var)
   
   maskid <- sample(1:5, size=length(dset$dataset$mask), replace=TRUE)
-  region_mask <- NeuroSurface(dset$dataset$train_data@geometry, indices=nodes(dset$dataset$train_data@geometry), data=maskid)
+  region_mask <- NeuroSurface(dset$dataset$train_data@geometry, indices=nodes(dset$dataset$train_data@geometry), 
+                              data=maskid)
   
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
@@ -57,9 +58,9 @@ test_that("mvpa_regional with 5 ROIS with sda_boot runs without error", {
 #   
 # })
 
-test_that("mvpa_regional with 5 ROIS runs and sparse_sda without error", {
-  tuneGrid <- expand.grid(frac=c(.2,.5,.8), lambda=c(.01, .2, .8))
-  model <- load_model("sparse_sda")
+test_that("mvpa_regional with 5 ROIS runs and sda without error", {
+  tuneGrid <- expand.grid(lambda=c(.01), diagonal=c(TRUE, FALSE))
+  model <- load_model("sda")
   
   dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=4)
   cval <- blocked_cross_validation(dataset$design$block_var)
