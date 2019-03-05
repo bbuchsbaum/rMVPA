@@ -377,9 +377,13 @@ initialize_design <- function(config) {
     config$test_subset <- eval(parse(text=config$test_subset))
   }
   
-
   ## full design
-  config$full_train_design <- read.table(config$train_design, header=TRUE, comment.char=";")
+  config$full_train_design <- if (length(config$train_design) > 1) {
+    flog.info(paste("concatenating %s design files", length(config$train_design)))
+    do.call(rbind, lapply(config$train_design, read.table, header=TRUE, comment.char=";"))
+  } else {
+    read.table(config$train_design, header=TRUE, comment.char=";")
+  }
   
   ## subset of training samples
   config$train_subset <- load_subset(config$full_train_design, config$train_subset)
@@ -391,12 +395,12 @@ initialize_design <- function(config) {
   flog.info(paste("training subset contains", nrow(config$train_design), "of", nrow(config$full_train_design), "rows."))
   
   if (!is.null(config$test_design) && is.null(config$test_data)) {
-    flog.error("test_design %s is supplied with no test_data")
+    flog.error("test_design %s is supplied with no test_data", config$test_data)
     stop()
   }
   
   if (is.null(config$test_design) && !is.null(config$test_data)) {
-    flog.error("test_data %s is supplied with no test_design")
+    flog.error("test_data %s is supplied with no test_design", config$test_data)
     stop()
   }
   
@@ -413,7 +417,14 @@ initialize_design <- function(config) {
   if (!is.null(config$test_design)) {
     has_test <- TRUE
     flog.info("test design %s is specified", config$test_design)
-    config$full_test_design <- read.table(config$test_design, header=TRUE, comment.char=";")
+    
+    config$full_test_design <- if (length(config$test_design) > 1) {
+      flog.info(paste("concatenating %s test design files", length(config$test_design)))
+      do.call(rbind, lapply(config$test_design, read.table, header=TRUE, comment.char=";"))
+    } else {
+      read.table(config$test_design, header=TRUE, comment.char=";")
+    }
+    
     flog.info(paste("test design contains", nrow(config$full_test_design), "rows."))
     
     config$test_subset <- load_subset(config$full_test_design, config$test_subset)
