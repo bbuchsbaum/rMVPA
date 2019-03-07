@@ -8,8 +8,8 @@
 \usage{
 select_features(obj, X, Y, ...)
 
-\method{select_features}{catscore}(obj, X, Y,
-  ranking.score = c("entropy", "avg", "max"), ...)
+\method{select_features}{catscore}(obj, X, Y, ranking.score = c("entropy",
+  "avg", "max"), ...)
 
 \method{select_features}{FTest}(obj, X, Y, ...)
 }
