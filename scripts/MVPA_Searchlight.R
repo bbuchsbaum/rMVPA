@@ -10,6 +10,7 @@
 .suppress(library(io))
 .suppress(library(doParallel))
 .suppress(library(purrr))
+.suppress(library(future))
 
 option_list <- list(make_option(c("-r", "--radius"), type="numeric", help="the radius in millimeters of the searchlight"),
                     make_option(c("-t", "--train_design"), type="character", help="the file name of the design table"),
@@ -52,6 +53,7 @@ config <- rMVPA:::initialize_standard_parameters(config, args, "searchlight")
 rMVPA:::set_arg("niter", config, args, 16)
 rMVPA:::set_arg("radius", config, args, 8)
 rMVPA:::set_arg("type", config, args, "randomized")
+rMVPA:::set_arg("ncores", config, args, 1)
 
 
 ## tuning parameters for classiifer optimization
@@ -124,6 +126,12 @@ write_output <- function(searchres, name="", output, data_mode="image") {
 
 
 output <- rMVPA:::make_output_dir(config$output)
+
+
+if (as.numeric(config$ncores) > 1) {
+  flog.info("multi-threaded processing with %s cores ", config$ncores)
+  future::plan("multiprocess")
+}
 
 for (i in 1:length(dataset)) {
   dset <- dataset[[i]]
