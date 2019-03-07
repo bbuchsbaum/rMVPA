@@ -41,7 +41,7 @@ args <- opt$options
 flog.info("command line args are ", args, capture=TRUE)
 
 ## TODO check that 'test_label_column' is valid, if test_data is present
-
+## TODO test that train_design in nonempty and files exist
 ## set up configuration 
 config <- rMVPA:::initialize_configuration(args)
 
