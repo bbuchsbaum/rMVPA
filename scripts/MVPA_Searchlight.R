@@ -112,12 +112,12 @@ write_output <- function(searchres, name="", output, data_mode="image") {
   if (data_mode == "image") {
     for (i in 1:length(searchres)) {
       oname <- if (name != "") paste0(output, "/", names(searchres)[i], "_", name, ".nii") else paste0(output, "/", names(searchres)[i], ".nii")
-      writeVolume(searchres[[i]], oname)  
+      write_vol(searchres[[i]], oname)  
     }
   } else if (data_mode == "surface") {
     for (i in 1:length(searchres)) {
       out <- paste0(output, "/", names(searchres)[i])
-      neurosurf::writeSurfaceData(searchres[[i]], out, name)  
+      neurosurf::write_surf_data(searchres[[i]], out, name)  
     }
   } else {
     stop(paste("wrong data_mode:", data_mode))
@@ -130,7 +130,7 @@ output <- rMVPA:::make_output_dir(config$output)
 
 if (as.numeric(config$ncores) > 1) {
   flog.info("multi-threaded processing with %s cores ", config$ncores)
-  future::plan("multiprocess")
+  future::plan(tweak(multiprocess, workers=as.numeric(config$ncores)))
 }
 
 for (i in 1:length(dataset)) {

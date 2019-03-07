@@ -142,7 +142,7 @@ write_output <- function(res, name="", output, data_mode="image") {
   if (data_mode == "image") {
     for (i in 1:length(res)) {
       out <- paste0(output, "/", names(res)[i], "_", name, ".nii")
-      writeVolume(res[[i]], out)  
+      write_vol(res[[i]], out)  
     }
   } else if (data_mode == "surface") {
     for (i in 1:length(res)) {

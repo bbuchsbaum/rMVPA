@@ -48,6 +48,6 @@ res <- if  (args$algo == "slic") {
   rMVPA:::turbo_cluster(mask, bvec, args$clusters, lambda=as.numeric(args$lambda), use_medoid=args$medoid)
 }
 
-writeVolume(res$clusvol, args$output)
+write_vol(res$clusvol, args$output)
 
 
