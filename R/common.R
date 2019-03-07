@@ -586,7 +586,7 @@ load_model <- function(name) {
 load_mask <- function(config) {
   if (config$data_mode == "image") {
     if (!file.exists(config$mask)) {
-      flog.error("mask %s does not exist", config$mask))
+      flog.error("mask %s does not exist", config$mask)
       stop()
     }
     read_vol(config$mask)
