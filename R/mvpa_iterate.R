@@ -70,7 +70,7 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   result <- try_warning(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
   
   if (!is.null(result$error)) {
-    emessage <- attr(result, "condition")$message
+    emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
     tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), id=id, 
                    error=TRUE, error_message=emessage, 
                    warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
@@ -106,6 +106,10 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @importFrom dplyr rowwise do bind_rows
 #' @importFrom tibble as_tibble
 internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE) {
+  #if (nrow(coords(roi$train_roi)) == 1) {
+  #  browser()
+  #}
+  
   
   ## generate cross-validation samples
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi)), y_train(mspec))
@@ -122,7 +126,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
       if (inherits(result, "try-error")) {
         flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
         ## error encountered, store error messages
-        emessage <- attr(result, "condition")$message
+        emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
         tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest), 
                        fit=list(NULL), error=TRUE, error_message=emessage)
       } else {
@@ -185,7 +189,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), compute_per
   
   ### iterate over rows using parallel map with futures
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
-    do_fun(as_roi(sample), mod_spec, .id, 
+    roi <- as_roi(sample)
+    do_fun(roi, mod_spec, .id, 
            compute_performance=compute_performance,
            return_fit=return_fits)
   }) %>% dplyr::bind_rows()
