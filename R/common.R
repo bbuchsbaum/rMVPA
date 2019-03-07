@@ -663,8 +663,8 @@ load_image_data_series <- function(fnames, config, indices, mask_volume) {
   #}))
   
   vec <- read_vec(fnames, mask=mask_volume)
-  
-  SparseNeuroVec(vecmat[indices,], space(mask_volume), mask=mask_volume)
+  vec
+  #SparseNeuroVec(vecmat[indices,], space(mask_volume), mask=mask_volume)
 }
 
 
