@@ -44,8 +44,9 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
     bspace <- neuroim2::NeuroSpace(c(D,nobs), spacing)
     bvec <- neuroim2::NeuroVec(mat, bspace)
+    
     mask <- as.logical(neuroim2::NeuroVol(array(rep(0, prod(D)), D), neuroim2::NeuroSpace(D, spacing)))
-    roi <- neuroim2::spherical_roi(mask, dim(bspace)/2, radius=min(dim(bspace)/2))
+    roi <- neuroim2::spherical_roi(mask, round((dim(bspace)[1:3])/2), radius=min(dim(bspace)/2))
     mask[coords(roi)] <- 1
     
     if (external_test) {

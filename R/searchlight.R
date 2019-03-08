@@ -121,7 +121,7 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
 
 #' @keywords performance
 combine_standard <- function(model_spec, good_results, bad_results) {
-  ind <- sort(unlist(good_results$indices))
+  ind <- unlist(good_results$id)
   perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
   wrap_out(perf_mat, model_spec$dataset, ind)
 }
