@@ -73,7 +73,7 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   
   
   colnames(perf_mat) <- names(perf_list[[1]])
-  wrap_out(perf_mat, model_spec$dataset, ind_set)
+  wrap_out(perf_mat, model_spec$dataset, ids=NULL)
 }
 
 #' @keywords internal
