@@ -1,7 +1,7 @@
 
 #' @keywords internal
 wrap_out <- function(perf_mat, dataset, ids,...) {
-  out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids), ...s)
+  out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids))
   names(out) <- colnames(perf_mat)
   out
 }
