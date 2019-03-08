@@ -227,8 +227,12 @@ get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "random
 #' @keywords internal
 #' @noRd
 #' @import neuroim2
-wrap_output.mvpa_dataset <- function(obj, vals, indices) {
-  NeuroVol(vals[indices], space(obj$mask), indices=indices)
+wrap_output.mvpa_dataset <- function(obj, vals, indices=NULL) {
+  if (!is.null(indices)) {
+    NeuroVol(vals, space(obj$mask), indices=indices)
+  } else {
+    NeuroVol(vals, space(obj$mask))
+  }
 }
 
 
