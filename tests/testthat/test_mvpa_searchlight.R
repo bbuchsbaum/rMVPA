@@ -76,11 +76,11 @@ gen_surface_dataset <- function(nobs, nlevels, folds=5) {
 
 test_that("standard mvpa_searchlight runs without error", {
   
-  dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
+  dataset <- gen_sample_dataset(c(8,8,8), 100, blocks=3)
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
-  res <- run_searchlight(mspec,radius=4, method="standard", ncores=2)
+  res <- run_searchlight(mspec,radius=8, method="standard", ncores=2)
   
 })
 
@@ -114,18 +114,18 @@ test_that("randomized surface-based mvpa_searchlight runs without error", {
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design,model_type="classification", crossval=cval)
-  res <- run_searchlight(mspec, radius=8, method="randomized", niter=5)
+  res <- run_searchlight(mspec, radius=8, method="randomized", niter=4)
   
   
 })
 
 test_that("randomized mvpa_searchlight runs without error", {
   
-  dataset <- gen_sample_dataset(c(5,5,5), 100, nlevels=2)
+  dataset <- gen_sample_dataset(c(8,8,8), 100, nlevels=2)
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
-  res <- run_searchlight(mspec,radius=3, method="randomized", niter=4)
+  res <- run_searchlight(mspec,radius=5, method="randomized", niter=4)
 
 
 })
