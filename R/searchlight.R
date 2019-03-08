@@ -1,7 +1,7 @@
 
 #' @keywords internal
-wrap_out <- function(perf_mat, dataset, ids) {
-  out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids))
+wrap_out <- function(perf_mat, dataset, ids,...) {
+  out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids), ...s)
   names(out) <- colnames(perf_mat)
   out
 }
@@ -14,7 +14,8 @@ combine_randomized <- function(model_spec, good_results, bad_results) {
   ncols <- length(good_results$performance[[1]])
   
   perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, ncols), j=rep(1:ncols, each=length(ind_set)), 
-                                   x=rep(0, length(ind_set)*ncols), dims=c(length(model_spec$dataset$mask), ncols))
+                                   x=rep(0, length(ind_set)*ncols), 
+                                   dims=c(length(model_spec$dataset$mask), ncols))
   
   for (i in 1:nrow(good_results)) {
     ind <- good_results$indices[[i]]
@@ -122,7 +123,7 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
 combine_standard <- function(model_spec, good_results, bad_results) {
   ind <- sort(unlist(good_results$indices))
   perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
-  wrap_out(perf_mat, model_spec$dataset, ind)
+  wrap_out(perf_mat, model_spec$dataset, ind, subset_vals=FALSE)
 }
 
 
