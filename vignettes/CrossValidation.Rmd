@@ -15,7 +15,7 @@ vignette: >
 ```{r, echo=FALSE, message=FALSE}
 suppressPackageStartupMessages(library(neuroim2))
 suppressPackageStartupMessages(library(devtools))
-suppressPackageStartupMessages(library(rMVPA))
+devtools::load_all(rMVPA)
 ```
 
 
