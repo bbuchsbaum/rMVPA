@@ -108,10 +108,10 @@
 <div id="using-devtools" class="section level3">
 <h3 class="hasAnchor">
 <a href="#using-devtools" class="anchor"></a>Using devtools</h3>
-<p>To install <code>rMVPA</code> from within R, use the <code>devtools</code> function <code>install_github</code>. You will need the development version of <code>neuroim</code> as well.</p>
+<p>To install <code>rMVPA</code> from within R, use the <code>devtools</code> function <code>install_github</code>. You will need the development version of <code>neuroim2</code> as well.</p>
 <p>From within R:</p>
 <pre><code><a href="https://www.rdocumentation.org/packages/base/topics/library">library(devtools)
-install_github("bbuchsbaum/neuroim")
+install_github("bbuchsbaum/neuroim2")
 install_github("bbuchsbaum/rMVPA")</a></code></pre>
 </div>
 <div id="using-git-from-the-command-line" class="section level3">
@@ -119,6 +119,15 @@ install_github("bbuchsbaum/rMVPA")</a></code></pre>
 <a href="#using-git-from-the-command-line" class="anchor"></a>Using <code>git</code> from the command line</h3>
 <pre><code>git clone git@github.com:bbuchsbaum/rMVPA.git
 R CMD install rMVPA</code></pre>
+</div>
+<div id="optionally-install-command-line-scripts-for-coding-free-mvpa-analysis" class="section level3">
+<h3 class="hasAnchor">
+<a href="#optionally-install-command-line-scripts-for-coding-free-mvpa-analysis" class="anchor"></a>Optionally install command line scripts for “coding-free” MVPA analysis:</h3>
+<p><code>wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Searchlight.R</code></p>
+<p><code>wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Regional.R</code></p>
+<p>Then, move thse files to a folder on your <code>PATH</code> and make them exectuable:</p>
+<p><code>chmod +x MVPA_Searchlight.R</code></p>
+<p><code>chmod +x MVPA_Regional.R</code></p>
 </div>
 </div>
   </div>

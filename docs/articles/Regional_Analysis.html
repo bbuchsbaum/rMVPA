@@ -124,7 +124,7 @@
 ##   training observations:  80 
 ##   training levels:  a b 
 ##   no test observations. 
-##   training response:   Factor w/ 2 levels "a","b": 2 1 1 1 1 1 2 2 2 1 ... 
+##   training response:   Factor w/ 2 levels "a","b": 2 2 1 2 1 2 2 1 2 1 ... 
 ##   block var:   int [1:80] 1 2 3 4 1 2 3 4 1 2 ...</code></pre>
 <p>```</p>
 <p>Now we generate an arbitrary set of ROIs by assigning each voxel in the input mask a value ranging from 1 to 3.</p>
@@ -135,7 +135,7 @@ region_mask &lt;-<span class="st"> </span>neuroim2<span class="op">::</span><spa
 <span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/table">table</a></span>(region_mask)</code></pre></div>
 <pre><code>## region_mask
 ##   0   1   2   3 
-## 123  23  26  44</code></pre>
+## 123  27  24  42</code></pre>
 <p>The <code>region_mask</code> volume now defines a set of three ROIs where each ROI is defined by an integer value. Next, we can run a classification/regression model within each ROI using the <code>run_regional</code> function:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mod &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_model.html">load_model</a></span>(<span class="st">"sda"</span>)
 tune_grid &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/data.frame">data.frame</a></span>(<span class="dt">lambda=</span>.<span class="dv">01</span>, <span class="dt">diagonal=</span><span class="ot">FALSE</span>)
@@ -148,27 +148,27 @@ res &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_reg
 <pre><code>## # A tibble: 3 x 3
 ##   ROINUM Accuracy     AUC
 ##    &lt;int&gt;    &lt;dbl&gt;   &lt;dbl&gt;
-## 1      1    0.475 -0.0162
-## 2      2    0.512  0.03  
-## 3      3    0.525  0.0272</code></pre>
+## 1      1    0.5   -0.0156
+## 2      2    0.562  0.0381
+## 3      3    0.45  -0.0938</code></pre>
 <p>To get fine-grained information, the individual predictions for each ROI and trial are included in <code>prediction_table</code>:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(res<span class="op">$</span>prediction_table)</code></pre></div>
 <pre><code>## Source: local data frame [240 x 7]
 ## Groups: &lt;by row&gt;
 ## 
 ## # A tibble: 240 x 7
-##    ROINUM observed pobserved predicted correct  prob_a prob_b
-##  *  &lt;int&gt; &lt;fct&gt;        &lt;dbl&gt; &lt;chr&gt;     &lt;lgl&gt;     &lt;dbl&gt;  &lt;dbl&gt;
-##  1      1 b          0.969   b         TRUE    0.0311  0.969 
-##  2      1 a          0.102   b         FALSE   0.102   0.898 
-##  3      1 a          0.00394 b         FALSE   0.00394 0.996 
-##  4      1 a          0.449   b         FALSE   0.449   0.551 
-##  5      1 a          0.460   b         FALSE   0.460   0.540 
-##  6      1 a          0.937   a         TRUE    0.937   0.0632
-##  7      1 b          0.306   a         FALSE   0.694   0.306 
-##  8      1 b          0.803   b         TRUE    0.197   0.803 
-##  9      1 b          0.273   a         FALSE   0.727   0.273 
-## 10      1 a          0.245   b         FALSE   0.245   0.755 
+##    ROINUM observed pobserved predicted correct  prob_a  prob_b
+##  *  &lt;int&gt; &lt;fct&gt;        &lt;dbl&gt; &lt;chr&gt;     &lt;lgl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
+##  1      1 b          0.996   b         TRUE    0.00374 0.996  
+##  2      1 b          0.0742  a         FALSE   0.926   0.0742 
+##  3      1 a          0.713   a         TRUE    0.713   0.287  
+##  4      1 b          0.877   b         TRUE    0.123   0.877  
+##  5      1 a          0.0327  b         FALSE   0.0327  0.967  
+##  6      1 b          0.0251  a         FALSE   0.975   0.0251 
+##  7      1 b          0.00887 a         FALSE   0.991   0.00887
+##  8      1 a          0.119   b         FALSE   0.119   0.881  
+##  9      1 b          0.932   b         TRUE    0.0676  0.932  
+## 10      1 a          0.772   a         TRUE    0.772   0.228  
 ## # … with 230 more rows</code></pre>
 </div>
 </div>

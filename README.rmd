@@ -32,13 +32,13 @@ Documentation and vignettes: https://bbuchsbaum.github.io/rMVPA/
 
 ### Using devtools
 
-To install `rMVPA` from within R, use the `devtools` function `install_github`. You will need the development version of `neuroim` as well.
+To install `rMVPA` from within R, use the `devtools` function `install_github`. You will need the development version of `neuroim2` as well.
 
 From within R:
 
 ```
 library(devtools)
-install_github("bbuchsbaum/neuroim")
+install_github("bbuchsbaum/neuroim2")
 install_github("bbuchsbaum/rMVPA")
 ```
 
@@ -48,3 +48,18 @@ install_github("bbuchsbaum/rMVPA")
 git clone git@github.com:bbuchsbaum/rMVPA.git
 R CMD install rMVPA
 ```
+
+### Optionally install command line scripts for "coding-free" MVPA analysis:
+
+`wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Searchlight.R`
+
+`wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Regional.R`
+
+Then, move thse files to a folder on your `PATH` and make them exectuable:
+
+`chmod +x MVPA_Searchlight.R`
+
+`chmod +x MVPA_Regional.R`
+
+
+

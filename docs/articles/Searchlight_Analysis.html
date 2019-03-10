@@ -123,7 +123,7 @@
 ##   training observations:  80 
 ##   training levels:  a b 
 ##   no test observations. 
-##   training response:   Factor w/ 2 levels "a","b": 2 1 1 2 1 2 2 2 1 1 ... 
+##   training response:   Factor w/ 2 levels "a","b": 1 2 1 1 2 1 2 2 2 2 ... 
 ##   block var:   int [1:80] 1 2 3 4 1 2 3 4 1 2 ...</code></pre>
 </div>
 <div id="create-a-cross-validation-object-using-a-pre-defined-blocking-variable-" class="section level3">
@@ -167,7 +167,7 @@ model</code></pre></div>
 ##   training observations:  80 
 ##   training levels:  a b 
 ##   no test observations. 
-##   training response:   Factor w/ 2 levels "a","b": 2 1 1 2 1 2 2 2 1 1 ... 
+##   training response:   Factor w/ 2 levels "a","b": 1 2 1 1 2 1 2 2 2 2 ... 
 ##   block var:   int [1:80] 1 2 3 4 1 2 3 4 1 2 ...</code></pre>
 </div>
 <div id="run-a-standard-searchlight-analysis" class="section level3">
@@ -175,8 +175,8 @@ model</code></pre></div>
 <a href="#run-a-standard-searchlight-analysis" class="anchor"></a>Run a standard searchlight analysis</h3>
 <p>The output of <code>run_searchlight</code> is a list of image volumes containing performance measures for each spherical searchlight. For a two-class classification problem, there are three output measures: <code>Accuracy</code> and <code>AUC</code> (<code>AUC</code> has .5 subtracted from it, so that it is centered at 0 rather than .5). <code>Accuracy</code> is the raw cross-validated accuracy measure for each centroid and <code>AUC</code> is the area under the curve statistic. The <code>radius</code> argument indicates the radius in <code>mm</code> of the spherical searchlight. Finally, <code>method</code> indicates the searchlight scheme, which can be <code>standard</code> or <code>randomized</code>. See below for more information about the randomized searchlight.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model, <span class="dt">radius=</span><span class="dv">4</span>, <span class="dt">method=</span><span class="st">"standard"</span>)</code></pre></div>
-<pre><code>## INFO [2019-03-10 08:42:12] model is: sda_notune
-## INFO [2019-03-10 08:42:12] running standard searchlight with 4 radius</code></pre>
+<pre><code>## INFO [2019-03-10 08:51:18] model is: sda_notune
+## INFO [2019-03-10 08:51:18] running standard searchlight with 4 radius</code></pre>
 <pre><code>## Warning: package 'purrr' was built under R version 3.5.2</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result</code></pre></div>
 <pre><code>## $Accuracy
@@ -203,16 +203,16 @@ model</code></pre></div>
 <a href="#run-a-randomized-searchlight-analysis" class="anchor"></a>Run a randomized searchlight analysis</h2>
 <p>A randomized searchlight analysis is an iterative procedure in which searchlight regions are sampled <em>without replacement</em> from the voxel set. A classification analysis is run for each region, and the result is recorded for the center voxel and <em>all other voxels in the region</em>. This is done for each of <code>niter</code> times, where each iteration involves an exhaustive sampling of the voxel set. The performance at each voxel is the average performance for the set of analyses in which the given voxel was included as a feature. The result will be similar to the standard searchlight procedure, but emphasizes the contribution of a given voxel across different local contexts to classification performance. This should in principle offer slightly better spatial localization than the standard searchlight. The randomized searchlight procedure can also be faster, because the total number of estimated models is a function of <code>nvoxels/radius * niter</code>, which will be smaller than <code>nvoxels</code> for many choices of <code>radius</code> and <code>niter</code>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model, <span class="dt">radius=</span><span class="dv">4</span>, <span class="dt">method=</span><span class="st">"randomized"</span>, <span class="dt">niter=</span><span class="dv">8</span>)</code></pre></div>
-<pre><code>## INFO [2019-03-10 08:42:26] model is: sda_notune
-## INFO [2019-03-10 08:42:26] running randomized searchlight with 4 radius and 8 iterations
-## INFO [2019-03-10 08:42:27] searchlight iteration: 1
-## INFO [2019-03-10 08:42:27] searchlight iteration: 2
-## INFO [2019-03-10 08:42:27] searchlight iteration: 3
-## INFO [2019-03-10 08:42:28] searchlight iteration: 4
-## INFO [2019-03-10 08:42:28] searchlight iteration: 5
-## INFO [2019-03-10 08:42:28] searchlight iteration: 6
-## INFO [2019-03-10 08:42:29] searchlight iteration: 7
-## INFO [2019-03-10 08:42:29] searchlight iteration: 8</code></pre>
+<pre><code>## INFO [2019-03-10 08:51:31] model is: sda_notune
+## INFO [2019-03-10 08:51:31] running randomized searchlight with 4 radius and 8 iterations
+## INFO [2019-03-10 08:51:31] searchlight iteration: 1
+## INFO [2019-03-10 08:51:32] searchlight iteration: 2
+## INFO [2019-03-10 08:51:32] searchlight iteration: 3
+## INFO [2019-03-10 08:51:32] searchlight iteration: 4
+## INFO [2019-03-10 08:51:33] searchlight iteration: 5
+## INFO [2019-03-10 08:51:33] searchlight iteration: 6
+## INFO [2019-03-10 08:51:33] searchlight iteration: 7
+## INFO [2019-03-10 08:51:34] searchlight iteration: 8</code></pre>
 <pre><code>## number of models fit: 32</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result</code></pre></div>
 <pre><code>## $Accuracy
@@ -240,19 +240,19 @@ model</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">svm_model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_model.html">load_model</a></span>(<span class="st">"svmLinear"</span>) 
 model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/mvpa_model.html">mvpa_model</a></span>(<span class="dt">model=</span>svm_model, <span class="dt">dataset=</span>dataset<span class="op">$</span>dataset, <span class="dt">design=</span>dataset<span class="op">$</span>design, <span class="dt">crossval=</span>crossval)
 result_svm &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model, <span class="dt">radius=</span><span class="dv">4</span>, <span class="dt">method=</span><span class="st">"randomized"</span>, <span class="dt">niter=</span><span class="dv">2</span>)</code></pre></div>
-<pre><code>## INFO [2019-03-10 08:42:30] model is: svmLinear
-## INFO [2019-03-10 08:42:30] running randomized searchlight with 4 radius and 2 iterations
-## INFO [2019-03-10 08:42:30] searchlight iteration: 1
-## INFO [2019-03-10 08:42:33] searchlight iteration: 2</code></pre>
+<pre><code>## INFO [2019-03-10 08:51:35] model is: svmLinear
+## INFO [2019-03-10 08:51:35] running randomized searchlight with 4 radius and 2 iterations
+## INFO [2019-03-10 08:51:35] searchlight iteration: 1
+## INFO [2019-03-10 08:51:37] searchlight iteration: 2</code></pre>
 <pre><code>## number of models fit: 8</code></pre>
 <p>Here we use a random forest classifier. To fix the tuning parameter <code>mtry</code> at a known value, we supply a <code>tune_grid</code> argument to the <code>mvpa_model</code> function. Here, we set <code>mtry</code> to <code>2</code>. Sinc ethere is only one value, it means that this parameter will be fixed. If we supply a grid of values, then the paramter will be tuned for each searchlight sample. Since parameter tuning is costly in terms of computing time, this is not a recommended approach unless one has a great deal of computing power or one is running the searchlight over a small mask.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">rf_model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_model.html">load_model</a></span>(<span class="st">"rf"</span>) 
 model &lt;-<span class="st"> </span><span class="kw"><a href="../reference/mvpa_model.html">mvpa_model</a></span>(<span class="dt">model=</span>rf_model, <span class="dt">dataset=</span>dataset<span class="op">$</span>dataset, <span class="dt">design=</span>dataset<span class="op">$</span>design, <span class="dt">crossval=</span>crossval, <span class="dt">tune_grid=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/data.frame">data.frame</a></span>(<span class="dt">mtry=</span><span class="dv">2</span>))
 result_rf &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(model, <span class="dt">radius=</span><span class="dv">4</span>, <span class="dt">method=</span><span class="st">"randomized"</span>, <span class="dt">niter=</span><span class="dv">2</span>)</code></pre></div>
-<pre><code>## INFO [2019-03-10 08:42:34] model is: rf
-## INFO [2019-03-10 08:42:34] running randomized searchlight with 4 radius and 2 iterations
-## INFO [2019-03-10 08:42:34] searchlight iteration: 1
-## INFO [2019-03-10 08:42:36] searchlight iteration: 2</code></pre>
+<pre><code>## INFO [2019-03-10 08:51:38] model is: rf
+## INFO [2019-03-10 08:51:38] running randomized searchlight with 4 radius and 2 iterations
+## INFO [2019-03-10 08:51:38] searchlight iteration: 1
+## INFO [2019-03-10 08:51:39] searchlight iteration: 2</code></pre>
 <pre><code>## number of models fit: 8</code></pre>
 <p>Here we specify a range of values for the <code>mtry</code> tuning parameter. In this case, by supplying the <code>tune_reps</code> argument to <code>mvpa_model</code> we control the number of resamples used to tune the model parameters. The default is 10, but here we speed up execution time by reducing it to 2. In general, more resamples are required to reliably estimate optimal tuning parameters. This means for a whole-brain searchlight, parameter tuning is <strong>generally</strong> impractical. This is why the classiifer <code>sda_notune</code> is a good choice for searchlight analyses, since it “works well” with default tuning parameters.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">grid &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/data.frame">data.frame</a></span>(<span class="dt">mtry=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/c">c</a></span>(<span class="dv">2</span>,<span class="dv">4</span>,<span class="dv">6</span>,<span class="dv">8</span>))

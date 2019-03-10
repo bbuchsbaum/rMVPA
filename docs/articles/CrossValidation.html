@@ -119,12 +119,12 @@
 ## 4 &lt;chr [400]&gt; &lt;chr [100]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 4    
 ## 5 &lt;chr [400]&gt; &lt;chr [100]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 5</code></pre>
 <p>Notice that the <code>data.frame</code> contains five variable: <code>ytrain</code>, <code>ytest</code>, <code>train</code>, <code>test</code> and <code>.id</code> which contains the training responses, the test responses, the training data, the test data, and a integer id variable, respectively. The first four variables are <code>list</code>elements because they contain vector- or matrix- valued elements in each cell. Indeed, the <code>train</code> and <code>test</code> variables are S3 classes of type <code>resample</code> from the <code>modelr</code> package. For example, to access training data for the first cross-validation fold, we can do the following:</p>
-<pre><code>##              x1         x2         x3
-## 101 -0.59372501  0.7703341 -0.5287467
-## 102 -0.48662831  1.2265577 -0.7116593
-## 103  0.76613108 -0.6022387  2.8791613
-## 104  0.01732003 -1.3710608  0.3282430
-## 105  0.67783851 -0.7210769 -0.4535243</code></pre>
+<pre><code>##              x1          x2         x3
+## 101  0.07978055  0.61613573 -0.1801890
+## 102 -2.09033904  0.13444668  1.1617459
+## 103 -0.19762885  0.98784985 -1.3734310
+## 104  0.16522777  0.05156571 -0.9175175
+## 105  0.31328097 -0.28274367 -0.3053598</code></pre>
 <p>As a toy example, below we loop through the cross-validation sets using the <code>dplyr</code> <code>rowwise</code> function, fit an <code>sda</code> model and put the fitted model into a new data.frame.</p>
 </div>
 <div id="bootstrap-blocked-cross-validation" class="section level3">
@@ -138,16 +138,16 @@
 <pre><code>## # A tibble: 100 x 5
 ##    ytrain      ytest       train          test           .id  
 ##    &lt;list&gt;      &lt;list&gt;      &lt;list&gt;         &lt;list&gt;         &lt;chr&gt;
-##  1 &lt;chr [246]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 001  
-##  2 &lt;chr [252]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 002  
-##  3 &lt;chr [238]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 003  
-##  4 &lt;chr [252]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 004  
-##  5 &lt;chr [239]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 005  
-##  6 &lt;chr [245]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 006  
-##  7 &lt;chr [251]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 007  
-##  8 &lt;chr [246]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 008  
-##  9 &lt;chr [234]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 009  
-## 10 &lt;chr [240]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 010  
+##  1 &lt;chr [252]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 001  
+##  2 &lt;chr [234]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 002  
+##  3 &lt;chr [241]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 003  
+##  4 &lt;chr [235]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 004  
+##  5 &lt;chr [250]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 005  
+##  6 &lt;chr [248]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 006  
+##  7 &lt;chr [236]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 007  
+##  8 &lt;chr [238]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 008  
+##  9 &lt;chr [236]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 009  
+## 10 &lt;chr [251]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 010  
 ## # … with 90 more rows</code></pre>
 </div>
 <div id="repeated-split-half-resampling-over-blocks" class="section level3">
