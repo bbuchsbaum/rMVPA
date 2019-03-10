@@ -15,7 +15,6 @@ vignette: >
 ```{r, echo=FALSE, message=FALSE}
 suppressPackageStartupMessages(library(neuroim2))
 suppressPackageStartupMessages(library(devtools))
-devtools::load_all()
 ```
 
 If we have one or more pre-defined regions of interests (ROIs) we can use `rMVPA` to run a clasisifation/regression model in each region, yielding peformance measures for each region.

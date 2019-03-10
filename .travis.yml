@@ -7,7 +7,7 @@ cache: packages
 r_github_packages: bbuchsbaum/neuroim2
 
 
-warnings_are_errors: true
+warnings_are_errors: false
 
 Imports: rflann
 Remotes: YeeJeremy/rflann
