@@ -79,7 +79,7 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
 #' @keywords internal
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
-#' @import furrr
+#' @importFrom furrr future_map
 do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, combiner=pool_randomized, ...) {
  
   

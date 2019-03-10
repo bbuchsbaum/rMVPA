@@ -57,7 +57,7 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 #' @export
 #' @param ranking.score the feature score: entropy, avg, or max.
 #' @rdname select_features
-#' @import sda
+#' @importFrom sda sda.ranking
 select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg", "max"),...) {
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   ranking.score <- match.arg(ranking.score)
