@@ -13,11 +13,11 @@ classification_result(observed, predicted, probs, testind = NULL,
 binary_classification_result(observed, predicted, probs, testind = NULL,
   test_design = NULL, predictor = NULL)
 
-multiway_classification_result(observed, predicted, probs, testind = NULL,
-  test_design = NULL, predictor = NULL)
+multiway_classification_result(observed, predicted, probs,
+  testind = NULL, test_design = NULL, predictor = NULL)
 
-regression_result(observed, predicted, testind = NULL, test_design = NULL,
-  predictor = NULL)
+regression_result(observed, predicted, testind = NULL,
+  test_design = NULL, predictor = NULL)
 }
 \arguments{
 \item{observed}{a vector of observed/true values.}

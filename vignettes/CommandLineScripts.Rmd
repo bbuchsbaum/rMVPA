@@ -1,0 +1,151 @@
+---
+title: "Command-Line Scripts"
+author: "Bradley Buchsbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{CommandLine}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Running rMVPA algorithms from the command line
+
+`rMVPA` offers two main command-line executable R scripts that can be used to run most basic MVPA analyses. The goal of these scripts is to get users up and running without have to write full-blow R programs. Instead rMVPA can be controlled via a configuration file that specifies the data, design infromation, block structure, model parameters, etc. that are necessary to run an analysis.
+
+There are currently two main scripts: `MVPA_Searchlight.R` and `MVPA_Regional.R`. These two scripts are very similar in their inputs and capabilities--the difference is really only that the former runs a "searchlight" analysis and the latter runs MVPA over some set of one or more regions of interest (ROI). For example, if one wished to run MVPA using a single large mask of visual cortex or over a set of Freesrufer-defined ROIs, one would opt for MVPA_Regional.R.
+
+```{r, echo=FALSE, message=FALSE}
+
+```
+## Installing the command-line scripts
+
+`MVPA_Searchlight.R` and `MVPA_Regional.R` are stored in the `scripts` sub-directory of the R project located here:
+
+https://github.com/bbuchsbaum/rMVPA
+
+Of course, before you can the scripts, you need to have rMVPA installed. Easiest way is to open an R console and type following command, assuming `devtools` is alreeady installed. If not, first install the `devtools` package.
+
+```{r, echo=FALSE, message=FALSE, eval = FALSE}
+
+devtools::install_github("bbuchsbaum/rMVPA")
+
+```
+
+
+
+Installing the rMVPA package, however, will not install the command line scripts. Instead, you have to do this manually.
+
+## Using `wget` to fetch scripts from Github
+
+An easy way to do this is with the `wget` command. 
+
+`wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Searchlight.R`
+
+`wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Regional.R`
+
+## Adding scripts to your `bin` folder and making them executable
+
+Then, you generally want to move these to a `bin` directory either locally (e.g. `/home/username/bin` or at the system level `/usr/local/bin`).
+
+e.g. `cp MVPA_*R /home/username/bin` where `username` is the name of your login id.
+
+
+Finally, you need to make the script executable: 
+
+`cd /home/username/bin`
+`chmod +x MVPA_Searchlight.R`
+`chmod +x MVPA_Regional.R`
+
+Now you can test whether the script is working (assuming that the files are on your `PATH`):
+
+`MVPA_Searchlight.R --help`
+
+`MVPA_Regional.R --help`
+
+
+## Searchlight analyses with MVPA_Searchlight.R
+
+### Setting up a configuration file
+
+To run a searchlight analysis we need a minimum of five pieces of information. 
+
+* **train_data**: One or more NifTI 4D files containing trialwise (i.e. one value per voxel per trial) estimates of brain activity--often colloquially referrrd to as the "betas" because they are derived from single-trial regression analysis yielding a series of beta estimates.
+
+* **train_design**: A tabular plain text file ("design file"") which contains at a minimum the "label" associated with each image in the "betas" files. 
+
+* **label_column**: The name of the column in the above design file that holds the "labels".
+
+* **model**: the name of the classifier model such as `sda_notune` for tuning-parameter-free shrinkage discriminant analysis.
+
+* **output**: the name of the folder to place the searchlight classification results.
+
+This information is included in a configuration file which can be a simple R source code file (e.g. "config.R") or a YAML formatted file (e.g. config.yaml). 
+
+The following additional information can also be specified:
+
+* **cross_validation**: the cross-validation method to be used (see below for examples, also see "CrossValidation" vignette).
+
+* **mask**: the name of a brain mask file that indicates the set of voxels to include in the searchlight.
+
+* **block_column**: the name of the column in the design file that encodes the block structure of the experiment. This is especially important for fMRI designs, where the session is divided into contiguous "blocks" or "runs". These blocks generally should be "kept together" during corss-validaiton based procedures. Thus, it is important in such cases to put this block infromation as a usually interger-valued column in the "train_design" tabular text file.
+
+* **radius**: the radius in millimeters of the searchlight. The default value here is 8 but slightly smaller or larger values are also reasonable.
+
+* **normalize**: whether to standardize each *image* in the training data by subtracting the mean image and dividing by the standard deviation. If successive trialwise estimates vary considerably in terms of whole-image variance or mean, then normalizing the images can be beneficial. On the other hand, if whole-brain mean/variance is a meaningful signal for your problem, then you may not want to normalize in this way.
+
+* **type**: the *type* of the searchlight. This can either be "standard" or "randomized". A standard searchlight involves estimating a classifier model at the center of over voel in the mask; a randomized searchlight uses an iterative montecarlo resampling approach to estimate the infromational contribution of each voxel to classification performance.
+
+* **niter**: when **type** is "randomized" this parameter supplies the number of resampling iterations (default = 16).
+
+
+## An example configuation file.
+
+Assume we have a training dataset consisting a set of 100 single trial "betas" collected over five runs and concatenated together into a single file called "betas.nii".
+
+Further assume our classiification goal is to predict whether a presented stimulus is one of four possible categories: **face**, **scene**, **object**, or **word**.
+
+This information is included in a design file called "train_design.txt" that looks like this (first 5 rows only):
+
+```{r, echo=FALSE, message=FALSE}
+
+g <- expand.grid(label=c("face", "scene", "object", "word"), repnum=1:5, run=1:5)
+knitr::kable(g[1:5,])
+
+```
+
+
+Here is a minimal `config.R` file.
+
+```{r, echo=FALSE, message=FALSE}
+
+train_design = "train_design.txt"
+train_data = "betas.nii"
+label_column = "label"
+block_column="run"
+radius=6
+mask = "brain_mask.nii"
+mode = "sda_notune"
+output = "searchlight_analysis"
+
+```
+
+Now to run, we type the following command:
+
+`MVPA_Searchlight.R --config config.R`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

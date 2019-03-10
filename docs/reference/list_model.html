@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>train_model — train_model • rMVPA</title>
+<title>a list of model fits — list_model • rMVPA</title>
 
 <!-- jquery -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
@@ -31,9 +31,9 @@
 
 
 
-<meta property="og:title" content="train_model — train_model" />
+<meta property="og:title" content="a list of model fits — list_model" />
 
-<meta property="og:description" content="train a classification or regression model" />
+<meta property="og:description" content="a list of model fits" />
 <meta name="twitter:card" content="summary" />
 
 
@@ -119,65 +119,31 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>train_model</h1>
+    <h1>a list of model fits</h1>
     
-    <div class="hidden name"><code>train_model.Rd</code></div>
+    <div class="hidden name"><code>list_model.Rd</code></div>
     </div>
 
     <div class="ref-description">
     
-    <p>train a classification or regression model</p>
+    <p>a list of model fits</p>
     
     </div>
 
-    <pre class="usage"><span class='fu'>train_model</span>(<span class='no'>obj</span>, <span class='no'>...</span>)
-
-<span class='co'># S3 method for mvpa_model</span>
-<span class='fu'>train_model</span>(<span class='no'>obj</span>, <span class='no'>train_dat</span>, <span class='no'>y</span>, <span class='no'>indices</span>,
-  <span class='kw'>param</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>wts</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>tune_reps</span> <span class='kw'>=</span> <span class='fl'>10</span>, <span class='no'>...</span>)</pre>
+    <pre class="usage"><span class='fu'>list_model</span>(<span class='no'>fits</span>, <span class='kw'>names</span> <span class='kw'>=</span> <span class='fl'>1</span>:<span class='fu'><a href='https://www.rdocumentation.org/packages/base/topics/length'>length</a></span>(<span class='no'>fits</span>))</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>obj</th>
-      <td><p>the model specification</p></td>
+      <th>fits</th>
+      <td><p>a list of fits</p></td>
     </tr>
     <tr>
-      <th>...</th>
-      <td><p>extra args</p></td>
-    </tr>
-    <tr>
-      <th>train_dat</th>
-      <td><p>training data, and instance of class <code>ROIVolume</code> or <code>ROISurface</code></p></td>
-    </tr>
-    <tr>
-      <th>y</th>
-      <td><p>the dependent variable</p></td>
-    </tr>
-    <tr>
-      <th>indices</th>
-      <td><p>the spatial indices associated with each column</p></td>
-    </tr>
-    <tr>
-      <th>param</th>
-      <td><p>optional tuning parameters</p></td>
-    </tr>
-    <tr>
-      <th>wts</th>
-      <td><p>optional case weights</p></td>
-    </tr>
-    <tr>
-      <th>tune_reps</th>
-      <td><p>the number of bootstrap replications for parameter tuning (only used when param is not <code>NULL</code>)</p></td>
+      <th>names</th>
+      <td><p>the names of the fits</p></td>
     </tr>
     </table>
-    
-    <h2 class="hasAnchor" id="methods-by-class-"><a class="anchor" href="#methods-by-class-"></a>Methods (by class)</h2>
-
-    <ul>
-<li><p><code>mvpa_model</code>: train an mvpa_model</p></li>
-</ul>
     
 
   </div>
@@ -185,9 +151,7 @@
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
       <li><a href="#arguments">Arguments</a></li>
-      
-      <li><a href="#methods-by-class-">Methods (by class)</a></li>
-          </ul>
+                </ul>
 
   </div>
 </div>

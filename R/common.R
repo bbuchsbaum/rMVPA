@@ -527,6 +527,7 @@ make_output_dir <- function(dirname) {
   }
 }
 
+
 initialize_crossval <- function(config, des=NULL) {
   cval <- if (is.null(config$cross_validation) && !is.null(des$block_var)) {
     flog.info("cross-validation type: cross validation using predefined blocking variable")
