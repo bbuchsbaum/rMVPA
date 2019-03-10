@@ -14,6 +14,7 @@ vignette: >
 ```{r, echo=FALSE, message=FALSE}
 suppressPackageStartupMessages(library(neuroim2))
 suppressPackageStartupMessages(library(devtools))
+library(rMVPA)
 ```
 
 ### Generate a volumetric dataset with 100 observations and two classes

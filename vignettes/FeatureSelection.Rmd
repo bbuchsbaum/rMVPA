@@ -15,6 +15,7 @@ vignette: >
 ```{r, echo=FALSE, message=FALSE}
 suppressPackageStartupMessages(library(neuroim2))
 suppressPackageStartupMessages(library(devtools))
+library(rMVPA)
 ```
 
 Feature selection is used to select a subset of variables to include into a classification or regression model. This can be useful when one has many irrelevant features and one wants to quickly reduce the problem to a more manageable size. Alternatively, if one wants to impose a limit on the total number of included features (say, 1000) across  a set of classification tasks (e.g. over a group of subjects) then it can be useful to use a feature selection before running the analysis. Note that to avoid bias, feature selection must be incorported into cross-validation procedure such that feature selection is carried out for each training fold. This is automatically done in the analysis pileplines provided in `rMVPA`.
