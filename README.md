@@ -35,6 +35,8 @@ From within R:
 
 `wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Regional.R`
 
-Then, move thse files to a folder on your `PATH` and make them exectuable:
+Then, move these files to a folder on your `PATH` and make them executable:
 
-`chmod +x MVPA_Searchlight.R` `chmod +x MVPA_Regional.R`
+`chmod +x MVPA_Searchlight.R`
+
+`chmod +x MVPA_Regional.R`
