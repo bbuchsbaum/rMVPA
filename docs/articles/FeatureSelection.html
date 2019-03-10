@@ -31,7 +31,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rMVPA</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.2</span>
       </span>
     </div>
 
@@ -98,7 +98,8 @@
 <div id="feature-selection" class="section level2">
 <h2 class="hasAnchor">
 <a href="#feature-selection" class="anchor"></a>Feature Selection</h2>
-<pre><code>## Warning: character(0)</code></pre>
+<pre><code>## Warning: replacing previous import 'neuroim2::centroids' by
+## 'sda::centroids' when loading 'rMVPA'</code></pre>
 <p>Feature selection is used to select a subset of variables to include into a classification or regression model. This can be useful when one has many irrelevant features and one wants to quickly reduce the problem to a more manageable size. Alternatively, if one wants to impose a limit on the total number of included features (say, 1000) across a set of classification tasks (e.g. over a group of subjects) then it can be useful to use a feature selection before running the analysis. Note that to avoid bias, feature selection must be incorported into cross-validation procedure such that feature selection is carried out for each training fold. This is automatically done in the analysis pileplines provided in <code>rMVPA</code>.</p>
 <div id="creating-a-feature_selector-object" class="section level3">
 <h3 class="hasAnchor">

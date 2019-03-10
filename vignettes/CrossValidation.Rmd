@@ -13,9 +13,9 @@ vignette: >
 ## Cross-Validation Approaches
 
 ```{r, echo=FALSE, message=FALSE}
-library(neuroim2)
-library(devtools)
-load_all()
+suppressPackageStartupMessages(library(neuroim2))
+suppressPackageStartupMessages(library(devtools))
+suppressPackageStartupMessages(library(rMVPA))
 ```
 
 
