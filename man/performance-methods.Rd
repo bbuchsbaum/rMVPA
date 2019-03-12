@@ -4,7 +4,7 @@
 \alias{performance.regression_result}
 \title{performance}
 \usage{
-\method{performance}{regression_result}(x, split_list)
+\method{performance}{regression_result}(x, split_list, ...)
 }
 \arguments{
 \item{x}{the result object}

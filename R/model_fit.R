@@ -99,8 +99,11 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   ret
 }
 
+#' predict
+#' 
+#' @param sub_indices a vector of indices used to subset rows of `newdata` 
 #' @export
-predict.regression_model_fit <- function(object, newdata, sub_indices=NULL) {
+predict.regression_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   
   mat <- if (inherits(newdata, "NeuroVec") || inherits(newdata, "NeuroSurfaceVector")) {
     series(newdata, object$fit$vox_ind)

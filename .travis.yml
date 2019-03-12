@@ -9,15 +9,10 @@ r_github_packages: bbuchsbaum/neuroim2
 
 warnings_are_errors: false
 
-Imports: rflann
-Remotes: YeeJeremy/rflann
 
-
-Imports: rflann, 
-  neuroim2
+Imports: neuroim2
   
-Remotes: YeeJeremy/rflann,
-  bbuchsbaum/neuroim2
+Remotes: bbuchsbaum/neuroim2
   
 
 r_packages:

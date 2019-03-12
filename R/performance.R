@@ -14,7 +14,7 @@ predicted_class <- function(prob) {
 #' @param split_list split results by indexed sub-groups
 #' @export
 #' @rdname performance-methods
-performance.regression_result <- function(x, split_list) {
+performance.regression_result <- function(x, split_list,...) {
   if (!is.null(split_list)) {
     ## TODO: add support
     stop("split_by not supported for regression analyses yet.")

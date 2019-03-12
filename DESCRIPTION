@@ -31,7 +31,6 @@ Imports:
     matrixStats,
     modelr,
     Rfit,
-    rflann,
     neurosurf,
     io,
     optparse
@@ -67,8 +66,7 @@ Suggests:
     iterators
 Remotes:
     bbuchsbaum/neuroim2,
-    bbuchsbaum/neurosurf,
-    YeeJeremy/rflann
+    bbuchsbaum/neurosurf
 VignetteBuilder: knitr
 Encoding: UTF-8
 
