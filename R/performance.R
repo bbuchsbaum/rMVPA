@@ -62,6 +62,17 @@ merge_results.binary_classification_result <- function(x,...) {
                                test_design=x$test_design, predictor=x$predictor)
 }
 
+
+#' @export
+prob_observed.binary_classification_result <- function(x) {
+  x$probs[cbind(seq(1,nrow(x$probs)),as.integer(x$observed))]
+}
+
+#' @export
+prob_observed.multiway_classification_result <- function(x) {
+  x$probs[cbind(seq(1,nrow(x$probs)),as.integer(x$observed))]
+}
+
 #' @export
 merge_results.multiway_classification_result <- function(x,...) {
   

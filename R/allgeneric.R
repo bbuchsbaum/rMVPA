@@ -230,6 +230,18 @@ nobs <- function(x) {
   UseMethod("nobs")
 }
 
+#' prob_observed
+#' 
+#' extract predicted probability for the observed clss
+#' 
+#' @param x the object
+#' @export
+prob_observed <- function(x) {
+  UseMethod("prob_observed")
+}
+
+
+
 #' nresponses
 #' 
 #' get number of responses or category levels for the dependent variable
