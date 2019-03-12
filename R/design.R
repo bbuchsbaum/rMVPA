@@ -47,7 +47,7 @@ parse_variable <- function(var, design) {
     }
     design[[var]]
   } else if (is.factor(var) && length(var) == nrow(design)) {
-    droplevels(var)
+    var
   } else {
     stop("'var' must be a formula, factor, or character vector")
   }

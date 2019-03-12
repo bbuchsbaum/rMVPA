@@ -221,7 +221,7 @@ test_that("mvpa_searchlight works with testset", {
 
 
  
-test_that("mvpa_searchlight works with testset and split_var", {
+test_that("mvpa_searchlight works with split_var", {
   dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3, split_by=factor(rep(1:4, each=25)))
 
   crossVal <- blocked_cross_validation(dataset$design$block_var)
@@ -231,6 +231,19 @@ test_that("mvpa_searchlight works with testset and split_var", {
                       crossval=crossVal, class_metrics=FALSE)
   res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
  
+})
+
+
+test_that("mvpa_searchlight works with testset and split_var", {
+  dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3, external_test=TRUE, split_by=factor(rep(1:4, each=25)))
+  
+  crossVal <- blocked_cross_validation(dataset$design$block_var)
+  tuneGrid <- expand.grid(alpha=.5, lambda=c(.1))
+  model <- load_model("glmnet")
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", 
+                      crossval=crossVal, class_metrics=FALSE)
+  res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
+  
 })
 
 
