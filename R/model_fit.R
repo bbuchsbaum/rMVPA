@@ -70,7 +70,7 @@ fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
 
 
 #' predict
-#' 
+#' @method predict class_model_fit
 #' @export
 #' @param sub_indices the subset of row indices to compute predictions on
 predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
