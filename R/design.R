@@ -33,14 +33,14 @@ y_test.mvpa_design <- function(obj) if (is.null(obj$y_test)) obj$y_train else ob
 
 #' @keywords internal
 parse_variable <- function(var, design) {
-  if (purrr::is_formula(var)) {
+  ret <- if (purrr::is_formula(var)) {
     vnames <- all.vars(var[[2]])
-    var <- if (length(vnames) > 1) {
+    if (length(vnames) > 1) {
       do.call("interaction", c(lapply(vnames, function(vname) as.factor(design[[vname]])), sep=":"))
     } else {
       design[[vnames]]
     }
-    var
+    
   } else if (is.character(var) && length(var) == 1) {
     if (is.null(design[[var]])) {
       stop(paste("`design` does not contain variable named: ", var))
@@ -50,6 +50,12 @@ parse_variable <- function(var, design) {
     var
   } else {
     stop("'var' must be a formula, factor, or character vector")
+  }
+  
+  if (is.factor(ret)) {
+    droplevels(ret)
+  } else {
+    ret
   }
   
 }

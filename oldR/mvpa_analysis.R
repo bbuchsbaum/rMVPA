@@ -49,7 +49,7 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
   
   
   ## valid subset
-  valid.idx <- nonzeroVarianceColumns(values(ROI))
+  valid.idx <- nonzeroVarianceColumns(neuroim2::values(ROI))
   
   if (length(valid.idx) < 2) {
     stop("mvpa_crossval: fewer than 2 valid columns in data matrix")
@@ -69,7 +69,7 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
   
   if (is.null(tuneGrid)) {
     ## should move within crossval_
-    tuneGrid <- model$grid(values(ROI), Y, 1)
+    tuneGrid <- model$grid(neuroim2::values(ROI), Y, 1)
   }
   
   

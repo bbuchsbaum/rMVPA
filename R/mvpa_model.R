@@ -133,7 +133,7 @@ mvpa_model <- function(model,
 }
 
 #' @export
-print.mvpa_model <- function(x) {
+print.mvpa_model <- function(x,...) {
   cat("mvpa_model object. \n")
   cat("model: ", x$model_name, "\n")
   cat("model type: ", x$model_type, "\n")

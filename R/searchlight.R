@@ -59,6 +59,10 @@ pool_results <- function(good_results) {
 
 #' @keywords internal
 pool_randomized <- function(model_spec, good_results, bad_results) {
+  if (nrow(good_results) == 0) {
+    stop("searchlight: no searchlight samples produced valid results")
+  }
+  
   merged_results <- pool_results(good_results)
   perf_list <- lapply(merged_results, function(res) compute_performance(model_spec, res))
   
@@ -161,6 +165,28 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' Kriegeskorte, N., Goebel, R., & Bandettini, P. (2006). Information-based functional brain mapping. Proceedings of the National academy of Sciences of the United States of America, 103(10), 3863-3868.
 #' @export
 #' @rdname run_searchlight
+#' @examples 
+#'  
+#' dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3)
+#' cval <- blocked_cross_validation(dataset$design$block_var)
+#' model <- load_model("sda_notune")
+#' mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
+#' res <- run_searchlight(mspec,radius=8, method="standard")
+#' 
+#' # a custom "combiner" can be used to post-process the output of the searchlight classifier for special cases.
+#' # in the example below the supplied "combining function" extracts the predicted probability of the correct class 
+#' # for every voxel and every trial and then stores them in a data.frame.
+#' 
+#' \dontrun{ 
+#' custom_combiner <- function(mspec, good, bad) { 
+#'    good %>% pmap(function(result, id,...) { 
+#'      data.frame(trial=1:length(result$observed), id=id, prob=prob_observed(result)) 
+#'    }) %>% bind_rows()
+#' }
+#' 
+#' res2 <- run_searchlight(mspec,radius=8, method="standard", combiner=custom_combiner)
+#' }
+#' 
 run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, combiner=NULL, ...) {
   
   if (radius < 1 || radius > 100) {
@@ -181,7 +207,7 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomize
     }
     
     flog.info("running standard searchlight with %s radius ", radius)
-    do_standard(model_spec, radius)    
+    do_standard(model_spec, radius, combiner=combiner)    
   } else if (method == "randomized") {
     
     if (is.null(combiner)) {

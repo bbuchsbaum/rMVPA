@@ -14,7 +14,7 @@ predicted_class <- function(prob) {
 #' @param split_list split results by indexed sub-groups
 #' @export
 #' @rdname performance-methods
-performance.regression_result <- function(x, split_list) {
+performance.regression_result <- function(x, split_list,...) {
   if (!is.null(split_list)) {
     ## TODO: add support
     stop("split_by not supported for regression analyses yet.")
@@ -60,6 +60,17 @@ merge_results.binary_classification_result <- function(x,...) {
   predicted <- levels(x$observed)[mc]
   binary_classification_result(observed=x$observed, predicted=predicted, probs=probs, testind=x$testind, 
                                test_design=x$test_design, predictor=x$predictor)
+}
+
+
+#' @export
+prob_observed.binary_classification_result <- function(x) {
+  x$probs[cbind(seq(1,nrow(x$probs)),as.integer(x$observed))]
+}
+
+#' @export
+prob_observed.multiway_classification_result <- function(x) {
+  x$probs[cbind(seq(1,nrow(x$probs)),as.integer(x$observed))]
 }
 
 #' @export
@@ -195,10 +206,10 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   
   if (class_metrics) {
     #c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres), aucres)
-    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres), aucres)
+    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres, na.rm=TRUE), aucres)
   } else {
     #c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres))
-    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres))
+    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres, na.rm=TRUE))
   }
 }
   

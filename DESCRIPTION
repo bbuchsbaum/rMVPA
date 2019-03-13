@@ -3,7 +3,7 @@ Type: Package
 Title: Multivoxel Pattern Analysis in R
 Version: 0.1.2
 Date: 2019-03-08
-Authors@R: person("Bradley", "R.", "Buchsbaum", role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
+Authors@R: person("Bradley", "Buchsbaum",, "brad.buchsbaum@gmail.com", c("aut", "cre"))
 Maintainer: Bradley R. Buchsbaum <brad.buchsbaum@gmail.com>
 Description: An R package to facilitate multivoxel pattern analysis of
     neuroimaging data in R.
@@ -31,7 +31,6 @@ Imports:
     matrixStats,
     modelr,
     Rfit,
-    rflann,
     neurosurf,
     io,
     optparse
@@ -67,6 +66,7 @@ Suggests:
     iterators
 Remotes:
     bbuchsbaum/neuroim2,
-    bbuchsbaum/neurosurf,
-    YeeJeremy/rflann
+    bbuchsbaum/neurosurf
 VignetteBuilder: knitr
+Encoding: UTF-8
+

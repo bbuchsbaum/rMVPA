@@ -30,6 +30,29 @@ a named list of \code{NeuroVol} objects, where each element contains a performan
 \description{
 execute a searchlight analysis
 }
+\examples{
+ 
+dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3)
+cval <- blocked_cross_validation(dataset$design$block_var)
+model <- load_model("sda_notune")
+mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
+res <- run_searchlight(mspec,radius=8, method="standard")
+
+# a custom "combiner" can be used to post-process the output of the searchlight classifier for special cases.
+# in the example below the supplied "combining function" extracts the predicted probability of the correct class 
+# for every voxel and every trial and then stores them in a data.frame.
+
+\dontrun{ 
+custom_combiner <- function(mspec, good, bad) { 
+   good \%>\% pmap(function(result, id,...) { 
+     data.frame(trial=1:length(result$observed), id=id, prob=prob_observed(result)) 
+   }) \%>\% bind_rows()
+}
+
+res2 <- run_searchlight(mspec,radius=8, method="standard", combiner=custom_combiner)
+}
+
+}
 \references{
 Bjornsdotter, M., Rylander, K., & Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.
 
