@@ -206,10 +206,10 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   
   if (class_metrics) {
     #c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres), aucres)
-    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres), aucres)
+    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres, na.rm=TRUE), aucres)
   } else {
     #c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres))
-    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres))
+    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres, na.rm=TRUE))
   }
 }
   
