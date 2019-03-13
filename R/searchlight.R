@@ -59,6 +59,10 @@ pool_results <- function(good_results) {
 
 #' @keywords internal
 pool_randomized <- function(model_spec, good_results, bad_results) {
+  if (nrow(good_results) == 0) {
+    stop("searchlight: no searchlight samples produced valid results")
+  }
+  
   merged_results <- pool_results(good_results)
   perf_list <- lapply(merged_results, function(res) compute_performance(model_spec, res))
   
