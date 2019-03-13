@@ -377,12 +377,16 @@ initialize_design <- function(config) {
     config$test_subset <- eval(parse(text=config$test_subset))
   }
   
-  ## full design
-  config$full_train_design <- if (length(config$train_design) > 1) {
-    flog.info(paste("concatenating %s design files", length(config$train_design)))
-    do.call(rbind, lapply(config$train_design, read.table, header=TRUE, comment.char=";"))
+  if (is.data.frame(config$train_design)) {
+    config$full_train_design <- config$train_design
   } else {
-    read.table(config$train_design, header=TRUE, comment.char=";")
+    ## full design
+    config$full_train_design <- if (length(config$train_design) > 1) {
+      flog.info(paste("concatenating %s design files", length(config$train_design)))
+      do.call(rbind, lapply(config$train_design, read.table, header=TRUE, comment.char=";"))
+    } else {
+      read.table(config$train_design, header=TRUE, comment.char=";")
+    }
   }
   
   ## subset of training samples
@@ -418,11 +422,15 @@ initialize_design <- function(config) {
     has_test <- TRUE
     flog.info("test design %s is specified", config$test_design)
     
-    config$full_test_design <- if (length(config$test_design) > 1) {
-      flog.info(paste("concatenating %s test design files", length(config$test_design)))
-      do.call(rbind, lapply(config$test_design, read.table, header=TRUE, comment.char=";"))
+    if (is.data.frame(config$test_design)) {
+      config$full_test_design <- config$test_design
     } else {
-      read.table(config$test_design, header=TRUE, comment.char=";")
+      config$full_test_design <- if (length(config$test_design) > 1) {
+        flog.info(paste("concatenating %s test design files", length(config$test_design)))
+        do.call(rbind, lapply(config$test_design, read.table, header=TRUE, comment.char=";"))
+      } else {
+        read.table(config$test_design, header=TRUE, comment.char=";")
+      }
     }
     
     flog.info(paste("test design contains", nrow(config$full_test_design), "rows."))
