@@ -130,13 +130,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
 #' @keywords internal
 do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ...) {
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
-  #browser()
-  #vox_iter <- lapply(slight, function(x) x)
   cind <- which(model_spec$dataset$mask > 0)
-  #len <- sapply(vox_iter, function(x) attr(x, "length"))
-  #vox_iter <- vox_iter[len > 2]
-  #cind <- sapply(vox_iter, attr, "center.index")
-  #browser()
   ret <- mvpa_fun(model_spec, slight, cind,...)
 
   good_results <- ret %>% dplyr::filter(!error)
