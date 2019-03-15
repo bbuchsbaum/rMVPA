@@ -5,8 +5,9 @@
 \title{mvpa_model}
 \usage{
 mvpa_model(model, dataset, design, model_type = c("classification",
-  "regression"), crossval, feature_selector = NULL, tune_grid = NULL,
-  tune_reps = 5, performance = NULL, class_metrics = TRUE)
+  "regression"), crossval = NULL, feature_selector = NULL,
+  tune_grid = NULL, tune_reps = 5, performance = NULL,
+  class_metrics = TRUE)
 }
 \arguments{
 \item{model}{a caret-based classification or regression model}
@@ -32,4 +33,16 @@ regression'}
 }
 \description{
 mvpa_model
+}
+\examples{
+
+mod <- load_model("sda")
+traindat <- neuroim2::NeuroVec(array(rnorm(6*6*6*100), c(6,6,6)), neuroim2::NeuroSpace(c(6,6,6)))
+mask <- neuroim2::LogicalNeuroVol(array(rnorm(6*6*6)>0, c(6,6,6)), neuroim2::NeuroSpace(c(6,6,6)))
+
+mvdset <- mvpa_dataset(traindat,mask=mask)
+design <- data.frame(fac=rep(letters[1:4], 25), block=rep(1:10, each=10))
+cval <- blocked_cross_validation(design$block)
+mvdes <- mvpa_design(design, ~ fac, block_var=~block)
+mvpmod <- mvpa_model(mod,dataset=mvdset, design=mvdes,crossval=cval)
 }

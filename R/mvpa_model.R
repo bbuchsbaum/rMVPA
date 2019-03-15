@@ -1,16 +1,20 @@
 
+
+#' @keywords internal
 get_multiclass_perf <- function(split_list=NULL, class_metrics=TRUE) {
   function(result) {
     performance(result, split_list, class_metrics)
   }
 }
 
+#' @keywords internal
 get_binary_perf <- function(split_list=NULL) {
   function(result) {
     performance(result, split_list)
   }
 }
 
+#' @keywords internal
 get_regression_perf <- function(split_list=NULL) {
 
   function(result) {
@@ -18,6 +22,8 @@ get_regression_perf <- function(split_list=NULL) {
   }
 }
 
+
+#' @keywords internal
 get_custom_perf <- function(fun, split_list) {
   function(result) {
     custom_performance(result, fun, split_list)
@@ -25,6 +31,7 @@ get_custom_perf <- function(fun, split_list) {
 }
 
 
+#' @keywords internal
 compute_performance.mvpa_model <- function(obj, result) {
   obj$performance(result)
 }
@@ -82,11 +89,23 @@ y_test.mvpa_model <- function(obj) y_test(obj$design)
 #' @param performance an optional custom function for computing performance metrics.
 #' @param class_metrics \code{logical} flag indicating whether to compute performance metrics for each class.
 #' @export
+#' 
+#' @examples 
+#' 
+#' mod <- load_model("sda")
+#' traindat <- neuroim2::NeuroVec(array(rnorm(6*6*6*100), c(6,6,6)), neuroim2::NeuroSpace(c(6,6,6)))
+#' mask <- neuroim2::LogicalNeuroVol(array(rnorm(6*6*6)>0, c(6,6,6)), neuroim2::NeuroSpace(c(6,6,6)))
+#' 
+#' mvdset <- mvpa_dataset(traindat,mask=mask)
+#' design <- data.frame(fac=rep(letters[1:4], 25), block=rep(1:10, each=10))
+#' cval <- blocked_cross_validation(design$block)
+#' mvdes <- mvpa_design(design, ~ fac, block_var=~block)
+#' mvpmod <- mvpa_model(mod,dataset=mvdset, design=mvdes,crossval=cval)
 mvpa_model <- function(model, 
                        dataset,
                        design,
                        model_type=c("classification", "regression"), 
-                       crossval, 
+                       crossval=NULL, 
                        feature_selector=NULL, 
                        tune_grid=NULL, 
                        tune_reps=5,
@@ -114,6 +133,12 @@ mvpa_model <- function(model,
   }
   
   model_type <- match.arg(model_type)
+  
+  if (is.null(crossval) && !is.null(design$block_var)) {
+    crossval <- blocked_cross_validation(design$block_var)
+  }
+  
+  ## TODO check that crossval is compatible with design
   
   
   ret <- list(model=model,
