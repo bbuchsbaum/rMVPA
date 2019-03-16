@@ -57,6 +57,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
 
 #' external_crossval
 #' @keywords internal
+#' @importFrom stats predict
 external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE) {
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi))
  
@@ -211,6 +212,7 @@ run_rfit <- function(dvec, obj) {
 
 
 #' @keywords internal
+#' @importFrom stats coef cor dist rnorm terms lm sd
 run_lm <- function(dvec, obj) {
   form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
   vnames <- names(obj$design$model_mat)
@@ -272,7 +274,7 @@ do_rsa <- function(roi, mod_spec, rnum, method=method, distmethod=distmethod) {
 #' @param distmethod the method used to computer distances between oservations, one of: \code{pearson}, \code{spearman}
 #' @importFrom dplyr do rowwise
 #' @export
-rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_iter), regtype=c("rfit", "lm", "pearson", "spearman"), 
+rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), regtype=c("rfit", "lm", "pearson", "spearman"), 
                         distmethod=c("spearman", "pearson")) {
  
   distmethod <- match.arg(distmethod)

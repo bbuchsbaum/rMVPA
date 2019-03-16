@@ -109,6 +109,7 @@ has_test_set <- function(obj) {
 #' @param x the result to evaluate performance of
 #' @param ... extra args
 #' @export
+#' @rdname performance-methods
 performance <- function(x,...) {
   UseMethod("performance")
 }

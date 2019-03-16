@@ -4,7 +4,7 @@
 \alias{rsa_iterate}
 \title{rsa_iterate}
 \usage{
-rsa_iterate(mod_spec, vox_list, ids = 1:length(vox_iter),
+rsa_iterate(mod_spec, vox_list, ids = 1:length(vox_list),
   regtype = c("rfit", "lm", "pearson", "spearman"),
   distmethod = c("spearman", "pearson"))
 }

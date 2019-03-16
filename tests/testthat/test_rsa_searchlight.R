@@ -1,3 +1,5 @@
+context("rsa searchlight")
+
 test_that("standard rsa_searchlight and blocking variable runs without error", {
   dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
   

@@ -32,8 +32,7 @@ Imports:
     modelr,
     Rfit,
     neurosurf,
-    io,
-    optparse
+    io
 Collate:
     'allgeneric.R'
     'classifiers.R'
@@ -63,7 +62,8 @@ Suggests:
     glmnet,
     e1071,
     randomForest,
-    iterators
+    iterators,
+    optparse
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf

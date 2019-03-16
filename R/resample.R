@@ -1,4 +1,9 @@
 
+#' @keywords internal
+gen_id <- function(n) {
+  width <- nchar(n)
+  sprintf(paste0("%0", width, "d"), seq_len(n))
+}
 
 .get_samples <- function(obj, voxlist) {
   ret <- lapply(voxlist, function(vox) {
@@ -7,7 +12,7 @@
   
   n <- length(ret)
   df <- tibble::data_frame(sample = ret)
-  df[[".id"]] <- modelr:::id(n)
+  df[[".id"]] <- gen_id(n)
   df
 }
 
@@ -36,6 +41,7 @@ data_sample.mvpa_dataset <- function(obj, vox) {
 
 
 #' @export
+#' @method print data_sample
 print.data_sample <- function(x, ...) {
   if (is.matrix(x$vox)) {
     cat("data sample with : ", nrow(x$vox), "features")
@@ -87,13 +93,13 @@ as.data.frame.data_sample <- function(x, ...) {
   }
   
   if (!is.null(test_mat)) {
-    .type <- rep(c("train", "test"), c(nrow(trainmat), nrow(testmat)))
+    .type <- rep(c("train", "test"), c(nrow(train_mat), nrow(test_mat)))
     ret <- as.data.frame(rbind(train_mat, test_mat))
     ret$.type <- .type
     attr(ret, "vox") <- cds
     ret
   } else {
-    .type <- rep(c("train"), nrow(trainmat))
+    .type <- rep(c("train"), nrow(train_mat))
     ret <- as.data.frame(train_mat)
     ret$.type <- .type
     attr(ret, "vox") <- cds

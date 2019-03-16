@@ -10,7 +10,7 @@ nresponses.mvpa_design <- function(x) {
   if (is.factor(x$y_train)) {
     length(levels(x$y_train))
   } else if (is.vector(x$y_train)) {
-    y
+    length(x$y_train)
   } else if (is.matrix(x$y_train)) {
     ncol(x$y_train)
   } else {
@@ -158,6 +158,7 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
 }
 
 #' @export
+#' @method print rsa_design
 print.rsa_design <- function(x,...) {
   cat("rsa_design:", "\n")
   cat("  formula: ", deparse(x$formula), "\n")
@@ -170,6 +171,7 @@ print.rsa_design <- function(x,...) {
 
 
 #' @export
+#' @method print mvpa_design
 print.mvpa_design <- function(x,...) {
   cat("mvpa_design:", "\n")
   cat("  training observations: ", length(x$y_train), "\n")

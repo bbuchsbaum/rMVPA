@@ -29,7 +29,7 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
   }
   
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
-  cols[[id]] <- modelr:::id(k)
+  cols[[id]] <- gen_id(k)
   
   tibble::as_data_frame(cols)
 }
@@ -83,7 +83,7 @@ crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps
   }
   
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
-  cols[[id]] <- modelr:::id(length(fold_idx))
+  cols[[id]] <-gen_id(length(fold_idx))
   
   tibble::as_data_frame(cols)
   
@@ -123,7 +123,7 @@ crossv_block <- function(data, y, block_var, id = ".id") {
   }
   
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
-  cols[[id]] <- modelr:::id(length(fold_idx))
+  cols[[id]] <- gen_id(length(fold_idx))
   
   tibble::as_data_frame(cols)
 }
@@ -162,7 +162,7 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id") {
   }
   
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
-  cols[[id]] <- modelr:::id(length(fold_idx))
+  cols[[id]] <- gen_id(length(fold_idx))
   
   tibble::as_data_frame(cols)
 }
@@ -293,7 +293,7 @@ crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id",..
   }
   
   cols <- purrr::transpose(purrr::map(obj$sample_set, function(el) fold(el$train, el$test)))
-  cols[[id]] <- modelr:::id(length(obj$sample_set))
+  cols[[id]] <- gen_id(length(obj$sample_set))
   
   tibble::as_data_frame(cols)
 }
@@ -305,6 +305,7 @@ crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y,...) 
 
 
 #' @export
+#' @method print blocked_cross_validation
 print.blocked_cross_validation <- function(x,...) {
   cat("cross-validation: blocked \n")
   cat("  nobservations: ", length(x$block_var), "\n")
@@ -313,6 +314,7 @@ print.blocked_cross_validation <- function(x,...) {
 }
 
 #' @export
+#' @method print twofold_blocked_cross_validation
 print.twofold_blocked_cross_validation <- function(x,...) {
   cat("twofold cross-validation: blocked \n")
   cat("  nobservations: ", length(x$block_var), "\n")
@@ -321,6 +323,7 @@ print.twofold_blocked_cross_validation <- function(x,...) {
 }
 
 #' @export
+#' @method print bootstrap_blocked_cross_validation
 print.bootstrap_blocked_cross_validation <- function(x,...) {
   cat("cross-validation: bootstrap blocked \n")
   cat("  n observations: ", length(x$block_var))
@@ -330,6 +333,7 @@ print.bootstrap_blocked_cross_validation <- function(x,...) {
 
 
 #' @export
+#' @method print twofold_cross_validation
 print.twofold_cross_validation <- function(x,...) {
   cat("cross-validation: repeated two-fold \n")
   cat("  nobservations: ", length(x$block_var))
@@ -339,6 +343,7 @@ print.twofold_cross_validation <- function(x,...) {
 
 
 #' @export
+#' @method print kfold_cross_validation
 print.kfold_cross_validation <- function(x,...) {
   cat("cross-validation: k fold \n")
   cat("  nobservations: ", length(x$block_var), "\n")

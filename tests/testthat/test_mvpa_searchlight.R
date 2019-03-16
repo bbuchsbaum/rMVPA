@@ -1,6 +1,8 @@
 library(neuroim2)
 library(neurosurf)
 
+context("mvpa searchlight")
+
 gen_regression_dataset <- function(D, nobs, spacing=c(1,1,1), folds=5) {
   mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
   bspace <- NeuroSpace(c(D,nobs), spacing)
@@ -152,7 +154,7 @@ test_that("randomized mvpa_searchlight runs without error", {
      ret
    }
    
-   dataset <- gen_sample_dataset(c(5,5,1), 100, nlevels=3)
+   dataset <- gen_sample_dataset(c(5,5,5), 100, nlevels=3)
    cval <- blocked_cross_validation(dataset$design$block_var)
    model <- load_model("sda_notune")
    mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, performance=custom)

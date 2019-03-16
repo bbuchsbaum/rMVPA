@@ -105,7 +105,7 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
 #' A data structure that encapsulate a standard (volumetric) training dataset, an optional test dataset and a voxel 'mask'.
 #' 
 #' @param train_data the training data set: a \code{NeuroVec} instance
-#' @param test_data the test data set: a \code{NeuroVec} instance
+#' @param test_data the optional test data set: a \code{NeuroVec} instance
 #' @param mask the set of voxels to include: a \code{NeuroVol} instance
 #' @importFrom assertthat assert_that
 #' @export
@@ -163,6 +163,7 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="")
 }
 
 #' @export
+#' @method print mvpa_design
 print.mvpa_dataset <- function(x,...) {
   cat("mvpa_dataset:", "\n")
   cat("  train_data: ")
@@ -182,6 +183,7 @@ print.mvpa_dataset <- function(x,...) {
 }
 
 #' @export
+#' @method print mvpa_surface_dataset
 print.mvpa_surface_dataset <- function(x,...) {
   cat("mvpa_surface_dataset:", "\n")
   cat("  train_data: ")
@@ -217,7 +219,6 @@ get_searchlight.mvpa_dataset <- function(obj, type=c("standard", "randomized"), 
 
 
 #' @export
-
 get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "randomized"), radius=8,...) {
   type <- match.arg(type)
   if (type == "standard") {

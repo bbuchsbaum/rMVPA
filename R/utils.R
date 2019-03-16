@@ -45,8 +45,8 @@ nonzeroVarianceColumns2 <- function(M) {
 }
 
 removeZeroVarianceColumns <- function(M) {
-  noVariance <- which(apply(M, 2, sd, na.rm=TRUE) == 0)
-  if (length(noVariance) > 0) {
+  hasVariance <- which(apply(M, 2, sd, na.rm=TRUE) != 0)
+  if (length(hasVariance) > 0) {
     M[, hasVariance, drop=FALSE]
   } else {
     M

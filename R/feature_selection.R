@@ -1,5 +1,6 @@
 
 #' @keywords iternal
+#' @importFrom stats pf
 matrixAnova <- function(Y, x) {
   x <- as.matrix(x)
   Y <- as.numeric(Y)

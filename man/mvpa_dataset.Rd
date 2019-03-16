@@ -9,7 +9,7 @@ mvpa_dataset(train_data, test_data = NULL, mask)
 \arguments{
 \item{train_data}{the training data set: a \code{NeuroVec} instance}
 
-\item{test_data}{the test data set: a \code{NeuroVec} instance}
+\item{test_data}{the optional test data set: a \code{NeuroVec} instance}
 
 \item{mask}{the set of voxels to include: a \code{NeuroVol} instance}
 }

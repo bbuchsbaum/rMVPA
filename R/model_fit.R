@@ -1,11 +1,18 @@
 
+#' @keywords internal
+requireNamespaceQuietStop <- function(package) {
+  if (!requireNamespace(package, quietly = TRUE))
+    stop(paste('package',package,'is required'), call. = FALSE)
+}
+
+
 mclass_summary <- function (data, lev = NULL, model = NULL) {
   if (!all(levels(data[, "pred"]) == levels(data[, "obs"]))) 
     stop("levels of observed and predicted data do not match")
   has_class_probs <- all(lev %in% colnames(data))
   
   if (has_class_probs) {
-    caret:::requireNamespaceQuietStop("ModelMetrics")
+    requireNamespaceQuietStop("ModelMetrics")
     prob_stats <- lapply(levels(data[, "pred"]), function(x) {
       obs <- ifelse(data[, "obs"] == x, 1, 0)
       prob <- data[, x]
@@ -69,10 +76,9 @@ fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
 }
 
 
-#' predict
 #' @method predict class_model_fit
-#' @export
 #' @param sub_indices the subset of row indices to compute predictions on
+#' @export
 predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   
   mat <- if (inherits(newdata, "NeuroVec") || inherits(newdata, "NeuroSurfaceVector")) {
@@ -99,10 +105,10 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   ret
 }
 
-#' predict
-#' 
+
 #' @param sub_indices a vector of indices used to subset rows of `newdata` 
 #' @export
+#' @method predict regression_model_fit
 predict.regression_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   
   mat <- if (inherits(newdata, "NeuroVec") || inherits(newdata, "NeuroSurfaceVector")) {
@@ -132,8 +138,12 @@ merge_predictions.regression_prediction <- function(obj1, rest, weights=rep(1,le
   allobj <- c(obj1, rest)
   assert_that(all(sapply(allobj, function(obj) inherits(obj, "regression_prediction"))))
   
+  #preds <- lapply(1:length(allobj), function(i) {
+  #  predict(allobj[[i]], newdata, ...)$pred * weights[i]
+  #})
+  
   preds <- lapply(1:length(allobj), function(i) {
-    predict(allobj[[i]], newdata, ...)$pred * weights[i]
+    allobj[[i]]$pred * weights[i]
   })
   
   final_pred <- rowMeans(do.call(cbind, preds))
@@ -144,13 +154,17 @@ merge_predictions.regression_prediction <- function(obj1, rest, weights=rep(1,le
 
 
 #' @export
+#' @method merge_predictions classification_prediction
 merge_predictions.classification_prediction <- function(obj1, rest, weights=rep(1,length(rest)+1)/(length(rest)+1)) {
   allobj <- c(obj1, rest)
   assert_that(all(sapply(allobj, function(obj) inherits(obj, "classification_prediction"))))
   
+  #preds <- lapply(1:length(allobj), function(i) {
+  #  predict(allobj[[i]], newdata, ...)$prob * weights[i]
+  #})
   
   preds <- lapply(1:length(allobj), function(i) {
-    predict(allobj[[i]], newdata, ...)$prob * weights[i]
+    allobj[[i]]$prob * weights[i]
   })
   
   prob <- preds[!sapply(preds, function(x) is.null(x))]
@@ -235,23 +249,25 @@ list_model <- function(fits, names=1:length(fits)) {
 }
 
 #' @export
+#' @method predict weighted_model
 predict.weighted_model <- function(object, newdata=NULL, ...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
 
-  preds <- lapply(x$fits, function(fit) predict(fit, newdata, ...))
-  merge_predictions(preds[[1]], preds[2:length(preds)], attr(x, "weights"))
+  preds <- lapply(object$fits, function(fit) predict(fit, newdata, ...))
+  merge_predictions(preds[[1]], preds[2:length(preds)], attr(object, "weights"))
   
 }
 
 #' @export
+#' @method predict list_model
 predict.list_model <- function(object, newdata=NULL,...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
   
-  res <- lapply(x, function(fit) {
+  res <- lapply(object, function(fit) {
     predict(fit, newdata,...)
   })
   

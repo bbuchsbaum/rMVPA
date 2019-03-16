@@ -194,6 +194,7 @@
 
 
 #' @import stringr
+#' @importFrom io qread
 initialize_configuration <- function(args) {
   
   if (!is.null(args$config)) {
@@ -240,8 +241,15 @@ initialize_standard_parameters <- function(config, args, analysisType) {
 }
 
 #' @noRd
+#' @keywords internal
+#' @importFrom purrr map_dbl
 normalize_image_samples <- function(bvec, mask) {
-  norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
+  vlist <- bvec %>% vols() %>% map_dbl(function(v) {
+    scale(v[mask>0])[,1]
+  })
+  
+  norm_datavec <- do.call(cbind, vlist)
+  #norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
   SparseNeuroVec(norm_datavec, space(bvec), mask=mask)  
 }
 
@@ -253,7 +261,7 @@ normalize_surface_samples <- function(bvec, mask) {
   m2 <- matrix(0, length(nodes(bvec)), ncol(bvec@data))
   m2[indices(bvec),] <- mat
   
-  NeuroSurfaceVector(geometry(bvec), indices=indices(bvec), m2)
+  neurosurf::NeuroSurfaceVector(geometry(bvec), indices=indices(bvec), m2)
 }
 
 initialize_surface_data <- function(config) {
@@ -626,7 +634,8 @@ load_mvpa_model <- function(config, dataset, design, crossval, feature_selector)
   
 }
 
-
+#' @keywords internal
+#' @importFrom futile.logger flog.error
 load_subset <- function(full_design, subset) {
   if (is.character(subset)) {
     if (substr(subset, 1,1) != "~") {
@@ -642,7 +651,7 @@ load_subset <- function(full_design, subset) {
       warning(paste("subset has same number of rows as full table"))
     }
     if (sum(keep) <= 1) {
-      futile.error("train_subset %s results in design with only 1 row.", as.character(subexpr))
+      flog.error("train_subset %s results in design with only 1 row.", as.character(subexpr))
       stop()
     }
     keep

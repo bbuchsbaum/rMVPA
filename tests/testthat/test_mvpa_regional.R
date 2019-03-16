@@ -4,9 +4,12 @@ library(testthat)
 library(assertthat)
 
 
+context("mvpa regional")
+
 test_that("mvpa_regional with 5 ROIS runs without error", {
   
-  dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="image", response_type="categorical")
+  dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="image", 
+                             response_type="categorical")
   cval <- twofold_blocked_cross_validation(dset$design$block_var)
   
   region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))

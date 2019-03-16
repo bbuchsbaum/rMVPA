@@ -85,7 +85,7 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
 #' @importFrom dplyr filter bind_rows
 #' @importFrom furrr future_map
 do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, combiner=pool_randomized, ...) {
- 
+  error=NULL 
   
   ret <- furrr::future_map(1:niter, function(i) {
     flog.info("searchlight iteration: %i", i)
@@ -101,7 +101,7 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
   message("number of models fit: ", nmodels)
  
   results <- dplyr::bind_rows(ret)
-  good_results <- results %>% dplyr::filter(!error)
+  good_results <- results %>% dplyr::filter(error == FALSE)
   bad_results <- results %>% dplyr::filter(error == TRUE)
   
   if (nrow(bad_results) > 0) {
@@ -126,6 +126,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
 
 #' @keywords internal
 do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ...) {
+  error=NULL
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
   cind <- which(model_spec$dataset$mask > 0)
   ret <- mvpa_fun(model_spec, slight, cind,...)
@@ -157,6 +158,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' 
 #' Kriegeskorte, N., Goebel, R., & Bandettini, P. (2006). Information-based functional brain mapping. Proceedings of the National academy of Sciences of the United States of America, 103(10), 3863-3868.
 #' @export
+#' @importFrom purrr pmap
 #' @rdname run_searchlight
 #' @examples 
 #'  

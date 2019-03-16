@@ -9,8 +9,6 @@ predicted_class <- function(prob) {
 }
 
 #' performance
-
-#' @param x the result object
 #' @param split_list split results by indexed sub-groups
 #' @export
 #' @rdname performance-methods
@@ -41,7 +39,7 @@ custom_performance <- function(x, custom_fun, split_list=NULL) {
     total <- custom_fun(x)
     subtots <- unlist(lapply(names(split_list), function(tag) {
       ind <- split_list[[tag]]
-      ret <- custom_fun(subResult(x, ind))
+      ret <- custom_fun(sub_result(x, ind))
       names(ret) <- paste0(names(ret), "_", tag)
       ret
     }))

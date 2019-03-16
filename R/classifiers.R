@@ -27,6 +27,7 @@ MVPAModels <- new.env()
 
 
 #' @import MASS
+#' @importFrom stats median
 #' @noRd
 corsimFit <- function(x, y, method, robust) {
   estimator <- if (robust) {
@@ -45,7 +46,7 @@ corsimFit <- function(x, y, method, robust) {
   if (identical("mean", estimator)) {
     list(conditionMeans=group_means(x, 1, y), levs=levels(y), method=method, robust=robust)
   } else {
-    list(conditionMeans = splitReduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)
+    list(conditionMeans = neuroim2::split_reduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)
   }
 }
 

@@ -1,6 +1,7 @@
 
 
 combine_regional_results = function(results, ids) {
+  ROINUM=NULL
   if (is.factor(results$result[[1]]$observed)) {
     results %>% dplyr::rowwise() %>% dplyr::do( {
 
@@ -45,6 +46,10 @@ combine_regional_results = function(results, ids) {
 #' @import parallel
 #' @export
 run_regional <- function(model_spec, region_mask, return_fits=FALSE) {  
+  ## to get rid of package check warnings
+  ROINUM=NULL
+  ###
+  
   
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   
