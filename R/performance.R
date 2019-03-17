@@ -60,6 +60,16 @@ merge_results.binary_classification_result <- function(x,...) {
                                test_design=x$test_design, predictor=x$predictor)
 }
 
+#' @export
+merge_results.regression_result <- function(x,...) {
+  rlist <- list(x,...)
+  pred <- Reduce("+", lapply(rlist, function(x) x$predicted))/length(rlist)
+  regression_result(observed=x$observed, predicted=pred, testind=x$testind, 
+                               test_design=x$test_design, predictor=x$predictor)
+}
+
+
+
 
 #' @export
 prob_observed.binary_classification_result <- function(x) {
