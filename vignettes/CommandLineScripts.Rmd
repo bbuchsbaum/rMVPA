@@ -3,9 +3,8 @@ title: "Command-Line Scripts"
 author: "Bradley Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
-vignette: >
   %\VignetteIndexEntry{CommandLine}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
   
 ---

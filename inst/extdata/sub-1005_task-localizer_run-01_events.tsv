@@ -1,0 +1,9 @@
+"Run" "Item" "BlockType" "BlockStart" "BlockEnd" "PicStart" "PicEnd" "Repeat" "Response" "RT"
+1 1 "Scenes" 10 32.2 13.3 14.2 "Na" "Na" 0
+1 1 "Scenes" 42.2 64.4 45.5 46.4 "Na" "Na" 0
+1 1 "Objects" 74.4 96.6 77.7 78.6 "Na" "Na" 0
+1 1 "Bodies" 106.6 128.8 109.9 110.8 "Na" "Na" 0
+1 1 "Scenes" 138.8 161 142.1 143 "Na" "Na" 0
+1 1 "Faces" 171 193.2 174.3 175.2 "Na" "Na" 0
+1 1 "Faces" 203.2 225.4 206.5 207.4 "Na" "Na" 0
+1 1 "Objects" 235.4 257.6 238.7 239.6 "Na" "Na" 0
