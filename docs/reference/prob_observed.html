@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>rsa_iterate — rsa_iterate • rMVPA</title>
+<title>prob_observed — prob_observed • rMVPA</title>
 
 <!-- jquery -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
@@ -31,9 +31,9 @@
 
 
 
-<meta property="og:title" content="rsa_iterate — rsa_iterate" />
+<meta property="og:title" content="prob_observed — prob_observed" />
 
-<meta property="og:description" content="Run RSA analysis for each of a list of voxels sets" />
+<meta property="og:description" content="extract predicted probability for the observed clss" />
 <meta name="twitter:card" content="summary" />
 
 
@@ -119,43 +119,25 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>rsa_iterate</h1>
+    <h1>prob_observed</h1>
     
-    <div class="hidden name"><code>rsa_iterate.Rd</code></div>
+    <div class="hidden name"><code>prob_observed.Rd</code></div>
     </div>
 
     <div class="ref-description">
     
-    <p>Run RSA analysis for each of a list of voxels sets</p>
+    <p>extract predicted probability for the observed clss</p>
     
     </div>
 
-    <pre class="usage"><span class='fu'>rsa_iterate</span>(<span class='no'>mod_spec</span>, <span class='no'>vox_list</span>, <span class='kw'>ids</span> <span class='kw'>=</span> <span class='fl'>1</span>:<span class='fu'><a href='https://www.rdocumentation.org/packages/base/topics/length'>length</a></span>(<span class='no'>vox_list</span>),
-  <span class='kw'>regtype</span> <span class='kw'>=</span> <span class='fu'><a href='https://www.rdocumentation.org/packages/base/topics/c'>c</a></span>(<span class='st'>"rfit"</span>, <span class='st'>"lm"</span>, <span class='st'>"pearson"</span>, <span class='st'>"spearman"</span>),
-  <span class='kw'>distmethod</span> <span class='kw'>=</span> <span class='fu'><a href='https://www.rdocumentation.org/packages/base/topics/c'>c</a></span>(<span class='st'>"spearman"</span>, <span class='st'>"pearson"</span>))</pre>
+    <pre class="usage"><span class='fu'>prob_observed</span>(<span class='no'>x</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>mod_spec</th>
-      <td><p>a class of type <code>mvpa_model</code></p></td>
-    </tr>
-    <tr>
-      <th>vox_list</th>
-      <td><p>a <code>list</code> of voxel indices/coordinates</p></td>
-    </tr>
-    <tr>
-      <th>ids</th>
-      <td><p>a <code>vector</code> of ids for each voxel set</p></td>
-    </tr>
-    <tr>
-      <th>regtype</th>
-      <td><p>the analysis method, one of: <code>lm</code>, <code>rfit</code>, <code>pearson</code>, <code>spearman</code></p></td>
-    </tr>
-    <tr>
-      <th>distmethod</th>
-      <td><p>the method used to computer distances between oservations, one of: <code>pearson</code>, <code>spearman</code></p></td>
+      <th>x</th>
+      <td><p>the object</p></td>
     </tr>
     </table>
     

@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>performance — performance.regression_result • rMVPA</title>
+<title>performance — performance • rMVPA</title>
 
 <!-- jquery -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
@@ -31,9 +31,9 @@
 
 
 
-<meta property="og:title" content="performance — performance.regression_result" />
+<meta property="og:title" content="performance — performance" />
 
-<meta property="og:description" content="performance" />
+<meta property="og:description" content="Compute appropriate performance metrics such as accuracy/AUC/RMSE from a classification/regression result" />
 <meta name="twitter:card" content="summary" />
 
 
@@ -126,19 +126,25 @@
 
     <div class="ref-description">
     
-    <p>performance</p>
+    <p>Compute appropriate performance metrics such as accuracy/AUC/RMSE from a classification/regression result</p>
     
     </div>
 
-    <pre class="usage"><span class='co'># S3 method for regression_result</span>
-<span class='fu'><a href='performance.html'>performance</a></span>(<span class='no'>x</span>, <span class='no'>split_list</span>)</pre>
+    <pre class="usage"><span class='fu'>performance</span>(<span class='no'>x</span>, <span class='no'>...</span>)
+
+<span class='co'># S3 method for regression_result</span>
+<span class='fu'>performance</span>(<span class='no'>x</span>, <span class='no'>split_list</span>, <span class='no'>...</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>x</th>
-      <td><p>the result object</p></td>
+      <td><p>the result to evaluate performance of</p></td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td><p>extra args</p></td>
     </tr>
     <tr>
       <th>split_list</th>
@@ -159,7 +165,7 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Bradley Buchsbaum R..</p>
+  <p>Developed by Bradley Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">
