@@ -79,7 +79,7 @@ hist(result$AUC)
 
 All of the classifiers available in the `caret` package can be used (in theory) for a searchlight analysis. For example, we can run an analysis using a linear support vector (`svmLinear`) machine as follows:
 
-```{r}
+```{r, eval=FALSE}
 svm_model <- load_model("svmLinear") 
 model <- mvpa_model(model=svm_model, dataset=dataset$dataset, design=dataset$design, crossval=crossval)
 result_svm <- run_searchlight(model, radius=4, method="randomized", niter=2)
