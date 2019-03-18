@@ -178,6 +178,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @param ids a \code{vector} of ids for each voxel set
 #' @param compute_performance compute and store performance measures for each voxel set
 #' @param return_fits return the model fit for each voxel set?
+#' @param verbose print progress messages
 #' @importFrom dplyr bind_rows
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_performance=TRUE, return_fits=FALSE, verbose=TRUE) {
