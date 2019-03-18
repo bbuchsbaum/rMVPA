@@ -86,7 +86,7 @@
       <h1>Cross-Validation Schemes</h1>
                         <h4 class="author">Bradley Buchsbaum</h4>
             
-            <h4 class="date">2019-03-10</h4>
+            <h4 class="date">2019-03-17</h4>
       
       
       <div class="hidden name"><code>CrossValidation.Rmd</code></div>
@@ -104,11 +104,18 @@
 <a href="#blocked-cross-validation" class="anchor"></a>Blocked Cross-Validation</h3>
 <p>In fMRI analyses images are generally acquired over a number of scans or “runs” that form natural breaks in the data. Due to temporal auto-correlation in the data, it is generally not a good idea to train and test a classifier on trials collected in the same run. Therefore, when dividing the data into data blocks for cross-validation, it is natural to use scanning “run” as a means of splitting up the data into training and test folds.</p>
 <p>There is a special data structure to help set this up called <code>blocked_cross_validation</code>. All we need is an variable that indcates the block index of each trial in the experiment. For example, imagine we have five scans/blocks, each with 100 images.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">block_var &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/rep">rep</a></span>(<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>, <span class="dt">each=</span><span class="dv">100</span>)
+cval &lt;-<span class="st"> </span><span class="kw"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span>(block_var)
+<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(cval)</code></pre></div>
 <pre><code>## cross-validation: blocked 
 ##   nobservations:  500 
 ##   nfolds:  5 
 ##   block sizes:  100 100 100 100 100</code></pre>
 <p>Now, to generate cross-validation samples, we use the <code>crossval_sample</code> generic function. We need to give it data for the independent variables, <code>data</code> and a response variable <code>y</code>. The result will be a <code>data.frame</code> (or <code>tibble</code> to be precise) that contains in each row the samples necessary to conduct a complete leave-one-block out cross-validation analysis.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/data.frame">data.frame</a></span>(<span class="dt">x1=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">500</span>), <span class="dt">x2=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">500</span>), <span class="dt">x3=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">500</span>))
+y &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/rep">rep</a></span>(letters[<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>], <span class="dt">length.out=</span><span class="dv">500</span>)
+sam &lt;-<span class="st"> </span><span class="kw"><a href="../reference/crossval_samples.html">crossval_samples</a></span>(cval, dat,y)
+sam</code></pre></div>
 <pre><code>## # A tibble: 5 x 5
 ##   ytrain      ytest       train          test           .id  
 ##   &lt;list&gt;      &lt;list&gt;      &lt;list&gt;         &lt;list&gt;         &lt;chr&gt;
@@ -118,46 +125,70 @@
 ## 4 &lt;chr [400]&gt; &lt;chr [100]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 4    
 ## 5 &lt;chr [400]&gt; &lt;chr [100]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 5</code></pre>
 <p>Notice that the <code>data.frame</code> contains five variable: <code>ytrain</code>, <code>ytest</code>, <code>train</code>, <code>test</code> and <code>.id</code> which contains the training responses, the test responses, the training data, the test data, and a integer id variable, respectively. The first four variables are <code>list</code>elements because they contain vector- or matrix- valued elements in each cell. Indeed, the <code>train</code> and <code>test</code> variables are S3 classes of type <code>resample</code> from the <code>modelr</code> package. For example, to access training data for the first cross-validation fold, we can do the following:</p>
-<pre><code>##             x1         x2         x3
-## 101 -0.6591529  1.2131672  0.8189680
-## 102 -0.5174149 -1.0650987  0.9259753
-## 103 -0.1368315  0.2409265 -0.8156254
-## 104  1.0005651 -0.6453403 -1.5609847
-## 105  0.5483958  2.2218989 -0.7368365</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">train_dat &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/as.data.frame">as.data.frame</a></span>(sam<span class="op">$</span>train[[<span class="dv">1</span>]])
+<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(train_dat[<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>,])</code></pre></div>
+<pre><code>##               x1         x2         x3
+## 101 -0.007629869  0.6772264 -1.2111730
+## 102  0.605299587  0.6158374 -0.3045876
+## 103 -1.830578130 -0.9334113 -0.6052458
+## 104  2.856542103  1.6966556  1.3622668
+## 105  1.207885545  1.4378733  1.5579119</code></pre>
 <p>As a toy example, below we loop through the cross-validation sets using the <code>dplyr</code> <code>rowwise</code> function, fit an <code>sda</code> model and put the fitted model into a new data.frame.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/library">library</a></span>(dplyr)
+
+model_fits &lt;-<span class="st"> </span>sam <span class="op">%&gt;%</span><span class="st"> </span><span class="kw"><a href="https://dplyr.tidyverse.org/reference/rowwise.html">rowwise</a></span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="kw"><a href="https://dplyr.tidyverse.org/reference/do.html">do</a></span>({
+  train_dat &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/as.data.frame">as.data.frame</a></span>(.<span class="op">$</span>train)
+  y_train &lt;-<span class="st"> </span>.<span class="op">$</span>ytrain
+  fit &lt;-<span class="st"> </span>sda<span class="op">::</span><span class="kw"><a href="https://www.rdocumentation.org/packages/sda/topics/sda">sda</a></span>(<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/matrix">as.matrix</a></span>(train_dat), y_train, <span class="dt">verbose=</span><span class="ot">FALSE</span>)
+  tibble<span class="op">::</span><span class="kw"><a href="https://tibble.tidyverse.org/reference/tibble.html">tibble</a></span>(<span class="dt">fit=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/list">list</a></span>(fit))
+})</code></pre></div>
 </div>
 <div id="bootstrap-blocked-cross-validation" class="section level3">
 <h3 class="hasAnchor">
 <a href="#bootstrap-blocked-cross-validation" class="anchor"></a>Bootstrap Blocked Cross-Validation</h3>
 <p>The above blocked cross-validation iterates through the full dataset once, with each block being held out as a test set for one cross-validation fold. In some cases we might want a cross-validation scheme that resamples the ful dataset more extensively, while still respecting the block sampling structure of fMRI. In this case we can use the <code>bootstrap_blocked_cross_validation</code> scheme. Suppose, as above, we have an integer-valued block variable. Now we create a <code>bootstrap_blocked_cross_validation</code> with 20 bootstrap replications:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">block_var &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/rep">rep</a></span>(<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>, <span class="dt">each=</span><span class="dv">100</span>)
+cval &lt;-<span class="st"> </span><span class="kw"><a href="../reference/cross_validation.html">bootstrap_blocked_cross_validation</a></span>(block_var, <span class="dt">nreps=</span><span class="dv">20</span>)
+<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(cval)</code></pre></div>
 <pre><code>## cross-validation: bootstrap blocked 
 ##   n observations:  500  n bootstrap reps:  20 
 ##   block sizes:  100 100 100 100 100</code></pre>
 <p>Now we create a set of new resamples. But this time instead of 5 resamples (one for each block), we have 100 resamples (20 for each block). Each block is used as a test set 20 times and for each of those 20 resamples, the training data is sampled with replacement from the remaining runs.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/data.frame">data.frame</a></span>(<span class="dt">x1=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">500</span>), <span class="dt">x2=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">500</span>), <span class="dt">x3=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">500</span>))
+y &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/rep">rep</a></span>(letters[<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>], <span class="dt">length.out=</span><span class="dv">500</span>)
+sam &lt;-<span class="st"> </span><span class="kw"><a href="../reference/crossval_samples.html">crossval_samples</a></span>(cval, dat,y)
+sam</code></pre></div>
 <pre><code>## # A tibble: 100 x 5
 ##    ytrain      ytest       train          test           .id  
 ##    &lt;list&gt;      &lt;list&gt;      &lt;list&gt;         &lt;list&gt;         &lt;chr&gt;
-##  1 &lt;chr [243]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 001  
-##  2 &lt;chr [251]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 002  
-##  3 &lt;chr [245]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 003  
-##  4 &lt;chr [245]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 004  
+##  1 &lt;chr [246]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 001  
+##  2 &lt;chr [241]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 002  
+##  3 &lt;chr [263]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 003  
+##  4 &lt;chr [242]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 004  
 ##  5 &lt;chr [249]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 005  
-##  6 &lt;chr [249]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 006  
-##  7 &lt;chr [250]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 007  
-##  8 &lt;chr [249]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 008  
-##  9 &lt;chr [245]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 009  
-## 10 &lt;chr [239]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 010  
+##  6 &lt;chr [250]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 006  
+##  7 &lt;chr [241]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 007  
+##  8 &lt;chr [247]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 008  
+##  9 &lt;chr [254]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 009  
+## 10 &lt;chr [250]&gt; &lt;chr [400]&gt; &lt;S3: resample&gt; &lt;S3: resample&gt; 010  
 ## # … with 90 more rows</code></pre>
 </div>
 <div id="repeated-split-half-resampling-over-blocks" class="section level3">
 <h3 class="hasAnchor">
 <a href="#repeated-split-half-resampling-over-blocks" class="anchor"></a>Repeated Split-Half Resampling over Blocks</h3>
 <p>Another approach for repeatedly sampling the data while respecting block structure is encapsulated in the <code>twofold_blocked_cross_validation</code> resampling scheme. Here every training resample is drawn from a random half the blocks and every test set is determined by the other half. This is done <code>nreps</code> times, yielding a set of split-half (or “two fold”) resamples. Note that this approach requires more than two blocks since with 2 blocks it would always split the data in the identical way, i.e. it does not subsample or bootstrap trials <em>within</em> blocks.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">block_var &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/rep">rep</a></span>(<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>, <span class="dt">each=</span><span class="dv">100</span>)
+cval &lt;-<span class="st"> </span><span class="kw"><a href="../reference/cross_validation.html">twofold_blocked_cross_validation</a></span>(block_var, <span class="dt">nreps=</span><span class="dv">20</span>)
+<span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(cval)</code></pre></div>
 <pre><code>## twofold cross-validation: blocked 
 ##   nobservations:  500 
 ##   nreps:  20 
 ##   block sizes:  100 100 100 100 100</code></pre>
 <p>Again, we resample using <code>crossval_samples</code> and supply a data set and a response variable.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">dat &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/data.frame">data.frame</a></span>(<span class="dt">x1=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">500</span>), <span class="dt">x2=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">500</span>), <span class="dt">x3=</span><span class="kw"><a href="https://www.rdocumentation.org/packages/stats/topics/Normal">rnorm</a></span>(<span class="dv">500</span>))
+y &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/rep">rep</a></span>(letters[<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>], <span class="dt">length.out=</span><span class="dv">500</span>)
+sam &lt;-<span class="st"> </span><span class="kw"><a href="../reference/crossval_samples.html">crossval_samples</a></span>(cval, dat,y)
+sam</code></pre></div>
 <pre><code>## # A tibble: 10 x 5
 ##    ytrain      ytest       train          test           .id  
 ##    &lt;list&gt;      &lt;list&gt;      &lt;list&gt;         &lt;list&gt;         &lt;chr&gt;
@@ -189,7 +220,7 @@
 
 
       <footer><div class="copyright">
-  <p>Developed by Bradley Buchsbaum R..</p>
+  <p>Developed by Bradley Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">

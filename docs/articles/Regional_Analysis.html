@@ -86,7 +86,7 @@
       <h1>Regional Analysis</h1>
                         <h4 class="author">Bradley Buchsbaum</h4>
             
-            <h4 class="date">2019-03-10</h4>
+            <h4 class="date">2019-03-17</h4>
       
       
       <div class="hidden name"><code>Regional_Analysis.Rmd</code></div>
@@ -123,7 +123,7 @@
 ##   training observations:  80 
 ##   training levels:  a b 
 ##   no test observations. 
-##   training response:   Factor w/ 2 levels "a","b": 1 1 2 1 2 1 1 1 2 1 ... 
+##   training response:   Factor w/ 2 levels "a","b": 1 2 1 2 1 2 1 1 2 2 ... 
 ##   block var:   int [1:80] 1 2 3 4 1 2 3 4 1 2 ...</code></pre>
 <p>```</p>
 <p>Now we generate an arbitrary set of ROIs by assigning each voxel in the input mask a value ranging from 1 to 3.</p>
@@ -134,7 +134,7 @@ region_mask &lt;-<span class="st"> </span>neuroim2<span class="op">::</span><spa
 <span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/table">table</a></span>(region_mask)</code></pre></div>
 <pre><code>## region_mask
 ##   0   1   2   3 
-## 123  31  26  36</code></pre>
+## 123  32  27  34</code></pre>
 <p>The <code>region_mask</code> volume now defines a set of three ROIs where each ROI is defined by an integer value. Next, we can run a classification/regression model within each ROI using the <code>run_regional</code> function:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mod &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_model.html">load_model</a></span>(<span class="st">"sda"</span>)
 tune_grid &lt;-<span class="st"> </span><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/data.frame">data.frame</a></span>(<span class="dt">lambda=</span>.<span class="dv">01</span>, <span class="dt">diagonal=</span><span class="ot">FALSE</span>)
@@ -147,9 +147,9 @@ res &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_reg
 <pre><code>## # A tibble: 3 x 3
 ##   ROINUM Accuracy     AUC
 ##    &lt;int&gt;    &lt;dbl&gt;   &lt;dbl&gt;
-## 1      1    0.475 -0.0894
-## 2      2    0.412 -0.109 
-## 3      3    0.562  0.0769</code></pre>
+## 1      1    0.55   0.0716
+## 2      2    0.45  -0.0925
+## 3      3    0.562  0.0853</code></pre>
 <p>To get fine-grained information, the individual predictions for each ROI and trial are included in <code>prediction_table</code>:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw"><a href="https://www.rdocumentation.org/packages/base/topics/print">print</a></span>(res<span class="op">$</span>prediction_table)</code></pre></div>
 <pre><code>## Source: local data frame [240 x 7]
@@ -158,16 +158,16 @@ res &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_reg
 ## # A tibble: 240 x 7
 ##    ROINUM observed pobserved predicted correct  prob_a   prob_b
 ##  *  &lt;int&gt; &lt;fct&gt;        &lt;dbl&gt; &lt;chr&gt;     &lt;lgl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
-##  1      1 a          0.856   a         TRUE    0.856   0.144   
-##  2      1 a          0.978   a         TRUE    0.978   0.0219  
-##  3      1 b          0.0124  a         FALSE   0.988   0.0124  
-##  4      1 a          0.590   a         TRUE    0.590   0.410   
-##  5      1 b          0.00651 a         FALSE   0.993   0.00651 
-##  6      1 a          1.000   a         TRUE    1.000   0.000106
-##  7      1 a          0.0221  b         FALSE   0.0221  0.978   
-##  8      1 a          0.132   b         FALSE   0.132   0.868   
-##  9      1 b          0.0159  a         FALSE   0.984   0.0159  
-## 10      1 a          0.00283 b         FALSE   0.00283 0.997   
+##  1      1 a         0.466    b         FALSE   0.466   0.534   
+##  2      1 b         0.753    b         TRUE    0.247   0.753   
+##  3      1 a         0.0123   b         FALSE   0.0123  0.988   
+##  4      1 b         0.996    b         TRUE    0.00393 0.996   
+##  5      1 a         0.142    b         FALSE   0.142   0.858   
+##  6      1 b         0.000102 a         FALSE   1.000   0.000102
+##  7      1 a         0.987    a         TRUE    0.987   0.0127  
+##  8      1 a         0.999    a         TRUE    0.999   0.00104 
+##  9      1 b         0.00266  a         FALSE   0.997   0.00266 
+## 10      1 b         0.733    b         TRUE    0.267   0.733   
 ## # … with 230 more rows</code></pre>
 </div>
 </div>
@@ -187,7 +187,7 @@ res &lt;-<span class="st"> </span><span class="kw"><a href="../reference/run_reg
 
 
       <footer><div class="copyright">
-  <p>Developed by Bradley Buchsbaum R..</p>
+  <p>Developed by Bradley Buchsbaum.</p>
 </div>
 
 <div class="pkgdown">
