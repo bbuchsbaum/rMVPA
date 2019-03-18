@@ -196,7 +196,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_per
     
     if (verbose && (as.numeric(.id) %% 100 == 0)) {
       perc <- as.integer(as.numeric(.id)/tot * 100)
-      printf("mvpa_iterate: %s % \n", perc)
+      sprintf("mvpa_iterate: %s % \n", perc)
     }
     
     roi <- as_roi(sample)
