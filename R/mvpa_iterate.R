@@ -180,7 +180,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @param return_fits return the model fit for each voxel set?
 #' @importFrom dplyr bind_rows
 #' @export
-mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_performance=TRUE, return_fits=FALSE) {
+mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_performance=TRUE, return_fits=FALSE, verbose=TRUE) {
   assert_that(length(ids) == length(vox_list), 
               msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   
@@ -192,7 +192,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_per
   tot <- length(ids)
   ### iterate over rows using parallel map with futures
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
-    if (as.numeric(.id) %% 1000 == 0) {
+    if (verbose && (as.numeric(.id) %% 1000 == 0)) {
       perc <- as.integer(as.numeric(.id)/tot * 100)
       message("mpva_iterate: ", perc, "%")
     }
