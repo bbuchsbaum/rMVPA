@@ -189,9 +189,13 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_per
   do_fun <- if (has_test_set(mod_spec$dataset)) external_crossval else internal_crossval
   
   #browser()
-  
+  tot <- length(ids)
   ### iterate over rows using parallel map with futures
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
+    if (as.numeric(.id) %% 1000 == 0) {
+      perc <- as.integer(as.numeric(.id)/tot * 100)
+      message("mpva_iterate: ", perc, "%")
+    }
     roi <- as_roi(sample)
     do_fun(roi, mod_spec, rnum, 
            compute_performance=compute_performance,
