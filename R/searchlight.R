@@ -88,8 +88,8 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
   error=NULL 
   
   ret <- furrr::future_map(1:niter, function(i) {
-    flog.info("searchlight iteration: %i", i)
-    flog.debug("constructing searchlight.")
+    printf("searchlight iteration: %s", i)
+    printf("constructing searchlight.")
     
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
   
@@ -127,8 +127,10 @@ combine_standard <- function(model_spec, good_results, bad_results) {
 #' @keywords internal
 do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ...) {
   error=NULL
+  flog.info("creating standard searchlight")
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
   cind <- which(model_spec$dataset$mask > 0)
+  flog.info("running standard searchlight iterator")
   ret <- mvpa_fun(model_spec, slight, cind,...)
 
   good_results <- ret %>% dplyr::filter(!error)
