@@ -88,9 +88,10 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
   error=NULL 
   
   ret <- furrr::future_map(1:niter, function(i) {
+
     sprintf("searchlight iteration: %s", i)
     sprintf("constructing searchlight.")
-    
+
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
   
     cind <- purrr::map_int(slight, ~ .@parent_index)

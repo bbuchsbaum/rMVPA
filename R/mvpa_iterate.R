@@ -192,16 +192,13 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_per
   #browser()
   tot <- length(ids)
   ### iterate over rows using parallel map with futures
-  ret <- sframe %>% dplyr::mutate(rnum=ids) %>% purrr::pmap(function(sample, rnum, .id) {
+  ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
     
-    #if (verbose && (as.numeric(.id) %% 10 == 0)) {
-    #  perc <- as.integer(as.numeric(.id)/tot * 100)
-    #  printf("mpva_iterate: %s % \n", perc)
-    #}
-    
-    if (verbose) {
-      print(paste(rnum, ", ", .id))
+    if (verbose && (as.numeric(.id) %% 100 == 0)) {
+      perc <- as.integer(as.numeric(.id)/tot * 100)
+      printf("mvpa_iterate: %s % \n", perc)
     }
+    
     roi <- as_roi(sample)
     do_fun(roi, mod_spec, rnum, 
            compute_performance=compute_performance,
