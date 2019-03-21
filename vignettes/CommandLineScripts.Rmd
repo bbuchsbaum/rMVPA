@@ -119,7 +119,7 @@ knitr::kable(g[1:5,])
 
 Here is a minimal `config.R` file.
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=TRUE, message=FALSE}
 
 train_design = "train_design.txt"
 train_data = "betas.nii"
@@ -132,7 +132,7 @@ output = "searchlight_analysis"
 
 ```
 
-Now to run, we type the following command:
+Now to run, we type the following command (assuming that `MVPA_Searchlight.R` in on you `PATH`):
 
 `MVPA_Searchlight.R --config config.R`
 

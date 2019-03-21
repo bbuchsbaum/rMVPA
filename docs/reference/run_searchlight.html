@@ -178,10 +178,10 @@
 <span class='no'>cval</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='cross_validation.html'>blocked_cross_validation</a></span>(<span class='no'>dataset</span>$<span class='no'>design</span>$<span class='no'>block_var</span>)
 <span class='no'>model</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='load_model.html'>load_model</a></span>(<span class='st'>"sda_notune"</span>)
 <span class='no'>mspec</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='mvpa_model.html'>mvpa_model</a></span>(<span class='no'>model</span>, <span class='no'>dataset</span>$<span class='no'>dataset</span>, <span class='kw'>design</span><span class='kw'>=</span><span class='no'>dataset</span>$<span class='no'>design</span>, <span class='kw'>model_type</span><span class='kw'>=</span><span class='st'>"classification"</span>, <span class='kw'>crossval</span><span class='kw'>=</span><span class='no'>cval</span>)
-<span class='no'>res</span> <span class='kw'>&lt;-</span> <span class='fu'>run_searchlight</span>(<span class='no'>mspec</span>,<span class='kw'>radius</span><span class='kw'>=</span><span class='fl'>8</span>, <span class='kw'>method</span><span class='kw'>=</span><span class='st'>"standard"</span>)</div><div class='output co'>#&gt; INFO [2019-03-21 11:11:47] model is: sda_notune
-#&gt; INFO [2019-03-21 11:11:47] running standard searchlight with 8 radius 
-#&gt; INFO [2019-03-21 11:11:47] creating standard searchlight
-#&gt; INFO [2019-03-21 11:11:47] running standard searchlight iterator</div><div class='output co'>#&gt; <span class='warning'>Warning: package ‘purrr’ was built under R version 3.5.2</span></div><div class='input'>
+<span class='no'>res</span> <span class='kw'>&lt;-</span> <span class='fu'>run_searchlight</span>(<span class='no'>mspec</span>,<span class='kw'>radius</span><span class='kw'>=</span><span class='fl'>8</span>, <span class='kw'>method</span><span class='kw'>=</span><span class='st'>"standard"</span>)</div><div class='output co'>#&gt; INFO [2019-03-21 11:13:58] model is: sda_notune
+#&gt; INFO [2019-03-21 11:13:58] running standard searchlight with 8 radius 
+#&gt; INFO [2019-03-21 11:13:58] creating standard searchlight
+#&gt; INFO [2019-03-21 11:13:58] running standard searchlight iterator</div><div class='output co'>#&gt; <span class='warning'>Warning: package ‘purrr’ was built under R version 3.5.2</span></div><div class='input'>
 # a custom "combiner" can be used to post-process the output of the searchlight classifier for special cases.
 # in the example below the supplied "combining function" extracts the predicted probability of the correct class 
 # for every voxel and every trial and then stores them in a data.frame.
