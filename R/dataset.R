@@ -128,7 +128,7 @@ mvpa_dataset <- function(train_data, test_data=NULL, mask) {
 
 #' mvpa_surface_dataset
 #' 
-#' Cnstruct a MVPA dataset with a surface-based dataset.
+#' Construct a MVPA dataset with a surface-based dataset.
 #' 
 #' @param train_data the training data, must inherit from \code{NeuroSurfaceVector} in \code{neurosurf} package.
 #' @param test_data optional test data, must inherit from \code{NeuroSurfaceVector} in \code{neurosurf} package.

@@ -680,8 +680,14 @@ load_image_data_series <- function(fnames, config, indices, mask_volume) {
   #  mat
   #}))
   
+  
+  ## TODO use indices in read_vec
   vec <- read_vec(fnames, mask=mask_volume)
-  vec
+  
+  if (!is.null(indices)) {
+    sub_vector(vec, indices)
+  }
+  
   #SparseNeuroVec(vecmat[indices,], space(mask_volume), mask=mask_volume)
 }
 
