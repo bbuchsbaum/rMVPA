@@ -140,7 +140,8 @@ mvpa_model <- function(model,
   
   ## TODO check that crossval is compatible with design
   
-  
+  ## TODO check that mvpa_design is compatible with mvpa_dataset (n training obs == length(y_train))
+  #assert_that(length(y_train(design)) == )
   ret <- list(model=model,
               dataset=dataset,
               design=design,

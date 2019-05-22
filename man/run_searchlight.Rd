@@ -8,8 +8,7 @@
 run_searchlight(model_spec, radius, method, niter, ...)
 
 \method{run_searchlight}{mvpa_model}(model_spec, radius = 8,
-  method = c("randomized", "standard"), niter = 4, combiner = NULL,
-  ...)
+  method = c("randomized", "standard"), niter = 4, combiner = NULL, ...)
 }
 \arguments{
 \item{model_spec}{a \code{mvpa_model} instance.}

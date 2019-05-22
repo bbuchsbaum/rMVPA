@@ -11,11 +11,11 @@ vignette: >
 ---
 
 
-## Running rMVPA algorithms from the command line
+### Running rMVPA algorithms from the command line
 
-`rMVPA` offers two main command-line executable R scripts that can be used to run most basic MVPA analyses. The goal of these scripts is to get users up and running without have to write full-blow R programs. Instead rMVPA can be controlled via a configuration file that specifies the data, design infromation, block structure, model parameters, etc. that are necessary to run an analysis.
+`rMVPA` offers two main command-line executable R scripts that can be used to run most basic MVPA analyses. The goal of these scripts is to get users up and running without requiring them to write full-blown R programs. Instead, rMVPA can be controlled via a configuration file that specifies the data, design information, block structure, model parameters, etc. that are necessary to run an MVPA analysis.
 
-There are currently two main scripts: `MVPA_Searchlight.R` and `MVPA_Regional.R`. These two scripts are very similar in their inputs and capabilities--the difference is really only that the former runs a "searchlight" analysis and the latter runs MVPA over some set of one or more regions of interest (ROI). For example, if one wished to run MVPA using a single large mask of visual cortex or over a set of Freesrufer-defined ROIs, one would opt for MVPA_Regional.R.
+There are currently two main scripts: `MVPA_Searchlight.R` and `MVPA_Regional.R`. These two scripts are very similar in their inputs and capabilities--the difference is really only that the former runs a "searchlight" analysis and the latter runs an MVPA over a set of one or more regions of interest (ROI). For example, if one wished to run MVPA using a single large mask covering visual cortex, or over a set of Freesrufer-defined ROIs, one would opt for `MVPA_Regional.R`.
 
 ```{r, echo=FALSE, message=FALSE}
 
@@ -119,7 +119,7 @@ knitr::kable(g[1:5,])
 
 Here is a minimal `config.R` file.
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=TRUE, message=FALSE}
 
 train_design = "train_design.txt"
 train_data = "betas.nii"
@@ -132,7 +132,7 @@ output = "searchlight_analysis"
 
 ```
 
-Now to run, we type the following command:
+Now to run, we type the following command (assuming that `MVPA_Searchlight.R` in on you `PATH`):
 
 `MVPA_Searchlight.R --config config.R`
 
