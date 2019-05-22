@@ -227,7 +227,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
   set_arg("label_column", config, args, "labels")
   set_arg("skip_if_folder_exists", config, args, FALSE)
   set_arg("output", config, args, paste0(analysisType, "_", config$labelColumn))
-  set_arg("block_column", config, args, "block")
+  set_arg("block_column", config, args, NULL)
   set_arg("normalize_samples", config, args, FALSE)
   set_arg("tune_grid", config, args, NULL)
   set_arg("mask", config, args, NULL)
