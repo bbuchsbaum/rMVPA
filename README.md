@@ -2,7 +2,7 @@
 Multivoxel Pattern Analysis in R
 --------------------------------
 
-[![codecov](https://codecov.io/gh/rMVPA/NA/branch/master/graph/badge.svg)](https://codecov.io/github/bbuchsbaum/rMVPA?branch=master) [![Build Status](https://travis-ci.org/rMVPA/rMVPA.svg?branch=master)](https://travis-ci.org/bbuchsbaum/rMVPA)
+[![codecov](https://codecov.io/gh/rMVPA/branch/master/graph/badge.svg)](https://codecov.io/github/bbuchsbaum/rMVPA?branch=master) [![Build Status](https://travis-ci.org/rMVPA/rMVPA.svg?branch=master)](https://travis-ci.org/bbuchsbaum/rMVPA)
 
 ### This package is under development.
 
