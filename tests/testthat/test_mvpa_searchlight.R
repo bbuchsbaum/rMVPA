@@ -130,6 +130,17 @@ test_that("randomized mvpa_searchlight runs without error", {
 
 })
 
+test_that("mvpa_searchlight with sda_boot", {
+  
+  dataset <- gen_sample_dataset(c(8,8,8), 100, nlevels=26, blocks=3)
+  cval <- blocked_cross_validation(dataset$design$block_var)
+  model <- load_model("sda_boot")
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
+  res <- run_searchlight(mspec,radius=6, method="standard", niter=4)
+  
+  
+})
+
 
 # test_that("clustered mvpa_searchlight runs without error", {
 #   

@@ -236,13 +236,21 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 mfits <- list()
                                 count <- 1
                                 failures <- 0
+                                
+                              
+                                split_y <- split(seq_along(y), y)
+                                
+                                if (!all(sapply(split_y, function(yy) length(yy > 0)))) {
+                                  stop("every factor level in 'y' must have at least 1 instance, cannot run sda_boot")
+                                }
+                                
                                 while (count <= param$reps) {
                                   message("fitting sda model ", count)
-                                  #row.idx <- sample(1:nrow(x), nrow(x), replace=TRUE)
-                                  smat <- replicate(5, {sample(1:nrow(x), nrow(x), replace=TRUE)})
                                   
-                                  sdsam <- apply(smat, 2, function(sam) sd(table(y[sam])))
-                                  row.idx <- smat[, which.min(sdsam)]
+                                  ysam <- lapply(split_y, function(idx) if (length(idx) == 1) idx else sample(idx, length(idx), replace=TRUE))
+                                  row.idx <- sort(unlist(ysam))
+                                  
+                                  #row.idx <- smat[, which.min(sdsam)]
                                   
                                   ret <- if (param$frac > 0 && param$frac < 1) {
                                     nkeep <- max(param$frac * ncol(x),1)
@@ -271,14 +279,14 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   }
                                 }
                               
-                                
+                          
                                 ret <- list(fits=mfits)
                                 class(ret) <- "sda_boot"
                                 ret
                                 
                               },
                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                      
+                                
                                 preds <- lapply(modelFit$fits, function(fit) {
                                   ind <- attr(fit, "keep.ind")
                                   predict(fit, as.matrix(newdata)[,ind], verbose=FALSE)$posterior
@@ -293,6 +301,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 
                                 
                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                
                                 preds <- lapply(modelFit$fits, function(fit) {
                                   ind <- attr(fit, "keep.ind")
                                   predict(fit, as.matrix(newdata)[,ind], verbose=FALSE)$posterior
