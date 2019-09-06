@@ -80,8 +80,7 @@ y_test.mvpa_model <- function(obj) y_test(obj$design)
 #' @param model a caret-based classification or regression model
 #' @param dataset a \code{mvpa_dataset} instance
 #' @param design a \code{mvpa_design} instance
-#' @param model_type a \code{character} string indicating problem type: 'classification' or 
-#' regression'
+#' @param model_type a \code{character} string indicating problem type: 'classification' or 'regression'
 #' @param crossval a \code{cross_validation} instance
 #' @param feature_selector an optional \code{feature_selector} instance
 #' @param tune_grid an optional parameter tuning grid as a \code{data.frame}

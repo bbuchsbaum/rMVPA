@@ -111,81 +111,8 @@ MVPAModels$pca_lda <- list(type = "Classification",
                              predict(modelFit, pcx)$posterior                              
                            })
 
-MVPAModels$clusterSVM <- list(type = "Classification", 
-                           library = "SwarmSVM", 
-                           loop = NULL, 
-                           label="clusterSVM",
-                           parameters=data.frame(parameters=c("K", "lambda", "cost"), 
-                                                 class=c("numeric", "numeric", "numeric"), 
-                                                 labels=c("number of clusters", "global regulzariaztion", "svm cost")),
-                           grid=function(x, y, len = 5) {
-                             expand.grid(K=1:len, lambda=seq(0,2, length.out=len), cost=1)
-                           },
-                           fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                             SwarmSVM::clusterSVM(x=as.matrix(x), y=y, centers=param$K, lambda=param$lambda, cost=param$cost, type=0)
-                           },
-                           
-                           predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                             pred = predict(modelFit, as.matrix(newdata))$predictions
-                           },
-                           prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                             pred = predict(modelFit, as.matrix(newdata), prob=TRUE)$probabilities
-                                                        
-                           })
 
 
-MVPAModels$gpca_lda <- list(type = "Classification", 
-                            library = c("sGPCA", "MASS"), 
-                            loop = NULL, 
-                            parameters=data.frame(parameters=c("ncomp", "theta"), class=c("numeric", "numeric"), labels=c("number of PCs", "smoothing")),
-                            grid=function(x, y, len = NULL) {
-                              data.frame(ncomp=5, theta=5)
-                            },
-                            fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                              args <- list(...)
-                              vox <- args$vox
-                              xs <- scale(x, scale=FALSE)
-                              xc <- attr(xs, "scaled:center")
-                              
-                              R <- Exp.cov(vox,theta=param$theta)
-                              er <- eigen(R,only.values=TRUE)
-                              R <- R/max(er$values)
-                              fit <- gpca(xs,diag(nrow(x)),R,K=param$ncomp)
-                              
-                              lda.fit <-lda(fit$U, y)
-                              attr(lda.fit, "centroid") <- xc
-                              attr(lda.fit, "pcfit") <- fit
-                              attr(lda.fit, "ncomp") <- param$ncomp
-                              lda.fit
-                            },
-                            predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                              compind <- seq(1, attr(modelFit, "ncomp"))
-                              pcx <- sweep(newdata, 2, attr(modelFit, "centroid")) %*% attr(modelFit, "pcfit")$V
-                              predict(modelFit, pcx)$class 
-                            },
-                            prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                              compind <- seq(1, attr(modelFit, "ncomp"))
-                              pcx <- sweep(newdata, 2, attr(modelFit, "centroid")) %*% attr(modelFit, "pcfit")$V
-                              predict(modelFit, pcx)$posterior
-                            })
-
-
-
-MVPAModels$nearestMean <- list(type = "Classification", 
-                               library = "klaR", 
-                               label="nearestMean",
-                               loop = NULL, 
-                               parameters=data.frame(parameters="gamma", class="numeric", labels="gamma"),
-                               grid=function(x, y, len = NULL) {
-                                 data.frame(gamma=.3)
-                               },
-                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) klaR::nm(x,y, param$gamma),
-                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 predict(modelFit, as.matrix(newdata))$class
-                               },
-                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 predict(modelFit, as.matrix(newdata))$posterior
-                               })
 
 MVPAModels$corclass <- list(type = "Classification", 
                           library = "rMVPA", 
@@ -237,7 +164,6 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 count <- 1
                                 failures <- 0
                                 
-                              
                                 split_y <- split(seq_along(y), y)
                                 
                                 if (!all(sapply(split_y, function(yy) length(yy > 0)))) {
@@ -245,12 +171,10 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 }
                                 
                                 while (count <= param$reps) {
-                                  message("fitting sda model ", count)
+                                  #message("fitting sda model ", count)
                                   
                                   ysam <- lapply(split_y, function(idx) if (length(idx) == 1) idx else sample(idx, length(idx), replace=TRUE))
                                   row.idx <- sort(unlist(ysam))
-                                  
-                                  #row.idx <- smat[, which.min(sdsam)]
                                   
                                   ret <- if (param$frac > 0 && param$frac < 1) {
                                     nkeep <- max(param$frac * ncol(x),1)
@@ -491,49 +415,6 @@ MVPAModels$hdrda <- list(type = "Classification",
                                 t(apply(posterior,1, function(x) x/sum(x)))
                               })
 
-MVPAModels$pls_rf <- list(label = "PLS-RF",
-                                    library = c("pls", "randomForest"),
-                                    type = "Regression",
-                                    ## Tune over both parameters at the same time
-                                    parameters = data.frame(parameter = c('ncomp', 'mtry'),
-                                                            class = c("numeric", 'numeric'),
-                                                            label = c('#Components',
-                                                                      '#Randomly Selected Predictors')),
-                                    grid = function(x, y, len = NULL) {
-                                      grid <- expand.grid(ncomp = seq(1, min(ncol(x) - 1, len), by = 1),
-                                                          mtry = 1:len)
-                                      ## We can't have mtry > ncomp
-                                      grid <- subset(grid, mtry <= ncomp)
-                                    },
-                                    loop = NULL,
-                                    fit = function(x, y, wts, param, lev, last, classProbs, ...) {
-                                      ## First fit the pls model, generate the training set scores,
-                                      ## then attach what is needed to the random forest object to 
-                                      ## be used later
-                                      
-                                      ## plsr only has a formula interface so create one data frame
-                                      dat <- if(!is.data.frame(x)) x <- as.data.frame(x)
-                                      dat$y <- y
-                                      pre <- plsr(y~ ., data = dat, ncomp = param$ncomp)
-                                      scores <- predict(pre, x, type = "scores")
-                                      colnames(scores) <- paste("score", 1:param$ncomp, sep = "")
-                                      mod <- randomForest(scores, y, mtry = param$mtry, ...)
-                                      mod$projection <- pre$projection
-                                      mod
-                                    },
-                                    predict = function(modelFit, newdata, submodels = NULL) {
-                                      ## Now apply the same scaling to the new samples
-                                      scores <- as.matrix(newdata)  %*% modelFit$projection
-                                      colnames(scores) <- paste("score", 1:ncol(scores), sep = "")
-                                      scores <- as.data.frame(scores)
-                                      ## Predict the random forest model
-                                      predict(modelFit, scores)
-                                    },
-                                    prob = NULL,
-                                    varImp = NULL,
-                                    predictors = function(x, ...) rownames(x$projection),
-                                    levels = function(x) x$obsLevels,
-                                    sort = function(x) x[order(x[,1]),])
 
 
 
