@@ -17,6 +17,8 @@ performance.regression_result <- function(x, split_list,...) {
     ## TODO: add support
     stop("split_by not supported for regression analyses yet.")
   }
+  
+  #browser()
   R2 <- 1 - sum((x$observed - x$predicted)^2)/sum((x$observed-mean(x$observed))^2)
   rmse <- sqrt(mean((x$observed-x$predicted)^2))
   rcor <- cor(x$observed, x$predicted, method="spearman")
