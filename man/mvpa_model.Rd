@@ -16,8 +16,7 @@ mvpa_model(model, dataset, design, model_type = c("classification",
 
 \item{design}{a \code{mvpa_design} instance}
 
-\item{model_type}{a \code{character} string indicating problem type: 'classification' or 
-regression'}
+\item{model_type}{a \code{character} string indicating problem type: 'classification' or 'regression'}
 
 \item{crossval}{a \code{cross_validation} instance}
 

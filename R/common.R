@@ -242,7 +242,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
 
 #' @noRd
 #' @keywords internal
-#' @importFrom purrr map_dbl
+#' @importFrom purrr map_dbl map
 normalize_image_samples <- function(bvec, mask) {
   vlist <- bvec %>% vols() %>% map(function(v) {
     scale(v[mask>0])[,1]
