@@ -211,8 +211,8 @@ test_that("randomized mvpa_searchlight works with regression", {
   
   dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3, response_type="continuous")
   cval <- blocked_cross_validation(dataset$design$block_var)
-  tuneGrid <- expand.grid(alpha=.5, lambda=c(.1,.01))
-  model <- load_model("glmnet")
+  tuneGrid <- expand.grid(K=2, eta=.5, kappa=.5)
+  model <- load_model("spls")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tuneGrid)
   res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
   

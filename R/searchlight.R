@@ -143,7 +143,8 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   }
   
   if (nrow(good_results) == 0) {
-    flog.error("no valid results for randomized searchlight, exiting.")
+    ## TODO print out some debug information
+    flog.error("no valid results for standard searchlight, exiting.")
   }
   
   combiner(model_spec, good_results, bad_results)
