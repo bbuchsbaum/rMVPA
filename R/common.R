@@ -253,6 +253,22 @@ normalize_image_samples <- function(bvec, mask) {
   SparseNeuroVec(norm_datavec, space(bvec), mask=mask)  
 }
 
+#' @noRd
+#' @keywords internal
+#' @importFrom purrr map_dbl map
+#' @importFrom neuroim2 vectors
+standardize_vars <- function(bvec, mask, blockvar) {
+  vlist <- bvec %>% vectors(subset=which(mask>0)) %>% map(function(v) {
+    if (all(v == 0)) v else {
+      unlist(map(split(v, blockvar), scale))
+    }
+  })
+  
+  sdatavec <- do.call(cbind, vlist)
+  #norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
+  SparseNeuroVec(sdatavec, space(bvec), mask=mask)  
+}
+
 
 #' @noRd
 normalize_surface_samples <- function(bvec, mask) {
