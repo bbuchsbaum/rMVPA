@@ -89,8 +89,8 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
   
   ret <- furrr::future_map(1:niter, function(i) {
 
-    sprintf("searchlight iteration: %s", i)
-    sprintf("constructing searchlight.")
+    futile.logger::flog.info("searchlight iteration: %s", i)
+    futile.logger::flog.info("constructing searchlight.")
     
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
   
@@ -99,7 +99,7 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
   })
   
   nmodels <- sum(unlist(sapply(ret, nrow)))
-  sprintf("number of models fit: %s", nmodels)
+  futile.logger::flog.info("number of models fit: %s", nmodels)
  
   results <- dplyr::bind_rows(ret)
   
