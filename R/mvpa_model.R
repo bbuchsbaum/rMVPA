@@ -107,7 +107,7 @@ mvpa_model <- function(model,
                        crossval=NULL, 
                        feature_selector=NULL, 
                        tune_grid=NULL, 
-                       tune_reps=5,
+                       tune_reps=15,
                        performance=NULL,
                        class_metrics=TRUE) {
   
