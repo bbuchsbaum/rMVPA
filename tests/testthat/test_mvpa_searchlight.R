@@ -218,6 +218,26 @@ test_that("randomized mvpa_searchlight works with regression", {
   
 })
 
+test_that("randomized mvpa_searchlight works with regression and a custom combinging function", {
+  
+  dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3, response_type="continuous")
+  cval <- blocked_cross_validation(dataset$design$block_var)
+  tuneGrid <- expand.grid(K=2, eta=.5, kappa=.5)
+  model <- load_model("spls")
+  
+  combiner <- function(mspec, good, bad) {
+    good
+  }
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tuneGrid)
+  mspec2 <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=expand.grid(K=2, eta=.1, kappa=.5))
+  
+  res1 <- run_searchlight(mspec, radius=3, niter=2,method="randomized", combiner=combiner)
+  res2 <- run_searchlight(mspec2, radius=3, niter=2,method="randomized", combiner=combiner)
+  pool_randomized(mspec, rbind(res1,res2))
+
+})
+
+
 test_that("mvpa_searchlight works with testset", {
   require("sda")
   dataset <- gen_sample_dataset(c(4,4,4), 100, response_type="categorical", data_mode="image", blocks=5, nlevels=4, external_test=TRUE, nobs=100)

@@ -66,8 +66,8 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   merged_results <- pool_results(good_results)
   perf_list <- furrr::future_map(merged_results, function(res) compute_performance(model_spec, res))
   
-  all_ind <- sort(unlist(good_results$indices))
-  ind_set <- unique(all_ind)
+  ind_set <- unique(sort(unlist(good_results$indices)))
+  #ind_set <- unique(all_ind)
   
   ncols <- length(perf_list[[1]])
   pmat <- do.call(rbind, perf_list)
@@ -114,7 +114,7 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
     futile.logger::flog.error("no valid results for randomized searchlight, exiting.")
   }
   
-  ## could simple merge all searchlights to produce global classification measure  
+  ## could simply merge all searchlights to produce global classification measure  
   combiner(model_spec, good_results)
 }
 
