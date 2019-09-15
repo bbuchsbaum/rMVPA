@@ -19,6 +19,21 @@ test_that("mvpa_regional with 5 ROIS runs without error", {
   
 })
 
+test_that("mvpa_regional with 5 ROIS runs without error and can access fitted model", {
+  
+  dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="image", 
+                             response_type="categorical")
+  cval <- twofold_blocked_cross_validation(dset$design$block_var)
+  
+  region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
+  model <- load_model("sda_notune")
+  mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
+  res <- run_regional(mspec, region_mask, return_fits=TRUE)
+  fit1 <- res$fits[[1]]
+  
+  
+})
+
 test_that("surface_based mvpa_regional with 5 ROIS runs without error", {
   
   dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="surface", response_type="categorical")
