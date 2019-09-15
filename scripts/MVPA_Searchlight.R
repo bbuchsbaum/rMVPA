@@ -37,6 +37,8 @@ oparser <- OptionParser(usage = "MVPA_Searchlight.R [options]", option_list=opti
 opt <- parse_args(oparser, positional_arguments=TRUE)
 args <- opt$options
 
+options(future.globals.maxSize= 4024*1024^2)
+
 flog.info("command line args are ", args, capture=TRUE)
 
 ## TODO check that 'test_label_column' is valid, if test_data is present

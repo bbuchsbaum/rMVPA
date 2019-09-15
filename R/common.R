@@ -227,7 +227,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
   set_arg("label_column", config, args, "labels")
   set_arg("skip_if_folder_exists", config, args, FALSE)
   set_arg("output", config, args, paste0(analysisType, "_", config$labelColumn))
-  set_arg("block_column", config, args, "block")
+  set_arg("block_column", config, args, NULL)
   set_arg("normalize_samples", config, args, FALSE)
   set_arg("tune_grid", config, args, NULL)
   set_arg("mask", config, args, NULL)
@@ -242,15 +242,31 @@ initialize_standard_parameters <- function(config, args, analysisType) {
 
 #' @noRd
 #' @keywords internal
-#' @importFrom purrr map_dbl
+#' @importFrom purrr map_dbl map
 normalize_image_samples <- function(bvec, mask) {
-  vlist <- bvec %>% vols() %>% map_dbl(function(v) {
+  vlist <- bvec %>% vols() %>% map(function(v) {
     scale(v[mask>0])[,1]
   })
   
   norm_datavec <- do.call(cbind, vlist)
   #norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
   SparseNeuroVec(norm_datavec, space(bvec), mask=mask)  
+}
+
+#' @noRd
+#' @keywords internal
+#' @importFrom purrr map_dbl map
+#' @importFrom neuroim2 vectors
+standardize_vars <- function(bvec, mask, blockvar) {
+  vlist <- bvec %>% vectors(subset=which(mask>0)) %>% map(function(v) {
+    if (all(v == 0)) v else {
+      unlist(map(split(v, blockvar), scale))
+    }
+  })
+  
+  sdatavec <- do.call(cbind, vlist)
+  #norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
+  SparseNeuroVec(sdatavec, space(bvec), mask=mask)  
 }
 
 
@@ -680,8 +696,14 @@ load_image_data_series <- function(fnames, config, indices, mask_volume) {
   #  mat
   #}))
   
+  
+  ## TODO use indices in read_vec
   vec <- read_vec(fnames, mask=mask_volume)
-  vec
+  
+  if (!is.null(indices)) {
+    sub_vector(vec, indices)
+  }
+  
   #SparseNeuroVec(vecmat[indices,], space(mask_volume), mask=mask_volume)
 }
 

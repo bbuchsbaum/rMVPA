@@ -187,9 +187,11 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @param ids a \code{vector} of ids for each voxel set
 #' @param compute_performance compute and store performance measures for each voxel set
 #' @param return_fits return the model fit for each voxel set?
+#' @param verbose print progress messages
 #' @importFrom dplyr bind_rows
 #' @export
-mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_performance=TRUE, return_fits=FALSE, permute=FALSE) {
+mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_performance=TRUE, return_fits=FALSE, permute=FALSE, verbose=TRUE) {
+
   assert_that(length(ids) == length(vox_list), 
               msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   
@@ -198,9 +200,15 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_per
   do_fun <- if (has_test_set(mod_spec$dataset)) external_crossval else internal_crossval
   
   #browser()
-  
+  tot <- length(ids)
   ### iterate over rows using parallel map with futures
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
+    
+    if (verbose && (as.numeric(.id) %% 100 == 0)) {
+      perc <- as.integer(as.numeric(.id)/tot * 100)
+      futile.logger::flog.info("mvpa_iterate: %s percent", perc)
+    }
+    
     roi <- as_roi(sample)
     do_fun(roi, mod_spec, rnum, 
            compute_performance=compute_performance,

@@ -12,8 +12,10 @@ knitr::opts_chunk$set(
 
 ## Multivoxel Pattern Analysis in R
 
-[![codecov](https://codecov.io/gh/rMVPA/NA/branch/master/graph/badge.svg)](https://codecov.io/github/bbuchsbaum/rMVPA?branch=master)
-[![Build Status](https://travis-ci.org/rMVPA/NA.svg?branch=master)](https://travis-ci.org/bbuchsbaum/rMVPA)
+=======
+[![codecov](https://codecov.io/gh/bbuchsbaum/rMVPA/branch/master/graph/badge.svg)](https://codecov.io/github/bbuchsbaum/rMVPA?branch=master)
+[![Build Status](https://api.travis-ci.org/bbuchsbaum/rMVPA.svg?branch=master)](https://travis-ci.org/bbuchsbaum/rMVPA)
+
 
 ```{r, echo = FALSE}                                                                                                        
 version <- as.vector(read.dcf('DESCRIPTION')[, 'Version'])                                                                 

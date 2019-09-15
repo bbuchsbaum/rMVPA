@@ -80,8 +80,7 @@ y_test.mvpa_model <- function(obj) y_test(obj$design)
 #' @param model a caret-based classification or regression model
 #' @param dataset a \code{mvpa_dataset} instance
 #' @param design a \code{mvpa_design} instance
-#' @param model_type a \code{character} string indicating problem type: 'classification' or 
-#' regression'
+#' @param model_type a \code{character} string indicating problem type: 'classification' or 'regression'
 #' @param crossval a \code{cross_validation} instance
 #' @param feature_selector an optional \code{feature_selector} instance
 #' @param tune_grid an optional parameter tuning grid as a \code{data.frame}
@@ -108,7 +107,7 @@ mvpa_model <- function(model,
                        crossval=NULL, 
                        feature_selector=NULL, 
                        tune_grid=NULL, 
-                       tune_reps=5,
+                       tune_reps=15,
                        performance=NULL,
                        class_metrics=TRUE) {
   
@@ -117,6 +116,14 @@ mvpa_model <- function(model,
   assert_that(inherits(design, "mvpa_design"))
   assert_that(inherits(dataset, "mvpa_dataset"))
   assert_that(is.logical(class_metrics))
+  
+  if (is.null(dataset$test_data) && !is.null(design$y_test)) {
+    stop("mvpa_model: design has `y_test` dataset must have `test_data`")
+  }
+  
+  if (!is.null(dataset$test_data) && is.null(design$y_test)) {
+    stop("mvpa_model: if dataset has `test_data` design must have `y_test`")
+  }
   
   perf <- if (!is.null(performance)) {
     assert_that(is.function(performance)) 
@@ -140,7 +147,8 @@ mvpa_model <- function(model,
   
   ## TODO check that crossval is compatible with design
   
-  
+  ## TODO check that mvpa_design is compatible with mvpa_dataset (n training obs == length(y_train))
+  #assert_that(length(y_train(design)) == )
   ret <- list(model=model,
               dataset=dataset,
               design=design,

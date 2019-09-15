@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Cross-Validation}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
@@ -27,7 +27,7 @@ In fMRI analyses images are generally acquired over a number of scans or "runs" 
 
 There is a special data structure to help set this up called `blocked_cross_validation`. All we need is an variable that indcates the block index of each trial in the experiment. For example, imagine we have five scans/blocks, each with 100 images.
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=TRUE, message=FALSE}
 
 block_var <- rep(1:5, each=100)
 cval <- blocked_cross_validation(block_var)
@@ -37,7 +37,7 @@ print(cval)
 
 Now, to generate cross-validation samples, we use the `crossval_sample` generic function. We need to give it data for the independent variables, `data` and a response variable `y`. The result will be a `data.frame` (or `tibble` to be precise) that contains in each row the samples necessary to conduct a complete leave-one-block out cross-validation analysis.
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=TRUE, message=FALSE}
 
 dat <- data.frame(x1=rnorm(500), x2=rnorm(500), x3=rnorm(500))
 y <- rep(letters[1:5], length.out=500)
@@ -48,14 +48,14 @@ sam
 
 Notice that the `data.frame` contains five variable: `ytrain`, `ytest`, `train`, `test` and `.id` which contains the training responses, the test responses, the training data, the test data, and a integer id variable, respectively. The first four variables are `list`elements because they contain vector- or matrix- valued elements in each cell. Indeed, the `train` and `test` variables are S3 classes of type `resample` from the `modelr` package. For example, to access training data for the first cross-validation fold, we can do the following:
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=TRUE, message=FALSE}
 train_dat <- as.data.frame(sam$train[[1]])
 print(train_dat[1:5,])
 ```
 
 As a toy example, below we loop through the cross-validation sets using the `dplyr` `rowwise` function, fit an `sda` model and put the fitted model into a new data.frame. 
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=TRUE, message=FALSE}
 library(dplyr)
 
 model_fits <- sam %>% rowwise() %>% do({
@@ -72,7 +72,7 @@ model_fits <- sam %>% rowwise() %>% do({
 
 The above blocked cross-validation iterates through the full dataset once, with each block being held out as a test set for one cross-validation fold. In some cases we might want a cross-validation scheme that resamples the ful dataset more extensively, while still respecting the block sampling structure of fMRI. In this case we can use the `bootstrap_blocked_cross_validation` scheme. Suppose, as above, we have an integer-valued block variable. Now we create a `bootstrap_blocked_cross_validation` with 20 bootstrap replications:
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=TRUE, message=FALSE}
 
 block_var <- rep(1:5, each=100)
 cval <- bootstrap_blocked_cross_validation(block_var, nreps=20)
@@ -82,7 +82,7 @@ print(cval)
 
 Now we create a set of new resamples. But this time instead of 5 resamples (one for each block), we have 100 resamples (20 for each block). Each block is used as a test set 20 times and for each of those 20 resamples, the training data is sampled with replacement from the remaining runs. 
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=TRUE, message=FALSE}
 dat <- data.frame(x1=rnorm(500), x2=rnorm(500), x3=rnorm(500))
 y <- rep(letters[1:5], length.out=500)
 sam <- crossval_samples(cval, dat,y)
@@ -93,7 +93,7 @@ sam
 
 Another approach for repeatedly sampling the data while respecting block structure is encapsulated in the `twofold_blocked_cross_validation` resampling scheme. Here every training resample is drawn from a random half the blocks and every test set is determined by the other half. This is done `nreps` times, yielding a set of split-half (or "two fold") resamples. Note that this approach requires more than two blocks since with 2 blocks it would always split the data in the identical way, i.e. it does not subsample or bootstrap trials *within* blocks.
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=TRUE, message=FALSE}
 block_var <- rep(1:5, each=100)
 cval <- twofold_blocked_cross_validation(block_var, nreps=20)
 print(cval)
@@ -102,7 +102,7 @@ print(cval)
 
 Again, we resample using `crossval_samples` and supply a data set and a response variable.
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=TRUE, message=FALSE}
 dat <- data.frame(x1=rnorm(500), x2=rnorm(500), x3=rnorm(500))
 y <- rep(letters[1:5], length.out=500)
 sam <- crossval_samples(cval, dat,y)

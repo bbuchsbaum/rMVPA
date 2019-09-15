@@ -1,8 +1,6 @@
 library(neuroim2)
 library(neurosurf)
 
-context("mvpa searchlight")
-
 gen_regression_dataset <- function(D, nobs, spacing=c(1,1,1), folds=5) {
   mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
   bspace <- NeuroSpace(c(D,nobs), spacing)
@@ -132,6 +130,17 @@ test_that("randomized mvpa_searchlight runs without error", {
 
 })
 
+test_that("mvpa_searchlight with sda_boot", {
+  
+  dataset <- gen_sample_dataset(c(8,8,8), 100, nlevels=26, blocks=3)
+  cval <- blocked_cross_validation(dataset$design$block_var)
+  model <- load_model("sda_boot")
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
+  res <- run_searchlight(mspec,radius=6, method="standard", niter=4)
+  
+  
+})
+
 
 # test_that("clustered mvpa_searchlight runs without error", {
 #   
@@ -154,7 +163,7 @@ test_that("randomized mvpa_searchlight runs without error", {
      ret
    }
    
-   dataset <- gen_sample_dataset(c(5,5,5), 100, nlevels=3)
+   dataset <- gen_sample_dataset(c(5,5,1), 100, nlevels=3)
    cval <- blocked_cross_validation(dataset$design$block_var)
    model <- load_model("sda_notune")
    mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, performance=custom)
@@ -202,12 +211,32 @@ test_that("randomized mvpa_searchlight works with regression", {
   
   dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3, response_type="continuous")
   cval <- blocked_cross_validation(dataset$design$block_var)
-  tuneGrid <- expand.grid(alpha=.5, lambda=c(.1,.01))
-  model <- load_model("glmnet")
+  tuneGrid <- expand.grid(K=2, eta=.5, kappa=.5)
+  model <- load_model("spls")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tuneGrid)
   res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
   
 })
+
+test_that("randomized mvpa_searchlight works with regression and a custom combinging function", {
+  
+  dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3, response_type="continuous")
+  cval <- blocked_cross_validation(dataset$design$block_var)
+  tuneGrid <- expand.grid(K=2, eta=.5, kappa=.5)
+  model <- load_model("spls")
+  
+  combiner <- function(mspec, good, bad) {
+    good
+  }
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tuneGrid)
+  mspec2 <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=expand.grid(K=2, eta=.1, kappa=.5))
+  
+  res1 <- run_searchlight(mspec, radius=3, niter=2,method="randomized", combiner=combiner)
+  res2 <- run_searchlight(mspec2, radius=3, niter=2,method="randomized", combiner=combiner)
+  pool_randomized(mspec, rbind(res1,res2))
+
+})
+
 
 test_that("mvpa_searchlight works with testset", {
   require("sda")
@@ -339,7 +368,7 @@ test_that("mvpa_searchlight on real data set with testset", {
   dset <- mvpa_dataset(tvec1, tvec2, mask=mask)  
   mdes <- mvpa_design(train_design=des1, y_train = ~ BlockType, test_design=des3, y_test = ~ Cue, block_var=~ Run, split_by = ~ combo)
   mod <- mvpa_model(load_model("sda_notune"), dset,mdes,crossval=blocked_cross_validation(des1$Run), class_metrics=FALSE)
-  res <- run_searchlight(mod, radius=16, niter=2,method="randomized")
+  res <- run_searchlight(mod, radius=16, niter=2,method="randomized", combiner=function(mspec, good, bad)
   
 })
 

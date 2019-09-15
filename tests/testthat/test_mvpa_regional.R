@@ -16,6 +16,7 @@ test_that("mvpa_regional with 5 ROIS runs without error", {
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec, region_mask, return_fits=TRUE)
+  expect_true(!is.null(res))
   
 })
 
@@ -46,6 +47,7 @@ test_that("surface_based mvpa_regional with 5 ROIS runs without error", {
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec, region_mask, return_fits=TRUE)
+  expect_true(!is.null(res))
   
 })
 
@@ -58,7 +60,7 @@ test_that("mvpa_regional with 5 ROIS with sda_boot runs without error", {
   model <- load_model("sda_boot")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec, regionMask)
-  
+  expect_true(!is.null(res))
 })
 
 # 
@@ -86,7 +88,7 @@ test_that("mvpa_regional with 5 ROIS runs and sda without error", {
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, tune_grid=tuneGrid)
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   res <- run_regional(mspec, regionMask, TRUE)
-  
+  expect_true(!is.null(res))
 })
 
 test_that("mvpa_regional with 5 ROIS and random forest without error", {
@@ -99,7 +101,7 @@ test_that("mvpa_regional with 5 ROIS and random forest without error", {
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, 
                       tune_grid=data.frame(mtry=c(2,4,6)))
   res <- run_regional(mspec, regionMask)
-  
+  expect_true(!is.null(res))
 })
 
 test_that("mvpa_regional with 5 ROIS and random forest and k-fold cross-validation without error", {
@@ -112,7 +114,7 @@ test_that("mvpa_regional with 5 ROIS and random forest and k-fold cross-validati
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, 
                       tune_grid=data.frame(mtry=c(2,4,6)))
   res <- run_regional(mspec, regionMask)
-  
+  expect_true(!is.null(res))
 })
 
 test_that("mvpa_regional with 5 ROIS and corclass and k-fold cross-validation without error", {
@@ -126,7 +128,7 @@ test_that("mvpa_regional with 5 ROIS and corclass and k-fold cross-validation wi
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, 
                       tune_grid=tune_grid)
   res <- run_regional(mspec, regionMask)
-  
+  expect_true(!is.null(res))
 })
 
 test_that("mvpa_regional with 5 ROIS runs and external test set", {
@@ -141,7 +143,7 @@ test_that("mvpa_regional with 5 ROIS runs and external test set", {
   
   expect_true(has_test_set(dataset$design))
   res <- run_regional(mspec, regionMask)
-  
+  expect_true(!is.null(res))
 })
 
 # test_that("mvpa_regional with 5 ROIS and consensus learning runs without error", {
@@ -181,7 +183,7 @@ test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topk=10", {
   fsel <- feature_selector("FTest", "topk", 10)
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, feature_selector=fsel)
   res <- run_regional(mspec, regionMask, return_fits=TRUE)
-  
+  expect_true(!is.null(res))
 })
 
 test_that("mvpa_regional with 5 ROIs and catscore FeatureSelection with top_p=.1", {
@@ -193,7 +195,7 @@ test_that("mvpa_regional with 5 ROIs and catscore FeatureSelection with top_p=.1
   fsel <- feature_selector("catscore", "top_p", .1)
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, feature_selector=fsel)
   res <- run_regional(mspec, regionMask, return_fits=TRUE)
-  
+  expect_true(!is.null(res))
 })
 
 
@@ -207,7 +209,7 @@ test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topp=.4", {
   fsel <- feature_selector("FTest", "topp", .4)
   mspec <- mvpa_model(model, dataset$dataset, dataset$design,model_type="classification", crossval=cval, feature_selector=fsel)
   res <- run_regional(mspec, regionMask, return_fits=TRUE)
- 
+  expect_true(!is.null(res))
 })
 
 
@@ -227,7 +229,6 @@ test_that("mvpa_regional with regression and 5 ROIs runs without error", {
 })
 
 test_that("standard mvpa_regional and custom cross-validation runs without error", {
-  
   dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
   sample_set <- replicate(5, {
     list(train=sample(1:80), test=sample(1:100))
@@ -239,7 +240,7 @@ test_that("standard mvpa_regional and custom cross-validation runs without error
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec,regionMask)
-  
+  expect_true(!is.null(res))
 })
 
 test_that("standard mvpa_regional and custom cross-validation and splitting var runs without error", {
@@ -255,7 +256,7 @@ test_that("standard mvpa_regional and custom cross-validation and splitting var 
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec,regionMask)
-  
+  expect_true(!is.null(res))
 })
 
 

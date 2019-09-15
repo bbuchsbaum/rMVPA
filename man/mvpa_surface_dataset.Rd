@@ -17,5 +17,5 @@ mvpa_surface_dataset(train_data, test_data = NULL, mask = NULL,
 \item{name}{label to identify the dataset (e.g. "lh" or "rh" to indicate hemisphere)}
 }
 \description{
-Cnstruct a MVPA dataset with a surface-based dataset.
+Construct a MVPA dataset with a surface-based dataset.
 }
