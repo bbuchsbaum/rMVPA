@@ -189,7 +189,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @param return_fits return the model fit for each voxel set?
 #' @importFrom dplyr bind_rows
 #' @export
-mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_performance=TRUE, return_fits=FALSE) {
+mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_performance=TRUE, return_fits=FALSE, permute=FALSE) {
   assert_that(length(ids) == length(vox_list), 
               msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   
@@ -204,7 +204,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_per
     roi <- as_roi(sample)
     do_fun(roi, mod_spec, rnum, 
            compute_performance=compute_performance,
-           return_fit=return_fits)
+           return_fit=return_fits, permute=permute)
   }) %>% dplyr::bind_rows()
   
   ret
