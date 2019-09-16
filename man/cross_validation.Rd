@@ -3,6 +3,7 @@
 \name{bootstrap_blocked_cross_validation}
 \alias{bootstrap_blocked_cross_validation}
 \alias{blocked_cross_validation}
+\alias{sequential_blocked_cross_validation}
 \alias{custom_cross_validation}
 \alias{twofold_blocked_cross_validation}
 \alias{kfold_cross_validation}
@@ -11,6 +12,8 @@
 bootstrap_blocked_cross_validation(block_var, nreps = 10)
 
 blocked_cross_validation(block_var)
+
+sequential_blocked_cross_validation(block_var, nfolds = 2, nreps = 4)
 
 custom_cross_validation(sample_set)
 
@@ -23,14 +26,20 @@ kfold_cross_validation(len, nfolds = 10)
 
 \item{nreps}{the number of twofold spits}
 
+\item{nfolds}{the number of folds to divide each sequence of trials within a block.}
+
 \item{sample_set}{a \code{list} of training and test sample indices}
 
 \item{len}{the number of observations.}
+
+\item{block_var}{an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.}
 
 \item{nfolds}{the number of cross-validation folds.}
 }
 \description{
 Construct a cross-validation specification using a predefined blocking variable with bootstrap resamples
+
+Construct a cross-validation specification using a predefined blocking variable
 
 Construct a cross-validation specification using a predefined blocking variable
 
