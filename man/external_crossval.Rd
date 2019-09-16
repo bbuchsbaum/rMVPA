@@ -5,7 +5,7 @@
 \title{external_crossval}
 \usage{
 external_crossval(roi, mspec, id, compute_performance = TRUE,
-  return_fit = FALSE)
+  return_fit = FALSE, permute = FALSE)
 }
 \description{
 external_crossval

@@ -84,7 +84,7 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     rnorm(ntest_obs)
   }
   
-  block_var <- rep(1:blocks, length.out=nobs)
+  block_var <- as.integer(as.character(cut(1:nobs, blocks, labels=1:blocks)))
   
   des <- if (external_test) {
     message("external test")

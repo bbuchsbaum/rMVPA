@@ -84,7 +84,7 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
 #' @importFrom furrr future_map
-do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, combiner=pool_randomized, permute=permute, ...) {
+do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, combiner=pool_randomized, permute=FALSE, ...) {
   error=NULL 
   
   ret <- furrr::future_map(1:niter, function(i) {
@@ -127,7 +127,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
 
 
 #' @keywords internal
-do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, permute=permute, ...) {
+do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, permute=FALSE, ...) {
   error=NULL
   flog.info("creating standard searchlight")
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
