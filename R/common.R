@@ -244,7 +244,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
 #' @keywords internal
 #' @importFrom purrr map_dbl map
 normalize_image_samples <- function(bvec, mask) {
-  vlist <- bvec %>% vols() %>% map(function(v) {
+  vlist <- bvec %>% vols() %>% furrr::future_map(function(v) {
     scale(v[mask>0])[,1]
   })
   
@@ -258,7 +258,7 @@ normalize_image_samples <- function(bvec, mask) {
 #' @importFrom purrr map_dbl map
 #' @importFrom neuroim2 vectors
 standardize_vars <- function(bvec, mask, blockvar) {
-  vlist <- bvec %>% vectors(subset=which(mask>0)) %>% map(function(v) {
+  vlist <- bvec %>% vectors(subset=which(mask>0)) %>% furrr::future_map(function(v) {
     if (all(v == 0)) v else {
       unlist(map(split(v, blockvar), scale))
     }
