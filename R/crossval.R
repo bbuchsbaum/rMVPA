@@ -199,7 +199,7 @@ blocked_cross_validation <- function(block_var) {
 }
 
 
-across_block_cross_validation <- function(block_var, nfolds=3) {
+cutblock_cross_validation <- function(block_var, nfolds=3) {
   sp <- split(1:length(block_var), block_var)
   lapply(sp, function(ind) {
     ord <- sample(1:nfolds)
