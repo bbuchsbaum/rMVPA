@@ -50,6 +50,9 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
 #' block_var <- rep(1:4, each=25)
 #' cv <- crossv_twofold(X,y,block_var, nreps=10)
 crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps=15) {
+  if (nreps < 2) N{
+    stop("'nreps' must be at least 2")
+  }
   if (!length(block_var) == length(y)) {
     stop("length of `block_var` must be equal to length(y)", call. = FALSE)
   }
@@ -63,8 +66,11 @@ crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps
   
   fold_sets <- utils::combn(block_ind, nhalf)
   nreps <- min(nreps, ncol(fold_sets))
-  cols <- sample(1:ncol(fold_sets), nreps)
   
+ 
+  cols <- as.integer(seq(1, ncol(fold_sets), length.out=nreps))
+  #sample(1:ncol(fold_sets), nreps)
+ 
   fold_idx <- lapply(1:nreps, function(i) {
     bind <- fold_sets[, cols[i]]
     which(block_var %in% bind)
@@ -191,6 +197,16 @@ blocked_cross_validation <- function(block_var) {
   class(ret) <- c("blocked_cross_validation", "cross_validation", "list")
   ret
 }
+
+
+cutblock_cross_validation <- function(block_var, nfolds=3) {
+  sp <- split(1:length(block_var), block_var)
+  lapply(sp, function(ind) {
+    ord <- sample(1:nfolds)
+  })
+}
+
+
 
 #' custom_cross_validation
 #' 

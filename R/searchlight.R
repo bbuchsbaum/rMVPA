@@ -84,7 +84,7 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
 #' @importFrom furrr future_map
-do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, combiner=pool_randomized, ...) {
+do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, combiner=pool_randomized, permute=permute, ...) {
   error=NULL 
   
   ret <- furrr::future_map(1:niter, function(i) {
@@ -95,7 +95,7 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
   
     cind <- purrr::map_int(slight, ~ .@parent_index)
-    mvpa_fun(model_spec, slight, cind,...)
+    mvpa_fun(model_spec, slight, cind, permute=permute, ...)
   })
   
   nmodels <- sum(unlist(sapply(ret, nrow)))
@@ -127,14 +127,13 @@ combine_standard <- function(model_spec, good_results, bad_results) {
 
 
 #' @keywords internal
-do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ...) {
+do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, permute=permute, ...) {
   error=NULL
   flog.info("creating standard searchlight")
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
   cind <- which(model_spec$dataset$mask > 0)
   flog.info("running standard searchlight iterator")
-  ret <- mvpa_fun(model_spec, slight, cind,...)
-
+  ret <- mvpa_fun(model_spec, slight, cind, permute=permute, ...)
   good_results <- ret %>% dplyr::filter(!error)
   bad_results <- ret %>% dplyr::filter(error == TRUE)
   
@@ -187,7 +186,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' res2 <- run_searchlight(mspec,radius=8, method="standard", combiner=custom_combiner)
 #' }
 #' 
-run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, combiner=NULL, ...) {
+run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, combiner=NULL, permute=FALSE, ...) {
   
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
@@ -207,7 +206,7 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomize
     }
     
     flog.info("running standard searchlight with %s radius ", radius)
-    do_standard(model_spec, radius, combiner=combiner)    
+    do_standard(model_spec, radius, combiner=combiner, permute=permute)    
   } else if (method == "randomized") {
     
     if (is.null(combiner)) {
@@ -215,7 +214,7 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomize
     }
     
     flog.info("running randomized searchlight with %s radius and %s iterations", radius, niter)
-    do_randomized(model_spec, radius, niter, combiner=combiner, compute_performance=FALSE)
+    do_randomized(model_spec, radius, niter, combiner=combiner, compute_performance=FALSE, permute=permute)
   } 
   
 }

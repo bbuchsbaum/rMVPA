@@ -58,12 +58,17 @@ wrap_result <- function(result_table, design, fit=NULL) {
 #' external_crossval
 #' @keywords internal
 #' @importFrom stats predict
-external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE) {
+external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi))
  
   dset <- mspec$dataset
   
-  ytrain <- y_train(mspec)
+  y_train <- if (permute) {
+    sample(y_train(mspec))
+  } else {
+    y_train(mspec)
+  }
+  
   ytest <- y_test(mspec)
   
   ind <- neuroim2::indices(roi$train_roi)
@@ -106,14 +111,18 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @keywords internal
 #' @importFrom dplyr rowwise do bind_rows
 #' @importFrom tibble as_tibble
-internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE) {
+internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
   #if (nrow(coords(roi$train_roi)) == 1) {
   #  browser()
   #}
   
   
   ## generate cross-validation samples
-  samples <- crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi)), y_train(mspec))
+  samples <- if (permute) {
+    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi)), y_train(mspec))
+  } else {
+    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi)), sample(y_train(mspec)))
+  }
   
   ## get ROI indices
   ind <- neuroim2::indices(roi$train_roi)
@@ -181,7 +190,8 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @param verbose print progress messages
 #' @importFrom dplyr bind_rows
 #' @export
-mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_performance=TRUE, return_fits=FALSE, verbose=TRUE) {
+mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_performance=TRUE, return_fits=FALSE, permute=FALSE, verbose=TRUE) {
+
   assert_that(length(ids) == length(vox_list), 
               msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   
@@ -201,7 +211,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_per
     roi <- as_roi(sample)
     do_fun(roi, mod_spec, rnum, 
            compute_performance=compute_performance,
-           return_fit=return_fits)
+           return_fit=return_fits, permute=permute)
   }) %>% dplyr::bind_rows()
   
   ret
