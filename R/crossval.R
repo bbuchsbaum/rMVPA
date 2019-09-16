@@ -256,7 +256,7 @@ blocked_cross_validation <- function(block_var) {
 #' @export
 sequential_blocked_cross_validation <- function(block_var, nfolds=2, nreps=4) {
   block_var <- as.integer(as.character(block_var))
-  ret <- list(block_var=block_var, nfolds=nfolds, block_ind=sort(unique(block_var)))
+  ret <- list(block_var=block_var, nfolds=nfolds, nreps=nreps, block_ind=sort(unique(block_var)))
   class(ret) <- c("sequential_blocked_cross_validation", "cross_validation", "list")
   ret
 }

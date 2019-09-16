@@ -84,6 +84,17 @@ test_that("standard mvpa_searchlight runs without error", {
   
 })
 
+test_that("standard mvpa_searchlight with sequential cross validation works", {
+  
+  dataset <- gen_sample_dataset(c(8,8,8), 100, blocks=3)
+  cval <- sequential_blocked_cross_validation(dataset$design$block_var)
+  model <- load_model("sda_notune")
+  mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
+  res <- run_searchlight(mspec,radius=4, method="standard")
+  
+})
+
+
 test_that("standard mvpa_searchlight and custom cross-validation runs without error", {
   
   dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
