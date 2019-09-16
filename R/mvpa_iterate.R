@@ -118,7 +118,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   
   
   ## generate cross-validation samples
-  sample <- if (permute) {
+  samples <- if (permute) {
     crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi)), y_train(mspec))
   } else {
     crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi)), sample(y_train(mspec)))
