@@ -107,7 +107,7 @@ mvpa_model <- function(model,
                        crossval=NULL, 
                        feature_selector=NULL, 
                        tune_grid=NULL, 
-                       tune_reps=5,
+                       tune_reps=15,
                        performance=NULL,
                        class_metrics=TRUE) {
   
@@ -116,6 +116,14 @@ mvpa_model <- function(model,
   assert_that(inherits(design, "mvpa_design"))
   assert_that(inherits(dataset, "mvpa_dataset"))
   assert_that(is.logical(class_metrics))
+  
+  if (is.null(dataset$test_data) && !is.null(design$y_test)) {
+    stop("mvpa_model: design has `y_test` dataset must have `test_data`")
+  }
+  
+  if (!is.null(dataset$test_data) && is.null(design$y_test)) {
+    stop("mvpa_model: if dataset has `test_data` design must have `y_test`")
+  }
   
   perf <- if (!is.null(performance)) {
     assert_that(is.function(performance)) 

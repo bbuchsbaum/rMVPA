@@ -156,7 +156,11 @@ merge_predictions.regression_prediction <- function(obj1, rest, weights=rep(1,le
 #' @export
 #' @method merge_predictions classification_prediction
 merge_predictions.classification_prediction <- function(obj1, rest, weights=rep(1,length(rest)+1)/(length(rest)+1)) {
-  allobj <- c(obj1, rest)
+  allobj <- vector(mode="list", length(rest)+1)
+  allobj[[1]] <- obj1
+  allobj[2:length(allobj)] <- rest
+  
+  #allobj <- c(obj1, rest)
   assert_that(all(sapply(allobj, function(obj) inherits(obj, "classification_prediction"))))
   
   #preds <- lapply(1:length(allobj), function(i) {
@@ -255,7 +259,7 @@ predict.weighted_model <- function(object, newdata=NULL, ...) {
     stop("newdata cannot be null")
   }
 
-  preds <- lapply(object$fits, function(fit) predict(fit, newdata, ...))
+  preds <- lapply(object, function(fit) predict(fit, newdata, ...))
   merge_predictions(preds[[1]], preds[2:length(preds)], attr(object, "weights"))
   
 }

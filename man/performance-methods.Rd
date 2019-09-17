@@ -18,4 +18,6 @@ performance(x, ...)
 }
 \description{
 Compute appropriate performance metrics such as accuracy/AUC/RMSE from a classification/regression result
+
+performance
 }

@@ -244,13 +244,29 @@ initialize_standard_parameters <- function(config, args, analysisType) {
 #' @keywords internal
 #' @importFrom purrr map_dbl map
 normalize_image_samples <- function(bvec, mask) {
-  vlist <- bvec %>% vols() %>% map(function(v) {
+  vlist <- bvec %>% vols() %>% furrr::future_map(function(v) {
     scale(v[mask>0])[,1]
   })
   
   norm_datavec <- do.call(cbind, vlist)
   #norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
   SparseNeuroVec(norm_datavec, space(bvec), mask=mask)  
+}
+
+#' @noRd
+#' @keywords internal
+#' @importFrom purrr map_dbl map
+#' @importFrom neuroim2 vectors
+standardize_vars <- function(bvec, mask, blockvar) {
+  vlist <- bvec %>% vectors(subset=which(mask>0)) %>% furrr::future_map(function(v) {
+    if (all(v == 0)) v else {
+      unlist(map(split(v, blockvar), scale))
+    }
+  })
+  
+  sdatavec <- do.call(cbind, vlist)
+  #norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
+  SparseNeuroVec(sdatavec, space(bvec), mask=mask)  
 }
 
 

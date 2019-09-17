@@ -6,6 +6,7 @@ combine_regional_results = function(results, ids) {
     results %>% dplyr::rowwise() %>% dplyr::do( {
 
       tib1 <- tibble::tibble(
+          id=seq_along(.$result$observed),
           ROINUM=rep(.$id, length(.$result$observed)),
           observed=.$result$observed,
           pobserved=sapply(seq_along(.$result$observed), function(i) .$result$probs[i, .$result$observed[i]]),
@@ -20,6 +21,7 @@ combine_regional_results = function(results, ids) {
    
     results %>% dplyr::rowwise() %>% dplyr::do(
       tibble::tibble(
+        id=seq_along(.$result$observed),
         ROINUM=rep(.$id, length(.$result$observed)),
         observed=.$result$observed,
         predicted=.$result$predicted)

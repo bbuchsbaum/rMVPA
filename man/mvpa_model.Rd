@@ -6,7 +6,7 @@
 \usage{
 mvpa_model(model, dataset, design, model_type = c("classification",
   "regression"), crossval = NULL, feature_selector = NULL,
-  tune_grid = NULL, tune_reps = 5, performance = NULL,
+  tune_grid = NULL, tune_reps = 15, performance = NULL,
   class_metrics = TRUE)
 }
 \arguments{
