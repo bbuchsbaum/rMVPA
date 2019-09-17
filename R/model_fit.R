@@ -72,7 +72,7 @@ tune_model <- function(mspec, x, y, wts, param, nreps=10) {
 
 
 fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
-  obj$model$fit(x,y,wts=wts,param=param,classProbs=classProbs, ...)
+  obj$model$fit(x,y,wts=wts,param=param,lev=levels(y), classProbs=classProbs, ...)
 }
 
 
