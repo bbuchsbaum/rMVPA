@@ -74,6 +74,11 @@ tune_model <- function(mspec, x, y, wts, param, nreps=10) {
 fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
   fit <- obj$model$fit(x,y,wts=wts,param=param,lev=levels(y), classProbs=classProbs, ...)
   fit$obsLevels <- levels(y)
+  if (is.factor(y)) {
+    fit$problemType <- "Classification"
+  } else {
+    fit$problemType <- "Regression"
+  }
   fit
 }
 
