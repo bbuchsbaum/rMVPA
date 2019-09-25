@@ -84,17 +84,6 @@ test_that("standard mvpa_searchlight runs without error", {
   
 })
 
-test_that("standard mvpa_searchlight with sequential cross validation works", {
-  
-  dataset <- gen_sample_dataset(c(8,8,8), 100, blocks=3)
-  cval <- sequential_blocked_cross_validation(dataset$design$block_var)
-  model <- load_model("sda_notune")
-  mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
-  res <- run_searchlight(mspec,radius=4, method="standard")
-  
-})
-
-
 test_that("standard mvpa_searchlight and custom cross-validation runs without error", {
   
   dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
@@ -208,7 +197,7 @@ test_that("standard mvpa_searchlight and tune_grid with two-fold cross-validatio
 
 test_that("randomized mvpa_searchlight and tune_grid runs without error", {
   
-  dataset <- gen_sample_dataset(c(2,2,6), 100, nlevels=2, blocks=2)
+  dataset <- gen_sample_dataset(c(6,6,6), 100, nlevels=2, blocks=2)
   cval <- blocked_cross_validation(dataset$design$block_var)
   
   tuneGrid <- expand.grid(lambda=c(.1,.8), diagonal=c(TRUE, FALSE))
@@ -222,32 +211,23 @@ test_that("randomized mvpa_searchlight works with regression", {
   
   dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3, response_type="continuous")
   cval <- blocked_cross_validation(dataset$design$block_var)
-  tuneGrid <- expand.grid(K=2, eta=.5, kappa=.5)
+  tuneGrid <- expand.grid(K=3, eta=.5, kappa=.5)
   model <- load_model("spls")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tuneGrid)
   res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
   
 })
 
-test_that("randomized mvpa_searchlight works with regression and a custom combinging function", {
+test_that("randomized mvpa_searchlight works with xgboost", {
   
-  dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3, response_type="continuous")
+  dataset <- gen_sample_dataset(c(6,6,4), 100, nlevels=5, blocks=5)
   cval <- blocked_cross_validation(dataset$design$block_var)
-  tuneGrid <- expand.grid(K=2, eta=.5, kappa=.5)
-  model <- load_model("spls")
+  tuneGrid <- expand.grid(max_depth=2, eta=.5, nrounds=100,gamma=0,colsample_bytree=.6, min_child_weight=1, subsample=.5)
+  model <- load_model("xgbTree")
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, crossval=cval, tune_grid=tuneGrid)
+  res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
   
-  combiner <- function(mspec, good, bad) {
-    good
-  }
-  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tuneGrid)
-  mspec2 <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=expand.grid(K=2, eta=.1, kappa=.5))
-  
-  res1 <- run_searchlight(mspec, radius=3, niter=2,method="randomized", combiner=combiner)
-  res2 <- run_searchlight(mspec2, radius=3, niter=2,method="randomized", combiner=combiner)
-  pool_randomized(mspec, rbind(res1,res2))
-
 })
-
 
 test_that("mvpa_searchlight works with testset", {
   require("sda")

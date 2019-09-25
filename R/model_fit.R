@@ -72,7 +72,14 @@ tune_model <- function(mspec, x, y, wts, param, nreps=10) {
 
 
 fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
-  obj$model$fit(x,y,wts=wts,param=param,classProbs=classProbs, ...)
+  fit <- obj$model$fit(x,y,wts=wts,param=param,lev=levels(y), classProbs=classProbs, ...)
+  fit$obsLevels <- levels(y)
+  if (is.factor(y)) {
+    fit$problemType <- "Classification"
+  } else {
+    fit$problemType <- "Regression"
+  }
+  fit
 }
 
 
@@ -95,7 +102,7 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   if (!is.null(object$feature_mask)) {
     mat <- mat[, object$feature_mask,drop=FALSE]
   }
-  
+
   probs <- object$model$prob(object$fit,mat) 
   colnames(probs) <- levels(object$y)
   cpred <- max.col(probs)
