@@ -31,7 +31,12 @@ combine_randomized <- function(model_spec, good_results, bad_results) {
 # pool classiifer results collected over a set of overlapping indices
 #' @keywords internal
 #' @noRd
-pool_results <- function(good_results) {
+pool_results <- function(...) {
+  reslist <- list(...)
+  check <- sapply(reslist, function(res) inherits(res, "data.frame")) 
+  assertthat::assert_that(all(check), msg="pool_results: all arguments must be of type 'data.frame'")
+  good_results <- do.call(rbind, reslist)
+ 
   all_ind <- sort(unlist(good_results$indices))
   ind_count <- table(all_ind)
   ind_set <- unique(all_ind)
