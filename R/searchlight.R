@@ -69,6 +69,7 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   }
   
   merged_results <- pool_results(good_results)
+  
   perf_list <- furrr::future_map(merged_results, function(res) compute_performance(model_spec, res))
   
   ind_set <- unique(sort(unlist(good_results$indices)))
