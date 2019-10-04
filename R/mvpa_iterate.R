@@ -291,7 +291,7 @@ do_rsa <- function(roi, mod_spec, rnum, method=method, distmethod=distmethod) {
 #' @importFrom dplyr do rowwise
 #' @export
 rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), regtype=c("rfit", "lm", "pearson", "spearman"), 
-                        distmethod=c("spearman", "pearson")) {
+                        distmethod=c("spearman", "pearson"), permute=FALSE) {
  
   distmethod <- match.arg(distmethod)
   regtype <- match.arg(regtype)
