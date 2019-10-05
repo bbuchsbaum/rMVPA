@@ -63,7 +63,7 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
  
   dset <- mspec$dataset
   
-  y_train <- if (permute) {
+  ytrain <- if (permute) {
     sample(y_train(mspec))
   } else {
     y_train(mspec)
