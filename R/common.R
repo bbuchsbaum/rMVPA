@@ -245,7 +245,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
 #' @importFrom purrr map_dbl map
 normalize_image_samples <- function(bvec, mask) {
   vlist <- bvec %>% vols() %>% furrr::future_map(function(v) {
-    scale(v[mask>0])[,1]
+    scale(v[which(mask>0)])[,1]
   })
   
   norm_datavec <- do.call(cbind, vlist)
