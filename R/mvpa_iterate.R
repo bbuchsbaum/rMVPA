@@ -76,7 +76,11 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   result <- try_warning(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
   
   if (!is.null(result$error)) {
-    emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
+    emessage <- if (!is.null(attr(result, "condition")$message)) {
+      attr(result, "condition")$message
+    } else {
+      result$error
+    }
     tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), id=id, 
                    error=TRUE, error_message=emessage, 
                    warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
