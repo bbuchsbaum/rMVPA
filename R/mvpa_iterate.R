@@ -95,7 +95,7 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   #                  warning=!is.null(result$warning), 
   #                  warning_message=if (is.null(result$warning)) "~" else result$warning)
   # } else {
-    pred <- predict(result$value, tibble::as_tibble(neuroim2::values(roi$test_roi)), NULL)
+    pred <- predict(result, tibble::as_tibble(neuroim2::values(roi$test_roi)), NULL)
     plist <- lapply(pred, list)
     plist$y_true <- list(ytest)
     plist$test_ind=list(as.integer(seq_along(ytest)))
@@ -109,7 +109,8 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
     }
   
     if (compute_performance) {
-      tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, 
+      tibble::tibble(result=list(cres), indices=list(ind), 
+                     performance=list(compute_performance(mspec, cres)), id=id, 
                  error=FALSE, error_message="~", 
                  warning=!is.null(result$warning), 
                  warning_message=if (is.null(result$warning)) "~" else result$warning)
