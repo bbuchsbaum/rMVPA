@@ -170,6 +170,9 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   stop("every factor level in 'y' must have at least 1 instance, cannot run sda_boot")
                                 }
                                 
+                                assertthat::assert_that(param$frac > 0, msg="sda_boot: 'frac' parameter must be greater than 0")
+                                assertthat::assert_that(param$reps > 0, msg="sda_boot: 'reps' parameter must be greater than 0")
+                                
                                 while (count <= param$reps) {
                                   #message("fitting sda model ", count)
                                   
@@ -178,10 +181,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   
                                   ret <- if (param$frac > 0 && param$frac < 1) {
                                     nkeep <- max(param$frac * ncol(x),1)
-                              
-                                    rank <- memo_rank(x, L=y, fdr=FALSE)
-                                    ind <- rank[,"idx"][1:nkeep]
-                                  
+                                    ind <- sample(1:ncol(x), nkeep)
                                     fit <- sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y, verbose=FALSE,...)
                                     attr(fit, "keep.ind") <- ind
                                     fit
@@ -305,7 +305,8 @@ MVPAModels$sparse_sda <- list(type = "Classification",
                                library = "sda", 
                                label="sparse_sda",
                                loop = NULL, 
-                               parameters=data.frame(parameters=c("frac", "lambda"), class=c("numeric", "numeric"), label=c("fraction of features to keep (frac > 0 a frac <= 1)", "lambda")),
+                               parameters=data.frame(parameters=c("frac", "lambda"), class=c("numeric", "numeric"), 
+                                                     label=c("fraction of features to keep (frac > 0 a frac <= 1)", "lambda")),
                                grid=function(x, y, len = NULL) expand.grid(frac=seq(.1,1,length.out=len), lambda=seq(.01,.99,length.out=len)),
                                fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
                                  print(param)
