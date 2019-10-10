@@ -153,10 +153,10 @@ MVPAModels$sda_boot <- list(type = "Classification",
                               library = "sda", 
                               label="sda_boot",
                               loop = NULL, 
-                              parameters=data.frame(parameters=c("reps", "frac"), 
-                                                    class=c("numeric", "numeric"), 
-                                                    label=c("number of bootstap resamples", "fraction of features to select")),
-                              grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
+                              parameters=data.frame(parameters=c("reps", "frac", "lambda_min", "lambda_max"), 
+                                                    class=c("numeric", "numeric", "numeric", "numeric"), 
+                                                    label=c("number of bootstap resamples", "fraction of features to select", "min lambda", "max lambda")),
+                              grid=function(x, y, len = NULL) data.frame(reps=10, frac=1, lambda_min=.01, lambda_max=.8),
                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {   
                                 
                                 x <- as.matrix(x)
@@ -165,6 +165,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 failures <- 0
                                 
                                 split_y <- split(seq_along(y), y)
+                                lambda <- seq(param$lambda_min, param$lambda_max, length.out=nreps)
                                 
                                 if (!all(sapply(split_y, function(yy) length(yy > 0)))) {
                                   stop("every factor level in 'y' must have at least 1 instance, cannot run sda_boot")
@@ -182,11 +183,11 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   ret <- if (param$frac > 0 && param$frac < 1) {
                                     nkeep <- max(param$frac * ncol(x),1)
                                     ind <- sample(1:ncol(x), nkeep)
-                                    fit <- sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y[row.idx], verbose=FALSE,...)
+                                    fit <- sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y[row.idx], lambda=lambda[count], verbose=FALSE,...)
                                     attr(fit, "keep.ind") <- ind
                                     fit
                                   } else {
-                                    fit <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...))
+                                    fit <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], lambda=lambda[count], verbose=FALSE, ...))
                                     attr(fit, "keep.ind") <- 1:ncol(x)
                                     fit
                                   }
