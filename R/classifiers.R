@@ -182,7 +182,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   ret <- if (param$frac > 0 && param$frac < 1) {
                                     nkeep <- max(param$frac * ncol(x),1)
                                     ind <- sample(1:ncol(x), nkeep)
-                                    fit <- sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y, verbose=FALSE,...)
+                                    fit <- sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y[row.idx], verbose=FALSE,...)
                                     attr(fit, "keep.ind") <- ind
                                     fit
                                   } else {
