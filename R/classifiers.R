@@ -165,7 +165,7 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 failures <- 0
                                 
                                 split_y <- split(seq_along(y), y)
-                                lambda <- seq(param$lambda_min, param$lambda_max, length.out=nreps)
+                                lambda <- seq(param$lambda_min, param$lambda_max, length.out=param$reps)
                                 
                                 if (!all(sapply(split_y, function(yy) length(yy > 0)))) {
                                   stop("every factor level in 'y' must have at least 1 instance, cannot run sda_boot")
