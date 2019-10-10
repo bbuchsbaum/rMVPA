@@ -63,7 +63,7 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
  
   dset <- mspec$dataset
   
-  y_train <- if (permute) {
+  ytrain <- if (permute) {
     sample(y_train(mspec))
   } else {
     y_train(mspec)
@@ -73,16 +73,29 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   
   ind <- neuroim2::indices(roi$train_roi)
   
-  result <- try_warning(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
+  #result <- try_warning(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
+  result <- try(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
   
-  if (!is.null(result$error)) {
+  if (inherits(result, "try-error")) {
+    flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
+    ## error encountered, store error messages
     emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), id=id, 
-                   error=TRUE, error_message=emessage, 
-                   warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
+    tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest), 
+                   fit=list(NULL), error=TRUE, error_message=emessage)
   } else {
-   
-    pred <- predict(result$value, tibble::as_tibble(neuroim2::values(roi$test_roi)), NULL)
+  # if (!is.null(result$error)) {
+  #   
+  #   emessage <- if (!is.null(attr(result$error, "condition")$message)) {
+  #     attr(result, "condition")$message
+  #   } else {
+  #     result$error
+  #   }
+  #   tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), id=id, 
+  #                  error=TRUE, error_message=emessage, 
+  #                  warning=!is.null(result$warning), 
+  #                  warning_message=if (is.null(result$warning)) "~" else result$warning)
+  # } else {
+    pred <- predict(result, tibble::as_tibble(neuroim2::values(roi$test_roi)), NULL)
     plist <- lapply(pred, list)
     plist$y_true <- list(ytest)
     plist$test_ind=list(as.integer(seq_along(ytest)))
@@ -96,14 +109,18 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
     }
   
     if (compute_performance) {
-      tibble::tibble(result=list(cres), indices=list(ind), performance=list(compute_performance(mspec, cres)), id=id, 
+      tibble::tibble(result=list(cres), indices=list(ind), 
+                     performance=list(compute_performance(mspec, cres)), id=id, 
                  error=FALSE, error_message="~", 
-                 warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
+                 warning=!is.null(result$warning), 
+                 warning_message=if (is.null(result$warning)) "~" else result$warning)
     } else {
       tibble::tibble(result=list(cres), indices=list(ind), performance=list(NULL), id=id, 
                      error=FALSE, error_message="~", 
-                     warning=!is.null(result$warning), warning_message=if (is.null(result$warning)) "~" else result$warning)
+                     warning=!is.null(result$warning), 
+                     warning_message=if (is.null(result$warning)) "~" else result$warning)
     }
+  
   }
 }
  
