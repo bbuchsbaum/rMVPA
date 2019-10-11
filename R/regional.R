@@ -52,14 +52,17 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
   ROINUM=NULL
   ###
   
-  
+  allrois <- unique(region_mask[region_mask>0])
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
-  
-  region_vec <- as.vector(region_mask)
+  region_vec <- as.vector(region_mask[which(model_spec$dataset$mask != 0)]) 
   region_set <- sort(as.integer(unique(region_vec[region_vec > 0])))
   
   if (length(region_set) < 1) {
     stop("run_regional: invalid ROI mask, number of ROIs = 0")
+  }
+  
+  if (length(region_set) < length(allrois)) {
+    futile.logger::flog.warn("run_regional: not all ROIs had more than 1 voxel, using restricted set of %s ROIS", length(region_set))
   }
   
   vox_iter <- lapply(region_set, function(rnum) which(region_vec == rnum))
@@ -74,7 +77,9 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
   flog.info("model is: %s", model_spec$model$label)
   
   ## run mvpa for each region
-  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set,compute_performance=TRUE, return_fits = return_fits)
+  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set,
+                          compute_performance=TRUE, 
+                          return_fits = return_fits)
   
 
   ## compile performance results

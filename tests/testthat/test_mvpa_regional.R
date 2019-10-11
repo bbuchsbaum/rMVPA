@@ -20,6 +20,25 @@ test_that("mvpa_regional with 5 ROIS runs without error", {
   
 })
 
+test_that("mvpa_regional with an ROI with zero overlapping voxels runs without error", {
+  
+  dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="image", 
+                             response_type="categorical")
+  cval <- twofold_blocked_cross_validation(dset$design$block_var)
+  
+  region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
+  m <- dset$dataset$mask
+  m[region_mask==5] = 0
+  dset$dataset$mask <- m
+  
+  model <- load_model("sda_notune")
+  mspec <- mvpa_model(model, dset$dataset, dset$design, 
+                      model_type="classification", crossval=cval)
+  res <- run_regional(mspec, region_mask, return_fits=FALSE)
+  expect_true(!is.null(res))
+  
+})
+
 test_that("mvpa_regional with 5 ROIS runs without error and can access fitted model", {
   
   dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="image", 
