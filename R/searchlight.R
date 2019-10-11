@@ -1,6 +1,6 @@
 
 #' @keywords internal
-wrap_out <- function(perf_mat, dataset, ids) {
+wrap_out <- function(perf_mat, dataset, ids=NULL) {
   out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids))
   names(out) <- colnames(perf_mat)
   out
@@ -8,6 +8,7 @@ wrap_out <- function(perf_mat, dataset, ids) {
 
 #' @keywords internal
 combine_randomized <- function(model_spec, good_results, bad_results) {
+  
   all_ind <- sort(unlist(good_results$indices))
   ind_count <- table(all_ind)
   ind_set <- unique(all_ind)
@@ -22,10 +23,10 @@ combine_randomized <- function(model_spec, good_results, bad_results) {
     m <- kronecker(matrix(good_results$performance[[i]], 1, ncols), rep(1,length(ind)))
     perf_mat[ind,] <- perf_mat[ind,] + m
   }
-  
-  perf_mat[ind_set,] <- sweep(perf_mat[ind_set,], 1, as.integer(ind_count), FUN="/")
+
+  perf_mat[ind_set,] <- sweep(perf_mat[ind_set,,drop=FALSE], 1, as.integer(ind_count), FUN="/")
   colnames(perf_mat) <- names(good_results$performance[[1]])
-  wrap_out(perf_mat, model_spec$dataset, ind_set)
+  wrap_out(perf_mat, model_spec$dataset)
 }
 
 # pool classiifer results collected over a set of overlapping indices
@@ -232,6 +233,7 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomize
 #' @importFrom futile.logger flog.info flog.error flog.debug
 #' @export
 run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, 
+                                      permute=FALSE,
                                       distmethod=c("spearman", "person"), 
                                       regtype=c("lm", "rfit", "pearson", "spearman"),...) {
   
@@ -250,10 +252,10 @@ run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized
   
   res <- if (method == "standard") {
     flog.info("running standard RSA searchlight with %s radius ", radius)
-    do_standard(model_spec, radius, mvpa_fun=rsa_iterate, combiner=combine_standard, regtype, distmethod)    
+    do_standard(model_spec, radius, mvpa_fun=rsa_iterate, combiner=combine_standard, permute=permute, regtype, distmethod)    
   } else if (method == "randomized") {
     flog.info("running randomized RSA searchlight with %s radius and %s iterations", radius, niter)
-    do_randomized(model_spec, radius, niter, mvpa_fun=rsa_iterate, combiner=combine_randomized, regtype,distmethod)
+    do_randomized(model_spec, radius, niter, mvpa_fun=rsa_iterate, combiner=combine_randomized, permute=permute, regtype,distmethod)
   } 
   
 }

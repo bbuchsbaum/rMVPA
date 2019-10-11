@@ -288,7 +288,7 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
 
 
 #' @importFrom neuroim2 indices values
-do_rsa <- function(roi, mod_spec, rnum, method=method, distmethod=distmethod) {
+do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi))
   ind <- indices(roi$train_roi)
   ret <- train_model(mod_spec, xtrain, ind, method=method, distmethod=distmethod)
@@ -304,11 +304,11 @@ do_rsa <- function(roi, mod_spec, rnum, method=method, distmethod=distmethod) {
 #' @param vox_list a \code{list} of voxel indices/coordinates
 #' @param ids a \code{vector} of ids for each voxel set
 #' @param regtype the analysis method, one of: \code{lm}, \code{rfit}, \code{pearson}, \code{spearman}
-#' @param distmethod the method used to computer distances between oservations, one of: \code{pearson}, \code{spearman}
+#' @param distmethod the method used to computer distances between observations, one of: \code{pearson}, \code{spearman}
 #' @importFrom dplyr do rowwise
 #' @export
-rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), regtype=c("rfit", "lm", "pearson", "spearman"), 
-                        distmethod=c("spearman", "pearson"), permute=FALSE) {
+rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FALSE, regtype=c("rfit", "lm", "pearson", "spearman"), 
+                        distmethod=c("spearman", "pearson")) {
  
   distmethod <- match.arg(distmethod)
   regtype <- match.arg(regtype)
@@ -320,7 +320,7 @@ rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), regtype=c("r
   
   ## iterate over searchlights using parallel futures
   ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
-    do_rsa(as_roi(sample), mod_spec, rnum, regtype, distmethod)
+    do_rsa(as_roi(sample), mod_spec, rnum, method=regtype, distmethod=distmethod)
   }) %>% dplyr::bind_rows()
 }
 

@@ -153,10 +153,10 @@ MVPAModels$sda_boot <- list(type = "Classification",
                               library = "sda", 
                               label="sda_boot",
                               loop = NULL, 
-                              parameters=data.frame(parameters=c("reps", "frac"), 
-                                                    class=c("numeric", "numeric"), 
-                                                    label=c("number of bootstap resamples", "fraction of features to select")),
-                              grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
+                              parameters=data.frame(parameters=c("reps", "frac", "lambda_min", "lambda_max"), 
+                                                    class=c("numeric", "numeric", "numeric", "numeric"), 
+                                                    label=c("number of bootstap resamples", "fraction of features to select", "min lambda", "max lambda")),
+                              grid=function(x, y, len = NULL) data.frame(reps=10, frac=1, lambda_min=.01, lambda_max=.8),
                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {   
                                 
                                 x <- as.matrix(x)
@@ -165,10 +165,14 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 failures <- 0
                                 
                                 split_y <- split(seq_along(y), y)
+                                lambda <- seq(param$lambda_min, param$lambda_max, length.out=param$reps)
                                 
                                 if (!all(sapply(split_y, function(yy) length(yy > 0)))) {
                                   stop("every factor level in 'y' must have at least 1 instance, cannot run sda_boot")
                                 }
+                                
+                                assertthat::assert_that(param$frac > 0, msg="sda_boot: 'frac' parameter must be greater than 0")
+                                assertthat::assert_that(param$reps > 0, msg="sda_boot: 'reps' parameter must be greater than 0")
                                 
                                 while (count <= param$reps) {
                                   #message("fitting sda model ", count)
@@ -178,15 +182,12 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                   
                                   ret <- if (param$frac > 0 && param$frac < 1) {
                                     nkeep <- max(param$frac * ncol(x),1)
-                              
-                                    rank <- memo_rank(x, L=y, fdr=FALSE)
-                                    ind <- rank[,"idx"][1:nkeep]
-                                  
-                                    fit <- sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y, verbose=FALSE,...)
+                                    ind <- sample(1:ncol(x), nkeep)
+                                    fit <- sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y[row.idx], lambda=lambda[count], verbose=FALSE,...)
                                     attr(fit, "keep.ind") <- ind
                                     fit
                                   } else {
-                                    fit <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], verbose=FALSE, ...))
+                                    fit <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], lambda=lambda[count], verbose=FALSE, ...))
                                     attr(fit, "keep.ind") <- 1:ncol(x)
                                     fit
                                   }
@@ -305,7 +306,8 @@ MVPAModels$sparse_sda <- list(type = "Classification",
                                library = "sda", 
                                label="sparse_sda",
                                loop = NULL, 
-                               parameters=data.frame(parameters=c("frac", "lambda"), class=c("numeric", "numeric"), label=c("fraction of features to keep (frac > 0 a frac <= 1)", "lambda")),
+                               parameters=data.frame(parameters=c("frac", "lambda"), class=c("numeric", "numeric"), 
+                                                     label=c("fraction of features to keep (frac > 0 a frac <= 1)", "lambda")),
                                grid=function(x, y, len = NULL) expand.grid(frac=seq(.1,1,length.out=len), lambda=seq(.01,.99,length.out=len)),
                                fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
                                  print(param)
