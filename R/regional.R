@@ -52,26 +52,25 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
   ROINUM=NULL
   ###
   
-  allrois <- unique(region_mask[region_mask>0])
+  allrois <- sort(unique(region_mask[region_mask>0]))
   ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
-  region_vec <- as.vector(region_mask[which(model_spec$dataset$mask != 0)]) 
+  region_vec <- as.vector(region_mask)
   region_set <- sort(as.integer(unique(region_vec[region_vec > 0])))
   
   if (length(region_set) < 1) {
     stop("run_regional: invalid ROI mask, number of ROIs = 0")
   }
   
-  if (length(region_set) < length(allrois)) {
-    futile.logger::flog.warn("run_regional: not all ROIs had more than 1 voxel, using restricted set of %s ROIS", length(region_set))
-  }
   
-  vox_iter <- lapply(region_set, function(rnum) which(region_vec == rnum))
+  
+  vox_iter <- lapply(region_set, function(rnum) which(region_vec == rnum & mask > 0))
   lens <- sapply(vox_iter, length)
+  keep <- lens > 1
   
   if (any(lens < 2)) {
-    warning(paste("some ROIs have less than two voxels, removing them from list: ", paste(region_set[lens < 2], collapse=",")))
-    vox_iter <- vox_iter[lens >= 2]
-    region_set <- region_set[lens >= 2]
+    futile.logger::flog.warn(paste("some ROIs have less than two voxels, removing them from list: ", paste(region_set[lens < 2], collapse=",")))
+    vox_iter <- vox_iter[keep]
+    region_set <- region_set[keep]
   }
   
   flog.info("model is: %s", model_spec$model$label)
