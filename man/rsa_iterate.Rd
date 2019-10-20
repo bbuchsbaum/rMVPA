@@ -5,7 +5,7 @@
 \title{rsa_iterate}
 \usage{
 rsa_iterate(mod_spec, vox_list, ids = 1:length(vox_list),
-  regtype = c("rfit", "lm", "pearson", "spearman"),
+  permute = FALSE, regtype = c("rfit", "lm", "pearson", "spearman"),
   distmethod = c("spearman", "pearson"))
 }
 \arguments{
@@ -17,7 +17,7 @@ rsa_iterate(mod_spec, vox_list, ids = 1:length(vox_list),
 
 \item{regtype}{the analysis method, one of: \code{lm}, \code{rfit}, \code{pearson}, \code{spearman}}
 
-\item{distmethod}{the method used to computer distances between oservations, one of: \code{pearson}, \code{spearman}}
+\item{distmethod}{the method used to computer distances between observations, one of: \code{pearson}, \code{spearman}}
 }
 \description{
 Run RSA analysis for each of a list of voxels sets

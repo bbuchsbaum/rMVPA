@@ -129,11 +129,6 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @importFrom dplyr rowwise do bind_rows
 #' @importFrom tibble as_tibble
 internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
-  #if (nrow(coords(roi$train_roi)) == 1) {
-  #  browser()
-  #}
-  
-  
   ## generate cross-validation samples
   samples <- if (!permute) {
     crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi)), y_train(mspec))
@@ -323,5 +318,49 @@ rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FAL
     do_rsa(as_roi(sample), mod_spec, rnum, method=regtype, distmethod=distmethod)
   }) %>% dplyr::bind_rows()
 }
+
+
+#' @export
+train_model.manova_model <- function(obj, train_dat, indices, ...) {
+  dframe <- obj$design$data
+  dframe$response <- as.matrix(train_dat)
+  form <- as.formula(paste("response", paste(as.character(obj$design$formula), collapse='')))
+ 
+  fres=ffmanova(form, data=dframe)
+  pvals=fres$pValues
+  names(pvals) <- sanitize(names(pvals))   
+  lpvals <- -log(pvals)
+  lpvals
+}
+
+
+
+#' @importFrom neuroim2 indices values
+do_manova <- function(roi, mod_spec, rnum) {
+  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi))
+  ind <- indices(roi$train_roi)
+  ret <- train_model(mod_spec, xtrain, ind)
+  tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")
+}
+
+#' manova_iterate
+#' 
+#' Run Manova analysis for each of a list of voxels sets
+#' 
+#' @param mod_spec a class of type \code{mvpa_model}
+#' @param vox_list a \code{list} of voxel indices/coordinates
+#' @param ids a \code{vector} of ids for each voxel set
+#' @importFrom dplyr do rowwise
+#' @export
+manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FALSE) {
+  assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
+  sframe <- get_samples(mod_spec$dataset, vox_list)
+  
+  ## iterate over searchlights using parallel futures
+  ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
+    do_manova(as_roi(sample), mod_spec, rnum)
+  }) %>% dplyr::bind_rows()
+}
+
 
 

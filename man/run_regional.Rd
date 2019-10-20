@@ -4,7 +4,8 @@
 \alias{run_regional}
 \title{Region of interest based MVPA analysis}
 \usage{
-run_regional(model_spec, region_mask, return_fits = FALSE)
+run_regional(model_spec, region_mask, return_fits = FALSE,
+  compute_performance = TRUE)
 }
 \arguments{
 \item{model_spec}{a \code{mvpa_model} instance}
@@ -17,6 +18,8 @@ Every non-zero set of positive integers will be used to define a set of voxels f
 \value{
 a named list of \code{NeuroVol} objects, where each name indicates the performance metric and label 
         (e.g. Accuracy, AUC)
+
+a \code{list} of type \code{regional_mvpa_result}
 }
 \description{
 Run a separate MVPA analysis for multiple disjoint regions of interest.

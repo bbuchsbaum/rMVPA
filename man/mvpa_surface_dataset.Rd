@@ -4,7 +4,8 @@
 \alias{mvpa_surface_dataset}
 \title{mvpa_surface_dataset}
 \usage{
-mvpa_surface_dataset(train_data, test_data = NULL, mask = NULL, name = "")
+mvpa_surface_dataset(train_data, test_data = NULL, mask = NULL,
+  name = "")
 }
 \arguments{
 \item{train_data}{the training data, must inherit from \code{NeuroSurfaceVector} in \code{neurosurf} package.}

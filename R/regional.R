@@ -31,6 +31,60 @@ combine_regional_results = function(results, ids) {
 
 
 
+#' @import dplyr
+combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), collapse_regions=FALSE) {
+  assert_that(length(predtabs) == length(wts))
+  assert_that(sum(wts) > 0)
+  assert_that(all(purrr::map_lgl(predtabs, is.data.frame)))
+  
+  wts <- wts/sum(wts)
+  
+  if (is.character(predtabs[[1]]$observed) || is.factor(predtabs[[1]]$observed)) {
+    ptab <- map(1:length(predtabs), function(i) predtabs[[i]] %>% mutate(.tableid=i, .weight=wts[i])) %>% map_df(bind_rows) %>% as_tibble()
+    
+    probs <- if (collapse_regions) {
+      ptab %>% dplyr::group_by(id,observed) %>% summarise_at(vars(starts_with("prob_")), funs(weighted.mean(., w=.weight)))
+    } else {
+      ptab %>% dplyr::group_by(id,observed, ROINUM) %>% summarise_at(vars(starts_with("prob_")), funs(weighted.mean(., w=.weight)))
+    }
+    
+    p <- probs %>% ungroup() %>% dplyr::select(dplyr::starts_with("prob_"))
+    pmat <- as.matrix(p)
+      
+    pobserved <- pmat[cbind(seq(1,nrow(probs)),as.integer(probs$observed))]
+    mc <- max.col(pmat)
+    preds <- levels(probs$observed)[mc]
+      
+    prediction_table <- tibble(
+      id=probs$id,
+      ROINUM=if (collapse_regions) 1 else probs$ROINUM,
+      observed=probs$observed,
+      pobserved=pobserved,
+      predicted=preds,
+      correct = predicted == probs$observed,
+    ) %>% bind_cols(p)
+  } else if (is.numeric(predtabs[[1]]$observed)) {
+    stop("combining continuous predictions not implemented")
+  }
+}
+
+merge_results.regional_mvpa_result <- function(x, ...) {
+  rlist <- list(x,...)
+  combine_prediction_tables(rlist)
+}
+
+regional_mvpa_result <- function(model_spec, performance_table, prediction_table, vol_results, fits=fits) {
+  ret <- list(model_spec=model_spec, 
+              performance_table=performance_table,
+              prediction_table=prediction_table,
+              vol_results=vol_results,
+              fits=fits)
+  
+  class(ret) <- c("regional_mvpa_result", "list")
+  ret
+  
+}
+
 #' Region of interest based MVPA analysis
 #' 
 #' Run a separate MVPA analysis for multiple disjoint regions of interest.
@@ -46,8 +100,9 @@ combine_regional_results = function(results, ids) {
 #' @import foreach
 #' @import doParallel
 #' @import parallel
+#' @return a \code{list} of type \code{regional_mvpa_result} 
 #' @export
-run_regional <- function(model_spec, region_mask, return_fits=FALSE) {  
+run_regional <- function(model_spec, region_mask, return_fits=FALSE, compute_performance=TRUE) {  
   ## to get rid of package check warnings
   ROINUM=NULL
   ###
@@ -61,9 +116,7 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
     stop("run_regional: invalid ROI mask, number of ROIs = 0")
   }
   
-  
-  
-  vox_iter <- lapply(region_set, function(rnum) which(region_vec == rnum & mask > 0))
+  vox_iter <- lapply(region_set, function(rnum) which(region_vec == rnum & mspec$dataset$mask > 0))
   lens <- sapply(vox_iter, length)
   keep <- lens > 1
   
@@ -80,15 +133,19 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
                           compute_performance=TRUE, 
                           return_fits = return_fits)
   
-
-  ## compile performance results
-  perf_mat <- do.call(rbind, results$performance)
+  perf <- if (compute_performance) {
+    ## compile performance results
+    perf_mat <- do.call(rbind, results$performance)
  
-  ## generate volumetric results
-  vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask, cbind(as.integer(results$id), perf_mat[,i])))
-  names(vols) <- colnames(perf_mat)
+    ## generate volumetric results
+    vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask, cbind(as.integer(results$id), perf_mat[,i])))
+    names(vols) <- colnames(perf_mat)
   
-  perf_mat <- tibble::as_tibble(perf_mat) %>% dplyr::mutate(ROINUM = unlist(results$id)) %>% dplyr::select(ROINUM, dplyr::everything())
+    perfmat <- tibble::as_tibble(perf_mat) %>% dplyr::mutate(ROINUM = unlist(results$id)) %>% dplyr::select(ROINUM, dplyr::everything())
+    list(vols=vols, perf_mat=perfmat)
+  } else {
+    list(vols=list(), perf_mat=tibble())
+  }
   
   ## compile full prediction table
   prediction_table <- combine_regional_results(results, results$id)
@@ -97,5 +154,5 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE) {
     lapply(results$result, "[[", "predictor")
   }
   
-  list(performance_table=perf_mat, prediction_table=prediction_table, vol_results=vols, fits=fits)
+  regional_mvpa_result(model_spec=model_spec, performance_table=perf$perf_mat, prediction_table=prediction_table, vol_results=perf$vols, fits=fits)
 }

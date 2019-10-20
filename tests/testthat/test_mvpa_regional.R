@@ -37,6 +37,31 @@ test_that("mvpa_regional with 5 ROIS runs without error and can access fitted mo
   
 })
 
+test_that("merge two regional results", {
+  
+  dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="image", 
+                             response_type="categorical")
+  cval <- twofold_blocked_cross_validation(dset$design$block_var)
+  
+  region_mask <- NeuroVol(sample(1:2, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
+  rmask1 <- region_mask
+  rmask1[rmask1 == 1] <- 1
+  rmask1[rmask1 == 2] <- 0
+  
+  rmask2 <- region_mask
+  rmask2[rmask2 == 1] <- 0
+  rmask2[rmask2 == 2] <- 2
+  
+  
+  model <- load_model("sda_notune")
+  mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
+  res1 <- run_regional(mspec, region_mask=rmask1, return_fits=TRUE)
+  res2 <- run_regional(mspec, region_mask=rmask2, return_fits=TRUE)
+  fit1 <- res$fits[[1]]
+  
+  
+})
+
 test_that("surface_based mvpa_regional with 5 ROIS runs without error", {
   
   dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="surface", response_type="categorical")

@@ -192,16 +192,7 @@ binary_perf <- function(observed, predicted, probs) {
 multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   
   obs <- as.character(observed)
-  
-  #ncorrect <- sum(obs == predicted)
   ntotal <- length(obs)
-  #maxClass <- max(table(obs))
-  
-  #out <- binom.test(ncorrect,
-  #                  ntotal,
-  #                  p = maxClass/ntotal,
-  #                  alternative = "greater")
-  
  
   aucres <- sapply(1:ncol(probs), function(i) {
     lev <- try(levels(observed)[i])
@@ -215,10 +206,8 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   
   
   if (class_metrics) {
-    #c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres), aucres)
     c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres, na.rm=TRUE), aucres)
   } else {
-    #c(ZAccuracy=-qnorm(out$p.value), Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres))
     c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres, na.rm=TRUE))
   }
 }
