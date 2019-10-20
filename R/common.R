@@ -243,6 +243,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
 #' @noRd
 #' @keywords internal
 #' @importFrom purrr map_dbl map
+#' @importFrom neuroim2 SparseNeuroVec
 normalize_image_samples <- function(bvec, mask) {
   vlist <- bvec %>% vols() %>% furrr::future_map(function(v) {
     scale(v[which(mask>0)])[,1]
