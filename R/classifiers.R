@@ -26,7 +26,7 @@ MVPAModels <- new.env()
 
 
 
-#' @import MASS
+#' @importFrom MASS huber
 #' @importFrom stats median
 #' @noRd
 corsimFit <- function(x, y, method, robust) {

@@ -70,7 +70,7 @@ tune_model <- function(mspec, x, y, wts, param, nreps=10) {
   cfit$bestTune
 }
 
-
+#' @method fit_model mvpa_model
 fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
   fit <- obj$model$fit(x,y,wts=wts,param=param,lev=levels(y), classProbs=classProbs, ...)
   fit$obsLevels <- levels(y)
@@ -82,8 +82,8 @@ fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
   fit
 }
 
-
-#' @method predict class_model_fit
+#' predict class membership given new data
+#' 
 #' @param sub_indices the subset of row indices to compute predictions on
 #' @export
 predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
@@ -111,11 +111,10 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   class(ret) <- c("classification_prediction", "prediction", "list")
   ret
 }
-
-
+#' predict values given new data
+#' 
 #' @param sub_indices a vector of indices used to subset rows of `newdata` 
 #' @export
-#' @method predict regression_model_fit
 predict.regression_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   
   mat <- if (inherits(newdata, "NeuroVec") || inherits(newdata, "NeuroSurfaceVector")) {

@@ -7,6 +7,14 @@ wrap_out <- function(perf_mat, dataset, ids=NULL) {
 }
 
 #' @keywords internal
+combine_standard <- function(model_spec, good_results, bad_results) {
+  ind <- unlist(good_results$id)
+  perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
+  wrap_out(perf_mat, model_spec$dataset, ind)
+}
+
+
+#' @keywords internal
 combine_randomized <- function(model_spec, good_results, bad_results) {
   
   all_ind <- sort(unlist(good_results$indices))
@@ -125,12 +133,6 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
   combiner(model_spec, good_results)
 }
 
-#' @keywords performance
-combine_standard <- function(model_spec, good_results, bad_results) {
-  ind <- unlist(good_results$id)
-  perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
-  wrap_out(perf_mat, model_spec$dataset, ind)
-}
 
 
 #' @keywords internal
@@ -256,6 +258,38 @@ run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized
   } else if (method == "randomized") {
     flog.info("running randomized RSA searchlight with %s radius and %s iterations", radius, niter)
     do_randomized(model_spec, radius, niter, mvpa_fun=rsa_iterate, combiner=combine_randomized, permute=permute, regtype,distmethod)
+  } 
+  
+}
+
+#' @import itertools 
+#' @import foreach
+#' @import doParallel
+#' @import parallel
+#' @importFrom futile.logger flog.info flog.error flog.debug
+#' @import ffmanova
+#' @export
+run_searchlight.manova_model <- function(model_spec, radius=8, 
+                                         method=c("randomized", "standard"),  niter=4, 
+                                         permute=FALSE,...) {
+  
+  
+  if (radius < 1 || radius > 100) {
+    stop(paste("radius", radius, "outside allowable range (1-100)"))
+  }
+  
+  method <- match.arg(method)
+  
+  if (method == "randomized") {
+    assert_that(niter >= 1)
+  }
+  
+  res <- if (method == "standard") {
+    flog.info("running standard Manova searchlight with %s radius ", radius)
+    do_standard(model_spec, radius, mvpa_fun=manova_iterate, combiner=combine_standard, permute=permute)    
+  } else if (method == "randomized") {
+    flog.info("running randomized Manova searchlight with %s radius and %s iterations", radius, niter)
+    do_randomized(model_spec, radius, niter, mvpa_fun=manova_iterate, combiner=combine_randomized, permute=permute)
   } 
   
 }
