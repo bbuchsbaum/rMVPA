@@ -41,6 +41,7 @@ Collate:
     'dataset.R'
     'design.R'
     'feature_selection.R'
+    'manova_model.R'
     'mvpa_iterate.R'
     'mvpa_model.R'
     'model_fit.R'
