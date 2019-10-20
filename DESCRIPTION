@@ -64,7 +64,8 @@ Suggests:
     e1071,
     randomForest,
     iterators,
-    optparse
+    optparse,
+    ffmanova
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf
