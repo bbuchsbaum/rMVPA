@@ -37,7 +37,7 @@ test_that("mvpa_regional with 5 ROIS runs without error and can access fitted mo
   
 })
 
-test_that("merge two regional results", {
+test_that("can combine two prediction tables from two regional analyses", {
   
   dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="image", 
                              response_type="categorical")
@@ -57,9 +57,10 @@ test_that("merge two regional results", {
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
   res1 <- run_regional(mspec, region_mask=rmask1, return_fits=TRUE)
   res2 <- run_regional(mspec, region_mask=rmask2, return_fits=TRUE)
-  fit1 <- res$fits[[1]]
-  
-  
+  ptab <- combine_prediction_tables(list(res1$prediction_table, res2$prediction_table))
+  ptab2 <- combine_prediction_tables(list(res1$prediction_table, res2$prediction_table), collapse_regions=FALSE)
+  expect_true(nrow(ptab) == nrow(res1$prediction_table))
+  expect_true(nrow(ptab2) == nrow(res1$prediction_table))
 })
 
 test_that("surface_based mvpa_regional with 5 ROIS runs without error", {
