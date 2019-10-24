@@ -202,7 +202,10 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @param verbose print progress messages
 #' @importFrom dplyr bind_rows
 #' @export
-mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), compute_performance=TRUE, return_fits=FALSE, permute=FALSE, verbose=TRUE) {
+mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), 
+                         compute_performance=TRUE, 
+                         return_fits=FALSE, 
+                         permute=FALSE, verbose=TRUE) {
 
   assert_that(length(ids) == length(vox_list), 
               msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))

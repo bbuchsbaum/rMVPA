@@ -163,10 +163,13 @@ test_that("mvpa_regional with 5 ROIS runs and external test set", {
   
   model <- load_model("rf")
   dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3, ntest_obs=200, external_test=TRUE)
+  dataset$design$test_design$auxvar = rnorm(nrow(dataset$design$test_design))
+  
   cval <- blocked_cross_validation(dataset$design$block_var)
   
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
-  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, 
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, 
+                      model_type="classification", crossval=cval, 
                       tune_grid=data.frame(mtry=c(2,4,6)))
   
   expect_true(has_test_set(dataset$design))

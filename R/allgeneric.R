@@ -62,6 +62,15 @@ y_test <- function(obj) {
   UseMethod("y_test")
 }
 
+#' test_design
+#' 
+#' return design table associated with test set
+#' @param obj the object to extract test design from
+#' @export
+test_design <- function(obs) {
+  UseMethod("test_design")
+}
+
 #' fit_model
 #' 
 #' fit a classification or regression model

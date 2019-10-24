@@ -298,7 +298,7 @@ mvpa_regional <- function(dataset, model, region_mask, crossval=kfold_cross_vali
       
       result <- model$run(dataset, roi, crossval, featureSelector)
       
-      attr(result, "ROINUM") <- roinum
+      attr(result, "roinum") <- roinum
       attr(result, "vox") <- idx
       
       
@@ -311,7 +311,7 @@ mvpa_regional <- function(dataset, model, region_mask, crossval=kfold_cross_vali
         
       }
       
-      perf <- c(ROINUM=roinum, perf)     
+      perf <- c(roinum=roinum, perf)     
       perf <- structure(perf, result=result)
       perf    
     }

@@ -31,6 +31,14 @@ y_train.mvpa_design <- function(obj) obj$y_train
 #' @export
 y_test.mvpa_design <- function(obj) if (is.null(obj$y_test)) obj$y_train else obj$y_test
 
+
+#' @export
+test_design.mvpa_design <- function(obj) {
+  if (is.null(obj$y_test)) obj$train_design else obj$test_design
+}
+
+
+
 #' @keywords internal
 parse_variable <- function(var, design) {
   ret <- if (purrr::is_formula(var)) {
@@ -143,6 +151,12 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
     block_var <- parse_variable(block_var, train_design)
   }
  
+  test_design <- if (!is.null(test_design)) {
+    tibble::as_tibble(test_design) %>% mutate(.rownum=1:n()) 
+  }
+  
+  train_design <- tibble::as_tibble(train_design) %>% mutate(.rownum=1:n())
+  
   des <- list(
     train_design=tibble::as_tibble(train_design),
     y_train=y_train,

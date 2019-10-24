@@ -133,7 +133,7 @@ mvpa_regional_consensus <- function(dataset, model, regionMask, autobalance=FALS
       ## train on sub indices
       result <- model$run(dataset, vox, crossVal, featureSelector, subIndices=fold$trainIndex)
 
-      attr(result, "ROINUM") <- roinum
+      attr(result, "roinum") <- roinum
       attr(result, "vox") <- vox
       result
 
