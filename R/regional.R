@@ -117,7 +117,7 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE, compute_per
     stop("run_regional: invalid ROI mask, number of ROIs = 0")
   }
   
-  vox_iter <- lapply(region_set, function(rnum) which(region_vec == rnum & mspec$dataset$mask > 0))
+  vox_iter <- lapply(region_set, function(rnum) which(region_vec == rnum & model_spec$dataset$mask > 0))
   lens <- sapply(vox_iter, length)
   keep <- lens > 1
   
