@@ -40,12 +40,15 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
   wts <- wts/sum(wts)
   
   if (is.character(predtabs[[1]]$observed) || is.factor(predtabs[[1]]$observed)) {
-    ptab <- map(1:length(predtabs), function(i) predtabs[[i]] %>% mutate(.tableid=i, .weight=wts[i])) %>% map_df(bind_rows) %>% as_tibble()
+    ptab <- map(1:length(predtabs), function(i) predtabs[[i]] %>% mutate(.tableid=i, .weight=wts[i])) %>% 
+      map_df(bind_rows) %>% as_tibble()
     
     probs <- if (collapse_regions) {
-      ptab %>% dplyr::group_by(id,observed) %>% summarise_at(vars(starts_with("prob_")), funs(weighted.mean(., w=.weight)))
+      ptab %>% dplyr::group_by(.rownum,observed) %>% summarise_at(vars(starts_with("prob_")), 
+                                                             funs(weighted.mean(., w=.weight)))
     } else {
-      ptab %>% dplyr::group_by(id,observed,roinum) %>% summarise_at(vars(starts_with("prob_")), funs(weighted.mean(., w=.weight)))
+      ptab %>% dplyr::group_by(.rownum,observed,roinum) %>% summarise_at(vars(starts_with("prob_")), 
+                                                                    funs(weighted.mean(., w=.weight)))
     }
     
     p <- probs %>% ungroup() %>% dplyr::select(dplyr::starts_with("prob_"))
@@ -57,7 +60,7 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
       
     prediction_table <- tibble(
       .rownum=probs$.rownum,
-      roinum=if (collapse_regions) 1 else probs$ROINUM,
+      roinum=if (collapse_regions) 1 else probs$roinum,
       observed=probs$observed,
       pobserved=pobserved,
       predicted=preds,
@@ -133,7 +136,7 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE, compute_per
   results <- mvpa_iterate(model_spec, vox_iter, ids=region_set,
                           compute_performance=TRUE, 
                           return_fits = return_fits)
-  
+
   perf <- if (compute_performance) {
     ## compile performance results
     perf_mat <- do.call(rbind, results$performance)
@@ -148,8 +151,10 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE, compute_per
     list(vols=list(), perf_mat=tibble())
   }
   
+  
   ## compile full prediction table
   prediction_table <- combine_regional_results(results) 
+  
   if (coalesce_design_vars) {
     prediction_table <- coalesce_join(prediction_table, test_design(mspec$design), 
                                       by=".rownum")

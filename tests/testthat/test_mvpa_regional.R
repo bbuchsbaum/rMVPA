@@ -33,7 +33,7 @@ test_that("mvpa_regional with 5 ROIS runs without error and can access fitted mo
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec, region_mask, return_fits=TRUE)
   fit1 <- res$fits[[1]]
-  
+  expect_true(class(fit1)[1] == "weighted_model")
   
 })
 
@@ -57,6 +57,7 @@ test_that("can combine two prediction tables from two regional analyses", {
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
   res1 <- run_regional(mspec, region_mask=rmask1, return_fits=TRUE)
   res2 <- run_regional(mspec, region_mask=rmask2, return_fits=TRUE)
+  
   ptab <- combine_prediction_tables(list(res1$prediction_table, res2$prediction_table))
   ptab2 <- combine_prediction_tables(list(res1$prediction_table, res2$prediction_table), collapse_regions=FALSE)
   expect_true(nrow(ptab) == nrow(res1$prediction_table))
@@ -162,7 +163,7 @@ test_that("mvpa_regional with 5 ROIS and corclass and k-fold cross-validation wi
 test_that("mvpa_regional with 5 ROIS runs and external test set", {
   
   model <- load_model("rf")
-  dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3, ntest_obs=200, external_test=TRUE)
+  dataset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, ntest_obs=200, external_test=TRUE)
   dataset$design$test_design$auxvar = rnorm(nrow(dataset$design$test_design))
   
   cval <- blocked_cross_validation(dataset$design$block_var)
@@ -173,9 +174,11 @@ test_that("mvpa_regional with 5 ROIS runs and external test set", {
                       tune_grid=data.frame(mtry=c(2,4,6)))
   
   expect_true(has_test_set(dataset$design))
-  res <- run_regional(mspec, regionMask)
+  res <- run_regional(mspec, regionMask, coalesce_design_vars = TRUE)
   expect_true(!is.null(res))
 })
+
+
 
 # test_that("mvpa_regional with 5 ROIS and consensus learning runs without error", {
 #   
