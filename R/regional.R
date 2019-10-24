@@ -156,7 +156,7 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE, compute_per
   prediction_table <- combine_regional_results(results) 
   
   if (coalesce_design_vars) {
-    prediction_table <- coalesce_join(prediction_table, test_design(mspec$design), 
+    prediction_table <- coalesce_join(prediction_table, test_design(model_spec$design), 
                                       by=".rownum")
   }
   
