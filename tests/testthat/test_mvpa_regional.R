@@ -82,7 +82,7 @@ test_that("surface_based mvpa_regional with 5 ROIS runs without error", {
 
 test_that("mvpa_regional with 5 ROIS with sda_boot runs without error", {
   
-  dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3,response_type="categorical")
+  dataset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3,response_type="categorical")
   cval <- blocked_cross_validation(dataset$design$block_var)
   
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), neuroim2::space(dataset$dataset$mask))
@@ -92,20 +92,20 @@ test_that("mvpa_regional with 5 ROIS with sda_boot runs without error", {
   expect_true(!is.null(res))
 })
 
-# 
-# test_that("mvpa_regional with 5 ROIS with sda_boot and custom_performance runs without error", {
-#   
-#   dataset <- gen_dataset(c(10,10,2), 100, 3)
-#   crossVal <- blocked_cross_validation(dataset$blockVar)
-#   
-#   regionMask <- NeuroVol(sample(1:5, size=length(dataset$mask), replace=TRUE), space(dataset$mask))
-#   model <- load_model("sda_boot", list(custom_performance = function(x) {
-#     print(names(x$prob))
-#     #print(x$testDesign[[]])
-#   }))
-#   res <- mvpa_regional(dataset, model, regionMask, crossVal)
-#   
-# })
+ 
+test_that("mvpa_regional with 5 ROIS with sda_boot and custom_performance runs without error", {
+
+  dataset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3,response_type="categorical")
+  cval <- blocked_cross_validation(dataset$design$block_var)
+  regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), neuroim2::space(dataset$dataset$mask))
+  model <- load_model("sda_boot")
+  
+  p <- function(x) { return(list(x=1)) }
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, performance=p)
+  res <- run_regional(mspec, regionMask)
+  expect_true(!is.null(res))
+  expect_true(names(res$vol_results) == "x")
+})
 
 test_that("mvpa_regional with 5 ROIS runs and sda without error", {
   tuneGrid <- expand.grid(lambda=c(.01), diagonal=c(TRUE, FALSE))

@@ -139,6 +139,7 @@ mvpa_model <- function(model,
     stop("performance method not found")
   }
   
+
   model_type <- match.arg(model_type)
   
   if (is.null(crossval) && !is.null(design$block_var)) {

@@ -124,6 +124,11 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE, compute_per
   lens <- sapply(vox_iter, length)
   keep <- lens > 1
   
+  if (all(!keep)) {
+    futile.logger::flog.error("run_regional: no ROIs have more than one voxel.")
+    stop()
+  }
+  
   if (any(lens < 2)) {
     futile.logger::flog.warn(paste("some ROIs have less than two voxels, removing them from list: ", paste(region_set[lens < 2], collapse=",")))
     vox_iter <- vox_iter[keep]
