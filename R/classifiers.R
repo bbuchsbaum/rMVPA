@@ -236,6 +236,103 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 Reduce("+", prob)/length(prob)
                                 
                               })
+MVPAModels$lda_thomaz_boot <- list(type = "Classification", 
+                            library = "sparsediscrim", 
+                            label="lda_thomaz_boot",
+                            loop = NULL, 
+                            parameters=data.frame(parameters=c("reps", "frac"), 
+                                                  class=c("numeric", "numeric"), 
+                                                  label=c("number of bootstap resamples", "fraction of features to select")),
+                            grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
+                            fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {   
+                              
+                              x <- as.matrix(x)
+                              mfits <- list()
+                              count <- 1
+                              failures <- 0
+                              
+                              split_y <- split(seq_along(y), y)
+                              
+                              if (!all(sapply(split_y, function(yy) length(yy > 0)))) {
+                                stop("every factor level in 'y' must have at least 1 instance, cannot run lda_thomaz_boot")
+                              }
+                              
+                              assertthat::assert_that(param$frac > 0, msg="lda_thomaz_boot: 'frac' parameter must be greater than 0")
+                              
+                              while (count <= param$reps) {
+                                #message("fitting sda model ", count)
+                                
+                                ysam <- lapply(split_y, function(idx) if (length(idx) == 1) idx else sample(idx, length(idx), replace=TRUE))
+                                row.idx <- sort(unlist(ysam))
+                                
+                                ret <- if (param$frac > 0 && param$frac < 1) {
+                                  nkeep <- max(param$frac * ncol(x),1)
+                                  ind <- sample(1:ncol(x), nkeep)
+                                  fit <- sparsediscrim::lda_thomaz(Xtrain=x[row.idx,ind,drop=FALSE], L=y[row.idx])
+                                  attr(fit, "keep.ind") <- ind
+                                  fit
+                                } else {
+                                  fit <- try(sparsediscrim::lda_thomaz(Xtrain=x[row.idx,ind,drop=FALSE], L=y[row.idx]))
+                                  attr(fit, "keep.ind") <- 1:ncol(x)
+                                  fit
+                                }
+                                
+                                if (!inherits(ret, "try-error")) {
+                                  mfits[[count]] <- ret
+                                  count <- count + 1
+                                } else {
+                                  message("lda_thomaz model fit error, retry attempt: ", failures + 1)
+                                  failures <- failures + 1
+                                  if (failures > 10) {
+                                    return(ret)
+                                  }
+                                }
+                              }
+                              
+                              
+                              ret <- list(fits=mfits)
+                              class(ret) <- "sda_boot"
+                              ret
+                              
+                            },
+                            predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                              
+                              
+                              
+                              preds <- lapply(modelFit$fits, function(fit) {
+                                ind <- attr(fit, "keep.ind")
+                                
+                                scores <- -t(sparsediscrim:::predict.lda_thomaz(fit, newdata[,ind])$scores)
+                                mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
+                                probs <- exp(scores - mc)
+                                zapsmall(probs/rowSums(probs))
+                              })
+                              
+                              prob <- preds[!sapply(preds, function(x) is.null(x))]
+                              pfinal <- Reduce("+", prob)/length(prob)
+                              
+                              colnames(pfinal)[apply(pfinal, 1, which.max)]
+                              
+                            },
+                            
+                            
+                            prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+                              preds <- lapply(modelFit$fits, function(fit) {
+                                ind <- attr(fit, "keep.ind")
+                                
+                                scores <- -t(sparsediscrim:::predict.lda_thomaz(fit, newdata[,ind])$scores)
+                                mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
+                                probs <- exp(scores - mc)
+                                zapsmall(probs/rowSums(probs))
+                              })
+                              
+                              prob <- preds[!sapply(preds, function(x) is.null(x))]
+                              pfinal <- Reduce("+", prob)/length(prob)
+                              
+                              colnames(pfinal)[apply(pfinal, 1, which.max)]
+                            
+                              
+                            })
 
 
 #' @importFrom memoise memoise
