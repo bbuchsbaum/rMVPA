@@ -328,8 +328,6 @@ MVPAModels$lda_thomaz_boot <- list(type = "Classification",
                               
                               prob <- preds[!sapply(preds, function(x) is.null(x))]
                               pfinal <- Reduce("+", prob)/length(prob)
-                              
-                              colnames(pfinal)[apply(pfinal, 1, which.max)]
                             
                               
                             })
