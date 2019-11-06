@@ -291,12 +291,11 @@ MVPAModels$lda_thomaz_boot <- list(type = "Classification",
                               
                               
                               ret <- list(fits=mfits)
-                              class(ret) <- "sda_boot"
+                              class(ret) <- "lda_thomaz_boot"
                               ret
                               
                             },
                             predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                              
                               
                               
                               preds <- lapply(modelFit$fits, function(fit) {
