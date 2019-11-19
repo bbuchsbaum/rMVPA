@@ -259,6 +259,7 @@ normalize_image_samples <- function(bvec, mask) {
 #' @importFrom purrr map_dbl map
 #' @importFrom neuroim2 vectors
 standardize_vars <- function(bvec, mask, blockvar) {
+  assertthat::assert_that(length(blockvar) == dim(bvec)[4])
   vlist <- bvec %>% vectors(subset=which(mask>0)) %>% furrr::future_map(function(v) {
     if (all(v == 0)) v else {
       unlist(map(split(v, blockvar), scale))
