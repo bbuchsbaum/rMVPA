@@ -84,12 +84,23 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   
   merged_results <- pool_results(good_results)
   pobserved <- merged_results %>% purrr::map( ~ prob_observed(.)) %>% bind_cols()
-  pobserved <- SparseNeuroVec(as.matrix(pobserved), space(model_spec$dataset$mask), mask=as.logical(model_spec$dataset$mask))
+  ind_set <- sort(unique(unlist(good_results$indices)))
+
+  all_ids <- which(model_spec$dataset$mask > 0)
+  ## if we did not get a result for all voxel ids returned results...
+  mask <- if (length(ind_set) != length(all_ids)) {
+    mask <- model_spec$dataset$mask
+    keep <- all_ids %in% ind_set
+    mask[all_ids[!keep]] <- 0
+    mask
+  } else {
+    model_spec$dataset$mask
+  }
+  
+  
+  pobserved <- SparseNeuroVec(as.matrix(pobserved), neuroim2::space(mask), mask=as.logical(mask))
   
   perf_list <- furrr::future_map(merged_results, function(res) compute_performance(model_spec, res))
-  
-  ind_set <- unique(sort(unlist(good_results$indices)))
-  #ind_set <- unique(all_ind)
   
   ncols <- length(perf_list[[1]])
   pmat <- do.call(rbind, perf_list)
