@@ -59,7 +59,7 @@ res <- run_regional(mspec,region_mask)
 
 ```
 
-`run_regional` produces seeveral output values, including `performance_table`, which includes cross-validated performance metrics for each ROI:
+`run_regional` produces several output values, including `performance_table`, which includes cross-validated performance metrics for each ROI:
 
 ```{r}
 print(res$performance_table)
