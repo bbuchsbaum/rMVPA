@@ -268,7 +268,7 @@ MVPAModels$lda_thomaz_boot <- list(type = "Classification",
                                 ret <- if (param$frac > 0 && param$frac < 1) {
                                   nkeep <- max(param$frac * ncol(x),1)
                                   ind <- sample(1:ncol(x), nkeep)
-                                  fit <- sparsediscrim::lda_thomaz(x=x[row.idx,ind,drop=FALSE], y[row.idx])
+                                  fit <- try(sparsediscrim::lda_thomaz(x=x[row.idx,ind,drop=FALSE], y[row.idx]))
                                   attr(fit, "keep.ind") <- ind
                                   fit
                                 } else {
