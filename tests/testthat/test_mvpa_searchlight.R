@@ -81,6 +81,7 @@ test_that("standard mvpa_searchlight runs without error", {
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
   res <- run_searchlight(mspec,radius=8, method="standard")
+  expect_true(!is.null(res))
   
 })
 
@@ -92,6 +93,7 @@ test_that("standard mvpa_searchlight with boot_lda_thomaz runs without error", {
   grid <- data.frame(nreps=2, frac=.5)
   mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval, tune_grid=grid)
   res <- run_searchlight(mspec,radius=8, method="standard")
+  expect_true(!is.null(res))
   
 })
 
@@ -106,6 +108,7 @@ test_that("standard mvpa_searchlight and custom cross-validation runs without er
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
   res <- run_searchlight(mspec,radius=4, method="standard")
+  expect_true(!is.null(res))
   
 })
 
@@ -116,6 +119,7 @@ test_that("standard surface-based mvpa_searchlight runs without error", {
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design,model_type="classification", crossval=cval)
   res <- run_searchlight(mspec, radius=8, method="standard")
+  expect_true(!is.null(res))
   
 })
 
@@ -126,6 +130,7 @@ test_that("randomized surface-based mvpa_searchlight runs without error", {
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design,model_type="classification", crossval=cval)
   res <- run_searchlight(mspec, radius=8, method="randomized", niter=4)
+  expect_true(!is.null(res))
   
   
 })
@@ -137,6 +142,7 @@ test_that("randomized mvpa_searchlight runs without error", {
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
   res <- run_searchlight(mspec,radius=5, method="randomized", niter=4)
+  expect_true(!is.null(res))
 
 
 })
@@ -148,6 +154,7 @@ test_that("mvpa_searchlight with sda_boot", {
   model <- load_model("sda_boot")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
   res <- run_searchlight(mspec,radius=6, method="standard", niter=4)
+  expect_true(!is.null(res))
   
   
 })
@@ -179,6 +186,7 @@ test_that("mvpa_searchlight with sda_boot", {
    model <- load_model("sda_notune")
    mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, performance=custom)
    res <- run_searchlight(mspec,radius=3, method="randomized")
+   expect_true(!is.null(res))
    
 
 })
@@ -191,6 +199,7 @@ test_that("standard mvpa_searchlight and tune_grid runs without error", {
   model <- load_model("sda")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, tune_grid=tuneGrid)
   res <- run_searchlight(mspec, radius=3, method="standard")
+  expect_true(!is.null(res))
   
 })
 
@@ -203,6 +212,7 @@ test_that("standard mvpa_searchlight and tune_grid with two-fold cross-validatio
   model <- load_model("sda")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, tune_grid=tuneGrid)
   res <- run_searchlight(mspec, radius=3, method="standard")
+  expect_true(!is.null(res))
   
 })
 
@@ -215,6 +225,7 @@ test_that("randomized mvpa_searchlight and tune_grid runs without error", {
   model <- load_model("sda")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, tune_grid=tuneGrid)
   res <- run_searchlight(mspec, radius=3, method="randomized")
+  expect_true(!is.null(res))
   
 })
 
@@ -226,7 +237,7 @@ test_that("randomized mvpa_searchlight works with regression", {
   model <- load_model("spls")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tuneGrid)
   res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
-  
+  expect_true(!is.null(res))
 })
 
 test_that("randomized mvpa_searchlight works with xgboost", {
@@ -237,6 +248,7 @@ test_that("randomized mvpa_searchlight works with xgboost", {
   model <- load_model("xgbTree")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, crossval=cval, tune_grid=tuneGrid)
   res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
+  expect_true(!is.null(res))
   
 })
 
@@ -249,7 +261,7 @@ test_that("mvpa_searchlight works with testset", {
   model <- load_model("sda")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
   res <- run_searchlight( mspec, radius=6, method="randomized")
-  
+  expect_true(!is.null(res))
 })
 
 
@@ -263,6 +275,7 @@ test_that("mvpa_searchlight works with split_var", {
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", 
                       crossval=crossVal, class_metrics=FALSE)
   res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
+  expect_true(!is.null(res))
  
 })
 
@@ -289,6 +302,7 @@ test_that("mvpa_searchlight on real data set", {
   mdes <- mvpa_design(des, y_train = ~ BlockType, block_var=~ Run)
   mod <- mvpa_model(load_model("sda_notune"), dset,mdes,crossval=blocked_cross_validation(des$Run))
   res <- run_searchlight(mod, radius=16, niter=2,method="randomized")
+  expect_true(!is.null(res))
   
 })
 
@@ -313,7 +327,8 @@ test_that("mvpa_searchlight on real data set", {
   dset <- mvpa_dataset(tvec, mask=mask)  
   mdes <- mvpa_design(des, y_train = ~ BlockType, block_var=~ Run)
   mod <- mvpa_model(load_model("sda_notune"), dset,mdes,crossval=blocked_cross_validation(des$Run))
-  res <- run_searchlight(mod, radius=16, niter=2,method="randomized")
+  res <- run_searchlight(mod, radius=16, niter=3,method="randomized")
+  expect_true(!is.null(res))
   
 })
 
@@ -369,9 +384,13 @@ test_that("mvpa_searchlight on real data set with testset", {
   
   dset <- mvpa_dataset(tvec1, tvec2, mask=mask)  
   mdes <- mvpa_design(train_design=des1, y_train = ~ BlockType, test_design=des3, y_test = ~ Cue, block_var=~ Run, split_by = ~ combo)
-  mod <- mvpa_model(load_model("sda_notune"), dset,mdes,crossval=blocked_cross_validation(des1$Run), class_metrics=FALSE)
-  res <- run_searchlight(mod, radius=16, niter=2,method="randomized", combiner=function(mspec, good, bad)
-  
+  mod <- mvpa_model(load_model("sda_notune"), dset,mdes,
+                    crossval=blocked_cross_validation(des1$Run), class_metrics=FALSE)
+  res <- run_searchlight(mod, radius=16, niter=3,method="randomized", 
+                         combiner=function(mspec, good, bad) {
+                           good
+                         })
+    expect_true(!is.null(res))
 })
 
 

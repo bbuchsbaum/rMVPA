@@ -112,7 +112,12 @@ write_output <- function(searchres, name="", output, data_mode="image") {
   if (data_mode == "image") {
     for (i in 1:length(searchres)) {
       oname <- if (name != "") paste0(output, "/", names(searchres)[i], "_", name, ".nii") else paste0(output, "/", names(searchres)[i], ".nii")
-      write_vol(searchres[[i]], oname)  
+      ##TODO hack
+      if (inherits(searchres[[i]], "NeuroVol")) {
+        write_vol(searchres[[i]], oname)  
+      } else if (inherits(searchres[[i]], "NeuroVec")) {
+        write_vec(searchres[[i]], oname) 
+      }
     }
   } else if (data_mode == "surface") {
     for (i in 1:length(searchres)) {
