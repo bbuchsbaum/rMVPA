@@ -289,8 +289,12 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
 do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi))
   ind <- indices(roi$train_roi)
-  ret <- train_model(mod_spec, xtrain, ind, method=method, distmethod=distmethod)
-  tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")
+  ret <- try(train_model(mod_spec, xtrain, ind, method=method, distmethod=distmethod))
+  if (inherits(ret, "try-error")) {
+    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message=attr(ret, "condition"))
+  } else {
+    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")
+  }
 }
 
 
