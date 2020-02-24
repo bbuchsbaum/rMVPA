@@ -13,6 +13,19 @@ warnings_are_errors: false
 Imports: neuroim2
   
 Remotes: bbuchsbaum/neuroim2
+
+env:
+  global: RGL_USE_NULL=TRUE
+
+r_check_args: "--as-cran --install-args=--build"
+
+before_install:
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install libcgal-dev libglu1-mesa-dev mesa-common-dev; fi
+  - wget -O travis_helpers.sh http://bit.ly/travis_helpers
+  - source travis_helpers.sh
+  - rm travis_helpers.sh
+  - PACKAGE_NAME=`package_name`
+  - PACKAGE_DIRECTORY=`basename ${PWD}`
   
 
 r_packages:

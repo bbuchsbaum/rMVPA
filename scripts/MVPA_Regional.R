@@ -1,7 +1,7 @@
 #! /usr/bin/env Rscript
 
 .suppress <- suppressPackageStartupMessages
-.suppress(library(neuroim))
+.suppress(library(neuroim2))
 .suppress(library(neurosurf))
 .suppress(library(rMVPA))
 .suppress(library(optparse))
