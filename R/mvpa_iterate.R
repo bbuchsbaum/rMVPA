@@ -249,6 +249,7 @@ run_lm <- function(dvec, obj) {
   vnames <- names(obj$design$model_mat)
   obj$design$model_mat$dvec <- dvec
  
+  #browser()
   res <- lm(form, data=obj$design$model_mat)
   res <- coef(summary(res))[-1,3]
   names(res) <- vnames
@@ -291,7 +292,7 @@ do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
   ind <- indices(roi$train_roi)
   ret <- try(train_model(mod_spec, xtrain, ind, method=method, distmethod=distmethod))
   if (inherits(ret, "try-error")) {
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message=attr(ret, "condition")$message)
+    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=TRUE, error_message=attr(ret, "condition")$message)
   } else {
     tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")
   }

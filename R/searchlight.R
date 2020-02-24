@@ -8,6 +8,7 @@ wrap_out <- function(perf_mat, dataset, ids=NULL) {
 
 #' @keywords internal
 combine_standard <- function(model_spec, good_results, bad_results) {
+  
   ind <- unlist(good_results$id)
   perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
   pobserved <- good_results %>% dplyr::select(result) %>% pull(result) %>% purrr::map( ~ prob_observed(.)) %>% bind_cols()
@@ -17,6 +18,14 @@ combine_standard <- function(model_spec, good_results, bad_results) {
   ret$pobserved <- pobserved
   ret
 }
+
+combine_rsa_standard <- function(model_spec, good_results, bad_results) {
+  ind <- unlist(good_results$id)
+  perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
+  ret <- wrap_out(perf_mat, model_spec$dataset, ind)
+  ret
+}
+
 
 
 #' @keywords internal
@@ -148,6 +157,8 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
     futile.logger::flog.error("no valid results for randomized searchlight, exiting.")
   }
   
+  #browser()
+  
   ## could simply merge all searchlights to produce global classification measure  
   combiner(model_spec, good_results)
 }
@@ -273,7 +284,7 @@ run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized
   
   res <- if (method == "standard") {
     flog.info("running standard RSA searchlight with %s radius ", radius)
-    do_standard(model_spec, radius, mvpa_fun=rsa_iterate, combiner=combine_standard, permute=permute, regtype, distmethod)    
+    do_standard(model_spec, radius, mvpa_fun=rsa_iterate, combiner=combine_rsa_standard, permute=permute, regtype, distmethod)    
   } else if (method == "randomized") {
     flog.info("running randomized RSA searchlight with %s radius and %s iterations", radius, niter)
     do_randomized(model_spec, radius, niter, mvpa_fun=rsa_iterate, combiner=combine_randomized, permute=permute, regtype,distmethod)

@@ -6,10 +6,25 @@ test_that("standard rsa_searchlight and blocking variable runs without error", {
   Dmat <- dist(matrix(rnorm(100*100), 100, 100))
   rdes <- rsa_design(~ Dmat, list(Dmat=Dmat, block=dataset$design$block_var), block_var="block")
   mspec <- rsa_model(dataset$dataset, design=rdes)
-  ret1 <- run_searchlight(mspec, radius=4, "standard",regtype="lm")
-  ret2 <- run_searchlight(mspec, radius=4, "standard", regtype="rfit")
-  ret3 <- run_searchlight(mspec, radius=4, "standard", regtype="pearson")
-  ret4 <- run_searchlight(mspec, radius=4, "standard", regtype="spearman")
+  ret1 <- run_searchlight(mspec, radius=4, method="standard",regtype="lm")
+  ret2 <- run_searchlight(mspec, radius=4, method="standard", regtype="rfit")
+  ret3 <- run_searchlight(mspec, radius=4, method="standard", regtype="pearson")
+  ret4 <- run_searchlight(mspec, radius=4, method="standard", regtype="spearman")
+  expect_true(!is.null(ret1) && !is.null(ret2) && !is.null(ret3) && !is.null(ret4))
+  
+})
+
+test_that("standard rsa_searchlight with multiple distance matrices and blocking variable runs without error", {
+  dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
+  
+  Dmat1 <- dist(matrix(rnorm(100*100), 100, 100))
+  Dmat2 <- dist(matrix(rnorm(100*100), 100, 100))
+  rdes <- rsa_design(~ Dmat1 + Dmat2, list(Dmat1=Dmat1, Dmat2=Dmat2, block=dataset$design$block_var), block_var="block")
+  mspec <- rsa_model(dataset$dataset, design=rdes)
+  ret1 <- run_searchlight(mspec, radius=4, method="standard",regtype="lm")
+  ret2 <- run_searchlight(mspec, radius=4, method="standard", regtype="rfit")
+  ret3 <- run_searchlight(mspec, radius=4, method="standard", regtype="pearson")
+  ret4 <- run_searchlight(mspec, radius=4, method="standard", regtype="spearman")
   expect_true(!is.null(ret1) && !is.null(ret2) && !is.null(ret3) && !is.null(ret4))
   
 })
