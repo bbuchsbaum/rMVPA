@@ -263,6 +263,8 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomize
 #' @import doParallel
 #' @import parallel
 #' @importFrom futile.logger flog.info flog.error flog.debug
+#' @param distmethod method used to compute distances between searchlight samples
+#' @param regtype method used to fit response and predictor distance matrices
 #' @export
 run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, 
                                       permute=FALSE,
