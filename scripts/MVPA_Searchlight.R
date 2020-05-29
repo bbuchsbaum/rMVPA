@@ -134,6 +134,9 @@ output <- rMVPA:::make_output_dir(config$output)
 
 
 if (as.numeric(config$ncores) > 1) {
+  ##if (length(config$ncores) == 2) {
+  ##  future::plan(tweak(multiprocess, workers=as.numeric(config$ncores)))
+  ##}
   flog.info("multi-threaded processing with %s cores ", config$ncores)
   future::plan(tweak(multiprocess, workers=as.numeric(config$ncores)))
 }
@@ -167,7 +170,7 @@ if (purrr::is_formula(config_params$label_column)) {
   config_params$label_column= Reduce(paste, deparse(config_params$label_column))
 }
 
-configout <- paste0(config$output, "/config.yaml")
+configout <- paste0(output, "/config.yaml")
 qwrite(as.list(config_params), configout)
 
 
