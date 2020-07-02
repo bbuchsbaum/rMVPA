@@ -149,6 +149,7 @@ performance.multiway_classification_result <- function(x, split_list=NULL, class
 #' @keywords internal
 #' @noRd
 combinedAUC <- function(Pred, Obs) {
+  Obs <- as.factor(Obs)
   mean(sapply(1:ncol(Pred), function(i) {
     lev <- levels(Obs)[i]
     pos <- Obs == lev
