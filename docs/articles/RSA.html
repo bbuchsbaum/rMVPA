@@ -122,9 +122,9 @@
 
 <span class="no">rsamod</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/rsa_model.html">rsa_model</a></span>(<span class="no">dset</span>, <span class="no">rsades</span>)
 <span class="no">result</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span>(<span class="no">rsamod</span>, <span class="kw">radius</span><span class="kw">=</span><span class="fl">4</span>, <span class="kw">method</span><span class="kw">=</span><span class="st">"standard"</span>,<span class="kw">regtype</span><span class="kw">=</span><span class="st">"pearson"</span>)</pre></body></html></div>
-<pre><code>## INFO [2020-09-07 10:13:41] running standard RSA searchlight with 4 radius 
-## INFO [2020-09-07 10:13:41] creating standard searchlight
-## INFO [2020-09-07 10:13:41] running standard searchlight iterator
+<pre><code>## INFO [2020-09-07 10:58:32] running standard RSA searchlight with 4 radius 
+## INFO [2020-09-07 10:58:32] creating standard searchlight
+## INFO [2020-09-07 10:58:32] running standard searchlight iterator
 ## [1] "regtype pearson"</code></pre>
 <pre><code>## Warning: The `x` argument of `as_tibble.matrix()` must have unique column names if `.name_repair` is omitted as of tibble 2.0.0.
 ## Using compatibility `.name_repair`.
@@ -139,9 +139,9 @@
 ##   Spacing        : 1  X  1  X  1 
 ##   Origin         : 0  X  0  X  0 
 ##   Axes           : Left-to-Right Posterior-to-Anterior Inferior-to-Superior</code></pre>
-<div class="sourceCode" id="cb7"><html><body><pre class="r"><span class="co">### we can save the result to disk, as follows:</span>
+<div class="sourceCode" id="cb7"><html><body><pre class="r">### we can save the result to disk, as follows:
 
-<span class="fu">write_vol</span>(<span class="no">result</span>$<span class="no">Dmat</span>, <span class="st">"RSA_Dmat.nii.gz"</span>)</pre></body></html></div>
+## write_vol(result$Dmat, "RSA_Dmat.nii.gz") </pre></body></html></div>
 </div>
 </div>
   </div>
