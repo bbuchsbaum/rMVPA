@@ -4,8 +4,7 @@
 \alias{predict.regression_model_fit}
 \title{predict values given new data}
 \usage{
-\method{predict}{regression_model_fit}(object, newdata,
-  sub_indices = NULL, ...)
+\method{predict}{regression_model_fit}(object, newdata, sub_indices = NULL, ...)
 }
 \arguments{
 \item{sub_indices}{a vector of indices used to subset rows of `newdata`}

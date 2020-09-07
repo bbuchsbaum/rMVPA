@@ -11,7 +11,7 @@ gen_id <- function(n) {
   })
   
   n <- length(ret)
-  df <- tibble::data_frame(sample = ret)
+  df <- tibble::tibble(sample = ret)
   df[[".id"]] <- gen_id(n)
   df
 }

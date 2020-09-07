@@ -31,7 +31,7 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
   cols[[id]] <- gen_id(k)
   
-  tibble::as_data_frame(cols)
+  tibble::as_tibble(cols)
 }
 
 #' crossv_twofold
@@ -91,7 +91,7 @@ crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
   cols[[id]] <-gen_id(length(fold_idx))
   
-  tibble::as_data_frame(cols)
+  tibble::as_tibble(cols)
   
   
 }
@@ -131,7 +131,7 @@ crossv_block <- function(data, y, block_var, id = ".id") {
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
   cols[[id]] <- gen_id(length(fold_idx))
   
-  tibble::as_data_frame(cols)
+  tibble::as_tibble(cols)
 }
 
 #' crossv_bootstrap_block
@@ -170,7 +170,7 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id") {
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
   cols[[id]] <- gen_id(length(fold_idx))
   
-  tibble::as_data_frame(cols)
+  tibble::as_tibble(cols)
 }
 
 #' X <- data.frame(x1=rnorm(100), x2=rnorm(100))
@@ -372,7 +372,7 @@ crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id",..
   cols <- purrr::transpose(purrr::map(obj$sample_set, function(el) fold(el$train, el$test)))
   cols[[id]] <- gen_id(length(obj$sample_set))
   
-  tibble::as_data_frame(cols)
+  tibble::as_tibble(cols)
 }
 
 #' @export

@@ -4,8 +4,11 @@
 \alias{weighted_model}
 \title{weighted_model}
 \usage{
-weighted_model(fits, names = 1:length(fits),
-  weights = rep(1/length(fits), length(fits)))
+weighted_model(
+  fits,
+  names = 1:length(fits),
+  weights = rep(1/length(fits), length(fits))
+)
 }
 \arguments{
 \item{fits}{a list of model fits}

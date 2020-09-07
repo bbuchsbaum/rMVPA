@@ -303,11 +303,11 @@ do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
 #' 
 #' Run RSA analysis for each of a list of voxels sets
 #' 
-#' @param mod_spec a class of type \code{mvpa_model}
+#' @param mod_spec a class of type \code{rsa_model}
 #' @param vox_list a \code{list} of voxel indices/coordinates
 #' @param ids a \code{vector} of ids for each voxel set
 #' @param regtype the analysis method, one of: \code{lm}, \code{rfit}, \code{pearson}, \code{spearman}
-#' @param distmethod the method used to computer distances between observations, one of: \code{pearson}, \code{spearman}
+#' @param distmethod the method used to compute distances between observations, one of: \code{pearson}, \code{spearman}
 #' @importFrom dplyr do rowwise
 #' @export
 rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FALSE, regtype=c("rfit", "lm", "pearson", "spearman"), 

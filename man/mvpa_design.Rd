@@ -4,8 +4,14 @@
 \alias{mvpa_design}
 \title{mvpa_design}
 \usage{
-mvpa_design(train_design, y_train, test_design = NULL, y_test = NULL,
-  block_var = NULL, split_by = NULL)
+mvpa_design(
+  train_design,
+  y_train,
+  test_design = NULL,
+  y_test = NULL,
+  block_var = NULL,
+  split_by = NULL
+)
 }
 \arguments{
 \item{train_design}{a \code{data.frame} containing training variables.}

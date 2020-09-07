@@ -4,10 +4,18 @@
 \alias{mvpa_model}
 \title{mvpa_model}
 \usage{
-mvpa_model(model, dataset, design, model_type = c("classification",
-  "regression"), crossval = NULL, feature_selector = NULL,
-  tune_grid = NULL, tune_reps = 15, performance = NULL,
-  class_metrics = TRUE)
+mvpa_model(
+  model,
+  dataset,
+  design,
+  model_type = c("classification", "regression"),
+  crossval = NULL,
+  feature_selector = NULL,
+  tune_grid = NULL,
+  tune_reps = 15,
+  performance = NULL,
+  class_metrics = TRUE
+)
 }
 \arguments{
 \item{model}{a caret-based classification or regression model}

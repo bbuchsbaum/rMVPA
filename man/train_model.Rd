@@ -7,8 +7,16 @@
 \usage{
 train_model(obj, ...)
 
-\method{train_model}{mvpa_model}(obj, train_dat, y, indices,
-  param = NULL, wts = NULL, tune_reps = 10, ...)
+\method{train_model}{mvpa_model}(
+  obj,
+  train_dat,
+  y,
+  indices,
+  param = NULL,
+  wts = NULL,
+  tune_reps = 10,
+  ...
+)
 }
 \arguments{
 \item{obj}{the model specification}

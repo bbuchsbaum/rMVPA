@@ -4,8 +4,7 @@
 \alias{predict.class_model_fit}
 \title{predict class membership given new data}
 \usage{
-\method{predict}{class_model_fit}(object, newdata, sub_indices = NULL,
-  ...)
+\method{predict}{class_model_fit}(object, newdata, sub_indices = NULL, ...)
 }
 \arguments{
 \item{sub_indices}{the subset of row indices to compute predictions on}

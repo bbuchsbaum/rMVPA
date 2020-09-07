@@ -4,8 +4,7 @@
 \alias{manova_iterate}
 \title{manova_iterate}
 \usage{
-manova_iterate(mod_spec, vox_list, ids = 1:length(vox_list),
-  permute = FALSE)
+manova_iterate(mod_spec, vox_list, ids = 1:length(vox_list), permute = FALSE)
 }
 \arguments{
 \item{mod_spec}{a class of type \code{mvpa_model}}

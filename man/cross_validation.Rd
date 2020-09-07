@@ -26,15 +26,11 @@ kfold_cross_validation(len, nfolds = 10)
 
 \item{nreps}{the number of twofold spits}
 
-\item{nfolds}{the number of folds to divide each sequence of trials within a block.}
+\item{nfolds}{the number of cross-validation folds.}
 
 \item{sample_set}{a \code{list} of training and test sample indices}
 
 \item{len}{the number of observations.}
-
-\item{block_var}{an integer vector of indicating the cross-validation blocks. Each block is indicating by a unique integer.}
-
-\item{nfolds}{the number of cross-validation folds.}
 }
 \description{
 Construct a cross-validation specification using a predefined blocking variable with bootstrap resamples

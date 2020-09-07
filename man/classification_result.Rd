@@ -7,17 +7,40 @@
 \alias{regression_result}
 \title{Create a \code{classification_result} instance}
 \usage{
-classification_result(observed, predicted, probs, testind = NULL,
-  test_design = NULL, predictor = NULL)
+classification_result(
+  observed,
+  predicted,
+  probs,
+  testind = NULL,
+  test_design = NULL,
+  predictor = NULL
+)
 
-binary_classification_result(observed, predicted, probs, testind = NULL,
-  test_design = NULL, predictor = NULL)
+binary_classification_result(
+  observed,
+  predicted,
+  probs,
+  testind = NULL,
+  test_design = NULL,
+  predictor = NULL
+)
 
-multiway_classification_result(observed, predicted, probs,
-  testind = NULL, test_design = NULL, predictor = NULL)
+multiway_classification_result(
+  observed,
+  predicted,
+  probs,
+  testind = NULL,
+  test_design = NULL,
+  predictor = NULL
+)
 
-regression_result(observed, predicted, testind = NULL,
-  test_design = NULL, predictor = NULL)
+regression_result(
+  observed,
+  predicted,
+  testind = NULL,
+  test_design = NULL,
+  predictor = NULL
+)
 }
 \arguments{
 \item{observed}{a vector of observed/true values.}

@@ -4,12 +4,17 @@
 \alias{rsa_iterate}
 \title{rsa_iterate}
 \usage{
-rsa_iterate(mod_spec, vox_list, ids = 1:length(vox_list),
-  permute = FALSE, regtype = c("rfit", "lm", "pearson", "spearman"),
-  distmethod = c("spearman", "pearson"))
+rsa_iterate(
+  mod_spec,
+  vox_list,
+  ids = 1:length(vox_list),
+  permute = FALSE,
+  regtype = c("rfit", "lm", "pearson", "spearman"),
+  distmethod = c("spearman", "pearson")
+)
 }
 \arguments{
-\item{mod_spec}{a class of type \code{mvpa_model}}
+\item{mod_spec}{a class of type \code{rsa_model}}
 
 \item{vox_list}{a \code{list} of voxel indices/coordinates}
 
@@ -17,7 +22,7 @@ rsa_iterate(mod_spec, vox_list, ids = 1:length(vox_list),
 
 \item{regtype}{the analysis method, one of: \code{lm}, \code{rfit}, \code{pearson}, \code{spearman}}
 
-\item{distmethod}{the method used to computer distances between observations, one of: \code{pearson}, \code{spearman}}
+\item{distmethod}{the method used to compute distances between observations, one of: \code{pearson}, \code{spearman}}
 }
 \description{
 Run RSA analysis for each of a list of voxels sets

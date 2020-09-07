@@ -4,8 +4,13 @@
 \alias{run_regional}
 \title{Region of interest based MVPA analysis}
 \usage{
-run_regional(model_spec, region_mask, return_fits = FALSE,
-  compute_performance = TRUE)
+run_regional(
+  model_spec,
+  region_mask,
+  return_fits = FALSE,
+  compute_performance = TRUE,
+  coalesce_design_vars = FALSE
+)
 }
 \arguments{
 \item{model_spec}{a \code{mvpa_model} instance}
@@ -14,10 +19,12 @@ run_regional(model_spec, region_mask, return_fits = FALSE,
 Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.}
 
 \item{return_fits}{whether to return model fit for every ROI (default is \code{FALSE} to save memory)}
+
+\item{compute_performance}{\code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC)}
 }
 \value{
-a named list of \code{NeuroVol} objects, where each name indicates the performance metric and label 
-        (e.g. Accuracy, AUC)
+a named list of \code{NeuroVol} objects, where each element contains performance metric and is 
+labelled according to the metric used (e.g. Accuracy, AUC)
 
 a \code{list} of type \code{regional_mvpa_result}
 }

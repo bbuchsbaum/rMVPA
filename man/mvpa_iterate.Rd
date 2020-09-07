@@ -4,9 +4,15 @@
 \alias{mvpa_iterate}
 \title{mvpa_iterate}
 \usage{
-mvpa_iterate(mod_spec, vox_list, ids = 1:length(vox_list),
-  compute_performance = TRUE, return_fits = FALSE, permute = FALSE,
-  verbose = TRUE)
+mvpa_iterate(
+  mod_spec,
+  vox_list,
+  ids = 1:length(vox_list),
+  compute_performance = TRUE,
+  return_fits = FALSE,
+  permute = FALSE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{mod_spec}{a class of type \code{mvpa_model}}

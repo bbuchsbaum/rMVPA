@@ -4,8 +4,7 @@
 \alias{crossv_twofold}
 \title{crossv_twofold}
 \usage{
-crossv_twofold(data, y, block_var, block_ind = NULL, id = ".id",
-  nreps = 15)
+crossv_twofold(data, y, block_var, block_ind = NULL, id = ".id", nreps = 15)
 }
 \arguments{
 \item{data}{the training data}

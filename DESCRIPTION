@@ -53,7 +53,7 @@ Collate:
     'rsa_model.R'
     'searchlight.R'
     'utils.R'
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
 Suggests:
     testthat,
     covr,
@@ -71,4 +71,3 @@ Remotes:
     bbuchsbaum/neurosurf
 VignetteBuilder: knitr
 Encoding: UTF-8
-

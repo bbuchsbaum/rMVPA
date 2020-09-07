@@ -3,7 +3,6 @@
 \docType{package}
 \name{rMVPA}
 \alias{rMVPA}
-\alias{rMVPA-package}
 \title{rMVPA: A package for multi-voxel pattern analysis (MVPA)}
 \description{
 The rMVPA package provides tools for running region-of-interest and searchlight MVPA analyses.

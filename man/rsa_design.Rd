@@ -4,8 +4,13 @@
 \alias{rsa_design}
 \title{rsa_design}
 \usage{
-rsa_design(formula, data, block_var = NULL, split_by = NULL,
-  keep_intra_run = FALSE)
+rsa_design(
+  formula,
+  data,
+  block_var = NULL,
+  split_by = NULL,
+  keep_intra_run = FALSE
+)
 }
 \arguments{
 \item{formula}{a formula expression specifying the dissimilarity-based regression function}
@@ -19,5 +24,11 @@ rsa_design(formula, data, block_var = NULL, split_by = NULL,
 \item{keep_intra_run}{a \code{logical} indicating whether to exclude within-run comparisons}
 }
 \description{
-rsa_design
+construct a design for an RSA model
+}
+\examples{
+
+dismat <- dist(matrix(rnorm(100*100), 100, 100))
+rdes <- rsa_design(~ dismat, list(dismat=dismat))
+ 
 }

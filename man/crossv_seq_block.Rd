@@ -7,8 +7,15 @@ y <- rep(letters[1:4], 25)
 block_var <- rep(1:4, each=25)
 cv <- crossv_seq_block(X,y,2, block_var)}
 \usage{
-crossv_seq_block(data, y, nfolds, block_var, nreps = 4,
-  block_ind = NULL, id = ".id")
+crossv_seq_block(
+  data,
+  y,
+  nfolds,
+  block_var,
+  nreps = 4,
+  block_ind = NULL,
+  id = ".id"
+)
 }
 \description{
 X <- data.frame(x1=rnorm(100), x2=rnorm(100))

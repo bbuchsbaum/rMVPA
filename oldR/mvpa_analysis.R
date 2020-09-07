@@ -162,17 +162,17 @@ mvpa_crossval <- function(dataset, ROI, crossval, model, tuneGrid=NULL, featureS
     if (length(roi) > 1) {
       result <- try(model$run(dataset, roi, crossval))
       result$predictor <- NULL
-      tibble::data_frame(result = list(result),
+      tibble::tibble(result = list(result),
                          indices = list(attr(vox, "indices")))
     } else {
-      tibble::data_frame(result = NA,
+      tibble::tibble(result = NA,
                          indices = list(attr(vox, "indices")))
     }
   }
   
   index_mat <- as.matrix(do.call(cbind, lapply(resultSet, function(result) {
     result %>% mutate(rn=row_number()) %>% dplyr::rowwise() %>% 
-      do(tibble::data_frame(indices=.$indices, rn=.$rn)) %>% arrange(indices) %>% select(rn)
+      do(tibble::tibble(indices=.$indices, rn=.$rn)) %>% arrange(indices) %>% select(rn)
   })))
   
   

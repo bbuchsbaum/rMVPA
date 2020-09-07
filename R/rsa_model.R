@@ -11,12 +11,20 @@ sanitize <- function(name) {
 
 #' rsa_design
 #' 
+#' construct a design for an RSA model
+#' 
 #' @param formula a formula expression specifying the dissimilarity-based regression function
 #' @param data a named list containing the dissimilarity matrices and any other auxiliary variables
 #' @param block_var an optional \code{formula}, \code{character} name or \code{integer} vector designating the block structure.
 #' @param split_by an optional \code{formula} indicating grouping structure for evaluating test performance.
 #' @param keep_intra_run a \code{logical} indicating whether to exclude within-run comparisons
 #' @importFrom assertthat assert_that
+#' @export
+#' @examples 
+#' 
+#' dismat <- dist(matrix(rnorm(100*100), 100, 100))
+#' rdes <- rsa_design(~ dismat, list(dismat=dismat))
+#'  
 rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_run=FALSE) {
   assert_that(purrr::is_formula(formula))
   
@@ -107,6 +115,7 @@ rsa_model_mat <- function(rsa_des) {
 #' 
 #' @param dataset a \code{mvpa_dataset} instance
 #' @param design a \code{rsa_design} instance
+#' @export
 rsa_model <- function(dataset,
                       design) {
   
