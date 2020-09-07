@@ -57,7 +57,7 @@ result
 
 ### we can save the result to disk, as follows:
 
-write_vol(result$Dmat, "RSA_Dmat.nii.gz") 
+## write_vol(result$Dmat, "RSA_Dmat.nii.gz") 
 ```
 
 
