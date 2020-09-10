@@ -54,7 +54,10 @@ parse_variable <- function(var, design) {
       stop(paste("`design` does not contain variable named: ", var))
     }
     design[[var]]
-  } else if (is.factor(var) && length(var) == nrow(design)) {
+  } else if (is.factor(var) || is.integer(var)) {
+    if (is.data.frame(design)) {
+      assertthat::assert_that(nrow(design) == length(var)) 
+    }
     var
   } else {
     stop("'var' must be a formula, factor, or character vector")

@@ -269,7 +269,7 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomize
 run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, 
                                       permute=FALSE,
                                       distmethod=c("spearman", "pearson"), 
-                                      regtype=c("lm", "rfit", "pearson", "spearman"),...) {
+                                      regtype=c("pearson", "spearman", "lm", "rfit"),...) {
   
   regtype <- match.arg(regtype)
   distmethod <- match.arg(distmethod)
