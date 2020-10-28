@@ -139,8 +139,8 @@ crossv_block <- function(data, y, block_var, id = ".id") {
 #' @inheritParams crossv_twofold
 #' @importFrom modelr resample
 #' @keywords internal
-crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id") {
-  
+crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weights=NULL) {
+  browser()
   if (!length(block_var) == length(y)) {
     stop("length of `block_var` must be equal to length(y)", call. = FALSE)
   }
@@ -148,11 +148,19 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id") {
   idx <- seq_len(nrow(data))
   block_idx <- split(idx, block_var)
   
+  
   assert_that(length(block_idx) > 1, msg="crossv_bootstrap_block: must have more than one block to bootstrap.")
   
-  fold_idx <- lapply(1:length(block_idx), function(heldout) {
-    replicate(nreps, sample(unlist(block_idx[-heldout]), replace=TRUE), simplify=FALSE)
-  })
+  fold_idx <- if (!is.null(weights)) {
+    block_wts <- split(weights, block_var)
+    fold_idx <- lapply(seq_along(block_idx), function(heldout) {
+      replicate(nreps, sample(unlist(block_idx[-heldout]), replace=TRUE, prob=unlist(block_wts[-heldout])), simplify=FALSE)
+    })
+  } else {
+    fold_idx <- lapply(seq_along(block_idx), function(heldout) {
+      replicate(nreps, sample(unlist(block_idx[-heldout]), replace=TRUE), simplify=FALSE)
+    })
+  }
   
   fold_idx <- lapply(unlist(fold_idx, recursive=FALSE), sort)
   
@@ -226,8 +234,22 @@ crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NU
 #' 
 #' @rdname cross_validation
 #' @export
-bootstrap_blocked_cross_validation <- function(block_var, nreps=10) {
-  ret <- list(block_var=block_var, nfolds=length(unique(block_var)), block_ind=sort(unique(block_var)), nreps=nreps)
+#' @examples 
+#' 
+#' block_var <- rep(1:5, each=50)
+#' cval <- bootstrap_blocked_cross_validation(block_var, weights=runif(length(block_var)))
+#' X <- matrix(rnorm(length(block_var) * 10), length(block_var), 10)
+#' y <- rep(letters[1:5], length(block_var))
+#' sam <- crossval_samples(cval, as.data.frame(X), y)
+bootstrap_blocked_cross_validation <- function(block_var, nreps=10, weights=NULL) {
+  
+  if (!is.null(weights)) {
+    assert_that(length(weights) == length(block_var))
+    assert_that(all(weights >= 0))  
+    weights <- weights/sum(weights)
+  }
+
+  ret <- list(block_var=block_var, nfolds=length(unique(block_var)), block_ind=sort(unique(block_var)), nreps=nreps, weights=weights)
   class(ret) <- c("bootstrap_blocked_cross_validation", "cross_validation", "list")
   ret
 }
@@ -355,7 +377,7 @@ crossval_samples.blocked_cross_validation <- function(obj, data, y,...) {
 
 #' @export
 crossval_samples.bootstrap_blocked_cross_validation <- function(obj, data, y,...) { 
-  crossv_bootstrap_block(data, y, block_var=obj$block_var, nreps=obj$nreps)
+  crossv_bootstrap_block(data, y, block_var=obj$block_var, nreps=obj$nreps, weights=obj$weights)
 }
 
 #' @export
@@ -403,7 +425,7 @@ print.twofold_blocked_cross_validation <- function(x,...) {
 #' @method print bootstrap_blocked_cross_validation
 print.bootstrap_blocked_cross_validation <- function(x,...) {
   cat("cross-validation: bootstrap blocked \n")
-  cat("  n observations: ", length(x$block_var))
+  cat("  n observations: ", length(x$block_var), "\n")
   cat("  n bootstrap reps: ", x$nreps, "\n")
   cat("  block sizes: ", table(x$block_var), "\n")
 }

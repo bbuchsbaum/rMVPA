@@ -103,7 +103,8 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
     parse_variable(y_train, train_design)
   }
   
-  if (is.factor(y_train)) {
+  if (is.factor(y_train) || is.character(y_train)) {
+    y_train <- as.factor(y_train)
    
     if (any(table(y_train) == 0)) {
       futile.logger::flog.warn("y_train: ", table(y_train), capture=TRUE)
