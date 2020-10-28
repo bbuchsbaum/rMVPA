@@ -9,7 +9,7 @@ rsa_iterate(
   vox_list,
   ids = 1:length(vox_list),
   permute = FALSE,
-  regtype = c("rfit", "lm", "pearson", "spearman"),
+  regtype = c("pearson", "spearman", "lm", "rfit"),
   distmethod = c("spearman", "pearson")
 )
 }

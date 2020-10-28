@@ -4,7 +4,14 @@
 \alias{crossv_bootstrap_block}
 \title{crossv_bootstrap_block}
 \usage{
-crossv_bootstrap_block(data, y, block_var, nreps = 5, id = ".id")
+crossv_bootstrap_block(
+  data,
+  y,
+  block_var,
+  nreps = 5,
+  id = ".id",
+  weights = NULL
+)
 }
 \arguments{
 \item{data}{the training data}

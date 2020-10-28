@@ -9,7 +9,7 @@
 \alias{kfold_cross_validation}
 \title{bootstrap_blocked_cross_validation}
 \usage{
-bootstrap_blocked_cross_validation(block_var, nreps = 10)
+bootstrap_blocked_cross_validation(block_var, nreps = 10, weights = NULL)
 
 blocked_cross_validation(block_var)
 
@@ -46,6 +46,12 @@ Construct a cross-validation specification that randomly partitions input set in
 Construct a cross-validation specification that randomly partitions input set into \code{nfolds} folds.
 }
 \examples{
+
+block_var <- rep(1:5, each=50)
+cval <- bootstrap_blocked_cross_validation(block_var, weights=runif(length(block_var)))
+X <- matrix(rnorm(length(block_var) * 10), length(block_var), 10)
+y <- rep(letters[1:5], length(block_var))
+sam <- crossval_samples(cval, as.data.frame(X), y)
 
 blockvar <- rep(1:5, each=10)
 nreps <- 5

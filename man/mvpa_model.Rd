@@ -2,7 +2,7 @@
 % Please edit documentation in R/mvpa_model.R
 \name{mvpa_model}
 \alias{mvpa_model}
-\title{mvpa_model}
+\title{create an mvpa_model}
 \usage{
 mvpa_model(
   model,
@@ -39,17 +39,28 @@ mvpa_model(
 \item{class_metrics}{\code{logical} flag indicating whether to compute performance metrics for each class.}
 }
 \description{
-mvpa_model
+create an mvpa_model
+}
+\details{
+if \code{performance} is supplied it must be a function that takes one argument and 
+returns a named list of scalar values. The argument the function takes is a class deriving from
+\code{classification_result} appropriate for the problem at hand. See example below.
 }
 \examples{
 
 mod <- load_model("sda")
-traindat <- neuroim2::NeuroVec(array(rnorm(6*6*6*100), c(6,6,6)), neuroim2::NeuroSpace(c(6,6,6)))
-mask <- neuroim2::LogicalNeuroVol(array(rnorm(6*6*6)>0, c(6,6,6)), neuroim2::NeuroSpace(c(6,6,6)))
+traindat <- neuroim2::NeuroVec(array(rnorm(6*6*6*100), c(6,6,6,100)), neuroim2::NeuroSpace(c(6,6,6,100)))
+mask <- neuroim2::LogicalNeuroVol(array(rnorm(6*6*6)>-.2, c(6,6,6)), neuroim2::NeuroSpace(c(6,6,6)))
 
 mvdset <- mvpa_dataset(traindat,mask=mask)
 design <- data.frame(fac=rep(letters[1:4], 25), block=rep(1:10, each=10))
 cval <- blocked_cross_validation(design$block)
 mvdes <- mvpa_design(design, ~ fac, block_var=~block)
-mvpmod <- mvpa_model(mod,dataset=mvdset, design=mvdes,crossval=cval)
+
+custom_perf <- function(result) {
+   c(accuracy=sum(result$observed == result$predicted)/length(result$observed))
+}
+mvpmod <- mvpa_model(mod,dataset=mvdset, design=mvdes,crossval=cval, performance=custom_perf)
+ret <- run_searchlight(mvpmod)
+stopifnot("accuracy" \%in\% names(ret))
 }

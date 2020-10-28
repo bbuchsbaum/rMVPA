@@ -173,7 +173,6 @@ test_that("mvpa_searchlight with sda_boot", {
  test_that("randomized mvpa_searchlight runs with custom_performance", {
    
    custom <- function(x) {
-     
      cnames <- colnames(x$probs)
      y <- x$observed
      
