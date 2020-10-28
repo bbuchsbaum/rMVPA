@@ -140,7 +140,7 @@ crossv_block <- function(data, y, block_var, id = ".id") {
 #' @importFrom modelr resample
 #' @keywords internal
 crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weights=NULL) {
-  browser()
+  #browser()
   if (!length(block_var) == length(y)) {
     stop("length of `block_var` must be equal to length(y)", call. = FALSE)
   }
