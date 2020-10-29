@@ -184,7 +184,8 @@ test_that("mvpa_searchlight with sda_boot", {
    dataset <- gen_sample_dataset(c(5,5,1), 100, nlevels=3)
    cval <- blocked_cross_validation(dataset$design$block_var)
    model <- load_model("sda_notune")
-   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, performance=custom)
+   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", 
+                       crossval=cval, performance=custom)
    res <- run_searchlight(mspec,radius=3, method="randomized")
    expect_true(!is.null(res))
    

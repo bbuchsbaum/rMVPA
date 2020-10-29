@@ -87,6 +87,8 @@ prob_observed.multiway_classification_result <- function(x) {
 merge_results.multiway_classification_result <- function(x,...) {
   
   rlist <- list(x,...)
+  ds <- sapply(rlist, function(x) nrow(x$probs))
+  
   probs <- Reduce("+", lapply(rlist, function(x) x$probs))/length(rlist)
   mc <- max.col(probs)
   predicted <- levels(x$observed)[mc]

@@ -50,6 +50,8 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
 #' block_var <- rep(1:4, each=25)
 #' cv <- crossv_twofold(X,y,block_var, nreps=10)
 crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps=15) {
+  ## every time this is called, it regenerates new indices
+  
   if (nreps < 2) {
     stop("'nreps' must be at least 2")
   }
@@ -87,6 +89,9 @@ crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps
       test = modelr::resample(data, test)
     )
   }
+  
+  ## this could return a function that when given data, returns a tibble
+  ## fun <- function(data) {... for every rows, mutate(train = ..., test = ...)} 
   
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
   cols[[id]] <-gen_id(length(fold_idx))
@@ -140,7 +145,7 @@ crossv_block <- function(data, y, block_var, id = ".id") {
 #' @importFrom modelr resample
 #' @keywords internal
 crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weights=NULL) {
-  #browser()
+  
   if (!length(block_var) == length(y)) {
     stop("length of `block_var` must be equal to length(y)", call. = FALSE)
   }
@@ -151,6 +156,8 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weig
   
   assert_that(length(block_idx) > 1, msg="crossv_bootstrap_block: must have more than one block to bootstrap.")
   
+ 
+  ## alter so that you bootstrap within the training blocks but test set is fixed
   fold_idx <- if (!is.null(weights)) {
     block_wts <- split(weights, block_var)
     fold_idx <- lapply(seq_along(block_idx), function(heldout) {
@@ -162,21 +169,29 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weig
     })
   }
   
-  fold_idx <- lapply(unlist(fold_idx, recursive=FALSE), sort)
+
+  
+  #fold_idx <- lapply(unlist(fold_idx, recursive=FALSE), sort)
+  #fold_idx <- lapply(fold_idx, function(fidx) setdiff(idx, fidx))
   
   
-  fold <- function(test) {
-    tidx <- setdiff(idx, test)
+  fold <- function(tidx, block) {
     list(
       ytrain = y[tidx],
-      ytest = y[test],
+      ytest = y[block_idx[[block]]],
       train = modelr::resample(data, tidx),
-      test = modelr::resample(data, test)
+      test = modelr::resample(data, block_idx[[block]])
     )
   }
   
-  cols <- purrr::transpose(purrr::map(fold_idx, fold))
-  cols[[id]] <- gen_id(length(fold_idx))
+  cols <- unlist(lapply(seq_along(fold_idx), function(i) {
+    lapply(fold_idx[[i]], function(tidx) {
+      fold(tidx, i)
+    })
+  }), recursive=FALSE)
+  
+  cols <- purrr::transpose(cols)
+  cols[[id]] <- gen_id(nreps * length(block_idx))
   
   tibble::as_tibble(cols)
 }
@@ -237,10 +252,13 @@ crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NU
 #' @examples 
 #' 
 #' block_var <- rep(1:5, each=50)
-#' cval <- bootstrap_blocked_cross_validation(block_var, weights=runif(length(block_var)))
+#' weights <- runif(length(block_var))
+#' weights[1] = 0
+#' cval <- bootstrap_blocked_cross_validation(block_var, weights=weights)
 #' X <- matrix(rnorm(length(block_var) * 10), length(block_var), 10)
-#' y <- rep(letters[1:5], length(block_var))
-#' sam <- crossval_samples(cval, as.data.frame(X), y)
+#' y <- rep(letters[1:5], length.out=length(block_var))
+#' 
+#' sam <- crossval_samples(cval, as.data.frame(X), y, nreps=3)
 bootstrap_blocked_cross_validation <- function(block_var, nreps=10, weights=NULL) {
   
   if (!is.null(weights)) {
@@ -249,7 +267,8 @@ bootstrap_blocked_cross_validation <- function(block_var, nreps=10, weights=NULL
     weights <- weights/sum(weights)
   }
 
-  ret <- list(block_var=block_var, nfolds=length(unique(block_var)), block_ind=sort(unique(block_var)), nreps=nreps, weights=weights)
+  ret <- list(block_var=block_var, nfolds=length(unique(block_var)), 
+              block_ind=sort(unique(block_var)), nreps=nreps, weights=weights)
   class(ret) <- c("bootstrap_blocked_cross_validation", "cross_validation", "list")
   ret
 }

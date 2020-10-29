@@ -138,7 +138,7 @@ mvpa_model <- function(model,
     stop("mvpa_model: if dataset has `test_data` design must have `y_test`")
   }
   
-  perf <- if (!is.null(performance) && is.function(peerformance)) {
+  perf <- if (!is.null(performance) && is.function(performance)) {
     #assert_that(is.function(performance)) 
     get_custom_perf(performance, design$split_groups)
   } else if (is.numeric(design$y_train)) {

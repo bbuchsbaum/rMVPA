@@ -140,8 +140,12 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   ind <- neuroim2::indices(roi$train_roi)
   
   ret <- samples %>% pmap(function(ytrain, ytest, train, test, .id) {
-      ## fit model for cross-validation sample
-      result <- try(train_model(mspec, tibble::as_tibble(train), ytrain, 
+    ## fit model for cross-validation sample
+    ##if (ncol(train) < 2) {
+    ##  return(NULL)
+    ##}  
+    
+    result <- try(train_model(mspec, tibble::as_tibble(train), ytrain, 
                                 indices=ind, param=mspec$tune_grid, 
                                 tune_reps=mspec$tune_reps))
       
@@ -161,7 +165,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
         plist$error_message <- "~"
         tibble::as_tibble(plist) 
       }
-  }) %>% dplyr::bind_rows()
+  }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
   
 
   if (any(ret$error)) {
@@ -224,10 +228,16 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
     }
     
     roi <- as_roi(sample)
+    v <- neuroim2::values(roi$train_roi)
+    
+    if (ncol(v) < 2) {
+      return(NULL)
+    }
+    
     do_fun(roi, mod_spec, rnum, 
            compute_performance=compute_performance,
            return_fit=return_fits, permute=permute)
-  }) %>% dplyr::bind_rows()
+  }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
   
   ret
   
