@@ -170,7 +170,7 @@ test_that("mvpa_searchlight with sda_boot", {
 #   
 # })
 
- test_that("randomized mvpa_searchlight runs with custom_performance", {
+test_that("randomized mvpa_searchlight runs with custom_performance", {
    
    custom <- function(x) {
      cnames <- colnames(x$probs)
@@ -181,7 +181,7 @@ test_that("mvpa_searchlight with sda_boot", {
      ret
    }
    
-   dataset <- gen_sample_dataset(c(5,5,1), 100, nlevels=3)
+   dataset <- gen_sample_dataset(c(5,5,3), 100, nlevels=3)
    cval <- blocked_cross_validation(dataset$design$block_var)
    model <- load_model("sda_notune")
    mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", 
@@ -190,6 +190,32 @@ test_that("mvpa_searchlight with sda_boot", {
    expect_true(!is.null(res))
    
 
+})
+
+
+test_that("randomized mvpa_searchlight with bootstrap crossvalidation works", {
+  
+  
+  dataset <- gen_sample_dataset(c(5,5,3), 100, nlevels=3)
+  
+  custom <- function(x) {
+    cnames <- colnames(x$probs)
+    y <- x$observed
+    
+    p1 <- x$probs[cbind(1:nrow(x$probs), as.integer(y))]
+    ret <- c(m1 = mean(p1), m2=max(p1))
+    ret
+  }
+  
+  wts <- runif(100)
+  cval <- bootstrap_blocked_cross_validation(dataset$design$block_var, weights=wts)
+  model <- load_model("sda_notune")
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", 
+                      crossval=cval, performance=custom)
+  res <- run_searchlight(mspec,radius=3, method="randomized")
+  expect_true(!is.null(res))
+  
+  
 })
 
 test_that("standard mvpa_searchlight and tune_grid runs without error", {
