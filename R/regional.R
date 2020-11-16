@@ -118,7 +118,7 @@ prep_regional <- function(model_spec, region_mask) {
 }
 
 
-comp_perf <- function(results) {
+comp_perf <- function(results, region_mask) {
   ## compile performance results
   perf_mat <- do.call(rbind, results$performance)
   
@@ -153,7 +153,7 @@ run_regional.mvpa_model <- function(model_spec, region_mask, return_fits=FALSE, 
                           compute_performance=compute_performance, 
                           return_fits = return_fits)
 
-  perf <- if (compute_performance) comp_perf(results) else list(vols=list(), perf_mat=tibble())
+  perf <- if (compute_performance) comp_perf(results, region_mask) else list(vols=list(), perf_mat=tibble())
    
   
   ## compile full prediction table
