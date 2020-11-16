@@ -278,6 +278,19 @@ run_searchlight <- function(model_spec, radius, method, niter,...) {
   UseMethod("run_searchlight")
 }
 
+#' Region of interest based MVPA analysis
+#' 
+#' Run a separate MVPA analysis for multiple disjoint regions of interest.
+#' 
+#' @param model_spec a \code{mvpa_model} instance
+#' @param region_mask a \code{NeuroVol} or \code{NeuroSurface} where each region is identified by a unique integer. 
+#'        Every non-zero set of positive integers will be used to define a set of voxels for classification analysis.
+#' @param ... extra args
+#' @export        
+run_regional <- function(model_spec, region_mask, ...) {
+  UseMethod("run_regional")
+}
+
 
 #' crossval_samples
 #' 

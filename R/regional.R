@@ -88,34 +88,11 @@ regional_mvpa_result <- function(model_spec, performance_table, prediction_table
   
 }
 
-#' Region of interest based MVPA analysis
-#' 
-#' Run a separate MVPA analysis for multiple disjoint regions of interest.
-#' 
-#' @param model_spec a \code{mvpa_model} instance
-#' @param region_mask a \code{NeuroVol} or \code{NeuroSurface} where each region is identified by a unique integer. 
-#'        Every non-zero set of positive integers will be used to define a set of voxels for clasisifcation analysis.
-#' @param return_fits whether to return model fit for every ROI (default is \code{FALSE} to save memory)
-#' @param compute_performance \code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC) 
-#' 
-#' @return a named list of \code{NeuroVol} objects, where each element contains performance metric and is 
-#' labelled according to the metric used (e.g. Accuracy, AUC)
-#' @import itertools 
-#' @import foreach
-#' @import doParallel
-#' @import parallel
-#' @return a \code{list} of type \code{regional_mvpa_result} 
-#' @export
-run_regional <- function(model_spec, region_mask, return_fits=FALSE, compute_performance=TRUE, coalesce_design_vars=FALSE) {  
-  ## to get rid of package check warnings
-  roinum=NULL
-  ###
-  
+
+prep_regional <- function(model_spec, region_mask) {
   allrois <- sort(unique(region_mask[region_mask>0]))
-  ## Get the set of unique ROIs (all unique integers > 0 in provided mask)
   region_vec <- as.vector(region_mask)
   region_set <- sort(as.integer(unique(region_vec[region_vec > 0])))
-  
   if (length(region_set) < 1) {
     stop("run_regional: invalid ROI mask, number of ROIs = 0")
   }
@@ -135,27 +112,49 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE, compute_per
     region_set <- region_set[keep]
   }
   
+  list(allrois=allrois, region_vec=region_vec, region_set=region_set,
+       vox_iter=vox_iter, lens=lens, keep=keep)
+  
+}
+
+
+comp_perf <- function(results) {
+  ## compile performance results
+  perf_mat <- do.call(rbind, results$performance)
+  
+  ## generate volumetric results
+  vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask, cbind(as.integer(results$id), perf_mat[,i])))
+  names(vols) <- colnames(perf_mat)
+  
+  perfmat <- tibble::as_tibble(perf_mat,.name_repair="minimal") %>% dplyr::mutate(roinum = unlist(results$id)) %>% dplyr::select(roinum, dplyr::everything())
+  list(vols=vols, perf_mat=perfmat)
+}
+
+#' @param return_fits whether to return model fit for every ROI (default is \code{FALSE} to save memory)
+#' @param compute_performance \code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC) 
+#' 
+#' @import itertools 
+#' @import foreach
+#' @import doParallel
+#' @import parallel
+#' @return a \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects, where each element contains performance metric and is 
+#' labelled according to the metric used (e.g. Accuracy, AUC)
+#' @export
+run_regional.mvpa_model <- function(model_spec, region_mask, return_fits=FALSE, compute_performance=TRUE, coalesce_design_vars=FALSE) {  
+  ## to get rid of package check warnings
+  roinum=NULL
+  ###
+  
+  prepped <- prep_regional(model_spec, region_mask)
   flog.info("model is: %s", model_spec$model$label)
   
   ## run mvpa for each region
-  results <- mvpa_iterate(model_spec, vox_iter, ids=region_set,
-                          compute_performance=TRUE, 
+  results <- mvpa_iterate(model_spec, prepped$vox_iter, ids=prepped$region_set,
+                          compute_performance=compute_performance, 
                           return_fits = return_fits)
 
-  perf <- if (compute_performance) {
-    ## compile performance results
-    perf_mat <- do.call(rbind, results$performance)
- 
-    ## generate volumetric results
-    vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask, cbind(as.integer(results$id), perf_mat[,i])))
-    names(vols) <- colnames(perf_mat)
-  
-    perfmat <- tibble::as_tibble(perf_mat,.name_repair="universal") %>% dplyr::mutate(roinum = unlist(results$id)) %>% dplyr::select(roinum, dplyr::everything())
-    list(vols=vols, perf_mat=perfmat)
-  } else {
-    list(vols=list(), perf_mat=tibble())
-  }
-  
+  perf <- if (compute_performance) comp_perf(results) else list(vols=list(), perf_mat=tibble())
+   
   
   ## compile full prediction table
   prediction_table <- combine_regional_results(results) 
@@ -172,3 +171,23 @@ run_regional <- function(model_spec, region_mask, return_fits=FALSE, compute_per
   regional_mvpa_result(model_spec=model_spec, performance_table=perf$perf_mat, 
                        prediction_table=prediction_table, vol_results=perf$vols, fits=fits)
 }
+
+
+#' @export
+run_regional.rsa_model <- function(model_spec, region_mask, return_fits=FALSE, compute_performance=TRUE,regtype=c("pearson", "spearman", "lm", "rfit"), 
+                                   distmethod=c("pearson", "spearman"), coalesce_design_vars=FALSE) {  
+  regtype <- match.arg(regtype)
+  distmethod <- match.arg(distmethod)
+  
+  prepped <- prep_regional(model_spec, region_mask)
+  
+  results <- rsa_iterate(model_spec, prepped$vox_iter, ids=prepped$region_set, regtype=regtype, distmethod=distmethod)
+  perf <- if (compute_performance) comp_perf(results) else list(vols=list(), perf_mat=tibble())
+  
+  regional_mvpa_result(model_spec=model_spec, performance_table=perf$perf_mat, 
+                       prediction_table=NULL, vol_results=perf$vols, fits=NULL)
+  
+}
+  
+
+

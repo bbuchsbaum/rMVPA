@@ -18,6 +18,8 @@ try_warning  <- function(expr) {
 wrap_result <- function(result_table, design, fit=NULL) {
  
   observed <- y_test(design)
+  
+  ## It could happen that not all design rows are actually tested, which is why we find the unqiue set of test indices
   testind <- unique(sort(unlist(result_table$test_ind)))
   
   if (is.factor(observed)) {
@@ -35,6 +37,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
     maxid <- max.col(prob)
     pclass <- levels(observed)[maxid]
   
+    ## storing observed, testind, test_design 
     classification_result(observed[testind], pclass, prob, testind=testind, design$test_design, fit)
   } else {
     
@@ -130,6 +133,8 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @importFrom tibble as_tibble
 internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
   ## generate cross-validation samples
+  ## this could be done outside the function??
+  ## crossval_samples should really cache the indices rather than regenerate every iteration
   samples <- if (!permute) {
     crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="universal"), y_train(mspec))
   } else {
@@ -283,7 +288,7 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
   dtrain <- 1 - cor(t(train_dat), method=distmethod)
   dvec <- dtrain[lower.tri(dtrain)]
   
-  if (! is.null(obj$design$include)) {
+  if (!is.null(obj$design$include)) {
     dvec <- dvec[obj$design$include]
   }
   

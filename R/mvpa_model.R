@@ -75,6 +75,8 @@ y_train.mvpa_model <- function(obj) y_train(obj$design)
 y_test.mvpa_model <- function(obj) y_test(obj$design)
 
 
+## TODO check that length of test_data  == length of y_test
+
 #' create an mvpa_model
 #' 
 #' @param model a caret-based classification or regression model

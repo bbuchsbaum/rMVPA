@@ -258,7 +258,7 @@ crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NU
 #' X <- matrix(rnorm(length(block_var) * 10), length(block_var), 10)
 #' y <- rep(letters[1:5], length.out=length(block_var))
 #' 
-#' sam <- crossval_samples(cval, as.data.frame(X), y, nreps=3)
+#' sam <- crossval_samples(cval, as.data.frame(X), y)
 bootstrap_blocked_cross_validation <- function(block_var, nreps=10, weights=NULL) {
   
   if (!is.null(weights)) {
