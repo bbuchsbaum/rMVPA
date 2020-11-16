@@ -182,7 +182,7 @@ run_regional.rsa_model <- function(model_spec, region_mask, return_fits=FALSE, c
   prepped <- prep_regional(model_spec, region_mask)
   
   results <- rsa_iterate(model_spec, prepped$vox_iter, ids=prepped$region_set, regtype=regtype, distmethod=distmethod)
-  perf <- if (compute_performance) comp_perf(results) else list(vols=list(), perf_mat=tibble())
+  perf <- if (compute_performance) comp_perf(results, region_mask) else list(vols=list(), perf_mat=tibble())
   
   regional_mvpa_result(model_spec=model_spec, performance_table=perf$perf_mat, 
                        prediction_table=NULL, vol_results=perf$vols, fits=NULL)
