@@ -308,14 +308,28 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=N
     y <- as.factor(y)
   }
   
+  #if (any(is.na(train_dat))) {
+  #  browser()
+  #}
+  
+  ## columns that have zero variance
   nzero <- nonzeroVarianceColumns2(train_dat)
+  ## columns with NAs
+  nacols <- na_cols(train_dat)
+  ## duplicated columns
   dup <- !duplicated(t(train_dat))
+  ## invalid columns
+  nzero <- nzero & dup & !nacols
   
-  nzero <- nzero & dup
-  
-  if (sum(nzero) < 2) {
-    stop("training data must have more than one valid feature")
+  if (length(nzero) == 0 || sum(nzero,na.rm=TRUE) < 2) {
+      stop("training data must have more than one valid feature")
   }
+  
+  #out <- try(tmp())
+  #if (inherits(out, "try-error")) {
+  #  browser()
+  #}
+  
   
   ## feature selection and variable screening
   feature_mask <- if (!is.null(obj$feature_selector)) {
@@ -328,9 +342,11 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=N
     nzero
   }
   
-  if (sum(feature_mask) < 2) {
+  if (sum(feature_mask, na.rm=TRUE) < 2) {
     stop("training data must have more than one valid feature")
   }
+  
+  print(feature_mask)
   
   train_dat <- train_dat[,feature_mask]
   

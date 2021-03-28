@@ -32,9 +32,11 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 #' @param external_test is the test set 'external' to the training set
 #' @param ntest_obs number of test observations (only relevant if \code{external_test} is true)
 #' @param split_by compute performance measures for each level of factor
+#' @param na_cols number of columns with all NA values to add
 #' @export
 gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), data_mode=c("image", "surface"),
-                              spacing=c(1,1,1), blocks=5, nlevels=5, external_test=FALSE, ntest_obs=nobs, split_by=NULL) {
+                              spacing=c(1,1,1), blocks=5, nlevels=5, 
+                              external_test=FALSE, ntest_obs=nobs, split_by=NULL, na_cols=0) {
   
   response_type <- match.arg(response_type)
   data_mode <- match.arg(data_mode)
@@ -42,6 +44,13 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
   
   if (data_mode == "image") {
     mat <- array(rnorm(prod(D)*nobs), c(D,nobs))
+    if (na_cols > 0) {
+      naidx <- sample(dim(mat)[4], na_cols)
+      for (naid in naidx) {
+        ind <- arrayInd(naid, dim(mat)[1:3])
+        mat[ind[1], ind[2], ind[3],] <- NA
+      }
+    } 
     bspace <- neuroim2::NeuroSpace(c(D,nobs), spacing)
     bvec <- neuroim2::NeuroVec(mat, bspace)
     
