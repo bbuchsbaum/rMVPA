@@ -48,9 +48,12 @@ Construct a cross-validation specification that randomly partitions input set in
 \examples{
 
 block_var <- rep(1:5, each=50)
-cval <- bootstrap_blocked_cross_validation(block_var, weights=runif(length(block_var)))
+weights <- runif(length(block_var))
+weights[1] = 0
+cval <- bootstrap_blocked_cross_validation(block_var, weights=weights)
 X <- matrix(rnorm(length(block_var) * 10), length(block_var), 10)
-y <- rep(letters[1:5], length(block_var))
+y <- rep(letters[1:5], length.out=length(block_var))
+
 sam <- crossval_samples(cval, as.data.frame(X), y)
 
 blockvar <- rep(1:5, each=10)

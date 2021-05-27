@@ -14,7 +14,8 @@ gen_sample_dataset(
   nlevels = 5,
   external_test = FALSE,
   ntest_obs = nobs,
-  split_by = NULL
+  split_by = NULL,
+  na_cols = 0
 )
 }
 \arguments{
@@ -37,6 +38,8 @@ gen_sample_dataset(
 \item{ntest_obs}{number of test observations (only relevant if \code{external_test} is true)}
 
 \item{split_by}{compute performance measures for each level of factor}
+
+\item{na_cols}{number of columns with all NA values to add}
 }
 \description{
 gen_sample_dataset

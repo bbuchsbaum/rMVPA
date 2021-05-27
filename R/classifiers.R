@@ -1,4 +1,14 @@
 
+### TODO
+## Fast SDA searchlight
+## Use gray matter mask
+## for each voxel, resample including centroid with random surround
+## precompute centroids
+## precompute covariance matrix
+## precompute total scatter
+## for each searchlight solve(St, Sb)
+## make predictions, accuracy, auc
+
 ## use R6 to wrap models
 ## 
 
