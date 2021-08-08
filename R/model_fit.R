@@ -73,11 +73,14 @@ tune_model <- function(mspec, x, y, wts, param, nreps=10) {
 #' @method fit_model mvpa_model
 fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
   fit <- obj$model$fit(x,y,wts=wts,param=param,lev=levels(y), classProbs=classProbs, ...)
-  fit$obsLevels <- levels(y)
+  ##fit$obsLevels <- levels(y)
+  attr(fit, "obsLevels") <- levels(y)
   if (is.factor(y)) {
-    fit$problemType <- "Classification"
+    #fit$problemType <- "Classification"
+    attr(fit, "problemType") <- "Classification"
   } else {
-    fit$problemType <- "Regression"
+    #fit$problemType <- "Regression"
+    attr(fit, "problemType") <- "Regression"
   }
   fit
 }
@@ -307,6 +310,8 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=N
   if (is.character(y)) {
     y <- as.factor(y)
   }
+  
+ 
   
 
   ## columns that have zero variance

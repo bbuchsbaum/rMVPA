@@ -398,7 +398,8 @@ MVPAModels$glmnet_opt <- list(type = "Classification",
                                   colnames(probs) <- modelFit$obsLevels
                                 } else {
                                   probs <- as.data.frame(probs[,,1,drop = FALSE])
-                                  names(probs) <- modelFit$obsLevels
+                                  #names(probs) <- modelFit$obsLevels
+                                  attr(modelFit, "obsLevels")
                                 }
                                 
                                 probs

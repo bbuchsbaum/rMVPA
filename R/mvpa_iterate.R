@@ -135,6 +135,8 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   ## generate cross-validation samples
   ## this could be done outside the function??
   ## crossval_samples should really cache the indices rather than regenerate every iteration
+ 
+  
   samples <- if (!permute) {
     crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="universal"), y_train(mspec))
   } else {
