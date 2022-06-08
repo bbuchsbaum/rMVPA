@@ -131,6 +131,7 @@ comp_perf <- function(results, region_mask) {
 }
 
 #' @param return_fits whether to return model fit for every ROI (default is \code{FALSE} to save memory)
+#' @param return_predictions whether to return full prediction table with per trial probabilities (can be a large table, set \code{FALSE} to limit memory use)
 #' @param compute_performance \code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC) 
 #' 
 #' @import itertools 
@@ -140,7 +141,9 @@ comp_perf <- function(results, region_mask) {
 #' @return a \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects, where each element contains performance metric and is 
 #' labelled according to the metric used (e.g. Accuracy, AUC)
 #' @export
-run_regional.mvpa_model <- function(model_spec, region_mask, return_fits=FALSE, compute_performance=TRUE, coalesce_design_vars=FALSE) {  
+run_regional.mvpa_model <- function(model_spec, region_mask, return_fits=FALSE, 
+                                    return_predictions = TRUE, compute_performance=TRUE, 
+                                    coalesce_design_vars=FALSE) {  
   ## to get rid of package check warnings
   roinum=NULL
   ###
@@ -157,7 +160,9 @@ run_regional.mvpa_model <- function(model_spec, region_mask, return_fits=FALSE, 
    
   
   ## compile full prediction table
-  prediction_table <- combine_regional_results(results) 
+  prediction_table <- if (return_predictions) {
+    combine_regional_results(results) 
+  }
   
   if (coalesce_design_vars) {
     prediction_table <- coalesce_join(prediction_table, test_design(model_spec$design), 

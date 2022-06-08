@@ -43,11 +43,15 @@ test_design.mvpa_design <- function(obj) {
 parse_variable <- function(var, design) {
   ret <- if (purrr::is_formula(var)) {
     vnames <- all.vars(var[[2]])
-    if (length(vnames) > 1) {
+    ret <- if (length(vnames) > 1) {
       do.call("interaction", c(lapply(vnames, function(vname) as.factor(design[[vname]])), sep=":"))
     } else {
       design[[vnames]]
     }
+    
+    assertthat::assert_that(!is.null(ret), msg=paste("formula variable", 
+                                                     paste(as.character(var), collapse=" "), " not found."))
+    ret
     
   } else if (is.character(var) && length(var) == 1) {
     if (is.null(design[[var]])) {
@@ -153,6 +157,7 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   
   if (!is.null(block_var)) {
     block_var <- parse_variable(block_var, train_design)
+    assertthat::assert_that(!is.null(block_var))
   }
  
   test_design <- if (!is.null(test_design)) {

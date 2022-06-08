@@ -161,6 +161,8 @@ mvpa_model <- function(model,
     crossval <- blocked_cross_validation(design$block_var)
   }
   
+  assertthat::assert_that(!is.null(crossval))
+  
   ## TODO check that crossval is compatible with design
   
   ## TODO check that mvpa_design is compatible with mvpa_dataset (n training obs == length(y_train))
