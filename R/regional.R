@@ -13,7 +13,8 @@ combine_regional_results = function(results) {
           predicted=.$result$predicted,
           correct=as.character(.$result$observed) == as.character(.$result$predicted)
       )
-      tib2 <- tibble::as_tibble(.$result$probs, .name_repair="universal")
+      #tib2 <- tibble::as_tibble(.$result$probs, .name_repair="universal")
+      tib2 <- tibble::as_tibble(.$result$probs, .name_repair=.name_repair)
       names(tib2) <- paste0("prob_", names(tib2))
       cbind(tib1, tib2)
     })
@@ -38,10 +39,10 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
   assert_that(all(purrr::map_lgl(predtabs, is.data.frame)))
   
   wts <- wts/sum(wts)
-  
+ 
   if (is.character(predtabs[[1]]$observed) || is.factor(predtabs[[1]]$observed)) {
     ptab <- map(1:length(predtabs), function(i) predtabs[[i]] %>% mutate(.tableid=i, .weight=wts[i])) %>% 
-      map_df(bind_rows) %>% as_tibble(.name_repair="universal")
+      map_df(bind_rows) %>% as_tibble(.name_repair=.name_repair)
     
     probs <- if (collapse_regions) {
       ptab %>% dplyr::group_by(.rownum,observed) %>% summarise_at(vars(starts_with("prob_")), 
@@ -126,7 +127,7 @@ comp_perf <- function(results, region_mask) {
   vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask, cbind(as.integer(results$id), perf_mat[,i])))
   names(vols) <- colnames(perf_mat)
   
-  perfmat <- tibble::as_tibble(perf_mat,.name_repair="minimal") %>% dplyr::mutate(roinum = unlist(results$id)) %>% dplyr::select(roinum, dplyr::everything())
+  perfmat <- tibble::as_tibble(perf_mat,.name_repair=.name_repair) %>% dplyr::mutate(roinum = unlist(results$id)) %>% dplyr::select(roinum, dplyr::everything())
   list(vols=vols, perf_mat=perfmat)
 }
 

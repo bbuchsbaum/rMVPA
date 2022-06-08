@@ -415,7 +415,7 @@ MVPAModels$sparse_sda <- list(type = "Classification",
                                                      label=c("fraction of features to keep (frac > 0 a frac <= 1)", "lambda")),
                                grid=function(x, y, len = NULL) expand.grid(frac=seq(.1,1,length.out=len), lambda=seq(.01,.99,length.out=len)),
                                fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                                 print(param)
+                                 #print(param)
                                  x <- as.matrix(x)                          
                                  nkeep <- max(param$frac * ncol(x),1)
                                  

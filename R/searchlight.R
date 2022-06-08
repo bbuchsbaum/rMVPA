@@ -9,7 +9,7 @@ wrap_out <- function(perf_mat, dataset, ids=NULL) {
 
 #' @keywords internal
 combine_standard <- function(model_spec, good_results, bad_results) {
-  
+  ## retaining matrix of probabilities could be memory intensive if there are many categories and many trials
   ind <- unlist(good_results$id)
   perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
   pobserved <- good_results %>% dplyr::select(result) %>% pull(result) %>% purrr::map( ~ prob_observed(.)) %>% bind_cols()
@@ -141,7 +141,6 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
     futile.logger::flog.info("searchlight iteration: %s", i)
     
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
-  
     cind <- purrr::map_int(slight, ~ .@parent_index)
     mvpa_fun(model_spec, slight, cind, permute=permute, ...)
   })
@@ -230,7 +229,8 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' res2 <- run_searchlight(mspec,radius=8, method="standard", combiner=custom_combiner)
 #' }
 #' 
-run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, combiner=NULL, permute=FALSE, ...) {
+run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, combiner=NULL, 
+                                       permute=FALSE, ...) {
   
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))

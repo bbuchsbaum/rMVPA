@@ -161,15 +161,15 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
   }
  
   test_design <- if (!is.null(test_design)) {
-    tibble::as_tibble(test_design) %>% mutate(.rownum=1:n()) 
+    tibble::as_tibble(test_design, .name_repair = .name_repair) %>% mutate(.rownum=1:n()) 
   }
   
-  train_design <- tibble::as_tibble(train_design) %>% mutate(.rownum=1:n())
+  train_design <- tibble::as_tibble(train_design,.name_repair = .name_repair) %>% mutate(.rownum=1:n())
   
   des <- list(
-    train_design=tibble::as_tibble(train_design),
+    train_design=tibble::as_tibble(train_design, .name_repair = .name_repair),
     y_train=y_train,
-    test_design=if (!is.null(test_design)) tibble::as_tibble(test_design) else NULL,
+    test_design=if (!is.null(test_design)) tibble::as_tibble(test_design, .name_repair = .name_repair) else NULL,
     y_test=y_test,
     split_by=split_by,
     split_groups=split_groups,

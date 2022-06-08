@@ -343,7 +343,7 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=N
     stop("training data must have more than one valid feature")
   }
   
-  print(feature_mask)
+  #print(feature_mask)
   
   train_dat <- train_dat[,feature_mask]
   

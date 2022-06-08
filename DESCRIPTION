@@ -51,6 +51,7 @@ Collate:
     'regional.R'
     'resample.R'
     'rsa_model.R'
+    'roisplit.R'
     'searchlight.R'
     'utils.R'
 RoxygenNote: 7.1.1

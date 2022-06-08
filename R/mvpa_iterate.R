@@ -62,7 +62,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
 #' @keywords internal
 #' @importFrom stats predict
 external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="universal")
+  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
  
   dset <- mspec$dataset
   
@@ -98,12 +98,12 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   #                  warning=!is.null(result$warning), 
   #                  warning_message=if (is.null(result$warning)) "~" else result$warning)
   # } else {
-    pred <- predict(result, tibble::as_tibble(neuroim2::values(roi$test_roi), .name_repair="universal"), NULL)
+    pred <- predict(result, tibble::as_tibble(neuroim2::values(roi$test_roi), .name_repair=.name_repair), NULL)
     plist <- lapply(pred, list)
     plist$y_true <- list(ytest)
     plist$test_ind=list(as.integer(seq_along(ytest)))
   
-    ret <- tibble::as_tibble(plist) 
+    ret <- tibble::as_tibble(plist, .name_repair = .name_repair) 
   
     cres <- if (return_fit) {
       wrap_result(ret, mspec$design, result$fit)
@@ -138,9 +138,9 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
  
   
   samples <- if (!permute) {
-    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="universal"), y_train(mspec))
+    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), y_train(mspec))
   } else {
-    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="universal"), sample(y_train(mspec)))
+    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), sample(y_train(mspec)))
   }
   
   ## get ROI indices
@@ -152,7 +152,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
     ##  return(NULL)
     ##}  
     
-    result <- try(train_model(mspec, tibble::as_tibble(train, .name_repair="universal"), ytrain, 
+    result <- try(train_model(mspec, tibble::as_tibble(train, .name_repair=.name_repair), ytrain, 
                                 indices=ind, param=mspec$tune_grid, 
                                 tune_reps=mspec$tune_reps))
       
@@ -163,14 +163,14 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
         tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest), 
                        fit=list(NULL), error=TRUE, error_message=emessage)
       } else {
-        pred <- predict(result, tibble::as_tibble(test, .name_repair="universal"), NULL)
+        pred <- predict(result, tibble::as_tibble(test, .name_repair=.name_repair), NULL)
         plist <- lapply(pred, list)
         plist$y_true <- list(ytest)
         plist$test_ind <- list(as.integer(test))
         plist$fit <- if (return_fit) list(result) else list(NULL)
         plist$error <- FALSE
         plist$error_message <- "~"
-        tibble::as_tibble(plist, .name_repair="universal") 
+        tibble::as_tibble(plist, .name_repair=.name_repair) 
       }
   }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
   
@@ -305,7 +305,7 @@ train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("l
 
 #' @importFrom neuroim2 indices values
 do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="universal")
+  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
   ind <- indices(roi$train_roi)
   ret <- try(train_model(mod_spec, xtrain, ind, method=method, distmethod=distmethod))
   if (inherits(ret, "try-error")) {
@@ -362,7 +362,7 @@ train_model.manova_model <- function(obj, train_dat, indices, ...) {
 
 #' @importFrom neuroim2 indices values
 do_manova <- function(roi, mod_spec, rnum) {
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="universal")
+  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
   ind <- indices(roi$train_roi)
   ret <- train_model(mod_spec, xtrain, ind)
   tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")

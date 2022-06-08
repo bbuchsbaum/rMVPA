@@ -263,6 +263,8 @@ nresponses <- function(x) {
 }
 
 
+.name_repair = ~ vctrs::vec_as_names(..., repair = "unique", quiet = TRUE)
+
 #' run_searchlight
 #' 
 #' execute a searchlight analysis
