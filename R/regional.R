@@ -165,7 +165,7 @@ run_regional.mvpa_model <- function(model_spec, region_mask, return_fits=FALSE,
     combine_regional_results(results) 
   }
   
-  if (coalesce_design_vars) {
+  if (coalesce_design_vars && return_predictions) {
     prediction_table <- coalesce_join(prediction_table, test_design(model_spec$design), 
                                       by=".rownum")
   }
