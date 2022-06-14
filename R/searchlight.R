@@ -76,18 +76,20 @@ pool_results <- function(...) {
   
   respsets <- split(indmap[,1], indmap[,2])
   
-  merged_results <- furrr::future_map(respsets, function(r1) {
-    if (length(r1) > 1) {
-      first <- r1[1]
-      rest <- r1[2:length(r1)]
-      z1 <- good_results$result[[first]]
-      z2 <- good_results$result[rest]
-      ff <- purrr::partial(merge_results, x=z1)
-      do.call(ff, z2)
-    } else {
-      good_results$result[[r1[1]]]
-    }
-  })
+  merged_results <- furrr::future_map(respsets, do_merge_results, good_results=good_results)
+}
+
+do_merge_results <- function(r1, good_results) {
+  if (length(r1) > 1) {
+    first <- r1[1]
+    rest <- r1[2:length(r1)]
+    z1 <- good_results$result[[first]]
+    z2 <- good_results$result[rest]
+    ff <- purrr::partial(merge_results, x=z1)
+    do.call(ff, z2)
+  } else {
+    good_results$result[[r1[1]]]
+  }
 }
 
 #' @keywords internal
@@ -114,7 +116,8 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   
   pobserved <- SparseNeuroVec(as.matrix(pobserved), neuroim2::space(mask), mask=as.logical(mask))
   
-  perf_list <- furrr::future_map(merged_results, function(res) compute_performance(model_spec, res))
+  #perf_list <- furrr::future_map(merged_results, function(res) compute_performance(model_spec, res))
+  perf_list <- purrr::map(merged_results, function(res) compute_performance(model_spec, res))
   
   ncols <- length(perf_list[[1]])
   pmat <- do.call(rbind, perf_list)
@@ -137,9 +140,7 @@ do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, comb
   error=NULL 
   
   ret <- furrr::future_map(seq(1,niter), function(i) {
-
     futile.logger::flog.info("searchlight iteration: %s", i)
-    
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
     cind <- purrr::map_int(slight, ~ .@parent_index)
     mvpa_fun(model_spec, slight, cind, permute=permute, ...)

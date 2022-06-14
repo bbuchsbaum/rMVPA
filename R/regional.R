@@ -124,6 +124,7 @@ comp_perf <- function(results, region_mask) {
   perf_mat <- do.call(rbind, results$performance)
   
   ## generate volumetric results
+  ## TODO fails when region_mask is an logical vol
   vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask, cbind(as.integer(results$id), perf_mat[,i])))
   names(vols) <- colnames(perf_mat)
   
