@@ -26,6 +26,8 @@ kfold_cross_validation(len, nfolds = 10)
 
 \item{nreps}{the number of twofold spits}
 
+\item{weights}{the weight for each sample with higher weights for observations that will be sampled more often.}
+
 \item{nfolds}{the number of cross-validation folds.}
 
 \item{sample_set}{a \code{list} of training and test sample indices}

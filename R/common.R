@@ -243,7 +243,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
 #' @noRd
 #' @keywords internal
 #' @importFrom purrr map_dbl map
-#' @importFrom neuroim2 SparseNeuroVec
+#' @importFrom neuroim2 SparseNeuroVec vols
 normalize_image_samples <- function(bvec, mask) {
   vlist <- bvec %>% vols() %>% furrr::future_map(function(v) {
     scale(as.numeric(v[which(mask>0)]))[,1]
@@ -354,7 +354,7 @@ initialize_feature_selection <- function(config) {
   }
 }
 
-
+#' @importFrom methods as
 initialize_image_data <- function(config, mask) {
   if (!is.null(config$train_subset)) {
     indices <- which(config$train_subset)
@@ -362,7 +362,6 @@ initialize_image_data <- function(config, mask) {
   }
   
   mask_volume <- as(mask, "LogicalNeuroVol")
-  
   train_datavec <- load_image_data(config, "train_data", mask_volume=mask_volume, indices=indices)    
 
   if (!is.null(config$test_data)) {
@@ -680,6 +679,7 @@ load_subset <- function(full_design, subset) {
 }
 
 
+#' @importFrom neuroim2 read_vec read_vol sub_vector
 load_image_data_series <- function(fnames, config, indices, mask_volume) {
   if (!all(file.exists(fnames))) {
     offenders <- fnames[!file.exists(fnames)]

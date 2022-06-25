@@ -4,7 +4,7 @@
 \alias{test_design}
 \title{test_design}
 \usage{
-test_design(obs)
+test_design(obj)
 }
 \arguments{
 \item{obj}{the object to extract test design from}

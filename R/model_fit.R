@@ -5,7 +5,7 @@ requireNamespaceQuietStop <- function(package) {
     stop(paste('package',package,'is required'), call. = FALSE)
 }
 
-
+#' @keywords internal
 mclass_summary <- function (data, lev = NULL, model = NULL) {
   if (!all(levels(data[, "pred"]) == levels(data[, "obs"]))) 
     stop("levels of observed and predicted data do not match")
@@ -29,7 +29,7 @@ mclass_summary <- function (data, lev = NULL, model = NULL) {
 
 
 
-
+#' @keywords internal
 load_caret_libs <- function(x) {
   for (lib in x$model$library) {
     library(lib, character.only = TRUE)
@@ -37,7 +37,7 @@ load_caret_libs <- function(x) {
 }
 
 
-
+#' @keywords internal
 get_control <- function(y, nreps) {
   if (is.factor(y) && length(levels(y)) == 2) {
     ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE, summaryFunction=caret::twoClassSummary)
@@ -85,9 +85,10 @@ fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
   fit
 }
 
-#' predict class membership given new data
-#' 
+
+#' @param newdata new data to predict on
 #' @param sub_indices the subset of row indices to compute predictions on
+#' @rdname predict
 #' @export
 predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   
@@ -114,10 +115,13 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   class(ret) <- c("classification_prediction", "prediction", "list")
   ret
 }
-#' predict values given new data
-#' 
+
+
+
+#' @param newdata new data to predict on
 #' @param sub_indices a vector of indices used to subset rows of `newdata` 
 #' @export
+#' @rdname predict
 predict.regression_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   
   mat <- if (inherits(newdata, "NeuroVec") || inherits(newdata, "NeuroSurfaceVector")) {
@@ -312,8 +316,6 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=N
   }
   
  
-  
-
   ## columns that have zero variance
   nzero <- nonzeroVarianceColumns2(train_dat)
   ## columns with NAs

@@ -2,6 +2,7 @@
 
 combine_regional_results = function(results) {
   roinum=NULL
+  .rownum=NULL
   if (is.factor(results$result[[1]]$observed)) {
     results %>% dplyr::rowwise() %>% dplyr::do( {
 
@@ -33,23 +34,30 @@ combine_regional_results = function(results) {
 
 
 #' @import dplyr
+#' @importFrom purrr map_df
 combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), collapse_regions=FALSE) {
   assert_that(length(predtabs) == length(wts))
   assert_that(sum(wts) > 0)
   assert_that(all(purrr::map_lgl(predtabs, is.data.frame)))
   
   wts <- wts/sum(wts)
- 
+  
+  .weight <- NULL
+  .rownum <- NULL
+  roinum <-  NULL
+  observed <- NULL
+  predicted <- NULL
+  
   if (is.character(predtabs[[1]]$observed) || is.factor(predtabs[[1]]$observed)) {
     ptab <- map(1:length(predtabs), function(i) predtabs[[i]] %>% mutate(.tableid=i, .weight=wts[i])) %>% 
       map_df(bind_rows) %>% as_tibble(.name_repair=.name_repair)
     
     probs <- if (collapse_regions) {
       ptab %>% dplyr::group_by(.rownum,observed) %>% summarise_at(vars(starts_with("prob_")), 
-                                                             funs(weighted.mean(., w=.weight)))
+                                                             funs(stats::weighted.mean(., w=.weight)))
     } else {
       ptab %>% dplyr::group_by(.rownum,observed,roinum) %>% summarise_at(vars(starts_with("prob_")), 
-                                                                    funs(weighted.mean(., w=.weight)))
+                                                                    funs(stats::weighted.mean(., w=.weight)))
     }
     
     p <- probs %>% ungroup() %>% dplyr::select(dplyr::starts_with("prob_"))
@@ -58,7 +66,8 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
     pobserved <- pmat[cbind(seq(1,nrow(probs)),as.integer(probs$observed))]
     mc <- max.col(pmat)
     preds <- levels(probs$observed)[mc]
-      
+    
+    
     prediction_table <- tibble(
       .rownum=probs$.rownum,
       roinum=if (collapse_regions) 1 else probs$roinum,
@@ -118,14 +127,18 @@ prep_regional <- function(model_spec, region_mask) {
   
 }
 
-
+#' @importFrom neuroim2 map_values
+#' @keywords internal
 comp_perf <- function(results, region_mask) {
+  roinum <- NULL
   ## compile performance results
   perf_mat <- do.call(rbind, results$performance)
   
   ## generate volumetric results
   ## TODO fails when region_mask is an logical vol
-  vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask, cbind(as.integer(results$id), perf_mat[,i])))
+  vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask, 
+                                                          cbind(as.integer(results$id), 
+                                                                perf_mat[,i])))
   names(vols) <- colnames(perf_mat)
   
   perfmat <- tibble::as_tibble(perf_mat,.name_repair=.name_repair) %>% dplyr::mutate(roinum = unlist(results$id)) %>% dplyr::select(roinum, dplyr::everything())
@@ -135,7 +148,7 @@ comp_perf <- function(results, region_mask) {
 #' @param return_fits whether to return model fit for every ROI (default is \code{FALSE} to save memory)
 #' @param return_predictions whether to return full prediction table with per trial probabilities (can be a large table, set \code{FALSE} to limit memory use)
 #' @param compute_performance \code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC) 
-#' 
+#' @param coalesce_design_vars concatenate additional design variables with output stored in `prediction_table`
 #' @import itertools 
 #' @import foreach
 #' @import doParallel
@@ -143,9 +156,10 @@ comp_perf <- function(results, region_mask) {
 #' @return a \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects, where each element contains performance metric and is 
 #' labelled according to the metric used (e.g. Accuracy, AUC)
 #' @export
+#' @rdname run_regional
 run_regional.mvpa_model <- function(model_spec, region_mask, return_fits=FALSE, 
                                     return_predictions = TRUE, compute_performance=TRUE, 
-                                    coalesce_design_vars=FALSE) {  
+                                    coalesce_design_vars=FALSE, ...) {  
   ## to get rid of package check warnings
   roinum=NULL
   ###
@@ -181,8 +195,12 @@ run_regional.mvpa_model <- function(model_spec, region_mask, return_fits=FALSE,
 
 
 #' @export
-run_regional.rsa_model <- function(model_spec, region_mask, return_fits=FALSE, compute_performance=TRUE,regtype=c("pearson", "spearman", "lm", "rfit"), 
-                                   distmethod=c("pearson", "spearman"), coalesce_design_vars=FALSE) {  
+#' @rdname run_regional
+#' @param distmethod the distance cmputing method ("pearson" or "spearman")
+#' @param regtype the regression method ("pearson", "spearman", "lm", or "rfit")
+run_regional.rsa_model <- function(model_spec, region_mask, return_fits=FALSE, 
+                                   compute_performance=TRUE,regtype=c("pearson", "spearman", "lm", "rfit"), 
+                                   distmethod=c("pearson", "spearman"), coalesce_design_vars=FALSE, ...) {  
   regtype <- match.arg(regtype)
   distmethod <- match.arg(distmethod)
   

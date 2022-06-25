@@ -210,6 +210,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @param ids a \code{vector} of ids for each voxel set
 #' @param compute_performance compute and store performance measures for each voxel set
 #' @param return_fits return the model fit for each voxel set?
+#' @param permute permute the labels
 #' @param verbose print progress messages
 #' @importFrom dplyr bind_rows
 #' @export
@@ -234,12 +235,22 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
       futile.logger::flog.info("mvpa_iterate: %s percent", perc)
     }
     
+    
     roi <- as_roi(sample)
     v <- neuroim2::values(roi$train_roi)
     
     if (ncol(v) < 2) {
+      ## too few columns
       return(NULL)
     }
+    
+    ## here we filter rois to check for valid columns
+    roi <- try(filter_roi(roi))
+    
+    if (inherits(roi, "try-error")) {
+      return(NULL)
+    }
+    
     
     do_fun(roi, mod_spec, rnum, 
            compute_performance=compute_performance,
@@ -327,6 +338,7 @@ do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
 #' @param distmethod the method used to compute distances between observations, one of: \code{pearson}, \code{spearman}
 #' @importFrom dplyr do rowwise
 #' @export
+#' @inheritParams mvpa_iterate
 rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FALSE, regtype=c("pearson", "spearman", "lm", "rfit"), 
                         distmethod=c("spearman", "pearson")) {
  
@@ -346,10 +358,11 @@ rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FAL
 
 
 #' @export
+#' @importFrom stats as.formula
 train_model.manova_model <- function(obj, train_dat, indices, ...) {
   dframe <- obj$design$data
   dframe$response <- as.matrix(train_dat)
-  form <- as.formula(paste("response", paste(as.character(obj$design$formula), collapse='')))
+  form <- stats::as.formula(paste("response", paste(as.character(obj$design$formula), collapse='')))
  
   fres=ffmanova(form, data=dframe)
   pvals=fres$pValues
@@ -370,13 +383,14 @@ do_manova <- function(roi, mod_spec, rnum) {
 
 #' manova_iterate
 #' 
-#' Run Manova analysis for each of a list of voxels sets
+#' Run MANOVA analysis for each of a list of voxels sets
 #' 
 #' @param mod_spec a class of type \code{mvpa_model}
 #' @param vox_list a \code{list} of voxel indices/coordinates
 #' @param ids a \code{vector} of ids for each voxel set
 #' @importFrom dplyr do rowwise
 #' @export
+#' @inheritParams mvpa_iterate
 manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FALSE) {
   assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   sframe <- get_samples(mod_spec$dataset, vox_list)

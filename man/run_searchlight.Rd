@@ -3,6 +3,7 @@
 \name{run_searchlight}
 \alias{run_searchlight}
 \alias{run_searchlight.mvpa_model}
+\alias{run_searchlight.rsa_model}
 \title{run_searchlight}
 \usage{
 run_searchlight(model_spec, radius, method, niter, ...)
@@ -14,6 +15,17 @@ run_searchlight(model_spec, radius, method, niter, ...)
   niter = 4,
   combiner = NULL,
   permute = FALSE,
+  ...
+)
+
+\method{run_searchlight}{rsa_model}(
+  model_spec,
+  radius = 8,
+  method = c("randomized", "standard"),
+  niter = 4,
+  permute = FALSE,
+  distmethod = c("spearman", "pearson"),
+  regtype = c("pearson", "spearman", "lm", "rfit"),
   ...
 )
 }
@@ -29,6 +41,12 @@ run_searchlight(model_spec, radius, method, niter, ...)
 \item{...}{extra args}
 
 \item{combiner}{a function that combines results into an appropriate output.}
+
+\item{permute}{permute the labels (i.e. to derive a "random" result)}
+
+\item{distmethod}{method used to compute distances between searchlight samples}
+
+\item{regtype}{method used to fit response and predictor distance matrices}
 }
 \value{
 a named list of \code{NeuroVol} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.

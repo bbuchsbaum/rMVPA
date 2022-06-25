@@ -34,6 +34,7 @@ roi_surface_matrix <- function(mat, refspace, indices, coords) {
 #' @param split_by compute performance measures for each level of factor
 #' @param na_cols number of columns with all NA values to add
 #' @export
+#' @importFrom neuroim2 coords
 gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuous"), data_mode=c("image", "surface"),
                               spacing=c(1,1,1), blocks=5, nlevels=5, 
                               external_test=FALSE, ntest_obs=nobs, split_by=NULL, na_cols=0) {

@@ -50,8 +50,37 @@ print.data_sample <- function(x, ...) {
   }
 }
 
+filter_roi <- function(roi) {
+  trdat <- values(roi$train_roi)
+  ##tedat <- values(roi$test_roi)
+  
+  nas <- apply(trdat, 2, function(v) any(is.na(v)))
+  sdnonzero <- apply(trdat, 2, sd, na.rm=TRUE) > 0
+  
+  keep <- !nas & sdnonzero
+  
+  if (sum(keep)  == 0) {
+    stop("filter_roi: roi has no valid columns")
+  } #else {
+    #print(paste("valid column: ", sum(keep)))
+  #}
+  
+  if (is.null(roi$test_roi)) {
+    troi <- neuroim2::ROIVec(space(roi$train_roi), coords(roi$train_roi)[keep,,drop=FALSE], data=trdat[,keep,drop=FALSE])
+    list(train_roi=troi,
+         test_roi=NULL)
+  } else  {
+    troi <- neuroim2::ROIVec(space(roi$train_roi), coords(roi$train_roi)[keep,,drop=FALSE], data=trdat[,keep,drop=FALSE])
+    tedat <- values(roi$test_roi)
+    teroi <- neuroim2::ROIVec(space(roi$test_roi), coords(roi$test_roi)[keep,,drop=FALSE], data=tedat[,keep,drop=FALSE])
+    list(train_roi=troi,
+         test_roi=teroi)
+  }
+}
+
 #' @keywords internal
 #' @noRd
+#' @importFrom neuroim2 series_roi
 as_roi.data_sample <- function(x, ...) {
   
   train_roi <- try(series_roi(x$data$train_data, x$vox))
@@ -79,15 +108,16 @@ as_roi.data_sample <- function(x, ...) {
 
 #' @keywords internal
 #' @noRd
+#' @importFrom neuroim2 space series series_roi
 as.data.frame.data_sample <- function(x, ...) {
-  train_mat <- series(x$data$train_data, x$vox)
+  train_mat <- neuroim2::series(x$data$train_data, x$vox)
   
   test_mat <- if (has_test_set(x$data)) {
-    series(x$data$test_data, x$vox)
+    neuroim2::series(x$data$test_data, x$vox)
   }
   
   cds <- if (is.vector(x$vox)) {
-    cds <- index_to_grid(space(x$data$mask), x$vox)
+    cds <- neuroim2::index_to_grid(space(x$data$mask), x$vox)
   } else {
     x$vox
   }

@@ -6,7 +6,6 @@
 #' @param testind the row indices of the test observations.
 #' @param test_design an optional design for the test data.
 #' @param predictor an optional predictor object.
-#' @rdname classification_result
 #' 
 #' @examples 
 #' 
@@ -41,7 +40,8 @@ classification_result <- function(observed, predicted, probs, testind=NULL, test
   }
 }
 
-
+#' @desscribeIn classification_result Classification results for binary outcome
+#' 
 #' @inheritParams classification_result
 #' @rdname classification_result
 #' @export
@@ -77,6 +77,8 @@ sub_result.multiway_classification_result <- function(x, indices) {
 }
 
 #' @export
+#' @param indices the set of indices used to subset results
+#' @rdname sub_result
 sub_result.binary_classification_result <- function(x, indices) {
   ret <- list(
     observed=x$observed[indices],

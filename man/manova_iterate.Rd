@@ -12,7 +12,9 @@ manova_iterate(mod_spec, vox_list, ids = 1:length(vox_list), permute = FALSE)
 \item{vox_list}{a \code{list} of voxel indices/coordinates}
 
 \item{ids}{a \code{vector} of ids for each voxel set}
+
+\item{permute}{permute the labels}
 }
 \description{
-Run Manova analysis for each of a list of voxels sets
+Run MANOVA analysis for each of a list of voxels sets
 }

@@ -20,6 +20,8 @@ rsa_iterate(
 
 \item{ids}{a \code{vector} of ids for each voxel set}
 
+\item{permute}{permute the labels}
+
 \item{regtype}{the analysis method, one of: \code{lm}, \code{rfit}, \code{pearson}, \code{spearman}}
 
 \item{distmethod}{the method used to compute distances between observations, one of: \code{pearson}, \code{spearman}}

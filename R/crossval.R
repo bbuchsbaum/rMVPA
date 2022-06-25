@@ -196,6 +196,7 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weig
   tibble::as_tibble(cols, .name_repair = .name_repair)
 }
 
+#' @inheritParams crossv_twofold
 #' X <- data.frame(x1=rnorm(100), x2=rnorm(100))
 #' y <- rep(letters[1:4], 25)
 #' block_var <- rep(1:4, each=25)
@@ -247,6 +248,7 @@ crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NU
 #' 
 #' Construct a cross-validation specification using a predefined blocking variable with bootstrap resamples
 #' 
+#' @param weights the weight for each sample with higher weights for observations that will be sampled more often.
 #' @rdname cross_validation
 #' @export
 #' @examples 

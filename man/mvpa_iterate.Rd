@@ -25,6 +25,8 @@ mvpa_iterate(
 
 \item{return_fits}{return the model fit for each voxel set?}
 
+\item{permute}{permute the labels}
+
 \item{verbose}{print progress messages}
 }
 \description{

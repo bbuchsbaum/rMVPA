@@ -10,6 +10,7 @@ Description: An R package to facilitate multivoxel pattern analysis of
 License: GPL (>= 2)
 Imports:
     assertthat,
+    methods,
     dplyr,
     tibble,
     caret,
@@ -32,7 +33,8 @@ Imports:
     modelr,
     Rfit,
     neurosurf,
-    io
+    io,
+    ffmanova
 Collate:
     'allgeneric.R'
     'classifiers.R'
@@ -54,7 +56,7 @@ Collate:
     'roisplit.R'
     'searchlight.R'
     'utils.R'
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Suggests:
     testthat,
     covr,
@@ -65,8 +67,7 @@ Suggests:
     e1071,
     randomForest,
     iterators,
-    optparse,
-    ffmanova
+    optparse
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf

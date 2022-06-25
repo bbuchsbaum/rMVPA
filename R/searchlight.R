@@ -9,6 +9,7 @@ wrap_out <- function(perf_mat, dataset, ids=NULL) {
 
 #' @keywords internal
 combine_standard <- function(model_spec, good_results, bad_results) {
+  result <- NULL
   ## retaining matrix of probabilities could be memory intensive if there are many categories and many trials
   ind <- unlist(good_results$id)
   perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
@@ -76,7 +77,7 @@ pool_results <- function(...) {
   
   respsets <- split(indmap[,1], indmap[,2])
   
-  merged_results <- furrr::future_map(respsets, do_merge_results, good_results=good_results)
+  merged_results <- purrr::map(respsets, do_merge_results, good_results=good_results)
 }
 
 do_merge_results <- function(r1, good_results) {
@@ -200,7 +201,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' @import parallel
 #' @importFrom futile.logger flog.info flog.error flog.debug
 #' @param combiner a function that combines results into an appropriate output.
-#' 
+#' @param permute permute the labels (i.e. to derive a "random" result)
 #' @references 
 #' Bjornsdotter, M., Rylander, K., & Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.
 #' 
@@ -230,7 +231,8 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' res2 <- run_searchlight(mspec,radius=8, method="standard", combiner=custom_combiner)
 #' }
 #' 
-run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, combiner=NULL, 
+run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, 
+                                       combiner=NULL, 
                                        permute=FALSE, ...) {
   
   if (radius < 1 || radius > 100) {
@@ -272,10 +274,12 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomize
 #' @param distmethod method used to compute distances between searchlight samples
 #' @param regtype method used to fit response and predictor distance matrices
 #' @export
+#' @rdname run_searchlight
 run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, 
                                       permute=FALSE,
                                       distmethod=c("spearman", "pearson"), 
-                                      regtype=c("pearson", "spearman", "lm", "rfit"),...) {
+                                      regtype=c("pearson", "spearman", "lm", "rfit"),
+                                      ...) {
   
   regtype <- match.arg(regtype)
   distmethod <- match.arg(distmethod)

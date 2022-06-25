@@ -67,7 +67,7 @@ y_test <- function(obj) {
 #' return design table associated with test set
 #' @param obj the object to extract test design from
 #' @export
-test_design <- function(obs) {
+test_design <- function(obj) {
   UseMethod("test_design")
 }
 
