@@ -135,7 +135,8 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   ## generate cross-validation samples
   ## this could be done outside the function??
   ## crossval_samples should really cache the indices rather than regenerate every iteration
- 
+  ## for large class sizes, this can create big objects for every voxel.
+
   
   samples <- if (!permute) {
     crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), y_train(mspec))
@@ -174,7 +175,6 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
       }
   }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
   
-
   if (any(ret$error)) {
     emessage <- ret$error_message[which(ret$error)[1]]
     tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), 
@@ -209,6 +209,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @param vox_list a \code{list} of voxel indices/coordinates
 #' @param ids a \code{vector} of ids for each voxel set
 #' @param compute_performance compute and store performance measures for each voxel set
+#' @param return_predictions return row-wise predictions for each voxel set.
 #' @param return_fits return the model fit for each voxel set?
 #' @param permute permute the labels
 #' @param verbose print progress messages
@@ -216,6 +217,7 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), 
                          compute_performance=TRUE, 
+                         return_predictions=TRUE,
                          return_fits=FALSE, 
                          permute=FALSE, verbose=TRUE) {
 
@@ -252,9 +254,19 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
     }
     
     
-    do_fun(roi, mod_spec, rnum, 
+    result <- do_fun(roi, mod_spec, rnum, 
            compute_performance=compute_performance,
            return_fit=return_fits, permute=permute)
+    
+    
+    ## storing full prediction output takes up a lot of memory.
+    ## here we remove this information unless requested.
+    if (!return_predictions) {
+      result <- result %>% mutate(result = list(NULL))
+    }
+    
+    result
+    
   }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
   
   ret

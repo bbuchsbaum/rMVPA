@@ -10,14 +10,22 @@ wrap_out <- function(perf_mat, dataset, ids=NULL) {
 #' @keywords internal
 combine_standard <- function(model_spec, good_results, bad_results) {
   result <- NULL
+  
   ## retaining matrix of probabilities could be memory intensive if there are many categories and many trials
   ind <- unlist(good_results$id)
   perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
-  pobserved <- good_results %>% dplyr::select(result) %>% pull(result) %>% purrr::map( ~ prob_observed(.)) %>% bind_cols()
-  pobserved <- SparseNeuroVec(as.matrix(pobserved), space(model_spec$dataset$mask), mask=as.logical(model_spec$dataset$mask))
   
+  has_results <- any(unlist(purrr::map(good_results$result, function(x) !is.null(x))))
   ret <- wrap_out(perf_mat, model_spec$dataset, ind)
-  ret$pobserved <- pobserved
+  
+  if (has_results) {
+    pobserved <- good_results %>% dplyr::select(result) %>% pull(result) %>% purrr::map( ~ prob_observed(.)) %>% bind_cols()
+    pobserved <- SparseNeuroVec(as.matrix(pobserved), space(model_spec$dataset$mask), mask=as.logical(model_spec$dataset$mask))
+    ret$pobserved <- pobserved
+  } else {
+    ret$pobserved <- NULL
+  }
+
   ret
 }
 
@@ -32,6 +40,8 @@ combine_rsa_standard <- function(model_spec, good_results, bad_results) {
 
 #' @keywords internal
 combine_randomized <- function(model_spec, good_results, bad_results) {
+  
+ 
   
   all_ind <- sort(unlist(good_results$indices))
   ind_count <- table(all_ind)
@@ -99,6 +109,7 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
     stop("searchlight: no searchlight samples produced valid results")
   }
   
+  
   merged_results <- pool_results(good_results)
   pobserved <- merged_results %>% purrr::map( ~ prob_observed(.)) %>% bind_cols()
   ind_set <- sort(unique(unlist(good_results$indices)))
@@ -137,7 +148,11 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
 #' @importFrom furrr future_map
-do_randomized <- function(model_spec, radius, niter, mvpa_fun=mvpa_iterate, combiner=pool_randomized, permute=FALSE, ...) {
+do_randomized <- function(model_spec, radius, niter, 
+                          mvpa_fun=mvpa_iterate, 
+                          combiner=pool_randomized, 
+                          permute=FALSE, 
+                          ...) {
   error=NULL 
   
   ret <- furrr::future_map(seq(1,niter), function(i) {
@@ -200,7 +215,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' @import doParallel
 #' @import parallel
 #' @importFrom futile.logger flog.info flog.error flog.debug
-#' @param combiner a function that combines results into an appropriate output.
+#' @param combiner one of either "pool", "average", or a function that combines results into an appropriate output.
 #' @param permute permute the labels (i.e. to derive a "random" result)
 #' @references 
 #' Bjornsdotter, M., Rylander, K., & Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.
@@ -231,8 +246,10 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' res2 <- run_searchlight(mspec,radius=8, method="standard", combiner=custom_combiner)
 #' }
 #' 
-run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, 
-                                       combiner=NULL, 
+run_searchlight.mvpa_model <- function(model_spec, radius=8, 
+                                       method=c("randomized", "standard"),  
+                                       niter=4, 
+                                       combiner="average", 
                                        permute=FALSE, ...) {
   
   if (radius < 1 || radius > 100) {
@@ -248,20 +265,44 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8, method=c("randomize
   flog.info("model is: %s", model_spec$model$label)
   
   res <- if (method == "standard") {
-    if (is.null(combiner)) {
-      combiner <- combine_standard
-    }
-    
     flog.info("running standard searchlight with %s radius ", radius)
-    do_standard(model_spec, radius, combiner=combiner, permute=permute)    
+    if (is.function(combiner)) {
+      do_standard(model_spec, radius, combiner=combiner, permute=permute,...)    
+    } else {
+      if (combiner == "pool") {
+        do_standard(model_spec, radius, combiner=combine_standard, compute_performance=TRUE, permute=permute,...)  
+      } else if (combiner == "average") {
+        do_standard(model_spec, radius, combiner=combine_standard, compute_performance=TRUE, return_predictions=FALSE, 
+                    permute=permute,...)  
+      }
+    }
   } else if (method == "randomized") {
     
-    if (is.null(combiner)) {
-      combiner <- pool_randomized
+    flog.info("running randomized searchlight with %s radius and %s iterations", radius, niter)
+    if (combiner == "pool") {
+      do_randomized(model_spec, radius, niter, combiner=pool_randomized, 
+                    compute_performance=FALSE, 
+                    return_predictions=TRUE,
+                    permute=permute,
+                    ...)
+    } else if (combiner == "average") {
+      do_randomized(model_spec, radius, niter, combiner=combine_randomized, 
+                    compute_performance=TRUE, 
+                    return_predictions=FALSE,
+                    permute=permute,
+                    ...)
+    } else if (is.function(combiner)) {
+      ## combiner could be anything, assume defaults. Extra args will be passed to mvpa_iterate.
+      do_randomized(model_spec, radius, niter, combiner=combiner, 
+                    permute=permute,
+                    ...)
+    } else {
+      stop(paste("'combiner' must be either 'average', 'pool', or a user-supplied custom 'function'"))
     }
     
-    flog.info("running randomized searchlight with %s radius and %s iterations", radius, niter)
-    do_randomized(model_spec, radius, niter, combiner=combiner, compute_performance=FALSE, permute=permute)
+    
+    
+   
   } 
   
 }

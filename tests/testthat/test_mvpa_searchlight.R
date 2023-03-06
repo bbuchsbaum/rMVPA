@@ -149,12 +149,12 @@ test_that("randomized surface-based mvpa_searchlight runs without error", {
 
 test_that("randomized mvpa_searchlight runs without error", {
   
-  dataset <- gen_sample_dataset(c(8,8,8), 100, nlevels=2)
+  dataset <- gen_sample_dataset(c(12,12,12), 100, nlevels=2)
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, 
                       model_type="classification", crossval=cval)
-  res <- run_searchlight(mspec,radius=5, method="randomized", niter=4)
+  res <- run_searchlight(mspec,radius=4, method="randomized", niter=4)
   expect_true(!is.null(res))
 
 
