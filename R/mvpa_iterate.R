@@ -243,8 +243,6 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
   nbatches <- as.integer(length(ids)/batch_size)
   batch_group <- sort(rep(1:nbatches, length.out=length(ids)))
   
-
- 
   dset <- mod_spec$dataset
   do_fun <- if (has_test_set(dset)) external_crossval else internal_crossval
   
@@ -252,16 +250,17 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
   sframe <- get_samples(dset, vox_list) %>% mutate(batch=batch_group, rnum=ids) %>% 
     group_split(batch)
   
- 
-  
+  ## hack to avoid exporting of massive datasets
   mod_spec$dataset <- NULL
+  ### 
     
   tot <- length(ids)
   
   result <- purrr::map(sframe, function(sf) {
-    sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample)))
+    browser()
+    sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample))) %>% select(-sample)
     ### future_pmap goes here.
-    sf %>% furrr::future_pmap(function(sample, .id, batch, rnum, roi) {
+    sf %>% furrr::future_pmap(function(.id, batch, rnum, roi) {
       
       if (verbose && (as.numeric(.id) %% 100 == 0)) {
         perc <- as.integer(as.numeric(.id)/tot * 100)
@@ -436,15 +435,18 @@ manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),   batch_s
   tot <- length(ids)
  
   result <- purrr::map(sframe, function(sf) {
-    sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample)))
-    ### future_pmap goes here.
-    sf %>% furrr::future_pmap(function(sample, .id, batch, rnum, roi) {
-      do_manova(roi, mod_spec, rnum)
-    }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
+    sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample))) %>% select(-sample)
+    fut_manova(mod_spec, sf)
   }) %>% bind_rows()
   
   result
 
 }
 
+fut_manova <- function(mod_spec, sf) {
+  sf %>% furrr::future_pmap(function(.id, batch, rnum, roi) {
+    do_manova(roi, mod_spec, rnum)
+  }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
+}
+  
 
