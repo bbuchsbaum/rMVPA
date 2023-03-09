@@ -64,7 +64,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
 external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
  
-  dset <- mspec$dataset
+  #dset <- mspec$dataset
   
   ytrain <- if (permute) {
     sample(y_train(mspec))
@@ -77,7 +77,9 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   ind <- neuroim2::indices(roi$train_roi)
   
   #result <- try_warning(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
-  result <- try(train_model(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, tune_reps=mspec$tune_reps))
+  result <- try(train_model(mspec, xtrain, ytrain, indices=ind, 
+                            param=mspec$tune_grid, 
+                            tune_reps=mspec$tune_reps))
   
   if (inherits(result, "try-error")) {
     flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
@@ -199,6 +201,18 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   }
   
 }
+
+#' @keywords internal
+extract_roi <- function(sample) {
+  r <- as_roi(sample)
+  v <- neuroim2::values(r$train_roi)
+  r <- try(filter_roi(r))
+  if (inherits(r, "try-error") || ncol(v) < 2) {
+    NULL
+  } else {
+    r
+  }
+}
   
   
 #' mvpa_iterate
@@ -219,57 +233,55 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
                          compute_performance=TRUE, 
                          return_predictions=TRUE,
                          return_fits=FALSE, 
+                         batch_size=as.integer(.1*length(ids)),
                          permute=FALSE, verbose=TRUE) {
 
   assert_that(length(ids) == length(vox_list), 
               msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   
-  sframe <- get_samples(mod_spec$dataset, vox_list)
+  batch_size <- max(1, batch_size)
+  nbatches <- as.integer(length(ids)/batch_size)
+  batch_group <- sort(rep(1:nbatches, length.out=length(ids)))
+  
 
-  do_fun <- if (has_test_set(mod_spec$dataset)) external_crossval else internal_crossval
+ 
+  dset <- mod_spec$dataset
+  do_fun <- if (has_test_set(dset)) external_crossval else internal_crossval
   
+ 
+  sframe <- get_samples(dset, vox_list) %>% mutate(batch=batch_group, rnum=ids) %>% 
+    group_split(batch)
+  
+ 
+  
+  mod_spec$dataset <- NULL
+    
   tot <- length(ids)
-  ### iterate over rows using parallel map with futures
-  ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
-    
-    if (verbose && (as.numeric(.id) %% 100 == 0)) {
-      perc <- as.integer(as.numeric(.id)/tot * 100)
-      futile.logger::flog.info("mvpa_iterate: %s percent", perc)
-    }
-    
-    
-    roi <- as_roi(sample)
-    v <- neuroim2::values(roi$train_roi)
-    
-    if (ncol(v) < 2) {
-      ## too few columns
-      return(NULL)
-    }
-    
-    ## here we filter rois to check for valid columns
-    roi <- try(filter_roi(roi))
-    
-    if (inherits(roi, "try-error")) {
-      return(NULL)
-    }
-    
-    
-    result <- do_fun(roi, mod_spec, rnum, 
-           compute_performance=compute_performance,
-           return_fit=return_fits, permute=permute)
-    
-    
-    ## storing full prediction output takes up a lot of memory.
-    ## here we remove this information unless requested.
-    if (!return_predictions) {
-      result <- result %>% mutate(result = list(NULL))
-    }
-    
-    result
-    
-  }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
   
-  ret
+  result <- purrr::map(sframe, function(sf) {
+    sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample)))
+    ### future_pmap goes here.
+    sf %>% furrr::future_pmap(function(sample, .id, batch, rnum, roi) {
+      
+      if (verbose && (as.numeric(.id) %% 100 == 0)) {
+        perc <- as.integer(as.numeric(.id)/tot * 100)
+        futile.logger::flog.info("mvpa_iterate: %s percent", perc)
+      }
+      
+      result <- do_fun(roi, mod_spec, rnum, 
+                       compute_performance=compute_performance,
+                       return_fit=return_fits, permute=permute)
+      
+      if (!return_predictions) {
+        result <- result %>% mutate(result = list(NULL))
+      }
+      
+      result
+    }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
+  }) %>% bind_rows()
+  
+  
+  result
   
 }
 
@@ -403,15 +415,36 @@ do_manova <- function(roi, mod_spec, rnum) {
 #' @importFrom dplyr do rowwise
 #' @export
 #' @inheritParams mvpa_iterate
-manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FALSE) {
+manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),   batch_size=as.integer(.1*length(ids)), permute=FALSE) {
   assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
   sframe <- get_samples(mod_spec$dataset, vox_list)
-  
-  ## iterate over searchlights using parallel futures
-  ret <- sframe %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
-    do_manova(as_roi(sample), mod_spec, rnum)
-  }) %>% dplyr::bind_rows()
-}
 
+  
+  batch_size <- max(1, batch_size)
+  nbatches <- as.integer(length(ids)/batch_size)
+  batch_group <- sort(rep(1:nbatches, length.out=length(ids)))
+  
+
+  dset <- mod_spec$dataset
+  mod_spec$dataset <- NULL
+  
+  
+  sframe <- get_samples(dset, vox_list) %>% mutate(batch=batch_group, rnum=ids) %>% 
+    group_split(batch)
+  
+ 
+  tot <- length(ids)
+ 
+  result <- purrr::map(sframe, function(sf) {
+    sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample)))
+    ### future_pmap goes here.
+    sf %>% furrr::future_pmap(function(sample, .id, batch, rnum, roi) {
+      do_manova(roi, mod_spec, rnum)
+    }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
+  }) %>% bind_rows()
+  
+  result
+
+}
 
 

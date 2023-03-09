@@ -155,7 +155,7 @@ do_randomized <- function(model_spec, radius, niter,
                           ...) {
   error=NULL 
   
-  ret <- furrr::future_map(seq(1,niter), function(i) {
+  ret <- purrr::map(seq(1,niter), function(i) {
     futile.logger::flog.info("searchlight iteration: %s", i)
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
     cind <- purrr::map_int(slight, ~ .@parent_index)

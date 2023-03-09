@@ -183,6 +183,8 @@ mvpa_model <- function(model,
   
 }
 
+
+
 #' @export
 #' @method print mvpa_model
 print.mvpa_model <- function(x,...) {
