@@ -257,7 +257,6 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
   tot <- length(ids)
   
   result <- purrr::map(sframe, function(sf) {
-    browser()
     sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample))) %>% select(-sample)
     ### future_pmap goes here.
     sf %>% furrr::future_pmap(function(.id, batch, rnum, roi) {
@@ -448,5 +447,5 @@ fut_manova <- function(mod_spec, sf) {
     do_manova(roi, mod_spec, rnum)
   }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
 }
-  
+
 
