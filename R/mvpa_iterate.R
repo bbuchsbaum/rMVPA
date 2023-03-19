@@ -415,9 +415,10 @@ do_manova <- function(roi, mod_spec, rnum) {
 #' @inheritParams mvpa_iterate
 manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),   batch_size=as.integer(.1*length(ids)), permute=FALSE) {
   assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
+  futile.logger::flog.info("manova_iterate: extracting voxel ids", capture=TRUE)
   sframe <- get_samples(mod_spec$dataset, vox_list)
 
-  
+  futile.logger::flog.info("manova_iterate: generating batches", capture=TRUE)
   batch_size <- max(1, batch_size)
   nbatches <- as.integer(length(ids)/batch_size)
   batch_group <- sort(rep(1:nbatches, length.out=length(ids)))
@@ -426,14 +427,14 @@ manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),   batch_s
   dset <- mod_spec$dataset
   mod_spec$dataset <- NULL
   
-  
+  futile.logger::flog.info("manova_iterate: generating batches", capture=TRUE)
   sframe <- get_samples(dset, vox_list) %>% mutate(batch=batch_group, rnum=ids) %>% 
     group_split(batch)
   
  
   tot <- length(ids)
- 
   result <- purrr::map(sframe, function(sf) {
+    futile.logger::flog.info("manova_iterate: compute manovas ...", capture=TRUE)
     sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample))) %>% select(-sample)
     fut_manova(mod_spec, sf)
   }) %>% bind_rows()
