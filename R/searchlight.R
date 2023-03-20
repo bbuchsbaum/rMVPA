@@ -191,6 +191,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   error=NULL
   flog.info("creating standard searchlight")
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
+
   cind <- which(model_spec$dataset$mask > 0)
   flog.info("running standard searchlight iterator")
   ret <- mvpa_fun(model_spec, slight, cind, permute=permute, ...)

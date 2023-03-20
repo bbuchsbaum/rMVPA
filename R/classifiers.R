@@ -501,12 +501,11 @@ MVPAModels$lda_thomaz <- list(type = "Classification",
                               parameters=data.frame(parameters="parameter", class="character", label="parameter"),
                               grid=function(x, y, len = NULL) data.frame(parameter="none"),
                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { sparsediscrim:::lda_thomaz(x,y, ...) },
-                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { sparsediscrim:::predict.lda_thomaz(modelFit, as.matrix(newdata))$class },
+                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { sparsediscrim:::predict.lda_thomaz(modelFit, as.matrix(newdata)) },
                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
-                                scores <- -t(sparsediscrim:::predict.lda_thomaz(modelFit, newdata)$scores)
-                                mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
-                                probs <- exp(scores - mc)
-                                zapsmall(probs/rowSums(probs))
+                                p <- sparsediscrim:::predict.lda_thomaz(modelFit, newdata, type="prob")
+                                
+                                p
                               })
 
 MVPAModels$hdrda <- list(type = "Classification", 

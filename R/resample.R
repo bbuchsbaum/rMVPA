@@ -31,7 +31,8 @@ get_samples.mvpa_surface_dataset <- function(obj, vox_list) {
 data_sample.mvpa_dataset <- function(obj, vox) {
   structure(
     list(
-      data = obj,
+      #data = obj,
+      data=NULL,
       vox=vox
     ),
     class = "data_sample"
@@ -81,12 +82,12 @@ filter_roi <- function(roi) {
 #' @keywords internal
 #' @noRd
 #' @importFrom neuroim2 series_roi
-as_roi.data_sample <- function(x, ...) {
+as_roi.data_sample <- function(x, data, ...) {
   
-  train_roi <- try(series_roi(x$data$train_data, x$vox))
+  train_roi <- try(series_roi(data$train_data, x$vox))
   
-  test_roi <- if (has_test_set(x$data)) {
-    series_roi(x$data$test_data, x$vox)
+  test_roi <- if (has_test_set(data)) {
+    series_roi(data$test_data, x$vox)
   }
   
   #cds <- if (is.vector(x$vox)) {
@@ -109,15 +110,15 @@ as_roi.data_sample <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 #' @importFrom neuroim2 space series series_roi
-as.data.frame.data_sample <- function(x, ...) {
-  train_mat <- neuroim2::series(x$data$train_data, x$vox)
+as.data.frame.data_sample <- function(x, data, ...) {
+  train_mat <- neuroim2::series(data$train_data, x$vox)
   
-  test_mat <- if (has_test_set(x$data)) {
-    neuroim2::series(x$data$test_data, x$vox)
+  test_mat <- if (has_test_set(data)) {
+    neuroim2::series(data$test_data, x$vox)
   }
   
   cds <- if (is.vector(x$vox)) {
-    cds <- neuroim2::index_to_grid(space(x$data$mask), x$vox)
+    cds <- neuroim2::index_to_grid(space(data$mask), x$vox)
   } else {
     x$vox
   }

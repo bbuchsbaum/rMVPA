@@ -179,8 +179,9 @@ extract_sample <- function(obj,...) {
 #' convert to an \code{ROIVolume} or \code{ROISurface} object
 #' 
 #' @param obj the object to convert
+#' @param data the associated data object
 #' @param ... extra args
-as_roi <- function(obj,...) {
+as_roi <- function(obj, data, ...) {
   UseMethod("as_roi")
 }
 
