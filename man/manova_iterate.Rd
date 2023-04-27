@@ -4,7 +4,13 @@
 \alias{manova_iterate}
 \title{manova_iterate}
 \usage{
-manova_iterate(mod_spec, vox_list, ids = 1:length(vox_list), permute = FALSE)
+manova_iterate(
+  mod_spec,
+  vox_list,
+  ids = 1:length(vox_list),
+  batch_size = as.integer(0.1 * length(ids)),
+  permute = FALSE
+)
 }
 \arguments{
 \item{mod_spec}{a class of type \code{mvpa_model}}
@@ -13,7 +19,9 @@ manova_iterate(mod_spec, vox_list, ids = 1:length(vox_list), permute = FALSE)
 
 \item{ids}{a \code{vector} of ids for each voxel set}
 
-\item{permute}{permute the labels}
+\item{batch_size}{The number of voxel sets to process in each batch (defaults to 10% of the total voxel sets).}
+
+\item{permute}{Logical, whether to permute the labels (defaults to FALSE).}
 }
 \description{
 Run MANOVA analysis for each of a list of voxels sets

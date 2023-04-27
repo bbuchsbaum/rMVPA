@@ -9,26 +9,32 @@ mvpa_iterate(
   vox_list,
   ids = 1:length(vox_list),
   compute_performance = TRUE,
+  return_predictions = TRUE,
   return_fits = FALSE,
+  batch_size = as.integer(0.1 * length(ids)),
   permute = FALSE,
   verbose = TRUE
 )
 }
 \arguments{
-\item{mod_spec}{a class of type \code{mvpa_model}}
+\item{mod_spec}{An object of class \code{mvpa_model} specifying the model.}
 
-\item{vox_list}{a \code{list} of voxel indices/coordinates}
+\item{vox_list}{A \code{list} of voxel indices or coordinates.}
 
-\item{ids}{a \code{vector} of ids for each voxel set}
+\item{ids}{A \code{vector} of IDs for each voxel set (defaults to 1:length(vox_list)).}
 
-\item{compute_performance}{compute and store performance measures for each voxel set}
+\item{compute_performance}{Logical, whether to compute and store performance measures for each voxel set (defaults to TRUE).}
 
-\item{return_fits}{return the model fit for each voxel set?}
+\item{return_predictions}{Logical, whether to return row-wise predictions for each voxel set (defaults to TRUE).}
 
-\item{permute}{permute the labels}
+\item{return_fits}{Logical, whether to return the model fit for each voxel set (defaults to FALSE).}
 
-\item{verbose}{print progress messages}
+\item{batch_size}{The number of voxel sets to process in each batch (defaults to 10% of the total voxel sets).}
+
+\item{permute}{Logical, whether to permute the labels (defaults to FALSE).}
+
+\item{verbose}{Logical, whether to print progress messages (defaults to TRUE).}
 }
 \description{
-Fit a classification/regression model for each voxel set in a list
+Fits a classification or regression model for each voxel set in a list.
 }

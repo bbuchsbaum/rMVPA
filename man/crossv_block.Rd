@@ -2,25 +2,30 @@
 % Please edit documentation in R/crossval.R
 \name{crossv_block}
 \alias{crossv_block}
-\title{crossv_block}
+\title{Block Cross-Validation Data Preparation}
 \usage{
 crossv_block(data, y, block_var, id = ".id")
 }
 \arguments{
-\item{data}{the training data}
+\item{data}{A data frame containing the training data.}
 
-\item{y}{the response vector}
+\item{y}{A response vector.}
 
-\item{block_var}{an \code{integer} \code{vector} defining the cross-validation blocks}
+\item{block_var}{An integer vector defining the cross-validation blocks.}
 
-\item{id}{a character id}
+\item{id}{A character string specifying the identifier for the output data frame.}
+}
+\value{
+A tibble containing the training and testing data, response vectors, and block IDs for each fold.
 }
 \description{
-crossv_block
+This function prepares the data for block cross-validation by dividing the dataset
+based on the provided block variable. It creates subsets of training and testing
+data for each block without performing any analysis or fitting models.
 }
 \examples{
-X <- data.frame(x1=rnorm(100), x2=rnorm(100))
+X <- data.frame(x1 = rnorm(100), x2 = rnorm(100))
 y <- rep(letters[1:4], 25)
-block_var <- rep(1:4, each=25)
-cv <- crossv_block(X,y,block_var)
+block_var <- rep(1:4, each = 25)
+cv <- crossv_block(X, y, block_var)
 }

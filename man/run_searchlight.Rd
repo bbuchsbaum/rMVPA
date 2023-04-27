@@ -4,6 +4,7 @@
 \alias{run_searchlight}
 \alias{run_searchlight.mvpa_model}
 \alias{run_searchlight.rsa_model}
+\alias{run_searchlight.manova_model}
 \title{run_searchlight}
 \usage{
 run_searchlight(model_spec, radius, method, niter, ...)
@@ -13,7 +14,7 @@ run_searchlight(model_spec, radius, method, niter, ...)
   radius = 8,
   method = c("randomized", "standard"),
   niter = 4,
-  combiner = NULL,
+  combiner = "average",
   permute = FALSE,
   ...
 )
@@ -28,57 +29,78 @@ run_searchlight(model_spec, radius, method, niter, ...)
   regtype = c("pearson", "spearman", "lm", "rfit"),
   ...
 )
+
+\method{run_searchlight}{manova_model}(
+  model_spec,
+  radius = 8,
+  method = c("randomized", "standard"),
+  niter = 4,
+  permute = FALSE,
+  ...
+)
 }
 \arguments{
-\item{model_spec}{a \code{mvpa_model} instance.}
+\item{model_spec}{An object of type \code{manova_model} specifying the MANOVA model to be used.}
 
-\item{radius}{the searchlight radus in millimeters.}
+\item{radius}{The radius of the searchlight sphere (default is 8, allowable range: 1-100).}
 
-\item{method}{the type of searchlight (randomized or standard)}
+\item{method}{The method used for the searchlight analysis ("randomized" or "standard").}
 
-\item{niter}{the number of searchlight iterations (used only for 'randomized' method)}
+\item{niter}{The number of iterations for randomized searchlight (default is 4).}
 
-\item{...}{extra args}
+\item{...}{Additional arguments to be passed to the function.}
 
-\item{combiner}{a function that combines results into an appropriate output.}
+\item{combiner}{A function that combines results into an appropriate output, or one of the following strings: "pool" or "average".}
 
-\item{permute}{permute the labels (i.e. to derive a "random" result)}
+\item{permute}{Whether to permute the labels (default is FALSE).}
 
-\item{distmethod}{method used to compute distances between searchlight samples}
+\item{distmethod}{The method used to compute distances between searchlight samples ("spearman" or "pearson").}
 
-\item{regtype}{method used to fit response and predictor distance matrices}
+\item{regtype}{The method used to fit response and predictor distance matrices ("pearson", "spearman", "lm", or "rfit").}
 }
 \value{
-a named list of \code{NeuroVol} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.
+A named list of \code{NeuroVol} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.
 }
 \description{
-execute a searchlight analysis
+Execute a searchlight analysis.
+
+This function runs a searchlight analysis using a specified MVPA model, radius, and method.
+It can be customized with a combiner function and permutation options.
+
+This function runs a searchlight analysis using a specified RSA model, radius, and method.
+It can be customized with permutation options, distance computation methods, and regression methods.
+
+This function runs a searchlight analysis using a specified MANOVA model, radius, and method.
+It can be customized with permutation options.
 }
 \examples{
+# TODO: Add an example
  
 dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3)
 cval <- blocked_cross_validation(dataset$design$block_var)
 model <- load_model("sda_notune")
 mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
-res <- run_searchlight(mspec,radius=8, method="standard")
+res <- run_searchlight(mspec, radius=8, method="standard")
 
-# a custom "combiner" can be used to post-process the output of the searchlight classifier for special cases.
-# in the example below the supplied "combining function" extracts the predicted probability of the correct class 
+# A custom "combiner" can be used to post-process the output of the searchlight classifier for special cases.
+# In the example below, the supplied "combining function" extracts the predicted probability of the correct class 
 # for every voxel and every trial and then stores them in a data.frame.
 
 \dontrun{ 
 custom_combiner <- function(mspec, good, bad) { 
-   good \%>\% pmap(function(result, id,...) { 
+   good \%>\% pmap(function(result, id, ...) { 
      data.frame(trial=1:length(result$observed), id=id, prob=prob_observed(result)) 
    }) \%>\% bind_rows()
 }
 
-res2 <- run_searchlight(mspec,radius=8, method="standard", combiner=custom_combiner)
+res2 <- run_searchlight(mspec, radius=8, method="standard", combiner=custom_combiner)
 }
-
 }
 \references{
 Bjornsdotter, M., Rylander, K., & Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.
 
 Kriegeskorte, N., Goebel, R., & Bandettini, P. (2006). Information-based functional brain mapping. Proceedings of the National academy of Sciences of the United States of America, 103(10), 3863-3868.
+}
+\seealso{
+\code{\link{run_searchlight.randomized}}, \code{\link{run_searchlight.standard}}
 }

@@ -2,15 +2,23 @@
 % Please edit documentation in R/allgeneric.R
 \name{as_roi}
 \alias{as_roi}
-\title{as_roi}
+\title{Convert an object to an ROIVolume or ROISurface object}
 \usage{
-as_roi(obj, ...)
+as_roi(obj, data, ...)
 }
 \arguments{
-\item{obj}{the object to convert}
+\item{obj}{The object to be converted.}
 
-\item{...}{extra args}
+\item{data}{The associated data object used in the conversion process.}
+
+\item{...}{Additional arguments to be passed to the function.}
+}
+\value{
+An ROIVolume or ROISurface object.
 }
 \description{
-convert to an \code{ROIVolume} or \code{ROISurface} object
+The as_roi function is a generic function that converts the provided object
+into an ROIVolume or ROISurface object, given the associated data object and
+any additional arguments.
 }
+\keyword{internal}

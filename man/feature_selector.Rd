@@ -2,28 +2,28 @@
 % Please edit documentation in R/feature_selection.R
 \name{feature_selector}
 \alias{feature_selector}
-\title{feature_selector}
+\title{Create a feature selection specification}
 \usage{
 feature_selector(method, cutoff_type, cutoff_value)
 }
 \arguments{
-\item{method}{the type of feature selection}
+\item{method}{The type of feature selection method to use. Supported methods are "FTest" and "catscore".}
 
-\item{cutoff_type}{the type of threshold used to select features.}
+\item{cutoff_type}{The type of threshold used to select features. Supported cutoff types are "top_k" and "top_p".}
 
-\item{cutoff_value}{the numeric vale of the threshold cutoff}
+\item{cutoff_value}{The numeric value of the threshold cutoff.}
 }
 \value{
-a list with class name equal to the \code{method} arguments
+A list with a class name equal to the \code{method} argument.
 }
 \description{
-Creates a feature selection specification
+This function creates a feature selection specification using the provided
+method, cutoff type, and cutoff value.
 }
 \details{
 The available feature selection methods are:
-
-Ftest: computes a one-way ANOVA for every column in feature matrix
-catscore: computes a correlation adjusted t-test for every column in matrix using \code{sda.ranking} from the \code{sda} package.
+  - FTest: Computes a one-way ANOVA for every column in the feature matrix.
+  - catscore: Computes a correlation adjusted t-test for every column in the matrix using \code{sda.ranking} from the \code{sda} package.
 }
 \examples{
 fsel <- feature_selector("FTest", "top_k", 1000)

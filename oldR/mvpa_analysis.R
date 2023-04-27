@@ -287,6 +287,7 @@ mvpa_regional <- function(dataset, model, region_mask, crossval=kfold_cross_vali
     stop("mvpa_regional: invalid ROI mask, number of ROIs = 0")
   }
   
+  roinum <- NULL
   res <- foreach::foreach(roinum = regionSet, .verbose=FALSE, .errorhandling="pass", .packages=c("rMVPA", "MASS", "neuroim", "caret", dataset$model$library)) %dopar% {   
     idx <- which(region_mask == roinum)
     

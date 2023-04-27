@@ -54,23 +54,37 @@ get_control <- function(y, nreps) {
 }
 
 
-#' tune_model
-#' 
-#' find the best tuning parameters for a model specification
-#' 
-#' @param mspec the model specification which derives from class \code{mvpa_model}
-#' @param x the training data matrix
-#' @param y the response vector
-#' @param wts optional class weights (if underlying model supports it)
-#' @param param the tuning grid, should be a \code{data.frame} where parameter names are indicated by column names.
-#' @param nreps the number of bootstrap replications
+#'
+#' This function finds the best hyperparameters for a given model specification
+#' using a specified tuning grid and cross-validation.
+#'
+#' @param mspec A model specification derived from the \code{mvpa_model} class.
+#' @param x The training data matrix.
+#' @param y The response vector.
+#' @param wts Optional class weights (if the underlying model supports it).
+#' @param param A \code{data.frame} representing the tuning grid, where
+#'        parameter names are indicated by column names.
+#' @param nreps The number of bootstrap replications (default is 10).
+#' @return A data frame containing the best hyperparameter values.
+#' @keywords internal
 tune_model <- function(mspec, x, y, wts, param, nreps=10) {
   ctrl <- get_control(y, nreps)
   cfit <-caret::train(as.data.frame(x), y, method=mspec$model, weights=wts, metric=ctrl$metric, trControl=ctrl$ctrl, tuneGrid=param)
   cfit$bestTune
 }
 
-#' @method fit_model mvpa_model
+#' Fit an MVPA model
+#'
+#' This function fits a multivariate pattern analysis (MVPA) model to the given data.
+#'
+#' @param obj An object derived from the \code{mvpa_model} class.
+#' @param x The training data matrix.
+#' @param y The response vector.
+#' @param wts Optional class weights (if the underlying model supports it).
+#' @param param The hyperparameters of the model.
+#' @param classProbs Logical; if TRUE, class probabilities should be computed (default is FALSE).
+#' @param ... Additional arguments to be passed to the underlying model fitting function.
+#' @return A fitted model object with additional attributes "obsLevels" and "problemType".
 fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
   fit <- obj$model$fit(x,y,wts=wts,param=param,lev=levels(y), classProbs=classProbs, ...)
   ##fit$obsLevels <- levels(y)
@@ -85,11 +99,14 @@ fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
   fit
 }
 
-
-#' @param newdata new data to predict on
-#' @param sub_indices the subset of row indices to compute predictions on
-#' @rdname predict
-#' @export
+#'
+#' This function predicts class labels and probabilities for new data using a fitted model.
+#'
+#' @param object A fitted model object of class \code{class_model_fit}.
+#' @param newdata New data to predict on, either as a \code{matrix} or a \code{NeuroVec} or \code{NeuroSurfaceVector} object.
+#' @param sub_indices The subset of row indices to compute predictions on (optional).
+#' @param ... Additional arguments to be passed to the underlying prediction function.
+#' @return A list containing class predictions and probabilities with class attributes "classification_prediction", "prediction", and "list".
 predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   
   mat <- if (inherits(newdata, "NeuroVec") || inherits(newdata, "NeuroSurfaceVector")) {

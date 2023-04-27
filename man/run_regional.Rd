@@ -30,29 +30,43 @@ run_regional(model_spec, region_mask, ...)
 )
 }
 \arguments{
-\item{model_spec}{a \code{mvpa_model} instance}
+\item{model_spec}{An object of type \code{rsa_model} specifying the RSA model to be used.}
 
-\item{region_mask}{a \code{NeuroVol} or \code{NeuroSurface} where each region is identified by a unique integer. 
-Every non-zero set of positive integers will be used to define a set of voxels for classification analysis.}
+\item{region_mask}{A mask representing different regions in the brain image.}
 
-\item{...}{extra args}
+\item{...}{Additional arguments to be passed to the function.}
 
-\item{return_fits}{whether to return model fit for every ROI (default is \code{FALSE} to save memory)}
+\item{return_fits}{Whether to return model fit for every ROI (default is \code{FALSE} to save memory).}
 
-\item{return_predictions}{whether to return full prediction table with per trial probabilities (can be a large table, set \code{FALSE} to limit memory use)}
+\item{return_predictions}{Whether to return full prediction table with per trial probabilities (can be a large table, set \code{FALSE} to limit memory use).}
 
-\item{compute_performance}{\code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC)}
+\item{compute_performance}{\code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC).}
 
-\item{coalesce_design_vars}{concatenate additional design variables with output stored in `prediction_table`}
+\item{coalesce_design_vars}{Concatenate additional design variables with output stored in `prediction_table`.}
 
-\item{regtype}{the regression method ("pearson", "spearman", "lm", or "rfit")}
+\item{regtype}{The regression method ("pearson", "spearman", "lm", or "rfit").}
 
-\item{distmethod}{the distance cmputing method ("pearson" or "spearman")}
+\item{distmethod}{The distance computing method ("pearson" or "spearman").}
 }
 \value{
-a \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects, where each element contains performance metric and is 
-labelled according to the metric used (e.g. Accuracy, AUC)
+A named list of results for each region of interest.
+
+A \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects,
+where each element contains a performance metric and is labeled according to the metric used (e.g. Accuracy, AUC).
+
+A \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects,
+where each element contains a performance metric and is labeled according to the metric used (e.g. Accuracy, AUC).
 }
 \description{
 Run a separate MVPA analysis for multiple disjoint regions of interest.
+
+This function runs a regional MVPA analysis using a specified MVPA model and
+region mask. The analysis can be customized to return model fits, predictions,
+and performance measures.
+
+This function runs a regional RSA analysis using a specified RSA model and
+region mask. The analysis can be customized to return model fits and performance measures.
+}
+\examples{
+# TODO: Add an example
 }

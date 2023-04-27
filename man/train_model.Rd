@@ -3,7 +3,7 @@
 \name{train_model}
 \alias{train_model}
 \alias{train_model.mvpa_model}
-\title{train_model}
+\title{Train Model}
 \usage{
 train_model(obj, ...)
 
@@ -19,9 +19,9 @@ train_model(obj, ...)
 )
 }
 \arguments{
-\item{obj}{the model specification}
+\item{obj}{The model specification object.}
 
-\item{...}{extra args}
+\item{...}{Additional arguments to be passed to the method-specific function.}
 
 \item{train_dat}{training data, and instance of class \code{ROIVolume} or \code{ROISurface}}
 
@@ -36,10 +36,10 @@ train_model(obj, ...)
 \item{tune_reps}{the number of bootstrap replications for parameter tuning (only used when param is not \code{NULL})}
 }
 \description{
-train a classification or regression model
+Train a classification or regression model.
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{mvpa_model}: train an mvpa_model
-}}
+\item \code{train_model(mvpa_model)}: train an mvpa_model
 
+}}

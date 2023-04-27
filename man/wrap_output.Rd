@@ -2,17 +2,23 @@
 % Please edit documentation in R/allgeneric.R
 \name{wrap_output}
 \alias{wrap_output}
-\title{wrap_output}
+\title{Wrap output values into a desired format}
 \usage{
 wrap_output(obj, vals, ...)
 }
 \arguments{
-\item{obj}{the object}
+\item{obj}{The object used to determine the appropriate method for wrapping the output.}
 
-\item{vals}{the values to wrap}
+\item{vals}{The values to be wrapped.}
 
-\item{...}{extra args}
+\item{...}{Additional arguments to be passed to the function.}
+}
+\value{
+A wrapped output based on the provided object and values.
 }
 \description{
-wrap_output
+The wrap_output function is a generic function that takes an object,
+values to be wrapped, and additional arguments to create a wrapped
+output based on the provided object and values.
 }
+\keyword{internal}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/mvpa_model.R
 \name{mvpa_model}
 \alias{mvpa_model}
-\title{create an mvpa_model}
+\title{Create an MVPA Model}
 \usage{
 mvpa_model(
   model,
@@ -18,33 +18,33 @@ mvpa_model(
 )
 }
 \arguments{
-\item{model}{a caret-based classification or regression model}
+\item{model}{A caret-based classification or regression model.}
 
-\item{dataset}{a \code{mvpa_dataset} instance}
+\item{dataset}{An `mvpa_dataset` instance.}
 
-\item{design}{a \code{mvpa_design} instance}
+\item{design}{An `mvpa_design` instance.}
 
-\item{model_type}{a \code{character} string indicating problem type: 'classification' or 'regression'}
+\item{model_type}{A character string indicating the problem type: "classification" or "regression".}
 
-\item{crossval}{a \code{cross_validation} instance}
+\item{crossval}{An optional `cross_validation` instance.}
 
-\item{feature_selector}{an optional \code{feature_selector} instance}
+\item{feature_selector}{An optional `feature_selector` instance.}
 
-\item{tune_grid}{an optional parameter tuning grid as a \code{data.frame}}
+\item{tune_grid}{An optional parameter tuning grid as a `data.frame`.}
 
-\item{tune_reps}{the number of replications used during paramter tuning. Only relevant if \code{tune_grid} supplied.}
+\item{tune_reps}{The number of replications used during parameter tuning. Only relevant if `tune_grid` is supplied.}
 
-\item{performance}{an optional custom function for computing performance metrics.}
+\item{performance}{An optional custom function for computing performance metrics.}
 
-\item{class_metrics}{\code{logical} flag indicating whether to compute performance metrics for each class.}
+\item{class_metrics}{A logical flag indicating whether to compute performance metrics for each class.}
 }
 \description{
-create an mvpa_model
+Create an MVPA model based on a caret-based classification or regression model.
 }
 \details{
-if \code{performance} is supplied it must be a function that takes one argument and 
-returns a named list of scalar values. The argument the function takes is a class deriving from
-\code{classification_result} appropriate for the problem at hand. See example below.
+If `performance` is supplied, it must be a function that takes one argument and returns a named list of scalar values. 
+The argument the function takes is a class deriving from `classification_result` appropriate for the problem at hand.
+See example below.
 }
 \examples{
 
@@ -58,9 +58,9 @@ cval <- blocked_cross_validation(design$block)
 mvdes <- mvpa_design(design, ~ fac, block_var=~block)
 
 custom_perf <- function(result) {
-   c(accuracy=sum(result$observed == result$predicted)/length(result$observed))
+  c(accuracy=sum(result$observed == result$predicted)/length(result$observed))
 }
-mvpmod <- mvpa_model(mod,dataset=mvdset, design=mvdes,crossval=cval, performance=custom_perf)
+mvpmod <- mvpa_model(mod, dataset=mvdset, design=mvdes, crossval=cval, performance=custom_perf)
 ret <- run_searchlight(mvpmod)
 stopifnot("accuracy" \%in\% names(ret))
 }

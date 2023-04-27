@@ -2,7 +2,7 @@
 % Please edit documentation in R/crossval.R
 \name{crossv_bootstrap_block}
 \alias{crossv_bootstrap_block}
-\title{crossv_bootstrap_block}
+\title{Block Bootstrap Cross-Validation Data Preparation}
 \usage{
 crossv_bootstrap_block(
   data,
@@ -14,17 +14,33 @@ crossv_bootstrap_block(
 )
 }
 \arguments{
-\item{data}{the training data}
+\item{data}{A data frame containing the training data.}
 
-\item{y}{the response vector}
+\item{y}{A response vector.}
 
-\item{block_var}{an \code{integer} \code{vector} defining the cross-validation blocks}
+\item{block_var}{An integer vector defining the cross-validation blocks.}
 
-\item{nreps}{the number of resamples}
+\item{nreps}{An integer specifying the number of bootstrap repetitions.}
 
-\item{id}{a character id}
+\item{id}{A character string specifying the identifier for the output data frame.}
+
+\item{weights}{An optional numeric vector of weights to be used for bootstrap sampling.}
+}
+\value{
+A tibble containing the training and testing data, response vectors, and block IDs for each fold.
 }
 \description{
-crossv_bootstrap_block
+This function prepares the data for block bootstrap cross-validation by dividing the dataset
+based on the provided block variable. It creates subsets of training and testing
+data for each block using bootstrap sampling within the training blocks, without performing any analysis or fitting models.
+}
+\details{
+The function first checks if the length of the `block_var` vector matches the length of the response vector `y`.
+It then creates a list of block indices and ensures there is more than one block to bootstrap. If weights are provided,
+the function splits the weights according to the block variable.
+
+The function performs bootstrap sampling within the training blocks but keeps the test set fixed.
+For each block, it generates a list of training indices using bootstrap sampling and creates the corresponding
+training and testing data sets.
 }
 \keyword{internal}

@@ -43,37 +43,46 @@ regression_result(
 )
 }
 \arguments{
-\item{observed}{a vector of observed/true values.}
+\item{observed}{A vector of observed or true values.}
 
-\item{predicted}{a vector of the predicted values.}
+\item{predicted}{A vector of predicted values.}
 
-\item{probs}{a \code{matrix} of predicted probabilities, one column per level.}
+\item{probs}{A \code{matrix} of predicted probabilities, with one column per level.}
 
-\item{testind}{the row indices of the test observations.}
+\item{testind}{The row indices of the test observations (optional).}
 
-\item{test_design}{an optional design for the test data.}
+\item{test_design}{An optional design for the test data.}
 
-\item{predictor}{an optional predictor object.}
+\item{predictor}{An optional predictor object.}
+}
+\value{
+A classification result object, which can be one of: \code{regression_result},
+  \code{binary_classification_result}, or \code{multiway_classification_result}.
+
+A binary classification result object, with the class attribute set to "binary_classification_result".
 }
 \description{
-Create a \code{classification_result} instance
+Constructs a classification result object based on the observed and predicted values,
+as well as other optional parameters.
+
+Constructs a binary classification result object based on the observed and predicted values,
+as well as other optional parameters.
 }
 \examples{
-
-## a vector of observed values
+# A vector of observed values
 yobs <- factor(rep(letters[1:4], 5))
 
-## predicted probabilities
-probs <- data.frame(a=runif(1:20), b=runif(1:20), c=runif(1:20), d=runif(1:20))
+# Predicted probabilities
+probs <- data.frame(a = runif(1:20), b = runif(1:20), c = runif(1:20), d = runif(1:20))
 probs <- sweep(probs, 1, rowSums(probs), "/")
 
-## get the max probability per row and use this to determine the predicted class
+# Get the max probability per row and use this to determine the predicted class
 maxcol <- max.col(probs)
 predicted <- levels(yobs)[maxcol]
 
-## construct a classification result
+# Construct a classification result
 cres <- classification_result(yobs, predicted, probs)
 
-## compute default performance measures (Accuracy, AUC)
+# Compute default performance measures (Accuracy, AUC)
 performance(cres)
 }

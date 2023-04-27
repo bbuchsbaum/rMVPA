@@ -2,13 +2,13 @@
 % Please edit documentation in R/allgeneric.R
 \name{test_design}
 \alias{test_design}
-\title{test_design}
+\title{Test Design Extraction}
 \usage{
 test_design(obj)
 }
 \arguments{
-\item{obj}{the object to extract test design from}
+\item{obj}{The object from which to extract the test design table.}
 }
 \description{
-return design table associated with test set
+Return the design table associated with the test set from an object.
 }

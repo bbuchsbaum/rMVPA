@@ -2,13 +2,13 @@
 % Please edit documentation in R/allgeneric.R
 \name{y_test}
 \alias{y_test}
-\title{y_test}
+\title{Test Labels/Response Extraction}
 \usage{
 y_test(obj)
 }
 \arguments{
-\item{obj}{the object to extract test response variable from.}
+\item{obj}{The object from which to extract the test response variable.}
 }
 \description{
-extract the test labels/response.
+Extract the test labels or response variable from an object.
 }

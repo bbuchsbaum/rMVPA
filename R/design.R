@@ -77,26 +77,26 @@ parse_variable <- function(var, design) {
 
 
 #' mvpa_design
-#' 
-#' Construct an MVPA design object that defines the classification/regression problem.
-#' 
-#' @param train_design a \code{data.frame} containing training variables.
-#' @param y_train a \code{formula}, \code{character} name or \code{factor} designating the training response.
-#' @param test_design an optional \code{data.frame} containing test variables.
-#' @param y_test an optional \code{formula}, \code{character} name or \code{factor} designating the test response.
-#' @param block_var an optional \code{formula}, \code{character} name or \code{integer} vector designating the blocking variable.
-#' @param split_by an optional \code{formula} indicating grouping structure for evaluating test performance.
-#' 
-#' @examples 
-#' 
-#' df1 <- data.frame(y=rep(letters[1:4], 5), x1=rnorm(20), x2=rnorm(20), block=rep(1:4, each=5))
+#'
+#' Constructs an MVPA design object, defining the classification or regression problem for Multi-Variate Pattern Analysis (MVPA).
+#'
+#' @param train_design A \code{data.frame} containing the training variables.
+#' @param y_train A \code{formula}, \code{character} name, or \code{factor} specifying the response variable for training.
+#' @param test_design An optional \code{data.frame} containing the test variables.
+#' @param y_test An optional \code{formula}, \code{character} name, or \code{factor} specifying the response variable for testing.
+#' @param block_var An optional \code{formula}, \code{character} name, or \code{integer} vector specifying the blocking variable.
+#' @param split_by An optional \code{formula} indicating the grouping structure for evaluating test performance.
+#'
+#' @examples
+#'
+#' df1 <- data.frame(y = rep(letters[1:4], 5), x1 = rnorm(20), x2 = rnorm(20), block = rep(1:4, each = 5))
 #' des <- mvpa_design(df1, ~ y, block_var = ~ block)
-#' 
+#'
 #' ## with a test set
-#' 
-#' testdes <- data.frame(y=sample(letters[1:4]), 10)
-#' des <- mvpa_design(df1, ~ y, block_var = ~ block, test_design=testdes, y_test= ~ y)
-#' 
+#'
+#' testdes <- data.frame(y = sample(letters[1:4], 10))
+#' des <- mvpa_design(df1, ~ y, block_var = ~ block, test_design = testdes, y_test = ~ y)
+#'
 #' @export
 #' @importFrom futile.logger flog.warn
 mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, block_var=NULL, split_by=NULL) {

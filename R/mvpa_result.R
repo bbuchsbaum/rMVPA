@@ -1,29 +1,34 @@
 #' Create a \code{classification_result} instance
-#' 
-#' @param observed a vector of observed/true values.
-#' @param predicted a vector of the predicted values.
-#' @param probs a \code{matrix} of predicted probabilities, one column per level.
-#' @param testind the row indices of the test observations.
-#' @param test_design an optional design for the test data.
-#' @param predictor an optional predictor object.
-#' 
-#' @examples 
-#' 
-#' ## a vector of observed values
+#'
+#' Constructs a classification result object based on the observed and predicted values,
+#' as well as other optional parameters.
+#'
+#' @param observed A vector of observed or true values.
+#' @param predicted A vector of predicted values.
+#' @param probs A \code{matrix} of predicted probabilities, with one column per level.
+#' @param testind The row indices of the test observations (optional).
+#' @param test_design An optional design for the test data.
+#' @param predictor An optional predictor object.
+#'
+#' @return A classification result object, which can be one of: \code{regression_result},
+#'   \code{binary_classification_result}, or \code{multiway_classification_result}.
+#'
+#' @examples
+#' # A vector of observed values
 #' yobs <- factor(rep(letters[1:4], 5))
-#' 
-#' ## predicted probabilities
-#' probs <- data.frame(a=runif(1:20), b=runif(1:20), c=runif(1:20), d=runif(1:20))
+#'
+#' # Predicted probabilities
+#' probs <- data.frame(a = runif(1:20), b = runif(1:20), c = runif(1:20), d = runif(1:20))
 #' probs <- sweep(probs, 1, rowSums(probs), "/")
-#' 
-#' ## get the max probability per row and use this to determine the predicted class
+#'
+#' # Get the max probability per row and use this to determine the predicted class
 #' maxcol <- max.col(probs)
 #' predicted <- levels(yobs)[maxcol]
-#' 
-#' ## construct a classification result
+#'
+#' # Construct a classification result
 #' cres <- classification_result(yobs, predicted, probs)
-#' 
-#' ## compute default performance measures (Accuracy, AUC)
+#'
+#' # Compute default performance measures (Accuracy, AUC)
 #' performance(cres)
 #' @export
 classification_result <- function(observed, predicted, probs, testind=NULL, test_design=NULL,predictor=NULL) {
@@ -40,9 +45,19 @@ classification_result <- function(observed, predicted, probs, testind=NULL, test
   }
 }
 
-#' @desscribeIn classification_result Classification results for binary outcome
-#' 
-#' @inheritParams classification_result
+#' Classification results for binary outcome
+#'
+#' Constructs a binary classification result object based on the observed and predicted values,
+#' as well as other optional parameters.
+#'
+#' @param observed A vector of observed or true values.
+#' @param predicted A vector of predicted values.
+#' @param probs A \code{matrix} of predicted probabilities, with one column per level.
+#' @param testind The row indices of the test observations (optional).
+#' @param test_design An optional design for the test data.
+#' @param predictor An optional predictor object.
+#'
+#' @return A binary classification result object, with the class attribute set to "binary_classification_result".
 #' @rdname classification_result
 #' @export
 binary_classification_result <- function(observed, predicted, probs, testind=NULL, test_design=NULL, predictor=NULL) {

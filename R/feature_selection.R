@@ -27,25 +27,23 @@ matrixAnova <- function(Y, x) {
 
 
 
-#' feature_selector
-#' 
-#' Creates a feature selection specification
-#' 
-#' @param method the type of feature selection
-#' @param cutoff_type the type of threshold used to select features.
-#' @param cutoff_value the numeric vale of the threshold cutoff
-#' @examples 
+#' Create a feature selection specification
+#'
+#' This function creates a feature selection specification using the provided
+#' method, cutoff type, and cutoff value.
+#'
+#' @param method The type of feature selection method to use. Supported methods are "FTest" and "catscore".
+#' @param cutoff_type The type of threshold used to select features. Supported cutoff types are "top_k" and "top_p".
+#' @param cutoff_value The numeric value of the threshold cutoff.
+#' @return A list with a class name equal to the \code{method} argument.
+#' @details
+#' The available feature selection methods are:
+#'   - FTest: Computes a one-way ANOVA for every column in the feature matrix.
+#'   - catscore: Computes a correlation adjusted t-test for every column in the matrix using \code{sda.ranking} from the \code{sda} package.
+#' @examples
 #' fsel <- feature_selector("FTest", "top_k", 1000)
 #' fsel <- feature_selector("FTest", "top_p", .1)
 #' class(fsel) == "FTest"
-#' @return a list with class name equal to the \code{method} arguments
-#' @details 
-#' 
-#' The available feature selection methods are:
-#' 
-#' Ftest: computes a one-way ANOVA for every column in feature matrix
-#' catscore: computes a correlation adjusted t-test for every column in matrix using \code{sda.ranking} from the \code{sda} package.
-#' 
 #' @export
 feature_selector <- function(method, cutoff_type, cutoff_value) {
   ret <- list(
@@ -57,9 +55,25 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 
 
 
+#' Perform feature selection using the CATSCORE method
+#'
+#' This function selects features from the input data matrix X using the
+#' CATSCORE method and the provided feature selection specification.
+#'
+#' @param obj The feature selection specification created by \code{feature_selector()}.
+#' @param X The input data matrix.
+#' @param Y The response variable.
+#' @param ranking.score The feature score to use. Supported scores are "entropy", "avg", or "max". Default is "entropy".
+#' @return A logical vector indicating which features to retain.
+#' @details
+#' The CATSCORE method computes a correlation adjusted t-test for every column in the matrix using \code{sda.ranking} from the \code{sda} package.
+#' @seealso \code{\link{feature_selector}} for creating a feature selection specification.
 #' @export
-#' @param ranking.score the feature score: entropy, avg, or max.
-#' @rdname select_features
+#' @examples
+#' fsel <- feature_selector("catscore", "top_k", 1000)
+#' X <- as.data.frame(matrix(rnorm(100 * 10), 100, 10))
+#' Y <- rep(letters[1:5], 20)
+#' selected_features <- select_features(fsel, X, Y, ranking.score = "entropy")
 #' @importFrom sda sda.ranking
 select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg", "max"),...) {
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
@@ -104,9 +118,25 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
 
 
 
-#' @rdname select_features
-#' @importFrom assertthat assert_that
+#' Perform feature selection using the F-test method
+#'
+#' This function selects features from the input data matrix X using the
+#' F-test method and the provided feature selection specification.
+#'
+#' @param obj The feature selection specification created by \code{feature_selector()}.
+#' @param X The input data matrix.
+#' @param Y The response variable.
+#' @return A logical vector indicating which features to retain.
+#' @details
+#' The F-test method computes a one-way ANOVA for every column in the feature matrix.
+#' @seealso \code{\link{feature_selector}} for creating a feature selection specification.
 #' @export
+#' @examples
+#' fsel <- feature_selector("FTest", "top_k", 1000)
+#' X <- as.data.frame(matrix(rnorm(100 * 10), 100, 10))
+#' Y <- rep(letters[1:5], 20)
+#' selected_features <- select_features(fsel, X, Y)
+#' @importFrom assertthat assert_that
 select_features.FTest <- function(obj, X, Y,...) {
   message("selecting features via FTest")
   message("cutoff type ", obj$cutoff_type)

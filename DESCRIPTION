@@ -56,7 +56,7 @@ Collate:
     'roisplit.R'
     'searchlight.R'
     'utils.R'
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
 Suggests:
     testthat,
     covr,
@@ -73,3 +73,4 @@ Remotes:
     bbuchsbaum/neurosurf
 VignetteBuilder: knitr
 Encoding: UTF-8
+URL: http://bbuchsbaum.github.io/rMVPA/

@@ -2,29 +2,29 @@
 % Please edit documentation in R/allgeneric.R
 \name{fit_model}
 \alias{fit_model}
-\title{fit_model}
+\title{Fit Model}
 \usage{
 fit_model(obj, roi_x, y, wts, param, lev, last, classProbs, ...)
 }
 \arguments{
-\item{obj}{a model fitting object}
+\item{obj}{A model fitting object.}
 
-\item{roi_x}{an ROI containing the training data}
+\item{roi_x}{An ROI containing the training data.}
 
-\item{y}{the response vector}
+\item{y}{The response vector.}
 
-\item{wts}{a set of case weights}
+\item{wts}{A set of case weights.}
 
-\item{param}{tuning parameters}
+\item{param}{Tuning parameters.}
 
-\item{lev}{unused}
+\item{lev}{Unused.}
 
-\item{last}{unused}
+\item{last}{Unused.}
 
-\item{classProbs}{unused}
+\item{classProbs}{Unused.}
 
-\item{...}{extra args}
+\item{...}{Additional arguments to be passed to the method-specific function.}
 }
 \description{
-fit a classification or regression model
+Fit a classification or regression model.
 }

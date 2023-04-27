@@ -2,13 +2,19 @@
 % Please edit documentation in R/allgeneric.R
 \name{prob_observed}
 \alias{prob_observed}
-\title{prob_observed}
+\title{Probability of observed class}
 \usage{
 prob_observed(x)
 }
 \arguments{
-\item{x}{the object}
+\item{x}{The object from which to extract the predicted probability for the observed class.}
+}
+\value{
+A vector of predicted probabilities for the observed class.
 }
 \description{
-extract predicted probability for the observed clss
+Extract the predicted probability for the observed class.
+}
+\seealso{
+\code{\link{prob_observed.binary_classification_result}}, \code{\link{prob_observed.multiway_classification_result}}
 }

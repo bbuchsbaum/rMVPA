@@ -2,13 +2,13 @@
 % Please edit documentation in R/allgeneric.R
 \name{has_test_set}
 \alias{has_test_set}
-\title{has_test_set}
+\title{Test Set Availability}
 \usage{
 has_test_set(obj)
 }
 \arguments{
-\item{obj}{the object}
+\item{obj}{The object to check for a test set.}
 }
 \description{
-has_test_set
+Check if an object has a test set available.
 }

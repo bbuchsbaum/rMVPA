@@ -1,13 +1,30 @@
 
-
+#' Wrap output results
+#'
+#' This function wraps the output results of the performance matrix into a list
+#' of SparseNeuroVec objects for each column in the performance matrix.
+#'
 #' @keywords internal
+#' @param perf_mat A performance matrix containing classifier results.
+#' @param dataset A dataset object containing the dataset information.
+#' @param ids An optional vector of voxel IDs.
+#' @return A named list of SparseNeuroVec objects representing the wrapped output results.
 wrap_out <- function(perf_mat, dataset, ids=NULL) {
   out <- lapply(1:ncol(perf_mat), function(i)  wrap_output(dataset, perf_mat[,i], ids))
   names(out) <- colnames(perf_mat)
   out
 }
 
+#' Combine standard classifier results
+#'
+#' This function combines the standard classifier results from a good results data frame
+#' by binding the performance rows together and optionally computes the observed probabilities.
+#'
 #' @keywords internal
+#' @param model_spec A list containing the model specification.
+#' @param good_results A data frame containing the successful classifier results.
+#' @param bad_results A data frame containing the unsuccessful classifier results.
+#' @return A list containing the combined performance matrix, observed probabilities, and other information from the dataset.
 combine_standard <- function(model_spec, good_results, bad_results) {
   result <- NULL
   
@@ -29,6 +46,18 @@ combine_standard <- function(model_spec, good_results, bad_results) {
   ret
 }
 
+
+
+#' Combine RSA standard classifier results
+#'
+#' This function combines the RSA standard classifier results from a good results data frame
+#' by binding the performance rows together.
+#'
+#' @keywords internal
+#' @param model_spec A list containing the model specification.
+#' @param good_results A data frame containing the successful classifier results.
+#' @param bad_results A data frame containing the unsuccessful classifier results.
+#' @return A list containing the combined performance matrix along with other information from the dataset.
 combine_rsa_standard <- function(model_spec, good_results, bad_results) {
   ind <- unlist(good_results$id)
   perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
@@ -38,7 +67,16 @@ combine_rsa_standard <- function(model_spec, good_results, bad_results) {
 
 
 
+#' Combine randomized classifier results
+#'
+#' This function combines the randomized classifier results from a good results data frame
+#' and normalizes the performance matrix by the number of instances for each voxel index.
+#'
 #' @keywords internal
+#' @param model_spec A list containing the model specification.
+#' @param good_results A data frame containing the successful classifier results.
+#' @param bad_results A data frame containing the unsuccessful classifier results.
+#' @return A list containing the combined and normalized performance matrix along with other information from the dataset.
 combine_randomized <- function(model_spec, good_results, bad_results) {
   
  
@@ -63,8 +101,13 @@ combine_randomized <- function(model_spec, good_results, bad_results) {
   wrap_out(perf_mat, model_spec$dataset)
 }
 
-# pool classiifer results collected over a set of overlapping indices
+#' Pool classifier results
+#'
+#' This function pools classifier results collected over a set of overlapping indices.
+#'
 #' @keywords internal
+#' @param ... A variable list of data frames containing classifier results to be pooled.
+#' @return A list of merged classifier results.
 #' @noRd
 pool_results <- function(...) {
   reslist <- list(...)
@@ -90,6 +133,16 @@ pool_results <- function(...) {
   merged_results <- purrr::map(respsets, do_merge_results, good_results=good_results)
 }
 
+
+
+#' Merge searchlight results
+#'
+#' This function merges searchlight results, combining the first result with the rest of the results.
+#'
+#' @keywords internal
+#' @param r1 A list of indices representing the searchlight results to be merged.
+#' @param good_results A data frame containing the valid searchlight results.
+#' @return A combined searchlight result object.
 do_merge_results <- function(r1, good_results) {
   if (length(r1) > 1) {
     first <- r1[1]
@@ -103,7 +156,15 @@ do_merge_results <- function(r1, good_results) {
   }
 }
 
+#' Combine randomized searchlight results by pooling
+#'
+#' This function combines randomized searchlight results by pooling the good results.
+#'
 #' @keywords internal
+#' @param model_spec An object specifying the model used in the searchlight analysis.
+#' @param good_results A data frame containing the valid searchlight results.
+#' @param bad_results A data frame containing the invalid searchlight results.
+#' @return An object containing the combined searchlight results.
 pool_randomized <- function(model_spec, good_results, bad_results) {
   if (nrow(good_results) == 0) {
     stop("searchlight: no searchlight samples produced valid results")
@@ -144,7 +205,20 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   ret
 }
 
+#' Perform randomized searchlight analysis
+#'
+#' This function performs randomized searchlight analysis using a specified model, radius, and number of iterations.
+#' It can be customized with different MVPA functions, combiners, and permutation options.
+#'
 #' @keywords internal
+#' @param model_spec An object specifying the model to be used in the searchlight analysis.
+#' @param radius The radius of the searchlight sphere.
+#' @param niter The number of iterations for randomized searchlight.
+#' @param mvpa_fun The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).
+#' @param combiner The function to be used to combine results (default is \code{pool_randomized}).
+#' @param permute Whether to permute the labels (default is FALSE).
+#' @param ... Additional arguments to be passed to the MVPA function.
+#'
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
 #' @importFrom furrr future_map
@@ -186,7 +260,18 @@ do_randomized <- function(model_spec, radius, niter,
 
 
 
+#' Perform standard searchlight analysis
+#'
+#' This function performs standard searchlight analysis using a specified model and radius.
+#' It can be customized with different MVPA functions, combiners, and permutation options.
+#'
 #' @keywords internal
+#' @param model_spec An object specifying the model to be used in the searchlight analysis.
+#' @param radius The radius of the searchlight sphere.
+#' @param mvpa_fun The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).
+#' @param combiner The function to be used to combine results (default is \code{combine_standard}).
+#' @param permute Whether to permute the labels (default is FALSE).
+#' @param ... Additional arguments to be passed to the MVPA function.
 do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, permute=FALSE, ...) {
   error=NULL
   flog.info("creating standard searchlight")
@@ -211,19 +296,27 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 }
 
 
-#' @import itertools 
-#' @import foreach
-#' @import doParallel
-#' @import parallel
+#' Run searchlight analysis on a specified MVPA model
+#'
+#' This function runs a searchlight analysis using a specified MVPA model, radius, and method.
+#' It can be customized with a combiner function and permutation options.
+#'
+#' @param model_spec An object of type \code{mvpa_model} specifying the MVPA model to be used.
+#' @param radius The radius of the searchlight sphere (default is 8, allowable range: 1-100).
+#' @param method The method used for the searchlight analysis ("randomized" or "standard").
+#' @param niter The number of iterations for randomized searchlight (default is 4).
+#' @param combiner A function that combines results into an appropriate output, or one of the following strings: "pool" or "average".
+#' @param permute Whether to permute the labels (default is FALSE).
+#' @param ... Additional arguments to be passed to the function.
+#'
+#' @import itertools foreach doParallel parallel
+#' @importFrom purrr pmap
 #' @importFrom futile.logger flog.info flog.error flog.debug
-#' @param combiner one of either "pool", "average", or a function that combines results into an appropriate output.
-#' @param permute permute the labels (i.e. to derive a "random" result)
 #' @references 
 #' Bjornsdotter, M., Rylander, K., & Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.
 #' 
 #' Kriegeskorte, N., Goebel, R., & Bandettini, P. (2006). Information-based functional brain mapping. Proceedings of the National academy of Sciences of the United States of America, 103(10), 3863-3868.
 #' @export
-#' @importFrom purrr pmap
 #' @rdname run_searchlight
 #' @examples 
 #'  
@@ -231,22 +324,21 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' cval <- blocked_cross_validation(dataset$design$block_var)
 #' model <- load_model("sda_notune")
 #' mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
-#' res <- run_searchlight(mspec,radius=8, method="standard")
+#' res <- run_searchlight(mspec, radius=8, method="standard")
 #' 
-#' # a custom "combiner" can be used to post-process the output of the searchlight classifier for special cases.
-#' # in the example below the supplied "combining function" extracts the predicted probability of the correct class 
+#' # A custom "combiner" can be used to post-process the output of the searchlight classifier for special cases.
+#' # In the example below, the supplied "combining function" extracts the predicted probability of the correct class 
 #' # for every voxel and every trial and then stores them in a data.frame.
 #' 
 #' \dontrun{ 
 #' custom_combiner <- function(mspec, good, bad) { 
-#'    good %>% pmap(function(result, id,...) { 
+#'    good %>% pmap(function(result, id, ...) { 
 #'      data.frame(trial=1:length(result$observed), id=id, prob=prob_observed(result)) 
 #'    }) %>% bind_rows()
 #' }
 #' 
-#' res2 <- run_searchlight(mspec,radius=8, method="standard", combiner=custom_combiner)
+#' res2 <- run_searchlight(mspec, radius=8, method="standard", combiner=custom_combiner)
 #' }
-#' 
 run_searchlight.mvpa_model <- function(model_spec, radius=8, 
                                        method=c("randomized", "standard"),  
                                        niter=4, 
@@ -308,13 +400,22 @@ run_searchlight.mvpa_model <- function(model_spec, radius=8,
   
 }
 
-#' @import itertools 
-#' @import foreach
-#' @import doParallel
-#' @import parallel
+#' Run searchlight analysis on a specified RSA model
+#'
+#' This function runs a searchlight analysis using a specified RSA model, radius, and method.
+#' It can be customized with permutation options, distance computation methods, and regression methods.
+#'
+#' @param model_spec An object of type \code{rsa_model} specifying the RSA model to be used.
+#' @param radius The radius of the searchlight sphere (default is 8, allowable range: 1-100).
+#' @param method The method used for the searchlight analysis ("randomized" or "standard").
+#' @param niter The number of iterations for randomized searchlight (default is 4).
+#' @param permute Whether to permute the labels (default is FALSE).
+#' @param distmethod The method used to compute distances between searchlight samples ("spearman" or "pearson").
+#' @param regtype The method used to fit response and predictor distance matrices ("pearson", "spearman", "lm", or "rfit").
+#' @param ... Additional arguments to be passed to the function.
+#'
+#' @import itertools foreach doParallel parallel
 #' @importFrom futile.logger flog.info flog.error flog.debug
-#' @param distmethod method used to compute distances between searchlight samples
-#' @param regtype method used to fit response and predictor distance matrices
 #' @export
 #' @rdname run_searchlight
 run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized", "standard"),  niter=4, 
@@ -346,13 +447,23 @@ run_searchlight.rsa_model <- function(model_spec, radius=8, method=c("randomized
   
 }
 
-#' @import itertools 
-#' @import foreach
-#' @import doParallel
-#' @import parallel
+#' Run searchlight analysis on a specified MANOVA model
+#'
+#' This function runs a searchlight analysis using a specified MANOVA model, radius, and method.
+#' It can be customized with permutation options.
+#'
+#' @param model_spec An object of type \code{manova_model} specifying the MANOVA model to be used.
+#' @param radius The radius of the searchlight sphere (default is 8, allowable range: 1-100).
+#' @param method The method used for the searchlight analysis ("randomized" or "standard").
+#' @param niter The number of iterations for randomized searchlight (default is 4).
+#' @param permute Whether to permute the labels (default is FALSE).
+#' @param ... Additional arguments to be passed to the function.
+#'
+#' @import itertools foreach doParallel parallel
 #' @importFrom futile.logger flog.info flog.error flog.debug
 #' @import ffmanova
 #' @export
+#' @rdname run_searchlight
 run_searchlight.manova_model <- function(model_spec, radius=8, 
                                          method=c("randomized", "standard"),  niter=4, 
                                          permute=FALSE,...) {

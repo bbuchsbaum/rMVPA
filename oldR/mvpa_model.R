@@ -542,7 +542,14 @@ nonzeroVarianceColumns <- function(M) {
 
 #' @keywords internal
 nonzeroVarianceColumns2 <- function(M) {
-  apply(M, 2, sd, na.rm=TRUE) > 0
+  ret <- apply(M, 2, sd, na.rm=TRUE) > 0
+  ret[is.na(ret)] <- FALSE
+  ret
+}
+
+#' @keywords internal
+na_cols <- function(M) {
+  apply(M, 2, function(x) any(is.na(x)))
 }
 
 #' @keywords internal

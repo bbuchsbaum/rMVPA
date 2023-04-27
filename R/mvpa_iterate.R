@@ -216,17 +216,18 @@ extract_roi <- function(sample, data) {
   
   
 #' mvpa_iterate
-#' 
-#' Fit a classification/regression model for each voxel set in a list
-#' 
-#' @param mod_spec a class of type \code{mvpa_model}
-#' @param vox_list a \code{list} of voxel indices/coordinates
-#' @param ids a \code{vector} of ids for each voxel set
-#' @param compute_performance compute and store performance measures for each voxel set
-#' @param return_predictions return row-wise predictions for each voxel set.
-#' @param return_fits return the model fit for each voxel set?
-#' @param permute permute the labels
-#' @param verbose print progress messages
+#'
+#' Fits a classification or regression model for each voxel set in a list.
+#'
+#' @param mod_spec An object of class \code{mvpa_model} specifying the model.
+#' @param vox_list A \code{list} of voxel indices or coordinates.
+#' @param ids A \code{vector} of IDs for each voxel set (defaults to 1:length(vox_list)).
+#' @param compute_performance Logical, whether to compute and store performance measures for each voxel set (defaults to TRUE).
+#' @param return_predictions Logical, whether to return row-wise predictions for each voxel set (defaults to TRUE).
+#' @param return_fits Logical, whether to return the model fit for each voxel set (defaults to FALSE).
+#' @param batch_size The number of voxel sets to process in each batch (defaults to 10% of the total voxel sets).
+#' @param permute Logical, whether to permute the labels (defaults to FALSE).
+#' @param verbose Logical, whether to print progress messages (defaults to TRUE).
 #' @importFrom dplyr bind_rows
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), 
@@ -263,7 +264,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
   
 }
 
-
+#' @keywords internal
+#' @noRd
 fut_mvpa <- function(mod_spec, sf, tot, do_fun, verbose, permute, compute_performance, return_fits, return_predictions) {
   mod_spec$dataset <- NULL
   gc()
@@ -355,14 +357,15 @@ do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
 
 
 #' rsa_iterate
-#' 
-#' Run RSA analysis for each of a list of voxels sets
-#' 
-#' @param mod_spec a class of type \code{rsa_model}
-#' @param vox_list a \code{list} of voxel indices/coordinates
-#' @param ids a \code{vector} of ids for each voxel set
-#' @param regtype the analysis method, one of: \code{lm}, \code{rfit}, \code{pearson}, \code{spearman}
-#' @param distmethod the method used to compute distances between observations, one of: \code{pearson}, \code{spearman}
+#'
+#' Runs representational similarity analysis (RSA) for each voxel set in a list.
+#'
+#' @param mod_spec An object of class \code{rsa_model} specifying the RSA model.
+#' @param vox_list A \code{list} of voxel indices or coordinates for each voxel set.
+#' @param ids A \code{vector} of IDs for each voxel set (defaults to 1:length(vox_list)).
+#' @param permute Logical, whether to permute the labels (defaults to FALSE).
+#' @param regtype A character string specifying the analysis method. One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").
+#' @param distmethod A character string specifying the method used to compute distances between observations. One of: \code{"pearson"} or \code{"spearman"} (defaults to "spearman").
 #' @importFrom dplyr do rowwise
 #' @export
 #' @inheritParams mvpa_iterate
