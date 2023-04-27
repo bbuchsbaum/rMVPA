@@ -143,12 +143,12 @@ data for the first cross-validation fold, we can do the following:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">train_dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">sam</span><span class="op">$</span><span class="va">train</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">train_dat</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>,<span class="op">]</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##             x1          x2         x3</span></span>
-<span><span class="co">## 101  0.6303126 -0.49295908 -1.1882780</span></span>
-<span><span class="co">## 102  0.6627694 -2.39942772  0.1353299</span></span>
-<span><span class="co">## 103  1.0223087  1.46758307 -1.0239027</span></span>
-<span><span class="co">## 104 -2.1139571 -2.74512038 -0.4161415</span></span>
-<span><span class="co">## 105  1.4631152  0.08863036  1.1449101</span></span></code></pre>
+<pre><code><span><span class="co">##             x1         x2         x3</span></span>
+<span><span class="co">## 101 -1.0501585  0.9685635 -0.7115069</span></span>
+<span><span class="co">## 102 -0.3176043  1.5391201  0.2188930</span></span>
+<span><span class="co">## 103  1.2662758 -0.5384616  0.4090034</span></span>
+<span><span class="co">## 104  0.6783671  0.5632136  1.2787299</span></span>
+<span><span class="co">## 105 -0.1889328 -2.2953661 -0.8430364</span></span></code></pre>
 <p>As a toy example, below we loop through the cross-validation sets
 using the <code>dplyr</code> <code>rowwise</code> function, fit an
 <code>sda</code> model and put the fitted model into a new

@@ -96,7 +96,17 @@
 <p>permuteLogical, whether to permute the labels (defaults to FALSE).</p>
 <p>verboseLogical, whether to print progress messages (defaults to TRUE).</p></dd>
 
-</dl><p>Fits a classification or regression model for each voxel set in a list.</p>
+</dl><p>A <code>data.frame</code> with the results for each voxel set.</p>
+
+
+<p>Fit a Model for Each Voxel Set in a List Using Parallelization</p>
+
+
+<p>This function fits a classification or regression model for each voxel set in a list using parallelization.
+It can compute and store performance measures for each voxel set, return row-wise predictions, and return the model fit.This function utilizes parallel processing to speed up the process of fitting the specified model for each voxel set.
+The parallelization is achieved using the `furrr` package which provides a parallel backend for the `purrr` package.
+By default, it divides the voxel sets into batches and processes them in parallel according to the specified batch size.
+The function provides options to control the return of performance measures, predictions, and model fits.</p>
 
 
     </div>
