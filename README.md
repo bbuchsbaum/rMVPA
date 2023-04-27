@@ -1,6 +1,4 @@
 
-[![codecov](https://codecov.io/gh/bbuchsbaum/rMVPA/branch/master/graph/badge.svg)](https://codecov.io/github/bbuchsbaum/rMVPA?branch=master)
-
 ## Multivoxel Pattern Analysis in R
 
 ### This package is under development.
