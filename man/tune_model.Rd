@@ -2,23 +2,30 @@
 % Please edit documentation in R/model_fit.R
 \name{tune_model}
 \alias{tune_model}
-\title{tune_model}
+\title{This function finds the best hyperparameters for a given model specification
+using a specified tuning grid and cross-validation.}
 \usage{
 tune_model(mspec, x, y, wts, param, nreps = 10)
 }
 \arguments{
-\item{mspec}{the model specification which derives from class \code{mvpa_model}}
+\item{mspec}{A model specification derived from the \code{mvpa_model} class.}
 
-\item{x}{the training data matrix}
+\item{x}{The training data matrix.}
 
-\item{y}{the response vector}
+\item{y}{The response vector.}
 
-\item{wts}{optional class weights (if underlying model supports it)}
+\item{wts}{Optional class weights (if the underlying model supports it).}
 
-\item{param}{the tuning grid, should be a \code{data.frame} where parameter names are indicated by column names.}
+\item{param}{A \code{data.frame} representing the tuning grid, where
+parameter names are indicated by column names.}
 
-\item{nreps}{the number of bootstrap replications}
+\item{nreps}{The number of bootstrap replications (default is 10).}
+}
+\value{
+A data frame containing the best hyperparameter values.
 }
 \description{
-find the best tuning parameters for a model specification
+This function finds the best hyperparameters for a given model specification
+using a specified tuning grid and cross-validation.
 }
+\keyword{internal}

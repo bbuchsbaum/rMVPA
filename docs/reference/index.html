@@ -128,6 +128,11 @@
         <dd>Fit Model</dd>
       </dl><dl><dt>
           
+          <code><a href="fit_model.mvpa_model.html">fit_model(<i>&lt;mvpa_model&gt;</i>)</a></code> 
+        </dt>
+        <dd>Fit an MVPA model</dd>
+      </dl><dl><dt>
+          
           <code><a href="gen_sample_dataset.html">gen_sample_dataset()</a></code> 
         </dt>
         <dd>gen_sample_dataset</dd>
@@ -243,6 +248,16 @@
         <dd>performance</dd>
       </dl><dl><dt>
           
+          <code><a href="predict.class_model_fit.html">predict(<i>&lt;class_model_fit&gt;</i>)</a></code> 
+        </dt>
+        <dd>This function predicts class labels and probabilities for new data using a fitted model.</dd>
+      </dl><dl><dt>
+          
+          <code><a href="predict.regression_model_fit.html">predict(<i>&lt;regression_model_fit&gt;</i>)</a></code> 
+        </dt>
+        <dd>Predict continuous values for a new dataset using a regression model</dd>
+      </dl><dl><dt>
+          
           <code><a href="predicted_class.html">predicted_class()</a></code> 
         </dt>
         <dd>predicted_class</dd>
@@ -268,6 +283,34 @@
         <dd>Create a <code>regional_mvpa_result</code> instance</dd>
       </dl><dl><dt>
           
+          <code><a href="roi_volume_matrix.html">roi_volume_matrix()</a></code> 
+        </dt>
+        <dd>roisplit &lt;- function(data, in_id, out_id) 
+  if (!inherits(data, "data_sample"))
+    stop("`data` must inherit from `data_sample`.", call. = FALSE)
+  
+  if (!is.integer(in_id) | any(in_id &lt; 1))
+    stop("`in_id` must be a positive integer vector.", call. = FALSE)
+  
+  if(!all(is.na(out_id))) 
+    if (!is.integer(out_id) | any(out_id &lt; 1))
+      stop("`out_id` must be a positive integer vector.", call. = FALSE)
+  
+  
+  if (length(in_id) == 0)
+    stop("At least one row should be selected for the analysis set.",
+         call. = FALSE)
+  
+  structure(
+    list(
+      data = data,
+      in_id = in_id,
+      out_id = out_id
+    ),
+    class = c("roisplit", "rsplit")
+  )</dd>
+      </dl><dl><dt>
+          
           <code><a href="rsa_design.html">rsa_design()</a></code> 
         </dt>
         <dd>rsa_design</dd>
@@ -286,6 +329,16 @@
           <code><a href="run_regional.html">run_regional()</a></code> 
         </dt>
         <dd>Region of interest based MVPA analysis</dd>
+      </dl><dl><dt>
+          
+          <code><a href="run_regional.mvpa_model.html">run_regional(<i>&lt;mvpa_model&gt;</i>)</a></code> 
+        </dt>
+        <dd>Run regional MVPA analysis on a specified MVPA model</dd>
+      </dl><dl><dt>
+          
+          <code><a href="run_regional.rsa_model.html">run_regional(<i>&lt;rsa_model&gt;</i>)</a></code> 
+        </dt>
+        <dd>Run regional RSA analysis on a specified RSA model</dd>
       </dl><dl><dt>
           
           <code><a href="run_searchlight.html">run_searchlight()</a></code> 
@@ -326,11 +379,6 @@
           <code><a href="tune_grid.html">tune_grid()</a></code> 
         </dt>
         <dd>Tune Grid Extraction</dd>
-      </dl><dl><dt>
-          
-          <code><a href="tune_model.html">tune_model()</a></code> 
-        </dt>
-        <dd>tune_model</dd>
       </dl><dl><dt>
           
           <code><a href="twofold_blocked_cross_validation.html">twofold_blocked_cross_validation()</a></code> 

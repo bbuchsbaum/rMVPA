@@ -35,6 +35,19 @@ mvpa_iterate(
 
 \item{verbose}{Logical, whether to print progress messages (defaults to TRUE).}
 }
+\value{
+A \code{data.frame} with the results for each voxel set.
+}
 \description{
-Fits a classification or regression model for each voxel set in a list.
+Fit a Model for Each Voxel Set in a List Using Parallelization
+}
+\details{
+This function fits a classification or regression model for each voxel set in a list using parallelization.
+It can compute and store performance measures for each voxel set, return row-wise predictions, and return the model fit.
+
+
+This function utilizes parallel processing to speed up the process of fitting the specified model for each voxel set.
+The parallelization is achieved using the `furrr` package which provides a parallel backend for the `purrr` package.
+By default, it divides the voxel sets into batches and processes them in parallel according to the specified batch size.
+The function provides options to control the return of performance measures, predictions, and model fits.
 }

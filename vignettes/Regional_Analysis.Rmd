@@ -32,7 +32,6 @@ dset <- gen_sample_dataset(D=c(6,6,6), nobs = 80, blocks=4, nlevels=2)
 print(dset)
 ```
 
-```
 
 Now we generate an arbitrary set of ROIs by assigning each voxel in the input mask a value ranging from 1 to 3. 
 

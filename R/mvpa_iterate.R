@@ -241,9 +241,6 @@ extract_roi <- function(sample, data) {
 #' @importFrom furrr future_pmap
 #' @importFrom purrr map
 #' @examples
-#' # Assuming `model_spec` is an object of class `mvpa_model`
-#' # and `voxel_list` is a list of voxel indices or coordinates
-#' results <- mvpa_iterate(model_spec, voxel_list)
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), 
                          compute_performance=TRUE, 

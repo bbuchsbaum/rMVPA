@@ -11,7 +11,7 @@ vignette: >
 
 
 ## Representational Similarity Analysis
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=FALSE, message=FALSE,warning=FALSE}
 suppressPackageStartupMessages(library(neuroim2))
 suppressPackageStartupMessages(library(devtools))
 library(rMVPA)
@@ -24,7 +24,7 @@ To generate a dataset we use the `gen_sample_dataset` function. We are creating 
 To run RSA with an external model matrix, we need to create and `rsa_design` object. First we generate a sample dataset with 80 trials as follows.
 
 
-```{r}
+```{r,message=FALSE,warning=FALSE}
 
 dataset <- gen_sample_dataset(D=c(20,20,8), nobs = 80, blocks=4)
 
@@ -32,7 +32,7 @@ dataset <- gen_sample_dataset(D=c(20,20,8), nobs = 80, blocks=4)
 
 Now we create a external dissimilarity matrix with the same number of trials as our fMRI dataset. Then we create an `rsa_design` object and an `rsa_model` object. Finally, we run a searchlight analysis with a 4mm radius using a pearson correlation as a metric to compare the similarity between the external model matrix (Dmat) and 
 
-```{r}
+```{r,message=FALSE,warning=FALSE}
 Dmat <- dist(matrix(rnorm(80*100), 80, 100))
 rsades <- rsa_design(~ Dmat, list(Dmat=Dmat), block_var=factor(dataset$design$block_var))
 
@@ -61,7 +61,7 @@ range(result2$Dmat)
 The return object `result` contains a list of `NeuroVol` objects, one for each model matrix. Here, since there is only one external model matrix, `Dmat` there is only one element in the returned list.
 
 
-```{r}
+```{r,message=FALSE,warning=FALSE}
 
 result
 
@@ -72,7 +72,7 @@ result
 
 Let's rerun using a Spearman correlation instead of pearson correlation to compare brain vs model matrices.
 
-```{r}
+```{r,message=FALSE,warning=FALSE}
 
 result <- run_searchlight(rsamod, radius=4, method="standard",regtype="spearman")
 range(result$Dmat)

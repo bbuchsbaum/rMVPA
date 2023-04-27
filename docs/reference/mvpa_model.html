@@ -133,11 +133,47 @@ See example below.</p>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span><span class="va">mvpmod</span> <span class="op">&lt;-</span> <span class="fu">mvpa_model</span><span class="op">(</span><span class="va">mod</span>, dataset<span class="op">=</span><span class="va">mvdset</span>, design<span class="op">=</span><span class="va">mvdes</span>, crossval<span class="op">=</span><span class="va">cval</span>, performance<span class="op">=</span><span class="va">custom_perf</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">ret</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">mvpmod</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:35] model is: sda</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:35] running randomized searchlight with 8 radius and 4 iterations</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:35] searchlight iteration: 1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:35] mvpa_iterate: compute analysis for batch 1 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:09] model is: sda</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:09] running randomized searchlight with 8 radius and 4 iterations</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:09] searchlight iteration: 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:09] mvpa_iterate: compute analysis for batch 1 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9969 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9069 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9876 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -148,8 +184,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -160,8 +196,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -172,8 +208,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -184,8 +220,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -196,8 +232,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -208,8 +244,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -220,43 +256,7 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
@@ -268,9 +268,45 @@ See example below.</p>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>UNRELIABLE VALUE: Future (‘&lt;none&gt;’) unexpectedly generated random numbers without specifying argument 'seed'. There is a risk that those random numbers are not statistically sound and the overall results might be invalid. To fix this, specify 'seed=TRUE'. This ensures that proper, parallel-safe random numbers are produced via the L'Ecuyer-CMRG method. To disable this check, use 'seed=NULL', or set option 'future.rng.onMisuse' to "ignore".</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:36] searchlight iteration: 2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:36] mvpa_iterate: compute analysis for batch 1 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:10] searchlight iteration: 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:10] mvpa_iterate: compute analysis for batch 1 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9969 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9069 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9876 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -281,8 +317,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -293,8 +329,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -305,8 +341,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -317,8 +353,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -329,8 +365,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -341,8 +377,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -353,43 +389,7 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
@@ -401,9 +401,45 @@ See example below.</p>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>UNRELIABLE VALUE: Future (‘&lt;none&gt;’) unexpectedly generated random numbers without specifying argument 'seed'. There is a risk that those random numbers are not statistically sound and the overall results might be invalid. To fix this, specify 'seed=TRUE'. This ensures that proper, parallel-safe random numbers are produced via the L'Ecuyer-CMRG method. To disable this check, use 'seed=NULL', or set option 'future.rng.onMisuse' to "ignore".</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:36] searchlight iteration: 3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:36] mvpa_iterate: compute analysis for batch 1 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:10] searchlight iteration: 3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:10] mvpa_iterate: compute analysis for batch 1 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9969 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9069 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9876 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -414,8 +450,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -426,8 +462,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -438,8 +474,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -450,8 +486,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -462,8 +498,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -474,8 +510,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -486,43 +522,7 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
@@ -534,9 +534,45 @@ See example below.</p>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>UNRELIABLE VALUE: Future (‘&lt;none&gt;’) unexpectedly generated random numbers without specifying argument 'seed'. There is a risk that those random numbers are not statistically sound and the overall results might be invalid. To fix this, specify 'seed=TRUE'. This ensures that proper, parallel-safe random numbers are produced via the L'Ecuyer-CMRG method. To disable this check, use 'seed=NULL', or set option 'future.rng.onMisuse' to "ignore".</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:37] searchlight iteration: 4</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:37] mvpa_iterate: compute analysis for batch 1 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:11] searchlight iteration: 4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:11] mvpa_iterate: compute analysis for batch 1 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9969 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9069 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 0.9876 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -547,8 +583,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -559,8 +595,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -571,8 +607,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -583,8 +619,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -595,8 +631,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -607,8 +643,8 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 132 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -619,43 +655,7 @@ See example below.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of variables: 113 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of observations: 90 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of classes: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.freq (frequencies): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating variances (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimating optimal shrinkage intensity lambda.var (variance vector): 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Computing inverse correlation matrix (pooled across classes)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Specified shrinkage intensity lambda (correlation matrix): 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 113 features.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Prediction uses 132 features.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
@@ -667,7 +667,7 @@ See example below.</p>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Estimated correlation matrix doesn't have full rank - pseudoinverse used for inversion.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>UNRELIABLE VALUE: Future (‘&lt;none&gt;’) unexpectedly generated random numbers without specifying argument 'seed'. There is a risk that those random numbers are not statistically sound and the overall results might be invalid. To fix this, specify 'seed=TRUE'. This ensures that proper, parallel-safe random numbers are produced via the L'Ecuyer-CMRG method. To disable this check, use 'seed=NULL', or set option 'future.rng.onMisuse' to "ignore".</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:11:38] number of models fit: 4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-04-27 07:18:12] number of models fit: 4</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="st">"accuracy"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">ret</span><span class="op">)</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
