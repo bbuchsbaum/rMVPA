@@ -217,7 +217,10 @@ extract_roi <- function(sample, data) {
   
 #' mvpa_iterate
 #'
-#' Fits a classification or regression model for each voxel set in a list.
+#' Fit a Model for Each Voxel Set in a List Using Parallelization
+#'
+#' This function fits a classification or regression model for each voxel set in a list using parallelization.
+#' It can compute and store performance measures for each voxel set, return row-wise predictions, and return the model fit.
 #'
 #' @param mod_spec An object of class \code{mvpa_model} specifying the model.
 #' @param vox_list A \code{list} of voxel indices or coordinates.
@@ -228,7 +231,19 @@ extract_roi <- function(sample, data) {
 #' @param batch_size The number of voxel sets to process in each batch (defaults to 10% of the total voxel sets).
 #' @param permute Logical, whether to permute the labels (defaults to FALSE).
 #' @param verbose Logical, whether to print progress messages (defaults to TRUE).
+#' @return A \code{data.frame} with the results for each voxel set.
+#' @details
+#' This function utilizes parallel processing to speed up the process of fitting the specified model for each voxel set.
+#' The parallelization is achieved using the `furrr` package which provides a parallel backend for the `purrr` package.
+#' By default, it divides the voxel sets into batches and processes them in parallel according to the specified batch size.
+#' The function provides options to control the return of performance measures, predictions, and model fits.
 #' @importFrom dplyr bind_rows
+#' @importFrom furrr future_pmap
+#' @importFrom purrr map
+#' @examples
+#' # Assuming `model_spec` is an object of class `mvpa_model`
+#' # and `voxel_list` is a list of voxel indices or coordinates
+#' results <- mvpa_iterate(model_spec, voxel_list)
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), 
                          compute_performance=TRUE, 

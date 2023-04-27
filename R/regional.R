@@ -263,7 +263,6 @@ comp_perf <- function(results, region_mask) {
 #' @import doParallel
 #' @import parallel
 #' @export
-#' @rdname run_regional
 run_regional.mvpa_model <- function(model_spec, region_mask, return_fits=FALSE, 
                                     return_predictions = TRUE, compute_performance=TRUE, 
                                     coalesce_design_vars=FALSE, ...) {  
@@ -319,7 +318,6 @@ run_regional.mvpa_model <- function(model_spec, region_mask, return_fits=FALSE,
 #' where each element contains a performance metric and is labeled according to the metric used (e.g. Accuracy, AUC).
 #'
 #' @export
-#' @rdname run_regional
 run_regional.rsa_model <- function(model_spec, region_mask, return_fits=FALSE, 
                                    compute_performance=TRUE,regtype=c("pearson", "spearman", "lm", "rfit"), 
                                    distmethod=c("pearson", "spearman"), coalesce_design_vars=FALSE, ...) {  

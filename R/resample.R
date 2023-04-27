@@ -5,6 +5,7 @@ gen_id <- function(n) {
   sprintf(paste0("%0", width, "d"), seq_len(n))
 }
 
+#' @keywords internal
 .get_samples <- function(obj, voxlist) {
   ret <- lapply(voxlist, function(vox) {
     sam <- data_sample(obj, vox)
@@ -42,7 +43,6 @@ data_sample.mvpa_dataset <- function(obj, vox) {
 
 
 #' @export
-#' @method print data_sample
 print.data_sample <- function(x, ...) {
   if (is.matrix(x$vox)) {
     cat("data sample with : ", nrow(x$vox), "features")

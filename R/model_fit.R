@@ -135,10 +135,20 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
 
 
 
-#' @param newdata new data to predict on
-#' @param sub_indices a vector of indices used to subset rows of `newdata` 
+#' Predict continuous values for a new dataset using a regression model
+#'
+#' This function predicts continuous values for new data using a fitted regression model.
+#'
+#' @param object A fitted model object of class \code{regression_model_fit}.
+#' @param newdata New data to predict on, either as a matrix or a \code{NeuroVec} or \code{NeuroSurfaceVector} object.
+#' @param sub_indices A vector of indices used to subset rows of `newdata` (optional).
+#' @param ... Additional arguments to be passed to the underlying prediction function.
+#' @return A list containing predicted continuous values with class attributes "regression_prediction", "prediction", and "list".
+#' @examples
+#' # Assuming `fitted_model` is a fitted model object of class `regression_model_fit`
+#' new_data <- iris_dataset$test_data
+#' predictions <- predict(fitted_model, new_data)
 #' @export
-#' @rdname predict
 predict.regression_model_fit <- function(object, newdata, sub_indices=NULL,...) {
   
   mat <- if (inherits(newdata, "NeuroVec") || inherits(newdata, "NeuroSurfaceVector")) {

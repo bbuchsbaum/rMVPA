@@ -1,198 +1,6 @@
 
 
 
-# initializeROIGrouping <- function(config) {
-#   if (!is.null(config$roi_grouping)) {
-#     roilist <- lapply(1:length(config$roi_grouping), function(i) {
-#       grp <- config$roi_grouping[[i]]
-#       idx <- which(config$ROIVolume %in% grp)
-#       vol <- makeVolume(refvol=config$ROIVolume)
-#       vol[idx] <- i
-#       vol
-#     })
-#     
-#     if (is.null(names(config$roi_grouping))) {
-#       names(roilist) <- paste0("roi_group_", seq_along(config$roi_grouping))
-#     } else {
-#       names(roilist) <- names(config$roi_grouping)
-#     }
-#     config$ROIVolume <- roilist
-#   } else {
-#     config$ROIVolume <- list(config$ROIVolume)
-#   }
-# }
-
-
-# initializeROISubset <- function(config) {
-#   if (!is.null(config$roi_subset)) {
-#     form <- try(eval(parse(text=config$roi_subset)))
-#     if (inherits(form, "try-error")) {
-#       flog.error("could not parse roi_subset parameter: %s", config$roi_subset)
-#       stop()
-#     }
-#     
-#     if (class(form) != "formula") {
-#       flog.error("roi_subset argument must be an expression that starts with a ~ character")
-#       stop()
-#     }
-#     
-#     res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
-#     
-#     config$ROIVolume[!res] <- 0
-#     flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
-#   }
-# }
-# 
-# 
-# initMVPARegional
-#  
-# @param configFile an 'MVPA_Regional' configuration file
-# @param args list of addiitonal override arguments
-# @export
-# initMVPARegional <- function(configFile, args=list(), verbose=FALSE) {
-#   if (!verbose) {
-#     flog.threshold(ERROR)
-#   } else {
-#     flog.threshold(DEBUG)
-#   }
-#   
-#   config <- initializeConfiguration(list(config=configFile))
-#   config <- initializeStandardParameters(config, args, "mvpa_regional")
-# 
-#   set_arg("savePredictors", config, args, FALSE)
-#   
-#   config <- initializeTuneGrid(args, config)
-#   configParams <- as.list(config)
-#   config <- initializeDesign(config)
-#   
-#   rowIndices <- which(config$train_subset)
-#   config$ROIVolume <- loadMask(config)
-#   
-#   initializeROISubset(config)
-#   initializeROIGrouping(config)
-#   
-#   parcellationVolume <- if (!is.null(config$parcellation)) {
-#     loadVolume(config$parcellation)
-#   }
-#   
-#   config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
-#   config <- initializeData(config)
-#   
-#   flog.info("number of training trials: %s", length(rowIndices))
-#   
-#   flog.info("max trial index: %s", max(rowIndices))
-#   
-#   flog.info("loading training data: %s", config$train_data)
-#   
-#   flog.info("mask contains %s voxels", sum(config$maskVolume))
-#   
-#   for (i in seq_along(config$ROIVolume)) {
-#     rvol <- config$ROIVolume[[i]]
-#     
-#     flog.info("Region mask contains: %s ROIs", length(unique(rvol[rvol > 0])))
-#     flog.info(paste("ROIs are for group ", i, "are:"), rvol, capture=TRUE)
-#     
-#   }
-#   
-#   flog.info("Running regional MVPA with parameters:", configParams, capture=TRUE)
-#   
-#   flog.info("With %s roi groups", length(config$ROIVolume))
-#   
-#   if (length(config$labels) != dim(config$train_datavec)[4]) {
-#     flog.error("Number of volumes: %s must equal number of labels: %s", dim(config$train_datavec)[4], length(config$labels))
-#     stop()
-#   }
-#   
-#   featureSelector <- if (!is.null(config$feature_selector)) {
-#     FeatureSelector(config$feature_selector$method, config$feature_selector$cutoff_type, as.numeric(config$feature_selector$cutoff_value))
-#   }
-#   
-#   flog.info("feature selector: ", featureSelector, capture=TRUE)
-#   
-#   flog.info("bootstrap replications: ", config$bootstrap_replications, capture=TRUE)
-#   
-#   dataset <- MVPADataset(config$train_datavec, config$labels, config$maskVolume, config$block, config$test_datavec, 
-#                          config$testLabels, modelName=config$model, tuneGrid=config$tune_grid,
-#                          tuneLength=config$tune_length, testSplitVar=config$testSplitVar, testSplits=config$testSplits, 
-#                          trainDesign=config$train_design,
-#                          testDesign=config$test_design)
-#   
-#   for (varname in c("test_subset", "train_subset", "roi_subset", "split_by")) {
-#     if (!is.null(configParams[[varname]]) && is(configParams[[varname]], "formula")) {
-#       configParams[[varname]] <- Reduce(paste, deparse(configParams[[varname]]))
-#     }
-#   }
-#   
-#   for (lib in dataset$model$library) {
-#     library(lib, character.only = TRUE)
-#   }
-#   
-#   list(dataset=dataset, config=config)
-#   
-# }
-# 
-# 
-# # @export
-# initMVPASearchlight <- function(configFile, args=list(), verbose=FALSE) {
-#   if (!verbose) {
-#     flog.threshold(ERROR)
-#   } else {
-#     flog.threshold(DEBUG)
-#   }
-#   
-#   
-#   config <- initializeConfiguration(list(config=configFile))
-#   config <- initializeStandardParameters(config, args, "mvpa_searchlight")
-#   
-#   set_arg("niter", config, args, 16)
-#   set_arg("radius", config, args, 8)
-#   set_arg("type", config, args, "randomized")
-#   
-#   config <- initializeTuneGrid(args, config)
-#   configParams <- as.list(config)
-#   config <- initializeDesign(config)
-#   
-#   config$maskVolume <- as(loadMask(config), "LogicalBrainVolume")
-#   
-#   
-#   rowIndices <- which(config$train_subset)
-#   config$ROIVolume <- loadMask(config)
-#   
-#   rowIndices <- which(config$train_subset)
-#   flog.info("number of trials: %s", length(rowIndices))
-#   flog.info("max trial index: %s", max(rowIndices))
-#   flog.info("loading training data: %s", config$train_data)
-#   flog.info("mask contains %s voxels", sum(config$maskVolume))
-#   
-#   config <- initializeData(config)
-#   
-#   flog.info("Running searchlight with parameters:", configParams, capture=TRUE)
-#   
-#   
-#   dataset <- MVPADataset(config$train_datavec, 
-#                          config$labels, 
-#                          config$maskVolume, 
-#                          config$block, 
-#                          config$test_datavec, 
-#                          config$testLabels, 
-#                          modelName=config$model, 
-#                          tuneGrid=config$tune_grid,
-#                          tuneLength=config$tune_length, 
-#                          testSplitVar=config$testSplitVar, 
-#                          testSplits=config$testSplits,
-#                          trainDesign=config$train_design,
-#                          testDesign=config$test_design)
-#   
-#   for (lib in dataset$model$library) {
-#     library(lib, character.only = TRUE)
-#   }
-#   
-#   list(dataset=dataset, config=config)
-# }
-
-
-
-
 #' @import stringr
 #' @importFrom io qread
 initialize_configuration <- function(args) {
@@ -282,6 +90,7 @@ normalize_surface_samples <- function(bvec, mask) {
   neurosurf::NeuroSurfaceVector(geometry(bvec), indices=indices(bvec), m2)
 }
 
+#' @noRd
 initialize_surface_data <- function(config) {
   if (!is.null(config$train_subset)) {
     indices <- which(config$train_subset)
@@ -346,6 +155,7 @@ initialize_surface_data <- function(config) {
  
 }
 
+#' @noRd
 initialize_feature_selection <- function(config) {
   if (!is.null(config$feature_selector)) {
     feature_selector(config$feature_selector$method, config$feature_selector$cutoff_type, as.numeric(config$feature_selector$cutoff_value))
@@ -392,7 +202,7 @@ initialize_image_data <- function(config, mask) {
 
 }
 
-
+#' @noRd
 initialize_design <- function(config) {
   if (is.character(config$train_subset)) {
     config$train_subset <- eval(parse(text=config$train_subset))
@@ -500,7 +310,7 @@ initialize_design <- function(config) {
   
 }
 
-
+#' @noRd
 initialize_tune_grid <- function(args, config) {
   if (!is.null(args$tune_grid) && !args$tune_grid == "NULL") {
     params <- try(expand.grid(eval(parse(text=args$tune_grid))))
@@ -531,14 +341,14 @@ initialize_tune_grid <- function(args, config) {
 }
 
 
-
+#' @noRd
 set_default <- function(name, config, default) {
   if (is.null(config[[name]])) {
     config[[name]]<- default
   }
 }
 
-
+#' @noRd
 set_arg <- function(name, config, args, default) {
   if (is.null(config[[name]]) && is.null(args[[name]])) {
     config[[name]] <- default
@@ -560,7 +370,7 @@ make_output_dir <- function(dirname) {
   }
 }
 
-
+#' @noRd
 initialize_crossval <- function(config, des=NULL) {
   cval <- if (is.null(config$cross_validation) && !is.null(des$block_var)) {
     flog.info("cross-validation type: cross validation using predefined blocking variable")
@@ -616,7 +426,7 @@ load_model <- function(name) {
   
 }
 
-
+#' @noRd
 load_mask <- function(config) {
   if (config$data_mode == "image") {
     if (!file.exists(config$mask)) {
@@ -629,7 +439,7 @@ load_mask <- function(config) {
   }
 }
 
-
+#' @noRd
 load_design <- function(config, name) {
   if (!file.exists(config[[name]])) {
     futile.logger::flog.error(paste("cannot find table named: ", name))
@@ -639,6 +449,7 @@ load_design <- function(config, name) {
   }
 }
 
+#' @noRd
 load_mvpa_model <- function(config, dataset, design, crossval, feature_selector) {
   mod <- load_model(config$model)
   mvp_mod <- mvpa_model(mod,dataset, design=design, 
@@ -709,7 +520,7 @@ load_image_data_series <- function(fnames, config, indices, mask_volume) {
   #SparseNeuroVec(vecmat[indices,], space(mask_volume), mask=mask_volume)
 }
 
-
+#' @noRd
 load_image_data <- function(config, name, mask_volume, indices=NULL) {
   fname <- config[[name]]
   if (length(fname) > 1) {
@@ -728,6 +539,8 @@ load_image_data <- function(config, name, mask_volume, indices=NULL) {
   }
 }
 
+
+#' @noRd
 load_surface_mask <- function(masklist, train_surf) {
   sections <- names(train_surf)
   assert_that(all(names(sections) == names(masklist)))
@@ -742,6 +555,7 @@ load_surface_mask <- function(masklist, train_surf) {
   masksurfaces
 }
 
+#' @noRd
 load_surface_data <- function(config, name, nodeind=NULL, colind=NULL) {
   tdat <- config[[name]]
   sections <- names(tdat)
