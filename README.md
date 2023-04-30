@@ -1,4 +1,10 @@
 
+<!-- badges: start -->
+
+[![R-CMD-check](https://github.com/bbuchsbaum/rMVPA/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/rMVPA/actions/workflows/R-CMD-check.yaml)
+
+<!-- badges: end -->
+
 ## Multivoxel Pattern Analysis in R
 
 ### This package is under development.
