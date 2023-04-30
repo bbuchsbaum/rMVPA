@@ -102,7 +102,6 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_
 #' The function takes an RSA design object as input and processes the distance matrices and other variables to
 #' construct a model matrix. It handles different types of input matrices, including symmetric and asymmetric
 #' distance matrices, and can include or exclude within-run comparisons based on the RSA design.
-#' @importFrom utils isSymmetric
 #' @examples
 #' dismat <- dist(matrix(rnorm(100*100), 100, 100))
 #' rdes <- rsa_design(~ dismat, list(dismat=dismat))

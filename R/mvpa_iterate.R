@@ -150,10 +150,12 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   ind <- neuroim2::indices(roi$train_roi)
   
   ret <- samples %>% pmap(function(ytrain, ytest, train, test, .id) {
-    ## fit model for cross-validation sample
-    ##if (ncol(train) < 2) {
-    ##  return(NULL)
-    ##}  
+    # Check if the number of features is less than 2
+    if (ncol(train) < 2) {
+      # Return an error message
+      return(tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest),
+                            fit=list(NULL), error=TRUE, error_message="Number of features is less than 2"))
+    }
     
     result <- try(train_model(mspec, tibble::as_tibble(train, .name_repair=.name_repair), ytrain, 
                                 indices=ind, param=mspec$tune_grid, 
