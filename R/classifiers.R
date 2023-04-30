@@ -12,6 +12,8 @@
 ## use R6 to wrap models
 ## 
 
+#' @keywords internal
+#' @noRd
 colHuber <- function(x,k=1.5, tol=1e-04) {
   mu <- matrixStats::colMedians(x)
   s <- matrixStats::colMads(x)
@@ -60,14 +62,16 @@ corsimFit <- function(x, y, method, robust) {
   }
 }
 
-
+#' @keywords internal
+#' @noRd
 predict_corsimFit <- function(modelFit, newData) {
   cres <- cor(t(newData), t(modelFit$conditionMeans), method=modelFit$method)
   res <- max.col(cres)
   modelFit$levs[res]
 }
 
-
+#' @keywords internal
+#' @noRd
 prob_corsimFit <- function(modelFit, newData) {
   scores <- cor(t(newData), t(modelFit$conditionMeans), method=modelFit$method)
   
@@ -80,7 +84,8 @@ prob_corsimFit <- function(modelFit, newData) {
 }
 
 
-
+#' @keywords internal
+#' @noRd
 MVPAModels$pca_lda <- list(type = "Classification", 
                            library = "MASS", 
                            loop = NULL, 
@@ -123,7 +128,8 @@ MVPAModels$pca_lda <- list(type = "Classification",
 
 
 
-
+#' @keywords internal
+#' @noRd
 MVPAModels$corclass <- list(type = "Classification", 
                           library = "rMVPA", 
                           label="corclass",
@@ -138,8 +144,13 @@ MVPAModels$corclass <- list(type = "Classification",
                             prob_corsimFit(modelFit, as.matrix(newdata))
                           })
 
+#' @keywords internal
+#' @noRd
 MVPAModels$corsim <- MVPAModels$corclass
 
+
+#' @keywords internal
+#' @noRd
 MVPAModels$sda_notune <- list(type = "Classification", 
                               library = "sda", 
                               label="sda_notune",
@@ -158,7 +169,8 @@ MVPAModels$sda_notune <- list(type = "Classification",
                                 predict(modelFit, as.matrix(newdata),verbose=FALSE)$posterior
                               })
 
-
+#' @keywords internal
+#' @noRd
 MVPAModels$sda_boot <- list(type = "Classification", 
                               library = "sda", 
                               label="sda_boot",
@@ -243,9 +255,10 @@ MVPAModels$sda_boot <- list(type = "Classification",
                                 })
                                 
                                 prob <- preds[!sapply(preds, function(x) is.null(x))]
-                                Reduce("+", prob)/length(prob)
-                                
-                              })
+                                Reduce("+", prob)/length(prob)})
+
+#' @keywords internal
+#' @noRd
 MVPAModels$lda_thomaz_boot <- list(type = "Classification", 
                             library = "sparsediscrim", 
                             label="lda_thomaz_boot",
@@ -350,7 +363,8 @@ memo_rank <- memoise(function(X, L,fdr) {
 })
 
 
-
+#' @keywords internal
+#' @noRd
 MVPAModels$glmnet_opt <- list(type = "Classification", 
                               library = c("c060", "glmnet"), 
                               label="glmnet_opt",
@@ -406,7 +420,8 @@ MVPAModels$glmnet_opt <- list(type = "Classification",
                               })
 
 
-
+#' @keywords internal
+#' @noRd
 MVPAModels$sparse_sda <- list(type = "Classification", 
                                library = "sda", 
                                label="sparse_sda",
@@ -434,6 +449,11 @@ MVPAModels$sparse_sda <- list(type = "Classification",
                                })
 
 
+
+
+
+#' @keywords internal
+#' @noRd
 MVPAModels$sda_ranking <- list(type = "Classification", 
                                library = "sda", 
                                label="sda_ranking",
@@ -473,6 +493,9 @@ MVPAModels$sda_ranking <- list(type = "Classification",
                                  predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
                                })
 
+
+#' @keywords internal
+#' @noRd
 MVPAModels$mgsda <- list(type = "Classification", 
                               library = "MGSDA", 
                               loop = NULL, 
@@ -495,6 +518,8 @@ MVPAModels$mgsda <- list(type = "Classification",
                                
                               })
 
+#' @keywords internal
+#' @noRd
 MVPAModels$lda_thomaz <- list(type = "Classification", 
                               library = "sparsediscrim", 
                               loop = NULL, 
@@ -508,6 +533,9 @@ MVPAModels$lda_thomaz <- list(type = "Classification",
                                 p
                               })
 
+
+#' @keywords internal
+#' @noRd
 MVPAModels$hdrda <- list(type = "Classification", 
                               library = "sparsediscrim", 
                               label="hdrda",

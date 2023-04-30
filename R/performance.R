@@ -1,17 +1,32 @@
 
 
 
-#' predicted_class
-#' @param prob a matrix of predicted probabilities with column names indicating the classes
+#' Calculate the Predicted Class from Probability Matrix
+#'
+#' This function calculates the predicted class from a matrix of predicted probabilities. The class with the highest probability is selected as the predicted class.
+#'
+#' @param prob A matrix of predicted probabilities with column names indicating the classes.
+#' @return A vector of predicted classes corresponding to the highest probability for each row in the input matrix.
+#' @export
 predicted_class <- function(prob) {
   maxid <- max.col(prob, ties.method="random")
   pclass <- colnames(prob)[maxid]
 }
 
-#' performance
-#' @param split_list split results by indexed sub-groups
+#' Calculate Performance Metrics for Regression Result
+#'
+#' This function calculates performance metrics for a regression result object, including R-squared, Root Mean Squared Error (RMSE), and Spearman correlation.
+#'
+#' @param x A \code{regression_result} object.
+#' @param split_list Split results by indexed sub-groups (not supported for regression analyses yet).
+#' @return A named vector with the calculated performance metrics: R-squared, RMSE, and Spearman correlation.
+#' @details
+#' The function calculates the following performance metrics for the given regression result object:
+#' - R-squared: proportion of variance in the observed data that is predictable from the fitted model.
+#' - RMSE: root mean squared error, a measure of the differences between predicted and observed values.
+#' - Spearman correlation: a measure of the monotonic relationship between predicted and observed values.
+#' @seealso \code{\link{regression_result}}
 #' @export
-#' @rdname performance-methods
 performance.regression_result <- function(x, split_list,...) {
   if (!is.null(split_list)) {
     ## TODO: add support
@@ -26,13 +41,17 @@ performance.regression_result <- function(x, split_list,...) {
 }
 
 
-#' custom_performance
-#' 
-#' applies a user-supplied performance metric to a prediction result
-#' 
-#' @param x the result object
-#' @param custom_fun the function used to compute performance metrics, i.e. \code{custom_fun(x)}
-#' @param split_list the splitting groups
+#' Apply Custom Performance Metric to Prediction Result
+#'
+#' This function applies a user-supplied performance metric to a prediction result object.
+#'
+#' @param x The prediction result object.
+#' @param custom_fun The function used to compute performance metrics, i.e., \code{custom_fun(x)}.
+#' @param split_list An optional named list of splitting groups. If provided, the performance metric will be computed for each group and returned as a named vector.
+#' @return A named vector with the calculated custom performance metric(s).
+#' @details
+#' The function allows users to apply a custom performance metric to a prediction result object.
+#' If a split list is provided, the performance metric will be computed for each group separately, and the results will be returned as a named vector.
 #' @export
 custom_performance <- function(x, custom_fun, split_list=NULL) {
   if (is.null(split_list)) {
@@ -69,7 +88,6 @@ merge_results.regression_result <- function(x,...) {
   regression_result(observed=x$observed, predicted=pred, testind=x$testind, 
                                test_design=x$test_design, predictor=x$predictor)
 }
-
 
 
 
@@ -119,7 +137,6 @@ performance.binary_classification_result <- function(x, split_list=NULL,...) {
     ret <- c(total, subtots)
   }
 }
-
 
 
 #' @export

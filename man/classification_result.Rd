@@ -2,41 +2,12 @@
 % Please edit documentation in R/mvpa_result.R
 \name{classification_result}
 \alias{classification_result}
-\alias{binary_classification_result}
-\alias{multiway_classification_result}
-\alias{regression_result}
 \title{Create a \code{classification_result} instance}
 \usage{
 classification_result(
   observed,
   predicted,
   probs,
-  testind = NULL,
-  test_design = NULL,
-  predictor = NULL
-)
-
-binary_classification_result(
-  observed,
-  predicted,
-  probs,
-  testind = NULL,
-  test_design = NULL,
-  predictor = NULL
-)
-
-multiway_classification_result(
-  observed,
-  predicted,
-  probs,
-  testind = NULL,
-  test_design = NULL,
-  predictor = NULL
-)
-
-regression_result(
-  observed,
-  predicted,
   testind = NULL,
   test_design = NULL,
   predictor = NULL
@@ -58,14 +29,9 @@ regression_result(
 \value{
 A classification result object, which can be one of: \code{regression_result},
   \code{binary_classification_result}, or \code{multiway_classification_result}.
-
-A binary classification result object, with the class attribute set to "binary_classification_result".
 }
 \description{
 Constructs a classification result object based on the observed and predicted values,
-as well as other optional parameters.
-
-Constructs a binary classification result object based on the observed and predicted values,
 as well as other optional parameters.
 }
 \examples{
@@ -86,3 +52,10 @@ cres <- classification_result(yobs, predicted, probs)
 # Compute default performance measures (Accuracy, AUC)
 performance(cres)
 }
+\seealso{
+Other classification_result: 
+\code{\link{binary_classification_result}()},
+\code{\link{multiway_classification_result}()},
+\code{\link{regression_result}()}
+}
+\concept{classification_result}

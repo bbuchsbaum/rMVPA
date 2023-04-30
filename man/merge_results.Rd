@@ -2,15 +2,18 @@
 % Please edit documentation in R/allgeneric.R
 \name{merge_results}
 \alias{merge_results}
-\title{merge_results}
+\title{Merge Multiple Classification/Regression Results}
 \usage{
 merge_results(x, ...)
 }
 \arguments{
-\item{x}{the first result}
+\item{x}{The first classification/regression result object to merge.}
 
-\item{...}{the rest}
+\item{...}{Additional classification/regression result objects to merge.}
+}
+\value{
+A single merged classification/regression result object containing the combined results of all input objects.
 }
 \description{
-merge two classification/regression results
+This function merges two or more classification/regression result objects into a single object.
 }

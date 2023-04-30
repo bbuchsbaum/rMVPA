@@ -232,16 +232,21 @@ merge_predictions.classification_prediction <- function(obj1, rest, weights=rep(
 }
 
 
-#' the result of a single model fit to a chunk of data
-#' 
-#' @param model the caret-style model object
-#' @param y the predictand
-#' @param fit the model fit 
-#' @param model_type the problem type: classification or regression
-#' @param param the model parameters
-#' @param vox_ind the the voxel indices indicating the data coordinates
-#' @param feature_mask a logical mask indicating the selected subset of columns
-#' @export
+#' Create a Model Fit Object
+#'
+#' Constructs a model fit object, representing the result of a single model fit to a chunk of data. The object contains information about the model, response variable, model fit, problem type, model parameters, voxel indices, and an optional feature mask.
+#'
+#' @param model The caret-style model object.
+#' @param y The response variable (predictand).
+#' @param fit The fitted model.
+#' @param model_type The problem type, either "classification" or "regression" (default). Must be one of the provided options.
+#' @param param The model parameters.
+#' @param vox_ind The voxel indices indicating the data coordinates.
+#' @param feature_mask An optional logical mask indicating the selected subset of columns (features).
+#'
+#' @return An object of class \code{model_fit}, containing the model, response variable, fitted model, problem type, model parameters, voxel indices, and optional feature mask. The object is also assigned a class based on the problem type: \code{class_model_fit} for classification or \code{regression_model_fit} for regression.
+#'
+#' @keywords internal
 model_fit <- function(model, y, fit, model_type=c("classification", "regression"), param, vox_ind, feature_mask=NULL) {
   model_type=match.arg(model_type)
   
@@ -262,14 +267,25 @@ model_fit <- function(model, y, fit, model_type=c("classification", "regression"
   ret
 }
 
-#' weighted_model
-#' 
-#' a consensus model formed as a weighted average of a set of models
-#' 
-#' @param fits a list of model fits
-#' @param names a list of names, one per model fit
-#' @param weights a vector of weights, one per model fit
-#' @export
+#' Create a Weighted Consensus Model
+#'
+#' Constructs a weighted consensus model formed as a weighted average of a set of models. The consensus model combines the input models according to their respective weights.
+#'
+#' @param fits A list of model fits to be combined.
+#' @param names An optional list of names, one per model fit (default: numeric indices).
+#' @param weights A vector of weights, one per model fit, that sum up to 1 (default: equal weights for all models).
+#'
+#' @return An object of class \code{weighted_model}, containing the list of model fits, their names, and the assigned weights. The object is also assigned a class `list`.
+#'
+#' @examples
+#' # Create two sample model fits
+#' fit1 <- list(model = "model1", y = c(0, 1), fit = "fit1")
+#' fit2 <- list(model = "model2", y = c(1, 0), fit = "fit2")
+#'
+#' # Combine the model fits into a weighted consensus model
+#' w_model <- weighted_model(fits = list(fit1, fit2), names = c("model1", "model2"), weights = c(0.6, 0.4))
+#'
+#' @keywords internal
 weighted_model <- function(fits, names=1:length(fits), weights=rep(1/length(fits), length(fits))) {
   stopifnot(length(weights) == length(fits))
   ret <- fits
@@ -319,19 +335,20 @@ predict.list_model <- function(object, newdata=NULL,...) {
 
 
 
-
-
-
-#' train_model
-#' 
-#' @param train_dat training data, and instance of class \code{ROIVolume} or \code{ROISurface}
-#' @param y the dependent variable
-#' @param indices the spatial indices associated with each column
-#' @param param optional tuning parameters
-#' @param wts optional case weights
-#' @param tune_reps the number of bootstrap replications for parameter tuning (only used when param is not \code{NULL})
-#' @export
-#' @describeIn train_model train an mvpa_model
+#' Train an MVPA Model
+#'
+#' This function trains a Multi-Variate Pattern Analysis (MVPA) model on the provided data, taking care of feature selection, parameter tuning, and model fitting.
+#'
+#' @param obj An object of class \code{mvpa_model}, specifying the MVPA problem.
+#' @param train_dat Training data, an instance of class \code{ROIVolume} or \code{ROISurface}.
+#' @param y The dependent variable (response variable), either a numeric vector or a factor.
+#' @param indices The spatial indices associated with each column.
+#' @param param Optional tuning parameters (default: NULL). If not provided, the function will perform tuning using \code{tune_grid}.
+#' @param wts Optional case weights (default: NULL).
+#' @param tune_reps The number of bootstrap replications for parameter tuning (default: 10), only used when \code{param} is NULL.
+#' @param ... Additional arguments passed to other methods.
+#'
+#' @return A model fit object containing the trained model, its fit, the model type (classification or regression), the best tuning parameters, the voxel indices, and the feature mask.
 train_model.mvpa_model <- function(obj, train_dat, y, indices, param=NULL, wts=NULL, tune_reps=10,...) {
   
   if (is.null(param)) {

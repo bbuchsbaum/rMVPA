@@ -2,15 +2,18 @@
 % Please edit documentation in R/allgeneric.R
 \name{data_sample}
 \alias{data_sample}
-\title{data_sample}
+\title{Extract Sample from Dataset}
 \usage{
 data_sample(obj, vox)
 }
 \arguments{
-\item{obj}{the object}
+\item{obj}{The input dataset object, which should be an instance of a data class compatible with sample extraction.}
 
-\item{vox}{the voxel indices}
+\item{...}{Additional arguments to be passed to the specific sample extraction method for the input object's class.}
+}
+\value{
+A sample extracted from the input dataset based on the specific extraction method.
 }
 \description{
-data_sample
+This function extracts a sample from a given dataset object.
 }

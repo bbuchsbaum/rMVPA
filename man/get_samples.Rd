@@ -2,15 +2,18 @@
 % Please edit documentation in R/allgeneric.R
 \name{get_samples}
 \alias{get_samples}
-\title{get_samples}
+\title{Get Multiple Data Samples}
 \usage{
 get_samples(obj, vox_list)
 }
 \arguments{
-\item{obj}{the object}
+\item{obj}{The input dataset object, which should be an instance of a data class compatible with data sample extraction.}
 
-\item{vox_list}{the list of voxel/index sets}
+\item{vox_list}{A list of vectors containing voxel indices to extract from the dataset object.}
+}
+\value{
+A list of data samples extracted from the input dataset based on the specified voxel/index sets.
 }
 \description{
-get_samples
+This function extracts multiple data samples based on a list of voxel/index sets from a given dataset object.
 }

@@ -76,24 +76,25 @@ parse_variable <- function(var, design) {
 }
 
 
-#' mvpa_design
+#' Create an MVPA Design Object
 #'
 #' Constructs an MVPA design object, defining the classification or regression problem for Multi-Variate Pattern Analysis (MVPA).
+#' It handles different configurations of input datasets, response variables, and optional parameters, such as blocking variables and group structures.
 #'
 #' @param train_design A \code{data.frame} containing the training variables.
-#' @param y_train A \code{formula}, \code{character} name, or \code{factor} specifying the response variable for training.
-#' @param test_design An optional \code{data.frame} containing the test variables.
-#' @param y_test An optional \code{formula}, \code{character} name, or \code{factor} specifying the response variable for testing.
-#' @param block_var An optional \code{formula}, \code{character} name, or \code{integer} vector specifying the blocking variable.
-#' @param split_by An optional \code{formula} indicating the grouping structure for evaluating test performance.
+#' @param y_train A \code{formula}, \code{character} name, or \code{factor} specifying the response variable for training. Must have at least 2 levels with one or more training instances.
+#' @param test_design An optional \code{data.frame} containing the test variables. Must be provided if \code{y_test} is specified.
+#' @param y_test An optional \code{formula}, \code{character} name, or \code{factor} specifying the response variable for testing. Requires \code{test_design} to be provided.
+#' @param block_var An optional \code{formula}, \code{character} name, or \code{integer} vector specifying the blocking variable, used for repeated measures designs.
+#' @param split_by An optional \code{formula} indicating the grouping structure for evaluating test performance. Splitting condition must result in at least 3 observations per group.
+#'
+#' @return An object of class \code{mvpa_design}, containing the training and optional test design, response variables, blocking variable, and group structure.
 #'
 #' @examples
-#'
 #' df1 <- data.frame(y = rep(letters[1:4], 5), x1 = rnorm(20), x2 = rnorm(20), block = rep(1:4, each = 5))
 #' des <- mvpa_design(df1, ~ y, block_var = ~ block)
 #'
-#' ## with a test set
-#'
+#' ## With a test set
 #' testdes <- data.frame(y = sample(letters[1:4], 10))
 #' des <- mvpa_design(df1, ~ y, block_var = ~ block, test_design = testdes, y_test = ~ y)
 #'

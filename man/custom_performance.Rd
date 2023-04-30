@@ -2,17 +2,24 @@
 % Please edit documentation in R/performance.R
 \name{custom_performance}
 \alias{custom_performance}
-\title{custom_performance}
+\title{Apply Custom Performance Metric to Prediction Result}
 \usage{
 custom_performance(x, custom_fun, split_list = NULL)
 }
 \arguments{
-\item{x}{the result object}
+\item{x}{The prediction result object.}
 
-\item{custom_fun}{the function used to compute performance metrics, i.e. \code{custom_fun(x)}}
+\item{custom_fun}{The function used to compute performance metrics, i.e., \code{custom_fun(x)}.}
 
-\item{split_list}{the splitting groups}
+\item{split_list}{An optional named list of splitting groups. If provided, the performance metric will be computed for each group and returned as a named vector.}
+}
+\value{
+A named vector with the calculated custom performance metric(s).
 }
 \description{
-applies a user-supplied performance metric to a prediction result
+This function applies a user-supplied performance metric to a prediction result object.
+}
+\details{
+The function allows users to apply a custom performance metric to a prediction result object.
+If a split list is provided, the performance metric will be computed for each group separately, and the results will be returned as a named vector.
 }

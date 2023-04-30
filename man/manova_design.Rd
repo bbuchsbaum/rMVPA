@@ -2,15 +2,29 @@
 % Please edit documentation in R/manova_model.R
 \name{manova_design}
 \alias{manova_design}
-\title{manova_design}
+\title{Create a MANOVA Design}
 \usage{
 manova_design(formula, data)
 }
 \arguments{
-\item{formula}{a formula expression specifying MANOVA regression model}
+\item{formula}{A formula expression specifying the MANOVA regression model.}
 
-\item{data}{a named list containing the dissimilarity matrices and any other auxiliary variables}
+\item{data}{A named list containing the dissimilarity matrices and any other auxiliary variables.}
+}
+\value{
+A MANOVA design object with class attributes "manova_design" and "list".
 }
 \description{
-manova_design
+This function creates a MANOVA design object containing a formula expression and a named list of data.
+}
+\details{
+The function takes a formula expression and a named list of data as input, and returns a MANOVA design object.
+The object is a list that contains the formula expression and the named list of data with class attributes "manova_design" and "list".
+This object can be further used for MANOVA analysis or other related multivariate statistical methods.
+}
+\examples{
+# Create a MANOVA design
+formula <- y ~ x1 + x2
+data_list <- list(y = dissimilarity_matrix_y, x1 = dissimilarity_matrix_x1, x2 = dissimilarity_matrix_x2)
+manova_design_obj <- manova_design(formula, data_list)
 }

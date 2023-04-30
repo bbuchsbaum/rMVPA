@@ -2,15 +2,19 @@
 % Please edit documentation in R/allgeneric.R
 \name{compute_performance}
 \alias{compute_performance}
-\title{compute_performance}
+\title{Compute Performance Metrics for Classification/Regression Results}
 \usage{
 compute_performance(obj, result)
 }
 \arguments{
-\item{obj}{the object}
+\item{obj}{The input object for which the performance metrics should be computed.}
 
-\item{result}{the 'result' to evaluate}
+\item{result}{The classification/regression result object to evaluate.}
+}
+\value{
+A list of performance metrics for the input classification/regression result object.
 }
 \description{
-Delegate calculation of performance metrics
+This function delegates the calculation of performance metrics for classification/regression results
+to the appropriate method based on the input object's class.
 }

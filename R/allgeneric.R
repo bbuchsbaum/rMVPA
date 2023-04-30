@@ -1,6 +1,4 @@
 
-
-
 #' Select Features
 #' 
 #' Given a \code{feature_selection} specification object and a dataset, returns the set of selected features as a binary vector.
@@ -36,9 +34,6 @@ select_features <- function(obj, X, Y, ...) {
 #'
 #' @param obj The model specification object.
 #' @param ... Additional arguments to be passed to the method-specific function.
-#'
-#' @export
-#' 
 train_model <- function(obj,...) {
   UseMethod("train_model")
 }
@@ -107,10 +102,10 @@ fit_model <- function(obj, roi_x, y, wts, param, lev, last, classProbs, ...) {
 #' @param x The training data.
 #' @param y The response vector.
 #' @param len The number of elements in the tuning grid.
-#' @export
 tune_grid <- function(obj, x,y,len) {
   UseMethod("tune_grid")
 }
+
 
 #' Test Set Availability
 #'
@@ -123,67 +118,80 @@ has_test_set <- function(obj) {
 }
 
 
-#' performance
-#' 
-#' Compute appropriate performance metrics such as accuracy/AUC/RMSE from a classification/regression result
-#' 
-#' @param x the result to evaluate performance of
-#' @param ... extra args
+#' Compute Performance Metrics for Classification/Regression Results
+#'
+#' This function computes appropriate performance metrics (e.g., accuracy, AUC, RMSE) for a given classification/regression result.
+#'
+#' @param x The classification/regression result object to evaluate.
+#' @param ... Additional arguments passed on to the specific performance evaluation method.
+#'
+#' @return A list of performance metrics for the input classification/regression result object.
+#'
 #' @export
-#' @rdname performance-methods
 performance <- function(x,...) {
   UseMethod("performance")
 }
 
 
-#' compute_performance
-#' 
-#' Delegate calculation of performance metrics
-#' 
-#' @param obj the object
-#' @param result the 'result' to evaluate
+#' Compute Performance Metrics for Classification/Regression Results
+#'
+#' This function delegates the calculation of performance metrics for classification/regression results
+#' to the appropriate method based on the input object's class.
+#'
+#' @param obj The input object for which the performance metrics should be computed.
+#' @param result The classification/regression result object to evaluate.
+#'
+#' @return A list of performance metrics for the input classification/regression result object.
+#'
+#' @export
 compute_performance <- function(obj, result) {
   UseMethod("compute_performance")
 }
 
-#' merge_results
-#' 
-#' merge two classification/regression results
-#' 
-#' @param x the first result
-#' @param ... the rest
+#' Merge Multiple Classification/Regression Results
+#'
+#' This function merges two or more classification/regression result objects into a single object.
+#'
+#' @param x The first classification/regression result object to merge.
+#' @param ... Additional classification/regression result objects to merge.
+#'
+#' @return A single merged classification/regression result object containing the combined results of all input objects.
+#'
 #' @export
+#'
 merge_results <- function(x, ...) {
   UseMethod("merge_results")
 }
 
 
-#' get_samples
-#' 
-#' @param obj the object
-#' @param vox_list the list of voxel/index sets
+#' Get Multiple Data Samples
+#'
+#' This function extracts multiple data samples based on a list of voxel/index sets from a given dataset object.
+#'
+#' @param obj The input dataset object, which should be an instance of a data class compatible with data sample extraction.
+#' @param vox_list A list of vectors containing voxel indices to extract from the dataset object.
+#'
+#' @return A list of data samples extracted from the input dataset based on the specified voxel/index sets.
+#'
 #' @export
 get_samples <- function(obj, vox_list) {
   UseMethod("get_samples")
 }
 
-#' data_sample
-#' 
-#' @param obj the object
-#' @param vox the voxel indices
+#' Extract Sample from Dataset
+#'
+#' This function extracts a sample from a given dataset object.
+#'
+#' @param obj The input dataset object, which should be an instance of a data class compatible with sample extraction.
+#' @param ... Additional arguments to be passed to the specific sample extraction method for the input object's class.
+#'
+#' @return A sample extracted from the input dataset based on the specific extraction method.
+#'
 #' @export
 data_sample <- function(obj, vox) {
   UseMethod("data_sample")
 }
 
-
-#' extract_sample
-#' 
-#' @param obj the object
-#' @param ... extra args
-extract_sample <- function(obj,...) {
-  UseMethod("extract_sample")
-}
 
 
 #' Convert an object to an ROIVolume or ROISurface object
@@ -202,17 +210,19 @@ as_roi <- function(obj, data, ...) {
 }
 
 
-#' get_searchlight
-#' 
-#' generate a searchlight iterator appropriate for a given input dataset (e.g. volumetric or surface).
-#' 
-#' @param obj the object
-#' @param ... extra args
+#' Generate Searchlight Iterator
+#'
+#' This function generates a searchlight iterator suitable for a given input dataset, such as volumetric or surface data.
+#'
+#' @param obj The input dataset object, which should be an instance of a data class compatible with searchlight analysis.
+#' @param ... Additional arguments to be passed to the specific searchlight iterator method for the input object's class.
+#'
+#' @return A searchlight iterator object that can be used to perform searchlight analysis on the input dataset.
+#'
 #' @export
 get_searchlight <- function(obj, ...) {
   UseMethod("get_searchlight")
 }
-
 
 
 
@@ -245,21 +255,39 @@ merge_predictions <- function(obj1, rest, ...) {
 }
 
 
-#' sub_result
-#' 
-#' exctract a row-wise subset of a classification/regression result object.
-#' 
-#' @param x the result object to subset
-#' @param indices the row indices
+#' Extract Row-wise Subset of a Result Object
+#'
+#' This function extracts a row-wise subset of a classification or regression result object.
+#'
+#' @param x The input result object, which should be an instance of a classification or regression result class.
+#' @param indices A vector of row indices to extract from the result object.
+#'
+#' @return A new result object containing only the specified row indices from the input result object.
+#'
+#' @export
+#'
+#' @examples
+#' # Create a simple classification result object
+#' observed <- c(1, 0, 1, 1, 0)
+#' predicted <- c(1, 0, 0, 1, 1)
+#' result <- list(observed = observed, predicted = predicted)
+#' class(result) <- c("classification_result", "list")
+#'
+#' # Extract a subset of the result object
+#' sub_result(result, c(2, 3, 4))
+#' @family sub_result
 sub_result <- function(x, indices) {
   UseMethod("sub_result")
 }
 
-#' nobs
-#' 
-#' get number of observations 
-#' 
-#' @param x the object
+#' Get Number of Observations
+#'
+#' This function retrieves the number of observations from a given object.
+#'
+#' @param x The input object, which can be of different types, such as a data frame, matrix, or a custom object with a defined `nobs` method.
+#'
+#' @return The number of observations in the input object. Depending on the object type, this could be the number of rows or elements.
+#'
 #' @export
 nobs <- function(x) {
   UseMethod("nobs")
@@ -290,7 +318,8 @@ nresponses <- function(x) {
   UseMethod("nresponses")
 }
 
-
+#' @keywords internal
+#' @noRd
 .name_repair = ~ vctrs::vec_as_names(..., repair = "unique", quiet = TRUE)
 
 #' run_searchlight

@@ -31,6 +31,7 @@
 #' # Compute default performance measures (Accuracy, AUC)
 #' performance(cres)
 #' @export
+#' @family classification_result
 classification_result <- function(observed, predicted, probs, testind=NULL, test_design=NULL,predictor=NULL) {
   
   
@@ -58,7 +59,7 @@ classification_result <- function(observed, predicted, probs, testind=NULL, test
 #' @param predictor An optional predictor object.
 #'
 #' @return A binary classification result object, with the class attribute set to "binary_classification_result".
-#' @rdname classification_result
+#' @family classification_result
 #' @export
 binary_classification_result <- function(observed, predicted, probs, testind=NULL, test_design=NULL, predictor=NULL) {
   assertthat::assert_that(length(observed) == length(predicted))
@@ -77,7 +78,17 @@ binary_classification_result <- function(observed, predicted, probs, testind=NUL
 
 
 
+#' Subset Multiway Classification Result
+#'
+#' This function subsets a multiway classification result based on the provided indices.
+#'
+#' @param x An object of class \code{multiway_classification_result} containing the multiway classification results.
+#' @param indices The set of indices used to subset the results.
+#'
+#' @return A \code{multiway_classification_result} object containing the subset of results specified by the indices.
+#'
 #' @export
+#' @family sub_result
 sub_result.multiway_classification_result <- function(x, indices) {
   ret <- list(
     observed=x$observed[indices],
@@ -91,9 +102,17 @@ sub_result.multiway_classification_result <- function(x, indices) {
   ret
 }
 
+#' Subset Binary Classification Result
+#'
+#' This function subsets a binary classification result based on the provided indices.
+#'
+#' @param x An object of class \code{binary_classification_result} containing the binary classification results.
+#' @param indices The set of indices used to subset the results.
+#'
+#' @return A \code{binary_classification_result} object containing the subset of results specified by the indices.
+#'
 #' @export
-#' @param indices the set of indices used to subset results
-#' @rdname sub_result
+#' @family sub_result
 sub_result.binary_classification_result <- function(x, indices) {
   ret <- list(
     observed=x$observed[indices],
@@ -109,9 +128,19 @@ sub_result.binary_classification_result <- function(x, indices) {
 
 
  
+#' Create a Multiway Classification Result Object
+#'
+#' This function creates a multiway classification result object containing the observed and predicted values, class probabilities, test design, test indices, and predictor.
+#'
+#' @param observed A vector of observed values.
+#' @param predicted A vector of predicted values.
+#' @param probs A matrix of class probabilities.
+#' @param testind A vector of indices for the test data (optional).
+#' @param test_design The test design (optional).
+#' @param predictor The predictor used in the multiway classification model (optional).
+#' @return A list with class attributes "multiway_classification_result", "classification_result", and "list" containing the observed and predicted values, class probabilities, test design, test indices, and predictor.
 #' @inheritParams classification_result
-#' @rdname classification_result
-#' @export
+#' @family classification_result
 multiway_classification_result <- function(observed, predicted, probs,testind=NULL, test_design=NULL, predictor=NULL) {
   assertthat::assert_that(length(observed) == length(predicted))
   ret <- list(
@@ -127,9 +156,17 @@ multiway_classification_result <- function(observed, predicted, probs,testind=NU
 }
 
  
-#' @inheritParams classification_result
-#' @rdname classification_result
-#' @export
+#' Create a Regression Result Object
+#'
+#' This function creates a regression result object containing the observed and predicted values, test design, test indices, and predictor.
+#'
+#' @param observed A vector of observed values.
+#' @param predicted A vector of predicted values.
+#' @param testind A vector of indices for the test data (optional).
+#' @param test_design The test design (optional).
+#' @param predictor The predictor used in the regression model (optional).
+#' @return A list with class attributes "regression_result", "classification_result", and "list" containing the observed and predicted values, test design, test indices, and predictor.
+#' @family classification_result
 regression_result <- function(observed, predicted, testind=NULL, test_design=NULL, predictor=NULL) {
   ret <- list(
     observed=observed,

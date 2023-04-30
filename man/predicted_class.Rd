@@ -2,13 +2,16 @@
 % Please edit documentation in R/performance.R
 \name{predicted_class}
 \alias{predicted_class}
-\title{predicted_class}
+\title{Calculate the Predicted Class from Probability Matrix}
 \usage{
 predicted_class(prob)
 }
 \arguments{
-\item{prob}{a matrix of predicted probabilities with column names indicating the classes}
+\item{prob}{A matrix of predicted probabilities with column names indicating the classes.}
+}
+\value{
+A vector of predicted classes corresponding to the highest probability for each row in the input matrix.
 }
 \description{
-predicted_class
+This function calculates the predicted class from a matrix of predicted probabilities. The class with the highest probability is selected as the predicted class.
 }

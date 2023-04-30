@@ -41,7 +41,6 @@ data_sample.mvpa_dataset <- function(obj, vox) {
 }
 
 
-
 #' @export
 print.data_sample <- function(x, ...) {
   if (is.matrix(x$vox)) {
@@ -51,33 +50,53 @@ print.data_sample <- function(x, ...) {
   }
 }
 
+#' Filter Region of Interest (ROI)
+#'
+#' This function filters an ROI, keeping only valid columns.
+#'
+#' @param roi A list containing the train and test ROI data.
+#' @return A list with filtered train and test ROI data.
+#' @details
+#' The function filters an ROI by removing columns with missing values (NA) and zero standard deviation.
+#' It returns a list with filtered train and test ROI data.
+#' @keywords internal
 filter_roi <- function(roi) {
+  # Extract the train data values
   trdat <- values(roi$train_roi)
-  ##tedat <- values(roi$test_roi)
   
+  # Find columns with missing values (NA)
   nas <- apply(trdat, 2, function(v) any(is.na(v)))
+  
+  # Find columns with non-zero standard deviation
   sdnonzero <- apply(trdat, 2, sd, na.rm=TRUE) > 0
   
+  # Determine columns to keep
   keep <- !nas & sdnonzero
   
-  if (sum(keep)  == 0) {
+  # If no valid columns are found, throw an error
+  if (sum(keep) == 0) {
     stop("filter_roi: roi has no valid columns")
-  } #else {
-    #print(paste("valid column: ", sum(keep)))
-  #}
+  }
   
+  # If there's no test ROI data, return filtered train ROI data only
   if (is.null(roi$test_roi)) {
     troi <- neuroim2::ROIVec(space(roi$train_roi), coords(roi$train_roi)[keep,,drop=FALSE], data=trdat[,keep,drop=FALSE])
     list(train_roi=troi,
          test_roi=NULL)
   } else  {
+    # Filter train ROI data
     troi <- neuroim2::ROIVec(space(roi$train_roi), coords(roi$train_roi)[keep,,drop=FALSE], data=trdat[,keep,drop=FALSE])
+    
+    # Filter test ROI data
     tedat <- values(roi$test_roi)
     teroi <- neuroim2::ROIVec(space(roi$test_roi), coords(roi$test_roi)[keep,,drop=FALSE], data=tedat[,keep,drop=FALSE])
+    
+    # Return filtered train and test ROI data
     list(train_roi=troi,
          test_roi=teroi)
   }
 }
+
 
 #' @keywords internal
 #' @noRd

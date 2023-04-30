@@ -240,7 +240,6 @@ extract_roi <- function(sample, data) {
 #' @importFrom dplyr bind_rows
 #' @importFrom furrr future_pmap
 #' @importFrom purrr map
-#' @examples
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), 
                          compute_performance=TRUE, 
@@ -301,7 +300,7 @@ fut_mvpa <- function(mod_spec, sf, tot, do_fun, verbose, permute, compute_perfor
 
 }
 
-
+#' @keywords internal
 #' @importFrom Rfit rfit
 run_rfit <- function(dvec, obj) {
   form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
@@ -333,7 +332,18 @@ run_cor <- function(dvec, obj, method) {
 }
 
 
-#' @export
+#' Train an RSA Model
+#'
+#' This function trains an RSA (representational similarity analysis) model using the specified method and distance calculation.
+#'
+#' @param obj An object of class \code{rsa_model}.
+#' @param train_dat The training data.
+#' @param indices The indices of the training data.
+#' @param wts Optional, the weights for the model training.
+#' @param method The method used for model training. One of "lm" (linear regression), "rfit" (robust regression), "pearson" (Pearson correlation), or "spearman" (Spearman correlation). Default is "lm".
+#' @param distmethod The method used for distance calculation. One of "pearson" (Pearson correlation) or "spearman" (Spearman correlation). Default is "pearson".
+#' @param ... Additional arguments passed to the training method.
+#' @return The trained model.
 train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("lm", "rfit", "pearson", "spearman"), 
                                   distmethod=c("pearson", "spearman"), ...) {
   method <- match.arg(method)
@@ -398,6 +408,7 @@ rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FAL
 }
 
 
+#' @keywords internal
 fut_rsa <- function(mod_spec, sf) {
   mod_spec$dataset <- NULL
   gc()
@@ -410,7 +421,15 @@ fut_rsa <- function(mod_spec, sf) {
 }
 
 
-#' @export
+#' Train a MANOVA Model
+#'
+#' This function trains a multivariate analysis of variance (MANOVA) model using the specified design.
+#'
+#' @param obj An object of class \code{manova_model}.
+#' @param train_dat The training data.
+#' @param indices The indices of the training data.
+#' @param ... Additional arguments passed to the training method.
+#' @return A named numeric vector of -log(p-values) for each predictor in the MANOVA model.
 #' @importFrom stats as.formula
 train_model.manova_model <- function(obj, train_dat, indices, ...) {
   dframe <- obj$design$data
@@ -427,6 +446,7 @@ train_model.manova_model <- function(obj, train_dat, indices, ...) {
 
 
 #' @importFrom neuroim2 indices values
+#' @keywords internal
 do_manova <- function(roi, mod_spec, rnum) {
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
   ind <- indices(roi$train_roi)
@@ -478,6 +498,7 @@ manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),   batch_s
 
 }
 
+#'@keywords internal
 fut_manova <- function(mod_spec, sf) {
   mod_spec$dataset <- NULL
   gc()

@@ -2,7 +2,7 @@
 % Please edit documentation in R/model_fit.R
 \name{model_fit}
 \alias{model_fit}
-\title{the result of a single model fit to a chunk of data}
+\title{Create a Model Fit Object}
 \usage{
 model_fit(
   model,
@@ -15,20 +15,24 @@ model_fit(
 )
 }
 \arguments{
-\item{model}{the caret-style model object}
+\item{model}{The caret-style model object.}
 
-\item{y}{the predictand}
+\item{y}{The response variable (predictand).}
 
-\item{fit}{the model fit}
+\item{fit}{The fitted model.}
 
-\item{model_type}{the problem type: classification or regression}
+\item{model_type}{The problem type, either "classification" or "regression" (default). Must be one of the provided options.}
 
-\item{param}{the model parameters}
+\item{param}{The model parameters.}
 
-\item{vox_ind}{the the voxel indices indicating the data coordinates}
+\item{vox_ind}{The voxel indices indicating the data coordinates.}
 
-\item{feature_mask}{a logical mask indicating the selected subset of columns}
+\item{feature_mask}{An optional logical mask indicating the selected subset of columns (features).}
+}
+\value{
+An object of class \code{model_fit}, containing the model, response variable, fitted model, problem type, model parameters, voxel indices, and optional feature mask. The object is also assigned a class based on the problem type: \code{class_model_fit} for classification or \code{regression_model_fit} for regression.
 }
 \description{
-the result of a single model fit to a chunk of data
+Constructs a model fit object, representing the result of a single model fit to a chunk of data. The object contains information about the model, response variable, model fit, problem type, model parameters, voxel indices, and an optional feature mask.
 }
+\keyword{internal}

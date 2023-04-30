@@ -1,26 +1,42 @@
 
 
+#' Combine Regional Results
+#'
+#' This function combines regional results from a list into a single data frame.
+#'
+#' @param results A list of regional results.
+#' @return A data frame with combined regional results.
+#' @details
+#' The function is used to combine regional results from a list into a single data frame.
+#' It handles both factor and non-factor observed values and creates a combined data frame with the corresponding columns.
+#' @keywords internal
 combine_regional_results = function(results) {
   roinum=NULL
   .rownum=NULL
+  
+  # Check if the observed values are factors (for categorical data)
   if (is.factor(results$result[[1]]$observed)) {
     results %>% dplyr::rowwise() %>% dplyr::do( {
-
+      
+      # Create a tibble containing observed, predicted, and additional information
       tib1 <- tibble::tibble(
-          .rownum=seq_along(.$result$observed),
-          roinum=rep(.$id, length(.$result$observed)),
-          observed=.$result$observed,
-          pobserved=sapply(seq_along(.$result$observed), function(i) .$result$probs[i, .$result$observed[i]]),
-          predicted=.$result$predicted,
-          correct=as.character(.$result$observed) == as.character(.$result$predicted)
+        .rownum=seq_along(.$result$observed),
+        roinum=rep(.$id, length(.$result$observed)),
+        observed=.$result$observed,
+        pobserved=sapply(seq_along(.$result$observed), function(i) .$result$probs[i, .$result$observed[i]]),
+        predicted=.$result$predicted,
+        correct=as.character(.$result$observed) == as.character(.$result$predicted)
       )
-      #tib2 <- tibble::as_tibble(.$result$probs, .name_repair="universal")
+      
+      # Create a tibble with the probabilities for each class
       tib2 <- tibble::as_tibble(.$result$probs, .name_repair=.name_repair)
       names(tib2) <- paste0("prob_", names(tib2))
+      
+      # Combine tib1 and tib2
       cbind(tib1, tib2)
     })
   } else {
-   
+    # For non-factor observed values (for continuous data)
     results %>% dplyr::rowwise() %>% dplyr::do(
       tibble::tibble(
         .rownum=seq_along(.$result$observed),
@@ -30,8 +46,6 @@ combine_regional_results = function(results) {
     )
   }
 }
-
-
 
 #' Combine prediction tables
 #'

@@ -2,15 +2,18 @@
 % Please edit documentation in R/allgeneric.R
 \name{get_searchlight}
 \alias{get_searchlight}
-\title{get_searchlight}
+\title{Generate Searchlight Iterator}
 \usage{
 get_searchlight(obj, ...)
 }
 \arguments{
-\item{obj}{the object}
+\item{obj}{The input dataset object, which should be an instance of a data class compatible with searchlight analysis.}
 
-\item{...}{extra args}
+\item{...}{Additional arguments to be passed to the specific searchlight iterator method for the input object's class.}
+}
+\value{
+A searchlight iterator object that can be used to perform searchlight analysis on the input dataset.
 }
 \description{
-generate a searchlight iterator appropriate for a given input dataset (e.g. volumetric or surface).
+This function generates a searchlight iterator suitable for a given input dataset, such as volumetric or surface data.
 }

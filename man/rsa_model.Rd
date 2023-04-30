@@ -2,15 +2,31 @@
 % Please edit documentation in R/rsa_model.R
 \name{rsa_model}
 \alias{rsa_model}
-\title{rsa_model}
+\title{Construct an RSA (Representational Similarity Analysis) model}
 \usage{
 rsa_model(dataset, design)
 }
 \arguments{
-\item{dataset}{a \code{mvpa_dataset} instance}
+\item{dataset}{An instance of an \code{mvpa_dataset}.}
 
-\item{design}{a \code{rsa_design} instance}
+\item{design}{An instance of an \code{rsa_design} created by \code{rsa_design()}.}
+}
+\value{
+A list with two elements: \code{dataset} and \code{design}, with the class attribute set to \code{"rsa_model"} and \code{"list"}.
 }
 \description{
-rsa_model
+This function creates an RSA model object by taking an MVPA (Multi-Variate Pattern Analysis) dataset and an RSA design.
+}
+\examples{
+# Create a random MVPA dataset
+data <- matrix(rnorm(100 * 100), 100, 100)
+labels <- factor(rep(1:2, each = 50))
+mvpa_data <- mvpa_dataset(data, labels)
+
+# Create an RSA design
+dismat <- dist(data)
+rdes <- rsa_design(~ dismat, list(dismat = dismat))
+
+# Create an RSA model
+rsa_mod <- rsa_model(mvpa_data, rdes)
 }
