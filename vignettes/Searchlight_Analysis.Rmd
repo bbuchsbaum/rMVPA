@@ -13,7 +13,7 @@ vignette: >
 ## Searchlight Analysis
 ```{r, echo=FALSE, message=FALSE}
 suppressPackageStartupMessages(library(neuroim2))
-suppressPackageStartupMessages(library(devtools))
+##suppressPackageStartupMessages(library(devtools))
 library(rMVPA)
 ```
 

@@ -31,7 +31,7 @@ well.
 
 From within R:
 
-    library(devtools)
+    #library(devtools)
     install_github("bbuchsbaum/neuroim2")
     install_github("bbuchsbaum/rMVPA")
 

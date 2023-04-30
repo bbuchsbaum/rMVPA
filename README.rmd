@@ -42,7 +42,7 @@ To install `rMVPA` from within R, use the `devtools` function `install_github`. 
 From within R:
 
 ```
-library(devtools)
+#library(devtools)
 install_github("bbuchsbaum/neuroim2")
 install_github("bbuchsbaum/rMVPA")
 ```

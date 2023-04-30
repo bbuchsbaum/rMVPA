@@ -29,8 +29,8 @@ https://github.com/bbuchsbaum/rMVPA
 Of course, before you can the scripts, you need to have rMVPA installed. Easiest way is to open an R console and type following command, assuming `devtools` is alreeady installed. If not, first install the `devtools` package.
 
 ```{r, echo=FALSE, message=FALSE, eval = FALSE}
-
-devtools::install_github("bbuchsbaum/rMVPA")
+## devtools::install_github("bbuuchsbaum/rMVPA")
+library(rMVPA")
 
 ```
 
