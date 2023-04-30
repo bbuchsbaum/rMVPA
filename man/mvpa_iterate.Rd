@@ -2,7 +2,7 @@
 % Please edit documentation in R/mvpa_iterate.R
 \name{mvpa_iterate}
 \alias{mvpa_iterate}
-\title{mvpa_iterate}
+\title{MVPA Iteration for Voxel Sets with Parallelization}
 \usage{
 mvpa_iterate(
   mod_spec,
@@ -23,31 +23,28 @@ mvpa_iterate(
 
 \item{ids}{A \code{vector} of IDs for each voxel set (defaults to 1:length(vox_list)).}
 
-\item{compute_performance}{Logical, whether to compute and store performance measures for each voxel set (defaults to TRUE).}
+\item{compute_performance}{A \code{logical} indicating whether to compute and store performance measures for each voxel set (defaults to TRUE).}
 
-\item{return_predictions}{Logical, whether to return row-wise predictions for each voxel set (defaults to TRUE).}
+\item{return_predictions}{A \code{logical} indicating whether to return row-wise predictions for each voxel set (defaults to TRUE).}
 
-\item{return_fits}{Logical, whether to return the model fit for each voxel set (defaults to FALSE).}
+\item{return_fits}{A \code{logical} indicating whether to return the model fit for each voxel set (defaults to FALSE).}
 
-\item{batch_size}{The number of voxel sets to process in each batch (defaults to 10% of the total voxel sets).}
+\item{batch_size}{An \code{integer} specifying the number of voxel sets to process in each batch (defaults to 10% of the total voxel sets).}
 
-\item{permute}{Logical, whether to permute the labels (defaults to FALSE).}
+\item{permute}{A \code{logical} indicating whether to permute the labels (defaults to FALSE).}
 
-\item{verbose}{Logical, whether to print progress messages (defaults to TRUE).}
+\item{verbose}{A \code{logical} indicating whether to print progress messages (defaults to TRUE).}
 }
 \value{
-A \code{data.frame} with the results for each voxel set.
+A \code{data.frame} containing the results for each voxel set, including performance measures, predictions, and model fits, as specified by the input parameters.
 }
 \description{
-Fit a Model for Each Voxel Set in a List Using Parallelization
+This function fits a classification or regression model for each voxel set in a list using parallelization.
+It can compute and store performance measures, return row-wise predictions, and return the model fit for each voxel set.
 }
 \details{
-This function fits a classification or regression model for each voxel set in a list using parallelization.
-It can compute and store performance measures for each voxel set, return row-wise predictions, and return the model fit.
-
-
-This function utilizes parallel processing to speed up the process of fitting the specified model for each voxel set.
-The parallelization is achieved using the `furrr` package which provides a parallel backend for the `purrr` package.
+This function utilizes parallel processing to speed up the process of fitting the specified model for each voxel set in a list.
+The parallelization is achieved using the `furrr` package, which provides a parallel backend for the `purrr` package.
 By default, it divides the voxel sets into batches and processes them in parallel according to the specified batch size.
-The function provides options to control the return of performance measures, predictions, and model fits.
+The function provides options to control the return of performance measures, predictions, and model fits for each voxel set.
 }

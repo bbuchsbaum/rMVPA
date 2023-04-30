@@ -58,9 +58,19 @@
 
       <dl><dt>
           
-          <code><a href="classification_result.html">classification_result()</a></code> <code><a href="classification_result.html">binary_classification_result()</a></code> <code><a href="classification_result.html">multiway_classification_result()</a></code> <code><a href="classification_result.html">regression_result()</a></code> 
+          <code><a href="binary_classification_result.html">binary_classification_result()</a></code> 
+        </dt>
+        <dd>Classification results for binary outcome</dd>
+      </dl><dl><dt>
+          
+          <code><a href="classification_result.html">classification_result()</a></code> 
         </dt>
         <dd>Create a <code>classification_result</code> instance</dd>
+      </dl><dl><dt>
+          
+          <code><a href="coalesce_join2.html">coalesce_join2()</a></code> 
+        </dt>
+        <dd>Coalesce Join Two Data Frames</dd>
       </dl><dl><dt>
           
           <code><a href="combine_prediction_tables.html">combine_prediction_tables()</a></code> 
@@ -70,7 +80,7 @@
           
           <code><a href="compute_performance.html">compute_performance()</a></code> 
         </dt>
-        <dd>compute_performance</dd>
+        <dd>Compute Performance Metrics for Classification/Regression Results</dd>
       </dl><dl><dt>
           
           <code><a href="cross_validation.html">bootstrap_blocked_cross_validation()</a></code> <code><a href="cross_validation.html">blocked_cross_validation()</a></code> <code><a href="cross_validation.html">sequential_blocked_cross_validation()</a></code> <code><a href="cross_validation.html">custom_cross_validation()</a></code> 
@@ -105,17 +115,12 @@
           
           <code><a href="custom_performance.html">custom_performance()</a></code> 
         </dt>
-        <dd>custom_performance</dd>
+        <dd>Apply Custom Performance Metric to Prediction Result</dd>
       </dl><dl><dt>
           
           <code><a href="data_sample.html">data_sample()</a></code> 
         </dt>
-        <dd>data_sample</dd>
-      </dl><dl><dt>
-          
-          <code><a href="extract_sample.html">extract_sample()</a></code> 
-        </dt>
-        <dd>extract_sample</dd>
+        <dd>Extract Sample from Dataset</dd>
       </dl><dl><dt>
           
           <code><a href="feature_selector.html">feature_selector()</a></code> 
@@ -140,17 +145,12 @@
           
           <code><a href="get_samples.html">get_samples()</a></code> 
         </dt>
-        <dd>get_samples</dd>
+        <dd>Get Multiple Data Samples</dd>
       </dl><dl><dt>
           
           <code><a href="get_searchlight.html">get_searchlight()</a></code> 
         </dt>
-        <dd>get_searchlight</dd>
-      </dl><dl><dt>
-          
-          <code><a href="group_means.html">group_means()</a></code> 
-        </dt>
-        <dd>group_means</dd>
+        <dd>Generate Searchlight Iterator</dd>
       </dl><dl><dt>
           
           <code><a href="has_test_set.html">has_test_set()</a></code> 
@@ -175,7 +175,7 @@
           
           <code><a href="manova_design.html">manova_design()</a></code> 
         </dt>
-        <dd>manova_design</dd>
+        <dd>Create a MANOVA Design</dd>
       </dl><dl><dt>
           
           <code><a href="manova_iterate.html">manova_iterate()</a></code> 
@@ -185,7 +185,7 @@
           
           <code><a href="manova_model.html">manova_model()</a></code> 
         </dt>
-        <dd>manova_model</dd>
+        <dd>Create a MANOVA Model</dd>
       </dl><dl><dt>
           
           <code><a href="merge_predictions.html">merge_predictions()</a></code> 
@@ -195,7 +195,7 @@
           
           <code><a href="merge_results.html">merge_results()</a></code> 
         </dt>
-        <dd>merge_results</dd>
+        <dd>Merge Multiple Classification/Regression Results</dd>
       </dl><dl><dt>
           
           <code><a href="merge_results.regional_mvpa_result.html">merge_results(<i>&lt;regional_mvpa_result&gt;</i>)</a></code> 
@@ -203,9 +203,9 @@
         <dd>Merge regional MVPA results</dd>
       </dl><dl><dt>
           
-          <code><a href="model_fit.html">model_fit()</a></code> 
+          <code><a href="multiway_classification_result.html">multiway_classification_result()</a></code> 
         </dt>
-        <dd>the result of a single model fit to a chunk of data</dd>
+        <dd>Create a Multiway Classification Result Object</dd>
       </dl><dl><dt>
           
           <code><a href="mvpa_dataset.html">mvpa_dataset()</a></code> 
@@ -215,7 +215,7 @@
           
           <code><a href="mvpa_design.html">mvpa_design()</a></code> 
         </dt>
-        <dd>mvpa_design</dd>
+        <dd>Create an MVPA Design Object</dd>
       </dl><dl><dt>
           
           <code><a href="mvpa_iterate.html">mvpa_iterate()</a></code> 
@@ -235,7 +235,7 @@
           
           <code><a href="nobs.html">nobs()</a></code> 
         </dt>
-        <dd>nobs</dd>
+        <dd>Get Number of Observations</dd>
       </dl><dl><dt>
           
           <code><a href="nresponses.html">nresponses()</a></code> 
@@ -243,9 +243,14 @@
         <dd>Number of response categories</dd>
       </dl><dl><dt>
           
-          <code><a href="performance-methods.html">performance()</a></code> 
+          <code><a href="performance.html">performance()</a></code> 
         </dt>
-        <dd>performance</dd>
+        <dd>Compute Performance Metrics for Classification/Regression Results</dd>
+      </dl><dl><dt>
+          
+          <code><a href="performance.regression_result.html">performance(<i>&lt;regression_result&gt;</i>)</a></code> 
+        </dt>
+        <dd>Calculate Performance Metrics for Regression Result</dd>
       </dl><dl><dt>
           
           <code><a href="predict.class_model_fit.html">predict(<i>&lt;class_model_fit&gt;</i>)</a></code> 
@@ -260,7 +265,7 @@
           
           <code><a href="predicted_class.html">predicted_class()</a></code> 
         </dt>
-        <dd>predicted_class</dd>
+        <dd>Calculate the Predicted Class from Probability Matrix</dd>
       </dl><dl><dt>
           
           <code><a href="prep_regional.html">prep_regional()</a></code> 
@@ -281,6 +286,11 @@
           <code><a href="regional_mvpa_result.html">regional_mvpa_result()</a></code> 
         </dt>
         <dd>Create a <code>regional_mvpa_result</code> instance</dd>
+      </dl><dl><dt>
+          
+          <code><a href="regression_result.html">regression_result()</a></code> 
+        </dt>
+        <dd>Create a Regression Result Object</dd>
       </dl><dl><dt>
           
           <code><a href="roi_volume_matrix.html">roi_volume_matrix()</a></code> 
@@ -313,7 +323,7 @@
           
           <code><a href="rsa_design.html">rsa_design()</a></code> 
         </dt>
-        <dd>rsa_design</dd>
+        <dd>Construct a design for an RSA (Representational Similarity Analysis) model</dd>
       </dl><dl><dt>
           
           <code><a href="rsa_iterate.html">rsa_iterate()</a></code> 
@@ -323,7 +333,12 @@
           
           <code><a href="rsa_model.html">rsa_model()</a></code> 
         </dt>
-        <dd>rsa_model</dd>
+        <dd>Construct an RSA (Representational Similarity Analysis) model</dd>
+      </dl><dl><dt>
+          
+          <code><a href="rsa_model_mat.html">rsa_model_mat()</a></code> 
+        </dt>
+        <dd>Construct a model matrix for an RSA (Representational Similarity Analysis) design</dd>
       </dl><dl><dt>
           
           <code><a href="run_regional.html">run_regional()</a></code> 
@@ -363,7 +378,17 @@
           
           <code><a href="sub_result.html">sub_result()</a></code> 
         </dt>
-        <dd>sub_result</dd>
+        <dd>Extract Row-wise Subset of a Result Object</dd>
+      </dl><dl><dt>
+          
+          <code><a href="sub_result.binary_classification_result.html">sub_result(<i>&lt;binary_classification_result&gt;</i>)</a></code> 
+        </dt>
+        <dd>Subset Binary Classification Result</dd>
+      </dl><dl><dt>
+          
+          <code><a href="sub_result.multiway_classification_result.html">sub_result(<i>&lt;multiway_classification_result&gt;</i>)</a></code> 
+        </dt>
+        <dd>Subset Multiway Classification Result</dd>
       </dl><dl><dt>
           
           <code><a href="test_design.html">test_design()</a></code> 
@@ -376,6 +401,21 @@
         <dd>Train Model</dd>
       </dl><dl><dt>
           
+          <code><a href="train_model.manova_model.html">train_model(<i>&lt;manova_model&gt;</i>)</a></code> 
+        </dt>
+        <dd>Train a MANOVA Model</dd>
+      </dl><dl><dt>
+          
+          <code><a href="train_model.mvpa_model.html">train_model(<i>&lt;mvpa_model&gt;</i>)</a></code> 
+        </dt>
+        <dd>Train an MVPA Model</dd>
+      </dl><dl><dt>
+          
+          <code><a href="train_model.rsa_model.html">train_model(<i>&lt;rsa_model&gt;</i>)</a></code> 
+        </dt>
+        <dd>Train an RSA Model</dd>
+      </dl><dl><dt>
+          
           <code><a href="tune_grid.html">tune_grid()</a></code> 
         </dt>
         <dd>Tune Grid Extraction</dd>
@@ -384,11 +424,6 @@
           <code><a href="twofold_blocked_cross_validation.html">twofold_blocked_cross_validation()</a></code> 
         </dt>
         <dd>twofold_blocked_cross_validation</dd>
-      </dl><dl><dt>
-          
-          <code><a href="weighted_model.html">weighted_model()</a></code> 
-        </dt>
-        <dd>weighted_model</dd>
       </dl><dl><dt>
           
           <code><a href="y_test.html">y_test()</a></code> 

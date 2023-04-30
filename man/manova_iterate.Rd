@@ -2,7 +2,7 @@
 % Please edit documentation in R/mvpa_iterate.R
 \name{manova_iterate}
 \alias{manova_iterate}
-\title{manova_iterate}
+\title{MANOVA Iteration for Voxel Sets}
 \usage{
 manova_iterate(
   mod_spec,
@@ -13,16 +13,19 @@ manova_iterate(
 )
 }
 \arguments{
-\item{mod_spec}{a class of type \code{mvpa_model}}
+\item{mod_spec}{A \code{mvpa_model} object representing the model specification.}
 
-\item{vox_list}{a \code{list} of voxel indices/coordinates}
+\item{vox_list}{A \code{list} of voxel indices or coordinates.}
 
-\item{ids}{a \code{vector} of ids for each voxel set}
+\item{ids}{A \code{vector} of IDs for each voxel set.}
 
-\item{batch_size}{The number of voxel sets to process in each batch (defaults to 10% of the total voxel sets).}
+\item{batch_size}{An \code{integer} specifying the batch size for processing (default is 10% of the total number of IDs).}
 
-\item{permute}{Logical, whether to permute the labels (defaults to FALSE).}
+\item{permute}{A \code{logical} indicating whether to permute the voxel sets (default is FALSE).}
+}
+\value{
+A \code{data.frame} containing the MANOVA results for each voxel set.
 }
 \description{
-Run MANOVA analysis for each of a list of voxels sets
+This function runs a MANOVA analysis for each of a list of voxel sets.
 }
