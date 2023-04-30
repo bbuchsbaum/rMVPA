@@ -119,21 +119,21 @@ metric to compare the similarity between the external model matrix
 <span></span>
 <span><span class="va">rsamod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_model.html">rsa_model</a></span><span class="op">(</span><span class="va">dset</span>, <span class="va">rsades</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">rsamod</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"standard"</span>,regtype<span class="op">=</span><span class="st">"pearson"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2023-04-30 16:53:32] running standard RSA searchlight with 4 radius </span></span>
-<span><span class="co">## INFO [2023-04-30 16:53:32] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2023-04-30 16:53:32] running standard searchlight iterator</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2023-04-30 17:02:51] running standard RSA searchlight with 4 radius </span></span>
+<span><span class="co">## INFO [2023-04-30 17:02:51] creating standard searchlight</span></span>
+<span><span class="co">## INFO [2023-04-30 17:02:51] running standard searchlight iterator</span></span></code></pre>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rsamod2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_model.html">rsa_model</a></span><span class="op">(</span><span class="va">dset</span>, <span class="va">rsades2</span><span class="op">)</span></span>
 <span><span class="va">result2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">rsamod2</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"standard"</span>,regtype<span class="op">=</span><span class="st">"pearson"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2023-04-30 16:53:36] running standard RSA searchlight with 4 radius </span></span>
-<span><span class="co">## INFO [2023-04-30 16:53:36] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2023-04-30 16:53:36] running standard searchlight iterator</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2023-04-30 17:02:55] running standard RSA searchlight with 4 radius </span></span>
+<span><span class="co">## INFO [2023-04-30 17:02:55] creating standard searchlight</span></span>
+<span><span class="co">## INFO [2023-04-30 17:02:55] running standard searchlight iterator</span></span></code></pre>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">Dmat</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] -0.01927255  0.07662786</span></span></code></pre>
+<pre><code><span><span class="co">## [1] -0.06964915  0.03080049</span></span></code></pre>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">result2</span><span class="op">$</span><span class="va">Dmat</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] -0.01927255  0.07662786</span></span></code></pre>
+<pre><code><span><span class="co">## [1] -0.06964915  0.03080049</span></span></code></pre>
 <p>The return object <code>result</code> contains a list of
 <code>NeuroVol</code> objects, one for each model matrix. Here, since
 there is only one external model matrix, <code>Dmat</code> there is only
@@ -155,12 +155,12 @@ one element in the returned list.</p>
 correlation to compare brain vs model matrices.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">rsamod</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"standard"</span>,regtype<span class="op">=</span><span class="st">"spearman"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2023-04-30 16:53:41] running standard RSA searchlight with 4 radius </span></span>
-<span><span class="co">## INFO [2023-04-30 16:53:41] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2023-04-30 16:53:41] running standard searchlight iterator</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2023-04-30 17:03:00] running standard RSA searchlight with 4 radius </span></span>
+<span><span class="co">## INFO [2023-04-30 17:03:00] creating standard searchlight</span></span>
+<span><span class="co">## INFO [2023-04-30 17:03:00] running standard searchlight iterator</span></span></code></pre>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">Dmat</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] -0.02610535  0.06671675</span></span></code></pre>
+<pre><code><span><span class="co">## [1] -0.07385315  0.04047299</span></span></code></pre>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

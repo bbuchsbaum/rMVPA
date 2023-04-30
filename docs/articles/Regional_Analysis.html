@@ -131,7 +131,7 @@ design.</p>
 <span><span class="co">##   training observations:  80 </span></span>
 <span><span class="co">##   training levels:  a b </span></span>
 <span><span class="co">##   no test observations. </span></span>
-<span><span class="co">##   training response:   Factor w/ 2 levels "a","b": 2 1 2 1 1 2 2 1 1 2 ... </span></span>
+<span><span class="co">##   training response:   Factor w/ 2 levels "a","b": 1 2 1 2 2 1 1 1 2 2 ... </span></span>
 <span><span class="co">##   block var:   int [1:80] 1 1 1 1 1 1 1 1 1 1 ...</span></span></code></pre>
 <p>Now we generate an arbitrary set of ROIs by assigning each voxel in
 the input mask a value ranging from 1 to 3.</p>
@@ -143,7 +143,7 @@ the input mask a value ranging from 1 to 3.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## region_mask</span></span>
 <span><span class="co">##   0   1   2   3 </span></span>
-<span><span class="co">## 123  32  35  26</span></span></code></pre>
+<span><span class="co">## 123  32  33  28</span></span></code></pre>
 <p>The <code>region_mask</code> volume now defines a set of three ROIs
 where each ROI is defined by an integer value. Next, we can run a
 classification/regression model within each ROI using the
@@ -162,27 +162,27 @@ performance metrics for each ROI:</p>
 <pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
 <span><span class="co">##   roinum Accuracy      AUC</span></span>
 <span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1    0.375 -<span style="color: #BB0000;">0.087</span><span style="color: #BB0000; text-decoration: underline;">5</span> </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2    0.488 -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">12</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3    0.488  0.005<span style="text-decoration: underline;">62</span></span></span></code></pre>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1    0.488 -<span style="color: #BB0000;">0.005</span><span style="color: #BB0000; text-decoration: underline;">62</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2    0.262 -<span style="color: #BB0000;">0.233</span>  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3    0.625  0.131</span></span></code></pre>
 <p>To get fine-grained information, the individual predictions for each
 ROI and trial are included in <code>prediction_table</code>:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">prediction_table</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 240 × 8</span></span></span>
 <span><span class="co">## <span style="color: #949494;"># Rowwise: </span></span></span>
-<span><span class="co">##    .rownum roinum observed pobserved predicted correct  prob_a prob_b</span></span>
-<span><span class="co">##      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 1</span>       1      1 b           0.212  a         FALSE   0.788   0.212 </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 2</span>       2      1 a           0.028<span style="text-decoration: underline;">5</span> b         FALSE   0.028<span style="text-decoration: underline;">5</span>  0.971 </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 3</span>       3      1 b           0.221  a         FALSE   0.779   0.221 </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 4</span>       4      1 a           0.246  b         FALSE   0.246   0.754 </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 5</span>       5      1 a           0.819  a         TRUE    0.819   0.181 </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 6</span>       6      1 b           0.980  b         TRUE    0.019<span style="text-decoration: underline;">8</span>  0.980 </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 7</span>       7      1 b           0.580  b         TRUE    0.420   0.580 </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 8</span>       8      1 a           0.820  a         TRUE    0.820   0.180 </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 9</span>       9      1 a           0.949  a         TRUE    0.949   0.051<span style="text-decoration: underline;">1</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">10</span>      10      1 b           0.991  b         TRUE    0.009<span style="text-decoration: underline;">12</span> 0.991 </span></span>
+<span><span class="co">##    .rownum roinum observed pobserved predicted correct    prob_a    prob_b</span></span>
+<span><span class="co">##      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 1</span>       1      1 a        0.000<span style="text-decoration: underline;">000</span>8 b         FALSE   0.000<span style="text-decoration: underline;">000</span>8 1.00     </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 2</span>       2      1 b        0.068<span style="text-decoration: underline;">3</span>    a         FALSE   0.932     0.068<span style="text-decoration: underline;">3</span>   </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 3</span>       3      1 a        1.00      a         TRUE    1.00      0.000<span style="text-decoration: underline;">000</span>1</span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 4</span>       4      1 b        0.898     b         TRUE    0.102     0.898    </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 5</span>       5      1 b        0.913     b         TRUE    0.087<span style="text-decoration: underline;">0</span>    0.913    </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 6</span>       6      1 a        0.483     b         FALSE   0.483     0.517    </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 7</span>       7      1 a        0.946     a         TRUE    0.946     0.054<span style="text-decoration: underline;">4</span>   </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 8</span>       8      1 a        0.048<span style="text-decoration: underline;">2</span>    b         FALSE   0.048<span style="text-decoration: underline;">2</span>    0.952    </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 9</span>       9      1 b        0.000<span style="text-decoration: underline;">022</span>1 a         FALSE   1.00      0.000<span style="text-decoration: underline;">022</span>1</span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">10</span>      10      1 b        0.918     b         TRUE    0.082<span style="text-decoration: underline;">5</span>    0.918    </span></span>
 <span><span class="co">## <span style="color: #949494;"># ℹ 230 more rows</span></span></span></code></pre>
 </div>
 </div>
