@@ -29,3 +29,6 @@ A \code{data.frame} containing the MANOVA results for each voxel set.
 \description{
 This function runs a MANOVA analysis for each of a list of voxel sets.
 }
+\references{
+Langsrud, O. (2000). Fifty-fifty MANOVA: multivariate analysis of variance for collinear responses. Proceedings of The Industrial Statistics in Action, 2000(2), 250-264.
+}

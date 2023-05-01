@@ -75,7 +75,7 @@ handle_model_training_error <- function(result, id, ytest) {
                  fit=list(NULL), error=TRUE, error_message=emessage)
 }
 
-create_result_tibble <- function(cres, ind, mspec, id, result) {
+create_result_tibble <- function(cres, ind, mspec, id, result, compute_performance) {
   if (compute_performance) {
     tibble::tibble(result=list(cres), indices=list(ind), 
                    performance=list(compute_performance(mspec, cres)), id=id, 
@@ -92,78 +92,6 @@ create_result_tibble <- function(cres, ind, mspec, id, result) {
 
 
 
-#' #' external_crossval
-#' #' @keywords internal
-#' #' @importFrom stats predict
-#' #' external_crossval
-#' #' @keywords internal
-#' #' @importFrom stats predict
-#' external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
-#'   # Prepare the training data
-#'   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
-#'   
-#'   # Permute the training labels if required
-#'   ytrain <- if (permute) {
-#'     sample(y_train(mspec))
-#'   } else {
-#'     y_train(mspec)
-#'   }
-#'   
-#'   # Get the testing labels
-#'   ytest <- y_test(mspec)
-#'   
-#'   # Get the ROI indices
-#'   ind <- neuroim2::indices(roi$train_roi)
-#'   
-#'   # Train the model and handle any errors
-#'   result <- try(train_model(mspec, xtrain, ytrain, indices=ind, 
-#'                             param=mspec$tune_grid, 
-#'                             tune_reps=mspec$tune_reps))
-#'   
-#'   if (inherits(result, "try-error")) {
-#'     # Log a warning if there's an error during model training
-#'     flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
-#'     # Store error messages and return a tibble with the error information
-#'     emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
-#'     tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest), 
-#'                    fit=list(NULL), error=TRUE, error_message=emessage)
-#'   } else {
-#'     # Make predictions using the trained model
-#'     pred <- predict(result, tibble::as_tibble(neuroim2::values(roi$test_roi), .name_repair=.name_repair), NULL)
-#'     # Convert predictions to a list
-#'     plist <- lapply(pred, list)
-#'     plist$y_true <- list(ytest)
-#'     plist$test_ind <- list(as.integer(seq_along(ytest)))
-#'     
-#'     # Create a tibble with the predictions
-#'     ret <- tibble::as_tibble(plist, .name_repair = .name_repair) 
-#'     
-#'     # Wrap the results and return the fitted model if required
-#'     cres <- if (return_fit) {
-#'       wrap_result(ret, mspec$design, result$fit)
-#'     } else {
-#'       wrap_result(ret, mspec$design)
-#'     }
-#'     
-#'     # Compute performance and return a tibble with the results and any warnings
-#'     if (compute_performance) {
-#'       tibble::tibble(result=list(cres), indices=list(ind), 
-#'                      performance=list(compute_performance(mspec, cres)), id=id, 
-#'                      error=FALSE, error_message="~", 
-#'                      warning=!is.null(result$warning), 
-#'                      warning_message=if (is.null(result$warning)) "~" else result$warning)
-#'     } else {
-#'       tibble::tibble(result=list(cres), indices=list(ind), performance=list(NULL), id=id, 
-#'                      error=FALSE, error_message="~", 
-#'                      warning=!is.null(result$warning), 
-#'                      warning_message=if (is.null(result$warning)) "~" else result$warning)
-#'     }
-#'     
-#'   }
-#' }
-#' 
-#' 
-
 #' External Cross-Validation
 #'
 #' This function performs external cross-validation on the provided ROI and model specification.
@@ -178,83 +106,109 @@ create_result_tibble <- function(cres, ind, mspec, id, result) {
 #'
 #' @return A tibble with performance metrics, fitted model (optional), and any warnings or errors.
 #' @export
+
 external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
-  # Prepare the training data and labels
+  # Prepare the training data
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
+
+  # Permute the training labels if required
   ytrain <- if (permute) {
     sample(y_train(mspec))
   } else {
     y_train(mspec)
   }
-  
+
   # Get the testing labels
   ytest <- y_test(mspec)
-  
+
   # Get the ROI indices
   ind <- neuroim2::indices(roi$train_roi)
-  
+
   # Train the model and handle any errors
-  result <- try(train_model(mspec, xtrain, ytrain, indices=ind, 
-                            param=mspec$tune_grid, 
+  result <- try(train_model(mspec, xtrain, ytrain, indices=ind,
+                            param=mspec$tune_grid,
                             tune_reps=mspec$tune_reps))
-  
+
   if (inherits(result, "try-error")) {
-    ret <- handle_model_training_error(result, id, ytest)
+    # Log a warning if there's an error during model training
+    flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
+    # Store error messages and return a tibble with the error information
+    emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
+    tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest),
+                   fit=list(NULL), error=TRUE, error_message=emessage)
   } else {
     # Make predictions using the trained model
     pred <- predict(result, tibble::as_tibble(neuroim2::values(roi$test_roi), .name_repair=.name_repair), NULL)
+    # Convert predictions to a list
     plist <- lapply(pred, list)
     plist$y_true <- list(ytest)
     plist$test_ind <- list(as.integer(seq_along(ytest)))
-    
+
     # Create a tibble with the predictions
-    ret <- tibble::as_tibble(plist, .name_repair = .name_repair) 
+    ret <- tibble::as_tibble(plist, .name_repair = .name_repair)
+
+    # Wrap the results and return the fitted model if required
+    cres <- if (return_fit) {
+      wrap_result(ret, mspec$design, result$fit)
+    } else {
+      wrap_result(ret, mspec$design)
+    }
+
+    # Compute performance and return a tibble with the results and any warnings
+    if (compute_performance) {
+      tibble::tibble(result=list(cres), indices=list(ind),
+                     performance=list(compute_performance(mspec, cres)), id=id,
+                     error=FALSE, error_message="~",
+                     warning=!is.null(result$warning),
+                     warning_message=if (is.null(result$warning)) "~" else result$warning)
+    } else {
+      tibble::tibble(result=list(cres), indices=list(ind), performance=list(NULL), id=id,
+                     error=FALSE, error_message="~",
+                     warning=!is.null(result$warning),
+                     warning_message=if (is.null(result$warning)) "~" else result$warning)
+    }
+
   }
-  
-  # Wrap the results and return the fitted model if required
-  cres <- if (return_fit) {
-    wrap_result(ret, mspec$design, result$fit)
-  } else {
-    wrap_result(ret, mspec$design)
-  }
-  
-  # Compute performance and return a tibble with the results and any warnings
-  create_result_tibble(cres, ind, mspec, id, result)
 }
 
-                                                               
 
-#' Internal Cross-Validation Function
-#'
-#' This is an internal function to perform cross-validation on the given ROI data.
-#' It generates cross-validation samples, fits the model, and computes performance.
-#'
-#' @param roi A list containing the ROI data.
-#' @param mspec The model specification.
-#' @param id The ID of the model.
-#' @param compute_performance A logical flag indicating whether to compute performance (default: TRUE).
-#' @param return_fit A logical flag indicating whether to return the fitted model (default: FALSE).
-#' @param permute A logical flag indicating whether to permute the labels (default: FALSE).
-#'
-#' @keywords internal
-#' @importFrom dplyr rowwise do bind_rows
-#' @importFrom tibble as_tibble
+
+
+
+
 internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
   # Generate cross-validation samples
-  samples <- prepare_crossval_samples(roi, mspec, permute)
-  
+  # Note: This step could potentially be moved outside the function
+  samples <- if (!permute) {
+    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), y_train(mspec))
+  } else {
+    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), sample(y_train(mspec)))
+  }
+
   # Get ROI indices
   ind <- neuroim2::indices(roi$train_roi)
-  
+
   # Iterate through the samples and fit the model
   ret <- samples %>% pmap(function(ytrain, ytest, train, test, .id) {
-    # Train the model and handle any errors
-    result <- try(train_model(mspec, tibble::as_tibble(train, .name_repair=.name_repair), ytrain, 
-                              indices=ind, param=mspec$tune_grid, 
+    # Check if the number of features is less than 2
+    if (ncol(train) < 2) {
+      # Return an error message
+      return(tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest),
+                            fit=list(NULL), error=TRUE, error_message="Number of features is less than 2"))
+    }
+
+    # Train the model
+    result <- try(train_model(mspec, tibble::as_tibble(train, .name_repair=.name_repair), ytrain,
+                              indices=ind, param=mspec$tune_grid,
                               tune_reps=mspec$tune_reps))
-    
+
+    # Check if there was an error during model fitting
     if (inherits(result, "try-error")) {
-      handle_model_training_error(result, id, ytest)
+      flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
+      # Store error messages
+      emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
+      tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest),
+                     fit=list(NULL), error=TRUE, error_message=emessage)
     } else {
       # Predict on test data
       pred <- predict(result, tibble::as_tibble(test, .name_repair=.name_repair), NULL)
@@ -264,86 +218,35 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
       plist$fit <- if (return_fit) list(result) else list(NULL)
       plist$error <- FALSE
       plist$error_message <- "~"
-      tibble::as_tibble(plist, .name_repair=.name_repair) 
+      tibble::as_tibble(plist, .name_repair=.name_repair)
     }
   }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
-  
-  # Compute performance and return a tibble with the results and any warnings
-  create_result_tibble(ret, ind, mspec, id)
+
+  # Check if any errors occurred during the process
+  if (any(ret$error)) {
+    emessage <- ret$error_message[which(ret$error)[1]]
+    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL),
+                   error=TRUE, error_message=emessage)
+  } else {
+    # If no errors, wrap the result and compute performance if required
+    cres <- if (return_fit) {
+      predictor <- weighted_model(ret$fit)
+      wrap_result(ret, mspec$design, predictor)
+    } else {
+      wrap_result(ret, mspec$design)
+    }
+
+    if (compute_performance) {
+      tibble::tibble(result=list(cres), indices=list(ind),
+                     performance=list(compute_performance(mspec, cres)),
+                     id=id, error=FALSE, error_message="~")
+    } else {
+      tibble::tibble(result=list(cres), indices=list(ind),
+                     performance=list(NULL),
+                     id=id, error=FALSE, error_message="~")
+    }
+  }
 }
-
-
-# internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
-#   # Generate cross-validation samples
-#   # Note: This step could potentially be moved outside the function
-#   samples <- if (!permute) {
-#     crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), y_train(mspec))
-#   } else {
-#     crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), sample(y_train(mspec)))
-#   }
-#   
-#   # Get ROI indices
-#   ind <- neuroim2::indices(roi$train_roi)
-#   
-#   # Iterate through the samples and fit the model
-#   ret <- samples %>% pmap(function(ytrain, ytest, train, test, .id) {
-#     # Check if the number of features is less than 2
-#     if (ncol(train) < 2) {
-#       # Return an error message
-#       return(tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest),
-#                             fit=list(NULL), error=TRUE, error_message="Number of features is less than 2"))
-#     }
-#     
-#     # Train the model
-#     result <- try(train_model(mspec, tibble::as_tibble(train, .name_repair=.name_repair), ytrain, 
-#                               indices=ind, param=mspec$tune_grid, 
-#                               tune_reps=mspec$tune_reps))
-#     
-#     # Check if there was an error during model fitting
-#     if (inherits(result, "try-error")) {
-#       flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
-#       # Store error messages
-#       emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
-#       tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest), 
-#                      fit=list(NULL), error=TRUE, error_message=emessage)
-#     } else {
-#       # Predict on test data
-#       pred <- predict(result, tibble::as_tibble(test, .name_repair=.name_repair), NULL)
-#       plist <- lapply(pred, list)
-#       plist$y_true <- list(ytest)
-#       plist$test_ind <- list(as.integer(test))
-#       plist$fit <- if (return_fit) list(result) else list(NULL)
-#       plist$error <- FALSE
-#       plist$error_message <- "~"
-#       tibble::as_tibble(plist, .name_repair=.name_repair) 
-#     }
-#   }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
-#   
-#   # Check if any errors occurred during the process
-#   if (any(ret$error)) {
-#     emessage <- ret$error_message[which(ret$error)[1]]
-#     tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), 
-#                    error=TRUE, error_message=emessage)
-#   } else {
-#     # If no errors, wrap the result and compute performance if required
-#     cres <- if (return_fit) {
-#       predictor <- weighted_model(ret$fit)
-#       wrap_result(ret, mspec$design, predictor)
-#     } else {
-#       wrap_result(ret, mspec$design)
-#     }
-#     
-#     if (compute_performance) {
-#       tibble::tibble(result=list(cres), indices=list(ind), 
-#                      performance=list(compute_performance(mspec, cres)), 
-#                      id=id, error=FALSE, error_message="~")
-#     } else {
-#       tibble::tibble(result=list(cres), indices=list(ind), 
-#                      performance=list(NULL), 
-#                      id=id, error=FALSE, error_message="~")
-#     }
-#   }
-# }
 
     
  
