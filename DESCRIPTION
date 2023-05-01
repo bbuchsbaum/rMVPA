@@ -34,7 +34,8 @@ Imports:
     Rfit,
     neurosurf,
     io,
-    ffmanova
+    ffmanova,
+    sparsediscrim
 Collate:
     'allgeneric.R'
     'classifiers.R'

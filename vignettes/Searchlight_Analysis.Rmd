@@ -75,7 +75,7 @@ hist(result$AUC)
 
 ```
 
-## Using different classifiers
+## Using different Cclassifiers
 
 All of the classifiers available in the `caret` package can be used (in theory) for a searchlight analysis. For example, we can run an analysis using a linear support vector (`svmLinear`) machine as follows:
 
@@ -104,4 +104,38 @@ model2 <- mvpa_model(model=rf_model, dataset=dataset$dataset, design=dataset$des
 result_rf_tuned <- run_searchlight(model2, radius=6, method="randomized", niter=1)
 
 ```
+
+<!-- ## External Cross-Validation Example -->
+
+<!-- Instead of using internal cross-validation, as we used in the above examples, sometimes one might have a held-out test data that can be used as a validation set. Here we show how to  -->
+
+<!-- ```{r} -->
+<!-- # Create training data -->
+<!-- train_design <- data.frame(y = rep(letters[1:4], 5), x1 = rnorm(20), x2 = rnorm(20), block = rep(1:4, each = 5)) -->
+
+<!-- # Create test data -->
+<!-- test_design <- data.frame(y = sample(letters[1:4], 10, replace=TRUE)) -->
+
+<!-- # Create an MVPA design object with external cross-validation -->
+<!-- design <- mvpa_design(train_design, ~ y, block_var = ~ block, test_design = test_design, y_test = ~ y) -->
+
+<!-- # Display the MVPA design object -->
+<!-- print(design) -->
+
+<!-- # Create a new dataset for external cross-validation -->
+<!-- dataset_ext <- list(dataset = dataset$dataset, design = design) -->
+
+<!-- # Construct an `mvpa_model` object with a Shrinkage Discriminant Analysis classifier (`sda_notune`) -->
+<!-- sda_model_ext <- load_model("sda_notune") -->
+<!-- model_ext <- mvpa_model(model = sda_model_ext, dataset = dataset_ext$dataset, design = dataset_ext$design) -->
+
+<!-- # Run a randomized searchlight analysis using external cross-validation -->
+<!-- result_ext <- run_searchlight(model_ext, radius = 4, method = "randomized", niter = 8) -->
+
+<!-- # Display the results -->
+<!-- print(result_ext) -->
+
+<!-- # Plot a histogram of AUC values -->
+<!-- hist(result_ext$AUC) -->
+<!-- ``` -->
 
