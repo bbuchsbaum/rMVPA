@@ -55,7 +55,7 @@ initialize_standard_parameters <- function(config, args, analysisType) {
 normalize_image_samples <- function(bvec, mask) {
   vlist <- bvec %>% vols() %>% furrr::future_map(function(v) {
     scale(as.numeric(v[which(mask>0)]))[,1]
-  })
+  }, .options=furrr::furrr_options(seed=TRUE))
   
   norm_datavec <- do.call(cbind, vlist)
   #norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
@@ -72,7 +72,7 @@ standardize_vars <- function(bvec, mask, blockvar) {
     if (all(v == 0)) v else {
       unlist(map(split(v, blockvar), scale))
     }
-  })
+  }, .options = furrr::furrr_options(seed=TRUE))
   
   sdatavec <- do.call(cbind, vlist)
   #norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))

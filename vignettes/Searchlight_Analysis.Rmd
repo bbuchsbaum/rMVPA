@@ -94,7 +94,7 @@ model <- mvpa_model(model=rf_model, dataset=dataset$dataset, design=dataset$desi
 result_rf <- run_searchlight(model, radius=4, method="randomized", niter=2)
 ```
 
-Here we specify a range of values for the `mtry` tuning parameter. In this case, by supplying the `tune_reps` argument to `mvpa_model` we control the number of resamples used to tune the model parameters. The default is 10, but here we speed up execution time by reducing it to 2. In general, more resamples are required to reliably estimate optimal tuning parameters. This means for a whole-brain searchlight, parameter tuning is **generally** impractical. This is why the classiifer `sda_notune` is a good choice for searchlight analyses, since it "works well" with default tuning parameters.
+Here we specify a range of values for the `mtry` tuning parameter. In this case, by supplying the `tune_reps` argument to `mvpa_model` we control the number of resamples used to tune the model parameters. The default is 10, but here we speed up execution time by reducing it to 2. In general, more resamples are required to reliably estimate optimal tuning parameters. This means for a whole-brain searchlight, parameter tuning is **generally** impractical. This is why the classifier `sda_notune` is a good choice for searchlight analyses, since it "works well" with default tuning parameters.
 
 ```{r, message=FALSE, warning=FALSE, results='hide'}
 

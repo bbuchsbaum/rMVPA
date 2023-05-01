@@ -139,7 +139,6 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
   ## crossval_samples should really cache the indices rather than regenerate every iteration
   ## for large class sizes, this can create big objects for every voxel.
 
-  
   samples <- if (!permute) {
     crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), y_train(mspec))
   } else {
@@ -216,7 +215,6 @@ extract_roi <- function(sample, data) {
   }
 }
   
-  
 #' MVPA Iteration for Voxel Sets with Parallelization
 #'
 #' This function fits a classification or regression model for each voxel set in a list using parallelization.
@@ -268,9 +266,15 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
   
   result <- purrr::map(1:length(batch_ids), function(i) {
     futile.logger::flog.info("mvpa_iterate: compute analysis for batch %s ...", i)
-    sf <- get_samples(dset, vox_list[batch_ids[[i]]]) %>% mutate(.id=batch_ids[[i]], rnum=rnums[[i]])
-    sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample,dset))) %>% select(-sample)
-    fut_mvpa(mod_spec, sf, tot, do_fun, verbose, permute, compute_performance, return_fits, return_predictions)
+    vlist <- vox_list[batch_ids[[i]]]
+    size <- sapply(vlist, function(v) nrow(v@coords))
+    #browser()
+    sf <- get_samples(dset, vox_list[batch_ids[[i]]]) %>% mutate(.id=batch_ids[[i]], rnum=rnums[[i]], size=size) %>% filter(size>=2)
+    if (nrow(sf) > 0) {
+      sf <- sf %>% rowwise()  %>% mutate(roi=list(extract_roi(sample,dset))) %>% select(-sample) 
+      fut_mvpa(mod_spec, sf, tot, do_fun, verbose, permute, compute_performance, return_fits, return_predictions)
+    }
+    
   }) %>% bind_rows()
   
   
@@ -283,13 +287,14 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
 fut_mvpa <- function(mod_spec, sf, tot, do_fun, verbose, permute, compute_performance, return_fits, return_predictions) {
   mod_spec$dataset <- NULL
   gc()
-  sf %>% furrr::future_pmap(function(.id, rnum, roi) {
+  sf %>% furrr::future_pmap(function(.id, rnum, roi, size) {
     
     if (verbose && (as.numeric(.id) %% 100 == 0)) {
       perc <- as.integer(as.numeric(.id)/tot * 100)
       futile.logger::flog.info("mvpa_iterate: %s percent", perc)
     }
-    
+   
+   
     result <- do_fun(roi, mod_spec, rnum, 
                      compute_performance=compute_performance,
                      return_fit=return_fits, permute=permute)
@@ -299,7 +304,7 @@ fut_mvpa <- function(mod_spec, sf, tot, do_fun, verbose, permute, compute_perfor
     }
     
     result
-  }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
+  }, .options=furrr::furrr_options(seed=TRUE)) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
 
 }
 
@@ -418,7 +423,7 @@ fut_rsa <- function(mod_spec, sf) {
   sf %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
     ## extract_roi?
     do_rsa(as_roi(sample, mod_spec$dataset), mod_spec, rnum, method=regtype, distmethod=distmethod)
-  }) %>% dplyr::bind_rows()
+  }, .options = furrr::furrr_options(seed = T)) %>% dplyr::bind_rows()
   
   
 }
@@ -479,6 +484,7 @@ do_manova <- function(roi, mod_spec, rnum) {
 #' @return A \code{data.frame} containing the MANOVA results for each voxel set.
 #'
 #' @importFrom dplyr do rowwise
+#' @references Langsrud, O. (2000). Fifty-fifty MANOVA: multivariate analysis of variance for collinear responses. Proceedings of The Industrial Statistics in Action, 2000(2), 250-264.
 #' @export
 manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),   batch_size=as.integer(.1*length(ids)), permute=FALSE) {
   assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
@@ -511,7 +517,7 @@ fut_manova <- function(mod_spec, sf) {
   gc()
   sf %>% furrr::future_pmap(function(.id, rnum, roi) {
     do_manova(roi, mod_spec, rnum)
-  }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
+  },.options = furrr::furrr_options(seed = T)) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
 }
 
 
