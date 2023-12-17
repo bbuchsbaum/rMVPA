@@ -8,7 +8,7 @@ context("mvpa regional")
 
 test_that("mvpa_regional with 5 ROIS runs without error", {
   
-  dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="image", 
+  dset <- gen_sample_dataset(c(10,10,8), nobs=100, nlevels=3, data_mode="image", 
                              response_type="categorical")
   cval <- twofold_blocked_cross_validation(dset$design$block_var)
   
@@ -59,8 +59,8 @@ test_that("can combine two prediction tables from two regional analyses", {
   res2 <- run_regional(mspec, region_mask=rmask2, return_fits=TRUE)
   
   ptab <- combine_prediction_tables(list(res1$prediction_table, res2$prediction_table))
-  ptab2 <- combine_prediction_tables(list(res1$prediction_table, res2$prediction_table), collapse_regions=FALSE)
-  expect_true(nrow(ptab) == nrow(res1$prediction_table))
+  ptab2 <- combine_prediction_tables(list(res1$prediction_table, res2$prediction_table), collapse_regions=TRUE)
+  expect_true(nrow(ptab) == nrow(res1$prediction_table)*2)
   expect_true(nrow(ptab2) == nrow(res1$prediction_table))
 })
 
@@ -98,7 +98,7 @@ test_that("mvpa_regional with 5 ROIS with lda_thomaz_boot runs without error", {
   cval <- blocked_cross_validation(dataset$design$block_var)
   
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), neuroim2::space(dataset$dataset$mask))
-  model <- load_model("lda_thomaz_boot")
+  model <- load_model("sda_boot")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
   res <- run_regional(mspec, regionMask)
   expect_true(!is.null(res))
@@ -123,7 +123,7 @@ test_that("mvpa_regional with 5 ROIS runs and sda without error", {
   tuneGrid <- expand.grid(lambda=c(.01), diagonal=c(TRUE, FALSE))
   model <- load_model("sda")
   
-  dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=4)
+  dataset <- gen_sample_dataset(c(10,10,5), nobs=100, nlevels=4)
   cval <- blocked_cross_validation(dataset$design$block_var)
   
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, tune_grid=tuneGrid)
@@ -135,7 +135,7 @@ test_that("mvpa_regional with 5 ROIS runs and sda without error", {
 test_that("mvpa_regional with 5 ROIS and random forest without error", {
   
   model <- load_model("rf")
-  dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3)
+  dataset <- gen_sample_dataset(c(10,10,5), nobs=100, nlevels=3)
   cval <- blocked_cross_validation(dataset$design$block_var)
 
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
@@ -148,7 +148,7 @@ test_that("mvpa_regional with 5 ROIS and random forest without error", {
 test_that("mvpa_regional with 5 ROIS and random forest and k-fold cross-validation without error", {
   
   model <- load_model("rf")
-  dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3)
+  dataset <- gen_sample_dataset(c(10,10,6), nobs=100, nlevels=3)
   cval <- kfold_cross_validation(length(dataset$design$block_var), nfolds=4)
   
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
@@ -252,7 +252,7 @@ test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topp=.4", {
   cval <- blocked_cross_validation(dataset$design$block_var)
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   model <- load_model("sda_notune")
-  fsel <- feature_selector("FTest", "topp", .4)
+  fsel <- feature_selector("FTest", "topp", .5)
   mspec <- mvpa_model(model, dataset$dataset, dataset$design,model_type="classification", crossval=cval, feature_selector=fsel)
   res <- run_regional(mspec, regionMask, return_fits=TRUE)
   expect_true(!is.null(res))
@@ -261,11 +261,12 @@ test_that("mvpa_regional with 5 ROIs and ANOVA FeatureSelection with topp=.4", {
 
 test_that("mvpa_regional with regression and 5 ROIs runs without error", {
   
-  dataset <- gen_sample_dataset(c(10,10,2), 100, response_type="continuous")
+  dataset <- gen_sample_dataset(c(10,10,6), 100, response_type="continuous")
   cval <- blocked_cross_validation(dataset$design$block_var)
   
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   tune_grid <- expand.grid(alpha=c(.1,.5), lambda=c(.001,.2,.5))
+  
   model <- load_model("glmnet")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", crossval=cval, tune_grid=tune_grid)
   res <- run_regional(mspec, regionMask)

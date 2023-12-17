@@ -14,6 +14,7 @@
 #' data <- iris[,-5]
 #' y <- iris$Species
 #' result <- crossv_k(data, y, k = 5)
+#' #' @importFrom modelr resample
 crossv_k <- function(data, y, k = 5, id = ".id") {
   if (!is.numeric(k) || length(k) != 1) {
     stop("`k` must be a single integer.", call. = FALSE)
@@ -30,8 +31,8 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
     list(
       ytrain = y[tidx],
       ytest = y[test],
-      train = resample(data, setdiff(idx, test)),
-      test = resample(data, test)
+      train = modelr::resample(data, setdiff(idx, test)),
+      test = modelr::resample(data, test)
     )
   }
   
@@ -531,13 +532,14 @@ crossval_samples.bootstrap_blocked_cross_validation <- function(obj, data, y,...
 }
 
 #' @export
+#' @importFrom modelr resample
 crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id",...) {
   fold <- function(train, test) {
     list(
       ytrain = y[train],
       ytest = y[test],
-      train = resample(data, train),
-      test = resample(data, test)
+      train = modelr::resample(data, train),
+      test = modelr::resample(data, test)
     )
   }
   

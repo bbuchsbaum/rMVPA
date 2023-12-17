@@ -61,14 +61,15 @@ combine_regional_results = function(results) {
 #' @importFrom purrr map_df
 #' @examples
 #' # Create example prediction tables
+#' observed = factor(sample(letters[1:2], 10, replace = TRUE))
 #' predtab1 <- data.frame(.rownum = 1:10,
 #'                        roinum = rep(1, 10),
-#'                        observed = factor(sample(letters[1:2], 10, replace = TRUE)),
+#'                        observed = observed,
 #'                        prob_A = runif(10),
 #'                        prob_B = runif(10))
 #' predtab2 <- data.frame(.rownum = 1:10,
 #'                        roinum = rep(2, 10),
-#'                        observed = factor(sample(letters[1:2], 10, replace = TRUE)),
+#'                        observed = observed,
 #'                        prob_A = runif(10),
 #'                        prob_B = runif(10))
 #'
@@ -89,13 +90,15 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
   predicted <- NULL
   
   if (is.character(predtabs[[1]]$observed) || is.factor(predtabs[[1]]$observed)) {
-    ptab <- map(1:length(predtabs), function(i) predtabs[[i]] %>% mutate(.tableid=i, .weight=wts[i])) %>% 
+    ## applies constant weight to each table and concatenates
+    ptab <- map(seq_along(predtabs), function(i) predtabs[[i]] %>% mutate(.tableid=i, .weight=wts[i])) %>% 
       map_df(bind_rows) %>% as_tibble(.name_repair=.name_repair)
     
     probs <- if (collapse_regions) {
       ptab %>% dplyr::group_by(.rownum,observed) %>% summarise_at(vars(starts_with("prob_")), 
                                                              funs(stats::weighted.mean(., w=.weight)))
     } else {
+      ## groups over rownames, condition, and roinum, then compute weighted means of probabilities
       ptab %>% dplyr::group_by(.rownum,observed,roinum) %>% summarise_at(vars(starts_with("prob_")), 
                                                                     funs(stats::weighted.mean(., w=.weight)))
     }

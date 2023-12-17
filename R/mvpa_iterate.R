@@ -315,9 +315,11 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
   
   result <- purrr::map(1:length(batch_ids), function(i) {
     futile.logger::flog.info("mvpa_iterate: compute analysis for batch %s ...", i)
-    vlist <- vox_list[batch_ids[[i]]]
-    size <- sapply(vlist, function(v) nrow(v@coords))
     #browser()
+    vlist <- vox_list[batch_ids[[i]]]
+    #size <- sapply(vlist, function(v) nrow(v@coords))
+    size <- sapply(vlist, function(v) length(v))
+
     sf <- get_samples(dset, vox_list[batch_ids[[i]]]) %>% mutate(.id=batch_ids[[i]], rnum=rnums[[i]], size=size) %>% filter(size>=2)
     if (nrow(sf) > 0) {
       sf <- sf %>% rowwise()  %>% mutate(roi=list(extract_roi(sample,dset))) %>% select(-sample) 

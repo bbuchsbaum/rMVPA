@@ -26,14 +26,15 @@ Supports weighted combination and collapsing regions.
 }
 \examples{
 # Create example prediction tables
+observed = factor(sample(letters[1:2], 10, replace = TRUE))
 predtab1 <- data.frame(.rownum = 1:10,
                        roinum = rep(1, 10),
-                       observed = factor(sample(letters[1:2], 10, replace = TRUE)),
+                       observed = observed,
                        prob_A = runif(10),
                        prob_B = runif(10))
 predtab2 <- data.frame(.rownum = 1:10,
                        roinum = rep(2, 10),
-                       observed = factor(sample(letters[1:2], 10, replace = TRUE)),
+                       observed = observed,
                        prob_A = runif(10),
                        prob_B = runif(10))
 

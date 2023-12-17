@@ -27,4 +27,5 @@ each fold without performing any analysis or fitting models.
 data <- iris[,-5]
 y <- iris$Species
 result <- crossv_k(data, y, k = 5)
+#' @importFrom modelr resample
 }

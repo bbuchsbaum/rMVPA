@@ -2,75 +2,7 @@
 % Please edit documentation in R/mvpa_iterate.R
 \name{external_crossval}
 \alias{external_crossval}
-\title{#' external_crossval
-#' @keywords internal
-#' @importFrom stats predict
-#' external_crossval
-#' @keywords internal
-#' @importFrom stats predict
-external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
-  # Prepare the training data
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
-  
-  # Permute the training labels if required
-  ytrain <- if (permute) {
-    sample(y_train(mspec))
-  } else {
-    y_train(mspec)
-  }
-  
-  # Get the testing labels
-  ytest <- y_test(mspec)
-  
-  # Get the ROI indices
-  ind <- neuroim2::indices(roi$train_roi)
-  
-  # Train the model and handle any errors
-  result <- try(train_model(mspec, xtrain, ytrain, indices=ind, 
-                            param=mspec$tune_grid, 
-                            tune_reps=mspec$tune_reps))
-  
-  if (inherits(result, "try-error")) {
-    # Log a warning if there's an error during model training
-    flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
-    # Store error messages and return a tibble with the error information
-    emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
-    tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest), 
-                   fit=list(NULL), error=TRUE, error_message=emessage)
-  } else {
-    # Make predictions using the trained model
-    pred <- predict(result, tibble::as_tibble(neuroim2::values(roi$test_roi), .name_repair=.name_repair), NULL)
-    # Convert predictions to a list
-    plist <- lapply(pred, list)
-    plist$y_true <- list(ytest)
-    plist$test_ind <- list(as.integer(seq_along(ytest)))
-    
-    # Create a tibble with the predictions
-    ret <- tibble::as_tibble(plist, .name_repair = .name_repair) 
-    
-    # Wrap the results and return the fitted model if required
-    cres <- if (return_fit) {
-      wrap_result(ret, mspec$design, result$fit)
-    } else {
-      wrap_result(ret, mspec$design)
-    }
-    
-    # Compute performance and return a tibble with the results and any warnings
-    if (compute_performance) {
-      tibble::tibble(result=list(cres), indices=list(ind), 
-                     performance=list(compute_performance(mspec, cres)), id=id, 
-                     error=FALSE, error_message="~", 
-                     warning=!is.null(result$warning), 
-                     warning_message=if (is.null(result$warning)) "~" else result$warning)
-    } else {
-      tibble::tibble(result=list(cres), indices=list(ind), performance=list(NULL), id=id, 
-                     error=FALSE, error_message="~", 
-                     warning=!is.null(result$warning), 
-                     warning_message=if (is.null(result$warning)) "~" else result$warning)
-    }
-    
-  }
-}}
+\title{External Cross-Validation}
 \usage{
 external_crossval(
   roi,
@@ -98,9 +30,6 @@ external_crossval(
 A tibble with performance metrics, fitted model (optional), and any warnings or errors.
 }
 \description{
-External Cross-Validation
-}
-\details{
 This function performs external cross-validation on the provided ROI and model specification.
 It returns a tibble with performance metrics, fitted model (optional), and any warnings or errors.
 }
