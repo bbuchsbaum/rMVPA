@@ -299,7 +299,6 @@ nobs <- function(x) {
 #'
 #' @param x The object from which to extract the predicted probability for the observed class.
 #' @return A vector of predicted probabilities for the observed class.
-#' @seealso \code{\link{prob_observed.binary_classification_result}}, \code{\link{prob_observed.multiway_classification_result}}
 #' @export
 prob_observed <- function(x) {
   UseMethod("prob_observed")

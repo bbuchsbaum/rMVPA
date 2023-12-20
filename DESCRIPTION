@@ -68,7 +68,7 @@ Suggests:
     e1071,
     randomForest,
     iterators,
-    optparse
+    spls
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf

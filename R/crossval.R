@@ -130,6 +130,7 @@ crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps
 #' y <- rep(letters[1:4], 25)
 #' block_var <- rep(1:4, each = 25)
 #' cv <- crossv_block(X, y, block_var)
+#' @export
 crossv_block <- function(data, y, block_var, id = ".id") {
  
   if (!length(block_var) == length(y)) {

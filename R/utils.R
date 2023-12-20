@@ -90,13 +90,7 @@ removeZeroVarianceColumns <- function(M) {
 #' @param join A join function to be used for joining the data frames. The default is dplyr::full_join.
 #' @param ... Additional arguments passed on to the join function.
 #' @return A data frame resulting from the specified join operation and coalesced columns.
-#' @examples
-#' # Create two data frames with common column names
-#' df1 <- data.frame(id = 1:3, value = c(10, 20, 30))
-#' df2 <- data.frame(id = 2:4, value = c(15, 25, 35))
-#'
-#' # Perform a coalesce join using a full join
-#' result <- coalesce_join2(df1, df2)
+#' @keywords internal
 coalesce_join2 <- function(x, y, 
                           by = NULL, suffix = c(".x", ".y"), 
                           join = dplyr::full_join, ...) {
