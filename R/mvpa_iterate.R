@@ -450,7 +450,8 @@ do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
 #' @importFrom dplyr do rowwise
 #' @export
 #' @inheritParams mvpa_iterate
-rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FALSE, regtype=c("pearson", "spearman", "lm", "rfit"), 
+rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FALSE, 
+                        regtype=c("pearson", "spearman", "lm", "rfit"), 
                         distmethod=c("spearman", "pearson")) {
  
   distmethod <- match.arg(distmethod)
@@ -463,15 +464,17 @@ rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FAL
   
   ## iterate over searchlights using parallel futures
   sf <- sframe %>% dplyr::mutate(rnum=ids) 
-  fut_rsa(mod_spec,sf)
+  fut_rsa(mod_spec,sf, regtype, distmethod)
 }
 
 
 #' @keywords internal
-fut_rsa <- function(mod_spec, sf) {
-  mod_spec$dataset <- NULL
+fut_rsa <- function(mod_spec, sf,  regtype, distmethod) {
+  #mod_spec$dataset <- NULL
   gc()
-  sf %>% dplyr::mutate(rnum=ids) %>% furrr::future_pmap(function(sample, rnum, .id) {
+  
+  #browser()
+  sf %>% furrr::future_pmap(function(sample, rnum, .id) {
     ## extract_roi?
     do_rsa(as_roi(sample, mod_spec$dataset), mod_spec, rnum, method=regtype, distmethod=distmethod)
   }, .options = furrr::furrr_options(seed = T)) %>% dplyr::bind_rows()
