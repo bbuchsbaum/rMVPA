@@ -12,6 +12,8 @@
 \item{X}{The input data matrix.}
 
 \item{Y}{The response variable.}
+
+\item{...}{extra args (not used)}
 }
 \value{
 A logical vector indicating which features to retain.

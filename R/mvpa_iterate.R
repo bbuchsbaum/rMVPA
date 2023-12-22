@@ -510,6 +510,7 @@ train_model.manova_model <- function(obj, train_dat, indices, ...) {
 #' @importFrom neuroim2 indices values
 #' @keywords internal
 do_manova <- function(roi, mod_spec, rnum) {
+  #browser()
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
   ind <- indices(roi$train_roi)
   ret <- try(train_model(mod_spec, xtrain, ind))
@@ -554,11 +555,14 @@ manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),   batch_s
   ##mod_spec$dataset <- NULL
 
   tot <- length(ids)
+
   result <- purrr::map(1:length(batch_ids), function(i) {
     futile.logger::flog.info("manova_iterate: compute manovas ...")
     sf <- get_samples(mod_spec$dataset, vox_list[batch_ids[[i]]]) %>% mutate(.id=batch_ids[[i]], rnum=rnums[[i]])
-    sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample,dset))) %>% select(-sample)
-    fut_manova(mod_spec, sf)
+    if (nrow(coords(sf$sample[[1]]$vox)) > 1) {
+      sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample,dset))) %>% select(-sample)
+      fut_manova(mod_spec, sf)
+    }
   }) %>% bind_rows()
   
   result
@@ -569,7 +573,9 @@ manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),   batch_s
 fut_manova <- function(mod_spec, sf) {
   mod_spec$dataset <- NULL
   gc()
+ 
   sf %>% furrr::future_pmap(function(.id, rnum, roi) {
+    
     do_manova(roi, mod_spec, rnum)
   },.options = furrr::furrr_options(seed = T)) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
 }

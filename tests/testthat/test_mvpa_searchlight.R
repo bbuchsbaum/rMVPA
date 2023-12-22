@@ -322,10 +322,10 @@ test_that("mvpa_searchlight works with split_var", {
 
 test_that("mvpa_searchlight on real data set", {
   tdat <- c(
-    system.file("extdata", "sub-1005_task-localizer_run-01_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-02_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-03_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-04_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA")
+    system.file("extdata", "sub-1005_task-localizer_run-01_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA"),
+    system.file("extdata", "sub-1005_task-localizer_run-02_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA"),
+    system.file("extdata", "sub-1005_task-localizer_run-03_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA"),
+    system.file("extdata", "sub-1005_task-localizer_run-04_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA")
   )
   
   tdes <- c(

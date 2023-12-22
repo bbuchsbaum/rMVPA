@@ -19,6 +19,7 @@ predicted_class <- function(prob) {
 #'
 #' @param x A \code{regression_result} object.
 #' @param split_list Split results by indexed sub-groups (not supported for regression analyses yet).
+#' @param ... extra args (not used).
 #' @return A named vector with the calculated performance metrics: R-squared, RMSE, and Spearman correlation.
 #' @details
 #' The function calculates the following performance metrics for the given regression result object:

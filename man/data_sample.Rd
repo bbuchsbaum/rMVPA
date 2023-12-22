@@ -9,6 +9,8 @@ data_sample(obj, vox)
 \arguments{
 \item{obj}{The input dataset object, which should be an instance of a data class compatible with sample extraction.}
 
+\item{vox}{the voxel indices/coordinates associated with the data sample.}
+
 \item{...}{Additional arguments to be passed to the specific sample extraction method for the input object's class.}
 }
 \value{

@@ -68,11 +68,6 @@
         <dd>Create a <code>classification_result</code> instance</dd>
       </dl><dl><dt>
           
-          <code><a href="coalesce_join2.html">coalesce_join2()</a></code> 
-        </dt>
-        <dd>Coalesce Join Two Data Frames</dd>
-      </dl><dl><dt>
-          
           <code><a href="combine_prediction_tables.html">combine_prediction_tables()</a></code> 
         </dt>
         <dd>Combine prediction tables</dd>
@@ -98,11 +93,6 @@
         <dd>K-fold Cross-Validation Data Preparation</dd>
       </dl><dl><dt>
           
-          <code><a href="crossv_seq_block.html">crossv_seq_block()</a></code> 
-        </dt>
-        <dd>Sequential Block Cross-Validation Data Preparation</dd>
-      </dl><dl><dt>
-          
           <code><a href="crossv_twofold.html">crossv_twofold()</a></code> 
         </dt>
         <dd>Repeated Two-Fold Cross-Validation Data Preparation</dd>
@@ -121,6 +111,11 @@
           <code><a href="data_sample.html">data_sample()</a></code> 
         </dt>
         <dd>Extract Sample from Dataset</dd>
+      </dl><dl><dt>
+          
+          <code><a href="external_crossval.html">external_crossval()</a></code> 
+        </dt>
+        <dd>External Cross-Validation</dd>
       </dl><dl><dt>
           
           <code><a href="feature_selector.html">feature_selector()</a></code> 
@@ -291,34 +286,6 @@
           <code><a href="regression_result.html">regression_result()</a></code> 
         </dt>
         <dd>Create a Regression Result Object</dd>
-      </dl><dl><dt>
-          
-          <code><a href="roi_volume_matrix.html">roi_volume_matrix()</a></code> 
-        </dt>
-        <dd>roisplit &lt;- function(data, in_id, out_id) 
-  if (!inherits(data, "data_sample"))
-    stop("`data` must inherit from `data_sample`.", call. = FALSE)
-  
-  if (!is.integer(in_id) | any(in_id &lt; 1))
-    stop("`in_id` must be a positive integer vector.", call. = FALSE)
-  
-  if(!all(is.na(out_id))) 
-    if (!is.integer(out_id) | any(out_id &lt; 1))
-      stop("`out_id` must be a positive integer vector.", call. = FALSE)
-  
-  
-  if (length(in_id) == 0)
-    stop("At least one row should be selected for the analysis set.",
-         call. = FALSE)
-  
-  structure(
-    list(
-      data = data,
-      in_id = in_id,
-      out_id = out_id
-    ),
-    class = c("roisplit", "rsplit")
-  )</dd>
       </dl><dl><dt>
           
           <code><a href="rsa_design.html">rsa_design()</a></code> 

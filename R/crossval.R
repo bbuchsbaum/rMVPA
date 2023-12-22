@@ -14,7 +14,8 @@
 #' data <- iris[,-5]
 #' y <- iris$Species
 #' result <- crossv_k(data, y, k = 5)
-#' #' @importFrom modelr resample
+#' @importFrom modelr resample
+#' @export
 crossv_k <- function(data, y, k = 5, id = ".id") {
   if (!is.numeric(k) || length(k) != 1) {
     stop("`k` must be a single integer.", call. = FALSE)
@@ -61,6 +62,7 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
 #' y <- rep(letters[1:4], 25)
 #' block_var <- rep(1:4, each = 25)
 #' cv <- crossv_twofold(X, y, block_var, nreps = 10)
+#' @noRd
 crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps=15) {
   ## every time this is called, it regenerates new indices
   
@@ -262,6 +264,7 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weig
 #' y <- rep(letters[1:4], 25)
 #' block_var <- rep(1:4, each=25)
 #' cv <- crossv_seq_block(X,y,2, block_var)
+#' @noRd
 crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NULL, id = ".id") {
   
   if (!length(block_var) == length(y)) {

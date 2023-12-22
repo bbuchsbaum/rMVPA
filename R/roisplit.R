@@ -112,7 +112,8 @@
 #'   )
 #' }
 
-#' @keywords @internal
+#' @keywords internal
+#' @noRd
 roi_volume_matrix <- function(mat, refspace, indices, coords) {
   structure(mat,
             refspace=refspace,
@@ -122,7 +123,8 @@ roi_volume_matrix <- function(mat, refspace, indices, coords) {
   
 }
 
-#' @keywords @internal
+#' @keywords internal
+#' @noRd
 roi_surface_matrix <- function(mat, refspace, indices, coords) {
   structure(mat,
             refspace=refspace,

@@ -162,7 +162,7 @@ test_that("mvpa_regional with 5 ROIS and corclass and k-fold cross-validation wi
   
   model <- load_model("corclass")
   tune_grid <- expand.grid(method=c("pearson", "kendall", "spearman"), robust=c(TRUE,FALSE))
-  dataset <- gen_sample_dataset(c(10,10,2), nobs=100, nlevels=3)
+  dataset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3)
   cval <- kfold_cross_validation(length(dataset$design$block_var), nfolds=4)
   
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))

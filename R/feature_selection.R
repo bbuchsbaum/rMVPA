@@ -126,6 +126,7 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
 #' @param obj The feature selection specification created by \code{feature_selector()}.
 #' @param X The input data matrix.
 #' @param Y The response variable.
+#' @param ... extra args (not used)
 #' @return A logical vector indicating which features to retain.
 #' @details
 #' The F-test method computes a one-way ANOVA for every column in the feature matrix.

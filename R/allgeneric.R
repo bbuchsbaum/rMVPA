@@ -183,6 +183,7 @@ get_samples <- function(obj, vox_list) {
 #' This function extracts a sample from a given dataset object.
 #'
 #' @param obj The input dataset object, which should be an instance of a data class compatible with sample extraction.
+#' @param vox the voxel indices/coordinates associated with the data sample.
 #' @param ... Additional arguments to be passed to the specific sample extraction method for the input object's class.
 #'
 #' @return A sample extracted from the input dataset based on the specific extraction method.

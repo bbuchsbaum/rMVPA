@@ -10,6 +10,8 @@
 \item{x}{A \code{regression_result} object.}
 
 \item{split_list}{Split results by indexed sub-groups (not supported for regression analyses yet).}
+
+\item{...}{extra args (not used).}
 }
 \value{
 A named vector with the calculated performance metrics: R-squared, RMSE, and Spearman correlation.

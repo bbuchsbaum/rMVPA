@@ -15,6 +15,3 @@ A vector of predicted probabilities for the observed class.
 \description{
 Extract the predicted probability for the observed class.
 }
-\seealso{
-\code{\link{prob_observed.binary_classification_result}}, \code{\link{prob_observed.multiway_classification_result}}
-}
