@@ -75,4 +75,5 @@ Remotes:
     bbuchsbaum/neurosurf
 VignetteBuilder: knitr
 Encoding: UTF-8
-URL: http://bbuchsbaum.github.io/rMVPA/
+URL: https://bbuchsbaum.github.io/rMVPA/, https://github.com/bbuchsbaum/rMVPA
+BugReports: https://github.com/bbuchsbaum/rMVPA/issues
