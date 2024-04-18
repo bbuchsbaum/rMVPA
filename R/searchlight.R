@@ -65,6 +65,26 @@ combine_rsa_standard <- function(model_spec, good_results, bad_results) {
   ret
 }
 
+#' Combine Vector RSA standard classifier results
+#'
+#' This function combines the Vector RSA standard classifier results from a good results data frame
+#' by binding the performance rows together.
+#'
+#' @keywords internal
+#' @param model_spec A list containing the model specification.
+#' @param good_results A data frame containing the successful classifier results.
+#' @param bad_results A data frame containing the unsuccessful classifier results.
+#' @return A list containing the combined performance matrix along with other information from the dataset.
+combine_vector_rsa_standard <- function(model_spec, good_results, bad_results) {
+  ind <- unlist(good_results$id)
+  perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
+  score_mat <- data.frame(sim=rowMeans(perf_mat))
+  #ret <- wrap_out(perf_mat, model_spec$dataset, ind)
+  ret <- wrap_out(score_mat, model_spec$dataset, ind)
+  ret
+}
+
+
 
 
 #' Combine randomized classifier results
@@ -488,3 +508,47 @@ run_searchlight.manova_model <- function(model_spec, radius=8,
   } 
   
 }
+
+
+#' Run searchlight analysis on a specified vector RSA model
+#'
+#' This function runs a searchlight analysis using a specified vector RSA model, radius, and method.
+#' It can be customized with permutation options, distance computation methods, and regression methods.
+#'
+#' @param model_spec An object of type \code{vector_rsa_model} specifying the vector RSA model to be used.
+#' @param radius The radius of the searchlight sphere (default is 8, allowable range: 1-100).
+#' @param method The method used for the searchlight analysis ("randomized" or "standard").
+#' @param niter The number of iterations for randomized searchlight (default is 4).
+#' @param permute Whether to permute the labels (default is FALSE).
+#' @param ... Additional arguments to be passed to the function.
+#'
+#' @importFrom futile.logger flog.info flog.error flog.debug
+#' @export
+#' @rdname run_searchlight
+run_searchlight.vector_rsa <- function(model_spec, radius=8, method=c("randomized", "standard"), niter=4, 
+                                       permute=FALSE, ...) {
+  
+  
+  
+  if (radius < 1 || radius > 100) {
+    stop(paste("Radius", radius, "is outside the allowable range (1-100)"))
+  }
+  
+  method <- match.arg(method)
+  
+  if (method == "randomized") {
+    assert_that(niter >= 1, msg="Number of iterations for randomized method must be at least 1")
+  }
+  
+  if (method == "standard") {
+    flog.info("Running standard vector RSA searchlight with radius %s", radius)
+    results <- do_standard(model_spec, radius, mvpa_fun=vector_rsa_iterate, combiner=combine_vector_rsa_standard, permute=permute, ...)
+  } else {
+    flog.info("Running randomized vector RSA searchlight with radius %s and %s iterations", radius, niter)
+    results <- do_randomized(model_spec, radius, niter=niter, mvpa_fun=vector_rsa_iterate, combiner=combine_randomized, permute=permute,...)
+  }
+  
+  return(results)
+}
+
+
