@@ -18,7 +18,7 @@ It can be customized with permutation options."><!-- mathjax --><script src="htt
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
     
 
-    <nav class="navbar fixed-top navbar-light navbar-expand-lg bg-light"><div class="container">
+    <nav class="navbar fixed-top navbar-light navbar-expand-lg bg-light" data-bs-theme="light"><div class="container">
     
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -39,8 +39,8 @@ It can be customized with permutation options."><!-- mathjax --><script src="htt
     <a class="dropdown-item" href="../articles/CommandLineScripts.html">Command-Line Scripts</a>
     <a class="dropdown-item" href="../articles/CrossValidation.html">Cross-Validation Schemes</a>
     <a class="dropdown-item" href="../articles/FeatureSelection.html">Feature Selection</a>
-    <a class="dropdown-item" href="../articles/RSA.html">Represenational Similarity Analysis</a>
     <a class="dropdown-item" href="../articles/Regional_Analysis.html">Regional Analysis</a>
+    <a class="dropdown-item" href="../articles/RSA.html">Represenational Similarity Analysis</a>
     <a class="dropdown-item" href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a>
   </div>
 </li>
@@ -170,23 +170,23 @@ It can be customized with permutation options.</p>
 <span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="mvpa_model.html">mvpa_model</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span>, model_type<span class="op">=</span><span class="st">"classification"</span>, crossval<span class="op">=</span><span class="va">cval</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">run_searchlight</span><span class="op">(</span><span class="va">mspec</span>, radius<span class="op">=</span><span class="fl">8</span>, method<span class="op">=</span><span class="st">"standard"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:00] model is: sda_notune</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:00] running standard searchlight with 8 radius </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:00] creating standard searchlight</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:00] running standard searchlight iterator</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:00] mvpa_iterate: compute analysis for batch 1 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:01] mvpa_iterate: compute analysis for batch 2 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:01] mvpa_iterate: compute analysis for batch 3 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:01] mvpa_iterate: compute analysis for batch 4 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:02] mvpa_iterate: compute analysis for batch 5 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:02] mvpa_iterate: compute analysis for batch 6 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:03] mvpa_iterate: compute analysis for batch 7 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:03] mvpa_iterate: compute analysis for batch 8 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:04] mvpa_iterate: compute analysis for batch 9 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:04] mvpa_iterate: compute analysis for batch 10 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:05] mvpa_iterate: compute analysis for batch 11 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:05] mvpa_iterate: compute analysis for batch 12 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2023-12-20 19:31:05] mvpa_iterate: compute analysis for batch 13 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:17] model is: sda_notune</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:17] running standard searchlight with 8 radius </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:17] creating standard searchlight</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:17] running standard searchlight iterator</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:17] mvpa_iterate: compute analysis for batch 1 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:18] mvpa_iterate: compute analysis for batch 2 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:18] mvpa_iterate: compute analysis for batch 3 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:19] mvpa_iterate: compute analysis for batch 4 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:19] mvpa_iterate: compute analysis for batch 5 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:19] mvpa_iterate: compute analysis for batch 6 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:20] mvpa_iterate: compute analysis for batch 7 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:20] mvpa_iterate: compute analysis for batch 8 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:21] mvpa_iterate: compute analysis for batch 9 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:21] mvpa_iterate: compute analysis for batch 10 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:22] mvpa_iterate: compute analysis for batch 11 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:22] mvpa_iterate: compute analysis for batch 12 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-18 16:49:22] mvpa_iterate: compute analysis for batch 13 ...</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A custom "combiner" can be used to post-process the output of the searchlight classifier for special cases.</span></span></span>
 <span class="r-in"><span><span class="co"># In the example below, the supplied "combining function" extracts the predicted probability of the correct class </span></span></span>
@@ -212,7 +212,7 @@ It can be customized with permutation options.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.7.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.8.</p>
 </div>
 
     </footer></div>

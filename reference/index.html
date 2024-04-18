@@ -6,7 +6,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
     
 
-    <nav class="navbar fixed-top navbar-light navbar-expand-lg bg-light"><div class="container">
+    <nav class="navbar fixed-top navbar-light navbar-expand-lg bg-light" data-bs-theme="light"><div class="container">
     
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -27,8 +27,8 @@
     <a class="dropdown-item" href="../articles/CommandLineScripts.html">Command-Line Scripts</a>
     <a class="dropdown-item" href="../articles/CrossValidation.html">Cross-Validation Schemes</a>
     <a class="dropdown-item" href="../articles/FeatureSelection.html">Feature Selection</a>
-    <a class="dropdown-item" href="../articles/RSA.html">Represenational Similarity Analysis</a>
     <a class="dropdown-item" href="../articles/Regional_Analysis.html">Regional Analysis</a>
+    <a class="dropdown-item" href="../articles/RSA.html">Represenational Similarity Analysis</a>
     <a class="dropdown-item" href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a>
   </div>
 </li>
@@ -68,11 +68,6 @@
         <dd>Create a <code>classification_result</code> instance</dd>
       </dl><dl><dt>
           
-          <code><a href="coalesce_join2.html">coalesce_join2()</a></code> 
-        </dt>
-        <dd>Coalesce Join Two Data Frames</dd>
-      </dl><dl><dt>
-          
           <code><a href="combine_prediction_tables.html">combine_prediction_tables()</a></code> 
         </dt>
         <dd>Combine prediction tables</dd>
@@ -96,11 +91,6 @@
           <code><a href="crossv_k.html">crossv_k()</a></code> 
         </dt>
         <dd>K-fold Cross-Validation Data Preparation</dd>
-      </dl><dl><dt>
-          
-          <code><a href="crossv_seq_block.html">crossv_seq_block()</a></code> 
-        </dt>
-        <dd>Sequential Block Cross-Validation Data Preparation</dd>
       </dl><dl><dt>
           
           <code><a href="crossv_twofold.html">crossv_twofold()</a></code> 
@@ -143,6 +133,11 @@
         <dd>Fit an MVPA model</dd>
       </dl><dl><dt>
           
+          <code><a href="fut_vector_rsa.html">fut_vector_rsa()</a></code> 
+        </dt>
+        <dd>Apply the RSA model in parallel using futures</dd>
+      </dl><dl><dt>
+          
           <code><a href="gen_sample_dataset.html">gen_sample_dataset()</a></code> 
         </dt>
         <dd>gen_sample_dataset</dd>
@@ -156,6 +151,11 @@
           <code><a href="get_searchlight.html">get_searchlight()</a></code> 
         </dt>
         <dd>Generate Searchlight Iterator</dd>
+      </dl><dl><dt>
+          
+          <code><a href="group_means.html">group_means()</a></code> 
+        </dt>
+        <dd>Compute Group Means of a Matrix</dd>
       </dl><dl><dt>
           
           <code><a href="has_test_set.html">has_test_set()</a></code> 
@@ -298,34 +298,6 @@
         <dd>Create a Regression Result Object</dd>
       </dl><dl><dt>
           
-          <code><a href="roi_volume_matrix.html">roi_volume_matrix()</a></code> 
-        </dt>
-        <dd>roisplit &lt;- function(data, in_id, out_id) 
-  if (!inherits(data, "data_sample"))
-    stop("`data` must inherit from `data_sample`.", call. = FALSE)
-  
-  if (!is.integer(in_id) | any(in_id &lt; 1))
-    stop("`in_id` must be a positive integer vector.", call. = FALSE)
-  
-  if(!all(is.na(out_id))) 
-    if (!is.integer(out_id) | any(out_id &lt; 1))
-      stop("`out_id` must be a positive integer vector.", call. = FALSE)
-  
-  
-  if (length(in_id) == 0)
-    stop("At least one row should be selected for the analysis set.",
-         call. = FALSE)
-  
-  structure(
-    list(
-      data = data,
-      in_id = in_id,
-      out_id = out_id
-    ),
-    class = c("roisplit", "rsplit")
-  )</dd>
-      </dl><dl><dt>
-          
           <code><a href="rsa_design.html">rsa_design()</a></code> 
         </dt>
         <dd>Construct a design for an RSA (Representational Similarity Analysis) model</dd>
@@ -421,6 +393,11 @@
         <dd>Train an RSA Model</dd>
       </dl><dl><dt>
           
+          <code><a href="train_model.vector_rsa_model.html">train_model(<i>&lt;vector_rsa_model&gt;</i>)</a></code> 
+        </dt>
+        <dd>Train a vector RSA model</dd>
+      </dl><dl><dt>
+          
           <code><a href="tune_grid.html">tune_grid()</a></code> 
         </dt>
         <dd>Tune Grid Extraction</dd>
@@ -429,6 +406,16 @@
           <code><a href="twofold_blocked_cross_validation.html">twofold_blocked_cross_validation()</a></code> 
         </dt>
         <dd>twofold_blocked_cross_validation</dd>
+      </dl><dl><dt>
+          
+          <code><a href="vector_rsa_design.html">vector_rsa_design()</a></code> 
+        </dt>
+        <dd>Construct a design for a vectorized RSA model</dd>
+      </dl><dl><dt>
+          
+          <code><a href="vector_rsa_model.html">vector_rsa_model()</a></code> 
+        </dt>
+        <dd>Create a vectorized RSA model</dd>
       </dl><dl><dt>
           
           <code><a href="y_test.html">y_test()</a></code> 
@@ -448,7 +435,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.7.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.8.</p>
 </div>
 
     </footer></div>

@@ -58,6 +58,9 @@
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_standard.html</loc>
   </url>
   <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_vector_rsa_standard.html</loc>
+  </url>
+  <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/comp_perf.html</loc>
   </url>
   <url>
@@ -74,9 +77,6 @@
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_k.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_seq_block.html</loc>
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_twofold.html</loc>
@@ -115,6 +115,9 @@
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/fit_model.mvpa_model.html</loc>
   </url>
   <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/fut_vector_rsa.html</loc>
+  </url>
+  <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.html</loc>
   </url>
   <url>
@@ -122,6 +125,9 @@
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.html</loc>
+  </url>
+  <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/group_means.html</loc>
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/has_test_set.html</loc>
@@ -217,9 +223,6 @@
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/regression_result.html</loc>
   </url>
   <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/roi_volume_matrix.html</loc>
-  </url>
-  <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.html</loc>
   </url>
   <url>
@@ -277,6 +280,9 @@
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.rsa_model.html</loc>
   </url>
   <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.vector_rsa_model.html</loc>
+  </url>
+  <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/tune_grid.html</loc>
   </url>
   <url>
@@ -284,6 +290,12 @@
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/twofold_blocked_cross_validation.html</loc>
+  </url>
+  <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_design.html</loc>
+  </url>
+  <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.html</loc>
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/weighted_model.html</loc>
