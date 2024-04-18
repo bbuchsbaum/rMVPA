@@ -450,7 +450,7 @@ do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
 #' @importFrom dplyr do rowwise
 #' @export
 #' @inheritParams mvpa_iterate
-rsa_iterate <- function(mod_spec, vox_list, ids=seq_long(vox_list),  permute=FALSE, 
+rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FALSE, 
                         regtype=c("pearson", "spearman", "lm", "rfit"), 
                         distmethod=c("spearman", "pearson")) {
  

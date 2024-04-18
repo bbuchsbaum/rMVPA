@@ -144,10 +144,9 @@ do_vector_rsa <- function(roi, mod_spec, rnum, method = "pearson") {
 #' @param mod_spec The model specification.
 #' @param vox_list A list of voxel sets to analyze.
 #' @param ids Identifiers for each data set.
-#' @param method Method for computing similarities.
 #' @param permute Logical indicating whether to permute the labels
 #' @noRd
-vector_rsa_iterate <- function(mod_spec, vox_list, ids = seq_along(vox_list), method = "pearson", permute=FALSE) {
+vector_rsa_iterate <- function(mod_spec, vox_list, ids = seq_along(vox_list),  permute=FALSE) {
   # Ensure IDs match the number of data sets
   if (length(ids) != length(vox_list)) {
     stop("Length of ids must match the number of data sets.")

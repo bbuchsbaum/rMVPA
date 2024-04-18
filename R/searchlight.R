@@ -99,8 +99,6 @@ combine_vector_rsa_standard <- function(model_spec, good_results, bad_results) {
 #' @return A list containing the combined and normalized performance matrix along with other information from the dataset.
 combine_randomized <- function(model_spec, good_results, bad_results) {
   
- 
-  
   all_ind <- sort(unlist(good_results$indices))
   ind_count <- table(all_ind)
   ind_set <- unique(all_ind)
