@@ -126,11 +126,11 @@ train_model.vector_rsa_model <- function(obj, roi, ...) {
 #' @param method Method for computing similarities.
 #' @return A tibble with RSA results and potentially error information.
 #' @noRd
-do_vector_rsa <- function(roi, mod_spec, rnum, method = "pearson") {
+do_vector_rsa <- function(roi, mod_spec, rnum) {
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
   ind <- indices(roi$train_roi)
   tryCatch({
-    scores <- train_model(mod_spec, xtrain, method = method)
+    scores <- train_model(mod_spec, xtrain)
     tibble::tibble(result = list(NULL), indices=list(ind), performance=list(scores), id=rnum, error = FALSE, error_message = "~")
   }, error = function(e) {
     tibble::tibble(result = list(NULL), indices=list(ind), performance=list(NULL), id=rnum, error = TRUE, error_message = e$message)
@@ -158,7 +158,7 @@ vector_rsa_iterate <- function(mod_spec, vox_list, ids = seq_along(vox_list),  p
   ## iterate over searchlights using parallel futures
   sf <- sframe %>% dplyr::mutate(rnum=ids) 
   
-  fut_vector_rsa(mod_spec,sf, method)
+  fut_vector_rsa(mod_spec,sf)
  
 }
 
@@ -169,10 +169,10 @@ vector_rsa_iterate <- function(mod_spec, vox_list, ids = seq_along(vox_list),  p
 #' @param sf A tibble containing the data sets and their identifiers.
 #' @param method Method for computing similarities.
 #' @return A combined result of all RSA analyses.
-fut_vector_rsa <- function(mod_spec, sf, method) {
+fut_vector_rsa <- function(mod_spec, sf, ...) {
   gc()
   sf %>% furrr::future_pmap(function(sample, rnum, .id) {
-    do_vector_rsa(as_roi(sample, mod_spec$dataset), mod_spec, rnum, method=method)
+    do_vector_rsa(as_roi(sample, mod_spec$dataset), mod_spec, rnum, ...)
   }, .options = furrr::furrr_options(seed = T)) %>% dplyr::bind_rows()
    
 }
