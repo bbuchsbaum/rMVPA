@@ -3,7 +3,6 @@
 #' The rMVPA package provides tools for running region-of-interest and searchlight MVPA analyses.
 #' 
 #' 
-#' @docType package
 #' @name rMVPA
 NULL
 

@@ -9,6 +9,8 @@
 \arguments{
 \item{obj}{An object of class \code{vector_rsa_model}.}
 
+\item{roi}{the region of interest}
+
 \item{...}{addiitonal arguments}
 
 \item{X}{The data matrix where rows correspond to trials.}

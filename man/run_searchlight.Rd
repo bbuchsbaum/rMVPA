@@ -5,6 +5,7 @@
 \alias{run_searchlight.mvpa_model}
 \alias{run_searchlight.rsa_model}
 \alias{run_searchlight.manova_model}
+\alias{run_searchlight.vector_rsa}
 \title{run_searchlight}
 \usage{
 run_searchlight(model_spec, radius, method, niter, ...)
@@ -38,9 +39,18 @@ run_searchlight(model_spec, radius, method, niter, ...)
   permute = FALSE,
   ...
 )
+
+\method{run_searchlight}{vector_rsa}(
+  model_spec,
+  radius = 8,
+  method = c("randomized", "standard"),
+  niter = 4,
+  permute = FALSE,
+  ...
+)
 }
 \arguments{
-\item{model_spec}{An object of type \code{manova_model} specifying the MANOVA model to be used.}
+\item{model_spec}{An object of type \code{vector_rsa_model} specifying the vector RSA model to be used.}
 
 \item{radius}{The radius of the searchlight sphere (default is 8, allowable range: 1-100).}
 
@@ -72,6 +82,9 @@ It can be customized with permutation options, distance computation methods, and
 
 This function runs a searchlight analysis using a specified MANOVA model, radius, and method.
 It can be customized with permutation options.
+
+This function runs a searchlight analysis using a specified vector RSA model, radius, and method.
+It can be customized with permutation options, distance computation methods, and regression methods.
 }
 \examples{
 # TODO: Add an example

@@ -4,10 +4,19 @@
 \alias{vector_rsa_model}
 \title{Create a vectorized RSA model}
 \usage{
-vector_rsa_model(dataset, design)
+vector_rsa_model(
+  dataset,
+  design,
+  distfun = cordist(),
+  rsa_simfun = c("pearson", "spearman")
+)
 }
 \arguments{
+\item{dataset}{An \code{mvpa_dataset}  object.}
+
 \item{design}{A vector_rsa_design object.}
+
+\item{distfun}{an object of \code{distfun} type for computation of pairwise dissimilarities among image rows}
 }
 \value{
 An object representing the RSA model, which includes both the design and precomputed data.

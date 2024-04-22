@@ -4,10 +4,10 @@
 \alias{vector_rsa_design}
 \title{Construct a design for a vectorized RSA model}
 \usage{
-vector_rsa_design(D, labels, block_var, dist_to_sim = function(D) 1 - D)
+vector_rsa_design(D, labels, block_var)
 }
 \arguments{
-\item{D}{A distance matrix with row.names indicating labels.}
+\item{D}{A representational disssimilarity matrix with row.names indicating labels.}
 
 \item{labels}{character vector of labels corresponding to rows in another dataset X.}
 

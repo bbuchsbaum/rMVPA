@@ -2,19 +2,19 @@
 #'
 #' This function constructs a design for an RSA model using a single distance matrix, labels, and blocks.
 #'
-#' @param D A distance matrix with row.names indicating labels.
+#' @param D A representational disssimilarity matrix with row.names indicating labels.
 #' @param labels character vector of labels corresponding to rows in another dataset X.
 #' @param block_var vector indicating the block (strata) each label belongs to.
 #' @return A list containing the elements of the RSA design, class attributes "vector_rsa_design" and "list".
 #' @details The function verifies that all labels in the 'labels' are present in the row.names of 'D'.
 #' It also sets up for precomputing cross-block pairs if needed.
 #' @export
-vector_rsa_design <- function(D, labels, block_var, dist_to_sim = function(D) 1-D) {
+vector_rsa_design <- function(D, labels, block_var) {
   # Verify that all labels are present in row.names of D
   assertthat::assert_that(all(labels %in% rownames(D)), 
                           msg = "All labels must be present in the row.names of D.")
   
-  S <- dist_to_sim(D)
+  # S <- dist_to_sim(D)
   # Set up data and preprocessing steps if necessary
   # Here, the design is simple and only needs to handle labels and block structure.
   # Further preprocessing for cross-block pairs might be handled in vector_rsa_model_mat
@@ -28,7 +28,7 @@ vector_rsa_design <- function(D, labels, block_var, dist_to_sim = function(D) 1-
   
   design <- list(
     D = D,
-    S=S,
+    #S=S,
     labels = labels,
     block = block_var
   )
@@ -49,10 +49,10 @@ vector_rsa_model_mat <- function(design) {
   #similarity_matrix <- 1 - as.matrix(design$D)
   
   # Ensure the matrix is expanded to match all instances in X
-  Sexpanded <- design$S[match(design$labels, rownames(design$S)), match(design$labels, rownames(design$S))]
+  Dexpanded <- design$D[match(design$labels, rownames(design$D)), match(design$labels, rownames(design$D))]
   
   # Precompute cross-block pairs with indices for fast access
-  label_indices <- match(design$labels, rownames(design$S))
+  label_indices <- match(design$labels, rownames(design$D))
   
   cross_block_data <- lapply(sort(unique(design$block)), function(b) {
     inds <- which(design$block != b)
@@ -63,7 +63,7 @@ vector_rsa_model_mat <- function(design) {
   
   # Bundle precomputed data
   precomputed <- list(
-    Sexpanded=Sexpanded,
+    Dexpanded=Dexpanded,
     cross_block_data = cross_block_data
   )
   
@@ -73,13 +73,16 @@ vector_rsa_model_mat <- function(design) {
 #' Create a vectorized RSA model
 #'
 #' This function integrates a vector_rsa_design and precomputes data to create a vectorized RSA model.
-#'
+#' 
+#' @param dataset An \code{mvpa_dataset}  object.
 #' @param design A vector_rsa_design object.
+#' @param distfun an object of \code{distfun} type for computation of pairwise dissimilarities among image rows
 #' @return An object representing the RSA model, which includes both the design and precomputed data.
 #' @details Integrates RSA design and precomputed data to facilitate efficient RSA computations. 
 #' It directly incorporates precomputations for cross-block comparisons.
 #' @export
-vector_rsa_model <- function(dataset, design) {
+vector_rsa_model <- function(dataset, design, distfun=cordist(), rsa_simfun=c("pearson", "spearman")) {
+  rsa_simfun = match.arg(rsa_simfun)
   assert_that(inherits(dataset, "mvpa_dataset"))
   # Verify that design is correctly formatted
   assertthat::assert_that(inherits(design, "vector_rsa_design"),
@@ -99,6 +102,8 @@ vector_rsa_model <- function(dataset, design) {
   model <- list(
     dataset = dataset,
     design = design,
+    distfun=distfun,
+    rsa_simfun=rsa_simfun,
     cross_block_data = cross_block_data
   )
   
@@ -111,6 +116,7 @@ vector_rsa_model <- function(dataset, design) {
 #'
 #' @param obj An object of class \code{vector_rsa_model}.
 #' @param X The data matrix where rows correspond to trials.
+#' @param roi the region of interest
 #' @param ... addiitonal arguments
 #' @export
 train_model.vector_rsa_model <- function(obj, roi, ...) {
@@ -123,7 +129,7 @@ train_model.vector_rsa_model <- function(obj, roi, ...) {
 #'
 #' @param roi A subset of data, usually representing one ROI or one trial block.
 #' @param mod_spec The RSA model specification.
-#' @param method Method for computing similarities.
+#' @param rnum roi ids
 #' @return A tibble with RSA results and potentially error information.
 #' @noRd
 do_vector_rsa <- function(roi, mod_spec, rnum) {
@@ -153,8 +159,8 @@ vector_rsa_iterate <- function(mod_spec, vox_list, ids = seq_along(vox_list),  p
   }
  
   assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
-  sframe <- get_samples(mod_spec$dataset, vox_list)
   
+  sframe <- get_samples(mod_spec$dataset, vox_list)
   ## iterate over searchlights using parallel futures
   sf <- sframe %>% dplyr::mutate(rnum=ids) 
   
@@ -178,58 +184,19 @@ fut_vector_rsa <- function(mod_spec, sf, ...) {
 }
 
 
-compute_trial_scores <- function(obj, X, method = c("pearson", "spearman")) {
-  method <- match.arg(method)
+compute_trial_scores <- function(obj, X) {
   
   # Retrieve precomputed data
   precomputed = obj$design$model_mat
-  similarity_matrix = precomputed$Sexpanded  # Unexpanded similarity matrix
+  dissimilarity_matrix = precomputed$Dexpanded  # Unexpanded similarity matrix
   cross_block_data = precomputed$cross_block_data
   X <- as.matrix(X)
   # Calculate similarity vectors using precomputed data
+  #browser()
+  second_order_similarity(obj$distfun, X, dissimilarity_matrix, obj$design$block, obj$rsa_simfun)
   
-  ## we could return two lists: data_vec, ref_vec
-  ## then use proxy::simil(x,y, pairwise=TRUE, by_rows=TRUE)
-  scores <- lapply(seq_len(nrow(X)), function(i) {
-    block_id = obj$design$block[i]
-    valid_indices = cross_block_data[[as.character(block_id)]]$indices
-    
-    # Compute first-order similarities
-    data_vec = cor(X[i,], t(X[valid_indices,]), method=method)[1,]
-    
-    # Map indices to pull the correct rows from the compact similarity matrix
-    #ref_indices = match(obj$design$labels[valid_indices], rownames(similarity_matrix))
-    #ref_vec = similarity_matrix[match(obj$design$labels[i], rownames(similarity_matrix)), ref_indices]
-    ref_vec <- similarity_matrix[valid_indices, i]
-    
-    # Compute second-order similarity score
-    second_order_sim = cor(data_vec, ref_vec, method = method)
-    return(second_order_sim)
-  })
-  
-  return(unlist(scores))
 }
 
-#' Compare trial similarity vectors to the reference
-#'
-#' @param sim_vector The similarity vector for a given trial.
-#' @param reference_vector The corresponding reference vector from the expanded D matrix.
-#' @return The similarity score.
-#' @noRd
-compare_to_reference <- function(sim_vector, reference_vector) {
-  cor(sim_vector, reference_vector, method = "pearson")
-}
-
-#' Expand the D matrix to match trials in X
-#'
-#' @param D The reference distance matrix.
-#' @param labels Labels for each row in X.
-#' @return An expanded version of D matching the order of labels in X.
-#' @noRd
-expand_D <- function(D, labels) {
-  indices <- match(labels, rownames(D))
-  return(D[indices, indices])
-}
 
 
 

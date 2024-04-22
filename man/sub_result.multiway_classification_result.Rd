@@ -19,7 +19,7 @@ This function subsets a multiway classification result based on the provided ind
 }
 \seealso{
 Other sub_result: 
-\code{\link{sub_result.binary_classification_result}()},
-\code{\link{sub_result}()}
+\code{\link{sub_result}()},
+\code{\link{sub_result.binary_classification_result}()}
 }
 \concept{sub_result}

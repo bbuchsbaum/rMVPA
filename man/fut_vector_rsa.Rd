@@ -4,7 +4,7 @@
 \alias{fut_vector_rsa}
 \title{Apply the RSA model in parallel using futures}
 \usage{
-fut_vector_rsa(mod_spec, sf, method)
+fut_vector_rsa(mod_spec, sf, ...)
 }
 \arguments{
 \item{mod_spec}{The model specification.}
