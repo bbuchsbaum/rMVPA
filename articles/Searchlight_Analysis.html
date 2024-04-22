@@ -206,20 +206,20 @@ statistic. The <code>radius</code> argument indicates the radius in
 information about the randomized searchlight.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"standard"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2024-04-22 14:50:31] model is: sda_notune</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:31] running standard searchlight with 4 radius </span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:31] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:31] running standard searchlight iterator</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:31] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:33] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:34] mvpa_iterate: compute analysis for batch 3 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:35] mvpa_iterate: compute analysis for batch 4 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:36] mvpa_iterate: compute analysis for batch 5 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:38] mvpa_iterate: compute analysis for batch 6 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:39] mvpa_iterate: compute analysis for batch 7 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:40] mvpa_iterate: compute analysis for batch 8 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:41] mvpa_iterate: compute analysis for batch 9 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:43] mvpa_iterate: compute analysis for batch 10 ...</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2024-04-22 15:32:57] model is: sda_notune</span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:57] running standard searchlight with 4 radius </span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:57] creating standard searchlight</span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:57] running standard searchlight iterator</span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:57] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:59] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:00] mvpa_iterate: compute analysis for batch 3 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:01] mvpa_iterate: compute analysis for batch 4 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:02] mvpa_iterate: compute analysis for batch 5 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:04] mvpa_iterate: compute analysis for batch 6 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:05] mvpa_iterate: compute analysis for batch 7 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:06] mvpa_iterate: compute analysis for batch 8 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:08] mvpa_iterate: compute analysis for batch 9 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:09] mvpa_iterate: compute analysis for batch 10 ...</span></span></code></pre>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span></span></code></pre></div>
 <pre><code><span><span class="co">## $Accuracy</span></span>
@@ -264,38 +264,38 @@ number of estimated models is a function of
 <code>niter</code>.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"randomized"</span>, niter<span class="op">=</span><span class="fl">8</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2024-04-22 14:50:44] model is: sda_notune</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:44] running randomized searchlight with 4 radius and 8 iterations</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:44] searchlight iteration: 1</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:44] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:44] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:45] mvpa_iterate: compute analysis for batch 3 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:45] searchlight iteration: 2</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:45] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:45] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:45] searchlight iteration: 3</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:45] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:46] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:46] searchlight iteration: 4</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:46] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:46] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:47] searchlight iteration: 5</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:47] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:47] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:47] mvpa_iterate: compute analysis for batch 3 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:47] searchlight iteration: 6</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:47] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:48] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:48] searchlight iteration: 7</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:48] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:48] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:48] mvpa_iterate: compute analysis for batch 3 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:48] searchlight iteration: 8</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:48] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:49] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:49] mvpa_iterate: compute analysis for batch 3 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:49] mvpa_iterate: compute analysis for batch 4 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:49] number of models fit: 17</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2024-04-22 15:33:11] model is: sda_notune</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:11] running randomized searchlight with 4 radius and 8 iterations</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:11] searchlight iteration: 1</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:11] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:11] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:11] mvpa_iterate: compute analysis for batch 3 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:11] searchlight iteration: 2</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:11] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:12] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:12] searchlight iteration: 3</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:12] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:12] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:12] searchlight iteration: 4</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:12] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:13] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:13] searchlight iteration: 5</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:13] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:13] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:14] mvpa_iterate: compute analysis for batch 3 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:14] searchlight iteration: 6</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:14] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:14] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:14] searchlight iteration: 7</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:14] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:15] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:15] mvpa_iterate: compute analysis for batch 3 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:15] searchlight iteration: 8</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:15] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:15] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:16] mvpa_iterate: compute analysis for batch 3 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:16] mvpa_iterate: compute analysis for batch 4 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:16] number of models fit: 17</span></span></code></pre>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span></span></code></pre></div>
 <pre><code><span><span class="co">## $Accuracy</span></span>
@@ -341,18 +341,18 @@ one is running the searchlight over a small mask.</p>
 <code class="sourceCode R"><span><span class="va">rf_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"rf"</span><span class="op">)</span> </span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model<span class="op">=</span><span class="va">rf_model</span>, dataset<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span>, crossval<span class="op">=</span><span class="va">crossval</span>, tune_grid<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>mtry<span class="op">=</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">result_rf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"randomized"</span>, niter<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2024-04-22 14:50:50] model is: rf</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:50] running randomized searchlight with 4 radius and 2 iterations</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:50] searchlight iteration: 1</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:50] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:51] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:51] mvpa_iterate: compute analysis for batch 3 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:51] mvpa_iterate: compute analysis for batch 4 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:51] searchlight iteration: 2</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:51] mvpa_iterate: compute analysis for batch 1 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:52] mvpa_iterate: compute analysis for batch 2 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:52] mvpa_iterate: compute analysis for batch 3 ...</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:52] number of models fit: 5</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2024-04-22 15:33:17] model is: rf</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:17] running randomized searchlight with 4 radius and 2 iterations</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:17] searchlight iteration: 1</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:17] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:17] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:18] mvpa_iterate: compute analysis for batch 3 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:18] mvpa_iterate: compute analysis for batch 4 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:18] searchlight iteration: 2</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:18] mvpa_iterate: compute analysis for batch 1 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:18] mvpa_iterate: compute analysis for batch 2 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:19] mvpa_iterate: compute analysis for batch 3 ...</span></span>
+<span><span class="co">## INFO [2024-04-22 15:33:19] number of models fit: 5</span></span></code></pre>
 <p>Here we specify a range of values for the <code>mtry</code> tuning
 parameter. In this case, by supplying the <code>tune_reps</code>
 argument to <code>mvpa_model</code> we control the number of resamples

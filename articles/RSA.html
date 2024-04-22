@@ -119,15 +119,15 @@ metric to compare the similarity between the external model matrix
 <span></span>
 <span><span class="va">rsamod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_model.html">rsa_model</a></span><span class="op">(</span><span class="va">dset</span>, <span class="va">rsades</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">rsamod</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"standard"</span>,regtype<span class="op">=</span><span class="st">"pearson"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2024-04-22 14:50:17] running standard RSA searchlight with 4 radius </span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:17] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:17] running standard searchlight iterator</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2024-04-22 15:32:42] running standard RSA searchlight with 4 radius </span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:42] creating standard searchlight</span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:42] running standard searchlight iterator</span></span></code></pre>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rsamod2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_model.html">rsa_model</a></span><span class="op">(</span><span class="va">dset</span>, <span class="va">rsades2</span><span class="op">)</span></span>
 <span><span class="va">result2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">rsamod2</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"standard"</span>,regtype<span class="op">=</span><span class="st">"pearson"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2024-04-22 14:50:21] running standard RSA searchlight with 4 radius </span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:21] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:21] running standard searchlight iterator</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2024-04-22 15:32:46] running standard RSA searchlight with 4 radius </span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:46] creating standard searchlight</span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:46] running standard searchlight iterator</span></span></code></pre>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">Dmat</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] -0.0438099  0.0252217</span></span></code></pre>
@@ -155,9 +155,9 @@ one element in the returned list.</p>
 correlation to compare brain vs model matrices.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">rsamod</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"standard"</span>,regtype<span class="op">=</span><span class="st">"spearman"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2024-04-22 14:50:24] running standard RSA searchlight with 4 radius </span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:24] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2024-04-22 14:50:24] running standard searchlight iterator</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2024-04-22 15:32:49] running standard RSA searchlight with 4 radius </span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:49] creating standard searchlight</span></span>
+<span><span class="co">## INFO [2024-04-22 15:32:49] running standard searchlight iterator</span></span></code></pre>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">Dmat</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] -0.04623480  0.03528682</span></span></code></pre>
