@@ -67,6 +67,9 @@
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/compute_performance.html</loc>
   </url>
   <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/create_dist.html</loc>
+  </url>
+  <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.html</loc>
   </url>
   <url>
@@ -79,9 +82,6 @@
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_k.html</loc>
   </url>
   <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_twofold.html</loc>
-  </url>
-  <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/crossval_samples.html</loc>
   </url>
   <url>
@@ -89,6 +89,9 @@
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/data_sample.html</loc>
+  </url>
+  <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.html</loc>
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/do_merge_results.html</loc>
@@ -190,6 +193,21 @@
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/nresponses.html</loc>
   </url>
   <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.cordist.html</loc>
+  </url>
+  <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.euclidean.html</loc>
+  </url>
+  <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.html</loc>
+  </url>
+  <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.mahalanobis.html</loc>
+  </url>
+  <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.robustmahadist.html</loc>
+  </url>
+  <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/performance.html</loc>
   </url>
   <url>
@@ -245,6 +263,9 @@
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.html</loc>
+  </url>
+  <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/second_order_similarity.html</loc>
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/select_features.FTest.html</loc>
