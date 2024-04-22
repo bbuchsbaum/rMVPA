@@ -170,6 +170,8 @@ pairwise_dist.euclidean <- function(obj, X) {
 #' dist_matrix <- pairwise_dist.mahalanobis(list(), X)
 #'
 #' @export
+#' @importFrom corpcor invcov.shrink
+#' @importFrom stats mahalanobis
 pairwise_dist.mahalanobis <- function(obj, X) {
   # Estimate the inverse of the shrunken covariance matrix
   inv_cov <- invcov.shrink(X)

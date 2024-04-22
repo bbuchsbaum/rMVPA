@@ -71,7 +71,8 @@ Suggests:
     e1071,
     randomForest,
     iterators,
-    spls
+    spls,
+    corpcor
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf
