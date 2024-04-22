@@ -1,5 +1,6 @@
 
 # Default method
+#' @export
 pairwise_dist.default <- function(X, dist_obj) {
   stop("pairwise_dist not implemented for objects of class ", class(dist_obj)[1])
 }
