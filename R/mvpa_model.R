@@ -178,7 +178,7 @@ mvpa_model <- function(model,
               crossval=crossval,
               performance=perf)
   
-  class(ret) <- "mvpa_model"
+  class(ret) <- c("mvpa_model", "model_spec", "list")
   ret
   
 }

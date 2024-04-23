@@ -143,6 +143,9 @@ rsa_model_mat <- function(rsa_des) {
 #'
 #' @param dataset An instance of an \code{mvpa_dataset}.
 #' @param design An instance of an \code{rsa_design} created by \code{rsa_design()}.
+#' @param regtype A character string specifying the analysis method. One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").
+#' @param distmethod A character string specifying the method used to compute distances between observations. One of: \code{"pearson"} or \code{"spearman"} (defaults to "spearman").
+#' @param permute A logical indicating whether to permute the data for significance testing (defaults to \code{FALSE}).
 #' @return A list with two elements: \code{dataset} and \code{design}, with the class attribute set to \code{"rsa_model"} and \code{"list"}.
 #' @examples
 #' # Create a random MVPA dataset
@@ -157,13 +160,20 @@ rsa_model_mat <- function(rsa_des) {
 #' # Create an RSA model
 #' rsa_mod <- rsa_model(mvpa_data, rdes)
 #' @export
-rsa_model <- function(dataset, design) {
+rsa_model <- function(dataset, design, distmethod=c("pearson", "spearman"), regtype=c("pearson", "spearman", "lm", "rfit"), 
+                      permute=FALSE) {
   assert_that(inherits(dataset, "mvpa_dataset"))
   assert_that(inherits(design, "rsa_design"))
   
+  distmethod <- match.arg(distmethod)
+  regtype <- match.arg(regtype)
+  
   # Create an RSA model object with the dataset and design
   structure(list(dataset = dataset,
-                 design = design),
+                 design = design,
+                 distmethod=distmethod,
+                 regtype=regtype,
+                 permute=permute),
             class = c("rsa_model", "list"))
 }
 

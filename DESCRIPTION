@@ -60,6 +60,7 @@ Collate:
     'vector_rsa_model.R'
     'distcalc.R'
     'utils.R'
+    'feature_rsa_model.R'
 RoxygenNote: 7.3.1
 Suggests:
     testthat,
