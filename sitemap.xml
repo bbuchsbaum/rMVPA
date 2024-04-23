@@ -106,6 +106,9 @@
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/external_crossval.html</loc>
   </url>
   <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_iterate.html</loc>
+  </url>
+  <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/feature_selector.html</loc>
   </url>
   <url>
@@ -116,9 +119,6 @@
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/fit_model.mvpa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/fut_vector_rsa.html</loc>
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.html</loc>
@@ -287,6 +287,9 @@
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/test_design.html</loc>
+  </url>
+  <url>
+    <loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.feature_rsa_model.html</loc>
   </url>
   <url>
     <loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.html</loc>

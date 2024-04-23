@@ -186,23 +186,23 @@ It can be customized with permutation options, distance computation methods, and
 <span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="mvpa_model.html">mvpa_model</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span>, model_type<span class="op">=</span><span class="st">"classification"</span>, crossval<span class="op">=</span><span class="va">cval</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">run_searchlight</span><span class="op">(</span><span class="va">mspec</span>, radius<span class="op">=</span><span class="fl">8</span>, method<span class="op">=</span><span class="st">"standard"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:13] model is: sda_notune</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:13] running standard searchlight with 8 radius </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:13] creating standard searchlight</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:13] running standard searchlight iterator</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:13] mvpa_iterate: compute analysis for batch 1 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:14] mvpa_iterate: compute analysis for batch 2 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:14] mvpa_iterate: compute analysis for batch 3 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:14] mvpa_iterate: compute analysis for batch 4 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:15] mvpa_iterate: compute analysis for batch 5 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:15] mvpa_iterate: compute analysis for batch 6 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:16] mvpa_iterate: compute analysis for batch 7 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:16] mvpa_iterate: compute analysis for batch 8 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:17] mvpa_iterate: compute analysis for batch 9 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:17] mvpa_iterate: compute analysis for batch 10 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:18] mvpa_iterate: compute analysis for batch 11 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:18] mvpa_iterate: compute analysis for batch 12 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-22 15:32:19] mvpa_iterate: compute analysis for batch 13 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:56] model is: sda_notune</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:56] running standard searchlight with 8 radius </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:56] creating standard searchlight</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:56] running standard searchlight iterator</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:56] mvpa_iterate: compute analysis for batch 1 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:57] mvpa_iterate: compute analysis for batch 2 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:57] mvpa_iterate: compute analysis for batch 3 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:57] mvpa_iterate: compute analysis for batch 4 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:58] mvpa_iterate: compute analysis for batch 5 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:58] mvpa_iterate: compute analysis for batch 6 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:59] mvpa_iterate: compute analysis for batch 7 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:39:59] mvpa_iterate: compute analysis for batch 8 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:40:00] mvpa_iterate: compute analysis for batch 9 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:40:00] mvpa_iterate: compute analysis for batch 10 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:40:00] mvpa_iterate: compute analysis for batch 11 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:40:01] mvpa_iterate: compute analysis for batch 12 ...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2024-04-23 13:40:01] mvpa_iterate: compute analysis for batch 13 ...</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A custom "combiner" can be used to post-process the output of the searchlight classifier for special cases.</span></span></span>
 <span class="r-in"><span><span class="co"># In the example below, the supplied "combining function" extracts the predicted probability of the correct class </span></span></span>
