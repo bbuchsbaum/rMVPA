@@ -101,6 +101,18 @@ robustmahadist <- function(labels=NULL) {
   create_dist("robustmahadist", labels)
 }
 
+#' @rdname distance-constructors
+pcadist <- function(labels=NULL, ncomp=2, whiten=TRUE, threshfun=NULL, dist_method=c("euclidean", "manhattan", "cosine")) {
+  dist_method <- match.arg(dist_method)
+  if (is.null(threshfun)) {
+    threshfun <- function(x) ncomp
+  } else{
+    stopifnot(is.function(threshfun))
+  }
+  
+  create_dist("pcadist", labels, whiten=whiten, threshfun=threshfun, dist_method=dist_method)
+}
+
 
 
 #' Compute Pairwise Correlation Distances
@@ -187,6 +199,27 @@ pairwise_dist.mahalanobis <- function(obj, X) {
   sqrt(dist_matrix_sq) # Computing the square root of the squared distances
 }
 
+#' @export
+pairwise_dist.pcadist <- function(obj, X) {
+  pres <- prcomp(X, center = TRUE, scale = TRUE)
+  ncomp <- obj$threshfun(pres$sdev^2)
+  if (ncomp < 1) {
+    ncomp <- 1
+    warning("Number of components set to 1, as threshold function returned a value less than 1.")
+  }
+  
+  if (obj$whiten) {
+    x <- pres$x[, 1:ncomp, drop=FALSE] %*% diag(x=1 / pres$sdev[1:ncomp], nrow=ncomp, ncol=ncomp)
+  } else {
+    x <- pres$x[, 1:ncomp, drop=FALSE]
+  }
+  if (obj$dist_method  %in% c("euclidean", "manhattan")) {
+    dist_matrix <- as.matrix(dist(x, method=obj$dist_method))
+  } else if (obj$dist_method == "cosine") {
+    as.matrix(proxy::dist(x, method="cosine"))
+  }
+}
+
 
 #' Compute Pairwise Robust Mahalanobis Distances
 #'
@@ -220,7 +253,7 @@ pairwise_dist.robustmahadist <- function(obj, X) {
     }
   }
   
-  sqrt(dist_matrix)
+  dist_matrix
 }
 
 

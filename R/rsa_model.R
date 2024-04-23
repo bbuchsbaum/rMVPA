@@ -159,6 +159,7 @@ rsa_model_mat <- function(rsa_des) {
 #' @export
 rsa_model <- function(dataset, design) {
   assert_that(inherits(dataset, "mvpa_dataset"))
+  assert_that(inherits(design, "rsa_design"))
   
   # Create an RSA model object with the dataset and design
   structure(list(dataset = dataset,

@@ -2,7 +2,7 @@
 #'
 #' This function constructs a design for an RSA model using a single distance matrix, labels, and blocks.
 #'
-#' @param D A representational disssimilarity matrix with row.names indicating labels.
+#' @param D A representational dissimilarity matrix with row.names indicating labels.
 #' @param labels character vector of labels corresponding to rows in another dataset X.
 #' @param block_var vector indicating the block (strata) each label belongs to.
 #' @return A list containing the elements of the RSA design, class attributes "vector_rsa_design" and "list".
@@ -77,6 +77,7 @@ vector_rsa_model_mat <- function(design) {
 #' @param dataset An \code{mvpa_dataset}  object.
 #' @param design A vector_rsa_design object.
 #' @param distfun an object of \code{distfun} type for computation of pairwise dissimilarities among image rows
+#' @param rsa_simfun a character string specifying the similarity function to use for RSA
 #' @return An object representing the RSA model, which includes both the design and precomputed data.
 #' @details Integrates RSA design and precomputed data to facilitate efficient RSA computations. 
 #' It directly incorporates precomputations for cross-block comparisons.
@@ -175,6 +176,7 @@ vector_rsa_iterate <- function(mod_spec, vox_list, ids = seq_along(vox_list),  p
 #' @param sf A tibble containing the data sets and their identifiers.
 #' @param method Method for computing similarities.
 #' @return A combined result of all RSA analyses.
+#' @noRd
 fut_vector_rsa <- function(mod_spec, sf, ...) {
   gc()
   sf %>% furrr::future_pmap(function(sample, rnum, .id) {
@@ -183,7 +185,7 @@ fut_vector_rsa <- function(mod_spec, sf, ...) {
    
 }
 
-
+#' @noRd
 compute_trial_scores <- function(obj, X) {
   
   # Retrieve precomputed data

@@ -106,7 +106,6 @@ create_result_tibble <- function(cres, ind, mspec, id, result, compute_performan
 #'
 #' @return A tibble with performance metrics, fitted model (optional), and any warnings or errors.
 #' @export
-
 external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
   # Prepare the training data
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
@@ -172,10 +171,7 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 }
 
 
-
-
-
-
+#' @noRd
 internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
   # Generate cross-validation samples
   # Note: This step could potentially be moved outside the function

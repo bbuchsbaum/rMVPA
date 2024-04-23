@@ -17,6 +17,8 @@ vector_rsa_model(
 \item{design}{A vector_rsa_design object.}
 
 \item{distfun}{an object of \code{distfun} type for computation of pairwise dissimilarities among image rows}
+
+\item{rsa_simfun}{a character string specifying the similarity function to use for RSA}
 }
 \value{
 An object representing the RSA model, which includes both the design and precomputed data.

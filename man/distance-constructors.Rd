@@ -5,6 +5,7 @@
 \alias{mahadist}
 \alias{eucdist}
 \alias{robustmahadist}
+\alias{pcadist}
 \title{Distance Function Constructors}
 \usage{
 cordist(labels = NULL, method = c("pearson", "spearman"))
@@ -14,6 +15,14 @@ mahadist(labels = NULL)
 eucdist(labels = NULL)
 
 robustmahadist(labels = NULL)
+
+pcadist(
+  labels = NULL,
+  ncomp = 2,
+  whiten = TRUE,
+  threshfun = NULL,
+  dist_method = c("euclidean", "manhattan", "cosine")
+)
 }
 \arguments{
 \item{labels}{A vector of labels associated with the data points.}

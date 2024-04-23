@@ -7,7 +7,7 @@
 vector_rsa_design(D, labels, block_var)
 }
 \arguments{
-\item{D}{A representational disssimilarity matrix with row.names indicating labels.}
+\item{D}{A representational dissimilarity matrix with row.names indicating labels.}
 
 \item{labels}{character vector of labels corresponding to rows in another dataset X.}
 
