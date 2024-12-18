@@ -7,13 +7,13 @@
 get_searchlight(obj, ...)
 }
 \arguments{
-\item{obj}{The input dataset object, which should be an instance of a data class compatible with searchlight analysis.}
+\item{obj}{The input dataset object.}
 
-\item{...}{Additional arguments to be passed to the specific searchlight iterator method for the input object's class.}
+\item{...}{Additional arguments to methods.}
 }
 \value{
-A searchlight iterator object that can be used to perform searchlight analysis on the input dataset.
+A searchlight iterator object.
 }
 \description{
-This function generates a searchlight iterator suitable for a given input dataset, such as volumetric or surface data.
+Generate a searchlight iterator suitable for given data.
 }

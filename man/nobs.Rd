@@ -7,11 +7,11 @@
 nobs(x)
 }
 \arguments{
-\item{x}{The input object, which can be of different types, such as a data frame, matrix, or a custom object with a defined `nobs` method.}
+\item{x}{The input object.}
 }
 \value{
-The number of observations in the input object. Depending on the object type, this could be the number of rows or elements.
+The number of observations.
 }
 \description{
-This function retrieves the number of observations from a given object.
+Retrieve the number of observations in an object.
 }

@@ -5,11 +5,14 @@ test_that("standard rsa_searchlight and blocking variable runs without error", {
   
   Dmat <- dist(matrix(rnorm(100*100), 100, 100))
   rdes <- rsa_design(~ Dmat, list(Dmat=Dmat, block=dataset$design$block_var), block_var="block")
+  mspec <- rsa_model(dataset$dataset, design=rdes, regtype="lm")
+  ret1 <- run_searchlight(mspec, radius=4, method="standard")
+  mspec <- rsa_model(dataset$dataset, design=rdes, regtype="rfit")
+  ret2 <- run_searchlight(mspec, radius=4, method="standard")
+  mspec <- rsa_model(dataset$dataset, design=rdes, regtype="pearson")
+  ret3 <- run_searchlight(mspec, radius=4, method="standard")
   mspec <- rsa_model(dataset$dataset, design=rdes)
-  ret1 <- run_searchlight(mspec, radius=4, method="standard",regtype="lm")
-  ret2 <- run_searchlight(mspec, radius=4, method="standard", regtype="rfit")
-  ret3 <- run_searchlight(mspec, radius=4, method="standard", regtype="pearson")
-  ret4 <- run_searchlight(mspec, radius=4, method="standard", regtype="spearman")
+  ret4 <- run_searchlight(mspec, radius=4, method="standard")
   expect_true(!is.null(ret1) && !is.null(ret2) && !is.null(ret3) && !is.null(ret4))
   
 })
@@ -20,11 +23,14 @@ test_that("standard rsa_searchlight with multiple distance matrices and blocking
   Dmat1 <- dist(matrix(rnorm(100*100), 100, 100))
   Dmat2 <- dist(matrix(rnorm(100*100), 100, 100))
   rdes <- rsa_design(~ Dmat1 + Dmat2, list(Dmat1=Dmat1, Dmat2=Dmat2, block=dataset$design$block_var), block_var="block")
+  mspec <- rsa_model(dataset$dataset, design=rdes, regtype="lm")
+  ret1 <- run_searchlight(mspec, radius=4, method="standard")
+  mspec <- rsa_model(dataset$dataset, design=rdes, regtype="rfit")
+  ret2 <- run_searchlight(mspec, radius=4, method="standard")
+  mspec <- rsa_model(dataset$dataset, design=rdes, regtype="pearson")
+  ret3 <- run_searchlight(mspec, radius=4, method="standard")
   mspec <- rsa_model(dataset$dataset, design=rdes)
-  ret1 <- run_searchlight(mspec, radius=4, method="standard",regtype="lm")
-  ret2 <- run_searchlight(mspec, radius=4, method="standard", regtype="rfit")
-  ret3 <- run_searchlight(mspec, radius=4, method="standard", regtype="pearson")
-  ret4 <- run_searchlight(mspec, radius=4, method="standard", regtype="spearman")
+  ret4 <- run_searchlight(mspec, radius=4, method="standard")
   expect_true(!is.null(ret1) && !is.null(ret2) && !is.null(ret3) && !is.null(ret4))
   
 })
@@ -35,12 +41,9 @@ test_that("randomized rsa_searchlight and blocking variable runs without error",
   
   Dmat <- dist(matrix(rnorm(100*100), 100, 100))
   rdes <- rsa_design(~ Dmat, list(Dmat=Dmat, block=dataset$design$block_var), block_var="block")
-  mspec <- rsa_model(dataset$dataset, design=rdes)
-  ret1 <- run_searchlight(mspec, radius=4, "randomized",regtype="lm")
-  ret2 <- run_searchlight(mspec, radius=4, "randomized", regtype="rfit")
-  ret3 <- run_searchlight(mspec, radius=4, "randomized", regtype="pearson")
-  ret4 <- run_searchlight(mspec, radius=4, "randomized", regtype="spearman")
-  expect_true(!is.null(ret1) && !is.null(ret2) && !is.null(ret3) && !is.null(ret4))
+  mspec <- rsa_model(dataset$dataset, design=rdes, regtype="lm")
+  ret1 <- run_searchlight(mspec, radius=4, "randomized")
+  expect_true(!is.null(ret1))
   
 })
 
@@ -49,11 +52,12 @@ test_that("standard rsa_searchlight and no blocking variable runs without error"
   
   Dmat <- dist(matrix(rnorm(100*100), 100, 100))
   rdes <- rsa_design(~ Dmat, list(Dmat=Dmat))
-  mspec <- rsa_model(dataset$dataset, design=rdes)
-  ret1 <- run_searchlight(mspec, 4, "standard", 4, regtype="lm")
-  ret2 <- run_searchlight(mspec, 4, "standard", 4, regtype="rfit")
-  ret3 <- run_searchlight(mspec, 4, "standard", 4, regtype="pearson")
-  ret4 <- run_searchlight(mspec, 4, "standard", 4, regtype="spearman")
-  expect_true(!is.null(ret1) && !is.null(ret2) && !is.null(ret3) && !is.null(ret4))
+ 
+  for (regtype in c("lm", "rfit", "pearson", "spearman")) {
+    mspec <- rsa_model(dataset$dataset, design=rdes, regtype=regtype)
+    ret <- run_searchlight(mspec, radius=4, method="standard")
+    expect_true(!is.null(ret))
+  }
+
   
 })

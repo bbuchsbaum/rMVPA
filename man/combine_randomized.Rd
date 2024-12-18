@@ -4,7 +4,7 @@
 \alias{combine_randomized}
 \title{Combine randomized classifier results}
 \usage{
-combine_randomized(model_spec, good_results, bad_results)
+combine_randomized(model_spec, good_results, bad_results = NULL)
 }
 \arguments{
 \item{model_spec}{A list containing the model specification.}

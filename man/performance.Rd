@@ -2,18 +2,18 @@
 % Please edit documentation in R/allgeneric.R
 \name{performance}
 \alias{performance}
-\title{Compute Performance Metrics for Classification/Regression Results}
+\title{Compute Performance Metrics}
 \usage{
 performance(x, ...)
 }
 \arguments{
 \item{x}{The classification/regression result object to evaluate.}
 
-\item{...}{Additional arguments passed on to the specific performance evaluation method.}
+\item{...}{Additional arguments passed to method-specific performance functions.}
 }
 \value{
-A list of performance metrics for the input classification/regression result object.
+A list of performance metrics.
 }
 \description{
-This function computes appropriate performance metrics (e.g., accuracy, AUC, RMSE) for a given classification/regression result.
+Compute performance metrics (accuracy, AUC, RMSE, etc.) for classification/regression results.
 }

@@ -139,7 +139,6 @@ sub_result.binary_classification_result <- function(x, indices) {
 #' @param test_design The test design (optional).
 #' @param predictor The predictor used in the multiway classification model (optional).
 #' @return A list with class attributes "multiway_classification_result", "classification_result", and "list" containing the observed and predicted values, class probabilities, test design, test indices, and predictor.
-#' @inheritParams classification_result
 #' @family classification_result
 multiway_classification_result <- function(observed, predicted, probs,testind=NULL, test_design=NULL, predictor=NULL) {
   assertthat::assert_that(length(observed) == length(predicted))
@@ -176,5 +175,140 @@ regression_result <- function(observed, predicted, testind=NULL, test_design=NUL
     predictor=predictor)
   class(ret) <- c("regression_result", "classification_result", "list")
   ret
+}
+
+#' @export
+#' @method print classification_result
+print.classification_result <- function(x, ...) {
+  UseMethod("print")
+}
+
+#' @export
+#' @method print regression_result
+print.regression_result <- function(x, ...) {
+  # Ensure crayon is available
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty printing. Please install it.")
+  }
+  
+  # Define color scheme
+  header_style <- crayon::bold$cyan
+  section_style <- crayon::yellow
+  info_style <- crayon::white
+  number_style <- crayon::green
+  stat_style <- crayon::italic$blue
+  
+  # Print header
+  cat("\n", header_style("█▀▀ Regression Result ▀▀█"), "\n\n")
+  
+  # Basic information
+  cat(section_style("├─ Data Summary"), "\n")
+  cat(info_style("│  ├─ Observations: "), number_style(length(x$observed)), "\n")
+  cat(info_style("│  ├─ Test Indices: "), 
+      if(!is.null(x$testind)) number_style(length(x$testind)) else crayon::red("None"), "\n")
+  
+  # Performance metrics
+  cat(section_style("└─ Performance Metrics"), "\n")
+  mse <- mean((x$observed - x$predicted)^2)
+  rmse <- sqrt(mse)
+  r2 <- cor(x$observed, x$predicted)^2
+  mae <- mean(abs(x$observed - x$predicted))
+  
+  cat(info_style("   ├─ MSE: "), number_style(sprintf("%.4f", mse)), "\n")
+  cat(info_style("   ├─ RMSE: "), number_style(sprintf("%.4f", rmse)), "\n")
+  cat(info_style("   ├─ MAE: "), number_style(sprintf("%.4f", mae)), "\n")
+  cat(info_style("   └─ R²: "), number_style(sprintf("%.4f", r2)), "\n\n")
+}
+
+#' @export
+#' @method print binary_classification_result
+print.binary_classification_result <- function(x, ...) {
+  # Ensure crayon is available
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty printing. Please install it.")
+  }
+  
+  # Define color scheme
+  header_style <- crayon::bold$cyan
+  section_style <- crayon::yellow
+  info_style <- crayon::white
+  number_style <- crayon::green
+  level_style <- crayon::blue
+  
+  # Print header
+  cat("\n", header_style("█▀▀ Binary Classification Result ▀▀█"), "\n\n")
+  
+  # Basic information
+  cat(section_style("├─ Data Summary"), "\n")
+  cat(info_style("│  ├─ Observations: "), number_style(length(x$observed)), "\n")
+  cat(info_style("│  ├─ Classes: "), level_style(paste(levels(x$observed), collapse=", ")), "\n")
+  cat(info_style("│  └─ Test Indices: "), 
+      if(!is.null(x$testind)) number_style(length(x$testind)) else crayon::red("None"), "\n")
+  
+  # Performance metrics
+  cat(section_style("└─ Performance Metrics"), "\n")
+  conf_mat <- table(Observed=x$observed, Predicted=x$predicted)
+  accuracy <- sum(diag(conf_mat)) / sum(conf_mat)
+  sensitivity <- conf_mat[2,2] / sum(conf_mat[2,])
+  specificity <- conf_mat[1,1] / sum(conf_mat[1,])
+  
+  cat(info_style("   ├─ Accuracy: "), number_style(sprintf("%.4f", accuracy)), "\n")
+  cat(info_style("   ├─ Sensitivity: "), number_style(sprintf("%.4f", sensitivity)), "\n")
+  cat(info_style("   └─ Specificity: "), number_style(sprintf("%.4f", specificity)), "\n\n")
+}
+
+#' @export
+#' @method print multiway_classification_result
+print.multiway_classification_result <- function(x, ...) {
+  # Ensure crayon is available
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty printing. Please install it.")
+  }
+  
+  # Define color scheme
+  header_style <- crayon::bold$cyan
+  section_style <- crayon::yellow
+  info_style <- crayon::white
+  number_style <- crayon::green
+  level_style <- crayon::blue
+  
+  # Print header
+  cat("\n", header_style("█▀▀ Multiway Classification Result ▀▀█"), "\n\n")
+  
+  # Basic information
+  cat(section_style("├─ Data Summary"), "\n")
+  cat(info_style("│  ├─ Observations: "), number_style(length(x$observed)), "\n")
+  cat(info_style("│  ├─ Number of Classes: "), number_style(length(levels(x$observed))), "\n")
+  cat(info_style("│  ├─ Classes: "), level_style(paste(levels(x$observed), collapse=", ")), "\n")
+  cat(info_style("│  └─ Test Indices: "), 
+      if(!is.null(x$testind)) number_style(length(x$testind)) else crayon::red("None"), "\n")
+  
+  # Performance metrics
+  cat(section_style("└─ Performance Metrics"), "\n")
+  conf_mat <- table(Observed=x$observed, Predicted=x$predicted)
+  accuracy <- sum(diag(conf_mat)) / sum(conf_mat)
+  
+  # Calculate per-class metrics
+  class_metrics <- lapply(levels(x$observed), function(cls) {
+    tp <- sum(x$observed == cls & x$predicted == cls)
+    total <- sum(x$observed == cls)
+    recall <- tp / total
+    precision <- tp / sum(x$predicted == cls)
+    f1 <- 2 * (precision * recall) / (precision + recall)
+    c(recall=recall, precision=precision, f1=f1)
+  })
+  names(class_metrics) <- levels(x$observed)
+  
+  cat(info_style("   ├─ Overall Accuracy: "), number_style(sprintf("%.4f", accuracy)), "\n")
+  cat(info_style("   └─ Per-Class Metrics:"), "\n")
+  
+  for(cls in levels(x$observed)) {
+    metrics <- class_metrics[[cls]]
+    cat(info_style("      ├─ "), level_style(cls), ":\n")
+    cat(info_style("      │  ├─ Recall: "), number_style(sprintf("%.4f", metrics["recall"])), "\n")
+    cat(info_style("      │  ├─ Precision: "), number_style(sprintf("%.4f", metrics["precision"])), "\n")
+    cat(info_style("      │  └─ F1: "), number_style(sprintf("%.4f", metrics["f1"])), "\n")
+  }
+  cat("\n")
 }
 

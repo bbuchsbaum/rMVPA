@@ -1,4 +1,33 @@
 
+
+#' @noRd
+#' @keywords internal
+check_len <- function(y, block_var) {
+  futile.logger::flog.debug("Checking length of y and block_var")
+  futile.logger::flog.debug("y: %s", paste(dim(y), collapse=" x "))
+  futile.logger::flog.debug("block_var: %s", length(block_var))
+  if (is.vector(y)) {
+    if (!length(block_var) == length(y)) {
+      stop("length of `block_var` must be equal to length(y)", call. = FALSE)
+    }
+  } else if (is.matrix(y)) {
+    if (!nrow(y) == length(block_var)) {
+      stop("number of rows in `y` must be equal to length(block_var)", call. = FALSE)
+    }
+  }
+}
+
+
+#' @noRd
+#' @keywords internal
+subset_y <- function(y, idx) {
+  if (is.vector(y) || is.factor(y)) {
+    y[idx]
+  } else if (is.matrix(y)) {
+    y[idx,,drop=FALSE]
+  }
+}
+
 #' K-fold Cross-Validation Data Preparation
 #'
 #' This function prepares the data for k-fold cross-validation by dividing the
@@ -21,6 +50,7 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
     stop("`k` must be a single integer.", call. = FALSE)
   }
   
+  
   n <- nrow(data)
   folds <- sample(rep(1:k, length.out = n))
   
@@ -30,17 +60,18 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
   fold <- function(test) {
     tidx <- setdiff(idx, test)
     list(
-      ytrain = y[tidx],
-      ytest = y[test],
+      ytrain = subset_y(y, tidx),
+      ytest = subset_y(y, test),
       train = modelr::resample(data, setdiff(idx, test)),
       test = modelr::resample(data, test)
     )
   }
   
+  
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
   cols[[id]] <- gen_id(k)
   
-  tibble::as_tibble(cols, .name_repair = .name_repair)
+  tibble::as_tibble(cols, .name_repair = "unique")
 }
 
 #' Repeated Two-Fold Cross-Validation Data Preparation
@@ -65,13 +96,11 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
 #' @noRd
 crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps=15) {
   ## every time this is called, it regenerates new indices
-  
   if (nreps < 2) {
     stop("'nreps' must be at least 2")
   }
-  if (!length(block_var) == length(y)) {
-    stop("length of `block_var` must be equal to length(y)", call. = FALSE)
-  }
+  
+  check_len(y, block_var)
   
   if (is.null(block_ind)) {
     block_ind <- seq(1, length(sort(unique(block_var))))
@@ -97,8 +126,8 @@ crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps
   fold <- function(test) {
     tidx <- setdiff(idx, test)
     list(
-      ytrain = y[tidx],
-      ytest = y[test],
+      ytrain = subset_y(y, tidx),
+      ytest = subset_y(y, test),
       train = modelr::resample(data, tidx),
       test = modelr::resample(data, test)
     )
@@ -110,7 +139,7 @@ crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
   cols[[id]] <-gen_id(length(fold_idx))
   
-  tibble::as_tibble(cols, .name_repair = .name_repair)
+  tibble::as_tibble(cols, .name_repair = "unique")
   
   
 }
@@ -135,9 +164,7 @@ crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps
 #' @export
 crossv_block <- function(data, y, block_var, id = ".id") {
  
-  if (!length(block_var) == length(y)) {
-    stop("length of `block_var` must be equal to length(y)", call. = FALSE)
-  }
+  check_len(y, block_var)
   
   idx <- seq_len(nrow(data))
   fold_idx <- split(idx, block_var)
@@ -146,8 +173,8 @@ crossv_block <- function(data, y, block_var, id = ".id") {
   fold <- function(test) {
     tidx <- setdiff(idx, test)
     list(
-      ytrain = y[tidx],
-      ytest = y[test],
+      ytrain = subset_y(y, tidx),
+      ytest = subset_y(y, test),
       train = modelr::resample(data, tidx),
       test = modelr::resample(data, test)
     )
@@ -156,7 +183,7 @@ crossv_block <- function(data, y, block_var, id = ".id") {
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
   cols[[id]] <- gen_id(length(fold_idx))
   
-  tibble::as_tibble(cols, .name_repair = .name_repair)
+  tibble::as_tibble(cols, .name_repair = "unique")
 }
 
 #' Block Bootstrap Cross-Validation Data Preparation
@@ -185,10 +212,7 @@ crossv_block <- function(data, y, block_var, id = ".id") {
 #'
 #' @keywords internal
 crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weights=NULL) {
-  
-  if (!length(block_var) == length(y)) {
-    stop("length of `block_var` must be equal to length(y)", call. = FALSE)
-  }
+  check_len(y, block_var)
   
   idx <- seq_len(nrow(data))
   block_idx <- split(idx, block_var)
@@ -217,8 +241,8 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weig
   
   fold <- function(tidx, block) {
     list(
-      ytrain = y[tidx],
-      ytest = y[block_idx[[block]]],
+      ytrain = subset_y(y, tidx),
+      ytest = subset_y(y, block_idx[[block]]),
       train = modelr::resample(data, tidx),
       test = modelr::resample(data, block_idx[[block]])
     )
@@ -233,7 +257,7 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weig
   cols <- purrr::transpose(cols)
   cols[[id]] <- gen_id(nreps * length(block_idx))
   
-  tibble::as_tibble(cols, .name_repair = .name_repair)
+  tibble::as_tibble(cols, .name_repair = "unique")
 }
 
 #' Sequential Block Cross-Validation Data Preparation
@@ -266,10 +290,7 @@ crossv_bootstrap_block <- function(data, y, block_var, nreps=5, id = ".id", weig
 #' cv <- crossv_seq_block(X,y,2, block_var)
 #' @noRd
 crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NULL, id = ".id") {
-  
-  if (!length(block_var) == length(y)) {
-    stop("length of `block_var` must be equal to length(y)", call. = FALSE)
-  }
+  check_len(y, block_var)
   
   idx <- seq_len(nrow(data))
   block_idx <- split(idx, block_var)
@@ -293,8 +314,8 @@ crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NU
   fold <- function(test) {
     tidx <- setdiff(idx, test)
     list(
-      ytrain = y[tidx],
-      ytest = y[test],
+      ytrain = subset_y(y, tidx),
+      ytest = subset_y(y, test),
       train = modelr::resample(data, tidx),
       test = modelr::resample(data, test)
     )
@@ -303,7 +324,7 @@ crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NU
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
   cols[[id]] <- gen_id(length(fold_idx))
   
-  tibble::as_tibble(cols, .name_repair = .name_repair)
+  tibble::as_tibble(cols, .name_repair = "unique")
 
 }
 
@@ -339,7 +360,6 @@ crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NU
 #' @rdname cross_validation
 #' @export
 bootstrap_blocked_cross_validation <- function(block_var, nreps=10, weights=NULL) {
-  
   if (!is.null(weights)) {
     assert_that(length(weights) == length(block_var))
     assert_that(all(weights >= 0))  
@@ -516,7 +536,7 @@ kfold_cross_validation <- function(len, nfolds=10) {
 # }
 
 #' @export
-crossval_samples.sequential_blocked_cross_validation <- function(obj, data,y,...) { 
+crossval_samples.sequential_blocked_cross_validation <- function(obj, data, y,...) { 
   crossv_seq_block(data, y, nfolds=obj$nfolds, block_var=obj$block_var, nreps=obj$nreps, block_ind=obj$block_ind)
 }
 
@@ -550,7 +570,7 @@ crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id",..
   cols <- purrr::transpose(purrr::map(obj$sample_set, function(el) fold(el$train, el$test)))
   cols[[id]] <- gen_id(length(obj$sample_set))
   
-  tibble::as_tibble(cols, .name_repair = .name_repair)
+  tibble::as_tibble(cols, .name_repair = "unique")
 }
 
 #' @export
@@ -561,46 +581,160 @@ crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y,...) 
 
 #' @export
 #' @method print blocked_cross_validation
-print.blocked_cross_validation <- function(x,...) {
-  cat("cross-validation: blocked \n")
-  cat("  nobservations: ", length(x$block_var), "\n")
-  cat("  nfolds: ", x$nfolds, "\n")
-  cat("  block sizes: ", table(x$block_var), "\n")
+print.blocked_cross_validation <- function(x, ...) {
+  # Ensure crayon is available
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty printing. Please install it.")
+  }
+  
+  # Define color scheme
+  header_style <- crayon::bold$cyan
+  section_style <- crayon::yellow
+  info_style <- crayon::white
+  number_style <- crayon::green
+  stat_style <- crayon::italic$blue
+  
+  # Print header
+  cat("\n", header_style("█▀▀ Blocked Cross-Validation ▀▀█"), "\n\n")
+  
+  # Basic information
+  cat(section_style("├─ Dataset Information"), "\n")
+  cat(info_style("│  ├─ Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
+  cat(info_style("│  └─ Number of Folds: "), number_style(x$nfolds), "\n")
+  
+  # Block statistics
+  block_sizes <- table(x$block_var)
+  cat(section_style("└─ Block Information"), "\n")
+  cat(info_style("   ├─ Total Blocks: "), number_style(length(block_sizes)), "\n")
+  cat(info_style("   ├─ Mean Block Size: "), 
+      number_style(format(mean(block_sizes), digits=2)), 
+      stat_style(" (SD: "), 
+      number_style(format(sd(block_sizes), digits=2)),
+      stat_style(")"), "\n")
+  cat(info_style("   └─ Block Sizes: "), 
+      number_style(paste0(names(block_sizes), ": ", block_sizes, collapse=", ")), "\n\n")
 }
 
 #' @export
 #' @method print twofold_blocked_cross_validation
-print.twofold_blocked_cross_validation <- function(x,...) {
-  cat("twofold cross-validation: blocked \n")
-  cat("  nobservations: ", length(x$block_var), "\n")
-  cat("  nreps: ", x$nreps, "\n")
-  cat("  block sizes: ", table(x$block_var), "\n")
+print.twofold_blocked_cross_validation <- function(x, ...) {
+  # Ensure crayon is available
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty printing. Please install it.")
+  }
+  
+  # Define color scheme
+  header_style <- crayon::bold$cyan
+  section_style <- crayon::yellow
+  info_style <- crayon::white
+  number_style <- crayon::green
+  stat_style <- crayon::italic$blue
+  
+  # Print header
+  cat("\n", header_style("█▀▀ Two-Fold Blocked Cross-Validation ▀▀█"), "\n\n")
+  
+  # Basic information
+  cat(section_style("├─ Configuration"), "\n")
+  cat(info_style("│  ├─ Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
+  cat(info_style("│  ├─ Number of Folds: "), number_style("2"), "\n")
+  cat(info_style("│  └─ Repetitions: "), number_style(x$nreps), "\n")
+  
+  # Block statistics
+  block_sizes <- table(x$block_var)
+  cat(section_style("└─ Block Information"), "\n")
+  cat(info_style("   ├─ Total Blocks: "), number_style(length(block_sizes)), "\n")
+  cat(info_style("   ├─ Mean Block Size: "), 
+      number_style(format(mean(block_sizes), digits=2)), 
+      stat_style(" (SD: "), 
+      number_style(format(sd(block_sizes), digits=2)),
+      stat_style(")"), "\n")
+  cat(info_style("   └─ Block Sizes: "), 
+      number_style(paste0(names(block_sizes), ": ", block_sizes, collapse=", ")), "\n\n")
 }
 
 #' @export
 #' @method print bootstrap_blocked_cross_validation
-print.bootstrap_blocked_cross_validation <- function(x,...) {
-  cat("cross-validation: bootstrap blocked \n")
-  cat("  n observations: ", length(x$block_var), "\n")
-  cat("  n bootstrap reps: ", x$nreps, "\n")
-  cat("  block sizes: ", table(x$block_var), "\n")
+print.bootstrap_blocked_cross_validation <- function(x, ...) {
+  # Ensure crayon is available
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty printing. Please install it.")
+  }
+  
+  # Define color scheme
+  header_style <- crayon::bold$cyan
+  section_style <- crayon::yellow
+  info_style <- crayon::white
+  number_style <- crayon::green
+  stat_style <- crayon::italic$blue
+  
+  # Print header
+  cat("\n", header_style("█▀▀ Bootstrap Blocked Cross-Validation ▀▀█"), "\n\n")
+  
+  # Basic information
+  cat(section_style("├─ Configuration"), "\n")
+  cat(info_style("│  ├─ Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
+  cat(info_style("│  └─ Bootstrap Repetitions: "), number_style(x$nreps), "\n")
+  
+  # Block statistics
+  block_sizes <- table(x$block_var)
+  cat(section_style("├─ Block Information"), "\n")
+  cat(info_style("│  ├─ Total Blocks: "), number_style(length(block_sizes)), "\n")
+  cat(info_style("│  ├─ Mean Block Size: "), 
+      number_style(format(mean(block_sizes), digits=2)), 
+      stat_style(" (SD: "), 
+      number_style(format(sd(block_sizes), digits=2)),
+      stat_style(")"), "\n")
+  cat(info_style("│  └─ Block Sizes: "), 
+      number_style(paste0(names(block_sizes), ": ", block_sizes, collapse=", ")), "\n")
+  
+  # Weight information if present
+  cat(section_style("└─ Sampling Weights"), "\n")
+  if (!is.null(x$weights)) {
+    cat(info_style("   ├─ Status: "), crayon::green("Present"), "\n")
+    cat(info_style("   ├─ Range: "), 
+        number_style(sprintf("[%.3f, %.3f]", min(x$weights), max(x$weights))), "\n")
+    cat(info_style("   └─ Non-zero Weights: "), 
+        number_style(sum(x$weights > 0)), 
+        stat_style(" ("), 
+        number_style(sprintf("%.1f%%", 100*mean(x$weights > 0))),
+        stat_style(")"), "\n\n")
+  } else {
+    cat(info_style("   └─ Status: "), crayon::red("None"), " (uniform sampling)\n\n")
+  }
 }
-
-
-#' @export
-#' @method print twofold_cross_validation
-print.twofold_cross_validation <- function(x,...) {
-  cat("cross-validation: repeated two-fold \n")
-  cat("  nobservations: ", length(x$block_var))
-  cat("  nfolds: ", 2, "\n")
-  cat("  nreps: ", x$nreps, "\n")
-}
-
 
 #' @export
 #' @method print kfold_cross_validation
-print.kfold_cross_validation <- function(x,...) {
-  cat("cross-validation: k fold \n")
-  cat("  nobservations: ", length(x$block_var), "\n")
-  cat("  nfolds: ", x$nfolds, "\n")
+print.kfold_cross_validation <- function(x, ...) {
+  # Ensure crayon is available
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty printing. Please install it.")
+  }
+  
+  # Define color scheme
+  header_style <- crayon::bold$cyan
+  section_style <- crayon::yellow
+  info_style <- crayon::white
+  number_style <- crayon::green
+  stat_style <- crayon::italic$blue
+  
+  # Print header
+  cat("\n", header_style("█▀▀ K-Fold Cross-Validation ▀▀█"), "\n\n")
+  
+  # Basic information
+  cat(section_style("├─ Configuration"), "\n")
+  cat(info_style("│  ├─ Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
+  cat(info_style("│  ├─ Number of Folds: "), number_style(x$nfolds), "\n")
+  
+  # Fold statistics
+  fold_sizes <- table(x$block_var)
+  cat(section_style("└─ Fold Information"), "\n")
+  cat(info_style("   ├─ Mean Fold Size: "), 
+      number_style(format(mean(fold_sizes), digits=2)), 
+      stat_style(" (SD: "), 
+      number_style(format(sd(fold_sizes), digits=2)),
+      stat_style(")"), "\n")
+  cat(info_style("   └─ Fold Sizes: "), 
+      number_style(paste0("Fold ", names(fold_sizes), ": ", fold_sizes, collapse=", ")), 
+      "\n\n")
 }

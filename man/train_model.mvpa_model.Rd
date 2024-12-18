@@ -4,16 +4,7 @@
 \alias{train_model.mvpa_model}
 \title{Train an MVPA Model}
 \usage{
-\method{train_model}{mvpa_model}(
-  obj,
-  train_dat,
-  y,
-  indices,
-  param = NULL,
-  wts = NULL,
-  tune_reps = 10,
-  ...
-)
+\method{train_model}{mvpa_model}(obj, train_dat, y, indices, wts = NULL, ...)
 }
 \arguments{
 \item{obj}{An object of class \code{mvpa_model}, specifying the MVPA problem.}
@@ -24,11 +15,7 @@
 
 \item{indices}{The spatial indices associated with each column.}
 
-\item{param}{Optional tuning parameters (default: NULL). If not provided, the function will perform tuning using \code{tune_grid}.}
-
-\item{wts}{Optional case weights (default: NULL).}
-
-\item{tune_reps}{The number of bootstrap replications for parameter tuning (default: 10), only used when \code{param} is NULL.}
+\item{wts}{Optional class weights (if the underlying model supports it).}
 
 \item{...}{Additional arguments passed to other methods.}
 }

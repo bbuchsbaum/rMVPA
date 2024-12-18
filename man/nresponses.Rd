@@ -2,16 +2,16 @@
 % Please edit documentation in R/allgeneric.R
 \name{nresponses}
 \alias{nresponses}
-\title{Number of response categories}
+\title{Number of Response Categories}
 \usage{
 nresponses(x)
 }
 \arguments{
-\item{x}{The object from which to extract the number of response categories.}
+\item{x}{The object from which to extract the number of categories.}
 }
 \value{
-The number of response categories or category levels for the dependent variable.
+The number of response categories.
 }
 \description{
-Get the number of response categories or category levels for the dependent variable.
+Get the number of response categories or levels.
 }

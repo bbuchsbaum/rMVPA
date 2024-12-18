@@ -40,6 +40,7 @@ test_design.mvpa_design <- function(obj) {
 
 
 #' @keywords internal
+#' @noRd
 parse_variable <- function(var, design) {
   ret <- if (purrr::is_formula(var)) {
     vnames <- all.vars(var[[2]])
@@ -78,29 +79,64 @@ parse_variable <- function(var, design) {
 
 #' Create an MVPA Design Object
 #'
-#' Constructs an MVPA design object, defining the classification or regression problem for Multi-Variate Pattern Analysis (MVPA).
-#' It handles different configurations of input datasets, response variables, and optional parameters, such as blocking variables and group structures.
+#' Creates a design object for MVPA analysis that encapsulates training and testing designs,
+#' response variables, and optional blocking and splitting factors.
 #'
-#' @param train_design A \code{data.frame} containing the training variables.
-#' @param y_train A \code{formula}, \code{character} name, or \code{factor} specifying the response variable for training. Must have at least 2 levels with one or more training instances.
-#' @param test_design An optional \code{data.frame} containing the test variables. Must be provided if \code{y_test} is specified.
-#' @param y_test An optional \code{formula}, \code{character} name, or \code{factor} specifying the response variable for testing. Requires \code{test_design} to be provided.
-#' @param block_var An optional \code{formula}, \code{character} name, or \code{integer} vector specifying the blocking variable, used for repeated measures designs.
-#' @param split_by An optional \code{formula} indicating the grouping structure for evaluating test performance. Splitting condition must result in at least 3 observations per group.
+#' @param train_design A data frame containing the training design matrix
+#' @param test_design Optional data frame containing the test design matrix (default: NULL)
+#' @param y_train Formula or vector specifying the training response variable
+#' @param y_test Optional formula or vector specifying the test response variable (default: NULL)
+#' @param block_var Optional formula or vector specifying the blocking variable for cross-validation
+#' @param split_by Optional formula or vector for splitting analyses
+#' @param ... Additional arguments (currently unused)
 #'
-#' @return An object of class \code{mvpa_design}, containing the training and optional test design, response variables, blocking variable, and group structure.
+#' @return An \code{mvpa_design} object (S3 class) containing:
+#'   \describe{
+#'     \item{train_design}{Data frame of training design}
+#'     \item{test_design}{Data frame of test design (if provided)}
+#'     \item{y_train}{Training response variable}
+#'     \item{y_test}{Test response variable (if provided)}
+#'     \item{block_var}{Blocking variable for cross-validation (if provided)}
+#'     \item{split_by}{Splitting factor (if provided)}
+#'   }
+#'
+#' @details
+#' The \code{y_train} and \code{y_test} can be specified either as formulas (e.g., ~ condition) 
+#' or as vectors. If formulas are used, they are evaluated within the respective design matrices.
+#' 
+#' The \code{block_var} and \code{split_by} can also be specified as formulas or vectors. 
+#' If formulas, they are evaluated within the training design matrix.
 #'
 #' @examples
-#' df1 <- data.frame(y = rep(letters[1:4], 5), x1 = rnorm(20), x2 = rnorm(20), block = rep(1:4, each = 5))
-#' des <- mvpa_design(df1, ~ y, block_var = ~ block)
+#' # Basic design with only training data
+#' train_df <- data.frame(condition = rep(c("A", "B"), each = 50),
+#'                        block = rep(1:5, each = 20),
+#'                        group = rep(c("Group1", "Group2"), 50))
+#' design <- mvpa_design(train_df, y_train = ~ condition)
 #'
-#' ## With a test set
-#' testdes <- data.frame(y = sample(letters[1:4], 10))
-#' des <- mvpa_design(df1, ~ y, block_var = ~ block, test_design = testdes, y_test = ~ y)
+#' # Design with test data and blocking variable
+#' test_df <- data.frame(condition = rep(c("A", "B"), each = 25))
+#' design_with_test <- mvpa_design(
+#'   train_df, 
+#'   test_df, 
+#'   y_train = ~ condition, 
+#'   y_test = ~ condition,
+#'   block_var = ~ block
+#' )
 #'
+#' # Design with split_by factor
+#' design_split <- mvpa_design(
+#'   train_df, 
+#'   y_train = ~ condition,
+#'   split_by = ~ group
+#' )
+#'
+#' @seealso 
+#' \code{\link{mvpa_dataset}} for creating the corresponding dataset object
+#'
+#' @importFrom stats as.formula
 #' @export
-#' @importFrom futile.logger flog.warn
-mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, block_var=NULL, split_by=NULL) {
+mvpa_design <- function(train_design, test_design=NULL, y_train, y_test=NULL, block_var=NULL, split_by=NULL, ...) {
  
   y_train <- if (!purrr::is_formula(y_train) && length(y_train) > 1) {
     y_train
@@ -183,41 +219,121 @@ mvpa_design <- function(train_design, y_train, test_design=NULL, y_test=NULL, bl
 
 #' @export
 #' @method print rsa_design
-print.rsa_design <- function(x,...) {
-  cat("rsa_design:", "\n")
-  cat("  formula: ", deparse(x$formula), "\n")
-  cat("  variables: ", names(x$data), "\n")
-  cat("  block var: ", capture.output(str(x$block_var)), "\n")
-  if (!is.null(x$split_by))
-    cat("  split_by", x$split_by)
+print.rsa_design <- function(x, ...) {
+  # Ensure crayon is available
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty printing. Please install it.")
+  }
   
+  # Define color scheme
+  header_style <- crayon::bold$cyan
+  section_style <- crayon::yellow
+  info_style <- crayon::white
+  formula_style <- crayon::italic$green
+  var_style <- crayon::blue
+  
+  # Print header
+  cat("\n", header_style("█▀▀ RSA Design ▀▀█"), "\n\n")
+  
+  # Formula section
+  cat(section_style("├─ Formula"), "\n")
+  cat(info_style("│  └─ "), formula_style(deparse(x$formula)), "\n")
+  
+  # Variables section
+  cat(section_style("├─ Variables"), "\n")
+  cat(info_style("│  └─ "), var_style(paste(names(x$data), collapse=", ")), "\n")
+  
+  # Block information
+  cat(section_style("└─ Structure"), "\n")
+  if (!is.null(x$block_var)) {
+    blocks <- table(x$block_var)
+    cat(info_style("   ├─ Blocking: "), "Present\n")
+    cat(info_style("   ├─ Number of Blocks: "), crayon::green(length(blocks)), "\n")
+    cat(info_style("   └─ Block Sizes: "), 
+        crayon::green(paste0(names(blocks), ": ", blocks, collapse=", ")), "\n")
+  } else {
+    cat(info_style("   └─ Blocking: "), crayon::red("None"), "\n")
+  }
+  cat("\n")
 }
-
 
 #' @export
 #' @method print mvpa_design
-print.mvpa_design <- function(x,...) {
-  cat("mvpa_design:", "\n")
-  cat("  training observations: ", length(x$y_train), "\n")
-  if (is.factor(x$y_train)) {
-    cat("  training levels: ", levels(x$y_train), "\n")
+print.mvpa_design <- function(x, ...) {
+  # Ensure crayon is available
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty printing. Please install it.")
   }
+  
+  # Define color scheme
+  header_style <- crayon::bold$cyan
+  section_style <- crayon::yellow
+  info_style <- crayon::white
+  number_style <- crayon::green
+  level_style <- crayon::blue
+  stat_style <- crayon::italic$white
+  
+  # Print header
+  cat("\n", header_style("█▀▀ MVPA Design ▀▀█"), "\n\n")
+  
+  # Training section
+  cat(section_style("├─ Training Data"), "\n")
+  cat(info_style("│  ├─ Observations: "), number_style(format(length(x$y_train), big.mark=",")), "\n")
+  
+  if (is.factor(x$y_train)) {
+    cat(info_style("│  ├─ Response Type: "), "Factor\n")
+    cat(info_style("│  ├─ Levels: "), level_style(paste(levels(x$y_train), collapse=", ")), "\n")
+    level_counts <- table(x$y_train)
+    cat(info_style("│  └─ Class Distribution: "), 
+        number_style(paste0(names(level_counts), ": ", level_counts, collapse=", ")), "\n")
+  } else {
+    cat(info_style("│  ├─ Response Type: "), "Numeric\n")
+    cat(info_style("│  └─ Range: "), 
+        number_style(sprintf("[%.2f, %.2f]", min(x$y_train), max(x$y_train))), "\n")
+  }
+  
+  # Test data section
+  cat(section_style("├─ Test Data"), "\n")
   if (!is.null(x$y_test)) {
-    cat("  test observations: ", length(x$y_test), "\n")
+    cat(info_style("│  ├─ Observations: "), number_style(format(length(x$y_test), big.mark=",")), "\n")
     if (is.factor(x$y_test)) {
-      cat("  test levels: ", levels(x$y_test), "\n")
+      test_counts <- table(x$y_test)
+      cat(info_style("│  └─ Class Distribution: "), 
+          number_style(paste0(names(test_counts), ": ", test_counts, collapse=", ")), "\n")
+    } else {
+      cat(info_style("│  └─ Range: "), 
+          number_style(sprintf("[%.2f, %.2f]", min(x$y_test), max(x$y_test))), "\n")
     }
   } else {
-    cat("  no test observations. \n")
+    cat(info_style("│  └─ "), crayon::red("None"), "\n")
   }
-  cat("  training response: ", capture.output(str(x$y_train)), "\n")
-  if (!is.null(x$y_test))
-    cat("  test response: ", capture.output(str(x$y_test)), "\n")
-  if (!is.null(x$block_var))
-    cat("  block var: ", capture.output(str(x$block_var)), "\n")
-  if (!is.null(x$split_by))
-    cat("  split_by: ", deparse(x$split_by))
   
+  # Structure section
+  cat(section_style("└─ Structure"), "\n")
+  
+  # Block variable info
+  if (!is.null(x$block_var)) {
+    blocks <- table(x$block_var)
+    cat(info_style("   ├─ Blocking: "), "Present\n")
+    cat(info_style("   ├─ Number of Blocks: "), number_style(length(blocks)), "\n")
+    cat(info_style("   ├─ Mean Block Size: "), 
+        number_style(format(mean(blocks), digits=2)),
+        stat_style(" (SD: "),
+        number_style(format(sd(blocks), digits=2)),
+        stat_style(")"), "\n")
+  } else {
+    cat(info_style("   ├─ Blocking: "), crayon::red("None"), "\n")
+  }
+  
+  # Split information
+  if (!is.null(x$split_by)) {
+    split_info <- table(x$split_by)
+    cat(info_style("   └─ Split Groups: "), 
+        number_style(paste0(names(split_info), ": ", split_info, collapse=", ")), "\n")
+  } else {
+    cat(info_style("   └─ Split Groups: "), crayon::red("None"), "\n")
+  }
+  cat("\n")
 }
 
 

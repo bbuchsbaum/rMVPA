@@ -61,7 +61,7 @@ Collate:
     'distcalc.R'
     'utils.R'
     'feature_rsa_model.R'
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2.9000
 Suggests:
     testthat,
     covr,

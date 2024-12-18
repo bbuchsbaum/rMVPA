@@ -1,3 +1,13 @@
+#' @noRd
+#' @keywords internal
+setup_mvpa_logger <- function() {
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty logging. Please install it.")
+  }
+  
+  # Use the standard layout but with colored messages
+  futile.logger::flog.layout(futile.logger::layout.simple)
+}
 
 #' @keywords internal
 try_warning  <- function(expr) {
@@ -7,69 +17,26 @@ try_warning  <- function(expr) {
       err <<- e
       NULL
     }), warning=function(w) {
-      warn <<- paste0(warn, str_trim(as.character(w)), sep=";")
+      warn <<- paste0(warn, str_trim(as.character(w)))
       invokeRestart("muffleWarning")
     })
   list(value=value, warning=warn, error=err)
 }
 
 
+
+#' @noRd
 #' @keywords internal
-wrap_result <- function(result_table, design, fit=NULL) {
- 
-  observed <- y_test(design)
-  
-  ## It could happen that not all design rows are actually tested, which is why we find the unqiue set of test indices
-  testind <- unique(sort(unlist(result_table$test_ind)))
-  
-  if (is.factor(observed)) {
-    prob <- matrix(0, length(testind), length(levels(observed)))
-    colnames(prob) <- levels(observed)
-  
-    for (i in seq_along(result_table$probs)) {
-      p <- as.matrix(result_table$probs[[i]])
-      tind <- match(result_table$test_ind[[i]], testind)
-      prob[tind,] <- prob[tind,] + p
-    }
-    
-    ## probs must sum to one, can divide by sum.
-    prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
-    maxid <- max.col(prob)
-    pclass <- levels(observed)[maxid]
-  
-    ## storing observed, testind, test_design 
-    classification_result(observed[testind], pclass, prob, testind=testind, design$test_design, fit)
-  } else {
-    
-      testind <- unique(sort(unlist(result_table$test_ind)))
-      preds <- numeric(length(testind))
-      
-      for (i in seq_along(result_table$preds)) {
-        #tind <- result_table$test_ind[[i]]
-        tind <- match(result_table$test_ind[[i]], testind)
-        preds[tind] <- preds[tind] + result_table$preds[[i]]
-      }
-      
-      ## TODO check me
-      counts <- table(sort(unlist(result_table$test_ind)))
-      preds <- preds/counts
-      regression_result(observed, preds, testind=testind, test_design=design$test_design, fit)
-  }
-}
-
-
-#' @noRd
-generate_crossval_samples <- function(mspec, roi, permute = FALSE) {
-  if (!permute) {
-    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), y_train(mspec))
-  } else {
-    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), sample(y_train(mspec)))
-  }
+generate_crossval_samples <- function(mspec, roi) {
+  crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="minimal"), y_train(mspec))
 }
 
 #' @noRd
+#' @keywords internal
 handle_model_training_error <- function(result, id, ytest) {
-  flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
+  futile.logger::flog.warn("⚠ Model %s fitting error: %s", 
+                          crayon::blue(id), 
+                          crayon::red(attr(result, "condition")$message))
   emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
   tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest), 
                  fit=list(NULL), error=TRUE, error_message=emessage)
@@ -100,23 +67,17 @@ create_result_tibble <- function(cres, ind, mspec, id, result, compute_performan
 #' @param roi A list containing train_roi and test_roi elements.
 #' @param mspec A model specification object.
 #' @param id A unique identifier for the model.
-#' @param compute_performance Logical, whether to compute performance metrics (default: TRUE).
-#' @param return_fit Logical, whether to return the fitted model (default: FALSE).
-#' @param permute Logical, whether to permute the training labels (default: FALSE).
 #'
 #' @return A tibble with performance metrics, fitted model (optional), and any warnings or errors.
-#' @export
-external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
+#' @noRd
+#' @keywords internal
+external_crossval <- function(mspec, roi, id) {
   # Prepare the training data
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
+  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="minimal")
 
-  # Permute the training labels if required
-  ytrain <- if (permute) {
-    sample(y_train(mspec))
-  } else {
-    y_train(mspec)
-  }
 
+  ytrain <- y_train(mspec)
+ 
   # Get the testing labels
   ytest <- y_test(mspec)
 
@@ -137,7 +98,7 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
                    fit=list(NULL), error=TRUE, error_message=emessage)
   } else {
     # Make predictions using the trained model
-    pred <- predict(result, tibble::as_tibble(neuroim2::values(roi$test_roi), .name_repair=.name_repair), NULL)
+    pred <- predict(result, tibble::as_tibble(neuroim2::values(roi$test_roi), .name_repair="minimal"), NULL)
     # Convert predictions to a list
     plist <- lapply(pred, list)
     plist$y_true <- list(ytest)
@@ -147,14 +108,14 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
     ret <- tibble::as_tibble(plist, .name_repair = .name_repair)
 
     # Wrap the results and return the fitted model if required
-    cres <- if (return_fit) {
+    cres <- if (mspec$return_fit) {
       wrap_result(ret, mspec$design, result$fit)
     } else {
       wrap_result(ret, mspec$design)
     }
 
     # Compute performance and return a tibble with the results and any warnings
-    if (compute_performance) {
+    if (mspec$compute_performance) {
       tibble::tibble(result=list(cres), indices=list(ind),
                      performance=list(compute_performance(mspec, cres)), id=id,
                      error=FALSE, error_message="~",
@@ -171,15 +132,56 @@ external_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
 }
 
 
+#' Perform Internal Cross-Validation for MVPA Models
+#'
+#' This function performs internal cross-validation on a region of interest (ROI) using a specified 
+#' MVPA model. It handles the training, prediction, and result aggregation for each cross-validation fold.
+#'
+#' @param mspec An MVPA model specification object containing:
+#'   \describe{
+#'     \item{crossval}{Cross-validation specification}
+#'     \item{compute_performance}{Logical indicating whether to compute performance metrics}
+#'     \item{return_fit}{Logical indicating whether to return fitted models}
+#'   }
+#' @param roi A list containing at least:
+#'   \describe{
+#'     \item{train_roi}{Training data as a NeuroVec or NeuroSurfaceVector object}
+#'   }
+#' @param id Identifier for the current analysis
+#'
+#' @return A tibble containing:
+#'   \describe{
+#'     \item{result}{List of prediction results for each fold}
+#'     \item{indices}{ROI indices used in the analysis}
+#'     \item{performance}{Performance metrics if compute_performance is TRUE}
+#'     \item{id}{Analysis identifier}
+#'     \item{error}{Logical indicating if an error occurred}
+#'     \item{error_message}{Error message if applicable}
+#'     \item{warning}{Logical indicating if a warning occurred}
+#'     \item{warning_message}{Warning message if applicable}
+#'   }
+#'
+#' @details
+#' The function performs the following steps:
+#' 1. Generates cross-validation samples using the specified scheme
+#' 2. For each fold:
+#'    - Checks for minimum feature requirements
+#'    - Trains the model on the training set
+#'    - Makes predictions on the test set
+#'    - Formats and stores results
+#' 3. Merges results across all folds
+#'
+#' @note
+#' This is an internal function used by mvpa_iterate and should not be called directly.
+#' It assumes that input validation has already been performed.
+#'
+#' @keywords internal
 #' @noRd
-internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_fit=FALSE, permute=FALSE) {
+internal_crossval <- function(mspec, roi, id) {
   # Generate cross-validation samples
   # Note: This step could potentially be moved outside the function
-  samples <- if (!permute) {
-    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), y_train(mspec))
-  } else {
-    crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair), sample(y_train(mspec)))
-  }
+  samples <- crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), 
+  .name_repair=.name_repair), y_train(mspec))
 
   # Get ROI indices
   ind <- neuroim2::indices(roi$train_roi)
@@ -189,66 +191,37 @@ internal_crossval <- function(roi, mspec, id, compute_performance=TRUE, return_f
     # Check if the number of features is less than 2
     if (ncol(train) < 2) {
       # Return an error message
-      return(tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest),
-                            fit=list(NULL), error=TRUE, error_message="Number of features is less than 2"))
+      return(
+        format_result(mspec, error_message="error: less than 2 features", context=list(roi=roi, ytrain=ytrain, ytest=ytest, train=train, test=test, .id=.id))
+      )
     }
 
     # Train the model
     result <- try(train_model(mspec, tibble::as_tibble(train, .name_repair=.name_repair), ytrain,
-                              indices=ind, param=mspec$tune_grid,
-                              tune_reps=mspec$tune_reps))
+                              indices=ind))
 
     # Check if there was an error during model fitting
     if (inherits(result, "try-error")) {
       flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
       # Store error messages
       emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
-      tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest),
-                     fit=list(NULL), error=TRUE, error_message=emessage)
+      format_result(mspec, result=NULL, error_message=emessage, context=list(roi=roi, ytrain=ytrain, ytest=ytest, train=train, test=test, .id=.id))
     } else {
+      
       # Predict on test data
-      pred <- predict(result, tibble::as_tibble(test, .name_repair=.name_repair), NULL)
-      plist <- lapply(pred, list)
-      plist$y_true <- list(ytest)
-      plist$test_ind <- list(as.integer(test))
-      plist$fit <- if (return_fit) list(result) else list(NULL)
-      plist$error <- FALSE
-      plist$error_message <- "~"
-      tibble::as_tibble(plist, .name_repair=.name_repair)
+      format_result(mspec, result, error_message=NULL, context=list(roi=roi, ytrain=ytrain, ytest=ytest, train=train, test=test, .id=.id))
     }
   }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
+  
 
-  # Check if any errors occurred during the process
-  if (any(ret$error)) {
-    emessage <- ret$error_message[which(ret$error)[1]]
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL),
-                   error=TRUE, error_message=emessage)
-  } else {
-    # If no errors, wrap the result and compute performance if required
-    cres <- if (return_fit) {
-      predictor <- weighted_model(ret$fit)
-      wrap_result(ret, mspec$design, predictor)
-    } else {
-      wrap_result(ret, mspec$design)
-    }
-
-    if (compute_performance) {
-      tibble::tibble(result=list(cres), indices=list(ind),
-                     performance=list(compute_performance(mspec, cres)),
-                     id=id, error=FALSE, error_message="~")
-    } else {
-      tibble::tibble(result=list(cres), indices=list(ind),
-                     performance=list(NULL),
-                     id=id, error=FALSE, error_message="~")
-    }
-  }
+  merge_results(mspec, ret, indices=ind, id=id)
 }
 
     
- 
 
 
 #' @keywords internal
+#' @noRd
 extract_roi <- function(sample, data) {
   r <- as_roi(sample,data)
   v <- neuroim2::values(r$train_roi)
@@ -260,320 +233,195 @@ extract_roi <- function(sample, data) {
   }
 }
   
-#' MVPA Iteration for Voxel Sets with Parallelization
+#' Iterate MVPA Analysis Over Multiple ROIs
 #'
-#' This function fits a classification or regression model for each voxel set in a list using parallelization.
-#' It can compute and store performance measures, return row-wise predictions, and return the model fit for each voxel set.
+#' Performs multivariate pattern analysis (MVPA) across multiple regions of interest (ROIs) 
+#' using batch processing and parallel computation.
 #'
-#' @param mod_spec An object of class \code{mvpa_model} specifying the model.
-#' @param vox_list A \code{list} of voxel indices or coordinates.
-#' @param ids A \code{vector} of IDs for each voxel set (defaults to 1:length(vox_list)).
-#' @param compute_performance A \code{logical} indicating whether to compute and store performance measures for each voxel set (defaults to TRUE).
-#' @param return_predictions A \code{logical} indicating whether to return row-wise predictions for each voxel set (defaults to TRUE).
-#' @param return_fits A \code{logical} indicating whether to return the model fit for each voxel set (defaults to FALSE).
-#' @param batch_size An \code{integer} specifying the number of voxel sets to process in each batch (defaults to 10% of the total voxel sets).
-#' @param permute A \code{logical} indicating whether to permute the labels (defaults to FALSE).
-#' @param verbose A \code{logical} indicating whether to print progress messages (defaults to TRUE).
+#' @param mod_spec An MVPA model specification object containing:
+#'   \describe{
+#'     \item{dataset}{The dataset to analyze}
+#'     \item{compute_performance}{Logical indicating whether to compute performance metrics}
+#'     \item{return_predictions}{Logical indicating whether to return predictions}
+#'   }
+#' @param vox_list A list of voxel indices or coordinates defining each ROI to analyze
+#' @param ids Vector of identifiers for each ROI analysis (default: 1:length(vox_list))
+#' @param batch_size Integer specifying number of ROIs to process per batch 
+#'        (default: 10% of total ROIs)
+#' @param verbose Logical indicating whether to print progress messages (default: TRUE)
+#' @param processor Optional custom processing function. If NULL, uses default processor.
+#'        Must accept parameters (obj, roi, rnum) and return a tibble.
 #'
-#' @return A \code{data.frame} containing the results for each voxel set, including performance measures, predictions, and model fits, as specified by the input parameters.
+#' @return A tibble containing results for each ROI with columns:
+#'   \describe{
+#'     \item{result}{List column of analysis results (NULL if return_predictions=FALSE)}
+#'     \item{indices}{List column of ROI indices used}
+#'     \item{performance}{List column of performance metrics (if computed)}
+#'     \item{id}{ROI identifier}
+#'     \item{error}{Logical indicating if an error occurred}
+#'     \item{error_message}{Error message if applicable}
+#'     \item{warning}{Logical indicating if warning occurred}
+#'     \item{warning_message}{Warning message if applicable}
+#'   }
 #'
 #' @details
-#' This function utilizes parallel processing to speed up the process of fitting the specified model for each voxel set in a list.
-#' The parallelization is achieved using the `furrr` package, which provides a parallel backend for the `purrr` package.
-#' By default, it divides the voxel sets into batches and processes them in parallel according to the specified batch size.
-#' The function provides options to control the return of performance measures, predictions, and model fits for each voxel set.
+#' The function processes ROIs in batches to manage memory usage. For each batch:
+#' 1. Extracts ROI data from the dataset
+#' 2. Filters out ROIs with fewer than 2 voxels
+#' 3. Processes each ROI using either the default or custom processor
+#' 4. Combines results across all batches
 #'
-#' @importFrom dplyr bind_rows
 #' @importFrom furrr future_pmap
 #' @importFrom purrr map
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), 
-                         compute_performance=TRUE, 
-                         return_predictions=TRUE,
-                         return_fits=FALSE, 
                          batch_size=as.integer(.1*length(ids)),
-                         permute=FALSE, verbose=TRUE) {
-
-  assert_that(length(ids) == length(vox_list), 
-              msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
+                         verbose=TRUE,
+                         processor=NULL) {
   
+  setup_mvpa_logger()
   
-  batch_size <- max(1, batch_size)
-  nbatches <- as.integer(length(ids)/batch_size)
-  batch_group <- sort(rep(1:nbatches, length.out=length(ids)))
-  batch_ids <- split(1:length(ids), batch_group)
-  rnums <- split(ids, batch_group)
+  if (length(vox_list) == 0) {
+    futile.logger::flog.warn("⚠ Empty voxel list provided. No analysis to perform.")
+    return(tibble::tibble())
+  }
   
-  dset <- mod_spec$dataset
-  tot <- length(ids)
+  # Add debugging
+  futile.logger::flog.debug("Starting mvpa_iterate with %d voxels", length(vox_list))
   
-  do_fun <- if (has_test_set(dset)) external_crossval else internal_crossval
-  
-  result <- purrr::map(1:length(batch_ids), function(i) {
-    futile.logger::flog.info("mvpa_iterate: compute analysis for batch %s ...", i)
-    #browser()
-    vlist <- vox_list[batch_ids[[i]]]
-    #size <- sapply(vlist, function(v) nrow(v@coords))
-    size <- sapply(vlist, function(v) length(v))
-
-    sf <- get_samples(dset, vox_list[batch_ids[[i]]]) %>% mutate(.id=batch_ids[[i]], rnum=rnums[[i]], size=size) %>% filter(size>=2)
-    if (nrow(sf) > 0) {
-      sf <- sf %>% rowwise()  %>% mutate(roi=list(extract_roi(sample,dset))) %>% select(-sample) 
-      fut_mvpa(mod_spec, sf, tot, do_fun, verbose, permute, compute_performance, return_fits, return_predictions)
+  tryCatch({
+    assert_that(length(ids) == length(vox_list), 
+                msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
+    
+    batch_size <- max(1, batch_size)
+    nbatches <- ceiling(length(ids)/batch_size)
+    batch_group <- sort(rep(1:nbatches, length.out=length(ids)))
+    batch_ids <- split(1:length(ids), batch_group)
+    rnums <- split(ids, batch_group)
+    
+    dset <- mod_spec$dataset
+    tot <- length(ids)
+    
+    # Process batches and collect results
+    results <- vector("list", length(batch_ids))
+    skipped_rois <- 0
+    processed_rois <- 0
+    
+    for(i in seq_along(batch_ids)) {
+      tryCatch({
+        if(verbose) {
+          futile.logger::flog.info("⚡ Processing batch %s/%s", 
+                                  crayon::blue(i), 
+                                  crayon::blue(nbatches))
+        }
+        
+        vlist <- vox_list[batch_ids[[i]]]
+        size <- sapply(vlist, function(v) length(v))
+        
+        # Add debugging
+        futile.logger::flog.debug("Processing batch %d with %d voxels", i, length(vlist))
+        
+        sf <- get_samples(mod_spec$dataset, vox_list[batch_ids[[i]]]) %>% 
+          mutate(.id=batch_ids[[i]], rnum=rnums[[i]], size=size) %>% 
+          filter(size>=2)
+        
+        # Add debugging
+        futile.logger::flog.debug("Sample frame has %d rows after filtering", nrow(sf))
+        
+        ## gpt01 suggestion::
+        #sf <- sf %>%
+        #  mutate(roi = map(sample, ~ extract_roi(.x, dset))) %>%
+        #  select(-sample)
+        
+        if (nrow(sf) > 0) {
+          sf <- sf %>% 
+            rowwise() %>% 
+            mutate(roi=list(extract_roi(sample,dset))) %>% 
+            select(-sample)
+          
+          results[[i]] <- run_future(mod_spec, sf, processor, verbose)
+          processed_rois <- processed_rois + nrow(sf)
+          
+          # Add debugging
+          futile.logger::flog.debug("Batch %d produced %d results", i, nrow(results[[i]]))
+        } else {
+          skipped_rois <- skipped_rois + length(batch_ids[[i]])
+          futile.logger::flog.warn("%s Batch %s: All ROIs filtered out (size < 2 voxels)", 
+                                  crayon::yellow("⚠"),
+                                  crayon::blue(i))
+          results[[i]] <- tibble::tibble(
+            result = list(NULL),
+            indices = list(NULL),
+            performance = list(NULL),
+            id = rnums[[i]],
+            error = TRUE,
+            error_message = "ROI filtered out (size < 2 voxels)",
+            warning = TRUE,
+            warning_message = "ROI filtered out (size < 2 voxels)"
+          )
+        }
+        
+      }, error = function(e) {
+        futile.logger::flog.error("Batch %d failed: %s", i, e$message)
+        NULL
+      })
     }
     
-  }) %>% bind_rows()
-  
-  
-  result
-  
+    # Final summary log
+    futile.logger::flog.info("\n✨ MVPA Iteration Complete\n├─ Total ROIs: %s\n├─ Processed: %s\n└─ Skipped: %s",
+                            crayon::blue(tot),
+                            crayon::blue(processed_rois),
+                            crayon::yellow(skipped_rois))
+    
+    # Combine all results
+    final_results <- dplyr::bind_rows(results)
+    
+    final_results
+  }, error = function(e) {
+    futile.logger::flog.error("mvpa_iterate failed: %s", e$message)
+    return(tibble::tibble())
+  })
 }
 
-#' @keywords internal
 #' @noRd
-fut_mvpa <- function(mod_spec, sf, tot, do_fun, verbose, permute, compute_performance, return_fits, return_predictions) {
-  mod_spec$dataset <- NULL
+run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, ...) {
   gc()
-  sf %>% furrr::future_pmap(function(.id, rnum, roi, size) {
-    
-    if (verbose && (as.numeric(.id) %% 100 == 0)) {
-      perc <- as.integer(as.numeric(.id)/tot * 100)
-      futile.logger::flog.info("mvpa_iterate: %s percent", perc)
+  total_items <- nrow(frame)
+  processed_items <- 0
+  
+  do_fun <- if (is.null(processor)) {
+    function(obj, roi, rnum) {
+      process_roi(obj, roi, rnum)
     }
-   
-   
-    result <- do_fun(roi, mod_spec, rnum, 
-                     compute_performance=compute_performance,
-                     return_fit=return_fits, permute=permute)
+  } else {
+    processor
+  }
+  
+  frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
+    # Update progress based on actual items processed
+    processed_items <<- processed_items + 1
+    if (verbose && (processed_items %% 100 == 0)) {
+      progress_percent <- as.integer(processed_items/total_items * 100)
+      futile.logger::flog.info("↻ Progress: %s%% complete", 
+                              crayon::blue(progress_percent))
+    }
     
-    if (!return_predictions) {
+    result <- do_fun(obj, roi, rnum)
+    
+    if (!obj$return_predictions) {
       result <- result %>% mutate(result = list(NULL))
     }
     
     result
-  }, .options=furrr::furrr_options(seed=TRUE)) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
-
-}
-
-#' @keywords internal
-#' @importFrom Rfit rfit
-run_rfit <- function(dvec, obj) {
-  form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
-  obj$design$model_mat$dvec <- dvec
-  res <- Rfit::rfit(form, data=obj$design$model_mat)
-  coef(res)[-1]
-}
-
-
-#' @keywords internal
-#' @importFrom stats coef cor dist rnorm terms lm sd
-run_lm <- function(dvec, obj) {
-  form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
-  vnames <- names(obj$design$model_mat)
-  obj$design$model_mat$dvec <- dvec
- 
-  #browser()
-  res <- lm(form, data=obj$design$model_mat)
-  res <- coef(summary(res))[-1,3]
-  names(res) <- vnames
-  res
-}
-
-#' @keywords internal
-run_cor <- function(dvec, obj, method) {
-  res <- sapply(obj$design$model_mat, function(x) cor(dvec, x, method=method))
-  names(res) <- names(obj$design$model_mat)
-  res
-}
-
-
-#' Train an RSA Model
-#'
-#' This function trains an RSA (representational similarity analysis) model using the specified method and distance calculation.
-#'
-#' @param obj An object of class \code{rsa_model}.
-#' @param train_dat The training data.
-#' @param indices The indices of the training data.
-#' @param wts Optional, the weights for the model training.
-#' @param method The method used for model training. One of "lm" (linear regression), "rfit" (robust regression), "pearson" (Pearson correlation), or "spearman" (Spearman correlation). Default is "lm".
-#' @param distmethod The method used for distance calculation. One of "pearson" (Pearson correlation) or "spearman" (Spearman correlation). Default is "pearson".
-#' @param ... Additional arguments passed to the training method.
-#' @return The trained model.
-train_model.rsa_model <- function(obj, train_dat, indices, wts=NULL, method=c("lm", "rfit", "pearson", "spearman"), 
-                                  distmethod=c("pearson", "spearman"), ...) {
-  method <- match.arg(method)
-  distmethod <- match.arg(distmethod)
-  
-  dtrain <- 1 - cor(t(train_dat), method=distmethod)
-  dvec <- dtrain[lower.tri(dtrain)]
-  
-  if (!is.null(obj$design$include)) {
-    dvec <- dvec[obj$design$include]
-  }
-  
-  switch(method,
-         rfit=run_rfit(dvec, obj),
-         lm=run_lm(dvec,obj),
-         pearson=run_cor(dvec,obj,"pearson"),
-         spearman=run_cor(dvec,obj,"spearman"))
-  
-}
-
-
-#' @importFrom neuroim2 indices values
-do_rsa <- function(roi, mod_spec, rnum, method, distmethod) {
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
-  ind <- indices(roi$train_roi)
-  ret <- try(train_model(mod_spec, xtrain, ind, method=method, distmethod=distmethod))
-  if (inherits(ret, "try-error")) {
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=TRUE, error_message=attr(ret, "condition")$message)
-  } else {
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")
-  }
-}
-
-
-#' rsa_iterate
-#'
-#' Runs representational similarity analysis (RSA) for each voxel set in a list.
-#'
-#' @param mod_spec An object of class \code{rsa_model} specifying the RSA model.
-#' @param vox_list A \code{list} of voxel indices or coordinates for each voxel set.
-#' @param ids A \code{vector} of IDs for each voxel set (defaults to 1:length(vox_list)).
-#' @param permute Logical, whether to permute the labels (defaults to FALSE).
-#' @param regtype A character string specifying the analysis method. One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").
-#' @param distmethod A character string specifying the method used to compute distances between observations. One of: \code{"pearson"} or \code{"spearman"} (defaults to "spearman").
-#' @importFrom dplyr do rowwise
-#' @export
-#' @inheritParams mvpa_iterate
-rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),  permute=FALSE, 
-                        regtype=c("pearson", "spearman", "lm", "rfit"), 
-                        distmethod=c("spearman", "pearson")) {
- 
-  distmethod <- match.arg(distmethod)
-  regtype <- match.arg(regtype)
-  
-  message("regtype is:", regtype)
-  
-  assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
-  sframe <- get_samples(mod_spec$dataset, vox_list)
-  
-  ## iterate over searchlights using parallel futures
-  sf <- sframe %>% dplyr::mutate(rnum=ids) 
-  fut_rsa(mod_spec,sf, regtype, distmethod)
-}
-
-
-#' @keywords internal
-fut_rsa <- function(mod_spec, sf,  regtype, distmethod) {
-  #mod_spec$dataset <- NULL
-  gc()
-  
-  #browser()
-  sf %>% furrr::future_pmap(function(sample, rnum, .id) {
-    ## extract_roi?
-    do_rsa(as_roi(sample, mod_spec$dataset), mod_spec, rnum, method=regtype, distmethod=distmethod)
-  }, .options = furrr::furrr_options(seed = T)) %>% dplyr::bind_rows()
-  
-  
-}
-
-
-#' Train a MANOVA Model
-#'
-#' This function trains a multivariate analysis of variance (MANOVA) model using the specified design.
-#'
-#' @param obj An object of class \code{manova_model}.
-#' @param train_dat The training data.
-#' @param indices The indices of the training data.
-#' @param ... Additional arguments passed to the training method.
-#' @return A named numeric vector of -log(p-values) for each predictor in the MANOVA model.
-#' @importFrom stats as.formula
-train_model.manova_model <- function(obj, train_dat, indices, ...) {
-  dframe <- obj$design$data
-  dframe$response <- as.matrix(train_dat)
-  form <- stats::as.formula(paste("response", paste(as.character(obj$design$formula), collapse='')))
- 
-  fres=ffmanova(form, data=dframe)
-  pvals=fres$pValues
-  names(pvals) <- sanitize(names(pvals))   
-  lpvals <- -log(pvals)
-  lpvals
+  }, .options=furrr::furrr_options(seed=TRUE)) %>% 
+    purrr::discard(is.null) %>% 
+    dplyr::bind_rows()
 }
 
 
 
-#' @importFrom neuroim2 indices values
-#' @keywords internal
-do_manova <- function(roi, mod_spec, rnum) {
-  #browser()
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
-  ind <- indices(roi$train_roi)
-  ret <- try(train_model(mod_spec, xtrain, ind))
-  if (inherits(ret, "try-error")) {
-    flog.warn("error fitting model %s : %s", rnum, attr(ret, "condition")$message)
-    ## error encountered, store error messages
-    emessage <- if (is.null(attr(ret, "condition")$message)) "" else attr(ret, "condition")$message
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(NULL), 
-                   id=rnum, error=TRUE, error_message=emessage)
-  } else {
-      tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), 
-                     id=rnum, error=FALSE, error_message="~")
-  }
-}
 
-#' MANOVA Iteration for Voxel Sets
-#'
-#' This function runs a MANOVA analysis for each of a list of voxel sets.
-#'
-#' @param mod_spec A \code{mvpa_model} object representing the model specification.
-#' @param vox_list A \code{list} of voxel indices or coordinates.
-#' @param ids A \code{vector} of IDs for each voxel set.
-#' @param batch_size An \code{integer} specifying the batch size for processing (default is 10% of the total number of IDs).
-#' @param permute A \code{logical} indicating whether to permute the voxel sets (default is FALSE).
-#'
-#' @return A \code{data.frame} containing the MANOVA results for each voxel set.
-#'
-#' @importFrom dplyr do rowwise
-#' @references Langsrud, O. (2000). Fifty-fifty MANOVA: multivariate analysis of variance for collinear responses. Proceedings of The Industrial Statistics in Action, 2000(2), 250-264.
-#' @export
-manova_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),   batch_size=as.integer(.1*length(ids)), permute=FALSE) {
-  assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
-  futile.logger::flog.info("manova_iterate: extracting voxel ids")
 
-  batch_size <- max(1, batch_size)
-  nbatches <- as.integer(length(ids)/batch_size)
-  batch_group <- sort(rep(1:nbatches, length.out=length(ids)))
-  batch_ids <- split(1:length(ids), batch_group)
-  rnums <- split(ids, batch_group)
 
-  dset <- mod_spec$dataset
-  ##mod_spec$dataset <- NULL
-
-  tot <- length(ids)
-
-  result <- purrr::map(1:length(batch_ids), function(i) {
-    futile.logger::flog.info("manova_iterate: compute manovas ...")
-    sf <- get_samples(mod_spec$dataset, vox_list[batch_ids[[i]]]) %>% mutate(.id=batch_ids[[i]], rnum=rnums[[i]])
-    if (nrow(coords(sf$sample[[1]]$vox)) > 1) {
-      sf <- sf %>% rowwise() %>% mutate(roi=list(extract_roi(sample,dset))) %>% select(-sample)
-      fut_manova(mod_spec, sf)
-    }
-  }) %>% bind_rows()
-  
-  result
-
-}
-
-#'@keywords internal
-fut_manova <- function(mod_spec, sf) {
-  mod_spec$dataset <- NULL
-  gc()
- 
-  sf %>% furrr::future_pmap(function(.id, rnum, roi) {
-    
-    do_manova(roi, mod_spec, rnum)
-  },.options = furrr::furrr_options(seed = T)) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
-}
 
 

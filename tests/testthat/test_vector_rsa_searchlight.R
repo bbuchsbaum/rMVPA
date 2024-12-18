@@ -15,7 +15,7 @@ test_that("vector_rsa runs without error and produces valid outputs", {
   rdes <- vector_rsa_design(D=D, labels=sample(labels, length(block), replace=TRUE), block)
   mspec <- vector_rsa_model(dataset$dataset, rdes, distfun=cordist())
   
-  out <- run_searchlight.vector_rsa(mspec, radius=4, method="standard")
+  out <- run_searchlight(mspec, radius=4, method="standard")
   expect_true(inherits(out[[1]], "DenseNeuroVol"))
   # Set up parallel processing capabilities
   

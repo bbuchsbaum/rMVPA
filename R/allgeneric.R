@@ -1,6 +1,18 @@
+#' Get Unique Region IDs
+#'
+#' Extract unique region IDs from a region mask, handling both volume and surface data.
+#'
+#' @param region_mask A region mask object (NeuroVol or NeuroSurface)
+#' @param ... Additional arguments passed to methods
+#'
+#' @return A sorted vector of unique region IDs greater than 0
+#' @keywords internal
+get_unique_regions <- function(region_mask, ...) {
+  UseMethod("get_unique_regions")
+}
 
 #' Select Features
-#' 
+#'
 #' Given a \code{feature_selection} specification object and a dataset, returns the set of selected features as a binary vector.
 #'
 #' @param obj The \code{feature_selection} object specifying the feature selection method and its parameters.
@@ -26,7 +38,102 @@ select_features <- function(obj, X, Y, ...) {
   UseMethod("select_features")
 }
 
+#' Format Result Object
+#'
+#' @param obj The result object to be formatted.
+#' @param result The result object to be formatted.
+#' @param error_message An optional error message.
+#' @param ... Additional arguments to be passed to the method-specific function.
+#' @export
+format_result <- function(obj, result, error_message, ...) {
+  UseMethod("format_result")
+}
 
+
+#' Merge Multiple Results
+#'
+#' @param obj The base object containing merge specifications
+#' @param result_set List of results to be merged
+#' @param indices List of indices corresponding to each result
+#' @param id Identifier for the merged result
+#' @param ... Additional arguments passed to specific merge methods
+#'
+#' @return A merged result object containing:
+#' \itemize{
+#'   \item Combined results from all input objects
+#'   \item Associated indices
+#'   \item Merged metadata
+#' }
+#'
+#' @export
+merge_results <- function(obj, result_set, indices, id, ...) {
+  UseMethod("merge_results")
+}
+
+#' Run Future
+#'
+#' Run a future-based computation defined by the object and frame.
+#'
+#' @param obj An object specifying the computation.
+#' @param frame A data frame or environment containing data for the computation.
+#' @param processor A function or object specifying how to process the frame.
+#' @param ... Additional arguments passed to the method-specific function.
+#' @noRd
+run_future <- function(obj, frame, processor, ...) {
+  UseMethod("run_future")
+}
+
+#' Process ROI
+#'
+#' Process a region of interest (ROI) with possible cross-validation.
+#'
+#' @param mod_spec The model specification object.
+#' @param roi The region of interest data.
+#' @param rnum A numeric or string identifier for the ROI.
+#' @param ... Additional arguments passed to the method-specific function.
+#' @keywords internal
+#' @noRd
+process_roi <- function(mod_spec, roi, rnum, ...) {
+  UseMethod("process_roi")
+}
+
+#' Default Process ROI Method
+#'
+#' Default implementation for processing ROIs when no custom ROI processor is provided.
+#'
+#' @inheritParams process_roi
+#' @keywords internal
+#' @noRd
+process_roi.default <- function(mod_spec, roi, rnum, ...) {
+  if (!is.null(mod_spec$process_roi)) {
+    mod_spec$process_roi(mod_spec, roi, rnum, ...)
+  } else if (has_test_set(mod_spec$dataset)) {
+    external_crossval(mod_spec, roi, rnum, ...)
+  } else if (has_crossval(mod_spec)) {
+    internal_crossval(mod_spec, roi, rnum, ...)
+  } else {
+    process_roi_default(mod_spec, roi, rnum, ...)
+  }
+}
+
+#' Default ROI Processing Helper
+#'
+#' @param mod_spec The model specification object.
+#' @param roi The ROI containing training data.
+#' @param rnum The region number or identifier.
+#' @param ... Additional arguments passed to specific methods.
+#' @keywords internal
+#' @noRd
+process_roi_default <- function(mod_spec, roi, rnum, ...) {
+  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
+  ind <- indices(roi$train_roi)
+  ret <- try(train_model(mod_spec, xtrain, ind))
+  if (inherits(ret, "try-error")) {
+    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=TRUE, error_message=attr(ret, "condition")$message)
+  } else {
+    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")
+  }
+}
 
 #' Train Model
 #'
@@ -34,11 +141,11 @@ select_features <- function(obj, X, Y, ...) {
 #'
 #' @param obj The model specification object.
 #' @param ... Additional arguments to be passed to the method-specific function.
+#' @return A trained model object.
+#' @export
 train_model <- function(obj,...) {
   UseMethod("train_model")
 }
-
-
 
 #' Training Labels/Response Extraction
 #'
@@ -46,11 +153,9 @@ train_model <- function(obj,...) {
 #'
 #' @param obj The object from which to extract the training response variable.
 #' @export
-#' 
 y_train <- function(obj) {
   UseMethod("y_train")
 }
-
 
 #' Test Labels/Response Extraction
 #'
@@ -58,7 +163,6 @@ y_train <- function(obj) {
 #'
 #' @param obj The object from which to extract the test response variable.
 #' @export
-#' 
 y_test <- function(obj) {
   UseMethod("y_test")
 }
@@ -69,7 +173,6 @@ y_test <- function(obj) {
 #'
 #' @param obj The object from which to extract the test design table.
 #' @export
-#' 
 test_design <- function(obj) {
   UseMethod("test_design")
 }
@@ -83,16 +186,15 @@ test_design <- function(obj) {
 #' @param y The response vector.
 #' @param wts A set of case weights.
 #' @param param Tuning parameters.
-#' @param lev Unused.
-#' @param last Unused.
-#' @param classProbs Unused.
+#' @param lev Factor levels (for classification).
+#' @param last Logical indicating if this is the last iteration.
+#' @param classProbs Logical indicating if class probabilities should be returned.
 #' @param ... Additional arguments to be passed to the method-specific function.
 #' 
 #' @export
-fit_model <- function(obj, roi_x, y, wts, param, lev, last, classProbs, ...) {
+fit_model <- function(obj, roi_x, y, wts, param, lev=NULL, last=FALSE, classProbs=FALSE, ...) {
   UseMethod("fit_model")
 }
-
 
 #' Tune Grid Extraction
 #'
@@ -106,7 +208,6 @@ tune_grid <- function(obj, x,y,len) {
   UseMethod("tune_grid")
 }
 
-
 #' Test Set Availability
 #'
 #' Check if an object has a test set available.
@@ -117,32 +218,38 @@ has_test_set <- function(obj) {
   UseMethod("has_test_set")
 }
 
+#' Requires cross-validation to be performed
+#' @param obj The model object.
+has_crossval <- function(obj) {
+  UseMethod("has_crossval")
+}
 
-#' Compute Performance Metrics for Classification/Regression Results
+#' @export
+has_crossval.default <- function(obj) {
+  FALSE
+}
+
+#' Compute Performance Metrics
 #'
-#' This function computes appropriate performance metrics (e.g., accuracy, AUC, RMSE) for a given classification/regression result.
+#' Compute performance metrics (accuracy, AUC, RMSE, etc.) for classification/regression results.
 #'
 #' @param x The classification/regression result object to evaluate.
-#' @param ... Additional arguments passed on to the specific performance evaluation method.
+#' @param ... Additional arguments passed to method-specific performance functions.
 #'
-#' @return A list of performance metrics for the input classification/regression result object.
-#'
+#' @return A list of performance metrics.
 #' @export
 performance <- function(x,...) {
   UseMethod("performance")
 }
 
-
-#' Compute Performance Metrics for Classification/Regression Results
+#' Compute Performance for an Object
 #'
-#' This function delegates the calculation of performance metrics for classification/regression results
-#' to the appropriate method based on the input object's class.
+#' Delegates calculation of performance metrics to the appropriate method.
 #'
-#' @param obj The input object for which the performance metrics should be computed.
+#' @param obj The input object.
 #' @param result The classification/regression result object to evaluate.
 #'
-#' @return A list of performance metrics for the input classification/regression result object.
-#'
+#' @return A list of performance metrics.
 #' @export
 compute_performance <- function(obj, result) {
   UseMethod("compute_performance")
@@ -150,29 +257,26 @@ compute_performance <- function(obj, result) {
 
 #' Merge Multiple Classification/Regression Results
 #'
-#' This function merges two or more classification/regression result objects into a single object.
+#' This function merges two or more classification/regression result objects.
 #'
-#' @param x The first classification/regression result object to merge.
-#' @param ... Additional classification/regression result objects to merge.
+#' @param x The first classification/regression result object.
+#' @param ... Additional classification/regression result objects.
 #'
-#' @return A single merged classification/regression result object containing the combined results of all input objects.
+#' @return A single merged classification/regression result object.
 #'
 #' @export
-#'
-merge_results <- function(x, ...) {
-  UseMethod("merge_results")
+merge_classif_results <- function(x, ...) {
+  UseMethod("merge_classif_results")
 }
-
 
 #' Get Multiple Data Samples
 #'
-#' This function extracts multiple data samples based on a list of voxel/index sets from a given dataset object.
+#' Extract multiple data samples based on a list of voxel/index sets from a dataset object.
 #'
-#' @param obj The input dataset object, which should be an instance of a data class compatible with data sample extraction.
-#' @param vox_list A list of vectors containing voxel indices to extract from the dataset object.
+#' @param obj The input dataset object.
+#' @param vox_list A list of vectors containing voxel indices to extract.
 #'
-#' @return A list of data samples extracted from the input dataset based on the specified voxel/index sets.
-#'
+#' @return A list of data samples.
 #' @export
 get_samples <- function(obj, vox_list) {
   UseMethod("get_samples")
@@ -180,139 +284,111 @@ get_samples <- function(obj, vox_list) {
 
 #' Extract Sample from Dataset
 #'
-#' This function extracts a sample from a given dataset object.
+#' Extract a sample from a given dataset object.
 #'
-#' @param obj The input dataset object, which should be an instance of a data class compatible with sample extraction.
-#' @param vox the voxel indices/coordinates associated with the data sample.
-#' @param ... Additional arguments to be passed to the specific sample extraction method for the input object's class.
+#' @param obj The input dataset object.
+#' @param vox The voxel indices/coordinates.
+#' @param ... Additional arguments to methods.
 #'
-#' @return A sample extracted from the input dataset based on the specific extraction method.
-#'
+#' @return A sample extracted from the dataset.
 #' @export
-data_sample <- function(obj, vox) {
+data_sample <- function(obj, vox, ...) {
   UseMethod("data_sample")
 }
 
-
-
-#' Convert an object to an ROIVolume or ROISurface object
+#' Convert object to ROI
 #'
-#' The as_roi function is a generic function that converts the provided object
-#' into an ROIVolume or ROISurface object, given the associated data object and
-#' any additional arguments.
+#' Convert the provided object into an ROIVolume or ROISurface object.
 #'
 #' @param obj The object to be converted.
-#' @param data The associated data object used in the conversion process.
-#' @param ... Additional arguments to be passed to the function.
+#' @param data The associated data object.
+#' @param ... Additional arguments passed to methods.
 #' @return An ROIVolume or ROISurface object.
 #' @keywords internal
 as_roi <- function(obj, data, ...) {
   UseMethod("as_roi")
 }
 
-
 #' Generate Searchlight Iterator
 #'
-#' This function generates a searchlight iterator suitable for a given input dataset, such as volumetric or surface data.
+#' Generate a searchlight iterator suitable for given data.
 #'
-#' @param obj The input dataset object, which should be an instance of a data class compatible with searchlight analysis.
-#' @param ... Additional arguments to be passed to the specific searchlight iterator method for the input object's class.
+#' @param obj The input dataset object.
+#' @param ... Additional arguments to methods.
 #'
-#' @return A searchlight iterator object that can be used to perform searchlight analysis on the input dataset.
-#'
+#' @return A searchlight iterator object.
 #' @export
 get_searchlight <- function(obj, ...) {
   UseMethod("get_searchlight")
 }
 
-
-
-#' Wrap output values into a desired format
+#' Wrap Output
 #'
-#' The wrap_output function is a generic function that takes an object,
-#' values to be wrapped, and additional arguments to create a wrapped
-#' output based on the provided object and values.
+#' Wrap output values into a desired format.
 #'
-#' @param obj The object used to determine the appropriate method for wrapping the output.
+#' @param obj The object used to determine the wrapping method.
 #' @param vals The values to be wrapped.
-#' @param ... Additional arguments to be passed to the function.
-#' @return A wrapped output based on the provided object and values.
+#' @param ... Additional arguments passed to methods.
+#' @return A wrapped output object.
 #' @keywords internal
 wrap_output <- function(obj, vals, ...) {
   UseMethod("wrap_output")
 }
 
-#' Merge predictions from multiple models
+#' Merge Predictions
 #'
-#' Combine predictions from several models applied to the same test set.
+#' Combine predictions from multiple models on the same test set.
 #'
 #' @param obj1 The first object containing predictions.
-#' @param rest The rest of the objects containing predictions.
-#' @param ... Additional arguments to be passed to the function.
-#' @return A combined object containing merged predictions from multiple models.
+#' @param rest Other objects containing predictions.
+#' @param ... Additional arguments.
+#' @return A combined object with merged predictions.
 #' @export
 merge_predictions <- function(obj1, rest, ...) {
   UseMethod("merge_predictions")
 }
 
-
-#' Extract Row-wise Subset of a Result Object
+#' Extract Row-wise Subset of a Result
 #'
-#' This function extracts a row-wise subset of a classification or regression result object.
+#' Extract a subset of rows from a classification/regression result object.
 #'
-#' @param x The input result object, which should be an instance of a classification or regression result class.
-#' @param indices A vector of row indices to extract from the result object.
+#' @param x The input result object.
+#' @param indices Row indices to extract.
 #'
-#' @return A new result object containing only the specified row indices from the input result object.
-#'
+#' @return A new result object with the specified rows.
 #' @export
-#'
-#' @examples
-#' # Create a simple classification result object
-#' observed <- c(1, 0, 1, 1, 0)
-#' predicted <- c(1, 0, 0, 1, 1)
-#' result <- list(observed = observed, predicted = predicted)
-#' class(result) <- c("classification_result", "list")
-#'
-#' # Extract a subset of the result object
-#' sub_result(result, c(2, 3, 4))
-#' @family sub_result
 sub_result <- function(x, indices) {
   UseMethod("sub_result")
 }
 
 #' Get Number of Observations
 #'
-#' This function retrieves the number of observations from a given object.
+#' Retrieve the number of observations in an object.
 #'
-#' @param x The input object, which can be of different types, such as a data frame, matrix, or a custom object with a defined `nobs` method.
-#'
-#' @return The number of observations in the input object. Depending on the object type, this could be the number of rows or elements.
-#'
+#' @param x The input object.
+#' @return The number of observations.
 #' @export
 nobs <- function(x) {
   UseMethod("nobs")
 }
 
-#' Probability of observed class
+#' Probability of Observed Class
 #'
 #' Extract the predicted probability for the observed class.
 #'
-#' @param x The object from which to extract the predicted probability for the observed class.
-#' @return A vector of predicted probabilities for the observed class.
+#' @param x The object from which to extract the probability.
+#' @return A vector of predicted probabilities.
 #' @export
 prob_observed <- function(x) {
   UseMethod("prob_observed")
 }
 
-
-
-#' Number of response categories
+#' Number of Response Categories
 #'
-#' Get the number of response categories or category levels for the dependent variable.
+#' Get the number of response categories or levels.
 #'
-#' @param x The object from which to extract the number of response categories.
-#' @return The number of response categories or category levels for the dependent variable.
+#' @param x The object from which to extract the number of categories.
+#' @return The number of response categories.
 #' @export
 nresponses <- function(x) {
   UseMethod("nresponses")
@@ -322,94 +398,164 @@ nresponses <- function(x) {
 #' @noRd
 .name_repair = ~ vctrs::vec_as_names(..., repair = "unique", quiet = TRUE)
 
-#' run_searchlight
+#' Run Searchlight Analysis
 #'
-#' Execute a searchlight analysis.
+#' Execute a searchlight analysis using multivariate pattern analysis.
 #'
-#' @param model_spec A \code{mvpa_model} instance containing the model specifications.
-#' @param radius The searchlight radius in millimeters.
-#' @param method The type of searchlight, either 'randomized' or 'standard'.
-#' @param niter The number of searchlight iterations (used only for the 'randomized' method).
-#' @param ... Extra arguments passed to the specific searchlight methods.
-#' @return A named list of \code{NeuroVol} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.
-#' @seealso \code{\link{run_searchlight.randomized}}, \code{\link{run_searchlight.standard}}
+#' @param model_spec A \code{mvpa_model} instance containing the model specifications
+#' @param radius The searchlight radius in millimeters
+#' @param method The type of searchlight, either 'randomized' or 'standard'
+#' @param niter The number of searchlight iterations (used only for 'randomized' method)
+#' @param ... Extra arguments passed to specific searchlight methods
+#'
+#' @return A named list of \code{NeuroVol} objects containing performance metrics (e.g., AUC) at each voxel location
+#'
 #' @examples
-#' # TODO: Add an example
+#' \donttest{
+#'   # Generate sample dataset with categorical response
+#'   dataset <- gen_sample_dataset(
+#'     D = c(8,8,8),           # 8x8x8 volume
+#'     nobs = 100,             # 100 observations
+#'     response_type = "categorical",
+#'     data_mode = "image",
+#'     blocks = 3,             # 3 blocks for cross-validation
+#'     nlevels = 2             # binary classification
+#'   )
+#'   
+#'   # Create cross-validation specification using blocks
+#'   cval <- blocked_cross_validation(dataset$design$block_var)
+#'   
+#'   # Load the SDA classifier (Shrinkage Discriminant Analysis)
+#'   model <- load_model("sda_notune")
+#'   
+#'   # Create MVPA model
+#'   mspec <- mvpa_model(
+#'     model = model,
+#'     dataset = dataset$dataset,
+#'     design = dataset$design,
+#'     model_type = "classification",
+#'     crossval = cval
+#'   )
+#'   
+#'   # Run searchlight analysis
+#'   results <- run_searchlight(
+#'     mspec,
+#'     radius = 8,            # 8mm radius
+#'     method = "standard"    # Use standard searchlight
+#'   )
+#'   
+#'   # Results contain performance metrics
+#'   # Access them with results$performance
+#' }
+#'
 #' @export
-run_searchlight <- function(model_spec, radius, method, niter,...) {
+run_searchlight <- function(model_spec, radius, method = c("standard", "randomized"), niter = NULL, ...) {
   UseMethod("run_searchlight")
 }
 
-#' Region of interest based MVPA analysis
+#' Region of Interest Based MVPA Analysis
 #'
 #' Run a separate MVPA analysis for multiple disjoint regions of interest.
 #'
-#' @param model_spec A \code{mvpa_model} instance containing the model specifications.
-#' @param region_mask A \code{NeuroVol} or \code{NeuroSurface} object where each region is identified by a unique integer.
-#'        Every non-zero set of positive integers will be used to define a set of voxels for classification analysis.
-#' @param ... Extra arguments passed to the specific regional analysis methods.
-#' @return A named list of results for each region of interest.
+#' @param model_spec A \code{mvpa_model} instance containing the model specifications
+#' @param region_mask A \code{NeuroVol} or \code{NeuroSurface} object where each region is identified by a unique integer
+#' @param ... Extra arguments passed to specific regional analysis methods
+#'
+#' @return A named list containing:
+#'   \item{performance}{Performance metrics for each region}
+#'   \item{prediction_table}{Predictions for each region}
+#'   \item{fits}{Model fits if return_fits=TRUE}
+#'
 #' @examples
-#' # TODO: Add an example
-#' @export      
+#' \donttest{
+#'   # Generate sample dataset (3D volume with categorical response)
+#'   dataset <- gen_sample_dataset(
+#'     D = c(10,10,10),       # Small 10x10x10 volume
+#'     nobs = 100,            # 100 observations
+#'     nlevels = 3,           # 3 classes
+#'     response_type = "categorical",
+#'     data_mode = "image",
+#'     blocks = 3             # 3 blocks for cross-validation
+#'   )
+#'   
+#'   # Create region mask with 5 ROIs
+#'   region_mask <- NeuroVol(
+#'     sample(1:5, size=length(dataset$dataset$mask), replace=TRUE),
+#'     space(dataset$dataset$mask)
+#'   )
+#'   
+#'   # Create cross-validation specification
+#'   cval <- blocked_cross_validation(dataset$design$block_var)
+#'   
+#'   # Load SDA classifier (Shrinkage Discriminant Analysis)
+#'   model <- load_model("sda_notune")
+#'   
+#'   # Create MVPA model
+#'   mspec <- mvpa_model(
+#'     model = model,
+#'     dataset = dataset$dataset,
+#'     design = dataset$design,
+#'     model_type = "classification",
+#'     crossval = cval,
+#'     return_fits = TRUE    # Return fitted models
+#'   )
+#'   
+#'   # Run regional analysis
+#'   results <- run_regional(mspec, region_mask)
+#'   
+#'   # Access results
+#'   head(results$performance)           # Performance metrics
+#'   head(results$prediction_table)      # Predictions
+#'   first_roi_fit <- results$fits[[1]]  # First ROI's fitted model
+#' }
+#'
+#' @export
 run_regional <- function(model_spec, region_mask, ...) {
   UseMethod("run_regional")
 }
 
-
 #' crossval_samples
 #'
-#' A generic function that applies a cross-validation scheme to split the data into training and testing sets.
-#' It is used along with cross-validation control objects and S3 implementation functions to perform the cross-validation process.
+#' Apply a cross-validation scheme to split the data into training and testing sets.
 #'
 #' @param obj A cross-validation control object.
-#' @param data A data frame containing the predictor variables.
+#' @param data A data frame containing the predictors.
 #' @param y A vector containing the response variable.
 #' @param ... Extra arguments passed to the specific cross-validation methods.
-#' @return A tibble containing the training and testing sets for each fold, as well as the response variables for both sets.
-#' @seealso \code{\link{crossval_samples.sequential_blocked_cross_validation}},
-#'   \code{\link{crossval_samples.kfold_cross_validation}},
-#'   \code{\link{crossval_samples.blocked_cross_validation}},
-#'   \code{\link{crossval_samples.bootstrap_blocked_cross_validation}},
-#'   \code{\link{crossval_samples.custom_cross_validation}},
-#'   \code{\link{crossval_samples.twofold_blocked_cross_validation}}
-#' @examples
-#' # Example with k-fold cross-validation
-#' cval <- kfold_cross_validation(len=100, nfolds=10)
-#' samples <- crossval_samples(cval, data=as.data.frame(matrix(rnorm(100*10), 100, 10)), y=rep(letters[1:5],20))
-#' stopifnot(nrow(samples) == 10)
+#'
+#' @return A tibble containing training and testing sets for each fold.
 #' @export
 crossval_samples <- function(obj, data, y,...) { 
   UseMethod("crossval_samples") 
 }
 
-
 #' Generic Pairwise Distance Computation
 #'
-#' This function acts as a generic interface for computing pairwise distances between the rows of a matrix X. The actual computation is delegated to method-specific functions depending on the class of `dist_obj`.
+#' Compute pairwise distances between rows of X using a specified distance object.
 #'
-#' @param dist_obj A distance object which specifies the type of distance measure to be used and potentially contains additional parameters needed for distance calculation. The class of `dist_obj` determines which method is dispatched.
-#' @param X A numeric matrix where each row is considered as a data point between which distances are to be calculated. The matrix should not contain any missing values as this may affect the accuracy and performance of the distance computations.
-#' @param ... Additional arguments to be passed to the method-specific distance functions.
+#' @param obj A distance object specifying the distance measure.
+#' @param X A numeric matrix of data points (rows = samples).
+#' @param ... Additional arguments passed to methods.
 #'
-#' @return Depending on the specific method implementation, this function typically returns a numeric matrix or an object of class `dist` representing the pairwise distances between the rows of `X`.
-#'
-#' @details
-#' `pairwise_dist` is a generic function meant to interface with various methods for distance computation. Users must provide a `dist_obj` which includes specifics about the distance measure to be used. The actual computation is handled by method-specific functions that should be defined for different classes of `dist_obj`. These functions must be registered with the appropriate S3 method for `pairwise_dist` such as `pairwise_dist.default`, `pairwise_dist.correlation`, etc.
-#'
-#' @examples
-#' # Assuming a correlation-based distance object and matrix X
-#' dist_obj <- correlation_dist_object(parameters)
-#' X <- matrix(rnorm(100), ncol = 10)
-#' distances <- pairwise_dist(dist_obj, X)
-#'
-#' @seealso \code{\link{dist}} for default distance computations in R.
-#' @export
+#' @return A matrix or dist object of pairwise distances.
 #' @keywords internal
+#' @noRd
 pairwise_dist <- function(obj, X,...) {
   UseMethod("pairwise_dist")
 }
 
+#' Filter Region of Interest (ROI)
+#'
+#' Filter an ROI by removing columns with missing values or zero std dev.
+#'
+#' @param roi A list containing the train and test ROI data.
+#' @param ... Additional arguments passed to methods.
+#'
+#' @return A list with filtered train and test ROI data.
+#' @keywords internal
+filter_roi <- function(roi, ...) {
+  UseMethod("filter_roi", roi$train_roi)
+}
 
 
 

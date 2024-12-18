@@ -7,13 +7,13 @@
 get_samples(obj, vox_list)
 }
 \arguments{
-\item{obj}{The input dataset object, which should be an instance of a data class compatible with data sample extraction.}
+\item{obj}{The input dataset object.}
 
-\item{vox_list}{A list of vectors containing voxel indices to extract from the dataset object.}
+\item{vox_list}{A list of vectors containing voxel indices to extract.}
 }
 \value{
-A list of data samples extracted from the input dataset based on the specified voxel/index sets.
+A list of data samples.
 }
 \description{
-This function extracts multiple data samples based on a list of voxel/index sets from a given dataset object.
+Extract multiple data samples based on a list of voxel/index sets from a dataset object.
 }

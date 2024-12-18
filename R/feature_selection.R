@@ -1,9 +1,33 @@
 ## TODO integrate mlr "filters"
 
 
-#' @keywords iternal
+#' Feature Selection Methods
+#'
+#' @section Methods:
+#' Two feature selection methods are available:
+#' \describe{
+#'   \item{FTest}{One-way ANOVA F-test for each feature}
+#'   \item{catscore}{Correlation-adjusted t-scores using sda.ranking}
+#' }
+#'
+#' @section Cutoff Types:
+#' Two types of cutoffs are supported:
+#' \describe{
+#'   \item{top_k/topk}{Select top k features}
+#'   \item{top_p/topp}{Select top p percent of features (0 < p <= 1)}
+#' }
+#'
+#' @name feature_selection
+NULL
+
+
+#' @keywords internal
 #' @importFrom stats pf
+#' @noRd
 matrixAnova <- function(Y, x) {
+  if (!is.numeric(x)) stop("x must be numeric")
+  if (nrow(x) != length(Y)) stop("x and Y must have compatible dimensions")
+  if (any(is.na(x)) || any(is.na(Y))) stop("NA values not supported")
   x <- as.matrix(x)
   Y <- as.numeric(Y)
   k <- max(Y)
@@ -111,12 +135,6 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
 }
 
 
-#select_features.FisherKernel <- function(obj, ROI, Y, vox, radius=8) {
-#  fres <- matrixAnova(Y,X)
-#  search <- Searchlight
-#}
-
-
 
 #' Perform feature selection using the F-test method
 #'
@@ -175,6 +193,25 @@ select_features.FTest <- function(obj, X, Y,...) {
   
   keep
   
+}
+
+
+
+# Common validation function
+validate_cutoff <- function(type, value, ncol) {
+  type <- tolower(type)
+  if (!type %in% c("top_k", "topk", "top_p", "topp")) {
+    stop("Cutoff type must be one of: top_k, topk, top_p, topp")
+  }
+  
+  if (grepl("p$", type)) {
+    if (value <= 0 || value > 1) {
+      stop("For percentage cutoff, value must be > 0 and <= 1")
+    }
+    max(ceiling(value * ncol), 1)
+  } else {
+    min(value, ncol)
+  }
 }
 
 

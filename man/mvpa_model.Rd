@@ -14,7 +14,10 @@ mvpa_model(
   tune_grid = NULL,
   tune_reps = 15,
   performance = NULL,
-  class_metrics = TRUE
+  class_metrics = TRUE,
+  compute_performance = TRUE,
+  return_predictions = TRUE,
+  return_fits = FALSE
 )
 }
 \arguments{
@@ -37,6 +40,12 @@ mvpa_model(
 \item{performance}{An optional custom function for computing performance metrics.}
 
 \item{class_metrics}{A logical flag indicating whether to compute performance metrics for each class.}
+
+\item{compute_performance}{A \code{logical} indicating whether to compute and store performance measures for each voxel set (defaults to TRUE).}
+
+\item{return_predictions}{A \code{logical} indicating whether to return row-wise predictions for each voxel set (defaults to TRUE).}
+
+\item{return_fits}{A \code{logical} indicating whether to return the model fit for each voxel set (defaults to FALSE).}
 }
 \description{
 Create an MVPA model based on a caret-based classification or regression model.

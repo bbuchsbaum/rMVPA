@@ -7,10 +7,9 @@
 \method{run_regional}{mvpa_model}(
   model_spec,
   region_mask,
-  return_fits = FALSE,
-  return_predictions = TRUE,
-  compute_performance = TRUE,
   coalesce_design_vars = FALSE,
+  processor = NULL,
+  verbose = FALSE,
   ...
 )
 }
@@ -19,13 +18,7 @@
 
 \item{region_mask}{A mask representing different regions in the brain image.}
 
-\item{return_fits}{Whether to return model fit for every ROI (default is \code{FALSE} to save memory).}
-
-\item{return_predictions}{Whether to return full prediction table with per trial probabilities (can be a large table, set \code{FALSE} to limit memory use).}
-
-\item{compute_performance}{\code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC).}
-
-\item{coalesce_design_vars}{Concatenate additional design variables with output stored in `prediction_table`.}
+\item{processor}{}
 
 \item{...}{Additional arguments to be passed to the function.}
 }

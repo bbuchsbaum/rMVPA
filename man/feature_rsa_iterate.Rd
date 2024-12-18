@@ -4,12 +4,7 @@
 \alias{feature_rsa_iterate}
 \title{feature_rsa_iterate}
 \usage{
-feature_rsa_iterate(
-  mod_spec,
-  vox_list,
-  ids = 1:length(vox_list),
-  permute = FALSE
-)
+feature_rsa_iterate(mod_spec, vox_list, ids = 1:length(vox_list))
 }
 \arguments{
 \item{mod_spec}{An object of class \code{rsa_model} specifying the RSA model.}
@@ -17,8 +12,6 @@ feature_rsa_iterate(
 \item{vox_list}{A \code{list} of voxel indices or coordinates for each voxel set.}
 
 \item{ids}{A \code{vector} of IDs for each voxel set (defaults to 1:length(vox_list)).}
-
-\item{permute}{Logical, whether to permute the labels (defaults to FALSE).}
 }
 \description{
 Runs feature-based representational similarity analysis (RSA) for each voxel set in a list.

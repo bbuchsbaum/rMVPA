@@ -4,7 +4,6 @@
 #' @import stringr
 #' @importFrom io qread
 initialize_configuration <- function(args) {
-  
   if (!is.null(args$config)) {
     if (!file.exists(args$config)) {
       flog.error("cannot find configuration file: %s", args$config)
@@ -24,6 +23,7 @@ initialize_configuration <- function(args) {
 
 
 #' @noRd
+#' @keywords internal
 initialize_standard_parameters <- function(config, args, analysisType) {
   set_arg("train_design", config, args, "mvpa_design.txt")
   set_arg("test_design", config, args, NULL)
@@ -81,6 +81,7 @@ standardize_vars <- function(bvec, mask, blockvar) {
 
 
 #' @noRd
+#' @keywords internal       
 normalize_surface_samples <- function(bvec, mask) {
   mat <- scale(bvec@data[indices(bvec), ,drop=FALSE])
   
@@ -91,6 +92,7 @@ normalize_surface_samples <- function(bvec, mask) {
 }
 
 #' @noRd
+#' @keywords internal
 initialize_surface_data <- function(config) {
   if (!is.null(config$train_subset)) {
     indices <- which(config$train_subset)
@@ -156,6 +158,7 @@ initialize_surface_data <- function(config) {
 }
 
 #' @noRd
+#' @keywords internal
 initialize_feature_selection <- function(config) {
   if (!is.null(config$feature_selector)) {
     feature_selector(config$feature_selector$method, config$feature_selector$cutoff_type, as.numeric(config$feature_selector$cutoff_value))
@@ -165,6 +168,7 @@ initialize_feature_selection <- function(config) {
 }
 
 #' @importFrom methods as
+#' @keywords internal
 initialize_image_data <- function(config, mask) {
   if (!is.null(config$train_subset)) {
     indices <- which(config$train_subset)
@@ -203,6 +207,7 @@ initialize_image_data <- function(config, mask) {
 }
 
 #' @noRd
+#' @keywords internal
 initialize_design <- function(config) {
   if (is.character(config$train_subset)) {
     config$train_subset <- eval(parse(text=config$train_subset))
@@ -311,6 +316,7 @@ initialize_design <- function(config) {
 }
 
 #' @noRd
+#' @keywords internal
 initialize_tune_grid <- function(args, config) {
   if (!is.null(args$tune_grid) && !args$tune_grid == "NULL") {
     params <- try(expand.grid(eval(parse(text=args$tune_grid))))
@@ -342,6 +348,7 @@ initialize_tune_grid <- function(args, config) {
 
 
 #' @noRd
+#' @keywords internal
 set_default <- function(name, config, default) {
   if (is.null(config[[name]])) {
     config[[name]]<- default
@@ -349,6 +356,7 @@ set_default <- function(name, config, default) {
 }
 
 #' @noRd
+#' @keywords internal
 set_arg <- function(name, config, args, default) {
   if (is.null(config[[name]]) && is.null(args[[name]])) {
     config[[name]] <- default
@@ -359,7 +367,8 @@ set_arg <- function(name, config, args, default) {
   }    
 }
 
-
+#' @noRd
+#' @keywords internal
 make_output_dir <- function(dirname) {
   if (!file.exists(dirname)) {
     system(paste("mkdir", dirname))
@@ -371,6 +380,7 @@ make_output_dir <- function(dirname) {
 }
 
 #' @noRd
+#' @keywords internal
 initialize_crossval <- function(config, des=NULL) {
   cval <- if (is.null(config$cross_validation) && !is.null(des$block_var)) {
     flog.info("cross-validation type: cross validation using predefined blocking variable")
@@ -404,11 +414,75 @@ initialize_crossval <- function(config, des=NULL) {
 }
 
 
-
-#' load_model
-#' @param name the name of the model
-#' @examples load_model("sda")
+#' Load a Pre-defined MVPA Model
+#'
+#' Retrieves a model specification from either the pre-defined set of MVPA models or from caret's model library.
+#'
+#' @param name Character string specifying the model to load. Can be either:
+#'   \itemize{
+#'     \item A pre-defined MVPA model name:
+#'     \describe{
+#'       \item{corclass}{Correlation-based classifier with template matching}
+#'       \item{sda_notune}{Simple Shrinkage Discriminant Analysis without tuning}
+#'       \item{sda_boot}{SDA with bootstrap resampling}
+#'       \item{glmnet_opt}{Elastic net with EPSGO parameter optimization}
+#'       \item{sparse_sda}{SDA with sparsity constraints}
+#'       \item{sda_ranking}{SDA with automatic feature ranking}
+#'       \item{mgsda}{Multi-Group Sparse Discriminant Analysis}
+#'       \item{lda_thomaz}{Modified LDA for high-dimensional data}
+#'       \item{hdrda}{High-Dimensional Regularized Discriminant Analysis}
+#'     }
+#'     \item Any valid model name from caret's model library (e.g., "rf" for random forest, "svmRadial" for SVM)
+#'   }
+#'
+#' @return A list containing the model specification with the following components:
+#'   \describe{
+#'     \item{type}{Model type: "Classification" or "Regression"}
+#'     \item{library}{Required R package(s) for the model}
+#'     \item{label}{Human-readable model name}
+#'     \item{parameters}{Data frame describing tunable parameters}
+#'     \item{grid}{Function to generate parameter tuning grid}
+#'     \item{fit}{Function to fit the model}
+#'     \item{predict}{Function to generate predictions}
+#'     \item{prob}{Function to generate class probabilities (classification only)}
+#'   }
+#'
+#' @examples
+#' # Load custom MVPA model
+#' model <- load_model("sda_notune")
+#' 
+#' # Load correlation classifier with parameter tuning options
+#' corr_model <- load_model("corclass")
+#' print(corr_model$parameters)  # View tunable parameters
+#' 
+#' # Load caret's random forest model
+#' rf_model <- load_model("rf")
+#' print(rf_model$parameters)  # View RF parameters
+#' 
+#' # Load caret's SVM model
+#' svm_model <- load_model("svmRadial")
+#'
+#' @seealso 
+#' \code{\link{MVPAModels}} for the complete list of available custom MVPA models
+#' 
+#' \code{\link[caret]{getModelInfo}} for the complete list of available caret models
+#' 
+#' \code{\link{mvpa_model}} for using these models in MVPA analyses
+#'
 #' @export
+load_model <- function(name) {
+  if (exists(name, envir=MVPAModels)) {
+    return(get(name, envir=MVPAModels))
+  }
+  
+  # Try loading from caret if not found in MVPAModels
+  caret_model <- try(getModelInfo(name, regex=FALSE)[[1]], silent=TRUE)
+  if (!inherits(caret_model, "try-error")) {
+    return(caret_model)
+  }
+  
+  stop("Model '", name, "' not found in MVPAModels or caret library")
+}
 load_model <- function(name) {
   registry <- MVPAModels
   
@@ -491,6 +565,7 @@ load_subset <- function(full_design, subset) {
 
 
 #' @importFrom neuroim2 read_vec read_vol sub_vector
+#' @noRd
 load_image_data_series <- function(fnames, config, indices, mask_volume) {
   if (!all(file.exists(fnames))) {
     offenders <- fnames[!file.exists(fnames)]

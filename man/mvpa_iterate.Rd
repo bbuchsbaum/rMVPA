@@ -2,49 +2,58 @@
 % Please edit documentation in R/mvpa_iterate.R
 \name{mvpa_iterate}
 \alias{mvpa_iterate}
-\title{MVPA Iteration for Voxel Sets with Parallelization}
+\title{Iterate MVPA Analysis Over Multiple ROIs}
 \usage{
 mvpa_iterate(
   mod_spec,
   vox_list,
   ids = 1:length(vox_list),
-  compute_performance = TRUE,
-  return_predictions = TRUE,
-  return_fits = FALSE,
   batch_size = as.integer(0.1 * length(ids)),
-  permute = FALSE,
-  verbose = TRUE
+  verbose = TRUE,
+  processor = NULL
 )
 }
 \arguments{
-\item{mod_spec}{An object of class \code{mvpa_model} specifying the model.}
+\item{mod_spec}{An MVPA model specification object containing:
+\describe{
+  \item{dataset}{The dataset to analyze}
+  \item{compute_performance}{Logical indicating whether to compute performance metrics}
+  \item{return_predictions}{Logical indicating whether to return predictions}
+}}
 
-\item{vox_list}{A \code{list} of voxel indices or coordinates.}
+\item{vox_list}{A list of voxel indices or coordinates defining each ROI to analyze}
 
-\item{ids}{A \code{vector} of IDs for each voxel set (defaults to 1:length(vox_list)).}
+\item{ids}{Vector of identifiers for each ROI analysis (default: 1:length(vox_list))}
 
-\item{compute_performance}{A \code{logical} indicating whether to compute and store performance measures for each voxel set (defaults to TRUE).}
+\item{batch_size}{Integer specifying number of ROIs to process per batch 
+(default: 10% of total ROIs)}
 
-\item{return_predictions}{A \code{logical} indicating whether to return row-wise predictions for each voxel set (defaults to TRUE).}
+\item{verbose}{Logical indicating whether to print progress messages (default: TRUE)}
 
-\item{return_fits}{A \code{logical} indicating whether to return the model fit for each voxel set (defaults to FALSE).}
-
-\item{batch_size}{An \code{integer} specifying the number of voxel sets to process in each batch (defaults to 10% of the total voxel sets).}
-
-\item{permute}{A \code{logical} indicating whether to permute the labels (defaults to FALSE).}
-
-\item{verbose}{A \code{logical} indicating whether to print progress messages (defaults to TRUE).}
+\item{processor}{Optional custom processing function. If NULL, uses default processor.
+Must accept parameters (obj, roi, rnum) and return a tibble.}
 }
 \value{
-A \code{data.frame} containing the results for each voxel set, including performance measures, predictions, and model fits, as specified by the input parameters.
+A tibble containing results for each ROI with columns:
+  \describe{
+    \item{result}{List column of analysis results (NULL if return_predictions=FALSE)}
+    \item{indices}{List column of ROI indices used}
+    \item{performance}{List column of performance metrics (if computed)}
+    \item{id}{ROI identifier}
+    \item{error}{Logical indicating if an error occurred}
+    \item{error_message}{Error message if applicable}
+    \item{warning}{Logical indicating if warning occurred}
+    \item{warning_message}{Warning message if applicable}
+  }
 }
 \description{
-This function fits a classification or regression model for each voxel set in a list using parallelization.
-It can compute and store performance measures, return row-wise predictions, and return the model fit for each voxel set.
+Performs multivariate pattern analysis (MVPA) across multiple regions of interest (ROIs) 
+using batch processing and parallel computation.
 }
 \details{
-This function utilizes parallel processing to speed up the process of fitting the specified model for each voxel set in a list.
-The parallelization is achieved using the `furrr` package, which provides a parallel backend for the `purrr` package.
-By default, it divides the voxel sets into batches and processes them in parallel according to the specified batch size.
-The function provides options to control the return of performance measures, predictions, and model fits for each voxel set.
+The function processes ROIs in batches to manage memory usage. For each batch:
+1. Extracts ROI data from the dataset
+2. Filters out ROIs with fewer than 2 voxels
+3. Processes each ROI using either the default or custom processor
+4. Combines results across all batches
 }

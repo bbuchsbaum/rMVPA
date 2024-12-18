@@ -1,8 +1,4 @@
 
-
-
-
-
 #' Compute Group Means of a Matrix
 #'
 #' This function calculates the average vector for each level of a grouping variable in a given matrix.

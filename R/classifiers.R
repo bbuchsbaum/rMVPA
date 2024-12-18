@@ -1,64 +1,71 @@
-
-### TODO
-## Fast SDA searchlight
-## Use gray matter mask
-## for each voxel, resample including centroid with random surround
-## precompute centroids
-## precompute covariance matrix
-## precompute total scatter
-## for each searchlight solve(St, Sb)
-## make predictions, accuracy, auc
-
-## use R6 to wrap models
-## 
-
 #' @keywords internal
 #' @noRd
-colHuber <- function(x,k=1.5, tol=1e-04) {
+colHuber <- function(x, k=1.5, tol=1e-04) {
   mu <- matrixStats::colMedians(x)
   s <- matrixStats::colMads(x)
   n <- nrow(x)
-  sapply(1:length(mu), function(i) {
+  sapply(seq_along(mu), function(i) {
     repeat {
-      yy <- pmin(pmax(mu[i] - k * s[i], x[,i]), mu[i] + k * s[i])
+      yy <- pmin(pmax(mu[i] - k * s[i], x[, i]), mu[i] + k * s[i])
       mu1 <- sum(yy)/n
       if (abs(mu[i] - mu1) < tol * s[i]) 
         break
-      mu <- mu1
+      mu[i] <- mu1
     }
-    mu
+    mu[i]
   })
 }
 
 
-
-
-#' @noRd
+#' Pre-defined MVPA Classification Models
+#'
+#' An environment containing custom classification models for MVPA analysis.
+#'
+#' @format An environment with the following models:
+#' \describe{
+#'   \item{corclass}{Correlation-based classifier using template matching with options (pearson, spearman, kendall)}
+#'   \item{corsim}{Alias for corclass}
+#'   \item{sda_notune}{Shrinkage Discriminant Analysis (SDA) without parameter tuning}
+#'   \item{sda_boot}{SDA with bootstrap resampling and feature selection}
+#'   \item{glmnet_opt}{Elastic net classifier (glmnet) with optimized alpha/lambda via EPSGO}
+#'   \item{sparse_sda}{SDA with sparsity constraints and feature selection}
+#'   \item{sda_ranking}{SDA with feature ranking and selection via higher criticism}
+#'   \item{mgsda}{Multi-Group Sparse Discriminant Analysis}
+#'   \item{lda_thomaz}{Modified LDA classifier for high-dimensional data}
+#'   \item{hdrda}{High-Dimensional Regularized Discriminant Analysis}
+#' }
+#'
+#' @details
+#' Models are accessed via \code{load_model(name)}. Each implements caret's \code{fit}, \code{predict}, and \code{prob} methods.
+#'
+#' @examples
+#' # Load simple SDA classifier
+#' model <- load_model("sda_notune")
+#'
+#' # Load correlation classifier
+#' model <- load_model("corclass")
+#'
+#' @export
 MVPAModels <- new.env()
-
-
 
 #' @importFrom MASS huber
 #' @importFrom stats median
 #' @noRd
 corsimFit <- function(x, y, method, robust) {
   estimator <- if (robust) {
-    function(vec)  {
-      h <- try(MASS::huber(vec))
-      if (inherits(h, "try-error")) {
-        median(vec)
-      } else {
-        h$mu
-      }
-    }      
+    function(vec) {
+      h <- try(MASS::huber(vec), silent=TRUE)
+      if (inherits(h, "try-error")) median(vec) else h$mu
+    }
   } else {
     "mean"
   }
   
+  lev <- levels(y)
   if (identical("mean", estimator)) {
-    list(conditionMeans=group_means(x, 1, y), levs=levels(y), method=method, robust=robust)
+    list(conditionMeans=group_means(x, 1, y), levs=lev, method=method, robust=robust)
   } else {
-    list(conditionMeans = neuroim2::split_reduce(as.matrix(x), y, estimator), levs=levels(y), method=method, robust=robust)
+    list(conditionMeans = neuroim2::split_reduce(as.matrix(x), y, estimator), levs=lev, method=method, robust=robust)
   }
 }
 
@@ -74,520 +81,531 @@ predict_corsimFit <- function(modelFit, newData) {
 #' @noRd
 prob_corsimFit <- function(modelFit, newData) {
   scores <- cor(t(newData), t(modelFit$conditionMeans), method=modelFit$method)
-  
-  mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
-  #probs <- exp(scores - mc)
+  mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores, ties.method = "first"))]
   probs <- exp(sweep(scores, 1, mc, "-"))
-  probs <- zapsmall(probs/rowSums(probs))
+  probs <- zapsmall(probs / rowSums(probs))
   colnames(probs) <- modelFit$levs
   probs
 }
 
-
+# PCA + LDA model
+# Store lev after training so predictions can reference classes.
 #' @keywords internal
 #' @noRd
-MVPAModels$pca_lda <- list(type = "Classification", 
-                           library = "MASS", 
-                           loop = NULL, 
-                           label="pca_lda",
-                           parameters=data.frame(parameters="ncomp", class="numeric", labels="ncomp"),
-                           grid=function(x, y, len = 5) {
-                             data.frame(ncomp=1:len)
-                           },
-                           
-                           fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                             scmat <- scale(as.matrix(x))
-                             pres <- svd::propack.svd(scmat, neig=param$ncomp)
-                             #pres <- prcomp(as.matrix(x), scale=TRUE)
-                             #lda.fit <- lda(pres$x[,1:param$ncomp, drop=FALSE], y)
-                             lda.fit <- lda(pres$u[, 1:param$ncomp, drop=FALSE], y)
-                             attr(lda.fit, "ncomp") <- param$ncomp
-                             attr(lda.fit, "pcfit") <- pres
-                             attr(lda.fit, "center") <- attr(scmat, "scaled:center")
-                             attr(lda.fit, "scale") <- attr(scmat, "scaled:scale")
-                             lda.fit
-                           },
-                           
-                           predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                             compind <- seq(1, attr(modelFit, "ncomp"))
-                             
-                             pcfit <- attr(modelFit, "pcfit")
-                             #colnames(newdata) <- rownames(pcfit$rotation)
-                             #pcx <- predict(pcfit, newdata)[,compind,drop=FALSE]
-                             pcx <- scale(newdata, attr(pcfit, "center"), attr(pcfit, "scale")) %*% pcfit$v
-                             predict(modelFit, pcx)$class
-                           },
-                           prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                             compind <- seq(1, attr(modelFit, "ncomp"))
-                             pcfit <- attr(modelFit, "pcfit")
-                             #colnames(newdata) <- rownames(pcfit$rotation)
-                             #pcx <- predict(pcfit, newdata)[,compind,drop=FALSE]
-                             pcx <- scale(newdata, attr(modelFit, "center"), attr(modelFit, "scale")) %*% pcfit$v
-                             predict(modelFit, pcx)$posterior                              
-                           })
+MVPAModels$pca_lda <- list(
+  type = "Classification", 
+  library = "MASS", 
+  loop = NULL, 
+  label="pca_lda",
+  parameters=data.frame(parameters="ncomp", class="numeric", labels="ncomp"),
+  grid=function(x, y, len = 5) data.frame(ncomp=1:len),
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    scmat <- scale(as.matrix(x))
+    pres <- svd::propack.svd(scmat, neig=param$ncomp)
+    lda.fit <- lda(pres$u[, 1:param$ncomp, drop=FALSE], y)
+    attr(lda.fit, "ncomp") <- param$ncomp
+    attr(lda.fit, "pcfit") <- pres
+    attr(lda.fit, "center") <- attr(scmat, "scaled:center")
+    attr(lda.fit, "scale") <- attr(scmat, "scaled:scale")
+    attr(lda.fit, "obsLevels") <- lev
+    lda.fit
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    compind <- seq_len(attr(modelFit, "ncomp"))
+    pcfit <- attr(modelFit, "pcfit")
+    pcx <- scale(newdata, attr(modelFit, "center"), attr(modelFit, "scale")) %*% pcfit$v
+    predict(modelFit, pcx[, compind, drop=FALSE])$class
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    compind <- seq_len(attr(modelFit, "ncomp"))
+    pcfit <- attr(modelFit, "pcfit")
+    pcx <- scale(newdata, attr(modelFit, "center"), attr(modelFit, "scale")) %*% pcfit$v
+    predict(modelFit, pcx[, compind, drop=FALSE])$posterior
+  }
+)
 
-
-
+# corclass and corsim
+# Ensure lev is known from fit if needed. corsimFit stores lev internally.
 #' @keywords internal
 #' @noRd
-MVPAModels$corclass <- list(type = "Classification", 
-                          library = "rMVPA", 
-                          label="corclass",
-                          loop = NULL, 
-                          parameters=data.frame(parameters=c("method", "robust"), class=c("character", "logical"), label=c("correlation type: pearson, spearman, or kendall", "mean or huber")),
-                          grid=function(x, y, len = NULL) if (is.null(len) || len == 1) { data.frame(method="pearson", robust=FALSE) } else { expand.grid(method=c("pearson", "spearman", "kendall"), 
-                                                                                                                                          robust=c(TRUE, FALSE)) },
-                          fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) corsimFit(x,y, as.character(param$method), param$robust),
-                          
-                          predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) predict_corsimFit(modelFit, as.matrix(newdata)),
-                          prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                            prob_corsimFit(modelFit, as.matrix(newdata))
-                          })
+MVPAModels$corclass <- list(
+  type = "Classification", 
+  library = "rMVPA", 
+  label="corclass",
+  loop = NULL, 
+  parameters=data.frame(parameters=c("method", "robust"), class=c("character", "logical"),
+                        label=c("correlation type: pearson, spearman, or kendall", "mean or huber")),
+  grid=function(x, y, len = NULL) {
+    if (is.null(len) || len == 1) {
+      data.frame(method="pearson", robust=FALSE)
+    } else {
+      expand.grid(method=c("pearson","spearman","kendall"), robust=c(TRUE,FALSE))
+    }
+  },
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    corsimFit(x, y, as.character(param$method), param$robust)
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    predict_corsimFit(modelFit, as.matrix(newdata))
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    prob_corsimFit(modelFit, as.matrix(newdata))
+  }
+)
 
 #' @keywords internal
 #' @noRd
 MVPAModels$corsim <- MVPAModels$corclass
 
-
+# sda_notune
+# Add levels storage
 #' @keywords internal
 #' @noRd
-MVPAModels$sda_notune <- list(type = "Classification", 
-                              library = "sda", 
-                              label="sda_notune",
-                              loop = NULL, 
-                              parameters=data.frame(parameters="parameter", class="character", label="parameter"),
-                              grid=function(x, y, len = NULL) data.frame(parameter="none"),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {                       
-                                sda::sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...)
-                              },
-                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                
-                                predict(modelFit, as.matrix(newdata), verbose=FALSE)$class
-                              },
-                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-            
-                                predict(modelFit, as.matrix(newdata),verbose=FALSE)$posterior
-                              })
+MVPAModels$sda_notune <- list(
+  type = "Classification", 
+  library = "sda", 
+  label="sda_notune",
+  loop = NULL, 
+  parameters=data.frame(parameters="parameter", class="character", label="parameter"),
+  grid=function(x, y, len = NULL) data.frame(parameter="none"),
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    m <- sda::sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...)
+    m$obsLevels <- lev
+    m
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    predict(modelFit, as.matrix(newdata), verbose=FALSE)$class
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    predict(modelFit, as.matrix(newdata), verbose=FALSE)$posterior
+  }
+)
 
+# sda_boot
+# Store lev and ensure predictions label correctly
 #' @keywords internal
 #' @noRd
-MVPAModels$sda_boot <- list(type = "Classification", 
-                              library = "sda", 
-                              label="sda_boot",
-                              loop = NULL, 
-                              parameters=data.frame(parameters=c("reps", "frac", "lambda_min", "lambda_max"), 
-                                                    class=c("numeric", "numeric", "numeric", "numeric"), 
-                                                    label=c("number of bootstap resamples", "fraction of features to select", "min lambda", "max lambda")),
-                              grid=function(x, y, len = NULL) data.frame(reps=10, frac=1, lambda_min=.01, lambda_max=.8),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {   
-                                
-                                x <- as.matrix(x)
-                                mfits <- list()
-                                count <- 1
-                                failures <- 0
-                                
-                                split_y <- split(seq_along(y), y)
-                                lambda <- seq(param$lambda_min, param$lambda_max, length.out=param$reps)
-                                
-                                if (!all(sapply(split_y, function(yy) length(yy > 0)))) {
-                                  stop("every factor level in 'y' must have at least 1 instance, cannot run sda_boot")
-                                }
-                                
-                                assertthat::assert_that(param$frac > 0, msg="sda_boot: 'frac' parameter must be greater than 0")
-                                assertthat::assert_that(param$reps > 0, msg="sda_boot: 'reps' parameter must be greater than 0")
-                                
-                                while (count <= param$reps) {
-                                  #message("fitting sda model ", count)
-                                  
-                                  ysam <- lapply(split_y, function(idx) if (length(idx) == 1) idx else sample(idx, length(idx), replace=TRUE))
-                                  row.idx <- sort(unlist(ysam))
-                                  
-                                  ret <- if (param$frac > 0 && param$frac < 1) {
-                                    nkeep <- max(param$frac * ncol(x),1)
-                                    ind <- sample(1:ncol(x), nkeep)
-                                    fit <- try(sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y[row.idx], lambda=lambda[count], verbose=FALSE,...))
-                                    attr(fit, "keep.ind") <- ind
-                                    fit
-                                  } else {
-                                    fit <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], lambda=lambda[count], verbose=FALSE, ...))
-                                    attr(fit, "keep.ind") <- 1:ncol(x)
-                                    fit
-                                  }
-                                  
-                                  if (!inherits(ret, "try-error")) {
-                                    mfits[[count]] <- ret
-                                    count <- count + 1
-                                  } else {
-                                    message("sda model fit error, retry attempt: ", failures + 1)
-                                    failures <- failures + 1
-                                    if (failures > 10) {
-                                      return(ret)
-                                    }
-                                  }
-                                }
-                              
-                          
-                                ret <- list(fits=mfits)
-                                class(ret) <- "sda_boot"
-                                ret
-                                
-                              },
-                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                
-                                preds <- lapply(modelFit$fits, function(fit) {
-                                  ind <- attr(fit, "keep.ind")
-                                  predict(fit, as.matrix(newdata)[,ind], verbose=FALSE)$posterior
-                                })
-                                
-                                prob <- preds[!sapply(preds, function(x) is.null(x))]
-                                pfinal <- Reduce("+", prob)/length(prob)
-                                
-                                colnames(pfinal)[apply(pfinal, 1, which.max)]
-                            
-                              },
-                                
-                                
-                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                
-                                preds <- lapply(modelFit$fits, function(fit) {
-                                  ind <- attr(fit, "keep.ind")
-                                  predict(fit, as.matrix(newdata)[,ind], verbose=FALSE)$posterior
-                                })
-                                
-                                prob <- preds[!sapply(preds, function(x) is.null(x))]
-                                Reduce("+", prob)/length(prob)})
+MVPAModels$sda_boot <- list(
+  type = "Classification", 
+  library = "sda", 
+  label="sda_boot",
+  loop = NULL, 
+  parameters=data.frame(parameters=c("reps","frac","lambda_min","lambda_max"),
+                        class=c("numeric","numeric","numeric","numeric"),
+                        label=c("boot reps","frac features","min lambda","max lambda")),
+  grid=function(x, y, len = NULL) data.frame(reps=10, frac=1, lambda_min=.01, lambda_max=.8),
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    x <- as.matrix(x)
+    mfits <- list()
+    count <- 1
+    failures <- 0
+    
+    split_y <- split(seq_along(y), y)
+    lambda <- seq(param$lambda_min, param$lambda_max, length.out=param$reps)
+    
+    if (!all(sapply(split_y, function(yy) length(yy) > 0))) {
+      stop("Every level in 'y' must have at least one instance for sda_boot.")
+    }
+    
+    assertthat::assert_that(param$frac > 0, msg="sda_boot: 'frac' must be > 0")
+    assertthat::assert_that(param$reps > 0, msg="sda_boot: 'reps' must be > 0")
+    
+    while (count <= param$reps) {
+      ysam <- lapply(split_y, function(idx) if (length(idx)==1) idx else sample(idx, length(idx), replace=TRUE))
+      row.idx <- sort(unlist(ysam))
+      
+      ret <- if (param$frac > 0 && param$frac < 1) {
+        nkeep <- max(param$frac * ncol(x),1)
+        ind <- sample(seq_len(ncol(x)), nkeep)
+        fit <- try(sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y[row.idx], lambda=lambda[count], verbose=FALSE, ...),
+                   silent=TRUE)
+        attr(fit, "keep.ind") <- ind
+        fit
+      } else {
+        fit <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], lambda=lambda[count], verbose=FALSE, ...),
+                   silent=TRUE)
+        attr(fit, "keep.ind") <- seq_len(ncol(x))
+        fit
+      }
+      
+      if (!inherits(ret, "try-error")) {
+        mfits[[count]] <- ret
+        count <- count + 1
+      } else {
+        message("sda model fit error, retry: ", failures + 1)
+        failures <- failures + 1
+        if (failures > 10) return(ret)
+      }
+    }
+    
+    out <- list(fits=mfits, lev=lev)
+    class(out) <- "sda_boot"
+    out
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    preds <- lapply(modelFit$fits, function(fit) {
+      ind <- attr(fit, "keep.ind")
+      predict(fit, as.matrix(newdata)[,ind,drop=FALSE], verbose=FALSE)$posterior
+    })
+    
+    prob <- preds[!sapply(preds, is.null)]
+    pfinal <- Reduce("+", prob)/length(prob)
+    modelFit$lev[apply(pfinal, 1, which.max)]
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    preds <- lapply(modelFit$fits, function(fit) {
+      ind <- attr(fit, "keep.ind")
+      predict(fit, as.matrix(newdata)[,ind,drop=FALSE], verbose=FALSE)$posterior
+    })
+    prob <- preds[!sapply(preds, is.null)]
+    pfinal <- Reduce("+", prob)/length(prob)
+    colnames(pfinal) <- modelFit$lev
+    pfinal
+  }
+)
 
+
+# lda_thomaz_boot
+# Store lev similarly, ensure correct predictions and probs
 #' @keywords internal
 #' @noRd
-MVPAModels$lda_thomaz_boot <- list(type = "Classification", 
-                            library = "sparsediscrim", 
-                            label="lda_thomaz_boot",
-                            loop = NULL, 
-                            parameters=data.frame(parameters=c("reps", "frac"), 
-                                                  class=c("numeric", "numeric"), 
-                                                  label=c("number of bootstap resamples", "fraction of features to select")),
-                            grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
-                            fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {   
-                              
-                              x <- as.matrix(x)
-                              mfits <- list()
-                              count <- 1
-                              failures <- 0
-                              
-                              split_y <- split(seq_along(y), y)
-                              
-                              if (!all(sapply(split_y, function(yy) length(yy > 0)))) {
-                                stop("every factor level in 'y' must have at least 1 instance, cannot run lda_thomaz_boot")
-                              }
-                              
-                              assertthat::assert_that(param$frac > 0, msg="lda_thomaz_boot: 'frac' parameter must be greater than 0")
-                              
-                              while (count <= param$reps) {
-                                #message("fitting sda model ", count)
-                                
-                                ysam <- lapply(split_y, function(idx) if (length(idx) == 1) idx else sample(idx, length(idx), replace=TRUE))
-                                row.idx <- sort(unlist(ysam))
-                                
-                                ret <- if (param$frac > 0 && param$frac < 1) {
-                                  nkeep <- max(param$frac * ncol(x),1)
-                                  ind <- sample(1:ncol(x), nkeep)
-                                  fit <- try(sparsediscrim::lda_thomaz(x=x[row.idx,ind,drop=FALSE], y[row.idx]))
-                                  attr(fit, "keep.ind") <- ind
-                                  fit
-                                } else {
-                                  fit <- try(sparsediscrim::lda_thomaz(x[row.idx,,drop=FALSE], y[row.idx]))
-                                  attr(fit, "keep.ind") <- 1:ncol(x)
-                                  fit
-                                }
-                                
-                                if (!inherits(ret, "try-error")) {
-                                  mfits[[count]] <- ret
-                                  count <- count + 1
-                                } else {
-                                  message("lda_thomaz model fit error, retry attempt: ", failures + 1)
-                                  failures <- failures + 1
-                                  if (failures > 10) {
-                                    return(ret)
-                                  }
-                                }
-                              }
-                              
-                              
-                              ret <- list(fits=mfits)
-                              class(ret) <- "lda_thomaz_boot"
-                              ret
-                              
-                            },
-                            predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                              
-                              
-                              preds <- lapply(modelFit$fits, function(fit) {
-                                ind <- attr(fit, "keep.ind")
-                                
-                                scores <- -t(sparsediscrim:::predict.lda_thomaz(fit, newdata[,ind])$scores)
-                                mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
-                                probs <- exp(scores - mc)
-                                zapsmall(probs/rowSums(probs))
-                              })
-                              
-                              prob <- preds[!sapply(preds, function(x) is.null(x))]
-                              pfinal <- Reduce("+", prob)/length(prob)
-                              
-                              colnames(pfinal)[apply(pfinal, 1, which.max)]
-                              
-                            },
-                            
-                            
-                            prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                              preds <- lapply(modelFit$fits, function(fit) {
-                                ind <- attr(fit, "keep.ind")
-                                
-                                scores <- -t(sparsediscrim:::predict.lda_thomaz(fit, newdata[,ind])$scores)
-                                mc <- scores[cbind(1:nrow(scores), max.col(scores, ties.method = "first"))]
-                                probs <- exp(scores - mc)
-                                zapsmall(probs/rowSums(probs))
-                              })
-                              
-                              prob <- preds[!sapply(preds, function(x) is.null(x))]
-                              pfinal <- Reduce("+", prob)/length(prob)
-                            
-                              
-                            })
+MVPAModels$lda_thomaz_boot <- list(
+  type = "Classification", 
+  library = "sparsediscrim", 
+  label="lda_thomaz_boot",
+  loop = NULL, 
+  parameters=data.frame(parameters=c("reps","frac"), class=c("numeric","numeric"),
+                        label=c("bootstrap reps","fraction of features")),
+  grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    x <- as.matrix(x)
+    mfits <- list()
+    count <- 1
+    failures <- 0
+    
+    split_y <- split(seq_along(y), y)
+    if (!all(sapply(split_y, function(yy) length(yy) > 0))) {
+      stop("All levels in 'y' must have ≥1 instance for lda_thomaz_boot.")
+    }
+    assertthat::assert_that(param$frac > 0, msg="lda_thomaz_boot: 'frac' must be > 0")
+    
+    while (count <= param$reps) {
+      ysam <- lapply(split_y, function(idx) if (length(idx)==1) idx else sample(idx, length(idx), replace=TRUE))
+      row.idx <- sort(unlist(ysam))
+      
+      ret <- if (param$frac > 0 && param$frac < 1) {
+        nkeep <- max(param$frac * ncol(x),1)
+        ind <- sample(seq_len(ncol(x)), nkeep)
+        fit <- try(sparsediscrim::lda_thomaz(x=x[row.idx,ind,drop=FALSE], y[row.idx]), silent=TRUE)
+        attr(fit, "keep.ind") <- ind
+        fit
+      } else {
+        fit <- try(sparsediscrim::lda_thomaz(x[row.idx,,drop=FALSE], y[row.idx]), silent=TRUE)
+        attr(fit, "keep.ind") <- seq_len(ncol(x))
+        fit
+      }
+      
+      if (!inherits(ret, "try-error")) {
+        mfits[[count]] <- ret
+        count <- count + 1
+      } else {
+        message("lda_thomaz model fit error, retry: ", failures + 1)
+        failures <- failures + 1
+        if (failures > 10) return(ret)
+      }
+    }
+    
+    out <- list(fits=mfits, lev=lev)
+    class(out) <- "lda_thomaz_boot"
+    out
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    preds <- lapply(modelFit$fits, function(fit) {
+      ind <- attr(fit, "keep.ind")
+      scores <- -t(sparsediscrim:::predict.lda_thomaz(fit, newdata[,ind])$scores)
+      mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores, ties.method = "first"))]
+      probs <- exp(scores - mc)
+      zapsmall(probs/rowSums(probs))
+    })
+    
+    prob <- preds[!sapply(preds, is.null)]
+    pfinal <- Reduce("+", prob)/length(prob)
+    modelFit$lev[apply(pfinal, 1, which.max)]
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    preds <- lapply(modelFit$fits, function(fit) {
+      ind <- attr(fit, "keep.ind")
+      scores <- -t(sparsediscrim:::predict.lda_thomaz(fit, newdata[,ind])$scores)
+      mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores))]
+      probs <- exp(scores - mc)
+      zapsmall(probs/rowSums(probs))
+    })
+    
+    prob <- preds[!sapply(preds, is.null)]
+    pfinal <- Reduce("+", prob)/length(prob)
+    # pfinal has no colnames here since lda_thomaz doesn't store them directly.
+    # Normally, need levels. If needed: colnames(pfinal) <- modelFit$lev
+    pfinal
+  }
+)
 
-
+# memoized ranking for sda methods
 #' @importFrom memoise memoise
 #' @importFrom sda sda.ranking
 #' @noRd
-memo_rank <- memoise(function(X, L,fdr) {
+memo_rank <- memoise(function(X, L, fdr) {
   sda::sda.ranking(X,L,fdr=fdr,verbose=FALSE)
 })
 
-
+# glmnet_opt
+# Store lev, fix prob calculation
 #' @keywords internal
 #' @noRd
-MVPAModels$glmnet_opt <- list(type = "Classification", 
-                              library = c("c060", "glmnet"), 
-                              label="glmnet_opt",
-                              loop = NULL, 
-                              parameters=data.frame(parameters="parameter", class="character", label="parameter"),
-                              grid=function(x, y, len = NULL) data.frame(parameter="none"),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                                bounds <- t(data.frame(alpha=c(0, 1)))
-                                fam <- if (length(levels(y) > 2)) {
-                                  "multinomial"
-                                } else {
-                                  "binomial"
-                                }
-                                colnames(bounds)<-c("lower","upper")
-                                x <- as.matrix(x)                          
-                                fit <- epsgo(Q.func="tune.glmnet.interval",
-                                             bounds=bounds,
-                                             parms.coding="none",
-                                             seed = 1234,
-                                             show="none",
-                                             fminlower = -100,
-                                             x = x, y = y, family = fam,
-                                             type.min = "lambda.1se",
-                                             foldid=createFolds(y,k=5,list=FALSE),
-                                             type.measure = "mse")
-                                sfit <- summary(fit, verbose=FALSE)
-                                fit <- glmnet(x,y, family=fam,alpha=sfit$opt.alpha, nlambda=20)
-                                fit$opt_lambda <- sfit$opt.lambda
-                                fit$opt_alpha <- sfit$opt.alpha
-                                fit
-                              },
-                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {                        
-                                out <- predict(modelFit, as.matrix(newdata), s=modelFit$opt_lambda, type="class")
-                                if (is.matrix(out)) {
-                                  out[,1]
-                                } else {
-                                  out
-                                }
-                              },
-                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                obsLevels <- if("classnames" %in% names(modelFit)) modelFit$classnames else NULL
-                                if(length(obsLevels) == 2) {
-                                  probs <- as.vector(probs)
-                                  probs <- as.data.frame(cbind(1-probs, probs))
-                                  colnames(probs) <- modelFit$obsLevels
-                                } else {
-                                  probs <- as.data.frame(probs[,,1,drop = FALSE])
-                                  #names(probs) <- modelFit$obsLevels
-                                  attr(modelFit, "obsLevels")
-                                }
-                                
-                                probs
-                              })
+MVPAModels$glmnet_opt <- list(
+  type = "Classification", 
+  library = c("c060","glmnet"), 
+  label="glmnet_opt",
+  loop = NULL, 
+  parameters=data.frame(parameters="parameter", class="character", label="parameter"),
+  
+  grid=function(x, y, len = NULL) data.frame(parameter="none"),
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    x <- as.matrix(x)
+    bounds <- t(data.frame(alpha=c(0,1)))
+    colnames(bounds)<-c("lower","upper")
+    fam <- if (length(lev) > 2) "multinomial" else "binomial"
+    
+    foldid <- caret::createFolds(y,k=5,list=FALSE)
+    fit <- epsgo(Q.func="tune.glmnet.interval",
+                 bounds=bounds,
+                 parms.coding="none",
+                 seed=1234,
+                 show="none",
+                 fminlower=-100,
+                 x=x, y=y, family=fam,
+                 type.min="lambda.1se",
+                 foldid=foldid,
+                 type.measure="mse")
+    sfit <- summary(fit, verbose=FALSE)
+    modelFit <- glmnet(x,y,family=fam,alpha=sfit$opt.alpha, nlambda=20)
+    modelFit$opt_lambda <- sfit$opt.lambda
+    modelFit$opt_alpha <- sfit$opt.alpha
+    modelFit$obsLevels <- lev
+    modelFit
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    out <- predict(modelFit, as.matrix(newdata), s=modelFit$opt_lambda, type="class")
+    if (is.matrix(out)) out[,1] else out
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    lev <- modelFit$obsLevels
+    fam <- if (length(lev) > 2) "multinomial" else "binomial"
+    probs <- predict(modelFit, as.matrix(newdata), s=modelFit$opt_lambda, type="response")
+    if (fam=="binomial") {
+      # Binary
+      probs <- as.vector(probs)
+      probs <- data.frame(probs_1 = 1 - probs, probs_2 = probs)
+      colnames(probs) <- lev
+    } else {
+      # Multinomial returns a 3D array: (N, classes, 1)
+      # Convert to data.frame
+      probs <- as.data.frame(probs[,,1,drop=FALSE])
+      colnames(probs) <- lev
+    }
+    probs
+  }
+)
 
-
+# sparse_sda
+# Store lev if needed, no explicit predict labeling needed except from posterior
 #' @keywords internal
 #' @noRd
-MVPAModels$sparse_sda <- list(type = "Classification", 
-                               library = "sda", 
-                               label="sparse_sda",
-                               loop = NULL, 
-                               parameters=data.frame(parameters=c("frac", "lambda"), class=c("numeric", "numeric"), 
-                                                     label=c("fraction of features to keep (frac > 0 a frac <= 1)", "lambda")),
-                               grid=function(x, y, len = NULL) expand.grid(frac=seq(.1,1,length.out=len), lambda=seq(.01,.99,length.out=len)),
-                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                                 #print(param)
-                                 x <- as.matrix(x)                          
-                                 nkeep <- max(param$frac * ncol(x),1)
-                                 
-                                 rank <- memo_rank(x, L=y, fdr=FALSE)
-                                 ind <- rank[,"idx"][1:nkeep]
-                                 
-                                 fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, lambda=param$lambda, verbose=FALSE)
-                                 attr(fit, "keep.ind") <- ind
-                                 fit
-                               },
-                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {                        
-                                 predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]), verbose=FALSE)$class
-                               },
-                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
-                               })
+MVPAModels$sparse_sda <- list(
+  type = "Classification", 
+  library = "sda", 
+  label="sparse_sda",
+  loop = NULL, 
+  parameters=data.frame(parameters=c("frac","lambda"), class=c("numeric","numeric"), 
+                        label=c("frac features","lambda")),
+  grid=function(x, y, len = NULL) expand.grid(frac=seq(.1,1,length.out=len), lambda=seq(.01,.99,length.out=len)),
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    x <- as.matrix(x)                          
+    nkeep <- max(param$frac * ncol(x),1)
+    rank <- memo_rank(x, L=y, fdr=FALSE)
+    ind <- rank[,"idx"][1:nkeep]
+    
+    fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, lambda=param$lambda, verbose=FALSE)
+    attr(fit, "keep.ind") <- ind
+    fit$obsLevels <- lev
+    fit
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]), verbose=FALSE)$class
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
+  }
+)
 
 
-
-
-
+# sda_ranking
+# Store lev
 #' @keywords internal
 #' @noRd
-MVPAModels$sda_ranking <- list(type = "Classification", 
-                               library = "sda", 
-                               label="sda_ranking",
-                               loop = NULL, 
-                               parameters=data.frame(parameters="parameter", class="character", label="parameter"),
-                               grid=function(x, y, len = NULL) data.frame(parameter="none"),
-                               fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-                                 
-                                 x <- as.matrix(x)                             
-                                 ind <- if (ncol(x) > 2) {
-                                   ## rank features
-                                   rank <- sda::sda.ranking(Xtrain=x, L=y, fdr=TRUE, verbose=FALSE, ...)
-                                   
-                                   #thresh based on higher criticism
-                                   hcind <- which.max(rank[,"HC"])
-                                   
-                                   
-                                   keep.ind <- if (hcind < 2) {
-                                     seq(1, min(ncol(x), 2))
-                                   } else {
-                                     1:hcind                               
-                                   }   
-                                   rank[keep.ind,"idx"]
-                                } else {
-                                  ## keep everything
-                                  1:ncol(x)
-                                }
-                        
-                                fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
-                                attr(fit, "keep.ind") <- ind
-                                fit
-                               },
-                               predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {                        
-                                 predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]), verbose=FALSE)$class
-                               },
-                               prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-                                 predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
-                               })
+MVPAModels$sda_ranking <- list(
+  type = "Classification", 
+  library = "sda", 
+  label="sda_ranking",
+  loop = NULL, 
+  parameters=data.frame(parameters="parameter", class="character", label="parameter"),
+  grid=function(x, y, len = NULL) data.frame(parameter="none"),
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    x <- as.matrix(x)                             
+    if (ncol(x) > 2) {
+      rank <- sda::sda.ranking(Xtrain=x, L=y, fdr=TRUE, verbose=FALSE, ...)
+      hcind <- which.max(rank[,"HC"])
+      keep.ind <- if (hcind < 2) seq(1, min(ncol(x), 2)) else 1:hcind
+      ind <- rank[keep.ind,"idx"]
+    } else {
+      ind <- seq_len(ncol(x))
+    }
+    
+    fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
+    attr(fit, "keep.ind") <- ind
+    fit$obsLevels <- lev
+    fit
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]), verbose=FALSE)$class
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
+  }
+)
 
 
+# mgsda
+# Fix MSGDA::classifiyV to MGSDA::classifyV and store lev
+# Define modelFit as a list after training
 #' @keywords internal
 #' @noRd
-MVPAModels$mgsda <- list(type = "Classification", 
-                              library = "MGSDA", 
-                              loop = NULL, 
-                              parameters=data.frame(parameters="lambda", class="numeric", label="sparsity penalty"),
-                              grid=function(x, y, len = NULL) data.frame(lambda=seq(.001, .99, by=len)),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { 
-                                ycodes <- as.integer(y)
-                                V <- MGSDA::dLDA(x,ycodes, lambda= param$lambda, ...) 
-                                modelFit$ycodes <- ycodes
-                                modelFit$V <- V
-                                modelFit$xtrain <- xtrain
-                                modelFit$ytrain <- y
-                                modelFit
-                              },
-                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {  
-                                preds <- MSGDA::classifiyV(modelFit$xtrain, modelFit$ycodes, newdata, modelFit$V)
-                                levels(modelFit$ytrain)[preds]
-                              },
-                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
-                               
-                              })
+MVPAModels$mgsda <- list(
+  type = "Classification", 
+  library = "MGSDA", 
+  loop = NULL, 
+  parameters=data.frame(parameters="lambda", class="numeric", label="sparsity penalty"),
+  
+  grid=function(x, y, len = NULL) data.frame(lambda=seq(.001, .99, length.out=len)),
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { 
+    ycodes <- as.integer(y)
+    V <- MGSDA::dLDA(as.matrix(x), ycodes, lambda=param$lambda, ...)
+    modelFit <- list(
+      V = V,
+      ycodes = ycodes,
+      xtrain = as.matrix(x),
+      ytrain = y,
+      obsLevels = lev
+    )
+    modelFit
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    preds <- MGSDA::classifyV(modelFit$xtrain, modelFit$ycodes, as.matrix(newdata), modelFit$V)
+    modelFit$obsLevels[preds]
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    # Not implemented in original code. If probabilities are not supported, return NULL or implement if possible.
+    # Here we return NULL to avoid errors.
+    NULL
+  }
+)
 
+# lda_thomaz
+# Store lev
 #' @keywords internal
 #' @noRd
-MVPAModels$lda_thomaz <- list(type = "Classification", 
-                              library = "sparsediscrim", 
-                              loop = NULL, 
-                              parameters=data.frame(parameters="parameter", class="character", label="parameter"),
-                              grid=function(x, y, len = NULL) data.frame(parameter="none"),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { sparsediscrim:::lda_thomaz(x,y, ...) },
-                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { sparsediscrim:::predict.lda_thomaz(modelFit, as.matrix(newdata)) },
-                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
-                                p <- sparsediscrim:::predict.lda_thomaz(modelFit, newdata, type="prob")
-                                
-                                p
-                              })
+MVPAModels$lda_thomaz <- list(
+  type = "Classification", 
+  library = "sparsediscrim", 
+  loop = NULL, 
+  parameters=data.frame(parameters="parameter", class="character", label="parameter"),
+  
+  grid=function(x, y, len = NULL) data.frame(parameter="none"),
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    fit <- sparsediscrim:::lda_thomaz(as.matrix(x), y, ...)
+    fit$obsLevels <- lev
+    fit
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    # Returns a list with element $class
+    sparsediscrim:::predict.lda_thomaz(modelFit, as.matrix(newdata))$class
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    p <- sparsediscrim:::predict.lda_thomaz(modelFit, as.matrix(newdata), type="prob")
+    # p is posterior probabilities with columns corresponding to classes in modelFit$obsLevels
+    if (!is.null(modelFit$obsLevels)) colnames(p) <- modelFit$obsLevels
+    p
+  }
+)
 
-
+# hdrda
+# Store lev
 #' @keywords internal
 #' @noRd
-MVPAModels$hdrda <- list(type = "Classification", 
-                              library = "sparsediscrim", 
-                              label="hdrda",
-                              loop = NULL, 
-                              parameters=data.frame(parameters=c("lambda", "gamma"), class=c("numeric", "numeric"), label=c("HRDA pooling parameter", "shrinkage parameter")),
-                              grid=function(x, y, len = NULL) expand.grid(lambda=seq(.99, .001, length.out=len), gamma=seq(.001, .99, length.out=len)),
-                              fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) { sparsediscrim:::hdrda(x,y, lambda=param$lambda, gamma=param$gamma,...) },
-                              predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) { sparsediscrim:::predict.hdrda(modelFit, as.matrix(newdata))$class },
-                              prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) { 
-                                posterior <- sparsediscrim:::predict.hdrda(modelFit, newdata)$posterior
-                                t(apply(posterior,1, function(x) x/sum(x)))
-                              })
+MVPAModels$hdrda <- list(
+  type = "Classification", 
+  library = "sparsediscrim", 
+  label="hdrda",
+  loop = NULL, 
+  parameters=data.frame(parameters=c("lambda","gamma"), class=c("numeric","numeric"), 
+                        label=c("HRDA pooling","shrinkage parameter")),
+  
+  grid=function(x, y, len = NULL) expand.grid(lambda=seq(.99, .001, length.out=len), gamma=seq(.001, .99, length.out=len)),
+  
+  fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    fit <- sparsediscrim:::hdrda(as.matrix(x), y, lambda=param$lambda, gamma=param$gamma, ...)
+    fit$obsLevels <- lev
+    fit
+  },
+  
+  predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    sparsediscrim:::predict.hdrda(modelFit, as.matrix(newdata))$class
+  },
+  
+  prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    posterior <- sparsediscrim:::predict.hdrda(modelFit, as.matrix(newdata))$posterior
+    posterior <- t(apply(posterior,1,function(x) x/sum(x)))
+    if (!is.null(modelFit$obsLevels)) colnames(posterior) <- modelFit$obsLevels
+    posterior
+  }
+)
 
-
-
-
-# MVPAModels$gmd <- list(type = "Classification", 
-#                        library = "GMD", 
-#                        label="histogram distance",
-#                        loop=NULL,
-#                        parameters=data.frame(parameters="k", class="integer", label="number of nearest neighbors"),
-#                        grid=function(x, y, len = NULL) data.frame(k=5),
-#                        fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-#                          
-#                          #breaks <- gbreaks(as.vector(x),25)
-#                          #xh <- as.mhist(lapply(1:nrow(x), function(i) ghist(x[i,], breaks=breaks)))
-#                          #xh <- apply(x,1,function(vals) ghist(vals, n=20), simplify=FALSE)
-#                          #ind <- expand.grid(i=1:length(xh), j=1:length(xh))
-#                          #Dmat <- mapply(function(i,j) {
-#                          #  .Call("gmd0", xh[[i]], xh[[j]], 0, PACKAGE = "GMD")
-#                          #}, ind[,1], ind[,2])
-#                          list(x=x, y=y, levs=levels(y), k=param$k, breaks = gbreaks(as.vector(x),25))
-#                        },
-#                        predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {       
-#                          ret <- unlist(lapply(1:nrow(newdata), function(i) {
-#                            vals <- newdata[i,]
-#                            hvals <- ghist(vals, breaks=modelFit$breaks)
-#                            D <- apply(modelFit$x, 1, function(tvals) {
-#                              #.Call("gmd0", hvals, ghist(tvals, breaks=modelFit$breaks), 0, PACKAGE = "GMD")
-#                              gmdp(hvals, ghist(tvals, breaks=modelFit$breaks), sliding=FALSE)
-#                            })
-#                            
-#                            #ind <- order(D)[1:modelFit$k]
-#                            minD <- min(D)
-#                            agg <- aggregate(D ~ modelFit$y, FUN=median)
-#                            ord <- order(agg[,2])
-#                            modelFit$levs[ord[1]]
-#                            #names(which.max(table(modelFit$y[ind])))[1]
-#                          }))
-#                          
-#                        },
-#                        prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-#                          
-#                          #predict(modelFit, as.matrix(newdata[,attr(modelFit, "keep.ind"), drop=FALSE]),verbose=FALSE)$posterior
-#                        })

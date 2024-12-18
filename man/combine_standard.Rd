@@ -7,14 +7,14 @@
 combine_standard(model_spec, good_results, bad_results)
 }
 \arguments{
-\item{model_spec}{A list containing the model specification.}
+\item{model_spec}{A list containing the model specification}
 
-\item{good_results}{A data frame containing the successful classifier results.}
+\item{good_results}{A data frame containing the successful classifier results}
 
-\item{bad_results}{A data frame containing the unsuccessful classifier results.}
+\item{bad_results}{A data frame containing the unsuccessful classifier results}
 }
 \value{
-A list containing the combined performance matrix, observed probabilities, and other information from the dataset.
+A list containing the combined performance matrix and other information
 }
 \description{
 This function combines the standard classifier results from a good results data frame

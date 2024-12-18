@@ -4,7 +4,17 @@
 \alias{fit_model}
 \title{Fit Model}
 \usage{
-fit_model(obj, roi_x, y, wts, param, lev, last, classProbs, ...)
+fit_model(
+  obj,
+  roi_x,
+  y,
+  wts,
+  param,
+  lev = NULL,
+  last = FALSE,
+  classProbs = FALSE,
+  ...
+)
 }
 \arguments{
 \item{obj}{A model fitting object.}
@@ -17,11 +27,11 @@ fit_model(obj, roi_x, y, wts, param, lev, last, classProbs, ...)
 
 \item{param}{Tuning parameters.}
 
-\item{lev}{Unused.}
+\item{lev}{Factor levels (for classification).}
 
-\item{last}{Unused.}
+\item{last}{Logical indicating if this is the last iteration.}
 
-\item{classProbs}{Unused.}
+\item{classProbs}{Logical indicating if class probabilities should be returned.}
 
 \item{...}{Additional arguments to be passed to the method-specific function.}
 }

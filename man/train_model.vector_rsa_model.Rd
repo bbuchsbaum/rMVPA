@@ -4,12 +4,14 @@
 \alias{train_model.vector_rsa_model}
 \title{Train a vector RSA model}
 \usage{
-\method{train_model}{vector_rsa_model}(obj, roi, ...)
+\method{train_model}{vector_rsa_model}(obj, train_dat, indices, ...)
 }
 \arguments{
 \item{obj}{An object of class \code{vector_rsa_model}.}
 
-\item{roi}{the region of interest}
+\item{train_dat}{the training data}
+
+\item{indices}{the spatial indices of the training data}
 
 \item{...}{addiitonal arguments}
 

@@ -14,8 +14,8 @@ test_that("mvpa_regional with 5 ROIS runs without error", {
   
   region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
   model <- load_model("sda_notune")
-  mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
-  res <- run_regional(mspec, region_mask, return_fits=TRUE)
+  mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval, return_fits=TRUE)
+  res <- run_regional(mspec, region_mask)
   expect_true(!is.null(res))
   
 })
@@ -30,7 +30,7 @@ test_that("mvpa_regional with 5 ROIS runs without error and can access fitted mo
   
   region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
   model <- load_model("sda_notune")
-  mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval)
+  mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval, return_fits=TRUE)
   res <- run_regional(mspec, region_mask, return_fits=TRUE)
   fit1 <- res$fits[[1]]
   expect_true(class(fit1)[1] == "weighted_model")
@@ -126,7 +126,7 @@ test_that("mvpa_regional with 5 ROIS runs and sda without error", {
   dataset <- gen_sample_dataset(c(10,10,5), nobs=100, nlevels=4)
   cval <- blocked_cross_validation(dataset$design$block_var)
   
-  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, tune_grid=tuneGrid)
+  mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, tune_grid=tuneGrid, tune_reps=10)
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   res <- run_regional(mspec, regionMask, TRUE)
   expect_true(!is.null(res))

@@ -1,4 +1,3 @@
-
 #' @keywords internal
 gen_id <- function(n) {
   width <- nchar(n)
@@ -50,17 +49,14 @@ print.data_sample <- function(x, ...) {
   }
 }
 
-#' Filter Region of Interest (ROI)
-#'
-#' This function filters an ROI, keeping only valid columns.
-#'
-#' @param roi A list containing the train and test ROI data.
-#' @return A list with filtered train and test ROI data.
-#' @details
-#' The function filters an ROI by removing columns with missing values (NA) and zero standard deviation.
-#' It returns a list with filtered train and test ROI data.
 #' @keywords internal
-filter_roi <- function(roi) {
+filter_roi.default <- function(roi, ...) {
+  stop("Unsupported ROI type")
+}
+
+#' @keywords internal
+#' @importFrom neuroim2 ROIVec space coords values
+filter_roi.ROIVec <- function(roi, ...) {
   # Extract the train data values
   trdat <- values(roi$train_roi)
   
@@ -80,20 +76,65 @@ filter_roi <- function(roi) {
   
   # If there's no test ROI data, return filtered train ROI data only
   if (is.null(roi$test_roi)) {
-    troi <- neuroim2::ROIVec(space(roi$train_roi), coords(roi$train_roi)[keep,,drop=FALSE], data=trdat[,keep,drop=FALSE])
-    list(train_roi=troi,
-         test_roi=NULL)
-  } else  {
+    troi <- ROIVec(space(roi$train_roi), 
+                   coords(roi$train_roi)[keep,,drop=FALSE], 
+                   data=trdat[,keep,drop=FALSE])
+    list(train_roi=troi, test_roi=NULL)
+  } else {
     # Filter train ROI data
-    troi <- neuroim2::ROIVec(space(roi$train_roi), coords(roi$train_roi)[keep,,drop=FALSE], data=trdat[,keep,drop=FALSE])
+    troi <- ROIVec(space(roi$train_roi), 
+                   coords(roi$train_roi)[keep,,drop=FALSE], 
+                   data=trdat[,keep,drop=FALSE])
     
     # Filter test ROI data
     tedat <- values(roi$test_roi)
-    teroi <- neuroim2::ROIVec(space(roi$test_roi), coords(roi$test_roi)[keep,,drop=FALSE], data=tedat[,keep,drop=FALSE])
+    teroi <- ROIVec(space(roi$test_roi), 
+                    coords(roi$test_roi)[keep,,drop=FALSE], 
+                    data=tedat[,keep,drop=FALSE])
     
-    # Return filtered train and test ROI data
-    list(train_roi=troi,
-         test_roi=teroi)
+    list(train_roi=troi, test_roi=teroi)
+  }
+}
+
+#' @keywords internal
+#' @importFrom neurosurf ROISurfaceVector geometry nodes
+filter_roi.ROISurfaceVector <- function(roi, ...) {
+  # Extract the train data values
+  trdat <- roi$train_roi@data
+  
+  # Find columns with missing values (NA)
+  nas <- apply(trdat, 2, function(v) any(is.na(v)))
+  
+  # Find columns with non-zero standard deviation
+  sdnonzero <- apply(trdat, 2, sd, na.rm=TRUE) > 0
+  
+  # Determine columns to keep
+  keep <- !nas & sdnonzero
+  
+  # If no valid columns are found, throw an error
+  if (sum(keep) == 0) {
+    stop("filter_roi: roi has no valid columns")
+  }
+  
+  # If there's no test ROI data, return filtered train ROI data only
+  if (is.null(roi$test_roi)) {
+    troi <- ROISurfaceVector(geometry=roi$train_roi@geometry,
+                            indices=roi$train_roi@indices[keep],
+                            data=trdat[,keep,drop=FALSE])
+    list(train_roi=troi, test_roi=NULL)
+  } else {
+    # Filter train ROI data
+    troi <- ROISurfaceVector(geometry=roi$train_roi@geometry,
+                            indices=roi$train_roi@indices[keep],
+                            data=trdat[,keep,drop=FALSE])
+    
+    # Filter test ROI data
+    tedat <- roi$test_roi@data
+    teroi <- ROISurfaceVector(geometry=roi$test_roi@geometry,
+                             indices=roi$test_roi@indices[keep],
+                             data=tedat[,keep,drop=FALSE])
+    
+    list(train_roi=troi, test_roi=teroi)
   }
 }
 

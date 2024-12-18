@@ -2,41 +2,24 @@
 % Please edit documentation in R/allgeneric.R, R/searchlight.R
 \name{run_searchlight}
 \alias{run_searchlight}
-\alias{run_searchlight.mvpa_model}
-\alias{run_searchlight.rsa_model}
-\alias{run_searchlight.manova_model}
+\alias{run_searchlight.model_spec}
 \alias{run_searchlight.vector_rsa}
-\title{run_searchlight}
+\title{Run Searchlight Analysis}
 \usage{
-run_searchlight(model_spec, radius, method, niter, ...)
+run_searchlight(
+  model_spec,
+  radius,
+  method = c("standard", "randomized"),
+  niter = NULL,
+  ...
+)
 
-\method{run_searchlight}{mvpa_model}(
+\method{run_searchlight}{model_spec}(
   model_spec,
   radius = 8,
   method = c("randomized", "standard"),
   niter = 4,
   combiner = "average",
-  permute = FALSE,
-  ...
-)
-
-\method{run_searchlight}{rsa_model}(
-  model_spec,
-  radius = 8,
-  method = c("randomized", "standard"),
-  niter = 4,
-  permute = FALSE,
-  distmethod = c("spearman", "pearson"),
-  regtype = c("pearson", "spearman", "lm", "rfit"),
-  ...
-)
-
-\method{run_searchlight}{manova_model}(
-  model_spec,
-  radius = 8,
-  method = c("randomized", "standard"),
-  niter = 4,
-  permute = FALSE,
   ...
 )
 
@@ -45,7 +28,6 @@ run_searchlight(model_spec, radius, method, niter, ...)
   radius = 8,
   method = c("randomized", "standard"),
   niter = 4,
-  permute = FALSE,
   ...
 )
 }
@@ -61,33 +43,57 @@ run_searchlight(model_spec, radius, method, niter, ...)
 \item{...}{Additional arguments to be passed to the function.}
 
 \item{combiner}{A function that combines results into an appropriate output, or one of the following strings: "pool" or "average".}
-
-\item{permute}{Whether to permute the labels (default is FALSE).}
-
-\item{distmethod}{The method used to compute distances between searchlight samples ("spearman" or "pearson").}
-
-\item{regtype}{The method used to fit response and predictor distance matrices ("pearson", "spearman", "lm", or "rfit").}
 }
 \value{
-A named list of \code{NeuroVol} objects, where each element contains a performance metric (e.g. AUC) at every voxel location.
+A named list of \code{NeuroVol} objects containing performance metrics (e.g., AUC) at each voxel location
 }
 \description{
-Execute a searchlight analysis.
+Execute a searchlight analysis using multivariate pattern analysis.
 
 This function runs a searchlight analysis using a specified MVPA model, radius, and method.
 It can be customized with a combiner function and permutation options.
-
-This function runs a searchlight analysis using a specified RSA model, radius, and method.
-It can be customized with permutation options, distance computation methods, and regression methods.
-
-This function runs a searchlight analysis using a specified MANOVA model, radius, and method.
-It can be customized with permutation options.
 
 This function runs a searchlight analysis using a specified vector RSA model, radius, and method.
 It can be customized with permutation options, distance computation methods, and regression methods.
 }
 \examples{
-# TODO: Add an example
+\donttest{
+  # Generate sample dataset with categorical response
+  dataset <- gen_sample_dataset(
+    D = c(8,8,8),           # 8x8x8 volume
+    nobs = 100,             # 100 observations
+    response_type = "categorical",
+    data_mode = "image",
+    blocks = 3,             # 3 blocks for cross-validation
+    nlevels = 2             # binary classification
+  )
+  
+  # Create cross-validation specification using blocks
+  cval <- blocked_cross_validation(dataset$design$block_var)
+  
+  # Load the SDA classifier (Shrinkage Discriminant Analysis)
+  model <- load_model("sda_notune")
+  
+  # Create MVPA model
+  mspec <- mvpa_model(
+    model = model,
+    dataset = dataset$dataset,
+    design = dataset$design,
+    model_type = "classification",
+    crossval = cval
+  )
+  
+  # Run searchlight analysis
+  results <- run_searchlight(
+    mspec,
+    radius = 8,            # 8mm radius
+    method = "standard"    # Use standard searchlight
+  )
+  
+  # Results contain performance metrics
+  # Access them with results$performance
+}
+
  
 dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3)
 cval <- blocked_cross_validation(dataset$design$block_var)
@@ -113,7 +119,4 @@ res2 <- run_searchlight(mspec, radius=8, method="standard", combiner=custom_comb
 Bjornsdotter, M., Rylander, K., & Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.
 
 Kriegeskorte, N., Goebel, R., & Bandettini, P. (2006). Information-based functional brain mapping. Proceedings of the National academy of Sciences of the United States of America, 103(10), 3863-3868.
-}
-\seealso{
-\code{\link{run_searchlight.randomized}}, \code{\link{run_searchlight.standard}}
 }

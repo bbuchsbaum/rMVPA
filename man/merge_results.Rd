@@ -2,18 +2,29 @@
 % Please edit documentation in R/allgeneric.R
 \name{merge_results}
 \alias{merge_results}
-\title{Merge Multiple Classification/Regression Results}
+\title{Merge Multiple Results}
 \usage{
-merge_results(x, ...)
+merge_results(obj, result_set, indices, id, ...)
 }
 \arguments{
-\item{x}{The first classification/regression result object to merge.}
+\item{obj}{The base object containing merge specifications}
 
-\item{...}{Additional classification/regression result objects to merge.}
+\item{result_set}{List of results to be merged}
+
+\item{indices}{List of indices corresponding to each result}
+
+\item{id}{Identifier for the merged result}
+
+\item{...}{Additional arguments passed to specific merge methods}
 }
 \value{
-A single merged classification/regression result object containing the combined results of all input objects.
+A merged result object containing:
+\itemize{
+  \item Combined results from all input objects
+  \item Associated indices
+  \item Merged metadata
+}
 }
 \description{
-This function merges two or more classification/regression result objects into a single object.
+Merge Multiple Results
 }

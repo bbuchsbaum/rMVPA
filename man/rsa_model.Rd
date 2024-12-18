@@ -4,12 +4,16 @@
 \alias{rsa_model}
 \title{Construct an RSA (Representational Similarity Analysis) model}
 \usage{
-rsa_model(dataset, design)
+rsa_model(dataset, design, distmethod = "spearman", regtype = "pearson")
 }
 \arguments{
 \item{dataset}{An instance of an \code{mvpa_dataset}.}
 
 \item{design}{An instance of an \code{rsa_design} created by \code{rsa_design()}.}
+
+\item{distmethod}{A character string specifying the method used to compute distances between observations. One of: \code{"pearson"} or \code{"spearman"} (defaults to "spearman").}
+
+\item{regtype}{A character string specifying the analysis method. One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").}
 }
 \value{
 A list with two elements: \code{dataset} and \code{design}, with the class attribute set to \code{"rsa_model"} and \code{"list"}.
@@ -27,6 +31,9 @@ mvpa_data <- mvpa_dataset(data, labels)
 dismat <- dist(data)
 rdes <- rsa_design(~ dismat, list(dismat = dismat))
 
-# Create an RSA model
+# Create an RSA model with default parameters
 rsa_mod <- rsa_model(mvpa_data, rdes)
+
+# Create an RSA model with custom parameters
+rsa_mod_custom <- rsa_model(mvpa_data, rdes, distmethod = "pearson", regtype = "lm")
 }

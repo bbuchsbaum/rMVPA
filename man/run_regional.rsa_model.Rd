@@ -9,8 +9,6 @@
   region_mask,
   return_fits = FALSE,
   compute_performance = TRUE,
-  regtype = c("pearson", "spearman", "lm", "rfit"),
-  distmethod = c("pearson", "spearman"),
   coalesce_design_vars = FALSE,
   ...
 )
@@ -24,13 +22,13 @@
 
 \item{compute_performance}{\code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC).}
 
-\item{regtype}{The regression method ("pearson", "spearman", "lm", or "rfit").}
-
-\item{distmethod}{The distance computing method ("pearson" or "spearman").}
-
 \item{coalesce_design_vars}{Concatenate additional design variables with output stored in `prediction_table`.}
 
 \item{...}{Additional arguments to be passed to the function.}
+
+\item{regtype}{The regression method ("pearson", "spearman", "lm", or "rfit").}
+
+\item{distmethod}{The distance computing method ("pearson" or "spearman").}
 }
 \value{
 A \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects,

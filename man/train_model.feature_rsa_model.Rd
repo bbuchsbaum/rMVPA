@@ -7,17 +7,17 @@
 \method{train_model}{feature_rsa_model}(obj, train_dat, indices, ...)
 }
 \arguments{
-\item{obj}{An object of class \code{featurersa_model}.}
+\item{obj}{An object of class \code{feature_rsa_model}}
 
-\item{train_dat}{The training data.}
+\item{train_dat}{The training data}
 
-\item{indices}{The indices of the training data.}
+\item{indices}{The indices of the training data}
 
-\item{...}{Additional arguments passed to the training method.}
+\item{...}{Additional arguments passed to the training method}
 }
 \value{
-The trained model.
+The trained model with updated components
 }
 \description{
-This function trains an RSA (representational similarity analysis) model using the specified method and distance calculation.
+This function trains an RSA (representational similarity analysis) model using the specified method.
 }

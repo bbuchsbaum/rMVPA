@@ -9,7 +9,6 @@ do_standard(
   radius,
   mvpa_fun = mvpa_iterate,
   combiner = combine_standard,
-  permute = FALSE,
   ...
 )
 }
@@ -21,8 +20,6 @@ do_standard(
 \item{mvpa_fun}{The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).}
 
 \item{combiner}{The function to be used to combine results (default is \code{combine_standard}).}
-
-\item{permute}{Whether to permute the labels (default is FALSE).}
 
 \item{...}{Additional arguments to be passed to the MVPA function.}
 }

@@ -6,39 +6,76 @@
 \usage{
 mvpa_design(
   train_design,
-  y_train,
   test_design = NULL,
+  y_train,
   y_test = NULL,
   block_var = NULL,
-  split_by = NULL
+  split_by = NULL,
+  ...
 )
 }
 \arguments{
-\item{train_design}{A \code{data.frame} containing the training variables.}
+\item{train_design}{A data frame containing the training design matrix}
 
-\item{y_train}{A \code{formula}, \code{character} name, or \code{factor} specifying the response variable for training. Must have at least 2 levels with one or more training instances.}
+\item{test_design}{Optional data frame containing the test design matrix (default: NULL)}
 
-\item{test_design}{An optional \code{data.frame} containing the test variables. Must be provided if \code{y_test} is specified.}
+\item{y_train}{Formula or vector specifying the training response variable}
 
-\item{y_test}{An optional \code{formula}, \code{character} name, or \code{factor} specifying the response variable for testing. Requires \code{test_design} to be provided.}
+\item{y_test}{Optional formula or vector specifying the test response variable (default: NULL)}
 
-\item{block_var}{An optional \code{formula}, \code{character} name, or \code{integer} vector specifying the blocking variable, used for repeated measures designs.}
+\item{block_var}{Optional formula or vector specifying the blocking variable for cross-validation}
 
-\item{split_by}{An optional \code{formula} indicating the grouping structure for evaluating test performance. Splitting condition must result in at least 3 observations per group.}
+\item{split_by}{Optional formula or vector for splitting analyses}
+
+\item{...}{Additional arguments (currently unused)}
 }
 \value{
-An object of class \code{mvpa_design}, containing the training and optional test design, response variables, blocking variable, and group structure.
+An \code{mvpa_design} object (S3 class) containing:
+  \describe{
+    \item{train_design}{Data frame of training design}
+    \item{test_design}{Data frame of test design (if provided)}
+    \item{y_train}{Training response variable}
+    \item{y_test}{Test response variable (if provided)}
+    \item{block_var}{Blocking variable for cross-validation (if provided)}
+    \item{split_by}{Splitting factor (if provided)}
+  }
 }
 \description{
-Constructs an MVPA design object, defining the classification or regression problem for Multi-Variate Pattern Analysis (MVPA).
-It handles different configurations of input datasets, response variables, and optional parameters, such as blocking variables and group structures.
+Creates a design object for MVPA analysis that encapsulates training and testing designs,
+response variables, and optional blocking and splitting factors.
+}
+\details{
+The \code{y_train} and \code{y_test} can be specified either as formulas (e.g., ~ condition) 
+or as vectors. If formulas are used, they are evaluated within the respective design matrices.
+
+The \code{block_var} and \code{split_by} can also be specified as formulas or vectors. 
+If formulas, they are evaluated within the training design matrix.
 }
 \examples{
-df1 <- data.frame(y = rep(letters[1:4], 5), x1 = rnorm(20), x2 = rnorm(20), block = rep(1:4, each = 5))
-des <- mvpa_design(df1, ~ y, block_var = ~ block)
+# Basic design with only training data
+train_df <- data.frame(condition = rep(c("A", "B"), each = 50),
+                       block = rep(1:5, each = 20),
+                       group = rep(c("Group1", "Group2"), 50))
+design <- mvpa_design(train_df, y_train = ~ condition)
 
-## With a test set
-testdes <- data.frame(y = sample(letters[1:4], 10))
-des <- mvpa_design(df1, ~ y, block_var = ~ block, test_design = testdes, y_test = ~ y)
+# Design with test data and blocking variable
+test_df <- data.frame(condition = rep(c("A", "B"), each = 25))
+design_with_test <- mvpa_design(
+  train_df, 
+  test_df, 
+  y_train = ~ condition, 
+  y_test = ~ condition,
+  block_var = ~ block
+)
 
+# Design with split_by factor
+design_split <- mvpa_design(
+  train_df, 
+  y_train = ~ condition,
+  split_by = ~ group
+)
+
+}
+\seealso{
+\code{\link{mvpa_dataset}} for creating the corresponding dataset object
 }

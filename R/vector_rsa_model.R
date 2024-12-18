@@ -108,8 +108,11 @@ vector_rsa_model <- function(dataset, design, distfun=cordist(), rsa_simfun=c("p
     cross_block_data = cross_block_data
   )
   
-  class(model) <- c("vector_rsa_model", "list")
-  return(model)
+  create_model_spec("vector_rsa_model", dataset, design,distfun=distfun,
+                    rsa_simfun=rsa_simfun,
+                    cross_block_data = cross_block_data)
+  
+
 }
 
 
@@ -117,75 +120,76 @@ vector_rsa_model <- function(dataset, design, distfun=cordist(), rsa_simfun=c("p
 #'
 #' @param obj An object of class \code{vector_rsa_model}.
 #' @param X The data matrix where rows correspond to trials.
-#' @param roi the region of interest
+#' @param train_dat the training data
+#' @param indices the spatial indices of the training data
 #' @param ... addiitonal arguments
 #' @export
-train_model.vector_rsa_model <- function(obj, roi, ...) {
+train_model.vector_rsa_model <- function(obj, train_dat, indices, ...) {
   # Compute trial scores using the similarity matrix instead of the distance matrix
-  scores <- compute_trial_scores(obj, roi, ...)
+  scores <- compute_trial_scores(obj, train_dat)
   return(scores)
 }
 
-#' Perform vector RSA for a subset of data
-#'
-#' @param roi A subset of data, usually representing one ROI or one trial block.
-#' @param mod_spec The RSA model specification.
-#' @param rnum roi ids
-#' @return A tibble with RSA results and potentially error information.
-#' @noRd
-do_vector_rsa <- function(roi, mod_spec, rnum) {
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
-  ind <- indices(roi$train_roi)
-  tryCatch({
-    scores <- train_model(mod_spec, xtrain)
-    tibble::tibble(result = list(NULL), indices=list(ind), performance=list(scores), id=rnum, error = FALSE, error_message = "~")
-  }, error = function(e) {
-    tibble::tibble(result = list(NULL), indices=list(ind), performance=list(NULL), id=rnum, error = TRUE, error_message = e$message)
-  })
-}
+# Perform vector RSA for a subset of data
+#
+# @param roi A subset of data, usually representing one ROI or one trial block.
+# @param mod_spec The RSA model specification.
+# @param rnum roi ids
+# @return A tibble with RSA results and potentially error information.
+# @noRd
+# do_vector_rsa <- function(roi, mod_spec, rnum) {
+#   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
+#   ind <- indices(roi$train_roi)
+#   tryCatch({
+#     scores <- train_model(mod_spec, xtrain)
+#     tibble::tibble(result = list(NULL), indices=list(ind), performance=list(scores), id=rnum, error = FALSE, error_message = "~")
+#   }, error = function(e) {
+#     tibble::tibble(result = list(NULL), indices=list(ind), performance=list(NULL), id=rnum, error = TRUE, error_message = e$message)
+#   })
+# }
 
 
 
 #' Iterate over data sets applying the vector RSA model
-#'
-#' @param mod_spec The model specification.
-#' @param vox_list A list of voxel sets to analyze.
-#' @param ids Identifiers for each data set.
-#' @param permute Logical indicating whether to permute the labels
-#' @noRd
-vector_rsa_iterate <- function(mod_spec, vox_list, ids = seq_along(vox_list),  permute=FALSE) {
-  # Ensure IDs match the number of data sets
-  if (length(ids) != length(vox_list)) {
-    stop("Length of ids must match the number of data sets.")
-  }
- 
-  assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
-  
-  sframe <- get_samples(mod_spec$dataset, vox_list)
-  ## iterate over searchlights using parallel futures
-  sf <- sframe %>% dplyr::mutate(rnum=ids) 
-  
-  fut_vector_rsa(mod_spec,sf)
- 
-}
+#
+# @param mod_spec The model specification.
+# @param vox_list A list of voxel sets to analyze.
+# @param ids Identifiers for each data set.
+# @noRd
+# vector_rsa_iterate <- function(mod_spec, vox_list, ids = seq_along(vox_list)) {
+#   # Ensure IDs match the number of data sets
+#   if (length(ids) != length(vox_list)) {
+#     stop("Length of ids must match the number of data sets.")
+#   }
+#  
+#   assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
+#   
+#   sframe <- get_samples(mod_spec$dataset, vox_list)
+#   ## iterate over searchlights using parallel futures
+#   sf <- sframe %>% dplyr::mutate(rnum=ids) 
+#   
+#   fut_vector_rsa(mod_spec,sf)
+#  
+# }
 
 
-#' Apply the RSA model in parallel using futures
-#'
-#' @param mod_spec The model specification.
-#' @param sf A tibble containing the data sets and their identifiers.
-#' @param method Method for computing similarities.
-#' @return A combined result of all RSA analyses.
-#' @noRd
-fut_vector_rsa <- function(mod_spec, sf, ...) {
-  gc()
-  sf %>% furrr::future_pmap(function(sample, rnum, .id) {
-    do_vector_rsa(as_roi(sample, mod_spec$dataset), mod_spec, rnum, ...)
-  }, .options = furrr::furrr_options(seed = T)) %>% dplyr::bind_rows()
-   
-}
+# Apply the RSA model in parallel using futures
+#
+# @param mod_spec The model specification.
+# @param sf A tibble containing the data sets and their identifiers.
+# @param method Method for computing similarities.
+# @return A combined result of all RSA analyses.
+# @noRd
+# fut_vector_rsa <- function(mod_spec, sf, ...) {
+#   gc()
+#   sf %>% furrr::future_pmap(function(sample, rnum, .id) {
+#     do_vector_rsa(as_roi(sample, mod_spec$dataset), mod_spec, rnum, ...)
+#   }, .options = furrr::furrr_options(seed = T)) %>% dplyr::bind_rows()
+#    
+# }
 
 #' @noRd
+#' @keywords internal
 compute_trial_scores <- function(obj, X) {
   
   # Retrieve precomputed data

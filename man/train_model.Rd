@@ -11,6 +11,9 @@ train_model(obj, ...)
 
 \item{...}{Additional arguments to be passed to the method-specific function.}
 }
+\value{
+A trained model object.
+}
 \description{
 Train a classification or regression model.
 }

@@ -2,19 +2,52 @@
 % Please edit documentation in R/dataset.R
 \name{mvpa_surface_dataset}
 \alias{mvpa_surface_dataset}
-\title{mvpa_surface_dataset}
+\title{Create a Surface-Based MVPA Dataset Object}
 \usage{
 mvpa_surface_dataset(train_data, test_data = NULL, mask = NULL, name = "")
 }
 \arguments{
-\item{train_data}{the training data, must inherit from \code{NeuroSurfaceVector} in \code{neurosurf} package.}
+\item{train_data}{The training data set: must inherit from \code{NeuroSurfaceVector}}
 
-\item{test_data}{optional test data, must inherit from \code{NeuroSurfaceVector} in \code{neurosurf} package.}
+\item{test_data}{Optional test data set: must inherit from \code{NeuroSurfaceVector} (default: NULL)}
 
-\item{mask}{a binary mask equal to the number of nodes in the training/test data set.}
+\item{mask}{Optional binary mask for vertices. If NULL, creates mask from training data indices}
 
-\item{name}{label to identify the dataset (e.g. "lh" or "rh" to indicate hemisphere)}
+\item{name}{Optional label to identify the dataset (e.g., "lh" or "rh" to indicate hemisphere)}
+}
+\value{
+An \code{mvpa_surface_dataset} object (S3 class) containing:
+  \describe{
+    \item{train_data}{The training data as a \code{NeuroSurfaceVector} instance}
+    \item{test_data}{The test data as a \code{NeuroSurfaceVector} instance (if provided)}
+    \item{mask}{A numeric vector indicating valid vertices (1) and excluded vertices (0)}
+    \item{name}{Character string identifier for the dataset}
+  }
 }
 \description{
-Construct a MVPA dataset with a surface-based dataset.
+Creates a dataset object for surface-based MVPA analysis that encapsulates a training dataset,
+an optional test dataset, and a vertex mask.
+}
+\details{
+If no mask is provided, one will be created automatically using the indices from the training data.
+The mask will be a numeric vector with length equal to the number of nodes in the surface geometry.
+}
+\examples{
+\dontrun{
+# Create surface dataset with automatic mask
+train_surf <- NeuroSurfaceVector(geometry, data)
+dataset <- mvpa_surface_dataset(train_surf, name="lh")
+
+# Create dataset with test data and custom mask
+test_surf <- NeuroSurfaceVector(geometry, test_data)
+mask <- numeric(length(nodes(geometry)))
+mask[roi_indices] <- 1
+dataset <- mvpa_surface_dataset(train_surf, test_surf, mask, name="rh")
+}
+
+}
+\seealso{
+\code{\link{mvpa_dataset}} for creating volume-based MVPA datasets
+
+\code{\link{mvpa_design}} for creating the corresponding design object
 }

@@ -2,20 +2,20 @@
 % Please edit documentation in R/allgeneric.R
 \name{merge_predictions}
 \alias{merge_predictions}
-\title{Merge predictions from multiple models}
+\title{Merge Predictions}
 \usage{
 merge_predictions(obj1, rest, ...)
 }
 \arguments{
 \item{obj1}{The first object containing predictions.}
 
-\item{rest}{The rest of the objects containing predictions.}
+\item{rest}{Other objects containing predictions.}
 
-\item{...}{Additional arguments to be passed to the function.}
+\item{...}{Additional arguments.}
 }
 \value{
-A combined object containing merged predictions from multiple models.
+A combined object with merged predictions.
 }
 \description{
-Combine predictions from several models applied to the same test set.
+Combine predictions from multiple models on the same test set.
 }

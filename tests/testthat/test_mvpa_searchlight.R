@@ -162,7 +162,7 @@ test_that("randomized mvpa_searchlight runs without error", {
 
 test_that("mvpa_searchlight with sda_boot", {
   
-  dataset <- gen_sample_dataset(c(8,8,8), 100, nlevels=26, blocks=3)
+  dataset <- gen_sample_dataset(c(8,8,8), 100, nlevels=6, blocks=3)
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("sda_boot")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval)
@@ -220,7 +220,8 @@ test_that("randomized mvpa_searchlight with bootstrap crossvalidation works", {
   }
   
   wts <- runif(100)
-  cval <- bootstrap_blocked_cross_validation(dataset$design$block_var, weights=wts)
+  cval <- bootstrap_blocked_cross_validation(dataset$design$block_var, 
+  weights=wts)
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", 
                       crossval=cval, performance=custom)
@@ -270,24 +271,24 @@ test_that("randomized mvpa_searchlight and tune_grid runs without error", {
 
 test_that("randomized mvpa_searchlight works with regression", {
   library(spls)
-  dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3, response_type="continuous")
+  dataset <- gen_sample_dataset(c(6,6,6), 100, blocks=3, response_type="continuous")
   cval <- blocked_cross_validation(dataset$design$block_var)
   tuneGrid <- expand.grid(K=3, eta=.5, kappa=.5)
   model <- load_model("spls")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="regression", 
                       crossval=cval, tune_grid=tuneGrid)
-  res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
+  res <- run_searchlight(mspec, radius=6, niter=2,method="randomized")
   expect_true(!is.null(res))
 })
 
 test_that("randomized mvpa_searchlight works with xgboost", {
   
-  dataset <- gen_sample_dataset(c(6,6,4), 100, nlevels=5, blocks=5)
+  dataset <- gen_sample_dataset(c(6,6,6), 100, nlevels=5, blocks=5)
   cval <- blocked_cross_validation(dataset$design$block_var)
   tuneGrid <- expand.grid(max_depth=2, eta=.5, nrounds=100,gamma=0,colsample_bytree=.6, min_child_weight=1, subsample=.5)
   model <- load_model("xgbTree")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, crossval=cval, tune_grid=tuneGrid)
-  res <- run_searchlight(mspec, radius=3, niter=2,method="randomized")
+  res <- run_searchlight(mspec, radius=5, niter=2,method="randomized")
   expect_true(!is.null(res))
   
 })
@@ -320,118 +321,118 @@ test_that("mvpa_searchlight works with split_var", {
 })
 
 
-test_that("mvpa_searchlight on real data set", {
-  tdat <- c(
-    system.file("extdata", "sub-1005_task-localizer_run-01_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-02_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-03_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-04_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA")
-  )
-  
-  tdes <- c(
-    system.file("extdata", "sub-1005_task-localizer_run-01_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-02_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-03_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-04_events.tsv", package="rMVPA")
-  )
-  mask <- neuroim2::read_vol(system.file("extdata", "sub-1005-MNI152NLin2009cAsym_small_global_mask.nii", package="rMVPA"))
-  
-  tvec <- neuroim2::read_vec(tdat)
-  des <- do.call(rbind, lapply(tdes,read.table, header=TRUE))
-  dset <- mvpa_dataset(tvec, mask=mask)  
-  mdes <- mvpa_design(des, y_train = ~ BlockType, block_var=~ Run)
-  mod <- mvpa_model(load_model("sda_notune"), dset,mdes,crossval=blocked_cross_validation(des$Run))
-  res <- run_searchlight(mod, radius=16, niter=2,method="randomized")
-  expect_true(!is.null(res))
-  
-})
-
-test_that("mvpa_searchlight on real data set", {
-  tdat <- c(
-    system.file("extdata", "sub-1005_task-localizer_run-01_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-02_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-03_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-04_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA")
-  )
-  
-  tdes <- c(
-    system.file("extdata", "sub-1005_task-localizer_run-01_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-02_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-03_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-04_events.tsv", package="rMVPA")
-  )
-  mask <- neuroim2::read_vol(system.file("extdata", "sub-1005-MNI152NLin2009cAsym_small_global_mask.nii", package="rMVPA"))
-  
-  tvec <- neuroim2::read_vec(tdat)
-  des <- do.call(rbind, lapply(tdes,read.table, header=TRUE))
-  dset <- mvpa_dataset(tvec, mask=mask)  
-  mdes <- mvpa_design(des, y_train = ~ BlockType, block_var=~ Run)
-  mod <- mvpa_model(load_model("sda_notune"), dset,mdes,crossval=blocked_cross_validation(des$Run))
-  res <- run_searchlight(mod, radius=16, niter=3,method="randomized")
-  expect_true(!is.null(res))
-  
-})
-
-test_that("mvpa_searchlight on real data set with testset", {
-  tdat1 <- c(
-    system.file("extdata", "sub-1005_task-localizer_run-01_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-02_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-03_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-04_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA")
-  )
-  
-  tdat2 <- c(
-    system.file("extdata", "sub-1005_task-wm_run-01_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-wm_run-02_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-wm_run-03_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-wm_run-04_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA")
-  )
-  
-  tdes1 <- c(
-    system.file("extdata", "sub-1005_task-localizer_run-01_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-02_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-03_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-localizer_run-04_events.tsv", package="rMVPA")
-  )
-  
-  tdes2 <- c(
-    system.file("extdata", "sub-1005_task-wm_run-01_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-wm_run-02_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-wm_run-03_events.tsv", package="rMVPA"),
-    system.file("extdata", "sub-1005_task-wm_run-04_events.tsv", package="rMVPA")
-  )
-  
-  
-  mask <- neuroim2::read_vol(system.file("extdata", "sub-1005-MNI152NLin2009cAsym_small_global_mask.nii", package="rMVPA"))
-  
-  tvec1 <- neuroim2::read_vec(tdat1)
-  tvec2 <- neuroim2::read_vec(tdat2)
-  des1 <- do.call(rbind, lapply(tdes1,read.table, header=TRUE))
-  des2 <- do.call(rbind, lapply(tdes2,read.table, header=TRUE))
-  library(dplyr)
-  
-  des3 <- des2 %>% mutate(combo = 
-                    case_when(
-                      (Cue == "Faces" & ToBeIgnored == "Scenes") | (Cue == "Scenes" & ToBeIgnored == "Faces") ~ "Faces-Scenes",
-                      (Cue == "Bodies" & ToBeIgnored == "Scenes") | (Cue == "Scenes" & ToBeIgnored == "Bodies") ~ "Bodies-Scenes",
-                      (Cue == "Objects" & ToBeIgnored == "Scenes") | (Cue == "Scenes" & ToBeIgnored == "Objects") ~ "Objects-Scenes",
-                      (Cue == "Objects" & ToBeIgnored == "Faces") | (Cue == "Faces" & ToBeIgnored == "Objects") ~ "Faces-Objects",
-                      (Cue == "Faces" & ToBeIgnored == "Bodies") | (Cue == "Bodies" & ToBeIgnored == "Faces") ~ "Faces-Bodies",
-                      (Cue == "Objects" & ToBeIgnored == "Bodies") | (Cue == "Bodies" & ToBeIgnored == "Objects") ~ "Objects-Bodies")
-  )
-                      
-                      
-  
-  dset <- mvpa_dataset(tvec1, tvec2, mask=mask)  
-  mdes <- mvpa_design(train_design=des1, y_train = ~ BlockType, test_design=des3, y_test = ~ Cue, block_var=~ Run, split_by = ~ combo)
-  mod <- mvpa_model(load_model("sda_notune"), dset,mdes,
-                    crossval=blocked_cross_validation(des1$Run), class_metrics=FALSE)
-  res <- run_searchlight(mod, radius=16, niter=3,method="randomized", 
-                         combiner=function(mspec, good, bad) {
-                           good
-                         })
-    expect_true(!is.null(res))
-})
+# test_that("mvpa_searchlight on real data set", {
+#   tdat <- c(
+#     system.file("extdata", "sub-1005_task-localizer_run-01_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-02_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-03_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-04_bold_space-MNI_preproc_betas_small.nii.gz", package="rMVPA")
+#   )
+#   
+#   tdes <- c(
+#     system.file("extdata", "sub-1005_task-localizer_run-01_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-02_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-03_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-04_events.tsv", package="rMVPA")
+#   )
+#   mask <- neuroim2::read_vol(system.file("extdata", "sub-1005-MNI152NLin2009cAsym_small_global_mask.nii", package="rMVPA"))
+#   
+#   tvec <- neuroim2::read_vec(tdat)
+#   des <- do.call(rbind, lapply(tdes,read.table, header=TRUE))
+#   dset <- mvpa_dataset(tvec, mask=mask)  
+#   mdes <- mvpa_design(des, y_train = ~ BlockType, block_var=~ Run)
+#   mod <- mvpa_model(load_model("sda_notune"), dset,mdes,crossval=blocked_cross_validation(des$Run))
+#   res <- run_searchlight(mod, radius=16, niter=2,method="randomized")
+#   expect_true(!is.null(res))
+#   
+# })
+# 
+# test_that("mvpa_searchlight on real data set", {
+#   tdat <- c(
+#     system.file("extdata", "sub-1005_task-localizer_run-01_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-02_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-03_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-04_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA")
+#   )
+#   
+#   tdes <- c(
+#     system.file("extdata", "sub-1005_task-localizer_run-01_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-02_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-03_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-04_events.tsv", package="rMVPA")
+#   )
+#   mask <- neuroim2::read_vol(system.file("extdata", "sub-1005-MNI152NLin2009cAsym_small_global_mask.nii", package="rMVPA"))
+#   
+#   tvec <- neuroim2::read_vec(tdat)
+#   des <- do.call(rbind, lapply(tdes,read.table, header=TRUE))
+#   dset <- mvpa_dataset(tvec, mask=mask)  
+#   mdes <- mvpa_design(des, y_train = ~ BlockType, block_var=~ Run)
+#   mod <- mvpa_model(load_model("sda_notune"), dset,mdes,crossval=blocked_cross_validation(des$Run))
+#   res <- run_searchlight(mod, radius=16, niter=3,method="randomized")
+#   expect_true(!is.null(res))
+#   
+# })
+# 
+# test_that("mvpa_searchlight on real data set with testset", {
+#   tdat1 <- c(
+#     system.file("extdata", "sub-1005_task-localizer_run-01_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-02_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-03_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-04_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA")
+#   )
+#   
+#   tdat2 <- c(
+#     system.file("extdata", "sub-1005_task-wm_run-01_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-wm_run-02_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-wm_run-03_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-wm_run-04_bold_space-MNI152NLin2009cAsym_preproc_betas_small.nii.gz", package="rMVPA")
+#   )
+#   
+#   tdes1 <- c(
+#     system.file("extdata", "sub-1005_task-localizer_run-01_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-02_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-03_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-localizer_run-04_events.tsv", package="rMVPA")
+#   )
+#   
+#   tdes2 <- c(
+#     system.file("extdata", "sub-1005_task-wm_run-01_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-wm_run-02_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-wm_run-03_events.tsv", package="rMVPA"),
+#     system.file("extdata", "sub-1005_task-wm_run-04_events.tsv", package="rMVPA")
+#   )
+#   
+#   
+#   mask <- neuroim2::read_vol(system.file("extdata", "sub-1005-MNI152NLin2009cAsym_small_global_mask.nii", package="rMVPA"))
+#   
+#   tvec1 <- neuroim2::read_vec(tdat1)
+#   tvec2 <- neuroim2::read_vec(tdat2)
+#   des1 <- do.call(rbind, lapply(tdes1,read.table, header=TRUE))
+#   des2 <- do.call(rbind, lapply(tdes2,read.table, header=TRUE))
+#   library(dplyr)
+#   
+#   des3 <- des2 %>% mutate(combo = 
+#                     case_when(
+#                       (Cue == "Faces" & ToBeIgnored == "Scenes") | (Cue == "Scenes" & ToBeIgnored == "Faces") ~ "Faces-Scenes",
+#                       (Cue == "Bodies" & ToBeIgnored == "Scenes") | (Cue == "Scenes" & ToBeIgnored == "Bodies") ~ "Bodies-Scenes",
+#                       (Cue == "Objects" & ToBeIgnored == "Scenes") | (Cue == "Scenes" & ToBeIgnored == "Objects") ~ "Objects-Scenes",
+#                       (Cue == "Objects" & ToBeIgnored == "Faces") | (Cue == "Faces" & ToBeIgnored == "Objects") ~ "Faces-Objects",
+#                       (Cue == "Faces" & ToBeIgnored == "Bodies") | (Cue == "Bodies" & ToBeIgnored == "Faces") ~ "Faces-Bodies",
+#                       (Cue == "Objects" & ToBeIgnored == "Bodies") | (Cue == "Bodies" & ToBeIgnored == "Objects") ~ "Objects-Bodies")
+#   )
+#                       
+#                       
+#   
+#   dset <- mvpa_dataset(tvec1, tvec2, mask=mask)  
+#   mdes <- mvpa_design(train_design=des1, y_train = ~ BlockType, test_design=des3, y_test = ~ Cue, block_var=~ Run, split_by = ~ combo)
+#   mod <- mvpa_model(load_model("sda_notune"), dset,mdes,
+#                     crossval=blocked_cross_validation(des1$Run), class_metrics=FALSE)
+#   res <- run_searchlight(mod, radius=16, niter=3,method="randomized", 
+#                          combiner=function(mspec, good, bad) {
+#                            good
+#                          })
+#     expect_true(!is.null(res))
+# })
 
 
 

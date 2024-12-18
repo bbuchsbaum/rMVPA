@@ -10,7 +10,6 @@ do_randomized(
   niter,
   mvpa_fun = mvpa_iterate,
   combiner = pool_randomized,
-  permute = FALSE,
   ...
 )
 }
@@ -24,8 +23,6 @@ do_randomized(
 \item{mvpa_fun}{The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).}
 
 \item{combiner}{The function to be used to combine results (default is \code{pool_randomized}).}
-
-\item{permute}{Whether to permute the labels (default is FALSE).}
 
 \item{...}{Additional arguments to be passed to the MVPA function.}
 }

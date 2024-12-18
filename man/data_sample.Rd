@@ -4,18 +4,18 @@
 \alias{data_sample}
 \title{Extract Sample from Dataset}
 \usage{
-data_sample(obj, vox)
+data_sample(obj, vox, ...)
 }
 \arguments{
-\item{obj}{The input dataset object, which should be an instance of a data class compatible with sample extraction.}
+\item{obj}{The input dataset object.}
 
-\item{vox}{the voxel indices/coordinates associated with the data sample.}
+\item{vox}{The voxel indices/coordinates.}
 
-\item{...}{Additional arguments to be passed to the specific sample extraction method for the input object's class.}
+\item{...}{Additional arguments to methods.}
 }
 \value{
-A sample extracted from the input dataset based on the specific extraction method.
+A sample extracted from the dataset.
 }
 \description{
-This function extracts a sample from a given dataset object.
+Extract a sample from a given dataset object.
 }

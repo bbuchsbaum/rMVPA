@@ -2,7 +2,7 @@
 % Please edit documentation in R/dataset.R
 \name{gen_sample_dataset}
 \alias{gen_sample_dataset}
-\title{gen_sample_dataset}
+\title{Generate Sample Dataset for MVPA Analysis}
 \usage{
 gen_sample_dataset(
   D,
@@ -19,28 +19,77 @@ gen_sample_dataset(
 )
 }
 \arguments{
-\item{D}{the data dimension(s)}
+\item{D}{The data dimension(s): vector of length 2 or 3 for image data, or single number for surface data}
 
-\item{nobs}{the number of observations}
+\item{nobs}{The number of observations}
 
-\item{response_type}{'categorical' or 'continuous'}
+\item{response_type}{Either 'categorical' or 'continuous'}
 
-\item{data_mode}{'image' or 'surface'}
+\item{data_mode}{Either 'image' or 'surface'}
 
-\item{spacing}{the voxel spacing}
+\item{spacing}{The voxel spacing (default: c(1,1,1))}
 
-\item{blocks}{the number of 'blocks' in the data}
+\item{blocks}{The number of 'blocks' in the data (for cross-validation)}
 
-\item{nlevels}{the number of category levels}
+\item{nlevels}{The number of category levels (only used if response_type='categorical')}
 
-\item{external_test}{is the test set 'external' to the training set}
+\item{external_test}{Whether to generate an external test set}
 
-\item{ntest_obs}{number of test observations (only relevant if \code{external_test} is true)}
+\item{ntest_obs}{The number of test observations (default: nobs)}
 
-\item{split_by}{compute performance measures for each level of factor}
+\item{split_by}{Optional factor for splitting analyses}
 
-\item{na_cols}{number of columns with all NA values to add}
+\item{na_cols}{The number of columns to randomly set to NA (default: 0)}
+}
+\value{
+A list containing:
+  \describe{
+    \item{dataset}{An \code{mvpa_dataset} object containing:
+      \itemize{
+        \item \code{train_data}: Training data as \code{NeuroVec} or \code{ROISurface}
+        \item \code{test_data}: Test data (if external_test=TRUE)
+        \item \code{mask}: Binary mask indicating valid voxels/vertices
+      }
+    }
+    \item{design}{An \code{mvpa_design} object containing:
+      \itemize{
+        \item \code{y_train}: Response variable for training
+        \item \code{y_test}: Response variable for test set (if external_test=TRUE)
+        \item \code{block_var}: Block variable for cross-validation
+        \item \code{split_by}: Optional splitting factor
+      }
+    }
+  }
 }
 \description{
-gen_sample_dataset
+Creates a synthetic dataset for testing and demonstration of MVPA analyses.
+}
+\examples{
+# Generate categorical image dataset
+dataset <- gen_sample_dataset(
+  D = c(10,10,10),
+  nobs = 100,
+  response_type = "categorical",
+  data_mode = "image",
+  blocks = 3,
+  nlevels = 2
+)
+
+# Generate continuous surface dataset
+surf_data <- gen_sample_dataset(
+  D = 1000,  # number of vertices
+  nobs = 50,
+  response_type = "continuous",
+  data_mode = "surface"
+)
+
+# Generate dataset with external test set
+test_dataset <- gen_sample_dataset(
+  D = c(8,8,8),
+  nobs = 80,
+  response_type = "categorical",
+  nlevels = 3,
+  external_test = TRUE
+)
+
 }
