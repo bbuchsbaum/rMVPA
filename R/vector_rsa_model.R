@@ -130,63 +130,8 @@ train_model.vector_rsa_model <- function(obj, train_dat, indices, ...) {
   return(scores)
 }
 
-# Perform vector RSA for a subset of data
-#
-# @param roi A subset of data, usually representing one ROI or one trial block.
-# @param mod_spec The RSA model specification.
-# @param rnum roi ids
-# @return A tibble with RSA results and potentially error information.
-# @noRd
-# do_vector_rsa <- function(roi, mod_spec, rnum) {
-#   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
-#   ind <- indices(roi$train_roi)
-#   tryCatch({
-#     scores <- train_model(mod_spec, xtrain)
-#     tibble::tibble(result = list(NULL), indices=list(ind), performance=list(scores), id=rnum, error = FALSE, error_message = "~")
-#   }, error = function(e) {
-#     tibble::tibble(result = list(NULL), indices=list(ind), performance=list(NULL), id=rnum, error = TRUE, error_message = e$message)
-#   })
-# }
 
 
-
-#' Iterate over data sets applying the vector RSA model
-#
-# @param mod_spec The model specification.
-# @param vox_list A list of voxel sets to analyze.
-# @param ids Identifiers for each data set.
-# @noRd
-# vector_rsa_iterate <- function(mod_spec, vox_list, ids = seq_along(vox_list)) {
-#   # Ensure IDs match the number of data sets
-#   if (length(ids) != length(vox_list)) {
-#     stop("Length of ids must match the number of data sets.")
-#   }
-#  
-#   assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
-#   
-#   sframe <- get_samples(mod_spec$dataset, vox_list)
-#   ## iterate over searchlights using parallel futures
-#   sf <- sframe %>% dplyr::mutate(rnum=ids) 
-#   
-#   fut_vector_rsa(mod_spec,sf)
-#  
-# }
-
-
-# Apply the RSA model in parallel using futures
-#
-# @param mod_spec The model specification.
-# @param sf A tibble containing the data sets and their identifiers.
-# @param method Method for computing similarities.
-# @return A combined result of all RSA analyses.
-# @noRd
-# fut_vector_rsa <- function(mod_spec, sf, ...) {
-#   gc()
-#   sf %>% furrr::future_pmap(function(sample, rnum, .id) {
-#     do_vector_rsa(as_roi(sample, mod_spec$dataset), mod_spec, rnum, ...)
-#   }, .options = furrr::furrr_options(seed = T)) %>% dplyr::bind_rows()
-#    
-# }
 
 #' @noRd
 #' @keywords internal

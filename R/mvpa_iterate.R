@@ -192,7 +192,7 @@ internal_crossval <- function(mspec, roi, id) {
     if (ncol(train) < 2) {
       # Return an error message
       return(
-        format_result(mspec, error_message="error: less than 2 features", context=list(roi=roi, ytrain=ytrain, ytest=ytest, train=train, test=test, .id=.id))
+        format_result(mspec, NULL, error_message="error: less than 2 features", context=list(roi=roi, ytrain=ytrain, ytest=ytest, train=train, test=test, .id=.id))
       )
     }
 

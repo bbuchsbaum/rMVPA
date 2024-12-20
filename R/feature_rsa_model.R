@@ -147,68 +147,38 @@ feature_rsa_model <- function(dataset,
 }
 
 
-#' Train an RSA Model
-#'
-#' Trains a Feature RSA model using scca, pls, or pca method.
-#' @param obj An object of class \code{feature_rsa_model}
-#' @param train_dat The training data
-#' @param indices The indices of the training data
-#' @param ... Additional args
-#' @return The trained model
 #' @export
-train_model.feature_rsa_model <- function(obj, train_dat, indices, ...) {
+train_model.feature_rsa_model <- function(obj, train_dat, ytrain, ...) {
   X <- as.matrix(train_dat)
-  F <- obj$design$F[indices,,drop=FALSE]
+  Fsub <- as.matrix(ytrain)  # ytrain is the already subsetted portion of F
   
-  method <- obj$method
-  
-  if (method == "pls") {
-    # Fit PLS: F ~ X, scale=TRUE handled by plsr internally
-    obj$trained_model <- pls::plsr(F ~ X, scale=TRUE)
-    obj$training_indices <- indices
-    
-    predicted <- predict_model(obj, X)
-    obj$performance <- evaluate_model(obj, predicted, F)
-    return(obj)
-    
-  } else if (method == "scca") {
-    # scca requires scaling
+  if (obj$method == "pls") {
+    obj$trained_model <- pls::plsr(Fsub ~ X, scale=TRUE)
+  } else if (obj$method == "scca") {
     sx <- .standardize(X)
-    sf <- .standardize(F)
+    sf <- .standardize(Fsub)
     scca_res <- whitening::scca(sx$X_sc, sf$X_sc, scale=FALSE)
     obj$trained_model <- scca_res
-    obj$training_indices <- indices
     obj$scca_x_mean <- sx$mean
     obj$scca_x_sd <- sx$sd
     obj$scca_f_mean <- sf$mean
     obj$scca_f_sd <- sf$sd
-    
-    predicted <- predict_model(obj, X)
-    obj$performance <- evaluate_model(obj, predicted, F)
-    return(obj)
-    
-  } else if (method == "pca") {
-    # PCA on X (scaled)
+  } else if (obj$method == "pca") {
     sx <- .standardize(X)
-    sf <- .standardize(F)
+    sf <- .standardize(Fsub)
     pca_res <- prcomp(sx$X_sc, scale.=FALSE)
     PC_train <- pca_res$x
     PC_train_i <- cbind(1, PC_train)
-    coefs <- solve(t(PC_train_i)%*%PC_train_i, t(PC_train_i)%*%sf$X_sc)
-    
+    coefs <- solve(t(PC_train_i) %*% PC_train_i, t(PC_train_i) %*% sf$X_sc)
     obj$trained_model <- pca_res
-    obj$training_indices <- indices
     obj$pcarot <- pca_res$rotation
     obj$pca_x_mean <- sx$mean
     obj$pca_x_sd <- sx$sd
     obj$pca_f_mean <- sf$mean
     obj$pca_f_sd <- sf$sd
     obj$pca_coefs <- coefs
-    
-    predicted <- predict_model(obj, X)
-    obj$performance <- evaluate_model(obj, predicted, F)
-    return(obj)
   }
+  obj
 }
 
 
@@ -254,6 +224,42 @@ evaluate_model.feature_rsa_model <- function(object, predicted, observed, ...) {
   )
 }
 
+
+#' @export
+y_train.feature_rsa_model <- function(object) {
+  object$F
+}
+
+format_result.feature_rsa_model <- function(obj, result, error_message=NULL, context, ...) {
+  if (!is.null(error_message)) {
+    return(tibble::tibble(
+      observed=list(NULL),
+      predicted=list(NULL),
+      error=TRUE,
+      error_message=error_message
+    ))
+  } else {
+    # Predict on test data
+    testX <- tibble::as_tibble(context$test, .name_repair=.name_repair)
+    pred <- predict_model(obj, testX)
+    
+    # observed is ytest
+    observed <- as.matrix(context$ytest)
+    
+    # Evaluate
+    perf <- evaluate_model(obj, pred, observed)
+    
+    # Return a tibble
+    # Store predicted and observed for optional inspection
+    tibble::tibble(
+      observed=list(observed),
+      predicted=list(pred),
+      performance=list(perf),
+      error=FALSE,
+      error_message="~"
+    )
+  }
+}
 
 #' Print Method for Feature RSA Model
 #'
