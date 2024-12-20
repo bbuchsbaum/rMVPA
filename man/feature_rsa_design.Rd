@@ -4,52 +4,34 @@
 \alias{feature_rsa_design}
 \title{Create a Feature-Based RSA Design}
 \usage{
-feature_rsa_design(S, labels, k = 0)
+feature_rsa_design(S = NULL, F = NULL, labels, k = 0)
 }
 \arguments{
-\item{S}{A symmetric similarity matrix representing the feature space relationships}
+\item{S}{A symmetric similarity matrix representing the feature space relationships. 
+If NULL, you must supply F.}
 
-\item{labels}{Vector of labels corresponding to the rows/columns of S}
+\item{F}{A feature space matrix (observations by features). If supplied, this overrides S and k.}
 
-\item{k}{Integer specifying the number of feature dimensions to retain. If 0 (default),
-automatically determines dimensions using eigenvalue threshold > 1}
+\item{labels}{Vector of labels corresponding to the rows/columns of S or observations of F.}
+
+\item{k}{Integer specifying the number of feature dimensions to retain when using S. If 0 (default),
+automatically determines dimensions using eigenvalue threshold > 1.}
 }
 \value{
 A \code{feature_rsa_design} object (S3 class) containing:
   \describe{
-    \item{S}{The input similarity matrix}
-    \item{F}{Feature space projection matrix (eigenvectors)}
+    \item{S}{The input similarity matrix (if used)}
+    \item{F}{Feature space projection matrix}
     \item{labels}{Vector of observation labels}
   }
 }
 \description{
-Creates a design for feature-based Representational Similarity Analysis (RSA) that maps neural patterns 
-to a predefined feature space using dimensionality reduction techniques.
+Creates a design for feature-based Representational Similarity Analysis (RSA).
+You can either supply a similarity matrix S (and optionally select dimensions)
+or directly supply a feature matrix F.
 }
 \details{
-Unlike standard RSA which compares dissimilarity matrices directly, feature RSA projects neural patterns 
-into a lower-dimensional feature space defined by the eigenvectors of the similarity matrix S. 
-The number of dimensions k can be specified explicitly or determined automatically based on 
-eigenvalues > 1. The resulting design is used with methods like sparse CCA or PLS to relate 
-neural patterns to this feature space.
-}
-\examples{
-# Create similarity matrix from feature vectors
-features <- matrix(rnorm(100*10), 100, 10)  # 100 observations, 10 features
-S <- tcrossprod(scale(features))  # similarity matrix
-labels <- paste0("obs", 1:100)
-
-# Create design with automatic dimension selection
-design <- feature_rsa_design(S, labels)
-
-# Create design with fixed number of dimensions
-design_k5 <- feature_rsa_design(S, labels, k=5)
-
-}
-\seealso{
-\code{\link{feature_rsa_model}} for creating the full model
-
-\code{\link{rsa_design}} for standard RSA designs
-
-\code{\link{vector_rsa_design}} for vector-based RSA designs
+If F is supplied directly, it is used as is.
+If only S is supplied, the design computes eigen decomposition of S to find a suitable 
+feature space (F).
 }

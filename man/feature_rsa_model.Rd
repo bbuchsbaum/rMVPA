@@ -12,63 +12,30 @@ feature_rsa_model(
 )
 }
 \arguments{
-\item{dataset}{An \code{mvpa_dataset} object containing the neural data}
+\item{dataset}{An \code{mvpa_dataset} object containing the neural data (X).}
 
-\item{design}{A \code{feature_rsa_design} object specifying the feature space and its structure}
+\item{design}{A \code{feature_rsa_design} object specifying the feature space (F).}
 
 \item{method}{Character string specifying the analysis method. One of:
 \describe{
-  \item{scca}{Sparse Canonical Correlation Analysis (default)}
+  \item{scca}{Sparse Canonical Correlation Analysis}
   \item{pls}{Partial Least Squares}
-  \item{pca}{Principal Component Analysis}
+  \item{pca}{Principal Component Analysis + linear regression on F}
 }}
 
-\item{crossval}{Optional cross-validation specification. If NULL and design contains block_var,
-creates blocked cross-validation using that variable}
+\item{crossval}{Optional cross-validation specification.}
 }
 \value{
-A \code{feature_rsa_model} object (S3 class) containing:
-  \describe{
-    \item{dataset}{The input \code{mvpa_dataset}}
-    \item{design}{The input \code{feature_rsa_design}}
-    \item{crossval}{Cross-validation specification}
-  }
+A \code{feature_rsa_model} object (S3 class).
 }
 \description{
 Creates a model for feature-based Representational Similarity Analysis (RSA) that relates neural patterns
-to a predefined feature space using dimensionality reduction and multivariate techniques.
+(X) to a predefined feature space (F).
 }
 \details{
-Feature RSA models analyze the relationship between neural patterns and a predefined feature space
-using multivariate techniques. Unlike traditional RSA which compares dissimilarity matrices,
-this approach directly relates neural patterns to feature space dimensions through methods like
-sparse CCA or PLS. Cross-validation can be specified explicitly or derived from the design's
-block structure.
-}
-\examples{
-# Create feature space and design
-features <- matrix(rnorm(100*10), 100, 10)
-S <- tcrossprod(scale(features))
-labels <- paste0("obs", 1:100)
-design <- feature_rsa_design(S, labels)
-
-# Create dataset (assuming you have neural data)
-dataset <- mvpa_dataset(train_data, mask=mask_vol)
-
-# Create model with sparse CCA
-model <- feature_rsa_model(dataset, design, method="scca")
-
-# Create model with PLS and explicit cross-validation
-cv <- blocked_cross_validation(block_var)
-model_pls <- feature_rsa_model(dataset, design, 
-                              method="pls", 
-                              crossval=cv)
-
-}
-\seealso{
-\code{\link{feature_rsa_design}} for creating the feature space design
-
-\code{\link{rsa_model}} for traditional RSA models
-
-\code{\link{vector_rsa_model}} for vector-based RSA models
+Feature RSA models analyze the relationship between neural patterns X and a predefined feature space F.
+Methods:
+  - scca: Finds canonical correlations between X and F and reconstructs F from X via these canonical directions.
+  - pls: Uses partial least squares regression to predict F from X.
+  - pca: PCA on X, then regress F_sc ~ PC(X_sc) for prediction.
 }

@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{The feature RSA model}
 
-\item{...}{Additional arguments}
+\item{...}{Additional args}
 }
 \description{
 Print Method for Feature RSA Model

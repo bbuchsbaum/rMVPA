@@ -9,13 +9,13 @@ predict_model.feature_rsa_model(object, newdata, ...)
 \arguments{
 \item{object}{The trained feature RSA model}
 
-\item{newdata}{New data to make predictions on}
+\item{newdata}{New data}
 
-\item{...}{Additional arguments passed to prediction method}
+\item{...}{Additional args}
 }
 \value{
 Predicted values in the feature space
 }
 \description{
-Makes predictions using a trained feature RSA model
+Predict Method for Feature RSA Model
 }

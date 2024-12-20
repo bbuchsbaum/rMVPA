@@ -13,11 +13,11 @@ evaluate_model.feature_rsa_model(object, predicted, observed, ...)
 
 \item{observed}{Observed values}
 
-\item{...}{Additional arguments}
+\item{...}{Additional args}
 }
 \value{
 Performance metrics
 }
 \description{
-Evaluates performance of a feature RSA model
+Evaluate Method for Feature RSA Model
 }

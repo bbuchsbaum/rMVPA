@@ -92,6 +92,7 @@ format_result.mvpa_model <- function(obj, result, error_message=NULL, context, .
 }
 
 
+
 #' @keywords internal
 get_multiclass_perf <- function(split_list=NULL, class_metrics=TRUE) {
   function(result) {
