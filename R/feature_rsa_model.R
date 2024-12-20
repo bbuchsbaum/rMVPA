@@ -100,12 +100,8 @@ feature_rsa_model <- function(dataset,
   
   assertthat::assert_that(!is.null(crossval))
   
-  ret <- list(method=method,
-              dataset=dataset,
-              design=design,
-              crossval=crossval)
-  
-  class(ret) <- "feature_rsa_model"
+  create_model_spec("feature_rsa_model", dataset=dataset, design=design, method=method, crossval=crossval)
+ 
   ret
 }
 
@@ -229,38 +225,6 @@ evaluate_model.feature_rsa_model <- function(object, predicted, observed, ...) {
 y_train.feature_rsa_model <- function(object) {
   object$F
 }
-
-
-# format_result.feature_rsa_model <- function(obj, result, error_message=NULL, context, ...) {
-#   if (!is.null(error_message)) {
-#     return(tibble::tibble(
-#       observed=list(NULL),
-#       predicted=list(NULL),
-#       error=TRUE,
-#       error_message=error_message
-#     ))
-#   } else {
-#     # Predict on test data
-#     testX <- tibble::as_tibble(context$test, .name_repair=.name_repair)
-#     pred <- predict_model(obj, testX)
-#     
-#     # observed is ytest
-#     observed <- as.matrix(context$ytest)
-#     
-#     # Evaluate
-#     perf <- evaluate_model(obj, pred, observed)
-#     
-#     # Return a tibble
-#     # Store predicted and observed for optional inspection
-#     tibble::tibble(
-#       observed=list(observed),
-#       predicted=list(pred),
-#       performance=list(perf),
-#       error=FALSE,
-#       error_message="~"
-#     )
-#   }
-# }
 
 format_result.feature_rsa_model <- function(obj, result, error_message=NULL, context, ...) {
   if (!is.null(error_message)) {
