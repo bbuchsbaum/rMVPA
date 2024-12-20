@@ -230,28 +230,48 @@ y_train.feature_rsa_model <- function(object) {
   object$F
 }
 
-#' @export
+
+# format_result.feature_rsa_model <- function(obj, result, error_message=NULL, context, ...) {
+#   if (!is.null(error_message)) {
+#     return(tibble::tibble(
+#       observed=list(NULL),
+#       predicted=list(NULL),
+#       error=TRUE,
+#       error_message=error_message
+#     ))
+#   } else {
+#     # Predict on test data
+#     testX <- tibble::as_tibble(context$test, .name_repair=.name_repair)
+#     pred <- predict_model(obj, testX)
+#     
+#     # observed is ytest
+#     observed <- as.matrix(context$ytest)
+#     
+#     # Evaluate
+#     perf <- evaluate_model(obj, pred, observed)
+#     
+#     # Return a tibble
+#     # Store predicted and observed for optional inspection
+#     tibble::tibble(
+#       observed=list(observed),
+#       predicted=list(pred),
+#       performance=list(perf),
+#       error=FALSE,
+#       error_message="~"
+#     )
+#   }
+# }
+
 format_result.feature_rsa_model <- function(obj, result, error_message=NULL, context, ...) {
   if (!is.null(error_message)) {
-    return(tibble::tibble(
-      observed=list(NULL),
-      predicted=list(NULL),
-      error=TRUE,
-      error_message=error_message
-    ))
+    return(tibble::tibble(observed=list(NULL), predicted=list(NULL), error=TRUE, error_message=error_message))
   } else {
-    # Predict on test data
-    testX <- tibble::as_tibble(context$test, .name_repair=.name_repair)
-    pred <- predict_model(obj, testX)
+    Xtest <- tibble::as_tibble(context$test)
+    pred <- predict_model(obj, Xtest)
     
-    # observed is ytest
     observed <- as.matrix(context$ytest)
-    
-    # Evaluate
     perf <- evaluate_model(obj, pred, observed)
     
-    # Return a tibble
-    # Store predicted and observed for optional inspection
     tibble::tibble(
       observed=list(observed),
       predicted=list(pred),
@@ -261,6 +281,59 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
     )
   }
 }
+
+
+# merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
+#   # If any errors occurred, return an error tibble
+#   if (any(result_set$error)) {
+#     emessage <- result_set$error_message[which(result_set$error)[1]]
+#     return(tibble::tibble(
+#       result=list(NULL),
+#       indices=list(indices),
+#       performance=list(NULL),
+#       id=id,
+#       error=TRUE,
+#       error_message=emessage,
+#       warning=any(result_set$warning),
+#       warning_message=if(any(result_set$warning)) result_set$warning_message[which(result_set$warning)[1]] else "~"
+#     ))
+#   }
+#   
+#   # If no errors, combine all fold predictions and observed values
+#   # Each fold should have columns: observed, predicted, performance, etc.
+#   # result_set might have multiple rows (one per fold)
+#   
+#   # Extract observed and predicted from each fold
+#   # They are stored as lists, each element a matrix
+#   observed_list <- result_set$observed
+#   predicted_list <- result_set$predicted
+#   
+#   # Combine rows (observations) across folds
+#   combined_observed <- do.call(rbind, observed_list)
+#   combined_predicted <- do.call(rbind, predicted_list)
+#   
+#   # Compute performance on the combined set
+#   perf <- evaluate_model(obj, combined_predicted, combined_observed)
+#   
+#   # Create a single combined result. We can store the combined predictions and observed as well.
+#   # 'result' typically is some kind of result object; here we can store the combined predictions.
+#   # For consistency, let's mimic mvpa_model: store combined predictions/observed in 'result' as well.
+#   combined_result <- list(
+#     observed = combined_observed,
+#     predicted = combined_predicted
+#   )
+#   
+#   tibble::tibble(
+#     result = list(combined_result),
+#     indices = list(indices),
+#     performance = list(perf),
+#     id = id,
+#     error = FALSE,
+#     error_message = "~",
+#     warning = any(result_set$warning),
+#     warning_message = if(any(result_set$warning)) result_set$warning_message[which(result_set$warning)[1]] else "~"
+#   )
+# }
 
 #' Merge Multiple Results for Feature RSA Model
 #'
@@ -272,54 +345,37 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
 #' @return A tibble with merged results
 #' @export
 merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
-  # If any errors occurred, return an error tibble
   if (any(result_set$error)) {
     emessage <- result_set$error_message[which(result_set$error)[1]]
     return(tibble::tibble(
-      result=list(NULL),
-      indices=list(indices),
-      performance=list(NULL),
-      id=id,
-      error=TRUE,
-      error_message=emessage,
-      warning=any(result_set$warning),
-      warning_message=if(any(result_set$warning)) result_set$warning_message[which(result_set$warning)[1]] else "~"
+      result=list(NULL), indices=list(indices),
+      performance=list(NULL), id=id,
+      error=TRUE, error_message=emessage
     ))
   }
   
-  # If no errors, combine all fold predictions and observed values
-  # Each fold should have columns: observed, predicted, performance, etc.
-  # result_set might have multiple rows (one per fold)
-  
-  # Extract observed and predicted from each fold
-  # They are stored as lists, each element a matrix
+  # Combine observed/predicted across folds
   observed_list <- result_set$observed
   predicted_list <- result_set$predicted
-  
-  # Combine rows (observations) across folds
   combined_observed <- do.call(rbind, observed_list)
   combined_predicted <- do.call(rbind, predicted_list)
   
-  # Compute performance on the combined set
+  # Evaluate performance on combined data
   perf <- evaluate_model(obj, combined_predicted, combined_observed)
   
-  # Create a single combined result. We can store the combined predictions and observed as well.
-  # 'result' typically is some kind of result object; here we can store the combined predictions.
-  # For consistency, let's mimic mvpa_model: store combined predictions/observed in 'result' as well.
+  # Store combined result
   combined_result <- list(
-    observed = combined_observed,
-    predicted = combined_predicted
+    observed=combined_observed,
+    predicted=combined_predicted
   )
   
   tibble::tibble(
-    result = list(combined_result),
-    indices = list(indices),
-    performance = list(perf),
-    id = id,
-    error = FALSE,
-    error_message = "~",
-    warning = any(result_set$warning),
-    warning_message = if(any(result_set$warning)) result_set$warning_message[which(result_set$warning)[1]] else "~"
+    result=list(combined_result),
+    indices=list(indices),
+    performance=list(perf),
+    id=id,
+    error=FALSE,
+    error_message="~"
   )
 }
 
