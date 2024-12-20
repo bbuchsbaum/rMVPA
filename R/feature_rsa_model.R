@@ -1,72 +1,58 @@
-
 #' Create a Feature-Based RSA Design
 #'
-#' Creates a design for feature-based Representational Similarity Analysis (RSA) that maps neural patterns 
-#' to a predefined feature space using dimensionality reduction techniques.
+#' Creates a design for feature-based Representational Similarity Analysis (RSA).
+#' You can either supply a similarity matrix S (and optionally select dimensions)
+#' or directly supply a feature matrix F.
 #'
-#' @param S A symmetric similarity matrix representing the feature space relationships
-#' @param labels Vector of labels corresponding to the rows/columns of S
-#' @param k Integer specifying the number of feature dimensions to retain. If 0 (default),
-#'          automatically determines dimensions using eigenvalue threshold > 1
+#' @param S A symmetric similarity matrix representing the feature space relationships. 
+#'          If NULL, you must supply F.
+#' @param F A feature space matrix (observations by features). If supplied, this overrides S and k.
+#' @param labels Vector of labels corresponding to the rows/columns of S or observations of F.
+#' @param k Integer specifying the number of feature dimensions to retain when using S. If 0 (default),
+#'          automatically determines dimensions using eigenvalue threshold > 1.
 #'
 #' @return A \code{feature_rsa_design} object (S3 class) containing:
 #'   \describe{
-#'     \item{S}{The input similarity matrix}
-#'     \item{F}{Feature space projection matrix (eigenvectors)}
+#'     \item{S}{The input similarity matrix (if used)}
+#'     \item{F}{Feature space projection matrix}
 #'     \item{labels}{Vector of observation labels}
 #'   }
 #'
 #' @details
-#' Unlike standard RSA which compares dissimilarity matrices directly, feature RSA projects neural patterns 
-#' into a lower-dimensional feature space defined by the eigenvectors of the similarity matrix S. 
-#' The number of dimensions k can be specified explicitly or determined automatically based on 
-#' eigenvalues > 1. The resulting design is used with methods like sparse CCA or PLS to relate 
-#' neural patterns to this feature space.
+#' If F is supplied directly, it is used as is.
+#' If only S is supplied, the design computes eigen decomposition of S to find a suitable 
+#' feature space (F).
 #'
-#' @examples
-#' # Create similarity matrix from feature vectors
-#' features <- matrix(rnorm(100*10), 100, 10)  # 100 observations, 10 features
-#' S <- tcrossprod(scale(features))  # similarity matrix
-#' labels <- paste0("obs", 1:100)
-#' 
-#' # Create design with automatic dimension selection
-#' design <- feature_rsa_design(S, labels)
-#' 
-#' # Create design with fixed number of dimensions
-#' design_k5 <- feature_rsa_design(S, labels, k=5)
-#'
-#' @seealso 
-#' \code{\link{feature_rsa_model}} for creating the full model
-#' 
-#' \code{\link{rsa_design}} for standard RSA designs
-#' 
-#' \code{\link{vector_rsa_design}} for vector-based RSA designs
-#'
-#' @importFrom assertthat assert_that
 #' @export
-feature_rsa_design <- function(S, labels, k=0) {
-  assertthat::assert_that(is.matrix(S))
-  assertthat::assert_that(nrow(S) == length(labels))
-  assertthat::assert_that(isSymmetric(S))
+feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0) {
+  assertthat::assert_that(!is.null(labels))
   
-  S <- (S + t(S))/2
-  
-  if (k == 0) {
-    eres <- eigen(S)
-    k <- max(which(eres$values > 1))
-    k <- max(k, 2)
-    F <- eres$vectors[,1:k, drop=FALSE]
+  if (!is.null(F)) {
+    # If F is provided, trust user supplied features
+    assertthat::assert_that(is.matrix(F))
+    assertthat::assert_that(nrow(F) == length(labels))
+    ret <- list(S=S, F=F, labels=labels)
   } else {
-    assertthat::assert_that(k > 0 && k <= nrow(S))
-    eres <- eigen(S)
-    F <- eres$vectors[, 1:k, drop=FALSE]
+    # Must have S
+    assertthat::assert_that(!is.null(S))
+    assertthat::assert_that(is.matrix(S))
+    assertthat::assert_that(nrow(S) == length(labels))
+    assertthat::assert_that(isSymmetric(S))
+    
+    S <- (S + t(S))/2
+    
+    if (k == 0) {
+      eres <- eigen(S)
+      k <- max(which(eres$values > 1))
+      k <- max(k, 2)
+      F <- eres$vectors[, 1:k, drop=FALSE]
+    } else {
+      assertthat::assert_that(k > 0 && k <= nrow(S))
+      eres <- eigen(S)
+      F <- eres$vectors[, 1:k, drop=FALSE]
+    }
+    ret <- list(S=S, F=F, labels=labels)
   }
-  
-  ret <- list(
-    S=S,
-    F=F,
-    labels=labels
-  )
   
   class(ret) <- "feature_rsa_design"
   ret
@@ -76,68 +62,37 @@ feature_rsa_design <- function(S, labels, k=0) {
 #' Create a Feature-Based RSA Model
 #'
 #' Creates a model for feature-based Representational Similarity Analysis (RSA) that relates neural patterns
-#' to a predefined feature space using dimensionality reduction and multivariate techniques.
+#' (X) to a predefined feature space (F).
 #'
-#' @param dataset An \code{mvpa_dataset} object containing the neural data
-#' @param design A \code{feature_rsa_design} object specifying the feature space and its structure
+#' @param dataset An \code{mvpa_dataset} object containing the neural data (X).
+#' @param design A \code{feature_rsa_design} object specifying the feature space (F).
 #' @param method Character string specifying the analysis method. One of:
 #'   \describe{
-#'     \item{scca}{Sparse Canonical Correlation Analysis (default)}
+#'     \item{scca}{Sparse Canonical Correlation Analysis}
 #'     \item{pls}{Partial Least Squares}
-#'     \item{pca}{Principal Component Analysis}
+#'     \item{pca}{Principal Component Analysis + linear regression on F}
 #'   }
-#' @param crossval Optional cross-validation specification. If NULL and design contains block_var,
-#'        creates blocked cross-validation using that variable
+#' @param crossval Optional cross-validation specification.
 #'
-#' @return A \code{feature_rsa_model} object (S3 class) containing:
-#'   \describe{
-#'     \item{dataset}{The input \code{mvpa_dataset}}
-#'     \item{design}{The input \code{feature_rsa_design}}
-#'     \item{crossval}{Cross-validation specification}
-#'   }
+#' @return A \code{feature_rsa_model} object (S3 class).
 #'
 #' @details
-#' Feature RSA models analyze the relationship between neural patterns and a predefined feature space
-#' using multivariate techniques. Unlike traditional RSA which compares dissimilarity matrices,
-#' this approach directly relates neural patterns to feature space dimensions through methods like
-#' sparse CCA or PLS. Cross-validation can be specified explicitly or derived from the design's
-#' block structure.
+#' Feature RSA models analyze the relationship between neural patterns X and a predefined feature space F.
+#' Methods:
+#'   - scca: Finds canonical correlations between X and F and reconstructs F from X via these canonical directions.
+#'   - pls: Uses partial least squares regression to predict F from X.
+#'   - pca: PCA on X, then regress F_sc ~ PC(X_sc) for prediction.
 #'
-#' @examples
-#' # Create feature space and design
-#' features <- matrix(rnorm(100*10), 100, 10)
-#' S <- tcrossprod(scale(features))
-#' labels <- paste0("obs", 1:100)
-#' design <- feature_rsa_design(S, labels)
-#'
-#' # Create dataset (assuming you have neural data)
-#' dataset <- mvpa_dataset(train_data, mask=mask_vol)
-#'
-#' # Create model with sparse CCA
-#' model <- feature_rsa_model(dataset, design, method="scca")
-#'
-#' # Create model with PLS and explicit cross-validation
-#' cv <- blocked_cross_validation(block_var)
-#' model_pls <- feature_rsa_model(dataset, design, 
-#'                               method="pls", 
-#'                               crossval=cv)
-#'
-#' @seealso 
-#' \code{\link{feature_rsa_design}} for creating the feature space design
-#' 
-#' \code{\link{rsa_model}} for traditional RSA models
-#' 
-#' \code{\link{vector_rsa_model}} for vector-based RSA models
-#'
-#' @importFrom assertthat assert_that
 #' @export
 feature_rsa_model <- function(dataset,
-                       design,
-                       method=c("scca", "pls", "pca"),
-                       crossval=NULL) {
+                              design,
+                              method=c("scca", "pls", "pca"),
+                              crossval=NULL) {
   
-  assert_that(inherits(dataset, "mvpa_dataset"))
-  assert_that(inherits(design, "feature_rsa_design"))
+  method <- match.arg(method)
+  
+  assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
+  assertthat::assert_that(inherits(design, "feature_rsa_design"))
   
   if (is.null(crossval) && !is.null(design$block_var)) {
     crossval <- blocked_cross_validation(design$block_var)
@@ -155,68 +110,142 @@ feature_rsa_model <- function(dataset,
 }
 
 
+# Helper to standardize data
+.standardize <- function(X) {
+  cm <- colMeans(X)
+  csd <- apply(X,2,sd)
+  csd[csd==0] <- 1
+  X_sc <- scale(X, center=cm, scale=csd)
+  list(X_sc=X_sc, mean=cm, sd=csd)
+}
+
+# Given scca result, predict F from X:
+# Steps:
+# 1) Standardize X with training stats
+# 2) Compute CCAX = X_sc %*% WX
+# 3) CCAY = CCAX * lambda (canonical correlations)
+# 4) Y_sc = CCAY %*% t(WY)
+# 5) Unscale Y_sc to get Y_pred
+.predict_scca <- function(model, X_new) {
+  tm <- model$trained_model
+  Xsc <- sweep(sweep(X_new,2,model$scca_x_mean,"-"),2,model$scca_x_sd,"/")
+  CCAX_new <- Xsc %*% tm$WX
+  CCAY_new <- sweep(CCAX_new,2,tm$lambda,"*")
+  Y_sc <- CCAY_new %*% t(tm$WY)
+  Y_pred <- sweep(sweep(Y_sc,2,model$scca_f_sd,"*"),2,model$scca_f_mean,"+")
+  Y_pred
+}
+
+
+# For PCA method
+.predict_pca <- function(model, X_new) {
+  Xsc <- sweep(sweep(X_new,2,model$pca_x_mean,"-"),2,model$pca_x_sd,"/")
+  PC_new <- Xsc %*% model$pcarot
+  F_sc_pred <- cbind(1, PC_new) %*% model$pca_coefs
+  F_pred <- sweep(sweep(F_sc_pred,2,model$pca_f_sd,"*"),2,model$pca_f_mean,"+")
+  F_pred
+}
+
+
 #' Train an RSA Model
 #'
-#' This function trains an RSA (representational similarity analysis) model using the specified method.
-#'
+#' Trains a Feature RSA model using scca, pls, or pca method.
 #' @param obj An object of class \code{feature_rsa_model}
 #' @param train_dat The training data
 #' @param indices The indices of the training data
-#' @param ... Additional arguments passed to the training method
-#' @return The trained model with updated components
+#' @param ... Additional args
+#' @return The trained model
+#' @export
 train_model.feature_rsa_model <- function(obj, train_dat, indices, ...) {
   X <- as.matrix(train_dat)
+  F <- obj$design$F[indices,,drop=FALSE]
   
-  # Train model based on specified method
-  trained_model <- switch(obj$method[1],
-    "scca" = whitening::scca(X, obj$design$F),
-    "pls" = pls::plsr(X ~ obj$design$F),
-    "pca" = prcomp(X, scale. = TRUE)
-  )
+  method <- obj$method
   
-  # Store training results
-  obj$trained_model <- trained_model
-  obj$training_indices <- indices
-  
-  # Calculate initial performance metrics
-  predicted <- predict_model(obj, X)
-  obj$performance <- evaluate_model(obj, predicted, obj$design$F[indices,])
-  
-  return(obj)
+  if (method == "pls") {
+    # Fit PLS: F ~ X, scale=TRUE handled by plsr internally
+    obj$trained_model <- pls::plsr(F ~ X, scale=TRUE)
+    obj$training_indices <- indices
+    
+    predicted <- predict_model(obj, X)
+    obj$performance <- evaluate_model(obj, predicted, F)
+    return(obj)
+    
+  } else if (method == "scca") {
+    # scca requires scaling
+    sx <- .standardize(X)
+    sf <- .standardize(F)
+    scca_res <- whitening::scca(sx$X_sc, sf$X_sc, scale=FALSE)
+    obj$trained_model <- scca_res
+    obj$training_indices <- indices
+    obj$scca_x_mean <- sx$mean
+    obj$scca_x_sd <- sx$sd
+    obj$scca_f_mean <- sf$mean
+    obj$scca_f_sd <- sf$sd
+    
+    predicted <- predict_model(obj, X)
+    obj$performance <- evaluate_model(obj, predicted, F)
+    return(obj)
+    
+  } else if (method == "pca") {
+    # PCA on X (scaled)
+    sx <- .standardize(X)
+    sf <- .standardize(F)
+    pca_res <- prcomp(sx$X_sc, scale.=FALSE)
+    PC_train <- pca_res$x
+    PC_train_i <- cbind(1, PC_train)
+    coefs <- solve(t(PC_train_i)%*%PC_train_i, t(PC_train_i)%*%sf$X_sc)
+    
+    obj$trained_model <- pca_res
+    obj$training_indices <- indices
+    obj$pcarot <- pca_res$rotation
+    obj$pca_x_mean <- sx$mean
+    obj$pca_x_sd <- sx$sd
+    obj$pca_f_mean <- sf$mean
+    obj$pca_f_sd <- sf$sd
+    obj$pca_coefs <- coefs
+    
+    predicted <- predict_model(obj, X)
+    obj$performance <- evaluate_model(obj, predicted, F)
+    return(obj)
+  }
 }
 
 
 #' Predict Method for Feature RSA Model
 #'
-#' Makes predictions using a trained feature RSA model
-#'
 #' @param object The trained feature RSA model
-#' @param newdata New data to make predictions on
-#' @param ... Additional arguments passed to prediction method
+#' @param newdata New data
+#' @param ... Additional args
 #' @return Predicted values in the feature space
 #' @export
 predict_model.feature_rsa_model <- function(object, newdata, ...) {
   X <- as.matrix(newdata)
-  # Project new data into the learned feature space
-  pred <- predict(object$trained_model, X)
-  return(pred)
+  method <- object$method
+  if (method == "pls") {
+    pred_arr <- predict(object$trained_model, newdata=data.frame(X))
+    ncomp <- object$trained_model$ncomp
+    pred <- pred_arr[,,ncomp, drop=FALSE]
+    pred <- pred[,,1]
+    return(pred)
+  } else if (method == "scca") {
+    return(.predict_scca(object, X))
+  } else if (method == "pca") {
+    return(.predict_pca(object, X))
+  }
 }
 
+
 #' Evaluate Method for Feature RSA Model
-#'
-#' Evaluates performance of a feature RSA model
 #'
 #' @param object The feature RSA model
 #' @param predicted Predicted values
 #' @param observed Observed values
-#' @param ... Additional arguments
+#' @param ... Additional args
 #' @return Performance metrics
 #' @export
 evaluate_model.feature_rsa_model <- function(object, predicted, observed, ...) {
-  # Calculate correlation between predicted and observed feature projections
   cors <- diag(cor(predicted, observed))
-  
-  # Calculate mean squared error
   mse <- mean((predicted - observed)^2)
   
   list(
@@ -225,22 +254,23 @@ evaluate_model.feature_rsa_model <- function(object, predicted, observed, ...) {
   )
 }
 
+
 #' Print Method for Feature RSA Model
 #'
 #' @param x The feature RSA model
-#' @param ... Additional arguments
+#' @param ... Additional args
 #' @export
 print.feature_rsa_model <- function(x, ...) {
   cat("Feature RSA Model\n")
   cat("Method:", x$method, "\n")
   cat("Number of features:", ncol(x$design$F), "\n")
-  cat("Number of observations:", nrow(x$design$S), "\n")
+  cat("Number of observations:", nrow(x$design$F), "\n")
 }
 
 #' Summary Method for Feature RSA Model
 #'
 #' @param object The feature RSA model
-#' @param ... Additional arguments
+#' @param ... Additional args
 #' @export
 summary.feature_rsa_model <- function(object, ...) {
   print(object)
@@ -250,48 +280,48 @@ summary.feature_rsa_model <- function(object, ...) {
   }
 }
 
-#' @importFrom neuroim2 indices values
-do_feature_rsa <- function(roi, mod_spec, rnum) {
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
-  ind <- indices(roi$train_roi)
-  ret <- try(train_model(mod_spec, xtrain, ind))
-  if (inherits(ret, "try-error")) {
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=TRUE, error_message=attr(ret, "condition")$message)
+
+#' Run regional RSA analysis on a specified Feature RSA model
+#'
+#' This function runs a regional analysis using a feature RSA model and region mask.
+#'
+#' @param model_spec A \code{feature_rsa_model} object.
+#' @param region_mask A mask representing different brain regions.
+#' @param coalesce_design_vars If TRUE, merges design variables into prediction table.
+#' @param processor A custom processor function for ROIs. If NULL, uses defaults.
+#' @param verbose Print progress messages.
+#' @param ... Additional arguments
+#' 
+#' @details
+#' This integrates `feature_rsa_model` with the MVPA framework, similar to `run_regional.mvpa_model`.
+#'
+#' @export
+run_regional.feature_rsa_model <- function(model_spec, region_mask, coalesce_design_vars=FALSE, processor=NULL, 
+                                           verbose=FALSE, ...) {  
+  prepped <- prep_regional(model_spec, region_mask)
+  
+  # uses mvpa_iterate
+  results <- mvpa_iterate(model_spec, prepped$vox_iter, ids=prepped$region_set, processor=processor, verbose=verbose, ...)
+  
+  perf <- if (model_spec$dataset$compute_performance) comp_perf(results, region_mask) else list(vols=list(), perf_mat=tibble::tibble())
+  
+  prediction_table <- if (model_spec$dataset$return_predictions) {
+    combine_regional_results(results) 
   } else {
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")
+    NULL
   }
+  
+  if (coalesce_design_vars && !is.null(prediction_table)) {
+    prediction_table <- coalesce_join(prediction_table, test_design(model_spec$design), 
+                                      by=".rownum")
+  }
+  
+  fits <- if (model_spec$dataset$return_fits) {
+    lapply(results$result, "[[", "predictor")
+  } else {
+    NULL
+  }
+  
+  regional_mvpa_result(model_spec=model_spec, performance_table=perf$perf_mat, 
+                       prediction_table=prediction_table, vol_results=perf$vols, fits=fits)
 }
-
-  
-#' feature_rsa_iterate
-#'
-#' Runs feature-based representational similarity analysis (RSA) for each voxel set in a list.
-#'
-#' @param mod_spec An object of class \code{rsa_model} specifying the RSA model.
-#' @param vox_list A \code{list} of voxel indices or coordinates for each voxel set.
-#' @param ids A \code{vector} of IDs for each voxel set (defaults to 1:length(vox_list)).
-#' @importFrom dplyr do rowwise
-feature_rsa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list)) {
-  assert_that(length(ids) == length(vox_list), msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
-  sframe <- get_samples(mod_spec$dataset, vox_list)
-  
-  ## iterate over searchlights using parallel futures
-  sf <- sframe %>% dplyr::mutate(rnum=ids) 
-  fut_feature_rsa(mod_spec,sf, regtype, distmethod)
-}
-
-
-#' @keywords internal
-fut_feature_rsa <- function(mod_spec, sf) {
-  #mod_spec$dataset <- NULL
-  gc()
-  
-  #browser()
-  sf %>% furrr::future_pmap(function(sample, rnum, .id) {
-    ## extract_roi?
-    do_feature_rsa(as_roi(sample, mod_spec$dataset), mod_spec, rnum)
-  }, .options = furrr::furrr_options(seed = T)) %>% dplyr::bind_rows()
-  
-}
-
-  
