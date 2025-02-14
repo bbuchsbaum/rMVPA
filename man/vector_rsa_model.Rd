@@ -12,21 +12,21 @@ vector_rsa_model(
 )
 }
 \arguments{
-\item{dataset}{An \code{mvpa_dataset}  object.}
+\item{dataset}{An \code{mvpa_dataset} object.}
 
-\item{design}{A vector_rsa_design object.}
+\item{design}{A \code{vector_rsa_design} object.}
 
-\item{distfun}{an object of \code{distfun} type for computation of pairwise dissimilarities among image rows}
+\item{distfun}{A \code{distfun} (distance function) for computing pairwise dissimilarities among image rows.}
 
-\item{rsa_simfun}{a character string specifying the similarity function to use for RSA}
+\item{rsa_simfun}{A character string specifying the similarity function to use for RSA, 
+one of \code{"pearson"} or \code{"spearman"}.}
 }
 \value{
-An object representing the RSA model, which includes both the design and precomputed data.
+A \code{vector_rsa_model} object (S3 class) containing references to the dataset, design, and function parameters.
 }
 \description{
-This function integrates a vector_rsa_design and precomputes data to create a vectorized RSA model.
+This function integrates a vector_rsa_design and an mvpa_dataset to create a vectorized RSA model.
 }
 \details{
-Integrates RSA design and precomputed data to facilitate efficient RSA computations. 
-It directly incorporates precomputations for cross-block comparisons.
+The model references the already-precomputed cross-block data from the design.
 }

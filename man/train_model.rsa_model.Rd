@@ -4,12 +4,14 @@
 \alias{train_model.rsa_model}
 \title{Train an RSA Model}
 \usage{
-\method{train_model}{rsa_model}(obj, train_dat, indices, ...)
+\method{train_model}{rsa_model}(obj, train_dat, y, indices, ...)
 }
 \arguments{
 \item{obj}{An object of class \code{rsa_model}.}
 
 \item{train_dat}{The training data.}
+
+\item{y}{The response variable.}
 
 \item{indices}{The indices of the training data.}
 

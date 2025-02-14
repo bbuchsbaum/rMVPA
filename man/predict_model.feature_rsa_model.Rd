@@ -4,7 +4,7 @@
 \alias{predict_model.feature_rsa_model}
 \title{Predict Method for Feature RSA Model}
 \usage{
-predict_model.feature_rsa_model(object, newdata, ...)
+predict_model.feature_rsa_model(object, fit, newdata, ...)
 }
 \arguments{
 \item{object}{The trained feature RSA model}

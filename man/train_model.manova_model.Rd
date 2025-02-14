@@ -4,12 +4,14 @@
 \alias{train_model.manova_model}
 \title{Train a MANOVA Model}
 \usage{
-\method{train_model}{manova_model}(obj, train_dat, indices, ...)
+\method{train_model}{manova_model}(obj, train_dat, y, indices, ...)
 }
 \arguments{
 \item{obj}{An object of class \code{manova_model}.}
 
 \item{train_dat}{The training data.}
+
+\item{y}{the response variable}
 
 \item{indices}{The indices of the training data.}
 

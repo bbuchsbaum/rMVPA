@@ -2,47 +2,43 @@
 % Please edit documentation in R/distcalc.R
 \name{create_dist}
 \alias{create_dist}
-\title{Create Distance Function Object}
+\title{Create a Distance Function Object}
 \usage{
-create_dist(name, labels, ...)
+create_dist(name, labels = NULL, ...)
 }
 \arguments{
-\item{name}{A character string specifying the method of distance computation. 
-This method name is used to dispatch the appropriate distance calculation function. 
-Common methods might include "euclidean", "manhattan", "mahalanobis", etc.}
+\item{name}{A character string specifying the distance method (e.g., "euclidean", "cordist").}
 
-\item{labels}{A vector of labels or identifiers associated with the rows of the data matrix. 
-These labels are important for reference in distance computations, particularly when adjustments or 
-restrictions based on groupings or identifiers are needed.}
+\item{labels}{A vector of row labels (optional), primarily for informational/reference purposes.}
 
-\item{...}{Additional parameters relevant to the specific distance method. 
-These could include tuning parameters like `lambda` for shrinkage in covariance estimation 
-or parameters controlling the behavior of the distance computation.}
+\item{...}{Additional parameters for the distance method (e.g. `method="pearson"` for correlation, 
+or \code{whiten=TRUE} for PCA-based distances).}
 }
 \value{
-Returns an object of class `distfun` and the specific method class 
-(as specified by the `method` parameter). This object encapsulates all information 
-necessary to compute distances between data points according to the specified method 
-and additional parameters.
+An S3 object with class \code{c(name, "distfun")} that can be passed to \code{pairwise_dist()}.
 }
 \description{
-This function constructs an object representing a distance function, 
-which can be used with generic functions like `pairwise_dist` for computing distances. 
-The object stores the method of distance calculation, labels associated with data points, 
-and any additional parameters that may affect the distance computation.
+Constructs a generic distance function object, storing:
+\itemize{
+  \item \code{name}: The name (method) of the distance (e.g., "euclidean", "cordist", "mahalanobis").
+  \item \code{labels}: (Optional) a vector of labels associated with the data rows.
+  \item \code{...}: Additional parameters relevant to the specific distance method 
+        (e.g., correlation method for \code{cordist}, number of components for \code{pcadist}, etc.).
+}
 }
 \details{
-The `create_dist` function enables the flexible creation of distance function objects. 
-By specifying a method and associated parameters, users can customize the behavior of 
-distance calculations. This functionality is especially useful in statistical and 
-machine learning applications where different distance metrics can have significant 
-impacts on the results.
+This object is used by \code{pairwise_dist()} to compute an \strong{N x N} matrix of pairwise distances 
+between rows of a data matrix.
+
+
+The distance function object itself does \emph{not} exclude same-block comparisons or reorder rows by label.
+Those tasks (if needed) are handled downstream (for example, in \code{second_order_similarity}).
 }
 \examples{
 # Create a Euclidean distance function object
-dist_obj_euc <- create_dist("euclidean", labels = c("A", "B", "C", "D"))
+dist_obj_euc <- create_dist("euclidean")
 
-# Create a Mahalanobis distance function object with additional parameters
-dist_obj_maha <- create_dist("mahalanobis", labels = c("A", "B", "C", "D"))
+# Create a correlation distance function object with a specified correlation method
+dist_obj_cor <- create_dist("cordist", method="spearman")
 
 }

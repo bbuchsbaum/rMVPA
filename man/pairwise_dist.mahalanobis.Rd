@@ -7,20 +7,24 @@
 \method{pairwise_dist}{mahalanobis}(obj, X)
 }
 \arguments{
-\item{X}{Numeric matrix where rows represent observations and columns represent variables.}
+\item{obj}{A distance function object of class \code{c("mahalanobis", "distfun")}.}
 
-\item{dist_obj}{A list that might include additional parameters for distance computation, 
-currently unused.}
+\item{X}{A numeric matrix (rows = observations, columns = variables).}
 }
 \value{
-An object of class `dist` containing the computed Mahalanobis distances.
+An \strong{N x N numeric matrix} of pairwise Mahalanobis distances.
 }
 \description{
-Computes the pairwise Mahalanobis distances using an inverse covariance matrix estimated
-from the data matrix `X` with shrinkage.
+Returns a full NxN matrix of Mahalanobis distances among rows of \code{X}, using a shrunken inverse covariance.
+\strong{No block-based exclusion is performed.}
+}
+\details{
+Uses \code{corpcor::invcov.shrink} on \code{X} to estimate the inverse covariance matrix 
+and then computes \code{mahalanobis(...)} for each row vs. each other row.
 }
 \examples{
 X <- matrix(rnorm(100), 10, 10)
-dist_matrix <- pairwise_dist.mahalanobis(list(), X)
+dist_obj <- mahadist()
+dist_matrix <- pairwise_dist(dist_obj, X)
 
 }

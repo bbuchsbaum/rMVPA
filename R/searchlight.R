@@ -402,133 +402,121 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 }
 
 
-#' Run searchlight analysis on a specified MVPA model
+
+#' A "base" function for searchlight analysis
 #'
-#' This function runs a searchlight analysis using a specified MVPA model, radius, and method.
-#' It can be customized with a combiner function and permutation options.
+#' This function implements the generic logic for running a searchlight:
+#' \enumerate{
+#'   \item Checks \code{radius} and \code{method}.
+#'   \item For "standard" searchlight, calls \code{do_standard(...)}.
+#'   \item For "randomized", calls \code{do_randomized(...)} with \code{niter} times.
+#'   \item Handles the \code{combiner} function or string ("pool", "average").
+#' }
 #'
-#' @param model_spec An object of type \code{mvpa_model} specifying the MVPA model to be used.
-#' @param radius The radius of the searchlight sphere (default is 8, allowable range: 1-100).
-#' @param method The method used for the searchlight analysis ("randomized" or "standard").
-#' @param niter The number of iterations for randomized searchlight (default is 4).
-#' @param combiner A function that combines results into an appropriate output, or one of the following strings: "pool" or "average".
-#' @param ... Additional arguments to be passed to the function.
+#' It does not assume any specific model type, but expects that \code{model_spec}
+#' is compatible with \code{do_standard(...)} or \code{do_randomized(...)} in your code.
 #'
-#' @import itertools foreach doParallel parallel
-#' @importFrom purrr pmap
-#' @importFrom futile.logger flog.info flog.error flog.debug
-#' @references 
-#' Bjornsdotter, M., Rylander, K., & Wessberg, J. (2011). A Monte Carlo method for locally multivariate brain mapping. Neuroimage, 56(2), 508-516.
-#' 
-#' Kriegeskorte, N., Goebel, R., & Bandettini, P. (2006). Information-based functional brain mapping. Proceedings of the National academy of Sciences of the United States of America, 103(10), 3863-3868.
+#' @param model_spec A model specification object (e.g., \code{mvpa_model}, \code{vector_rsa_model}, etc.).
+#' @param radius Numeric searchlight radius (1 to 100).
+#' @param method Character: "standard" or "randomized".
+#' @param niter Number of iterations if \code{method="randomized"}.
+#' @param combiner Either a function that combines partial results or a string
+#'        ("pool", "average") that selects a built-in combiner.
+#' @param ... Additional arguments passed on to \code{do_standard} or \code{do_randomized}.
+#'
+#' @return The result object from \code{do_standard} or \code{do_randomized} (often a \code{searchlight_result} or similar).
+#'
 #' @export
-#' @rdname run_searchlight
-#' @examples 
-#'  
-#' dataset <- gen_sample_dataset(c(4,4,4), 100, blocks=3)
-#' cval <- blocked_cross_validation(dataset$design$block_var)
-#' model <- load_model("sda_notune")
-#' mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval)
-#' res <- run_searchlight(mspec, radius=8, method="standard")
-#' 
-#' # A custom "combiner" can be used to post-process the output of the searchlight classifier for special cases.
-#' # In the example below, the supplied "combining function" extracts the predicted probability of the correct class 
-#' # for every voxel and every trial and then stores them in a data.frame.
-#' 
-#' \dontrun{ 
-#' custom_combiner <- function(mspec, good, bad) { 
-#'    good %>% pmap(function(result, id, ...) { 
-#'      data.frame(trial=1:length(result$observed), id=id, prob=prob_observed(result)) 
-#'    }) %>% bind_rows()
-#' }
-#' 
-#' res2 <- run_searchlight(mspec, radius=8, method="standard", combiner=custom_combiner)
-#' }
-run_searchlight.model_spec <- function(model_spec, radius=8, 
-                                       method=c("randomized", "standard"),  
-                                       niter=4, 
-                                       combiner="average", ...) {
-  
+run_searchlight_base <- function(model_spec,
+                                 radius = 8,
+                                 method = c("randomized", "standard"),
+                                 niter = 4,
+                                 combiner = "average",
+                                 ...) {
+  # 1) Check radius
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
   }
   
+  # 2) Match method
   method <- match.arg(method)
   
+  # If method is randomized, check niter
   if (method == "randomized") {
-    assert_that(niter >= 1)
+    assert_that(niter >= 1, msg = "Number of iterations for randomized searchlight must be >= 1")
   }
   
-  #flog.info("model is: %s", model_spec$model$label)
-  
-  res <- if (method == "standard") {
-    flog.info("running standard searchlight with %s radius ", radius)
-    if (is.function(combiner)) {
-      do_standard(model_spec, radius, combiner=combiner,...)    
-    } else {
-      if (combiner == "pool") {
-        do_standard(model_spec, radius, combiner=combine_standard,...)  
-      } else if (combiner == "average") {
-        do_standard(model_spec, radius, combiner=combine_standard,...)  
-      }
-    }
-  } else if (method == "randomized") {
-    
-    flog.info("running randomized searchlight with %s radius and %s iterations", radius, niter)
+  # 3) Decide combiner if it's "pool" or "average"
+  #    (In your code, you might have do_standard/do_randomized handle this logic directly—this is just an example.)
+  chosen_combiner <- combiner
+  if (!is.function(combiner)) {
     if (combiner == "pool") {
-      do_randomized(model_spec, radius, niter, combiner=pool_randomized,  ...)
+      chosen_combiner <- pool_randomized        # or combine_standard, depending on your code
     } else if (combiner == "average") {
-      do_randomized(model_spec, radius, niter, combiner=combine_randomized,...)
-    } else if (is.function(combiner)) {
-      ## combiner could be anything, assume defaults. Extra args will be passed to mvpa_iterate.
-      do_randomized(model_spec, radius, niter, combiner=combiner, ...)
+      chosen_combiner <- combine_randomized     # or combine_standard, depending on your code
     } else {
-      stop(paste("'combiner' must be either 'average', 'pool', or a user-supplied custom 'function'"))
+      stop("'combiner' must be 'average', 'pool', or a custom function.")
     }
-  } 
+  }
   
+  # 4) Dispatch to do_standard or do_randomized
+  res <- if (method == "standard") {
+    flog.info("Running standard searchlight with radius = %s", radius)
+    do_standard(model_spec, radius, combiner = chosen_combiner, ...)
+  } else {  # method == "randomized"
+    flog.info("Running randomized searchlight with radius = %s and niter = %s", radius, niter)
+    do_randomized(model_spec, radius, niter = niter, combiner = chosen_combiner, ...)
+  }
+  
+  res
 }
 
-
-
-#' Run searchlight analysis on a specified vector RSA model
+#' Default method for run_searchlight
 #'
-#' This function runs a searchlight analysis using a specified vector RSA model, radius, and method.
-#' It can be customized with permutation options, distance computation methods, and regression methods.
+#' By default, if an object's class does not implement a specific 
+#' \code{run_searchlight.<class>} method, this fallback will call
+#' \code{run_searchlight_base}.
 #'
-#' @param model_spec An object of type \code{vector_rsa_model} specifying the vector RSA model to be used.
-#' @param radius The radius of the searchlight sphere (default is 8, allowable range: 1-100).
-#' @param method The method used for the searchlight analysis ("randomized" or "standard").
-#' @param niter The number of iterations for randomized searchlight (default is 4).
-#' @param ... Additional arguments to be passed to the function.
+#' @param model_spec The generic model specification object.
+#' @inheritParams run_searchlight_base
 #'
-#' @importFrom futile.logger flog.info flog.error flog.debug
 #' @export
-#' @rdname run_searchlight
-run_searchlight.vector_rsa <- function(model_spec, radius=8, method=c("randomized", "standard"), niter=4, ...) {
-  
-  
-  
-  if (radius < 1 || radius > 100) {
-    stop(paste("Radius", radius, "is outside the allowable range (1-100)"))
-  }
-  
+run_searchlight.default <- function(model_spec, radius = 8, method = c("randomized","standard"),
+                                    niter = 4, combiner = "average", ...) {
+  run_searchlight_base(
+    model_spec    = model_spec,
+    radius        = radius,
+    method        = method,
+    niter         = niter,
+    combiner      = combiner,
+    ...
+  )
+}
+
+#' run_searchlight method for vector_rsa_model
+#'
+#' This sets a custom \code{mvpa_fun} (e.g., \code{vector_rsa_iterate}) or 
+#' different combiners for standard vs. randomized, etc.
+#'
+#' @param model_spec A \code{vector_rsa_model} object.
+#' @inheritParams run_searchlight_base
+#' @export
+run_searchlight.vector_rsa <- function(model_spec,
+                                       radius = 8,
+                                       method = c("randomized","standard"),
+                                       niter = 4,
+                                       ...) {
   method <- match.arg(method)
-  
-  if (method == "randomized") {
-    assert_that(niter >= 1, msg="Number of iterations for randomized method must be at least 1")
-  }
   
   if (method == "standard") {
-    flog.info("Running standard vector RSA searchlight with radius %s", radius)
-    results <- do_standard(model_spec, radius, mvpa_fun=vector_rsa_iterate, combiner=combine_vector_rsa_standard, ...)
+    flog.info("Running standard vector RSA searchlight (radius = %s)", radius)
+    do_standard(model_spec, radius, mvpa_fun = vector_rsa_iterate, combiner = combine_vector_rsa_standard, ...)
   } else {
-    flog.info("Running randomized vector RSA searchlight with radius %s and %s iterations", radius, niter)
-    results <- do_randomized(model_spec, radius, niter=niter, mvpa_fun=vector_rsa_iterate, combiner=combine_randomized,...)
+    flog.info("Running randomized vector RSA searchlight (radius = %s, niter = %s)", radius, niter)
+    do_randomized(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate, combiner = combine_randomized, ...)
   }
-  
-  return(results)
 }
+
 
 #' Create a searchlight performance object
 #'

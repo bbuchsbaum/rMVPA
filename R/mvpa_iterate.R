@@ -84,10 +84,13 @@ external_crossval <- function(mspec, roi, id) {
   # Get the ROI indices
   ind <- neuroim2::indices(roi$train_roi)
 
+  #browser()
   # Train the model and handle any errors
   result <- try(train_model(mspec, xtrain, ytrain, indices=ind,
                             param=mspec$tune_grid,
                             tune_reps=mspec$tune_reps))
+  
+ 
 
   if (inherits(result, "try-error")) {
     # Log a warning if there's an error during model training
@@ -181,7 +184,7 @@ internal_crossval <- function(mspec, roi, id) {
   # Generate cross-validation samples
   # Note: This step could potentially be moved outside the function
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), 
-  .name_repair=.name_repair), y_train(mspec))
+                                                                .name_repair=.name_repair), y_train(mspec))
 
   # Get ROI indices
   ind <- neuroim2::indices(roi$train_roi)
@@ -196,9 +199,14 @@ internal_crossval <- function(mspec, roi, id) {
       )
     }
 
+   
+   
     # Train the model
-    result <- try(train_model(mspec, tibble::as_tibble(train, .name_repair=.name_repair), ytrain,
+    result <- try(train_model(mspec, 
+                              tibble::as_tibble(train, .name_repair=.name_repair), 
+                              ytrain,
                               indices=ind))
+   
 
     # Check if there was an error during model fitting
     if (inherits(result, "try-error")) {
@@ -207,7 +215,6 @@ internal_crossval <- function(mspec, roi, id) {
       emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
       format_result(mspec, result=NULL, error_message=emessage, context=list(roi=roi, ytrain=ytrain, ytest=ytest, train=train, test=test, .id=.id))
     } else {
-      
       # Predict on test data
       format_result(mspec, result, error_message=NULL, context=list(roi=roi, ytrain=ytrain, ytest=ytest, train=train, test=test, .id=.id))
     }
@@ -234,35 +241,21 @@ extract_roi <- function(sample, data) {
 }
   
 #' Iterate MVPA Analysis Over Multiple ROIs
-#'
+#' 
+#' @description
 #' Performs multivariate pattern analysis (MVPA) across multiple regions of interest (ROIs) 
 #' using batch processing and parallel computation.
 #'
-#' @param mod_spec An MVPA model specification object containing:
-#'   \describe{
-#'     \item{dataset}{The dataset to analyze}
-#'     \item{compute_performance}{Logical indicating whether to compute performance metrics}
-#'     \item{return_predictions}{Logical indicating whether to return predictions}
-#'   }
+#' @param mod_spec An MVPA model specification object containing the dataset to analyze,
+#'        compute_performance (logical indicating whether to compute performance metrics),
+#'        and return_predictions (logical indicating whether to return predictions)
 #' @param vox_list A list of voxel indices or coordinates defining each ROI to analyze
-#' @param ids Vector of identifiers for each ROI analysis (default: 1:length(vox_list))
-#' @param batch_size Integer specifying number of ROIs to process per batch 
-#'        (default: 10% of total ROIs)
-#' @param verbose Logical indicating whether to print progress messages (default: TRUE)
+#' @param ids Vector of identifiers for each ROI analysis. Defaults to 1:length(vox_list)
+#' @param batch_size Integer specifying number of ROIs to process per batch.
+#'        Defaults to 10% of total ROIs
+#' @param verbose Logical indicating whether to print progress messages. Defaults to TRUE
 #' @param processor Optional custom processing function. If NULL, uses default processor.
 #'        Must accept parameters (obj, roi, rnum) and return a tibble.
-#'
-#' @return A tibble containing results for each ROI with columns:
-#'   \describe{
-#'     \item{result}{List column of analysis results (NULL if return_predictions=FALSE)}
-#'     \item{indices}{List column of ROI indices used}
-#'     \item{performance}{List column of performance metrics (if computed)}
-#'     \item{id}{ROI identifier}
-#'     \item{error}{Logical indicating if an error occurred}
-#'     \item{error_message}{Error message if applicable}
-#'     \item{warning}{Logical indicating if warning occurred}
-#'     \item{warning_message}{Warning message if applicable}
-#'   }
 #'
 #' @details
 #' The function processes ROIs in batches to manage memory usage. For each batch:
@@ -270,6 +263,18 @@ extract_roi <- function(sample, data) {
 #' 2. Filters out ROIs with fewer than 2 voxels
 #' 3. Processes each ROI using either the default or custom processor
 #' 4. Combines results across all batches
+#'
+#' @return A tibble containing results for each ROI with columns:
+#' \itemize{
+#'   \item{result}{List column of analysis results (NULL if return_predictions=FALSE)}
+#'   \item{indices}{List column of ROI indices used}
+#'   \item{performance}{List column of performance metrics (if computed)}
+#'   \item{id}{ROI identifier}
+#'   \item{error}{Logical indicating if an error occurred}
+#'   \item{error_message}{Error message if applicable}
+#'   \item{warning}{Logical indicating if warning occurred}
+#'   \item{warning_message}{Warning message if applicable}
+#' }
 #'
 #' @importFrom furrr future_pmap
 #' @importFrom purrr map
@@ -285,6 +290,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
     futile.logger::flog.warn("⚠ Empty voxel list provided. No analysis to perform.")
     return(tibble::tibble())
   }
+  
+  
   
   # Add debugging
   futile.logger::flog.debug("Starting mvpa_iterate with %d voxels", length(vox_list))
@@ -320,7 +327,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
         
         # Add debugging
         futile.logger::flog.debug("Processing batch %d with %d voxels", i, length(vlist))
-        
+        #browser()
         sf <- get_samples(mod_spec$dataset, vox_list[batch_ids[[i]]]) %>% 
           mutate(.id=batch_ids[[i]], rnum=rnums[[i]], size=size) %>% 
           filter(size>=2)
@@ -375,7 +382,6 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
     
     # Combine all results
     final_results <- dplyr::bind_rows(results)
-    
     final_results
   }, error = function(e) {
     futile.logger::flog.error("mvpa_iterate failed: %s", e$message)

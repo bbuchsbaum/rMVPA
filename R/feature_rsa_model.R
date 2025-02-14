@@ -100,13 +100,12 @@ feature_rsa_model <- function(dataset,
   
   assertthat::assert_that(!is.null(crossval))
   
-  create_model_spec("feature_rsa_model", dataset=dataset, design=design, method=method, crossval=crossval)
- 
-  ret
+  create_model_spec("feature_rsa_model", dataset=dataset, design=design, method=method, crossval=crossval, 
+                    compute_performance=TRUE, return_fits=FALSE)
 }
 
 
-# Helper to standardize data
+#' @noRd
 .standardize <- function(X) {
   cm <- colMeans(X)
   csd <- apply(X,2,sd)
@@ -115,25 +114,40 @@ feature_rsa_model <- function(dataset,
   list(X_sc=X_sc, mean=cm, sd=csd)
 }
 
-# Given scca result, predict F from X:
-# Steps:
-# 1) Standardize X with training stats
-# 2) Compute CCAX = X_sc %*% WX
-# 3) CCAY = CCAX * lambda (canonical correlations)
-# 4) Y_sc = CCAY %*% t(WY)
-# 5) Unscale Y_sc to get Y_pred
+#' @noRd
 .predict_scca <- function(model, X_new) {
   tm <- model$trained_model
   Xsc <- sweep(sweep(X_new,2,model$scca_x_mean,"-"),2,model$scca_x_sd,"/")
-  CCAX_new <- Xsc %*% tm$WX
-  CCAY_new <- sweep(CCAX_new,2,tm$lambda,"*")
-  Y_sc <- CCAY_new %*% t(tm$WY)
-  Y_pred <- sweep(sweep(Y_sc,2,model$scca_f_sd,"*"),2,model$scca_f_mean,"+")
-  Y_pred
+  xcoef <- t(tm$WX)
+  ycoef <- t(tm$WY)
+  Lambda_q <- diag(tm$lambda)
+  y_inv      <- corpcor::pseudoinverse(ycoef)
+  Yhat <- Xsc %*% xcoef %*% Lambda_q %*% y_inv
+  Yhat <- sweep(sweep(Yhat, 2, model$scca_f_sd, "*"), 2, model$scca_f_mean, "+")
+}
+
+.predict_scca2 <- function(model, X_new) {
+  tm <- model$trained_model
+  
+  # Standardize X
+  Xsc <- sweep(sweep(X_new,2,model$scca_x_mean,"-"),2,model$scca_x_sd,"/")
+  
+  # Grab the canonical weights
+  WX <- tm$WX  # shape: (#canonical, ncol(X_sc)) or (2 x 10)
+  WY <- tm$WY  # shape: (#canonical, ncol(F_sc)) or (2 x 2)
+  
+  # Canonical correlations
+  Lambda_q <- diag(tm$lambda)  # (2 x 2)
+  
+  Yhat_sc <- Xsc %*% t(WX) %*% Lambda_q %*% t(WY)
+  
+  # Unscale to original F space
+  Yhat <- sweep(sweep(Yhat_sc, 2, model$scca_f_sd, "*"), 2, model$scca_f_mean, "+")
+  Yhat
 }
 
 
-# For PCA method
+#' @noRd
 .predict_pca <- function(model, X_new) {
   Xsc <- sweep(sweep(X_new,2,model$pca_x_mean,"-"),2,model$pca_x_sd,"/")
   PC_new <- Xsc %*% model$pcarot
@@ -144,37 +158,48 @@ feature_rsa_model <- function(dataset,
 
 
 #' @export
-train_model.feature_rsa_model <- function(obj, train_dat, ytrain, ...) {
+train_model.feature_rsa_model <- function(obj, train_dat, ytrain, indices, ...) {
   X <- as.matrix(train_dat)
   Fsub <- as.matrix(ytrain)  # ytrain is the already subsetted portion of F
-  
+  result <- list()
   if (obj$method == "pls") {
-    obj$trained_model <- pls::plsr(Fsub ~ X, scale=TRUE)
+    df_train <- as.data.frame(X)
+    if(is.null(colnames(df_train))) {
+      colnames(df_train) <- paste0("V", 1:ncol(X))
+    }
+    fit <- pls::plsr(I(Fsub) ~ ., data = df_train, scale = TRUE)
+    result$trained_model <- fit
   } else if (obj$method == "scca") {
     sx <- .standardize(X)
     sf <- .standardize(Fsub)
     scca_res <- whitening::scca(sx$X_sc, sf$X_sc, scale=FALSE)
-    obj$trained_model <- scca_res
-    obj$scca_x_mean <- sx$mean
-    obj$scca_x_sd <- sx$sd
-    obj$scca_f_mean <- sf$mean
-    obj$scca_f_sd <- sf$sd
+    result$trained_model <- scca_res
+    result$scca_x_mean <- sx$mean
+    result$scca_x_sd <- sx$sd
+    result$scca_f_mean <- sf$mean
+    result$scca_f_sd <- sf$sd
   } else if (obj$method == "pca") {
     sx <- .standardize(X)
     sf <- .standardize(Fsub)
     pca_res <- prcomp(sx$X_sc, scale.=FALSE)
     PC_train <- pca_res$x
-    PC_train_i <- cbind(1, PC_train)
-    coefs <- solve(t(PC_train_i) %*% PC_train_i, t(PC_train_i) %*% sf$X_sc)
-    obj$trained_model <- pca_res
-    obj$pcarot <- pca_res$rotation
-    obj$pca_x_mean <- sx$mean
-    obj$pca_x_sd <- sx$sd
-    obj$pca_f_mean <- sf$mean
-    obj$pca_f_sd <- sf$sd
-    obj$pca_coefs <- coefs
+    # Truncate the number of principal components to avoid singularity; use up to 10 PCs
+    k <- min(ncol(PC_train), 10)
+    PC_train_subset <- PC_train[, 1:k, drop=FALSE]
+    # Fit a multivariate linear model using lm(), predicting standardized F from the truncated PCs
+    df <- as.data.frame(PC_train_subset)
+    fit <- lm(sf$X_sc ~ ., data = df)
+    coefs <- coef(fit)  # The coefficients matrix (Intercept and slopes) for each response variable
+    result$trained_model <- pca_res
+    # Store only the first k principal rotation vectors for use in prediction
+    result$pcarot <- pca_res$rotation[, 1:k, drop=FALSE]
+    result$pca_x_mean <- sx$mean
+    result$pca_x_sd <- sx$sd
+    result$pca_f_mean <- sf$mean
+    result$pca_f_sd <- sf$sd
+    result$pca_coefs <- coefs
   }
-  obj
+  result
 }
 
 
@@ -185,19 +210,22 @@ train_model.feature_rsa_model <- function(obj, train_dat, ytrain, ...) {
 #' @param ... Additional args
 #' @return Predicted values in the feature space
 #' @export
-predict_model.feature_rsa_model <- function(object, newdata, ...) {
+predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   X <- as.matrix(newdata)
   method <- object$method
   if (method == "pls") {
-    pred_arr <- predict(object$trained_model, newdata=data.frame(X))
-    ncomp <- object$trained_model$ncomp
-    pred <- pred_arr[,,ncomp, drop=FALSE]
-    pred <- pred[,,1]
+    df_new <- as.data.frame(X)
+    if(is.null(colnames(df_new))) {
+      colnames(df_new) <- paste0("V", 1:ncol(X))
+    }
+    pred_arr <- predict(fit$trained_model, newdata = df_new, ncomp = fit$ncomp)
+    pred <- pred_arr[,, fit$ncomp, drop = FALSE]
+    pred <- drop(pred)
     return(pred)
   } else if (method == "scca") {
-    return(.predict_scca(object, X))
+    return(.predict_scca(fit, X))
   } else if (method == "pca") {
-    return(.predict_pca(object, X))
+    return(.predict_pca(fit, X))
   }
 }
 
@@ -222,19 +250,25 @@ evaluate_model.feature_rsa_model <- function(object, predicted, observed, ...) {
 
 
 #' @export
-y_train.feature_rsa_model <- function(object) {
-  object$F
+y_train.feature_rsa_model <- function(obj) {
+  obj$design$F
 }
 
+#' @export
+y_train.feature_rsa_design <- function(obj) {
+  obj$F
+}
+
+#' @export
 format_result.feature_rsa_model <- function(obj, result, error_message=NULL, context, ...) {
   if (!is.null(error_message)) {
     return(tibble::tibble(observed=list(NULL), predicted=list(NULL), error=TRUE, error_message=error_message))
   } else {
     Xtest <- tibble::as_tibble(context$test)
-    pred <- predict_model(obj, Xtest)
+    pred <- predict_model.feature_rsa_model(obj, result, Xtest)
     
     observed <- as.matrix(context$ytest)
-    perf <- evaluate_model(obj, pred, observed)
+    perf <- evaluate_model.feature_rsa_model(obj, pred, observed)
     
     tibble::tibble(
       observed=list(observed),
@@ -247,57 +281,6 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
 }
 
 
-# merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
-#   # If any errors occurred, return an error tibble
-#   if (any(result_set$error)) {
-#     emessage <- result_set$error_message[which(result_set$error)[1]]
-#     return(tibble::tibble(
-#       result=list(NULL),
-#       indices=list(indices),
-#       performance=list(NULL),
-#       id=id,
-#       error=TRUE,
-#       error_message=emessage,
-#       warning=any(result_set$warning),
-#       warning_message=if(any(result_set$warning)) result_set$warning_message[which(result_set$warning)[1]] else "~"
-#     ))
-#   }
-#   
-#   # If no errors, combine all fold predictions and observed values
-#   # Each fold should have columns: observed, predicted, performance, etc.
-#   # result_set might have multiple rows (one per fold)
-#   
-#   # Extract observed and predicted from each fold
-#   # They are stored as lists, each element a matrix
-#   observed_list <- result_set$observed
-#   predicted_list <- result_set$predicted
-#   
-#   # Combine rows (observations) across folds
-#   combined_observed <- do.call(rbind, observed_list)
-#   combined_predicted <- do.call(rbind, predicted_list)
-#   
-#   # Compute performance on the combined set
-#   perf <- evaluate_model(obj, combined_predicted, combined_observed)
-#   
-#   # Create a single combined result. We can store the combined predictions and observed as well.
-#   # 'result' typically is some kind of result object; here we can store the combined predictions.
-#   # For consistency, let's mimic mvpa_model: store combined predictions/observed in 'result' as well.
-#   combined_result <- list(
-#     observed = combined_observed,
-#     predicted = combined_predicted
-#   )
-#   
-#   tibble::tibble(
-#     result = list(combined_result),
-#     indices = list(indices),
-#     performance = list(perf),
-#     id = id,
-#     error = FALSE,
-#     error_message = "~",
-#     warning = any(result_set$warning),
-#     warning_message = if(any(result_set$warning)) result_set$warning_message[which(result_set$warning)[1]] else "~"
-#   )
-# }
 
 #' Merge Multiple Results for Feature RSA Model
 #'
@@ -325,13 +308,15 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   combined_predicted <- do.call(rbind, predicted_list)
   
   # Evaluate performance on combined data
-  perf <- evaluate_model(obj, combined_predicted, combined_observed)
+  perf <- evaluate_model.feature_rsa_model(obj, combined_predicted, combined_observed)
+  perf <- list(mse=perf$mse, correlation=mean(perf$correlations))
   
   # Store combined result
   combined_result <- list(
     observed=combined_observed,
     predicted=combined_predicted
   )
+  
   
   tibble::tibble(
     result=list(combined_result),
@@ -343,17 +328,6 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   )
 }
 
-#' Print Method for Feature RSA Model
-#'
-#' @param x The feature RSA model
-#' @param ... Additional args
-#' @export
-print.feature_rsa_model <- function(x, ...) {
-  cat("Feature RSA Model\n")
-  cat("Method:", x$method, "\n")
-  cat("Number of features:", ncol(x$design$F), "\n")
-  cat("Number of observations:", nrow(x$design$F), "\n")
-}
 
 #' Summary Method for Feature RSA Model
 #'
@@ -384,32 +358,126 @@ summary.feature_rsa_model <- function(object, ...) {
 #' This integrates `feature_rsa_model` with the MVPA framework, similar to `run_regional.mvpa_model`.
 #'
 #' @export
-run_regional.feature_rsa_model <- function(model_spec, region_mask, coalesce_design_vars=FALSE, processor=NULL, 
-                                           verbose=FALSE, ...) {  
+run_regional.feature_rsa_model <- function(model_spec, region_mask, coalesce_design_vars=FALSE, processor=NULL,
+                                           verbose=FALSE, ...) {
   prepped <- prep_regional(model_spec, region_mask)
   
+
   # uses mvpa_iterate
+ 
   results <- mvpa_iterate(model_spec, prepped$vox_iter, ids=prepped$region_set, processor=processor, verbose=verbose, ...)
+ 
+
+  perf <- if (model_spec$compute_performance) comp_perf(results, region_mask) else list(vols=list(), perf_mat=tibble::tibble())
   
-  perf <- if (model_spec$dataset$compute_performance) comp_perf(results, region_mask) else list(vols=list(), perf_mat=tibble::tibble())
-  
-  prediction_table <- if (model_spec$dataset$return_predictions) {
-    combine_regional_results(results) 
+  prediction_table <- if (model_spec$return_predictions) {
+    combine_regional_results(results)
   } else {
     NULL
   }
-  
+
   if (coalesce_design_vars && !is.null(prediction_table)) {
-    prediction_table <- coalesce_join(prediction_table, test_design(model_spec$design), 
+    prediction_table <- coalesce_join(prediction_table, test_design(model_spec$design),
                                       by=".rownum")
   }
-  
-  fits <- if (model_spec$dataset$return_fits) {
+
+  fits <- if (model_spec$return_fits) {
     lapply(results$result, "[[", "predictor")
   } else {
     NULL
   }
-  
-  regional_mvpa_result(model_spec=model_spec, performance_table=perf$perf_mat, 
+
+  regional_mvpa_result(model_spec=model_spec, performance_table=perf$perf_mat,
                        prediction_table=prediction_table, vol_results=perf$vols, fits=fits)
 }
+
+#' Print Method for Feature RSA Design
+#'
+#' @param x A feature_rsa_design object.
+#' @param ... Additional arguments (ignored).
+#' @export
+print.feature_rsa_design <- function(x, ...) {
+  # Create a border line for styling
+  border <- crayon::bold(crayon::cyan(strrep("=", 50)))
+  
+  # Header
+  cat(border, "\n")
+  cat(crayon::bold(crayon::cyan("          Feature RSA Design          \n")))
+  cat(border, "\n\n")
+  
+  # Extract key details
+  n_obs <- nrow(x$F)
+  n_feat <- ncol(x$F)
+  
+  # Print number of observations and feature dimensions
+  cat(crayon::bold(crayon::green("Number of Observations: ")), n_obs, "\n")
+  cat(crayon::bold(crayon::green("Feature Dimensions:     ")), n_feat, "\n")
+  
+  # Indicate whether a similarity matrix was provided
+  if (!is.null(x$S)) {
+    cat(crayon::bold(crayon::magenta("Similarity Matrix:      ")), "Provided\n")
+  } else {
+    cat(crayon::bold(crayon::magenta("Similarity Matrix:      ")), 
+        "Not provided (using feature matrix F directly)\n")
+  }
+  
+  # Print first few labels
+  n_labels <- length(x$labels)
+  n_to_print <- min(5, n_labels)
+  label_str <- paste(x$labels[1:n_to_print], collapse = ", ")
+  if (n_labels > n_to_print) {
+    label_str <- paste0(label_str, ", ...")
+  }
+  cat(crayon::bold(crayon::yellow("Labels (first few):   ")), label_str, "\n")
+  
+  # Footer
+  cat("\n", border, "\n")
+}
+
+#' Print Method for Feature RSA Model
+#'
+#' @param x A feature_rsa_model object.
+#' @param ... Additional arguments (ignored).
+#' @export
+print.feature_rsa_model <- function(x, ...) {
+  # Create a border line for styling
+  border <- crayon::bold(crayon::cyan(strrep("=", 50)))
+  
+  # Header
+  cat(border, "\n")
+  cat(crayon::bold(crayon::cyan("          Feature RSA Model           \n")))
+  cat(border, "\n\n")
+  
+  # Display the method used (e.g., scca, pls, or pca)
+  cat(crayon::bold(crayon::green("Method: ")), x$method, "\n")
+  
+  # Check if the design component is present to extract dimensions
+  if (!is.null(x$design)) {
+    n_obs <- nrow(x$design$F)
+    n_feat <- ncol(x$design$F)
+  } else {
+    n_obs <- "Unknown"
+    n_feat <- "Unknown"
+  }
+  
+  cat(crayon::bold(crayon::green("Number of Observations: ")), n_obs, "\n")
+  cat(crayon::bold(crayon::green("Feature Dimensions:     ")), n_feat, "\n")
+  
+  # Indicate training status
+  if (!is.null(x$trained_model)) {
+    cat(crayon::bold(crayon::magenta("Status: ")), "Trained model available\n")
+  } else {
+    cat(crayon::bold(crayon::magenta("Status: ")), "Model not yet trained\n")
+  }
+  
+  # Display cross-validation status
+  if (!is.null(x$crossval)) {
+    cat(crayon::bold(crayon::yellow("Cross-Validation: ")), "Configured\n")
+  } else {
+    cat(crayon::bold(crayon::yellow("Cross-Validation: ")), "Not configured\n")
+  }
+  
+  # Footer
+  cat("\n", border, "\n")
+}
+

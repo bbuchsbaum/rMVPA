@@ -7,20 +7,28 @@
 \method{pairwise_dist}{robustmahadist}(obj, X)
 }
 \arguments{
-\item{X}{Numeric matrix where rows represent observations and columns represent variables.}
+\item{obj}{A distance function object of class \code{c("robustmahadist", "distfun")}.}
 
-\item{dist_obj}{A list that might include additional parameters for distance computation, 
-currently unused.}
+\item{X}{A numeric matrix.}
 }
 \value{
-An object of class `dist` containing the computed robust Mahalanobis distances.
+An \strong{N x N numeric matrix} of pairwise robust Mahalanobis distances.
 }
 \description{
-Computes the pairwise Mahalanobis distances using a robustly estimated covariance matrix,
-which can be more resistant to outliers.
+Returns a full NxN matrix of robust Mahalanobis distances, using a robust covariance estimator.
+\strong{No block-based exclusion is performed.}
+}
+\details{
+- Estimates a robust covariance with \code{robustcov::covGK(X)} (make sure the \code{robustcov} package is installed).
+- Then calls \code{corpcor::invcov.shrink} to get an inverse covariance estimate.
+- Finally, loops over row pairs to compute \code{(x_i - x_j) * inv_cov * (x_i - x_j)^T}.
 }
 \examples{
-X <- matrix(rnorm(100), 10, 10)
-dist_matrix <- pairwise_dist.robustmahadist(list(), X)
+\dontrun{
+  library(robustcov)
+  X <- matrix(rnorm(100), 10, 10)
+  dist_obj <- robustmahadist()
+  dist_matrix <- pairwise_dist(dist_obj, X)
+}
 
 }

@@ -83,7 +83,7 @@ standardize_vars <- function(bvec, mask, blockvar) {
 #' @noRd
 #' @keywords internal       
 normalize_surface_samples <- function(bvec, mask) {
-  mat <- scale(bvec@data[indices(bvec), ,drop=FALSE])
+  mat <- scale(bvec@data[neuroim2::indices(bvec), ,drop=FALSE])
   
   m2 <- matrix(0, length(nodes(bvec)), ncol(bvec@data))
   m2[indices(bvec),] <- mat

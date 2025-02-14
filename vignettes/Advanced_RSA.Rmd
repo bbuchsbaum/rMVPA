@@ -1,0 +1,292 @@
+---
+title: "Advanced RSA Methods: Feature-Based and Vector-Based Approaches"
+author: "Bradley Buchsbaum"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Advanced RSA Methods: Feature-Based and Vector-Based Approaches}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, echo=FALSE, message=FALSE}
+suppressPackageStartupMessages({
+  library(neuroim2)
+  library(rMVPA)
+  library(dplyr)
+})
+```
+
+# Introduction
+
+While standard Representational Similarity Analysis (RSA) compares neural patterns with model-based similarity structures, there are cases where more specialized approaches are needed. The `rMVPA` package provides two advanced RSA methods:
+
+1. **Feature-Based RSA**: Projects neural patterns into a predefined feature space
+2. **Vector-Based RSA**: Directly compares vectorized distance matrices
+
+This vignette explains when and why to use these specialized approaches instead of standard RSA.
+
+# Feature-Based RSA
+
+## Overview
+
+Feature-Based RSA is designed for cases where:
+
+1. You have a rich feature space describing your stimuli
+2. You want to directly map neural patterns to these features
+3. You're interested in reconstructing stimulus features from neural patterns
+
+Unlike standard RSA which compares similarity matrices, Feature-Based RSA attempts to find a mapping between neural patterns and a feature space.
+
+## Key Differences from Standard RSA
+
+1. **Direct Feature Mapping**: 
+   - Standard RSA: Compares similarity structures
+   - Feature RSA: Maps neural patterns to feature dimensions
+
+2. **Output**:
+   - Standard RSA: Correlation/regression coefficients between RDMs
+   - Feature RSA: Predicted feature values for each stimulus
+
+3. **Use Cases**:
+   - Standard RSA: Testing theoretical models of representation
+   - Feature RSA: Reconstructing stimulus features from brain activity
+
+## Implementation Example
+
+Let's walk through a complete example:
+
+```{r}
+# Generate a synthetic dataset with dimensions 6x6x6, 50 observations, divided into 4 blocks
+# This ensures that the number of trials matches the number of stimuli used below
+data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 50, blocks = 4, nlevels = 2)
+print(data_out)
+
+# Generate synthetic feature space (e.g., visual features of stimuli)
+set.seed(123)
+n_stimuli <- 50
+n_features <- 5
+
+# Create feature matrix (stimuli × features)
+feature_matrix <- matrix(rnorm(n_stimuli * n_features), n_stimuli, n_features)
+colnames(feature_matrix) <- paste0("feature_", 1:n_features)
+
+# Create stimulus labels
+stim_labels <- paste0("stim_", 1:n_stimuli)
+
+# Create feature RSA design
+feature_design <- feature_rsa_design(
+  F = feature_matrix,  # Direct feature matrix
+  labels = stim_labels
+)
+
+# Create MVPA dataset from the generated data
+dset <- mvpa_dataset(data_out$dataset$train_data, mask = data_out$dataset$mask)
+
+# Create cross-validation structure using the block information
+crossval <- blocked_cross_validation(data_out$design$block_var)
+
+# Create feature RSA model
+feature_model <- feature_rsa_model(
+  dataset = dset,
+  design = feature_design,
+  method = "scca",  # Sparse Canonical Correlation Analysis
+  crossval = crossval  # Add cross-validation
+)
+
+# Create proper region mask from the dataset's mask
+mask_vol <- data_out$dataset$mask
+nvox <- sum(mask_vol)
+region_mask <- neuroim2::NeuroVol(
+  sample(1:3, size = nvox, replace = TRUE),  # 3 regions
+  space(mask_vol),
+  indices = which(mask_vol > 0)
+)
+
+# Run regional analysis
+results <- run_regional(feature_model, region_mask)
+
+# Examine results
+print(results$performance_table)
+```
+
+## Available Methods
+
+Feature-Based RSA supports multiple analysis methods:
+
+1. **Sparse Canonical Correlation Analysis (SCCA)**:
+   - Finds canonical correlations between neural patterns and features
+   - Useful when features may be correlated
+
+2. **Partial Least Squares (PLS)**:
+   - Projects data to maximize covariance with features
+   - Good for high-dimensional feature spaces
+
+3. **PCA Regression**:
+   - Reduces neural patterns via PCA then predicts features
+   - Useful for very high-dimensional neural data
+
+```{r}
+# Compare different methods
+methods <- c("scca", "pca") ## pls is not implemented yet
+results_list <- lapply(methods, function(method) {
+  model <- feature_rsa_model(
+    dataset = dset,
+    design = feature_design,
+    method = method,
+    crossval = crossval  # Add cross-validation
+  )
+  run_regional(model, region_mask)
+})
+
+# Compare performance
+for (i in seq_along(methods)) {
+  cat("\nMethod:", methods[i], "\n")
+  print(results_list[[i]]$performance_table)
+}
+```
+
+# Vector-Based RSA
+
+## Overview
+
+Vector-Based RSA is designed for cases where:
+
+1. You have pre-computed distance matrices
+2. You want to compare across-block distances only
+3. You need efficient computation for large datasets
+
+Unlike standard RSA which works with full similarity matrices, Vector-Based RSA operates on vectorized distance matrices and can efficiently handle block structure.
+
+## Key Differences from Standard RSA
+
+1. **Computation**:
+   - Standard RSA: Works with full similarity matrices
+   - Vector RSA: Works with vectorized distances
+
+2. **Block Handling**:
+   - Standard RSA: Manual block exclusion
+   - Vector RSA: Built-in efficient block handling
+
+3. **Memory Usage**:
+   - Standard RSA: Stores full matrices
+   - Vector RSA: Stores only necessary comparisons
+
+## Implementation Example
+
+```{r}
+# Create distance matrix for stimuli
+stim_distances <- as.matrix(dist(feature_matrix))
+rownames(stim_distances) <- stim_labels
+
+# Create block structure (e.g., runs)
+blocks <- rep(1:5, length.out = n_stimuli)
+
+# Create vector RSA design
+vector_design <- vector_rsa_design(
+    D = stim_distances,
+    labels = stim_labels,
+    block_var = blocks
+)
+
+# Create vector RSA model
+vector_model <- vector_rsa_model(
+  dataset = dset,
+  design = vector_design,
+  distfun = cordist(),  # Correlation distance
+  rsa_simfun = "pearson"
+)
+
+# Run analysis
+results_vector <- run_regional(vector_model, region_mask)
+
+# Examine results
+print(results_vector$performance_table)
+```
+
+## Efficient Block Handling
+
+Vector-Based RSA automatically handles block structure:
+
+```{r}
+# Compare with different block structures
+block_sizes <- c(5, 10)
+results_blocks <- lapply(block_sizes, function(size) {
+  blocks <- rep(1:(n_stimuli/size), each = size)
+  design <- vector_rsa_design(
+    D = stim_distances,
+    labels = stim_labels,
+    block_var = blocks
+  )
+  model <- vector_rsa_model(
+    dataset = dset,
+    design = design,
+    distfun = cordist()
+  )
+  run_regional(model, region_mask)
+})
+
+# Compare results
+for (i in seq_along(block_sizes)) {
+  cat("\nBlock size:", block_sizes[i], "\n")
+  print(results_blocks[[i]]$performance_table)
+}
+```
+
+# When to Use Each Method
+
+## Feature-Based RSA
+
+Choose Feature-Based RSA when:
+- You have a well-defined feature space
+- You want to reconstruct stimulus features
+- Your features have meaningful dimensions
+- You're interested in feature prediction
+
+Example use cases:
+- Predicting visual features from visual cortex activity
+- Reconstructing semantic dimensions from language areas
+- Mapping motion parameters from MT/V5 responses
+
+## Vector-Based RSA
+
+Choose Vector-Based RSA when:
+- You have many pre-computed distance matrices
+- Memory efficiency is important
+- You need sophisticated block handling
+- You're working with large datasets
+
+Example use cases:
+- Comparing across many experimental runs
+- Working with high-resolution fMRI data
+- Analyzing large-scale similarity structures
+
+## Standard RSA
+
+Stick with standard RSA when:
+- You're testing theoretical models
+- You want to compare similarity structures
+- Block structure isn't critical
+- Memory usage isn't a concern
+
+# Summary
+
+The `rMVPA` package provides three complementary RSA approaches:
+
+1. **Standard RSA**: General-purpose similarity analysis
+2. **Feature-Based RSA**: Direct feature mapping and reconstruction
+3. **Vector-Based RSA**: Efficient similarity comparison with block handling
+
+Choose the appropriate method based on:
+- Your research question
+- Data structure
+- Computational requirements
+- Whether you're interested in features vs. similarities
+
+For implementation details, refer to:
+- `feature_rsa_model.R`
+- `vector_rsa_model.R`
+- `rsa_model.R` 

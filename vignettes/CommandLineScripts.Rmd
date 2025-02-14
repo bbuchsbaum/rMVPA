@@ -1,152 +1,273 @@
 ---
-title: "Command-Line Scripts"
-author: "Bradley Buchsbaum"
+title: "MVPA Searchlight Tutorial"
+author: "Your Name"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Command-Line Scripts}
+  %\VignetteIndexEntry{MVPA Searchlight Tutorial}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-  
 ---
 
+# Introduction
 
-### Running rMVPA algorithms from the command line
+This tutorial explains how to run a **searchlight-based Multivariate Pattern Analysis (MVPA)**
+using **MVPA_Searchlight.R**. The script performs a **local classification or regression analysis**
+on fMRI data by iterating over each voxel (or node for surface data) and extracting information
+from a surrounding neighborhood.
 
-`rMVPA` offers two main command-line executable R scripts that can be used to run most basic MVPA analyses. The goal of these scripts is to get users up and running without requiring them to write full-blown R programs. Instead, rMVPA can be controlled via a configuration file that specifies the data, design information, block structure, model parameters, etc. that are necessary to run an MVPA analysis.
+## Key Features:
+- **Flexible Input Handling**: Works with volumetric (**NIfTI**) and surface-based neuroimaging data
+- **Parallel Processing**: Supports multi-core computation for speed
+- **Customizable Models**: Choose from classifiers and regressors (e.g., `rf`, `sda_notune`, `corsim`)
+- **Reproducible Outputs**: Generates **config files** and **metric maps**
+- **Built-in Cross-Validation**: Includes options for blocked and stratified validation
+- **Data Normalization**: Optional centering and scaling of samples
+- **Feature Selection**: Support for various feature selection methods
+- **Multiple Data Modes**: Handles both volumetric and surface-based analyses
 
-There are currently two main scripts: `MVPA_Searchlight.R` and `MVPA_Regional.R`. These two scripts are very similar in their inputs and capabilities--the difference is really only that the former runs a "searchlight" analysis and the latter runs an MVPA over a set of one or more regions of interest (ROI). For example, if one wished to run MVPA using a single large mask covering visual cortex, or over a set of Freesrufer-defined ROIs, one would opt for `MVPA_Regional.R`.
+---
 
-```{r, echo=FALSE, message=FALSE}
+# Running the Script
 
-```
-## Installing the command-line scripts
+## 1. Basic Usage
 
-`MVPA_Searchlight.R` and `MVPA_Regional.R` are stored in the `scripts` sub-directory of the R project located here:
+If you have:
 
-https://github.com/bbuchsbaum/rMVPA
+- A **4D fMRI file** for training: `train_data.nii`
+- A **trial-by-trial design matrix**: `train_design.txt`
+- A **brain mask file**: `mask.nii`
 
-Of course, before you can the scripts, you need to have rMVPA installed. Easiest way is to open an R console and type following command, assuming `devtools` is alreeady installed. If not, first install the `devtools` package.
+You can run the script from the command line:
 
-```{r, echo=FALSE, message=FALSE, eval = FALSE}
-## devtools::install_github("bbuuchsbaum/rMVPA")
-library(rMVPA")
-
-```
-
-
-
-Installing the rMVPA package, however, will not install the command line scripts. Instead, you have to do this manually.
-
-## Using `wget` to fetch scripts from Github
-
-An easy way to do this is with the `wget` command. 
-
-`wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Searchlight.R`
-
-`wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Regional.R`
-
-## Adding scripts to your `bin` folder and making them executable
-
-Then, you generally want to move these to a `bin` directory either locally (e.g. `/home/username/bin` or at the system level `/usr/local/bin`).
-
-e.g. `cp MVPA_*R /home/username/bin` where `username` is the name of your login id.
-
-
-Finally, you need to make the script executable: 
-
-`cd /home/username/bin`
-`chmod +x MVPA_Searchlight.R`
-`chmod +x MVPA_Regional.R`
-
-Now you can test whether the script is working (assuming that the files are on your `PATH`):
-
-`MVPA_Searchlight.R --help`
-
-`MVPA_Regional.R --help`
-
-
-## Searchlight analyses with MVPA_Searchlight.R
-
-### Setting up a configuration file
-
-To run a searchlight analysis we need a minimum of five pieces of information. 
-
-* **train_data**: One or more NifTI 4D files containing trialwise (i.e. one value per voxel per trial) estimates of brain activity--often colloquially referrrd to as the "betas" because they are derived from single-trial regression analysis yielding a series of beta estimates.
-
-* **train_design**: A tabular plain text file ("design file"") which contains at a minimum the "label" associated with each image in the "betas" files. 
-
-* **label_column**: The name of the column in the above design file that holds the "labels".
-
-* **model**: the name of the classifier model such as `sda_notune` for tuning-parameter-free shrinkage discriminant analysis.
-
-* **output**: the name of the folder to place the searchlight classification results.
-
-This information is included in a configuration file which can be a simple R source code file (e.g. "config.R") or a YAML formatted file (e.g. config.yaml). 
-
-The following additional information can also be specified:
-
-* **cross_validation**: the cross-validation method to be used (see below for examples, also see "CrossValidation" vignette).
-
-* **mask**: the name of a brain mask file that indicates the set of voxels to include in the searchlight.
-
-* **block_column**: the name of the column in the design file that encodes the block structure of the experiment. This is especially important for fMRI designs, where the session is divided into contiguous "blocks" or "runs". These blocks generally should be "kept together" during cross-validaiton based procedures. Thus, it is important in such cases to put this block information as a usually integer-valued column in the "train_design" tabular text file.
-
-* **radius**: the radius in millimeters of the searchlight. The default value here is 8 but slightly smaller or larger values are also reasonable.
-
-* **normalize**: whether to standardize each *image* in the training data by subtracting the mean image and dividing by the standard deviation. If successive trialwise estimates vary considerably in terms of whole-image variance or mean, then normalizing the images can be beneficial. On the other hand, if whole-brain mean/variance is a meaningful signal for your problem, then you may not want to normalize in this way.
-
-* **type**: the *type* of the searchlight. This can either be "standard" or "randomized". A standard searchlight involves estimating a classifier model at the center of over voel in the mask; a randomized searchlight uses an iterative montecarlo resampling approach to estimate the infromational contribution of each voxel to classification performance.
-
-* **niter**: when **type** is "randomized" this parameter supplies the number of resampling iterations (default = 16).
-
-
-## An example configuation file.
-
-Assume we have a training dataset consisting a set of 100 single trial "betas" collected over five runs and concatenated together into a single file called "betas.nii".
-
-Further assume our classiification goal is to predict whether a presented stimulus is one of four possible categories: **face**, **scene**, **object**, or **word**.
-
-This information is included in a design file called "train_design.txt" that looks like this (first 5 rows only):
-
-```{r, echo=FALSE, message=FALSE}
-
-g <- expand.grid(label=c("face", "scene", "object", "word"), repnum=1:5, run=1:5)
-knitr::kable(g[1:5,])
-
+```bash
+MVPA_Searchlight.R --radius=6 \
+                           --train_design=train_design.txt \
+                           --train_data=train_data.nii \
+                           --mask=mask.nii \
+                           --model=sda_notune \
+                           --label_column=condition \
+                           --ncores=4 \
+                           --output=my_searchlight_output
 ```
 
+## 2. Understanding Data Modes
 
-Here is a minimal `config.R` file.
+The script supports two primary data modes:
 
-```{r, echo=TRUE, message=FALSE}
+### Image Mode (Volumetric Data)
+- Default mode (`--data_mode=image`)
+- Works with NIfTI format files
+- Requires a binary mask file
+- Processes voxel-wise data in 3D space
 
-train_design = "train_design.txt"
-train_data = "betas.nii"
-label_column = "label"
-block_column="run"
-radius=6
-mask = "brain_mask.nii"
-mode = "sda_notune"
-output = "searchlight_analysis"
+### Surface Mode
+- Activated with `--data_mode=surface`
+- Works with surface-based neuroimaging data
+- Can handle multiple surface sections
+- Processes data on cortical surface meshes
 
+## 3. Available Models
+
+The script supports various classification and regression models:
+
+### Built-in MVPA Models:
+- `corclass`: Correlation-based classifier with template matching
+- `sda_notune`: Simple Shrinkage Discriminant Analysis without tuning
+- `sda_boot`: SDA with bootstrap resampling
+- `glmnet_opt`: Elastic net with EPSGO parameter optimization
+- `sparse_sda`: SDA with sparsity constraints
+- `sda_ranking`: SDA with automatic feature ranking
+- `mgsda`: Multi-Group Sparse Discriminant Analysis
+- `lda_thomaz`: Modified LDA for high-dimensional data
+- `hdrda`: High-Dimensional Regularized Discriminant Analysis
+
+### Caret Models:
+- Any model available in the caret package (e.g., `rf`, `svmRadial`, `glmnet`)
+
+## 4. Cross-Validation Options
+
+The script supports multiple cross-validation strategies:
+
+### Blocked Cross-Validation
+```bash
+--block_column=session
+```
+Uses a blocking variable (e.g., session) for cross-validation splits.
+
+### K-Fold Cross-Validation
+Default when no block column is specified. Uses random splits.
+
+### Two-Fold Cross-Validation
+Specify in the configuration file:
+```yaml
+cross_validation:
+  name: "twofold"
+  nreps: 10
 ```
 
-Now to run, we type the following command (assuming that `MVPA_Searchlight.R` in on you `PATH`):
+### Advanced Cross-Validation Methods
 
-`MVPA_Searchlight.R --config config.R`
+In addition to the standard options above, several advanced cross-validation strategies are available:
 
+- **Blocked Cross-Validation**: Divides the dataset based on a blocking variable (e.g., session) so that samples from the same block remain together.
+- **K-Fold Cross-Validation**: Randomly partitions the data into k folds, providing a robust estimate of model performance.
+- **Bootstrap Blocked Cross-Validation**: Generates bootstrap resamples within blocks to assess model stability in heterogeneous datasets.
+- **Sequential Blocked Cross-Validation**: Assigns sequential folds within each block, preserving temporal or ordered structures.
+- **Custom Cross-Validation**: Allows you to define custom training and testing splits if standard methods do not fit your experimental design.
 
+Specify the desired method in your configuration file by setting the `name` field under `cross_validation`. For example, to use bootstrap blocked cross-validation:
+```yaml
+cross_validation:
+  name: "bootstrap"   # Options: "twofold", "bootstrap", "sequential", "custom", "kfold"
+  nreps: 10
+```
 
+Choose the method that best aligns with your data structure and experimental design.
 
+## 5. Feature Selection
 
+Enable feature selection with the `--feature_selector` parameter:
 
+```yaml
+feature_selector:
+  method: "anova"  # or "correlation", "t-test", etc.
+  cutoff_type: "percentile"
+  cutoff_value: 0.1
+```
 
+## 6. Understanding `label_column`
 
+The **label column** is critical as it specifies the target variable for classification or regression.
 
+- If performing **classification**, this column should contain **categorical labels** (e.g., `"Face"` vs. `"House"`).
+- If performing **regression**, this column should contain **continuous values** (e.g., reaction times, confidence ratings).
 
+**Example Design File (`train_design.txt`):**
 
+```
+trial  condition  subject  session
+1      Face       S01      1
+2      House      S01      1
+3      Face       S01      1
+4      House      S01      1
+5      Face       S01      2
+```
 
+## 7. Using a Configuration File
+
+Instead of specifying all options on the command line, you can use a **YAML** or **R script** configuration file.
+
+**Example YAML Config File (`config.yaml`):**
+
+```yaml
+# Data Sources
+train_design: "train_design.txt"
+test_design: "test_design.txt"
+train_data: "train_data.nii"
+test_data: "test_data.nii"
+mask: "mask.nii"
+
+# Analysis Parameters
+model: "rf"  # Random Forest classifier
+data_mode: "image"  # or "surface"
+ncores: 4
+radius: 6
+label_column: "condition"
+block_column: "session"
+
+# Output Options
+output: "searchlight_results"
+normalize_samples: TRUE
+class_metrics: TRUE
+
+# Advanced Options
+feature_selector:
+  method: "anova"
+  cutoff_type: "percentile"
+  cutoff_value: 0.1
+
+cross_validation:
+  name: "twofold"
+  nreps: 10
+
+# Optional Subsetting
+train_subset: "subject == 'S01'"
+test_subset: "subject == 'S02'"
+```
+
+**Running with a Config File:**
+
+```bash
+Rscript MVPA_Searchlight.R --config=config.yaml
+```
+
+## 8. Expected Outputs
+
+After running the script, the output directory (`searchlight_results/`) contains:
+
+- **Performance Maps**: NIfTI files for each performance metric
+  - `accuracy.nii`: Overall classification accuracy map
+  - `auc.nii`: Area Under Curve (AUC) performance map
+  - For multiclass problems with `class_metrics: TRUE`:
+    - `auc_class1.nii`, `auc_class2.nii`, etc.: Per-class AUC maps
+  
+- **Probability Maps**: When available
+  - `prob_observed.nii`: Probabilities for observed classes
+  - `prob_predicted.nii`: Probabilities for predicted classes
+
+- **Configuration**
+  - `config.yaml`: Complete record of analysis parameters for reproducibility
+
+Example directory structure:
+
+```
+searchlight_results/
+├── accuracy.nii          # Overall classification accuracy
+├── auc.nii              # Mean AUC across classes
+├── auc_class1.nii       # AUC for class 1 (if class_metrics: TRUE)
+├── auc_class2.nii       # AUC for class 2 (if class_metrics: TRUE)
+├── prob_observed.nii    # Probabilities for observed classes
+├── prob_predicted.nii   # Probabilities for predicted classes
+└── config.yaml          # Analysis configuration
+```
+
+The exact files will depend on:
+- Whether it's a binary or multiclass classification
+- If `class_metrics: TRUE` is set
+- The type of analysis (classification vs regression)
+- The model type used
+
+For regression analyses, you'll see different metrics:
+- `r2.nii`: R-squared values
+- `rmse.nii`: Root Mean Square Error
+- `spearcor.nii`: Spearman correlation
+
+## 9. Performance Considerations
+
+- Use `--normalize_samples=TRUE` for better model performance
+- Increase `--ncores` for faster processing on multi-core systems
+- Adjust `--radius` based on your spatial resolution and hypothesis
+- Consider using `--type=randomized` for faster approximate searchlights
+- Set appropriate memory limits with `options(future.globals.maxSize)`
+
+# Summary
+
+- **MVPA_Searchlight.R** is a flexible tool for searchlight-based MVPA
+- Supports both volumetric and surface-based analyses
+- Offers multiple cross-validation and feature selection strategies
+- Provides extensive configuration options via command line or config files
+- Generates comprehensive performance metrics and reproducible outputs
+
+**Next Steps:**
+- Try different models (`--model=rf`, `--model=sda_notune`)
+- Experiment with feature selection methods
+- Explore surface-based MVPA with `--data_mode=surface`
+- Use cross-validation strategies appropriate for your design
+- Optimize performance with parallel processing
+
+Happy searchlighting!
 
 
 

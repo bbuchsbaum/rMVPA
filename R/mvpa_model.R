@@ -177,8 +177,8 @@ y_test.mvpa_model <- function(obj) y_test(obj$design)
 #' @param ... Additional arguments to be passed to the model.
 #' @noRd
 #' @export
-create_model_spec <- function(name, dataset, design, return_predictions=FALSE, tune_reps=FALSE, ...) {
-  ret <- list(name=name, dataset=dataset, design=design, return_predictions=return_predictions, tune_reps=tune_reps, ...)
+create_model_spec <- function(name, dataset, design, return_predictions=FALSE, compute_performance=FALSE, tune_reps=FALSE, ...) {
+  ret <- list(name=name, dataset=dataset, design=design, return_predictions=return_predictions, compute_performance=compute_performance, tune_reps=tune_reps, ...)
   class(ret) <- c(name, "model_spec", "list")
   ret
 }
@@ -304,6 +304,11 @@ mvpa_model <- function(model,
 
 #' @export
 has_crossval.mvpa_model <- function(obj) {
+  !is.null(obj$crossval)
+}
+
+#' @export
+has_crossval.model_spec <- function(obj) {
   !is.null(obj$crossval)
 }
 

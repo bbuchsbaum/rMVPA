@@ -110,6 +110,7 @@ process_roi.default <- function(mod_spec, roi, rnum, ...) {
   } else if (has_test_set(mod_spec$dataset)) {
     external_crossval(mod_spec, roi, rnum, ...)
   } else if (has_crossval(mod_spec)) {
+    #print("internal crossval")
     internal_crossval(mod_spec, roi, rnum, ...)
   } else {
     process_roi_default(mod_spec, roi, rnum, ...)
@@ -124,7 +125,9 @@ process_roi.default <- function(mod_spec, roi, rnum, ...) {
 #' @param ... Additional arguments passed to specific methods.
 #' @keywords internal
 #' @noRd
+#' @importFrom neuroim2 indices
 process_roi_default <- function(mod_spec, roi, rnum, ...) {
+  #browser()
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
   ind <- indices(roi$train_roi)
   ret <- try(train_model(mod_spec, xtrain, ind))

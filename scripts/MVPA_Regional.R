@@ -1,3 +1,19 @@
+###############################################################################
+# MVPA Regional Analysis Script
+# 
+# This script performs regional multivariate pattern analysis (MVPA) on fMRI data.
+# It supports both classification and regression analyses using volumetric (NIfTI) or
+# surface-based neuroimaging data. Regional analysis can be performed on a specified 
+# set of regions within the brain, and the results include performance metrics and
+# prediction tables.
+# 
+# Key Features:
+#   - Configurable via YAML or R config files
+#   - Supports test and train subsets (using test_subset with a single design file)
+#   - Outputs performance maps and prediction tables
+#   - Consistent logging and error checking
+###############################################################################
+
 #! /usr/bin/env Rscript
 
 .suppress <- suppressPackageStartupMessages
@@ -11,197 +27,183 @@
 .suppress(library(doParallel))
 
 
-
-
-## should be able to use "test_subset" without test_data
-## that means: train only on one subset and test only on another subset within single design
-
-## if train_design only, the "test_subset" subsets the the train_design. Check to make sure no overlap in columns.
-## if test_design provided, the test design must have matching test_data
-
-## should output importance maps for methods that supply them (e.g. sda)
-
-
-
+###############################################################################
+# Command-Line Options
+###############################################################################
 option_list <- list(
-                    make_option(c("-t", "--train_design"), type="character", help="the file name of the training design table"),
-                    make_option("--test_design", type="character", help="the file name of the test design table"),
-                    make_option("--train_data", type="character", help="the name of the training data file as (4D .nii file)"), 
-                    make_option("--test_data", type="character", help="the name of the testing data file as (4D .nii file)"),  
-                    make_option(c("-n", "--normalize"), action="store_true", type="logical", help="center and scale each image volume"),
-                    make_option(c("-m", "--model"), type="character", help="name of the classifier model"),
-                    make_option(c("-a", "--mask"), type="character", help="name of binary image mask file (.nii format)"),
-                    make_option(c("-p", "--pthreads"), type="numeric", help="the number of parallel threads"),
-                    make_option(c("-l", "--label_column"), type="character", help="the name of the column in the design file containing the training labels"),
-                    make_option(c("--test_label_column"), type="character", help="the name of the column in the test design file containing the test labels"),
-                    make_option(c("-o", "--output"), type="character", help="the name of the output folder where results will be placed"),
-                    make_option(c("-b", "--block_column"), type="character", help="the name of the column in the design file indicating the block variable used for cross-validation"),
-                    make_option(c("-g", "--tune_grid"), type="character", help="string containing grid parameters in the following form: a=\\(1,2\\), b=\\('one', 'two'\\)"),
-                    make_option(c("--tune_length"), type="numeric", help="an integer denoting the number of levels for each model tuning parameter"),
-                    make_option(c("--save_predictors"), type="logical", action="store_true", help="save model fits (one per ROI) for predicting new data sets (default is FALSE)"),
-                    make_option(c("--skip_if_folder_exists"), type="logical", action="store_true", help="skip, if output folder already exists"),
-                    ## should be skip_if_folder_exists or "overwrite_folder"
-                    make_option(c("--class_metrics"), type="logical", help="write out performance metrics for each class in multiclass settings"),
-                    make_option(c("--ensemble_predictor"), type="logical", help="predictor is based on average prediction of all cross-validated runs"),
-                    make_option(c("-c", "--config"), type="character", help="name of configuration file used to specify program parameters"))
-
+  make_option(c("-t", "--train_design"), type="character", 
+              help="File name of the training design table"),
+  make_option("--test_design", type="character", 
+              help="File name of the test design table"),
+  make_option("--train_data", type="character", 
+              help="File name of the training data (4D NIfTI file)"),
+  make_option("--test_data", type="character", 
+              help="File name of the testing data (4D NIfTI file)"),
+  make_option(c("-n", "--normalize"), action="store_true", default=FALSE,
+              help="Center and scale each image volume"),
+  make_option(c("-m", "--model"), type="character", 
+              help="Name of the classifier/regression model"),
+  make_option(c("-a", "--mask"), type="character", 
+              help="Name of binary image mask file (.nii format)"),
+  make_option(c("-p", "--pthreads"), type="numeric", 
+              help="Number of parallel threads"),
+  make_option(c("-l", "--label_column"), type="character", 
+              help="Name of the column in the design file containing training labels"),
+  make_option(c("--test_label_column"), type="character", 
+              help="Name of the column in the test design file containing test labels"),
+  make_option(c("-o", "--output"), type="character", 
+              help="Output folder where results will be stored"),
+  make_option(c("-b", "--block_column"), type="character", 
+              help="Name of the column indicating the block variable for cross-validation"),
+  make_option(c("-g", "--tune_grid"), type="character", 
+              help="String containing grid parameters (e.g., a=\(1,2\), b=\('one','two'\))"),
+  make_option(c("--tune_length"), type="numeric", 
+              help="Number of levels for model tuning parameters"),
+  make_option(c("--save_predictors"), type="logical", action="store_true", default=FALSE,
+              help="Save model fits for predicting new data sets (default FALSE)"),
+  make_option(c("--skip_if_folder_exists"), type="logical", action="store_true", default=FALSE,
+              help="Skip analysis if output folder already exists"),
+  make_option(c("--class_metrics"), type="logical", default=FALSE,
+              help="Write out performance metrics for each class in multiclass settings"),
+  make_option(c("--ensemble_predictor"), type="logical", default=FALSE,
+              help="Use ensemble prediction based on average prediction of all cross-validated runs"),
+  make_option(c("-c", "--config"), type="character",
+              help="Configuration file (YAML or R) specifying program parameters")
+)
 
 oparser <- OptionParser(usage = "MVPA_Regional.R [options]", option_list=option_list)
 opt <- parse_args(oparser, positional_arguments=TRUE)
 args <- opt$options
 
-flog.info("command line args are ", args, capture=TRUE)
+flog.info("Command-line args:", args, capture=TRUE)
 
-## set up configuration 
+###############################################################################
+# Configuration and Parameter Initialization
+###############################################################################
+
+# Load configuration from file if provided
 config <- rMVPA:::initialize_configuration(args)
-## set default parameters
+# Set default parameters specific to regional analysis
 config <- rMVPA:::initialize_standard_parameters(config, args, "mvpa_regional")
 
-
-## Regional Specific Params
+# Regional-specific parameter: save_predictors, etc.
 rMVPA:::set_arg("save_predictors", config, args, FALSE)
 
-
+# Initialize tuning grid if provided
 config$tune_grid <- rMVPA:::initialize_tune_grid(args, config)
+
+# Convert configuration to a list for logging (if needed)
 config_params <- as.list(config)
 
-flog.info("initializing design structure")
+###############################################################################
+# Design Initialization
+###############################################################################
+
+flog.info("Initializing design structure...")
 config$design <- rMVPA:::initialize_design(config)
 design <- config$design
 
+###############################################################################
+# Data Loading
+###############################################################################
 
-flog.info("loading training data: %s", config$train_data)
-
-
+flog.info("Loading training data: %s", config$train_data)
 
 if (config$data_mode == "image") {
+  # Load the image mask and image data
   region_mask <- rMVPA:::load_mask(config)
   mask_volume <- as(region_mask, "LogicalNeuroVol")
   dataset <- rMVPA:::initialize_image_data(config, region_mask)
+  # Store dataset as a list for consistency
   dataset <- list(dataset)
   names(dataset) <- ""
-  flog.info("image mask contains %s voxels", sum(mask_volume))
-  flog.info("image mask contains %s regions", length(table(region_mask)) - 1)
+  flog.info("Image mask contains %s voxels", sum(mask_volume))
+  flog.info("Image mask defines %s regions", length(table(region_mask)) - 1)
 } else if (config$data_mode == "surface") {
   dataset <- rMVPA:::initialize_surface_data(config)
 } else {
-  flog.error("unrecognized data_mode: %s", config$data_mode)
+  flog.error("Unrecognized data_mode: %s", config$data_mode)
+  stop()
 }
 
-print(dataset)
-row_indices <- which(config$train_subset)
+# Log trial/subset information
+rownumbers <- which(config$train_subset)
+flog.info("Number of training trials: %s", length(rownumbers))
+if (length(rownumbers) > 0) flog.info("Max trial index: %s", max(rownumbers))
 
-flog.info("number of trials: %s", length(row_indices))
-flog.info("max trial index: %s", max(row_indices))
-
-
-#config$ROIVolume <- loadMask(config)
-
-# if (!is.null(config$roi_subset)) {
-#   form <- try(eval(parse(text=config$roi_subset)))
-#   if (inherits(form, "try-error")) {
-#     flog.error("could not parse roi_subset parameter: %s", config$roi_subset)
-#     stop()
-#   }
-#   
-#   if (class(form) != "formula") {
-#     flog.error("roi_subset argument must be an expression that starts with a ~ character")
-#     stop()
-#   }
-#   
-#   res <- as.logical(eval(form[[2]], list(x=config$ROIVolume)))
-#   
-#   config$ROIVolume[!res] <- 0
-#   flog.info("roi_subset contains %s voxels", sum(config$ROIVolume > 0))
-#   
-#   if (sum(config$ROIVolume) <= 1) {
-#     flog.info("ROI must contain more than one voxel, aborting.")
-#     stop()
-#   }
-# }
-
-
-#config$maskVolume <- as(Reduce("+", lapply(config$ROIVolume, function(roivol) as(roivol, "LogicalBrainVolume"))), "LogicalBrainVolume")
-#config <- initializeData(config)
+###############################################################################
+# Cross-Validation and Feature Selection Setup
+###############################################################################
 
 if (!is.null(config$custom_performance)) {
-  flog.info("custom performance function provided: ", config$custom_performance)
+  flog.info("Custom performance function provided: %s", config$custom_performance)
 }
-
 
 crossval <- rMVPA:::initialize_crossval(config, design)
 feature_selector <- rMVPA:::initialize_feature_selection(config)
 
 if (is.numeric(design$y_train)) {
-  flog.info("labels are continuous, running a regression analysis.")
+  flog.info("Labels are continuous - running regression analysis.")
 } else {
-  flog.info("labels are categorical, running a classification analysis.")
+  flog.info("Labels are categorical - running classification analysis.")
 }
 
-write_output <- function(res, name="", output, data_mode="image") {
-  if (data_mode == "image") {
-    for (i in 1:length(res)) {
-      out <- paste0(output, "/", names(res)[i], "_", name, ".nii")
-      ##TODO hacky
-      if (inherits(res[[i]], "NeuroVol")) {
-        write_vol(res[[i]], out)  
-      } else if (inherits(res[[i]], "NeuroVec")) {
-        write_vec(res[[i]], out) 
-      }
-      #write_vol(res[[i]], out)  
-    }
-  } else if (data_mode == "surface") {
-    for (i in 1:length(res)) {
-      out <- paste0(output, "/", names(res)[i], "_", name)
-      neurosurf::writeSurfaceData(res[[i]], out)  
-    }
-  } else {
-    stop(paste("wrong data_mode:", data_mode))
-  }
-}
+###############################################################################
+# Model Loading and Regional Analysis Execution
+###############################################################################
 
+# Create the output directory
 output <- rMVPA:::make_output_dir(config$output)
 
+# Loop over datasets (typically one for regional analysis)
 for (i in 1:length(dataset)) {
   dset <- dataset[[i]]
   dname <- names(dataset)[i]
-  
-  if (names(dataset)[i] != "") {
-    flog.info("running mvpa_regional for %s dataset: ", names(dataset)[i])
+  if (dname != "") {
+    flog.info("Running mvpa_regional for dataset: %s", dname)
   } else {
-    flog.info("running mvpa_regional")
+    flog.info("Running mvpa_regional")
   }
   
+  # Log number of regions based on mask values
   mvals <- as.vector(dset$mask)
+  num_regions <- length(table(mvals[mvals != 0]))
+  flog.info("Number of regions: %s", num_regions)
   
-  flog.info("number of regions is %s", length(table(mvals[mvals != 0])))
+  # Load the MVPA model
+  mvpa_mod <- rMVPA:::load_mvpa_model(config, dset, design, crossval, feature_selector)
+  flog.info("MVPA model loaded.")
   
-  mvpa_mod <- rMVPA:::load_mvpa_model(config, dset, design,crossval,feature_selector)
-  
-  flog.info("mvpa model: ", mvpa_mod, capture=TRUE)
-  
+  # Run regional analysis using the regional function
   regional_res <- rMVPA:::run_regional(mvpa_mod, region_mask, return_fits=TRUE)
   
+  # Log performance summary
+  flog.info("Regional analysis performance:")
   print(regional_res$performance)
   
-  write_output(regional_res$vol_results, name=names(dataset)[i], output, data_mode=config$data_mode)
+  # Write output volumes (e.g., importance or performance maps)
+  write_output(regional_res$vol_results, name=dname, output, data_mode=config$data_mode)
   
-  out_perf <-
-    if (dname != "")
-      paste0(paste0(output, paste0("/", dname, "_performance_table.txt")))
-  else paste0(output, "/" , "performance_table.txt")
+  # Write out performance and prediction tables
+  out_perf <- if (dname != "") {
+    paste0(output, "/", dname, "_performance_table.txt")
+  } else {
+    paste0(output, "/performance_table.txt")
+  }
+  out_pred <- if (dname != "") {
+    paste0(output, "/", dname, "_prediction_table.txt")
+  } else {
+    paste0(output, "/prediction_table.txt")
+  }
   
-  out_pred <-
-    if (dname != "")
-      paste0(paste0(output, paste0("/", dname, "_prediction_table.txt")))
-  else paste0(output, "/" , "prediction_table.txt")
-  
-  write.table(regional_res$performance, out_perf, row.names=FALSE, quote=FALSE)
-  
-  write.table(regional_res$prediction_table, out_pred, row.names=FALSE, quote=FALSE)
-  
+  write.table(regional_res$performance, out_perf, row.names=FALSE, quote=FALSE, sep="\t")
+  write.table(regional_res$prediction_table, out_pred, row.names=FALSE, quote=FALSE, sep="\t")
 }
- 
-  
+
+###############################################################################
+# Completion Message
+###############################################################################
+
+flog.info("Regional MVPA analysis complete! Results saved to: %s", output)
 
 

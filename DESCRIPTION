@@ -61,6 +61,7 @@ Collate:
     'distcalc.R'
     'utils.R'
     'feature_rsa_model.R'
+    'new_analysis_overview.R'
 RoxygenNote: 7.3.2.9000
 Suggests:
     testthat,

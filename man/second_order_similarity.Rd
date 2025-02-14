@@ -5,54 +5,50 @@
 \title{Compute Second-Order Similarity Scores}
 \usage{
 second_order_similarity(
-  dist_fun,
+  distfun,
   X,
-  D,
-  block,
+  Dref,
+  block_var,
   method = c("pearson", "spearman")
 )
 }
 \arguments{
-\item{dist_fun}{A distance function object or a character string specifying the 
-method used for distance computation. This function should be capable of processing
-the matrix X to produce a distance matrix.}
+\item{distfun}{An S3 distance object (see \code{\link{create_dist}}) 
+specifying how to compute a pairwise distance matrix from \code{X}.}
 
-\item{X}{A numeric matrix where each row is an observation and columns are features.
-Distances will be computed pairwise between rows of this matrix.}
+\item{X}{A numeric matrix (rows = observations, columns = features).}
 
-\item{D}{A numeric matrix, typically a predefined dissimilarity matrix that
-serves as a reference to compare against the computed distances from X.}
+\item{Dref}{A numeric NxN reference matrix of dissimilarities (e.g., from an ROI mask or a prior).}
 
-\item{block}{A vector (numeric or factor) indicating the block or group for each row
-in X and S. Comparisons are only made between elements of different blocks.}
+\item{block_var}{A vector indicating block/group memberships for each row in \code{X}.}
 
-\item{method}{The method used for computing correlation between similarity vectors.
-Defaults to "pearson", but "spearman" or "kendall" could also be used.}
+\item{method}{Correlation method: "pearson" or "spearman".}
 }
 \value{
-A numeric vector of similarity scores, one for each observation in X, 
-representing the correlation between distance vectors derived from X and the
-corresponding vectors in S for non-matching blocks.
+A numeric vector of length \code{nrow(X)}, where each entry is
+the correlation (using \code{method}) between \code{distance_matrix[i, valid]} and
+\code{Dref[i, valid]}, with \code{valid = which(block_var != block_var[i])}.
 }
 \description{
-This function calculates the second order similarity between two similarity vectors
-derived from a provided distance function applied to matrix X and a reference
-similarity matrix S. The calculation takes into account a blocking variable to exclude
-comparisons within the same block.
+Calculates correlation-based \emph{second order similarity} between:
+\itemize{
+  \item A \strong{full NxN distance matrix} computed from \code{X} via \code{distfun}, and 
+  \item A \code{Dref} matrix (the "reference" dissimilarities).
+}
+For each row \code{i}, this excludes same-block comparisons by selecting \code{which(block_var != block_var[i])}.
 }
 \details{
-The function computes a distance matrix for X using the specified `dist_fun`. It then
-compares these distances with the entries in S for each observation, excluding
-comparisons within the same block as defined by the `block` argument. This is useful
-for evaluating how well the distances within X align with an external similarity
-standard, adjusting for within-block dependencies.
+This function first calls \code{pairwise_dist(distfun, X)}, obtaining an NxN matrix 
+of \emph{all} pairwise distances. It does not do block-based exclusion internally. 
+Instead, for each row \code{i}, it excludes same-block rows from the correlation 
+by subsetting the distances to \code{valid_indices}.
 }
 \examples{
-# Assuming X and S are numeric matrices and block is a factor or numeric vector
-dist_fun <- "euclidean"  # This should be defined or loaded from your package/environment
-X <- matrix(rnorm(100), ncol=10)
-D <- matrix(rnorm(100), ncol=10)
-block <- rep(1:5, each=20)
-scores <- second_order_similarity(dist_fun, X, D, block, method = "pearson")
+# Suppose we have X (10x5), a reference D (10x10), block var, and a correlation distfun:
+X <- matrix(rnorm(50), 10, 5)
+D <- matrix(runif(100), 10, 10)
+block <- rep(1:2, each=5)
+dist_obj <- cordist(method="pearson")
+scores <- second_order_similarity(dist_obj, X, D, block, method="spearman")
 
 }

@@ -368,7 +368,7 @@ MVPAModels$lda_thomaz_boot <- list(
 #' @importFrom memoise memoise
 #' @importFrom sda sda.ranking
 #' @noRd
-memo_rank <- memoise(function(X, L, fdr) {
+memo_rank <- memoise::memoise(function(X, L, fdr) {
   sda::sda.ranking(X,L,fdr=fdr,verbose=FALSE)
 })
 

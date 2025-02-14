@@ -219,7 +219,7 @@ prep_regional <- function(model_spec, region_mask) {
   if (length(region_set) < 1) {
     stop("run_regional: invalid ROI mask, number of ROIs = 0")
   }
-  
+
   vox_iter <- lapply(region_set, function(rnum) which(region_vec == rnum & model_spec$dataset$mask > 0))
   lens <- sapply(vox_iter, length)
   keep <- lens > 1
@@ -271,90 +271,188 @@ comp_perf <- function(results, region_mask) {
   list(vols=vols, perf_mat=perfmat)
 }
 
-#' Run regional MVPA analysis on a specified MVPA model
+#' A "base" function that does the standard regional analysis pipeline
 #'
-#' This function runs a regional MVPA analysis using a specified MVPA model and
-#' region mask. The analysis can be customized to return model fits, predictions,
-#' and performance measures.
+#' @param model_spec A model specification object.
+#' @param region_mask A mask representing different brain regions in either a \code{NeuroVol} or \code{NeuroSurface}.
+#' @param coalesce_design_vars If \code{TRUE}, merges design variables into the prediction table (if present).
+#' @param processor An optional processor function for each region (ROI).
+#' @param verbose If \code{TRUE}, prints progress messages.
+#' @param compute_performance Logical indicating whether to compute performance metrics (defaults to \code{model_spec$compute_performance}).
+#' @param return_predictions Logical indicating whether to combine a full prediction table (defaults to \code{model_spec$return_predictions}).
+#' @param return_fits Logical indicating whether to return the fitted models (defaults to \code{model_spec$return_fits}).
+#' @param ... Additional arguments passed along to \code{mvpa_iterate} or other methods.
 #'
-#' @param model_spec An object of type \code{mvpa_model} specifying the MVPA model to be used.
-#' @param region_mask A mask representing different regions in the brain image.
-#' @param processor 
-#' @param ... Additional arguments to be passed to the function.
-#'
-#' @return A \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects,
-#' where each element contains a performance metric and is labeled according to the metric used (e.g. Accuracy, AUC).
-#'
-#' @import itertools
-#' @import foreach
-#' @import doParallel
-#' @import parallel
+#' @return A \code{regional_mvpa_result} object containing:
+#'   \itemize{
+#'     \item \code{performance_table}: A \code{tibble} of performance metrics per region
+#'     \item \code{prediction_table}: A \code{tibble} (if \code{return_predictions = TRUE})
+#'     \item \code{vol_results}: A list of volumetric maps (if \code{compute_performance = TRUE})
+#'     \item \code{fits}: A list of model fits if \code{return_fits = TRUE}
+#'     \item \code{model_spec}: The original model specification
+#'   }
+#' 
 #' @export
-run_regional.mvpa_model <- function(model_spec, region_mask, coalesce_design_vars=FALSE, processor=NULL, 
-                                    verbose=FALSE, ...) {  
-  ## to get rid of package check warnings
-  roinum=NULL
-  ###
+run_regional_base <- function(model_spec,
+                              region_mask,
+                              coalesce_design_vars = FALSE,
+                              processor = NULL,
+                              verbose = FALSE,
+                              compute_performance = model_spec$compute_performance,
+                              return_predictions = model_spec$return_predictions,
+                              return_fits = model_spec$return_fits,
+                              ...) {
   
+  # 1) Prepare regions
   prepped <- prep_regional(model_spec, region_mask)
-  #flog.info("model is: %s", model_spec$model$label)
   
-  ## run mvpa for each region
-  results <- mvpa_iterate(model_spec, prepped$vox_iter, ids=prepped$region_set, processor)
-
-
-  perf <- if (model_spec$compute_performance) comp_perf(results, region_mask) else list(vols=list(), perf_mat=tibble())
-   
+  # 2) Iterate over regions
+  results <- mvpa_iterate(
+    model_spec,
+    prepped$vox_iter,
+    ids = prepped$region_set,
+    processor = processor,
+    verbose = verbose,
+    ...
+  )
   
-  ## compile full prediction table
-  prediction_table <- if (model_spec$return_predictions) {
-    combine_regional_results(results) 
+  # 3) Performance computation
+  perf <- if (isTRUE(compute_performance)) {
+    comp_perf(results, region_mask)
+  } else {
+    list(vols = list(), perf_mat = tibble::tibble())
   }
   
-  if (coalesce_design_vars && model_spec$return_predictions) {
-    prediction_table <- coalesce_join(prediction_table, test_design(model_spec$design), 
-                                      by=".rownum")
+  # 4) Predictions
+  prediction_table <- NULL
+  if (isTRUE(return_predictions)) {
+    prediction_table <- combine_regional_results(results)
+    
+    if (coalesce_design_vars && !is.null(prediction_table)) {
+      prediction_table <- coalesce_join(
+        prediction_table,
+        test_design(model_spec$design),
+        by = ".rownum"
+      )
+    }
   }
   
-  fits <- if (model_spec$return_fits) {
-    lapply(results$result, "[[", "predictor")
+  # 5) Fits
+  fits <- NULL
+  if (isTRUE(return_fits)) {
+    fits <- lapply(results$result, "[[", "predictor")
   }
   
-  regional_mvpa_result(model_spec=model_spec, performance_table=perf$perf_mat, 
-                       prediction_table=prediction_table, vol_results=perf$vols, fits=fits)
+  # 6) Construct and return final result
+  regional_mvpa_result(
+    model_spec        = model_spec,
+    performance_table = perf$perf_mat,
+    prediction_table  = prediction_table,
+    vol_results       = perf$vols,
+    fits             = fits
+  )
 }
 
 
-#' Run regional RSA analysis on a specified RSA model
+#' Default method for run_regional
 #'
-#' This function runs a regional RSA analysis using a specified RSA model and
-#' region mask. The analysis can be customized to return model fits and performance measures.
+#' By default, if an object does not implement a specific \code{run_regional.*} method,
+#' this fallback will attempt to run the \code{run_regional_base} pipeline. 
 #'
-#' @param model_spec An object of type \code{rsa_model} specifying the RSA model to be used.
-#' @param region_mask A mask representing different regions in the brain image.
-#' @param return_fits Whether to return model fit for every ROI (default is \code{FALSE} to save memory).
-#' @param compute_performance \code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC).
-#' @param regtype The regression method ("pearson", "spearman", "lm", or "rfit").
-#' @param distmethod The distance computing method ("pearson" or "spearman").
-#' @param coalesce_design_vars Concatenate additional design variables with output stored in `prediction_table`.
-#' @param ... Additional arguments to be passed to the function.
+#' @param model_spec A generic model specification object.
+#' @param region_mask A mask representing different brain regions.
+#' @param ... Additional arguments passed to \code{run_regional_base}.
 #'
-#' @return A \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects,
-#' where each element contains a performance metric and is labeled according to the metric used (e.g. Accuracy, AUC).
+#' @return A \code{regional_mvpa_result} object.
+#' @export
+run_regional.default <- function(model_spec, region_mask, ...) {
+  run_regional_base(model_spec, region_mask, ...)
+}
+
+
+#' Specialized run_regional method for mvpa_model
+#'
+#' This method wraps \code{run_regional_base} with default arguments for an \code{mvpa_model} object.
+#'
+#' @param model_spec An \code{mvpa_model} object.
+#' @param region_mask A mask for the brain regions.
+#' @param coalesce_design_vars If \code{TRUE}, merges design variables into the prediction table.
+#' @param processor An optional processor function for each region.
+#' @param verbose If \code{TRUE}, prints progress messages.
+#' @param ... Additional arguments passed to \code{run_regional_base}.
 #'
 #' @export
-run_regional.rsa_model <- function(model_spec, region_mask, return_fits=FALSE, 
-                                   compute_performance=TRUE, coalesce_design_vars=FALSE, ...) {  
+run_regional.mvpa_model <- function(model_spec, region_mask,
+                                    coalesce_design_vars = FALSE,
+                                    processor = NULL,
+                                    verbose = FALSE,
+                                    ...) {
   
-  prepped <- prep_regional(model_spec, region_mask)
-  
-  results <- mvpa_iterate(model_spec, prepped$vox_iter, ids=prepped$region_set)
-  perf <- if (compute_performance) comp_perf(results, region_mask) else list(vols=list(), perf_mat=tibble())
-  
-  regional_mvpa_result(model_spec=model_spec, performance_table=perf$perf_mat, 
-                       prediction_table=NULL, vol_results=perf$vols, fits=NULL)
-  
+  run_regional_base(
+    model_spec,
+    region_mask,
+    coalesce_design_vars = coalesce_design_vars,
+    processor = processor,
+    verbose = verbose,
+    ...
+  )
 }
+
+
+#' Specialized run_regional method for rsa_model
+#'
+#' By default, RSA models do not produce a full prediction table (set \code{return_predictions = FALSE}).
+#'
+#' @param model_spec An \code{rsa_model} object.
+#' @param region_mask A mask for the brain regions.
+#' @param return_fits Whether to return each region's fitted model (default \code{FALSE}).
+#' @param compute_performance \code{logical} indicating whether to compute performance metrics.
+#' @param coalesce_design_vars If \code{TRUE}, merges design variables into the prediction table (though we typically don't have one for RSA).
+#' @param ... Additional arguments passed to \code{run_regional_base}.
+#'
+#' @export
+run_regional.rsa_model <- function(model_spec, region_mask,
+                                   return_fits = FALSE,
+                                   compute_performance = TRUE,
+                                   coalesce_design_vars = FALSE,
+                                   ...) {
   
+  run_regional_base(
+    model_spec,
+    region_mask,
+    coalesce_design_vars  = coalesce_design_vars,
+    compute_performance   = compute_performance,
+    return_fits           = return_fits,
+    return_predictions    = FALSE,  # RSA typically doesn't produce a "prediction table"
+    ...
+  )
+}
+
+
+#' Specialized run_regional method for feature_rsa_model
+#'
+#' @param model_spec A \code{feature_rsa_model} object.
+#' @param region_mask A mask of brain regions.
+#' @param coalesce_design_vars If \code{TRUE}, merges design variables into the prediction table.
+#' @param processor An optional region processor function.
+#' @param verbose If \code{TRUE}, prints progress messages.
+#' @param ... Additional arguments passed to \code{run_regional_base}.
+#'
+#' @export
+run_regional.feature_rsa_model <- function(model_spec, region_mask,
+                                           coalesce_design_vars = FALSE,
+                                           processor = NULL,
+                                           verbose = FALSE,
+                                           ...) {
+  
+  run_regional_base(
+    model_spec,
+    region_mask,
+    coalesce_design_vars = coalesce_design_vars,
+    processor = processor,
+    verbose = verbose,
+    ...
+  )
+}
 
 

@@ -4,18 +4,21 @@
 \alias{train_model.vector_rsa_model}
 \title{Train a vector RSA model}
 \usage{
-\method{train_model}{vector_rsa_model}(obj, train_dat, indices, ...)
+\method{train_model}{vector_rsa_model}(obj, train_dat, y, indices, ...)
 }
 \arguments{
 \item{obj}{An object of class \code{vector_rsa_model}.}
 
-\item{train_dat}{the training data}
+\item{train_dat}{A data frame or matrix representing the training subset (e.g., voxel intensities).}
 
-\item{indices}{the spatial indices of the training data}
+\item{y}{Not used in vector RSA (here for consistency with other train_model generics).}
 
-\item{...}{addiitonal arguments}
+\item{indices}{The spatial indices of the training data (ROI, searchlight, etc.).}
 
-\item{X}{The data matrix where rows correspond to trials.}
+\item{...}{Additional arguments.}
+}
+\value{
+A structure containing "scores" or similar second-order similarity results.
 }
 \description{
 Train a vector RSA model

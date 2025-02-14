@@ -7,22 +7,25 @@
 \method{pairwise_dist}{cordist}(obj, X)
 }
 \arguments{
-\item{X}{Numeric matrix where rows represent observations and columns represent variables.}
+\item{obj}{A distance function object of class \code{c("cordist", "distfun")}.}
 
-\item{dist_obj}{A list containing the method ("correlation") and a block vector to specify
-which rows in `X` should not be compared to avoid within-block correlation.}
+\item{X}{A numeric matrix (rows = observations, columns = variables).}
 }
 \value{
-An object of class `dist` containing the computed correlation distances.
+An \strong{N x N numeric matrix} of pairwise distances.
 }
 \description{
-This method computes the pairwise correlation distances for a matrix `X`, excluding
-comparisons within the same block as specified by the `dist_obj$block`.
+Computes a full NxN matrix of correlation-based distances: \code{1 - cor(t(X), method=obj$method)}.
+\strong{No block-based exclusion is performed here.}
+}
+\details{
+This function calculates correlation distances among the rows of \code{X}. 
+If you have a block variable and wish to exclude same-block comparisons, 
+handle that \emph{after} obtaining this full matrix (e.g., in \code{second_order_similarity}).
 }
 \examples{
 X <- matrix(rnorm(100), 10, 10)
-block <- rep(1:2, each=5)
-dist_obj <- list(method = "pearson", block = block)
-dist_matrix <- pairwise_dist.correlation(dist_obj, X)
+dist_obj <- cordist(method="pearson")
+dist_matrix <- pairwise_dist(dist_obj, X)
 
 }

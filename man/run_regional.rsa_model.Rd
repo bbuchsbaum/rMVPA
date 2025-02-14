@@ -2,7 +2,7 @@
 % Please edit documentation in R/regional.R
 \name{run_regional.rsa_model}
 \alias{run_regional.rsa_model}
-\title{Run regional RSA analysis on a specified RSA model}
+\title{Specialized run_regional method for rsa_model}
 \usage{
 \method{run_regional}{rsa_model}(
   model_spec,
@@ -14,27 +14,18 @@
 )
 }
 \arguments{
-\item{model_spec}{An object of type \code{rsa_model} specifying the RSA model to be used.}
+\item{model_spec}{An \code{rsa_model} object.}
 
-\item{region_mask}{A mask representing different regions in the brain image.}
+\item{region_mask}{A mask for the brain regions.}
 
-\item{return_fits}{Whether to return model fit for every ROI (default is \code{FALSE} to save memory).}
+\item{return_fits}{Whether to return each region's fitted model (default \code{FALSE}).}
 
-\item{compute_performance}{\code{logical} indicating whether to compute performance measures (e.g. Accuracy, AUC).}
+\item{compute_performance}{\code{logical} indicating whether to compute performance metrics.}
 
-\item{coalesce_design_vars}{Concatenate additional design variables with output stored in `prediction_table`.}
+\item{coalesce_design_vars}{If \code{TRUE}, merges design variables into the prediction table (though we typically don't have one for RSA).}
 
-\item{...}{Additional arguments to be passed to the function.}
-
-\item{regtype}{The regression method ("pearson", "spearman", "lm", or "rfit").}
-
-\item{distmethod}{The distance computing method ("pearson" or "spearman").}
-}
-\value{
-A \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects,
-where each element contains a performance metric and is labeled according to the metric used (e.g. Accuracy, AUC).
+\item{...}{Additional arguments passed to \code{run_regional_base}.}
 }
 \description{
-This function runs a regional RSA analysis using a specified RSA model and
-region mask. The analysis can be customized to return model fits and performance measures.
+By default, RSA models do not produce a full prediction table (set \code{return_predictions = FALSE}).
 }

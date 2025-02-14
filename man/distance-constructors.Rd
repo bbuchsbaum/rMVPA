@@ -25,34 +25,41 @@ pcadist(
 )
 }
 \arguments{
-\item{labels}{A vector of labels associated with the data points.}
+\item{labels}{Optional vector of row labels (not directly used in distance calculation).}
 
-\item{method}{The method of distance computation, applicable for `cordist`.}
+\item{method}{For \code{cordist}, the correlation method: "pearson" or "spearman".}
+
+\item{ncomp}{For \code{pcadist}, the number of components (or a function threshold).}
+
+\item{whiten}{For \code{pcadist}, whether to whiten principal components (logical).}
+
+\item{threshfun}{For \code{pcadist}, an optional function that determines how many PCs to retain 
+based on \code{pres$sdev^2}.}
+
+\item{dist_method}{For \code{pcadist}, the base distance measure in PC space ("euclidean", "manhattan", or "cosine").}
 }
 \value{
-An object of class `distfun` with a specific method subclass, encapsulating
-        all information necessary for computing distances according to the specified method.
+An S3 object with class \code{c("<method>", "distfun")}.
 }
 \description{
-These functions provide convenient constructors for various types of distance functions.
-Each constructor function initializes a distance function object for use with distance
-computation functions, specifying the method and any necessary labels.
+These convenience functions build specific types of distance function objects via \code{\link{create_dist}}.
+Each returns an S3 object inheriting from \code{c("<method>", "distfun")}.
 }
 \details{
-The constructors allow for the specification of distance calculation methods and associated labels:
-- `cordist` creates a correlation distance function.
-- `mahadist` creates a Mahalanobis distance function.
-- `eucdist` creates a Euclidean distance function.
-- `robustmahadist` creates a robust version of the Mahalanobis distance function.
+- \code{cordist(labels, method="pearson")} → correlation-based distance.  
+- \code{mahadist(labels)} → Mahalanobis distance.  
+- \code{eucdist(labels)} → Euclidean distance.  
+- \code{robustmahadist(labels)} → Mahalanobis distance using robust covariance.  
+- \code{pcadist(labels, ...)} → distance in reduced PCA space.
 }
 \examples{
-dist_obj_1 <- cordist(labels = c("A", "B", "C"), method = "pearson")
-dist_obj_2 <- mahadist(labels = c("A", "B", "C"))
-dist_obj_3 <- eucdist(labels = c("A", "B", "C"))
-dist_obj_4 <- robustmahadist(labels = c("A", "B", "C"))
+dist_obj_1 <- cordist(method="pearson")
+dist_obj_2 <- mahadist()
+dist_obj_3 <- eucdist()
+dist_obj_4 <- robustmahadist()
+dist_obj_5 <- pcadist(ncomp=2, dist_method="cosine")
 
 }
 \seealso{
-\code{\link{create_dist}} for the underlying constructor used by these functions.
+\code{\link{create_dist}} for the underlying constructor.
 }
-\keyword{methods}

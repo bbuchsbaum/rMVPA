@@ -11,7 +11,7 @@ vector_rsa_design(D, labels, block_var)
 
 \item{labels}{character vector of labels corresponding to rows in another dataset X.}
 
-\item{block_var}{vector indicating the block (strata) each label belongs to.}
+\item{block_var}{A vector indicating the block (strata) each label belongs to. Must be the same length as `labels`.}
 }
 \value{
 A list containing the elements of the RSA design, class attributes "vector_rsa_design" and "list".
@@ -20,6 +20,7 @@ A list containing the elements of the RSA design, class attributes "vector_rsa_d
 This function constructs a design for an RSA model using a single distance matrix, labels, and blocks.
 }
 \details{
-The function verifies that all labels in the 'labels' are present in the row.names of 'D'.
-It also sets up for precomputing cross-block pairs if needed.
+The function verifies that all `labels` appear in `rownames(D)`. It also creates an expanded version
+of the dissimilarity matrix (`Dexpanded`) matching the order of `labels`, and precomputes
+cross-block information for later use.
 }

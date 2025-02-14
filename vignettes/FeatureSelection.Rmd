@@ -1,69 +1,109 @@
 ---
-title: "Feature Selection"
+title: "Feature Selection in rMVPA"
 author: "Bradley Buchsbaum"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Feature Selection}
+  %\VignetteIndexEntry{Feature Selection in rMVPA}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 
-## Feature Selection
+## Introduction
 
-```{r, echo=FALSE, message=FALSE}
-suppressPackageStartupMessages(library(neuroim2))
-##suppressPackageStartupMessages(library(devtools))
-library(rMVPA)
-```
+In modern neuroimaging and machine learning analyses, datasets often contain a large number of features (e.g., voxels). Many of these features can be noisy or irrelevant for the prediction task at hand. Feature selection is a critical step to reduce dimensionality, improve model interpretability, and potentially enhance predictive performance. It is essential to integrate feature selection within the cross-validation framework to avoid introducing selection bias. In the `rMVPA` package, feature selection can be applied automatically as part of the analysis pipeline.
 
-Feature selection is used to select a subset of variables to include into a classification or regression model. This can be useful when one has many irrelevant features and one wants to quickly reduce the problem to a more manageable size. Alternatively, if one wants to impose a limit on the total number of included features (say, 1000) across  a set of classification tasks (e.g. over a group of subjects) then it can be useful to use a feature selection before running the analysis. Note that to avoid bias, feature selection must be incorported into cross-validation procedure such that feature selection is carried out for each training fold. This is automatically done in the analysis pileplines provided in `rMVPA`.
+In `rMVPA`, a *feature selector* object is used to specify the method and criteria for feature selection. Two primary methods are available:
 
-### Creating a `feature_selector` object
+- **FTest**: Performs a one-way ANOVA F-test on each feature and uses the resulting p-values for selection.
+- **catscore**: Computes correlation-adjusted t-scores (using the `sda.ranking` function from the `sda` package) to rank features.
 
-To use feature selection in `rMVPA` we must construct a `feature_selector` instance which specifies the feature selection method and the criteria for variable inclusion. There are two ways of specificying a threshold of `cutoff` value for variable inclusion: the first, called `top_k`, selects features by including the top *k* most important features according to a feature importance algorithm; the second, called `top_p` selects feature by including a proportion *p* of all variables after ranking them by feature importance. Thus, if *p* is .1, we would include the top 10% of all features. 
+Additionally, two types of cutoff criteria are supported:
 
-First, we demonstrate setting creatinga `feature_selector` using the `top_k` method, using k=10, and the univariate F-test for feature ranking:
+- **Top_k** (or "topk"): Selects the top *k* features based on their ranking.
+- **Top_p** (or "topp"): Selects a proportion *p* of the features (e.g., setting *p* to 0.1 selects the top 10% of features).
 
-```{r}
 
-fsel <- feature_selector(method="FTest",cutoff_type = "top_k", cutoff_value = 10)
+## Creating a Feature Selector Object
+
+To create a feature selector in `rMVPA`, use the `feature_selector()` function. For example, to construct a feature selector using the FTest method with a top_k cutoff (selecting the top 10 features):
+
+```{r, message=FALSE, warning=FALSE}
+suppressPackageStartupMessages(library(rMVPA))
+# Create a feature selector using FTest with top_k cutoff (select top 10 features)
+fsel <- feature_selector(method = "FTest", cutoff_type = "top_k", cutoff_value = 10)
 fsel
-
 ```
 
-To apply feature selection to some data, we do as follows:
+Similarly, you can create a feature selector that selects a proportion of features using the top_p option. In the example below, we select the top 10% of features based on the FTest ranking:
 
-```{r, message=FALSE}
-
-## create a dependent variable.
-Y <- factor(rep(letters[1:4], 25))
-
-## create a feature matrix
-X <- matrix(rnorm(100*100), 100, 100)
-
-## select_features returns a logical vector with selected features as TRUE and otherwise FALSE
-res <- select_features(fsel,X,Y)
-
-## the total number of TRUE values should equal the cutoff_value of 10.
-print(sum(res))
+```{r, message=FALSE, warning=FALSE}
+# Create a feature selector using FTest with top_p cutoff (select top 10% of features)
+fsel <- feature_selector(method = "FTest", cutoff_type = "top_p", cutoff_value = 0.1)
+fsel
 ```
 
-Now we select feature using a proprtion cutoff using the `top_p` option.
+## Applying Feature Selection to Data
 
-```{r}
+The `select_features()` function applies the feature selection process to a given feature matrix `X` and a response variable `Y`. The function returns a logical vector with `TRUE` for selected features and `FALSE` otherwise.
 
-fsel <- feature_selector(method="FTest",cutoff_type = "top_p", cutoff_value = .1)
-res <- select_features(fsel,X,Y)
+Below is an example using simulated data:
 
-## the total number of TRUE values should equal the cutoff_value of 10.
-print(sum(res)/ncol(X))
+```{r, message=FALSE, warning=FALSE}
+# Simulate a response variable (categorical)
+Y <- factor(rep(letters[1:4], each = 25))
 
+# Simulate a feature matrix with 100 samples and 100 features
+X <- matrix(rnorm(100 * 100), nrow = 100, ncol = 100)
+
+# Apply feature selection using the FTest method with top_k cutoff
+fsel <- feature_selector(method = "FTest", cutoff_type = "top_k", cutoff_value = 10)
+selected_features <- select_features(fsel, X, Y)
+
+# The number of selected features should be equal to the cutoff value (10)
+cat("Number of selected features (top_k):", sum(selected_features), "\n")
 ```
 
+Now, let's use the top_p option. This will select a proportion of the features. For example, with a cutoff value of 0.1, the top 10% of features will be selected:
 
+```{r, message=FALSE, warning=FALSE}
+# Apply feature selection using the FTest method with top_p cutoff (select top 10% of features)
+fsel <- feature_selector(method = "FTest", cutoff_type = "top_p", cutoff_value = 0.1)
+selected_features <- select_features(fsel, X, Y)
 
+# Calculate the proportion of features selected
+the_proportion <- sum(selected_features) / ncol(X)
+cat("Proportion of features selected (top_p):", the_proportion, "\n")
+```
 
+## Using the catscore Method
+
+Alternatively, you can use the `catscore` method to perform feature selection. The `catscore` method computes a correlation-adjusted t-score for each feature. Here's an example:
+
+```{r, message=FALSE, warning=FALSE}
+# Create a feature selector using catscore with top_k cutoff (select top 10 features)
+fsel <- feature_selector(method = "catscore", cutoff_type = "top_k", cutoff_value = 10)
+
+# Simulate a response variable and feature matrix
+Y <- factor(rep(letters[1:3], length.out = 90))
+X <- matrix(rnorm(90 * 50), nrow = 90, ncol = 50)
+
+# Apply feature selection using catscore
+selected_features <- select_features(fsel, X, Y, ranking.score = "entropy")
+
+cat("Number of features selected using catscore (top_k):", sum(selected_features), "\n")
+```
+
+## Summary
+
+Feature selection is a powerful tool to reduce dimensionality in high-dimensional datasets, especially in neuroimaging applications. In `rMVPA`, the integration of feature selection into cross-validation workflows helps ensure that models are built on unbiased, relevant subsets of data. You can choose between different methods (FTest or catscore) and cutoff strategies (top_k vs top_p) based on your specific analysis needs.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+suppressPackageStartupMessages({
+  library(neuroim2)
+  library(rMVPA)
+})
+```
 
 

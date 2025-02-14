@@ -2,7 +2,7 @@
 % Please edit documentation in R/regional.R
 \name{run_regional.mvpa_model}
 \alias{run_regional.mvpa_model}
-\title{Run regional MVPA analysis on a specified MVPA model}
+\title{Specialized run_regional method for mvpa_model}
 \usage{
 \method{run_regional}{mvpa_model}(
   model_spec,
@@ -14,20 +14,18 @@
 )
 }
 \arguments{
-\item{model_spec}{An object of type \code{mvpa_model} specifying the MVPA model to be used.}
+\item{model_spec}{An \code{mvpa_model} object.}
 
-\item{region_mask}{A mask representing different regions in the brain image.}
+\item{region_mask}{A mask for the brain regions.}
 
-\item{processor}{}
+\item{coalesce_design_vars}{If \code{TRUE}, merges design variables into the prediction table.}
 
-\item{...}{Additional arguments to be passed to the function.}
-}
-\value{
-A \code{list} of type \code{regional_mvpa_result} containing a named list of \code{NeuroVol} objects,
-where each element contains a performance metric and is labeled according to the metric used (e.g. Accuracy, AUC).
+\item{processor}{An optional processor function for each region.}
+
+\item{verbose}{If \code{TRUE}, prints progress messages.}
+
+\item{...}{Additional arguments passed to \code{run_regional_base}.}
 }
 \description{
-This function runs a regional MVPA analysis using a specified MVPA model and
-region mask. The analysis can be customized to return model fits, predictions,
-and performance measures.
+This method wraps \code{run_regional_base} with default arguments for an \code{mvpa_model} object.
 }

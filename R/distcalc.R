@@ -1,334 +1,360 @@
-
-# Default method
 #' @export
 pairwise_dist.default <- function(X, dist_obj) {
   stop("pairwise_dist not implemented for objects of class ", class(dist_obj)[1])
 }
 
 
-#' Create Distance Function Object
+#' Create a Distance Function Object
 #'
-#' This function constructs an object representing a distance function, 
-#' which can be used with generic functions like `pairwise_dist` for computing distances. 
-#' The object stores the method of distance calculation, labels associated with data points, 
-#' and any additional parameters that may affect the distance computation.
+#' Constructs a generic distance function object, storing:
+#' \itemize{
+#'   \item \code{name}: The name (method) of the distance (e.g., "euclidean", "cordist", "mahalanobis").
+#'   \item \code{labels}: (Optional) a vector of labels associated with the data rows.
+#'   \item \code{...}: Additional parameters relevant to the specific distance method 
+#'         (e.g., correlation method for \code{cordist}, number of components for \code{pcadist}, etc.).
+#' }
 #'
-#' @param name A character string specifying the method of distance computation. 
-#' This method name is used to dispatch the appropriate distance calculation function. 
-#' Common methods might include "euclidean", "manhattan", "mahalanobis", etc.
+#' This object is used by \code{pairwise_dist()} to compute an \strong{N x N} matrix of pairwise distances 
+#' between rows of a data matrix.
 #'
-#' @param labels A vector of labels or identifiers associated with the rows of the data matrix. 
-#' These labels are important for reference in distance computations, particularly when adjustments or 
-#' restrictions based on groupings or identifiers are needed.
+#' @param name A character string specifying the distance method (e.g., "euclidean", "cordist").
+#' @param labels A vector of row labels (optional), primarily for informational/reference purposes.
+#' @param ... Additional parameters for the distance method (e.g. `method="pearson"` for correlation, 
+#'            or \code{whiten=TRUE} for PCA-based distances).
 #'
-#' @param ... Additional parameters relevant to the specific distance method. 
-#' These could include tuning parameters like `lambda` for shrinkage in covariance estimation 
-#' or parameters controlling the behavior of the distance computation.
-#'
-#' @return Returns an object of class `distfun` and the specific method class 
-#' (as specified by the `method` parameter). This object encapsulates all information 
-#' necessary to compute distances between data points according to the specified method 
-#' and additional parameters.
+#' @return An S3 object with class \code{c(name, "distfun")} that can be passed to \code{pairwise_dist()}.
 #'
 #' @details
-#' The `create_dist` function enables the flexible creation of distance function objects. 
-#' By specifying a method and associated parameters, users can customize the behavior of 
-#' distance calculations. This functionality is especially useful in statistical and 
-#' machine learning applications where different distance metrics can have significant 
-#' impacts on the results.
+#' The distance function object itself does \emph{not} exclude same-block comparisons or reorder rows by label.
+#' Those tasks (if needed) are handled downstream (for example, in \code{second_order_similarity}).
 #'
 #' @examples
 #' # Create a Euclidean distance function object
-#' dist_obj_euc <- create_dist("euclidean", labels = c("A", "B", "C", "D"))
+#' dist_obj_euc <- create_dist("euclidean")
 #'
-#' # Create a Mahalanobis distance function object with additional parameters
-#' dist_obj_maha <- create_dist("mahalanobis", labels = c("A", "B", "C", "D"))
+#' # Create a correlation distance function object with a specified correlation method
+#' dist_obj_cor <- create_dist("cordist", method="spearman")
 #'
 #' @export
-create_dist <- function(name, labels, ...) {
-  structure(list(name = name, labels = labels, ...), class = c(name, "distfun"))
+create_dist <- function(name, labels=NULL, ...) {
+  structure(
+    list(name = name, labels = labels, ...), 
+    class = c(name, "distfun")
+  )
 }
 
 
 #' Distance Function Constructors
 #'
-#' These functions provide convenient constructors for various types of distance functions.
-#' Each constructor function initializes a distance function object for use with distance
-#' computation functions, specifying the method and any necessary labels.
+#' These convenience functions build specific types of distance function objects via \code{\link{create_dist}}.
+#' Each returns an S3 object inheriting from \code{c("<method>", "distfun")}.
 #'
-#' @param labels A vector of labels associated with the data points.
-#' @param method The method of distance computation, applicable for `cordist`.
+#' @param labels Optional vector of row labels (not directly used in distance calculation).
+#' @param method For \code{cordist}, the correlation method: "pearson" or "spearman".
+#' @param ncomp For \code{pcadist}, the number of components (or a function threshold).
+#' @param whiten For \code{pcadist}, whether to whiten principal components (logical).
+#' @param threshfun For \code{pcadist}, an optional function that determines how many PCs to retain 
+#'                  based on \code{pres$sdev^2}.
+#' @param dist_method For \code{pcadist}, the base distance measure in PC space ("euclidean", "manhattan", or "cosine").
 #'
-#' @return An object of class `distfun` with a specific method subclass, encapsulating
-#'         all information necessary for computing distances according to the specified method.
+#' @return An S3 object with class \code{c("<method>", "distfun")}.
 #'
 #' @details
-#' The constructors allow for the specification of distance calculation methods and associated labels:
-#' - `cordist` creates a correlation distance function.
-#' - `mahadist` creates a Mahalanobis distance function.
-#' - `eucdist` creates a Euclidean distance function.
-#' - `robustmahadist` creates a robust version of the Mahalanobis distance function.
+#' - \code{cordist(labels, method="pearson")} → correlation-based distance.  
+#' - \code{mahadist(labels)} → Mahalanobis distance.  
+#' - \code{eucdist(labels)} → Euclidean distance.  
+#' - \code{robustmahadist(labels)} → Mahalanobis distance using robust covariance.  
+#' - \code{pcadist(labels, ...)} → distance in reduced PCA space.
 #'
 #' @examples
-#' dist_obj_1 <- cordist(labels = c("A", "B", "C"), method = "pearson")
-#' dist_obj_2 <- mahadist(labels = c("A", "B", "C"))
-#' dist_obj_3 <- eucdist(labels = c("A", "B", "C"))
-#' dist_obj_4 <- robustmahadist(labels = c("A", "B", "C"))
+#' dist_obj_1 <- cordist(method="pearson")
+#' dist_obj_2 <- mahadist()
+#' dist_obj_3 <- eucdist()
+#' dist_obj_4 <- robustmahadist()
+#' dist_obj_5 <- pcadist(ncomp=2, dist_method="cosine")
 #'
-#' @seealso \code{\link{create_dist}} for the underlying constructor used by these functions.
+#' @seealso \code{\link{create_dist}} for the underlying constructor.
 #'
 #' @rdname distance-constructors
 #' @export
-#' @keywords methods
 cordist <- function(labels=NULL, method=c("pearson", "spearman")) {
-  method=match.arg(method)
+  method <- match.arg(method)
   create_dist(name="cordist", labels=labels, method=method)
 }
 
-# Example usage for Mahalanobis distance with labels
 #' @rdname distance-constructors
+#' @export
 mahadist <- function(labels=NULL) {
   create_dist("mahalanobis", labels)
 }
 
 #' @rdname distance-constructors
+#' @export
 eucdist <- function(labels=NULL) {
   create_dist("euclidean", labels)
 }
 
 #' @rdname distance-constructors
+#' @export
 robustmahadist <- function(labels=NULL) {
   create_dist("robustmahadist", labels)
 }
 
 #' @rdname distance-constructors
-pcadist <- function(labels=NULL, ncomp=2, whiten=TRUE, threshfun=NULL, dist_method=c("euclidean", "manhattan", "cosine")) {
+#' @export
+pcadist <- function(labels=NULL, ncomp=2, whiten=TRUE, threshfun=NULL,
+                    dist_method=c("euclidean", "manhattan", "cosine")) {
   dist_method <- match.arg(dist_method)
   if (is.null(threshfun)) {
-    threshfun <- function(x) ncomp
-  } else{
+    # By default, always use the user-specified 'ncomp'
+    tfun <- function(x) ncomp
+  } else {
     stopifnot(is.function(threshfun))
+    tfun <- threshfun
   }
-  
-  create_dist("pcadist", labels, whiten=whiten, threshfun=threshfun, dist_method=dist_method)
+  create_dist("pcadist", labels, whiten=whiten, threshfun=tfun, dist_method=dist_method)
 }
-
 
 
 #' Compute Pairwise Correlation Distances
 #'
-#' This method computes the pairwise correlation distances for a matrix `X`, excluding
-#' comparisons within the same block as specified by the `dist_obj$block`.
+#' Computes a full NxN matrix of correlation-based distances: \code{1 - cor(t(X), method=obj$method)}.
+#' \strong{No block-based exclusion is performed here.}
 #'
-#' @param dist_obj A list containing the method ("correlation") and a block vector to specify
-#' which rows in `X` should not be compared to avoid within-block correlation.
-#' @param X Numeric matrix where rows represent observations and columns represent variables.
+#' @param obj A distance function object of class \code{c("cordist", "distfun")}.
+#' @param X A numeric matrix (rows = observations, columns = variables).
 #'
-#' @return An object of class `dist` containing the computed correlation distances.
+#' @return An \strong{N x N numeric matrix} of pairwise distances.
+#'
+#' @details
+#' This function calculates correlation distances among the rows of \code{X}. 
+#' If you have a block variable and wish to exclude same-block comparisons, 
+#' handle that \emph{after} obtaining this full matrix (e.g., in \code{second_order_similarity}).
 #'
 #' @examples
 #' X <- matrix(rnorm(100), 10, 10)
-#' block <- rep(1:2, each=5)
-#' dist_obj <- list(method = "pearson", block = block)
-#' dist_matrix <- pairwise_dist.correlation(dist_obj, X)
-#' 
+#' dist_obj <- cordist(method="pearson")
+#' dist_matrix <- pairwise_dist(dist_obj, X)
+#'
 #' @export
 pairwise_dist.cordist <- function(obj, X) {
   1 - cor(t(X), method=obj$method)
-  # block <- dist_obj$block
-  # n <- nrow(X)
-  # dist_matrix <- matrix(0, n, n)  # initialize with zeros
-  # for (i in seq_len(n)) {
-  #   valid_indices <- which(block != block[i])
-  #   dist_matrix[i, valid_indices] <- 1 - cor(X[i, , drop = FALSE], t(X[valid_indices, , drop = FALSE]), method=dist_obj$method)
-  # }
-  # as.dist(dist_matrix)  # convert to distance object
 }
 
 
 #' Compute Pairwise Euclidean Distances
 #'
-#' Computes the pairwise Euclidean distances for a matrix `X`.
+#' Returns a full NxN matrix of Euclidean distances among the rows of \code{X}.
+#' \strong{No block-based exclusion is performed.}
 #'
-#' @param dist_obj A list containing possibly additional parameters, currently unused.
-#' @param X Numeric matrix where rows represent observations and columns represent variables.
+#' @param obj A distance function object of class \code{c("euclidean", "distfun")}.
+#' @param X A numeric matrix (rows = observations, columns = variables).
 #'
-#' @return An object of class `dist` containing the computed Euclidean distances.
+#' @return An \strong{N x N numeric matrix} of pairwise Euclidean distances.
+#'
+#' @details
+#' This function simply calls \code{dist(X)} internally and converts it to a matrix via \code{as.matrix()}.
 #'
 #' @examples
 #' X <- matrix(rnorm(100), 10, 10)
-#' dist_matrix <- pairwise_dist.euclidean(list(), X)
+#' dist_obj <- eucdist()
+#' dist_matrix <- pairwise_dist(dist_obj, X)
 #'
 #' @export
 pairwise_dist.euclidean <- function(obj, X) {
-  # Estimate the inverse of the shrunken covariance matrix
-  as.matrix(dist(X))
+  as.matrix(dist(X, method="euclidean"))
 }
 
 
 #' Compute Pairwise Mahalanobis Distances
 #'
-#' Computes the pairwise Mahalanobis distances using an inverse covariance matrix estimated
-#' from the data matrix `X` with shrinkage.
+#' Returns a full NxN matrix of Mahalanobis distances among rows of \code{X}, using a shrunken inverse covariance.
+#' \strong{No block-based exclusion is performed.}
 #'
-#' @param dist_obj A list that might include additional parameters for distance computation, 
-#' currently unused.
-#' @param X Numeric matrix where rows represent observations and columns represent variables.
+#' @param obj A distance function object of class \code{c("mahalanobis", "distfun")}. 
+#' @param X A numeric matrix (rows = observations, columns = variables).
 #'
-#' @return An object of class `dist` containing the computed Mahalanobis distances.
+#' @return An \strong{N x N numeric matrix} of pairwise Mahalanobis distances.
+#'
+#' @details
+#' Uses \code{corpcor::invcov.shrink} on \code{X} to estimate the inverse covariance matrix 
+#' and then computes \code{mahalanobis(...)} for each row vs. each other row.
 #'
 #' @examples
 #' X <- matrix(rnorm(100), 10, 10)
-#' dist_matrix <- pairwise_dist.mahalanobis(list(), X)
+#' dist_obj <- mahadist()
+#' dist_matrix <- pairwise_dist(dist_obj, X)
 #'
 #' @export
 #' @importFrom corpcor invcov.shrink
 #' @importFrom stats mahalanobis
 pairwise_dist.mahalanobis <- function(obj, X) {
-  # Estimate the inverse of the shrunken covariance matrix
-  inv_cov <- invcov.shrink(X)
-  
+  inv_cov <- corpcor::invcov.shrink(X)
   n <- nrow(X)
   
-  # Compute the squared Mahalanobis distances using mahalanobis()
   dist_matrix_sq <- matrix(0, n, n)
-  for (i in 1:n) {
+  for (i in seq_len(n)) {
     dist_matrix_sq[i, ] <- mahalanobis(X, center = X[i, ], cov = inv_cov, inverted = TRUE)
   }
   
-  sqrt(dist_matrix_sq) # Computing the square root of the squared distances
+  sqrt(dist_matrix_sq)
 }
 
+
+#' Compute Pairwise PCA-Based Distances
+#'
+#' Returns a full NxN matrix of distances in a PCA-reduced subspace, with an optional whitening step.
+#' \strong{No block-based exclusion is performed.}
+#'
+#' @param obj A distance function object of class \code{c("pcadist", "distfun")}.
+#' @param X A numeric matrix.
+#'
+#' @return An \strong{N x N numeric matrix} of pairwise distances in the reduced PCA space.
+#'
+#' @details
+#' 1. Performs \code{prcomp(X)} (centered, scaled=TRUE).
+#' 2. Determines the number of components via \code{obj$threshfun(...)}.
+#' 3. Optionally whitens (divide each principal component by its standard deviation).
+#' 4. Computes pairwise distances on the reduced data using \code{obj$dist_method}.
+#'
+#' @examples
+#' X <- matrix(rnorm(100), 10, 10)
+#' dist_obj <- pcadist(ncomp=3, dist_method="cosine")
+#' dist_matrix <- pairwise_dist(dist_obj, X)
+#'
 #' @export
+#' @importFrom stats prcomp dist
 pairwise_dist.pcadist <- function(obj, X) {
-  pres <- prcomp(X, center = TRUE, scale = TRUE)
+  pres <- prcomp(X, center = TRUE, scale. = TRUE)
   ncomp <- obj$threshfun(pres$sdev^2)
   if (ncomp < 1) {
     ncomp <- 1
-    warning("Number of components set to 1, as threshold function returned a value less than 1.")
+    warning("Number of components set to 1, as threshold function returned < 1.")
   }
   
+  # Extract PC space
+  pc_space <- pres$x[, seq_len(ncomp), drop=FALSE]
+  
+  # Optional whitening
   if (obj$whiten) {
-    x <- pres$x[, 1:ncomp, drop=FALSE] %*% diag(x=1 / pres$sdev[1:ncomp], nrow=ncomp, ncol=ncomp)
-  } else {
-    x <- pres$x[, 1:ncomp, drop=FALSE]
+    pc_space <- pc_space %*% diag(1 / pres$sdev[seq_len(ncomp)], ncomp, ncomp)
   }
-  if (obj$dist_method  %in% c("euclidean", "manhattan")) {
-    dist_matrix <- as.matrix(dist(x, method=obj$dist_method))
+  
+  # Distances
+  if (obj$dist_method %in% c("euclidean", "manhattan")) {
+    as.matrix(dist(pc_space, method = obj$dist_method))
   } else if (obj$dist_method == "cosine") {
-    as.matrix(proxy::dist(x, method="cosine"))
+    # proxy::dist for 'cosine' distance
+    as.matrix(proxy::dist(pc_space, method = "cosine"))
   }
 }
 
 
 #' Compute Pairwise Robust Mahalanobis Distances
 #'
-#' Computes the pairwise Mahalanobis distances using a robustly estimated covariance matrix,
-#' which can be more resistant to outliers.
+#' Returns a full NxN matrix of robust Mahalanobis distances, using a robust covariance estimator.
+#' \strong{No block-based exclusion is performed.}
 #'
-#' @param dist_obj A list that might include additional parameters for distance computation, 
-#' currently unused.
-#' @param X Numeric matrix where rows represent observations and columns represent variables.
+#' @param obj A distance function object of class \code{c("robustmahadist", "distfun")}.
+#' @param X A numeric matrix.
 #'
-#' @return An object of class `dist` containing the computed robust Mahalanobis distances.
+#' @return An \strong{N x N numeric matrix} of pairwise robust Mahalanobis distances.
+#'
+#' @details
+#' - Estimates a robust covariance with \code{robustcov::covGK(X)} (make sure the \code{robustcov} package is installed).
+#' - Then calls \code{corpcor::invcov.shrink} to get an inverse covariance estimate.
+#' - Finally, loops over row pairs to compute \code{(x_i - x_j) * inv_cov * (x_i - x_j)^T}.
 #'
 #' @examples
-#' X <- matrix(rnorm(100), 10, 10)
-#' dist_matrix <- pairwise_dist.robustmahadist(list(), X)
+#' \dontrun{
+#'   library(robustcov)
+#'   X <- matrix(rnorm(100), 10, 10)
+#'   dist_obj <- robustmahadist()
+#'   dist_matrix <- pairwise_dist(dist_obj, X)
+#' }
 #'
 #' @export
 pairwise_dist.robustmahadist <- function(obj, X) {
-  # Use robust covariance estimation
   robust_cov <- robustcov::covGK(X)
   inv_cov <- corpcor::invcov.shrink(robust_cov)
   
   n <- nrow(X)
   dist_matrix <- matrix(0, n, n)
   
-  for (i in 1:(n-1)) {
-    for (j in (i + 1):n) {
+  for (i in seq_len(n-1)) {
+    for (j in seq((i+1), n)) {
       diff <- X[i, ] - X[j, ]
-      dist_matrix[i, j] <- sqrt(t(diff) %*% inv_cov %*% diff)
-      dist_matrix[j, i] <- dist_matrix[i, j]  # Fill lower triangle
+      dist_val <- sqrt(t(diff) %*% inv_cov %*% diff)
+      dist_matrix[i, j] <- dist_val
+      dist_matrix[j, i] <- dist_val
     }
   }
-  
   dist_matrix
 }
 
 
 #' Compute Second-Order Similarity Scores
 #'
-#' This function calculates the second order similarity between two similarity vectors
-#' derived from a provided distance function applied to matrix X and a reference
-#' similarity matrix S. The calculation takes into account a blocking variable to exclude
-#' comparisons within the same block.
+#' Calculates correlation-based \emph{second order similarity} between:
+#' \itemize{
+#'   \item A \strong{full NxN distance matrix} computed from \code{X} via \code{distfun}, and 
+#'   \item A \code{Dref} matrix (the "reference" dissimilarities).
+#' }
+#' For each row \code{i}, this excludes same-block comparisons by selecting \code{which(block_var != block_var[i])}.
 #'
-#' @param dist_fun A distance function object or a character string specifying the 
-#' method used for distance computation. This function should be capable of processing
-#' the matrix X to produce a distance matrix.
-#' @param X A numeric matrix where each row is an observation and columns are features.
-#' Distances will be computed pairwise between rows of this matrix.
-#' @param D A numeric matrix, typically a predefined dissimilarity matrix that
-#' serves as a reference to compare against the computed distances from X.
-#' @param block A vector (numeric or factor) indicating the block or group for each row
-#' in X and S. Comparisons are only made between elements of different blocks.
-#' @param method The method used for computing correlation between similarity vectors.
-#' Defaults to "pearson", but "spearman" or "kendall" could also be used.
+#' @param distfun An S3 distance object (see \code{\link{create_dist}}) 
+#'   specifying how to compute a pairwise distance matrix from \code{X}.
+#' @param X A numeric matrix (rows = observations, columns = features).
+#' @param Dref A numeric NxN reference matrix of dissimilarities (e.g., from an ROI mask or a prior).
+#' @param block_var A vector indicating block/group memberships for each row in \code{X}.
+#' @param method Correlation method: "pearson" or "spearman".
 #'
-#' @return A numeric vector of similarity scores, one for each observation in X, 
-#' representing the correlation between distance vectors derived from X and the
-#' corresponding vectors in S for non-matching blocks.
+#' @return A numeric vector of length \code{nrow(X)}, where each entry is
+#' the correlation (using \code{method}) between \code{distance_matrix[i, valid]} and
+#' \code{Dref[i, valid]}, with \code{valid = which(block_var != block_var[i])}.
 #'
 #' @details
-#' The function computes a distance matrix for X using the specified `dist_fun`. It then
-#' compares these distances with the entries in S for each observation, excluding
-#' comparisons within the same block as defined by the `block` argument. This is useful
-#' for evaluating how well the distances within X align with an external similarity
-#' standard, adjusting for within-block dependencies.
+#' This function first calls \code{pairwise_dist(distfun, X)}, obtaining an NxN matrix 
+#' of \emph{all} pairwise distances. It does not do block-based exclusion internally. 
+#' Instead, for each row \code{i}, it excludes same-block rows from the correlation 
+#' by subsetting the distances to \code{valid_indices}.
 #'
 #' @examples
-#' # Assuming X and S are numeric matrices and block is a factor or numeric vector
-#' dist_fun <- "euclidean"  # This should be defined or loaded from your package/environment
-#' X <- matrix(rnorm(100), ncol=10)
-#' D <- matrix(rnorm(100), ncol=10)
-#' block <- rep(1:5, each=20)
-#' scores <- second_order_similarity(dist_fun, X, D, block, method = "pearson")
+#' # Suppose we have X (10x5), a reference D (10x10), block var, and a correlation distfun:
+#' X <- matrix(rnorm(50), 10, 5)
+#' D <- matrix(runif(100), 10, 10)
+#' block <- rep(1:2, each=5)
+#' dist_obj <- cordist(method="pearson")
+#' scores <- second_order_similarity(dist_obj, X, D, block, method="spearman")
 #'
 #' @export
-second_order_similarity <- function(dist_fun, X, D, block, method = c("pearson", "spearman")) {
+second_order_similarity <- function(distfun, X, Dref, block_var, method=c("pearson", "spearman")) {
   method <- match.arg(method)
-
-  # Compute distances using the provided distance function
-  distance_matrix = pairwise_dist(dist_fun, X)
   
-  # Initialize scores vector
-  scores <- numeric(length(block))
- 
-  # Calculate trial-wise similarity scores, considering valid blocks
-  for (i in seq_along(block)) {
-    valid_indices <- which(block != block[i])
+  # 1) Compute a full NxN distance matrix from X
+  distance_matrix <- pairwise_dist(distfun, X)
+  
+  n <- nrow(X)
+  scores <- numeric(n)
+  
+  # 2) For each row i, exclude same-block comparisons
+  for (i in seq_len(n)) {
+    valid_indices <- which(block_var != block_var[i])
     if (length(valid_indices) > 0) {
-      sim_vector_x = distance_matrix[i, valid_indices]
-      sim_vector_s = D[i, valid_indices]
-      scores[i] <- if (length(sim_vector_x) > 0 && length(sim_vector_s) > 0) {
-        cor(sim_vector_x, sim_vector_s, method = method)
+      x_vec <- distance_matrix[i, valid_indices]
+      ref_vec <- Dref[i, valid_indices]
+      if (length(x_vec) > 1) {
+        scores[i] <- cor(x_vec, ref_vec, method = method)
       } else {
-        NA  # Handle cases where no valid comparisons
+        scores[i] <- NA
       }
     } else {
-      scores[i] <- NA  # Assign NA if no valid indices
+      scores[i] <- NA
     }
   }
   
-  return(scores)
+  scores
 }
-
-
-
-
-
-
 
 
 

@@ -7,9 +7,9 @@
 \method{print}{feature_rsa_model}(x, ...)
 }
 \arguments{
-\item{x}{The feature RSA model}
+\item{x}{A feature_rsa_model object.}
 
-\item{...}{Additional args}
+\item{...}{Additional arguments (ignored).}
 }
 \description{
 Print Method for Feature RSA Model

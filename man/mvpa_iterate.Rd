@@ -14,37 +14,34 @@ mvpa_iterate(
 )
 }
 \arguments{
-\item{mod_spec}{An MVPA model specification object containing:
-\describe{
-  \item{dataset}{The dataset to analyze}
-  \item{compute_performance}{Logical indicating whether to compute performance metrics}
-  \item{return_predictions}{Logical indicating whether to return predictions}
-}}
+\item{mod_spec}{An MVPA model specification object containing the dataset to analyze,
+compute_performance (logical indicating whether to compute performance metrics),
+and return_predictions (logical indicating whether to return predictions)}
 
 \item{vox_list}{A list of voxel indices or coordinates defining each ROI to analyze}
 
-\item{ids}{Vector of identifiers for each ROI analysis (default: 1:length(vox_list))}
+\item{ids}{Vector of identifiers for each ROI analysis. Defaults to 1:length(vox_list)}
 
-\item{batch_size}{Integer specifying number of ROIs to process per batch 
-(default: 10% of total ROIs)}
+\item{batch_size}{Integer specifying number of ROIs to process per batch.
+Defaults to 10% of total ROIs}
 
-\item{verbose}{Logical indicating whether to print progress messages (default: TRUE)}
+\item{verbose}{Logical indicating whether to print progress messages. Defaults to TRUE}
 
 \item{processor}{Optional custom processing function. If NULL, uses default processor.
 Must accept parameters (obj, roi, rnum) and return a tibble.}
 }
 \value{
 A tibble containing results for each ROI with columns:
-  \describe{
-    \item{result}{List column of analysis results (NULL if return_predictions=FALSE)}
-    \item{indices}{List column of ROI indices used}
-    \item{performance}{List column of performance metrics (if computed)}
-    \item{id}{ROI identifier}
-    \item{error}{Logical indicating if an error occurred}
-    \item{error_message}{Error message if applicable}
-    \item{warning}{Logical indicating if warning occurred}
-    \item{warning_message}{Warning message if applicable}
-  }
+\itemize{
+  \item{result}{List column of analysis results (NULL if return_predictions=FALSE)}
+  \item{indices}{List column of ROI indices used}
+  \item{performance}{List column of performance metrics (if computed)}
+  \item{id}{ROI identifier}
+  \item{error}{Logical indicating if an error occurred}
+  \item{error_message}{Error message if applicable}
+  \item{warning}{Logical indicating if warning occurred}
+  \item{warning_message}{Warning message if applicable}
+}
 }
 \description{
 Performs multivariate pattern analysis (MVPA) across multiple regions of interest (ROIs) 

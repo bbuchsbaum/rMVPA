@@ -7,18 +7,23 @@
 \method{pairwise_dist}{euclidean}(obj, X)
 }
 \arguments{
-\item{X}{Numeric matrix where rows represent observations and columns represent variables.}
+\item{obj}{A distance function object of class \code{c("euclidean", "distfun")}.}
 
-\item{dist_obj}{A list containing possibly additional parameters, currently unused.}
+\item{X}{A numeric matrix (rows = observations, columns = variables).}
 }
 \value{
-An object of class `dist` containing the computed Euclidean distances.
+An \strong{N x N numeric matrix} of pairwise Euclidean distances.
 }
 \description{
-Computes the pairwise Euclidean distances for a matrix `X`.
+Returns a full NxN matrix of Euclidean distances among the rows of \code{X}.
+\strong{No block-based exclusion is performed.}
+}
+\details{
+This function simply calls \code{dist(X)} internally and converts it to a matrix via \code{as.matrix()}.
 }
 \examples{
 X <- matrix(rnorm(100), 10, 10)
-dist_matrix <- pairwise_dist.euclidean(list(), X)
+dist_obj <- eucdist()
+dist_matrix <- pairwise_dist(dist_obj, X)
 
 }

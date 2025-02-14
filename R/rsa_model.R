@@ -231,11 +231,12 @@ run_cor <- function(dvec, obj) {
 #'
 #' @param obj An object of class \code{rsa_model}.
 #' @param train_dat The training data.
+#' @param y The response variable.
 #' @param indices The indices of the training data.
 #' @param ... Additional arguments passed to the training method.
 #' @return The trained model.
 #' @export
-train_model.rsa_model <- function(obj, train_dat, indices, ...) {
+train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
   dtrain <- 1 - cor(t(train_dat), method=obj$distmethod)
   dvec <- dtrain[lower.tri(dtrain)]
   
@@ -251,17 +252,6 @@ train_model.rsa_model <- function(obj, train_dat, indices, ...) {
   
 }
 
-#' @export
-# process_roi.rsa_model <- function( mod_spec, roi, rnum,...) {
-#   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
-#   ind <- indices(roi$train_roi)
-#   ret <- try(train_model(mod_spec, xtrain, ind))
-#   if (inherits(ret, "try-error")) {
-#     tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=TRUE, error_message=attr(ret, "condition")$message)
-#   } else {
-#     tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")
-#   }
-# }
 
 #' @export
 #' @method print rsa_model
