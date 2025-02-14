@@ -1,339 +1,127 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/404.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/articles/CommandLineScripts.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/articles/RSA.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/articles/index.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/authors.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/index.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/as_roi.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/classification_result.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/coalesce_join2.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_prediction_tables.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_randomized.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_regional_results.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_rsa_standard.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_standard.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_vector_rsa_standard.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/comp_perf.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/compute_performance.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/create_dist.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_block.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_bootstrap_block.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_k.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/crossval_samples.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/custom_performance.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/data_sample.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/do_merge_results.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/do_randomized.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/do_standard.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/external_crossval.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_iterate.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/feature_selector.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/filter_roi.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/fit_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/fit_model.mvpa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/get_samples.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/group_means.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/has_test_set.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/kfold_cross_validation.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/list_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/load_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/manova_design.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/manova_iterate.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/manova_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_predictions.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results.regional_mvpa_result.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/model_fit.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_surface_dataset.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/nobs.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/nresponses.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.cordist.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.euclidean.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.mahalanobis.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.robustmahadist.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/performance.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/performance.regression_result.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/pool_randomized.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/predict.class_model_fit.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/predict.regression_model_fit.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/predicted_class.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/prep_regional.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/prob_observed.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/rMVPA.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/regional_mvpa_result.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/regression_result.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/rsa_iterate.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/rsa_model_mat.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional.mvpa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional.rsa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/second_order_similarity.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/select_features.FTest.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/select_features.catscore.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/select_features.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/sub_result.binary_classification_result.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/sub_result.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/sub_result.multiway_classification_result.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/test_design.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.feature_rsa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.manova_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.mvpa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.rsa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.vector_rsa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/tune_grid.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/tune_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/twofold_blocked_cross_validation.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_design.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/weighted_model.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/wrap_out.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/wrap_output.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/y_test.html</loc>
-  </url>
-  <url>
-    <loc>http://bbuchsbaum.github.io/rMVPA/reference/y_train.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/404.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Advanced_RSA.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/CommandLineScripts.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/MVPA_RegionalCmdline.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/RSA.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/index.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/authors.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/index.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/MVPAModels.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/as_roi.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/classification_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/coalesce_join2.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_prediction_tables.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_randomized.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_rsa_standard.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_standard.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/combine_vector_rsa_standard.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/compute_performance.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/create_dist.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/create_searchlight_performance.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_block.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_bootstrap_block.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/crossv_k.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/crossval_samples.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/custom_performance.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/data_sample.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/do_merge_results.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/do_randomized.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/do_standard.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/evaluate_model.feature_rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_design.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/feature_selection.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/feature_selector.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/filter_roi.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/fit_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/format_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/get_samples.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/get_unique_regions.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/group_means.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/has_crossval.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/has_test_set.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/index.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/kfold_cross_validation.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/load_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/manova_design.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/manova_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_classif_results.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_predictions.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results.feature_rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results.regional_mvpa_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_surface_dataset.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/new-analysis-overview.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/nobs.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/nresponses.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.cordist.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.euclidean.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.mahalanobis.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.pcadist.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/pairwise_dist.robustmahadist.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/performance.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/performance.regression_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/pool_randomized.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/predict_model.feature_rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/predicted_class.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/prep_regional.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.feature_rsa_design.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.feature_rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.vector_rsa_design.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.vector_rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/prob_observed.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/rMVPA-package.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/rMVPA.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/regional_mvpa_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/regression_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional.default.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional.feature_rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional.mvpa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional.rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional_base.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.default.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.vector_rsa.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight_base.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/second_order_similarity.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/select_features.FTest.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/select_features.catscore.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/select_features.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/sub_result.binary_classification_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/sub_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/sub_result.multiway_classification_result.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/summary.feature_rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/test_design.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.manova_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.mvpa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.vector_rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/tune_grid.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/twofold_blocked_cross_validation.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_design.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/wrap_out.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/wrap_output.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/y_test.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/y_train.html</loc></url>
 </urlset>
+
