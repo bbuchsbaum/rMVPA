@@ -2,3 +2,35 @@ url: http://bbuchsbaum.github.io/rMVPA/
 template:
   bootstrap: 5
 
+articles:
+  - title: "Getting Started"
+    desc: >
+      Tutorials and guides for getting started with rMVPA
+    contents:
+      - RSA
+      - Advanced_RSA
+      - CrossValidation
+      - FeatureSelection
+      - Searchlight_Analysis
+  
+  - title: "Advanced Topics"
+    desc: >
+      In-depth guides for advanced usage
+    contents:
+      - Regional_Analysis
+      - CommandLineScripts
+      - MVPA_RegionalCmdline
+      
+
+reference:
+- title: "All Functions"
+  desc: >
+    All functions exported by rMVPA
+  contents:
+  - matches(".*")
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, tutorials, news]
+    right: [search, github]
+
