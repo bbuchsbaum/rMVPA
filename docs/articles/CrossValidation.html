@@ -5,59 +5,53 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<meta name="description" content="rMVPA">
-<title>Cross-Validation Schemes • rMVPA</title>
+<title>Cross-Validation Strategies in rMVPA • rMVPA</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.2.2/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.2.2/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
-<!-- bootstrap-toc --><script src="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@v1.0.1/dist/bootstrap-toc.min.js" integrity="sha256-4veVQbu7//Lk5TSmc7YV48MxtMy98e26cf5MrgZYnwo=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- search --><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Cross-Validation Schemes">
-<meta property="og:description" content="rMVPA">
-<!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
-<script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-<![endif]-->
+<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Cross-Validation Strategies in rMVPA">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
-    
 
-    <nav class="navbar fixed-top navbar-light navbar-expand-lg bg-light"><div class="container">
-    
+
+    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
     <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
-    
+
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item">
-  <a class="nav-link" href="../reference/index.html">Reference</a>
-</li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
-  <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
-  <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/CommandLineScripts.html">Command-Line Scripts</a>
-    <a class="dropdown-item" href="../articles/CrossValidation.html">Cross-Validation Schemes</a>
-    <a class="dropdown-item" href="../articles/FeatureSelection.html">Feature Selection</a>
-    <a class="dropdown-item" href="../articles/RSA.html">Represenational Similarity Analysis</a>
-    <a class="dropdown-item" href="../articles/Regional_Analysis.html">Regional Analysis</a>
-    <a class="dropdown-item" href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a>
-  </div>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="../articles/Advanced_RSA.html">Advanced RSA Methods: Feature-Based and Vector-Based Approaches</a></li>
+    <li><a class="dropdown-item" href="../articles/CommandLineScripts.html">MVPA Searchlight Tutorial</a></li>
+    <li><a class="dropdown-item" href="../articles/CrossValidation.html">Cross-Validation Strategies in rMVPA</a></li>
+    <li><a class="dropdown-item" href="../articles/FeatureSelection.html">Feature Selection in rMVPA</a></li>
+    <li><a class="dropdown-item" href="../articles/MVPA_RegionalCmdline.html">MVPA Regional Analysis Tutorial</a></li>
+    <li><a class="dropdown-item" href="../articles/Regional_Analysis.html">Advanced Regional MVPA Analysis in rMVPA</a></li>
+    <li><a class="dropdown-item" href="../articles/RSA.html">Representational Similarity Analysis (RSA) in rMVPA</a></li>
+    <li><a class="dropdown-item" href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a></li>
+  </ul>
 </li>
       </ul>
-<form class="form-inline my-2 my-lg-0" role="search">
-        <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off">
-</form>
-
-      <ul class="navbar-nav"></ul>
+<ul class="navbar-nav">
+<li class="nav-item"><form class="form-inline" role="search">
+ <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
+</form></li>
+      </ul>
 </div>
 
-    
+
   </div>
 </nav><div class="container template-article">
 
@@ -66,213 +60,689 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="" class="logo" alt=""><h1>Cross-Validation Schemes</h1>
+
+      <h1>Cross-Validation Strategies in rMVPA</h1>
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2023-04-30</h4>
+            <h4 data-toc-skip class="date">2025-02-13</h4>
       
-      
+
       <div class="d-none name"><code>CrossValidation.Rmd</code></div>
     </div>
 
     
     
 <div class="section level2">
-<h2 id="cross-validation-approaches">Cross-Validation Approaches<a class="anchor" aria-label="anchor" href="#cross-validation-approaches"></a>
+<h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p>Cross-validation is used in <code>rMVPA</code> to evaluate the
-performance of a trained classifier. In general this is achieved by
-splitting the data into training and tests sets, fitting a model on the
-training data and then evaluating its performance on the test set. The
-methods described below are used for cases where one does not have a
-predfined “test set”, but rather wants examine test set performance by
-repeatedly analyzing the training data itself.</p>
+<p>Cross-validation is a critical component in evaluating the
+performance and generalizability of MVPA models. The <code>rMVPA</code>
+package provides several cross-validation strategies specifically
+designed for neuroimaging data, where temporal structure and run/block
+organization must be carefully considered.</p>
+<p>This vignette covers: - The importance of cross-validation in MVPA -
+Available cross-validation schemes - How to implement each scheme - Best
+practices and considerations - Working examples</p>
+</div>
+<div class="section level2">
+<h2 id="cross-validation-fundamentals">Cross-Validation Fundamentals<a class="anchor" aria-label="anchor" href="#cross-validation-fundamentals"></a>
+</h2>
 <div class="section level3">
-<h3 id="blocked-cross-validation">Blocked Cross-Validation<a class="anchor" aria-label="anchor" href="#blocked-cross-validation"></a>
+<h3 id="why-cross-validation-matters-in-mvpa">Why Cross-Validation Matters in MVPA<a class="anchor" aria-label="anchor" href="#why-cross-validation-matters-in-mvpa"></a>
 </h3>
-<p>In fMRI analyses images are generally acquired over a number of scans
-or “runs” that form natural breaks in the data. Due to temporal
-auto-correlation in the data, it is generally not a good idea to train
-and test a classifier on trials collected in the same run. Therefore,
-when dividing the data into data blocks for cross-validation, it is
-natural to use scanning “run” as a means of splitting up the data into
-training and test folds.</p>
-<p>There is a special data structure to help set this up called
-<code>blocked_cross_validation</code>. All we need is an variable that
-indcates the block index of each trial in the experiment. For example,
-imagine we have five scans/blocks, each with 100 images.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">block_var</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, each<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span>
-<span><span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">block_var</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">cval</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## cross-validation: blocked </span></span>
-<span><span class="co">##   nobservations:  500 </span></span>
-<span><span class="co">##   nfolds:  5 </span></span>
-<span><span class="co">##   block sizes:  100 100 100 100 100</span></span></code></pre>
-<p>Now, to generate cross-validation samples, we use the
-<code>crossval_sample</code> generic function. We need to give it data
-for the independent variables, <code>data</code> and a response variable
-<code>y</code>. The result will be a <code>data.frame</code> (or
-<code>tibble</code> to be precise) that contains in each row the samples
-necessary to conduct a complete leave-one-block out cross-validation
-analysis.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x1<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">500</span><span class="op">)</span>, x2<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">500</span><span class="op">)</span>, x3<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">500</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>, length.out<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span><span class="va">sam</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crossval_samples.html">crossval_samples</a></span><span class="op">(</span><span class="va">cval</span>, <span class="va">dat</span>,<span class="va">y</span><span class="op">)</span></span>
-<span><span class="va">sam</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 5 × 5</span></span></span>
-<span><span class="co">##   ytrain       ytest        train                test                 .id  </span></span>
-<span><span class="co">##   <span style="color: #949494; font-style: italic;">&lt;named list&gt;</span> <span style="color: #949494; font-style: italic;">&lt;named list&gt;</span> <span style="color: #949494; font-style: italic;">&lt;named list&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;named list&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span> <span style="color: #949494;">&lt;chr [400]&gt;</span>  <span style="color: #949494;">&lt;chr [100]&gt;</span>  <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 1    </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span> <span style="color: #949494;">&lt;chr [400]&gt;</span>  <span style="color: #949494;">&lt;chr [100]&gt;</span>  <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 2    </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span> <span style="color: #949494;">&lt;chr [400]&gt;</span>  <span style="color: #949494;">&lt;chr [100]&gt;</span>  <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 3    </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">4</span> <span style="color: #949494;">&lt;chr [400]&gt;</span>  <span style="color: #949494;">&lt;chr [100]&gt;</span>  <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 4    </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">5</span> <span style="color: #949494;">&lt;chr [400]&gt;</span>  <span style="color: #949494;">&lt;chr [100]&gt;</span>  <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 5</span></span></code></pre>
-<p>Notice that the <code>data.frame</code> contains five variable:
-<code>ytrain</code>, <code>ytest</code>, <code>train</code>,
-<code>test</code> and <code>.id</code> which contains the training
-responses, the test responses, the training data, the test data, and a
-integer id variable, respectively. The first four variables are
-<code>list</code>elements because they contain vector- or matrix- valued
-elements in each cell. Indeed, the <code>train</code> and
-<code>test</code> variables are S3 classes of type <code>resample</code>
-from the <code>modelr</code> package. For example, to access training
-data for the first cross-validation fold, we can do the following:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">train_dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">sam</span><span class="op">$</span><span class="va">train</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">train_dat</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>,<span class="op">]</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##             x1         x2          x3</span></span>
-<span><span class="co">## 101  0.6575325 -0.5192688  0.15200005</span></span>
-<span><span class="co">## 102 -0.4855634 -1.0153874  0.08774466</span></span>
-<span><span class="co">## 103 -1.1437761  2.4706087  0.19103310</span></span>
-<span><span class="co">## 104  0.3441383  1.2854147  0.39389703</span></span>
-<span><span class="co">## 105  0.7521509 -0.6853256 -0.17037142</span></span></code></pre>
-<p>As a toy example, below we loop through the cross-validation sets
-using the <code>dplyr</code> <code>rowwise</code> function, fit an
-<code>sda</code> model and put the fitted model into a new
-data.frame.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">model_fits</span> <span class="op">&lt;-</span> <span class="va">sam</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/rowwise.html" class="external-link">rowwise</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/do.html" class="external-link">do</a></span><span class="op">(</span><span class="op">{</span></span>
-<span>  <span class="va">train_dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">.</span><span class="op">$</span><span class="va">train</span><span class="op">)</span></span>
-<span>  <span class="va">y_train</span> <span class="op">&lt;-</span> <span class="va">.</span><span class="op">$</span><span class="va">ytrain</span></span>
-<span>  <span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">sda</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/sda/man/sda.html" class="external-link">sda</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">train_dat</span><span class="op">)</span>, <span class="va">y_train</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
-<span>  <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>fit<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<p>In neuroimaging analyses, cross-validation serves multiple
+purposes:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Performance Estimation</strong>: Provides unbiased estimates
+of model performance</li>
+<li>
+<strong>Generalizability</strong>: Tests how well patterns
+generalize to new data</li>
+<li>
+<strong>Overfitting Prevention</strong>: Helps detect and prevent
+overfitting to noise</li>
+<li>
+<strong>Temporal Independence</strong>: Ensures temporal
+independence between training and test sets</li>
+</ol>
 </div>
 <div class="section level3">
-<h3 id="bootstrap-blocked-cross-validation">Bootstrap Blocked Cross-Validation<a class="anchor" aria-label="anchor" href="#bootstrap-blocked-cross-validation"></a>
+<h3 id="available-cross-validation-schemes">Available Cross-Validation Schemes<a class="anchor" aria-label="anchor" href="#available-cross-validation-schemes"></a>
 </h3>
-<p>The above blocked cross-validation iterates through the full dataset
-once, with each block being held out as a test set for one
-cross-validation fold. In some cases we might want a cross-validation
-scheme that resamples the ful dataset more extensively, while still
-respecting the block sampling structure of fMRI. In this case we can use
-the <code>bootstrap_blocked_cross_validation</code> scheme. Suppose, as
-above, we have an integer-valued block variable. Now we create a
-<code>bootstrap_blocked_cross_validation</code> with 20 bootstrap
-replications:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">block_var</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, each<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span>
-<span><span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">bootstrap_blocked_cross_validation</a></span><span class="op">(</span><span class="va">block_var</span>, nreps<span class="op">=</span><span class="fl">20</span><span class="op">)</span></span>
+<p>The <code>rMVPA</code> package implements several cross-validation
+strategies:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Blocked Cross-Validation</strong>: Uses scanning runs as
+natural validation blocks</li>
+<li>
+<strong>K-Fold Cross-Validation</strong>: Randomly partitions data
+into k folds</li>
+<li>
+<strong>Bootstrap Blocked Cross-Validation</strong>: Resamples
+within blocks with replacement</li>
+<li>
+<strong>Sequential Blocked Cross-Validation</strong>: Creates
+sequential folds within blocks</li>
+<li>
+<strong>Two-Fold Blocked Cross-Validation</strong>: Splits blocks
+into two groups</li>
+<li>
+<strong>Custom Cross-Validation</strong>: Allows user-defined
+validation schemes</li>
+</ol>
+</div>
+</div>
+<div class="section level2">
+<h2 id="blocked-cross-validation">Blocked Cross-Validation<a class="anchor" aria-label="anchor" href="#blocked-cross-validation"></a>
+</h2>
+<div class="section level3">
+<h3 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+</h3>
+<p>Blocked cross-validation is the most common approach for fMRI data.
+It respects the temporal structure of the data by using scanning runs as
+natural validation blocks.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create a simple blocked structure: 5 runs with 20 trials each</span></span>
+<span><span class="va">block_var</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, each <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
+<span><span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">block_var</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">cval</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## cross-validation: bootstrap blocked </span></span>
-<span><span class="co">##   n observations:  500 </span></span>
-<span><span class="co">##   n bootstrap reps:  20 </span></span>
-<span><span class="co">##   block sizes:  100 100 100 100 100</span></span></code></pre>
-<p>Now we create a set of new resamples. But this time instead of 5
-resamples (one for each block), we have 100 resamples (20 for each
-block). Each block is used as a test set 20 times and for each of those
-20 resamples, the training data is sampled with replacement from the
-remaining runs.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x1<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">500</span><span class="op">)</span>, x2<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">500</span><span class="op">)</span>, x3<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">500</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>, length.out<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span><span class="va">sam</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crossval_samples.html">crossval_samples</a></span><span class="op">(</span><span class="va">cval</span>, <span class="va">dat</span>,<span class="va">y</span><span class="op">)</span></span>
-<span><span class="va">sam</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">█▀▀ Blocked Cross-Validation ▀▀█</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">├─ Dataset Information</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Number of Folds: </span> <span style="color: #00BB00;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">└─ Block Information</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">   └─ Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span></span></span></code></pre>
+</div>
+<div class="section level3">
+<h3 id="implementation-example">Implementation Example<a class="anchor" aria-label="anchor" href="#implementation-example"></a>
+</h3>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Generate example data</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  x1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span>,  <span class="co"># 100 trials total</span></span>
+<span>  x2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span>,</span>
+<span>  x3 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>, length.out <span class="op">=</span> <span class="fl">100</span><span class="op">)</span><span class="op">)</span>  <span class="co"># 5 conditions</span></span>
+<span></span>
+<span><span class="co"># Generate cross-validation samples</span></span>
+<span><span class="va">samples</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crossval_samples.html">crossval_samples</a></span><span class="op">(</span><span class="va">cval</span>, <span class="va">dat</span>, <span class="va">y</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">samples</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 5 × 5</span></span></span>
+<span><span class="co">##   ytrain       ytest        train               test                .id  </span></span>
+<span><span class="co">##   <span style="color: #949494; font-style: italic;">&lt;named list&gt;</span> <span style="color: #949494; font-style: italic;">&lt;named list&gt;</span> <span style="color: #949494; font-style: italic;">&lt;named list&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;named list&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span> <span style="color: #949494;">&lt;fct [80]&gt;</span>   <span style="color: #949494;">&lt;fct [20]&gt;</span>   <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 1    </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span> <span style="color: #949494;">&lt;fct [80]&gt;</span>   <span style="color: #949494;">&lt;fct [20]&gt;</span>   <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 2    </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span> <span style="color: #949494;">&lt;fct [80]&gt;</span>   <span style="color: #949494;">&lt;fct [20]&gt;</span>   <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 3    </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">4</span> <span style="color: #949494;">&lt;fct [80]&gt;</span>   <span style="color: #949494;">&lt;fct [20]&gt;</span>   <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 4    </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">5</span> <span style="color: #949494;">&lt;fct [80]&gt;</span>   <span style="color: #949494;">&lt;fct [20]&gt;</span>   <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 5</span></span></code></pre>
+</div>
+<div class="section level3">
+<h3 id="understanding-the-output">Understanding the Output<a class="anchor" aria-label="anchor" href="#understanding-the-output"></a>
+</h3>
+<p>Each row in the samples tibble contains: - <code>ytrain</code>:
+Training labels - <code>ytest</code>: Test labels - <code>train</code>:
+Training data subset - <code>test</code>: Test data subset -
+<code>.id</code>: Fold identifier</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="bootstrap-blocked-cross-validation">Bootstrap Blocked Cross-Validation<a class="anchor" aria-label="anchor" href="#bootstrap-blocked-cross-validation"></a>
+</h2>
+<div class="section level3">
+<h3 id="overview-1">Overview<a class="anchor" aria-label="anchor" href="#overview-1"></a>
+</h3>
+<p>This method combines blocking with bootstrap resampling, providing
+more stable performance estimates while respecting the run
+structure.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create bootstrap blocked CV with 20 repetitions</span></span>
+<span><span class="va">boot_cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">bootstrap_blocked_cross_validation</a></span><span class="op">(</span><span class="va">block_var</span>, nreps <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">boot_cval</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">█▀▀ Bootstrap Blocked Cross-Validation ▀▀█</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">├─ Configuration</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Bootstrap Repetitions: </span> <span style="color: #00BB00;">20</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">├─ Block Information</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">└─ Sampling Weights</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">   └─ Status: </span> <span style="color: #BB0000;">None</span>  (uniform sampling)</span></span></code></pre>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Generate samples</span></span>
+<span><span class="va">boot_samples</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crossval_samples.html">crossval_samples</a></span><span class="op">(</span><span class="va">boot_cval</span>, <span class="va">dat</span>, <span class="va">y</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">boot_samples</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 100 × 5</span></span></span>
-<span><span class="co">##    ytrain      ytest       train                test                 .id  </span></span>
-<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 1</span> <span style="color: #949494;">&lt;chr [400]&gt;</span> <span style="color: #949494;">&lt;chr [100]&gt;</span> <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 001  </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 2</span> <span style="color: #949494;">&lt;chr [400]&gt;</span> <span style="color: #949494;">&lt;chr [100]&gt;</span> <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 002  </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 3</span> <span style="color: #949494;">&lt;chr [400]&gt;</span> <span style="color: #949494;">&lt;chr [100]&gt;</span> <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 003  </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 4</span> <span style="color: #949494;">&lt;chr [400]&gt;</span> <span style="color: #949494;">&lt;chr [100]&gt;</span> <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 004  </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 5</span> <span style="color: #949494;">&lt;chr [400]&gt;</span> <span style="color: #949494;">&lt;chr [100]&gt;</span> <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 005  </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 6</span> <span style="color: #949494;">&lt;chr [400]&gt;</span> <span style="color: #949494;">&lt;chr [100]&gt;</span> <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 006  </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 7</span> <span style="color: #949494;">&lt;chr [400]&gt;</span> <span style="color: #949494;">&lt;chr [100]&gt;</span> <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 007  </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 8</span> <span style="color: #949494;">&lt;chr [400]&gt;</span> <span style="color: #949494;">&lt;chr [100]&gt;</span> <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 008  </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 9</span> <span style="color: #949494;">&lt;chr [400]&gt;</span> <span style="color: #949494;">&lt;chr [100]&gt;</span> <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 009  </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">10</span> <span style="color: #949494;">&lt;chr [400]&gt;</span> <span style="color: #949494;">&lt;chr [100]&gt;</span> <span style="color: #949494;">&lt;resample [400 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [100 x 3]&gt;</span> 010  </span></span>
+<span><span class="co">##    ytrain     ytest      train               test                .id  </span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 1</span> <span style="color: #949494;">&lt;fct [80]&gt;</span> <span style="color: #949494;">&lt;fct [20]&gt;</span> <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 001  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 2</span> <span style="color: #949494;">&lt;fct [80]&gt;</span> <span style="color: #949494;">&lt;fct [20]&gt;</span> <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 002  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 3</span> <span style="color: #949494;">&lt;fct [80]&gt;</span> <span style="color: #949494;">&lt;fct [20]&gt;</span> <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 003  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 4</span> <span style="color: #949494;">&lt;fct [80]&gt;</span> <span style="color: #949494;">&lt;fct [20]&gt;</span> <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 004  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 5</span> <span style="color: #949494;">&lt;fct [80]&gt;</span> <span style="color: #949494;">&lt;fct [20]&gt;</span> <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 005  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 6</span> <span style="color: #949494;">&lt;fct [80]&gt;</span> <span style="color: #949494;">&lt;fct [20]&gt;</span> <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 006  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 7</span> <span style="color: #949494;">&lt;fct [80]&gt;</span> <span style="color: #949494;">&lt;fct [20]&gt;</span> <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 007  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 8</span> <span style="color: #949494;">&lt;fct [80]&gt;</span> <span style="color: #949494;">&lt;fct [20]&gt;</span> <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 008  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 9</span> <span style="color: #949494;">&lt;fct [80]&gt;</span> <span style="color: #949494;">&lt;fct [20]&gt;</span> <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 009  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">10</span> <span style="color: #949494;">&lt;fct [80]&gt;</span> <span style="color: #949494;">&lt;fct [20]&gt;</span> <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 010  </span></span>
 <span><span class="co">## <span style="color: #949494;"># ℹ 90 more rows</span></span></span></code></pre>
 </div>
 <div class="section level3">
-<h3 id="repeated-split-half-resampling-over-blocks">Repeated Split-Half Resampling over Blocks<a class="anchor" aria-label="anchor" href="#repeated-split-half-resampling-over-blocks"></a>
+<h3 id="optional-weighted-sampling">Optional Weighted Sampling<a class="anchor" aria-label="anchor" href="#optional-weighted-sampling"></a>
 </h3>
-<p>Another approach for repeatedly sampling the data while respecting
-block structure is encapsulated in the
-<code>twofold_blocked_cross_validation</code> resampling scheme. Here
-every training resample is drawn from a random half the blocks and every
-test set is determined by the other half. This is done
-<code>nreps</code> times, yielding a set of split-half (or “two fold”)
-resamples. Note that this approach requires more than two blocks since
-with 2 blocks it would always split the data in the identical way,
-i.e. it does not subsample or bootstrap trials <em>within</em>
-blocks.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">block_var</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, each<span class="op">=</span><span class="fl">100</span><span class="op">)</span></span>
-<span><span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/twofold_blocked_cross_validation.html">twofold_blocked_cross_validation</a></span><span class="op">(</span><span class="va">block_var</span>, nreps<span class="op">=</span><span class="fl">20</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">cval</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## twofold cross-validation: blocked </span></span>
-<span><span class="co">##   nobservations:  500 </span></span>
-<span><span class="co">##   nreps:  20 </span></span>
-<span><span class="co">##   block sizes:  100 100 100 100 100</span></span></code></pre>
-<p>Again, we resample using <code>crossval_samples</code> and supply a
-data set and a response variable.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x1<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">500</span><span class="op">)</span>, x2<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">500</span><span class="op">)</span>, x3<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">500</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>, length.out<span class="op">=</span><span class="fl">500</span><span class="op">)</span></span>
-<span><span class="va">sam</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crossval_samples.html">crossval_samples</a></span><span class="op">(</span><span class="va">cval</span>, <span class="va">dat</span>,<span class="va">y</span><span class="op">)</span></span>
-<span><span class="va">sam</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 10 × 5</span></span></span>
-<span><span class="co">##    ytrain      ytest       train                test                 .id  </span></span>
-<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 1</span> <span style="color: #949494;">&lt;chr [300]&gt;</span> <span style="color: #949494;">&lt;chr [200]&gt;</span> <span style="color: #949494;">&lt;resample [300 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [200 x 3]&gt;</span> 01   </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 2</span> <span style="color: #949494;">&lt;chr [300]&gt;</span> <span style="color: #949494;">&lt;chr [200]&gt;</span> <span style="color: #949494;">&lt;resample [300 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [200 x 3]&gt;</span> 02   </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 3</span> <span style="color: #949494;">&lt;chr [300]&gt;</span> <span style="color: #949494;">&lt;chr [200]&gt;</span> <span style="color: #949494;">&lt;resample [300 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [200 x 3]&gt;</span> 03   </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 4</span> <span style="color: #949494;">&lt;chr [300]&gt;</span> <span style="color: #949494;">&lt;chr [200]&gt;</span> <span style="color: #949494;">&lt;resample [300 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [200 x 3]&gt;</span> 04   </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 5</span> <span style="color: #949494;">&lt;chr [300]&gt;</span> <span style="color: #949494;">&lt;chr [200]&gt;</span> <span style="color: #949494;">&lt;resample [300 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [200 x 3]&gt;</span> 05   </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 6</span> <span style="color: #949494;">&lt;chr [300]&gt;</span> <span style="color: #949494;">&lt;chr [200]&gt;</span> <span style="color: #949494;">&lt;resample [300 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [200 x 3]&gt;</span> 06   </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 7</span> <span style="color: #949494;">&lt;chr [300]&gt;</span> <span style="color: #949494;">&lt;chr [200]&gt;</span> <span style="color: #949494;">&lt;resample [300 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [200 x 3]&gt;</span> 07   </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 8</span> <span style="color: #949494;">&lt;chr [300]&gt;</span> <span style="color: #949494;">&lt;chr [200]&gt;</span> <span style="color: #949494;">&lt;resample [300 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [200 x 3]&gt;</span> 08   </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 9</span> <span style="color: #949494;">&lt;chr [300]&gt;</span> <span style="color: #949494;">&lt;chr [200]&gt;</span> <span style="color: #949494;">&lt;resample [300 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [200 x 3]&gt;</span> 09   </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">10</span> <span style="color: #949494;">&lt;chr [300]&gt;</span> <span style="color: #949494;">&lt;chr [200]&gt;</span> <span style="color: #949494;">&lt;resample [300 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [200 x 3]&gt;</span> 10</span></span></code></pre>
+<p>You can provide weights to influence the sampling probability:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create weights (e.g., based on motion parameters)</span></span>
+<span><span class="va">weights</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">block_var</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">weighted_boot_cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">bootstrap_blocked_cross_validation</a></span><span class="op">(</span></span>
+<span>  <span class="va">block_var</span>, </span>
+<span>  nreps <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>  weights <span class="op">=</span> <span class="va">weights</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">weighted_boot_cval</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">█▀▀ Bootstrap Blocked Cross-Validation ▀▀█</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">├─ Configuration</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Bootstrap Repetitions: </span> <span style="color: #00BB00;">20</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">├─ Block Information</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">└─ Sampling Weights</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Status: </span> <span style="color: #00BB00;">Present</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Range: </span> <span style="color: #00BB00;">[0.001, 0.020]</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">   └─ Non-zero Weights: </span> <span style="color: #00BB00;">100</span> <span style="color: #0000BB; font-style: italic;"> (</span> <span style="color: #00BB00;">100.0%</span> <span style="color: #0000BB; font-style: italic;">)</span></span></span></code></pre>
 </div>
 </div>
-  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+<div class="section level2">
+<h2 id="sequential-blocked-cross-validation">Sequential Blocked Cross-Validation<a class="anchor" aria-label="anchor" href="#sequential-blocked-cross-validation"></a>
+</h2>
+<div class="section level3">
+<h3 id="overview-2">Overview<a class="anchor" aria-label="anchor" href="#overview-2"></a>
+</h3>
+<p>This method creates sequential folds within each block, useful when
+temporal order matters.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create sequential blocked CV with 2 folds and 4 repetitions</span></span>
+<span><span class="va">seq_cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">sequential_blocked_cross_validation</a></span><span class="op">(</span></span>
+<span>  <span class="va">block_var</span>,</span>
+<span>  nfolds <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  nreps <span class="op">=</span> <span class="fl">4</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">seq_cval</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## $block_var</span></span>
+<span><span class="co">##   [1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2</span></span>
+<span><span class="co">##  [38] 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4 4 4 4 4 4 4</span></span>
+<span><span class="co">##  [75] 4 4 4 4 4 4 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $nfolds</span></span>
+<span><span class="co">## [1] 2</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $nreps</span></span>
+<span><span class="co">## [1] 4</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $block_ind</span></span>
+<span><span class="co">## [1] 1 2 3 4 5</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## attr(,"class")</span></span>
+<span><span class="co">## [1] "sequential_blocked_cross_validation" "cross_validation"                   </span></span>
+<span><span class="co">## [3] "list"</span></span></code></pre>
+</div>
+</div>
+<div class="section level2">
+<h2 id="two-fold-blocked-cross-validation">Two-Fold Blocked Cross-Validation<a class="anchor" aria-label="anchor" href="#two-fold-blocked-cross-validation"></a>
+</h2>
+<div class="section level3">
+<h3 id="overview-3">Overview<a class="anchor" aria-label="anchor" href="#overview-3"></a>
+</h3>
+<p>This approach randomly splits blocks into two groups, useful for
+rapid performance estimation.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create two-fold blocked CV with 10 repetitions</span></span>
+<span><span class="va">twofold_cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/twofold_blocked_cross_validation.html">twofold_blocked_cross_validation</a></span><span class="op">(</span><span class="va">block_var</span>, nreps <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">twofold_cval</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">█▀▀ Two-Fold Blocked Cross-Validation ▀▀█</span> </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">├─ Configuration</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Number of Folds: </span> <span style="color: #00BB00;">2</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Repetitions: </span> <span style="color: #00BB00;">10</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">└─ Block Information</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">   └─ Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span></span></span></code></pre>
+</div>
+</div>
+<div class="section level2">
+<h2 id="custom-cross-validation">Custom Cross-Validation<a class="anchor" aria-label="anchor" href="#custom-cross-validation"></a>
+</h2>
+<div class="section level3">
+<h3 id="overview-4">Overview<a class="anchor" aria-label="anchor" href="#overview-4"></a>
+</h3>
+<p>For specialized validation schemes, you can define custom
+training/testing splits:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Define custom splits</span></span>
+<span><span class="va">custom_splits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>train <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">60</span>, test <span class="op">=</span> <span class="fl">61</span><span class="op">:</span><span class="fl">100</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>train <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">40</span>, test <span class="op">=</span> <span class="fl">41</span><span class="op">:</span><span class="fl">100</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>train <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">80</span>, test <span class="op">=</span> <span class="fl">81</span><span class="op">:</span><span class="fl">100</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create custom CV</span></span>
+<span><span class="va">custom_cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">custom_cross_validation</a></span><span class="op">(</span><span class="va">custom_splits</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_cval</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## $sample_set</span></span>
+<span><span class="co">## $sample_set[[1]]</span></span>
+<span><span class="co">## $sample_set[[1]]$train</span></span>
+<span><span class="co">##  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25</span></span>
+<span><span class="co">## [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50</span></span>
+<span><span class="co">## [51] 51 52 53 54 55 56 57 58 59 60</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $sample_set[[1]]$test</span></span>
+<span><span class="co">##  [1]  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79</span></span>
+<span><span class="co">## [20]  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98</span></span>
+<span><span class="co">## [39]  99 100</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $sample_set[[2]]</span></span>
+<span><span class="co">## $sample_set[[2]]$train</span></span>
+<span><span class="co">##  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25</span></span>
+<span><span class="co">## [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $sample_set[[2]]$test</span></span>
+<span><span class="co">##  [1]  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59</span></span>
+<span><span class="co">## [20]  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78</span></span>
+<span><span class="co">## [39]  79  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97</span></span>
+<span><span class="co">## [58]  98  99 100</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $sample_set[[3]]</span></span>
+<span><span class="co">## $sample_set[[3]]$train</span></span>
+<span><span class="co">##  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25</span></span>
+<span><span class="co">## [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50</span></span>
+<span><span class="co">## [51] 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75</span></span>
+<span><span class="co">## [76] 76 77 78 79 80</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $sample_set[[3]]$test</span></span>
+<span><span class="co">##  [1]  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99</span></span>
+<span><span class="co">## [20] 100</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## $nfolds</span></span>
+<span><span class="co">## [1] 3</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## attr(,"class")</span></span>
+<span><span class="co">## [1] "custom_cross_validation" "cross_validation"       </span></span>
+<span><span class="co">## [3] "list"</span></span></code></pre>
+</div>
+</div>
+<div class="section level2">
+<h2 id="practical-example-model-training">Practical Example: Model Training<a class="anchor" aria-label="anchor" href="#practical-example-model-training"></a>
+</h2>
+<p>Here’s a complete example using blocked cross-validation with an SDA
+classifier:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Setup cross-validation</span></span>
+<span><span class="va">block_var</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, each <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
+<span><span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">block_var</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Generate data</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span> <span class="op">*</span> <span class="fl">10</span><span class="op">)</span>, <span class="fl">100</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>, <span class="fl">20</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Generate CV samples</span></span>
+<span><span class="va">samples</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crossval_samples.html">crossval_samples</a></span><span class="op">(</span><span class="va">cval</span>, <span class="va">dat</span>, <span class="va">y</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Train models for each fold</span></span>
+<span><span class="va">model_fits</span> <span class="op">&lt;-</span> <span class="va">samples</span> <span class="op">%&gt;%</span> </span>
+<span>  <span class="fu">rowwise</span><span class="op">(</span><span class="op">)</span> <span class="op">%&gt;%</span> </span>
+<span>  <span class="fu">do</span><span class="op">(</span><span class="op">{</span></span>
+<span>    <span class="va">train_dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">.</span><span class="op">$</span><span class="va">train</span><span class="op">)</span></span>
+<span>    <span class="va">y_train</span> <span class="op">&lt;-</span> <span class="va">.</span><span class="op">$</span><span class="va">ytrain</span></span>
+<span>    <span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">sda</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/sda/man/sda.html" class="external-link">sda</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">train_dat</span><span class="op">)</span>, <span class="va">y_train</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>    <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>fit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">model_fits</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 5 × 1</span></span></span>
+<span><span class="co">## <span style="color: #949494;"># Rowwise: </span></span></span>
+<span><span class="co">##   fit   </span></span>
+<span><span class="co">##   <span style="color: #949494; font-style: italic;">&lt;list&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span> <span style="color: #949494;">&lt;sda&gt;</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span> <span style="color: #949494;">&lt;sda&gt;</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span> <span style="color: #949494;">&lt;sda&gt;</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">4</span> <span style="color: #949494;">&lt;sda&gt;</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">5</span> <span style="color: #949494;">&lt;sda&gt;</span></span></span></code></pre>
+</div>
+<div class="section level2">
+<h2 id="best-practices">Best Practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
+</h2>
+<p>When choosing a cross-validation strategy, consider:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Data Structure</strong>
+<ul>
+<li>Use blocked CV when data has clear run/session boundaries</li>
+<li>Consider sequential CV when temporal order matters</li>
+<li>Use bootstrap blocked CV for more stable estimates</li>
+</ul>
+</li>
+<li>
+<strong>Sample Size</strong>
+<ul>
+<li>For small datasets, bootstrap blocked CV can help</li>
+<li>For large datasets, simple blocked CV may suffice</li>
+</ul>
+</li>
+<li>
+<strong>Temporal Dependencies</strong>
+<ul>
+<li>Always respect the temporal structure of fMRI data</li>
+<li>Avoid mixing training/testing data from the same run</li>
+<li>Consider temporal autocorrelation</li>
+</ul>
+</li>
+<li>
+<strong>Computation Time</strong>
+<ul>
+<li>Bootstrap and sequential methods require more computation</li>
+<li>Two-fold CV offers quick preliminary results</li>
+<li>Balance estimation stability with computational cost</li>
+</ul>
+</li>
+</ol>
+</div>
+<div class="section level2">
+<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
+</h2>
+<p>The <code>rMVPA</code> package provides a comprehensive suite of
+cross-validation strategies for neuroimaging data. Key points:</p>
+<ul>
+<li>Choose the appropriate CV strategy based on your data structure</li>
+<li>Consider temporal dependencies in fMRI data</li>
+<li>Use bootstrap methods for more stable estimates when needed</li>
+<li>Implement custom schemes for specialized needs</li>
+</ul>
+<p>For implementation details, refer to the source code in
+<code>crossval.R</code>.</p>
+</div>
+<div class="section level2">
+<h2 id="integration-with-regional-and-searchlight-analyses">Integration with Regional and Searchlight Analyses<a class="anchor" aria-label="anchor" href="#integration-with-regional-and-searchlight-analyses"></a>
+</h2>
+<p>Cross-validation strategies in <code>rMVPA</code> are designed to
+work seamlessly with both regional and searchlight analyses. Here we’ll
+demonstrate how to incorporate different cross-validation schemes into
+these analyses.</p>
+<div class="section level3">
+<h3 id="regional-analysis-example">Regional Analysis Example<a class="anchor" aria-label="anchor" href="#regional-analysis-example"></a>
+</h3>
+<p>Let’s perform a regional MVPA analysis using different
+cross-validation strategies:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Generate a sample dataset</span></span>
+<span><span class="va">data_out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>,<span class="fl">6</span>,<span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">80</span>, blocks <span class="op">=</span> <span class="fl">4</span>, nlevels <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create a region mask</span></span>
+<span><span class="va">mask</span> <span class="op">&lt;-</span> <span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span></span>
+<span><span class="va">nvox</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">mask</span><span class="op">)</span></span>
+<span><span class="va">region_mask</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, size <span class="op">=</span> <span class="va">nvox</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, </span>
+<span>  <span class="fu">space</span><span class="op">(</span><span class="va">mask</span><span class="op">)</span>, </span>
+<span>  indices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">mask</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create MVPA dataset</span></span>
+<span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Load the classification model</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span></span>
+<span><span class="va">tune_grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>lambda <span class="op">=</span> <span class="fl">0.01</span>, diagonal <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Example 1: Using Blocked Cross-Validation</span></span>
+<span><span class="va">blocked_cv</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span>
+<span><span class="va">mvpa_mod_blocked</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>, </span>
+<span>  dataset <span class="op">=</span> <span class="va">dset</span>, </span>
+<span>  design <span class="op">=</span> <span class="va">data_out</span><span class="op">$</span><span class="va">design</span>,</span>
+<span>  crossval <span class="op">=</span> <span class="va">blocked_cv</span>,</span>
+<span>  tune_grid <span class="op">=</span> <span class="va">tune_grid</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run regional analysis with blocked CV</span></span>
+<span><span class="va">results_blocked</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod_blocked</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## INFO [2025-02-13 23:16:22] </span></span>
+<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
+<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Example 2: Using Bootstrap Blocked Cross-Validation</span></span>
+<span><span class="va">bootstrap_cv</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">bootstrap_blocked_cross_validation</a></span><span class="op">(</span></span>
+<span>  <span class="va">data_out</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span>,</span>
+<span>  nreps <span class="op">=</span> <span class="fl">10</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">mvpa_mod_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>,</span>
+<span>  dataset <span class="op">=</span> <span class="va">dset</span>,</span>
+<span>  design <span class="op">=</span> <span class="va">data_out</span><span class="op">$</span><span class="va">design</span>,</span>
+<span>  crossval <span class="op">=</span> <span class="va">bootstrap_cv</span>,</span>
+<span>  tune_grid <span class="op">=</span> <span class="va">tune_grid</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run regional analysis with bootstrap CV</span></span>
+<span><span class="va">results_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod_boot</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## INFO [2025-02-13 23:16:24] </span></span>
+<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
+<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Compare performance between CV strategies</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Blocked CV Performance:\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Blocked CV Performance:</span></span></code></pre>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_blocked</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
+<span><span class="co">##   roinum Accuracy    AUC</span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1    0.6   0.097<span style="text-decoration: underline;">5</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2    0.55  0.093<span style="text-decoration: underline;">1</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3    0.575 0.114</span></span></code></pre>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nBootstrap CV Performance:\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## Bootstrap CV Performance:</span></span></code></pre>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_boot</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
+<span><span class="co">##   roinum Accuracy    AUC</span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1    0.575 0.056<span style="text-decoration: underline;">9</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2    0.512 0.075<span style="text-decoration: underline;">0</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3    0.588 0.09</span></span></code></pre>
+</div>
+<div class="section level3">
+<h3 id="searchlight-analysis-example">Searchlight Analysis Example<a class="anchor" aria-label="anchor" href="#searchlight-analysis-example"></a>
+</h3>
+<p>We can also use different cross-validation strategies in searchlight
+analysis:</p>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Example 3: Searchlight with Sequential Blocked Cross-Validation</span></span>
+<span><span class="va">seq_cv</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">sequential_blocked_cross_validation</a></span><span class="op">(</span></span>
+<span>  <span class="va">data_out</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span>,</span>
+<span>  nfolds <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  nreps <span class="op">=</span> <span class="fl">4</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">mvpa_mod_seq</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod</span>,</span>
+<span>  dataset <span class="op">=</span> <span class="va">dset</span>,</span>
+<span>  design <span class="op">=</span> <span class="va">data_out</span><span class="op">$</span><span class="va">design</span>,</span>
+<span>  crossval <span class="op">=</span> <span class="va">seq_cv</span>,</span>
+<span>  tune_grid <span class="op">=</span> <span class="va">tune_grid</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run searchlight analysis</span></span>
+<span><span class="va">results_searchlight</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span></span>
+<span>  <span class="va">mvpa_mod_seq</span>,</span>
+<span>  radius <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"standard"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="key-considerations">Key Considerations<a class="anchor" aria-label="anchor" href="#key-considerations"></a>
+</h3>
+<p>When integrating cross-validation with regional or searchlight
+analyses:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Memory Usage</strong>
+<ul>
+<li>Bootstrap and sequential methods generate more folds</li>
+<li>Consider reducing <code>nreps</code> for large searchlight
+analyses</li>
+<li>Monitor memory usage with large datasets</li>
+</ul>
+</li>
+<li>
+<strong>Computation Time</strong>
+<ul>
+<li>Searchlight analysis multiplies computation across voxels</li>
+<li>Two-fold CV might be preferable for initial searchlight
+exploration</li>
+<li>Use parallel processing when available</li>
+</ul>
+</li>
+<li>
+<strong>Result Stability</strong>
+<ul>
+<li>Bootstrap methods provide confidence intervals but require more
+computation</li>
+<li>Consider the trade-off between estimation stability and
+computational cost</li>
+<li>For searchlight analyses, simpler CV schemes might be
+sufficient</li>
+</ul>
+</li>
+<li>
+<strong>Performance Metrics</strong>
+<ul>
+<li>Different CV schemes might produce slightly different performance
+estimates</li>
+<li>Bootstrap methods generally provide more conservative estimates</li>
+<li>Consider averaging results across repetitions for bootstrap and
+sequential CV</li>
+</ul>
+</li>
+</ol>
+</div>
+<div class="section level3">
+<h3 id="example-comparing-cv-strategies-in-regional-analysis">Example: Comparing CV Strategies in Regional Analysis<a class="anchor" aria-label="anchor" href="#example-comparing-cv-strategies-in-regional-analysis"></a>
+</h3>
+<p>Here’s a more detailed comparison of different CV strategies:</p>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create different CV schemes</span></span>
+<span><span class="va">cv_schemes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  blocked <span class="op">=</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span>,</span>
+<span>  bootstrap <span class="op">=</span> <span class="fu"><a href="../reference/cross_validation.html">bootstrap_blocked_cross_validation</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span>, nreps <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span>
+<span>  twofold <span class="op">=</span> <span class="fu"><a href="../reference/twofold_blocked_cross_validation.html">twofold_blocked_cross_validation</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span>, nreps <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run regional analysis with each CV scheme</span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">cv_schemes</span>, <span class="kw">function</span><span class="op">(</span><span class="va">cv</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">mvpa_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span></span>
+<span>    <span class="va">mod</span>,</span>
+<span>    dataset <span class="op">=</span> <span class="va">dset</span>,</span>
+<span>    design <span class="op">=</span> <span class="va">data_out</span><span class="op">$</span><span class="va">design</span>,</span>
+<span>    crossval <span class="op">=</span> <span class="va">cv</span>,</span>
+<span>    tune_grid <span class="op">=</span> <span class="va">tune_grid</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/run_regional.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod</span>, <span class="va">region_mask</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## INFO [2025-02-13 23:16:25] </span></span>
+<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
+<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
+<span><span class="co">## INFO [2025-02-13 23:16:27] </span></span>
+<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
+<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
+<span><span class="co">## INFO [2025-02-13 23:16:27] </span></span>
+<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
+<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Compare performance across CV schemes</span></span>
+<span><span class="va">performance_comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">perf</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">[[</span><span class="va">name</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">performance_table</span></span>
+<span>  <span class="va">perf</span><span class="op">$</span><span class="va">cv_scheme</span> <span class="op">&lt;-</span> <span class="va">name</span></span>
+<span>  <span class="va">perf</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Combine results</span></span>
+<span><span class="va">all_performance</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">performance_comparison</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">all_performance</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 9 × 4</span></span></span>
+<span><span class="co">##   roinum Accuracy    AUC cv_scheme</span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1    0.6   0.097<span style="text-decoration: underline;">5</span> blocked  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2    0.55  0.093<span style="text-decoration: underline;">1</span> blocked  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3    0.575 0.114  blocked  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">4</span>      1    0.6   0.067<span style="text-decoration: underline;">5</span> bootstrap</span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">5</span>      2    0.55  0.066<span style="text-decoration: underline;">3</span> bootstrap</span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">6</span>      3    0.6   0.070<span style="text-decoration: underline;">0</span> bootstrap</span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">7</span>      1    0.588 0.114  twofold  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">8</span>      2    0.538 0.081<span style="text-decoration: underline;">3</span> twofold  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">9</span>      3    0.525 0.080<span style="text-decoration: underline;">6</span> twofold</span></span></code></pre>
+<p>This integration demonstrates how different cross-validation
+strategies can be easily incorporated into the broader MVPA analysis
+framework, allowing researchers to choose the most appropriate
+validation approach for their specific analysis needs.</p>
+<p>For more details on regional and searchlight analyses, refer to their
+respective vignettes and the implementation in <code>regional.R</code>
+and <code>searchlight.R</code>.</p>
+</div>
+</div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>
 
 
 
     <footer><div class="pkgdown-footer-left">
-  <p></p>
-<p>Developed by Bradley Buchsbaum.</p>
+  <p>Developed by Bradley Buchsbaum.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.7.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
 </div>
 
     </footer>
 </div>
 
-  
 
-  
+
+
 
   </body>
 </html>
