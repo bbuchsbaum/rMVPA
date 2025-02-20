@@ -31,7 +31,7 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0) {
     # If F is provided, trust user supplied features
     assertthat::assert_that(is.matrix(F))
     assertthat::assert_that(nrow(F) == length(labels))
-    ret <- list(S=S, F=F, labels=labels)
+    ret <- list(S=S, F=F, labels=labels, k = ncol(F))
   } else {
     # Must have S
     assertthat::assert_that(!is.null(S))
@@ -51,7 +51,7 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0) {
       eres <- eigen(S)
       F <- eres$vectors[, 1:k, drop=FALSE]
     }
-    ret <- list(S=S, F=F, labels=labels)
+    ret <- list(S=S, F=F, labels=labels, k = k)
   }
   
   class(ret) <- "feature_rsa_design"
@@ -117,34 +117,17 @@ feature_rsa_model <- function(dataset,
 #' @noRd
 .predict_scca <- function(model, X_new) {
   tm <- model$trained_model
-  Xsc <- sweep(sweep(X_new,2,model$scca_x_mean,"-"),2,model$scca_x_sd,"/")
-  xcoef <- t(tm$WX)
-  ycoef <- t(tm$WY)
-  Lambda_q <- diag(tm$lambda)
-  y_inv      <- corpcor::pseudoinverse(ycoef)
+  Xsc <- sweep(sweep(X_new, 2, model$scca_x_mean, "-"), 2, model$scca_x_sd, "/")
+  ncomp <- model$ncomp
+  xcoef <- t(tm$WX)[, 1:ncomp, drop=FALSE]
+  ycoef <- t(tm$WY)[, 1:ncomp, drop=FALSE]
+  Lambda_q <- diag(tm$lambda[1:ncomp])
+  y_inv <- corpcor::pseudoinverse(ycoef)
   Yhat <- Xsc %*% xcoef %*% Lambda_q %*% y_inv
   Yhat <- sweep(sweep(Yhat, 2, model$scca_f_sd, "*"), 2, model$scca_f_mean, "+")
+  return(Yhat)
 }
 
-.predict_scca2 <- function(model, X_new) {
-  tm <- model$trained_model
-  
-  # Standardize X
-  Xsc <- sweep(sweep(X_new,2,model$scca_x_mean,"-"),2,model$scca_x_sd,"/")
-  
-  # Grab the canonical weights
-  WX <- tm$WX  # shape: (#canonical, ncol(X_sc)) or (2 x 10)
-  WY <- tm$WY  # shape: (#canonical, ncol(F_sc)) or (2 x 2)
-  
-  # Canonical correlations
-  Lambda_q <- diag(tm$lambda)  # (2 x 2)
-  
-  Yhat_sc <- Xsc %*% t(WX) %*% Lambda_q %*% t(WY)
-  
-  # Unscale to original F space
-  Yhat <- sweep(sweep(Yhat_sc, 2, model$scca_f_sd, "*"), 2, model$scca_f_mean, "+")
-  Yhat
-}
 
 
 #' @noRd
@@ -167,26 +150,29 @@ train_model.feature_rsa_model <- function(obj, train_dat, ytrain, indices, ...) 
     if(is.null(colnames(df_train))) {
       colnames(df_train) <- paste0("V", 1:ncol(X))
     }
-    fit <- pls::plsr(I(Fsub) ~ ., data = df_train, scale = TRUE)
+    ncomp <- if(!is.null(obj$design$k)) { obj$design$k } else { ncol(Fsub) }
+    fit <- pls::plsr(I(Fsub) ~ ., data = df_train, scale = TRUE, ncomp = ncomp)
     result$trained_model <- fit
+    result$ncomp <- ncomp
   } else if (obj$method == "scca") {
     sx <- .standardize(X)
     sf <- .standardize(Fsub)
     scca_res <- whitening::scca(sx$X_sc, sf$X_sc, scale=FALSE)
+    effective_ncomp <- sum(abs(scca_res$lambda) > 1e-6)
+    ncomp <- if(!is.null(obj$design$k)) { min(effective_ncomp, obj$design$k) } else { effective_ncomp }
     result$trained_model <- scca_res
     result$scca_x_mean <- sx$mean
     result$scca_x_sd <- sx$sd
     result$scca_f_mean <- sf$mean
     result$scca_f_sd <- sf$sd
+    result$ncomp <- ncomp
   } else if (obj$method == "pca") {
     sx <- .standardize(X)
     sf <- .standardize(Fsub)
     pca_res <- prcomp(sx$X_sc, scale.=FALSE)
     PC_train <- pca_res$x
-    # Truncate the number of principal components to avoid singularity; use up to 10 PCs
-    k <- min(ncol(PC_train), 10)
+    k <- if(!is.null(obj$design$k)) { obj$design$k } else { min(ncol(PC_train), 10) }
     PC_train_subset <- PC_train[, 1:k, drop=FALSE]
-    # Fit a multivariate linear model using lm(), predicting standardized F from the truncated PCs
     df <- as.data.frame(PC_train_subset)
     fit <- lm(sf$X_sc ~ ., data = df)
     coefs <- coef(fit)  # The coefficients matrix (Intercept and slopes) for each response variable
@@ -198,6 +184,7 @@ train_model.feature_rsa_model <- function(obj, train_dat, ytrain, indices, ...) 
     result$pca_f_mean <- sf$mean
     result$pca_f_sd <- sf$sd
     result$pca_coefs <- coefs
+    result$ncomp <- k
   }
   result
 }
@@ -362,7 +349,6 @@ run_regional.feature_rsa_model <- function(model_spec, region_mask, coalesce_des
                                            verbose=FALSE, ...) {
   prepped <- prep_regional(model_spec, region_mask)
   
-
   # uses mvpa_iterate
  
   results <- mvpa_iterate(model_spec, prepped$vox_iter, ids=prepped$region_set, processor=processor, verbose=verbose, ...)

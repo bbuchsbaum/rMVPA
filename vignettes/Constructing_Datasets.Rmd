@@ -1,0 +1,74 @@
+---
+title: "Constructing Datasets for MVPA Analysis"
+author: "Bradley Buchsbaum"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Constructing Datasets for MVPA Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+---
+
+This vignette demonstrates how to create real neuroimaging datasets for MVPA analysis. The examples below show how to create both volumetric (image-based) and surface-based datasets using functions defined in dataset.R. Note that the code examples are set to not evaluate (eval=FALSE) since they refer to file paths that must be replaced with actual data files.
+
+## Creating a Real Volumetric (Image-Based) Dataset
+
+This example assumes you have a 4D fMRI file ("bold.nii.gz") and a corresponding 3D brain mask file ("mask.nii.gz").
+
+```{r volumetric, eval=FALSE}
+library(neuroim2)
+
+# Read the fMRI data as a NeuroVec object using neuroim2::read_vec
+train_neurovec <- neuroim2::read_vec("path/to/bold.nii.gz", mode = "normal")
+
+# Read the brain mask and create a NeuroVol object
+mask_vec <- neuroim2::read_vec("path/to/mask.nii.gz", mode = "normal")
+mask_vol <- NeuroVol(as.array(mask_vec), NeuroSpace(dim(mask_vec), spacing = c(2, 2, 2)))
+
+# Create the MVPA image dataset
+real_dataset <- mvpa_dataset(train_data = train_neurovec, mask = mask_vol)
+
+# Display dataset details
+print(real_dataset)
+```
+
+## Creating a Real Surface-Based Dataset
+
+This example assumes you have cortical geometry stored in a file (e.g., "subject.lh.smoothwm.asc") and a signal matrix in CSV format ("surface_data.csv"). The signal matrix should have dimensions corresponding to the number of vertices and the number of observations.
+
+```{r surface, eval=FALSE}
+library(neurosurf)
+
+# Load the cortical geometry
+geom <- read_surf_geometry("path/to/subject.lh.smoothwm.asc")
+
+# Read the surface data from a CSV file
+# The CSV should not have a header and have dimensions: number of vertices x number of observations
+data_matrix <- as.matrix(read.csv("path/to/surface_data.csv", header = FALSE))
+
+# Verify that the number of rows in the data matches the geometry
+nvert <- nrow(neurosurf::vertices(geom))
+if(nrow(data_matrix) != nvert) {
+  stop("The number of vertices in the data does not match the geometry.")
+}
+
+# Create a NeuroSurfaceVector using the geometry and the data matrix
+real_neurosurf <- NeuroSurfaceVector(geom, 1:nvert, data_matrix)
+
+# Create the MVPA surface dataset; if no mask is provided, one is generated automatically
+real_surface_dataset <- mvpa_surface_dataset(train_data = real_neurosurf, name = "lh")
+
+# Display dataset details
+print(real_surface_dataset)
+```
+
+## Notes
+
+- For volumetric datasets, the NeuroSpace object is used to define dimensions and voxel spacing. 
+- For surface datasets, ensure that the signal matrix and cortical geometry are compatible.
+
+Replace the file paths with actual paths to your real data files before running the code. 

@@ -30,19 +30,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="active nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/Advanced_RSA.html">Advanced RSA Methods: Feature-Based and Vector-Based Approaches</a></li>
-    <li><a class="dropdown-item" href="../articles/CommandLineScripts.html">MVPA Searchlight Tutorial</a></li>
-    <li><a class="dropdown-item" href="../articles/CrossValidation.html">Cross-Validation Strategies in rMVPA</a></li>
-    <li><a class="dropdown-item" href="../articles/FeatureSelection.html">Feature Selection in rMVPA</a></li>
-    <li><a class="dropdown-item" href="../articles/MVPA_RegionalCmdline.html">MVPA Regional Analysis Tutorial</a></li>
-    <li><a class="dropdown-item" href="../articles/Regional_Analysis.html">Advanced Regional MVPA Analysis in rMVPA</a></li>
-    <li><a class="dropdown-item" href="../articles/RSA.html">Representational Similarity Analysis (RSA) in rMVPA</a></li>
-    <li><a class="dropdown-item" href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a></li>
-  </ul>
-</li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -65,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-02-13</h4>
+            <h4 data-toc-skip class="date">2025-02-16</h4>
       
 
       <div class="d-none name"><code>CrossValidation.Rmd</code></div>
@@ -91,22 +79,12 @@ practices and considerations - Working examples</p>
 <div class="section level3">
 <h3 id="why-cross-validation-matters-in-mvpa">Why Cross-Validation Matters in MVPA<a class="anchor" aria-label="anchor" href="#why-cross-validation-matters-in-mvpa"></a>
 </h3>
-<p>In neuroimaging analyses, cross-validation serves multiple
-purposes:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Performance Estimation</strong>: Provides unbiased estimates
-of model performance</li>
-<li>
-<strong>Generalizability</strong>: Tests how well patterns
-generalize to new data</li>
-<li>
-<strong>Overfitting Prevention</strong>: Helps detect and prevent
-overfitting to noise</li>
-<li>
-<strong>Temporal Independence</strong>: Ensures temporal
-independence between training and test sets</li>
-</ol>
+<p>Cross-validation is essential in neuroimaging analyses. It gives us
+unbiased estimates of how well our models perform and shows whether
+brain activity patterns truly generalize to new data. By separating
+training and test sets, cross-validation prevents us from overfitting to
+noise in the data. It also maintains temporal independence between sets,
+which is crucial for time-series neuroimaging data.</p>
 </div>
 <div class="section level3">
 <h3 id="available-cross-validation-schemes">Available Cross-Validation Schemes<a class="anchor" aria-label="anchor" href="#available-cross-validation-schemes"></a>
@@ -472,14 +450,11 @@ classifier:</p>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h2>
-<p>The <code>rMVPA</code> package provides a comprehensive suite of
-cross-validation strategies for neuroimaging data. Key points:</p>
-<ul>
-<li>Choose the appropriate CV strategy based on your data structure</li>
-<li>Consider temporal dependencies in fMRI data</li>
-<li>Use bootstrap methods for more stable estimates when needed</li>
-<li>Implement custom schemes for specialized needs</li>
-</ul>
+<p>Choose the right cross-validation strategy for your neuroimaging
+data. Match the CV approach to your data structure, account for temporal
+dependencies in fMRI, and use bootstrap methods when you need more
+stable estimates. The rMVPA package supports all these approaches,
+including custom schemes for specialized needs.</p>
 <p>For implementation details, refer to the source code in
 <code>crossval.R</code>.</p>
 </div>
@@ -504,7 +479,7 @@ cross-validation strategies:</p>
 <span><span class="va">nvox</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">mask</span><span class="op">)</span></span>
 <span><span class="va">region_mask</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, size <span class="op">=</span> <span class="va">nvox</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, </span>
-<span>  <span class="fu">space</span><span class="op">(</span><span class="va">mask</span><span class="op">)</span>, </span>
+<span>  <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">mask</span><span class="op">)</span>, </span>
 <span>  indices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">mask</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -527,7 +502,7 @@ cross-validation strategies:</p>
 <span></span>
 <span><span class="co"># Run regional analysis with blocked CV</span></span>
 <span><span class="va">results_blocked</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod_blocked</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-02-13 23:16:22] </span></span>
+<pre><code><span><span class="co">## INFO [2025-02-16 22:31:04] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
@@ -548,7 +523,7 @@ cross-validation strategies:</p>
 <span></span>
 <span><span class="co"># Run regional analysis with bootstrap CV</span></span>
 <span><span class="va">results_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod_boot</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-02-13 23:16:24] </span></span>
+<pre><code><span><span class="co">## INFO [2025-02-16 22:31:06] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
@@ -676,17 +651,17 @@ sequential CV</li>
 <span>  <span class="op">)</span></span>
 <span>  <span class="fu"><a href="../reference/run_regional.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-02-13 23:16:25] </span></span>
+<pre><code><span><span class="co">## INFO [2025-02-16 22:31:07] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:16:27] </span></span>
+<span><span class="co">## INFO [2025-02-16 22:31:10] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:16:27] </span></span>
+<span><span class="co">## INFO [2025-02-16 22:31:10] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>

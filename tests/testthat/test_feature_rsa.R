@@ -182,3 +182,27 @@ test_that("SCCA method can learn to reconstruct correlated features", {
   expect_gt(mean(perf$correlations), 0.7)
 
 })
+
+
+# test_that("can run feature_rsa with different methods", {
+#   data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 50, blocks = 4, nlevels = 2)
+#   print(data_out)
+#   crossval <- blocked_cross_validation(data_out$design$block_var)
+#   # Compare different methods
+#   methods <- c("scca", "pca", "pls") 
+#   results_list <- lapply(methods, function(method) {
+#     model <- feature_rsa_model(
+#       dataset = data_out$dset,
+#       design = feature_design,
+#       method = method,
+#       crossval = crossval  # Add cross-validation
+#     )
+#     run_regional(model, region_mask)
+#   })
+#   
+#   # Compare performance
+#   for (i in seq_along(methods)) {
+#     cat("\nMethod:", methods[i], "\n")
+#     print(results_list[[i]]$performance_table)
+#   }
+# })

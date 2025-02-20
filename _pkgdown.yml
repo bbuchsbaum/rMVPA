@@ -12,6 +12,7 @@ articles:
       - CrossValidation
       - FeatureSelection
       - Searchlight_Analysis
+      - Constructing_Datasets
   
   - title: "Advanced Topics"
     desc: >

@@ -240,29 +240,11 @@ for (i in seq_along(block_sizes)) {
 
 ## Feature-Based RSA
 
-Choose Feature-Based RSA when:
-- You have a well-defined feature space
-- You want to reconstruct stimulus features
-- Your features have meaningful dimensions
-- You're interested in feature prediction
-
-Example use cases:
-- Predicting visual features from visual cortex activity
-- Reconstructing semantic dimensions from language areas
-- Mapping motion parameters from MT/V5 responses
+Feature-Based RSA is most appropriate when working with a well-defined feature space where the dimensions have meaningful interpretations. This approach excels at reconstructing and predicting specific stimulus features from neural activity patterns. Common applications include predicting visual features from visual cortex responses, reconstructing semantic dimensions from language area activity, and mapping motion parameters from MT/V5 activation patterns.
 
 ## Vector-Based RSA
 
-Choose Vector-Based RSA when:
-- You have many pre-computed distance matrices
-- Memory efficiency is important
-- You need sophisticated block handling
-- You're working with large datasets
-
-Example use cases:
-- Comparing across many experimental runs
-- Working with high-resolution fMRI data
-- Analyzing large-scale similarity structures
+Vector-Based RSA is ideal for analyzing large datasets with pre-computed distance matrices. It handles memory efficiently and provides sophisticated block handling capabilities. This makes it particularly valuable when comparing across multiple experimental runs, working with high-resolution fMRI data, or analyzing large-scale similarity structures.
 
 ## Standard RSA
 
@@ -280,13 +262,12 @@ The `rMVPA` package provides three complementary RSA approaches:
 2. **Feature-Based RSA**: Direct feature mapping and reconstruction
 3. **Vector-Based RSA**: Efficient similarity comparison with block handling
 
-Choose the appropriate method based on:
-- Your research question
-- Data structure
-- Computational requirements
-- Whether you're interested in features vs. similarities
+Your choice of RSA method should align with your research goals, match your data's structure, fit within computational constraints, and reflect whether you're analyzing feature spaces or similarity patterns.
 
 For implementation details, refer to:
 - `feature_rsa_model.R`
 - `vector_rsa_model.R`
 - `rsa_model.R` 
+
+
+

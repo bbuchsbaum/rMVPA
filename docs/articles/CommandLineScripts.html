@@ -30,19 +30,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="active nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/Advanced_RSA.html">Advanced RSA Methods: Feature-Based and Vector-Based Approaches</a></li>
-    <li><a class="dropdown-item" href="../articles/CommandLineScripts.html">MVPA Searchlight Tutorial</a></li>
-    <li><a class="dropdown-item" href="../articles/CrossValidation.html">Cross-Validation Strategies in rMVPA</a></li>
-    <li><a class="dropdown-item" href="../articles/FeatureSelection.html">Feature Selection in rMVPA</a></li>
-    <li><a class="dropdown-item" href="../articles/MVPA_RegionalCmdline.html">MVPA Regional Analysis Tutorial</a></li>
-    <li><a class="dropdown-item" href="../articles/Regional_Analysis.html">Advanced Regional MVPA Analysis in rMVPA</a></li>
-    <li><a class="dropdown-item" href="../articles/RSA.html">Representational Similarity Analysis (RSA) in rMVPA</a></li>
-    <li><a class="dropdown-item" href="../articles/Searchlight_Analysis.html">Searchlight Analysis</a></li>
-  </ul>
-</li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -64,7 +52,7 @@
       <h1>MVPA Searchlight Tutorial</h1>
                         <h4 data-toc-skip class="author">Your Name</h4>
             
-            <h4 data-toc-skip class="date">2025-02-13</h4>
+            <h4 data-toc-skip class="date">2025-02-16</h4>
       
 
       <div class="d-none name"><code>CommandLineScripts.Rmd</code></div>
@@ -84,34 +72,16 @@ from a surrounding neighborhood.</p>
 <div class="section level3">
 <h3 id="key-features">Key Features:<a class="anchor" aria-label="anchor" href="#key-features"></a>
 </h3>
-<ul>
-<li>
-<strong>Flexible Input Handling</strong>: Works with volumetric
-(<strong>NIfTI</strong>) and surface-based neuroimaging data</li>
-<li>
-<strong>Parallel Processing</strong>: Supports multi-core
-computation for speed</li>
-<li>
-<strong>Customizable Models</strong>: Choose from classifiers and
-regressors (e.g., <code>rf</code>, <code>sda_notune</code>,
-<code>corsim</code>)</li>
-<li>
-<strong>Reproducible Outputs</strong>: Generates <strong>config
-files</strong> and <strong>metric maps</strong>
-</li>
-<li>
-<strong>Built-in Cross-Validation</strong>: Includes options for
-blocked and stratified validation</li>
-<li>
-<strong>Data Normalization</strong>: Optional centering and scaling
-of samples</li>
-<li>
-<strong>Feature Selection</strong>: Support for various feature
-selection methods</li>
-<li>
-<strong>Multiple Data Modes</strong>: Handles both volumetric and
-surface-based analyses</li>
-</ul>
+<p>The script handles both volumetric (NIfTI) and surface-based
+neuroimaging data. It leverages parallel processing across multiple
+cores for faster computation. You can choose from various classifiers
+and regressors like <code>rf</code>, <code>sda_notune</code>, and
+<code>corsim</code>. The analysis generates reproducible outputs
+including config files and metric maps. Cross-validation options include
+both blocked and stratified approaches. Data can be optionally
+normalized through centering and scaling. The script supports different
+feature selection methods and works seamlessly with both volumetric and
+surface-based analyses.</p>
 <hr>
 </div>
 </div>
@@ -426,18 +396,11 @@ searchlights</li>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h2>
-<ul>
-<li>
-<strong>MVPA_Searchlight.R</strong> is a flexible tool for
-searchlight-based MVPA</li>
-<li>Supports both volumetric and surface-based analyses</li>
-<li>Offers multiple cross-validation and feature selection
-strategies</li>
-<li>Provides extensive configuration options via command line or config
-files</li>
-<li>Generates comprehensive performance metrics and reproducible
-outputs</li>
-</ul>
+<p>MVPA_Searchlight.R provides a flexible searchlight-based MVPA tool
+that works with both volumetric and surface-based data. It includes
+cross-validation, feature selection, and extensive configuration through
+command line or config files. The tool generates comprehensive metrics
+and reproducible outputs to help you analyze your neuroimaging data.</p>
 <p><strong>Next Steps:</strong> - Try different models
 (<code>--model=rf</code>, <code>--model=sda_notune</code>) - Experiment
 with feature selection methods - Explore surface-based MVPA with

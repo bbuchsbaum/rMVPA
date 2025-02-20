@@ -18,13 +18,7 @@ suppressPackageStartupMessages({
 
 ## Introduction to Representational Similarity Analysis
 
-Representational Similarity Analysis (RSA) is a powerful technique for comparing neural activity patterns and computational models. RSA works by:
-
-1. Computing similarity/dissimilarity between activity patterns
-2. Comparing these neural similarity patterns with model-based similarity patterns
-3. Evaluating how well the model explains the neural representations
-
-The `rMVPA` package provides a comprehensive framework for performing RSA on neuroimaging data.
+Representational Similarity Analysis (RSA) compares neural activity patterns with computational models by measuring pattern similarities, matching them against model predictions, and quantifying how well models explain the neural data. The `rMVPA` package implements this technique for neuroimaging analysis.
 
 ## Basic Concepts
 
@@ -221,17 +215,9 @@ print(results)
 
 ## Summary
 
-RSA in `rMVPA` offers:
-- Flexible specification of model RDMs
-- Multiple methods for computing and comparing dissimilarity matrices
-- Support for run/block structure
-- Integration with searchlight analysis
-- Various statistical approaches (correlation, regression, rank-based methods)
+The rMVPA package provides a comprehensive RSA implementation with flexible model specification, multiple dissimilarity computation methods, and support for complex experimental designs with run/block structures. It integrates seamlessly with searchlight analysis and offers various statistical approaches including correlation, regression, and rank-based methods.
 
-Choose the appropriate parameters based on your:
-- Experimental design (block_var, keep_intra_run)
-- Theoretical assumptions (distmethod)
-- Statistical preferences (regtype)
+When using RSA in rMVPA, carefully consider your experimental design when setting block variables and intra-run parameters, choose distance methods that match your theoretical framework, and select statistical approaches appropriate for your analysis goals.
 
 ## References
 

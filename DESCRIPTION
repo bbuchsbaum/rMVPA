@@ -35,7 +35,8 @@ Imports:
     neurosurf,
     io,
     ffmanova,
-    sparsediscrim
+    sparsediscrim,
+    corpcor
 Collate:
     'allgeneric.R'
     'classifiers.R'

@@ -18,14 +18,7 @@ on fMRI data by iterating over each voxel (or node for surface data) and extract
 from a surrounding neighborhood.
 
 ## Key Features:
-- **Flexible Input Handling**: Works with volumetric (**NIfTI**) and surface-based neuroimaging data
-- **Parallel Processing**: Supports multi-core computation for speed
-- **Customizable Models**: Choose from classifiers and regressors (e.g., `rf`, `sda_notune`, `corsim`)
-- **Reproducible Outputs**: Generates **config files** and **metric maps**
-- **Built-in Cross-Validation**: Includes options for blocked and stratified validation
-- **Data Normalization**: Optional centering and scaling of samples
-- **Feature Selection**: Support for various feature selection methods
-- **Multiple Data Modes**: Handles both volumetric and surface-based analyses
+The script handles both volumetric (NIfTI) and surface-based neuroimaging data. It leverages parallel processing across multiple cores for faster computation. You can choose from various classifiers and regressors like `rf`, `sda_notune`, and `corsim`. The analysis generates reproducible outputs including config files and metric maps. Cross-validation options include both blocked and stratified approaches. Data can be optionally normalized through centering and scaling. The script supports different feature selection methods and works seamlessly with both volumetric and surface-based analyses.
 
 ---
 
@@ -254,11 +247,7 @@ For regression analyses, you'll see different metrics:
 
 # Summary
 
-- **MVPA_Searchlight.R** is a flexible tool for searchlight-based MVPA
-- Supports both volumetric and surface-based analyses
-- Offers multiple cross-validation and feature selection strategies
-- Provides extensive configuration options via command line or config files
-- Generates comprehensive performance metrics and reproducible outputs
+MVPA_Searchlight.R provides a flexible searchlight-based MVPA tool that works with both volumetric and surface-based data. It includes cross-validation, feature selection, and extensive configuration through command line or config files. The tool generates comprehensive metrics and reproducible outputs to help you analyze your neuroimaging data.
 
 **Next Steps:**
 - Try different models (`--model=rf`, `--model=sda_notune`)

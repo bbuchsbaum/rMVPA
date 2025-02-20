@@ -248,42 +248,43 @@ extract_roi <- function(sample, data) {
 #'
 #' @param mod_spec An MVPA model specification object containing the dataset to analyze,
 #'        compute_performance (logical indicating whether to compute performance metrics),
-#'        and return_predictions (logical indicating whether to return predictions)
-#' @param vox_list A list of voxel indices or coordinates defining each ROI to analyze
-#' @param ids Vector of identifiers for each ROI analysis. Defaults to 1:length(vox_list)
+#'        and return_predictions (logical indicating whether to return predictions).
+#' @param vox_list A list of voxel indices or coordinates defining each ROI to analyze.
+#' @param ids Vector of identifiers for each ROI analysis. Defaults to 1:length(vox_list).
 #' @param batch_size Integer specifying number of ROIs to process per batch.
-#'        Defaults to 10% of total ROIs
-#' @param verbose Logical indicating whether to print progress messages. Defaults to TRUE
+#'        Defaults to 10\% of total ROIs.
+#' @param verbose Logical indicating whether to print progress messages. Defaults to TRUE.
 #' @param processor Optional custom processing function. If NULL, uses default processor.
 #'        Must accept parameters (obj, roi, rnum) and return a tibble.
 #'
 #' @details
 #' The function processes ROIs in batches to manage memory usage. For each batch:
-#' 1. Extracts ROI data from the dataset
-#' 2. Filters out ROIs with fewer than 2 voxels
-#' 3. Processes each ROI using either the default or custom processor
-#' 4. Combines results across all batches
+#' \enumerate{
+#'   \item Extracts ROI data from the dataset.
+#'   \item Filters out ROIs with fewer than 2 voxels.
+#'   \item Processes each ROI using either the default or custom processor.
+#'   \item Combines results across all batches.
+#' }
 #'
 #' @return A tibble containing results for each ROI with columns:
-#' \itemize{
-#'   \item{result}{List column of analysis results (NULL if return_predictions=FALSE)}
-#'   \item{indices}{List column of ROI indices used}
-#'   \item{performance}{List column of performance metrics (if computed)}
-#'   \item{id}{ROI identifier}
-#'   \item{error}{Logical indicating if an error occurred}
-#'   \item{error_message}{Error message if applicable}
-#'   \item{warning}{Logical indicating if warning occurred}
-#'   \item{warning_message}{Warning message if applicable}
+#' \describe{
+#'   \item{result}{List column of analysis results (NULL if return_predictions=FALSE).}
+#'   \item{indices}{List column of ROI indices used.}
+#'   \item{performance}{List column of performance metrics (if computed).}
+#'   \item{id}{ROI identifier.}
+#'   \item{error}{Logical indicating if an error occurred.}
+#'   \item{error_message}{Error message if applicable.}
+#'   \item{warning}{Logical indicating if a warning occurred.}
+#'   \item{warning_message}{Warning message if applicable.}
 #' }
 #'
 #' @importFrom furrr future_pmap
 #' @importFrom purrr map
 #' @export
-mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list), 
-                         batch_size=as.integer(.1*length(ids)),
-                         verbose=TRUE,
-                         processor=NULL) {
-  
+mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list), 
+                         batch_size = as.integer(.1 * length(ids)),
+                         verbose = TRUE,
+                         processor = NULL) {
   setup_mvpa_logger()
   
   if (length(vox_list) == 0) {
@@ -291,32 +292,28 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
     return(tibble::tibble())
   }
   
-  
-  
-  # Add debugging
   futile.logger::flog.debug("Starting mvpa_iterate with %d voxels", length(vox_list))
   
   tryCatch({
     assert_that(length(ids) == length(vox_list), 
-                msg=paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
+                msg = paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
     
     batch_size <- max(1, batch_size)
-    nbatches <- ceiling(length(ids)/batch_size)
-    batch_group <- sort(rep(1:nbatches, length.out=length(ids)))
+    nbatches <- ceiling(length(ids) / batch_size)
+    batch_group <- sort(rep(1:nbatches, length.out = length(ids)))
     batch_ids <- split(1:length(ids), batch_group)
     rnums <- split(ids, batch_group)
     
     dset <- mod_spec$dataset
     tot <- length(ids)
     
-    # Process batches and collect results
     results <- vector("list", length(batch_ids))
     skipped_rois <- 0
     processed_rois <- 0
     
-    for(i in seq_along(batch_ids)) {
+    for (i in seq_along(batch_ids)) {
       tryCatch({
-        if(verbose) {
+        if (verbose) {
           futile.logger::flog.info("⚡ Processing batch %s/%s", 
                                   crayon::blue(i), 
                                   crayon::blue(nbatches))
@@ -325,20 +322,13 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
         vlist <- vox_list[batch_ids[[i]]]
         size <- sapply(vlist, function(v) length(v))
         
-        # Add debugging
         futile.logger::flog.debug("Processing batch %d with %d voxels", i, length(vlist))
-        #browser()
+        
         sf <- get_samples(mod_spec$dataset, vox_list[batch_ids[[i]]]) %>% 
           mutate(.id=batch_ids[[i]], rnum=rnums[[i]], size=size) %>% 
           filter(size>=2)
         
-        # Add debugging
         futile.logger::flog.debug("Sample frame has %d rows after filtering", nrow(sf))
-        
-        ## gpt01 suggestion::
-        #sf <- sf %>%
-        #  mutate(roi = map(sample, ~ extract_roi(.x, dset))) %>%
-        #  select(-sample)
         
         if (nrow(sf) > 0) {
           sf <- sf %>% 
@@ -349,7 +339,6 @@ mvpa_iterate <- function(mod_spec, vox_list, ids=1:length(vox_list),
           results[[i]] <- run_future(mod_spec, sf, processor, verbose)
           processed_rois <- processed_rois + nrow(sf)
           
-          # Add debugging
           futile.logger::flog.debug("Batch %d produced %d results", i, nrow(results[[i]]))
         } else {
           skipped_rois <- skipped_rois + length(batch_ids[[i]])

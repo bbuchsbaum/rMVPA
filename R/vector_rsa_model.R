@@ -21,10 +21,10 @@ vector_rsa_design <- function(D, labels, block_var) {
   )
   
   # Fail fast if the number of rows in D is not equal to length(labels)
-  assertthat::assert_that(
-    nrow(D) == length(labels),
-    msg = "The number of rows in D must match the number of labels."
-  )
+  #assertthat::assert_that(
+  #  nrow(D) == length(labels),
+  #  msg = "The number of rows in D must match the number of labels."
+  #)
   
   # Ensure length consistency
   assertthat::assert_that(
@@ -130,6 +130,7 @@ train_model.vector_rsa_model <- function(obj, train_dat, y, indices, ...) {
 #' @keywords internal
 #' @noRd
 compute_trial_scores <- function(obj, X) {
+ 
   # Retrieve relevant design expansions
   precomputed <- obj$design$model_mat
   dissimilarity_matrix <- precomputed$Dexpanded

@@ -16,14 +16,13 @@ This tutorial explains how to run **regional multivariate pattern analysis (MVPA
 The script performs MVPA on specified brain regions, enabling both classification and regression analyses on fMRI data. 
 Regional analysis can be conducted on volumetric (NIfTI) or surface-based neuroimaging data, and allows for separate training and testing subsets.
 
-## Key Features:
-- **Flexible Input Handling**: Works with both volumetric (NIfTI) and surface-based data
-- **Subset Analysis**: Supports separate training and testing subsets for region-specific evaluation
-- **Configurable via Files**: Parameters can be set using YAML or R configuration files
-- **Detailed Outputs**: Generates performance maps, prediction tables, and configuration files
-- **Robust Cross-Validation**: Includes options for blocked, k-fold, and two-fold cross-validation
-- **Model Versatility**: Compatible with built-in MVPA models and models available in the caret package
-- **Data Normalization & Feature Selection**: Optional centering/scaling and customizable feature selection methods
+## Key Features
+
+The script handles both volumetric NIfTI and surface-based data formats. You can evaluate specific regions by using separate training and testing subsets. All parameters are configurable through YAML or R files.
+
+The analysis produces comprehensive outputs including performance maps, prediction tables, and configuration records. Cross-validation options include blocked, k-fold, and two-fold approaches. 
+
+The script works with built-in MVPA models and integrates with the caret package for additional model options. Data preprocessing includes optional centering/scaling and flexible feature selection methods.
 
 ---
 
@@ -226,11 +225,7 @@ For regression analyses, different metrics (e.g., `r2.nii`, `rmse.nii`, `spearco
 
 # Summary
 
-- **MVPA_Regional.R** is a versatile tool for regional MVPA analysis.
-- Supports both volumetric and surface-based data.
-- Flexible configuration via command line or config files.
-- Outputs detailed performance maps and prediction tables.
-- Robust cross-validation and optional feature selection enhance analysis.
+MVPA_Regional.R provides comprehensive regional MVPA analysis capabilities. It handles both volumetric and surface-based data formats with flexible configuration through command line or config files. The tool generates detailed performance maps and prediction tables, while incorporating robust cross-validation and feature selection to ensure reliable results.
 
 **Next Steps:**
 - Experiment with various models (`--model=rf`, `--model=sda_notune`).

@@ -35,12 +35,7 @@ This vignette covers:
 
 ## Why Cross-Validation Matters in MVPA
 
-In neuroimaging analyses, cross-validation serves multiple purposes:
-
-1. **Performance Estimation**: Provides unbiased estimates of model performance
-2. **Generalizability**: Tests how well patterns generalize to new data
-3. **Overfitting Prevention**: Helps detect and prevent overfitting to noise
-4. **Temporal Independence**: Ensures temporal independence between training and test sets
+Cross-validation is essential in neuroimaging analyses. It gives us unbiased estimates of how well our models perform and shows whether brain activity patterns truly generalize to new data. By separating training and test sets, cross-validation prevents us from overfitting to noise in the data. It also maintains temporal independence between sets, which is crucial for time-series neuroimaging data.
 
 ## Available Cross-Validation Schemes
 
@@ -225,12 +220,7 @@ When choosing a cross-validation strategy, consider:
 
 # Summary
 
-The `rMVPA` package provides a comprehensive suite of cross-validation strategies for neuroimaging data. Key points:
-
-- Choose the appropriate CV strategy based on your data structure
-- Consider temporal dependencies in fMRI data
-- Use bootstrap methods for more stable estimates when needed
-- Implement custom schemes for specialized needs
+Choose the right cross-validation strategy for your neuroimaging data. Match the CV approach to your data structure, account for temporal dependencies in fMRI, and use bootstrap methods when you need more stable estimates. The rMVPA package supports all these approaches, including custom schemes for specialized needs.
 
 For implementation details, refer to the source code in `crossval.R`.
 

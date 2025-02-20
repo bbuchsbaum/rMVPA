@@ -13,16 +13,9 @@ vignette: >
 
 # Introduction
 
-Regional multivariate pattern analysis (MVPA) allows you to evaluate prediction performance within predefined brain regions. In this vignette, we demonstrate a complete workflow for performing regional MVPA analysis using the `rMVPA` package. We will:
+Regional MVPA evaluates prediction performance within predefined brain regions. This vignette walks through the complete workflow using rMVPA:
 
-- Generate a synthetic neuroimaging dataset.
-- Define regions of interest (ROIs) using a region mask.
-- Construct appropriate MVPA dataset and design objects.
-- Build an MVPA model with cross-validation.
-- Run the regional analysis over the ROIs.
-- Examine performance metrics and prediction outputs.
-
-This approach, detailed in the source files (`regional.R`, `mvpa_model.R`, and `dataset.R`), ensures robust implementation of regional analysis within rMVPA.
+We'll generate synthetic data, define ROIs with a region mask, build the MVPA model with cross-validation, run the analysis, and examine the results. The implementation follows the approach in `regional.R`, `mvpa_model.R`, and `dataset.R`.
 
 # Data Generation and Preparation
 
@@ -131,13 +124,7 @@ This modular design, laid out in `mvpa_model.R` and `dataset.R`, ensures that:
 
 # Summary 
 
-In this vignette, we have demonstrated:
-
-- **Data Generation**: Creating a synthetic neuroimaging dataset using `gen_sample_dataset()`.
-- **ROI Definition**: Building a region mask for defining brain areas.
-- **Model Setup**: Constructing an MVPA model with proper design and cross-validation.
-- **Regional Analysis**: Running the model across each ROI and aggregating results.
-- **Results Interpretation**: Examining performance and prediction metrics.
+This vignette showed you how to generate synthetic neuroimaging data, define ROIs with region masks, set up MVPA models with cross-validation, run analyses across ROIs, and interpret the performance metrics. You now have the tools to conduct regional MVPA analyses on your own neuroimaging data.
 
 For further details, please refer to the source files:
 
