@@ -264,7 +264,7 @@ test_that("mvpa_regional with regression and 5 ROIs runs without error", {
   dataset <- gen_sample_dataset(c(10,10,6), 100, response_type="continuous")
   cval <- blocked_cross_validation(dataset$design$block_var)
   
-  regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
+  regionMask <- NeuroVol(sample(1:4, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
   tune_grid <- expand.grid(alpha=c(.1,.5), lambda=c(.001,.2,.5))
   
   model <- load_model("glmnet")

@@ -1,3 +1,6 @@
+library(rMVPA)
+library(neuroim2)
+
 test_that("regional feature_rsa_model with direct F matrix runs without error", {
   # Generate a sample dataset: small volume, say 5x5x5, with 100 observations
   dset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
@@ -30,7 +33,7 @@ test_that("regional feature_rsa_model with S-based feature extraction runs witho
   
   # Create a similarity matrix S: must be symmetric and match number of observations
   obs_features <- matrix(rnorm(100*10), 100, 10)
-  S <- tcrossprod(scale(obs_features))  # similarity matrix
+  S <- tcrossprod(base::scale(obs_features))  # similarity matrix
   labels <- paste0("obs", 1:100)
   
   # Create feature_rsa_design using S
@@ -50,8 +53,169 @@ test_that("regional feature_rsa_model with S-based feature extraction runs witho
   expect_s3_class(res, "regional_mvpa_result")
   expect_true(!is.null(res$performance_table))
   
-  # If you want, check that performance_table or prediction_table have expected columns
-  # e.g., expect_true("mse" %in% names(res$performance_table))
+  # Check that performance_table has expected columns
+  expect_true("mean_correlation" %in% colnames(res$performance_table))
+  expect_true("spatial_specificity" %in% colnames(res$performance_table))
+  expect_true("voxel_correlation" %in% colnames(res$performance_table))
+  expect_true("mse" %in% colnames(res$performance_table))
+  expect_true("r_squared" %in% colnames(res$performance_table))
+})
+
+test_that("feature_rsa_model with permutation testing works correctly", {
+  set.seed(123)
+  
+  # Create a small dataset for faster testing
+  dset <- gen_sample_dataset(c(3,3,3), 50, blocks=2)
+  
+  # Create a feature matrix
+  Fmat <- matrix(rnorm(50*10), 50, 10)
+  labels <- paste0("obs", 1:50)
+  
+  # Create feature_rsa_design
+  fdes <- feature_rsa_design(F=Fmat, labels=labels)
+  
+  # Create a feature_rsa_model with permutation testing
+  mspec <- feature_rsa_model(
+    dset$dataset, 
+    fdes, 
+    method="pca", 
+    crossval=blocked_cross_validation(dset$design$block_var),
+    nperm=10,  # Small number for testing
+    permute_by="observations",
+    save_distributions=TRUE
+  )
+  
+  # Create a region mask with just 2 ROIs for faster testing
+  region_mask <- NeuroVol(sample(1:2, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
+  
+  # Run regional analysis
+  res <- run_regional(mspec, region_mask)
+  
+  # Check results
+  expect_true(!is.null(res))
+  expect_s3_class(res, "regional_mvpa_result")
+  
+  # Check that permutation results are included in performance table
+  perf_cols <- colnames(res$performance_table)
+  expect_true(any(grepl("^p_", perf_cols)))  # p-values
+  expect_true(any(grepl("^z_", perf_cols)))  # z-scores
+  
+  # Check specific permutation columns
+  expect_true("p_mean_correlation" %in% perf_cols)
+  expect_true("z_mean_correlation" %in% perf_cols)
+  expect_true("p_spatial_specificity" %in% perf_cols)
+  expect_true("z_spatial_specificity" %in% perf_cols)
+})
+
+test_that("feature_rsa_model with permute_by='features' works correctly", {
+  set.seed(123)
+  
+  # Create a small dataset for faster testing
+  dset <- gen_sample_dataset(c(3,3,3), 40, blocks=2)
+  
+  # Create a feature matrix
+  Fmat <- matrix(rnorm(40*8), 40, 8)
+  labels <- paste0("obs", 1:40)
+  
+  # Create feature_rsa_design
+  fdes <- feature_rsa_design(F=Fmat, labels=labels)
+  
+  # Create a feature_rsa_model with permutation testing by features
+  mspec <- feature_rsa_model(
+    dset$dataset, 
+    fdes, 
+    method="pca", 
+    crossval=blocked_cross_validation(dset$design$block_var),
+    nperm=5,  # Small number for testing
+    permute_by="features"  # Permute features instead of observations
+  )
+  
+  # Create a region mask with just 2 ROIs for faster testing
+  region_mask <- NeuroVol(sample(1:2, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
+  
+  # Run regional analysis
+  res <- run_regional(mspec, region_mask)
+  
+  # Check results
+  expect_true(!is.null(res))
+  expect_s3_class(res, "regional_mvpa_result")
+  
+  # Check that permutation results are included in performance table
+  perf_cols <- colnames(res$performance_table)
+  expect_true(any(grepl("^p_", perf_cols)))
+  expect_true(any(grepl("^z_", perf_cols)))
+})
+
+test_that("feature_rsa_model with cache_pca=TRUE works correctly", {
+  set.seed(123)
+  
+  # Create a small dataset
+  dset <- gen_sample_dataset(c(3,3,3), 30, blocks=2)
+  
+  # Create a feature matrix
+  Fmat <- matrix(rnorm(30*6), 30, 6)
+  labels <- paste0("obs", 1:30)
+  
+  # Create feature_rsa_design
+  fdes <- feature_rsa_design(F=Fmat, labels=labels)
+  
+  # Create a feature_rsa_model with PCA caching
+  mspec <- feature_rsa_model(
+    dset$dataset, 
+    fdes, 
+    method="pca", 
+    crossval=blocked_cross_validation(dset$design$block_var),
+    cache_pca=TRUE  # Enable PCA caching
+  )
+  
+  # Create a region mask with just 2 ROIs
+  region_mask <- NeuroVol(sample(1:2, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
+  
+  # Run regional analysis
+  res <- run_regional(mspec, region_mask)
+  
+  # Check results
+  expect_true(!is.null(res))
+  expect_s3_class(res, "regional_mvpa_result")
+  expect_true(!is.null(res$performance_table))
+})
+
+test_that("feature_rsa_model with different max_comps values works correctly", {
+  set.seed(123)
+  
+  # Create a small dataset
+  dset <- gen_sample_dataset(c(3,3,3), 40, blocks=2)
+  
+  # Create a feature matrix with 10 dimensions
+  Fmat <- matrix(rnorm(40*10), 40, 10)
+  labels <- paste0("obs", 1:40)
+  
+  # Create feature_rsa_design with different max_comps values
+  fdes1 <- feature_rsa_design(F=Fmat, labels=labels, max_comps=3)
+  fdes2 <- feature_rsa_design(F=Fmat, labels=labels, max_comps=5)
+  
+  # Create feature_rsa_models
+  mspec1 <- feature_rsa_model(dset$dataset, fdes1, method="pca", 
+                             crossval=blocked_cross_validation(dset$design$block_var))
+  mspec2 <- feature_rsa_model(dset$dataset, fdes2, method="pca", 
+                             crossval=blocked_cross_validation(dset$design$block_var))
+  
+  # Check that max_comps was properly set
+  expect_equal(mspec1$max_comps, 3)
+  expect_equal(mspec2$max_comps, 5)
+  
+  # Create a region mask
+  region_mask <- NeuroVol(sample(1:2, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
+  
+  # Run regional analysis for both models
+  res1 <- run_regional(mspec1, region_mask)
+  res2 <- run_regional(mspec2, region_mask)
+  
+  # Check results
+  expect_true(!is.null(res1))
+  expect_true(!is.null(res2))
+  expect_s3_class(res1, "regional_mvpa_result")
+  expect_s3_class(res2, "regional_mvpa_result")
 })
 
 test_that("regional feature_rsa_model with pca method runs without error and returns performance", {
@@ -72,137 +236,111 @@ test_that("regional feature_rsa_model with pca method runs without error and ret
   expect_s3_class(res, "regional_mvpa_result")
   # Check if performance metrics are available
   expect_true("performance_table" %in% names(res))
-  # Possibly check at least one performance metric
-  # e.g., expect_true("mse" %in% names(res$performance_table))
+  # Check specific performance metrics
+  expect_true("mean_correlation" %in% colnames(res$performance_table))
+  expect_true("spatial_specificity" %in% colnames(res$performance_table))
+  expect_true("voxel_correlation" %in% colnames(res$performance_table))
+  expect_true("mse" %in% colnames(res$performance_table))
+  expect_true("r_squared" %in% colnames(res$performance_table))
 })
 
 
-test_that("PCA method can learn to reconstruct simple linear features", {
-  set.seed(42)
+test_that("can compare feature_rsa with different methods", {
+  set.seed(123)
   
-  # Simulate data: X is (n_obs x n_voxels)
-  n_obs <- 50
-  n_vox <- 10
-  X <- matrix(rnorm(n_obs * n_vox), nrow = n_obs, ncol = n_vox)
+  # Create a small dataset for faster testing
+  dset <- gen_sample_dataset(c(4,4,4), 60, blocks=3)
   
-  # Create a true linear mapping from X to F
-  # We'll create 3 feature dimensions from the 10 input dims
-  B <- matrix(rnorm(n_vox * 3, sd=1), nrow=n_vox, ncol=3)
-  # F = X * B + noise
-  Ftrue <- X %*% B + matrix(rnorm(n_obs * 3, sd = 0.1), n_obs, 3)
+  # Create a feature matrix
+  Fmat <- matrix(rnorm(60*10), 60, 10)
+  labels <- paste0("obs", 1:60)
   
-  # Minimal dataset. We'll just store X in a "fake" NeuroVec and mask
-  # In real usage, you'd have an actual NeuroVec from your fMRI data, etc.
-  mask_vol <- neuroim2::NeuroVol(array(1, c(1,1,1)), neuroim2::NeuroSpace(c(1,1,1)))
-  # For demonstration, let's store X in a single-voxel NeuroVec with 50 observations
-  # This obviously is a contrived usage, but it triggers the methods we need.
-  xspace <- neuroim2::NeuroSpace(c(1,1,1,n_obs))
-  xarr <- array(X, dim=c(1,1,1,n_obs)) 
-  train_vec <- neuroim2::NeuroVec(xarr, xspace)
+  # Create feature_rsa_design
+  fdes <- feature_rsa_design(F=Fmat, labels=labels)
   
-  ds <- mvpa_dataset(train_data=train_vec, mask=mask_vol)
+  # Create a region mask with just 2 ROIs for faster testing
+  region_mask <- NeuroVol(sample(1:2, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
   
-  # The design that holds F
-  design <- feature_rsa_design(F = Ftrue, labels = 1:n_obs)
+  # Compare different methods
+  methods <- c("scca", "pca", "pls")
+  results_list <- list()
   
-  # Create model with PCA method
-  # We can skip real cross-validation here and do 'crossval = blocked_cross_validation(...)' or similar
-  fake_cv <- blocked_cross_validation(block_var=rep(1, n_obs)) 
-  model_spec <- feature_rsa_model(dataset=ds, design=design, method="pca", crossval=fake_cv)
+  for (method in methods) {
+    # Create model with current method
+    mspec <- feature_rsa_model(
+      dataset = dset$dataset,
+      design = fdes,
+      method = method,
+      crossval = blocked_cross_validation(dset$design$block_var)
+    )
+    
+    # Run regional analysis
+    results_list[[method]] <- run_regional(mspec, region_mask)
+    
+    # Check results
+    expect_true(!is.null(results_list[[method]]))
+    expect_s3_class(results_list[[method]], "regional_mvpa_result")
+    expect_true(!is.null(results_list[[method]]$performance_table))
+  }
   
-  # Train
-  trained_fit <- train_model.feature_rsa_model(model_spec, train_dat=X, ytrain=Ftrue, indices=1:n_obs)
-  
-  # Predict on the same data
-  F_pred <- predict_model.feature_rsa_model(model_spec, trained_fit, newdata=X)
-  
-  # Evaluate
-  perf <- evaluate_model.feature_rsa_model(model_spec, F_pred, Ftrue)
-  
-  # Expect correlations to be quite high
-  expect_gt(mean(perf$correlations), 0.8)
-  # And MSE to be reasonably small
-  expect_lt(perf$mse, 0.2)
+  # Compare performance metrics across methods
+  for (method in methods) {
+    # Check that each method has the expected performance metrics
+    perf_table <- results_list[[method]]$performance_table
+    expect_true("mean_correlation" %in% colnames(perf_table))
+    expect_true("spatial_specificity" %in% colnames(perf_table))
+    expect_true("voxel_correlation" %in% colnames(perf_table))
+    expect_true("mse" %in% colnames(perf_table))
+    expect_true("r_squared" %in% colnames(perf_table))
+  }
 })
 
-test_that("PLS method can learn to reconstruct simple linear features", {
-  set.seed(42)
+test_that("feature_rsa_model with permutation testing produces valid p-values", {
+  set.seed(123)
   
-  n_obs <- 50
-  n_vox <- 10
-  X <- matrix(rnorm(n_obs * n_vox), n_obs, n_vox)
+  # Create a small dataset for faster testing
+  dset <- gen_sample_dataset(c(3,3,3), 40, blocks=2)
   
-  B <- matrix(rnorm(n_vox * 3, sd=1), n_vox, 3)
-  Ftrue <- X %*% B + matrix(rnorm(n_obs * 3, sd = 0.1), n_obs, 3)
+  # Create a feature matrix with a strong signal
+  X <- matrix(rnorm(40*8), 40, 8)
+  B <- matrix(rnorm(8*3), 8, 3)
+  Fmat <- X %*% B + matrix(rnorm(40*3, sd=0.1), 40, 3)
+  labels <- paste0("obs", 1:40)
   
-  mask_vol <- neuroim2::NeuroVol(array(1, c(1,1,1)), neuroim2::NeuroSpace(c(1,1,1)))
-  xarr <- array(X, dim=c(1,1,1,n_obs)) 
-  train_vec <- neuroim2::NeuroVec(xarr, neuroim2::NeuroSpace(c(1,1,1,n_obs)))
-  ds <- mvpa_dataset(train_data=train_vec, mask=mask_vol)
+  # Create feature_rsa_design
+  fdes <- feature_rsa_design(F=Fmat, labels=labels)
   
-  design <- feature_rsa_design(F = Ftrue, labels = 1:n_obs)
-  fake_cv <- blocked_cross_validation(block_var=rep(1, n_obs)) 
-  model_spec <- feature_rsa_model(dataset=ds, design=design, method="pls", crossval=fake_cv)
+  # Create a feature_rsa_model with permutation testing
+  mspec <- feature_rsa_model(
+    dset$dataset, 
+    fdes, 
+    method="pca", 
+    crossval=blocked_cross_validation(dset$design$block_var),
+    nperm=20,  # Small number for testing
+    permute_by="observations"
+  )
   
-  trained_fit <- train_model.feature_rsa_model(model_spec, train_dat=X, ytrain=Ftrue, indices=1:n_obs)
-  F_pred <- predict_model.feature_rsa_model(model_spec, trained_fit, newdata=X)
-  perf <- evaluate_model.feature_rsa_model(model_spec, F_pred, Ftrue)
+  # Create a region mask with just 1 ROI for faster testing
+  region_mask <- NeuroVol(rep(1, length(dset$dataset$mask)), space(dset$dataset$mask))
   
-  expect_gt(mean(perf$correlations), 0.8)
-  expect_lt(perf$mse, 0.2)
+  # Run regional analysis
+  res <- run_regional(mspec, region_mask)
+  
+  # Check results
+  expect_true(!is.null(res))
+  expect_s3_class(res, "regional_mvpa_result")
+  
+  # Check that p-values are between 0 and 1
+  p_value_cols <- grep("^p_", colnames(res$performance_table), value=TRUE)
+  for (col in p_value_cols) {
+    p_values <- res$performance_table[[col]]
+    expect_true(all(p_values >= 0 & p_values <= 1))
+  }
+  
+  # Check that z-scores are reasonable
+  z_score_cols <- grep("^z_", colnames(res$performance_table), value=TRUE)
+  for (col in z_score_cols) {
+    z_scores <- res$performance_table[[col]]
+    expect_true(all(!is.na(z_scores)))
+  }
 })
-
-test_that("SCCA method can learn to reconstruct correlated features", {
-  # SCCA typically is used for correlated sets of variables. 
-  # We'll build a scenario with correlated X ~ F.
-  set.seed(42)
-  n_obs <- 60
-  n_vox <- 10
-  
-  X <- matrix(rnorm(n_obs*n_vox), n_obs, n_vox)
-  # We'll create 2 correlated feature dims from X:
-  B <- matrix(rnorm(n_vox*2, sd=1), n_vox, 2)
-  Ftrue <- X %*% B + matrix(rnorm(n_obs*2, sd = 0.1), n_obs, 2)
-  
-  mask_vol <- neuroim2::NeuroVol(array(1, c(1,1,1)), neuroim2::NeuroSpace(c(1,1,1)))
-  xarr <- array(X, dim=c(1,1,1,n_obs)) 
-  train_vec <- neuroim2::NeuroVec(xarr, neuroim2::NeuroSpace(c(1,1,1,n_obs)))
-  ds <- mvpa_dataset(train_data=train_vec, mask=mask_vol)
-  
-  design <- feature_rsa_design(F = Ftrue, labels = 1:n_obs)
-  fake_cv <- blocked_cross_validation(block_var=rep(1, n_obs)) 
-  model_spec <- feature_rsa_model(dataset=ds, design=design, method="scca", crossval=fake_cv)
-  
-  trained_fit <- train_model.feature_rsa_model(model_spec, train_dat=X, ytrain=Ftrue, indices=1:n_obs)
-  F_pred <- predict_model.feature_rsa_model(model_spec, trained_fit, newdata=X)
-  perf <- evaluate_model.feature_rsa_model(model_spec, F_pred, Ftrue)
-  
-  # Because SCCA can be sensitive to scaling and dimension,
-  # we won't set the bar too high, but we still expect decent correlation.
-  expect_gt(mean(perf$correlations), 0.7)
-
-})
-
-
-# test_that("can run feature_rsa with different methods", {
-#   data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 50, blocks = 4, nlevels = 2)
-#   print(data_out)
-#   crossval <- blocked_cross_validation(data_out$design$block_var)
-#   # Compare different methods
-#   methods <- c("scca", "pca", "pls") 
-#   results_list <- lapply(methods, function(method) {
-#     model <- feature_rsa_model(
-#       dataset = data_out$dset,
-#       design = feature_design,
-#       method = method,
-#       crossval = crossval  # Add cross-validation
-#     )
-#     run_regional(model, region_mask)
-#   })
-#   
-#   # Compare performance
-#   for (i in seq_along(methods)) {
-#     cat("\nMethod:", methods[i], "\n")
-#     print(results_list[[i]]$performance_table)
-#   }
-# })

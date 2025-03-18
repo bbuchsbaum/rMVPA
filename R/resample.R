@@ -144,10 +144,11 @@ filter_roi.ROISurfaceVector <- function(roi, ...) {
 #' @importFrom neuroim2 series_roi
 as_roi.data_sample <- function(x, data, ...) {
   
-  train_roi <- try(series_roi(data$train_data, x$vox))
+  train_roi <- try(series_roi(data$train_data, x$vox), silent=TRUE)
   
   test_roi <- if (has_test_set(data)) {
-    series_roi(data$test_data, x$vox)
+    # Also use try with silent=TRUE for test data
+    try(series_roi(data$test_data, x$vox), silent=TRUE)
   }
   
   #cds <- if (is.vector(x$vox)) {

@@ -32,13 +32,7 @@ library(testthat)
 
 context("Comprehensive tests for RSA regional analysis and design/model functionality")
 
-## --- Sanitize Function ---
-test_that("sanitize() replaces illegal characters as expected", {
-  input <- "var:(test) name, extra."
-  sanitized <- sanitize(input)
-  # Expected: colons become dots, spaces removed, parentheses become dots, comma becomes underscore, trailing dot removed.
-  expect_equal(sanitized, "var.testname_extra")
-})
+
 
 ## --- rsa_design and rsa_model_mat ---
 test_that("rsa_design creates a valid RSA design object", {

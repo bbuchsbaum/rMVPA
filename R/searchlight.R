@@ -79,45 +79,81 @@ print.searchlight_result <- function(x, ...) {
 #' @param bad_results A data frame containing the unsuccessful classifier results
 #' @return A list containing the combined performance matrix and other information
 combine_standard <- function(model_spec, good_results, bad_results) {
-  result <- NULL
-  
-  ind <- unlist(good_results$id)
-  perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
-  
-  has_results <- any(unlist(purrr::map(good_results$result, function(x) !is.null(x))))
-  ret <- wrap_out(perf_mat, model_spec$dataset, ind)
-  
-  if (has_results) {
-    pobserved <- good_results %>% 
-      dplyr::select(result) %>% 
-      pull(result) %>% 
-      purrr::map(~ prob_observed(.)) %>% 
-      bind_cols()
+  # Add improved error handling with diagnostics
+  if (nrow(good_results) == 0) {
+    futile.logger::flog.error("No successful results to combine. Examining errors from bad results:")
     
-    # Create appropriate type of output based on dataset type
-    if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
-      # For surface data
-      pobserved <- neurosurf::NeuroSurfaceVector(
-        geometry = geometry(model_spec$dataset$train_data),
-        indices = seq_len(nrow(pobserved)),  # Or appropriate indices
-        mat = as.matrix(pobserved)
-      )
+    # Analyze bad results to provide better diagnostics
+    if (nrow(bad_results) > 0) {
+      # Group error messages and count occurrences
+      error_summary <- table(bad_results$error_message)
+      futile.logger::flog.error("Error summary from %d failed ROIs:", nrow(bad_results))
+      
+      for (i in seq_along(error_summary)) {
+        error_msg <- names(error_summary)[i]
+        count <- error_summary[i]
+        futile.logger::flog.error("  - %s: %d occurrences", error_msg, count)
+      }
+      
+      # Show a sample of the first few errors
+      sample_size <- min(5, nrow(bad_results))
+      futile.logger::flog.error("Sample of first %d errors:", sample_size)
+      for (i in 1:sample_size) {
+        futile.logger::flog.error("  ROI %s: %s", 
+                                 bad_results$id[i], 
+                                 bad_results$error_message[i])
+      }
     } else {
-      # For volume data
-      pobserved <- SparseNeuroVec(
-        as.matrix(pobserved), 
-        space(model_spec$dataset$mask), 
-        mask=as.logical(model_spec$dataset$mask)
-      )
+      futile.logger::flog.error("No error information available.")
     }
     
-    ret$pobserved <- pobserved
+    stop("No valid results for standard searchlight: all ROIs failed to process")
   }
-
-  ret
+  
+  result <- NULL
+  
+  # Proceed with combining results
+  tryCatch({
+    ind <- unlist(good_results$id)
+    perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
+    
+    has_results <- any(unlist(purrr::map(good_results$result, function(x) !is.null(x))))
+    ret <- wrap_out(perf_mat, model_spec$dataset, ind)
+    
+    if (has_results) {
+      pobserved <- good_results %>% 
+        dplyr::select(result) %>% 
+        pull(result) %>% 
+        purrr::map(~ prob_observed(.)) %>% 
+        bind_cols()
+      
+      # Create appropriate type of output based on dataset type
+      if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
+        # For surface data
+        pobserved <- neurosurf::NeuroSurfaceVector(
+          geometry = geometry(model_spec$dataset$train_data),
+          indices = seq_len(nrow(pobserved)),  # Or appropriate indices
+          mat = as.matrix(pobserved)
+        )
+      } else {
+        # For volume data
+        pobserved <- SparseNeuroVec(
+          as.matrix(pobserved), 
+          space(model_spec$dataset$mask), 
+          mask=as.logical(model_spec$dataset$mask)
+        )
+      }
+      
+      ret$pobserved <- pobserved
+    }
+    
+    return(ret)
+  }, error = function(e) {
+    futile.logger::flog.error("Error combining results: %s", e$message)
+    futile.logger::flog.debug("Error details: %s", e$call)
+    stop(paste("Failed to combine searchlight results:", e$message))
+  })
 }
-
-
 
 #' Combine RSA standard classifier results
 #'
@@ -130,10 +166,70 @@ combine_standard <- function(model_spec, good_results, bad_results) {
 #' @param bad_results A data frame containing the unsuccessful classifier results.
 #' @return A list containing the combined performance matrix along with other information from the dataset.
 combine_rsa_standard <- function(model_spec, good_results, bad_results) {
+  # Enhanced error handling with detailed diagnostics
+  if (nrow(good_results) == 0) {
+    futile.logger::flog.error("No successful results for RSA searchlight. Examining errors from bad results:")
+    
+    # Analyze bad results to provide better diagnostics
+    if (nrow(bad_results) > 0) {
+      # Group error messages and count occurrences
+      error_summary <- table(bad_results$error_message)
+      futile.logger::flog.error("Error summary from %d failed ROIs:", nrow(bad_results))
+      
+      for (i in seq_along(error_summary)) {
+        error_msg <- names(error_summary)[i]
+        count <- error_summary[i]
+        futile.logger::flog.error("  - %s: %d occurrences", error_msg, count)
+      }
+      
+      # Show a sample of the first few errors
+      sample_size <- min(5, nrow(bad_results))
+      futile.logger::flog.error("Sample of first %d errors:", sample_size)
+      for (i in 1:sample_size) {
+        futile.logger::flog.error("  ROI %s: %s", 
+                                 bad_results$id[i], 
+                                 bad_results$error_message[i])
+      }
+      
+      # Check if there are any common issues
+      if (any(grepl("unable to find an inherited method for function 'values'", bad_results$error_message))) {
+        futile.logger::flog.error("  - Many errors involve NULL ROIs. This may be caused by insufficient voxels in searchlight regions.")
+      }
+      if (any(grepl("insufficient data dimensions", bad_results$error_message))) {
+        futile.logger::flog.error("  - Many errors involve insufficient data dimensions. Your feature data may be too high-dimensional for small searchlight regions.")
+      }
+    } else {
+      futile.logger::flog.error("No error information available.")
+    }
+    
+    stop("No valid results for RSA searchlight: all ROIs failed to process")
+  }
+  
+  # Check if performance data is available
+  if (length(good_results$performance) == 0 || all(sapply(good_results$performance, is.null))) {
+    futile.logger::flog.error("Performance metrics missing in all results")
+    stop("No valid performance metrics for RSA searchlight")
+  }
+  
   ind <- unlist(good_results$id)
-  perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
-  ret <- wrap_out(perf_mat, model_spec$dataset, ind)
-  ret
+  
+  # Extract the performance matrix using safe error handling
+  tryCatch({
+    perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
+    ret <- wrap_out(perf_mat, model_spec$dataset, ind)
+    return(ret)
+  }, error = function(e) {
+    futile.logger::flog.error("Error combining RSA results: %s", e$message)
+    
+    # Try to provide more specific diagnostic information
+    if (grepl("requires numeric/complex matrix/vector arguments", e$message)) {
+      futile.logger::flog.error("This error often occurs when performance metrics are incompatible across ROIs. Check your performance calculation.")
+    } else if (grepl("subscript out of bounds", e$message)) {
+      futile.logger::flog.error("This may be caused by inconsistent dimensions in your results. Check that all ROIs return the same metrics.")
+    }
+    
+    stop(paste("Failed to combine RSA results:", e$message))
+  })
 }
 
 #' Combine Vector RSA standard classifier results
@@ -154,9 +250,6 @@ combine_vector_rsa_standard <- function(model_spec, good_results, bad_results) {
   ret
 }
 
-
-
-
 #' Combine randomized classifier results
 #'
 #' This function combines the randomized classifier results from a good results data frame
@@ -168,26 +261,45 @@ combine_vector_rsa_standard <- function(model_spec, good_results, bad_results) {
 #' @param bad_results A data frame containing the unsuccessful classifier results.
 #' @return A list containing the combined and normalized performance matrix along with other information from the dataset.
 combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
-  #browser()
+  # Check if we have results
+  if (nrow(good_results) == 0 || length(good_results$performance) == 0) {
+    futile.logger::flog.error("No valid results for randomized searchlight")
+    stop("No valid results for randomized searchlight")
+  }
+  
   all_ind <- sort(unlist(good_results$indices))
   ind_count <- table(all_ind)
   ind_set <- unique(all_ind)
+  
+  # Get the number of performance metrics
   ncols <- length(good_results$performance[[1]])
   
+  # Create sparse matrix to hold results
   perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, ncols), j=rep(1:ncols, each=length(ind_set)), 
                                   x=rep(0, length(ind_set)*ncols), 
                                   dims=c(length(model_spec$dataset$mask), ncols))
   
+  # Process each result
   for (i in 1:nrow(good_results)) {
     ind <- good_results$indices[[i]]
-    if (!is.null(ind)) {
-      m <- kronecker(matrix(good_results$performance[[i]], 1, ncols), rep(1,length(ind)))
-      perf_mat[ind,] <- perf_mat[ind,] + m
+    if (!is.null(ind) && !is.null(good_results$performance[[i]])) {
+      # Use tryCatch to handle errors gracefully
+      tryCatch({
+        m <- kronecker(matrix(good_results$performance[[i]], 1, ncols), rep(1, length(ind)))
+        perf_mat[ind,] <- perf_mat[ind,] + m
+      }, error = function(e) {
+        futile.logger::flog.warn("Error processing result %d: %s", i, e$message)
+      })
     }
   }
 
+  # Normalize by the count of overlapping searchlights
   perf_mat[ind_set,] <- sweep(perf_mat[ind_set,,drop=FALSE], 1, as.integer(ind_count), FUN="/")
+  
+  # Set column names from the performance metrics
   colnames(perf_mat) <- names(good_results$performance[[1]])
+  
+  # Wrap and return results
   ret <- wrap_out(perf_mat, model_spec$dataset)
   ret
 }
@@ -316,51 +428,62 @@ do_randomized <- function(model_spec, radius, niter,
                          mvpa_fun=mvpa_iterate, 
                          combiner=pool_randomized, 
                          ...) {
-  error=NULL 
+  error=NULL
+  total_models <- 0
+  total_errors <- 0
+  
+  futile.logger::flog.info("🔄 Starting randomized searchlight analysis:")
+  futile.logger::flog.info("├─ Radius: %s", crayon::blue(radius))
+  futile.logger::flog.info("└─ Iterations: %s", crayon::blue(niter))
   
   ret <- purrr::map(seq(1,niter), function(i) {
-    futile.logger::flog.info("searchlight iteration: %s", i)
+    futile.logger::flog.info("\n📊 Iteration %s/%s", crayon::blue(i), crayon::blue(niter))
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
-    cind <- purrr::map_int(slight, ~ .@parent_index)
     
-    # Add debugging
-    futile.logger::flog.debug("Searchlight samples: %d", length(slight))
-    futile.logger::flog.debug("Parent indices: %d", length(cind))
+    ## hacky
+  
+    cind <- if (is.integer(slight[[1]])) {
+      ## SurfaceSearchlight...
+      purrr::map_int(slight, ~ attr(., "center.index"))
+    } else {
+      purrr::map_int(slight, ~ .@parent_index)
+    }
     
     result <- mvpa_fun(model_spec, slight, cind, ...)
     
-    # Add debugging
-    futile.logger::flog.debug("MVPA results rows: %d", nrow(result))
-    futile.logger::flog.debug("MVPA results columns: %s", paste(colnames(result), collapse=", "))
+    # Count successful and failed models
+    n_success <- sum(!result$error, na.rm=TRUE)
+    n_errors <- sum(result$error, na.rm=TRUE)
+    total_models <<- total_models + n_success
+    total_errors <<- total_errors + n_errors
+    
+    if (n_errors > 0) {
+      futile.logger::flog.debug("└─ %s ROIs failed in this iteration", n_errors)
+    }
     
     result
   })
   
-  nmodels <- sum(unlist(sapply(ret, nrow)))
-  futile.logger::flog.info("number of models fit: %s", nmodels)
- 
   results <- dplyr::bind_rows(ret)
-  
-  # Add debugging
-  futile.logger::flog.debug("Combined results rows: %d", nrow(results))
-  futile.logger::flog.debug("Combined results columns: %s", paste(colnames(results), collapse=", "))
-  
   good_results <- results %>% dplyr::filter(error == FALSE)
   bad_results <- results %>% dplyr::filter(error == TRUE)
   
-  # Add debugging
-  futile.logger::flog.debug("Good results rows: %d", nrow(good_results))
-  futile.logger::flog.debug("Bad results rows: %d", nrow(bad_results))
-  
-  if (nrow(bad_results) > 0) {
-    futile.logger::flog.info(bad_results$error_message)
+  # Final summary with improved formatting
+  futile.logger::flog.info("\n✨ Searchlight Analysis Complete")
+  futile.logger::flog.info("├─ Total Models Fit: %s", crayon::green(total_models))
+  if (total_errors > 0) {
+    futile.logger::flog.info("└─ Failed ROIs: %s (%s%%)", 
+                            crayon::yellow(total_errors),
+                            crayon::yellow(sprintf("%.1f", total_errors/(total_models + total_errors)*100)))
+  } else {
+    futile.logger::flog.info("└─ All ROIs processed successfully!")
   }
   
   if (nrow(good_results) == 0) {
-    futile.logger::flog.error("no valid results for randomized searchlight, exiting.")
+    futile.logger::flog.error("❌ No valid results for randomized searchlight")
+    stop("No valid results produced")
   }
   
-  ## could simply merge all searchlights to produce global classification measure  
   combiner(model_spec, good_results)
 }
 
@@ -458,6 +581,8 @@ run_searchlight_base <- function(model_spec,
       stop("'combiner' must be 'average', 'pool', or a custom function.")
     }
   }
+  
+  print(paste("combiner is", str(chosen_combiner)))
   
   # 4) Dispatch to do_standard or do_randomized
   res <- if (method == "standard") {

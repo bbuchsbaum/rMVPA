@@ -161,7 +161,6 @@ select_features.FTest <- function(obj, X, Y,...) {
   message("cutoff type ", obj$cutoff_type)
   message("cutoff value ", obj$cutoff_value)
   
- 
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   
   if (is.numeric(Y)) {
@@ -169,7 +168,15 @@ select_features.FTest <- function(obj, X, Y,...) {
     Y <- factor(ifelse(Y > medY, "high", "low"))
   }
   
-  pvals <- matrixAnova(Y,X)[,2]
+  # Ensure X is numeric
+  if (!is.numeric(X)) {
+    X <- as.matrix(X)
+    if (!is.numeric(X)) {
+      stop("X must be convertible to a numeric matrix")
+    }
+  }
+  
+  pvals <- matrixAnova(Y, X)[,2]
   
   keep.idx <- if (obj$cutoff_type == "top_k" || obj$cutoff_type == "topk") {
     k <- min(ncol(X), obj$cutoff_value)
@@ -178,7 +185,7 @@ select_features.FTest <- function(obj, X, Y,...) {
     if (obj$cutoff_value <= 0 || obj$cutoff_value > 1) {
       stop("select_features.FTest: with top_p, cutoff_value must be > 0 and <= 1")
     }
-    k <- obj$cutoff_value * ncol(X)
+    k <- max(ceiling(obj$cutoff_value * ncol(X)), 1)
     order(pvals)[1:k]
   } else {
   

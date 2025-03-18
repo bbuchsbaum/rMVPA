@@ -256,16 +256,30 @@ prep_regional <- function(model_spec, region_mask) {
 #' @keywords internal
 #' @noRd
 comp_perf <- function(results, region_mask) {
+ 
   roinum <- NULL
   ## compile performance results
-  perf_mat <- do.call(rbind, results$performance)
+  perf_mat <- tryCatch({
+    do.call(rbind, results$performance)
+  }, error = function(e) {
+    message("Warning: Error creating performance matrix: ", e$message)
+    return(NULL)
+  })
+  
+  perf_mat <- as_tibble(perf_mat)
+  
+  # Check if perf_mat is NULL or has 0 columns
+  if (is.null(perf_mat) || !is.data.frame(perf_mat) || ncol(perf_mat) == 0) {
+    message("Warning: Performance matrix is empty or invalid. Returning empty results.")
+    return(list(vols=list(), perf_mat=tibble::tibble(roinum=unlist(results$id))))
+  }
   
   ## generate volumetric results
   ## TODO fails when region_mask is an logical vol
-  vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask, 
-                                                          cbind(as.integer(results$id), 
-                                                                perf_mat[,i])))
-  names(vols) <- colnames(perf_mat)
+  vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask,
+                                                         cbind(as.integer(results$id),
+                                                               perf_mat[[i]])))
+  names(vols) <- names(perf_mat)
   
   perfmat <- tibble::as_tibble(perf_mat,.name_repair=.name_repair) %>% dplyr::mutate(roinum = unlist(results$id)) %>% dplyr::select(roinum, dplyr::everything())
   list(vols=vols, perf_mat=perfmat)

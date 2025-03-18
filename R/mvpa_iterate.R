@@ -7,6 +7,10 @@ setup_mvpa_logger <- function() {
   
   # Use the standard layout but with colored messages
   futile.logger::flog.layout(futile.logger::layout.simple)
+  
+  # Set default threshold to INFO to hide DEBUG messages
+  # This prevents common/expected errors from being displayed
+  futile.logger::flog.threshold(futile.logger::INFO)
 }
 
 #' @keywords internal
@@ -232,8 +236,17 @@ internal_crossval <- function(mspec, roi, id) {
 extract_roi <- function(sample, data) {
   r <- as_roi(sample,data)
   v <- neuroim2::values(r$train_roi)
-  r <- try(filter_roi(r))
+  
+  # Use silent=TRUE to prevent error messages from being displayed on the console
+  r <- try(filter_roi(r), silent=TRUE)
+  
   if (inherits(r, "try-error") || ncol(v) < 2) {
+    # Only log at debug level so these expected errors don't alarm users
+    if (inherits(r, "try-error")) {
+      futile.logger::flog.debug("Skipping ROI: insufficient valid columns")
+    } else if (ncol(v) < 2) {
+      futile.logger::flog.debug("Skipping ROI: less than 2 columns")
+    }
     NULL
   } else {
     r
@@ -383,6 +396,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, ...) {
   gc()
   total_items <- nrow(frame)
   processed_items <- 0
+  error_count <- 0
   
   do_fun <- if (is.null(processor)) {
     function(obj, roi, rnum) {
@@ -392,25 +406,67 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, ...) {
     processor
   }
   
-  frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
+  results <- frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
     # Update progress based on actual items processed
     processed_items <<- processed_items + 1
+    
     if (verbose && (processed_items %% 100 == 0)) {
       progress_percent <- as.integer(processed_items/total_items * 100)
-      futile.logger::flog.info("↻ Progress: %s%% complete", 
-                              crayon::blue(progress_percent))
+      futile.logger::flog.info("↻ Batch Progress: %s%% (%d/%d ROIs)", 
+                              crayon::blue(progress_percent),
+                              processed_items,
+                              total_items)
     }
     
-    result <- do_fun(obj, roi, rnum)
-    
-    if (!obj$return_predictions) {
-      result <- result %>% mutate(result = list(NULL))
-    }
-    
-    result
-  }, .options=furrr::furrr_options(seed=TRUE)) %>% 
-    purrr::discard(is.null) %>% 
-    dplyr::bind_rows()
+    tryCatch({
+      if (is.null(roi)) {
+        # ROI failed validation, but this is an expected case in searchlights
+        error_count <<- error_count + 1
+        futile.logger::flog.debug("ROI %d: Skipped (failed validation)", rnum)
+        return(tibble::tibble(
+          result = list(NULL),
+          indices = list(NULL),
+          performance = list(NULL),
+          id = rnum,
+          error = TRUE,
+          error_message = "ROI failed validation (insufficient valid columns)",
+          warning = TRUE,
+          warning_message = "ROI failed validation (insufficient valid columns)"
+        ))
+      }
+      
+      result <- do_fun(obj, roi, rnum)
+      
+      if (!obj$return_predictions) {
+        result <- result %>% mutate(result = list(NULL))
+      }
+      
+      result
+    }, error = function(e) {
+      error_count <<- error_count + 1
+      # Use debug level to avoid alarming users with expected errors
+      futile.logger::flog.debug("ROI %d: Processing error (%s)", rnum, e$message)
+      tibble::tibble(
+        result = list(NULL),
+        indices = list(NULL),
+        performance = list(NULL),
+        id = rnum,
+        error = TRUE,
+        error_message = paste("Error processing ROI:", e$message),
+        warning = TRUE,
+        warning_message = paste("Error processing ROI:", e$message)
+      )
+    })
+  }, .options=furrr::furrr_options(seed=TRUE))
+  
+  # Log summary of errors if any occurred
+  if (error_count > 0 && verbose) {
+    futile.logger::flog.info("%s %d ROIs skipped or had processing errors (expected in searchlight analysis)", 
+                            crayon::yellow("⚠"),
+                            error_count)
+  }
+  
+  results %>% dplyr::bind_rows()
 }
 
 

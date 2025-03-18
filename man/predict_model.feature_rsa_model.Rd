@@ -7,14 +7,16 @@
 predict_model.feature_rsa_model(object, fit, newdata, ...)
 }
 \arguments{
-\item{object}{The trained feature RSA model}
+\item{object}{The trained feature RSA model (method, etc.)}
 
-\item{newdata}{New data}
+\item{fit}{The fitted model object from training_model()}
+
+\item{newdata}{New feature data matrix (rows = test obs, cols = features)}
 
 \item{...}{Additional args}
 }
 \value{
-Predicted values in the feature space
+Predicted brain activity \code{X} values (matrix).
 }
 \description{
 Predict Method for Feature RSA Model

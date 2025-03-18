@@ -148,7 +148,6 @@ test_that("randomized surface-based mvpa_searchlight runs without error", {
 })
 
 test_that("randomized mvpa_searchlight runs without error", {
-  
   dataset <- gen_sample_dataset(c(12,12,12), 100, nlevels=2)
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("sda_notune")
@@ -156,7 +155,6 @@ test_that("randomized mvpa_searchlight runs without error", {
                       model_type="classification", crossval=cval)
   res <- run_searchlight(mspec,radius=4, method="randomized", niter=4)
   expect_true(!is.null(res))
-
 
 })
 
@@ -295,7 +293,8 @@ test_that("randomized mvpa_searchlight works with xgboost", {
 
 test_that("mvpa_searchlight works with testset", {
   require("sda")
-  dataset <- gen_sample_dataset(c(4,4,4), 100, response_type="categorical", data_mode="image", blocks=5, nlevels=4, external_test=TRUE, nobs=100)
+  dataset <- gen_sample_dataset(c(4,4,4), 100, response_type="categorical", data_mode="image", 
+                                blocks=5, nlevels=4, external_test=TRUE)
   
   cval <- blocked_cross_validation(dataset$design$block_var)
 

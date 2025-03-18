@@ -8,19 +8,20 @@ feature_rsa_model(
   dataset,
   design,
   method = c("scca", "pls", "pca"),
-  crossval = NULL
+  crossval = NULL,
+  cache_pca = FALSE
 )
 }
 \arguments{
-\item{dataset}{An \code{mvpa_dataset} object containing the neural data (X).}
+\item{dataset}{An \code{mvpa_dataset} object containing the neural data (\code{X}).}
 
-\item{design}{A \code{feature_rsa_design} object specifying the feature space (F).}
+\item{design}{A \code{feature_rsa_design} object specifying the feature space (\code{F}).}
 
 \item{method}{Character string specifying the analysis method. One of:
 \describe{
   \item{scca}{Sparse Canonical Correlation Analysis}
   \item{pls}{Partial Least Squares}
-  \item{pca}{Principal Component Analysis + linear regression on F}
+  \item{pca}{Principal Component Analysis on feature space}
 }}
 
 \item{crossval}{Optional cross-validation specification.}
@@ -33,9 +34,9 @@ Creates a model for feature-based Representational Similarity Analysis (RSA) tha
 (X) to a predefined feature space (F).
 }
 \details{
-Feature RSA models analyze the relationship between neural patterns X and a predefined feature space F.
-Methods:
-  - scca: Finds canonical correlations between X and F and reconstructs F from X via these canonical directions.
-  - pls: Uses partial least squares regression to predict F from X.
-  - pca: PCA on X, then regress F_sc ~ PC(X_sc) for prediction.
+Feature RSA models analyze how well a feature matrix \code{F} can predict
+neural data \code{X}. For example:
+  - \strong{pca}: PCA on \code{F}, then regress \code{X} on those principal components.
+  - \strong{pls}: partial least squares regression of \code{X} on \code{F}.
+  - \strong{scca}: sparse CCA of \code{X} and \code{F}.
 }

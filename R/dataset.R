@@ -101,7 +101,7 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
       dset <- mvpa_dataset(train_data=bvec,mask=mask)
     }
   } else {
-    fname <- system.file("extdata/std.lh.smoothwm.asc", package="neuroim2")
+    fname <- system.file("extdata/std.8_lh.inflated.asc", package="neurosurf")
     geom <- neurosurf::read_surf_geometry(fname)
     nvert <- nrow(neurosurf::vertices(geom))
     mat <- matrix(rnorm(nvert*nobs), nvert, nobs)
@@ -180,6 +180,21 @@ mvpa_dataset <- function(train_data, test_data=NULL, mask) {
     assert_that(inherits(test_data, "NeuroVec"))
   }
   assert_that(inherits(mask, "NeuroVol"))
+  
+  # Check for single-voxel datasets (1,1,1,time)
+  mask_dims <- dim(mask)[1:3]
+  total_voxels <- prod(mask_dims)
+  if (total_voxels <= 1) {
+    stop("Invalid dataset: Only 1 voxel detected (dimensions ",
+         paste(mask_dims, collapse="×"),
+         "). Feature RSA analysis requires multiple voxels.")
+  }
+  
+  # Check for active voxels in mask
+  active_voxels <- sum(mask > 0)
+  if (active_voxels <= 1) {
+    stop("Invalid dataset: Only ", active_voxels, " active voxel(s) in mask. Feature RSA analysis requires multiple active voxels.")
+  }
   
   ret <- structure(
     list(

@@ -9,9 +9,9 @@ evaluate_model.feature_rsa_model(object, predicted, observed, ...)
 \arguments{
 \item{object}{The feature RSA model}
 
-\item{predicted}{Predicted values}
+\item{predicted}{Predicted brain activity (X) [nObs x nVox]}
 
-\item{observed}{Observed values}
+\item{observed}{Observed brain activity (X) [nObs x nVox]}
 
 \item{...}{Additional args}
 }

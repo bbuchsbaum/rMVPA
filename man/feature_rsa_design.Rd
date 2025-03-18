@@ -4,7 +4,7 @@
 \alias{feature_rsa_design}
 \title{Create a Feature-Based RSA Design}
 \usage{
-feature_rsa_design(S = NULL, F = NULL, labels, k = 0)
+feature_rsa_design(S = NULL, F = NULL, labels, k = 0, max_comps = 10)
 }
 \arguments{
 \item{S}{A symmetric similarity matrix representing the feature space relationships. 
@@ -16,6 +16,8 @@ If NULL, you must supply F.}
 
 \item{k}{Integer specifying the number of feature dimensions to retain when using S. If 0 (default),
 automatically determines dimensions using eigenvalue threshold > 1.}
+
+\item{max_comps}{Maximum number of components to use (for PCA/PLS/SCCA). Default 10.}
 }
 \value{
 A \code{feature_rsa_design} object (S3 class) containing:
@@ -23,6 +25,8 @@ A \code{feature_rsa_design} object (S3 class) containing:
     \item{S}{The input similarity matrix (if used)}
     \item{F}{Feature space projection matrix}
     \item{labels}{Vector of observation labels}
+    \item{k}{The number of feature dimensions}
+    \item{max_comps}{Maximum number of components for any method}
   }
 }
 \description{
@@ -31,7 +35,7 @@ You can either supply a similarity matrix S (and optionally select dimensions)
 or directly supply a feature matrix F.
 }
 \details{
-If F is supplied directly, it is used as is.
-If only S is supplied, the design computes eigen decomposition of S to find a suitable 
-feature space (F).
+If F is supplied directly, it is used as-is.
+If only S is supplied, the design computes an eigen decomposition of S 
+(keeping factors with eigenvalue > 1, unless you specify \code{k}).
 }
