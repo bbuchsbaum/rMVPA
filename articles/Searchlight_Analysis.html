@@ -30,7 +30,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-02-13</h4>
+            <h4 data-toc-skip class="date">2025-03-20</h4>
       
 
       <div class="d-none name"><code>Searchlight_Analysis.Rmd</code></div>
@@ -64,6 +64,9 @@ Buchsbaum</h4>
 <div class="section level2">
 <h2 id="searchlight-analysis">Searchlight Analysis<a class="anchor" aria-label="anchor" href="#searchlight-analysis"></a>
 </h2>
+<pre><code><span><span class="co">## Warning in rgl.init(initValue, onlyNULL): RGL: unable to open X11 display</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: 'rgl.init' failed, will use the null device.</span></span>
+<span><span class="co">## See '?rgl.useNULL' for ways to avoid this warning.</span></span></code></pre>
 <div class="section level3">
 <h3 id="generate-a-volumetric-dataset-with-100-observations-and-two-classes">Generate a volumetric dataset with 100 observations and two
 classes<a class="anchor" aria-label="anchor" href="#generate-a-volumetric-dataset-with-100-observations-and-two-classes"></a>
@@ -79,7 +82,7 @@ object (<code>dataset</code>) and an <code>mvpa_design</code> object
 (<code>design</code>). The first contains information about the data
 itself and the second contains information about the experimental
 design.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>,<span class="fl">6</span>,<span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">80</span>, blocks<span class="op">=</span><span class="fl">4</span>, nlevels<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## $dataset</span></span>
@@ -125,7 +128,7 @@ cross-validation. In other words, we want to train the classifier on
 <code>k</code> held out blocks. This is a form of leave-one-group-out
 cross-validation, which is encapsulated in the
 <code>blocked_cross_validation</code> function.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">block</span> <span class="op">&lt;-</span> <span class="va">dataset</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span></span>
 <span><span class="va">crossval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">block</span><span class="op">)</span></span>
 <span><span class="va">crossval</span></span></code></pre></div>
@@ -148,7 +151,7 @@ Discriminant Analysis classifier (<code>sda_notune</code>)<a class="anchor" aria
 <code>lambda</code> parameter is estimated from the training data. See
 documentation in the <a href="https://cran.r-project.org/web/packages/sda/index.html" class="external-link">sda
 package</a> package.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sda_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span> </span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model<span class="op">=</span><span class="va">sda_model</span>, dataset<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span>, crossval<span class="op">=</span><span class="va">crossval</span><span class="op">)</span></span>
 <span><span class="va">model</span></span></code></pre></div>
@@ -209,27 +212,29 @@ statistic. The <code>radius</code> argument indicates the radius in
 <code>method</code> indicates the searchlight scheme, which can be
 <code>standard</code> or <code>randomized</code>. See below for more
 information about the randomized searchlight.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"standard"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-02-13 23:41:34] Running standard searchlight with radius = 4</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:34] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:34] running standard searchlight iterator</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:34] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">10</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:35] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">10</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:36] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">10</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:37] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">10</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:38] ⚡ Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">10</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:40] ⚡ Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">10</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:41] ⚡ Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">10</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:42] ⚡ Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">10</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:43] ⚡ Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">10</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:44] ⚡ Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">10</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:45] </span></span>
+<pre><code><span><span class="co">## function (model_spec, good_results, bad_results = NULL)  </span></span>
+<span><span class="co">## [1] "combiner is "</span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:31] Running standard searchlight with radius = 4</span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:31] creating standard searchlight</span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:31] running standard searchlight iterator</span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:31] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">10</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:35] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">10</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:37] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">10</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:40] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">10</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:43] ⚡ Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">10</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:46] ⚡ Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">10</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:49] ⚡ Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">10</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:52] ⚡ Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">10</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:54] ⚡ Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">10</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:57] ⚡ Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">10</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:59] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">120</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">120</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">█▀▀ Searchlight Analysis Results ▀▀█</span> </span></span>
@@ -248,7 +253,7 @@ information about the randomized searchlight.</p>
 <span><span class="co">## <span style="color: #BBBBBB;">   │  ├─ SD: </span> <span style="color: #00BB00;">0.0109</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">   │  ├─ Min: </span> <span style="color: #00BB00;">-0.0437</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">   │  └─ Max: </span> <span style="color: #00BB00;">0.0140</span></span></span></code></pre>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">AUC</span><span class="op">$</span><span class="va">data</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Searchlight_Analysis_files/figure-html/unnamed-chunk-5-1.png" width="700"></p>
 </div>
@@ -273,83 +278,99 @@ number of estimated models is a function of
 <code>nvoxels/radius * niter</code>, which will be smaller than
 <code>nvoxels</code> for many choices of <code>radius</code> and
 <code>niter</code>.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"randomized"</span>, niter<span class="op">=</span><span class="fl">8</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-02-13 23:41:45] Running randomized searchlight with radius = 4 and niter = 8</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:45] searchlight iteration: 1</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:45] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:45] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:45] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:45] </span></span>
+<pre><code><span><span class="co">## function (model_spec, good_results, bad_results = NULL)  </span></span>
+<span><span class="co">## [1] "combiner is "</span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:00] Running randomized searchlight with radius = 4 and niter = 8</span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:00] 🔄 Starting randomized searchlight analysis:</span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:00] ├─ Radius: <span style="color: #0000BB;">4</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:00] └─ Iterations: <span style="color: #0000BB;">8</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:00] </span></span>
+<span><span class="co">## 📊 Iteration <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">8</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:00] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:00] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:00] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:01] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:45] searchlight iteration: 2</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:45] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:45] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] </span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:01] </span></span>
+<span><span class="co">## 📊 Iteration <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">8</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:01] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:01] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:02] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:02] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] searchlight iteration: 3</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] </span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:02] </span></span>
+<span><span class="co">## 📊 Iteration <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">8</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:02] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:02] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:03] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:03] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] searchlight iteration: 4</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">4</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">4</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:46] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">4</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:47] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">4</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:47] </span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:03] </span></span>
+<span><span class="co">## 📊 Iteration <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">8</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:03] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">4</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:04] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">4</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:04] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">4</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:04] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">4</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:05] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:47] searchlight iteration: 5</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:47] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:47] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:47] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:47] </span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:05] </span></span>
+<span><span class="co">## 📊 Iteration <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">8</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:05] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:05] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:05] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:06] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:47] searchlight iteration: 6</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:47] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">2</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:47] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">2</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:48] </span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:06] </span></span>
+<span><span class="co">## 📊 Iteration <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">8</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:06] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">2</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:06] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">2</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:07] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">2</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">2</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:48] searchlight iteration: 7</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:48] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:48] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:48] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:48] </span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:07] </span></span>
+<span><span class="co">## 📊 Iteration <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">8</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:07] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:07] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:07] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:08] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:48] searchlight iteration: 8</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:48] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:48] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:48] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:49] </span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:08] </span></span>
+<span><span class="co">## 📊 Iteration <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">8</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:08] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:08] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:09] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:09] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:49] number of models fit: 24</span></span></code></pre>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<span><span class="co">## INFO [2025-03-20 21:32:09] </span></span>
+<span><span class="co">## ✨ Searchlight Analysis Complete</span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:09] ├─ Total Models Fit: <span style="color: #00BB00;">24</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:09] └─ All ROIs processed successfully!</span></span></code></pre>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">█▀▀ Searchlight Analysis Results ▀▀█</span> </span></span>
@@ -368,7 +389,7 @@ number of estimated models is a function of
 <span><span class="co">## <span style="color: #BBBBBB;">   │  ├─ SD: </span> <span style="color: #00BB00;">0.0429</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">   │  ├─ Min: </span> <span style="color: #00BB00;">-0.1187</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">   │  └─ Max: </span> <span style="color: #00BB00;">0.0331</span></span></span></code></pre>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">AUC</span><span class="op">$</span><span class="va">data</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Searchlight_Analysis_files/figure-html/unnamed-chunk-6-1.png" width="700"></p>
 </div>
@@ -379,7 +400,7 @@ number of estimated models is a function of
 can be used (in theory) for a searchlight analysis. For example, we can
 run an analysis using a linear support vector (<code>svmLinear</code>)
 machine as follows:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">svm_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"svmLinear"</span><span class="op">)</span> </span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model<span class="op">=</span><span class="va">svm_model</span>, dataset<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span>, crossval<span class="op">=</span><span class="va">crossval</span><span class="op">)</span></span>
 <span><span class="va">result_svm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"randomized"</span>, niter<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
@@ -392,28 +413,38 @@ then the paramter will be tuned for each searchlight sample. Since
 parameter tuning is costly in terms of computing time, this is not a
 recommended approach unless one has a great deal of computing power or
 one is running the searchlight over a small mask.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rf_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"rf"</span><span class="op">)</span> </span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model<span class="op">=</span><span class="va">rf_model</span>, dataset<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span>, crossval<span class="op">=</span><span class="va">crossval</span>, tune_grid<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>mtry<span class="op">=</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">result_rf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"randomized"</span>, niter<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-02-13 23:41:49] Running randomized searchlight with radius = 4 and niter = 2</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:49] searchlight iteration: 1</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:49] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">2</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:49] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">2</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:50] </span></span>
+<pre><code><span><span class="co">## function (model_spec, good_results, bad_results = NULL)  </span></span>
+<span><span class="co">## [1] "combiner is "</span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:10] Running randomized searchlight with radius = 4 and niter = 2</span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:10] 🔄 Starting randomized searchlight analysis:</span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:10] ├─ Radius: <span style="color: #0000BB;">4</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:10] └─ Iterations: <span style="color: #0000BB;">2</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:10] </span></span>
+<span><span class="co">## 📊 Iteration <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">2</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:10] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">2</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:10] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">2</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:11] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">2</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">2</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:50] searchlight iteration: 2</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:50] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">2</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:50] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">2</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:50] </span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:11] </span></span>
+<span><span class="co">## 📊 Iteration <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">2</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:11] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">2</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:12] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">2</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:12] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">2</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">2</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:50] number of models fit: 4</span></span></code></pre>
+<span><span class="co">## INFO [2025-03-20 21:32:12] </span></span>
+<span><span class="co">## ✨ Searchlight Analysis Complete</span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:12] ├─ Total Models Fit: <span style="color: #00BB00;">4</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:32:12] └─ All ROIs processed successfully!</span></span></code></pre>
 <p>Here we specify a range of values for the <code>mtry</code> tuning
 parameter. In this case, by supplying the <code>tune_reps</code>
 argument to <code>mvpa_model</code> we control the number of resamples
@@ -424,7 +455,7 @@ a whole-brain searchlight, parameter tuning is
 <strong>generally</strong> impractical. This is why the classifier
 <code>sda_notune</code> is a good choice for searchlight analyses, since
 it “works well” with default tuning parameters.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>mtry<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>,<span class="fl">4</span>,<span class="fl">6</span>,<span class="fl">8</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">model2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model<span class="op">=</span><span class="va">rf_model</span>, dataset<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span>, crossval<span class="op">=</span><span class="va">crossval</span>, tune_grid<span class="op">=</span><span class="va">grid</span>, tune_reps<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span>
 <span></span>

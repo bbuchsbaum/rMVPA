@@ -44,7 +44,7 @@ or directly supply a feature matrix F.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">feature_rsa_design</span><span class="op">(</span>S <span class="op">=</span> <span class="cn">NULL</span>, F <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">labels</span>, k <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">feature_rsa_design</span><span class="op">(</span>S <span class="op">=</span> <span class="cn">NULL</span>, F <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">labels</span>, k <span class="op">=</span> <span class="fl">0</span>, max_comps <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -68,6 +68,10 @@ If NULL, you must supply F.</p></dd>
 <dd><p>Integer specifying the number of feature dimensions to retain when using S. If 0 (default),
 automatically determines dimensions using eigenvalue threshold &gt; 1.</p></dd>
 
+
+<dt id="arg-max-comps">max_comps<a class="anchor" aria-label="anchor" href="#arg-max-comps"></a></dt>
+<dd><p>Maximum number of components to use (for PCA/PLS/SCCA). Default 10.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -80,13 +84,19 @@ automatically determines dimensions using eigenvalue threshold &gt; 1.</p></dd>
     <dt>labels</dt>
 <dd><p>Vector of observation labels</p></dd>
 
+    <dt>k</dt>
+<dd><p>The number of feature dimensions</p></dd>
+
+    <dt>max_comps</dt>
+<dd><p>Maximum number of components for any method</p></dd>
+
 
 </dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>If F is supplied directly, it is used as is.
-If only S is supplied, the design computes eigen decomposition of S to find a suitable
-feature space (F).</p>
+    <p>If F is supplied directly, it is used as-is.
+If only S is supplied, the design computes an eigen decomposition of S
+(keeping factors with eigenvalue &gt; 1, unless you specify <code>k</code>).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

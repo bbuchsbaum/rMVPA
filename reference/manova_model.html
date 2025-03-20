@@ -73,9 +73,9 @@ This object can be used for further multivariate statistical analysis using the 
 <span class="r-in"><span><span class="va">data_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">dissimilarity_matrix_y</span>, x1 <span class="op">=</span> <span class="va">dissimilarity_matrix_x1</span>, x2 <span class="op">=</span> <span class="va">dissimilarity_matrix_x2</span><span class="op">)</span></span></span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'dissimilarity_matrix_y' not found</span>
 <span class="r-in"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="manova_design.html">manova_design</a></span><span class="op">(</span><span class="va">formula</span>, <span class="va">data_list</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in assert_that(purrr::is_formula(formula)):</span> could not find function "assert_that"</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'data_list' not found</span>
 <span class="r-in"><span><span class="va">manova_model_obj</span> <span class="op">&lt;-</span> <span class="fu">manova_model</span><span class="op">(</span><span class="va">dataset</span>, <span class="va">design</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in assert_that(inherits(dataset, "mvpa_dataset")):</span> could not find function "assert_that"</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'dataset' not found</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

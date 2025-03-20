@@ -45,7 +45,8 @@
 <span>  <span class="va">dataset</span>,</span>
 <span>  <span class="va">design</span>,</span>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"scca"</span>, <span class="st">"pls"</span>, <span class="st">"pca"</span><span class="op">)</span>,</span>
-<span>  crossval <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  crossval <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  cache_pca <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -54,11 +55,11 @@
 
 
 <dl><dt id="arg-dataset">dataset<a class="anchor" aria-label="anchor" href="#arg-dataset"></a></dt>
-<dd><p>An <code>mvpa_dataset</code> object containing the neural data (X).</p></dd>
+<dd><p>An <code>mvpa_dataset</code> object containing the neural data (<code>X</code>).</p></dd>
 
 
 <dt id="arg-design">design<a class="anchor" aria-label="anchor" href="#arg-design"></a></dt>
-<dd><p>A <code>feature_rsa_design</code> object specifying the feature space (F).</p></dd>
+<dd><p>A <code>feature_rsa_design</code> object specifying the feature space (<code>F</code>).</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
@@ -69,7 +70,7 @@
 <dd><p>Partial Least Squares</p></dd>
 
   <dt>pca</dt>
-<dd><p>Principal Component Analysis + linear regression on F</p></dd>
+<dd><p>Principal Component Analysis on feature space</p></dd>
 
 
 </dl></dd>
@@ -85,11 +86,11 @@
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Feature RSA models analyze the relationship between neural patterns X and a predefined feature space F.
-Methods:
-  - scca: Finds canonical correlations between X and F and reconstructs F from X via these canonical directions.
-  - pls: Uses partial least squares regression to predict F from X.
-  - pca: PCA on X, then regress F_sc ~ PC(X_sc) for prediction.</p>
+    <p>Feature RSA models analyze how well a feature matrix <code>F</code> can predict
+neural data <code>X</code>. For example:
+  - <strong>pca</strong>: PCA on <code>F</code>, then regress <code>X</code> on those principal components.
+  - <strong>pls</strong>: partial least squares regression of <code>X</code> on <code>F</code>.
+  - <strong>scca</strong>: sparse CCA of <code>X</code> and <code>F</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

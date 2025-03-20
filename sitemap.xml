@@ -2,6 +2,7 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/404.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Advanced_RSA.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/CommandLineScripts.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/MVPA_RegionalCmdline.html</loc></url>
@@ -57,7 +58,6 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/manova_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_classif_results.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_predictions.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results.feature_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results.regional_mvpa_result.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.html</loc></url>
@@ -98,6 +98,7 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional.rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_regional_base.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.default.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.feature_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.vector_rsa.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight_base.html</loc></url>

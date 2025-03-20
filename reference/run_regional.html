@@ -83,7 +83,6 @@
 <span class="r-in"><span>    data_mode <span class="op">=</span> <span class="st">"image"</span>,</span></span>
 <span class="r-in"><span>    blocks <span class="op">=</span> <span class="fl">3</span>             <span class="co"># 3 blocks for cross-validation</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in h(simpleError(msg, call)):</span> error in evaluating the argument 'i' in selecting a method for function '[&lt;-': could not find function "coords"</span>
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="co"># Create region mask with 5 ROIs</span></span></span>
 <span class="r-in"><span>  <span class="va">region_mask</span> <span class="op">&lt;-</span> <span class="fu">NeuroVol</span><span class="op">(</span></span></span>
@@ -107,23 +106,18 @@
 <span class="r-in"><span>    crossval <span class="op">=</span> <span class="va">cval</span>,</span></span>
 <span class="r-in"><span>    return_fits <span class="op">=</span> <span class="cn">TRUE</span>    <span class="co"># Return fitted models</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in assert_that(!is.null(model$fit)):</span> could not find function "assert_that"</span>
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="co"># Run regional analysis</span></span></span>
 <span class="r-in"><span>  <span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">run_regional</span><span class="op">(</span><span class="va">mspec</span>, <span class="va">region_mask</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in UseMethod("run_regional"):</span> no applicable method for 'run_regional' applied to an object of class "c('vector_rsa_model', 'model_spec', 'list')"</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'region_mask' not found</span>
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="co"># Access results</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">performance</span><span class="op">)</span>           <span class="co"># Performance metrics</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 3 × 3</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   roinum mse       correlation</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      1 <span style="color: #949494;">&lt;dbl [1]&gt;</span> <span style="color: #949494;">&lt;dbl [1]&gt;</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>      2 <span style="color: #949494;">&lt;dbl [1]&gt;</span> <span style="color: #949494;">&lt;dbl [1]&gt;</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>      3 <span style="color: #949494;">&lt;dbl [1]&gt;</span> <span style="color: #949494;">&lt;dbl [1]&gt;</span>  </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'results' not found</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">prediction_table</span><span class="op">)</span>      <span class="co"># Predictions</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'results' not found</span>
 <span class="r-in"><span>  <span class="va">first_roi_fit</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="va">fits</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>  <span class="co"># First ROI's fitted model</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'results' not found</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

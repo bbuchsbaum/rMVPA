@@ -30,7 +30,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-02-13</h4>
+            <h4 data-toc-skip class="date">2025-03-20</h4>
       
 
       <div class="d-none name"><code>Regional_Analysis.Rmd</code></div>
@@ -64,21 +64,14 @@ Buchsbaum</h4>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p>Regional multivariate pattern analysis (MVPA) allows you to evaluate
-prediction performance within predefined brain regions. In this
-vignette, we demonstrate a complete workflow for performing regional
-MVPA analysis using the <code>rMVPA</code> package. We will:</p>
-<ul>
-<li>Generate a synthetic neuroimaging dataset.</li>
-<li>Define regions of interest (ROIs) using a region mask.</li>
-<li>Construct appropriate MVPA dataset and design objects.</li>
-<li>Build an MVPA model with cross-validation.</li>
-<li>Run the regional analysis over the ROIs.</li>
-<li>Examine performance metrics and prediction outputs.</li>
-</ul>
-<p>This approach, detailed in the source files (<code>regional.R</code>,
-<code>mvpa_model.R</code>, and <code>dataset.R</code>), ensures robust
-implementation of regional analysis within rMVPA.</p>
+<p>Regional MVPA evaluates prediction performance within predefined
+brain regions. This vignette walks through the complete workflow using
+rMVPA:</p>
+<p>We’ll generate synthetic data, define ROIs with a region mask, build
+the MVPA model with cross-validation, run the analysis, and examine the
+results. The implementation follows the approach in
+<code>regional.R</code>, <code>mvpa_model.R</code>, and
+<code>dataset.R</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="data-generation-and-preparation">Data Generation and Preparation<a class="anchor" aria-label="anchor" href="#data-generation-and-preparation"></a>
@@ -316,24 +309,11 @@ level.</li>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h2>
-<p>In this vignette, we have demonstrated:</p>
-<ul>
-<li>
-<strong>Data Generation</strong>: Creating a synthetic neuroimaging
-dataset using <code><a href="../reference/gen_sample_dataset.html">gen_sample_dataset()</a></code>.</li>
-<li>
-<strong>ROI Definition</strong>: Building a region mask for defining
-brain areas.</li>
-<li>
-<strong>Model Setup</strong>: Constructing an MVPA model with proper
-design and cross-validation.</li>
-<li>
-<strong>Regional Analysis</strong>: Running the model across each
-ROI and aggregating results.</li>
-<li>
-<strong>Results Interpretation</strong>: Examining performance and
-prediction metrics.</li>
-</ul>
+<p>This vignette showed you how to generate synthetic neuroimaging data,
+define ROIs with region masks, set up MVPA models with cross-validation,
+run analyses across ROIs, and interpret the performance metrics. You now
+have the tools to conduct regional MVPA analyses on your own
+neuroimaging data.</p>
 <p>For further details, please refer to the source files:</p>
 <ul>
 <li>

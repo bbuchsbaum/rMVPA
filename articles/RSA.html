@@ -30,7 +30,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-02-13</h4>
+            <h4 data-toc-skip class="date">2025-03-20</h4>
       
 
       <div class="d-none name"><code>RSA.Rmd</code></div>
@@ -64,18 +64,11 @@ Buchsbaum</h4>
 <div class="section level2">
 <h2 id="introduction-to-representational-similarity-analysis">Introduction to Representational Similarity Analysis<a class="anchor" aria-label="anchor" href="#introduction-to-representational-similarity-analysis"></a>
 </h2>
-<p>Representational Similarity Analysis (RSA) is a powerful technique
-for comparing neural activity patterns and computational models. RSA
-works by:</p>
-<ol style="list-style-type: decimal">
-<li>Computing similarity/dissimilarity between activity patterns</li>
-<li>Comparing these neural similarity patterns with model-based
-similarity patterns</li>
-<li>Evaluating how well the model explains the neural
-representations</li>
-</ol>
-<p>The <code>rMVPA</code> package provides a comprehensive framework for
-performing RSA on neuroimaging data.</p>
+<p>Representational Similarity Analysis (RSA) compares neural activity
+patterns with computational models by measuring pattern similarities,
+matching them against model predictions, and quantifying how well models
+explain the neural data. The <code>rMVPA</code> package implements this
+technique for neuroimaging analysis.</p>
 </div>
 <div class="section level2">
 <h2 id="basic-concepts">Basic Concepts<a class="anchor" aria-label="anchor" href="#basic-concepts"></a>
@@ -171,21 +164,23 @@ computing neural dissimilarities and analyzing relationships:</p>
 <span>  radius <span class="op">=</span> <span class="fl">4</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"standard"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-02-13 23:41:28] Running standard searchlight with radius = 4</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:28] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:28] running standard searchlight iterator</span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:28] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:28] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:29] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:29] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:29] ⚡ Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:30] ⚡ Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:30] ⚡ Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:30] ⚡ Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:30] ⚡ Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:31] ⚡ Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:31] ⚡ Processing batch <span style="color: #0000BB;">11</span>/<span style="color: #0000BB;">11</span></span></span>
-<span><span class="co">## INFO [2025-02-13 23:41:31] </span></span>
+<pre><code><span><span class="co">## function (model_spec, good_results, bad_results = NULL)  </span></span>
+<span><span class="co">## [1] "combiner is "</span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:20] Running standard searchlight with radius = 4</span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:20] creating standard searchlight</span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:20] running standard searchlight iterator</span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:20] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:21] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:21] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:22] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:23] ⚡ Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:23] ⚡ Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:24] ⚡ Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:25] ⚡ Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:25] ⚡ Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:26] ⚡ Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:27] ⚡ Processing batch <span style="color: #0000BB;">11</span>/<span style="color: #0000BB;">11</span></span></span>
+<span><span class="co">## INFO [2025-03-20 21:31:27] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">256</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">256</span></span></span>
@@ -330,14 +325,16 @@ runs are very short - You’ve carefully controlled for temporal confounds
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h2>
-<p>RSA in <code>rMVPA</code> offers: - Flexible specification of model
-RDMs - Multiple methods for computing and comparing dissimilarity
-matrices - Support for run/block structure - Integration with
-searchlight analysis - Various statistical approaches (correlation,
-regression, rank-based methods)</p>
-<p>Choose the appropriate parameters based on your: - Experimental
-design (block_var, keep_intra_run) - Theoretical assumptions
-(distmethod) - Statistical preferences (regtype)</p>
+<p>The rMVPA package provides a comprehensive RSA implementation with
+flexible model specification, multiple dissimilarity computation
+methods, and support for complex experimental designs with run/block
+structures. It integrates seamlessly with searchlight analysis and
+offers various statistical approaches including correlation, regression,
+and rank-based methods.</p>
+<p>When using RSA in rMVPA, carefully consider your experimental design
+when setting block variables and intra-run parameters, choose distance
+methods that match your theoretical framework, and select statistical
+approaches appropriate for your analysis goals.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

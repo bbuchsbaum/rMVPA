@@ -30,7 +30,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -52,7 +52,7 @@
       <h1>MVPA Regional Analysis Tutorial</h1>
                         <h4 data-toc-skip class="author">Your Name</h4>
             
-            <h4 data-toc-skip class="date">2025-02-13</h4>
+            <h4 data-toc-skip class="date">2025-03-20</h4>
       
 
       <div class="d-none name"><code>MVPA_RegionalCmdline.Rmd</code></div>
@@ -70,32 +70,18 @@ classification and regression analyses on fMRI data. Regional analysis
 can be conducted on volumetric (NIfTI) or surface-based neuroimaging
 data, and allows for separate training and testing subsets.</p>
 <div class="section level3">
-<h3 id="key-features">Key Features:<a class="anchor" aria-label="anchor" href="#key-features"></a>
+<h3 id="key-features">Key Features<a class="anchor" aria-label="anchor" href="#key-features"></a>
 </h3>
-<ul>
-<li>
-<strong>Flexible Input Handling</strong>: Works with both volumetric
-(NIfTI) and surface-based data</li>
-<li>
-<strong>Subset Analysis</strong>: Supports separate training and
-testing subsets for region-specific evaluation</li>
-<li>
-<strong>Configurable via Files</strong>: Parameters can be set using
-YAML or R configuration files</li>
-<li>
-<strong>Detailed Outputs</strong>: Generates performance maps,
-prediction tables, and configuration files</li>
-<li>
-<strong>Robust Cross-Validation</strong>: Includes options for
-blocked, k-fold, and two-fold cross-validation</li>
-<li>
-<strong>Model Versatility</strong>: Compatible with built-in MVPA
-models and models available in the caret package</li>
-<li>
-<strong>Data Normalization &amp; Feature Selection</strong>:
-Optional centering/scaling and customizable feature selection
-methods</li>
-</ul>
+<p>The script handles both volumetric NIfTI and surface-based data
+formats. You can evaluate specific regions by using separate training
+and testing subsets. All parameters are configurable through YAML or R
+files.</p>
+<p>The analysis produces comprehensive outputs including performance
+maps, prediction tables, and configuration records. Cross-validation
+options include blocked, k-fold, and two-fold approaches.</p>
+<p>The script works with built-in MVPA models and integrates with the
+caret package for additional model options. Data preprocessing includes
+optional centering/scaling and flexible feature selection methods.</p>
 <hr>
 </div>
 </div>
@@ -361,16 +347,12 @@ overfitting.</li>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h2>
-<ul>
-<li>
-<strong>MVPA_Regional.R</strong> is a versatile tool for regional
-MVPA analysis.</li>
-<li>Supports both volumetric and surface-based data.</li>
-<li>Flexible configuration via command line or config files.</li>
-<li>Outputs detailed performance maps and prediction tables.</li>
-<li>Robust cross-validation and optional feature selection enhance
-analysis.</li>
-</ul>
+<p>MVPA_Regional.R provides comprehensive regional MVPA analysis
+capabilities. It handles both volumetric and surface-based data formats
+with flexible configuration through command line or config files. The
+tool generates detailed performance maps and prediction tables, while
+incorporating robust cross-validation and feature selection to ensure
+reliable results.</p>
 <p><strong>Next Steps:</strong> - Experiment with various models
 (<code>--model=rf</code>, <code>--model=sda_notune</code>). - Test
 different feature selection methods. - Evaluate both classification and
