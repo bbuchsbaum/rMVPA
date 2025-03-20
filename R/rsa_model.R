@@ -10,7 +10,6 @@ sanitize <- function(name) {
 }
 
 
-
 #' Construct a design for an RSA (Representational Similarity Analysis) model
 #'
 #' This function constructs a design for an RSA model using the provided formula, data, and optional parameters.
@@ -127,15 +126,13 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_
 rsa_model_mat <- function(rsa_des) {
   rvars <- labels(terms(rsa_des$formula))
   denv <- list2env(rsa_des$data)
-  vset <- lapply(rvars, function(x) eval(parse(text=x), denv))
+  vset <- lapply(rvars, function(x) eval(parse(text=x), envir=denv))
   
   # Process input variables to create vectors from distance matrices
   vmatlist <- lapply(vset, function(v) {
     if (inherits(v, "dist")) {
-      # An distance matrix of class "dist"
-      as.vector(v)
+      as.vector(v)  # class "dist"
     } else if (isSymmetric(v)) {
-      # A full distance matrix
       v[lower.tri(v)]
     } else {
       as.vector(dist(v))
@@ -147,50 +144,12 @@ rsa_model_mat <- function(rsa_des) {
     vmatlist <- lapply(vmatlist, function(v) v[rsa_des$include])
   }
   
-  # Assign sanitized names to the output list
+  # Assign sanitized names
   names(vmatlist) <- sanitize(rvars)
   
   # Return the model matrix as a named list of vectors
   vmatlist
 }
-
-
-#' Construct an RSA (Representational Similarity Analysis) model
-#'
-#' This function creates an RSA model object by taking an MVPA (Multi-Variate Pattern Analysis) dataset and an RSA design.
-#'
-#' @param dataset An instance of an \code{mvpa_dataset}.
-#' @param design An instance of an \code{rsa_design} created by \code{rsa_design()}.
-#' @param distmethod A character string specifying the method used to compute distances between observations. One of: \code{"pearson"} or \code{"spearman"} (defaults to "spearman").
-#' @param regtype A character string specifying the analysis method. One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").
-#' @return A list with two elements: \code{dataset} and \code{design}, with the class attribute set to \code{"rsa_model"} and \code{"list"}.
-#' @examples
-#' # Create a random MVPA dataset
-#' data <- matrix(rnorm(100 * 100), 100, 100)
-#' labels <- factor(rep(1:2, each = 50))
-#' mvpa_data <- mvpa_dataset(data, labels)
-#'
-#' # Create an RSA design
-#' dismat <- dist(data)
-#' rdes <- rsa_design(~ dismat, list(dismat = dismat))
-#'
-#' # Create an RSA model with default parameters
-#' rsa_mod <- rsa_model(mvpa_data, rdes)
-#'
-#' # Create an RSA model with custom parameters
-#' rsa_mod_custom <- rsa_model(mvpa_data, rdes, distmethod = "pearson", regtype = "lm")
-#' @export
-rsa_model <- function(dataset, design, distmethod = "spearman", regtype = "pearson") {
-  assert_that(inherits(dataset, "mvpa_dataset"))
-  assert_that(inherits(design, "rsa_design"))
-  
-  distmethod <- match.arg(distmethod, c("pearson", "spearman"))
-  regtype <- match.arg(regtype, c("pearson", "spearman", "lm", "rfit"))
-  
-  create_model_spec("rsa_model", dataset, design, distmethod = distmethod,
-                    regtype = regtype)
-}
-
 
 
 #' @keywords internal
@@ -207,24 +166,185 @@ run_rfit <- function(dvec, obj) {
 #' @keywords internal
 #' @importFrom stats coef cor dist rnorm terms lm sd
 #' @noRd
+check_collinearity <- function(model_mat) {
+  # Get the design matrix and names
+  vnames <- names(model_mat)
+  design_matrix <- as.matrix(model_mat)
+  
+  # Basic check - need at least 2 columns for collinearity
+  if (ncol(design_matrix) > 1) {
+    # Calculate correlation matrix and check for high correlations
+    tryCatch({
+      cor_matrix <- cor(design_matrix, use = "pairwise.complete.obs")
+      diag(cor_matrix) <- 0
+      if (any(abs(cor_matrix) > 0.99, na.rm = TRUE)) {
+        high_cor_pairs <- which(abs(cor_matrix) > 0.99, arr.ind = TRUE)
+        if (nrow(high_cor_pairs) > 0) {
+          problem_vars <- apply(high_cor_pairs, 1, function(idx) {
+            paste(vnames[c(idx[1], idx[2])], collapse = " and ")
+          })
+          stop(sprintf("Collinearity detected among predictors: %s. Consider removing one of the correlated variables.",
+                       paste(problem_vars, collapse = "; ")))
+        }
+      }
+      
+      # Also check linear dependencies using QR decomposition
+      qr_result <- qr(design_matrix)
+      if (qr_result$rank < ncol(design_matrix)) {
+        stop(sprintf("Design matrix is rank deficient (rank %d < %d columns). Some predictors are linear combinations of others.", 
+                     qr_result$rank, ncol(design_matrix)))
+      }
+    }, error = function(e) {
+      if (grepl("NA/NaN/Inf", e$message)) {
+        stop("Cannot compute correlations due to NA/NaN/Inf values in predictor variables.")
+      } else {
+        stop(paste("Error checking collinearity:", e$message))
+      }
+    })
+  }
+}
+
+
+#' @keywords internal
+#' @importFrom stats coef cor dist rnorm terms lm sd
+#' @noRd
 run_lm <- function(dvec, obj) {
+  # This is the standard LM approach that returns T-values for each predictor.
   form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
   vnames <- names(obj$design$model_mat)
   obj$design$model_mat$dvec <- dvec
-  res <- lm(form, data=obj$design$model_mat)
-  res <- coef(summary(res))[-1,3]
-  names(res) <- vnames
-  res
+  
+  fit <- lm(form, data=obj$design$model_mat)
+  # Return T-values (3rd column of coef summary)
+  tvals <- coef(summary(fit))[-1, 3]
+  names(tvals) <- vnames
+  tvals
 }
+
 
 #' @keywords internal
 #' @noRd
 run_cor <- function(dvec, obj) {
+  # For 'pearson' or 'spearman' regtype, we just do correlation with each predictor
   res <- sapply(obj$design$model_mat, function(x) cor(dvec, x, method=obj$distmethod))
   names(res) <- names(obj$design$model_mat)
   res
 }
 
+
+################################################################################
+# NEW: Constrained LM with glmnet
+################################################################################
+#' @keywords internal
+#' @importFrom glmnet glmnet
+#' @noRd
+run_lm_constrained <- function(dvec, obj) {
+  # Check if glmnet is available and install if needed
+  if (!requireNamespace("glmnet", quietly = TRUE)) {
+    stop("Package 'glmnet' is required for non-negative constraints. Please install it with: install.packages('glmnet')")
+  }
+  
+  # Convert list of vectors (predictors) into a matrix
+  var_names <- names(obj$design$model_mat)
+  X <- do.call(cbind, obj$design$model_mat)  # columns = predictors
+  colnames(X) <- var_names
+  
+  # Identify which predictors should be constrained to be >= 0
+  if (is.null(obj$nneg)) {
+    stop("run_lm_constrained called, but obj$nneg is NULL.")
+  }
+  
+  nneg_names <- names(obj$nneg)
+  lower_lim_vec <- sapply(var_names, function(vn) {
+    if (vn %in% nneg_names) 0 else -Inf
+  })
+  
+  # Create penalty_factor vector - add a small penalty to non-negative terms
+  # and zero penalty to unconstrained terms to avoid the "all penalty factors <= 0" error
+  penalty_factor <- sapply(var_names, function(vn) {
+    if (vn %in% nneg_names) 1e-5 else 0
+  })
+  
+  # Use a small alpha (mixing parameter) to ensure stability
+  alpha_val <- 1e-5
+  
+  # Fit glmnet with near-zero lambda and minimal penalty on non-negative variables
+  fit <- tryCatch({
+    glmnet::glmnet(
+      x = X,
+      y = dvec,
+      alpha = alpha_val,                       
+      lambda = 1e-5,                  
+      penalty.factor = penalty_factor,
+      lower.limits = lower_lim_vec,
+      standardize = FALSE,
+      intercept = TRUE
+    )
+  }, error = function(e) {
+    # If error still occurs, try a different approach with all penalty factors = 1
+    warning("First glmnet attempt failed, trying with uniform penalties: ", e$message)
+    glmnet::glmnet(
+      x = X,
+      y = dvec,
+      alpha = alpha_val,
+      lambda = 1e-5,
+      lower.limits = lower_lim_vec,
+      standardize = FALSE,
+      intercept = TRUE
+    )
+  })
+  
+  # Extract coefficients at smallest lambda
+  lambda_min <- min(fit$lambda)
+  
+  # Properly extract coefficients - coef is S3 method
+  coef_matrix <- predict(fit, type = "coefficients", s = lambda_min)
+  # First row is intercept, we want rows 2:end
+  betas <- as.numeric(coef_matrix)[-1]
+  names(betas) <- var_names
+  
+  betas
+}
+
+
+################################################################################
+# NEW: Semi-Partial LM
+################################################################################
+#' @keywords internal
+#' @noRd
+run_lm_semipartial <- function(dvec, obj) {
+  # Compute semi-partial correlations from a single LM fit
+  # sr_i = sign(t_i) * sqrt( (t_i^2 * MSE) / TSS )
+  
+  form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
+  vnames <- names(obj$design$model_mat)
+  obj$design$model_mat$dvec <- dvec
+  
+  fit  <- lm(form, data=obj$design$model_mat)
+  smry <- summary(fit)
+  
+  # t-values (excluding intercept)
+  tvals <- coef(smry)[-1, 3]
+  
+  # Residual MSE
+  MSE <- smry$sigma^2
+  
+  # TSS = total sum of squares of the outcome
+  y_mod <- fit$model$dvec
+  TSS   <- sum((y_mod - mean(y_mod))^2)
+  
+  # Compute sr_i
+  sr2 <- (tvals^2 * MSE) / TSS
+  sr  <- sign(tvals) * sqrt(sr2)
+  
+  names(sr) <- vnames
+  sr
+}
+
+
+################################################################################
+# TRAINING METHOD
+################################################################################
 #' Train an RSA Model
 #'
 #' This function trains an RSA (representational similarity analysis) model using the specified method and distance calculation.
@@ -234,25 +354,61 @@ run_cor <- function(dvec, obj) {
 #' @param y The response variable.
 #' @param indices The indices of the training data.
 #' @param ... Additional arguments passed to the training method.
-#' @return The trained model.
+#' @return 
+#' Depending on \code{obj$regtype}:
+#' \itemize{
+#'   \item \code{"lm"} + no constraints + \code{obj$semipartial=TRUE}: semi-partial correlations
+#'   \item \code{"lm"} + no constraints + \code{obj$semipartial=FALSE}: T-values of each predictor
+#'   \item \code{"lm"} + \code{nneg} constraints: raw coefficients from constrained \code{glmnet}
+#'   \item \code{"rfit"}: robust regression coefficients
+#'   \item \code{"pearson"} or \code{"spearman"}: correlation coefficients
+#' }
 #' @export
 train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
+  # 1) correlation-based distance
   dtrain <- 1 - cor(t(train_dat), method=obj$distmethod)
-  dvec <- dtrain[lower.tri(dtrain)]
+  dvec   <- dtrain[lower.tri(dtrain)]
   
+  # 2) Exclude certain comparisons if needed
   if (!is.null(obj$design$include)) {
     dvec <- dvec[obj$design$include]
   }
   
-  switch(obj$regtype,
-         rfit=run_rfit(dvec, obj),
-         lm=run_lm(dvec,obj),
-         pearson=run_cor(dvec,obj),
-         spearman=run_cor(dvec,obj))
+  # 3) Switch on regtype + constraints + semipartial
+  out <- switch(
+    obj$regtype,
+    
+    # robust regression
+    rfit = run_rfit(dvec, obj),
+    
+    # linear model
+    lm = {
+      has_nneg <- (!is.null(obj$nneg) && length(obj$nneg) > 0)
+      
+      if (has_nneg) {
+        # Use constrained approach
+        run_lm_constrained(dvec, obj)
+      } else if (isTRUE(obj$semipartial)) {
+        # Semi-partial correlations
+        run_lm_semipartial(dvec, obj)
+      } else {
+        # Standard approach = t-values
+        run_lm(dvec, obj)
+      }
+    },
+    
+    # correlation-based
+    pearson  = run_cor(dvec, obj),
+    spearman = run_cor(dvec, obj)
+  )
   
+  out
 }
 
 
+################################################################################
+# PRINT METHODS
+################################################################################
 #' @export
 #' @method print rsa_model
 print.rsa_model <- function(x, ...) {
@@ -261,12 +417,12 @@ print.rsa_model <- function(x, ...) {
     stop("Package 'crayon' is required for pretty printing. Please install it.")
   }
   
-  # Define color scheme
-  header_style <- crayon::bold$cyan
+  # Color scheme
+  header_style  <- crayon::bold$cyan
   section_style <- crayon::yellow
-  info_style <- crayon::white
-  number_style <- crayon::green
-  method_style <- crayon::magenta
+  info_style    <- crayon::white
+  number_style  <- crayon::green
+  method_style  <- crayon::magenta
   formula_style <- crayon::italic$blue
   
   # Print header
@@ -277,26 +433,38 @@ print.rsa_model <- function(x, ...) {
   cat(info_style("│  ├─ Distance Method: "), method_style(x$distmethod), "\n")
   cat(info_style("│  └─ Regression Type: "), method_style(x$regtype), "\n")
   
-  # Dataset information
+  # If nonneg constraints are present
+  if (!is.null(x$nneg) && length(x$nneg) > 0) {
+    cat(info_style("│  └─ Non-negativity on: "),
+        method_style(paste(names(x$nneg), collapse=", ")), "\n")
+  }
+  
+  # If semipartial
+  if (isTRUE(x$semipartial) && (is.null(x$nneg) || length(x$nneg) == 0)) {
+    cat(info_style("│  └─ Semi-partial: "), method_style("TRUE"), "\n")
+  }
+  
+  # Dataset info
   cat(section_style("├─ Dataset"), "\n")
   dims <- dim(x$dataset$train_data)
-  dim_str <- paste0(paste(dims[-length(dims)], collapse=" × "), 
-                   " × ", number_style(dims[length(dims)]), " observations")
+  dim_str <- paste0(
+    paste(dims[-length(dims)], collapse=" × "), 
+    " × ", number_style(dims[length(dims)]), " observations"
+  )
   cat(info_style("│  ├─ Dimensions: "), dim_str, "\n")
   cat(info_style("│  └─ Type: "), class(x$dataset$train_data)[1], "\n")
   
-  # Design information
+  # Design info
   cat(section_style("├─ Design"), "\n")
   cat(info_style("│  ├─ Formula: "), formula_style(deparse(x$design$formula)), "\n")
   
-  # Variables in model matrix
   var_names <- names(x$design$model_mat)
   cat(info_style("│  └─ Predictors: "), method_style(paste(var_names, collapse=", ")), "\n")
   
-  # Structure information
+  # Structure info
   cat(section_style("└─ Structure"), "\n")
   
-  # Block information
+  # Block info
   if (!is.null(x$design$block_var)) {
     blocks <- table(x$design$block_var)
     cat(info_style("   ├─ Blocking: "), "Present\n")
@@ -310,7 +478,7 @@ print.rsa_model <- function(x, ...) {
     cat(info_style("   ├─ Blocking: "), crayon::red("None"), "\n")
   }
   
-  # Split information
+  # Split info
   if (!is.null(x$design$split_by)) {
     split_info <- length(x$design$split_groups)
     cat(info_style("   └─ Split Groups: "), number_style(split_info), "\n")
@@ -321,6 +489,7 @@ print.rsa_model <- function(x, ...) {
   cat("\n")
 }
 
+
 #' @export
 #' @method print rsa_design
 print.rsa_design <- function(x, ...) {
@@ -329,22 +498,22 @@ print.rsa_design <- function(x, ...) {
     stop("Package 'crayon' is required for pretty printing. Please install it.")
   }
   
-  # Define color scheme
-  header_style <- crayon::bold$cyan
+  # Color scheme
+  header_style  <- crayon::bold$cyan
   section_style <- crayon::yellow
-  info_style <- crayon::white
-  number_style <- crayon::green
+  info_style    <- crayon::white
+  number_style  <- crayon::green
   formula_style <- crayon::italic$blue
-  var_style <- crayon::magenta
+  var_style     <- crayon::magenta
   
   # Print header
   cat("\n", header_style("█▀▀ RSA Design ▀▀█"), "\n\n")
   
-  # Formula section
+  # Formula
   cat(section_style("├─ Formula"), "\n")
   cat(info_style("│  └─ "), formula_style(deparse(x$formula)), "\n")
   
-  # Data section
+  # Variables
   cat(section_style("├─ Variables"), "\n")
   var_types <- sapply(x$data, function(v) {
     if (inherits(v, "dist")) "distance matrix"
@@ -361,10 +530,10 @@ print.rsa_design <- function(x, ...) {
         number_style(var_types[i]), "\n")
   }
   
-  # Structure section
+  # Structure
   cat(section_style("└─ Structure"), "\n")
   
-  # Block information
+  # Block info
   if (!is.null(x$block_var)) {
     blocks <- table(x$block_var)
     cat(info_style("   ├─ Blocking: "), "Present\n")
@@ -375,7 +544,7 @@ print.rsa_design <- function(x, ...) {
     cat(info_style("   ├─ Blocking: "), crayon::red("None"), "\n")
   }
   
-  # Include/exclude information
+  # Include/exclude info
   if (!is.null(x$include)) {
     n_comparisons <- length(x$include)
     n_included <- sum(x$include)
@@ -392,6 +561,97 @@ print.rsa_design <- function(x, ...) {
 }
 
 
-
-
-
+#' Construct an RSA (Representational Similarity Analysis) model
+#'
+#' This function creates an RSA model object by taking an MVPA (Multi-Variate Pattern Analysis) dataset and an RSA design.
+#'
+#' @param dataset An instance of an \code{mvpa_dataset}.
+#' @param design An instance of an \code{rsa_design} created by \code{rsa_design()}.
+#' @param distmethod A character string specifying the method used to compute distances between observations. 
+#'        One of: \code{"pearson"} or \code{"spearman"} (defaults to "spearman").
+#' @param regtype A character string specifying the analysis method. 
+#'        One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").
+#' @param check_collinearity Logical indicating whether to check for collinearity in the design matrix. 
+#'        Only applies when \code{regtype="lm"}. Default is TRUE.
+#' @param nneg A named list of variables (predictors) for which non-negative regression coefficients should be enforced 
+#'        (only if \code{regtype="lm"}). Defaults to \code{NULL} (no constraints).
+#' @param semipartial Logical indicating whether to compute semi-partial correlations in the \code{"lm"} case 
+#'        (only if \code{nneg} is not used). Defaults to \code{FALSE}.
+#'
+#' @return An object of class \code{"rsa_model"} (and \code{"list"}), containing:
+#' \itemize{
+#'   \item \code{dataset}    : the input dataset
+#'   \item \code{design}     : the RSA design
+#'   \item \code{distmethod} : the distance method used
+#'   \item \code{regtype}    : the regression type
+#'   \item \code{nneg}       : a named list of constrained variables, if any
+#'   \item \code{semipartial}: whether to compute semi-partial correlations
+#' }
+#' @examples
+#' # Create a random MVPA dataset
+#' data <- matrix(rnorm(100 * 100), 100, 100)
+#' labels <- factor(rep(1:2, each = 50))
+#' mvpa_data <- mvpa_dataset(data, labels)
+#'
+#' # Create an RSA design with two distance matrices
+#' dismat1 <- dist(data)
+#' dismat2 <- dist(matrix(rnorm(100*100), 100, 100))
+#' rdes <- rsa_design(~ dismat1 + dismat2, list(dismat1=dismat1, dismat2=dismat2))
+#'
+#' # Create an RSA model with standard 'lm' (returns t-values):
+#' rsa_mod <- rsa_model(mvpa_data, rdes, regtype="lm")
+#'
+#' # Create an RSA model enforcing non-negativity for dismat2 only:
+#' # Requires the 'glmnet' package to be installed
+#' # rsa_mod_nneg <- rsa_model(mvpa_data, rdes, regtype="lm",
+#' #                          nneg = list(dismat2 = TRUE))
+#'
+#' # Create an RSA model using 'lm' but returning semi-partial correlations:
+#' rsa_mod_sp <- rsa_model(mvpa_data, rdes, regtype="lm",
+#'                         semipartial = TRUE)
+#'
+#' # Train the model
+#' fit_params <- train_model(rsa_mod_sp, mvpa_data$train_data)
+#' # 'fit_params' = named vector of semi-partial correlations for each predictor
+#'
+#' @export
+rsa_model <- function(dataset, 
+                      design, 
+                      distmethod = "spearman", 
+                      regtype = "pearson", 
+                      check_collinearity = TRUE,
+                      nneg = NULL,
+                      semipartial = FALSE) {
+  
+  assert_that(inherits(dataset, "mvpa_dataset"))
+  assert_that(inherits(design, "rsa_design"))
+  
+  distmethod <- match.arg(distmethod, c("pearson", "spearman"))
+  regtype    <- match.arg(regtype, c("pearson", "spearman", "lm", "rfit"))
+  
+  # Check for glmnet if nneg constraints are provided
+  if (!is.null(nneg) && length(nneg) > 0 && regtype == "lm") {
+    if (!requireNamespace("glmnet", quietly = TRUE)) {
+      stop("Package 'glmnet' is required for non-negative constraints. Please install it with: install.packages('glmnet')")
+    }
+  }
+  
+  # If using LM, optionally check for collinearity
+  if (regtype == "lm" && check_collinearity) {
+    message("Checking design matrix for collinearity...")
+    check_collinearity(design$model_mat)
+    message("Collinearity check passed.")
+  }
+  
+  # Create the RSA model object
+  obj <- create_model_spec(
+    "rsa_model", 
+    dataset, 
+    design, 
+    distmethod = distmethod, 
+    regtype    = regtype,
+    nneg       = nneg,
+    semipartial = semipartial
+  )
+  obj
+}

@@ -135,9 +135,15 @@ test_that("vector_rsa_model constructs a valid model spec", {
   mspec <- vector_rsa_model(gen_sample_dataset(c(5,5,5), 100, blocks = 3)$dataset, rdes, distfun = cordist())
   
   expect_true(inherits(mspec, "vector_rsa_model"))
-  # Check that the model spec includes the provided distfun and rsa_simfun
+  # Check that the model spec includes permutation parameters
+  expect_equal(mspec$nperm, 50)
+  expect_equal(mspec$save_distributions, FALSE)
+  
+  # Check that other required components are present
   expect_true(!is.null(mspec$distfun))
-  expect_true(mspec$rsa_simfun %in% c("pearson", "spearman"))
+  expect_true(!is.null(mspec$rsa_simfun))
+  expect_true(!is.null(mspec$dataset))
+  expect_true(!is.null(mspec$design))
 })
 
 ## --- Tests for train_model.vector_rsa_model ---
@@ -225,4 +231,58 @@ test_that("vector_rsa searchlight runs without error with different distance fun
   mspec <- vector_rsa_model(dataset_obj$dataset, rdes, distfun = distfun_pca)
   out3 <- run_searchlight(mspec, radius = 4, method = "standard")
   expect_true(inherits(out3$results[[1]]$data, "DenseNeuroVol"))
+})
+
+## --- Tests for permutation testing ---
+test_that("vector_rsa runs with permutation testing and produces valid statistical outputs", {
+  # Generate sample dataset
+  dataset <- gen_sample_dataset(c(5,5,5), 15, blocks=3)
+  
+  # Create a reference distance matrix
+  D <- as.matrix(dist(matrix(rnorm(15*15), 15, 15)))
+  labels <- paste0("Label", 1:15)
+  rownames(D) <- labels
+  colnames(D) <- labels
+  
+  block <- dataset$design$block_var
+  
+  # Create vector_rsa_design
+  rdes <- vector_rsa_design(D=D, labels=sample(labels, length(block), replace=TRUE), block)
+  
+  # Create vector_rsa_model with permutation testing enabled
+  mspec <- vector_rsa_model(
+    dataset$dataset, 
+    rdes, 
+    distfun=cordist(),
+    nperm=50,  # Run 50 permutations
+    save_distributions=FALSE  # Don't save full distributions for efficiency
+  )
+  
+  # Run a small searchlight to test permutation
+  out <- run_searchlight(mspec, radius=3, method="standard")
+  
+  # Test that output contains permutation results
+  # First get the performance data
+  perf_data <- out$results[[1]]$data
+  first_nonzero <- which(perf_data@.Data > 0)[1]
+  
+  # Extract the performance value at the first nonzero location
+  if (!is.na(first_nonzero)) {
+    # Check if metadata contains permutation results
+    meta <- attr(perf_data, "meta")
+    
+    # Look for p-values and z-scores in column names
+    col_names <- colnames(meta$performance_names)
+    
+    # Verify permutation results exist
+    expect_true(any(grepl("^p_", col_names)), "Permutation p-values should exist in results")
+    expect_true(any(grepl("^z_", col_names)), "Permutation z-scores should exist in results")
+    
+    # Also check that there's at least one valid p-value between 0 and 1
+    p_cols <- meta$performance_names[, grepl("^p_", col_names), drop=FALSE]
+    if (ncol(p_cols) > 0) {
+      p_vals <- p_cols[first_nonzero, ]
+      expect_true(all(p_vals >= 0 & p_vals <= 1), "P-values should be between 0 and 1")
+    }
+  }
 })

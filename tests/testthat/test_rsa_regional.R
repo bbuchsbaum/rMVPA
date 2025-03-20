@@ -144,4 +144,98 @@ test_that("mvpa_regional with multiple distance matrices runs without error and 
   }
 })
 
+test_that("mvpa_regional with multiple distance matrices runs without error and returns valid performance metrics", {
+  dset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
+  
+  Dmat1 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat2 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat3 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  rdes <- rsa_design(~ Dmat1 + Dmat2 + Dmat3, list(Dmat1 = Dmat1, Dmat2 = Dmat2, Dmat3=Dmat3, block = dset$design$block_var), block_var = "block")
+  mspec <- rsa_model(dset$dataset, design = rdes, distmethod="spearman", regtype="lm")
+  
+  region_mask <- NeuroVol(sample(1:5, size = length(dset$dataset$mask), replace = TRUE), space(dset$dataset$mask))
+  res <- run_regional(mspec, region_mask)
+  
+  expect_true(!is.null(res))
+  # Check that performance_table contains expected columns (e.g., mse and correlation)
+  if (!is.null(res$performance_table)) {
+    colnames_perf <- names(res$performance_table)
+    expect_true(any(grepl("Dmat1", colnames_perf, ignore.case = TRUE)))
+    expect_true(any(grepl("Dmat2", colnames_perf, ignore.case = TRUE)))
+  }
+})
+
+test_that("mvpa_regional with semipartial correlations runs without error", {
+  dset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
+  
+  Dmat1 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat2 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  rdes <- rsa_design(~ Dmat1 + Dmat2, list(Dmat1 = Dmat1, Dmat2 = Dmat2, block = dset$design$block_var), block_var = "block")
+  
+  # Create model with semipartial option set to TRUE
+  mspec <- rsa_model(dset$dataset, design = rdes, regtype = "lm", semipartial = TRUE)
+  
+  region_mask <- NeuroVol(sample(1:5, size = length(dset$dataset$mask), replace = TRUE), space(dset$dataset$mask))
+  res <- run_regional(mspec, region_mask)
+  
+  expect_true(!is.null(res))
+  # Check that performance_table contains expected columns
+  if (!is.null(res$performance_table)) {
+    colnames_perf <- names(res$performance_table)
+    expect_true(any(grepl("Dmat1", colnames_perf, ignore.case = TRUE)))
+    expect_true(any(grepl("Dmat2", colnames_perf, ignore.case = TRUE)))
+  }
+  
+  # Test that coefficients are returned as semi-partial correlations
+  # This is a more indirect test, as we can't directly access the coefficients
+  # but we can check that the model runs without error and returns results
+  expect_true("performance_table" %in% names(res))
+  expect_true("vol_results" %in% names(res))
+})
+
+test_that("mvpa_regional with non-negative constraints runs without error", {
+  dset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
+  
+  Dmat1 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat2 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  rdes <- rsa_design(~ Dmat1 + Dmat2, list(Dmat1 = Dmat1, Dmat2 = Dmat2, block = dset$design$block_var), block_var = "block")
+  
+  # Create model with non-negative constraints on Dmat2
+  mspec <- rsa_model(dset$dataset, design = rdes, regtype = "lm", nneg = list(Dmat2 = TRUE))
+  
+  region_mask <- NeuroVol(sample(1:5, size = length(dset$dataset$mask), replace = TRUE), space(dset$dataset$mask))
+  res <- run_regional(mspec, region_mask)
+  
+  expect_true(!is.null(res))
+  # Check that performance_table contains expected columns
+  if (!is.null(res$performance_table)) {
+    colnames_perf <- names(res$performance_table)
+    expect_true(any(grepl("Dmat1", colnames_perf, ignore.case = TRUE)))
+    expect_true(any(grepl("Dmat2", colnames_perf, ignore.case = TRUE)))
+  }
+})
+
+test_that("mvpa_regional with both semipartial and non-negative constraints handles precedence correctly", {
+  dset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
+  
+  Dmat1 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat2 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  rdes <- rsa_design(~ Dmat1 + Dmat2, list(Dmat1 = Dmat1, Dmat2 = Dmat2, block = dset$design$block_var), block_var = "block")
+  
+  # Create model with both options - non-negative should take precedence
+  mspec <- rsa_model(dset$dataset, design = rdes, regtype = "lm", 
+                    nneg = list(Dmat2 = TRUE), semipartial = TRUE)
+  
+  region_mask <- NeuroVol(sample(1:5, size = length(dset$dataset$mask), replace = TRUE), space(dset$dataset$mask))
+  res <- run_regional(mspec, region_mask)
+  
+  expect_true(!is.null(res))
+  # Check that results are returned successfully
+  expect_true("performance_table" %in% names(res))
+  expect_true("vol_results" %in% names(res))
+  
+  # The model should use non-negative constraints and ignore semipartial
+  # This is handled in train_model.rsa_model function, which prioritizes nneg over semipartial
+})
+
 

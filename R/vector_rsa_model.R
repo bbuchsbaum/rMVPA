@@ -139,7 +139,7 @@ compute_trial_scores <- function(obj, X) {
   # Convert X to matrix if needed
   X <- as.matrix(X)
   
-  # This external function presumably computes second-order similarity:
+  # This function computes second-order similarity:
   #   second_order_similarity(distfun, X, D, block_var, rsa_simfun)
   # 'distfun' can compute distances on X, 'D' is the reference matrix
   # 'block_var' is in obj$design$block, and 'rsa_simfun' is the correlation method.
@@ -151,6 +151,70 @@ compute_trial_scores <- function(obj, X) {
     block_var = obj$design$block,
     method    = obj$rsa_simfun
   )
+}
+
+
+#' Compute Second-Order Similarity Scores
+#'
+#' Calculates correlation-based \emph{second order similarity} between:
+#' \itemize{
+#'   \item A \strong{full NxN distance matrix} computed from \code{X} via \code{distfun}, and 
+#'   \item A \code{Dref} matrix (the "reference" dissimilarities).
+#' }
+#' For each row \code{i}, this excludes same-block comparisons by selecting \code{which(block_var != block_var[i])}.
+#'
+#' @param distfun An S3 distance object (see \code{\link{create_dist}}) 
+#'   specifying how to compute a pairwise distance matrix from \code{X}.
+#' @param X A numeric matrix (rows = observations, columns = features).
+#' @param Dref A numeric NxN reference matrix of dissimilarities (e.g., from an ROI mask or a prior).
+#' @param block_var A vector indicating block/group memberships for each row in \code{X}.
+#' @param method Correlation method: "pearson" or "spearman".
+#'
+#' @return A numeric vector of length \code{nrow(X)}, where each entry is
+#' the correlation (using \code{method}) between \code{distance_matrix[i, valid]} and
+#' \code{Dref[i, valid]}, with \code{valid = which(block_var != block_var[i])}.
+#'
+#' @details
+#' This function first calls \code{pairwise_dist(distfun, X)}, obtaining an NxN matrix 
+#' of \emph{all} pairwise distances. It does not do block-based exclusion internally. 
+#' Instead, for each row \code{i}, it excludes same-block rows from the correlation 
+#' by subsetting the distances to \code{valid_indices}.
+#'
+#' @examples
+#' # Suppose we have X (10x5), a reference D (10x10), block var, and a correlation distfun:
+#' X <- matrix(rnorm(50), 10, 5)
+#' D <- matrix(runif(100), 10, 10)
+#' block <- rep(1:2, each=5)
+#' dist_obj <- cordist(method="pearson")
+#' scores <- second_order_similarity(dist_obj, X, D, block, method="spearman")
+#'
+#' @export
+second_order_similarity <- function(distfun, X, Dref, block_var, method=c("pearson", "spearman")) {
+  method <- match.arg(method)
+  
+  # 1) Compute a full NxN distance matrix from X
+  distance_matrix <- pairwise_dist(distfun, X)
+  
+  n <- nrow(X)
+  scores <- numeric(n)
+  
+  # 2) For each row i, exclude same-block comparisons
+  for (i in seq_len(n)) {
+    valid_indices <- which(block_var != block_var[i])
+    if (length(valid_indices) > 0) {
+      x_vec <- distance_matrix[i, valid_indices]
+      ref_vec <- Dref[i, valid_indices]
+      if (length(x_vec) > 1) {
+        scores[i] <- cor(x_vec, ref_vec, method = method)
+      } else {
+        scores[i] <- NA
+      }
+    } else {
+      scores[i] <- NA
+    }
+  }
+  
+  scores
 }
 
 
