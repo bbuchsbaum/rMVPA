@@ -362,7 +362,7 @@ feature_rsa_model <- function(dataset,
 }
 
 
-#' @importFrom glmnet cv.glmnet glmnet coef.glmnet predict
+#' @importFrom glmnet cv.glmnet glmnet 
 #' @noRd
 .predict_glmnet <- function(model, F_new) {
   # F_new is test features (subset for that fold)

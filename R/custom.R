@@ -417,8 +417,7 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #' @importFrom dplyr bind_rows select filter pull mutate
 #' @importFrom tidyr unnest_wider
 #' @importFrom tibble tibble is_tibble
-#' @importFrom neuroim2 values indices space mask NeuroVol NeuroSurface SparseNeuroVec geometry NeuroSurfaceVector get_searchlight NeuroSpace
-#' @importFrom Matrix sparseMatrix sweep
+#' @importFrom Matrix sparseMatrix 
 #' @importFrom purrr map map_int map_dbl map_lgl list_assign
 #' @importFrom stats setNames sd
 #' @importFrom futile.logger flog.info flog.warn flog.error flog.debug
