@@ -185,6 +185,7 @@ external_crossval <- function(mspec, roi, id) {
 #' @keywords internal
 #' @noRd
 internal_crossval <- function(mspec, roi, id) {
+  
   # Generate cross-validation samples
   # Note: This step could potentially be moved outside the function
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), 
@@ -192,6 +193,8 @@ internal_crossval <- function(mspec, roi, id) {
 
   # Get ROI indices
   ind <- neuroim2::indices(roi$train_roi)
+
+ 
 
   # Iterate through the samples and fit the model
   ret <- samples %>% pmap(function(ytrain, ytest, train, test, .id) {

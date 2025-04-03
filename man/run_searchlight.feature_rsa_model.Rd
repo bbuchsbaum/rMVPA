@@ -7,7 +7,7 @@
 \method{run_searchlight}{feature_rsa_model}(
   model_spec,
   radius = 8,
-  method = c("randomized", "standard"),
+  method = c("standard", "randomized"),
   niter = 4,
   ...
 )

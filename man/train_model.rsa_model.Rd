@@ -18,7 +18,14 @@
 \item{...}{Additional arguments passed to the training method.}
 }
 \value{
-The trained model.
+Depending on \code{obj$regtype}:
+\itemize{
+  \item \code{"lm"} + no constraints + \code{obj$semipartial=TRUE}: semi-partial correlations
+  \item \code{"lm"} + no constraints + \code{obj$semipartial=FALSE}: T-values of each predictor
+  \item \code{"lm"} + \code{nneg} constraints: raw coefficients from constrained \code{glmnet}
+  \item \code{"rfit"}: robust regression coefficients
+  \item \code{"pearson"} or \code{"spearman"}: correlation coefficients
+}
 }
 \description{
 This function trains an RSA (representational similarity analysis) model using the specified method and distance calculation.

@@ -267,7 +267,6 @@ comp_perf <- function(results, region_mask) {
   })
   
   perf_mat <- as_tibble(perf_mat)
-  
   # Check if perf_mat is NULL or has 0 columns
   if (is.null(perf_mat) || !is.data.frame(perf_mat) || ncol(perf_mat) == 0) {
     message("Warning: Performance matrix is empty or invalid. Returning empty results.")
@@ -316,6 +315,8 @@ run_regional_base <- function(model_spec,
                               return_predictions = model_spec$return_predictions,
                               return_fits = model_spec$return_fits,
                               ...) {
+
+  
   
   # 1) Prepare regions
   prepped <- prep_regional(model_spec, region_mask)
@@ -458,6 +459,7 @@ run_regional.feature_rsa_model <- function(model_spec, region_mask,
                                            processor = NULL,
                                            verbose = FALSE,
                                            ...) {
+
   
   run_regional_base(
     model_spec,

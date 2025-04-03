@@ -286,3 +286,82 @@ test_that("vector_rsa runs with permutation testing and produces valid statistic
     }
   }
 })
+
+# Setup: Generate sample data and design
+set.seed(123)
+dset_info <- gen_sample_dataset(c(10,10,10), 60, blocks=3)
+vdes <- vector_rsa_design(as.matrix(dist(rnorm(20*10))), 
+                          labels=rep(paste0("s", 1:20), 3),
+                          block_var=dset_info$design$block_var)
+
+test_that("vector_rsa_model constructs a valid model spec", {
+  # No permutation args here
+  mspec <- vector_rsa_model(dset_info$dataset, vdes)
+  
+  expect_s3_class(mspec, "vector_rsa_model")
+  expect_true(inherits(mspec, "model_spec"))
+  expect_true(!is.null(mspec$dataset))
+  expect_true(!is.null(mspec$design))
+  expect_true(!is.null(mspec$distfun))
+  expect_true(!is.null(mspec$rsa_simfun))
+  # REMOVED: These are not stored in the model spec
+  # expect_null(mspec$nperm)
+  # expect_false(mspec$save_distributions)
+})
+
+test_that("vector_rsa runs with standard settings and produces expected output structure", {
+  skip_on_cran()
+  # No permutation args here
+  mspec <- vector_rsa_model(dset_info$dataset, vdes)
+  
+  # Run searchlight without permutations
+  res <- run_searchlight(mspec, radius=4)
+  
+  expect_s3_class(res, "searchlight_result")
+  expect_true(inherits(res$result, "NeuroVol"))
+  # Expect a single volume (correlation scores)
+  expect_equal(dim(res$result)[4], 1) 
+  expect_equal(colnames(res$result), "stat") # Default name for the main statistic
+})
+
+test_that("vector_rsa runs with permutation testing and produces valid statistical outputs", {
+  skip_on_cran()
+  # No permutation args here
+  mspec <- vector_rsa_model(dset_info$dataset, vdes)
+  
+  # Run searchlight WITH permutation args
+  res <- run_searchlight(mspec, radius=4, nperm = 50, save_distributions = FALSE)
+  
+  expect_s3_class(res, "searchlight_result")
+  expect_true(inherits(res$result, "NeuroVol"))
+  # Expect two volumes: stat and p_value
+  expect_equal(dim(res$result)[4], 2)
+  expect_true(all(c("stat", "p_value") %in% colnames(res$result)))
+  
+  # Check p-values are valid (between 0 and 1, possibly NA outside mask)
+  p_vals <- res$result[res$result[,,,"p_value"] != 0] # Exclude background
+  expect_true(all(p_vals >= 0 & p_vals <= 1, na.rm = TRUE))
+})
+
+# Add a test for save_distributions=TRUE if needed, similar structure
+test_that("vector_rsa searchlight handles save_distributions=TRUE", {
+  skip_on_cran()
+  # No permutation args here
+  mspec <- vector_rsa_model(dset_info$dataset, vdes)
+  
+  # Run searchlight WITH permutation args and save_distributions
+  res <- run_searchlight(mspec, radius=4, nperm = 50, save_distributions = TRUE)
+  
+  expect_s3_class(res, "searchlight_result")
+  expect_true(inherits(res$result, "NeuroVol"))
+  # Expect three volumes: stat, p_value, and possibly perm_mean/perm_sd or similar
+  # The exact names/number depends on the implementation detail of save_distributions
+  # Let's check for at least 3 volumes
+  expect_gte(dim(res$result)[4], 3)
+  expect_true(all(c("stat", "p_value") %in% colnames(res$result)))
+})
+
+
+# Potential additional tests:
+# - Different rsa_simfun ('spearman')
+# - Errors with invalid radius or mask

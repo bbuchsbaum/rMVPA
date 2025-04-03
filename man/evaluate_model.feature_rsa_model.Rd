@@ -2,22 +2,34 @@
 % Please edit documentation in R/feature_rsa_model.R
 \name{evaluate_model.feature_rsa_model}
 \alias{evaluate_model.feature_rsa_model}
-\title{Evaluate Method for Feature RSA Model}
+\title{Evaluate model performance for feature RSA}
 \usage{
-evaluate_model.feature_rsa_model(object, predicted, observed, ...)
+evaluate_model.feature_rsa_model(
+  object,
+  predicted,
+  observed,
+  nperm = 0,
+  save_distributions = FALSE,
+  ...
+)
 }
 \arguments{
 \item{object}{The feature RSA model}
 
-\item{predicted}{Predicted brain activity (X) [nObs x nVox]}
+\item{predicted}{Matrix of predicted values (from feature space F to voxel space X)}
 
-\item{observed}{Observed brain activity (X) [nObs x nVox]}
+\item{observed}{Matrix of observed values (actual voxel space X)}
 
-\item{...}{Additional args}
+\item{nperm}{Number of permutations for statistical testing (default: 0, no permutation)}
+
+\item{save_distributions}{Logical indicating whether to save full permutation distributions}
+
+\item{...}{Additional arguments}
 }
 \value{
-Performance metrics
+A list containing performance metrics and optional permutation results
 }
 \description{
-Evaluate Method for Feature RSA Model
+Computes correlation-based metrics (diag correlation, mean correlation, voxel correlation),
+MSE, R^2, and optionally performs permutation tests (via a helper function).
 }

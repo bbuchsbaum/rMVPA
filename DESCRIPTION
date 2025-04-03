@@ -39,6 +39,8 @@ Imports:
     corpcor
 Collate:
     'allgeneric.R'
+    'custom.R'
+    'balance.R'
     'classifiers.R'
     'common.R'
     'crossval.R'

@@ -15,18 +15,21 @@ If NULL, you must supply F.}
 \item{labels}{Vector of labels corresponding to the rows/columns of S or observations of F.}
 
 \item{k}{Integer specifying the number of feature dimensions to retain when using S. If 0 (default),
-automatically determines dimensions using eigenvalue threshold > 1.}
+automatically determines dimensions using eigenvalue threshold > 1 (minimum 2 dimensions kept).
+This parameter is ignored if F is supplied directly (k becomes ncol(F)).}
 
-\item{max_comps}{Maximum number of components to use (for PCA/PLS/SCCA). Default 10.}
+\item{max_comps}{Initial upper limit for the number of components to be derived from the
+feature space F by subsequent `feature_rsa_model` methods (PCA, PLS, SCCA).
+This value is automatically capped by the final feature dimensionality `k`. Default 10.}
 }
 \value{
 A \code{feature_rsa_design} object (S3 class) containing:
   \describe{
     \item{S}{The input similarity matrix (if used)}
-    \item{F}{Feature space projection matrix}
+    \item{F}{Feature space projection matrix (k dimensions)}
     \item{labels}{Vector of observation labels}
-    \item{k}{The number of feature dimensions}
-    \item{max_comps}{Maximum number of components for any method}
+    \item{k}{The final number of feature dimensions used}
+    \item{max_comps}{The upper limit on components (<= k)}
   }
 }
 \description{
@@ -35,7 +38,12 @@ You can either supply a similarity matrix S (and optionally select dimensions)
 or directly supply a feature matrix F.
 }
 \details{
-If F is supplied directly, it is used as-is.
-If only S is supplied, the design computes an eigen decomposition of S 
-(keeping factors with eigenvalue > 1, unless you specify \code{k}).
+This function defines the feature space representation for the analysis.
+If F is supplied directly, it is used as-is, and `k` becomes `ncol(F)`.
+If only S is supplied, an eigen decomposition of S is performed.
+`k` determines how many eigenvectors form the feature matrix F. If `k=0`,
+dimensions with eigenvalues > 1 are kept (minimum 2).
+`max_comps` sets an upper bound for the number of components that model-fitting
+methods (like PCA, PLS, SCCA in `feature_rsa_model`) can use, and it cannot
+exceed the final feature dimensionality `k`.
 }

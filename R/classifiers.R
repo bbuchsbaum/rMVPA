@@ -609,3 +609,184 @@ MVPAModels$hdrda <- list(
   }
 )
 
+
+#' @importFrom stats var dnorm
+#' @keywords internal
+#' @noRd
+MVPAModels$naive_bayes <- list(
+  type = "Classification",
+  library = NULL, # No external library needed for this basic implementation
+  label = "naive_bayes",
+  loop = NULL,
+  parameters = data.frame(parameter="parameter", class="character", label="parameter"), # No tunable parameters
+  grid = function(x, y, len = NULL) data.frame(parameter="none"), # Trivial grid
+
+  # FIT function: Train the Naive Bayes model
+  fit = function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    x <- as.matrix(x)
+    if (!is.factor(y)) y <- factor(y) # Ensure y is a factor
+
+    n_train <- nrow(x)
+    n_features <- ncol(x)
+    classes <- levels(y)
+    n_classes <- length(classes)
+
+    # Calculate prior probabilities (log scale)
+    log_class_priors <- log(sapply(classes, function(level) mean(y == level)))
+
+    # Check for classes with only one sample
+    class_counts <- table(y)
+    if (any(class_counts < 2)) {
+       problem_classes <- names(class_counts[class_counts < 2])
+       stop(paste("Cannot train Naive Bayes: Class(es)",
+                  paste(problem_classes, collapse=", "),
+                  "have fewer than 2 samples. Variance cannot be estimated."))
+    }
+
+
+    # Calculate class-conditional means and variances for each feature
+    mus <- matrix(NA, nrow = n_classes, ncol = n_features)
+    vars <- matrix(NA, nrow = n_classes, ncol = n_features)
+    rownames(mus) <- rownames(vars) <- classes
+
+    # Use split for efficient calculation by class
+    obs_indices_by_class <- split(seq_len(n_train), y)
+
+    for (k in 1:n_classes) {
+      class_label <- classes[k]
+      idx <- obs_indices_by_class[[class_label]]
+      samples_k <- x[idx, , drop = FALSE]
+
+      # Calculate means
+      mus[k, ] <- colMeans(samples_k)
+
+      # Calculate variances (MLE estimate, dividing by n, like CosmoMVPA)
+      # Using apply with var calculates sample variance (divides by n-1)
+      # We adjust to get MLE variance: sample_var * (n-1) / n
+      n_samples_in_class <- length(idx)
+      vars_k <- apply(samples_k, 2, stats::var) * (n_samples_in_class - 1) / n_samples_in_class
+
+      # Handle zero variance: add a small epsilon to avoid issues with dnorm
+      # A very small value relative to typical fMRI signal variance
+      zero_var_idx <- which(vars_k <= .Machine$double.eps)
+      if (length(zero_var_idx) > 0) {
+          # Find overall variance across non-zero var features for this class
+          non_zero_vars <- vars_k[vars_k > .Machine$double.eps]
+          epsilon <- if(length(non_zero_vars) > 0) min(non_zero_vars) * 1e-6 else 1e-10
+          # Ensure epsilon is positive
+          epsilon <- max(epsilon, 1e-10)
+          vars_k[zero_var_idx] <- epsilon
+          warning(sprintf("Naive Bayes: %d features had zero variance for class '%s'. Replaced with small epsilon (%g).",
+                          length(zero_var_idx), class_label, epsilon))
+
+      }
+       vars[k, ] <- vars_k
+    }
+
+
+    # Store the trained model parameters
+    modelFit <- list(
+      mus = mus,
+      vars = vars,
+      log_class_priors = log_class_priors,
+      classes = classes,
+      obsLevels = classes # Consistent with rMVPA convention
+    )
+
+    attr(modelFit, "obsLevels") <- classes
+    attr(modelFit, "problemType") <- "Classification"
+
+    return(modelFit)
+  },
+
+  # PREDICT function: Predict class labels
+  predict = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    newdata <- as.matrix(newdata)
+    log_posteriors <- calculate_log_posteriors(modelFit, newdata)
+
+    # Find the class with the maximum log posterior probability for each sample
+    max_idx <- apply(log_posteriors, 1, which.max)
+    predicted_classes <- modelFit$classes[max_idx]
+
+    # Return as factor with original levels
+    factor(predicted_classes, levels = modelFit$classes)
+  },
+
+  # PROB function: Predict class probabilities
+  prob = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    newdata <- as.matrix(newdata)
+    log_posteriors <- calculate_log_posteriors(modelFit, newdata)
+
+    # Convert log posteriors to probabilities using the log-sum-exp trick for stability
+    # For each sample (row), subtract the max log posterior before exponentiating
+    probs <- apply(log_posteriors, 1, function(log_p_row) {
+       max_log_p <- max(log_p_row)
+       log_p_shifted <- log_p_row - max_log_p
+       p_shifted <- exp(log_p_shifted)
+       p_normalized <- p_shifted / sum(p_shifted)
+       # Handle potential NaNs if all log posteriors were -Inf
+       p_normalized[is.nan(p_normalized)] <- 1 / length(p_normalized)
+       return(p_normalized)
+    })
+
+    # The result from apply needs to be transposed
+    probs <- t(probs)
+    colnames(probs) <- modelFit$classes
+    return(probs)
+  }
+)
+
+# Helper function to calculate log posterior probabilities (used by predict and prob)
+# This avoids code duplication
+calculate_log_posteriors <- function(modelFit, newdata) {
+    mus <- modelFit$mus
+    vars <- modelFit$vars
+    log_class_priors <- modelFit$log_class_priors
+    classes <- modelFit$classes
+    n_classes <- length(classes)
+    n_test <- nrow(newdata)
+    n_features <- ncol(newdata)
+
+    if (n_features != ncol(mus)) {
+        stop(sprintf("Feature dimension mismatch: model trained with %d features, newdata has %d",
+                     ncol(mus), n_features))
+    }
+
+    # Matrix to store log posteriors (samples x classes)
+    log_posteriors <- matrix(NA, nrow = n_test, ncol = n_classes)
+    colnames(log_posteriors) <- classes
+
+    # Calculate log likelihood for each sample and each class
+    for (k in 1:n_classes) {
+        mu_k <- mus[k, ]
+        var_k <- vars[k, ]
+
+        # Use dnorm with log=TRUE for log PDF calculation
+        # Apply to each feature (column) for all test samples
+        # Result is a matrix (n_test x n_features)
+        # Note: dnorm handles vectors for x, mean, sd efficiently
+        log_likelihoods_features <- sapply(1:n_features, function(j) {
+             stats::dnorm(newdata[, j], mean = mu_k[j], sd = sqrt(var_k[j]), log = TRUE)
+        })
+
+        # Handle -Inf results from dnorm (e.g., if variance was tiny or value far out)
+        log_likelihoods_features[!is.finite(log_likelihoods_features)] <- -1e100 # Assign a very small log probability
+
+        # Sum log likelihoods across features (naive independence assumption)
+        log_likelihood_sum <- rowSums(log_likelihoods_features)
+
+        # Add log prior probability
+        log_posteriors[, k] <- log_likelihood_sum + log_class_priors[k]
+    }
+
+     # Handle cases where all posteriors might be -Inf (should be rare)
+     all_inf_rows <- apply(log_posteriors, 1, function(row) all(!is.finite(row)))
+     if (any(all_inf_rows)) {
+         log_posteriors[all_inf_rows,] <- log(1/n_classes) # Assign equal log probability
+         warning(sprintf("%d samples had non-finite log posteriors for all classes. Assigned equal probability.", sum(all_inf_rows)))
+     }
+
+
+    return(log_posteriors)
+}
+

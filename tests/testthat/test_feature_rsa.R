@@ -10,13 +10,14 @@ test_that("regional feature_rsa_model with direct F matrix runs without error", 
   labels <- paste0("obs", 1:100)
   
   # Create feature_rsa_design using direct F matrix
-  fdes <- feature_rsa_design(F=Fmat, labels=labels)
+  fdes <- feature_rsa_design(F=Fmat, labels=labels, max_comps=3)
   
   # Create a feature_rsa_model, for example using 'pls'
   mspec <- feature_rsa_model(dset$dataset, fdes, method="pca", crossval=blocked_cross_validation(dset$design$block_var))
   
   # Create a region mask with 5 ROIs
-  region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
+  region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), 
+  space(dset$dataset$mask))
   
   # Run regional analysis
   res <- run_regional(mspec, region_mask)
@@ -37,7 +38,7 @@ test_that("regional feature_rsa_model with S-based feature extraction runs witho
   labels <- paste0("obs", 1:100)
   
   # Create feature_rsa_design using S
-  fdes <- feature_rsa_design(S=S, labels=labels, k=5) # reduce to 5 dims
+  fdes <- feature_rsa_design(S=S, labels=labels, k=10) # reduce to 5 dims
   
   # Create a feature_rsa_model using scca this time
   mspec <- feature_rsa_model(dset$dataset, fdes, method="scca", crossval=blocked_cross_validation(dset$design$block_var))
@@ -55,7 +56,7 @@ test_that("regional feature_rsa_model with S-based feature extraction runs witho
   
   # Check that performance_table has expected columns
   expect_true("mean_correlation" %in% colnames(res$performance_table))
-  expect_true("spatial_specificity" %in% colnames(res$performance_table))
+  expect_true("cor_difference" %in% colnames(res$performance_table))
   expect_true("voxel_correlation" %in% colnames(res$performance_table))
   expect_true("mse" %in% colnames(res$performance_table))
   expect_true("r_squared" %in% colnames(res$performance_table))
@@ -103,8 +104,8 @@ test_that("feature_rsa_model with permutation testing works correctly", {
   # Check specific permutation columns
   expect_true("p_mean_correlation" %in% perf_cols)
   expect_true("z_mean_correlation" %in% perf_cols)
-  expect_true("p_spatial_specificity" %in% perf_cols)
-  expect_true("z_spatial_specificity" %in% perf_cols)
+  expect_true("p_cor_difference" %in% perf_cols)
+  expect_true("z_cor_difference" %in% perf_cols)
 })
 
 test_that("feature_rsa_model with permute_by='features' works correctly", {
@@ -238,7 +239,7 @@ test_that("regional feature_rsa_model with pca method runs without error and ret
   expect_true("performance_table" %in% names(res))
   # Check specific performance metrics
   expect_true("mean_correlation" %in% colnames(res$performance_table))
-  expect_true("spatial_specificity" %in% colnames(res$performance_table))
+  expect_true("cor_difference" %in% colnames(res$performance_table))
   expect_true("voxel_correlation" %in% colnames(res$performance_table))
   expect_true("mse" %in% colnames(res$performance_table))
   expect_true("r_squared" %in% colnames(res$performance_table))
@@ -249,14 +250,14 @@ test_that("can compare feature_rsa with different methods", {
   set.seed(123)
   
   # Create a small dataset for faster testing
-  dset <- gen_sample_dataset(c(4,4,4), 60, blocks=3)
+  dset <- gen_sample_dataset(c(4,4,4), 60, blocks=2)
   
   # Create a feature matrix
   Fmat <- matrix(rnorm(60*10), 60, 10)
   labels <- paste0("obs", 1:60)
   
   # Create feature_rsa_design
-  fdes <- feature_rsa_design(F=Fmat, labels=labels)
+  fdes <- feature_rsa_design(F=Fmat, labels=labels, max_comps=10) # reduce to 5 dims
   
   # Create a region mask with just 2 ROIs for faster testing
   region_mask <- NeuroVol(sample(1:2, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
@@ -266,6 +267,7 @@ test_that("can compare feature_rsa with different methods", {
   results_list <- list()
   
   for (method in methods) {
+    print(method)
     # Create model with current method
     mspec <- feature_rsa_model(
       dataset = dset$dataset,
@@ -288,7 +290,7 @@ test_that("can compare feature_rsa with different methods", {
     # Check that each method has the expected performance metrics
     perf_table <- results_list[[method]]$performance_table
     expect_true("mean_correlation" %in% colnames(perf_table))
-    expect_true("spatial_specificity" %in% colnames(perf_table))
+    expect_true("cor_difference" %in% colnames(perf_table))
     expect_true("voxel_correlation" %in% colnames(perf_table))
     expect_true("mse" %in% colnames(perf_table))
     expect_true("r_squared" %in% colnames(perf_table))

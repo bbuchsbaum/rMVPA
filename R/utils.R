@@ -154,3 +154,179 @@ coalesce_join <- function(x, y,
   
   dplyr::bind_cols(joined, coalesced)[cols]
 }
+
+#' Report System and Package Information for rMVPA
+#'
+#' Gathers and displays information about the R session, operating system,
+#' rMVPA version, and key dependencies. This information is helpful for
+#' debugging, reporting issues, and ensuring reproducibility.
+#'
+#' @return Invisibly returns a list containing the gathered system and package
+#'         information. It is primarily called for its side effect: printing
+#'         the formatted information to the console.
+#' @export
+#' @examples
+#' \dontrun{
+#' # Display system information in the console
+#' mvpa_sysinfo()
+#'
+#' # Capture the information in a variable
+#' sys_info <- mvpa_sysinfo()
+#' print(sys_info$r_version)
+#' print(sys_info$dependencies$caret)
+#' }
+mvpa_sysinfo <- function() {
+  info <- list()
+
+  # --- R and System Information ---
+  r_version <- R.version
+  info$r_version <- r_version$string
+  info$platform <- r_version$platform
+  sys_info <- Sys.info()
+  info$os <- paste(sys_info["sysname"], sys_info["release"])
+  info$nodename <- sys_info["nodename"]
+  info$user <- sys_info["user"]
+
+  # --- rMVPA Version ---
+  tryCatch({
+    # Use '::' to avoid issues if utils is masked
+    info$rmvpa_version <- as.character(utils::packageVersion("rMVPA"))
+  }, error = function(e) {
+    info$rmvpa_version <- "Error: rMVPA package not found or version unavailable."
+  })
+
+  # --- Key Dependency Versions ---
+  # Core dependencies and commonly used ones
+  deps <- c("neuroim2", "neurosurf", "caret", "future", "furrr",
+            "dplyr", "tibble", "purrr", "stats", "MASS") # Added stats/MASS
+
+  dep_versions <- list()
+  for (dep in deps) {
+    tryCatch({
+      # Check if namespace exists before getting version
+      if (requireNamespace(dep, quietly = TRUE)) {
+        dep_versions[[dep]] <- as.character(utils::packageVersion(dep))
+      } else {
+        dep_versions[[dep]] <- "Not installed"
+      }
+    }, error = function(e) {
+      # Fallback if packageVersion fails for an installed package
+      dep_versions[[dep]] <- "Error retrieving version"
+    })
+  }
+  info$dependencies <- dep_versions
+
+  # --- Parallel Backend (Future plan) ---
+  tryCatch({
+     # Get the current plan structure without changing it
+     current_plan <- future::plan("list")
+
+     # Format the plan description
+     # Based on future:::as.character.FutureStrategy and internal structure
+     plan_to_string <- function(p) {
+        cl <- class(p)[1]
+        details <- ""
+        if (inherits(p, "multicore") || inherits(p, "cluster")) {
+            workers <- tryCatch(length(p$workers), error=function(e) NA)
+            if (!is.na(workers)) {
+              details <- paste0(" (workers=", workers, ")")
+            }
+        } else if (inherits(p, "sequential")) {
+            # No extra details needed
+        }
+        paste0(cl, details)
+     }
+
+     if (is.list(current_plan)) {
+         # Handle plan stack (e.g., plan(list(cluster, sequential)))
+         plan_desc <- paste(sapply(current_plan, plan_to_string), collapse = " -> ")
+     } else {
+         # Handle single plan function
+         plan_desc <- plan_to_string(current_plan)
+     }
+
+     info$parallel_backend <- plan_desc
+   }, error = function(e) {
+     info$parallel_backend <- paste("Error retrieving plan:", e$message)
+   })
+
+
+  # --- Locale ---
+  tryCatch({
+    # Get all locale categories if possible
+    info$locale <- Sys.getlocale("LC_ALL")
+  }, error = function(e) {
+    # Fallback for specific category if LC_ALL fails
+    tryCatch({
+       info$locale <- Sys.getlocale("LC_CTYPE")
+    }, error = function(e2) {
+        info$locale <- "Error retrieving locale"
+    })
+  })
+
+  # Assign class for custom printing
+  class(info) <- "mvpa_sysinfo"
+
+  # Print the formatted info and return the list invisibly
+  print(info)
+  invisible(info)
+}
+
+
+#' Print mvpa_sysinfo Object
+#'
+#' Formats and prints the system information gathered by \code{mvpa_sysinfo}.
+#' This method provides a user-friendly display of the system configuration.
+#'
+#' @param x An object of class `mvpa_sysinfo`.
+#' @param ... Ignored.
+#' @export
+#' @keywords internal
+print.mvpa_sysinfo <- function(x, ...) {
+  # Helper for formatting lines
+  cat_line <- function(label, value) {
+    # Use a standard check instead of custom %||%
+    display_value <- ifelse(is.null(value) || length(value) == 0 || value == "", "N/A", value)
+    cat(sprintf("%-25s: %s\n", label, display_value))
+  }
+
+  # Use crayon for optional coloring if available
+  has_crayon <- requireNamespace("crayon", quietly = TRUE)
+  header_style <- if (has_crayon) crayon::bold$cyan else function(s) s
+  label_style <- if (has_crayon) crayon::bold else function(s) s
+
+  cat(header_style("------------------------- rMVPA System Information -------------------------\n"))
+
+  # Apply the helper function
+  cat_line("R Version", x$r_version)
+  cat_line("Platform", x$platform)
+  cat_line("Operating System", x$os)
+  cat_line("Node Name", x$nodename)
+  cat_line("User", x$user)
+  cat_line("Locale", x$locale)
+  cat_line("rMVPA Version", x$rmvpa_version)
+  cat_line("Parallel Backend (Future)", x$parallel_backend)
+
+  cat(label_style("\nKey Dependencies:\n"))
+  if (!is.null(x$dependencies) && length(x$dependencies) > 0) {
+    max_name_len <- max(nchar(names(x$dependencies))) %||% 10 # Provide default width
+    for (i in seq_along(x$dependencies)) {
+      dep_version <- x$dependencies[[i]]
+      dep_display <- ifelse(is.null(dep_version) || length(dep_version) == 0 || dep_version == "", "N/A", dep_version)
+      cat(sprintf("  - %-*s: %s\n", max_name_len, names(x$dependencies)[i], dep_display))
+    }
+  } else {
+    cat("  (No dependency versions found or rMVPA not fully loaded)\n")
+  }
+
+  cat(header_style("--------------------------------------------------------------------------\n"))
+  invisible(x)
+}
+
+
+# Helper for print method (borrowed from purrr, avoids dependency)
+# No longer strictly needed by print.mvpa_sysinfo after the changes, but keep for now 
+# in case it's used elsewhere or intended for future use.
+`%||%` <- function(x, y) {
+  if (is.null(x) || length(x) == 0) y else x
+}
