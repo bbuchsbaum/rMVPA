@@ -138,17 +138,51 @@ process_roi.default <- function(mod_spec, roi, rnum, ...) {
 #' @param ... Additional arguments passed to specific methods.
 #' @keywords internal
 #' @noRd
-#' @importFrom neuroim2 indices
+#' @importFrom neuroim2 indices values
+#' @importFrom tibble as_tibble tibble
+#' @importFrom futile.logger flog.warn
 process_roi_default <- function(mod_spec, roi, rnum, ...) {
+  # This helper is called by process_roi.default for models 
+  # that don't use internal cross-validation.
+  # It runs train_model and then passes the result to merge_results
+  # for final performance computation and formatting.
   #browser()
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
   ind <- indices(roi$train_roi)
-  ret <- try(train_model(mod_spec, xtrain, ind))
-  if (inherits(ret, "try-error")) {
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=TRUE, error_message=attr(ret, "condition")$message)
+  
+  # Run train_model
+  # Need to pass y=NULL and indices=ind based on train_model.vector_rsa_model signature
+  train_result_obj <- try(train_model(mod_spec, xtrain, y = NULL, indices=ind, ...)) 
+  
+  # Prepare a result set structure for merge_results
+  if (inherits(train_result_obj, "try-error")) {
+    # If training failed, create an error result set for merge_results
+    error_msg <- attr(train_result_obj, "condition")$message
+    result_set <- tibble::tibble(
+      result = list(NULL), # No result from train_model
+      error = TRUE,
+      error_message = ifelse(is.null(error_msg), "Unknown training error", error_msg)
+      # We don't need to mimic all columns internal_crossval might produce,
+      # only what merge_results requires for error handling.
+    )
+     futile.logger::flog.warn("ROI %s: train_model failed: %s", rnum, error_msg)
+     
   } else {
-    tibble::tibble(result=list(NULL), indices=list(ind), performance=list(ret), id=rnum, error=FALSE, error_message="~")
+    # If training succeeded, create a success result set for merge_results
+    # Store the *output* of train_model in the 'result' column. 
+    # merge_results.vector_rsa_model expects the scores vector here.
+     result_set <- tibble::tibble(
+       result = list(train_result_obj), # Store train_model output here
+       error = FALSE,
+       error_message = "~"
+       # merge_results will compute the 'performance' column.
+     )
   }
+  
+  # Call merge_results to compute final performance and format the output tibble
+  # merge_results handles both success and error cases based on result_set$error
+  final_result <- merge_results(mod_spec, result_set, indices=ind, id=rnum)
+  return(final_result)
 }
 
 #' Train Model

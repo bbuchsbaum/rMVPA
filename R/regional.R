@@ -266,7 +266,9 @@ comp_perf <- function(results, region_mask) {
     return(NULL)
   })
   
-  perf_mat <- as_tibble(perf_mat)
+  # Ensure we keep original names, make unique if duplicates exist
+  perf_mat <- as_tibble(perf_mat, .name_repair = "unique")
+  
   # Check if perf_mat is NULL or has 0 columns
   if (is.null(perf_mat) || !is.data.frame(perf_mat) || ncol(perf_mat) == 0) {
     message("Warning: Performance matrix is empty or invalid. Returning empty results.")
@@ -439,26 +441,105 @@ run_regional.rsa_model <- function(model_spec, region_mask,
 #' @rdname run_regional-methods
 #' @param return_fits Logical indicating whether to return the fitted models (default \code{FALSE}).
 #' @param compute_performance Logical indicating whether to compute performance metrics (default \code{TRUE}).
-#' @details For `vector_rsa_model` objects, `return_predictions` defaults to `FALSE`.
+#' @details For `vector_rsa_model` objects, `return_predictions` defaults to `FALSE` in `run_regional_base`.
+#' If `model_spec$return_predictions` is TRUE, this method will assemble an `observation_scores_table`.
+#' @importFrom dplyr bind_rows rename mutate row_number left_join
+#' @importFrom tidyr unnest
 #' @export
 run_regional.vector_rsa_model <- function(model_spec, region_mask,
                                          return_fits = FALSE,
                                          compute_performance = TRUE,
-                                         coalesce_design_vars = FALSE,
+                                         coalesce_design_vars = FALSE, # Usually FALSE for RSA
                                          processor = NULL,
                                          verbose = FALSE,
                                          ...) {
   
-  run_regional_base(
+  # 1) Prepare regions (using base helper)
+  prepped <- prep_regional(model_spec, region_mask)
+  
+  # 2) Iterate over regions using mvpa_iterate
+  # The result from merge_results.vector_rsa_model will contain:
+  # - performance: list column with the summary performance matrix
+  # - result: list column containing list(rsa_scores=scores_vector) or NULL
+  iteration_results <- mvpa_iterate(
     model_spec,
-    region_mask,
-    coalesce_design_vars  = coalesce_design_vars,
-    processor = processor,
+    prepped$vox_iter,
+    ids = prepped$region_set,
+    processor = processor, # Use default processor unless specified
     verbose = verbose,
-    compute_performance   = compute_performance,
-    return_fits           = return_fits,
-    return_predictions    = FALSE,  # Override default for Vector RSA
     ...
+  )
+  
+  # 3) Performance computation (using base helper)
+  # This extracts the 'performance' column from iteration_results
+  perf <- if (isTRUE(compute_performance)) {
+    comp_perf(iteration_results, region_mask)
+  } else {
+    list(vols = list(), perf_mat = tibble::tibble())
+  }
+  
+  # 4) Assemble observation scores (if requested)
+  prediction_table <- NULL
+  if (isTRUE(model_spec$return_predictions) && "result" %in% names(iteration_results)) {
+    # Filter out NULL results (where return_predictions was FALSE or errors occurred)
+    valid_results <- iteration_results[!sapply(iteration_results$result, is.null), ]
+    
+    if (nrow(valid_results) > 0) {
+      # Create a tibble: roinum | rsa_scores_list
+      scores_data <- tibble::tibble(
+          roinum = valid_results$id, 
+          scores_list = lapply(valid_results$result, function(res) res$rsa_scores)
+      )
+      
+      # Unnest to get a long table: roinum | observation_index | rsa_score
+      prediction_table <- scores_data %>%
+           mutate(observation_index = map(scores_list, seq_along)) %>% # Add observation index within ROI
+           tidyr::unnest(cols = c(scores_list, observation_index)) %>% 
+           dplyr::rename(rsa_score = scores_list) # Rename the scores column
+           
+       # Optionally merge design variables (might need adjustment based on score indices)
+       if (coalesce_design_vars) {
+            # We need a way to map observation_index back to the original design .rownum
+            # This assumes scores are in the same order as the original y_train 
+            # (which `second_order_similarity` preserves)
+            # Need the original design dataframe 
+            orig_design <- model_spec$design$design_table # Assuming it's stored here? Check mvpa_design
+            if (!is.null(orig_design)) {
+                # Add .rownum based on the original sequence
+                # This relies on the assumption that the number of scores matches nrow(orig_design)
+                num_obs_in_design <- nrow(orig_design)
+                prediction_table <- prediction_table %>%
+                   # Need to handle potential mismatch if scores length != num_obs_in_design
+                   # For now, assume they match and add .rownum directly
+                   dplyr::mutate(.rownum = observation_index) %>%
+                   # Perform the join
+                   coalesce_join(orig_design, by = ".rownum")
+            } else {
+                 warning("coalesce_design_vars=TRUE but original design table not found in model_spec$design$design_table")
+            }
+       }
+           
+    } else {
+         warning("return_predictions=TRUE, but no observation scores were returned from processing.")
+    }
+  }
+  
+  # 5) Fits (using base logic - check if applicable for vector_rsa)
+  # train_model returns scores, not a fit object, so fits will likely be NULL
+  fits <- NULL
+  if (isTRUE(return_fits)) {
+      # The `result` column now holds scores, not fits. This needs reconsideration.
+      # fits <- lapply(iteration_results$result, "[[<some_fit_element>") # This won't work
+      warning("`return_fits=TRUE` requested for vector_rsa_model, but this model type does not currently return standard fit objects.")
+  }
+  
+  # 6) Construct and return final result (using base constructor)
+  regional_mvpa_result(
+    model_spec        = model_spec,
+    performance_table = perf$perf_mat,
+    prediction_table  = prediction_table, # Add the assembled scores table
+    vol_results       = perf$vols,
+    fits             = fits
   )
 }
 

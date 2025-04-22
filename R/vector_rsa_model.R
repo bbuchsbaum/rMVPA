@@ -85,34 +85,39 @@ vector_rsa_model_mat <- function(design) {
 #'                   one of \code{"pearson"} or \code{"spearman"}.
 #' @param nperm Integer, number of permutations for statistical testing (default: 0).
 #' @param save_distributions Logical, whether to save full permutation distributions (default: FALSE).
+#' @param return_predictions Logical, whether to return per-observation similarity scores (default: FALSE).
 #'
 #' @return A \code{vector_rsa_model} object (S3 class) containing references to the dataset, design, and function parameters.
 #'
 #' @details
 #' The model references the already-precomputed cross-block data from the design. 
+#' If `return_predictions` is TRUE, the output of `run_regional` or `run_searchlight` 
+#' will include a `prediction_table` tibble containing the observation-level RSA scores.
 #' 
 #' @export
 vector_rsa_model <- function(dataset, design, 
                            distfun = cordist(), 
                            rsa_simfun = c("pearson", "spearman"),
                            nperm=0, 
-                           save_distributions=FALSE) { 
+                           save_distributions=FALSE,
+                           return_predictions=FALSE) {
   rsa_simfun <- match.arg(rsa_simfun)
   
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "vector_rsa_design"),
                           msg = "Input must be a 'vector_rsa_design' object.")
   
-  # Create the model spec, passing permutation parameters
+  # Create the model spec, passing permutation and prediction parameters
   create_model_spec(
     "vector_rsa_model",
     dataset = dataset,
     design  = design,
     distfun = distfun,
     rsa_simfun = rsa_simfun,
-    nperm = nperm,  # Pass nperm
-    compute_performance = TRUE,
-    save_distributions = save_distributions  # Pass save_distributions
+    nperm = nperm,
+    compute_performance = TRUE, # Assume performance is always computed
+    save_distributions = save_distributions,
+    return_predictions = return_predictions # Pass the new flag
   )
 }
 
@@ -447,9 +452,9 @@ merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
     # Return standard error tibble structure
     return(
       tibble::tibble(
-        result       = list(NULL), # No results on error
-        indices      = list(indices), # Keep indices for context
-        performance  = list(NULL), # No performance on error
+        result       = list(NULL), 
+        indices      = list(indices),
+        performance  = list(NULL), 
         id           = id,
         error        = TRUE,
         error_message= emessage
@@ -458,13 +463,10 @@ merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
   }
   
   # Extract the scores computed by train_model. 
-  # Default processor likely stores train_model output in result_set$result[[1]].
-  # Add checks for robustness.
   if (!"result" %in% names(result_set) || length(result_set$result) == 0 || is.null(result_set$result[[1]])) {
-     error_msg <- "merge_results (vector_rsa): result_set missing or has NULL/empty 'result' field."
+     error_msg <- "merge_results (vector_rsa): result_set missing or has NULL/empty 'result' field where scores were expected."
      futile.logger::flog.error("ROI/Sphere ID %s: %s", id, error_msg)
-     # Create NA performance matrix to avoid downstream errors
-     # Get expected metric names (rsa_score + perm cols if needed)
+     # Create NA performance matrix
      perf_names <- "rsa_score"
      if (obj$nperm > 0) {
          perf_names <- c(perf_names, "p_rsa_score", "z_rsa_score")
@@ -492,61 +494,55 @@ merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
                             id=id, error=TRUE, error_message=error_msg))
   }
   
-  # Call evaluate_model, passing the scores and permutation parameters from obj
+  # Call evaluate_model to compute summary performance and permutations
   perf <- evaluate_model.vector_rsa_model(
-    object    = obj,           # Pass the full model spec
-    predicted = NULL,          # Not used by vector_rsa evaluate
-    observed  = scores,        # Pass the scores here
-    nperm     = obj$nperm,     # Get nperm from the model spec
-    save_distributions = obj$save_distributions # Get save_dist from model spec
+    object    = obj,           
+    predicted = NULL,          
+    observed  = scores,        
+    nperm     = obj$nperm,     
+    save_distributions = obj$save_distributions
   )
   
-  # --- Collate results into the performance matrix --- 
-  base_metrics <- c(
-    perf$rsa_score # Extract the primary score
-  )
-  base_names <- c("rsa_score") # Name it
+  # --- Collate performance matrix --- 
+  base_metrics <- c(perf$rsa_score)
+  base_names <- c("rsa_score")
   
-  # Add permutation results if they were computed (even if NA)
   if (!is.null(perf$permutation_results)) {
       perm_p_values <- perf$permutation_results$p_values
       perm_z_scores <- perf$permutation_results$z_scores
-      
-      # Check if p-values/z-scores are named correctly
       if (is.null(names(perm_p_values)) || is.null(names(perm_z_scores))){
-           p_names <- paste0("p_", base_names) # Fallback naming
+           p_names <- paste0("p_", base_names)
            z_names <- paste0("z_", base_names)
       } else {
           p_names <- paste0("p_", names(perm_p_values))
           z_names <- paste0("z_", names(perm_z_scores))
       }
-
       perf_values <- c(base_metrics, perm_p_values, perm_z_scores)
       perf_names <- c(base_names, p_names, z_names)
   } else {
       perf_values <- base_metrics
       perf_names <- base_names
   }
-  
-  # Create the performance matrix
-  perf_mat <- matrix(
-      perf_values,
-      nrow = 1,
-      ncol = length(perf_values),
-      dimnames = list(NULL, perf_names)
-  )
-  
-  # Remove columns that are all NA (e.g., if permutations failed or weren't run)
+  perf_mat <- matrix(perf_values, nrow = 1, ncol = length(perf_values), dimnames = list(NULL, perf_names))
   perf_mat <- perf_mat[, colSums(is.na(perf_mat)) < nrow(perf_mat), drop = FALSE]
 
+  # --- Prepare results structure based on return_predictions flag --- 
+  result_data <- if (isTRUE(obj$return_predictions)) {
+      # Return scores structured for later assembly into prediction_table
+      # Wrap scores in a list with a standard name
+      list(rsa_scores = scores)
+  } else {
+      NULL # Return NULL if predictions are not requested
+  }
+  
   # Return the final tibble structure expected by the framework
   tibble::tibble(
-    result      = list(NULL), # Don't store raw results after merging
+    result      = list(result_data), # Store list(rsa_scores=scores) or NULL here
     indices     = list(indices),
     performance = list(perf_mat),
     id          = id,
     error       = FALSE,
-    error_message = "~" # Indicate success
+    error_message = "~" 
   )
 }
 
