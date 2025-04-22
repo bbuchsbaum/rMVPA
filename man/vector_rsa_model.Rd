@@ -8,7 +8,9 @@ vector_rsa_model(
   dataset,
   design,
   distfun = cordist(),
-  rsa_simfun = c("pearson", "spearman")
+  rsa_simfun = c("pearson", "spearman"),
+  nperm = 0,
+  save_distributions = FALSE
 )
 }
 \arguments{
@@ -20,6 +22,10 @@ vector_rsa_model(
 
 \item{rsa_simfun}{A character string specifying the similarity function to use for RSA, 
 one of \code{"pearson"} or \code{"spearman"}.}
+
+\item{nperm}{Integer, number of permutations for statistical testing (default: 0).}
+
+\item{save_distributions}{Logical, whether to save full permutation distributions (default: FALSE).}
 }
 \value{
 A \code{vector_rsa_model} object (S3 class) containing references to the dataset, design, and function parameters.

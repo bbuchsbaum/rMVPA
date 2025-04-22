@@ -11,6 +11,19 @@ get_unique_regions <- function(region_mask, ...) {
   UseMethod("get_unique_regions")
 }
 
+#' Strip Dataset from Model Specification
+#' 
+#' Removes the potentially large dataset component from a model specification object
+#' to avoid copying it during parallel processing.
+#' 
+#' @param obj The model specification object.
+#' @param ... Additional arguments.
+#' @return The model specification object with the `dataset` element removed or set to NULL.
+#' @export
+strip_dataset <- function(obj, ...) {
+  UseMethod("strip_dataset")
+} 
+
 #' Select Features
 #'
 #' Given a \code{feature_selection} specification object and a dataset, returns the set of selected features as a binary vector.
@@ -107,7 +120,7 @@ process_roi <- function(mod_spec, roi, rnum, ...) {
 process_roi.default <- function(mod_spec, roi, rnum, ...) {
   if (!is.null(mod_spec$process_roi)) {
     mod_spec$process_roi(mod_spec, roi, rnum, ...)
-  } else if (has_test_set(mod_spec$dataset)) {
+  } else if (has_test_set(mod_spec)) {
     external_crossval(mod_spec, roi, rnum, ...)
   } else if (has_crossval(mod_spec)) {
     #print("internal crossval")
@@ -462,13 +475,18 @@ run_searchlight <- function(model_spec, radius, method = c("standard", "randomiz
 #'
 #' @param model_spec A \code{mvpa_model} instance containing the model specifications
 #' @param region_mask A \code{NeuroVol} or \code{NeuroSurface} object where each region is identified by a unique integer
-#' @param ... Extra arguments passed to specific regional analysis methods
+#' @param coalesce_design_vars If \code{TRUE}, merges design variables into the prediction table (if present and generated). Default is \code{FALSE}.
+#' @param processor An optional custom processor function for each region (ROI). If NULL (default), behavior depends on the \code{model_spec} class.
+#' @param verbose If \code{TRUE}, print progress messages during iteration (default is \code{FALSE}).
+#' @param ... Extra arguments passed to specific regional analysis methods (e.g., `return_fits`, `compute_performance`).
 #'
-#' @return A named list containing:
-#'   \item{performance}{Performance metrics for each region}
-#'   \item{prediction_table}{Predictions for each region}
-#'   \item{fits}{Model fits if return_fits=TRUE}
-#'
+#' @return A \code{regional_mvpa_result} object (list) containing:
+#'   \item{performance_table}{A tibble of performance metrics for each region (if computed).}
+#'   \item{prediction_table}{A tibble with detailed predictions for each observation/region (if generated).}
+#'   \item{vol_results}{A list of volumetric maps representing performance metrics across space (if computed).}
+#'   \item{fits}{A list of fitted model objects for each region (if requested via `return_fits=TRUE`).}
+#'   \item{model_spec}{The original model specification object provided.} # Note: Original documentation said 'performance', clarified here.
+#' 
 #' @examples
 #' \donttest{
 #'   # Generate sample dataset (3D volume with categorical response)
@@ -512,6 +530,7 @@ run_searchlight <- function(model_spec, radius, method = c("standard", "randomiz
 #'   first_roi_fit <- results$fits[[1]]  # First ROI's fitted model
 #' }
 #'
+#' @rdname run_regional-methods
 #' @export
 run_regional <- function(model_spec, region_mask, ...) {
   UseMethod("run_regional")

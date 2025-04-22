@@ -404,94 +404,127 @@ feature_rsa_model <- function(dataset,
 }
 
 
-#' Predict Method for Feature RSA Model
-#'
-#' @param object The trained feature RSA model (method, etc.)
-#' @param fit The fitted model object from training_model()
-#' @param newdata New feature data matrix (rows = test obs, cols = features)
-#' @param ... Additional args
-#' @return Predicted brain activity \code{X} values (matrix).
-#' @export
+#' @rdname predict_model-methods
 #' @export
 predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
-  print("predict_model")
+  # Check if the 'fit' object contains an error from the training stage
+  if (!is.null(fit$error)) {
+     error_msg <- sprintf("predict_model: Cannot predict, training failed with error: %s", fit$error)
+     futile.logger::flog.error(error_msg)
+     stop(error_msg) # Stop prediction if training failed
+  }
+  
+  # Check if trained_model is missing, even if no explicit error was set
+  if (is.null(fit$trained_model) && object$method != "scca") { # SCCA might proceed with ncomp=0
+      error_msg <- sprintf("predict_model (%s): 'trained_model' is missing in the fit object provided. Cannot predict.", object$method)
+      futile.logger::flog.error(error_msg)
+      stop(error_msg)
+  }
+
  
   method <- object$method
   F_new  <- as.matrix(newdata)
   
-  if (method == "pls") {
-    # *** Explicit Column Check ***
-    # Check if the number of columns in the new feature data matches training
-    expected_cols <- length(fit$pls_f_mean) 
-    actual_cols <- ncol(F_new)
-    if (is.null(expected_cols)) {
-        stop("predict_model (PLS): Cannot determine expected feature count from trained model (pls_f_mean is NULL).")
-    }
-    if (actual_cols != expected_cols) {
-        error_msg <- sprintf("predict_model (PLS): Feature column mismatch. Model expects %d columns, but newdata has %d columns.",
-                             expected_cols, actual_cols)
-        futile.logger::flog.error(error_msg)
-        stop(error_msg) # Stop with a clear error message
-    }
-    
-    # Standardize newdata (F_new) using the training means/sds
-    sf_test <- tryCatch({
-         scale(F_new, center = fit$pls_f_mean, scale = fit$pls_f_sd)
-    }, error=function(e) {
-         # Log the specific error
-         futile.logger::flog.warn("predict_model (PLS): Error during standardization - %s", e$message)
-         # Re-throw
-         stop(e)
-     })
-    
-    # Add column names if available from training means/sds
-    # This might help pls::predict internally if it relies on names
-    if (!is.null(names(fit$pls_f_mean))) {
-       colnames(sf_test) <- names(fit$pls_f_mean)
-    }
-    
-    # Un-standardize the predictions using the training X means/sds
-    preds <- tryCatch({
-        predict(
-          fit$trained_model, 
-          newdata = sf_test,
-          ncomp   = fit$ncomp
-        )
-    }, error=function(e) {
-         # Log the specific error from predict.pls
-         futile.logger::flog.warn("predict_model (PLS): Error during PLS prediction - %s", e$message)
-         # Re-throw the error so the calling function (format_result) can catch it
-         stop(e)
-    })
-    
-    # Typically a 3D array [nTest, nResponseCols, nComps].
-    # If ncomp=1, it might be [nTest, nResponseCols].
-    # So we 'drop' the extra dimension:
-    preds <- drop(preds)
-    
-    return(preds)
-    
-  } else if (method == "scca") {
-    #
-    # ---- SCCA Predict ----
-    #
-    return(.predict_scca(fit, F_new))
-    
-  } else if (method == "pca") {
-    #
-    # ---- PCA Predict ----
-    #
-    return(.predict_pca(fit, F_new))
-    
-  } else if (method == "glmnet") {
-    #
-    # ---- GLMNet Predict ----
-    #
-    return(.predict_glmnet(fit, F_new))
-    
-  } else {
-    stop("Unknown method in feature_rsa_model.")
+  # Basic check for newdata dimensions
+  if (nrow(F_new) < 1) {
+      stop("predict_model: newdata (F_new) has 0 rows.")
   }
+
+  # Wrap the entire prediction logic in tryCatch
+  predictions <- tryCatch({
+    if (method == "pls") {
+      
+      # Retrieve necessary components from 'fit'
+      pls_model <- fit$trained_model
+      f_mean <- fit$pls_f_mean
+      f_sd <- fit$pls_f_sd
+      x_mean <- fit$pls_x_mean
+      x_sd <- fit$pls_x_sd
+      ncomp_to_use <- fit$ncomp
+
+      # Validate fit components
+      if (is.null(pls_model) || is.null(f_mean) || is.null(f_sd) || is.null(x_mean) || is.null(x_sd) || is.null(ncomp_to_use)) {
+        stop("predict_model (PLS): Missing essential components (model, means, sds, ncomp) in the fit object.")
+      }
+      if (ncomp_to_use < 1) {
+         # This case should ideally be handled by training setting ncomp appropriately,
+         # but predict.plsr might behave unexpectedly with ncomp=0.
+         # Let's return mean prediction similar to SCCA? Or error out?
+         # For now, let's error, assuming training should prevent ncomp=0 unless intended.
+         stop(sprintf("predict_model (PLS): Number of components to use (ncomp=%d) is less than 1.", ncomp_to_use))
+      }
+
+      expected_cols <- length(f_mean)
+      actual_cols <- ncol(F_new)
+      if (actual_cols != expected_cols) {
+        stop(sprintf("predict_model (PLS): Feature column mismatch. Model expects %d columns, newdata has %d.",
+                     expected_cols, actual_cols))
+      }
+      
+      # Standardize newdata using training parameters
+      sf_test <- scale(F_new, center = f_mean, scale = f_sd)
+      # Check for NaNs after scaling (can happen if sd was zero and scale didn't handle it perfectly)
+      if (any(is.nan(sf_test))) {
+         stop("predict_model (PLS): NaNs generated during standardization of newdata. Check feature variances.")
+      }
+
+      # Make predictions using pls::predict
+      # preds_raw is expected to be the prediction using ncomp_to_use components,
+      # potentially in a 3D array [obs, resp, 1]
+      preds_raw <- predict(pls_model, newdata = sf_test, ncomp = ncomp_to_use)
+      
+      # Drop any singleton dimensions (e.g., the component dimension if size 1)
+      preds_sc <- drop(preds_raw)
+
+      # Ensure preds_sc is a matrix even if only one observation/response
+      if (!is.matrix(preds_sc)) {
+         preds_sc <- matrix(preds_sc, nrow=nrow(F_new), ncol=length(x_mean))
+      }
+
+      # Un-standardize: X = X_sc * sd + mean
+      preds <- sweep(sweep(preds_sc, 2, x_sd, "*"), 2, x_mean, "+")
+      return(preds)
+      
+    } else if (method == "scca") {
+      # SCCA prediction logic is in .predict_scca
+      # Pass the entire 'fit' object which contains model and standardization params
+      return(.predict_scca(fit, F_new)) 
+      
+    } else if (method == "pca") {
+      # PCA prediction logic is in .predict_pca
+      # Pass the entire 'fit' object
+      return(.predict_pca(fit, F_new))
+      
+    } else if (method == "glmnet") {
+      # GLMNet prediction logic is in .predict_glmnet
+      # Pass the entire 'fit' object
+      return(.predict_glmnet(fit, F_new))
+      
+    } else {
+      stop(paste("Unknown method in predict_model.feature_rsa_model:", method))
+    }
+  }, error = function(e) {
+      # Catch any error from the specific prediction methods or checks
+      error_msg <- sprintf("predict_model (%s): Prediction failed - %s", method, e$message)
+      futile.logger::flog.error(error_msg)
+      # Re-throw the error so format_result can catch it
+      stop(error_msg)
+  })
+  
+  # Final check on prediction output
+  if (is.null(predictions) || !is.matrix(predictions)) {
+     error_msg <- sprintf("predict_model (%s): Prediction result is NULL or not a matrix. Check internal prediction logic.", method)
+     futile.logger::flog.error(error_msg)
+     stop(error_msg)
+  }
+   if (nrow(predictions) != nrow(F_new)) {
+     error_msg <- sprintf("predict_model (%s): Prediction result has %d rows, but expected %d (matching newdata).", 
+                         method, nrow(predictions), nrow(F_new))
+     futile.logger::flog.error(error_msg)
+     stop(error_msg)
+  }
+  
+  return(predictions)
 }
 
 
@@ -849,6 +882,13 @@ evaluate_model.feature_rsa_model <- function(object,
   tss        <- sum((observed - mean(observed, na.rm=TRUE))^2, na.rm=TRUE) # Add na.rm
   r_squared  <- if (tss == 0) NA else 1 - (rss / tss) # Handle zero total sum of squares
   
+  # Log warnings if key metrics are NA/NaN
+  if (!is.finite(mean_cor)) futile.logger::flog.warn("Mean correlation is NA/NaN.")
+  if (!is.finite(cor_difference)) futile.logger::flog.warn("Correlation difference is NA/NaN.")
+  if (!is.finite(mean_rank_percentile)) futile.logger::flog.warn("Mean rank percentile is NA/NaN.")
+  if (!is.finite(voxel_cor)) futile.logger::flog.warn("Voxel correlation is NA/NaN.")
+  if (!is.finite(r_squared)) futile.logger::flog.warn("R-squared is NA/NaN.")
+  
   # --- Calculate Correlation of Temporal Means (Spatial Averages) ---
   cor_temporal_means <- NA_real_
   if (nrow(observed) > 1 && nrow(predicted) > 1) { # Need >1 observation
@@ -924,6 +964,7 @@ evaluate_model.feature_rsa_model <- function(object,
 
 #' @export
 train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
+  
   # X: brain data (samples x voxels)
   # y: should be the Feature Matrix F (samples x features)
   Fsub <- y
@@ -932,113 +973,107 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
   
   # Check for minimum data size
   if (nrow(X) < 2 || ncol(X) < 1 || nrow(Fsub) < 2 || ncol(Fsub) < 1) {
-    result$error <- "Insufficient data (samples or voxels/features < 2)"
+    error_msg <- sprintf("Insufficient data for training (X dims: %d x %d, F dims: %d x %d). Requires at least 2 samples and 1 voxel/feature.", 
+                         nrow(X), ncol(X), nrow(Fsub), ncol(Fsub))
+    futile.logger::flog.error(error_msg)
+    result$error <- error_msg
     return(result)
   }
   
   # ---- PLS Train ----
   if (obj$method == "pls") {
-    # Check for near-zero variance in X and Fsub
-    near_zero_var_X <- any(apply(X, 2, var, na.rm = TRUE) < 1e-10)
-    near_zero_var_F <- any(apply(Fsub, 2, var, na.rm = TRUE) < 1e-10)
-    
-    if (near_zero_var_X || near_zero_var_F) {
-      # Log the warning
-      futile.logger::flog.warn("train_model (PLS): Near zero variance detected in X or F.")
-      result$error <- "Near zero variance detected in X or F for PLS."
-      return(result)
-    }
-    
-    # Standardize X (brain data) and Fsub (features) internally for PLS
-    sx <- .standardize(X)
-    sf <- .standardize(Fsub)
-    
-    # Determine the number of components to use for PLS
-    # Max possible components is min(N-1, P_f) where N=samples, P_f=features
-    max_k_possible <- min(nrow(sf$X_sc) - 1, ncol(sf$X_sc))
-    # User-defined maximum (from design object) vs possible maximum
-    k <- min(obj$max_comps, max_k_possible)
-    
-    if (k < 1) {
-      # Log the warning
-      futile.logger::flog.warn("train_model (PLS): Requested number of components (k=%d) is less than 1.", k)
-      result$error <- "Number of PLS components (k) is less than 1."
-      return(result)
-    }
-    
-    # Fit PLS model
     pls_res <- tryCatch({
+      # Check for near-zero variance *before* standardization attempt
+      var_X <- apply(X, 2, var, na.rm = TRUE)
+      var_F <- apply(Fsub, 2, var, na.rm = TRUE)
+      if (any(var_X < 1e-10) || any(var_F < 1e-10)) {
+        stop("Near zero variance detected in X or F before standardization.")
+      }
+      
+      sx <- .standardize(X)
+      sf <- .standardize(Fsub)
+      
+      # Check variance *after* standardization (shouldn't happen if .standardize handles sd=0, but double-check)
+      if (any(sx$sd < 1e-10) || any(sf$sd < 1e-10)) {
+         stop("Near zero variance detected after standardization.")
+      }
+      
+      max_k_possible <- min(nrow(sf$X_sc) - 1, ncol(sf$X_sc))
+      k <- min(obj$max_comps, max_k_possible)
+      
+      if (k < 1) {
+        stop(sprintf("Calculated number of PLS components (%d) is less than 1 (max_comps: %d, max_possible: %d).", 
+                     k, obj$max_comps, max_k_possible))
+      }
+      
+      # Fit PLS model
       pls::plsr(sx$X_sc ~ sf$X_sc, ncomp = k, scale = FALSE, validation = "none")
+      
     }, error = function(e) {
-      # Log the specific error
-      futile.logger::flog.warn("train_model (PLS): Fitting error - %s", e$message)
-      list(error=paste("PLS fitting error:", e$message))
+      error_msg <- sprintf("train_model (PLS): Error during training - %s", e$message)
+      futile.logger::flog.error(error_msg)
+      # Return an error indicator object
+      list(error = error_msg) 
     })
 
+    # Check if tryCatch returned an error object
     if (!is.null(pls_res$error)) {
        result$error <- pls_res$error
        return(result)
     }
 
-    # Store necessary results
+    # Store necessary results ONLY if successful
     result$trained_model <- pls_res
-    result$pls_x_mean    <- sx$mean
+    result$pls_x_mean    <- sx$mean # Need sx/sf from the try block scope
     result$pls_x_sd      <- sx$sd
     result$pls_f_mean    <- sf$mean
     result$pls_f_sd      <- sf$sd
-    result$ncomp         <- k
+    result$ncomp         <- k       # Need k from the try block scope
 
   } else if (obj$method == "scca") {
     # ---- SCCA Train ----
-    sx <- .standardize(X)
-    sf <- .standardize(Fsub)
-
-    # Check dimensions after standardization
-    if (any(sx$sd < 1e-8) || any(sf$sd < 1e-8)) {
-       result$error <- "Zero variance detected after standardization for SCCA."
-       return(result)
-    }
-    
     scca_res <- tryCatch({
-      whitening::scca(sx$X_sc, sf$X_sc, scale=FALSE)
+       sx <- .standardize(X)
+       sf <- .standardize(Fsub)
+       if (any(sx$sd < 1e-8) || any(sf$sd < 1e-8)) {
+          stop("Zero variance detected after standardization.")
+       }
+       # Store standardization details temporarily within this scope
+       list(res=whitening::scca(sx$X_sc, sf$X_sc, scale=FALSE), sx=sx, sf=sf)
     }, error = function(e) {
-      # Log the specific error
-      futile.logger::flog.warn("train_model (SCCA): SCCA execution error - %s", e$message)
-      # Return an object indicating error instead of stopping
-      list(error = paste("SCCA error:", e$message))
+      error_msg <- sprintf("train_model (SCCA): SCCA execution error - %s", e$message)
+      futile.logger::flog.error(error_msg)
+      list(error = error_msg)
     })
 
-    # Check if SCCA itself returned an error
+    # Check if tryCatch returned an error object
     if (!is.null(scca_res$error)) {
-      print("SCCA error")
       result$error <- scca_res$error
       return(result)
     }
     
-    # The effective # of comps from SCCA
-    # Added check for NULL lambda as SCCA might fail silently in some edge cases
-    effective_ncomp <- if (!is.null(scca_res$lambda)) sum(abs(scca_res$lambda) > 1e-6) else 0
+    # Extract results if successful
+    scca_fit <- scca_res$res
+    sx <- scca_res$sx
+    sf <- scca_res$sf
     
+    effective_ncomp <- if (!is.null(scca_fit$lambda)) sum(abs(scca_fit$lambda) > 1e-6) else 0
     ncomp <- min(effective_ncomp, obj$max_comps)
     
-    # Store standardization info regardless of component count (needed for fallback)
+    # Store standardization info regardless (needed for potential fallback in predict)
     result$scca_x_mean <- sx$mean
     result$scca_x_sd   <- sx$sd
     result$scca_f_mean <- sf$mean
     result$scca_f_sd   <- sf$sd
-    result$ncomp       <- ncomp # Will be 0 if no effective components
+    result$ncomp       <- ncomp 
         
     if (ncomp < 1) {
-      # Don't set result$error, but ncomp=0 signals the failure downstream
-      # The process_roi check for result$error won't trigger, 
-      # but predict_model will use the ncomp=0 information.
-      futile.logger::flog.info("train_model (SCCA): No effective canonical components found (ncomp=%d). Prediction will use mean fallback.", ncomp)
-      # We keep the scca_res object even if components are zero, 
-      # predict just needs to check ncomp.
-      result$trained_model <- scca_res 
+      futile.logger::flog.info("train_model (SCCA): No effective canonical components found (effective: %d, max_comps: %d). Prediction will use mean fallback.", 
+                               effective_ncomp, obj$max_comps)
+      # Still store the (potentially empty) scca_fit
+      result$trained_model <- scca_fit
     } else {
-      # Save into result *only if successful*
-      result$trained_model <- scca_res
+      result$trained_model <- scca_fit
     }
     
   } else if (obj$method == "pca") {
@@ -1046,204 +1081,238 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
     #
     # -- PCA with possible caching --
     #
-    # 1) Make a cache key from 'indices'
-    # (assuming 'indices' is a vector of row indices used for training)
-    key <- .hash_row_indices(indices)
-    
-    # 2) Check if caching is enabled AND if we have a cached PCA
-    if (isTRUE(obj$cache_pca) && !is.null(obj$pca_cache[[key]])) {
-      # -- REUSE the cached PCA info
-      pca_info <- obj$pca_cache[[key]]
-      # standardize brain data X with the stored means/sds
-      sx <- .standardize(X)
-      # we do not re-run prcomp, but reuse
-      pca_res <- pca_info$pca_res
-      sf_mean <- pca_info$f_mean
-      sf_sd   <- pca_info$f_sd
-      
-      # figure out k
-      available_k <- ncol(pca_res$x)
-      k <- min(obj$max_comps, available_k)
-      if (k < 1) {
-        stop("No principal components available (check data).")
-      }
-      PC_train_subset <- pca_res$x[, seq_len(k), drop=FALSE]
-      
-      # Regress X_sc on these PCs
-      df_pcs <- as.data.frame(PC_train_subset)
-      if (nrow(df_pcs) <= k) {
-        stop("Insufficient data for PCA regression (more comps than rows).")
-      }
-      
-      fit <- lm(sx$X_sc ~ ., data=df_pcs)
-      coefs <- coef(fit)
-      
-      result$pcarot     = pca_res$rotation[, seq_len(k), drop=FALSE]
-      result$pca_f_mean = sf_mean
-      result$pca_f_sd   = sf_sd
-      result$pca_coefs  = coefs
-      result$pca_x_mean = sx$mean
-      result$pca_x_sd   = sx$sd
-      result$ncomp      = k
-      
-    } else {
-      # -- NO CACHE HIT (or caching off), so we do normal PCA
-      sx <- .standardize(X)
-      sf <- .standardize(Fsub)
-      
-      pca_res <- prcomp(sf$X_sc, scale.=FALSE)
-      
-      available_k <- ncol(pca_res$x)
-      k <- min(obj$max_comps, available_k)
-      if (k < 1) {
-        stop("No principal components available (check data).")
-      }
-      PC_train_subset <- pca_res$x[, seq_len(k), drop=FALSE]
-      
-      # Regress X_sc on these PCs
-      df_pcs <- as.data.frame(PC_train_subset)
-      if (nrow(df_pcs) <= k) {
-        stop("Insufficient data for PCA regression (more comps than rows).")
-      }
-      fit <- lm(sx$X_sc ~ ., data=df_pcs)
-      coefs <- coef(fit)
-      
-      result$pcarot     = pca_res$rotation[, seq_len(k), drop=FALSE]
-      result$pca_f_mean = sf$mean
-      result$pca_f_sd   = sf$sd
-      result$pca_coefs  = coefs
-      result$pca_x_mean = sx$mean
-      result$pca_x_sd   = sx$sd
-      result$ncomp      = k
-      
-      # 3) Save a minimal set of info to the cache if cache is on
-      if (isTRUE(obj$cache_pca)) {
-        obj$pca_cache[[key]] <- list(
-          pca_res = pca_res,
-          f_mean  = sf$mean,
-          f_sd    = sf$sd
-          # we do *not* store the brain data standardization, 
-          # because that depends on each ROI. 
-          # We only store the PCA decomposition for the features. 
+    pca_result <- tryCatch({
+        key <- .hash_row_indices(indices)
+        cached_pca <- NULL
+        if (isTRUE(obj$cache_pca) && !is.null(obj$pca_cache[[key]])) {
+          cached_pca <- obj$pca_cache[[key]]
+          sx <- .standardize(X) # Still standardize X for this ROI
+          pca_res <- cached_pca$pca_res
+          sf_mean <- cached_pca$f_mean
+          sf_sd   <- cached_pca$f_sd
+        } else {
+          sx <- .standardize(X)
+          sf <- .standardize(Fsub)
+          if (any(sf$sd < 1e-10)) { # Check variance before prcomp
+             stop("Zero variance detected in features (F) before PCA.")
+          }
+          pca_res <- prcomp(sf$X_sc, scale.=FALSE)
+          sf_mean <- sf$mean
+          sf_sd   <- sf$sd
+          # Store if caching is enabled
+          if (isTRUE(obj$cache_pca)) {
+            obj$pca_cache[[key]] <- list(
+              pca_res = pca_res, f_mean = sf_mean, f_sd = sf_sd
+            )
+          }
+        }
+        
+        available_k <- ncol(pca_res$x)
+        k <- min(obj$max_comps, available_k)
+        if (k < 1) {
+          stop(sprintf("No principal components available (k=%d) after PCA (max_comps: %d, available: %d).", 
+                      k, obj$max_comps, available_k))
+        }
+        PC_train_subset <- pca_res$x[, seq_len(k), drop=FALSE]
+        
+        df_pcs <- as.data.frame(PC_train_subset)
+        if (nrow(df_pcs) <= k) {
+          stop(sprintf("Insufficient data for PCA regression (samples: %d, components: %d). Need more samples than components.", 
+                       nrow(df_pcs), k))
+        }
+        
+        fit <- lm(sx$X_sc ~ ., data=df_pcs)
+        
+        # Return all necessary components from successful run
+        list(
+          pcarot     = pca_res$rotation[, seq_len(k), drop=FALSE],
+          pca_f_mean = sf_mean,
+          pca_f_sd   = sf_sd,
+          pca_coefs  = coef(fit),
+          pca_x_mean = sx$mean,
+          pca_x_sd   = sx$sd,
+          ncomp      = k,
+          trained_model = fit # Add the lm fit object here
         )
-      }
+        
+    }, error = function(e) {
+        error_msg <- sprintf("train_model (PCA): Error during training - %s", e$message)
+        futile.logger::flog.error(error_msg)
+        list(error = error_msg)
+    })
+
+    # Check if tryCatch returned an error object
+    if (!is.null(pca_result$error)) {
+        result$error <- pca_result$error
+        return(result)
     }
+    
+    # Assign results if successful
+    result <- c(result, pca_result) # Merge the list of results
     
   } else if (obj$method == "glmnet") {
     #
     # ---- GLMNet Train ----
     #
-    # Standardize X and F
-    sx <- .standardize(X)
-    sf <- .standardize(Fsub)
+    glm_result <- tryCatch({
+        # Standardize X and F
+        sx <- .standardize(X)
+        sf <- .standardize(Fsub)
+        
+        if (any(sx$sd < 1e-10) || any(sf$sd < 1e-10)) { # Check variance
+             stop("Zero variance detected in X or F after standardization.")
+        }
 
-    #browser()
-    
-    # Check dimensions
-    if (nrow(sx$X_sc) < 2 || nrow(sf$X_sc) < 2) {
-      stop("Cannot perform GLMNet: insufficient observations.")
-    }
-    
-   
-    # Determine lambda to use
-    lambda_to_use <- obj$lambda
-    
-    # If we're using cross-validation for lambda selection
-    if (isTRUE(obj$cv_glmnet)) {
-      # Prepare a fold ID vector for cv.glmnet
-      # Here we use 5-fold CV by default, but this could be made configurable
-      n_obs <- nrow(sf$X_sc)
-      if (n_obs >= 10) {
-        # Use k-fold CV if enough observations
-        foldid <- sample(rep(1:5, length.out = n_obs))
-      } else {
-        # Use leave-one-out CV if limited observations
-        foldid <- 1:n_obs
-      }
-      
-      tryCatch({
-        fit <- glmnet::cv.glmnet(
+        if (nrow(sx$X_sc) < 2 || nrow(sf$X_sc) < 2) {
+          stop(sprintf("Insufficient observations for GLMNet (X: %d, F: %d). Requires >= 2.", nrow(X), nrow(Fsub)))
+        }
+        
+        lambda_to_use <- obj$lambda
+        cv_results <- NULL # Placeholder for CV output
+        cv_error <- NULL # Placeholder for CV specific error
+        
+        # Determine if CV should run
+        run_cv <- isTRUE(obj$cv_glmnet)
+        
+        if (run_cv) {
+          n_obs <- nrow(sf$X_sc)
+          if (n_obs < 3) { # cv.glmnet default nfolds=10 requires >=3
+              futile.logger::flog.warn("train_model (GLMNet CV): Too few observations (%d) for reliable CV. Skipping CV.", n_obs)
+              run_cv <- FALSE
+          } else {
+             foldid <- tryCatch({
+                 # Use default k-fold (typically 10), let cv.glmnet handle if n_obs < nfolds
+                 # Using internal cv.glmnet fold generation might be more robust
+                 NULL 
+             }, error = function(e) {
+                 futile.logger::flog.warn("train_model (GLMNet CV): Error creating fold IDs - %s. Skipping CV.", e$message)
+                 run_cv <<- FALSE # Modify run_cv in the outer scope
+                 NULL
+             })
+             
+             if (run_cv) { # Check again if foldid creation failed
+                cv_fit <- tryCatch({
+                    glmnet::cv.glmnet(
+                      x = sf$X_sc, 
+                      y = sx$X_sc,
+                      family = "mgaussian",
+                      alpha = obj$alpha,
+                      lambda = obj$lambda, # Pass user lambda if specified
+                      foldid = foldid,    # Pass NULL to let cv.glmnet create folds
+                      standardize = FALSE,
+                      intercept = TRUE
+                    )
+                }, error = function(e) {
+                    cv_error <<- sprintf("cv.glmnet failed: %s", e$message) # Assign to outer scope
+                    futile.logger::flog.warn("train_model (GLMNet CV): %s. Fitting with standard glmnet instead.", cv_error)
+                    run_cv <<- FALSE # Modify run_cv in the outer scope
+                    NULL # Return NULL to indicate CV failure
+                })
+                
+                if (run_cv && !is.null(cv_fit)) { # If CV succeeded
+                    lambda_to_use <- cv_fit$lambda.min
+                    cv_results <- cv_fit # Store CV results
+                }
+             }
+          }
+        }
+        
+        # Fit standard glmnet (either as fallback or primary)
+        final_fit <- glmnet::glmnet(
           x = sf$X_sc, 
           y = sx$X_sc,
           family = "mgaussian",
           alpha = obj$alpha,
-          lambda = lambda_to_use,
-          foldid = foldid,
-          standardize = FALSE,  # Already standardized
+          lambda = lambda_to_use, # Use CV lambda if available, otherwise obj$lambda
+          standardize = FALSE,
           intercept = TRUE
         )
         
-        # Store the best lambda
-        lambda_to_use <- fit$lambda.min
-        result$cv_results <- fit
-      }, error = function(e) {
-        # Log the specific error
-        futile.logger::flog.warn("train_model (GLMNet CV): cv.glmnet failed - %s. Falling back to standard glmnet.", e$message)
-        # If CV fails, we'll fall back to standard glmnet
-        obj$cv_glmnet <- FALSE
-      })
-    }
-    
-    # Now fit glmnet with the appropriate lambda
-    fit <- tryCatch({
-      glmnet::glmnet(
-        x = sf$X_sc, 
-        y = sx$X_sc,
-        family = "mgaussian",
-        alpha = obj$alpha,
-        lambda = lambda_to_use,
-        standardize = FALSE,  # Already standardized
-        intercept = TRUE
-      )
+        # Determine lambda used for prediction
+        lambda_used_for_pred <- if (run_cv && !is.null(cv_results)) {
+           lambda_to_use # lambda.min from successful CV
+        } else if (!is.null(final_fit$lambda)) {
+           final_fit$lambda[1] # First lambda if multiple were fit (e.g., obj$lambda=NULL)
+        } else {
+           NA # Should not happen if fit succeeded
+        }
+
+        # Calculate ncomp proxy
+        ncomp_proxy <- NA
+        if (!is.null(final_fit) && !is.null(lambda_used_for_pred) && is.finite(lambda_used_for_pred)) {
+           coefs <- tryCatch(glmnet::coef.glmnet(final_fit, s = lambda_used_for_pred), error=function(e) NULL)
+           if (!is.null(coefs) && is.list(coefs)) { # mgaussian returns a list
+              nonzero_count <- sapply(coefs, function(cm) sum(as.matrix(cm[-1,]) != 0)) # Exclude intercept
+              ncomp_proxy <- round(mean(nonzero_count))
+           } else {
+              futile.logger::flog.warn("train_model (GLMNet): Could not extract coefficients to calculate ncomp proxy.")
+           }
+        } else {
+           futile.logger::flog.warn("train_model (GLMNet): Could not determine lambda used or fit failed; cannot calculate ncomp proxy.")
+        }
+
+        # Return results
+        list(
+          trained_model = final_fit,
+          glmnet_x_mean = sx$mean,
+          glmnet_x_sd   = sx$sd,
+          glmnet_f_mean = sf$mean,
+          glmnet_f_sd   = sf$sd,
+          cv_glmnet     = (run_cv && !is.null(cv_results)), # True only if CV ran *and* succeeded
+          cv_results    = cv_results, # Store CV object if it succeeded
+          cv_error      = cv_error,   # Store CV error message if it occurred
+          lambda_used   = lambda_used_for_pred,
+          ncomp         = ncomp_proxy
+        )
+        
     }, error = function(e) {
-      # Log the specific error
-      futile.logger::flog.error("train_model (GLMNet): glmnet fitting error - %s", e$message)
-      stop(paste("GLMNet error:", e$message))
+        # Catch errors from standardization or the final glmnet fit
+        error_msg <- sprintf("train_model (GLMNet): Error during training - %s", e$message)
+        futile.logger::flog.error(error_msg)
+        list(error = error_msg)
     })
     
-    # Store the model and standardization parameters
-    result$trained_model <- fit
-    result$glmnet_x_mean <- sx$mean
-    result$glmnet_x_sd <- sx$sd
-    result$glmnet_f_mean <- sf$mean
-    result$glmnet_f_sd <- sf$sd
-    result$cv_glmnet <- obj$cv_glmnet
-    
-    # Store the lambda we used (or will use for prediction)
-    if (result$cv_glmnet) {
-      result$lambda_used <- lambda_to_use  # This is lambda.min from CV
-    } else {
-      # If not using CV, use the first lambda in the sequence
-      result$lambda_used <- fit$lambda[1]
+    # Check if tryCatch returned an error object
+    if (!is.null(glm_result$error)) {
+        result$error <- glm_result$error
+        return(result)
     }
     
-    # In GLMNET, we don't have a clear "ncomp" concept like PLS/PCA/SCCA
-    # We could use the number of non-zero coefficients as a proxy
-    # For mgaussian, coefficients is a list where each element corresponds to a response variable
-    if (obj$alpha > 0) {  # Only meaningful for models with some L1 penalty
-      # Extract coefficients at the selected lambda
-      if (result$cv_glmnet) {
-        coefs <- glmnet::coef.glmnet(fit, s = "lambda.min")
-      } else {
-        coefs <- glmnet::coef.glmnet(fit, s = result$lambda_used)
-      }
-      
-      # Count non-zero coefficients across all voxels (excluding intercepts)
-      nonzero_count <- sapply(coefs, function(cm) sum(cm[-1,] != 0))
-      avg_nonzero <- mean(nonzero_count)
-      
-      # Use this as our "ncomp" proxy
-      result$ncomp <- round(avg_nonzero)
-    } else {
-      # For pure ridge (alpha=0), all features are used but with shrinkage
-      result$ncomp <- ncol(sf$X_sc)
+    # Log CV error if it occurred but didn't stop the process
+    if (!is.null(glm_result$cv_error)) {
+       # This was already logged as warning, but good to have in final result list too?
+       # Maybe add it to the result list itself
+       result$cv_warning <- glm_result$cv_error
     }
     
+    # Assign results if successful
+    result <- c(result, glm_result)
+
   } else {
-    stop("Unknown method in feature_rsa_model.")
+    # This case should ideally not be reached if method is matched earlier
+    error_msg <- paste("Unknown method in train_model.feature_rsa_model:", obj$method)
+    futile.logger::flog.error(error_msg)
+    result$error <- error_msg
+    return(result)
+  }
+
+  
+  # Check for NULL trained_model just in case
+  if (is.null(result$trained_model)) {
+     error_msg <- sprintf("train_model (%s): Training finished but 'trained_model' is NULL. This indicates an unexpected issue.", obj$method)
+     futile.logger::flog.error(error_msg)
+     result$error <- error_msg
+     # Ensure ncomp is NA if model is NULL
+     if (!"ncomp" %in% names(result)) result$ncomp <- NA 
   }
   
-  result
+  # Ensure ncomp exists in the result list, set to NA if missing
+  if (!"ncomp" %in% names(result)) {
+      futile.logger::flog.warn("train_model (%s): 'ncomp' was not set during training. Setting to NA.", obj$method)
+      result$ncomp <- NA_real_
+  }
+  
+  return(result) # Return the final result list
 }
 
 
@@ -1463,113 +1532,6 @@ summary.feature_rsa_model <- function(object, ...) {
 }
 
 
-#' Run regional RSA analysis on a specified Feature RSA model
-#'
-#' This function runs a regional analysis using a feature RSA model and region mask.
-#'
-#' @param model_spec A \code{feature_rsa_model} object.
-#' @param region_mask A mask representing different brain regions.
-#' @param coalesce_design_vars If TRUE, merges design variables into prediction table.
-#' @param processor A custom processor function for ROIs. If NULL, uses defaults.
-#' @param verbose Print progress messages.
-#' @param ... Additional arguments
-#' 
-#' @details
-#' This integrates `feature_rsa_model` with the MVPA framework, similar to `run_regional.mvpa_model`.
-#'
-#' @export
-run_regional.feature_rsa_model <- function(model_spec, region_mask, coalesce_design_vars=FALSE, processor=NULL,
-                                           verbose=FALSE, ...) {
-  prepped <- prep_regional(model_spec, region_mask)
-  
-  # Define the processor function based on the model type
-  processor_func <- if (!is.null(processor)) {
-    processor # Use custom processor if provided
-  } else {
-    # Use the S3 method dispatch for process_roi
-    function(model_spec, roi, rnum) {
-      process_roi(model_spec, roi, rnum)
-    }
-  }
-  
-  # uses mvpa_iterate
-  results <- mvpa_iterate(model_spec, prepped$vox_iter, ids=prepped$region_set, processor=processor_func, verbose=verbose, ...)
-
-  perf <- if (model_spec$compute_performance) comp_perf(results, region_mask) else list(vols=list(), perf_mat=tibble::tibble())
-  
-  prediction_table <- if (model_spec$return_predictions) {
-    combine_regional_results(results)
-  } else {
-    NULL
-  }
-
-  if (coalesce_design_vars && !is.null(prediction_table)) {
-    prediction_table <- coalesce_join(prediction_table, test_design(model_spec$design),
-                                      by=".rownum")
-  }
-
-  fits <- if (model_spec$return_fits) {
-    lapply(results$result, "[[", "predictor")
-  } else {
-    NULL
-  }
-
-  regional_mvpa_result(model_spec=model_spec, performance_table=perf$perf_mat,
-                       prediction_table=prediction_table, vol_results=perf$vols, fits=fits)
-}
-
-#' Run searchlight analysis with a feature RSA model
-#'
-#' This method provides specialized handling for feature RSA models during searchlight analysis.
-#'
-#' @param model_spec A \code{feature_rsa_model} object
-#' @param radius Numeric radius for the searchlight spheres
-#' @param method Method for searchlight: "standard" or "randomized"
-#' @param niter Number of iterations for randomized searchlight
-#' @param ... Additional arguments passed to run_searchlight_base
-#'
-#' @export
-run_searchlight.feature_rsa_model <- function(model_spec, radius = 8, 
-                                             method = c("standard", "randomized"),
-                                             niter = 4, ...) {
-  method <- match.arg(method)
-  
-  # No hacky adjustments needed since the component limits are now part of the design
-  # and properly passed through to the model
-  
-  # Just log what we're using
-  if (model_spec$method == "pca" && !is.null(model_spec$max_pca_comps)) {
-    futile.logger::flog.info("Running searchlight with feature RSA (PCA): using max %d components", 
-                           model_spec$max_pca_comps)
-  } else if (model_spec$method == "scca" && !is.null(model_spec$max_scca_comps)) {
-    futile.logger::flog.info("Running searchlight with feature RSA (SCCA): using max %d components", 
-                           model_spec$max_scca_comps)
-  } else if (model_spec$method == "pls" && !is.null(model_spec$max_pls_comps)) {
-    futile.logger::flog.info("Running searchlight with feature RSA (PLS): using max %d components", 
-                           model_spec$max_pls_comps)
-  }
-  
-  # Use appropriate combiner based on method
-  if (method == "standard") {
-    futile.logger::flog.info("Running standard searchlight with feature RSA model")
-    run_searchlight_base(
-      model_spec = model_spec,
-      radius = radius,
-      method = method,
-      combiner = combine_rsa_standard,  # Use RSA-specific combiner
-      ...
-    )
-  } else {
-    futile.logger::flog.info("Running randomized searchlight with feature RSA model")
-    run_searchlight_base(
-      model_spec = model_spec,
-      radius = radius,
-      method = method,
-      niter = niter,
-      ...  # Use default combiner for randomized
-    )
-  }
-}
 
 #' Print Method for Feature RSA Design
 #'
@@ -1715,89 +1677,5 @@ print.feature_rsa_model <- function(x, ...) {
   # Footer
   cat("\n", border, "\n")
 }
-
-
-# process_roi.feature_rsa_model <- function(model_spec, roi, rnum) {
-#   # This is the core function called by mvpa_iterate for each ROI
-#   
-#   # 1. Prepare Data for this ROI
-#   cv_obj      <- model_spec$crossval
-#   fold_results <- list()
-#   
-#   for (i in 1:num_folds(cv_obj)) {
-#     # Get train/test splits for *observations* for this fold
-#     # Note: Features (y) are handled inside train_model
-#     train_idx <- train_indices(cv_obj, i)
-#     test_idx  <- test_indices(cv_obj, i)
-#     
-#     # Extract ROI data (brain patterns X)
-#     X_train <- neuroim2::values(roi$train_roi)[train_idx, , drop=FALSE]
-#     X_test  <- neuroim2::values(roi$test_roi)[test_idx, , drop=FALSE]
-#     
-#     # Extract corresponding features F (model$design$F)
-#     # The full feature matrix is available in model_spec$design
-#     F_train <- model_spec$design$F[train_idx, , drop=FALSE]
-#     F_test  <- model_spec$design$F[test_idx, , drop=FALSE]
-#     
-#     # 2. Train Model for this fold
-#     # Pass features (F_train) as 'y' to train_model
-#     trained_model_result <- tryCatch({
-#        train_model.feature_rsa_model(model_spec, X=X_train, y=F_train, indices=train_idx)
-#     }, error=function(e) {
-#        # Capture training errors directly
-#        list(error=paste("Training failed:", e$message))
-#     })
-#     
-#     # Check for training errors (including SCCA failure reported via result$error)
-#     if (!is.null(trained_model_result$error)) {
-#       # If training failed, create an error result for this fold and break the loop for this ROI
-#       # We need to return a single tibble row indicating error for the *whole ROI*
-#       # If one fold fails, the whole ROI processing for merge_results might fail
-#       # So, we return the error immediately
-#       return(tibble::tibble(
-#                 result       = list(NULL),
-#                 indices      = list(neuroim2::indices(roi$train_roi)),
-#                 performance  = list(NULL),
-#                 id           = rnum,
-#                 error        = TRUE,
-#                 error_message= trained_model_result$error
-#              ))
-#     }
-# 
-#     # 3. Format Result (includes prediction on test set)
-#     # Context needs test brain data (X_test) and test features (F_test as ytest)
-#     fold_context <- list(test=X_test, ytest=F_test)
-#     fold_result <- format_result.feature_rsa_model(model_spec, trained_model_result, context=fold_context)
-#     
-#     # Check for prediction/formatting errors within format_result
-#     if (fold_result$error) {
-#        # If prediction/formatting failed, return error for the whole ROI
-#         return(tibble::tibble(
-#                 result       = list(NULL),
-#                 indices      = list(neuroim2::indices(roi$train_roi)),
-#                 performance  = list(NULL),
-#                 id           = rnum,
-#                 error        = TRUE,
-#                 error_message= fold_result$error_message # Use error from format_result
-#              ))
-#     }
-# 
-#     fold_results[[i]] <- fold_result
-#   }
-#   
-#   # 4. Merge Results Across Folds (includes permutation testing)
-#   # Combine the list of fold tibbles into one tibble
-#   all_fold_results_df <- dplyr::bind_rows(fold_results)
-#   
-#   # Pass the combined fold results to merge_results
-#   merge_results.feature_rsa_model(
-#     obj = model_spec, 
-#     result_set = all_fold_results_df, 
-#     indices = neuroim2::indices(roi$train_roi), # indices of voxels in this ROI
-#     id = rnum # ROI identifier
-#   )
-# }
-
-
 
 

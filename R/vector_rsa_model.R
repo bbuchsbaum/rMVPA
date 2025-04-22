@@ -83,6 +83,8 @@ vector_rsa_model_mat <- function(design) {
 #' @param distfun A \code{distfun} (distance function) for computing pairwise dissimilarities among image rows.
 #' @param rsa_simfun A character string specifying the similarity function to use for RSA, 
 #'                   one of \code{"pearson"} or \code{"spearman"}.
+#' @param nperm Integer, number of permutations for statistical testing (default: 0).
+#' @param save_distributions Logical, whether to save full permutation distributions (default: FALSE).
 #'
 #' @return A \code{vector_rsa_model} object (S3 class) containing references to the dataset, design, and function parameters.
 #'
@@ -90,20 +92,27 @@ vector_rsa_model_mat <- function(design) {
 #' The model references the already-precomputed cross-block data from the design. 
 #' 
 #' @export
-vector_rsa_model <- function(dataset, design, distfun = cordist(), rsa_simfun = c("pearson", "spearman")) {
+vector_rsa_model <- function(dataset, design, 
+                           distfun = cordist(), 
+                           rsa_simfun = c("pearson", "spearman"),
+                           nperm=0, 
+                           save_distributions=FALSE) { 
   rsa_simfun <- match.arg(rsa_simfun)
   
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "vector_rsa_design"),
                           msg = "Input must be a 'vector_rsa_design' object.")
   
-  # Create the model spec
+  # Create the model spec, passing permutation parameters
   create_model_spec(
     "vector_rsa_model",
     dataset = dataset,
     design  = design,
     distfun = distfun,
-    rsa_simfun = rsa_simfun
+    rsa_simfun = rsa_simfun,
+    nperm = nperm,  # Pass nperm
+    compute_performance = TRUE,
+    save_distributions = save_distributions  # Pass save_distributions
   )
 }
 
@@ -343,6 +352,202 @@ print.vector_rsa_design <- function(x, ...) {
   
   # Footer
   cat("\n", border, "\n")
+}
+
+#' Evaluate model performance for vector RSA
+#'
+#' Computes the mean second-order similarity score and handles permutation testing.
+#'
+#' @param object The vector RSA model specification.
+#' @param predicted Ignored (vector RSA doesn't predict in the typical sense).
+#' @param observed The computed second-order similarity scores (vector from train_model).
+#' @param nperm Number of permutations from the model spec.
+#' @param save_distributions Logical, whether to save full permutation distributions.
+#' @param ... Additional arguments.
+#'
+#' @return A list containing the mean RSA score (`rsa_score`), raw scores, and 
+#'   optional permutation results (`p_values`, `z_scores`, `permutation_distributions`).
+#' @importFrom stats sd
+#' @export
+evaluate_model.vector_rsa_model <- function(object,
+                                             predicted, # Ignored
+                                             observed,  # These are the scores from train_model
+                                             nperm = 0,
+                                             save_distributions = FALSE,
+                                             ...) 
+{
+  # Primary metric: mean of the second-order similarity scores
+  mean_rsa_score <- mean(observed, na.rm = TRUE)
+
+  perm_results <- NULL
+  if (nperm > 0) {
+    # Retrieve original training data X
+    X_orig <- object$dataset$train_data
+    perm_means <- numeric(nperm)
+    # Perform permutations
+    for (p in seq_len(nperm)) {
+      # Permute the rows of X (shuffles condition assignments)
+      X_perm <- X_orig[sample(nrow(X_orig)), , drop = FALSE]
+      # Recompute trial scores under the null
+      scores_perm <- compute_trial_scores(object, X_perm)
+      # Store the mean RSA score for this permutation
+      perm_means[p] <- mean(scores_perm, na.rm = TRUE)
+    }
+    # Calculate p-value (one-sided: how many null >= observed)
+    count_ge <- sum(perm_means >= mean_rsa_score, na.rm = TRUE)
+    p_val <- (count_ge + 1) / (nperm + 1)
+    # Compute z-score
+    perm_mean <- mean(perm_means, na.rm = TRUE)
+    perm_sd   <- sd(perm_means, na.rm = TRUE)
+    z_score <- if (!is.na(perm_sd) && perm_sd > 0) {
+      (mean_rsa_score - perm_mean) / perm_sd
+    } else {
+      NA_real_
+    }
+    # Assemble results
+    perm_list <- list(
+      p_values = setNames(p_val, "rsa_score"),
+      z_scores = setNames(z_score, "rsa_score")
+    )
+    if (save_distributions) {
+      perm_list$permutation_distributions <- list(
+        rsa_score = perm_means
+      )
+    }
+    perm_results <- perm_list
+  }
+
+  list(
+    rsa_score           = mean_rsa_score,
+    permutation_results = perm_results
+  )
+}
+#' Merge results for vector RSA model
+#'
+#' Aggregates results (scores) and calls evaluate_model.
+#' Vector RSA typically doesn't involve folds in the same way as classifiers,
+#' so this mainly formats the output of train_model for the specific ROI/sphere.
+#'
+#' @param obj The vector RSA model specification (contains nperm etc.).
+#' @param result_set A tibble from the processor. Expected to contain the output
+#'   of `train_model.vector_rsa_model` (the scores vector) likely within `$result[[1]]`.
+#' @param indices Voxel indices for the current ROI/searchlight sphere.
+#' @param id Identifier for the current ROI/searchlight center.
+#' @param ... Additional arguments.
+#'
+#' @return A tibble row with the final performance metrics for the ROI/sphere.
+#' @importFrom tibble tibble
+#' @importFrom futile.logger flog.error flog.warn
+#' @export
+merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
+  
+  # Check for errors from previous steps (processor/train_model)
+  if (any(result_set$error)) {
+    emessage <- result_set$error_message[which(result_set$error)[1]]
+    # Return standard error tibble structure
+    return(
+      tibble::tibble(
+        result       = list(NULL), # No results on error
+        indices      = list(indices), # Keep indices for context
+        performance  = list(NULL), # No performance on error
+        id           = id,
+        error        = TRUE,
+        error_message= emessage
+      )
+    )
+  }
+  
+  # Extract the scores computed by train_model. 
+  # Default processor likely stores train_model output in result_set$result[[1]].
+  # Add checks for robustness.
+  if (!"result" %in% names(result_set) || length(result_set$result) == 0 || is.null(result_set$result[[1]])) {
+     error_msg <- "merge_results (vector_rsa): result_set missing or has NULL/empty 'result' field."
+     futile.logger::flog.error("ROI/Sphere ID %s: %s", id, error_msg)
+     # Create NA performance matrix to avoid downstream errors
+     # Get expected metric names (rsa_score + perm cols if needed)
+     perf_names <- "rsa_score"
+     if (obj$nperm > 0) {
+         perf_names <- c(perf_names, "p_rsa_score", "z_rsa_score")
+     }
+     perf_mat <- matrix(NA_real_, nrow=1, ncol=length(perf_names), 
+                        dimnames=list(NULL, perf_names))
+     return(tibble::tibble(result=list(NULL), indices=list(indices), performance=list(perf_mat), 
+                           id=id, error=TRUE, error_message=error_msg))
+  }
+  
+  scores <- result_set$result[[1]]
+  
+  # Validate the extracted scores
+  if (!is.numeric(scores)) {
+      error_msg <- sprintf("merge_results (vector_rsa): Extracted scores are not numeric for ROI/Sphere ID %s.", id)
+      futile.logger::flog.error(error_msg)
+      # Create NA performance matrix
+      perf_names <- "rsa_score"
+      if (obj$nperm > 0) {
+          perf_names <- c(perf_names, "p_rsa_score", "z_rsa_score")
+      }
+      perf_mat <- matrix(NA_real_, nrow=1, ncol=length(perf_names), 
+                         dimnames=list(NULL, perf_names))
+      return(tibble::tibble(result=list(NULL), indices=list(indices), performance=list(perf_mat), 
+                            id=id, error=TRUE, error_message=error_msg))
+  }
+  
+  # Call evaluate_model, passing the scores and permutation parameters from obj
+  perf <- evaluate_model.vector_rsa_model(
+    object    = obj,           # Pass the full model spec
+    predicted = NULL,          # Not used by vector_rsa evaluate
+    observed  = scores,        # Pass the scores here
+    nperm     = obj$nperm,     # Get nperm from the model spec
+    save_distributions = obj$save_distributions # Get save_dist from model spec
+  )
+  
+  # --- Collate results into the performance matrix --- 
+  base_metrics <- c(
+    perf$rsa_score # Extract the primary score
+  )
+  base_names <- c("rsa_score") # Name it
+  
+  # Add permutation results if they were computed (even if NA)
+  if (!is.null(perf$permutation_results)) {
+      perm_p_values <- perf$permutation_results$p_values
+      perm_z_scores <- perf$permutation_results$z_scores
+      
+      # Check if p-values/z-scores are named correctly
+      if (is.null(names(perm_p_values)) || is.null(names(perm_z_scores))){
+           p_names <- paste0("p_", base_names) # Fallback naming
+           z_names <- paste0("z_", base_names)
+      } else {
+          p_names <- paste0("p_", names(perm_p_values))
+          z_names <- paste0("z_", names(perm_z_scores))
+      }
+
+      perf_values <- c(base_metrics, perm_p_values, perm_z_scores)
+      perf_names <- c(base_names, p_names, z_names)
+  } else {
+      perf_values <- base_metrics
+      perf_names <- base_names
+  }
+  
+  # Create the performance matrix
+  perf_mat <- matrix(
+      perf_values,
+      nrow = 1,
+      ncol = length(perf_values),
+      dimnames = list(NULL, perf_names)
+  )
+  
+  # Remove columns that are all NA (e.g., if permutations failed or weren't run)
+  perf_mat <- perf_mat[, colSums(is.na(perf_mat)) < nrow(perf_mat), drop = FALSE]
+
+  # Return the final tibble structure expected by the framework
+  tibble::tibble(
+    result      = list(NULL), # Don't store raw results after merging
+    indices     = list(indices),
+    performance = list(perf_mat),
+    id          = id,
+    error       = FALSE,
+    error_message = "~" # Indicate success
+  )
 }
 
 

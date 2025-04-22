@@ -1,4 +1,3 @@
-
 #' @keywords internal
 #' @noRd
 wrap_result <- function(result_table, design, fit=NULL) {
@@ -158,8 +157,17 @@ crossval_samples.mvpa_model <- function(obj,data,y,...) {
 
 #' @export
 has_test_set.mvpa_model <- function(obj) {
-  !is.null(obj$design$y_test) 
+  # Use the stored flag rather than checking for existence of design$y_test
+  isTRUE(obj$has_test_set)
 }
+
+#' @export
+has_test_set.model_spec <- function(obj) {
+  # Use the stored flag rather than checking for existence of design$y_test
+  isTRUE(obj$has_test_set)
+}
+
+
 
 #' @export
 y_train.mvpa_model <- function(obj) y_train(obj$design)
@@ -174,14 +182,24 @@ y_test.mvpa_model <- function(obj) y_test(obj$design)
 #' @param design An `mvpa_design` instance.
 #' @param return_predictions A \code{logical} indicating whether to return row-wise predictions for each voxel set (defaults to TRUE).
 #' @param tune_reps The number of replications used during parameter tuning. Only relevant if `tune_grid` is supplied.
-#' @param ... Additional arguments to be passed to the model.
+#' @param ... Additional arguments to be passed to the model, including `has_test_set` flag.
 #' @noRd
 #' @export
 create_model_spec <- function(name, dataset, design, return_predictions=FALSE, 
                               compute_performance=FALSE, tune_reps=FALSE, ...) {
+  # Automatically detect test set presence from dataset and design if not passed as parameter
+  args <- list(...)
+  if (is.null(args$has_test_set)) {
+    args$has_test_set <- !is.null(dataset$test_data) && !is.null(design$y_test)
+  }
+  
   ret <- list(name=name, dataset=dataset, design=design, 
               return_predictions=return_predictions, compute_performance=compute_performance, 
-              tune_reps=tune_reps, ...)
+              tune_reps=tune_reps)
+  
+  # Add the remaining arguments
+  ret <- c(ret, args)
+  
   class(ret) <- c(name, "model_spec", "list")
   ret
 }
@@ -258,6 +276,9 @@ mvpa_model <- function(model,
     stop("mvpa_model: if dataset has `test_data` design must have `y_test`")
   }
   
+  # Determine if we have a test set based on both dataset and design
+  has_test <- !is.null(design$y_test) && !is.null(dataset$test_data)
+  
   perf <- if (!is.null(performance) && is.function(performance)) {
     #assert_that(is.function(performance)) 
     get_custom_perf(performance, design$split_groups)
@@ -298,7 +319,8 @@ mvpa_model <- function(model,
               performance=perf,
               compute_performance=compute_performance,
               return_predictions=return_predictions,
-              return_fits=return_fits)
+              return_fits=return_fits,
+              has_test_set=has_test)  # Add flag for test set presence
   
   ret
   
@@ -330,6 +352,25 @@ print.mvpa_model <- function(x,...) {
   print(x$crossval)
   print(x$dataset)
   print(x$design)
+}
+  
+
+#' Default method for strip_dataset generic
+#' 
+#' Removes the `dataset` element from a model specification object.
+#' 
+#' @param obj The model specification object.
+#' @param ... Additional arguments (ignored).
+#' @return The object with `obj$dataset` set to NULL.
+#' @export
+strip_dataset.default <- function(obj, ...) {
+  if (!is.null(obj$dataset)) {
+    futile.logger::flog.debug("Stripping dataset from model specification.")
+    obj$dataset <- NULL
+  } else {
+    futile.logger::flog.debug("Dataset already NULL or missing in model specification.")
+  }
+  obj
 }
   
   

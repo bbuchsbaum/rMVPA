@@ -19,6 +19,7 @@ An \code{mvpa_dataset} object (S3 class) containing:
     \item{train_data}{The training data as a \code{NeuroVec} instance}
     \item{test_data}{The test data as a \code{NeuroVec} instance (if provided, otherwise NULL)}
     \item{mask}{The binary mask defining valid voxels as a \code{NeuroVol} instance}
+    \item{has_test_set}{Logical flag indicating whether this dataset has a test set}
   }
 }
 \description{

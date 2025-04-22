@@ -7948,6 +7948,10 @@ summary.feature_rsa_model <- function(object, ...) {
 #' @export
 run_regional.feature_rsa_model <- function(model_spec, region_mask, coalesce_design_vars=FALSE, processor=NULL, 
                                            verbose=FALSE, ...) {  
+
+  print("run_regional.feature_rsa_model")
+
+  #browser()
   prepped <- prep_regional(model_spec, region_mask)
   
   # uses mvpa_iterate

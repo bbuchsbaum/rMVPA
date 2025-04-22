@@ -129,15 +129,22 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
   
   block_var <- as.integer(as.character(cut(1:nobs, blocks, labels=1:blocks)))
   
-  des <- if (external_test) {
+  if (external_test) {
     message("external test")
-    mvpa_design(data.frame(Y=Y, block_var=block_var), test_design=data.frame(Ytest = Ytest), 
+    mvdes <- mvpa_design(data.frame(Y=Y, block_var=block_var), test_design=data.frame(Ytest = Ytest), 
                        block_var= "block_var", y_train= ~ Y, y_test = ~ Ytest, split_by=split_by)
   } else {
-    mvpa_design(data.frame(Y=Y, block_var=block_var), block_var="block_var", y_train= ~ Y, split_by=split_by)
+    mvdes <- mvpa_design(data.frame(Y=Y, block_var=block_var), block_var="block_var", y_train= ~ Y, split_by=split_by)
   }
   
-  list(dataset=dset, design=des)
+  # Make sure the dataset also has the _has_test_set flag set consistently
+  if (is.list(dset) && "dataset" %in% names(dset)) {
+    dset$dataset$has_test_set <- external_test
+  } else {
+    dset$has_test_set <- external_test
+  }
+  
+  list(dataset=dset, design=mvdes)
 }
 
 
@@ -155,6 +162,7 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
 #'     \item{train_data}{The training data as a \code{NeuroVec} instance}
 #'     \item{test_data}{The test data as a \code{NeuroVec} instance (if provided, otherwise NULL)}
 #'     \item{mask}{The binary mask defining valid voxels as a \code{NeuroVol} instance}
+#'     \item{has_test_set}{Logical flag indicating whether this dataset has a test set}
 #'   }
 #'
 #' @examples
@@ -196,11 +204,15 @@ mvpa_dataset <- function(train_data, test_data=NULL, mask) {
     stop("Invalid dataset: Only ", active_voxels, " active voxel(s) in mask. Feature RSA analysis requires multiple active voxels.")
   }
   
+  # Store a flag indicating whether this dataset has a test set
+  has_test <- !is.null(test_data)
+  
   ret <- structure(
     list(
       train_data=train_data,
       test_data=test_data,
-      mask=mask
+      mask=mask,
+      has_test_set=has_test  # Add flag for test set presence
     ),
     class=c("mvpa_image_dataset", "mvpa_dataset", "list")
   )
@@ -224,6 +236,7 @@ mvpa_dataset <- function(train_data, test_data=NULL, mask) {
 #'     \item{test_data}{The test data as a \code{NeuroSurfaceVector} instance (if provided)}
 #'     \item{mask}{A numeric vector indicating valid vertices (1) and excluded vertices (0)}
 #'     \item{name}{Character string identifier for the dataset}
+#'     \item{has_test_set}{Logical flag indicating whether this dataset has a test set}
 #'   }
 #'
 #' @details
@@ -263,17 +276,19 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="")
     mask[indices(train_data)] <- 1
   }
   
+  # Store a flag indicating whether this dataset has a test set
+  has_test <- !is.null(test_data)
+  
   structure(
     list(
       train_data=train_data,
       test_data=test_data,
       mask=mask,
-      name=name
+      name=name,
+      has_test_set=has_test  # Add flag for test set presence
     ),
     class=c("mvpa_surface_dataset", "mvpa_dataset", "list")
   )
-
-  
 }
 
 #' @export
@@ -440,7 +455,8 @@ wrap_output.mvpa_surface_dataset <- function(obj, vals, indices) {
 
 #' @export
 has_test_set.mvpa_dataset <- function(obj) {
-  !is.null(obj$test_data) 
+  # Use the stored flag rather than checking for existence of test_data
+  isTRUE(obj$has_test_set)
 }
 
 

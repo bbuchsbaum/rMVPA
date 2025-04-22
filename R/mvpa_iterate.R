@@ -352,7 +352,11 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
             mutate(roi=list(extract_roi(sample,dset))) %>% 
             select(-sample)
           
-          results[[i]] <- run_future(mod_spec, sf, processor, verbose)
+          # Strip the dataset from mod_spec before passing to parallel workers
+          mod_spec_stripped <- strip_dataset(mod_spec)
+          
+          # Pass the stripped version
+          results[[i]] <- run_future(mod_spec_stripped, sf, processor, verbose)
           processed_rois <- processed_rois + nrow(sf)
           
           futile.logger::flog.debug("Batch %d produced %d results", i, nrow(results[[i]]))

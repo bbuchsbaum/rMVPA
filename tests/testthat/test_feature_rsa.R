@@ -13,7 +13,7 @@ test_that("regional feature_rsa_model with direct F matrix runs without error", 
   fdes <- feature_rsa_design(F=Fmat, labels=labels, max_comps=3)
   
   # Create a feature_rsa_model, for example using 'pls'
-  mspec <- feature_rsa_model(dset$dataset, fdes, method="pca", crossval=blocked_cross_validation(dset$design$block_var))
+  mspec <- feature_rsa_model(dset$dataset, fdes, method="pls", crossval=blocked_cross_validation(dset$design$block_var))
   
   # Create a region mask with 5 ROIs
   region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), 

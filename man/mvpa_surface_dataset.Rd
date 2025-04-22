@@ -22,6 +22,7 @@ An \code{mvpa_surface_dataset} object (S3 class) containing:
     \item{test_data}{The test data as a \code{NeuroSurfaceVector} instance (if provided)}
     \item{mask}{A numeric vector indicating valid vertices (1) and excluded vertices (0)}
     \item{name}{Character string identifier for the dataset}
+    \item{has_test_set}{Logical flag indicating whether this dataset has a test set}
   }
 }
 \description{
