@@ -327,6 +327,8 @@ print.mvpa_sysinfo <- function(x, ...) {
 # Helper for print method (borrowed from purrr, avoids dependency)
 # No longer strictly needed by print.mvpa_sysinfo after the changes, but keep for now 
 # in case it's used elsewhere or intended for future use.
+#' @noRd 
+#' @keywords internal
 `%||%` <- function(x, y) {
   if (is.null(x) || length(x) == 0) y else x
 }
