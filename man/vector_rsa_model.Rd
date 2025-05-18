@@ -37,7 +37,6 @@ A \code{vector_rsa_model} object (S3 class) containing references to the dataset
 This function integrates a vector_rsa_design and an mvpa_dataset to create a vectorized RSA model.
 }
 \details{
-The model references the already-precomputed cross-block data from the design. 
-If `return_predictions` is TRUE, the output of `run_regional` or `run_searchlight` 
+If `return_predictions` is TRUE, the output of `run_regional` or `run_searchlight`
 will include a `prediction_table` tibble containing the observation-level RSA scores.
 }

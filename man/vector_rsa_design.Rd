@@ -21,6 +21,5 @@ This function constructs a design for an RSA model using a single distance matri
 }
 \details{
 The function verifies that all `labels` appear in `rownames(D)`. It also creates an expanded version
-of the dissimilarity matrix (`Dexpanded`) matching the order of `labels`, and precomputes
-cross-block information for later use.
+of the dissimilarity matrix (`Dexpanded`) matching the order of `labels`.
 }

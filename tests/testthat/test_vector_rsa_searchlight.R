@@ -108,8 +108,6 @@ test_that("vector_rsa_design constructs a valid design object", {
   expect_true(!is.null(design$model_mat))
   # Check that the expanded matrix has dimensions matching labels
   expect_equal(dim(design$model_mat$Dexpanded), c(15,15))
-  # Check that cross-block data is computed
-  expect_true(is.list(design$model_mat$cross_block_data))
 })
 
 ## --- Tests for vector_rsa_model ---
