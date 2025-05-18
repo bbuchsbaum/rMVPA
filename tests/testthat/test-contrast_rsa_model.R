@@ -132,6 +132,7 @@ test_that("contrast_rsa_model constructor works with valid inputs", {
   expect_equal(model_spec$regression_type, "lm")
   expect_equal(model_spec$output_metric, c("beta_delta"))
   expect_false(model_spec$check_collinearity)
+  expect_false(model_spec$calc_reliability)
 })
 
 test_that("contrast_rsa_model constructor errors on invalid dataset", {
@@ -173,9 +174,11 @@ test_that("contrast_rsa_model constructor validates parameters via match.arg", {
 test_that("contrast_rsa_model constructor checks logical parameters", {
   dset <- mock_mvpa_dataset()
   ms_des <- mock_msreve_design()
-  
+
   expect_error(contrast_rsa_model(dset, ms_des, check_collinearity = "TRUE"),
                regexp = "is.logical\\(check_collinearity\\) is not TRUE") # from assert_that
+  expect_error(contrast_rsa_model(dset, ms_des, calc_reliability = "yes"),
+               regexp = "is.logical\\(calc_reliability\\) is not TRUE")
 })
 
 test_that("contrast_rsa_model constructor collinearity check works as expected", {
@@ -709,10 +712,11 @@ test_that("contrast_rsa_model output metrics are internally consistent", {
   ms_des <- msreve_design(mvpa_des, C_ortho)
   
   # Helper to run model with given options
-  run_metric <- function(metric, normalize = FALSE){
+  run_metric <- function(metric, normalize = FALSE, reliability = FALSE){
     spec <- contrast_rsa_model(dset, ms_des,
                                output_metric = c(metric),
                                normalize_delta = normalize,
+                               calc_reliability = reliability,
                                check_collinearity = FALSE)
     result_list <- train_model(spec,
                 sl_data = dset$train_data,
@@ -741,4 +745,8 @@ test_that("contrast_rsa_model output metrics are internally consistent", {
   recon_val_single <- run_metric("recon_score")
   expect_true(is.finite(recon_val_single))
   expect_true(recon_val_single >= -1 && recon_val_single <= 1)
-}) 
+
+  rho_const <- (get_nfolds(mock_cv_spec_s3(mvpa_des)) - 1) / get_nfolds(mock_cv_spec_s3(mvpa_des))
+  beta_delta_rel <- run_metric("beta_delta_reliable", reliability = TRUE)
+  expect_equal(beta_delta_rel, beta_delta_vec * rho_const, tolerance = 1e-6)
+})
