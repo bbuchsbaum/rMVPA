@@ -97,6 +97,11 @@ compute_crossvalidated_means_sl <- function(sl_data,
   n_voxels <- ncol(sl_data)
   n_folds <- get_nfolds(cv_spec)
 
+  # Confirm the train_indices generic is available before using it
+  if (!exists("train_indices", mode = "function")) {
+    rlang::abort("Required generic 'train_indices' is not available in scope.")
+  }
+
   # Prepare containers for online averaging (memory-efficient vs full 3-D array)
   U_hat_sl_cum <- matrix(0, nrow = n_conditions, ncol = n_voxels,
                          dimnames = list(unique_conditions, colnames(sl_data)))
@@ -114,9 +119,6 @@ compute_crossvalidated_means_sl <- function(sl_data,
   # --- Calculate Means per Fold --- 
   # Iterate folds and accumulate means online (memory safe)
   for (i in seq_len(n_folds)) {
-    if (!exists("train_indices", mode="function")) {
-        rlang::abort("Required method 'train_indices' is not available in scope.")
-    }
 
     train_indices <- train_indices(cv_spec, i)
 
