@@ -128,90 +128,14 @@ compute_crossvalidated_means_sl <- function(sl_data,
     train_data_fold <- sl_data[train_indices, , drop = FALSE]
     train_labels_fold <- condition_labels[train_indices]
 
-    fold_means_mat <- NULL
-    # Ensure there are rows and labels to process
-    if (nrow(train_data_fold) > 0 && length(train_labels_fold) > 0) {
-        # Convert train_labels_fold to a factor to ensure consistent ordering for rowsum and table
-        # Drop unused levels if any, to prevent issues with table counts vs rowsum rows
-        train_labels_factor <- factor(train_labels_fold, levels = unique_conditions)
-        
-        # Calculate sums per condition using rowsum
-        # rowsum requires the group to be a factor for predictable row order in output
-        # It sorts by levels of the factor.
-        sums_by_cond <- rowsum(train_data_fold, group = train_labels_factor, reorder = TRUE, na.rm = TRUE)
-        
-        # Calculate counts per condition
-        counts_by_cond <- table(train_labels_factor)
-        
-        # Align counts with the order of sums_by_cond (which is sorted by factor levels)
-        # This ensures correct element-wise division.
-        # If a level had sum 0 (all NAs) but count > 0, or sum > 0 but count 0 (should not happen here if table from same factor)
-        # we need to be careful.
-        # Rownames of sums_by_cond are the factor levels that had data.
-        ordered_levels_in_sum <- rownames(sums_by_cond)
-        counts_for_division <- counts_by_cond[ordered_levels_in_sum]
-        
-        # Calculate means: sums / counts
-        # Avoid division by zero if a count is zero (should not happen if level in sums_by_cond)
-        means_by_cond <- sums_by_cond / as.numeric(counts_for_division)
-        # Handle cases where a sum might have been NA (if all inputs were NA) or count was 0 (resulting in NaN/Inf)
-        means_by_cond[is.nan(means_by_cond) | is.infinite(means_by_cond)] <- NA_real_
-        
-        fold_means_mat <- means_by_cond
-        # rownames are already correctly set by rowsum to be the condition labels (factor levels)
-        # Ensure colnames are preserved from original data if possible (rowsum might strip them)
-        if (!is.null(colnames(train_data_fold)) && ncol(fold_means_mat) == ncol(train_data_fold)) {
-            colnames(fold_means_mat) <- colnames(train_data_fold)
-        } else if (!is.null(colnames(sl_data)) && ncol(fold_means_mat) == ncol(sl_data)) {
-            colnames(fold_means_mat) <- colnames(sl_data) # Fallback to sl_data colnames
-        }
-
-    } else {
-        # If no training data/labels for this fold, create an empty matrix with correct colnames
-        # This ensures consistency for later re-indexing into full_fold_means
-        num_unique_conds_total <- length(unique_conditions) # from outer scope
-        k_fold_levels <- character(0)
-        if (length(train_labels_fold) > 0) k_fold_levels <- levels(factor(train_labels_fold)) 
-        # If no data, it means no conditions from this fold, so 0 rows.
-        # The re-indexing to full_fold_means will handle this by having all NAs for this fold.
-        fold_means_mat <- matrix(NA_real_, 
-                                 nrow = 0, 
-                                 ncol = ncol(sl_data), 
-                                 dimnames = list(NULL, colnames(sl_data)))
-    }
-
-    # Apply whitening if method is crossnobis
-    if (estimation_method == "crossnobis") {
-        # We already checked that whitening_matrix_W is valid and has correct dimensions (V_sl x V_sl)
-        # fold_means_mat is K_fold x V_sl (where K_fold is conditions present in this fold)
-        if (nrow(fold_means_mat) > 0) { # Ensure there are rows to whiten
-             fold_means_mat_processed <- fold_means_mat %*% whitening_matrix_W
-             # Ensure column names are preserved if they exist on W (though not strictly necessary here)
-             if (!is.null(colnames(whitening_matrix_W)) && ncol(fold_means_mat_processed) == ncol(whitening_matrix_W)){
-                # this might not be right if W's colnames are not feature names
-             } else if (!is.null(colnames(fold_means_mat))){
-                colnames(fold_means_mat_processed) <- colnames(fold_means_mat)
-             }
-        } else {
-             fold_means_mat_processed <- fold_means_mat # No rows to process
-        }
-    } else {
-        fold_means_mat_processed <- fold_means_mat # Other methods don't whiten here
-    }
-
-    # Handle cases where a condition might be missing in a fold's training set
-    # Reindex to ensure all conditions are present, filling missing with NA
-    full_fold_means <- matrix(NA_real_,
-                              nrow = n_conditions,
-                              ncol = n_voxels,
-                              dimnames = list(unique_conditions, colnames(sl_data)))
-                              
-    present_conditions <- rownames(fold_means_mat_processed) # Use processed matrix
-    # Ensure present_conditions are valid before trying to subset
-    valid_present_conditions <- present_conditions[present_conditions %in% rownames(full_fold_means)]
-    if (length(valid_present_conditions) > 0) {
-        full_fold_means[valid_present_conditions, ] <- fold_means_mat_processed[valid_present_conditions, , drop = FALSE]
-    }
+    full_fold_means <- process_single_fold(train_data_fold,
+                                           train_labels_fold,
+                                           unique_conditions,
+                                           n_conditions,
+                                           n_voxels,
+                                           estimation_method,
+                                           whitening_matrix_W,
+                                           colnames(sl_data))
     
     # Update cumulative matrix and counts
     # Only add to cumulative sum if the full_fold_means for that condition in that fold is not all NA
@@ -291,3 +215,70 @@ compute_crossvalidated_means_sl <- function(sl_data,
     return(U_hat_sl)
   }
 } 
+#' Process a single cross-validation fold
+#'
+#' Internal helper used by `compute_crossvalidated_means_sl`.
+#' It computes per-condition means for one training fold, applies
+#' optional whitening, and reindexes the result so that all
+#' conditions are represented.
+#'
+#' @noRd
+#' @keywords internal
+process_single_fold <- function(train_data_fold,
+                               train_labels_fold,
+                               unique_conditions,
+                               n_conditions,
+                               n_voxels,
+                               estimation_method,
+                               whitening_matrix_W,
+                               sl_colnames) {
+
+  fold_means_mat <- NULL
+  if (nrow(train_data_fold) > 0 && length(train_labels_fold) > 0) {
+    train_labels_factor <- factor(train_labels_fold, levels = unique_conditions)
+    sums_by_cond <- rowsum(train_data_fold, group = train_labels_factor,
+                           reorder = TRUE, na.rm = TRUE)
+    counts_by_cond <- table(train_labels_factor)
+    ordered_levels_in_sum <- rownames(sums_by_cond)
+    counts_for_division <- counts_by_cond[ordered_levels_in_sum]
+    means_by_cond <- sums_by_cond / as.numeric(counts_for_division)
+    means_by_cond[is.nan(means_by_cond) | is.infinite(means_by_cond)] <- NA_real_
+
+    fold_means_mat <- means_by_cond
+    if (!is.null(colnames(train_data_fold)) &&
+        ncol(fold_means_mat) == ncol(train_data_fold)) {
+      colnames(fold_means_mat) <- colnames(train_data_fold)
+    } else if (!is.null(sl_colnames) &&
+               ncol(fold_means_mat) == length(sl_colnames)) {
+      colnames(fold_means_mat) <- sl_colnames
+    }
+  } else {
+    fold_means_mat <- matrix(NA_real_, nrow = 0, ncol = n_voxels,
+                             dimnames = list(NULL, sl_colnames))
+  }
+
+  if (estimation_method == "crossnobis") {
+    if (nrow(fold_means_mat) > 0) {
+      fold_means_mat_processed <- fold_means_mat %*% whitening_matrix_W
+      if (!is.null(colnames(fold_means_mat))) {
+        colnames(fold_means_mat_processed) <- colnames(fold_means_mat)
+      }
+    } else {
+      fold_means_mat_processed <- fold_means_mat
+    }
+  } else {
+    fold_means_mat_processed <- fold_means_mat
+  }
+
+  full_fold_means <- matrix(NA_real_, nrow = n_conditions, ncol = n_voxels,
+                            dimnames = list(unique_conditions, sl_colnames))
+  present_conditions <- rownames(fold_means_mat_processed)
+  valid_present_conditions <-
+    present_conditions[present_conditions %in% rownames(full_fold_means)]
+  if (length(valid_present_conditions) > 0) {
+    full_fold_means[valid_present_conditions, ] <-
+      fold_means_mat_processed[valid_present_conditions, , drop = FALSE]
+  }
+
+  full_fold_means
+}

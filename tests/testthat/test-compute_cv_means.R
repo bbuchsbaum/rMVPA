@@ -141,14 +141,39 @@ test_that("compute_crossvalidated_means_sl with return_folds=TRUE matches return
   cv_spec <- mock_cv_spec_s3(mvpa_des)
   set.seed(125)
   cond_means_per_sample <- as.numeric(mvpa_des$Y)
-  sl_data <- matrix(rep(cond_means_per_sample, n_voxels), nrow = n_samples, ncol = n_voxels) + 
+  sl_data <- matrix(rep(cond_means_per_sample, n_voxels), nrow = n_samples, ncol = n_voxels) +
                matrix(rnorm(n_samples * n_voxels, 0, 0.01), nrow = n_samples)
   colnames(sl_data) <- paste0("V", 1:n_voxels)
-  
+
   U_hat_direct <- compute_crossvalidated_means_sl(sl_data, mvpa_des, cv_spec, "average", return_folds = FALSE)
   res_list <- compute_crossvalidated_means_sl(sl_data, mvpa_des, cv_spec, "average", return_folds = TRUE)
-  
+
   expect_equal(U_hat_direct, res_list$mean_estimate)
+})
+
+test_that("process_single_fold reproduces fold_estimates from compute_crossvalidated_means_sl", {
+  n_samples <- 12; n_cond <- 3; n_blocks <- 2; n_voxels <- 4
+  mvpa_des <- mock_mvpa_design_cv(n_samples, n_cond, n_blocks)
+  cv_spec <- mock_cv_spec_s3(mvpa_des)
+  set.seed(999)
+  cond_means <- as.numeric(mvpa_des$Y)
+  sl_data <- matrix(rep(cond_means, n_voxels), nrow = n_samples, ncol = n_voxels) +
+              matrix(rnorm(n_samples * n_voxels, 0, 0.01), nrow = n_samples)
+  colnames(sl_data) <- paste0("V", 1:n_voxels)
+
+  res <- compute_crossvalidated_means_sl(sl_data, mvpa_des, cv_spec, "average", return_folds = TRUE)
+  for (f in seq_len(get_nfolds(cv_spec))) {
+    train_idx <- train_indices(cv_spec, f)
+    fold_expected <- rMVPA:::process_single_fold(sl_data[train_idx, , drop = FALSE],
+                                                 mvpa_des$Y[train_idx],
+                                                 levels(mvpa_des$Y),
+                                                 length(levels(mvpa_des$Y)),
+                                                 ncol(sl_data),
+                                                 "average",
+                                                 NULL,
+                                                 colnames(sl_data))
+    expect_equal(res$fold_estimates[,,f], fold_expected)
+  }
 })
 
 
