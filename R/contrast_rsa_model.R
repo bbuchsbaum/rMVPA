@@ -236,9 +236,10 @@ contrast_rsa_model <- function(dataset,
     # Further dimension checks will occur in compute_crossvalidated_means_sl against sl_data
   }
 
-  # TODO: Implement collinearity check if regtype = "lm" and check_collinearity = TRUE
-  # Build X <- sapply(1:Q, ...) or similar and test qr(X)$rank.
-  # Throw abort if rank < Q.
+  # Check for collinearity when using linear regression and
+  # `check_collinearity = TRUE`. Predictor matrix X is built from
+  # vectorized contrast RDMs and the QR rank is tested; an abort is
+  # triggered if the rank is less than the number of contrasts.
   if (regression_type == "lm" && check_collinearity) {
       # warning("Collinearity check requested but not yet implemented for contrast_rsa_model.")
       C <- design$contrast_matrix
@@ -461,7 +462,7 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   # Assign K from the U_hat used for delta, which should always be valid
   K <- nrow(U_hat_for_delta_calc)
   
-  # *** FIX: Check for NAs early in U_hat_for_delta_calc (used for Deltas) ***
+  # Check for NAs early in U_hat_for_delta_calc (used for Delta projections)
   if (anyNA(U_hat_for_delta_calc)) {
       warning("NA values present in cross-validated means (U_hat_for_delta_calc) used for Delta projections. Cannot proceed. Returning NAs for all metrics.")
       set_na_reason("NA in U_hat_for_delta_calc")
@@ -543,7 +544,6 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   names(X_sl_list) <- contrast_names
 
   # Combine predictors into a matrix
-  # *** FIX: Convert list to matrix ***
   Xmat <- tryCatch({
     do.call(cbind, X_sl_list)
   }, error = function(e) {
@@ -571,7 +571,7 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   valid_idx <- complete.cases(cbind(dvec_sl, Xmat))
   n_valid <- sum(valid_idx)
 
-  # *** FIX: Add small sample check ***
+  # Abort early if too few valid data points for regression
   min_samples_needed <- Q + 2 # Minimal number for lm
   if (n_valid < min_samples_needed) {
       warning(paste0("Insufficient valid data points (", n_valid, ") for RSA regression after handling NAs/exclusions. Need at least ", min_samples_needed, ". Returning NAs for all metrics."))
