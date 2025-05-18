@@ -655,8 +655,16 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   }
   
   if (nrow(good_results) == 0) {
-    ## TODO print out some debug information
-    flog.error("no valid results for standard searchlight, exiting.")
+    failed <- nrow(bad_results)
+    flog.error(
+      "no valid results for standard searchlight: %s ROIs failed.",
+      failed
+    )
+    if (failed > 0) {
+      unique_errors <- unique(bad_results$error_message)
+      msg_sample <- paste(head(unique_errors, 3), collapse = " | ")
+      flog.debug("sample error messages: %s", msg_sample)
+    }
   }
   
   combiner(model_spec, good_results, bad_results)
