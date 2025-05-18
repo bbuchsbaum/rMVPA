@@ -144,7 +144,7 @@ run_custom_regional <- function(dataset, region_mask, custom_func, ...,
   class(dummy_spec) <- c("custom_internal_model_spec", "model_spec", "list") # Basic class
 
   # Define the internal processor function
-  internal_processor <- function(model_spec, roi, rnum) {
+  internal_processor <- function(model_spec, roi, rnum, center_global_id = NA) {
       # Extract necessary info for the custom function
       roi_data <- tryCatch({
           neuroim2::values(roi$train_roi) # Assuming train_roi always exists
@@ -210,6 +210,7 @@ run_custom_regional <- function(dataset, region_mask, custom_func, ...,
     ids = prepped$region_set,
     processor = internal_processor,
     verbose = .verbose,
+    analysis_type = "regional",
     ... # Pass other mvpa_iterate args
   )
   futile.logger::flog.info("Custom regional analysis iteration complete.")
@@ -479,7 +480,7 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
   class(dummy_spec) <- c("custom_internal_model_spec", "model_spec", "list")
 
   # Define the internal processor function for ONE searchlight sphere
-  internal_processor <- function(model_spec, roi, rnum) {
+  internal_processor <- function(model_spec, roi, rnum, center_global_id = NA) {
       # `roi` here is the searchlight object (e.g., ROIVolume)
       # `rnum` is the index of the center voxel/vertex
       
