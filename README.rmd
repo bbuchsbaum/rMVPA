@@ -66,5 +66,9 @@ Then, move these files to a folder on your `PATH` and make them executable:
 
 `chmod +x MVPA_Regional.R`
 
+The MS-ReVE functionality is implemented in `R/contrast_rsa_model.R`. There is no
+file named `contrast_rsa.R`; all references should use the `contrast_rsa_model.R`
+filename.
+
 
 
