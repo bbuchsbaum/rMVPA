@@ -201,7 +201,7 @@ process_roi <- function(mod_spec, roi, rnum, ...) {
 #' @param center_global_id Optional global ID of the center voxel. Defaults to NA.
 #'
 #' @rdname process_roi-methods
-#' @keywords internal
+#' @export
 process_roi.default <- function(mod_spec, roi, rnum, center_global_id = NA, ...) {
   # Capture additional arguments to pass down
   dots <- list(...)

@@ -88,7 +88,7 @@ binary_classification_result <- function(observed, predicted, probs, testind=NUL
 #' @return A \code{multiway_classification_result} object containing the subset of results specified by the indices.
 #'
 #' @export
-#' @family sub_result
+#' @rdname sub_result-methods
 sub_result.multiway_classification_result <- function(x, indices) {
   ret <- list(
     observed=x$observed[indices],
@@ -112,7 +112,7 @@ sub_result.multiway_classification_result <- function(x, indices) {
 #' @return A \code{binary_classification_result} object containing the subset of results specified by the indices.
 #'
 #' @export
-#' @family sub_result
+#' @rdname sub_result-methods
 sub_result.binary_classification_result <- function(x, indices) {
   ret <- list(
     observed=x$observed[indices],

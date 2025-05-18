@@ -182,7 +182,7 @@ print.manova_design <- function(x, ...) {
 #' @importFrom futile.logger flog.error flog.warn
 #' @rdname merge_results-methods
 #' @method merge_results manova_model
-#' @rdname merge_results-methods
+#' @export
 merge_results.manova_model <- function(obj, result_set, indices, id, ...) {
   
   # Check for errors from previous steps (processor/train_model)
