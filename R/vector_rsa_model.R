@@ -109,12 +109,14 @@ vector_rsa_model <- function(dataset, design,
 #' Train a vector RSA model
 #'
 #' @param obj An object of class \code{vector_rsa_model}.
+#' @rdname train_model
 #' @param train_dat A data frame or matrix representing the training subset (e.g., voxel intensities).
 #' @param y Not used in vector RSA (here for consistency with other train_model generics).
 #' @param indices The spatial indices of the training data (ROI, searchlight, etc.).
 #' @param ... Additional arguments.
-#' 
+#'
 #' @return A structure containing "scores" or similar second-order similarity results.
+#' @method train_model vector_rsa_model
 #' @export
 train_model.vector_rsa_model <- function(obj, train_dat, y, indices, ...) {
   # "Training" here is effectively computing RSA-based metrics

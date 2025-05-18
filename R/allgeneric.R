@@ -221,6 +221,41 @@ process_roi_default <- function(mod_spec, roi, rnum, center_global_id = NA, ...)
 #'
 #' @return A trained model object. The exact return value depends on the specific
 #'   method implementation.
+#'
+#' @examples
+#' \donttest{
+#'   # Generate a small sample dataset for classification
+#'   dset_info <- gen_sample_dataset(
+#'     D = c(8, 8, 8),
+#'     nobs = 20,
+#'     response_type = "categorical",
+#'     data_mode = "image",
+#'     nlevels = 2
+#'   )
+#'
+#'   # Create a cross-validation specification
+#'   cval <- blocked_cross_validation(dset_info$design$block_var)
+#'
+#'   # Load a simple classifier
+#'   sda_model <- load_model("sda_notune")
+#'
+#'   # Create an MVPA model specification
+#'   mspec <- mvpa_model(
+#'     model = sda_model,
+#'     dataset = dset_info$dataset,
+#'     design = dset_info$design,
+#'     model_type = "classification",
+#'     crossval = cval
+#'   )
+#'
+#'   # Train the model
+#'   fit <- train_model(
+#'     mspec,
+#'     dset_info$dataset$train_data,
+#'     dset_info$design$y_train,
+#'     indices = seq_len(ncol(dset_info$dataset$train_data))
+#'   )
+#' }
 #' @export
 train_model <- function(obj,...) {
   UseMethod("train_model")

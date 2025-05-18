@@ -971,6 +971,14 @@ evaluate_model.feature_rsa_model <- function(object,
 }
 
 
+#' @rdname train_model
+#' @param obj An object of class \code{feature_rsa_model}.
+#' @param X Brain data (samples x voxels).
+#' @param y Feature matrix used for RSA (samples x features).
+#' @param indices Spatial indices associated with the training data.
+#' @param ... Additional arguments.
+#' @return A list containing RSA metrics and, if requested, permutation results.
+#' @method train_model feature_rsa_model
 #' @export
 train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
   

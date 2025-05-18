@@ -25,3 +25,21 @@ A model fit object containing the trained model, its fit, the model type (classi
 \description{
 This function trains a Multi-Variate Pattern Analysis (MVPA) model on the provided data, taking care of feature selection, parameter tuning, and model fitting.
 }
+\examples{
+\donttest{
+  dset_info <- gen_sample_dataset(D = c(8, 8, 8), nobs = 20,
+    response_type = "categorical", data_mode = "image", nlevels = 2)
+  cval <- blocked_cross_validation(dset_info$design$block_var)
+  sda_model <- load_model("sda_notune")
+  mspec <- mvpa_model(
+    model = sda_model,
+    dataset = dset_info$dataset,
+    design = dset_info$design,
+    model_type = "classification",
+    crossval = cval
+  )
+  train_model(mspec, dset_info$dataset$train_data,
+    dset_info$design$y_train,
+    indices = seq_len(ncol(dset_info$dataset$train_data)))
+}
+}

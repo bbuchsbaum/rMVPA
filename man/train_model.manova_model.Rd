@@ -23,3 +23,15 @@ A named numeric vector of -log(p-values) for each predictor in the MANOVA model.
 \description{
 This function trains a multivariate analysis of variance (MANOVA) model using the specified design.
 }
+\examples{
+\donttest{
+  dset_info <- gen_sample_dataset(D = c(8, 8, 8), nobs = 20,
+    response_type = "categorical", data_mode = "image", nlevels = 2)
+  dismat <- dist(matrix(rnorm(20 * 20), 20, 20))
+  rdes <- rsa_design(~ dismat, list(dismat = dismat))
+  man_mod <- manova_model(rdes)
+  train_model(man_mod, dset_info$dataset$train_data,
+    dset_info$design$y_train,
+    indices = seq_len(ncol(dset_info$dataset$train_data)))
+}
+}

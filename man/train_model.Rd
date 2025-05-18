@@ -20,3 +20,24 @@ This is a generic function that trains a model based on the provided
 model specification object. Different model types will have different
 methods implemented with specific parameters.
 }
+\examples{
+\donttest{
+  dset_info <- gen_sample_dataset(D = c(8, 8, 8), nobs = 20,
+    response_type = "categorical", data_mode = "image", nlevels = 2)
+  cval <- blocked_cross_validation(dset_info$design$block_var)
+  sda_model <- load_model("sda_notune")
+  mspec <- mvpa_model(
+    model = sda_model,
+    dataset = dset_info$dataset,
+    design = dset_info$design,
+    model_type = "classification",
+    crossval = cval
+  )
+  fit <- train_model(
+    mspec,
+    dset_info$dataset$train_data,
+    dset_info$design$y_train,
+    indices = seq_len(ncol(dset_info$dataset$train_data))
+  )
+}
+}

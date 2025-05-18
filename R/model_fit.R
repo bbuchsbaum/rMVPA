@@ -368,10 +368,7 @@ predict.list_model <- function(object, newdata=NULL,...) {
 
 
 
-#' Train an MVPA Model
-#'
-#' This function trains a Multi-Variate Pattern Analysis (MVPA) model on the provided data, taking care of feature selection, parameter tuning, and model fitting.
-#'
+#' @rdname train_model
 #' @param obj An object of class \code{mvpa_model}, specifying the MVPA problem.
 #' @param train_dat Training data, an instance of class \code{ROIVolume} or \code{ROISurface}.
 #' @param y The dependent variable (response variable), either a numeric vector or a factor.
@@ -379,6 +376,7 @@ predict.list_model <- function(object, newdata=NULL,...) {
 #' @param wts Optional class weights (if the underlying model supports it).
 #' @param ... Additional arguments passed to other methods.
 #' @return A model fit object containing the trained model, its fit, the model type (classification or regression), the best tuning parameters, the voxel indices, and the feature mask.
+#' @method train_model mvpa_model
 train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
   
   tryCatch({

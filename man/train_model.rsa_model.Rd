@@ -30,3 +30,15 @@ Depending on \code{obj$regtype}:
 \description{
 This function trains an RSA (representational similarity analysis) model using the specified method and distance calculation.
 }
+\examples{
+\donttest{
+  dset_info <- gen_sample_dataset(D = c(8, 8, 8), nobs = 20,
+    response_type = "categorical", data_mode = "image", nlevels = 2)
+  dismat <- dist(matrix(rnorm(20 * 20), 20, 20))
+  rdes <- rsa_design(~ dismat, list(dismat = dismat))
+  rsa_mod <- rsa_model(dset_info$dataset, rdes, regtype = "lm")
+  train_model(rsa_mod, dset_info$dataset$train_data,
+    dset_info$design$y_train,
+    indices = seq_len(ncol(dset_info$dataset$train_data)))
+}
+}
