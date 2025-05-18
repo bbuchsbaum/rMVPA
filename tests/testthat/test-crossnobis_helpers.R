@@ -50,15 +50,31 @@ test_that("compute_crossnobis_distances_sl pair ordering matches lower.tri", {
   expect_equal(names(dvec), c("Cond2_vs_Cond1", "Cond3_vs_Cond1", "Cond3_vs_Cond2"))
 })
 
+# A more direct test for pair ordering matching lower.tri
+test_that("compute_crossnobis_distances_sl returns pairs in lower.tri order", {
+  K <- 3; V <- 1; M <- 2
+  # create U_folds array filled with zeros
+  U_folds <- array(0, dim = c(K, V, M),
+                   dimnames = list(paste0("Cond", 1:K), NULL, NULL))
+  res <- compute_crossnobis_distances_sl(U_folds, P_voxels = V)
+
+  pair_idx <- which(lower.tri(matrix(1, K, K)), arr.ind = TRUE)
+  expected_names <- paste0(paste0("Cond", pair_idx[,1]), "_vs_", paste0("Cond", pair_idx[,2]))
+  expect_equal(names(res), expected_names)
+  expect_equal(length(res), K * (K - 1) / 2)
+})
+
 # Helper to manually compute crossnobis distances
 manual_crossnobis <- function(U_folds) {
   K <- dim(U_folds)[1]; V <- dim(U_folds)[2]; M <- dim(U_folds)[3]
-  cond_pairs <- utils::combn(K, 2)
-  n_pairs <- ncol(cond_pairs)
+  # Use lower.tri indices instead of combn to match the implementation
+  pair_idx <- which(lower.tri(matrix(1, K, K)), arr.ind = TRUE)
+  n_pairs <- nrow(pair_idx)
   res <- numeric(n_pairs)
   pair_names <- character(n_pairs)
+  
   for (p in seq_len(n_pairs)) {
-    i <- cond_pairs[1, p]; j <- cond_pairs[2, p]
+    i <- pair_idx[p, 1]; j <- pair_idx[p, 2]
     deltas <- U_folds[i, , ] - U_folds[j, , ]
     ip_mat <- crossprod(deltas)
     off_diag <- sum(ip_mat) - sum(diag(ip_mat))
@@ -106,8 +122,11 @@ test_that("crossnobis distance is less biased than naive within-fold distance", 
   true_dist <- sum((mu_true[1, ] - mu_true[2, ])^2) / V
   delta <- U_folds[1, , ] - U_folds[2, , ]
   naive <- mean(colSums(delta^2)) / V
-  cross_res <- compute_crossnobis_distances_sl(U_folds, P_voxels = V)["C1_vs_C2"]
+  
+  # Get the correct pair name based on lower.tri order
+  pair_idx <- which(lower.tri(matrix(1, K, K)), arr.ind = TRUE)
+  pair_name <- paste0("C", pair_idx[1, 1], "_vs_", "C", pair_idx[1, 2])
+  cross_res <- compute_crossnobis_distances_sl(U_folds, P_voxels = V)[pair_name]
 
   expect_lt(abs(cross_res - true_dist), abs(naive - true_dist))
 })
-

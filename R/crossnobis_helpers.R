@@ -74,10 +74,10 @@ compute_crossnobis_distances_sl <- function(U_folds, P_voxels = NULL) {
     return(setNames(numeric(0), character(0)))
   }
 
-  # Generate condition pairs in the same order as `lower.tri()`
-  # This ensures alignment with any include_vec filtering logic
-  condition_indices_pairs <- t(which(lower.tri(matrix(1, K, K)), arr.ind = TRUE))
-  n_pairs <- ncol(condition_indices_pairs)
+  # Generate all unique unordered pairs of conditions in the
+  # same column-major order as `lower.tri()`
+  pair_indices <- which(lower.tri(matrix(1, K, K)), arr.ind = TRUE)
+  n_pairs <- nrow(pair_indices)
   
   if (n_pairs == 0) { # Should be caught by K < 2, but as a safeguard
       return(setNames(numeric(0), character(0)))
@@ -86,9 +86,9 @@ compute_crossnobis_distances_sl <- function(U_folds, P_voxels = NULL) {
   crossnobis_distances <- numeric(n_pairs)
   pair_names <- character(n_pairs)
 
-  for (p_idx in 1:n_pairs) {
-    idx_cond1 <- condition_indices_pairs[1, p_idx]
-    idx_cond2 <- condition_indices_pairs[2, p_idx]
+  for (p_idx in seq_len(n_pairs)) {
+    idx_cond1 <- pair_indices[p_idx, 1]
+    idx_cond2 <- pair_indices[p_idx, 2]
 
     # Calculate delta_k_m for all folds m: (U_folds[cond1,,m] - U_folds[cond2,,m])
     # This results in a V x M matrix of difference patterns for the current pair
