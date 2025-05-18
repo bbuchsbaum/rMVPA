@@ -1,3 +1,4 @@
+@param include_interactions.*
 #' Constructor for msreve_design
 #'
 #' Creates an msreve_design object, which encapsulates the necessary
@@ -11,6 +12,7 @@
 #'   Each column represents a contrast vector. It is highly recommended
 #'   that columns are named to identify the contrasts.
 #' @param name An optional character string to name the design.
+#' @param include_interactions Logical. If TRUE, automatically add pairwise interaction contrasts using \code{\link{add_interaction_contrasts}}.
 #'
 #' @return An object of class \\code{msreve_design}, which is a list containing:
 #'   \\item{mvpa_design}{The input \\code{mvpa_design} object.}
@@ -39,7 +41,12 @@
 #' #  design_obj <- msreve_design(mvpa_des_obj, C_mat, name="example_msreve")
 #' #  print(design_obj)
 #' # }
-msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01") {
+#' #
+#' # # Automatically add pairwise interactions
+#' # design_obj_int <- msreve_design(mvpa_des_obj, C_mat,
+#' #                                include_interactions = TRUE)
+#' # colnames(design_obj_int$contrast_matrix)
+msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01", include_interactions = FALSE) {
   # Basic assertions
   if (!inherits(mvpa_design, "mvpa_design")) {
     stop("`mvpa_design` must be an object of class \'mvpa_design\'.")
@@ -130,11 +137,17 @@ msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01
   }
 
   attr(obj, "is_orthonormal") <- is_orthonormal
-  
-  structure(
+
+  obj_final <- structure(
     obj,
     class = c("msreve_design", "list")
   )
+
+  if (include_interactions) {
+    obj_final <- add_interaction_contrasts(obj_final)
+  }
+
+  obj_final
 }
 
 #' @export
@@ -250,5 +263,67 @@ orthogonalize_contrasts <- function(C) {
                    " are non-zero and form an orthonormal basis. Subsequent columns are zero vectors."))
   }
   
-  return(C_ortho)
-} 
+return(C_ortho)
+}
+
+#' Add Interaction Contrasts to an msreve_design
+#'
+#' Creates new contrast columns representing pairwise interactions of existing
+#' contrasts in an \code{msreve_design} object.
+#'
+#' @param design An object of class \code{msreve_design}.
+#' @param pairs Optional two-column matrix or list of character vectors
+#'   specifying pairs of contrast column names. Default \code{NULL} uses all
+#'   pairwise combinations.
+#' @param orthogonalize Logical; if \code{TRUE} (default) the expanded contrast
+#'   matrix is passed through \code{\link{orthogonalize_contrasts}}.
+#'
+#' @return The updated \code{msreve_design} object with interaction columns
+#'   appended.
+#' @export
+add_interaction_contrasts <- function(design, pairs = NULL, orthogonalize = TRUE) {
+  if (!inherits(design, "msreve_design")) {
+    stop("`design` must be an object of class 'msreve_design'.")
+  }
+
+  C <- design$contrast_matrix
+  if (is.null(colnames(C))) {
+    stop("contrast_matrix must have column names to define interactions")
+  }
+
+  cn <- colnames(C)
+  if (is.null(pairs)) {
+    if (ncol(C) < 2) return(design)
+    pair_list <- combn(cn, 2, simplify = FALSE)
+  } else if (is.matrix(pairs) && ncol(pairs) == 2) {
+    pair_list <- split(pairs, seq_len(nrow(pairs)))
+  } else if (is.list(pairs)) {
+    pair_list <- pairs
+  } else if (is.character(pairs)) {
+    pair_list <- lapply(pairs, function(x) strsplit(x, ":", fixed = TRUE)[[1]])
+  } else {
+    stop("`pairs` must be NULL, a two-column matrix, a list, or a character vector")
+  }
+
+  for (p in pair_list) {
+    if (length(p) != 2 || !all(p %in% cn)) {
+      stop("Each pair must contain two valid contrast column names")
+    }
+    new_col <- C[, p[1]] * C[, p[2]]
+    new_name <- paste0(p[1], "_x_", p[2])
+    C <- cbind(C, new_col)
+    cn <- c(cn, new_name)
+  }
+  colnames(C) <- cn
+
+  if (orthogonalize) {
+    C <- orthogonalize_contrasts(C)
+    attr(design, "is_orthonormal") <- TRUE
+  } else {
+    ctc <- crossprod(C)
+    attr(design, "is_orthonormal") <- isTRUE(all.equal(ctc, diag(ncol(C)), tolerance = 1e-8, check.attributes = FALSE))
+  }
+
+  design$contrast_matrix <- C
+  design
+}
