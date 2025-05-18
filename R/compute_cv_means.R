@@ -216,7 +216,8 @@ compute_crossvalidated_means_sl <- function(sl_data,
   } else {
     return(U_hat_sl)
   }
-} 
+}
+
 #' Process a single cross-validation fold
 #'
 #' Internal helper used by `compute_crossvalidated_means_sl`.
