@@ -120,15 +120,15 @@ compute_crossvalidated_means_sl <- function(sl_data,
   # Iterate folds and accumulate means online (memory safe)
   for (i in seq_len(n_folds)) {
 
-    train_indices <- train_indices(cv_spec, i)
+    fold_train_idx <- train_indices(cv_spec, i)
 
-    if (length(train_indices) == 0) {
+    if (length(fold_train_idx) == 0) {
       warning(paste("Fold", i, "has no training samples. Skipping."))
       next
     }
 
-    train_data_fold <- sl_data[train_indices, , drop = FALSE]
-    train_labels_fold <- condition_labels[train_indices]
+    train_data_fold <- sl_data[fold_train_idx, , drop = FALSE]
+    train_labels_fold <- condition_labels[fold_train_idx]
 
     full_fold_means <- process_single_fold(train_data_fold,
                                            train_labels_fold,
