@@ -169,14 +169,11 @@ compute_crossvalidated_means_sl <- function(sl_data,
     } else {
         # If no training data/labels for this fold, create an empty matrix with correct colnames
         # This ensures consistency for later re-indexing into full_fold_means
-        num_unique_conds_total <- length(unique_conditions) # from outer scope
-        k_fold_levels <- character(0)
-        if (length(train_labels_fold) > 0) k_fold_levels <- levels(factor(train_labels_fold)) 
         # If no data, it means no conditions from this fold, so 0 rows.
         # The re-indexing to full_fold_means will handle this by having all NAs for this fold.
-        fold_means_mat <- matrix(NA_real_, 
-                                 nrow = 0, 
-                                 ncol = ncol(sl_data), 
+        fold_means_mat <- matrix(NA_real_,
+                                 nrow = 0,
+                                 ncol = ncol(sl_data),
                                  dimnames = list(NULL, colnames(sl_data)))
     }
 
