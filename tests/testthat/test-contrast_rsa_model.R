@@ -750,3 +750,41 @@ test_that("contrast_rsa_model output metrics are internally consistent", {
   beta_delta_rel <- run_metric("beta_delta_reliable", reliability = TRUE)
   expect_equal(beta_delta_rel, beta_delta_vec * rho_const, tolerance = 1e-6)
 })
+
+test_that("composite metric returns NA with non-orthonormal contrasts", {
+  set.seed(987)
+  n_samples <- 16; n_cond <- 4; n_blocks <- 2; n_voxels <- 6
+
+  # Create deterministic toy dataset: condition means differ by row index
+  Y_labels <- factor(rep(paste0("Cond", 1:n_cond), each = n_samples / n_cond))
+  block_var <- factor(rep(1:n_blocks, length.out = n_samples))
+  base_mat <- matrix(rep(1:n_cond, each = n_samples / n_cond), nrow = n_samples, ncol = n_voxels)
+  noise <- matrix(rnorm(n_samples * n_voxels, sd = 0.01), nrow = n_samples)
+  data_mat <- base_mat + noise
+
+  mvpa_des <- mock_mvpa_design_cv(n_samples, n_cond, n_blocks, Y_labels)
+  dset <- structure(list(train_data = data_mat,
+                         mask = array(1, dim = c(2,2,2)),
+                         has_test_set = FALSE,
+                         design = mvpa_des,
+                         nfeatures = n_voxels),
+                    class = c("mvpa_dataset", "list"))
+
+  # Non-orthonormal contrast matrix (centered but not orthogonalized)
+  C_nonortho <- C_fixed_centered_4x2_scaled
+  rownames(C_nonortho) <- levels(Y_labels)
+  ms_des <- msreve_design(mvpa_des, C_nonortho)
+
+  spec <- contrast_rsa_model(dset, ms_des,
+                             output_metric = c("composite"),
+                             check_collinearity = FALSE)
+  result_list <- train_model(spec,
+                             sl_data = dset$train_data,
+                             sl_info = list(center_local_id = 1, center_global_id = 1,
+                                            radius = 0, n_voxels = n_voxels),
+                             cv_spec = mock_cv_spec_s3(mvpa_des))
+
+  expect_true(is.na(result_list$composite))
+  expect_equal(attr(result_list, "na_reason"),
+               "Non-orthonormal contrast matrix for composite")
+})
