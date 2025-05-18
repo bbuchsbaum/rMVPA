@@ -151,7 +151,7 @@ compute_trial_scores <- function(obj, X) {
   # Retrieve relevant design expansions
   precomputed <- obj$design$model_mat
   dissimilarity_matrix <- precomputed$Dexpanded
-  cross_block_data     <- precomputed$cross_block_data
+  #cross_block_data     <- precomputed$cross_block_data
 
   # Basic dimensionality checks
   if (nrow(X) != nrow(dissimilarity_matrix)) {
