@@ -339,6 +339,11 @@ train_model <- function(obj,...) {
 #' Extract the training labels or response variable from an object.
 #'
 #' @param obj The object from which to extract the training response variable.
+#'
+#' @rdname y_train-methods
+#' @examples
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10)
+#' y_train(ds$design)
 #' @export
 y_train <- function(obj) {
   UseMethod("y_train")
@@ -349,6 +354,11 @@ y_train <- function(obj) {
 #' Extract the test labels or response variable from an object.
 #'
 #' @param obj The object from which to extract the test response variable.
+#'
+#' @rdname y_test-methods
+#' @examples
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10, external_test = TRUE)
+#' y_test(ds$design)
 #' @export
 y_test <- function(obj) {
   UseMethod("y_test")
@@ -359,6 +369,11 @@ y_test <- function(obj) {
 #' Return the design table associated with the test set from an object.
 #'
 #' @param obj The object from which to extract the test design table.
+#'
+#' @rdname test_design-methods
+#' @examples
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10, external_test = TRUE)
+#' test_design(ds$design)
 #' @export
 test_design <- function(obj) {
   UseMethod("test_design")

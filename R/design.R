@@ -19,19 +19,23 @@ nresponses.mvpa_design <- function(x) {
 }
 
 #' @export
+#' has_test_set check for mvpa_design
 has_test_set.mvpa_design <- function(obj) {
-  !is.null(obj$y_test) 
+  !is.null(obj$y_test)
 }
 
 
+#' @rdname y_train-methods
 #' @export
 y_train.mvpa_design <- function(obj) obj$y_train
 
 
+#' @rdname y_test-methods
 #' @export
 y_test.mvpa_design <- function(obj) if (is.null(obj$y_test)) obj$y_train else obj$y_test
 
 
+#' @rdname test_design-methods
 #' @export
 test_design.mvpa_design <- function(obj) {
   if (is.null(obj$y_test)) obj$train_design else obj$test_design
