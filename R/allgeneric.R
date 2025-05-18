@@ -12,17 +12,26 @@ get_unique_regions <- function(region_mask, ...) {
 }
 
 #' Strip Dataset from Model Specification
-#' 
+#'
 #' Removes the potentially large dataset component from a model specification object
 #' to avoid copying it during parallel processing.
-#' 
+#'
 #' @param obj The model specification object.
 #' @param ... Additional arguments.
 #' @return The model specification object with the `dataset` element removed or set to NULL.
+#' @rdname strip_dataset-methods
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 20)
+#'   mdl <- load_model("sda_notune")
+#'   mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification")
+#'   stripped <- strip_dataset(mspec)
+#'   is.null(stripped$dataset)
+#' }
 #' @export
 strip_dataset <- function(obj, ...) {
   UseMethod("strip_dataset")
-} 
+}
 
 #' Select Features
 #'

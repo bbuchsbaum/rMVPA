@@ -361,13 +361,7 @@ print.mvpa_model <- function(x,...) {
 }
   
 
-#' Default method for strip_dataset generic
-#' 
-#' Removes the `dataset` element from a model specification object.
-#' 
-#' @param obj The model specification object.
-#' @param ... Additional arguments (ignored).
-#' @return The object with `obj$dataset` set to NULL.
+#' @rdname strip_dataset-methods
 #' @export
 strip_dataset.default <- function(obj, ...) {
   if (!is.null(obj$dataset)) {
@@ -380,6 +374,7 @@ strip_dataset.default <- function(obj, ...) {
 }
 
 #' @noRd
+#' @rdname strip_dataset-methods
 #' @export
 strip_dataset.mvpa_model <- function(obj, ...) {
   obj$dataset <- NULL
