@@ -71,6 +71,7 @@ custom_performance <- function(x, custom_fun, split_list=NULL) {
   
 }
 
+#' @rdname merge_results-methods
 #' @method merge_results binary_classification_result
 merge_results.binary_classification_result <- function(x,...) {
   rlist <- list(x,...)
@@ -82,6 +83,7 @@ merge_results.binary_classification_result <- function(x,...) {
                                test_design=x$test_design, predictor=x$predictor)
 }
 
+#' @rdname merge_results-methods
 #' @method merge_results regression_result
 merge_results.regression_result <- function(x,...) {
   rlist <- list(x,...)
@@ -102,6 +104,7 @@ prob_observed.multiway_classification_result <- function(x) {
   x$probs[cbind(seq(1,nrow(x$probs)),as.integer(x$observed))]
 }
 
+#' @rdname merge_results-methods
 #' @method merge_results multiway_classification_result
 merge_results.multiway_classification_result <- function(x,...) {
   

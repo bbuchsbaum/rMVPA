@@ -1430,6 +1430,7 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
   )
 }
 
+#' @rdname merge_results-methods
 #' @export
 merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
  

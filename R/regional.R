@@ -143,6 +143,7 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
 #' @param ... Additional \code{regional_mvpa_result} objects to be merged.
 #'
 #' @return A merged \code{regional_mvpa_result} object.
+#' @rdname merge_results-methods
 #' @method merge_results regional_mvpa_result
 merge_results.regional_mvpa_result <- function(x, ...) {
   rlist <- list(x,...)

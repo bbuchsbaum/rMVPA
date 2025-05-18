@@ -421,6 +421,7 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
 #' @return A tibble row with the formatted "performance" metrics (coefficients/t-values/correlations) for the ROI/sphere.
 #' @importFrom tibble tibble
 #' @importFrom futile.logger flog.error
+#' @rdname merge_results-methods
 #' @method merge_results rsa_model
 merge_results.rsa_model <- function(obj, result_set, indices, id, ...) {
   

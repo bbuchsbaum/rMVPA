@@ -180,6 +180,7 @@ print.manova_design <- function(x, ...) {
 #' @return A tibble row with the formatted performance metrics for the ROI/sphere.
 #' @importFrom tibble tibble
 #' @importFrom futile.logger flog.error flog.warn
+#' @rdname merge_results-methods
 #' @method merge_results manova_model
 merge_results.manova_model <- function(obj, result_set, indices, id, ...) {
   
