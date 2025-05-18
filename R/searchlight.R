@@ -451,16 +451,10 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
 #' @noRd
 pool_results <- function(...) {
   reslist <- list(...)
-  check <- sapply(reslist, function(res) inherits(res, "data.frame")) 
+  check <- sapply(reslist, function(res) inherits(res, "data.frame"))
   assertthat::assert_that(all(check), msg="pool_results: all arguments must be of type 'data.frame'")
   good_results <- do.call(rbind, reslist)
- 
-  ## the sorted vector of all voxel indices
-  all_ind <- sort(unlist(good_results$indices))
-  ## how many instances of each voxel?
-  ind_count <- table(all_ind)
-  ind_set <- unique(all_ind)
-  
+
   ## map every result to the set of indices in that set
   indmap <- do.call(rbind, lapply(1:nrow(good_results), function(i) {
     ind <- good_results$indices[[i]]
@@ -471,6 +465,8 @@ pool_results <- function(...) {
   respsets <- split(indmap[,1], indmap[,2])
   
   merged_results <- purrr::map(respsets, do_merge_results, good_results=good_results)
+
+  return(merged_results)
 }
 
 
