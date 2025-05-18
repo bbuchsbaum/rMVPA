@@ -45,6 +45,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
 
 
 #' @keywords internal
+#' @rdname merge_results-methods
 merge_results.mvpa_model <- function(obj, result_set, indices, id, ...) {
   # Check if any errors occurred during the process
   if (any(result_set$error)) {

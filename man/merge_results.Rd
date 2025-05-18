@@ -28,3 +28,12 @@ A merged result object containing:
 \description{
 Merge Multiple Results
 }
+\examples{
+ds <- gen_sample_dataset(D = c(5, 5, 5), nobs = 20, nlevels = 2)
+model <- load_model("sda_notune")
+mspec <- mvpa_model(model = model, dataset = ds$dataset, design = ds$design,
+  model_type = "classification")
+result_set <- tibble::tibble(result = list(NULL), error = FALSE,
+  error_message = "~")
+merge_results(mspec, result_set, indices = list(1:10), id = 1)
+}

@@ -81,6 +81,24 @@ format_result <- function(obj, result, error_message, ...) {
 #'   \item Merged metadata
 #' }
 #'
+#' @examples
+#' \donttest{
+#' ds <- gen_sample_dataset(D = c(5, 5, 5), nobs = 20, nlevels = 2)
+#' model <- load_model("sda_notune")
+#' mspec <- mvpa_model(
+#'   model = model,
+#'   dataset = ds$dataset,
+#'   design = ds$design,
+#'   model_type = "classification"
+#' )
+#' result_set <- tibble::tibble(
+#'   result = list(NULL),
+#'   error = FALSE,
+#'   error_message = "~"
+#' )
+#' merge_results(mspec, result_set, indices = list(1:10), id = 1)
+#' }
+#'
 #' @export
 merge_results <- function(obj, result_set, indices, id, ...) {
   UseMethod("merge_results")

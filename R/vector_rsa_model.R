@@ -457,6 +457,7 @@ evaluate_model.vector_rsa_model <- function(object,
 #' @return A tibble row with the final performance metrics for the ROI/sphere.
 #' @importFrom tibble tibble
 #' @importFrom futile.logger flog.error flog.warn
+#' @rdname merge_results-methods
 #' @method merge_results vector_rsa_model
 merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
   
