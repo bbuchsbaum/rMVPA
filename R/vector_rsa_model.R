@@ -153,20 +153,22 @@ train_model.vector_rsa_model <- function(obj, train_dat, y, indices, ...) {
 #' @keywords internal
 #' @noRd
 compute_trial_scores <- function(obj, X) {
- 
+
+  # Convert X to matrix if needed and check row count
+  X <- as.matrix(X)
+
+  # If we have fewer than two observations, there is no meaningful
+  # second-order similarity to compute.  Return a vector of NA as a
+  # sentinel value rather than attempting to compute pairwise distances.
+  if (nrow(X) < 2) {
+    return(rep(NA_real_, nrow(X)))
+  }
+
   # Retrieve relevant design expansions
   precomputed <- obj$design$model_mat
   dissimilarity_matrix <- precomputed$Dexpanded
-  cross_block_data     <- precomputed$cross_block_data
-  
-  # Convert X to matrix if needed
-  X <- as.matrix(X)
-  
-  # This function computes second-order similarity:
-  #   second_order_similarity(distfun, X, D, block_var, rsa_simfun)
-  # 'distfun' can compute distances on X, 'D' is the reference matrix
-  # 'block_var' is in obj$design$block, and 'rsa_simfun' is the correlation method.
-  
+
+  # Compute the trial scores via second_order_similarity
   second_order_similarity(
     distfun   = obj$distfun,
     X         = X,
@@ -364,6 +366,13 @@ evaluate_model.vector_rsa_model <- function(object,
 {
   # Primary metric: mean of the second-order similarity scores
   mean_rsa_score <- mean(observed, na.rm = TRUE)
+
+  # If compute_trial_scores returned only NA values (e.g., because the ROI
+  # contained fewer than two observations), there is no valid RSA score to
+  # compute or permute.  Return NA immediately.
+  if (length(observed) < 2 || all(is.na(observed))) {
+    return(list(rsa_score = NA_real_, permutation_results = NULL))
+  }
 
   perm_results <- NULL
   if (nperm > 0) {
