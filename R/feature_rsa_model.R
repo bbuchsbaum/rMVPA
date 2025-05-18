@@ -1610,40 +1610,19 @@ print.feature_rsa_model <- function(x, ...) {
   cat(crayon::bold(crayon::green("Number of Observations: ")), n_obs, "\n")
   cat(crayon::bold(crayon::green("Feature Dimensions:     ")), n_feat, "\n")
   
-  # Display component limit for the current method
-  if (x$method == "pca") {
-    comp_limit <- if(!is.null(x$max_pca_comps)) {
-      x$max_pca_comps
-    } else if (!is.null(x$design$max_pca_comps)) {
-      x$design$max_pca_comps
-    } else {
-      "Default"
-    }
-    cat(crayon::bold(crayon::blue("PCA max components:     ")), comp_limit, "\n")
-    
-    # Indicate if PCA has been precomputed for efficiency
-    if (!is.null(x$precomputed_pca)) {
-      cat(crayon::bold(crayon::green("PCA Optimization:       ")), 
-          "PCA precomputed for efficiency\n")
-    }
-  } else if (x$method == "scca") {
-    comp_limit <- if(!is.null(x$max_scca_comps)) {
-      x$max_scca_comps
-    } else if (!is.null(x$design$max_scca_comps)) {
-      x$design$max_scca_comps
-    } else {
-      "Default"
-    }
-    cat(crayon::bold(crayon::blue("SCCA max components:    ")), comp_limit, "\n")
-  } else if (x$method == "pls") {
-    comp_limit <- if(!is.null(x$max_pls_comps)) {
-      x$max_pls_comps
-    } else if (!is.null(x$design$max_pls_comps)) {
-      x$design$max_pls_comps
-    } else {
-      "Default"
-    }
-    cat(crayon::bold(crayon::blue("PLS max components:     ")), comp_limit, "\n")
+  # Display component limit
+  comp_limit <- if (!is.null(x$max_comps)) {
+    x$max_comps
+  } else if (!is.null(x$design$max_comps)) {
+    x$design$max_comps
+  } else {
+    "Default"
+  }
+  cat(crayon::bold(crayon::blue("Max components limit:   ")), comp_limit, "\n")
+
+  if (x$method == "pca" && !is.null(x$precomputed_pca)) {
+    cat(crayon::bold(crayon::green("PCA Optimization:       ")),
+        "PCA precomputed for efficiency\n")
   } else if (x$method == "glmnet") {
     cat(crayon::bold(crayon::blue("Elastic Net alpha:      ")), x$alpha, "\n")
     cat(crayon::bold(crayon::blue("Cross-validate lambda:  ")), 
