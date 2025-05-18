@@ -265,7 +265,8 @@ The output of `run_custom_searchlight` is a `searchlight_result` object (a list)
     *   `$summary_stats`: Basic statistics (mean, sd, min, max) calculated across the map values.
     *   Other metadata like `$metric_name`, `$n_nonzero`.
 *   `metrics`: Names of the metrics computed.
-*   `n_voxels`, `active_voxels`: Information about the dataset mask.
+*   `n_voxels`: total voxels/vertices defined by the mask.
+*   `active_voxels`: number of voxels/vertices with results.
 
 The values in the output maps (`$data`) represent the result of your `custom_func` applied to the searchlight sphere centered at each voxel. If the "randomized" method is used, the map values represent the *average* metric across all spheres that included that voxel.
 

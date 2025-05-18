@@ -15,7 +15,13 @@ wrap_out(perf_mat, dataset, ids = NULL)
 These are typically global indices into the mask space for volumetric data, or vertex numbers for surface data.}
 }
 \value{
-A `searchlight_result` object (a list).
+A `searchlight_result` object containing:
+\itemize{
+  \item `results` -- the metric maps.
+  \item `n_voxels` -- total voxels/vertices defined by the mask.
+  \item `active_voxels` -- number of voxels/vertices with results.
+  \item `metrics` -- names of the metrics.
+}
 }
 \description{
 This function wraps the output results of the performance matrix into a list

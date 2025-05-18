@@ -9,7 +9,13 @@
 #' @param dataset A dataset object containing the dataset information (including mask and type).
 #' @param ids An integer vector of voxel/vertex indices corresponding to the rows of `perf_mat`.
 #'   These are typically global indices into the mask space for volumetric data, or vertex numbers for surface data.
-#' @return A `searchlight_result` object (a list).
+#' @return A `searchlight_result` object containing
+#'   \itemize{
+#'     \item `results`: Named spatial maps for each metric.
+#'     \item `n_voxels`: Total number of voxels/vertices defined by the mask.
+#'     \item `active_voxels`: Number of voxels/vertices with results.
+#'     \item `metrics`: Character vector of metric names.
+#'   }
 wrap_out <- function(perf_mat, dataset, ids=NULL) {
 
   # Removed the strict stop condition for null ids if perf_mat has rows, 
@@ -23,9 +29,12 @@ wrap_out <- function(perf_mat, dataset, ids=NULL) {
       # If perf_mat is NULL or has no columns, return an empty structure but with metadata
       n_voxels_in_mask_empty <- 0
       if (!is.null(dataset$mask)) {
-        if (inherits(dataset$mask, "NeuroVol") || inherits(dataset$mask, "NeuroVec")) n_voxels_in_mask_empty <- prod(dim(dataset$mask))
-        else if (inherits(dataset$mask, "NeuroSurface")) n_voxels_in_mask_empty <- neurosurf::nvertices(dataset$mask)
-        else if (is.numeric(dataset$mask) || is.logical(dataset$mask)) n_voxels_in_mask_empty <- length(dataset$mask)
+        if (inherits(dataset$mask, c("NeuroVol", "NeuroVec")))
+          n_voxels_in_mask_empty <- prod(dim(dataset$mask))
+        else if (inherits(dataset$mask, "NeuroSurface"))
+          n_voxels_in_mask_empty <- neurosurf::nvertices(dataset$mask)
+        else if (is.numeric(dataset$mask) || is.logical(dataset$mask))
+          n_voxels_in_mask_empty <- length(dataset$mask)
       }
       return(structure(
           list(results = list(), 
@@ -104,16 +113,21 @@ wrap_out <- function(perf_mat, dataset, ids=NULL) {
   
   n_voxels_in_mask <- 0
   if (!is.null(dataset$mask)) {
-    if (inherits(dataset$mask, "NeuroVol"   )) n_voxels_in_mask <- sum(dataset$mask)
-    else if (inherits(dataset$mask, "NeuroSurface")) n_voxels_in_mask <- neurosurf::nvertices(dataset$mask)
-    else if (is.numeric(dataset$mask) || is.logical(dataset$mask)) n_voxels_in_mask <- sum(dataset$mask != 0)
+    if (inherits(dataset$mask, c("NeuroVol", "NeuroVec")))
+      n_voxels_in_mask <- prod(dim(dataset$mask))
+    else if (inherits(dataset$mask, "NeuroSurface"))
+      n_voxels_in_mask <- neurosurf::nvertices(dataset$mask)
+    else if (is.numeric(dataset$mask) || is.logical(dataset$mask))
+      n_voxels_in_mask <- length(dataset$mask)
   }
   
   active_voxel_count <- 0
   if (!is.null(ids)) {
     active_voxel_count <- length(ids)
+  } else if (!is.null(dataset$mask)) {
+    active_voxel_count <- sum(dataset$mask != 0)
   } else if (!is.null(perf_mat)) {
-    active_voxel_count <- nrow(perf_mat) # Fallback, but ids should be primary
+    active_voxel_count <- nrow(perf_mat)
   }
   
   structure(

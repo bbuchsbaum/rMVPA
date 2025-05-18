@@ -334,7 +334,8 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #'           `NeuroSurface` (`$data`) with the metric values mapped back to the
 #'           brain space, along with summary statistics (`$summary_stats`).
 #'     \item `metrics`: A character vector of the metric names.
-#'     \item `n_voxels`, `active_voxels`: Information about the dataset mask.
+#'     \item `n_voxels`: total voxels/vertices defined by the mask.
+#'     \item `active_voxels`: number of voxels/vertices with results.
 #'   }
 #'   If `method = "randomized"`, the values in the output maps represent the
 #'   average metric value for each voxel across all spheres it participated in.
