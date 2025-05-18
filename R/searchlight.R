@@ -716,29 +716,39 @@ run_searchlight_base <- function(model_spec,
     # Default mapping for string-based combiner argument
     if (method == "standard") {
       if (combiner == "average") { # Default for run_searchlight.default standard method
-        chosen_combiner <- combine_standard 
+        chosen_combiner <- combine_standard
+        attr(chosen_combiner, "name") <- "combine_standard"
       } else if (combiner == "standard") { # Allow explicit string name
         chosen_combiner <- combine_standard
+        attr(chosen_combiner, "name") <- "combine_standard"
       } else if (combiner == "rsa_standard") { # if other models need specific string refs
-        chosen_combiner <- combine_rsa_standard 
+        chosen_combiner <- combine_rsa_standard
+        attr(chosen_combiner, "name") <- "combine_rsa_standard"
       } else if (combiner == "vector_rsa_standard") {
         chosen_combiner <- combine_vector_rsa_standard
+        attr(chosen_combiner, "name") <- "combine_vector_rsa_standard"
       } else if (combiner == "msreve_standard") {
         chosen_combiner <- combine_msreve_standard
+        attr(chosen_combiner, "name") <- "combine_msreve_standard"
       } else {
         stop(paste0("Unknown string combiner '", combiner, "' for method 'standard'."))
       }
     } else if (method == "randomized") {
       if (combiner == "pool") {
         chosen_combiner <- pool_randomized
+        attr(chosen_combiner, "name") <- "pool_randomized"
       } else if (combiner == "average") {
         chosen_combiner <- combine_randomized
+        attr(chosen_combiner, "name") <- "combine_randomized"
       } else {
         stop(paste0("Unknown string combiner '", combiner, "' for method 'randomized'."))
       }
     } else {
       stop(paste0("Unknown method '", method, "' for resolving string combiner."))
     }
+  } else {
+    # combiner was supplied as a function; record its name if possible
+    attr(chosen_combiner, "name") <- deparse(substitute(combiner))
   }
   
   # Ensure chosen_combiner is actually a function now
@@ -748,7 +758,11 @@ run_searchlight_base <- function(model_spec,
 
   # print(paste("combiner is", str(chosen_combiner))) # Original debug line
   if (getOption("rMVPA.debug", FALSE)) {
-      message(paste("Using combiner:", deparse(substitute(chosen_combiner)), "for method:", method))
+      combiner_name <- attr(chosen_combiner, "name")
+      if (is.null(combiner_name)) {
+          combiner_name <- deparse(substitute(combiner))
+      }
+      message(paste("Using combiner:", combiner_name, "for method:", method))
   }
   
   # 4) Dispatch to do_standard or do_randomized
