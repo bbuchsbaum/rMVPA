@@ -47,7 +47,8 @@ strip_dataset <- function(obj, ...) {
 #'
 #' fsel2 <- feature_selector("FTest", "top_p", .1)
 #' featureMask <- select_features(fsel2, neuroim2::values(ROI), Y)
-#' 
+#'
+#' @rdname select_features-methods
 #' @export
 select_features <- function(obj, X, Y, ...) {
   UseMethod("select_features")
