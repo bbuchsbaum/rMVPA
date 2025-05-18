@@ -141,9 +141,24 @@ compute_trial_scores <- function(obj, X) {
   # Retrieve relevant design expansions
   precomputed <- obj$design$model_mat
   dissimilarity_matrix <- precomputed$Dexpanded
-  
+  cross_block_data     <- precomputed$cross_block_data
+
   # Convert X to matrix if needed
   X <- as.matrix(X)
+
+  # Basic dimensionality checks
+  if (nrow(X) != nrow(dissimilarity_matrix)) {
+    stop(
+      "nrow(X) (", nrow(X), ") must match nrow(precomputed$Dexpanded) (",
+      nrow(dissimilarity_matrix), ")"
+    )
+  }
+  if (length(obj$design$block) != nrow(X)) {
+    stop(
+      "length(obj$design$block) (", length(obj$design$block),
+      ") must match nrow(X) (", nrow(X), ")"
+    )
+  }
   
   # This function computes second-order similarity:
   #   second_order_similarity(distfun, X, D, block_var, rsa_simfun)
