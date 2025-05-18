@@ -71,6 +71,33 @@ test_that("msreve_design constructor warns if contrast matrix has no column name
                   regexp = "`contrast_matrix` does not have column names. It is recommended to name your contrasts.")
 })
 
+test_that("add_interaction_contrasts creates orthonormal interactions", {
+  mvpa_des <- mock_mvpa_design(n_cond = 4)
+  C <- matrix(c(1, -1, 0, 0,
+                0, 0, 1, -1), nrow = 4, byrow = FALSE,
+               dimnames = list(NULL, c("A", "B")))
+  base_des <- msreve_design(mvpa_des, C)
+
+  des_int <- add_interaction_contrasts(base_des)
+
+  expect_true(all(c("A_x_B") %in% colnames(des_int$contrast_matrix)))
+  expect_true(attr(des_int, "is_orthonormal"))
+  expect_equal(ncol(des_int$contrast_matrix), 3)
+})
+
+test_that("include_interactions parameter expands contrast matrix", {
+  mvpa_des <- mock_mvpa_design(n_cond = 4)
+  C <- matrix(c(1, -1, 0, 0,
+                0, 0, 1, -1), nrow = 4, byrow = FALSE,
+               dimnames = list(NULL, c("A", "B")))
+
+  des_int <- msreve_design(mvpa_des, C, include_interactions = TRUE)
+
+  expect_true(all(c("A_x_B") %in% colnames(des_int$contrast_matrix)))
+  expect_true(attr(des_int, "is_orthonormal"))
+  expect_equal(ncol(des_int$contrast_matrix), 3)
+})
+
 
 # --- Tests for orthogonalize_contrasts() ---
 
