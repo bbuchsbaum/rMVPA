@@ -12,8 +12,19 @@ compute_performance(obj, result)
 \item{result}{The classification/regression result object to evaluate.}
 }
 \value{
-A list of performance metrics.
+Named numeric vector of performance metrics.
 }
 \description{
-Delegates calculation of performance metrics to the appropriate method.
+Delegate calculation of performance metrics to the appropriate method.
+}
+\examples{
+cres <- binary_classification_result(
+  observed  = factor(c("a", "b")),
+  predicted = factor(c("a", "b")),
+  probs     = matrix(c(0.8, 0.2, 0.3, 0.7), ncol = 2,
+                     dimnames = list(NULL, c("a", "b")))
+)
+dummy <- list(performance = performance)
+class(dummy) <- "mvpa_model"
+compute_performance(dummy, cres)
 }

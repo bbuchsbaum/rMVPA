@@ -10,5 +10,13 @@ has_test_set(obj)
 \item{obj}{The object to check for a test set.}
 }
 \description{
-Check if an object has a test set available.
+Determine whether the object contains a separate test set.
+}
+\value{
+Logical indicating if a test set exists.
+}
+\examples{
+ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10, external_test = TRUE)
+has_test_set(ds$design)
+}
 }

@@ -407,30 +407,61 @@ fit_model <- function(obj, roi_x, y, wts, param, lev=NULL, last=FALSE, classProb
   UseMethod("fit_model")
 }
 
-#' Tune Grid Extraction
+#' Extract Tuning Grid
 #'
-#' Extract the parameter grid to optimize for a model.
+#' Returns the parameter grid used to tune a model.
 #'
-#' @param obj The model object.
-#' @param x The training data.
-#' @param y The response vector.
-#' @param len The number of elements in the tuning grid.
-tune_grid <- function(obj, x,y,len) {
+#' @param obj A model or model specification.
+#' @param x Training data.
+#' @param y Response variable.
+#' @param len Number of parameter sets to generate.
+#'
+#' @return A data frame of tuning parameter combinations.
+#' @rdname tune_grid-methods
+#' @export
+#'
+#' @examples
+#' ds  <- gen_sample_dataset(D = c(5, 5, 5), nobs = 10)
+#' mdl <- load_model("sda_notune")
+#' tune_grid(mdl, ds$dataset$train_data, ds$design$y_train, len = 1)
+tune_grid <- function(obj, x, y, len) {
   UseMethod("tune_grid")
 }
 
 #' Test Set Availability
 #'
-#' Check if an object has a test set available.
+#' Determine whether the object contains a separate test set.
 #'
-#' @param obj The object to check for a test set.
+#' @param obj Object to query.
+#'
+#' @return Logical indicating if a test set exists.
+#' @rdname has_test_set-methods
 #' @export
+#'
+#' @examples
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10, external_test = TRUE)
+#' has_test_set(ds$design)
 has_test_set <- function(obj) {
   UseMethod("has_test_set")
 }
 
-#' Requires cross-validation to be performed
-#' @param obj The model object.
+#' Cross-Validation Availability
+#'
+#' Determine whether cross-validation is specified for the object.
+#'
+#' @param obj Model specification object.
+#'
+#' @return Logical indicating if cross-validation will be performed.
+#' @rdname has_crossval-methods
+#' @export
+#'
+#' @examples
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10)
+#' cval <- blocked_cross_validation(ds$design$block_var)
+#' mdl <- load_model("sda_notune")
+#' mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+#'                     "classification", crossval = cval)
+#' has_crossval(mspec)
 has_crossval <- function(obj) {
   UseMethod("has_crossval")
 }
@@ -442,14 +473,24 @@ has_crossval.default <- function(obj) {
 
 #' Compute Performance Metrics
 #'
-#' Compute performance metrics (accuracy, AUC, RMSE, etc.) for classification/regression results.
+#' Generic function to compute performance metrics from result objects.
 #'
-#' @param x The classification/regression result object to evaluate.
-#' @param ... Additional arguments passed to method-specific performance functions.
+#' @param x Result object from a classification or regression analysis.
+#' @param ... Additional arguments passed to methods.
 #'
-#' @return A list of performance metrics.
+#' @return Named numeric vector of performance metrics.
+#' @rdname performance-methods
 #' @export
-performance <- function(x,...) {
+#'
+#' @examples
+#' cres <- binary_classification_result(
+#'   observed  = factor(c("a", "b")),
+#'   predicted = factor(c("a", "b")),
+#'   probs     = matrix(c(0.8, 0.2, 0.3, 0.7), ncol = 2,
+#'                      dimnames = list(NULL, c("a", "b")))
+#' )
+#' performance(cres)
+performance <- function(x, ...) {
   UseMethod("performance")
 }
 
@@ -457,10 +498,12 @@ performance <- function(x,...) {
 #'
 #' Delegates calculation of performance metrics to the appropriate method.
 #'
-#' @param obj The input object.
-#' @param result The classification/regression result object to evaluate.
+#' @param obj Model specification or object capable of computing performance.
+#' @param result The classification/regression result to evaluate.
 #'
-#' @return A list of performance metrics.
+#' @return Named numeric vector of performance metrics.
+#' @rdname compute_performance-methods
+#' @export
 #'
 #' @examples
 #' cres <- binary_classification_result(
@@ -472,7 +515,6 @@ performance <- function(x,...) {
 #' dummy <- list(performance = performance)
 #' class(dummy) <- "mvpa_model"
 #' compute_performance(dummy, cres)
-#' @export
 compute_performance <- function(obj, result) {
   UseMethod("compute_performance")
 }

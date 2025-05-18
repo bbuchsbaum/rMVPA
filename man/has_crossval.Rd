@@ -2,7 +2,7 @@
 % Please edit documentation in R/allgeneric.R
 \name{has_crossval}
 \alias{has_crossval}
-\title{Requires cross-validation to be performed}
+\title{Cross-Validation Availability}
 \usage{
 has_crossval(obj)
 }
@@ -10,5 +10,16 @@ has_crossval(obj)
 \item{obj}{The model object.}
 }
 \description{
-Requires cross-validation to be performed
+Determine whether cross-validation is specified for the object.
+}
+\value{
+Logical indicating if cross-validation will be performed.
+}
+\examples{
+ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10)
+cval <- blocked_cross_validation(ds$design$block_var)
+mdl <- load_model("sda_notune")
+mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification", crossval = cval)
+has_crossval(mspec)
+}
 }
