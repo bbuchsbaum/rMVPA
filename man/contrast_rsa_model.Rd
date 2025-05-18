@@ -13,6 +13,7 @@ contrast_rsa_model(
   check_collinearity = FALSE,
   normalize_delta = FALSE,
   allow_nonorth_composite = FALSE,
+  calc_reliability = FALSE,
   whitening_matrix_W = NULL,
   ...
 )
@@ -51,6 +52,7 @@ Supported options:
   \item \code{"delta_only"}: Only the voxel's projection onto the contrast (delta_q,v).
   \item \code{"recon_score"}: Voxel-specific RDM reconstruction score (r_v), correlating the RDM implied by the voxel's loadings with the empirical RDM.
   \item \code{"beta_delta_norm"}: Similar to `beta_delta`, but uses the L2-normalized voxel contribution vector (delta_q,v). Requires `normalize_delta=TRUE` to be meaningful.
+  \item \code{"beta_delta_reliable"}: Reliability-weighted contributions, \eqn{\rho_{q,v} \beta_q \Delta_{q,v}}, where \eqn{\rho_{q,v}} reflects fold-wise stability.
   \item \code{"composite"}: Sum of beta-weighted, L2-normalized voxel contributions (Σ_q β_q ~Δ_q,v). Represents the net projection onto the positive diagonal of the contrast space. Interpretation requires caution if contrasts are not orthonormal.
 }
 Default is \code{c("beta_delta")}.}
@@ -66,10 +68,14 @@ for the "beta_delta" output metric. Default is \code{FALSE}.}
 is not orthonormal, to avoid mis-interpretation. If TRUE, the composite score is returned regardless, but a warning
 is still emitted.}
 
-\item{whitening_matrix_W}{Optional V x V numeric matrix (voxels x voxels). Required if 
-`estimation_method = "crossnobis"` and Mahalanobis (rather than Euclidean) 
-distances are desired. This matrix (e.g., \eqn{\Sigma_{noise}^{-1/2}}) is passed to 
-`compute_crossvalidated_means_sl` to whiten per-fold estimates before distance calculation. 
+\item{calc_reliability}{Logical. If TRUE, voxel-wise contribution reliability (ρ
+values) are estimated across cross-validation folds during training and can
+be incorporated into the output metrics. Default is \code{FALSE}.}
+
+\item{whitening_matrix_W}{Optional V x V numeric matrix (voxels x voxels). Required if
+`estimation_method = "crossnobis"` and Mahalanobis (rather than Euclidean)
+distances are desired. This matrix (e.g., \eqn{\Sigma_{noise}^{-1/2}}) is passed to
+`compute_crossvalidated_means_sl` to whiten per-fold estimates before distance calculation.
 Default is `NULL` (Euclidean distances for Crossnobis).}
 
 \item{...}{Additional arguments passed to \code{create_model_spec}.}
