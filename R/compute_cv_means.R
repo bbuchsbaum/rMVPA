@@ -118,15 +118,15 @@ compute_crossvalidated_means_sl <- function(sl_data,
         rlang::abort("Required method 'train_indices' is not available in scope.")
     }
 
-    train_indices <- train_indices(cv_spec, i)
+    fold_train_idx <- train_indices(cv_spec, i)
 
-    if (length(train_indices) == 0) {
+    if (length(fold_train_idx) == 0) {
       warning(paste("Fold", i, "has no training samples. Skipping."))
       next
     }
 
-    train_data_fold <- sl_data[train_indices, , drop = FALSE]
-    train_labels_fold <- condition_labels[train_indices]
+    train_data_fold <- sl_data[fold_train_idx, , drop = FALSE]
+    train_labels_fold <- condition_labels[fold_train_idx]
 
     fold_means_mat <- NULL
     # Ensure there are rows and labels to process
