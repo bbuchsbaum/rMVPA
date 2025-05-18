@@ -174,10 +174,12 @@ has_test_set.model_spec <- function(obj) {
 
 
 
+#' @rdname y_train-methods
 #' @export
 y_train.mvpa_model <- function(obj) y_train(obj$design)
 
 
+#' @rdname y_test-methods
 #' @export
 y_test.mvpa_model <- function(obj) y_test(obj$design)
 

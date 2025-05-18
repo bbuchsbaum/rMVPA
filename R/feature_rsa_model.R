@@ -1333,11 +1333,13 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
 }
 
 
+#' @rdname y_train-methods
 #' @export
 y_train.feature_rsa_model <- function(obj) {
   obj$design$F  # Features are used as predictors (y in training function)
 }
 
+#' @rdname y_train-methods
 #' @export
 y_train.feature_rsa_design <- function(obj) {
   obj$F  # Features are used as predictors
