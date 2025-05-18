@@ -859,6 +859,9 @@ filter_roi <- function(roi, ...) {
 #' @param obj A cross-validation specification object (e.g., inheriting from `cross_validation`).
 #' @param ... Additional arguments passed to methods.
 #' @return An integer representing the number of folds.
+#' @examples
+#' cval <- kfold_cross_validation(len = 20, nfolds = 4)
+#' get_nfolds(cval)
 #' @export
 get_nfolds <- function(obj, ...) {
   UseMethod("get_nfolds")
@@ -873,6 +876,9 @@ get_nfolds <- function(obj, ...) {
 #' @param fold_num An integer specifying the fold number for which to retrieve training indices.
 #' @param ... Additional arguments passed to methods.
 #' @return An integer vector of training indices.
+#' @examples
+#' cval <- kfold_cross_validation(len = 20, nfolds = 4)
+#' train_indices(cval, 1)
 #' @export
 train_indices <- function(obj, fold_num, ...) {
   UseMethod("train_indices")

@@ -7,6 +7,12 @@
 #'
 #' @param prob A matrix of predicted probabilities with column names indicating the classes.
 #' @return A vector of predicted classes corresponding to the highest probability for each row in the input matrix.
+#' @examples
+#' prob <- matrix(c(0.2, 0.8,
+#'                  0.6, 0.4),
+#'                nrow = 2, byrow = TRUE,
+#'                dimnames = list(NULL, c("A", "B")))
+#' predicted_class(prob)
 #' @export
 predicted_class <- function(prob) {
   maxid <- max.col(prob, ties.method="random")
@@ -53,6 +59,17 @@ performance.regression_result <- function(x, split_list,...) {
 #' @details
 #' The function allows users to apply a custom performance metric to a prediction result object.
 #' If a split list is provided, the performance metric will be computed for each group separately, and the results will be returned as a named vector.
+#' @examples
+#' cres <- binary_classification_result(
+#'   observed  = factor(c("A", "B")),
+#'   predicted = factor(c("A", "A")),
+#'   probs = matrix(c(0.9, 0.1,
+#'                    0.6, 0.4),
+#'                  ncol = 2, byrow = TRUE,
+#'                  dimnames = list(NULL, c("A", "B")))
+#' )
+#' acc_fun <- function(x) mean(x$observed == x$predicted)
+#' custom_performance(cres, acc_fun)
 #' @export
 custom_performance <- function(x, custom_fun, split_list=NULL) {
   if (is.null(split_list)) {
