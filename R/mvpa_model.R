@@ -44,8 +44,8 @@ wrap_result <- function(result_table, design, fit=NULL) {
 
 
 
-#' @keywords internal
 #' @rdname merge_results-methods
+#' @export
 merge_results.mvpa_model <- function(obj, result_set, indices, id, ...) {
   # Check if any errors occurred during the process
   if (any(result_set$error)) {
@@ -375,7 +375,6 @@ strip_dataset.default <- function(obj, ...) {
   obj
 }
 
-#' @noRd
 #' @rdname strip_dataset-methods
 #' @export
 strip_dataset.mvpa_model <- function(obj, ...) {
