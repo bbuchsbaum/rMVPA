@@ -2,7 +2,7 @@
 % Please edit documentation in R/allgeneric.R
 \name{tune_grid}
 \alias{tune_grid}
-\title{Tune Grid Extraction}
+\title{Extract Tuning Grid}
 \usage{
 tune_grid(obj, x, y, len)
 }
@@ -16,5 +16,15 @@ tune_grid(obj, x, y, len)
 \item{len}{The number of elements in the tuning grid.}
 }
 \description{
-Extract the parameter grid to optimize for a model.
+Returns the parameter grid used to tune a model.
+}
+\value{
+A data frame of tuning parameter combinations.
+}
+\examples{
+\donttest{
+ds  <- gen_sample_dataset(D = c(5, 5, 5), nobs = 10)
+mdl <- load_model("sda_notune")
+tune_grid(mdl, ds$dataset$train_data, ds$design$y_train, len = 1)
+}
 }
