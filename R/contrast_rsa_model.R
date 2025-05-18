@@ -33,6 +33,7 @@
 #'     \item \code{"delta_only"}: Only the voxel's projection onto the contrast (delta_q,v).
 #'     \item \code{"recon_score"}: Voxel-specific RDM reconstruction score (r_v), correlating the RDM implied by the voxel's loadings with the empirical RDM.
 #'     \item \code{"beta_delta_norm"}: Similar to `beta_delta`, but uses the L2-normalized voxel contribution vector (delta_q,v). Requires `normalize_delta=TRUE` to be meaningful.
+#'     \item \code{"beta_delta_reliable"}: Reliability-weighted contributions, \eqn{\rho_{q,v} \beta_q \Delta_{q,v}}, where \eqn{\rho_{q,v}} reflects fold-wise stability.
 #'     \item \code{"composite"}: Sum of beta-weighted, L2-normalized voxel contributions (Σ_q β_q ~Δ_q,v). Represents the net projection onto the positive diagonal of the contrast space. Interpretation requires caution if contrasts are not orthonormal.
 #'   }
 #'   Default is \code{c("beta_delta")}.
@@ -44,10 +45,13 @@
 #' @param allow_nonorth_composite Logical. If FALSE (default) the composite metric will return NA when the contrast matrix
 #'   is not orthonormal, to avoid mis-interpretation. If TRUE, the composite score is returned regardless, but a warning
 #'   is still emitted.
-#' @param whitening_matrix_W Optional V x V numeric matrix (voxels x voxels). Required if 
-#'   `estimation_method = "crossnobis"` and Mahalanobis (rather than Euclidean) 
-#'   distances are desired. This matrix (e.g., \eqn{\Sigma_{noise}^{-1/2}}) is passed to 
-#'   `compute_crossvalidated_means_sl` to whiten per-fold estimates before distance calculation. 
+#' @param calc_reliability Logical. If TRUE, voxel-wise contribution reliability (ρ
+#'   values) are estimated across cross-validation folds during training and can
+#'   be incorporated into the output metrics. Default is \code{FALSE}.
+#' @param whitening_matrix_W Optional V x V numeric matrix (voxels x voxels). Required if
+#'   `estimation_method = "crossnobis"` and Mahalanobis (rather than Euclidean)
+#'   distances are desired. This matrix (e.g., \eqn{\Sigma_{noise}^{-1/2}}) is passed to
+#'   `compute_crossvalidated_means_sl` to whiten per-fold estimates before distance calculation.
 #'   Default is `NULL` (Euclidean distances for Crossnobis).
 #' @param ... Additional arguments passed to \code{create_model_spec}.
 #'
@@ -204,6 +208,7 @@ contrast_rsa_model <- function(dataset,
                                check_collinearity = FALSE,
                                normalize_delta = FALSE,
                                allow_nonorth_composite = FALSE,
+                               calc_reliability = FALSE,
                                whitening_matrix_W = NULL,
                                ...) {
 
@@ -215,7 +220,7 @@ contrast_rsa_model <- function(dataset,
   regression_type   <- match.arg(regression_type, c("pearson", "spearman", "lm", "rfit", "ridge_hkb"))
   
   # Validate output_metric
-  allowed_metrics <- c("beta_delta", "beta_only", "delta_only", "recon_score", "beta_delta_norm", "composite")
+  allowed_metrics <- c("beta_delta", "beta_only", "delta_only", "recon_score", "beta_delta_norm", "beta_delta_reliable", "composite")
   if (!is.character(output_metric) || !all(output_metric %in% allowed_metrics)) {
     rlang::abort(paste0("`output_metric` must be a character vector containing only allowed metrics: ",
                        paste(allowed_metrics, collapse=", ")))
@@ -229,6 +234,7 @@ contrast_rsa_model <- function(dataset,
   assert_that(is.logical(check_collinearity), length(check_collinearity) == 1)
   assert_that(is.logical(normalize_delta), length(normalize_delta) == 1)
   assert_that(is.logical(allow_nonorth_composite), length(allow_nonorth_composite)==1)
+  assert_that(is.logical(calc_reliability), length(calc_reliability) == 1)
   
   if (!is.null(whitening_matrix_W)) {
     assert_that(is.matrix(whitening_matrix_W), is.numeric(whitening_matrix_W),
@@ -299,6 +305,7 @@ contrast_rsa_model <- function(dataset,
     check_collinearity = check_collinearity,
     normalize_delta = normalize_delta,
     allow_nonorth_composite = allow_nonorth_composite,
+    calc_reliability = calc_reliability,
     whitening_matrix_W = whitening_matrix_W, # Store W in the spec
     ...
   )
@@ -342,6 +349,7 @@ print.contrast_rsa_model <- function(x, ...) {
     cat(info_style("   │  └─ Whitening Matrix (W): "), param_style(whiten_status), "\n")
   }
   cat(info_style("   ├─ Regression Type (β):   "), param_style(x$regression_type), "\n")
+  cat(info_style("   ├─ Calc Reliability:     "), param_style(ifelse(x$calc_reliability, "TRUE", "FALSE")), "\n")
   cat(info_style("   └─ Output Metric(s):      "), param_style(paste(x$output_metric, collapse = ", ")), "\n")
 
   cat("\n")
@@ -444,14 +452,21 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
     dvec_sl <- compute_crossnobis_distances_sl(U_folds_data, P_voxels)
 
   } else { # "average" or "L2_norm"
-    U_hat_for_delta_calc <- compute_crossvalidated_means_sl(
+    cv_outputs <- compute_crossvalidated_means_sl(
       sl_data,
       mvpa_des,
       cv_spec,
       obj$estimation_method, # "average" or "L2_norm"
-      whitening_matrix_W = NULL # W is not used for these methods in compute_cv_means
-                                 # (though passing obj$W would also be safe as it's ignored by cv_means)
+      whitening_matrix_W = NULL, # W is not used for these methods in compute_cv_means
+      return_folds = obj$calc_reliability
     )
+    if (is.list(cv_outputs) && obj$calc_reliability) {
+      U_hat_for_delta_calc <- cv_outputs$mean_estimate
+      U_folds_data <- cv_outputs$fold_estimates
+    } else {
+      U_hat_for_delta_calc <- cv_outputs
+      U_folds_data <- NULL
+    }
     # --- Step 2: Compute Empirical Second Moment Matrix (Ĝ_sl) ---
     # This step is only for "average" and "L2_norm" which produce U_hat directly for G_hat
     G_hat_sl <- U_hat_for_delta_calc %*% t(U_hat_for_delta_calc)
@@ -822,7 +837,60 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
         }
     }
   }
-  
+
+  # --- Step 6c: Calculate Reliability Weights (rho) if requested ---
+  rho_vc_sl <- rep(1, Q)
+  if (isTRUE(obj$calc_reliability)) {
+    S_total <- get_nfolds(cv_spec)
+    if (exists("U_folds_data", inherits = FALSE) && !is.null(U_folds_data)) {
+      fold_array <- U_folds_data
+    } else {
+      cv_tmp <- compute_crossvalidated_means_sl(
+        sl_data,
+        mvpa_des,
+        cv_spec,
+        obj$estimation_method,
+        whitening_matrix_W = if (obj$estimation_method == "crossnobis") obj$whitening_matrix_W else NULL,
+        return_folds = TRUE
+      )
+      fold_array <- cv_tmp$fold_estimates
+    }
+
+    if (is.array(fold_array) && length(dim(fold_array)) == 3) {
+      S_eff <- dim(fold_array)[3]
+      mean_delta <- rep(0, Q)
+      M2_delta <- rep(0, Q)
+      valid_folds <- 0
+      for (s_idx in seq_len(S_eff)) {
+        U_fold <- fold_array[,,s_idx]
+        if (!is.matrix(U_fold)) next
+        idx_match_fold <- match(rownames(U_fold), rownames(C))
+        if (anyNA(idx_match_fold)) next
+        C_fold <- C[idx_match_fold, , drop = FALSE]
+        Delta_fold_sl <- t(U_fold) %*% C_fold
+        delta_fold_center <- Delta_fold_sl[center_idx, , drop = TRUE]
+        if (anyNA(delta_fold_center)) next
+        valid_folds <- valid_folds + 1
+        delta_diff <- delta_fold_center - mean_delta
+        mean_delta <- mean_delta + delta_diff/valid_folds
+        M2_delta <- M2_delta + delta_diff*(delta_fold_center - mean_delta)
+      }
+
+      if (valid_folds > 1) {
+        var_delta <- M2_delta/(valid_folds - 1)
+        sigma2_noise_param <- (valid_folds - 1) * var_delta
+        denom <- var_delta + sigma2_noise_param
+        rho_vc_sl <- ifelse(denom < 1e-10, 1, sigma2_noise_param/denom)
+        rho_vc_sl[is.na(rho_vc_sl)] <- 0
+      } else if (valid_folds == 1) {
+        rho_vc_sl[M2_delta == 0] <- 1
+        rho_vc_sl[M2_delta != 0] <- 0
+      } else {
+        rho_vc_sl <- rep(0, Q)
+      }
+    }
+  }
+
   # --- Step 7: Calculate Final Metrics ---
   
   # Pre-check: if beta_sl or delta_vc_sl has NA due to critical failure,
@@ -889,14 +957,19 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
     } else if (metric_name == "beta_delta") {
         # Use unnormalized delta_vc_sl unless obj$normalize_delta is globally true
         current_delta <- if(obj$normalize_delta) delta_vc_sl_normalized else delta_vc_sl
-        metric_value <- beta_sl * current_delta
-        names(metric_value) <- contrast_names
-        
-    } else if (metric_name == "beta_delta_norm") {
+    metric_value <- beta_sl * current_delta
+    names(metric_value) <- contrast_names
+
+  } else if (metric_name == "beta_delta_norm") {
         if (!obj$normalize_delta) {
             warning("Output metric is 'beta_delta_norm' but 'normalize_delta' is FALSE. Result for 'beta_delta_norm' will be equivalent to 'beta_delta' using unnormalized delta.")
         }
-        metric_value <- beta_sl * delta_vc_sl_normalized # Always use normalized delta here
+    metric_value <- beta_sl * delta_vc_sl_normalized # Always use normalized delta here
+    names(metric_value) <- contrast_names
+
+  } else if (metric_name == "beta_delta_reliable") {
+        current_delta <- if(obj$normalize_delta) delta_vc_sl_normalized else delta_vc_sl
+        metric_value <- beta_sl * current_delta * rho_vc_sl
         names(metric_value) <- contrast_names
 
     } else if (metric_name == "beta_only") {
