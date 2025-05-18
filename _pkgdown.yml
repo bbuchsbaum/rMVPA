@@ -8,6 +8,7 @@ articles:
       Tutorials and guides for getting started with rMVPA
     contents:
       - RSA
+      - Contrast_RSA
       - Advanced_RSA
       - CrossValidation
       - FeatureSelection
