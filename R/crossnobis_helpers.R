@@ -21,6 +21,9 @@
 #'   \[ \tilde d_k = \frac{1}{M(M-1) P} \sum_{m \neq n} \hat\delta_{k,m}^{\top}\, \hat\delta_{k,n} \]
 #'   where \(\hat\delta_{k,m} = \hat\mu_{i,m}-\hat\mu_{j,m}\) is the difference pattern for
 #'   condition pair \(k=(i,j)\) in fold \(m\), and \(P\) is `P_voxels`.
+#'   Each delta matrix is reshaped to \(V \times M\) and inner products are
+#'   accumulated from `tcrossprod(t(delta))` with the diagonal set to zero so
+#'   only cross-fold terms contribute.
 #'   If `U_folds` contains NAs (e.g., a condition is entirely missing from a fold's
 #'   training data), distances involving that condition may result in `NA`.
 #'   If you want Mahalanobis distances, ensure `U_folds` contains patterns that have
@@ -32,7 +35,6 @@
 #'   *Nature Reviews Neuroscience*, 18(3), 179-186.
 #'   (Specifically Equation 5 for the unbiased squared Euclidean distance).
 #'
-#' @importFrom utils combn
 #' @importFrom rlang abort
 #' @keywords internal
 #' @noRd
@@ -72,8 +74,9 @@ compute_crossnobis_distances_sl <- function(U_folds, P_voxels = NULL) {
     return(setNames(numeric(0), character(0)))
   }
 
-  # Generate all unique unordered pairs of conditions
-  condition_indices_pairs <- utils::combn(K, 2) # 2 x n_pairs matrix
+  # Generate condition pairs in the same order as `lower.tri()`
+  # This ensures alignment with any include_vec filtering logic
+  condition_indices_pairs <- t(which(lower.tri(matrix(1, K, K)), arr.ind = TRUE))
   n_pairs <- ncol(condition_indices_pairs)
   
   if (n_pairs == 0) { # Should be caught by K < 2, but as a safeguard
@@ -89,17 +92,17 @@ compute_crossnobis_distances_sl <- function(U_folds, P_voxels = NULL) {
 
     # Calculate delta_k_m for all folds m: (U_folds[cond1,,m] - U_folds[cond2,,m])
     # This results in a V x M matrix of difference patterns for the current pair
-    # Using drop = FALSE ensures it's always V x M
-    delta_patterns_all_folds <- U_folds[idx_cond1, , , drop = FALSE] - U_folds[idx_cond2, , , drop = FALSE]
-    
+    # Using drop = TRUE ensures a 2D matrix is returned
+    delta_matrix <- U_folds[idx_cond1, , , drop = TRUE] -
+                    U_folds[idx_cond2, , , drop = TRUE]
+
     # Compute matrix of inner products: ip[m,n] = delta_k_m^T %*% delta_k_n
-    # t(delta_patterns_all_folds) is M x V
-    # delta_patterns_all_folds    is V x M
-    # Result is M x M
-    inner_product_matrix <- crossprod(delta_patterns_all_folds) # Equivalent to t(X) %*% X for X = delta_patterns_all_folds
-    
-    # Sum of all m != n terms (diagonal is already zero)
-    sum_off_diagonal_ips <- sum(inner_product_matrix, na.rm = FALSE) # Propagate NAs
+    # t(delta_matrix) is M x V, so tcrossprod(t(delta_matrix)) yields M x M
+    ip <- tcrossprod(t(delta_matrix))
+    diag(ip) <- 0
+
+    # Sum of all m != n terms
+    sum_off_diagonal_ips <- sum(ip, na.rm = FALSE) # Propagate NAs
 
     # Normalize
     if (M * (M - 1) == 0) { # Should be caught by M < 2
