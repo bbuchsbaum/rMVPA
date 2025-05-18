@@ -385,18 +385,13 @@ print.contrast_rsa_model <- function(x, ...) {
 #' @examples
 #' # This example shows the structure of the returned list but doesn't actually run the function
 #' # For a multi-metric model: output_metric = c("beta_delta", "recon_score", "beta_only")
-#' # With 2 contrasts named "contrast1" and "contrast2", the return structure would be:
-#' # 
-#' # result <- list(
-#' #   beta_delta = c(contrast1 = 0.23, contrast2 = -0.15),
-#' #   recon_score = 0.72,
-#' #   beta_only = c(contrast1 = 1.45, contrast2 = 0.88)
-#' # )
-#' #
-#' # Accessing individual metrics:
-#' # result$beta_delta["contrast1"]  # Value for first contrast's beta*delta
-#' # result$recon_score              # Single value for reconstruction score
-#' 
+#' @rdname train_model
+#' @param obj An object of class \code{contrast_rsa_model}.
+#' @param sl_data The data matrix for the current searchlight (samples x voxels).
+#' @param sl_info A list containing information about the current searchlight, including \code{center_local_id}.
+#' @param cv_spec The cross-validation specification.
+#' @param ... Additional arguments (currently ignored).
+#' @return A named list where each element corresponds to a requested metric from \code{obj$output_metric}.
 #' @importFrom stats cor dist lm coef sd terms
 #' @importFrom rlang abort
 #' @method train_model contrast_rsa_model

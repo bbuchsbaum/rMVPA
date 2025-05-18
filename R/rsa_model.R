@@ -346,16 +346,13 @@ run_lm_semipartial <- function(dvec, obj) {
 ################################################################################
 # TRAINING METHOD
 ################################################################################
-#' Train an RSA Model
-#'
-#' This function trains an RSA (representational similarity analysis) model using the specified method and distance calculation.
-#'
+#' @rdname train_model
 #' @param obj An object of class \code{rsa_model}.
 #' @param train_dat The training data.
 #' @param y The response variable.
 #' @param indices The indices of the training data.
 #' @param ... Additional arguments passed to the training method.
-#' @return 
+#' @return
 #' Depending on \code{obj$regtype}:
 #' \itemize{
 #'   \item \code{"lm"} + no constraints + \code{obj$semipartial=TRUE}: semi-partial correlations
@@ -364,6 +361,7 @@ run_lm_semipartial <- function(dvec, obj) {
 #'   \item \code{"rfit"}: robust regression coefficients
 #'   \item \code{"pearson"} or \code{"spearman"}: correlation coefficients
 #' }
+#' @method train_model rsa_model
 #' @export
 train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
   # 1) correlation-based distance

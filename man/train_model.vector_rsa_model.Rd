@@ -23,3 +23,15 @@ A structure containing "scores" or similar second-order similarity results.
 \description{
 Train a vector RSA model
 }
+\examples{
+\donttest{
+  dset_info <- gen_sample_dataset(D = c(8, 8, 8), nobs = 20,
+    response_type = "categorical", data_mode = "image", nlevels = 2)
+  vdesign <- vector_rsa_design(2, dset_info$design$y_train,
+    dset_info$design$block_var)
+  vmodel <- vector_rsa_model(dset_info$dataset, vdesign)
+  train_model(vmodel, dset_info$dataset$train_data,
+    dset_info$design$y_train,
+    indices = seq_len(ncol(dset_info$dataset$train_data)))
+}
+}

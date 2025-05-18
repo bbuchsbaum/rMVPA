@@ -77,11 +77,13 @@ manova_model <- function(dataset,
 #'
 #' @param obj An object of class \code{manova_model}.
 #' @param train_dat The training data.
+#' @rdname train_model
 #' @param y the response variable
 #' @param indices The indices of the training data.
 #' @param ... Additional arguments passed to the training method.
 #' @return A named numeric vector of -log(p-values) for each predictor in the MANOVA model.
 #' @importFrom stats as.formula
+#' @method train_model manova_model
 train_model.manova_model <- function(obj, train_dat, y, indices, ...) {
   dframe <- obj$design$data
   dframe$response <- as.matrix(train_dat)
