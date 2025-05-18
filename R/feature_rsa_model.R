@@ -4,7 +4,7 @@
 #' You can either supply a similarity matrix S (and optionally select dimensions)
 #' or directly supply a feature matrix F.
 #'
-#' @param S A symmetric similarity matrix representing the feature space relationships. 
+#' @param S A symmetric similarity matrix representing the feature space relationships.
 #'          If NULL, you must supply F.
 #' @param F A feature space matrix (observations by features). If supplied, this overrides S and k.
 #' @param labels Vector of labels corresponding to the rows/columns of S or observations of F.
@@ -14,6 +14,9 @@
 #' @param max_comps Initial upper limit for the number of components to be derived from the
 #'          feature space F by subsequent `feature_rsa_model` methods (PCA, PLS, SCCA).
 #'          This value is automatically capped by the final feature dimensionality `k`. Default 10.
+#' @param block_var Optional blocking variable for cross-validation. If provided and
+#'          `crossval` is `NULL` in `feature_rsa_model`, a blocked cross-validation
+#'          scheme will be generated using this vector.
 #'
 #' @return A \code{feature_rsa_design} object (S3 class) containing:
 #'   \describe{
@@ -22,6 +25,7 @@
 #'     \item{labels}{Vector of observation labels}
 #'     \item{k}{The final number of feature dimensions used}
 #'     \item{max_comps}{The upper limit on components (<= k)}
+#'     \item{block_var}{Optional blocking variable for cross-validation}
 #'   }
 #'
 #' @details
@@ -35,7 +39,7 @@
 #' exceed the final feature dimensionality `k`.
 #'
 #' @export
-feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10) {
+feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_var=NULL) {
   assertthat::assert_that(!is.null(labels))
   
   if (!is.null(F)) {
@@ -45,11 +49,12 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10) {
     max_comps <- min(max_comps, k_value)
     
     ret <- list(
-      S=S, 
-      F=F, 
-      labels=labels, 
+      S=S,
+      F=F,
+      labels=labels,
       k=k_value,
-      max_comps=max_comps
+      max_comps=max_comps,
+      block_var=block_var
     )
   } else {
     assertthat::assert_that(!is.null(S))
@@ -72,11 +77,12 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10) {
     max_comps <- min(max_comps, k)
     
     ret <- list(
-      S=S, 
-      F=F, 
-      labels=labels, 
+      S=S,
+      F=F,
+      labels=labels,
       k=k,
-      max_comps=max_comps
+      max_comps=max_comps,
+      block_var=block_var
     )
   }
   
@@ -181,8 +187,12 @@ feature_rsa_model <- function(dataset,
          " active voxel(s) in mask. Feature RSA analysis requires multiple active voxels.")
   }
   
-  if (is.null(crossval) && !is.null(design$block_var)) {
-    crossval <- blocked_cross_validation(design$block_var)
+  if (is.null(crossval)) {
+    if (!is.null(design$block_var)) {
+      crossval <- blocked_cross_validation(design$block_var)
+    } else {
+      stop("crossval must be provided or design must include block_var")
+    }
   }
   assertthat::assert_that(!is.null(crossval))
   
@@ -1557,8 +1567,15 @@ print.feature_rsa_design <- function(x, ...) {
   # Display the single max_comps limit stored in the design
   # This is the upper limit for components derived from the feature space (F)
   # for *any* method used in feature_rsa_model.
-  cat(crayon::bold(crayon::blue("Max Components Limit:   ")), 
+  cat(crayon::bold(crayon::blue("Max Components Limit:   ")),
       if(!is.null(x$max_comps)) x$max_comps else "Not explicitly set (using default)", "\n")
+
+  # Indicate if a blocking variable was supplied
+  if (!is.null(x$block_var)) {
+    cat(crayon::bold(crayon::blue("Blocking Variable:      ")), "Provided (", length(unique(x$block_var)), " blocks)\n")
+  } else {
+    cat(crayon::bold(crayon::blue("Blocking Variable:      ")), "None\n")
+  }
   
   # Indicate whether a similarity matrix was provided
   if (!is.null(x$S)) {

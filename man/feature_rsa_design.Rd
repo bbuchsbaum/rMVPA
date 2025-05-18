@@ -4,7 +4,8 @@
 \alias{feature_rsa_design}
 \title{Create a Feature-Based RSA Design}
 \usage{
-feature_rsa_design(S = NULL, F = NULL, labels, k = 0, max_comps = 10)
+feature_rsa_design(S = NULL, F = NULL, labels, k = 0, max_comps = 10,
+  block_var = NULL)
 }
 \arguments{
 \item{S}{A symmetric similarity matrix representing the feature space relationships. 
@@ -21,6 +22,10 @@ This parameter is ignored if F is supplied directly (k becomes ncol(F)).}
 \item{max_comps}{Initial upper limit for the number of components to be derived from the
 feature space F by subsequent `feature_rsa_model` methods (PCA, PLS, SCCA).
 This value is automatically capped by the final feature dimensionality `k`. Default 10.}
+
+\item{block_var}{Optional blocking variable used to automatically create a
+blocked cross-validation specification when `crossval` is not supplied to
+\code{feature_rsa_model}.}
 }
 \value{
 A \code{feature_rsa_design} object (S3 class) containing:
@@ -30,6 +35,7 @@ A \code{feature_rsa_design} object (S3 class) containing:
     \item{labels}{Vector of observation labels}
     \item{k}{The final number of feature dimensions used}
     \item{max_comps}{The upper limit on components (<= k)}
+    \item{block_var}{Optional blocking variable for cross-validation}
   }
 }
 \description{
