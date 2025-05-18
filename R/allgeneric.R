@@ -94,7 +94,28 @@ merge_results <- function(obj, result_set, indices, id, ...) {
 #' @param frame A data frame or environment containing data for the computation.
 #' @param processor A function or object specifying how to process the frame.
 #' @param ... Additional arguments passed to the method-specific function.
-#' @noRd
+#'
+#' @return A tibble containing the processed results.
+#'
+#' @examples
+#' frame <- tibble::tibble(
+#'   .id = 1:2,
+#'   rnum = c("roi1", "roi2"),
+#'   roi = list(1:3, 4:5),
+#'   size = c(3, 2)
+#' )
+#' mod_spec <- list(process_roi = function(mod_spec, roi, rnum, ...) {
+#'   tibble::tibble(
+#'     result = list(mean(roi)),
+#'     indices = list(seq_along(roi)),
+#'     performance = list(NULL),
+#'     id = rnum
+#'   )
+#' })
+#' run_future(mod_spec, frame, NULL)
+#'
+#' @rdname run_future-methods
+#' @keywords internal
 run_future <- function(obj, frame, processor, ...) {
   UseMethod("run_future")
 }
