@@ -279,7 +279,14 @@ print.vector_rsa_model <- function(x, ...) {
 
   # Model Specification
   cat("Model Specification:\\n")
-  cat("  |- Distance Function:   ", deparse(substitute(x$distfun)), "\\n")
+  dist_name <- tryCatch({
+    if (!is.null(x$distfun$name)) {
+      x$distfun$name
+    } else {
+      class(x$distfun)[1]
+    }
+  }, error = function(e) class(x$distfun)[1])
+  cat("  |- Distance Function:   ", dist_name, "\\n")
   cat("  |- RSA Similarity Func: ", x$rsa_simfun, "\\n\\n")
 
   # Footer
