@@ -283,6 +283,7 @@ run_custom_regional <- function(dataset, region_mask, custom_func, ...,
 }
 
 # Add a dummy method for the internal class to satisfy mvpa_iterate checks
+#' @rdname process_roi-methods
 #' @export
 #' @keywords internal
 process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {

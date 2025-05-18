@@ -122,25 +122,45 @@ run_future <- function(obj, frame, processor, ...) {
 
 #' Process ROI
 #'
-#' Process a region of interest (ROI) with possible cross-validation.
+#' Process a region of interest (ROI) and return the formatted results.
 #'
 #' @param mod_spec The model specification object.
 #' @param roi The region of interest data.
 #' @param rnum A numeric or string identifier for the ROI.
 #' @param ... Additional arguments passed to the method-specific function.
+#'
+#' @return A tibble row containing the performance metrics for the ROI.
+#'
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(4, 4, 4), 20, blocks = 2)
+#'   cv <- blocked_cross_validation(ds$design$block_var)
+#'   mdl <- load_model("sda_notune")
+#'   spec <- mvpa_model(
+#'     model = mdl,
+#'     dataset = ds$dataset,
+#'     design = ds$design,
+#'     model_type = "classification",
+#'     crossval = cv
+#'   )
+#'   vox <- sample(which(ds$dataset$mask > 0), 30)
+#'   samp <- data_sample(ds$dataset, vox)
+#'   roi_obj <- as_roi(samp, ds$dataset)
+#'   process_roi(spec, roi_obj, 1)
+#' }
+#'
+#' @rdname process_roi-methods
 #' @keywords internal
-#' @noRd
 process_roi <- function(mod_spec, roi, rnum, ...) {
   UseMethod("process_roi")
 }
 
 #' Default Process ROI Method
 #'
-#' Default implementation for processing ROIs when no custom ROI processor is provided.
+#' @param center_global_id Optional global ID of the center voxel. Defaults to NA.
 #'
-#' @inheritParams process_roi
+#' @rdname process_roi-methods
 #' @keywords internal
-#' @noRd
 process_roi.default <- function(mod_spec, roi, rnum, center_global_id = NA, ...) {
   # Capture additional arguments to pass down
   dots <- list(...)
