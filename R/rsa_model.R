@@ -424,6 +424,7 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
 #' @importFrom tibble tibble
 #' @importFrom futile.logger flog.error
 #' @method merge_results rsa_model
+#' @rdname merge_results-methods
 merge_results.rsa_model <- function(obj, result_set, indices, id, ...) {
   
   # Check for errors from previous steps (processor/train_model)

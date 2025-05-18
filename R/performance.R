@@ -72,6 +72,7 @@ custom_performance <- function(x, custom_fun, split_list=NULL) {
 }
 
 #' @method merge_results binary_classification_result
+#' @rdname merge_results-methods
 merge_results.binary_classification_result <- function(x,...) {
   rlist <- list(x,...)
   probs <- Reduce("+", lapply(rlist, function(x) x$probs))/length(rlist)
@@ -83,6 +84,7 @@ merge_results.binary_classification_result <- function(x,...) {
 }
 
 #' @method merge_results regression_result
+#' @rdname merge_results-methods
 merge_results.regression_result <- function(x,...) {
   rlist <- list(x,...)
   pred <- Reduce("+", lapply(rlist, function(x) x$predicted))/length(rlist)
@@ -103,6 +105,7 @@ prob_observed.multiway_classification_result <- function(x) {
 }
 
 #' @method merge_results multiway_classification_result
+#' @rdname merge_results-methods
 merge_results.multiway_classification_result <- function(x,...) {
   
   rlist <- list(x,...)

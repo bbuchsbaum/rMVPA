@@ -458,6 +458,7 @@ evaluate_model.vector_rsa_model <- function(object,
 #' @importFrom tibble tibble
 #' @importFrom futile.logger flog.error flog.warn
 #' @method merge_results vector_rsa_model
+#' @rdname merge_results-methods
 merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
   
   # Check for errors from previous steps (processor/train_model)

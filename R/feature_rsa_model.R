@@ -1336,6 +1336,7 @@ y_train.feature_rsa_design <- function(obj) {
 }
 
 #' @export
+#' @rdname format_result-methods
 format_result.feature_rsa_model <- function(obj, result, error_message=NULL, context, ...) {
   
   if (!is.null(error_message)) {
@@ -1423,6 +1424,7 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
 }
 
 #' @export
+#' @rdname merge_results-methods
 merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
  
   if (any(result_set$error)) {

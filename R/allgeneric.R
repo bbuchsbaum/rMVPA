@@ -60,6 +60,20 @@ select_features <- function(obj, X, Y, ...) {
 #' @param result The result object to be formatted.
 #' @param error_message An optional error message.
 #' @param ... Additional arguments to be passed to the method-specific function.
+#'
+#' @examples
+#' \donttest{
+#' dataset <- gen_sample_dataset(D = c(6, 6, 6), nobs = 20,
+#'                               response_type = "categorical",
+#'                               data_mode = "image")
+#' cval <- blocked_cross_validation(dataset$design$block_var)
+#' model <- load_model("sda_notune")
+#' mspec <- mvpa_model(model, dataset$dataset, dataset$design,
+#'                     "classification", crossval = cval)
+#' # Typically called internally during processing
+#' format_result(mspec, result = NULL, error_message = "example",
+#'               context = list(test = 1, ytest = factor("a")))
+#' }
 #' @export
 format_result <- function(obj, result, error_message, ...) {
   UseMethod("format_result")
@@ -329,6 +343,17 @@ performance <- function(x,...) {
 #' @param result The classification/regression result object to evaluate.
 #'
 #' @return A list of performance metrics.
+#'
+#' @examples
+#' cres <- binary_classification_result(
+#'   observed  = factor(c("a", "b")),
+#'   predicted = factor(c("a", "b")),
+#'   probs     = matrix(c(0.8, 0.2, 0.3, 0.7), ncol = 2,
+#'                      dimnames = list(NULL, c("a", "b")))
+#' )
+#' dummy <- list(performance = performance)
+#' class(dummy) <- "mvpa_model"
+#' compute_performance(dummy, cres)
 #' @export
 compute_performance <- function(obj, result) {
   UseMethod("compute_performance")
@@ -628,9 +653,15 @@ run_regional <- function(model_spec, region_mask, ...) {
 #' @param ... Extra arguments passed to the specific cross-validation methods.
 #'
 #' @return A tibble containing training and testing sets for each fold.
+#'
+#' @examples
+#' cval <- kfold_cross_validation(len = 20, nfolds = 4)
+#' dat  <- as.data.frame(matrix(rnorm(20 * 2), 20, 2))
+#' y    <- factor(rep(letters[1:4], 5))
+#' crossval_samples(cval, dat, y)
 #' @export
-crossval_samples <- function(obj, data, y,...) { 
-  UseMethod("crossval_samples") 
+crossval_samples <- function(obj, data, y,...) {
+  UseMethod("crossval_samples")
 }
 
 #' Generic Pairwise Distance Computation
