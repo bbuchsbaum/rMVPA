@@ -89,6 +89,7 @@ tune_model <- function(mspec, x, y, wts, param, nreps=10) {
 #' @param classProbs Logical; if TRUE, class probabilities should be computed (default is FALSE).
 #' @param ... Additional arguments to be passed to the underlying model fitting function.
 #' @return A fitted model object with additional attributes "obsLevels" and "problemType".
+#' @rdname fit_model-methods
 #' @noRd
 fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
   fit <- obj$model$fit(x,y,wts=wts,param=param,lev=levels(y), classProbs=classProbs, ...)
