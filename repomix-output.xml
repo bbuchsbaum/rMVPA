@@ -12139,7 +12139,7 @@ feature_rsa_model <- function(dataset,
   # Check feature dimensions
   if (ncol(F_new) != length(model$glmnet_f_mean)) {
     stop(sprintf("Feature matrix dimension mismatch for GLMNet: expected %d features but got %d.",
-                ncol(model$glmnet_f_mean), ncol(F_new)))
+                length(model$glmnet_f_mean), ncol(F_new)))
   }
   
   
