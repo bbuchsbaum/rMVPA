@@ -61,9 +61,9 @@ run_regional_base(
 
 \item{...}{Extra arguments passed to specific regional analysis methods (e.g., `return_fits`, `compute_performance`).}
 
-\item{coalesce_design_vars}{If \code{TRUE}, merges design variables into the prediction table.}
+\item{coalesce_design_vars}{If \code{TRUE}, merges design variables into the prediction table (if present and generated). Default is \code{FALSE}.}
 
-\item{processor}{An optional region processor function.}
+\item{processor}{An optional custom processor function for each region (ROI). If NULL (default), behavior depends on the \code{model_spec} class.}
 
 \item{verbose}{If \code{TRUE}, print progress messages during iteration (default is \code{FALSE}).}
 
@@ -93,9 +93,8 @@ This method provides the standard regional analysis pipeline for objects of clas
 
 For `rsa_model` objects, `return_predictions` defaults to `FALSE` as standard RSA typically doesn't produce a prediction table in the same way as classification/regression models.
 
-This method handles regional analysis for `feature_rsa_model` objects, typically calling `run_regional_base`.
-
-For `vector_rsa_model` objects, `return_predictions` defaults to `FALSE`.
+For `vector_rsa_model` objects, `return_predictions` defaults to `FALSE` in `run_regional_base`.
+If `model_spec$return_predictions` is TRUE, this method will assemble an `observation_scores_table`.
 }
 \examples{
 \donttest{

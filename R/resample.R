@@ -27,8 +27,9 @@ get_samples.mvpa_surface_dataset <- function(obj, vox_list) {
 }
 
 
+#' @rdname data_sample
 #' @export
-data_sample.mvpa_dataset <- function(obj, vox) {
+data_sample.mvpa_dataset <- function(obj, vox, ...) {
   structure(
     list(
       #data = obj,

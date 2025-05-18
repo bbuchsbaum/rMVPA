@@ -23,6 +23,8 @@ number of folds for evaluation. It returns an object of class "kfold_cross_valid
 }
 \examples{
 cval <- kfold_cross_validation(len=100, nfolds=10)
-samples <- crossval_samples(cval, data=as.data.frame(matrix(rnorm(100*10), 100, 10)), y=rep(letters[1:5],20))
+sample_data <- as.data.frame(matrix(rnorm(100*10), 100, 10))
+sample_y <- rep(letters[1:5], 20)
+samples <- crossval_samples(cval, data = sample_data, y = sample_y)
 stopifnot(nrow(samples) == 10)
 }

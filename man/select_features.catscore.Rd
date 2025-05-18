@@ -14,6 +14,8 @@
 \item{Y}{The response variable.}
 
 \item{ranking.score}{The feature score to use. Supported scores are "entropy", "avg", or "max". Default is "entropy".}
+
+\item{...}{Additional arguments (currently unused).}
 }
 \value{
 A logical vector indicating which features to retain.

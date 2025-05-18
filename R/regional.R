@@ -136,7 +136,6 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
 }
 
 
-#' Merge regional MVPA results
 #'
 #' Merge multiple regional MVPA results into a single result.
 #'
@@ -144,7 +143,7 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
 #' @param ... Additional \code{regional_mvpa_result} objects to be merged.
 #'
 #' @return A merged \code{regional_mvpa_result} object.
-#' @export
+#' @method merge_results regional_mvpa_result
 merge_results.regional_mvpa_result <- function(x, ...) {
   rlist <- list(x,...)
   combine_prediction_tables(rlist)
@@ -300,6 +299,7 @@ run_regional_base <- function(model_spec,
                               compute_performance = model_spec$compute_performance,
                               return_predictions = model_spec$return_predictions,
                               return_fits = model_spec$return_fits,
+                        
                               ...) {
 
   
@@ -314,6 +314,7 @@ run_regional_base <- function(model_spec,
     ids = prepped$region_set,
     processor = processor,
     verbose = verbose,
+    analysis_type = "regional",
     ...
   )
   
@@ -411,31 +412,6 @@ run_regional.rsa_model <- function(model_spec, region_mask,
   )
 }
 
-
-#' Regional MVPA for `feature_rsa_model` Objects
-#'
-#' @rdname run_regional-methods
-#' @param coalesce_design_vars If \code{TRUE}, merges design variables into the prediction table.
-#' @param processor An optional region processor function.
-#' @details This method handles regional analysis for `feature_rsa_model` objects, typically calling `run_regional_base`.
-#' @export
-# run_regional.feature_rsa_model <- function(model_spec, region_mask,
-#                                            coalesce_design_vars = FALSE,
-#                                            processor = NULL,
-#                                            verbose = FALSE,
-#                                            ...) {
-# 
-#   
-#   run_regional_base(
-#     model_spec,
-#     region_mask,
-#     coalesce_design_vars = coalesce_design_vars,
-#     processor = processor,
-#     verbose = verbose,
-#     ...
-#   )
-# }
-
 #' Regional MVPA for `vector_rsa_model` Objects
 #'
 #' @rdname run_regional-methods
@@ -467,6 +443,7 @@ run_regional.vector_rsa_model <- function(model_spec, region_mask,
     ids = prepped$region_set,
     processor = processor, # Use default processor unless specified
     verbose = verbose,
+    analysis_type = "regional",
     ...
   )
   
@@ -543,5 +520,27 @@ run_regional.vector_rsa_model <- function(model_spec, region_mask,
   )
 }
 
-
-
+#' Regional MVPA for `feature_rsa_model` Objects
+#'
+#' @rdname run_regional-methods
+#' @param coalesce_design_vars If \code{TRUE}, merges design variables into the prediction table.
+#' @param processor An optional region processor function.
+#' @details This method handles regional analysis for `feature_rsa_model` objects, typically calling `run_regional_base`.
+#' @export
+#' @S3method run_searchlight feature_rsa_model
+# run_regional.feature_rsa_model <- function(model_spec, region_mask,
+#                                            coalesce_design_vars = FALSE,
+#                                            processor = NULL,
+#                                            verbose = FALSE,
+#                                            ...) {
+# 
+#   
+#   run_regional_base(
+#     model_spec,
+#     region_mask,
+#     coalesce_design_vars = coalesce_design_vars,
+#     processor = processor,
+#     verbose = verbose,
+#     ...
+#   )
+# }

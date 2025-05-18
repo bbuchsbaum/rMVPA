@@ -336,7 +336,7 @@ MVPAModels$lda_thomaz_boot <- list(
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
     preds <- lapply(modelFit$fits, function(fit) {
       ind <- attr(fit, "keep.ind")
-      scores <- -t(sparsediscrim:::predict.lda_thomaz(fit, newdata[,ind])$scores)
+      scores <- -t(predict(fit, newdata[,ind])$scores)
       mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores, ties.method = "first"))]
       probs <- exp(scores - mc)
       zapsmall(probs/rowSums(probs))
@@ -350,7 +350,7 @@ MVPAModels$lda_thomaz_boot <- list(
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
     preds <- lapply(modelFit$fits, function(fit) {
       ind <- attr(fit, "keep.ind")
-      scores <- -t(sparsediscrim:::predict.lda_thomaz(fit, newdata[,ind])$scores)
+      scores <- -t(predict(fit, newdata[,ind])$scores)
       mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores))]
       probs <- exp(scores - mc)
       zapsmall(probs/rowSums(probs))
@@ -559,18 +559,18 @@ MVPAModels$lda_thomaz <- list(
   grid=function(x, y, len = NULL) data.frame(parameter="none"),
   
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-    fit <- sparsediscrim:::lda_thomaz(as.matrix(x), y, ...)
+    fit <- sparsediscrim::lda_thomaz(as.matrix(x), y, ...)
     fit$obsLevels <- lev
     fit
   },
   
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
     # Returns a list with element $class
-    sparsediscrim:::predict.lda_thomaz(modelFit, as.matrix(newdata))$class
+    predict(modelFit, as.matrix(newdata))$class
   },
   
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    p <- sparsediscrim:::predict.lda_thomaz(modelFit, as.matrix(newdata), type="prob")
+    p <- predict(modelFit, as.matrix(newdata), type="prob")
     # p is posterior probabilities with columns corresponding to classes in modelFit$obsLevels
     if (!is.null(modelFit$obsLevels)) colnames(p) <- modelFit$obsLevels
     p
@@ -592,17 +592,17 @@ MVPAModels$hdrda <- list(
   grid=function(x, y, len = NULL) expand.grid(lambda=seq(.99, .001, length.out=len), gamma=seq(.001, .99, length.out=len)),
   
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-    fit <- sparsediscrim:::hdrda(as.matrix(x), y, lambda=param$lambda, gamma=param$gamma, ...)
+    fit <- sparsediscrim::hdrda(as.matrix(x), y, lambda=param$lambda, gamma=param$gamma, ...)
     fit$obsLevels <- lev
     fit
   },
   
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    sparsediscrim:::predict.hdrda(modelFit, as.matrix(newdata))$class
+    predict(modelFit, as.matrix(newdata))$class
   },
   
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    posterior <- sparsediscrim:::predict.hdrda(modelFit, as.matrix(newdata))$posterior
+    posterior <- predict(modelFit, as.matrix(newdata))$posterior
     posterior <- t(apply(posterior,1,function(x) x/sum(x)))
     if (!is.null(modelFit$obsLevels)) colnames(posterior) <- modelFit$obsLevels
     posterior

@@ -2,7 +2,7 @@
 % Please edit documentation in R/allgeneric.R
 \name{train_model}
 \alias{train_model}
-\title{Train Model}
+\title{Train a classification, regression, or representational model.}
 \usage{
 train_model(obj, ...)
 }
@@ -12,8 +12,11 @@ train_model(obj, ...)
 \item{...}{Additional arguments to be passed to the method-specific function.}
 }
 \value{
-A trained model object.
+A trained model object. The exact return value depends on the specific
+  method implementation.
 }
 \description{
-Train a classification or regression model.
+This is a generic function that trains a model based on the provided
+model specification object. Different model types will have different
+methods implemented with specific parameters.
 }

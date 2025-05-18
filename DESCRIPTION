@@ -10,38 +10,45 @@ Description: An R package to facilitate multivoxel pattern analysis of
 License: GPL (>= 2)
 Imports:
     assertthat,
-    methods,
-    dplyr,
-    tibble,
     caret,
-    neuroim2,
-    itertools,
-    parallel,
-    foreach,
-    sda,
-    doParallel,
-    MASS,
-    futile.logger,
-    stringr,
-    Matrix,
-    Metrics,
-    memoise,
-    purrr,
-    furrr,
-    ModelMetrics,
-    matrixStats,
-    modelr,
-    Rfit,
-    neurosurf,
-    io,
+    corpcor,
+    crayon,
+    dplyr,
     ffmanova,
+    future,
+    future.apply,
+    furrr,
+    futile.logger,
+    glmnet,
+    io,
+    MASS,
+    Matrix,
+    matrixStats,
+    memoise,
+    methods,
+    Metrics,
+    modelr,
+    ModelMetrics,
+    neuroim2,
+    neurosurf,
+    pls,
+    proxy,
+    purrr,
+    Rfit,
+    rlang,
+    robustcov,
+    sda,
     sparsediscrim,
-    corpcor
+    stringr,
+    tibble,
+    tidyr,
+    whitening
 Collate:
     'allgeneric.R'
     'custom.R'
     'balance.R'
     'classifiers.R'
+     crossnobis_helpers.R
     'common.R'
     'crossval.R'
     'dataset.R'
@@ -65,19 +72,25 @@ Collate:
     'utils.R'
     'feature_rsa_model.R'
     'new_analysis_overview.R'
+    'contrasts.R'
+    'compute_cv_means.R'
+    'msreve_design.R'
+    'contrast_rsa_model.R'
 RoxygenNote: 7.3.2.9000
 Suggests:
-    testthat,
     covr,
+    doParallel,
+    e1071,
+    foreach,
+    iterators,
+    itertools,
     knitr,
+    parallel,
+    randomForest,
     rmarkdown,
     roxygen2,
-    glmnet,
-    e1071,
-    randomForest,
-    iterators,
     spls,
-    corpcor
+    testthat
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf

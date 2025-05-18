@@ -15,7 +15,11 @@
 #' @examples
 #' # Create a MANOVA design
 #' formula <- y ~ x1 + x2
-#' data_list <- list(y = dissimilarity_matrix_y, x1 = dissimilarity_matrix_x1, x2 = dissimilarity_matrix_x2)
+#' data_list <- list(
+#'   y = dissimilarity_matrix_y,
+#'   x1 = dissimilarity_matrix_x1,
+#'   x2 = dissimilarity_matrix_x2
+#' )
 #' manova_design_obj <- manova_design(formula, data_list)
 #' @export
 manova_design <- function(formula, data) {
@@ -47,7 +51,11 @@ manova_design <- function(formula, data) {
 #' # Create a MANOVA model
 #' dataset <- create_mvpa_dataset(data_matrix, labels, subject_ids)
 #' formula <- y ~ x1 + x2
-#' data_list <- list(y = dissimilarity_matrix_y, x1 = dissimilarity_matrix_x1, x2 = dissimilarity_matrix_x2)
+#' data_list <- list(
+#'   y = dissimilarity_matrix_y,
+#'   x1 = dissimilarity_matrix_x1,
+#'   x2 = dissimilarity_matrix_x2
+#' )
 #' design <- manova_design(formula, data_list)
 #' manova_model_obj <- manova_model(dataset, design)
 #' @export
@@ -87,93 +95,146 @@ train_model.manova_model <- function(obj, train_dat, y, indices, ...) {
 }
 
 
+
+
 #' @export
 #' @method print manova_model
 print.manova_model <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
-  
-  # Define color scheme
-  header_style <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style <- crayon::white
-  number_style <- crayon::green
-  formula_style <- crayon::italic$blue
-  var_style <- crayon::magenta
-  
   # Print header
-  cat("\n", header_style("█▀▀ MANOVA Model ▀▀█"), "\n\n")
-  
+  cat("\\n", "MANOVA Model", "\\n")
+  cat(rep("-", 20), "\\n\\n")
+
   # Formula section
-  cat(section_style("├─ Model Specification"), "\n")
-  cat(info_style("│  └─ Formula: "), formula_style(deparse(x$design$formula)), "\n")
-  
+  cat("Model Specification:\\n")
+  cat("  |- Formula: ", deparse(x$design$formula), "\\n\\n")
+
   # Dataset information
-  cat(section_style("├─ Dataset"), "\n")
+  cat("Dataset:\\n")
   dims <- dim(x$dataset$train_data)
-  dim_str <- paste0(paste(dims[-length(dims)], collapse=" × "), 
-                   " × ", number_style(dims[length(dims)]), " observations")
-  cat(info_style("│  ├─ Dimensions: "), dim_str, "\n")
-  cat(info_style("│  └─ Type: "), class(x$dataset$train_data)[1], "\n")
-  
+  dim_str <- paste0(paste(dims[-length(dims)], collapse=" x "),
+                   " x ", dims[length(dims)], " observations")
+  cat("  |- Dimensions: ", dim_str, "\\n")
+  cat("  |- Type: ", class(x$dataset$train_data)[1], "\\n\\n")
+
   # Variables section
-  cat(section_style("├─ Variables"), "\n")
+  cat("Variables:\\n")
   predictors <- all.vars(x$design$formula[[3]])  # Get predictor names from RHS of formula
   response <- all.vars(x$design$formula[[2]])    # Get response name from LHS of formula
-  cat(info_style("│  ├─ Response: "), var_style(response), "\n")
-  cat(info_style("│  └─ Predictors: "), var_style(paste(predictors, collapse=", ")), "\n")
-  
+  cat("  |- Response: ", response, "\\n")
+  cat("  |- Predictors: ", paste(predictors, collapse=", "), "\\n\\n")
+
   # Data structure
-  cat(section_style("└─ Data Structure"), "\n")
-  
+  cat("Data Structure:\\n")
+
   # Check if there's a test set
   has_test <- !is.null(x$dataset$test_data)
-  cat(info_style("   ├─ Test Set: "), 
-      if(has_test) crayon::green("Present") else crayon::red("None"), "\n")
-  
+  cat("  |- Test Set: ",
+      if(has_test) "Present" else "None", "\\n")
+
   # Check if there's a mask
   if (!is.null(x$dataset$mask)) {
     mask_sum <- sum(x$dataset$mask > 0)
-    cat(info_style("   └─ Active Voxels/Vertices: "), 
-        number_style(format(mask_sum, big.mark=",")), "\n")
+    cat("  |- Active Voxels/Vertices: ",
+        format(mask_sum, big.mark=","), "\\n")
   } else {
-    cat(info_style("   └─ Mask: "), crayon::red("None"), "\n")
+    cat("  |- Mask: None\\n")
   }
-  
-  cat("\n")
+
+  cat("\\n")
 }
 
 #' @export
 #' @method print manova_design
 print.manova_design <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
+  # Print header
+  cat("\\n", "MANOVA Design", "\\n")
+  cat(rep("-", 20), "\\n\\n")
+
+  # Formula section
+  cat("Formula:\\n")
+  cat("  |- ", deparse(x$formula), "\\n\\n")
+
+  # Data section
+  cat("Variables:\\n")
+  var_names <- names(x$data)
+  cat("  |- Total Variables: ", length(var_names), "\\n")
+  cat("  |- Names: ", paste(var_names, collapse=", "), "\\n")
+
+  cat("\\n")
+}
+
+#' Merge Results for MANOVA Model
+#'
+#' This function takes the computed -log(p-values) from `train_model.manova_model` 
+#' for a single ROI/searchlight and formats it into the standard output tibble.
+#'
+#' @param obj The MANOVA model specification.
+#' @param result_set A tibble containing the results from the processor function for the current ROI/sphere. 
+#'   Expected to have a `$result` column containing the named vector of -log(p-values).
+#' @param indices Voxel indices for the current ROI/searchlight sphere.
+#' @param id Identifier for the current ROI/searchlight center.
+#' @param ... Additional arguments (ignored).
+#'
+#' @return A tibble row with the formatted performance metrics for the ROI/sphere.
+#' @importFrom tibble tibble
+#' @importFrom futile.logger flog.error flog.warn
+#' @method merge_results manova_model
+merge_results.manova_model <- function(obj, result_set, indices, id, ...) {
+  
+  # Check for errors from previous steps (processor/train_model)
+  if (any(result_set$error)) {
+    emessage <- result_set$error_message[which(result_set$error)[1]]
+    # Return standard error tibble structure
+    return(
+      tibble::tibble(
+        result       = list(NULL), 
+        indices      = list(indices),
+        performance  = list(NULL), 
+        id           = id,
+        error        = TRUE,
+        error_message= emessage
+      )
+    )
   }
   
-  # Define color scheme
-  header_style <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style <- crayon::white
-  formula_style <- crayon::italic$blue
-  var_style <- crayon::magenta
+  # Extract the -log(p-values) computed by train_model. 
+  if (!"result" %in% names(result_set) || length(result_set$result) == 0 || is.null(result_set$result[[1]])) {
+     error_msg <- sprintf("merge_results (manova): result_set missing or has NULL/empty 'result' field where -log(pvals) were expected for ROI/ID %s.", id)
+     futile.logger::flog.error(error_msg)
+     # Create NA performance matrix based on expected names if possible
+     expected_names <- tryCatch(names(train_model.manova_model(obj, matrix(rnorm(2*2),2,2), NULL, 1:2)), 
+                                error = function(e) character(0)) # Get expected names via dummy run
+     perf_mat <- matrix(NA_real_, nrow=1, ncol=length(expected_names), dimnames=list(NULL, expected_names))
+     if (ncol(perf_mat) == 0) perf_mat <- NULL # If we couldn't get names
+     
+     return(tibble::tibble(result=list(NULL), indices=list(indices), performance=list(perf_mat), 
+                           id=id, error=TRUE, error_message=error_msg))
+  }
   
-  # Print header
-  cat("\n", header_style("█▀▀ MANOVA Design ▀▀█"), "\n\n")
+  log_pvals <- result_set$result[[1]]
   
-  # Formula section
-  cat(section_style("├─ Formula"), "\n")
-  cat(info_style("│  └─ "), formula_style(deparse(x$formula)), "\n")
+  # Validate the extracted results
+  if (!is.numeric(log_pvals) || is.null(names(log_pvals))) {
+      error_msg <- sprintf("merge_results (manova): Extracted results are not a named numeric vector for ROI/ID %s.", id)
+      futile.logger::flog.error(error_msg)
+      perf_mat <- matrix(NA_real_, nrow=1, ncol=length(log_pvals), dimnames=list(NULL, names(log_pvals)))
+      if (ncol(perf_mat) == 0) perf_mat <- NULL
+      return(tibble::tibble(result=list(NULL), indices=list(indices), performance=list(perf_mat), 
+                            id=id, error=TRUE, error_message=error_msg))
+  }
   
-  # Data section
-  cat(section_style("└─ Variables"), "\n")
-  var_names <- names(x$data)
-  cat(info_style("   ├─ Total Variables: "), crayon::green(length(var_names)), "\n")
-  cat(info_style("   └─ Names: "), var_style(paste(var_names, collapse=", ")), "\n")
+  # Format the results into a 1-row matrix (performance matrix)
+  perf_mat <- matrix(log_pvals, nrow = 1, dimnames = list(NULL, names(log_pvals)))
   
-  cat("\n")
+  # Return the standard tibble structure
+  tibble::tibble(
+    result      = list(NULL), # MANOVA model typically doesn't have 'predictions' in the usual sense
+    indices     = list(indices),
+    performance = list(perf_mat),
+    id          = id,
+    error       = FALSE,
+    error_message = "~" 
+  )
 }
 
 

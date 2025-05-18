@@ -1,3 +1,10 @@
+library(testthat)
+library(rMVPA) # Load the package itself
+library(neuroim2) # Use neuroim2 based on DESCRIPTION file
+
+
+context("Comprehensive tests for RSA regional analysis and design/model functionality")
+
 test_that("mvpa_regional with 5 ROIS runs without error", {
   dset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
   
@@ -28,12 +35,6 @@ test_that("mvpa_regional with 5 ROIS and multiple distance matrices runs without
   
 })
 
-library(testthat)
-
-context("Comprehensive tests for RSA regional analysis and design/model functionality")
-
-
-
 ## --- rsa_design and rsa_model_mat ---
 test_that("rsa_design creates a valid RSA design object", {
   # Create a dummy distance matrix and a dummy block variable
@@ -53,7 +54,7 @@ test_that("rsa_model_mat returns vectors of correct length and sanitized names",
   Dmat <- dist(matrix(rnorm(10 * 10), 10, 10))
   data_list <- list(Dmat = Dmat)
   rdes <- rsa_design(~ Dmat, data_list)
-  mm <- rsa_model_mat(rdes)
+  mm <- rMVPA:::rsa_model_mat(rdes)
   
   expect_equal(length(mm[[1]]), 45)
   # Names should be sanitized (e.g., no spaces or colons)
@@ -63,20 +64,32 @@ test_that("rsa_model_mat returns vectors of correct length and sanitized names",
 ## --- Training and Print Methods ---
 test_that("train_model.rsa_model with 'lm' regtype returns coefficients with proper names", {
   set.seed(123)
-  # Create dummy training data (e.g., 100 observations with 20 features)
-  train_data <- matrix(rnorm(100 * 20), 100, 20)
+  n_obs <- 100
+  n_vox <- 100 # Make number of features/voxels match mask size
+  # Create dummy training data
+  train_mat <- matrix(rnorm(n_obs * n_vox), n_obs, n_vox) # obs x voxels
   # Create a block variable and a distance matrix for the design
-  block_var <- rep(1:5, each = 20)
-  Dmat <- dist(matrix(rnorm(100 * 100), 100, 100))
+  block_var <- rep(1:5, each = n_obs/5)
+  Dmat <- dist(matrix(rnorm(n_obs * n_obs), n_obs, n_obs)) # obs x obs dist
   data_list <- list(Dmat = Dmat, block = block_var)
   rdes <- rsa_design(~ Dmat, data_list, block_var = "block")
   
-  # Create a dummy mvpa_dataset (simulate train_data and a mask)
-  dset <- list(train_data = train_data, mask = 1:100)
-  class(dset) <- "mvpa_dataset"
+  # Create a dummy mvpa_dataset 
+  mask_vol <- NeuroVol(rep(1, n_vox), space=NeuroSpace(dim=c(10,10,1))) # 3D mask
   
+  # Create a 4D space for the NeuroVec, matching voxels (from 3D space) and timepoints
+  space_3d_dim <- dim(mask_vol@space) 
+  n_timepoints <- ncol(t(train_mat)) # Number of observations
+  train_space_4d <- NeuroSpace(dim=c(space_3d_dim, n_timepoints))
+  
+  # Convert matrix to NeuroVec. Data should be voxels x observations.
+  train_vec <- NeuroVec(t(train_mat), train_space_4d) # Pass voxels x obs matrix, with explicit 4D space
+  
+  dset <- mvpa_dataset(train_data=train_vec, mask=mask_vol) 
+
   mspec <- rsa_model(dset, rdes, regtype = "lm")
-  coeffs <- train_model.rsa_model(mspec, train_data, y = NULL, indices = NULL)
+  # Pass the original obs x voxels matrix to train_model.rsa_model, as it transposes internally
+  coeffs <- train_model.rsa_model(mspec, train_mat, y = NULL, indices = NULL)
   
   expect_true(is.numeric(coeffs))
   expect_true(!is.null(names(coeffs)))

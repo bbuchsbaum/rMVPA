@@ -11,7 +11,8 @@ merge_predictions(obj1, rest, ...)
 
 \item{rest}{Other objects containing predictions.}
 
-\item{...}{Additional arguments.}
+\item{...}{Additional arguments. Methods for this generic may implement specific arguments
+such as `weights` to control how predictions are combined.}
 }
 \value{
 A combined object with merged predictions.

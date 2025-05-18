@@ -1,6 +1,7 @@
 #' @export
-pairwise_dist.default <- function(X, dist_obj) {
-  stop("pairwise_dist not implemented for objects of class ", class(dist_obj)[1])
+#' @noRd
+pairwise_dist.default <- function(obj, X, ...) {
+  stop("pairwise_dist not implemented for objects of class ", class(X)[1])
 }
 
 
@@ -137,7 +138,8 @@ pcadist <- function(labels=NULL, ncomp=2, whiten=TRUE, threshfun=NULL,
 #' dist_matrix <- pairwise_dist(dist_obj, X)
 #'
 #' @export
-pairwise_dist.cordist <- function(obj, X) {
+#' @noRd 
+pairwise_dist.cordist <- function(obj, X,...) {
   1 - cor(t(X), method=obj$method)
 }
 
@@ -161,7 +163,8 @@ pairwise_dist.cordist <- function(obj, X) {
 #' dist_matrix <- pairwise_dist(dist_obj, X)
 #'
 #' @export
-pairwise_dist.euclidean <- function(obj, X) {
+#' @noRd
+pairwise_dist.euclidean <- function(obj, X,...) {
   as.matrix(dist(X, method="euclidean"))
 }
 
@@ -188,7 +191,8 @@ pairwise_dist.euclidean <- function(obj, X) {
 #' @export
 #' @importFrom corpcor invcov.shrink
 #' @importFrom stats mahalanobis
-pairwise_dist.mahalanobis <- function(obj, X) {
+#' @noRd
+pairwise_dist.mahalanobis <- function(obj, X,...) {
   inv_cov <- corpcor::invcov.shrink(X)
   n <- nrow(X)
   
@@ -224,7 +228,8 @@ pairwise_dist.mahalanobis <- function(obj, X) {
 #'
 #' @export
 #' @importFrom stats prcomp dist
-pairwise_dist.pcadist <- function(obj, X) {
+#' @noRd
+pairwise_dist.pcadist <- function(obj, X,...) {
   pres <- prcomp(X, center = TRUE, scale. = TRUE)
   ncomp <- obj$threshfun(pres$sdev^2)
   if (ncomp < 1) {
@@ -274,7 +279,8 @@ pairwise_dist.pcadist <- function(obj, X) {
 #' }
 #'
 #' @export
-pairwise_dist.robustmahadist <- function(obj, X) {
+#' @noRd
+pairwise_dist.robustmahadist <- function(obj, X,...) {
   robust_cov <- robustcov::covGK(X)
   inv_cov <- corpcor::invcov.shrink(robust_cov)
   

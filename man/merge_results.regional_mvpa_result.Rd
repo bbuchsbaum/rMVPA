@@ -2,7 +2,7 @@
 % Please edit documentation in R/regional.R
 \name{merge_results.regional_mvpa_result}
 \alias{merge_results.regional_mvpa_result}
-\title{Merge regional MVPA results}
+\title{Merge multiple regional MVPA results into a single result.}
 \usage{
 \method{merge_results}{regional_mvpa_result}(x, ...)
 }

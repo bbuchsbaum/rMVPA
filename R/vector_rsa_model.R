@@ -134,8 +134,17 @@ vector_rsa_model <- function(dataset, design,
 #' @export
 train_model.vector_rsa_model <- function(obj, train_dat, y, indices, ...) {
   # "Training" here is effectively computing RSA-based metrics
-  scores <- compute_trial_scores(obj, train_dat)
-  return(scores)
+  # train_dat is already a matrix of the ROI's data
+  scores <- compute_trial_scores(obj, train_dat) 
+
+  if (obj$nperm > 0 && !is.null(train_dat)) {
+    # Only package roi_train_data if permutations are requested and data is available
+    return(list(scores = scores, roi_train_data = as.matrix(train_dat)))
+  } else {
+    # For nperm = 0, or if train_dat were NULL, just return scores in the list
+    # This ensures a consistent return type (list)
+    return(list(scores = scores, roi_train_data = NULL))
+  }
 }
 
 
@@ -238,60 +247,43 @@ second_order_similarity <- function(distfun, X, Dref, block_var, method=c("pears
 #' @param ... Additional arguments (ignored).
 #' @export
 print.vector_rsa_model <- function(x, ...) {
-  # Ensure that crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
-  
-  # Define styles using crayon
-  header_style  <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style    <- crayon::white
-  number_style  <- crayon::green
-  method_style  <- crayon::bold$blue
-  label_style   <- crayon::magenta
-  italic_style  <- crayon::italic$blue
-  
-  # Create a border line for header/footer
-  border <- header_style(strrep("=", 50))
-  
   # Header
-  cat(border, "\n")
-  cat(header_style("          Vectorized RSA Model          \n"))
-  cat(border, "\n\n")
-  
+  cat(rep("=", 50), "\\n")
+  cat("          Vectorized RSA Model          \\n")
+  cat(rep("=", 50), "\\n\\n")
+
   # Dataset information
   if (!is.null(x$dataset)) {
     dims <- dim(x$dataset$train_data)
     dims_str <- if (!is.null(dims)) paste(dims, collapse = " x ") else "Unknown"
-    cat(section_style("Dataset:\n"))
-    cat(info_style("  ├─ Data Dimensions: "), number_style(dims_str), "\n")
+    cat("Dataset:\\n")
+    cat("  |- Data Dimensions: ", dims_str, "\\n")
     if (!is.null(x$dataset$mask)) {
-      cat(info_style("  └─ Mask Length:     "), number_style(length(x$dataset$mask)), "\n")
+      cat("  |- Mask Length:     ", length(x$dataset$mask), "\\n")
     } else {
-      cat(info_style("  └─ Mask:            "), crayon::red("None"), "\n")
+      cat("  |- Mask:            None\\n")
     }
-    cat("\n")
+    cat("\\n")
   }
-  
+
   # Design information
   if (!is.null(x$design)) {
     n_labels <- length(x$design$labels)
     n_blocks <- length(unique(x$design$block))
     Ddim <- dim(x$design$model_mat$Dexpanded)
-    cat(section_style("Design:\n"))
-    cat(info_style("  ├─ Number of Labels:    "), number_style(n_labels), "\n")
-    cat(info_style("  ├─ Number of Blocks:    "), number_style(n_blocks), "\n")
-    cat(info_style("  └─ Dissimilarity Matrix:"), number_style(paste0(Ddim[1], " x ", Ddim[2])), "\n\n")
+    cat("Design:\\n")
+    cat("  |- Number of Labels:    ", n_labels, "\\n")
+    cat("  |- Number of Blocks:    ", n_blocks, "\\n")
+    cat("  |- Dissimilarity Matrix:", paste0(Ddim[1], " x ", Ddim[2]), "\\n\\n")
   }
-  
+
   # Model Specification
-  cat(section_style("Model Specification:\n"))
-  cat(info_style("  ├─ Distance Function:   "), method_style(deparse(substitute(x$distfun))), "\n")
-  cat(info_style("  └─ RSA Similarity Func: "), method_style(x$rsa_simfun), "\n\n")
-  
+  cat("Model Specification:\\n")
+  cat("  |- Distance Function:   ", deparse(substitute(x$distfun)), "\\n")
+  cat("  |- RSA Similarity Func: ", x$rsa_simfun, "\\n\\n")
+
   # Footer
-  cat(border, "\n")
+  cat(rep("=", 50), "\\n")
 }
 
 #' Print Method for vector_rsa_design
@@ -300,63 +292,50 @@ print.vector_rsa_model <- function(x, ...) {
 #' @param ... Additional arguments (ignored).
 #' @export
 print.vector_rsa_design <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
-  
-  # Define crayon styles
-  header_style  <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style    <- crayon::white
-  number_style  <- crayon::green
-  label_style   <- crayon::magenta
-  italic_style  <- crayon::italic$blue
-  
   # Create a border line
-  border <- header_style(strrep("=", 50))
-  
+  border <- paste(rep("=", 50), collapse="")
+
   # Header
-  cat(border, "\n")
-  cat(header_style("         Vectorized RSA Design          \n"))
-  cat(border, "\n\n")
-  
+  cat(border, "\\n")
+  cat("         Vectorized RSA Design          \\n")
+  cat(border, "\\n\\n")
+
   # Distance Matrix Information
   if (!is.null(x$D)) {
     Ddim <- dim(x$D)
-    cat(section_style("Distance Matrix:\n"))
-    cat(info_style("  ├─ Original Dimensions: "), number_style(paste0(Ddim[1], " x ", Ddim[2])), "\n")
+    cat("Distance Matrix:\\n")
+    cat("  |- Original Dimensions: ", paste0(Ddim[1], " x ", Ddim[2]), "\\n")
   }
-  
+
   # Labels Information
   if (!is.null(x$labels)) {
     n_labels <- length(x$labels)
-    cat(section_style("Labels:\n"))
-    cat(info_style("  ├─ Total Labels: "), number_style(n_labels), "\n")
+    cat("Labels:\\n")
+    cat("  |- Total Labels: ", n_labels, "\\n")
     # Display the first few labels as a sample
     sample_labels <- paste(head(x$labels, 5), collapse = ", ")
     if(n_labels > 5) sample_labels <- paste0(sample_labels, ", ...")
-    cat(info_style("  └─ Sample:         "), label_style(sample_labels), "\n")
+    cat("  |- Sample:         ", sample_labels, "\\n")
   }
-  
+
   # Block Information
   if (!is.null(x$block)) {
     unique_blocks <- sort(unique(x$block))
     n_blocks <- length(unique_blocks)
-    cat(section_style("Blocks:\n"))
-    cat(info_style("  ├─ Number of Blocks: "), number_style(n_blocks), "\n")
-    cat(info_style("  └─ Block Labels:     "), label_style(paste(unique_blocks, collapse = ", ")), "\n")
+    cat("Blocks:\\n")
+    cat("  |- Number of Blocks: ", n_blocks, "\\n")
+    cat("  |- Block Labels:     ", paste(unique_blocks, collapse = ", "), "\\n")
   }
-  
+
   # Expanded D Matrix Information
   if (!is.null(x$model_mat) && !is.null(x$model_mat$Dexpanded)) {
     Dexp_dim <- dim(x$model_mat$Dexpanded)
-    cat(section_style("Expanded D Matrix:\n"))
-    cat(info_style("  └─ Dimensions:       "), number_style(paste0(Dexp_dim[1], " x ", Dexp_dim[2])), "\n")
+    cat("Expanded D Matrix:\\n")
+    cat("  |- Dimensions:       ", paste0(Dexp_dim[1], " x ", Dexp_dim[2]), "\\n")
   }
-  
+
   # Footer
-  cat("\n", border, "\n")
+  cat("\\n", border, "\\n")
 }
 
 #' Evaluate model performance for vector RSA
@@ -366,6 +345,7 @@ print.vector_rsa_design <- function(x, ...) {
 #' @param object The vector RSA model specification.
 #' @param predicted Ignored (vector RSA doesn't predict in the typical sense).
 #' @param observed The computed second-order similarity scores (vector from train_model).
+#' @param roi_data_for_perm New parameter
 #' @param nperm Number of permutations from the model spec.
 #' @param save_distributions Logical, whether to save full permutation distributions.
 #' @param ... Additional arguments.
@@ -377,6 +357,7 @@ print.vector_rsa_design <- function(x, ...) {
 evaluate_model.vector_rsa_model <- function(object,
                                              predicted, # Ignored
                                              observed,  # These are the scores from train_model
+                                             roi_data_for_perm = NULL, # New parameter
                                              nperm = 0,
                                              save_distributions = FALSE,
                                              ...) 
@@ -386,15 +367,29 @@ evaluate_model.vector_rsa_model <- function(object,
 
   perm_results <- NULL
   if (nperm > 0) {
-    # Retrieve original training data X
-    X_orig <- object$dataset$train_data
+    if (is.null(roi_data_for_perm) || !is.matrix(roi_data_for_perm)) {
+      stop("evaluate_model.vector_rsa_model: roi_data_for_perm is NULL or not a matrix, but nperm > 0. Permutations cannot run without ROI data.")
+    }
+    
+    X_roi_matrix <- roi_data_for_perm # This is now the ROI's data matrix
+
     perm_means <- numeric(nperm)
-    # Perform permutations
+    # Permutation loop
     for (p in seq_len(nperm)) {
-      # Permute the rows of X (shuffles condition assignments)
-      X_perm <- X_orig[sample(nrow(X_orig)), , drop = FALSE]
+      if (nrow(X_roi_matrix) < 2) { # Safety for very small ROIs
+         # This case should ideally lead to NA/NaN for the perm_mean if it makes sense statistically
+         # or be caught earlier if an ROI is too small for any meaningful analysis.
+         # For now, setting to NaN to indicate impossibility.
+         perm_means[p] <- NaN 
+         next
+      }
+      # Permute the rows of the ROI's data matrix
+      perm_indices <- sample(nrow(X_roi_matrix))
+      X_perm_matrix <- X_roi_matrix[perm_indices, , drop = FALSE]
+      
       # Recompute trial scores under the null
-      scores_perm <- compute_trial_scores(object, X_perm)
+      scores_perm <- compute_trial_scores(object, X_perm_matrix) # 'object' has design, Dref, block_var
+      
       # Store the mean RSA score for this permutation
       perm_means[p] <- mean(scores_perm, na.rm = TRUE)
     }
@@ -427,6 +422,7 @@ evaluate_model.vector_rsa_model <- function(object,
     permutation_results = perm_results
   )
 }
+
 #' Merge results for vector RSA model
 #'
 #' Aggregates results (scores) and calls evaluate_model.
@@ -443,7 +439,7 @@ evaluate_model.vector_rsa_model <- function(object,
 #' @return A tibble row with the final performance metrics for the ROI/sphere.
 #' @importFrom tibble tibble
 #' @importFrom futile.logger flog.error flog.warn
-#' @export
+#' @method merge_results vector_rsa_model
 merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
   
   # Check for errors from previous steps (processor/train_model)
@@ -462,13 +458,15 @@ merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
     )
   }
   
-  # Extract the scores computed by train_model. 
-  if (!"result" %in% names(result_set) || length(result_set$result) == 0 || is.null(result_set$result[[1]])) {
-     error_msg <- "merge_results (vector_rsa): result_set missing or has NULL/empty 'result' field where scores were expected."
+  # Extract the list returned by train_model. 
+  train_model_output <- result_set$result[[1]]
+  
+  if (is.null(train_model_output) || !is.list(train_model_output) || !"scores" %in% names(train_model_output)) {
+     error_msg <- sprintf("merge_results (vector_rsa): train_model output structure invalid for ROI/ID %s. Expected list with 'scores'.", id)
      futile.logger::flog.error("ROI/Sphere ID %s: %s", id, error_msg)
      # Create NA performance matrix
-     perf_names <- "rsa_score"
-     if (obj$nperm > 0) {
+     perf_names <- "rsa_score" # Base metric
+     if (!is.null(obj$nperm) && obj$nperm > 0) { # Check obj$nperm directly
          perf_names <- c(perf_names, "p_rsa_score", "z_rsa_score")
      }
      perf_mat <- matrix(NA_real_, nrow=1, ncol=length(perf_names), 
@@ -477,7 +475,8 @@ merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
                            id=id, error=TRUE, error_message=error_msg))
   }
   
-  scores <- result_set$result[[1]]
+  scores <- train_model_output$scores
+  roi_train_data_for_perm <- train_model_output$roi_train_data # This will be NULL if nperm=0 or data was NULL
   
   # Validate the extracted scores
   if (!is.numeric(scores)) {
@@ -485,7 +484,7 @@ merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
       futile.logger::flog.error(error_msg)
       # Create NA performance matrix
       perf_names <- "rsa_score"
-      if (obj$nperm > 0) {
+      if (!is.null(obj$nperm) && obj$nperm > 0) {
           perf_names <- c(perf_names, "p_rsa_score", "z_rsa_score")
       }
       perf_mat <- matrix(NA_real_, nrow=1, ncol=length(perf_names), 
@@ -496,10 +495,11 @@ merge_results.vector_rsa_model <- function(obj, result_set, indices, id, ...) {
   
   # Call evaluate_model to compute summary performance and permutations
   perf <- evaluate_model.vector_rsa_model(
-    object    = obj,           
-    predicted = NULL,          
-    observed  = scores,        
-    nperm     = obj$nperm,     
+    object            = obj,           
+    predicted         = NULL, # Not used by vector_rsa's evaluate          
+    observed          = scores,  
+    roi_data_for_perm = roi_train_data_for_perm, # Pass the ROI's data
+    nperm             = obj$nperm,     
     save_distributions = obj$save_distributions
   )
   

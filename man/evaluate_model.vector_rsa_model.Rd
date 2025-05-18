@@ -8,6 +8,7 @@ evaluate_model.vector_rsa_model(
   object,
   predicted,
   observed,
+  roi_data_for_perm = NULL,
   nperm = 0,
   save_distributions = FALSE,
   ...
@@ -19,6 +20,8 @@ evaluate_model.vector_rsa_model(
 \item{predicted}{Ignored (vector RSA doesn't predict in the typical sense).}
 
 \item{observed}{The computed second-order similarity scores (vector from train_model).}
+
+\item{roi_data_for_perm}{New parameter}
 
 \item{nperm}{Number of permutations from the model spec.}
 

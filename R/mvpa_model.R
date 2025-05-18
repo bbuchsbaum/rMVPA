@@ -74,6 +74,7 @@ merge_results.mvpa_model <- function(obj, result_set, indices, id, ...) {
 
 
 #' @noRd
+#' @importFrom stats predict
 format_result.mvpa_model <- function(obj, result, error_message=NULL, context, ...) {
   if (!is.null(error_message)) {
     return(tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(context$ytest),
@@ -184,7 +185,6 @@ y_test.mvpa_model <- function(obj) y_test(obj$design)
 #' @param tune_reps The number of replications used during parameter tuning. Only relevant if `tune_grid` is supplied.
 #' @param ... Additional arguments to be passed to the model, including `has_test_set` flag.
 #' @noRd
-#' @export
 create_model_spec <- function(name, dataset, design, return_predictions=FALSE, 
                               compute_performance=FALSE, tune_reps=FALSE, ...) {
   # Automatically detect test set presence from dataset and design if not passed as parameter
@@ -233,7 +233,9 @@ create_model_spec <- function(name, dataset, design, return_predictions=FALSE,
 #' @examples
 #'
 #' mod <- load_model("sda")
-#' traindat <- neuroim2::NeuroVec(array(rnorm(6*6*6*100), c(6,6,6,100)), neuroim2::NeuroSpace(c(6,6,6,100)))
+#' arr_data <- array(rnorm(6*6*6*100), c(6,6,6,100))
+#' sp <- neuroim2::NeuroSpace(c(6,6,6,100))
+#' traindat <- neuroim2::NeuroVec(arr_data, sp)
 #' mask <- neuroim2::LogicalNeuroVol(array(rnorm(6*6*6)>-.2, c(6,6,6)), neuroim2::NeuroSpace(c(6,6,6)))
 #'
 #' mvdset <- mvpa_dataset(traindat,mask=mask)
@@ -370,6 +372,13 @@ strip_dataset.default <- function(obj, ...) {
   } else {
     futile.logger::flog.debug("Dataset already NULL or missing in model specification.")
   }
+  obj
+}
+
+#' @noRd
+#' @export
+strip_dataset.mvpa_model <- function(obj, ...) {
+  obj$dataset <- NULL
   obj
 }
   

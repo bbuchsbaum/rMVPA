@@ -1,5 +1,3 @@
-
-
 #' @noRd
 #' @keywords internal
 check_len <- function(y, block_var) {
@@ -50,9 +48,13 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
     stop("`k` must be a single integer.", call. = FALSE)
   }
   
+  if (k < 2) {
+    stop("`k` must be at least 2 for cross-validation.", call. = FALSE)
+  }
   
   n <- nrow(data)
   folds <- sample(rep(1:k, length.out = n))
+  check_len(y, folds) # Ensure y and the generated folds are compatible in length
   
   idx <- seq_len(n)
   fold_idx <- split(idx, folds)
@@ -106,6 +108,10 @@ crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps
     block_ind <- seq(1, length(sort(unique(block_var))))
   }
 
+  if (length(block_ind) < 2) {
+    stop("`block_ind` must contain at least two unique blocks for twofold cross-validation.", call. = FALSE)
+  }
+  
   nhalf <- floor(length(block_ind)/2)
   assert_that(nhalf > 0)
   
@@ -113,8 +119,7 @@ crossv_twofold <- function(data, y, block_var, block_ind=NULL, id = ".id", nreps
   nreps <- min(nreps, ncol(fold_sets))
   
  
-  cols <- as.integer(seq(1, ncol(fold_sets), length.out=nreps))
-  #sample(1:ncol(fold_sets), nreps)
+  cols <- sample(seq_len(ncol(fold_sets)), nreps)
  
   fold_idx <- lapply(1:nreps, function(i) {
     bind <- fold_sets[, cols[i]]
@@ -300,8 +305,8 @@ crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NU
   }
   
   foldseq <- replicate(nreps, {
-    unlist(lapply(block_idx, function(id) {
-      as.integer(as.character(cut(id, nfolds, labels=sample(1:nfolds))))
+    unlist(lapply(block_idx, function(id_vec) {
+      as.integer(as.character(cut(id_vec, nfolds, labels=sample(1:nfolds))))
     }))
     
   }, simplify=FALSE)
@@ -429,6 +434,9 @@ blocked_cross_validation <- function(block_var) {
 #' @export
 sequential_blocked_cross_validation <- function(block_var, nfolds=2, nreps=4) {
   block_var <- as.integer(as.character(block_var))
+  if (nfolds < 2) {
+    stop("`nfolds` must be at least 2 for sequential blocked cross-validation.", call. = FALSE)
+  }
   ret <- list(block_var=block_var, nfolds=nfolds, nreps=nreps, block_ind=sort(unique(block_var)))
   class(ret) <- c("sequential_blocked_cross_validation", "cross_validation", "list")
   ret
@@ -515,10 +523,15 @@ twofold_blocked_cross_validation <- function(block_var, nreps=10) {
 #' @return An object of class "kfold_cross_validation", "cross_validation", and "list" containing the block_var and nfolds.
 #' @examples
 #' cval <- kfold_cross_validation(len=100, nfolds=10)
-#' samples <- crossval_samples(cval, data=as.data.frame(matrix(rnorm(100*10), 100, 10)), y=rep(letters[1:5],20))
+#' sample_data <- as.data.frame(matrix(rnorm(100*10), 100, 10))
+#' sample_y <- rep(letters[1:5], 20)
+#' samples <- crossval_samples(cval, data = sample_data, y = sample_y)
 #' stopifnot(nrow(samples) == 10)
 #' @export
 kfold_cross_validation <- function(len, nfolds=10) {
+  if (nfolds < 2) {
+    stop("`nfolds` must be at least 2 for k-fold cross-validation.", call. = FALSE)
+  }
   block_var <- sample(rep(seq(1, nfolds), length.out=len))
   ret <- list(block_var=block_var, nfolds=nfolds)
   class(ret) <- c("kfold_cross_validation", "cross_validation", "list")
@@ -738,3 +751,140 @@ print.kfold_cross_validation <- function(x, ...) {
       number_style(paste0("Fold ", names(fold_sizes), ": ", fold_sizes, collapse=", ")), 
       "\n\n")
 }
+
+#' @export
+get_nfolds.blocked_cross_validation <- function(obj, ...) {
+  obj$nfolds
+}
+
+#' @export
+train_indices.blocked_cross_validation <- function(obj, fold_num, ...) {
+  if (fold_num < 1 || fold_num > obj$nfolds) {
+    stop(paste0("Invalid fold_num: ", fold_num, ". Must be between 1 and ", obj$nfolds), call. = FALSE)
+  }
+  test_block_value <- obj$block_ind[fold_num]
+  which(obj$block_var != test_block_value)
+}
+
+#' @export
+get_nfolds.kfold_cross_validation <- function(obj, ...) {
+  obj$nfolds
+}
+
+#' @export
+train_indices.kfold_cross_validation <- function(obj, fold_num, ...) {
+  if (fold_num < 1 || fold_num > obj$nfolds) {
+    stop(paste0("Invalid fold_num: ", fold_num, ". Must be between 1 and ", obj$nfolds), call. = FALSE)
+  }
+  # For kfold_cross_validation, block_var directly contains fold assignments (1 to k)
+  which(obj$block_var != fold_num)
+}
+
+#' @export
+get_nfolds.twofold_blocked_cross_validation <- function(obj, ...) {
+  # The number of "folds" here means the number of unique ways to split the blocks in half.
+  # This is determined by nreps, which samples from combn(block_ind, nhalf).
+  # For compute_cv_means, we consider each repetition as a distinct fold setup.
+  obj$nreps 
+}
+
+#' @export
+train_indices.twofold_blocked_cross_validation <- function(obj, fold_num, ...) {
+  if (fold_num < 1 || fold_num > obj$nreps) {
+    stop(paste0("Invalid fold_num: ", fold_num, ". Must be between 1 and ", obj$nreps, " (nreps)"), call. = FALSE)
+  }
+  
+  # Reconstruct the specific fold split logic from crossv_twofold
+  # This is complex because crossv_twofold samples combinations.
+  # For compute_cv_means, we need a deterministic way if we iterate through folds.
+  # The current structure of twofold_blocked_cross_validation does not directly store the chosen combinations.
+  # This suggests a potential mismatch or a need for cv_spec to store the actual fold definitions if used by compute_cv_means.
+  # 
+  # *** Interim solution for train_indices.twofold_blocked_cross_validation ***
+  # Option 1: Error out, stating it's not directly supported by compute_cv_means due to sampling.
+  # Option 2: Re-run the sampling logic with a fixed seed based on fold_num? (complex, not ideal for S3 method)
+  # Option 3: The object stores the actual `fold_idx` from a call to `crossval_samples`? (No, spec is created first)
+  #
+  # Given compute_cv_means iterates 1:n_folds, and n_folds is nreps, 
+  # we must assume each "rep" defines a specific train/test split of blocks.
+  # However, the object doesn't store which blocks are in the test set for rep `i`.
+  #
+  # For now, to allow tests to pass if they mock this, but to highlight the issue for real use:
+  # Let's assume that `crossval_samples.twofold_blocked_cross_validation` would have been called
+  # and the resulting `test_ind` for that specific `fold_num` (rep) is what defines the test set.
+  # This method *cannot* know that without `crossval_samples` being run first and its output stored.
+  # 
+  # This indicates compute_cv_means may not be able to directly use twofold_blocked_cross_validation
+  # in its current generic iteration form unless the object is augmented or the iteration logic changes.
+  #
+  # Let's make it error for now, as providing a meaningful train_indices is not possible
+  # from the object's current state for a specific `fold_num` rep.
+  stop(paste0("`train_indices.twofold_blocked_cross_validation` cannot deterministically provide training indices for a specific repetition (fold_num) ",
+              "based on the current object structure. `compute_crossvalidated_means_sl` might not be directly compatible with this CV type ",
+              "without prior generation and storage of explicit fold assignments."), call. = FALSE)
+}
+
+#' @export
+get_nfolds.bootstrap_blocked_cross_validation <- function(obj, ...) {
+  # Each block held out, and nreps bootstraps for each held-out block
+  length(unique(obj$block_var)) * obj$nreps
+}
+
+#' @export
+train_indices.bootstrap_blocked_cross_validation <- function(obj, fold_num, ...) {
+  stop("`train_indices.bootstrap_blocked_cross_validation` is not implemented. `compute_crossvalidated_means_sl` is not suitable for bootstrap resampling due to its assumption of partitioning. Use a different CV scheme or a specialized estimator for bootstrap.", call. = FALSE)
+}
+
+#' @export
+get_nfolds.sequential_blocked_cross_validation <- function(obj, ...) {
+  # This CV scheme defines sub-folds within primary blocks.
+  # get_nfolds refers to these sub-folds. The nreps is for different random assignments to these sub-folds.
+  # compute_cv_means needs a single deterministic set of folds. We use obj$nfolds.
+  obj$nfolds * obj$nreps # This assumes each rep * fold combo is a distinct fold for compute_cv_means.
+                        # This is consistent with how crossv_seq_block generates fold_idx.
+}
+
+#' @export
+train_indices.sequential_blocked_cross_validation <- function(obj, fold_num, ...) {
+  # `fold_num` here iterates from 1 to (obj$nfolds * obj$nreps)
+  # We need to map this back to a specific repetition and sub-fold j within that rep.
+  total_sub_folds_per_rep <- obj$nfolds
+  rep_num <- ((fold_num - 1) %/% total_sub_folds_per_rep) + 1
+  sub_fold_num_in_rep <- ((fold_num - 1) %% total_sub_folds_per_rep) + 1
+
+  if (rep_num > obj$nreps || sub_fold_num_in_rep > obj$nfolds) {
+    stop(paste0("Invalid fold_num: ", fold_num, ". Derived rep_num=", rep_num, ", sub_fold_num=", sub_fold_num_in_rep, 
+                 " is out of bounds for nreps=", obj$nreps, ", nfolds=", obj$nfolds, "."), call. = FALSE)
+  }
+
+  # Reconstruct the fold sequence for the *specific repetition* `rep_num`.
+  # This is tricky because crossv_seq_block uses `sample(1:nfolds)` internally per block per rep.
+  # To make this deterministic for a given `fold_num` passed to train_indices,
+  # we would need to fix the seed OR the object would need to store the fold assignments.
+  #
+  # For now, let's assume the intent of compute_cv_means with this scheme is that for each of the total_sub_folds_per_rep * nreps
+  # iterations, there's a defined test set. The `crossv_seq_block` logic does this by generating
+  # `fold_idx <- unlist(lapply(1:nreps, function(i) { lapply(1:nfolds, function(j) which(foldseq[[i]] == j)) }), recursive=FALSE)`
+  # The `fold_num` in train_indices would correspond to an element in this unlisted `fold_idx`.
+  # This means we can't easily get *training* indices without knowing the *test* indices for that `fold_num`.
+  #
+  # This is another case where direct compatibility with compute_cv_means' iteration is problematic
+  # without the cv_spec object storing the pre-computed fold assignments.
+  stop(paste0("`train_indices.sequential_blocked_cross_validation` cannot deterministically provide training indices for a specific combined repetition and sub-fold (fold_num) ",
+              "based on the current object structure. `compute_crossvalidated_means_sl` might not be directly compatible with this CV type ",
+              "without prior generation and storage of explicit fold assignments."), call. = FALSE)
+}
+
+#' @export
+get_nfolds.custom_cross_validation <- function(obj, ...) {
+  length(obj$sample_set)
+}
+
+#' @export
+train_indices.custom_cross_validation <- function(obj, fold_num, ...) {
+  if (fold_num < 1 || fold_num > length(obj$sample_set)) {
+    stop(paste0("Invalid fold_num: ", fold_num, ". Must be between 1 and ", length(obj$sample_set)), call. = FALSE)
+  }
+  obj$sample_set[[fold_num]]$train
+}
+

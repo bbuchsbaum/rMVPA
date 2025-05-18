@@ -14,22 +14,22 @@
 #'     size of the smallest class (sampling without replacement).
 #'   - `"oversample"`: Up-samples minority classes to match the size of the
 #'     largest class (sampling with replacement).
-#' @param balance_test_set Logical. If `TRUE` (default), balance the test
-#'   sets in each fold as well using the specified `method`. **Note:**
-#'   Oversampling the test set is generally not recommended as it can
-#'   lead to misleading performance estimates. A warning will be issued if
-#'   `balance_test_set=TRUE` and `method="oversample"`.
-#' @param seed An optional integer seed for the random number generator for
-#'   reproducible sampling. If `NULL` (default), the result varies.
-#' @param ... Additional arguments (currently unused).
+#' @param ... Additional arguments passed to internal balancing functions:
+#'   \describe{
+#'     \item{balance_test_set}{Logical. If `TRUE` (default), balance the test
+#'       sets in each fold as well using the specified `method`. **Note:**
+#'       Oversampling the test set is generally not recommended as it can
+#'       lead to misleading performance estimates. A warning will be issued if
+#'       `balance_test_set=TRUE` and `method="oversample"`.}
+#'     \item{seed}{An optional integer seed for the random number generator for
+#'       reproducible sampling. If `NULL` (default), the result varies.}
+#'   }
 #'
 #' @return A `custom_cross_validation` object where the sample indices in
 #'   `.train_indices` (and optionally `.test_indices`) for each fold have
 #'   been resampled to ensure balanced representation of target classes.
 #'
 #' @details
-#' This function implements two balancing strategies, inspired by
-#' CosmoMVPA's `cosmo_balance_partitions` (which uses sub-sampling).
 #'
 #' **Sub-sampling (`method="subsample"`)**:
 #' 1. Identifies the target class with the minimum number of samples

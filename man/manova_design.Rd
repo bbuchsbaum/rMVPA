@@ -25,6 +25,10 @@ This object can be further used for MANOVA analysis or other related multivariat
 \examples{
 # Create a MANOVA design
 formula <- y ~ x1 + x2
-data_list <- list(y = dissimilarity_matrix_y, x1 = dissimilarity_matrix_x1, x2 = dissimilarity_matrix_x2)
+data_list <- list(
+  y = dissimilarity_matrix_y,
+  x1 = dissimilarity_matrix_x1,
+  x2 = dissimilarity_matrix_x2
+)
 manova_design_obj <- manova_design(formula, data_list)
 }

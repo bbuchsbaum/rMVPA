@@ -58,7 +58,9 @@ See example below.
 \examples{
 
 mod <- load_model("sda")
-traindat <- neuroim2::NeuroVec(array(rnorm(6*6*6*100), c(6,6,6,100)), neuroim2::NeuroSpace(c(6,6,6,100)))
+arr_data <- array(rnorm(6*6*6*100), c(6,6,6,100))
+sp <- neuroim2::NeuroSpace(c(6,6,6,100))
+traindat <- neuroim2::NeuroVec(arr_data, sp)
 mask <- neuroim2::LogicalNeuroVol(array(rnorm(6*6*6)>-.2, c(6,6,6)), neuroim2::NeuroSpace(c(6,6,6)))
 
 mvdset <- mvpa_dataset(traindat,mask=mask)

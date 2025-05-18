@@ -10,7 +10,8 @@ vector_rsa_model(
   distfun = cordist(),
   rsa_simfun = c("pearson", "spearman"),
   nperm = 0,
-  save_distributions = FALSE
+  save_distributions = FALSE,
+  return_predictions = FALSE
 )
 }
 \arguments{
@@ -26,6 +27,8 @@ one of \code{"pearson"} or \code{"spearman"}.}
 \item{nperm}{Integer, number of permutations for statistical testing (default: 0).}
 
 \item{save_distributions}{Logical, whether to save full permutation distributions (default: FALSE).}
+
+\item{return_predictions}{Logical, whether to return per-observation similarity scores (default: FALSE).}
 }
 \value{
 A \code{vector_rsa_model} object (S3 class) containing references to the dataset, design, and function parameters.
@@ -34,5 +37,7 @@ A \code{vector_rsa_model} object (S3 class) containing references to the dataset
 This function integrates a vector_rsa_design and an mvpa_dataset to create a vectorized RSA model.
 }
 \details{
-The model references the already-precomputed cross-block data from the design.
+The model references the already-precomputed cross-block data from the design. 
+If `return_predictions` is TRUE, the output of `run_regional` or `run_searchlight` 
+will include a `prediction_table` tibble containing the observation-level RSA scores.
 }

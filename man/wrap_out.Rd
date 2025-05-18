@@ -7,17 +7,19 @@
 wrap_out(perf_mat, dataset, ids = NULL)
 }
 \arguments{
-\item{perf_mat}{A performance matrix containing classifier results.}
+\item{perf_mat}{A performance matrix (voxels/vertices x metrics) containing classifier results.}
 
-\item{dataset}{A dataset object containing the dataset information.}
+\item{dataset}{A dataset object containing the dataset information (including mask and type).}
 
-\item{ids}{An optional vector of voxel IDs.}
+\item{ids}{An integer vector of voxel/vertex indices corresponding to the rows of `perf_mat`.
+These are typically global indices into the mask space for volumetric data, or vertex numbers for surface data.}
 }
 \value{
-A named list of SparseNeuroVec objects representing the wrapped output results.
+A `searchlight_result` object (a list).
 }
 \description{
 This function wraps the output results of the performance matrix into a list
-of SparseNeuroVec objects for each column in the performance matrix.
+of spatial objects (NeuroVol or NeuroSurface) for each column 
+in the performance matrix, and structures it as a searchlight_result.
 }
 \keyword{internal}

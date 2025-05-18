@@ -1,24 +1,127 @@
 #' Wrap output results
 #'
 #' This function wraps the output results of the performance matrix into a list
-#' of SparseNeuroVec objects for each column in the performance matrix.
+#' of spatial objects (NeuroVol or NeuroSurface) for each column 
+#' in the performance matrix, and structures it as a searchlight_result.
 #'
 #' @keywords internal
-#' @param perf_mat A performance matrix containing classifier results.
-#' @param dataset A dataset object containing the dataset information.
-#' @param ids An optional vector of voxel IDs.
-#' @return A named list of SparseNeuroVec objects representing the wrapped output results.
+#' @param perf_mat A performance matrix (voxels/vertices x metrics) containing classifier results.
+#' @param dataset A dataset object containing the dataset information (including mask and type).
+#' @param ids An integer vector of voxel/vertex indices corresponding to the rows of `perf_mat`.
+#'   These are typically global indices into the mask space for volumetric data, or vertex numbers for surface data.
+#' @return A `searchlight_result` object (a list).
 wrap_out <- function(perf_mat, dataset, ids=NULL) {
-  out <- lapply(1:ncol(perf_mat), function(i) create_searchlight_performance(dataset, perf_mat[,i], ids))
-  names(out) <- colnames(perf_mat)
+
+  # Removed the strict stop condition for null ids if perf_mat has rows, 
+  # as combine_randomized might pass null ids for a dense matrix.
   
-  # Add class and metadata
+  # Check for dimension mismatch only if ids are provided
+  if (!is.null(ids) && !is.null(perf_mat) && nrow(perf_mat) > 0 && (nrow(perf_mat) != length(ids))) {
+    stop("Number of rows in `perf_mat` must match the length of `ids` when ids are provided.")
+  }
+  if (is.null(perf_mat) || ncol(perf_mat) == 0) {
+      # If perf_mat is NULL or has no columns, return an empty structure but with metadata
+      n_voxels_in_mask_empty <- 0
+      if (!is.null(dataset$mask)) {
+        if (inherits(dataset$mask, "NeuroVol") || inherits(dataset$mask, "NeuroVec")) n_voxels_in_mask_empty <- prod(dim(dataset$mask))
+        else if (inherits(dataset$mask, "NeuroSurface")) n_voxels_in_mask_empty <- neurosurf::nvertices(dataset$mask)
+        else if (is.numeric(dataset$mask) || is.logical(dataset$mask)) n_voxels_in_mask_empty <- length(dataset$mask)
+      }
+      return(structure(
+          list(results = list(), 
+               n_voxels = n_voxels_in_mask_empty, 
+               active_voxels = 0, 
+               metrics = character(0)),
+          class = c("searchlight_result", "list")
+      ))
+  }
+
+  output_maps <- list()
+  metric_names <- colnames(perf_mat)
+  
+  if (is.null(metric_names)) {
+    metric_names <- paste0("Metric", 1:ncol(perf_mat))
+  }
+  
+  for (i in 1:ncol(perf_mat)) {
+    metric_vector <- perf_mat[, i]
+    current_metric_name <- metric_names[i]
+
+    if (inherits(dataset, "mvpa_surface_dataset")) {
+      if (!requireNamespace("neurosurf", quietly = TRUE)) {
+        stop("Package 'neurosurf' is required to handle surface datasets.")
+      }
+      current_ids <- ids
+      if (is.null(current_ids)) {
+        # For surface, if ids is NULL, assume all vertices of the mask geometry
+        if (inherits(dataset$mask, "NeuroSurface")) {
+             current_ids <- seq_len(neurosurf::nodes(dataset$mask))
+        } else if (inherits(dataset$mask, "SurfaceGeometry")) {
+             current_ids <- seq_len(neurosurf::nodes(dataset$mask))
+        } else if (is.numeric(dataset$mask)) {
+            current_ids <- which(dataset$mask != 0)
+        } else {
+            stop("Cannot determine vertex indices for surface data when 'ids' is NULL and mask is not NeuroSurface/SurfaceGeometry.")
+        }
+        if (length(metric_vector) != length(current_ids)) {
+            stop(paste0("Length of metric_vector (", length(metric_vector), 
+                        ") does not match number of vertices (", length(current_ids), ") for dense surface map."))
+        }
+      }
+      output_maps[[current_metric_name]] <- neurosurf::NeuroSurface(
+        geometry = geometry(dataset$train_data), 
+        indices = current_ids, 
+        data = metric_vector
+      )
+    } else { # Assuming volumetric dataset
+      if (is.null(ids)) {
+        # Create a dense NeuroVol if ids is NULL
+        # Assume metric_vector length matches the number of voxels in the mask space
+        if (length(metric_vector) != prod(dim(neuroim2::space(dataset$mask)))) {
+            stop(paste0("Length of metric_vector (", length(metric_vector),
+                        ") does not match total voxels in mask space (", 
+                        prod(dim(neuroim2::space(dataset$mask))), ") for dense volumetric map when ids is NULL."))
+        }
+        # Reshape metric_vector to array and create NeuroVol
+        vol_array <- array(metric_vector, dim = dim(neuroim2::space(dataset$mask)))
+        output_maps[[current_metric_name]] <- neuroim2::NeuroVol(
+            data = vol_array,
+            space = neuroim2::space(dataset$mask) 
+            # Masking will be implicit if the space is from a masked NeuroVol
+            # Or, if dataset$mask is logical/numeric array, it could be applied: data = vol_array[dataset$mask]
+            # For now, assume space implies overall dimensions, data fills it.
+        )
+      } else {
+        # Create a SparseNeuroVec if ids are provided
+        output_maps[[current_metric_name]] <- neuroim2::NeuroVol(
+          data = metric_vector,
+          space = neuroim2::space(dataset$mask), 
+          indices = ids 
+        )
+      }
+    }
+  }
+  
+  n_voxels_in_mask <- 0
+  if (!is.null(dataset$mask)) {
+    if (inherits(dataset$mask, "NeuroVol"   )) n_voxels_in_mask <- sum(dataset$mask)
+    else if (inherits(dataset$mask, "NeuroSurface")) n_voxels_in_mask <- neurosurf::nvertices(dataset$mask)
+    else if (is.numeric(dataset$mask) || is.logical(dataset$mask)) n_voxels_in_mask <- sum(dataset$mask != 0)
+  }
+  
+  active_voxel_count <- 0
+  if (!is.null(ids)) {
+    active_voxel_count <- length(ids)
+  } else if (!is.null(perf_mat)) {
+    active_voxel_count <- nrow(perf_mat) # Fallback, but ids should be primary
+  }
+  
   structure(
     list(
-      results = out,
-      n_voxels = length(dataset$mask),
-      active_voxels = sum(dataset$mask > 0),
-      metrics = colnames(perf_mat)
+      results = output_maps, 
+      n_voxels = n_voxels_in_mask, # Renamed for clarity from original n_voxels
+      active_voxels = active_voxel_count, 
+      metrics = metric_names
     ),
     class = c("searchlight_result", "list")
   )
@@ -29,40 +132,66 @@ wrap_out <- function(perf_mat, dataset, ids=NULL) {
 print.searchlight_result <- function(x, ...) {
   # Ensure crayon is available
   if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
+    # stop("Package 'crayon' is required for pretty printing. Please install it.")
+    # Fallback to basic print if crayon is not there, to avoid breaking R CMD check
+    has_crayon <- FALSE
+  } else {
+    has_crayon <- TRUE
   }
   
   # Define color scheme
-  header_style <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style <- crayon::white
-  number_style <- crayon::green
-  metric_style <- crayon::magenta
+  header_style <- if (has_crayon) crayon::bold$cyan else function(txt) txt
+  section_style <- if (has_crayon) crayon::yellow else function(txt) txt
+  info_style <- if (has_crayon) crayon::white else function(txt) txt
+  number_style <- if (has_crayon) crayon::green else function(txt) txt
+  metric_style <- if (has_crayon) crayon::magenta else function(txt) txt
+  type_style <- if (has_crayon) crayon::blue else function(txt) txt # For object types
   
   # Print header
   cat("\n", header_style("█▀▀ Searchlight Analysis Results ▀▀█"), "\n\n")
   
   # Basic information
   cat(section_style("├─ Coverage"), "\n")
-  cat(info_style("│  ├─ Total Voxels: "), number_style(format(x$n_voxels, big.mark=",")), "\n")
-  cat(info_style("│  └─ Active Voxels: "), number_style(format(x$active_voxels, big.mark=",")), "\n")
+  cat(info_style("│  ├─ Voxels/Vertices in Mask: "), number_style(format(x$n_voxels, big.mark=",")), "\n")
+  cat(info_style("│  └─ Voxels/Vertices with Results: "), number_style(format(x$active_voxels, big.mark=",")), "\n")
   
-  # Performance metrics
-  cat(section_style("└─ Performance Metrics"), "\n")
-  for (metric in x$metrics) {
-    results <- x$results[[metric]]
-    if (inherits(results, "searchlight_performance")) {
-      cat(info_style("   ├─ "), metric_style(metric), "\n")
-      cat(info_style("   │  ├─ Mean: "), number_style(sprintf("%.4f", results$summary_stats$mean)), "\n")
-      cat(info_style("   │  ├─ SD: "), number_style(sprintf("%.4f", results$summary_stats$sd)), "\n")
-      cat(info_style("   │  ├─ Min: "), number_style(sprintf("%.4f", results$summary_stats$min)), "\n")
-      cat(info_style("   │  └─ Max: "), number_style(sprintf("%.4f", results$summary_stats$max)), "\n")
+  # Performance metrics (now direct spatial objects)
+  cat(section_style("└─ Output Maps (Metrics)"), "\n")
+  if (length(x$metrics) > 0 && !is.null(x$results)) {
+    for (metric_name in x$metrics) {
+      if (metric_name %in% names(x$results)) {
+        metric_map <- x$results[[metric_name]]
+        map_type <- class(metric_map)[1]
+        cat(info_style("   ├─ "), metric_style(metric_name), 
+            info_style(" (Type: "), type_style(map_type), info_style(")"), "\n")
+        
+        # Optionally, add simple summary stats if feasible and desired
+        # This requires knowing how to get data from metric_map (NeuroVol/NeuroSurfaceVector)
+        # For example (conceptual, needs specific accessors for neuroim2/neurosurf objects):
+        # data_values <- try(as.vector(metric_map), silent = TRUE) # or specific accessor
+        # if (!inherits(data_values, "try-error") && is.numeric(data_values)) {
+        #   data_values_no_na <- data_values[!is.na(data_values) & data_values != 0]
+        #   if (length(data_values_no_na) > 0) {
+        #     cat(info_style("   │  ├─ Mean (non-zero): "), number_style(sprintf("%.4f", mean(data_values_no_na))), "\n")
+        #     cat(info_style("   │  ├─ SD   (non-zero): "), number_style(sprintf("%.4f", sd(data_values_no_na))), "\n")
+        #     cat(info_style("   │  └─ Range(non-zero): "), number_style(sprintf("[%.4f, %.4f]", min(data_values_no_na), max(data_values_no_na))), "\n")
+        #   } else {
+        #     cat(info_style("   │  └─ (No non-zero data for summary stats)"), "\n")
+        #   }
+        # } else {
+        #    cat(info_style("   │  └─ (Summary stats not available for this map type)"), "\n")
+        # }
+      } else {
+        cat(info_style("   ├─ "), metric_style(metric_name), info_style(" (Map data not found in results)"), "\n")
+      }
     }
+  } else {
+    cat(info_style("   └─ No output maps found or metrics list is empty."),"\n")
   }
   
   if (!is.null(x$pobserved)) {
-    cat(section_style("\n└─ Observed Probabilities"), "\n")
-    # Add probability summary if needed
+    cat(section_style("\n└─ Observed Probabilities Map"), "\n")
+    cat(info_style("   └─ Type: "), type_style(class(x$pobserved)[1]), "\n")
   }
   
   cat("\n")
@@ -111,6 +240,8 @@ combine_standard <- function(model_spec, good_results, bad_results) {
   }
   
   result <- NULL
+
+
   
   # Proceed with combining results
   tryCatch({
@@ -137,10 +268,16 @@ combine_standard <- function(model_spec, good_results, bad_results) {
         )
       } else {
         # For volume data
+        nc <- ncol(pobserved)
+        mask <- as.logical(model_spec$dataset$mask)
+        if (nrow(bad_results) > 0) {
+          bad_ind <- unlist(bad_results$id)
+          mask[bad_ind] <- FALSE
+        }
         pobserved <- SparseNeuroVec(
           as.matrix(pobserved), 
-          space(model_spec$dataset$mask), 
-          mask=as.logical(model_spec$dataset$mask)
+          neuroim2::add_dim(neuroim2::space(model_spec$dataset$mask), ncol(pobserved)), 
+          mask=mask
         )
       }
       
@@ -449,7 +586,8 @@ do_randomized <- function(model_spec, radius, niter,
       purrr::map_int(slight, ~ .@parent_index)
     }
     
-    result <- mvpa_fun(model_spec, slight, cind, ...)
+    # Pass analysis_type to the mvpa function
+    result <- mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", ...)
     
     # Count successful and failed models
     n_success <- sum(!result$error, na.rm=TRUE)
@@ -508,7 +646,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
    
   cind <- which(model_spec$dataset$mask > 0)
   flog.info("running standard searchlight iterator")
-  ret <- mvpa_fun(model_spec, slight, cind, ...)
+  ret <- mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", ...)
   good_results <- ret %>% dplyr::filter(!error)
   bad_results <- ret %>% dplyr::filter(error == TRUE)
   
@@ -556,6 +694,8 @@ run_searchlight_base <- function(model_spec,
                                  niter = 4,
                                  combiner = "average",
                                  ...) {
+
+  
   # 1) Check radius
   if (radius < 1 || radius > 100) {
     stop(paste("radius", radius, "outside allowable range (1-100)"))
@@ -573,16 +713,43 @@ run_searchlight_base <- function(model_spec,
   #    (In your code, you might have do_standard/do_randomized handle this logic directly—this is just an example.)
   chosen_combiner <- combiner
   if (!is.function(combiner)) {
-    if (combiner == "pool") {
-      chosen_combiner <- pool_randomized        # or combine_standard, depending on your code
-    } else if (combiner == "average") {
-      chosen_combiner <- combine_randomized     # or combine_standard, depending on your code
+    # Default mapping for string-based combiner argument
+    if (method == "standard") {
+      if (combiner == "average") { # Default for run_searchlight.default standard method
+        chosen_combiner <- combine_standard 
+      } else if (combiner == "standard") { # Allow explicit string name
+        chosen_combiner <- combine_standard
+      } else if (combiner == "rsa_standard") { # if other models need specific string refs
+        chosen_combiner <- combine_rsa_standard 
+      } else if (combiner == "vector_rsa_standard") {
+        chosen_combiner <- combine_vector_rsa_standard
+      } else if (combiner == "msreve_standard") {
+        chosen_combiner <- combine_msreve_standard
+      } else {
+        stop(paste0("Unknown string combiner '", combiner, "' for method 'standard'."))
+      }
+    } else if (method == "randomized") {
+      if (combiner == "pool") {
+        chosen_combiner <- pool_randomized
+      } else if (combiner == "average") {
+        chosen_combiner <- combine_randomized
+      } else {
+        stop(paste0("Unknown string combiner '", combiner, "' for method 'randomized'."))
+      }
     } else {
-      stop("'combiner' must be 'average', 'pool', or a custom function.")
+      stop(paste0("Unknown method '", method, "' for resolving string combiner."))
     }
   }
   
-  print(paste("combiner is", str(chosen_combiner)))
+  # Ensure chosen_combiner is actually a function now
+  if (!is.function(chosen_combiner)){
+      stop(paste0("Internal error: Combiner resolution failed. 'chosen_combiner' is not a function for combiner string: ", combiner, " and method: ", method))
+  }
+
+  # print(paste("combiner is", str(chosen_combiner))) # Original debug line
+  if (getOption("rMVPA.debug", FALSE)) {
+      message(paste("Using combiner:", deparse(substitute(chosen_combiner)), "for method:", method))
+  }
   
   # 4) Dispatch to do_standard or do_randomized
   res <- if (method == "standard") {
@@ -643,87 +810,162 @@ run_searchlight.vector_rsa <- function(model_spec,
 }
 
 
-#' Create a searchlight performance object
+
+#' Combine MS-ReVE (Contrast RSA) Searchlight Results
 #'
+#' This function gathers the Q-dimensional performance vectors from each successful
+#' searchlight center and combines them into Q separate output maps.
+#'
+#' @param model_spec The \code{contrast_rsa_model} specification.
+#' @param good_results A tibble containing successful results from \code{train_model.contrast_rsa_model}.
+#'   Each row corresponds to a searchlight center. Expected columns include \code{id}
+#'   (center voxel global index) and \code{performance} (a named numeric vector of length Q).
+#' @param bad_results A tibble containing information about failed searchlights (for error reporting).
+#'
+#' @return A \code{searchlight_result} object containing:
+#'   \item{results}{A named list of \code{SparseNeuroVec} or \code{NeuroSurfaceVector} objects,
+#'     one for each contrast (Q maps in total).}
+#'   \item{...}{Other standard searchlight metadata.}
 #' @keywords internal
-#' @param dataset The dataset object
-#' @param perf_vec Performance vector for a single metric
-#' @param ids Optional vector of voxel IDs
-#' @return A searchlight_performance object
-create_searchlight_performance <- function(dataset, perf_vec, ids=NULL) {
-  # First use the S3 wrap_output method to create the NeuroVol
-  ret <- wrap_output(dataset, perf_vec, ids)
+#' @importFrom neuroim2 SparseNeuroVec space add_dim
+#' @importFrom neurosurf NeuroSurfaceVector geometry
+#' @importFrom purrr map 
+#' @importFrom dplyr bind_cols select pull
+#' @export
+combine_msreve_standard <- function(model_spec, good_results, bad_results) {
+  output_metric <- model_spec$output_metric
+  dataset <- model_spec$dataset
+  output_maps <- list()
+  final_metrics <- NULL
   
-  # Get non-zero and non-NA values for statistics
-  vals <- perf_vec[perf_vec != 0 & !is.na(perf_vec)]
+  # Handle cases where perf_list might contain NULLs if some searchlights failed
+  # but good_results still had rows (e.g. error occurred after performance was NULL)
+  # This shouldn't happen if mvpa_iterate filters errors correctly, but as a safeguard:
+  valid_perf_list <- Filter(Negate(is.null), good_results$performance)
+  if (length(valid_perf_list) == 0 && length(good_results$performance) > 0) {
+      stop("All performance results in perf_list are NULL, cannot combine.")
+  } else if (length(valid_perf_list) == 0 && length(good_results$performance) == 0) {
+      # This case is already handled by the nrow(good_results) == 0 check earlier
+      # but kept for logical completeness if perf_list was somehow empty independently.
+      stop("Performance results are empty, cannot combine.")
+  }
+  # Use the filtered list for further processing
+  # We also need to filter center_ids to align with valid_perf_list if some were NULL
+  # However, good_results should already contain only successful iterations where performance is non-NULL.
+  # Let's assume good_results$performance (aliased as perf_list) only has non-NULL valid results.
+
+  first_perf <- valid_perf_list[[1]] # Assumes perf_list is not empty (checked by nrow(good_results))
   
-  # Then wrap it in our searchlight_performance structure
+  # Check if the output is a single-value metric (like recon_score or composite)
+  # vs. a Q-length vector metric (like beta_delta, beta_only, delta_only, beta_delta_norm)
+  if (output_metric %in% c("recon_score", "composite")) {
+      # --- Handle single-value metrics --- 
+      expected_metric_name <- output_metric
+      if (length(first_perf) != 1 || names(first_perf)[1] != expected_metric_name) {
+          stop(paste0("Expected single ", expected_metric_name, " metric but found: ", 
+                      paste(names(first_perf), collapse=", ")))
+      }
+      
+      # Combine the single values into one vector
+      perf_vec <- sapply(valid_perf_list, function(x) x[[expected_metric_name]])
+      if (length(perf_vec) != length(good_results$id)) {
+         stop(paste0("Mismatch between number of performance scores and center IDs for ", expected_metric_name, "."))
+      }
+      
+      # Create a single output map
+      if (inherits(dataset, "mvpa_surface_dataset")) {
+          if (!requireNamespace("neurosurf", quietly = TRUE)) stop("Package 'neurosurf' required.")
+          q_data_mat <- matrix(perf_vec, ncol = 1)
+          output_maps[[expected_metric_name]] <- neurosurf::NeuroSurfaceVector(
+              geometry = neurosurf::geometry(dataset$mask), 
+              indices = good_results$id, 
+              data = q_data_mat
+          )
+      } else {
+          if (!requireNamespace("neuroim2", quietly = TRUE)) stop("Package 'neuroim2' required.")
+          output_maps[[expected_metric_name]] <- neuroim2::SparseNeuroVec(
+              data = perf_vec,
+              space = neuroim2::space(dataset$mask), 
+              indices = good_results$id
+          )
+      }
+      final_metrics <- expected_metric_name
+      
+  } else {
+      # --- Handle multi-value (Q-length) metrics --- 
+      Q <- length(first_perf)
+      contrast_names <- names(first_perf)
+      if (is.null(contrast_names) || Q == 0) {
+          # This case (Q=0) should ideally be caught earlier, e.g. in train_model if no contrasts
+          # or if contrast_names are NULL for a Q-length vector.
+          warning("Performance vectors are unnamed or have zero length. Map names will be generic or map creation might fail.")
+          if (Q > 0) contrast_names <- paste0("contrast_", 1:Q) else contrast_names <- character(0)
+      }
+      
+      # Ensure all performance vectors in the list have the same length Q
+      all_lengths_match <- all(sapply(valid_perf_list, length) == Q)
+      if (!all_lengths_match) {
+          stop("Inconsistent number of performance metrics (contrasts) across searchlights.")
+      }
+      
+      if (Q > 0) {
+          # Bind the list of vectors into a matrix (N_voxels x Q)
+          perf_mat_from_list <- do.call(rbind, valid_perf_list)
+          if (!is.matrix(perf_mat_from_list)) {
+              # Handle case where only one voxel succeeded, or perf_list had single vectors
+              perf_mat_from_list <- matrix(valid_perf_list[[1]], nrow=length(valid_perf_list), byrow = TRUE)
+          }
+          # Ensure correct dimensions if only one center_id
+          if (length(good_results$id) == 1 && nrow(perf_mat_from_list) == 1 && ncol(perf_mat_from_list) != Q) {
+             # If rbind on single list element transposes, fix it
+             if (length(valid_perf_list[[1]]) == Q) { # check if first element was Q-length
+                perf_mat_from_list <- matrix(valid_perf_list[[1]], nrow=1, ncol=Q)
+             }
+          }
+          
+          if (nrow(perf_mat_from_list) != length(good_results$id) || (!is.null(ncol(perf_mat_from_list)) && ncol(perf_mat_from_list) != Q) ){
+             stop(paste0("Dimension mismatch when creating performance matrix from list. Expected N_voxels x Q (", 
+                        length(good_results$id), "x", Q, ") but got ", nrow(perf_mat_from_list), "x", ncol(perf_mat_from_list))) 
+          }
+          colnames(perf_mat_from_list) <- contrast_names
+          
+          # Create Q output maps
+          for (q_idx in 1:Q) {
+            q_contrast_name <- contrast_names[q_idx]
+            q_perf_vec <- perf_mat_from_list[, q_idx]
+            
+            if (inherits(dataset, "mvpa_surface_dataset")) {
+              if (!requireNamespace("neurosurf", quietly = TRUE)) stop("Package 'neurosurf' required.")
+              q_data_mat <- matrix(q_perf_vec, ncol = 1)
+              output_maps[[q_contrast_name]] <- neurosurf::NeuroSurfaceVector(
+                  geometry = neurosurf::geometry(dataset$mask), 
+                  indices = good_results$id, 
+                  data = q_data_mat
+              )
+            } else {
+              if (!requireNamespace("neuroim2", quietly = TRUE)) stop("Package 'neuroim2' required.")
+              output_maps[[q_contrast_name]] <- neuroim2::SparseNeuroVec(
+                  data = q_perf_vec,
+                  space = neuroim2::space(dataset$mask), 
+                  indices = good_results$id
+              )
+            }
+          }
+      } # End if Q > 0
+      final_metrics <- contrast_names
+  }
+  
+
+  # --- Return Structure ---
   structure(
     list(
-      data = ret,
-      metric_name = names(perf_vec)[1],
-      n_nonzero = sum(perf_vec != 0, na.rm = TRUE),
-      summary_stats = list(
-        mean = if(length(vals) > 0) mean(vals, na.rm = TRUE) else NA,
-        sd = if(length(vals) > 0) sd(vals, na.rm = TRUE) else NA,
-        min = if(length(vals) > 0) min(vals, na.rm = TRUE) else NA,
-        max = if(length(vals) > 0) max(vals, na.rm = TRUE) else NA
-      ),
-      indices = ids  # Store the indices for reference
+      results = output_maps, # List of Q maps
+      n_voxels = prod(dim(dataset$mask)), # Total voxels/vertices in mask space
+      active_voxels = length(good_results$id), # Number of voxels with results
+      metrics = final_metrics # Names of the contrasts/maps
     ),
-    class = c("searchlight_performance", "list")
+    class = c("msreve_searchlight_result", "searchlight_result", "list") # Reuse existing class
   )
-}
-
-#' @export
-#' @method print searchlight_performance
-print.searchlight_performance <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
-  
-  # Define color scheme
-  header_style <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style <- crayon::white
-  number_style <- crayon::green
-  metric_style <- crayon::magenta
-  
-  # Print header
-  cat("\n", header_style("█▀▀ Searchlight Performance: "), 
-      metric_style(x$metric_name), header_style(" ▀▀█"), "\n\n")
-  
-  # Data information
-  cat(section_style("├─ Data Summary"), "\n")
-  cat(info_style("│  ├─ Non-zero Values: "), 
-      if(is.null(x$n_nonzero)) crayon::red("NULL") else number_style(format(x$n_nonzero, big.mark=",")), 
-      "\n")
-  
-  # Statistics
-  cat(section_style("└─ Statistics"), "\n")
-  
-  # Helper function to format stats with better NULL handling
-  format_stat <- function(val) {
-    if (is.null(val) || (length(val) == 0)) {
-      crayon::red("No data")
-    } else if (is.na(val)) {
-      crayon::red("No valid data")
-    } else {
-      number_style(sprintf("%.4f", val))
-    }
-  }
-  
-  # Safely extract stats with NULL checking
-  stats <- x$summary_stats
-  if (is.null(stats)) {
-    stats <- list(mean=NULL, sd=NULL, min=NULL, max=NULL)
-  }
-  
-  cat(info_style("   ├─ Mean: "), format_stat(stats$mean), "\n")
-  cat(info_style("   ├─ SD: "), format_stat(stats$sd), "\n")
-  cat(info_style("   ├─ Min: "), format_stat(stats$min), "\n")
-  cat(info_style("   └─ Max: "), format_stat(stats$max), "\n\n")
 }
 
 

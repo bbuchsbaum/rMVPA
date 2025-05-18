@@ -404,7 +404,6 @@ feature_rsa_model <- function(dataset,
 }
 
 
-#' @rdname predict_model-methods
 #' @export
 predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   # Check if the 'fit' object contains an error from the training stage

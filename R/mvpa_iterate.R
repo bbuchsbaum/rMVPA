@@ -71,14 +71,15 @@ create_result_tibble <- function(cres, ind, mspec, id, result, compute_performan
 #' @param roi A list containing train_roi and test_roi elements.
 #' @param mspec A model specification object.
 #' @param id A unique identifier for the model.
+#' @param center_global_id Optional global ID of the center voxel. Defaults to NA.
 #'
 #' @return A tibble with performance metrics, fitted model (optional), and any warnings or errors.
 #' @noRd
 #' @keywords internal
-external_crossval <- function(mspec, roi, id) {
+#' @importFrom stats predict
+external_crossval <- function(mspec, roi, id, center_global_id = NA, ...) {
   # Prepare the training data
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="minimal")
-
 
   ytrain <- y_train(mspec)
  
@@ -88,11 +89,25 @@ external_crossval <- function(mspec, roi, id) {
   # Get the ROI indices
   ind <- neuroim2::indices(roi$train_roi)
 
+  # Determine center_local_id based on center_global_id
+  center_local_id <- NA
+  if (!is.na(center_global_id)) {
+      center_local_id <- match(center_global_id, ind)
+      if (is.na(center_local_id)) {
+          stop(paste0("external_crossval: Provided center_global_id ", center_global_id, 
+                      " not found within the voxel indices for this ROI/searchlight (id: ", id, ")."))
+      }
+  }
+
+  # Prepare sl_info
+  sl_info <- list(center_local_id = center_local_id, center_global_id = center_global_id)
+
   #browser()
   # Train the model and handle any errors
-  result <- try(train_model(mspec, xtrain, ytrain, indices=ind,
-                            param=mspec$tune_grid,
-                            tune_reps=mspec$tune_reps))
+  # Pass sl_info and other dots
+  dots <- list(...)
+  result <- try(do.call(train_model, c(list(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, 
+                                          tune_reps=mspec$tune_reps, sl_info = sl_info), dots)))
   
  
 
@@ -155,6 +170,7 @@ external_crossval <- function(mspec, roi, id) {
 #'     \item{train_roi}{Training data as a NeuroVec or NeuroSurfaceVector object}
 #'   }
 #' @param id Identifier for the current analysis
+#' @param center_global_id Optional global ID of the center voxel. Defaults to NA.
 #'
 #' @return A tibble containing:
 #'   \describe{
@@ -184,17 +200,32 @@ external_crossval <- function(mspec, roi, id) {
 #'
 #' @keywords internal
 #' @noRd
-internal_crossval <- function(mspec, roi, id) {
+internal_crossval <- function(mspec, roi, id, center_global_id = NA) {
   
   # Generate cross-validation samples
   # Note: This step could potentially be moved outside the function
   samples <- crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), 
                                                                 .name_repair=.name_repair), y_train(mspec))
 
-  # Get ROI indices
+  # Get ROI indices (all global indices in this searchlight/region)
   ind <- neuroim2::indices(roi$train_roi)
+  
+  # Determine the LOCAL index corresponding to the GLOBAL center ID, if provided
+  center_local_id <- NA # Default to NA
+  if (!is.na(center_global_id)) {
+      center_local_id <- match(center_global_id, ind)
+      if (is.na(center_local_id)) {
+           # This indicates an issue: a center ID was provided but not found in the voxel indices
+           stop(paste0("Provided center_global_id ", center_global_id, 
+                      " not found within the voxel indices for this ROI/searchlight (id: ", id, ")."))
+      }
+  }
 
- 
+  # Prepare sl_info for train_model (will contain NAs if center_global_id was NA)
+  sl_info <- list(
+      center_local_id = center_local_id,
+      center_global_id = center_global_id 
+  )
 
   # Iterate through the samples and fit the model
   ret <- samples %>% pmap(function(ytrain, ytest, train, test, .id) {
@@ -207,12 +238,13 @@ internal_crossval <- function(mspec, roi, id) {
     }
 
    
-   
-    # Train the model
+    # Train the model - NOW PASSING sl_info
     result <- try(train_model(mspec, 
                               tibble::as_tibble(train, .name_repair=.name_repair), 
                               ytrain,
-                              indices=ind))
+                              sl_info = sl_info, # Pass sl_info here
+                              cv_spec = mspec$crossval, # Pass cv_spec if needed by the train method
+                              indices=ind)) # indices might still be useful for some models
    
 
     # Check if there was an error during model fitting
@@ -241,6 +273,7 @@ extract_roi <- function(sample, data) {
   v <- neuroim2::values(r$train_roi)
   
   # Use silent=TRUE to prevent error messages from being displayed on the console
+  ## TODO: this can remove the center voxel in a searchlight
   r <- try(filter_roi(r), silent=TRUE)
   
   if (inherits(r, "try-error") || ncol(v) < 2) {
@@ -272,6 +305,7 @@ extract_roi <- function(sample, data) {
 #' @param verbose Logical indicating whether to print progress messages. Defaults to TRUE.
 #' @param processor Optional custom processing function. If NULL, uses default processor.
 #'        Must accept parameters (obj, roi, rnum) and return a tibble.
+#' @param analysis_type Character indicating the type of analysis. Defaults to "searchlight".
 #'
 #' @details
 #' The function processes ROIs in batches to manage memory usage. For each batch:
@@ -300,13 +334,16 @@ extract_roi <- function(sample, data) {
 mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list), 
                          batch_size = as.integer(.1 * length(ids)),
                          verbose = TRUE,
-                         processor = NULL) {
+                         processor = NULL,
+                         analysis_type = c("searchlight", "regional")) {
   setup_mvpa_logger()
   
   if (length(vox_list) == 0) {
     futile.logger::flog.warn("⚠ Empty voxel list provided. No analysis to perform.")
     return(tibble::tibble())
   }
+
+
   
   futile.logger::flog.debug("Starting mvpa_iterate with %d voxels", length(vox_list))
   
@@ -314,6 +351,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     assert_that(length(ids) == length(vox_list), 
                 msg = paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
     
+    analysis_type <- match.arg(analysis_type)
+
     batch_size <- max(1, batch_size)
     nbatches <- ceiling(length(ids) / batch_size)
     batch_group <- sort(rep(1:nbatches, length.out = length(ids)))
@@ -334,6 +373,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                                   crayon::blue(i), 
                                   crayon::blue(nbatches))
         }
+
+       
         
         vlist <- vox_list[batch_ids[[i]]]
         size <- sapply(vlist, function(v) length(v))
@@ -355,8 +396,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           # Strip the dataset from mod_spec before passing to parallel workers
           mod_spec_stripped <- strip_dataset(mod_spec)
           
-          # Pass the stripped version
-          results[[i]] <- run_future(mod_spec_stripped, sf, processor, verbose)
+          # Pass the stripped version and analysis_type
+          results[[i]] <- run_future(mod_spec_stripped, sf, processor, verbose,
+                                     analysis_type = analysis_type)
           processed_rois <- processed_rois + nrow(sf)
           
           futile.logger::flog.debug("Batch %d produced %d results", i, nrow(results[[i]]))
@@ -388,10 +430,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                             crayon::blue(tot),
                             crayon::blue(processed_rois),
                             crayon::yellow(skipped_rois))
-    
     # Combine all results
     final_results <- dplyr::bind_rows(results)
-    final_results
+    return(final_results)
   }, error = function(e) {
     futile.logger::flog.error("mvpa_iterate failed: %s", e$message)
     return(tibble::tibble())
@@ -399,19 +440,21 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
 }
 
 #' @noRd
-run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, ...) {
+run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analysis_type, ...) {
   gc()
   total_items <- nrow(frame)
   processed_items <- 0
   error_count <- 0
   
   do_fun <- if (is.null(processor)) {
-    function(obj, roi, rnum) {
-      process_roi(obj, roi, rnum)
+    function(obj, roi, rnum, center_global_id = NA) {
+      process_roi(obj, roi, rnum, center_global_id = center_global_id)
     }
   } else {
     processor
   }
+
+
   
   results <- frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
     # Update progress based on actual items processed
@@ -427,22 +470,38 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, ...) {
     
     tryCatch({
       if (is.null(roi)) {
-        # ROI failed validation, but this is an expected case in searchlights
+        # ROI failed validation (e.g. from extract_roi returning NULL due to <2 voxels after filter_roi)
         error_count <<- error_count + 1
-        futile.logger::flog.debug("ROI %d: Skipped (failed validation)", rnum)
+        futile.logger::flog.debug("ROI ID %s: Skipped (failed initial validation in extract_roi, e.g. <2 voxels).", rnum)
         return(tibble::tibble(
           result = list(NULL),
           indices = list(NULL),
           performance = list(NULL),
           id = rnum,
           error = TRUE,
-          error_message = "ROI failed validation (insufficient valid columns)",
+          error_message = "ROI failed validation (e.g., <2 voxels after filtering or other extract_roi issue)",
           warning = TRUE,
-          warning_message = "ROI failed validation (insufficient valid columns)"
+          warning_message = "ROI failed validation (e.g., <2 voxels after filtering or other extract_roi issue)"
         ))
+
       }
       
-      result <- do_fun(obj, roi, rnum)
+      # Determine the center_global_id based on analysis type
+      center_global_id_to_pass <- if (analysis_type == "searchlight") rnum else NA
+      
+      # If we are here, ROI is valid. Call the processing function
+      # Note: Pass center_global_id_to_pass to the processor if it needs it,
+      # otherwise it will be handled if the processor calls internal_crossval
+      # The default process_roi likely needs to be adapted or replaced.
+      # For now, assuming do_fun (process_roi) will handle it implicitly
+      # or pass it down to internal_crossval.
+      # TODO: We might need to modify process_roi explicitly or make this call directly
+      # to internal_crossval depending on the model type.
+      # Let's assume for now the default processor logic implicitly handles internal_crossval
+      # and we just need to ensure center_global_id_to_pass is available.
+      # If a custom processor is used, it's the user's responsibility to handle it.
+
+      result <- do_fun(obj, roi, rnum, center_global_id = center_global_id_to_pass)
       
       if (!obj$return_predictions) {
         result <- result %>% mutate(result = list(NULL))
@@ -475,6 +534,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, ...) {
   
   results %>% dplyr::bind_rows()
 }
+
 
 
 

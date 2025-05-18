@@ -1,10 +1,33 @@
 #' rMVPA: A package for multi-voxel pattern analysis (MVPA)
 #'
-#' The rMVPA package provides tools for running region-of-interest and searchlight MVPA analyses.
-#' 
+#' The rMVPA package provides a comprehensive suite of tools for advanced
+#' neuroimaging data analysis using multi-voxel pattern analysis (MVPA).
+#' It supports various techniques including region-of-interest (ROI) and 
+#' searchlight analyses. Key functionalities cover:
+#' \itemize{
+#'   \item Classification-based MVPA
+#'   \item Representational Similarity Analysis (RSA), including standard RSA, 
+#'         vector-based RSA, and feature-based RSA.
+#'   \item Contrast RSA (MS-ReVE style analyses)
+#'   \item Flexible cross-validation schemes
+#'   \item Feature selection methods
+#'   \item Tools for constructing and managing MVPA datasets and designs.
+#' }
 #' 
 #' @name rMVPA
-NULL
+#' @keywords internal
+#' @seealso 
+#' Useful functions:
+#' \itemize{
+#'   \item \code{\link{mvpa_dataset}} for creating datasets
+#'   \item \code{\link{run_searchlight}} for searchlight analyses
+#'   \item \code{\link{run_regional}} for ROI analyses
+#'   \item \code{\link{rsa_model}}, \code{\link{contrast_rsa_model}}, \code{\link{vector_rsa_model}} for different RSA approaches
+#' }
+#' For a detailed introduction and examples, see the package vignette:
+#' \code{vignette("rMVPA_introduction", package = "rMVPA")} 
+#' (You may need to build vignettes first if installing from source).
+"_PACKAGE"
 
 ##
 

@@ -634,8 +634,8 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
 #' @return A `searchlight_result` object.
 #' @keywords internal
 combine_custom_standard <- function(dataset, iteration_results) {
-  good_results <- iteration_results %>% dplyr::filter(!error)
-  bad_results <- iteration_results %>% dplyr::filter(error)
+  good_results <- iteration_results %>% dplyr::filter(!.data$error)
+  bad_results <- iteration_results %>% dplyr::filter(.data$error)
 
   if (nrow(good_results) == 0) {
     flog.error("No successful results for standard custom searchlight. Examining errors:")
@@ -720,8 +720,8 @@ combine_custom_standard <- function(dataset, iteration_results) {
 #' @return A `searchlight_result` object.
 #' @keywords internal
 combine_custom_randomized <- function(dataset, iteration_results) {
-   good_results <- iteration_results %>% dplyr::filter(!error)
-   bad_results <- iteration_results %>% dplyr::filter(error)
+   good_results <- iteration_results %>% dplyr::filter(!.data$error)
+   bad_results <- iteration_results %>% dplyr::filter(.data$error)
 
    if (nrow(good_results) == 0) {
       flog.error("No successful results for randomized custom searchlight. Examining errors:")

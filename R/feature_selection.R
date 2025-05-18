@@ -88,6 +88,7 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 #' @param X The input data matrix.
 #' @param Y The response variable.
 #' @param ranking.score The feature score to use. Supported scores are "entropy", "avg", or "max". Default is "entropy".
+#' @param ... Additional arguments (currently unused).
 #' @return A logical vector indicating which features to retain.
 #' @details
 #' The CATSCORE method computes a correlation adjusted t-test for every column in the matrix using \code{sda.ranking} from the \code{sda} package.
@@ -219,6 +220,18 @@ validate_cutoff <- function(type, value, ncol) {
   } else {
     min(value, ncol)
   }
+}
+
+
+#' @export
+#' @method print feature_selector
+print.feature_selector <- function(x, ...) {
+  cat("Feature Selector Object\\n")
+  cat("-----------------------\\n")
+  cat("Method:        ", class(x)[1], "\\n")
+  cat("Cutoff Type:   ", x$cutoff_type, "\\n")
+  cat("Cutoff Value:  ", x$cutoff_value, "\\n")
+  invisible(x)
 }
 
 

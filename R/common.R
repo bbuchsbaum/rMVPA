@@ -1,6 +1,3 @@
-
-
-
 #' @import stringr
 #' @importFrom io qread
 initialize_configuration <- function(args) {
@@ -208,6 +205,7 @@ initialize_image_data <- function(config, mask) {
 
 #' @noRd
 #' @keywords internal
+#' @importFrom utils read.table
 initialize_design <- function(config) {
   if (is.character(config$train_subset)) {
     config$train_subset <- eval(parse(text=config$train_subset))
@@ -223,9 +221,9 @@ initialize_design <- function(config) {
     ## full design
     config$full_train_design <- if (length(config$train_design) > 1) {
       flog.info(paste("concatenating %s design files", length(config$train_design)))
-      do.call(rbind, lapply(config$train_design, read.table, header=TRUE, comment.char=";"))
+      do.call(rbind, lapply(config$train_design, utils::read.table, header=TRUE, comment.char=";"))
     } else {
-      read.table(config$train_design, header=TRUE, comment.char=";")
+      utils::read.table(config$train_design, header=TRUE, comment.char=";")
     }
   }
   
@@ -267,9 +265,9 @@ initialize_design <- function(config) {
     } else {
       config$full_test_design <- if (length(config$test_design) > 1) {
         flog.info(paste("concatenating %s test design files", length(config$test_design)))
-        do.call(rbind, lapply(config$test_design, read.table, header=TRUE, comment.char=";"))
+        do.call(rbind, lapply(config$test_design, utils::read.table, header=TRUE, comment.char=";"))
       } else {
-        read.table(config$test_design, header=TRUE, comment.char=";")
+        utils::read.table(config$test_design, header=TRUE, comment.char=";")
       }
     }
     
@@ -514,12 +512,13 @@ load_mask <- function(config) {
 }
 
 #' @noRd
+#' @importFrom utils read.table
 load_design <- function(config, name) {
   if (!file.exists(config[[name]])) {
     futile.logger::flog.error(paste("cannot find table named: ", name))
     stop()
   } else {
-    read.table(config[[name]], header=TRUE, comment.char=";")
+    utils::read.table(config[[name]], header=TRUE, comment.char=";")
   }
 }
 

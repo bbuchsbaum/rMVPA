@@ -7,3 +7,8 @@
 ^\.github$
 ^pkgdown$
 oldR
+.cursor
+test1
+test2
+.*md
+.*xml

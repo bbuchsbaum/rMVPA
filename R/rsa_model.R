@@ -237,6 +237,7 @@ run_cor <- function(dvec, obj) {
 ################################################################################
 #' @keywords internal
 #' @importFrom glmnet glmnet
+#' @importFrom stats predict
 #' @noRd
 run_lm_constrained <- function(dvec, obj) {
   # Check if glmnet is available and install if needed
@@ -406,158 +407,219 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
 }
 
 
+#' Merge Results for RSA Model
+#'
+#' This function takes the computed coefficients/correlations/t-values 
+#' from \code{train_model.rsa_model} for a single ROI/searchlight and formats 
+#' it into the standard output tibble.
+#'
+#' @param obj The RSA model specification.
+#' @param result_set A tibble containing the results from the processor function for the current ROI/sphere. 
+#'   Expected to have a \code{$result} column containing the named vector from \code{train_model.rsa_model}.
+#' @param indices Voxel indices for the current ROI/searchlight sphere.
+#' @param id Identifier for the current ROI/searchlight center.
+#' @param ... Additional arguments (ignored).
+#'
+#' @return A tibble row with the formatted "performance" metrics (coefficients/t-values/correlations) for the ROI/sphere.
+#' @importFrom tibble tibble
+#' @importFrom futile.logger flog.error
+#' @method merge_results rsa_model
+merge_results.rsa_model <- function(obj, result_set, indices, id, ...) {
+  
+  # Check for errors from previous steps (processor/train_model)
+  if (any(result_set$error)) {
+    emessage <- result_set$error_message[which(result_set$error)[1]]
+    # Return standard error tibble structure
+    return(
+      tibble::tibble(
+        result       = list(NULL), 
+        indices      = list(indices),
+        performance  = list(NULL), 
+        id           = id,
+        error        = TRUE,
+        error_message= emessage
+      )
+    )
+  }
+  
+  # Extract the model outputs (named vector) computed by train_model.
+  if (!"result" %in% names(result_set) || length(result_set$result) == 0 || is.null(result_set$result[[1]])) {
+     error_msg <- sprintf("merge_results (rsa_model): result_set missing or has NULL/empty 'result' field where model outputs were expected for ROI/ID %s.", id)
+     futile.logger::flog.error(error_msg)
+     
+     # Create NA performance matrix based on expected names from the design
+     expected_names <- names(obj$design$model_mat)
+     perf_mat <- matrix(NA_real_, nrow=1, ncol=length(expected_names), dimnames=list(NULL, expected_names))
+     if (length(expected_names) == 0) perf_mat <- NULL 
+     
+     return(tibble::tibble(result=list(NULL), indices=list(indices), performance=list(perf_mat), 
+                           id=id, error=TRUE, error_message=error_msg))
+  }
+  
+  model_outputs <- result_set$result[[1]]
+  
+  # Validate the extracted results
+  if (!is.numeric(model_outputs) || is.null(names(model_outputs)) || length(model_outputs) == 0) {
+      error_msg <- sprintf("merge_results (rsa_model): Extracted model outputs are not a named non-empty numeric vector for ROI/ID %s.", id)
+      futile.logger::flog.error(error_msg)
+      
+      # Attempt to use names from model_outputs if partially valid, otherwise from design
+      current_names <- names(model_outputs)
+      if (is.null(current_names) || length(current_names) == 0) {
+        current_names <- names(obj$design$model_mat)
+      }
+      
+      perf_mat <- matrix(NA_real_, nrow=1, ncol=length(current_names), dimnames=list(NULL, current_names))
+      if (length(current_names) == 0) perf_mat <- NULL
+      
+      return(tibble::tibble(result=list(NULL), indices=list(indices), performance=list(perf_mat), 
+                            id=id, error=TRUE, error_message=error_msg))
+  }
+  
+  # Format the results into a 1-row matrix (performance matrix)
+  perf_mat <- matrix(model_outputs, nrow = 1, dimnames = list(NULL, names(model_outputs)))
+  
+  # Return the standard tibble structure
+  tibble::tibble(
+    result      = list(NULL), # Model outputs are now in 'performance'
+    indices     = list(indices),
+    performance = list(perf_mat),
+    id          = id,
+    error       = FALSE,
+    error_message = "~" 
+  )
+}
+
+
 ################################################################################
 # PRINT METHODS
 ################################################################################
 #' @export
 #' @method print rsa_model
 print.rsa_model <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
-  
-  # Color scheme
-  header_style  <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style    <- crayon::white
-  number_style  <- crayon::green
-  method_style  <- crayon::magenta
-  formula_style <- crayon::italic$blue
-  
   # Print header
-  cat("\n", header_style("█▀▀ RSA Model ▀▀█"), "\n\n")
-  
+  cat("\\n", "RSA Model", "\\n")
+  cat(rep("-", 20), "\\n\\n")
+
   # Model configuration
-  cat(section_style("├─ Configuration"), "\n")
-  cat(info_style("│  ├─ Distance Method: "), method_style(x$distmethod), "\n")
-  cat(info_style("│  └─ Regression Type: "), method_style(x$regtype), "\n")
-  
+  cat("Configuration:\\n")
+  cat("  |- Distance Method: ", x$distmethod, "\\n")
+  cat("  |- Regression Type: ", x$regtype, "\\n")
+
   # If nonneg constraints are present
   if (!is.null(x$nneg) && length(x$nneg) > 0) {
-    cat(info_style("│  └─ Non-negativity on: "),
-        method_style(paste(names(x$nneg), collapse=", ")), "\n")
+    cat("  |- Non-negativity on: ", paste(names(x$nneg), collapse=", "), "\\n")
   }
-  
+
   # If semipartial
   if (isTRUE(x$semipartial) && (is.null(x$nneg) || length(x$nneg) == 0)) {
-    cat(info_style("│  └─ Semi-partial: "), method_style("TRUE"), "\n")
+    cat("  |- Semi-partial: TRUE\\n")
   }
-  
+  cat("\\n")
+
   # Dataset info
-  cat(section_style("├─ Dataset"), "\n")
+  cat("Dataset:\\n")
   dims <- dim(x$dataset$train_data)
   dim_str <- paste0(
-    paste(dims[-length(dims)], collapse=" × "), 
-    " × ", number_style(dims[length(dims)]), " observations"
+    paste(dims[-length(dims)], collapse=" x "),
+    " x ", dims[length(dims)], " observations"
   )
-  cat(info_style("│  ├─ Dimensions: "), dim_str, "\n")
-  cat(info_style("│  └─ Type: "), class(x$dataset$train_data)[1], "\n")
-  
+  cat("  |- Dimensions: ", dim_str, "\\n")
+  cat("  |- Type: ", class(x$dataset$train_data)[1], "\\n")
+  cat("\\n")
+
   # Design info
-  cat(section_style("├─ Design"), "\n")
-  cat(info_style("│  ├─ Formula: "), formula_style(deparse(x$design$formula)), "\n")
-  
+  cat("Design:\\n")
+  cat("  |- Formula: ", deparse(x$design$formula), "\\n")
+
   var_names <- names(x$design$model_mat)
-  cat(info_style("│  └─ Predictors: "), method_style(paste(var_names, collapse=", ")), "\n")
-  
+  cat("  |- Predictors: ", paste(var_names, collapse=", "), "\\n")
+  cat("\\n")
+
   # Structure info
-  cat(section_style("└─ Structure"), "\n")
-  
+  cat("Structure:\\n")
+
   # Block info
   if (!is.null(x$design$block_var)) {
     blocks <- table(x$design$block_var)
-    cat(info_style("   ├─ Blocking: "), "Present\n")
-    cat(info_style("   ├─ Number of Blocks: "), number_style(length(blocks)), "\n")
-    cat(info_style("   ├─ Mean Block Size: "), 
-        number_style(format(mean(blocks), digits=2)),
-        crayon::italic$white(" (SD: "),
-        number_style(format(sd(blocks), digits=2)),
-        crayon::italic$white(")"), "\n")
+    cat("  |- Blocking: Present\\n")
+    cat("  |- Number of Blocks: ", length(blocks), "\\n")
+    cat("  |- Mean Block Size: ",
+        format(mean(blocks), digits=2),
+        " (SD: ",
+        format(sd(blocks), digits=2),
+        ")\\n")
   } else {
-    cat(info_style("   ├─ Blocking: "), crayon::red("None"), "\n")
+    cat("  |- Blocking: None\\n")
   }
-  
+
   # Split info
   if (!is.null(x$design$split_by)) {
     split_info <- length(x$design$split_groups)
-    cat(info_style("   └─ Split Groups: "), number_style(split_info), "\n")
+    cat("  |- Split Groups: ", split_info, "\\n")
   } else {
-    cat(info_style("   └─ Split Groups: "), crayon::red("None"), "\n")
+    cat("  |- Split Groups: None\\n")
   }
-  
-  cat("\n")
+
+  cat("\\n")
 }
 
 
 #' @export
 #' @method print rsa_design
 print.rsa_design <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
-  
-  # Color scheme
-  header_style  <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style    <- crayon::white
-  number_style  <- crayon::green
-  formula_style <- crayon::italic$blue
-  var_style     <- crayon::magenta
-  
   # Print header
-  cat("\n", header_style("█▀▀ RSA Design ▀▀█"), "\n\n")
-  
+  cat("\\n", "RSA Design", "\\n")
+  cat(rep("-", 20), "\\n\\n")
+
   # Formula
-  cat(section_style("├─ Formula"), "\n")
-  cat(info_style("│  └─ "), formula_style(deparse(x$formula)), "\n")
-  
+  cat("Formula:\\n")
+  cat("  |- ", deparse(x$formula), "\\n\\n")
+
   # Variables
-  cat(section_style("├─ Variables"), "\n")
+  cat("Variables:\\n")
   var_types <- sapply(x$data, function(v) {
     if (inherits(v, "dist")) "distance matrix"
     else if (is.matrix(v)) "matrix"
     else if (is.vector(v)) "vector"
     else "other"
   })
-  
-  cat(info_style("│  ├─ Total Variables: "), number_style(length(x$data)), "\n")
+
+  cat("  |- Total Variables: ", length(x$data), "\\n")
   for (i in seq_along(x$data)) {
-    prefix <- if (i == length(x$data)) "└" else "├"
-    cat(info_style(sprintf("│  %s─ ", prefix)), 
-        var_style(names(x$data)[i]), ": ", 
-        number_style(var_types[i]), "\n")
+    prefix <- if (i == length(x$data)) "  |-" else "  |-"
+    cat(sprintf("%s %s: %s\\n", prefix, names(x$data)[i], var_types[i]))
   }
-  
+  cat("\\n")
+
   # Structure
-  cat(section_style("└─ Structure"), "\n")
-  
+  cat("Structure:\\n")
+
   # Block info
   if (!is.null(x$block_var)) {
     blocks <- table(x$block_var)
-    cat(info_style("   ├─ Blocking: "), "Present\n")
-    cat(info_style("   ├─ Number of Blocks: "), number_style(length(blocks)), "\n")
-    cat(info_style("   ├─ Block Sizes: "), 
-        number_style(paste0(names(blocks), ": ", blocks, collapse=", ")), "\n")
+    cat("  |- Blocking: Present\\n")
+    cat("  |- Number of Blocks: ", length(blocks), "\\n")
+    cat("  |- Block Sizes: ",
+        paste0(names(blocks), ": ", blocks, collapse=", "), "\\n")
   } else {
-    cat(info_style("   ├─ Blocking: "), crayon::red("None"), "\n")
+    cat("  |- Blocking: None\\n")
   }
-  
+
   # Include/exclude info
   if (!is.null(x$include)) {
     n_comparisons <- length(x$include)
     n_included <- sum(x$include)
-    cat(info_style("   └─ Comparisons: "), 
-        number_style(n_included), 
-        crayon::italic$white(" of "), 
-        number_style(n_comparisons), 
-        crayon::italic$white(sprintf(" (%.1f%%)", 100*n_included/n_comparisons)), "\n")
+    cat("  |- Comparisons: ",
+        n_included,
+        " of ",
+        n_comparisons,
+        sprintf(" (%.1f%%)", 100*n_included/n_comparisons), "\\n")
   } else {
-    cat(info_style("   └─ Comparisons: "), "All included\n")
+    cat("  |- Comparisons: All included\\n")
   }
-  
-  cat("\n")
+
+  cat("\\n")
 }
 
 

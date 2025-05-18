@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## When documenting an expeorted method always include a runnable example
+
+Roxygen examples tags should always be presented for exported functions and they must be capable of running. never use "dontrun" only "donttest". 
+

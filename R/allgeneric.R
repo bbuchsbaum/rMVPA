@@ -38,7 +38,9 @@ strip_dataset <- function(obj, ...) {
 #' @examples 
 #' fsel <- feature_selector("FTest", "top_k", 2)
 #' coords <- rbind(c(1,1,1), c(2,2,2), c(3,3,3))
-#' ROI <- neuroim2::ROIVec(neuroim2::NeuroSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
+#' space <- neuroim2::NeuroSpace(c(10,10,10))
+#' roi_data <- matrix(rnorm(100*3), 100, 3)
+#' ROI <- neuroim2::ROIVec(space, coords=coords, roi_data)
 #' Y <- factor(rep(c("a", "b"), each=50))
 #' featureMask <- select_features(fsel, neuroim2::values(ROI), Y)
 #' sum(featureMask) == 2
@@ -117,16 +119,21 @@ process_roi <- function(mod_spec, roi, rnum, ...) {
 #' @inheritParams process_roi
 #' @keywords internal
 #' @noRd
-process_roi.default <- function(mod_spec, roi, rnum, ...) {
+process_roi.default <- function(mod_spec, roi, rnum, center_global_id = NA, ...) {
+  # Capture additional arguments to pass down
+  dots <- list(...)
   if (!is.null(mod_spec$process_roi)) {
-    mod_spec$process_roi(mod_spec, roi, rnum, ...)
-  } else if (has_test_set(mod_spec)) {
-    external_crossval(mod_spec, roi, rnum, ...)
+    # Pass center_global_id and dots to user's custom processor
+    do.call(mod_spec$process_roi, c(list(mod_spec, roi, rnum, center_global_id = center_global_id), dots))
+  } else if (has_test_set(mod_spec)) { # Changed from mod_spec to mod_spec$dataset
+    # Pass center_global_id and dots to external_crossval
+    do.call(external_crossval, c(list(mod_spec, roi, rnum, center_global_id = center_global_id), dots))
   } else if (has_crossval(mod_spec)) {
-    #print("internal crossval")
-    internal_crossval(mod_spec, roi, rnum, ...)
+    # Pass center_global_id and dots to internal_crossval
+    do.call(internal_crossval, c(list(mod_spec, roi, rnum, center_global_id = center_global_id), dots))
   } else {
-    process_roi_default(mod_spec, roi, rnum, ...)
+    # Pass center_global_id and dots to process_roi_default
+    do.call(process_roi_default, c(list(mod_spec, roi, rnum, center_global_id = center_global_id), dots))
   }
 }
 
@@ -135,24 +142,40 @@ process_roi.default <- function(mod_spec, roi, rnum, ...) {
 #' @param mod_spec The model specification object.
 #' @param roi The ROI containing training data.
 #' @param rnum The region number or identifier.
+#' @param center_global_id Optional global ID of the center voxel. Defaults to NA.
 #' @param ... Additional arguments passed to specific methods.
 #' @keywords internal
 #' @noRd
 #' @importFrom neuroim2 indices values
 #' @importFrom tibble as_tibble tibble
 #' @importFrom futile.logger flog.warn
-process_roi_default <- function(mod_spec, roi, rnum, ...) {
+process_roi_default <- function(mod_spec, roi, rnum, center_global_id = NA, ...) {
   # This helper is called by process_roi.default for models 
   # that don't use internal cross-validation.
   # It runs train_model and then passes the result to merge_results
   # for final performance computation and formatting.
-  #browser()
+
   xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
   ind <- indices(roi$train_roi)
   
-  # Run train_model
-  # Need to pass y=NULL and indices=ind based on train_model.vector_rsa_model signature
-  train_result_obj <- try(train_model(mod_spec, xtrain, y = NULL, indices=ind, ...)) 
+  # Determine center_local_id based on center_global_id
+  center_local_id <- NA
+  if (!is.na(center_global_id)) {
+      center_local_id <- match(center_global_id, ind)
+      if (is.na(center_local_id)) {
+          stop(paste0("process_roi_default: Provided center_global_id ", center_global_id, 
+                      " not found within the voxel indices for this ROI/searchlight (id: ", rnum, ")."))
+      }
+  }
+  
+  # Prepare sl_info
+  sl_info <- list(center_local_id = center_local_id, center_global_id = center_global_id)
+  
+  # Run train_model, passing sl_info
+  # Assuming train_model methods will accept sl_info if needed
+  # Also pass other ... args
+  dots <- list(...)
+  train_result_obj <- try(do.call(train_model, c(list(mod_spec, xtrain, y = NULL, indices=ind, sl_info = sl_info), dots)))
   
   # Prepare a result set structure for merge_results
   if (inherits(train_result_obj, "try-error")) {
@@ -185,13 +208,18 @@ process_roi_default <- function(mod_spec, roi, rnum, ...) {
   return(final_result)
 }
 
-#' Train Model
 #'
-#' Train a classification or regression model.
+#' Train a classification, regression, or representational model.
+#'
+#' This is a generic function that trains a model based on the provided
+#' model specification object. Different model types will have different
+#' methods implemented with specific parameters.
 #'
 #' @param obj The model specification object.
 #' @param ... Additional arguments to be passed to the method-specific function.
-#' @return A trained model object.
+#'
+#' @return A trained model object. The exact return value depends on the specific
+#'   method implementation.
 #' @export
 train_model <- function(obj,...) {
   UseMethod("train_model")
@@ -391,7 +419,8 @@ wrap_output <- function(obj, vals, ...) {
 #'
 #' @param obj1 The first object containing predictions.
 #' @param rest Other objects containing predictions.
-#' @param ... Additional arguments.
+#' @param ... Additional arguments. Methods for this generic may implement specific arguments
+#'   such as `weights` to control how predictions are combined.
 #' @return A combined object with merged predictions.
 #' @export
 merge_predictions <- function(obj1, rest, ...) {
@@ -442,6 +471,24 @@ prob_observed <- function(x) {
 #' @export
 nresponses <- function(x) {
   UseMethod("nresponses")
+}
+
+#' Predict Model Output
+#'
+#' Generic function to predict outcomes from a fitted model object using new data.
+#'
+#' @param object A fitted model object for which a prediction method is defined.
+#' @param fit The fitted model object, often returned by `train_model`.
+#'              (Note: For some models, `object` itself might be the fit).
+#' @param newdata New data (e.g., a matrix or data frame) for which to make predictions.
+#'                The structure should be compatible with what the model was trained on.
+#' @param ... Additional arguments passed to specific prediction methods.
+#'
+#' @return Predictions whose structure depends on the specific method (e.g., a vector,
+#'   matrix, or data frame).
+#' @export
+predict_model <- function(object, fit, newdata, ...) {
+  UseMethod("predict_model")
 }
 
 #' @keywords internal
@@ -520,7 +567,7 @@ run_searchlight <- function(model_spec, radius, method = c("standard", "randomiz
 #'   \item{vol_results}{A list of volumetric maps representing performance metrics across space (if computed).}
 #'   \item{fits}{A list of fitted model objects for each region (if requested via `return_fits=TRUE`).}
 #'   \item{model_spec}{The original model specification object provided.} # Note: Original documentation said 'performance', clarified here.
-#' 
+#'
 #' @examples
 #' \donttest{
 #'   # Generate sample dataset (3D volume with categorical response)
@@ -613,6 +660,31 @@ filter_roi <- function(roi, ...) {
   UseMethod("filter_roi", roi$train_roi)
 }
 
+#' Get the Number of Folds
+#'
+#' An S3 generic method to retrieve the number of folds from a cross-validation specification object.
+#'
+#' @param obj A cross-validation specification object (e.g., inheriting from `cross_validation`).
+#' @param ... Additional arguments passed to methods.
+#' @return An integer representing the number of folds.
+#' @export
+get_nfolds <- function(obj, ...) {
+  UseMethod("get_nfolds")
+}
+
+#' Get Training Indices for a Fold
+#'
+#' An S3 generic method to retrieve the training sample indices for a specific fold 
+#' from a cross-validation specification object.
+#'
+#' @param obj A cross-validation specification object (e.g., inheriting from `cross_validation`).
+#' @param fold_num An integer specifying the fold number for which to retrieve training indices.
+#' @param ... Additional arguments passed to methods.
+#' @return An integer vector of training indices.
+#' @export
+train_indices <- function(obj, fold_num, ...) {
+  UseMethod("train_indices")
+}
 
 
 

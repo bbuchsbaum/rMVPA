@@ -1,4 +1,3 @@
-
 #' @keywords internal
 #' @noRd
 requireNamespaceQuietStop <- function(package) {
@@ -206,13 +205,12 @@ predict.regression_model_fit <- function(object, newdata, sub_indices=NULL,...) 
 
 #' @export
 #' @method merge_predictions regression_prediction
-merge_predictions.regression_prediction <- function(obj1, rest, weights=rep(1,length(rest)+1)/(length(rest)+1)) {
+merge_predictions.regression_prediction <- function(obj1, rest, ...) {
+  args <- list(...)
+  weights <- if (!is.null(args$weights)) args$weights else rep(1,length(rest)+1)/(length(rest)+1)
+
   allobj <- c(obj1, rest)
   assert_that(all(sapply(allobj, function(obj) inherits(obj, "regression_prediction"))))
-  
-  #preds <- lapply(1:length(allobj), function(i) {
-  #  predict(allobj[[i]], newdata, ...)$pred * weights[i]
-  #})
   
   preds <- lapply(1:length(allobj), function(i) {
     allobj[[i]]$pred * weights[i]
@@ -227,17 +225,15 @@ merge_predictions.regression_prediction <- function(obj1, rest, weights=rep(1,le
 
 #' @export
 #' @method merge_predictions classification_prediction
-merge_predictions.classification_prediction <- function(obj1, rest, weights=rep(1,length(rest)+1)/(length(rest)+1)) {
+merge_predictions.classification_prediction <- function(obj1, rest, ...) {
+  args <- list(...)
+  weights <- if (!is.null(args$weights)) args$weights else rep(1,length(rest)+1)/(length(rest)+1)
+
   allobj <- vector(mode="list", length(rest)+1)
   allobj[[1]] <- obj1
   allobj[2:length(allobj)] <- rest
   
-  #allobj <- c(obj1, rest)
   assert_that(all(sapply(allobj, function(obj) inherits(obj, "classification_prediction"))))
-  
-  #preds <- lapply(1:length(allobj), function(i) {
-  #  predict(allobj[[i]], newdata, ...)$prob * weights[i]
-  #})
   
   preds <- lapply(1:length(allobj), function(i) {
     allobj[[i]]$prob * weights[i]
@@ -333,7 +329,6 @@ weighted_model <- function(fits, names=1:length(fits), weights=rep(1/length(fits
 #' 
 #' @param fits a list of fits
 #' @param names the names of the fits
-#' @export
 #' @noRd
 #' @keywords internal
 list_model <- function(fits, names=1:length(fits)) {
@@ -346,6 +341,7 @@ list_model <- function(fits, names=1:length(fits)) {
 
 #' @export
 #' @method predict weighted_model
+#' @importFrom stats predict
 predict.weighted_model <- function(object, newdata=NULL, ...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
@@ -358,6 +354,7 @@ predict.weighted_model <- function(object, newdata=NULL, ...) {
 
 #' @export
 #' @method predict list_model
+#' @importFrom stats predict
 predict.list_model <- function(object, newdata=NULL,...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")

@@ -24,7 +24,9 @@ Given a \code{feature_selection} specification object and a dataset, returns the
 \examples{
 fsel <- feature_selector("FTest", "top_k", 2)
 coords <- rbind(c(1,1,1), c(2,2,2), c(3,3,3))
-ROI <- neuroim2::ROIVec(neuroim2::NeuroSpace(c(10,10,10)), coords=coords, matrix(rnorm(100*3), 100, 3))
+space <- neuroim2::NeuroSpace(c(10,10,10))
+roi_data <- matrix(rnorm(100*3), 100, 3)
+ROI <- neuroim2::ROIVec(space, coords=coords, roi_data)
 Y <- factor(rep(c("a", "b"), each=50))
 featureMask <- select_features(fsel, neuroim2::values(ROI), Y)
 sum(featureMask) == 2

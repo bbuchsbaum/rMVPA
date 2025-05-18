@@ -10,7 +10,8 @@ mvpa_iterate(
   ids = 1:length(vox_list),
   batch_size = as.integer(0.1 * length(ids)),
   verbose = TRUE,
-  processor = NULL
+  processor = NULL,
+  analysis_type = c("searchlight", "regional")
 )
 }
 \arguments{
@@ -29,6 +30,8 @@ Defaults to 10\% of total ROIs.}
 
 \item{processor}{Optional custom processing function. If NULL, uses default processor.
 Must accept parameters (obj, roi, rnum) and return a tibble.}
+
+\item{analysis_type}{Character indicating the type of analysis. Defaults to "searchlight".}
 }
 \value{
 A tibble containing results for each ROI with columns:

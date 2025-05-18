@@ -26,7 +26,11 @@ This object can be used for further multivariate statistical analysis using the 
 # Create a MANOVA model
 dataset <- create_mvpa_dataset(data_matrix, labels, subject_ids)
 formula <- y ~ x1 + x2
-data_list <- list(y = dissimilarity_matrix_y, x1 = dissimilarity_matrix_x1, x2 = dissimilarity_matrix_x2)
+data_list <- list(
+  y = dissimilarity_matrix_y,
+  x1 = dissimilarity_matrix_x1,
+  x2 = dissimilarity_matrix_x2
+)
 design <- manova_design(formula, data_list)
 manova_model_obj <- manova_model(dataset, design)
 }
