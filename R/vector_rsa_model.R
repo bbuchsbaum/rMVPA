@@ -8,9 +8,8 @@
 #'
 #' @return A list containing the elements of the RSA design, class attributes "vector_rsa_design" and "list".
 #' @details
-#' The function verifies that all `labels` appear in `rownames(D)`. It also creates an expanded version
-#' of the dissimilarity matrix (`Dexpanded`) matching the order of `labels`, and precomputes
-#' cross-block information for later use.
+#' The function verifies that all `labels` appear in `rownames(D)` and creates an expanded
+#' dissimilarity matrix (`Dexpanded`) matching the order of `labels`.
 #' 
 #' @export
 vector_rsa_design <- function(D, labels, block_var) {
@@ -53,23 +52,9 @@ vector_rsa_model_mat <- function(design) {
   row_idx <- match(design$labels, rownames(design$D))
   Dexpanded <- design$D[row_idx, row_idx, drop=FALSE]
   
-  # Precompute cross-block data: for each block, which labels/indices are outside that block
-  unique_blocks <- sort(unique(design$block))
-  cross_block_data <- lapply(unique_blocks, function(b) {
-    # Indices of everything *not* in block b
-    inds_not_b <- which(design$block != b)
-    list(
-      other_labels = design$labels[inds_not_b],
-      indices      = inds_not_b,
-      block        = b
-    )
-  })
-  names(cross_block_data) <- unique_blocks
-  
-  # Return as a list
+  # Return expanded matrix
   list(
-    Dexpanded        = Dexpanded,
-    cross_block_data = cross_block_data
+    Dexpanded = Dexpanded
   )
 }
 
@@ -90,8 +75,7 @@ vector_rsa_model_mat <- function(design) {
 #' @return A \code{vector_rsa_model} object (S3 class) containing references to the dataset, design, and function parameters.
 #'
 #' @details
-#' The model references the already-precomputed cross-block data from the design. 
-#' If `return_predictions` is TRUE, the output of `run_regional` or `run_searchlight` 
+#' If `return_predictions` is TRUE, the output of `run_regional` or `run_searchlight`
 #' will include a `prediction_table` tibble containing the observation-level RSA scores.
 #' 
 #' @export
@@ -157,7 +141,6 @@ compute_trial_scores <- function(obj, X) {
   # Retrieve relevant design expansions
   precomputed <- obj$design$model_mat
   dissimilarity_matrix <- precomputed$Dexpanded
-  cross_block_data     <- precomputed$cross_block_data
   
   # Convert X to matrix if needed
   X <- as.matrix(X)
