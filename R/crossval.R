@@ -549,26 +549,31 @@ kfold_cross_validation <- function(len, nfolds=10) {
 # }
 
 #' @export
-crossval_samples.sequential_blocked_cross_validation <- function(obj, data, y,...) { 
+#' @rdname crossval_samples-methods
+crossval_samples.sequential_blocked_cross_validation <- function(obj, data, y,...) {
   crossv_seq_block(data, y, nfolds=obj$nfolds, block_var=obj$block_var, nreps=obj$nreps, block_ind=obj$block_ind)
 }
 
 #' @export
-crossval_samples.kfold_cross_validation <- function(obj, data,y,...) { 
+#' @rdname crossval_samples-methods
+crossval_samples.kfold_cross_validation <- function(obj, data,y,...) {
   crossv_k(data, y, obj$nfolds)
 }
 
 #' @export
-crossval_samples.blocked_cross_validation <- function(obj, data, y,...) { 
+#' @rdname crossval_samples-methods
+crossval_samples.blocked_cross_validation <- function(obj, data, y,...) {
   crossv_block(data, y, obj$block_var)
 }
 
 #' @export
-crossval_samples.bootstrap_blocked_cross_validation <- function(obj, data, y,...) { 
+#' @rdname crossval_samples-methods
+crossval_samples.bootstrap_blocked_cross_validation <- function(obj, data, y,...) {
   crossv_bootstrap_block(data, y, block_var=obj$block_var, nreps=obj$nreps, weights=obj$weights)
 }
 
 #' @export
+#' @rdname crossval_samples-methods
 #' @importFrom modelr resample
 crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id",...) {
   fold <- function(train, test) {
@@ -587,7 +592,8 @@ crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id",..
 }
 
 #' @export
-crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y,...) { 
+#' @rdname crossval_samples-methods
+crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y,...) {
   crossv_twofold(data, y, obj$block_var, obj$block_ind, nreps=obj$nreps)
 }
 
