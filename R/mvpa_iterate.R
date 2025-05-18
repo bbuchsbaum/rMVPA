@@ -439,7 +439,10 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
   })
 }
 
-#' @noRd
+#' @param verbose Logical; print progress messages if \code{TRUE}.
+#' @param analysis_type The type of analysis (e.g., "searchlight").
+#' @rdname run_future-methods
+#' @export
 run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analysis_type, ...) {
   gc()
   total_items <- nrow(frame)
