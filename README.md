@@ -52,3 +52,7 @@ executable:
 `chmod +x MVPA_Searchlight.R`
 
 `chmod +x MVPA_Regional.R`
+
+The MS-ReVE functionality is implemented in `R/contrast_rsa_model.R`. There is
+no file named `contrast_rsa.R`; all references should use the
+`contrast_rsa_model.R` filename.
