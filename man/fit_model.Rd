@@ -2,6 +2,7 @@
 % Please edit documentation in R/allgeneric.R
 \name{fit_model}
 \alias{fit_model}
+\alias{fit_model.mvpa_model}
 \title{Fit Model}
 \usage{
 fit_model(
@@ -37,4 +38,23 @@ fit_model(
 }
 \description{
 Fit a classification or regression model.
+}
+\examples{
+\donttest{
+  ds <- gen_sample_dataset(
+    D = c(6, 6, 6), nobs = 20,
+    response_type = "categorical",
+    data_mode = "image", nlevels = 2
+  )
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(
+    model = mdl,
+    dataset = ds$dataset,
+    design = ds$design,
+    model_type = "classification"
+  )
+  grid <- tune_grid(mspec, ds$dataset$train_data, ds$design$y_train, len = 1)
+  fit <- fit_model(mspec, ds$dataset$train_data,
+                   ds$design$y_train, wts = NULL, param = grid)
+}
 }
