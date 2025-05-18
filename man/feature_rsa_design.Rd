@@ -4,11 +4,17 @@
 \alias{feature_rsa_design}
 \title{Create a Feature-Based RSA Design}
 \usage{
-feature_rsa_design(S = NULL, F = NULL, labels, k = 0, max_comps = 10,
-  block_var = NULL)
+feature_rsa_design(
+  S = NULL,
+  F = NULL,
+  labels,
+  k = 0,
+  max_comps = 10,
+  block_var = NULL
+)
 }
 \arguments{
-\item{S}{A symmetric similarity matrix representing the feature space relationships. 
+\item{S}{A symmetric similarity matrix representing the feature space relationships.
 If NULL, you must supply F.}
 
 \item{F}{A feature space matrix (observations by features). If supplied, this overrides S and k.}
@@ -23,9 +29,9 @@ This parameter is ignored if F is supplied directly (k becomes ncol(F)).}
 feature space F by subsequent `feature_rsa_model` methods (PCA, PLS, SCCA).
 This value is automatically capped by the final feature dimensionality `k`. Default 10.}
 
-\item{block_var}{Optional blocking variable used to automatically create a
-blocked cross-validation specification when `crossval` is not supplied to
-\code{feature_rsa_model}.}
+\item{block_var}{Optional blocking variable for cross-validation. If provided and
+`crossval` is `NULL` in `feature_rsa_model`, a blocked cross-validation
+scheme will be generated using this vector.}
 }
 \value{
 A \code{feature_rsa_design} object (S3 class) containing:

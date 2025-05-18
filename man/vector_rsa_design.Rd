@@ -20,6 +20,6 @@ A list containing the elements of the RSA design, class attributes "vector_rsa_d
 This function constructs a design for an RSA model using a single distance matrix, labels, and blocks.
 }
 \details{
-The function verifies that all `labels` appear in `rownames(D)`. It also creates an expanded version
-of the dissimilarity matrix (`Dexpanded`) matching the order of `labels`.
+The function verifies that all `labels` appear in `rownames(D)` and creates an expanded
+dissimilarity matrix (`Dexpanded`) matching the order of `labels`.
 }

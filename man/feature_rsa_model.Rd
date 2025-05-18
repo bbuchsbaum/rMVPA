@@ -33,9 +33,7 @@ and including the component limit (`max_comps`).}
   \item{glmnet}{Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.}
 }}
 
-\item{crossval}{Cross-validation specification. If \code{NULL}, a blocked
-cross-validation scheme will be created automatically when
-\code{design$block_var} is present.}
+\item{crossval}{Optional cross-validation specification.}
 
 \item{cache_pca}{Logical, if TRUE and method is "pca", cache the PCA decomposition of the
 feature matrix F across cross-validation folds involving the same training rows.
