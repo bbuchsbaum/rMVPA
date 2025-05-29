@@ -8,15 +8,19 @@ add_interaction_contrasts(design, pairs = NULL, orthogonalize = TRUE)
 }
 \arguments{
 \item{design}{An object of class \code{msreve_design}.}
-\item{pairs}{Optional two-column matrix or list of character vectors specifying
-  pairs of contrast column names. If \code{NULL}, all pairwise combinations are
-  used.}
-\item{orthogonalize}{Logical; if \code{TRUE}, the expanded contrast matrix is
-  passed through \code{\link{orthogonalize_contrasts}}.}
+
+\item{pairs}{Optional two-column matrix or list of character vectors
+specifying pairs of contrast column names. Default \code{NULL} uses all
+pairwise combinations.}
+
+\item{orthogonalize}{Logical; if \code{TRUE} (default) the expanded contrast
+matrix is passed through \code{\link{orthogonalize_contrasts}}.}
 }
-\value{The updated \code{msreve_design} object with interaction contrasts appended.}
+\value{
+The updated \code{msreve_design} object with interaction columns
+  appended.
+}
 \description{
 Creates new contrast columns representing pairwise interactions of existing
-contrasts.
+contrasts in an \code{msreve_design} object.
 }
-\seealso{\code{\link{msreve_design}}, \code{\link{orthogonalize_contrasts}}}

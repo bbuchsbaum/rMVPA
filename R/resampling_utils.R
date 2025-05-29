@@ -12,6 +12,7 @@
 #' @return If `list=TRUE`, a list of k integer vectors. If `list=FALSE`, an integer
 #'         vector of fold assignments.
 #' @importFrom rsample vfold_cv assessment
+#' @importFrom tidyselect all_of
 #' @keywords internal
 create_mvpa_folds <- function(y, k = 5, list = TRUE, seed = NULL) {
   if (!is.null(seed)) set.seed(seed)
@@ -25,7 +26,11 @@ create_mvpa_folds <- function(y, k = 5, list = TRUE, seed = NULL) {
      strata_arg <- ".response_var_for_stratification"
   }
   
-  folds_obj <- rsample::vfold_cv(df_for_rsample, v = k, strata = strata_arg, repeats = 1)
+  folds_obj <- if (!is.null(strata_arg)) {
+    rsample::vfold_cv(df_for_rsample, v = k, strata = all_of(strata_arg), repeats = 1)
+  } else {
+    rsample::vfold_cv(df_for_rsample, v = k, repeats = 1)
+  }
   
   if (list) {
     # Extract assessment (hold-out) indices for each fold

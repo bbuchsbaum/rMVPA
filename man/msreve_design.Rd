@@ -4,8 +4,12 @@
 \alias{msreve_design}
 \title{Constructor for msreve_design}
 \usage{
-msreve_design(mvpa_design, contrast_matrix, name = "msreve_design_01",
-  include_interactions = FALSE)
+msreve_design(
+  mvpa_design,
+  contrast_matrix,
+  name = "msreve_design_01",
+  include_interactions = FALSE
+)
 }
 \arguments{
 \item{mvpa_design}{An object of class \\code{mvpa_design}, containing
@@ -17,8 +21,8 @@ Each column represents a contrast vector. It is highly recommended
 that columns are named to identify the contrasts.}
 
 \item{name}{An optional character string to name the design.}
-\item{include_interactions}{Logical; if \code{TRUE}, automatically add
-pairwise interaction contrasts using \code{add_interaction_contrasts}.}
+
+\item{include_interactions}{Logical. If TRUE, automatically add pairwise interaction contrasts using \code{\link{add_interaction_contrasts}}.}
 }
 \value{
 An object of class \\code{msreve_design}, which is a list containing:
@@ -55,6 +59,6 @@ colnames(C_mat) <- c("GroupComparison", "SubComparison")
 #
 # # Automatically add pairwise interactions
 # design_obj_int <- msreve_design(mvpa_des_obj, C_mat,
-#   include_interactions = TRUE)
+#                                include_interactions = TRUE)
 # colnames(design_obj_int$contrast_matrix)
 }
