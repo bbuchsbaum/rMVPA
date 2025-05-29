@@ -217,26 +217,36 @@ binary_perf <- function(observed, predicted, probs) {
 }
 
 #' @keywords internal
+#' @importFrom yardstick accuracy_vec roc_auc_vec
 multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
+  lvls <- levels(observed)
+  predicted_factor <- factor(predicted, levels = lvls)
+
+  acc <- yardstick::accuracy_vec(truth = observed, estimate = predicted_factor)
   
-  obs <- as.character(observed)
-  ntotal <- length(obs)
- 
-  aucres <- sapply(1:ncol(probs), function(i) {
-    lev <- try(levels(observed)[i])
-    pos <- obs == lev
+  # Calculate per-class AUC using one-vs-rest approach (matching original logic)
+  aucres <- sapply(seq_along(lvls), function(i) {
+    lev <- lvls[i]
+    pos <- observed == lev
     pclass <- probs[,i]
     pother <- rowMeans(probs[,-i, drop=FALSE])
-    Metrics::auc(as.numeric(pos), pclass - pother)-.5
+    # Original uses pclass - pother as the score
+    score <- pclass - pother
+    binary_truth <- factor(ifelse(pos, "positive", "negative"), levels = c("negative", "positive"))
+    tryCatch(
+      yardstick::roc_auc_vec(truth = binary_truth, estimate = score, event_level = "second") - 0.5,
+      error = function(e) NA_real_
+    )
   })
   
   names(aucres) <- paste0("AUC_", colnames(probs))
   
+  metrics <- c(Accuracy = acc, AUC = mean(aucres, na.rm=TRUE))
   
   if (class_metrics) {
-    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres, na.rm=TRUE), aucres)
+    c(metrics, aucres)
   } else {
-    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres, na.rm=TRUE))
+    metrics
   }
 }
   
