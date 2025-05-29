@@ -89,8 +89,10 @@ Suggests:
     randomForest,
     rmarkdown,
     roxygen2,
+    rsample,
     spls,
-    testthat
+    testthat,
+    yardstick
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf
