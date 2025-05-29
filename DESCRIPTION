@@ -10,7 +10,6 @@ Description: An R package to facilitate multivoxel pattern analysis of
 License: GPL (>= 2)
 Imports:
     assertthat,
-    caret,
     corpcor,
     crayon,
     dplyr,
@@ -26,9 +25,7 @@ Imports:
     matrixStats,
     memoise,
     methods,
-    Metrics,
     modelr,
-    ModelMetrics,
     neuroim2,
     neurosurf,
     pls,

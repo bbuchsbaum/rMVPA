@@ -173,20 +173,6 @@ performance.multiway_classification_result <- function(x, split_list=NULL, class
 
 #' @keywords internal
 #' @noRd
-combinedAUC <- function(Pred, Obs) {
-  Obs <- as.factor(Obs)
-  mean(sapply(1:ncol(Pred), function(i) {
-    lev <- levels(Obs)[i]
-    pos <- Obs == lev
-    pclass <- Pred[,i]
-    pother <- rowMeans(Pred[,-i,drop=FALSE])
-    Metrics::auc(as.numeric(pos), pclass - pother)-.5
-  }))
-}
-
-
-#' @keywords internal
-#' @noRd
 combinedACC <- function(Pred, Obs) {
   levs <- levels(as.factor(Obs))
   maxind <- apply(Pred, 1, which.max)
