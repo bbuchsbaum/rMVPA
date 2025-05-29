@@ -30,14 +30,6 @@ mclass_summary <- function (data, lev = NULL, model = NULL) {
 
 
 
-#' @keywords internal
-#' @noRd
-load_caret_libs <- function(x) {
-  for (lib in x$model$library) {
-    library(lib, character.only = TRUE)
-  }
-}
-
 
 #' @keywords internal
 #' @noRd
