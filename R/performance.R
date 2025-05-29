@@ -28,17 +28,22 @@ predicted_class <- function(prob) {
 #' - Spearman correlation: a measure of the monotonic relationship between predicted and observed values.
 #' @seealso \code{\link{regression_result}}
 #' @export
+#' @importFrom yardstick rsq_vec rmse_vec
+#' @importFrom stats cor
 performance.regression_result <- function(x, split_list,...) {
   if (!is.null(split_list)) {
     ## TODO: add support
     stop("split_by not supported for regression analyses yet.")
   }
   
-  #browser()
-  R2 <- 1 - sum((x$observed - x$predicted)^2)/sum((x$observed-mean(x$observed))^2)
-  rmse <- sqrt(mean((x$observed-x$predicted)^2))
-  rcor <- cor(x$observed, x$predicted, method="spearman")
-  c(R2=R2, RMSE=rmse, spearcor=rcor)
+  obs <- x$observed
+  pred <- x$predicted
+  
+  res_rsq <- yardstick::rsq_vec(truth = obs, estimate = pred)
+  res_rmse <- yardstick::rmse_vec(truth = obs, estimate = pred)
+  res_spearcor <- tryCatch(stats::cor(obs, pred, method="spearman", use="pairwise.complete.obs"), error = function(e) NA_real_)
+  
+  c(R2=res_rsq, RMSE=res_rmse, spearcor=res_spearcor)
 }
 
 
