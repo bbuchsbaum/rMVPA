@@ -33,19 +33,20 @@ mclass_summary <- function (data, lev = NULL, model = NULL) {
 
 #' @keywords internal
 #' @noRd
-get_control <- function(y, nreps) {
-  if (is.factor(y) && length(levels(y)) == 2) {
-    ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE, summaryFunction=caret::twoClassSummary)
-    metric <- "ROC"
-  } else if (is.factor(y) && length(levels(y)) > 2) {
-    ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE, summaryFunction=mclass_summary)
-    metric <- "AUC"
+get_control <- function(y, nreps) { # nreps for bootstrap tuning
+  is_class <- is.factor(y)
+  
+  # Determine primary metric for tuning and optimization
+  metric_name <- if (is_class) {
+    if (nlevels(y) == 2) "roc_auc" else "accuracy" # Defaulting to accuracy for multiclass
   } else {
-    ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE)
-    metric = "RMSE"
+    "rmse" 
   }
   
-  list(ctrl=ctrl, metric=metric)
+  list(
+    metric = metric_name, 
+    number = nreps # For bootstrap reps in tuning, if applicable
+  )
 }
 
 
