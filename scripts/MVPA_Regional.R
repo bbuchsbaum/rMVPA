@@ -21,7 +21,6 @@
 .suppress(library(neurosurf))
 .suppress(library(rMVPA))
 .suppress(library(optparse))
-.suppress(library(caret))
 .suppress(library(futile.logger))
 .suppress(library(io))
 .suppress(library(doParallel))

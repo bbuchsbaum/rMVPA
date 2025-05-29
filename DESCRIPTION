@@ -39,6 +39,7 @@ Imports:
     stringr,
     tibble,
     tidyr,
+    tidyselect,
     whitening,
     rsample,
     yardstick
@@ -62,6 +63,7 @@ Collate:
     'performance.R'
     'rMVPA.R'
     'regional.R'
+    'register_mvpa_model.R'
     'resample.R'
     'resampling_utils.R'
     'rsa_model.R'

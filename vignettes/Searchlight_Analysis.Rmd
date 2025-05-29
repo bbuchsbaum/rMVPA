@@ -77,7 +77,7 @@ hist(result$results$AUC$data)
 
 ## Using different classifiers
 
-All of the classifiers available in the `caret` package can be used (in theory) for a searchlight analysis. For example, we can run an analysis using a linear support vector (`svmLinear`) machine as follows:
+All of the classifiers in the MVPAModels registry can be used for a searchlight analysis. Additional models can be registered using `register_mvpa_model()`. For example, to run an analysis using a built-in model:
 
 ```{r, eval=FALSE}
 svm_model <- load_model("svmLinear") 

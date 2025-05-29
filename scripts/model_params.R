@@ -4,7 +4,6 @@
 
 .suppress(library(rMVPA))
 .suppress(library(futile.logger))
-.suppress(library(caret))
 .suppress(library(optparse))
 
 option_list <- list(
