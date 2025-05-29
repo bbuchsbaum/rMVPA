@@ -5,28 +5,6 @@ requireNamespaceQuietStop <- function(package) {
     stop(paste('package',package,'is required'), call. = FALSE)
 }
 
-#' @keywords internal
-#' @noRd
-mclass_summary <- function (data, lev = NULL, model = NULL) {
-  if (!all(levels(data[, "pred"]) == levels(data[, "obs"]))) 
-    stop("levels of observed and predicted data do not match")
-  has_class_probs <- all(lev %in% colnames(data))
-  
-  if (has_class_probs) {
-    requireNamespaceQuietStop("ModelMetrics")
-    prob_stats <- lapply(levels(data[, "pred"]), function(x) {
-      obs <- ifelse(data[, "obs"] == x, 1, 0)
-      prob <- data[, x]
-      AUCs <- try(ModelMetrics::auc(obs, data[, x]), silent = TRUE)
-      return(AUCs)
-    })
-    roc <- mean(unlist(prob_stats))
-  } else {
-    stop("Cannot compute AUC. Class probabilities unavailable for model: ", model)
-  }
-  
-  c(AUC=roc)
-}
 
 
 
