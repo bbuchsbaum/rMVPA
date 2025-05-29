@@ -42,7 +42,9 @@ Imports:
     stringr,
     tibble,
     tidyr,
-    whitening
+    whitening,
+    rsample,
+    yardstick
 Collate:
     'allgeneric.R'
     'custom.R'
@@ -90,10 +92,8 @@ Suggests:
     randomForest,
     rmarkdown,
     roxygen2,
-    rsample,
     spls,
-    testthat,
-    yardstick
+    testthat
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf
