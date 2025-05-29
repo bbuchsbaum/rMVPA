@@ -209,3 +209,7 @@ MVPAModels$spls_mixomics <- list(
     pred$predict[,,modelFit$ncomp]
   }
 )
+
+# Add model aliases for backward compatibility
+MVPAModels$sda <- MVPAModels$sda_notune
+MVPAModels$glmnet <- MVPAModels$glmnet_opt

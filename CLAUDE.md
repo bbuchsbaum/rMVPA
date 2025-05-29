@@ -135,3 +135,5 @@ The package uses a centralized model registry called `MVPAModels` (an environmen
 - Logging via `futile.logger` for debugging
 - MS-ReVE functionality is in `R/contrast_rsa_model.R` (not `contrast_rsa.R`)
 - The package no longer depends on `caret` - all model management is handled internally
+- Commonly used caret models (rf, spls, etc.) have been extracted and adapted in `R/caret_models.R`
+- Model aliases exist for backward compatibility: `sda` → `sda_notune`, `glmnet` → `glmnet_opt`

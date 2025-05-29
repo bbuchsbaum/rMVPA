@@ -48,6 +48,7 @@ Collate:
     'custom.R'
     'balance.R'
     'classifiers.R'
+    'caret_models.R'
      crossnobis_helpers.R
     'common.R'
     'crossval.R'
