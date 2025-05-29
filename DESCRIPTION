@@ -64,6 +64,7 @@ Collate:
     'rMVPA.R'
     'regional.R'
     'resample.R'
+    'resampling_utils.R'
     'rsa_model.R'
     'roisplit.R'
     'searchlight.R'
