@@ -102,7 +102,7 @@ external_crossval <- function(mspec, roi, id, center_global_id = NA, ...) {
   # Prepare sl_info
   sl_info <- list(center_local_id = center_local_id, center_global_id = center_global_id)
 
-  #browser()
+ 
   # Train the model and handle any errors
   # Pass sl_info and other dots
   dots <- list(...)
@@ -453,7 +453,6 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analys
   } else {
     processor
   }
-
 
   
   results <- frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {

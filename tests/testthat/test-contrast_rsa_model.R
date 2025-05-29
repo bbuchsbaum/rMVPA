@@ -272,6 +272,37 @@ test_that("contrast_rsa_model constructor collinearity check works as expected",
 
 context("train_model.contrast_rsa_model")
 
+# --- Mock searchlight_info (simplified for these tests) ---
+mock_searchlight_info <- function(n_voxels = 10, n_designs = 1) {
+  structure(
+    list(
+      parent_index = 1:n_voxels, # For simplicity, each voxel is its own parent
+      parent_ninst = rep(1, n_voxels),
+      n_voxels = n_voxels,
+      n_designs = n_designs,
+      radius = 6, # example radius
+      type = "spherical" # example type
+    ),
+    class = c("searchlight_info", "list")
+  )
+}
+
+# --- Mock implementations for with_mocked_bindings ---
+# These are moved here to be available for all tests in this context
+.mock_get_nfolds_contrast <- function(obj, ...) {
+  if (inherits(obj, "mock_cv_spec")) {
+    return(obj$.n_folds_val)
+  }
+  stop(".mock_get_nfolds_contrast called with unexpected object type in this test context.")
+}
+
+.mock_train_indices_contrast <- function(obj, fold_num, ...) {
+  if (inherits(obj, "mock_cv_spec")) {
+    return(which(obj$.folds_val != fold_num))
+  }
+  stop(".mock_train_indices_contrast called with unexpected object type in this test context.")
+}
+
 # More comprehensive mock dataset for train_model tests
 mock_mvpa_dataset_train <- function(n_samples = 24, n_cond = 4, n_blocks = 3, n_voxels = 10) {
   mvpa_des_cv <- mock_mvpa_design_cv(n_samples, n_cond, n_blocks) 
@@ -323,16 +354,22 @@ test_that("train_model.contrast_rsa_model runs with standard settings (lm, beta_
   model_spec <- contrast_rsa_model(dset, ms_des, check_collinearity = FALSE) 
   cv_spec <- mock_cv_spec_s3(dset$design) 
   sl_data <- dset$train_data[, 1:n_voxels_sl] 
-  sl_info <- list(center_local_id = center_voxel_local_idx, center_global_id = center_voxel_local_idx)
-  
+  sl_info <- list(center_local_id = center_voxel_local_idx, center_global_id = center_voxel_local_idx, radius = 0, n_voxels = n_voxels_sl)
+
   expect_silent({
-    suppressWarnings(result_list <- train_model(model_spec, sl_data, sl_info, cv_spec))
+    with_mocked_bindings(
+      get_nfolds = .mock_get_nfolds_contrast,
+      train_indices = .mock_train_indices_contrast,
+      .package = "rMVPA",
+      {
+        res <- suppressWarnings(train_model(model_spec, sl_data, sl_info, cv_spec))
+      }
+    )
   })
   
-  expect_type(result_list, "list")
-  expect_named(result_list, c("beta_delta"))
+  expect_s3_class(res, "contrast_rsa_model_results")
   
-  result_vec <- result_list$beta_delta
+  result_vec <- res$beta_delta
   expect_type(result_vec, "double")
   expect_named(result_vec, colnames(ms_des$contrast_matrix))
   expect_false(anyNA(result_vec)) 
@@ -356,16 +393,22 @@ test_that("train_model.contrast_rsa_model works with pearson, delta_only", {
                                    check_collinearity = FALSE) 
   cv_spec <- mock_cv_spec_s3(dset$design) 
   sl_data <- dset$train_data[, 1:n_voxels_sl]
-  sl_info <- list(center_local_id = center_voxel_local_idx, center_global_id = center_voxel_local_idx)
+  sl_info <- list(center_local_id = center_voxel_local_idx, center_global_id = center_voxel_local_idx, radius = 0, n_voxels = n_voxels_sl)
   
   expect_silent({
-    suppressWarnings(result_list <- train_model(model_spec, sl_data, sl_info, cv_spec))
+    with_mocked_bindings(
+      get_nfolds = .mock_get_nfolds_contrast,
+      train_indices = .mock_train_indices_contrast,
+      .package = "rMVPA",
+      {
+        res <- suppressWarnings(train_model(model_spec, sl_data, sl_info, cv_spec))
+      }
+    )
   })
   
-  expect_type(result_list, "list")
-  expect_named(result_list, c("delta_only"))
+  expect_s3_class(res, "contrast_rsa_model_results")
   
-  result_vec <- result_list$delta_only
+  result_vec <- res$delta_only
   expect_type(result_vec, "double")
   expect_named(result_vec, colnames(ms_des$contrast_matrix))
   expect_false(anyNA(result_vec))
@@ -389,16 +432,22 @@ test_that("train_model.contrast_rsa_model works with spearman, beta_only", {
                                    check_collinearity = FALSE) 
   cv_spec <- mock_cv_spec_s3(dset$design) 
   sl_data <- dset$train_data[, 1:n_voxels_sl]
-  sl_info <- list(center_local_id = center_voxel_local_idx, center_global_id = center_voxel_local_idx)
+  sl_info <- list(center_local_id = center_voxel_local_idx, center_global_id = center_voxel_local_idx, radius = 0, n_voxels = n_voxels_sl)
   
   expect_silent({
-    suppressWarnings(result_list <- train_model(model_spec, sl_data, sl_info, cv_spec))
+    with_mocked_bindings(
+      get_nfolds = .mock_get_nfolds_contrast,
+      train_indices = .mock_train_indices_contrast,
+      .package = "rMVPA",
+      {
+        res <- suppressWarnings(train_model(model_spec, sl_data, sl_info, cv_spec))
+      }
+    )
   })
   
-  expect_type(result_list, "list")
-  expect_named(result_list, c("beta_only"))
+  expect_s3_class(res, "contrast_rsa_model_results")
   
-  result_vec <- result_list$beta_only
+  result_vec <- res$beta_only
   expect_type(result_vec, "double")
   expect_named(result_vec, colnames(ms_des$contrast_matrix))
   expect_false(anyNA(result_vec))
@@ -718,10 +767,23 @@ test_that("contrast_rsa_model output metrics are internally consistent", {
                                normalize_delta = normalize,
                                calc_reliability = reliability,
                                check_collinearity = FALSE)
-    result_list <- train_model(spec,
+    # result_list <- train_model(spec, # Original call
+    #             sl_data = dset$train_data,
+    #             sl_info = list(center_local_id = 1, center_global_id = 1, radius = 0, n_voxels = n_voxels),
+    #             cv_spec = mock_cv_spec_s3(mvpa_des))
+    
+    # Wrapped call
+    result_list <- with_mocked_bindings(
+        get_nfolds = .mock_get_nfolds_contrast,
+        train_indices = .mock_train_indices_contrast,
+        .package = "rMVPA",
+        {
+            suppressWarnings(train_model(spec,
                 sl_data = dset$train_data,
                 sl_info = list(center_local_id = 1, center_global_id = 1, radius = 0, n_voxels = n_voxels),
-                cv_spec = mock_cv_spec_s3(mvpa_des))
+                cv_spec = mock_cv_spec_s3(mvpa_des)))
+        }
+    )
     result_list[[metric]]
   }
   
@@ -746,7 +808,8 @@ test_that("contrast_rsa_model output metrics are internally consistent", {
   expect_true(is.finite(recon_val_single))
   expect_true(recon_val_single >= -1 && recon_val_single <= 1)
 
-  rho_const <- (get_nfolds(mock_cv_spec_s3(mvpa_des)) - 1) / get_nfolds(mock_cv_spec_s3(mvpa_des))
+  # rho_const <- (get_nfolds(mock_cv_spec_s3(mvpa_des)) - 1) / get_nfolds(mock_cv_spec_s3(mvpa_des)) # Original
+  rho_const <- (.mock_get_nfolds_contrast(mock_cv_spec_s3(mvpa_des)) - 1) / .mock_get_nfolds_contrast(mock_cv_spec_s3(mvpa_des)) # Patched
   beta_delta_rel <- run_metric("beta_delta_reliable", reliability = TRUE)
   expect_equal(beta_delta_rel, beta_delta_vec * rho_const, tolerance = 1e-6)
 })

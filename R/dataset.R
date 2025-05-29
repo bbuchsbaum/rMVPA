@@ -116,7 +116,11 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
   }
   
   Y <- if (response_type == "categorical") {
-    sample(factor(rep(letters[1:nlevels], length.out=nobs)))
+    if (nobs == 1) {
+      factor(letters[1], levels = letters[1:max(2, nlevels)])
+    } else {
+      sample(factor(rep(letters[1:nlevels], length.out=nobs)))
+    }
   } else {
     rnorm(nobs)
   }
@@ -127,7 +131,11 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     rnorm(ntest_obs)
   }
   
-  block_var <- as.integer(as.character(cut(1:nobs, blocks, labels=1:blocks)))
+  block_var <- if (nobs == 1 && blocks == 1) {
+    1L #  block_var should be an integer
+  } else {
+    as.integer(as.character(cut(1:nobs, blocks, labels=1:blocks)))
+  }
   
   if (external_test) {
     message("external test")

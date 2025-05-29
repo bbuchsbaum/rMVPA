@@ -414,11 +414,9 @@ initialize_crossval <- function(config, des=NULL) {
 
 #' Load a Pre-defined MVPA Model
 #'
-#' Retrieves a model specification from either the pre-defined set of MVPA models or from caret's model library.
+#' Retrieves a model specification from the pre-defined set of MVPA models.
 #'
-#' @param name Character string specifying the model to load. Can be either:
-#'   \itemize{
-#'     \item A pre-defined MVPA model name:
+#' @param name Character string specifying the model to load. Must be a pre-defined MVPA model name:
 #'     \describe{
 #'       \item{corclass}{Correlation-based classifier with template matching}
 #'       \item{sda_notune}{Simple Shrinkage Discriminant Analysis without tuning}
@@ -430,8 +428,6 @@ initialize_crossval <- function(config, des=NULL) {
 #'       \item{lda_thomaz}{Modified LDA for high-dimensional data}
 #'       \item{hdrda}{High-Dimensional Regularized Discriminant Analysis}
 #'     }
-#'     \item Any valid model name from caret's model library (e.g., "rf" for random forest, "svmRadial" for SVM)
-#'   }
 #'
 #' @return A list containing the model specification with the following components:
 #'   \describe{
@@ -452,50 +448,26 @@ initialize_crossval <- function(config, des=NULL) {
 #' # Load correlation classifier with parameter tuning options
 #' corr_model <- load_model("corclass")
 #' print(corr_model$parameters)  # View tunable parameters
-#' 
-#' # Load caret's random forest model
-#' rf_model <- load_model("rf")
-#' print(rf_model$parameters)  # View RF parameters
-#' 
-#' # Load caret's SVM model
-#' svm_model <- load_model("svmRadial")
 #'
 #' @seealso 
 #' \code{\link{MVPAModels}} for the complete list of available custom MVPA models
-#' 
-#' \code{\link[caret]{getModelInfo}} for the complete list of available caret models
 #' 
 #' \code{\link{mvpa_model}} for using these models in MVPA analyses
 #'
 #' @export
 load_model <- function(name) {
-  if (exists(name, envir=MVPAModels)) {
-    return(get(name, envir=MVPAModels))
-  }
-  
-  # Try loading from caret if not found in MVPAModels
-  caret_model <- try(getModelInfo(name, regex=FALSE)[[1]], silent=TRUE)
-  if (!inherits(caret_model, "try-error")) {
-    return(caret_model)
-  }
-  
-  stop("Model '", name, "' not found in MVPAModels or caret library")
-}
-load_model <- function(name) {
-  registry <- MVPAModels
+  registry <- MVPAModels # Existing environment
   
   ret <- if (!is.null(registry[[name]])) {
     registry[[name]]   
-  } else if (length(caret::getModelInfo(name)) > 0) {
-    caret::getModelInfo(name)[[name]] 
   } else {
-    stop(paste("unrecognized model: ", name))
+    # Removed caret fallback
+    stop(paste0("Model '", name, "' not found in MVPAModels. ",
+                "Register custom models using `register_mvpa_model()` if needed."))
   }
   
-  ret$label <- name
-  
+  ret$label <- name # Existing logic
   ret
-  
 }
 
 #' @noRd

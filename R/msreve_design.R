@@ -1,4 +1,3 @@
-@param include_interactions.*
 #' Constructor for msreve_design
 #'
 #' Creates an msreve_design object, which encapsulates the necessary
