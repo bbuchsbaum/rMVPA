@@ -391,7 +391,8 @@ MVPAModels$glmnet_opt <- list(
     colnames(bounds)<-c("lower","upper")
     fam <- if (length(lev) > 2) "multinomial" else "binomial"
 
-    foldid <- caret::createFolds(y,k=5,list=FALSE)
+    # Generate fold assignments for cv.glmnet
+    foldid <- create_mvpa_folds(y, k = 5, list = FALSE, seed = 1234)
     fit <- epsgo(Q.func="tune.glmnet.interval",
                  bounds=bounds,
                  parms.coding="none",
