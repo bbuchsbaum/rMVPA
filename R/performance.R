@@ -30,7 +30,7 @@ predicted_class <- function(prob) {
 #' @export
 #' @importFrom yardstick rsq_vec rmse_vec
 #' @importFrom stats cor
-performance.regression_result <- function(x, split_list,...) {
+performance.regression_result <- function(x, split_list=NULL,...) {
   if (!is.null(split_list)) {
     ## TODO: add support
     stop("split_by not supported for regression analyses yet.")
