@@ -192,21 +192,28 @@ combinedACC <- function(Pred, Obs) {
 
 
 #' @keywords internal
+#' @importFrom yardstick accuracy_vec roc_auc_vec
 binary_perf <- function(observed, predicted, probs) {
-  obs <- as.character(observed)
-  ncorrect <- sum(obs == predicted)
-  ntotal <- length(obs)
-  #maxClass <- max(table(obs))
+  # Ensure observed is a factor with levels in a consistent order
+  # and probs columns match this order.
+  lvls <- levels(observed)
+  if (length(lvls) != 2) stop("binary_perf expects 2 levels in observed.")
   
-  #out <- binom.test(ncorrect,
-  #                  ntotal,
-  #                  p = maxClass/ntotal,
-  #                  alternative = "greater")
+  # Ensure predicted is a factor with the same levels as observed
+  predicted_factor <- factor(predicted, levels = lvls)
   
+  # Assuming probs has columns named after levels(observed) or in the same order.
+  # And positive class is the second level.
+  prob_positive_class <- if (ncol(probs) == 2) probs[, lvls[2]] else probs[,1] # Adapt if probs is single col
+
+  res_acc <- yardstick::accuracy_vec(truth = observed, estimate = predicted_factor)
+  res_auc <- tryCatch(
+     yardstick::roc_auc_vec(truth = observed, estimate = prob_positive_class, event_level = "second"),
+     error = function(e) NA_real_
+  )
   
-  #c(ZAccuracy=-qnorm(out$p.value), Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
-  c(Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
-  
+  # Note: The original code subtracted 0.5 from AUC. This is unusual but preserved for compatibility
+  c(Accuracy = res_acc, AUC = res_auc - 0.5) # yardstick returns numeric, ensure it's named
 }
 
 #' @keywords internal
