@@ -5,3 +5,6 @@
 inst/doc
 docs
 oldR
+CRAN_guidance.md
+rMVPA_cheatsheet.md
+00check.log
