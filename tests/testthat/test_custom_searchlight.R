@@ -74,8 +74,7 @@ test_that("run_custom_searchlight (standard) runs without error and returns corr
 
 
 test_that("run_custom_searchlight (randomized) runs without error", {
-  skip_on_cran() # May take a bit longer
-  
+
   # Run randomized searchlight
   searchlight_results_rand <- run_custom_searchlight(
     dataset = dataset_vol,
