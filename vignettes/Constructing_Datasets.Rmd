@@ -41,6 +41,7 @@ print(real_dataset)
 This example assumes you have cortical geometry stored in a file (e.g., "subject.lh.smoothwm.asc") and a signal matrix in CSV format ("surface_data.csv"). The signal matrix should have dimensions corresponding to the number of vertices and the number of observations.
 
 ```{r surface, eval=FALSE}
+## remotes::install_github("bbuchsbaum/neurosurf")
 library(neurosurf)
 
 # Load the cortical geometry
