@@ -213,3 +213,153 @@ MVPAModels$spls_mixomics <- list(
 # Add model aliases for backward compatibility
 MVPAModels$sda <- MVPAModels$sda_notune
 MVPAModels$glmnet <- MVPAModels$glmnet_opt
+
+# XGBoost model adapted from caret
+MVPAModels$xgbTree <- list(
+  type = c("Regression", "Classification"),
+  library = c("xgboost", "plyr"),
+  label = "xgbTree",
+  loop = NULL,
+  parameters = data.frame(
+    parameters = c("nrounds", "max_depth", "eta", "gamma", "colsample_bytree", "min_child_weight", "subsample"),
+    class = c("numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"),
+    label = c("# Boosting Iterations", "Max Tree Depth", "Shrinkage", "Minimum Loss Reduction", 
+              "Subsample Ratio of Columns", "Minimum Sum of Instance Weight", "Subsample Percentage")
+  ),
+  
+  grid = function(x, y, len = NULL, search = "grid") {
+    if (search == "grid") {
+      expand.grid(
+        max_depth = seq(1, len), 
+        nrounds = floor((1:len) * 50), 
+        eta = c(0.3, 0.4), 
+        gamma = 0, 
+        colsample_bytree = c(0.6, 0.8), 
+        min_child_weight = c(1), 
+        subsample = seq(0.5, 1, length = len)
+      )
+    } else {
+      data.frame(
+        nrounds = floor(runif(len, min = 1, max = 1000)),
+        max_depth = sample(1:10, replace = TRUE, size = len),
+        eta = runif(len, min = 0.001, max = 0.6),
+        gamma = runif(len, min = 0, max = 10),
+        colsample_bytree = runif(len, min = 0.3, max = 0.7),
+        min_child_weight = sample(0:20, size = len, replace = TRUE),
+        subsample = runif(len, min = 0.25, max = 1)
+      )
+    }
+  },
+  
+  fit = function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    # Convert to matrix if needed
+    if (!inherits(x, "xgb.DMatrix")) {
+      x <- as.matrix(x)
+    }
+    
+    if (is.factor(y)) {
+      # Classification
+      if (length(lev) == 2) {
+        # Binary classification
+        y <- ifelse(y == lev[1], 1, 0)
+        if (!inherits(x, "xgb.DMatrix")) {
+          x <- xgboost::xgb.DMatrix(x, label = y, missing = NA)
+        } else {
+          xgboost::setinfo(x, "label", y)
+        }
+        if (!is.null(wts)) {
+          xgboost::setinfo(x, "weight", wts)
+        }
+        out <- xgboost::xgb.train(
+          list(eta = param$eta, max_depth = param$max_depth,
+               gamma = param$gamma, colsample_bytree = param$colsample_bytree,
+               min_child_weight = param$min_child_weight, subsample = param$subsample),
+          data = x, nrounds = param$nrounds, objective = "binary:logistic", ...
+        )
+      } else {
+        # Multiclass classification
+        y <- as.numeric(y) - 1
+        if (!inherits(x, "xgb.DMatrix")) {
+          x <- xgboost::xgb.DMatrix(x, label = y, missing = NA)
+        } else {
+          xgboost::setinfo(x, "label", y)
+        }
+        if (!is.null(wts)) {
+          xgboost::setinfo(x, "weight", wts)
+        }
+        out <- xgboost::xgb.train(
+          list(eta = param$eta, max_depth = param$max_depth,
+               gamma = param$gamma, colsample_bytree = param$colsample_bytree,
+               min_child_weight = param$min_child_weight, subsample = param$subsample),
+          data = x, num_class = length(lev), nrounds = param$nrounds,
+          objective = "multi:softprob", ...
+        )
+      }
+    } else {
+      # Regression
+      if (!inherits(x, "xgb.DMatrix")) {
+        x <- xgboost::xgb.DMatrix(x, label = y, missing = NA)
+      } else {
+        xgboost::setinfo(x, "label", y)
+      }
+      if (!is.null(wts)) {
+        xgboost::setinfo(x, "weight", wts)
+      }
+      out <- xgboost::xgb.train(
+        list(eta = param$eta, max_depth = param$max_depth,
+             gamma = param$gamma, colsample_bytree = param$colsample_bytree,
+             min_child_weight = param$min_child_weight, subsample = param$subsample),
+        data = x, nrounds = param$nrounds, objective = "reg:squarederror", ...
+      )
+    }
+    
+    # Store problem type and levels for prediction
+    out$obsLevels <- lev
+    out$problemType <- ifelse(is.factor(y), "Classification", "Regression")
+    
+    out
+  },
+  
+  predict = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    if (!inherits(newdata, "xgb.DMatrix")) {
+      newdata <- as.matrix(newdata)
+      newdata <- xgboost::xgb.DMatrix(data = newdata, missing = NA)
+    }
+    
+    out <- predict(modelFit, newdata)
+    
+    if (modelFit$problemType == "Classification") {
+      if (length(modelFit$obsLevels) == 2) {
+        # Binary classification
+        out <- ifelse(out >= 0.5, modelFit$obsLevels[1], modelFit$obsLevels[2])
+      } else {
+        # Multiclass classification
+        out <- matrix(out, ncol = length(modelFit$obsLevels), byrow = TRUE)
+        out <- modelFit$obsLevels[apply(out, 1, which.max)]
+      }
+    }
+    
+    out
+  },
+  
+  prob = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    if (!inherits(newdata, "xgb.DMatrix")) {
+      newdata <- as.matrix(newdata)
+      newdata <- xgboost::xgb.DMatrix(data = newdata, missing = NA)
+    }
+    
+    out <- predict(modelFit, newdata)
+    
+    if (length(modelFit$obsLevels) == 2) {
+      # Binary classification
+      out <- cbind(out, 1 - out)
+      colnames(out) <- modelFit$obsLevels
+    } else {
+      # Multiclass classification
+      out <- matrix(out, ncol = length(modelFit$obsLevels), byrow = TRUE)
+      colnames(out) <- modelFit$obsLevels
+    }
+    
+    as.data.frame(out, stringsAsFactors = TRUE)
+  }
+)

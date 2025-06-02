@@ -8,6 +8,7 @@ Maintainer: Bradley R. Buchsbaum <brad.buchsbaum@gmail.com>
 Description: An R package to facilitate multivoxel pattern analysis of
     neuroimaging data in R.
 License: GPL (>= 2)
+Depends: R (>= 4.1.0)
 Imports:
     assertthat,
     corpcor,
@@ -81,6 +82,7 @@ Collate:
     'contrast_rsa_model.R'
 RoxygenNote: 7.3.2.9000
 Suggests:
+    c060,
     covr,
     doParallel,
     e1071,
@@ -93,7 +95,8 @@ Suggests:
     rmarkdown,
     roxygen2,
     spls,
-    testthat
+    testthat,
+    xgboost
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf

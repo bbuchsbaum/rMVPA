@@ -485,7 +485,7 @@ test_that("train_model handles NA from U_hat_for_delta_calc (formerly compute_cr
     compute_crossvalidated_means_sl = function(...) U_hat_with_na,
     .package = "rMVPA",
     {
-      train_model.contrast_rsa_model(
+      train_model(
         model_spec_na, 
         sl_data = model_spec_na$dataset$train_data[1:4, 1:5, drop=FALSE],
         sl_info = list(center_local_id = 1, center_global_id = 1, radius=0, n_voxels=5)
@@ -552,7 +552,7 @@ test_that("train_model handles insufficient data points for regression", {
             compute_crossvalidated_means_sl = function(...) U_hat_clean_but_problematic, 
             .package = "rMVPA",
             {
-                train_model.contrast_rsa_model(
+                train_model(
                     model_spec_insufficient,
                     sl_data = model_spec_insufficient$dataset$train_data,
                     sl_info = list(center_local_id = 1, center_global_id = 1, radius=0, n_voxels=1)
@@ -683,7 +683,7 @@ test_that("train_model.contrast_rsa_model handles whitening_matrix_W for crossno
     compute_crossnobis_distances_sl = function(...) rep(NA_real_, 3),
     .package = "rMVPA",
     {
-      train_model.contrast_rsa_model(
+      train_model(
         model_spec_cn, 
         sl_data = dset$train_data,
         sl_info = list(center_local_id = 1, center_global_id = 1, radius=0, n_voxels=n_voxels_sl)
