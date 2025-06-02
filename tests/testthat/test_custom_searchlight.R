@@ -52,7 +52,7 @@ test_that("run_custom_searchlight (standard) runs without error and returns corr
 
   # Check the actual data map (NeuroVol)
   map_vol <- perf_obj$data
-  expect_s3_class(map_vol, "NeuroVol")
+  expect_true(inherits(map_vol, "NeuroVol"))
   expect_equal(dim(map_vol), dim(dataset_vol$mask))
   expect_equal(space(map_vol), space(dataset_vol$mask))
   expect_true(is.numeric(values(map_vol)))
@@ -93,7 +93,7 @@ test_that("run_custom_searchlight (randomized) runs without error", {
   expect_equal(searchlight_results_rand$metrics, c("mean_signal"))
   expect_s3_class(searchlight_results_rand$results$mean_signal, "searchlight_performance")
   map_vol_rand <- searchlight_results_rand$results$mean_signal$data
-  expect_s3_class(map_vol_rand, "NeuroVol")
+  expect_true(inherits(map_vol_rand, "NeuroVol"))
   expect_equal(dim(map_vol_rand), dim(dataset_vol$mask))
   
   # Check that some results exist (might not cover all voxels unlike standard)
@@ -106,21 +106,24 @@ test_that("run_custom_searchlight (randomized) runs without error", {
 
 
 test_that("run_custom_searchlight handles errors in custom_func", {
-  # Define a function that errors if fewer than 3 voxels in sphere
+  # Define a function that errors based on deterministic criteria
+  # Error on specific center indices to ensure a mix of success/failure
   error_sl_func <- function(sl_data, sl_info) {
-    if (ncol(sl_data) < 3) {
-      stop("Test Error: Too few voxels!")
+    # Use modulo arithmetic to ensure some spheres fail and some succeed
+    # Error on every third center index
+    if ((sl_info$center_index %% 3) == 0) {
+      stop("Test Error: Every third sphere fails!")
     }
     list(mean_signal = mean(sl_data, na.rm = TRUE))
   }
 
-  # Run with a small radius likely to trigger the error
+  # Run with standard searchlight
   # Suppress warnings expected from the error handling during run
   suppressWarnings({
       searchlight_results_err <- run_custom_searchlight(
-          dataset = dataset_vol,
+          dataset = dataset_vol,  # Use the original dataset
           custom_func = error_sl_func,
-          radius = 1, # Very small radius
+          radius = 5, # Use same radius as other tests
           method = "standard",
           .cores = 1,
           .verbose = FALSE
@@ -131,17 +134,24 @@ test_that("run_custom_searchlight handles errors in custom_func", {
   expect_s3_class(searchlight_results_err, "searchlight_result")
   expect_named(searchlight_results_err$results, "mean_signal")
   map_vol_err <- searchlight_results_err$results$mean_signal$data
-  expect_s3_class(map_vol_err, "NeuroVol")
+  expect_true(inherits(map_vol_err, "NeuroVol"))
 
-  # Check that some values are NA (where the error occurred)
-  # but not necessarily all, depending on sphere sizes
+  # Get values from the result map
+  all_values <- values(map_vol_err)
   active_indices <- which(as.logical(dataset_vol$mask))
-  map_values_active <- values(map_vol_err)[active_indices]
-  expect_true(any(is.na(map_values_active)))
-  # Ensure not ALL are NA (unless the mask is tiny/radius catches none)
-  if (length(active_indices) > 0) {
-      expect_false(all(is.na(map_values_active))) 
-  }
+  active_values <- all_values[active_indices]
+  
+  # We should have a mix of NA and non-NA values
+  n_na <- sum(is.na(active_values))
+  n_valid <- sum(!is.na(active_values))
+  
+  # With every 3rd sphere failing, we expect approximately 1/3 to be NA
+  # Just check that we have both
+  expect_true(n_na > 0, 
+              info = sprintf("Expected some NA values from failed spheres, but got %d NAs out of %d", n_na, length(active_values)))
+  
+  expect_true(n_valid > 0, 
+              info = sprintf("Expected some valid values from successful spheres, but got %d valid out of %d", n_valid, length(active_values)))
 })
 
 test_that("run_custom_searchlight runs in parallel (standard)", {

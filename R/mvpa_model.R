@@ -37,7 +37,8 @@ wrap_result <- function(result_table, design, fit=NULL) {
     
     ## TODO check me
     counts <- table(sort(unlist(result_table$test_ind)))
-    preds <- preds/counts
+    # Ensure counts aligns with testind order and convert to numeric vector
+    preds <- preds/as.numeric(counts[as.character(testind)])
     regression_result(observed, preds, testind=testind, test_design=design$test_design, fit)
   }
 }

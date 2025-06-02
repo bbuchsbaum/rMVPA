@@ -210,7 +210,6 @@ run_custom_regional <- function(dataset, region_mask, custom_func, ...,
     ids = prepped$region_set,
     processor = internal_processor,
     verbose = .verbose,
-    analysis_type = "regional",
     ... # Pass other mvpa_iterate args
   )
   futile.logger::flog.info("Custom regional analysis iteration complete.")
@@ -335,8 +334,7 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #'           `NeuroSurface` (`$data`) with the metric values mapped back to the
 #'           brain space, along with summary statistics (`$summary_stats`).
 #'     \item `metrics`: A character vector of the metric names.
-#'     \item `n_voxels`: total voxels/vertices defined by the mask.
-#'     \item `active_voxels`: number of voxels/vertices with results.
+#'     \item `n_voxels`, `active_voxels`: Information about the dataset mask.
 #'   }
 #'   If `method = "randomized"`, the values in the output maps represent the
 #'   average metric value for each voxel across all spheres it participated in.
@@ -579,7 +577,7 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
        for (i in 1:niter) {
             if (.verbose) flog.info("Randomized iteration %d/%d", i, niter)
             # Get random spheres for this iteration
-            slight <- get_searchlight(dataset, "randomized", radius) 
+            slight <- get_searchlight(dataset, type="randomized", radius=radius) 
             
             # Extract center indices (handling both NeuroVol and NeuroSurface cases)
              center_indices <- if (methods::is(slight[[1]], "ROIVolume")) {
@@ -626,6 +624,50 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
 }
 
 
+#' Create Searchlight Performance Object
+#'
+#' Creates a searchlight_performance object with the expected structure for tests
+#'
+#' @param data NeuroVol or NeuroSurface object
+#' @param metric_name Character string naming the metric
+#' @param indices Numeric vector of center indices (optional)
+#' @return A searchlight_performance object
+#' @export
+#' @keywords internal
+create_searchlight_performance <- function(data, metric_name, indices = NULL) {
+  # Calculate summary statistics from the data
+  values_vec <- if (inherits(data, c("NeuroVol", "NeuroSurface"))) {
+    neuroim2::values(data)
+  } else {
+    as.numeric(data)
+  }
+  
+  # Filter out NA values for statistics
+  valid_values <- values_vec[!is.na(values_vec)]
+  
+  summary_stats <- if (length(valid_values) > 0) {
+    list(
+      mean = mean(valid_values),
+      sd = sd(valid_values),
+      min = min(valid_values),
+      max = max(valid_values)
+    )
+  } else {
+    list(mean = NA, sd = NA, min = NA, max = NA)
+  }
+  
+  structure(
+    list(
+      data = data,
+      metric_name = metric_name,
+      n_nonzero = length(valid_values),
+      summary_stats = summary_stats,
+      indices = indices
+    ),
+    class = "searchlight_performance"
+  )
+}
+
 #' Combine Custom Standard Searchlight Results
 #'
 #' Internal function to combine results from a standard custom searchlight run.
@@ -636,8 +678,13 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
 #' @return A `searchlight_result` object.
 #' @keywords internal
 combine_custom_standard <- function(dataset, iteration_results) {
-  good_results <- iteration_results %>% dplyr::filter(!.data$error)
-  bad_results <- iteration_results %>% dplyr::filter(.data$error)
+  # Check if iteration_results is empty or missing expected columns
+  if (nrow(iteration_results) == 0 || !"error" %in% names(iteration_results)) {
+    stop("No results to combine for standard custom searchlight.")
+  }
+  
+  good_results <- iteration_results %>% dplyr::filter(!error)
+  bad_results <- iteration_results %>% dplyr::filter(error)
 
   if (nrow(good_results) == 0) {
     flog.error("No successful results for standard custom searchlight. Examining errors:")
@@ -690,25 +737,26 @@ combine_custom_standard <- function(dataset, iteration_results) {
      }
   }
 
-  # Use the wrap_out structure (adapted)
-  out_list <- lapply(1:num_metrics, function(i) {
-    metric_name <- metric_names[i]
-    metric_data <- perf_mat[, i]
-    # Create the performance object, passing the vector and center IDs
-    create_searchlight_performance(dataset, metric_data, center_ids) # Needs vector + IDs
-  })
-  names(out_list) <- metric_names
-
-  # Create the final searchlight_result object
-  structure(
-    list(
-      results = out_list,
-      n_voxels = length(dataset$mask),
-      active_voxels = sum(dataset$mask > 0),
-      metrics = metric_names
-    ),
-    class = c("searchlight_result", "list")
-  )
+  # Use wrap_out to create the searchlight result structure
+  # wrap_out expects a matrix with rows=voxels and cols=metrics
+  ret <- wrap_out(perf_mat, dataset, ids = center_ids)
+  
+  # Wrap each metric result in a searchlight_performance object
+  # This matches the expected test structure
+  performance_results <- list()
+  for (metric_name in names(ret$results)) {
+    performance_results[[metric_name]] <- create_searchlight_performance(
+      data = ret$results[[metric_name]],
+      metric_name = metric_name,
+      indices = center_ids
+    )
+  }
+  
+  # Replace the results with the wrapped versions
+  ret$results <- performance_results
+  
+  # Return the searchlight_result object
+  ret
 }
 
 
@@ -722,8 +770,8 @@ combine_custom_standard <- function(dataset, iteration_results) {
 #' @return A `searchlight_result` object.
 #' @keywords internal
 combine_custom_randomized <- function(dataset, iteration_results) {
-   good_results <- iteration_results %>% dplyr::filter(!.data$error)
-   bad_results <- iteration_results %>% dplyr::filter(.data$error)
+   good_results <- iteration_results %>% dplyr::filter(!error)
+   bad_results <- iteration_results %>% dplyr::filter(error)
 
    if (nrow(good_results) == 0) {
       flog.error("No successful results for randomized custom searchlight. Examining errors:")
@@ -809,10 +857,15 @@ combine_custom_randomized <- function(dataset, iteration_results) {
    }
 
    # --- Normalization and Output Wrapping ---
-   out_list <- list()
+   # Create a matrix to hold all normalized metrics
+   # Rows = all voxels in mask, Cols = metrics
+   final_matrix <- matrix(0, nrow = length(dataset$mask), ncol = num_metrics,
+                         dimnames = list(NULL, metric_names))
+   
    active_mask_indices_char <- as.character(which(dataset$mask > 0))
    
-   for (m_name in metric_names) {
+   for (i in seq_along(metric_names)) {
+       m_name <- metric_names[i]
        acc_matrix <- accumulators[[m_name]]
        
        # Identify indices present in both accumulator and counts
@@ -835,22 +888,28 @@ combine_custom_randomized <- function(dataset, iteration_results) {
            flog.warn("No overlapping indices found for normalization for metric '%s'.", m_name)
        }
 
-       # Wrap the normalized result vector (column 1 of sparse matrix)
-       # Need to extract the vector correctly, considering only relevant indices
-       final_vector <- as.vector(acc_matrix[,1]) # Full vector matching dataset$mask length
-
-       # Wrap output using create_searchlight_performance (pass the full vector, no IDs needed here)
-       out_list[[m_name]] <- create_searchlight_performance(dataset, final_vector, ids=NULL)
+       # Extract the normalized result vector and store in final matrix
+       final_matrix[, i] <- as.vector(acc_matrix[,1])
    }
 
-   # Create the final searchlight_result object
-   structure(
-       list(
-           results = out_list,
-           n_voxels = length(dataset$mask),
-           active_voxels = sum(dataset$mask > 0),
-           metrics = metric_names
-       ),
-       class = c("searchlight_result", "list")
-   )
+   # Use wrap_out to create the searchlight result structure
+   # For randomized searchlight with dense output, we pass ids=NULL
+   ret <- wrap_out(final_matrix, dataset, ids = NULL)
+   
+   # Wrap each metric result in a searchlight_performance object
+   # This matches the expected test structure
+   performance_results <- list()
+   for (metric_name in names(ret$results)) {
+     performance_results[[metric_name]] <- create_searchlight_performance(
+       data = ret$results[[metric_name]],
+       metric_name = metric_name,
+       indices = NULL  # NULL for randomized combined results
+     )
+   }
+   
+   # Replace the results with the wrapped versions
+   ret$results <- performance_results
+   
+   # Return the searchlight_result object
+   ret
 }

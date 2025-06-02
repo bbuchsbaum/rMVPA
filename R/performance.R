@@ -39,6 +39,9 @@ performance.regression_result <- function(x, split_list=NULL,...) {
   obs <- x$observed
   pred <- x$predicted
   
+  # Ensure pred is a numeric vector without table attributes
+  pred <- as.numeric(pred)
+  
   res_rsq <- yardstick::rsq_vec(truth = obs, estimate = pred)
   res_rmse <- yardstick::rmse_vec(truth = obs, estimate = pred)
   res_spearcor <- tryCatch(stats::cor(obs, pred, method="spearman", use="pairwise.complete.obs"), error = function(e) NA_real_)
@@ -105,6 +108,13 @@ prob_observed.binary_classification_result <- function(x) {
 #' @export
 prob_observed.multiway_classification_result <- function(x) {
   x$probs[cbind(seq(1,nrow(x$probs)),as.integer(x$observed))]
+}
+
+#' @export
+prob_observed.regression_result <- function(x) {
+  # Regression results don't have probabilities, return NULL
+  # This allows the searchlight combiner to skip prob_observed for regression
+  NULL
 }
 
 #' @method merge_results multiway_classification_result

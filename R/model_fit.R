@@ -283,7 +283,7 @@ merge_predictions.regression_prediction <- function(obj1, rest, ...) {
   assert_that(all(sapply(allobj, function(obj) inherits(obj, "regression_prediction"))))
   
   preds <- lapply(1:length(allobj), function(i) {
-    allobj[[i]]$pred * weights[i]
+    allobj[[i]]$preds * weights[i]
   })
   
   final_pred <- rowMeans(do.call(cbind, preds))
