@@ -446,6 +446,20 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
   if (!is.numeric(radius) || radius <= 0) {
       stop("`radius` must be a positive number.")
   }
+
+  # -- sanity check for radius relative to dataset dimensions --
+  if (inherits(dataset$mask, "NeuroVol")) {
+      mask_dims <- dim(dataset$mask)[1:3]
+      max_radius <- floor(min(mask_dims) / 2)
+      if (radius > max_radius) {
+          stop(sprintf(
+              "Specified radius (%s) is too large for dataset dimensions (%s). Maximum supported radius is %s.",
+              radius,
+              paste(mask_dims, collapse = "x"),
+              max_radius
+          ))
+      }
+  }
   if (method == "randomized" && (!is.numeric(niter) || niter < 1 || round(niter) != niter)) {
       stop("`niter` must be a positive integer for randomized searchlight.")
   }
