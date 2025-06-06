@@ -580,7 +580,10 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
             slight <- get_searchlight(dataset, type="randomized", radius=radius) 
             
             # Extract center indices (handling both NeuroVol and NeuroSurface cases)
-             center_indices <- if (methods::is(slight[[1]], "ROIVolume")) {
+             center_indices <- if (methods::is(slight[[1]], "ROIVolWindow")) {
+               # For randomized searchlight, use center_index
+               sapply(slight, function(x) x@center_index)
+             } else if (methods::is(slight[[1]], "ROIVolume")) {
                sapply(slight, function(x) x@parent_index)
              } else if (methods::is(slight[[1]], "ROISurface")) {
                sapply(slight, function(x) x@center_index)
