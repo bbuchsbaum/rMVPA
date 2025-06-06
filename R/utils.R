@@ -173,7 +173,7 @@ coalesce_join <- function(x, y,
 #' # Capture the information in a variable
 #' sys_info <- mvpa_sysinfo()
 #' print(sys_info$r_version)
-#' print(sys_info$dependencies$caret)
+#' print(sys_info$dependencies$rsample)
 #' }
 mvpa_sysinfo <- function() {
   info <- list()
@@ -197,7 +197,7 @@ mvpa_sysinfo <- function() {
 
   # --- Key Dependency Versions ---
   # Core dependencies and commonly used ones
-  deps <- c("neuroim2", "neurosurf", "caret", "future", "furrr",
+  deps <- c("neuroim2", "neurosurf", "rsample", "yardstick", "future", "furrr",
             "dplyr", "tibble", "purrr", "stats", "MASS") # Added stats/MASS
 
   dep_versions <- list()

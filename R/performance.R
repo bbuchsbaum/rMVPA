@@ -34,17 +34,25 @@ predicted_class <- function(prob) {
 #' - Spearman correlation: a measure of the monotonic relationship between predicted and observed values.
 #' @seealso \code{\link{regression_result}}
 #' @export
-performance.regression_result <- function(x, split_list,...) {
+#' @importFrom yardstick rsq_vec rmse_vec
+#' @importFrom stats cor
+performance.regression_result <- function(x, split_list=NULL,...) {
   if (!is.null(split_list)) {
     ## TODO: add support
     stop("split_by not supported for regression analyses yet.")
   }
   
-  #browser()
-  R2 <- 1 - sum((x$observed - x$predicted)^2)/sum((x$observed-mean(x$observed))^2)
-  rmse <- sqrt(mean((x$observed-x$predicted)^2))
-  rcor <- cor(x$observed, x$predicted, method="spearman")
-  c(R2=R2, RMSE=rmse, spearcor=rcor)
+  obs <- x$observed
+  pred <- x$predicted
+  
+  # Ensure pred is a numeric vector without table attributes
+  pred <- as.numeric(pred)
+  
+  res_rsq <- yardstick::rsq_vec(truth = obs, estimate = pred)
+  res_rmse <- yardstick::rmse_vec(truth = obs, estimate = pred)
+  res_spearcor <- tryCatch(stats::cor(obs, pred, method="spearman", use="pairwise.complete.obs"), error = function(e) NA_real_)
+  
+  c(R2=res_rsq, RMSE=res_rmse, spearcor=res_spearcor)
 }
 
 
@@ -123,6 +131,13 @@ prob_observed.multiway_classification_result <- function(x) {
   x$probs[cbind(seq(1,nrow(x$probs)),as.integer(x$observed))]
 }
 
+#' @export
+prob_observed.regression_result <- function(x) {
+  # Regression results don't have probabilities, return NULL
+  # This allows the searchlight combiner to skip prob_observed for regression
+  NULL
+}
+
 #' @rdname merge_results-methods
 #' @method merge_results multiway_classification_result
 #' @export
@@ -191,20 +206,6 @@ performance.multiway_classification_result <- function(x, split_list=NULL, class
 
 #' @keywords internal
 #' @noRd
-combinedAUC <- function(Pred, Obs) {
-  Obs <- as.factor(Obs)
-  mean(sapply(1:ncol(Pred), function(i) {
-    lev <- levels(Obs)[i]
-    pos <- Obs == lev
-    pclass <- Pred[,i]
-    pother <- rowMeans(Pred[,-i,drop=FALSE])
-    Metrics::auc(as.numeric(pos), pclass - pother)-.5
-  }))
-}
-
-
-#' @keywords internal
-#' @noRd
 combinedACC <- function(Pred, Obs) {
   levs <- levels(as.factor(Obs))
   maxind <- apply(Pred, 1, which.max)
@@ -215,44 +216,61 @@ combinedACC <- function(Pred, Obs) {
 
 
 #' @keywords internal
+#' @importFrom yardstick accuracy_vec roc_auc_vec
 binary_perf <- function(observed, predicted, probs) {
-  obs <- as.character(observed)
-  ncorrect <- sum(obs == predicted)
-  ntotal <- length(obs)
-  #maxClass <- max(table(obs))
+  # Ensure observed is a factor with levels in a consistent order
+  # and probs columns match this order.
+  lvls <- levels(observed)
+  if (length(lvls) != 2) stop("binary_perf expects 2 levels in observed.")
   
-  #out <- binom.test(ncorrect,
-  #                  ntotal,
-  #                  p = maxClass/ntotal,
-  #                  alternative = "greater")
+  # Ensure predicted is a factor with the same levels as observed
+  predicted_factor <- factor(predicted, levels = lvls)
   
+  # Assuming probs has columns named after levels(observed) or in the same order.
+  # And positive class is the second level.
+  prob_positive_class <- if (ncol(probs) == 2) probs[, lvls[2]] else probs[,1] # Adapt if probs is single col
+
+  res_acc <- yardstick::accuracy_vec(truth = observed, estimate = predicted_factor)
+  res_auc <- tryCatch(
+     yardstick::roc_auc_vec(truth = observed, estimate = prob_positive_class, event_level = "second"),
+     error = function(e) NA_real_
+  )
   
-  #c(ZAccuracy=-qnorm(out$p.value), Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
-  c(Accuracy=ncorrect/ntotal, AUC=Metrics::auc(observed == levels(observed)[2], probs[,2])-.5)
-  
+  # Note: The original code subtracted 0.5 from AUC. This is unusual but preserved for compatibility
+  c(Accuracy = res_acc, AUC = res_auc - 0.5) # yardstick returns numeric, ensure it's named
 }
 
 #' @keywords internal
+#' @importFrom yardstick accuracy_vec roc_auc_vec
 multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
+  lvls <- levels(observed)
+  predicted_factor <- factor(predicted, levels = lvls)
+
+  acc <- yardstick::accuracy_vec(truth = observed, estimate = predicted_factor)
   
-  obs <- as.character(observed)
-  ntotal <- length(obs)
- 
-  aucres <- sapply(1:ncol(probs), function(i) {
-    lev <- try(levels(observed)[i])
-    pos <- obs == lev
+  # Calculate per-class AUC using one-vs-rest approach (matching original logic)
+  aucres <- sapply(seq_along(lvls), function(i) {
+    lev <- lvls[i]
+    pos <- observed == lev
     pclass <- probs[,i]
     pother <- rowMeans(probs[,-i, drop=FALSE])
-    Metrics::auc(as.numeric(pos), pclass - pother)-.5
+    # Original uses pclass - pother as the score
+    score <- pclass - pother
+    binary_truth <- factor(ifelse(pos, "positive", "negative"), levels = c("negative", "positive"))
+    tryCatch(
+      yardstick::roc_auc_vec(truth = binary_truth, estimate = score, event_level = "second") - 0.5,
+      error = function(e) NA_real_
+    )
   })
   
   names(aucres) <- paste0("AUC_", colnames(probs))
   
+  metrics <- c(Accuracy = acc, AUC = mean(aucres, na.rm=TRUE))
   
   if (class_metrics) {
-    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres, na.rm=TRUE), aucres)
+    c(metrics, aucres)
   } else {
-    c(Accuracy=sum(obs == as.character(predicted))/length(obs), AUC=mean(aucres, na.rm=TRUE))
+    metrics
   }
 }
   

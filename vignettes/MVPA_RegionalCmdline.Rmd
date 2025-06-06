@@ -22,7 +22,7 @@ The script handles both volumetric NIfTI and surface-based data formats. You can
 
 The analysis produces comprehensive outputs including performance maps, prediction tables, and configuration records. Cross-validation options include blocked, k-fold, and two-fold approaches. 
 
-The script works with built-in MVPA models and integrates with the caret package for additional model options. Data preprocessing includes optional centering/scaling and flexible feature selection methods.
+The script works with built-in MVPA models from the MVPAModels registry. Data preprocessing includes optional centering/scaling and flexible feature selection methods.
 
 ---
 
@@ -78,7 +78,7 @@ The script supports various classification and regression models:
 - `hdrda`: High-Dimensional Regularized Discriminant Analysis
 
 ### Caret Models:
-- Any model available in the caret package (e.g., `rf`, `svmRadial`, `glmnet`)
+- Custom models can be registered using `register_mvpa_model()`
 
 ## 4. Cross-Validation Options
 

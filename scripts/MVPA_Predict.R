@@ -4,10 +4,8 @@
 .suppress(library(neuroim))
 .suppress(library(rMVPA))
 .suppress(library(optparse))
-.suppress(library(caret))
 .suppress(library(futile.logger))
 .suppress(library(io))
-.suppress(library(caret))
 
 option_list <- list(
   make_option(c("-t", "--test_design"), type="character", help="the file name of the evaluation design table (optional)"),

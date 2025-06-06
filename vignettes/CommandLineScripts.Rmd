@@ -76,8 +76,8 @@ The script supports various classification and regression models:
 - `lda_thomaz`: Modified LDA for high-dimensional data
 - `hdrda`: High-Dimensional Regularized Discriminant Analysis
 
-### Caret Models:
-- Any model available in the caret package (e.g., `rf`, `svmRadial`, `glmnet`)
+### Additional Models:
+- Custom models can be registered using `register_mvpa_model()`
 
 ## 4. Cross-Validation Options
 

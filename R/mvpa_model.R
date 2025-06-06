@@ -37,7 +37,8 @@ wrap_result <- function(result_table, design, fit=NULL) {
     
     ## TODO check me
     counts <- table(sort(unlist(result_table$test_ind)))
-    preds <- preds/counts
+    # Ensure counts aligns with testind order and convert to numeric vector
+    preds <- preds/as.numeric(counts[as.character(testind)])
     regression_result(observed, preds, testind=testind, test_design=design$test_design, fit)
   }
 }
@@ -212,9 +213,9 @@ create_model_spec <- function(name, dataset, design, return_predictions=FALSE,
 
 #' Create an MVPA Model
 #'
-#' Create an MVPA model based on a caret-based classification or regression model.
+#' Create an MVPA model based on a classification or regression model from the MVPAModels registry.
 #'
-#' @param model A caret-based classification or regression model.
+#' @param model A character string naming a model from the MVPAModels registry, or a custom model specification list.
 #' @param dataset An `mvpa_dataset` instance.
 #' @param design An `mvpa_design` instance.
 #' @param model_type A character string indicating the problem type: "classification" or "regression".

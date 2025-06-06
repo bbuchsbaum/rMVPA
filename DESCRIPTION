@@ -8,9 +8,9 @@ Maintainer: Bradley R. Buchsbaum <brad.buchsbaum@gmail.com>
 Description: An R package to facilitate multivoxel pattern analysis of
     neuroimaging data in R.
 License: GPL (>= 2)
+Depends: R (>= 4.1.0)
 Imports:
     assertthat,
-    caret,
     corpcor,
     crayon,
     dplyr,
@@ -26,9 +26,7 @@ Imports:
     matrixStats,
     memoise,
     methods,
-    Metrics,
     modelr,
-    ModelMetrics,
     neuroim2,
     neurosurf,
     pls,
@@ -42,12 +40,16 @@ Imports:
     stringr,
     tibble,
     tidyr,
-    whitening
+    tidyselect,
+    whitening,
+    rsample,
+    yardstick
 Collate:
     'allgeneric.R'
     'custom.R'
     'balance.R'
     'classifiers.R'
+    'caret_models.R'
      crossnobis_helpers.R
     'common.R'
     'crossval.R'
@@ -63,7 +65,9 @@ Collate:
     'performance.R'
     'rMVPA.R'
     'regional.R'
+    'register_mvpa_model.R'
     'resample.R'
+    'resampling_utils.R'
     'rsa_model.R'
     'roisplit.R'
     'searchlight.R'
@@ -78,6 +82,7 @@ Collate:
     'contrast_rsa_model.R'
 RoxygenNote: 7.3.2.9000
 Suggests:
+    c060,
     covr,
     doParallel,
     e1071,
@@ -90,7 +95,8 @@ Suggests:
     rmarkdown,
     roxygen2,
     spls,
-    testthat
+    testthat,
+    xgboost
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf

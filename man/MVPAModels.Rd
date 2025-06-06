@@ -26,7 +26,7 @@ MVPAModels
 An environment containing custom classification models for MVPA analysis.
 }
 \details{
-Models are accessed via \code{load_model(name)}. Each implements caret's \code{fit}, \code{predict}, and \code{prob} methods.
+Models are accessed via \code{load_model(name)}. Each model specification includes \code{fit}, \code{predict}, and \code{prob} methods.
 }
 \examples{
 # Load simple SDA classifier

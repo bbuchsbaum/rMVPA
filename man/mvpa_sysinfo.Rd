@@ -24,6 +24,6 @@ mvpa_sysinfo()
 # Capture the information in a variable
 sys_info <- mvpa_sysinfo()
 print(sys_info$r_version)
-print(sys_info$dependencies$caret)
+print(sys_info$dependencies$rsample)
 }
 }

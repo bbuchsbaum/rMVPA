@@ -4,10 +4,8 @@
 .suppress(library(neuroim))
 .suppress(library(rMVPA))
 .suppress(library(optparse))
-.suppress(library(caret))
 .suppress(library(futile.logger))
 .suppress(library(io))
-.suppress(library(caret))
 .suppress(library(doParallel))
 ## add "nestingDimension"
 ## that means features are nested in  a single 3D block

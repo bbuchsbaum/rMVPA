@@ -14,10 +14,10 @@
 `rMVPA` is an R library for multivariate pattern analysis of
 neuroimaging data. The goal of this library is to make MVPA analyses
 easy. It can be used both programmatically from within R or using a
-command line interface. ‘rMVPA’ leverages the ‘caret’ library for the
-underlying machine learning interface. What `rMVPA` provides is the
-infrastructure for conducting machine learning analyses on neuroimaging
-data.
+command line interface. ‘rMVPA’ provides a lightweight model registry
+and efficient resampling methods for machine learning. What `rMVPA`
+provides is the infrastructure for conducting machine learning analyses
+on neuroimaging data.
 
 Documentation and vignettes: <https://bbuchsbaum.github.io/rMVPA/>
 
@@ -53,6 +53,6 @@ executable:
 
 `chmod +x MVPA_Regional.R`
 
-The MS-ReVE functionality is implemented in `R/contrast_rsa_model.R`. There is
-no file named `contrast_rsa.R`; all references should use the
+The MS-ReVE functionality is implemented in `R/contrast_rsa_model.R`.
+There is no file named `contrast_rsa.R`; all references should use the
 `contrast_rsa_model.R` filename.

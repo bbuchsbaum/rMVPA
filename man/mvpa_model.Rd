@@ -21,7 +21,7 @@ mvpa_model(
 )
 }
 \arguments{
-\item{model}{A caret-based classification or regression model.}
+\item{model}{A character string naming a model from the MVPAModels registry, or a custom model specification list.}
 
 \item{dataset}{An `mvpa_dataset` instance.}
 
@@ -48,7 +48,7 @@ mvpa_model(
 \item{return_fits}{A \code{logical} indicating whether to return the model fit for each voxel set (defaults to FALSE).}
 }
 \description{
-Create an MVPA model based on a caret-based classification or regression model.
+Create an MVPA model based on a classification or regression model from the MVPAModels registry.
 }
 \details{
 If `performance` is supplied, it must be a function that takes one argument and returns a named list of scalar values. 

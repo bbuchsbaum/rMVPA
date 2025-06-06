@@ -1017,6 +1017,9 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
     # The individual metric assignment handles NA propagation.
   }
   
+  # Add S3 class to the results list
+  class(results_list) <- c("contrast_rsa_model_results", "list")
+  
   results_list
 }
 

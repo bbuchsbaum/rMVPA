@@ -7,21 +7,17 @@
 load_model(name)
 }
 \arguments{
-\item{name}{Character string specifying the model to load. Can be either:
-\itemize{
-  \item A pre-defined MVPA model name:
-  \describe{
-    \item{corclass}{Correlation-based classifier with template matching}
-    \item{sda_notune}{Simple Shrinkage Discriminant Analysis without tuning}
-    \item{sda_boot}{SDA with bootstrap resampling}
-    \item{glmnet_opt}{Elastic net with EPSGO parameter optimization}
-    \item{sparse_sda}{SDA with sparsity constraints}
-    \item{sda_ranking}{SDA with automatic feature ranking}
-    \item{mgsda}{Multi-Group Sparse Discriminant Analysis}
-    \item{lda_thomaz}{Modified LDA for high-dimensional data}
-    \item{hdrda}{High-Dimensional Regularized Discriminant Analysis}
-  }
-  \item Any valid model name from caret's model library (e.g., "rf" for random forest, "svmRadial" for SVM)
+\item{name}{Character string specifying the model to load. Must be a pre-defined MVPA model name:
+\describe{
+  \item{corclass}{Correlation-based classifier with template matching}
+  \item{sda_notune}{Simple Shrinkage Discriminant Analysis without tuning}
+  \item{sda_boot}{SDA with bootstrap resampling}
+  \item{glmnet_opt}{Elastic net with EPSGO parameter optimization}
+  \item{sparse_sda}{SDA with sparsity constraints}
+  \item{sda_ranking}{SDA with automatic feature ranking}
+  \item{mgsda}{Multi-Group Sparse Discriminant Analysis}
+  \item{lda_thomaz}{Modified LDA for high-dimensional data}
+  \item{hdrda}{High-Dimensional Regularized Discriminant Analysis}
 }}
 }
 \value{
@@ -38,7 +34,7 @@ A list containing the model specification with the following components:
   }
 }
 \description{
-Retrieves a model specification from either the pre-defined set of MVPA models or from caret's model library.
+Retrieves a model specification from the pre-defined set of MVPA models.
 }
 \examples{
 # Load custom MVPA model
@@ -48,18 +44,9 @@ model <- load_model("sda_notune")
 corr_model <- load_model("corclass")
 print(corr_model$parameters)  # View tunable parameters
 
-# Load caret's random forest model
-rf_model <- load_model("rf")
-print(rf_model$parameters)  # View RF parameters
-
-# Load caret's SVM model
-svm_model <- load_model("svmRadial")
-
 }
 \seealso{
 \code{\link{MVPAModels}} for the complete list of available custom MVPA models
-
-\code{\link[caret]{getModelInfo}} for the complete list of available caret models
 
 \code{\link{mvpa_model}} for using these models in MVPA analyses
 }

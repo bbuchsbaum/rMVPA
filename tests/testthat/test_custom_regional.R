@@ -4,6 +4,19 @@ library(dplyr)
 library(tibble)
 library(neuroim2)
 
+# Helper function to suppress package version warnings
+suppress_package_warnings <- function(expr) {
+  suppressWarnings(expr, classes = "packageStartupMessage")
+  # Alternative: suppress all warnings related to package versions
+  # Use this if the above doesn't work:
+  # withCallingHandlers(expr, 
+  #   warning = function(w) {
+  #     if (grepl("was built under R version", w$message)) {
+  #       invokeRestart("muffleWarning")
+  #     }
+  #   })
+}
+
 context("run_custom_regional")
 
 # --- Setup --- 
@@ -71,7 +84,14 @@ non_scalar_func <- function(roi_data, roi_info) {
 # --- Basic Functionality Tests (Volumetric) --- 
 
 test_that("run_custom_regional works with list-returning function", {
-  results <- run_custom_regional(dataset_vol, region_mask_vol, stats_func)
+  results <- withCallingHandlers(
+    run_custom_regional(dataset_vol, region_mask_vol, stats_func),
+    warning = function(w) {
+      if (grepl("was built under R version", w$message)) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
   
   expect_s3_class(results, "tbl_df")
   expect_equal(nrow(results), 5) # ROIs 1, 2, 3, 4, 5
@@ -82,7 +102,14 @@ test_that("run_custom_regional works with list-returning function", {
 })
 
 test_that("run_custom_regional works with dataframe-returning function", {
-  results <- run_custom_regional(dataset_vol, region_mask_vol, dataframe_func)
+  results <- withCallingHandlers(
+    run_custom_regional(dataset_vol, region_mask_vol, dataframe_func),
+    warning = function(w) {
+      if (grepl("was built under R version", w$message)) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
   
   expect_s3_class(results, "tbl_df")
   expect_equal(nrow(results), 5)
@@ -96,7 +123,14 @@ test_that("run_custom_regional works with dataframe-returning function", {
 test_that("run_custom_regional handles errors in custom_func correctly", {
   # Suppress warnings about the error itself during the run
   suppressWarnings({
-      results <- run_custom_regional(dataset_vol, region_mask_vol, error_func) 
+      results <- withCallingHandlers(
+        run_custom_regional(dataset_vol, region_mask_vol, error_func),
+        warning = function(w) {
+          if (grepl("was built under R version", w$message)) {
+            invokeRestart("muffleWarning")
+          }
+        }
+      )
   })
   
   expect_s3_class(results, "tbl_df")
@@ -124,13 +158,27 @@ test_that("run_custom_regional runs in parallel without error", {
   skip_if_not_installed("future.apply") # Needed for auto plan setting
   
   # Run sequentially first
-  results_seq <- run_custom_regional(dataset_vol, region_mask_vol, stats_func, .cores = 1)
+  results_seq <- withCallingHandlers(
+    run_custom_regional(dataset_vol, region_mask_vol, stats_func, .cores = 1),
+    warning = function(w) {
+      if (grepl("was built under R version", w$message)) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
   
   # Run in parallel 
   # No need to manually set plan if future.apply is installed
   # suppressMessages to hide the plan setting message
   suppressMessages({
-      results_par <- run_custom_regional(dataset_vol, region_mask_vol, stats_func, .cores = 2) 
+      results_par <- withCallingHandlers(
+        run_custom_regional(dataset_vol, region_mask_vol, stats_func, .cores = 2),
+        warning = function(w) {
+          if (grepl("was built under R version", w$message)) {
+            invokeRestart("muffleWarning")
+          }
+        }
+      )
   })
  
   # Reset plan just in case
@@ -167,14 +215,28 @@ test_that("run_custom_regional input validation works", {
 test_that("run_custom_regional handles custom_func returning invalid structures", {
   # Unnamed list - should cause error during internal processing
   # Should result in error = TRUE in the output table
-  results_unnamed <- run_custom_regional(dataset_vol, region_mask_vol, unnamed_func)
+  results_unnamed <- withCallingHandlers(
+    run_custom_regional(dataset_vol, region_mask_vol, unnamed_func),
+    warning = function(w) {
+      if (grepl("was built under R version", w$message)) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
   expect_s3_class(results_unnamed, "tbl_df")
   expect_true(all(results_unnamed$error))
   expect_match(results_unnamed$error_message[1], "Error in custom_func: The list or data frame returned by custom_func must have names")
   
   # Non-scalar list - should cause error during internal processing
   # Should result in error = TRUE in the output table
-  results_nonscalar <- run_custom_regional(dataset_vol, region_mask_vol, non_scalar_func)
+  results_nonscalar <- withCallingHandlers(
+    run_custom_regional(dataset_vol, region_mask_vol, non_scalar_func),
+    warning = function(w) {
+      if (grepl("was built under R version", w$message)) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
   expect_s3_class(results_nonscalar, "tbl_df")
   expect_true(all(results_nonscalar$error))
   expect_match(results_nonscalar$error_message[1], "Error in custom_func: custom_func must return a named list of scalars")
@@ -186,7 +248,16 @@ test_that("run_custom_regional runs with .verbose = TRUE", {
   # Just check that it runs without error, capturing output is complex
   # Remove subsetting of mask
   expect_silent({ 
-      capture.output(run_custom_regional(dataset_vol, region_mask_vol, stats_func, .verbose = TRUE)) 
+      capture.output(
+        withCallingHandlers(
+          run_custom_regional(dataset_vol, region_mask_vol, stats_func, .verbose = TRUE),
+          warning = function(w) {
+            if (grepl("was built under R version", w$message)) {
+              invokeRestart("muffleWarning")
+            }
+          }
+        )
+      )
   })
 })
 

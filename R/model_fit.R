@@ -5,55 +5,26 @@ requireNamespaceQuietStop <- function(package) {
     stop(paste('package',package,'is required'), call. = FALSE)
 }
 
+
+
+
+
 #' @keywords internal
 #' @noRd
-mclass_summary <- function (data, lev = NULL, model = NULL) {
-  if (!all(levels(data[, "pred"]) == levels(data[, "obs"]))) 
-    stop("levels of observed and predicted data do not match")
-  has_class_probs <- all(lev %in% colnames(data))
+get_control <- function(y, nreps) { # nreps for bootstrap tuning
+  is_class <- is.factor(y)
   
-  if (has_class_probs) {
-    requireNamespaceQuietStop("ModelMetrics")
-    prob_stats <- lapply(levels(data[, "pred"]), function(x) {
-      obs <- ifelse(data[, "obs"] == x, 1, 0)
-      prob <- data[, x]
-      AUCs <- try(ModelMetrics::auc(obs, data[, x]), silent = TRUE)
-      return(AUCs)
-    })
-    roc <- mean(unlist(prob_stats))
+  # Determine primary metric for tuning and optimization
+  metric_name <- if (is_class) {
+    if (nlevels(y) == 2) "roc_auc" else "accuracy" # Defaulting to accuracy for multiclass
   } else {
-    stop("Cannot compute AUC. Class probabilities unavailable for model: ", model)
+    "rmse" 
   }
   
-  c(AUC=roc)
-}
-
-
-
-#' @keywords internal
-#' @noRd
-load_caret_libs <- function(x) {
-  for (lib in x$model$library) {
-    library(lib, character.only = TRUE)
-  }
-}
-
-
-#' @keywords internal
-#' @noRd
-get_control <- function(y, nreps) {
-  if (is.factor(y) && length(levels(y)) == 2) {
-    ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE, summaryFunction=caret::twoClassSummary)
-    metric <- "ROC"
-  } else if (is.factor(y) && length(levels(y)) > 2) {
-    ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, classProbs=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE, summaryFunction=mclass_summary)
-    metric <- "AUC"
-  } else {
-    ctrl <- caret::trainControl("boot", number=nreps, verboseIter=TRUE, returnData=FALSE, returnResamp="none",allowParallel=FALSE, trim=TRUE)
-    metric = "RMSE"
-  }
-  
-  list(ctrl=ctrl, metric=metric)
+  list(
+    metric = metric_name, 
+    number = nreps # For bootstrap reps in tuning, if applicable
+  )
 }
 
 
@@ -71,10 +42,109 @@ get_control <- function(y, nreps) {
 #' @return A data frame containing the best hyperparameter values.
 #' @keywords internal
 #' @noRd
-tune_model <- function(mspec, x, y, wts, param, nreps=10) {
-  ctrl <- get_control(y, nreps)
-  cfit <-caret::train(as.data.frame(x), y, method=mspec$model, weights=wts, metric=ctrl$metric, trControl=ctrl$ctrl, tuneGrid=param)
-  cfit$bestTune
+#' @importFrom rsample bootstraps
+#' @importFrom purrr map_dfr map_dbl
+#' @importFrom tibble tibble
+tune_model <- function(mspec, x, y, wts, param_grid, nreps = 10) {
+  
+  # Get metric to optimize from the mspec's control object (derived via get_control)
+  # The 'model' element within mspec is the list from MVPAModels
+  control_obj <- get_control(y, nreps) 
+  metric_to_optimize <- control_obj$metric 
+  
+  # Define the yardstick metric function based on metric_to_optimize
+  # And define if higher is better for this metric
+  higher_is_better <- TRUE
+  metric_fn <- switch(metric_to_optimize,
+    "roc_auc"     = yardstick::roc_auc_vec,
+    "mn_log_loss" = { higher_is_better <- FALSE; yardstick::mn_log_loss_vec },
+    "accuracy"    = yardstick::accuracy_vec,
+    "rmse"        = { higher_is_better <- FALSE; yardstick::rmse_vec },
+    "rsq"         = yardstick::rsq_vec,
+    stop("Unsupported metric for tuning: ", metric_to_optimize)
+  )
+  
+  y_vector <- if(is.matrix(y) && ncol(y) == 1) y[,1] else y
+  
+  df_for_rsample <- as.data.frame(x)
+  df_for_rsample$.response_var_for_stratification <- y_vector
+  
+  # Using bootstraps for tuning
+  resamples_obj <- if(is.factor(y_vector)) {
+    rsample::bootstraps(df_for_rsample, times = nreps, strata = tidyselect::all_of(".response_var_for_stratification"))
+  } else {
+    rsample::bootstraps(df_for_rsample, times = nreps)
+  }
+
+  tuning_metrics <- purrr::map_dfr(seq_len(nrow(param_grid)), .f = function(param_idx) {
+    current_params_df <- param_grid[param_idx, , drop = FALSE]
+    
+    # Performance over resamples for this parameter set
+    resample_perf <- purrr::map_dbl(resamples_obj$splits, .f = function(split) {
+      train_df_fold <- rsample::analysis(split)
+      test_df_fold  <- rsample::assessment(split)
+      
+      y_train_fold <- train_df_fold$.response_var_for_stratification
+      x_train_fold <- as.matrix(train_df_fold[, !(names(train_df_fold) %in% ".response_var_for_stratification"), drop = FALSE])
+      
+      y_test_fold  <- test_df_fold$.response_var_for_stratification
+      x_test_fold  <- as.matrix(test_df_fold[, !(names(test_df_fold) %in% ".response_var_for_stratification"), drop = FALSE])
+
+      # mspec$model is the list from MVPAModels (e.g., MVPAModels$sda_notune)
+      # Call its $fit element
+      # The `param` argument to the model's fit function should be the current set
+      fit_obj <- mspec$model$fit(x_train_fold, y_train_fold, 
+                                 wts = wts, # Pass weights if available
+                                 param = current_params_df, 
+                                 lev = levels(y_vector), 
+                                 last = FALSE,  # Not the last model
+                                 weights = NULL,  # Different from wts
+                                 classProbs = is.factor(y_vector)) # Pass classProbs
+
+      # Predict and evaluate
+      metric_value <- NA_real_
+      if (metric_to_optimize == "roc_auc" || metric_to_optimize == "mn_log_loss") {
+         preds_probs <- mspec$model$prob(fit_obj, x_test_fold)
+         if (is.factor(y_test_fold) && is.matrix(preds_probs) && !is.null(levels(y_test_fold))) {
+            colnames(preds_probs) <- levels(y_test_fold)
+         }
+         
+         # For binary classification with roc_auc, pass only the probability of the second class
+         if (metric_to_optimize == "roc_auc" && nlevels(y_test_fold) == 2) {
+           prob_positive <- preds_probs[, levels(y_test_fold)[2]]
+           metric_value <- metric_fn(truth = y_test_fold, estimate = prob_positive, event_level = "second")
+         } else {
+           metric_value <- metric_fn(truth = y_test_fold, estimate = preds_probs)
+         }
+      } else {
+         preds <- mspec$model$predict(fit_obj, x_test_fold)
+         if (is.factor(y_test_fold) && !is.null(levels(y_test_fold))) {
+            preds <- factor(preds, levels = levels(y_test_fold))
+         }
+         metric_value <- metric_fn(truth = y_test_fold, estimate = preds)
+      }
+      metric_value
+    }) # End loop over resamples_obj$splits
+    
+    # Return mean performance for this parameter set
+    data.frame(.param_id = param_idx, mean_metric = mean(resample_perf, na.rm = TRUE))
+  }) # End loop over param_grid
+  
+  best_row_idx <- if (higher_is_better) {
+    which.max(tuning_metrics$mean_metric)
+  } else {
+    which.min(tuning_metrics$mean_metric)
+  }
+  
+  if (length(best_row_idx) == 0 || is.na(tuning_metrics$mean_metric[best_row_idx])) { 
+    warning("tune_model: All parameter combinations resulted in NA performance. Returning first parameter set.")
+    best_row_idx <- 1
+  }
+  
+  best_param_id <- tuning_metrics$.param_id[best_row_idx]
+  best_tune_params <- param_grid[best_param_id, , drop = FALSE]
+  
+  return(best_tune_params)
 }
 
 #' Fit an MVPA model
@@ -215,7 +285,7 @@ merge_predictions.regression_prediction <- function(obj1, rest, ...) {
   assert_that(all(sapply(allobj, function(obj) inherits(obj, "regression_prediction"))))
   
   preds <- lapply(1:length(allobj), function(i) {
-    allobj[[i]]$pred * weights[i]
+    allobj[[i]]$preds * weights[i]
   })
   
   final_pred <- rowMeans(do.call(cbind, preds))
@@ -267,7 +337,7 @@ merge_predictions.classification_prediction <- function(obj1, rest, ...) {
 #'
 #' Constructs a model fit object, representing the result of a single model fit to a chunk of data. The object contains information about the model, response variable, model fit, problem type, model parameters, voxel indices, and an optional feature mask.
 #'
-#' @param model The caret-style model object.
+#' @param model The model specification object from MVPAModels.
 #' @param y The response variable (predictand).
 #' @param fit The fitted model.
 #' @param model_type The problem type, either "classification" or "regression" (default). Must be one of the provided options.

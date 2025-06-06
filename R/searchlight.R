@@ -266,36 +266,46 @@ combine_standard <- function(model_spec, good_results, bad_results) {
     ret <- wrap_out(perf_mat, model_spec$dataset, ind)
     
     if (has_results) {
-      pobserved <- good_results %>% 
+      # Get prob_observed values - these may be NULL for regression
+      pob_list <- good_results %>% 
         dplyr::select(result) %>% 
         pull(result) %>% 
-        purrr::map(~ prob_observed(.)) %>% 
-        bind_cols()
+        purrr::map(~ prob_observed(.))
       
-      # Create appropriate type of output based on dataset type
-      if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
-        # For surface data
-        pobserved <- neurosurf::NeuroSurfaceVector(
-          geometry = geometry(model_spec$dataset$train_data),
-          indices = seq_len(nrow(pobserved)),  # Or appropriate indices
-          mat = as.matrix(pobserved)
-        )
-      } else {
-        # For volume data
-        nc <- ncol(pobserved)
-        mask <- as.logical(model_spec$dataset$mask)
-        if (nrow(bad_results) > 0) {
-          bad_ind <- unlist(bad_results$id)
-          mask[bad_ind] <- FALSE
+      # Only process pobserved if we have non-NULL values (i.e., classification results)
+      if (any(!sapply(pob_list, is.null))) {
+        # Filter out NULL values (from regression results)
+        pob_list <- pob_list[!sapply(pob_list, is.null)]
+        
+        if (length(pob_list) > 0) {
+          pobserved <- bind_cols(pob_list)
+          
+          # Create appropriate type of output based on dataset type
+          if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
+            # For surface data
+            pobserved <- neurosurf::NeuroSurfaceVector(
+              geometry = geometry(model_spec$dataset$train_data),
+              indices = seq_len(nrow(pobserved)),  # Or appropriate indices
+              mat = as.matrix(pobserved)
+            )
+          } else {
+            # For volume data
+            nc <- ncol(pobserved)
+            mask <- as.logical(model_spec$dataset$mask)
+            if (nrow(bad_results) > 0) {
+              bad_ind <- unlist(bad_results$id)
+              mask[bad_ind] <- FALSE
+            }
+            pobserved <- SparseNeuroVec(
+              as.matrix(pobserved), 
+              neuroim2::add_dim(neuroim2::space(model_spec$dataset$mask), ncol(pobserved)), 
+              mask=mask
+            )
+          }
+          
+          ret$pobserved <- pobserved
         }
-        pobserved <- SparseNeuroVec(
-          as.matrix(pobserved), 
-          neuroim2::add_dim(neuroim2::space(model_spec$dataset$mask), ncol(pobserved)), 
-          mask=mask
-        )
       }
-      
-      ret$pobserved <- pobserved
     }
     
     return(ret)
@@ -522,7 +532,21 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   
   
   merged_results <- pool_results(good_results)
-  pobserved <- merged_results %>% purrr::map( ~ prob_observed(.)) %>% bind_cols()
+  
+  # Get prob_observed values - these may be NULL for regression
+  pob_list <- merged_results %>% purrr::map(~ prob_observed(.))
+  
+  # Only process pobserved if we have non-NULL values (i.e., classification results)
+  pobserved <- NULL
+  if (any(!sapply(pob_list, is.null))) {
+    # Filter out NULL values (from regression results)
+    pob_list <- pob_list[!sapply(pob_list, is.null)]
+    
+    if (length(pob_list) > 0) {
+      pobserved <- bind_cols(pob_list)
+    }
+  }
+  
   ind_set <- sort(unique(unlist(good_results$indices)))
 
   all_ids <- which(model_spec$dataset$mask > 0)
@@ -537,7 +561,10 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   }
   
   
-  pobserved <- SparseNeuroVec(as.matrix(pobserved), neuroim2::space(mask), mask=as.logical(mask))
+  # Only create SparseNeuroVec for pobserved if we have classification results
+  if (!is.null(pobserved)) {
+    pobserved <- SparseNeuroVec(as.matrix(pobserved), neuroim2::space(mask), mask=as.logical(mask))
+  }
   
   #perf_list <- furrr::future_map(merged_results, function(res) compute_performance(model_spec, res))
   perf_list <- purrr::map(merged_results, function(res) compute_performance(model_spec, res))
@@ -551,7 +578,12 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   
   colnames(perf_mat) <- names(perf_list[[1]])
   ret <- wrap_out(perf_mat, model_spec$dataset, ids=NULL) 
-  ret$pobserved <- pobserved
+  
+  # Only add pobserved if it's not NULL (i.e., for classification results)
+  if (!is.null(pobserved)) {
+    ret$pobserved <- pobserved
+  }
+  
   ret
 }
 
