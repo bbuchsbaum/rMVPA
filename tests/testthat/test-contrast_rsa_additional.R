@@ -41,6 +41,14 @@ mock_cv_spec_s3 <- function(mvpa_design) {
 get_nfolds.mock_cv_spec <- function(obj, ...) obj$.n_folds_val
 train_indices.mock_cv_spec <- function(obj, fold_num, ...) which(obj$.folds_val != fold_num)
 
+# Define the fixed contrast matrix used in other tests
+C_fixed_centered_4x2 <- matrix(c(
+  1,  1, -1, -1,  # Contrast 1: (Cond1, Cond2) vs (Cond3, Cond4)
+  1, -1,  1, -1   # Contrast 2: (Cond1, Cond3) vs (Cond2, Cond4)
+), nrow = 4, ncol = 2, byrow = FALSE)
+C_fixed_centered_4x2_scaled <- scale(C_fixed_centered_4x2, center = TRUE, scale = FALSE)
+colnames(C_fixed_centered_4x2_scaled) <- c("CFC1", "CFC2")
+
 # -------------------------------------------------------------------------
 # Test normalize_delta behaviour
 # -------------------------------------------------------------------------
@@ -84,7 +92,29 @@ test_that("normalize_delta rescales beta_delta and delta_only", {
   )
   cv_spec <- mock_cv_spec_s3(mvpa_des)
   sl_info <- list(center_local_id = 1, center_global_id = 1)
-  res_raw <- train_model(spec_raw, sl_data = mvpa_dset$train_data, sl_info = sl_info, cv_spec = cv_spec)
+  # Mock function for get_nfolds
+  .mock_get_nfolds_contrast <- function(obj, ...) {
+    if (inherits(obj, "mock_cv_spec")) {
+      return(obj$.n_folds_val)
+    }
+    stop(".mock_get_nfolds_contrast called with unexpected object type in this test context.")
+  }
+  
+  .mock_train_indices_contrast <- function(obj, fold_num, ...) {
+    if (inherits(obj, "mock_cv_spec")) {
+      return(which(obj$.folds_val != fold_num))
+    }
+    stop(".mock_train_indices_contrast called with unexpected object type in this test context.")
+  }
+  
+  res_raw <- with_mocked_bindings(
+    get_nfolds = .mock_get_nfolds_contrast,
+    train_indices = .mock_train_indices_contrast,
+    .package = "rMVPA",
+    {
+      suppressWarnings(train_model(spec_raw, sl_data = mvpa_dset$train_data, sl_info = sl_info, cv_spec = cv_spec))
+    }
+  )
 
   spec_norm <- contrast_rsa_model(
     dataset = mvpa_dset,
@@ -93,7 +123,14 @@ test_that("normalize_delta rescales beta_delta and delta_only", {
     normalize_delta = TRUE,
     check_collinearity = FALSE
   )
-  res_norm <- train_model(spec_norm, sl_data = mvpa_dset$train_data, sl_info = sl_info, cv_spec = cv_spec)
+  res_norm <- with_mocked_bindings(
+    get_nfolds = .mock_get_nfolds_contrast,
+    train_indices = .mock_train_indices_contrast,
+    .package = "rMVPA",
+    {
+      suppressWarnings(train_model(spec_norm, sl_data = mvpa_dset$train_data, sl_info = sl_info, cv_spec = cv_spec))
+    }
+  )
 
   norm_const <- sqrt(sum(res_raw$delta_only^2))
   expect_equal(res_norm$delta_only, res_raw$delta_only / norm_const, tolerance = 1e-8)
@@ -128,11 +165,32 @@ test_that("allow_nonorth_composite returns value with warning", {
                              allow_nonorth_composite = TRUE,
                              check_collinearity = FALSE)
 
+  .mock_get_nfolds_contrast2 <- function(obj, ...) {
+    if (inherits(obj, "mock_cv_spec")) {
+      return(obj$.n_folds_val)
+    }
+    stop(".mock_get_nfolds_contrast2 called with unexpected object type in this test context.")
+  }
+  
+  .mock_train_indices_contrast2 <- function(obj, fold_num, ...) {
+    if (inherits(obj, "mock_cv_spec")) {
+      return(which(obj$.folds_val != fold_num))
+    }
+    stop(".mock_train_indices_contrast2 called with unexpected object type in this test context.")
+  }
+  
   expect_warning(
-    result_list <- train_model(spec,
-                               sl_data = dset$train_data,
-                               sl_info = list(center_local_id = 1, center_global_id = 1, radius = 0, n_voxels = n_voxels),
-                               cv_spec = mock_cv_spec_s3(mvpa_des)),
+    result_list <- with_mocked_bindings(
+      get_nfolds = .mock_get_nfolds_contrast2,
+      train_indices = .mock_train_indices_contrast2,
+      .package = "rMVPA",
+      {
+        suppressWarnings(train_model(spec,
+                                     sl_data = dset$train_data,
+                                     sl_info = list(center_local_id = 1, center_global_id = 1, radius = 0, n_voxels = n_voxels),
+                                     cv_spec = mock_cv_spec_s3(mvpa_des)))
+      }
+    ),
     regexp = "not orthonormal"
   )
   expect_false(is.na(result_list$composite))

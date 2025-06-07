@@ -91,7 +91,29 @@ spec <- contrast_rsa_model(
 cv_spec <- mock_cv_spec_s3(mvpa_des)
 sl_info <- list(center_local_id = 1, center_global_id = 1)
 
-result_list <- train_model(spec, sl_data = mvpa_dset$train_data, sl_info = sl_info, cv_spec = cv_spec)
+# Mock functions for get_nfolds
+.mock_get_nfolds_contrast <- function(obj, ...) {
+  if (inherits(obj, "mock_cv_spec")) {
+    return(obj$.n_folds_val)
+  }
+  stop(".mock_get_nfolds_contrast called with unexpected object type in this test context.")
+}
+
+.mock_train_indices_contrast <- function(obj, fold_num, ...) {
+  if (inherits(obj, "mock_cv_spec")) {
+    return(which(obj$.folds_val != fold_num))
+  }
+  stop(".mock_train_indices_contrast called with unexpected object type in this test context.")
+}
+
+result_list <- with_mocked_bindings(
+  get_nfolds = .mock_get_nfolds_contrast,
+  train_indices = .mock_train_indices_contrast,
+  .package = "rMVPA",
+  {
+    suppressWarnings(train_model(spec, sl_data = mvpa_dset$train_data, sl_info = sl_info, cv_spec = cv_spec))
+  }
+)
 
 # Expected metrics for the first voxel
 beta_exp  <- c(C1 = -2.5, C2 = -1.5)
