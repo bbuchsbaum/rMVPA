@@ -841,11 +841,19 @@ test_that("composite metric returns NA with non-orthonormal contrasts", {
   spec <- contrast_rsa_model(dset, ms_des,
                              output_metric = c("composite"),
                              check_collinearity = FALSE)
-  result_list <- train_model(spec,
-                             sl_data = dset$train_data,
-                             sl_info = list(center_local_id = 1, center_global_id = 1,
-                                            radius = 0, n_voxels = n_voxels),
-                             cv_spec = mock_cv_spec_s3(mvpa_des))
+  
+  result_list <- with_mocked_bindings(
+    get_nfolds = .mock_get_nfolds_contrast,
+    train_indices = .mock_train_indices_contrast,
+    .package = "rMVPA",
+    {
+      suppressWarnings(train_model(spec,
+                                   sl_data = dset$train_data,
+                                   sl_info = list(center_local_id = 1, center_global_id = 1,
+                                                  radius = 0, n_voxels = n_voxels),
+                                   cv_spec = mock_cv_spec_s3(mvpa_des)))
+    }
+  )
 
   expect_true(is.na(result_list$composite))
   expect_equal(attr(result_list, "na_reason"),
