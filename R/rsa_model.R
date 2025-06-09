@@ -704,6 +704,25 @@ rsa_model <- function(dataset,
     check_collinearity(design$model_mat)
     message("Collinearity check passed.")
   }
+
+  # Verify that the number of observations in the dataset matches
+  # the size expected by the RSA design. This prevents obscure
+  # dimension errors later during model fitting.
+  nobs_dataset <- {
+    dims <- dim(dataset$train_data)
+    if (is.null(dims)) length(dataset$train_data) else dims[length(dims)]
+  }
+  expected_len <- choose(nobs_dataset, 2)
+  if (!is.null(design$include)) {
+    expected_len <- sum(design$include)
+  }
+  model_vec_len <- length(design$model_mat[[1]])
+  if (model_vec_len != expected_len) {
+    stop(sprintf(
+      "Mismatch between dataset observations (%s) and RSA design length (%s).",
+      nobs_dataset, model_vec_len
+    ))
+  }
   
   # Create the RSA model object
   obj <- create_model_spec(
