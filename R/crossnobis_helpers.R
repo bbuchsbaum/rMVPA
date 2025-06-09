@@ -21,9 +21,11 @@
 #'   \[ \tilde d_k = \frac{1}{M(M-1) P} \sum_{m \neq n} \hat\delta_{k,m}^{\top}\, \hat\delta_{k,n} \]
 #'   where \(\hat\delta_{k,m} = \hat\mu_{i,m}-\hat\mu_{j,m}\) is the difference pattern for
 #'   condition pair \(k=(i,j)\) in fold \(m\), and \(P\) is `P_voxels`.
-#'   Each delta matrix is reshaped to \(V \times M\) and inner products are
-#'   accumulated from `tcrossprod(t(delta))` with the diagonal set to zero so
-#'   only cross-fold terms contribute.
+#'   All pairwise difference matrices are stacked in a 3-D array and
+#'   cross-fold inner products are computed in a vectorised manner using
+#'   matrix operations (equivalent to applying `tcrossprod` to each pair's
+#'   delta matrix) with diagonals excluded so that only cross-fold terms
+#'   contribute.
 #'   If `U_folds` contains NAs (e.g., a condition is entirely missing from a fold's
 #'   training data), distances involving that condition may result in `NA`.
 #'   If you want Mahalanobis distances, ensure `U_folds` contains patterns that have
@@ -76,43 +78,29 @@ compute_crossnobis_distances_sl <- function(U_folds, P_voxels = NULL) {
 
   # Generate all unique unordered pairs of conditions in the
   # same column-major order as `lower.tri()`
-  pair_indices <- which(lower.tri(matrix(1, K, K)), arr.ind = TRUE)
-  n_pairs <- nrow(pair_indices)
+  pair_indices <- utils::combn(K, 2)
+  n_pairs <- ncol(pair_indices)
   
   if (n_pairs == 0) { # Should be caught by K < 2, but as a safeguard
       return(setNames(numeric(0), character(0)))
   }
 
-  crossnobis_distances <- numeric(n_pairs)
-  pair_names <- character(n_pairs)
+  # Compute delta matrices for all pairs at once (pair x V x M)
+  delta_array <- U_folds[pair_indices[1, ], , , drop = FALSE] -
+                  U_folds[pair_indices[2, ], , , drop = FALSE]
 
-  for (p_idx in seq_len(n_pairs)) {
-    idx_cond1 <- pair_indices[p_idx, 1]
-    idx_cond2 <- pair_indices[p_idx, 2]
+  # Sum across folds and sum of squares across folds
+  delta_sum <- apply(delta_array, c(1, 2), sum)
+  delta_sq_sum <- apply(delta_array^2, c(1, 2), sum)
 
-    # Calculate delta_k_m for all folds m: (U_folds[cond1,,m] - U_folds[cond2,,m])
-    # This results in a V x M matrix of difference patterns for the current pair
-    # Using drop = TRUE ensures a 2D matrix is returned
-    delta_matrix <- U_folds[idx_cond1, , , drop = TRUE] -
-                    U_folds[idx_cond2, , , drop = TRUE]
+  cross_terms <- delta_sum^2 - delta_sq_sum
+  cross_sums <- rowSums(cross_terms)
 
-    # Compute matrix of inner products: ip[m,n] = delta_k_m^T %*% delta_k_n
-    # t(delta_matrix) is M x V, so tcrossprod(t(delta_matrix)) yields M x M
-    ip <- tcrossprod(t(delta_matrix))
-    diag(ip) <- 0
+  crossnobis_distances <- cross_sums / (P_voxels * M * (M - 1))
 
-    # Sum of all m != n terms
-    sum_off_diagonal_ips <- sum(ip, na.rm = FALSE) # Propagate NAs
-
-    # Normalize
-    if (M * (M - 1) == 0) { # Should be caught by M < 2
-        crossnobis_distances[p_idx] <- NA_real_
-    } else {
-        crossnobis_distances[p_idx] <- sum_off_diagonal_ips / (P_voxels * M * (M - 1))
-    }
-    
-    pair_names[p_idx] <- paste0(condition_names[idx_cond1], "_vs_", condition_names[idx_cond2])
-  }
+  pair_names <- paste0(condition_names[pair_indices[1, ]],
+                       "_vs_",
+                       condition_names[pair_indices[2, ]])
 
   names(crossnobis_distances) <- pair_names
   return(crossnobis_distances)
