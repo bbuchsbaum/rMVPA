@@ -377,6 +377,12 @@ combine_rsa_standard <- function(model_spec, good_results, bad_results) {
   # Extract the performance matrix using safe error handling
   tryCatch({
     perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
+    if (is.null(colnames(perf_mat)) || any(colnames(perf_mat) == "")) {
+      expected_names <- names(model_spec$design$model_mat)
+      if (length(expected_names) == ncol(perf_mat)) {
+        colnames(perf_mat) <- expected_names
+      }
+    }
     ret <- wrap_out(perf_mat, model_spec$dataset, ind)
     return(ret)
   }, error = function(e) {
