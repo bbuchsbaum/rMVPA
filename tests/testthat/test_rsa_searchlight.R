@@ -126,14 +126,40 @@ test_that("randomized rsa_searchlight and blocking variable runs without error",
 
 test_that("standard rsa_searchlight and no blocking variable runs without error", {
   dataset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
-  
+
   Dmat <- dist(matrix(rnorm(100 * 100), 100, 100))
   # Build RSA design without a blocking variable
   rdes <- rsa_design(~ Dmat, list(Dmat = Dmat))
-  
+
   for (regtype in c("lm", "rfit", "pearson", "spearman")) {
     mspec <- rsa_model(dataset$dataset, design = rdes, regtype = regtype)
     ret <- run_searchlight(mspec, radius = 4, method = "standard")
     expect_true(!is.null(ret))
   }
+})
+
+test_that("rsa_searchlight retains predictor names as metrics", {
+  dataset <- gen_sample_dataset(c(5, 5, 5), 20, blocks = 2)
+
+  D1 <- dist(matrix(rnorm(20 * 20), 20, 20))
+  D2 <- dist(matrix(rnorm(20 * 20), 20, 20))
+  rdes <- rsa_design(~ x1 + x2, list(x1 = D1, x2 = D2))
+
+  mspec <- rsa_model(dataset$dataset, design = rdes)
+  res <- run_searchlight(mspec, radius = 4, method = "standard")
+
+  expect_equal(res$metrics, c("x1", "x2"))
+})
+
+test_that("randomized rsa_searchlight retains predictor names as metrics", {
+  dataset <- gen_sample_dataset(c(5, 5, 5), 20, blocks = 2)
+
+  D1 <- dist(matrix(rnorm(20 * 20), 20, 20))
+  D2 <- dist(matrix(rnorm(20 * 20), 20, 20))
+  rdes <- rsa_design(~ x1 + x2, list(x1 = D1, x2 = D2))
+
+  mspec <- rsa_model(dataset$dataset, design = rdes)
+  res <- run_searchlight(mspec, radius = 4, method = "randomized", niter = 2)
+
+  expect_equal(res$metrics, c("x1", "x2"))
 })
