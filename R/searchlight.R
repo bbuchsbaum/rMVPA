@@ -464,7 +464,7 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
   perf_mat[ind_set,] <- sweep(perf_mat[ind_set,,drop=FALSE], 1, as.integer(ind_count), FUN="/")
   
   # Set column names from the performance metrics
-  colnames(perf_mat) <- names(good_results$performance[[1]])
+  colnames(perf_mat) <- colnames(good_results$performance[[1]])
   
   # Wrap and return results
   ret <- wrap_out(perf_mat, model_spec$dataset)
