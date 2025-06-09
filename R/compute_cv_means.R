@@ -102,6 +102,10 @@ compute_crossvalidated_means_sl <- function(sl_data,
     rlang::abort("Required generic 'train_indices' is not available in scope.")
   }
 
+  # Pre-compute training indices for each fold and label factor once
+  train_idx_list <- lapply(seq_len(n_folds), function(f) train_indices(cv_spec, f))
+  condition_labels_factor <- factor(condition_labels, levels = unique_conditions)
+
   # Prepare containers for online averaging (memory-efficient vs full 3-D array)
   U_hat_sl_cum <- matrix(0, nrow = n_conditions, ncol = n_voxels,
                          dimnames = list(unique_conditions, colnames(sl_data)))
@@ -116,65 +120,58 @@ compute_crossvalidated_means_sl <- function(sl_data,
     U_folds_array <- NULL # Not used, keep it NULL
   }
 
-  # --- Calculate Means per Fold --- 
-  # Iterate folds and accumulate means online (memory safe)
+  # --- Calculate Means per Fold ---
+  # Iterate folds and accumulate means using vectorised operations
   for (i in seq_len(n_folds)) {
 
-    fold_train_idx <- train_indices(cv_spec, i)
+    fold_train_idx <- train_idx_list[[i]]
 
     if (length(fold_train_idx) == 0) {
       warning(paste("Fold", i, "has no training samples. Skipping."))
+      if (return_folds) {
+        U_folds_array[, , i] <- NA_real_
+      }
       next
     }
 
     train_data_fold <- sl_data[fold_train_idx, , drop = FALSE]
-    train_labels_fold <- condition_labels[fold_train_idx]
+    train_labels_fold <- condition_labels_factor[fold_train_idx]
 
-    full_fold_means <- process_single_fold(train_data_fold,
-                                           train_labels_fold,
-                                           unique_conditions,
-                                           n_conditions,
-                                           n_voxels,
-                                           estimation_method,
-                                           whitening_matrix_W,
-                                           colnames(sl_data))
-    
-    # Update cumulative matrix and counts
-    # Only add to cumulative sum if the full_fold_means for that condition in that fold is not all NA
-    # This handles cases where a condition might be entirely missing from a fold, 
-    # and its full_fold_means row would be all NAs.
-    for (k_idx in seq_len(n_conditions)) {
-        if (any(!is.na(full_fold_means[k_idx, ]))) { # If at least one non-NA value in the row
-            # Add to cumulative, replacing NAs in cumulative with the new values if cum was 0
-            # or adding to existing values. This needs care if U_hat_sl_cum starts at 0.
-            # If U_hat_sl_cum[k_idx,] is all 0s from init, and full_fold_means[k_idx,] has NAs,
-            # 0 + NA = NA. This is correct.
-            U_hat_sl_cum[k_idx, ] <- U_hat_sl_cum[k_idx, ] + full_fold_means[k_idx, ]
-            cond_fold_counts[k_idx] <- cond_fold_counts[k_idx] + 1
-        }
+    # Compute sums and counts per condition efficiently
+    sums_by_cond <- rowsum(train_data_fold, group = train_labels_fold,
+                           reorder = FALSE, na.rm = TRUE)
+    counts_by_cond <- tabulate(train_labels_fold, nbins = n_conditions)
+
+    fold_means <- matrix(NA_real_, nrow = n_conditions, ncol = n_voxels,
+                         dimnames = list(unique_conditions, colnames(sl_data)))
+    present_idx <- which(counts_by_cond > 0)
+    if (length(present_idx) > 0) {
+      fold_means[present_idx, ] <- sums_by_cond[present_idx, , drop = FALSE] /
+        counts_by_cond[present_idx]
+      fold_means[is.nan(fold_means) | is.infinite(fold_means)] <- NA_real_
+
+      if (estimation_method == "crossnobis") {
+        fold_means[present_idx, ] <- fold_means[present_idx, , drop = FALSE] %*%
+          whitening_matrix_W
+      }
+    }
+
+    non_empty <- rowSums(!is.na(fold_means)) > 0
+    if (any(non_empty)) {
+      U_hat_sl_cum[non_empty, ] <- U_hat_sl_cum[non_empty, , drop = FALSE] +
+        fold_means[non_empty, , drop = FALSE]
+      cond_fold_counts[non_empty] <- cond_fold_counts[non_empty] + 1L
     }
 
     # Store per-fold estimates if requested
     if (return_folds) {
-      U_folds_array[, , i] <- full_fold_means
+      U_folds_array[, , i] <- fold_means
     }
   }
 
   # --- Finalise cross-validated means by dividing cumulative sums by counts ---
-  safe_div <- function(sum_vec, count) {
-       ifelse(count > 0, sum_vec / count, NA_real_)
-  }
-
-  U_hat_sl <- U_hat_sl_cum
-  for (k in seq_len(n_conditions)) {
-       U_hat_sl[k, ] <- safe_div(U_hat_sl_cum[k, ], cond_fold_counts[k])
-  }
-
-  # Rows where cond_fold_counts == 0 become all NA (indicating condition never in training)
-  zero_rows <- which(cond_fold_counts == 0)
-  if (length(zero_rows) > 0) {
-      U_hat_sl[zero_rows, ] <- NA_real_
-  }
+  divisors <- ifelse(cond_fold_counts > 0, cond_fold_counts, NA_real_)
+  U_hat_sl <- sweep(U_hat_sl_cum, 1, divisors, FUN = "/")
 
   ## ---- Optional post-processing: L2 row normalisation --------------------
   if (estimation_method == "L2_norm") {
