@@ -467,5 +467,15 @@ has_test_set.mvpa_dataset <- function(obj) {
   isTRUE(obj$has_test_set)
 }
 
+#' @export
+nobs.mvpa_dataset <- function(x) {
+  dims <- dim(x$train_data)
+  if (is.null(dims)) {
+    length(x$train_data)
+  } else {
+    dims[length(dims)]
+  }
+}
+
 
 
