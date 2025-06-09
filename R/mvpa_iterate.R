@@ -399,6 +399,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           # Pass the stripped version and analysis_type
           results[[i]] <- run_future(mod_spec_stripped, sf, processor, verbose,
                                      analysis_type = analysis_type)
+          # Clean up any completed futures and run garbage collection between batches
+          future::ClusterRegistry("cleanup")
+          gc()
           processed_rois <- processed_rois + nrow(sf)
           
           futile.logger::flog.debug("Batch %d produced %d results", i, nrow(results[[i]]))
@@ -432,6 +435,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                             crayon::yellow(skipped_rois))
     # Combine all results
     final_results <- dplyr::bind_rows(results)
+    # Ensure any remaining futures are cleared and memory is reclaimed
+    future::ClusterRegistry("cleanup")
+    gc()
     return(final_results)
   }, error = function(e) {
     futile.logger::flog.error("mvpa_iterate failed: %s", e$message)
@@ -534,6 +540,10 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analys
                             error_count)
   }
   
+  # Explicitly cleanup resolved futures to free memory before binding results
+  future::ClusterRegistry("cleanup")
+  gc()
+
   results %>% dplyr::bind_rows()
 }
 
