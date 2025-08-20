@@ -71,6 +71,7 @@ Collate:
     'rsa_model.R'
     'roisplit.R'
     'searchlight.R'
+    'save_results.R'
     'vector_rsa_model.R'
     'distcalc.R'
     'utils.R'

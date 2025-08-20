@@ -50,6 +50,8 @@ option_list <- list(
               help="Binary image mask file (.nii)."),
   make_option(c("-p", "--ncores"), type="numeric", default=1,
               help="Number of CPU cores to use in parallel."),
+  make_option(c("-b", "--batch-size"), type="numeric", default=NULL,
+              help="Number of searchlights per batch. Default: 10% of total searchlights. Lower values reduce memory usage but may decrease performance."),
   make_option(c("-l", "--label_column"), type="character", default="labels",
               help="Name of the training label column in the design file."),
   make_option(c("--test_label_column"), type="character",
@@ -103,6 +105,7 @@ rMVPA:::set_arg("niter", config, args, 16)
 rMVPA:::set_arg("radius", config, args, 8)
 rMVPA:::set_arg("type", config, args, "randomized")
 rMVPA:::set_arg("ncores", config, args, 1)
+rMVPA:::set_arg("batch_size", config, args, NULL)
 
 # Tuning parameters for classifier optimization
 config$tune_grid <- rMVPA:::initialize_tune_grid(args, config)
@@ -166,15 +169,23 @@ if (as.numeric(config$ncores) > 1) {
 
 # ----- Main Searchlight Execution -----
 write_output <- function(searchres, name="", output, data_mode="image") {
+  # Handle both searchlight_result objects and plain lists for backward compatibility
+  # If searchres is a searchlight_result, extract the results field
+  results_to_write <- if (inherits(searchres, "searchlight_result")) {
+    searchres$results
+  } else {
+    searchres
+  }
+  
   # Writes results to disk, either volumetric (NIfTI) or surface data
   if (data_mode == "image") {
-    for (i in seq_along(searchres)) {
+    for (i in seq_along(results_to_write)) {
       outfname <- if (nzchar(name)) {
-        file.path(output, paste0(names(searchres)[i], "_", name, ".nii"))
+        file.path(output, paste0(names(results_to_write)[i], "_", name, ".nii"))
       } else {
-        file.path(output, paste0(names(searchres)[i], ".nii"))
+        file.path(output, paste0(names(results_to_write)[i], ".nii"))
       }
-      resobj <- searchres[[i]]
+      resobj <- results_to_write[[i]]
       if (inherits(resobj, "NeuroVol")) {
         write_vol(resobj, outfname)  
       } else if (inherits(resobj, "NeuroVec")) {
@@ -182,9 +193,9 @@ write_output <- function(searchres, name="", output, data_mode="image") {
       }
     }
   } else if (data_mode == "surface") {
-    for (i in seq_along(searchres)) {
-      outbase <- file.path(output, names(searchres)[i])
-      neurosurf::write_surf_data(searchres[[i]], outbase, name)  
+    for (i in seq_along(results_to_write)) {
+      outbase <- file.path(output, names(results_to_write)[i])
+      neurosurf::write_surf_data(results_to_write[[i]], outbase, name)  
     }
   } else {
     stop("Unknown data_mode: ", data_mode)
@@ -204,12 +215,19 @@ for (i in seq_along(dataset)) {
   mvpaMod <- rMVPA:::load_mvpa_model(config, dset, design, crossval, feat_sel)
   
   # Actual searchlight call
-  searchres <- rMVPA:::run_searchlight(
+  searchlight_args <- list(
     mvpaMod, 
     radius = config$radius, 
     method = config$type, 
     niter  = config$niter
   )
+  
+  # Add batch_size if specified
+  if (!is.null(config$batch_size)) {
+    searchlight_args$batch_size <- config$batch_size
+  }
+  
+  searchres <- do.call(rMVPA:::run_searchlight, searchlight_args)
   
   write_output(searchres, name=dset_name, output=output_folder, data_mode=config$data_mode)
 }

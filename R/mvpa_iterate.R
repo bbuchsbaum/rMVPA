@@ -369,9 +369,11 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     for (i in seq_along(batch_ids)) {
       tryCatch({
         if (verbose) {
-          futile.logger::flog.info("⚡ Processing batch %s/%s", 
+          batch_size_current <- length(batch_ids[[i]])
+          futile.logger::flog.info("⚡ Processing batch %s/%s (%s ROIs in this batch)", 
                                   crayon::blue(i), 
-                                  crayon::blue(nbatches))
+                                  crayon::blue(nbatches),
+                                  crayon::green(batch_size_current))
         }
 
        
@@ -455,8 +457,6 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
 run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analysis_type, ...) {
   gc()
   total_items <- nrow(frame)
-  processed_items <- 0
-  error_count <- 0
   
   do_fun <- if (is.null(processor)) {
     function(obj, roi, rnum, center_global_id = NA) {
@@ -468,21 +468,14 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analys
 
   
   results <- frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
-    # Update progress based on actual items processed
-    processed_items <<- processed_items + 1
-    
-    if (verbose && (processed_items %% 100 == 0)) {
-      progress_percent <- as.integer(processed_items/total_items * 100)
-      futile.logger::flog.info("↻ Batch Progress: %s%% (%d/%d ROIs)", 
-                              crayon::blue(progress_percent),
-                              processed_items,
-                              total_items)
-    }
+    # Note: Progress tracking removed here because it doesn't work correctly
+    # with parallel execution. Each worker would have its own counter,
+    # causing duplicate messages and incorrect percentages.
+    # Progress is now tracked at the batch level in mvpa_iterate.
     
     tryCatch({
       if (is.null(roi)) {
         # ROI failed validation (e.g. from extract_roi returning NULL due to <2 voxels after filter_roi)
-        error_count <<- error_count + 1
         futile.logger::flog.debug("ROI ID %s: Skipped (failed initial validation in extract_roi, e.g. <2 voxels).", rnum)
         return(tibble::tibble(
           result = list(NULL),
@@ -520,7 +513,6 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analys
       
       result
     }, error = function(e) {
-      error_count <<- error_count + 1
       # Use debug level to avoid alarming users with expected errors
       futile.logger::flog.debug("ROI %d: Processing error (%s)", rnum, e$message)
       tibble::tibble(
@@ -535,13 +527,6 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analys
       )
     })
   }, .options=furrr::furrr_options(seed=TRUE))
-  
-  # Log summary of errors if any occurred
-  if (error_count > 0 && verbose) {
-    futile.logger::flog.info("%s %d ROIs skipped or had processing errors (expected in searchlight analysis)", 
-                            crayon::yellow("⚠"),
-                            error_count)
-  }
   
   # Explicitly cleanup resolved futures to free memory before binding results
   # Final cleanup and garbage collection

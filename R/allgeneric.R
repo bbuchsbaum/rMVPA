@@ -710,7 +710,13 @@ predict_model <- function(object, fit, newdata, ...) {
 #' @param radius The searchlight radius in millimeters
 #' @param method The type of searchlight, either 'randomized' or 'standard'
 #' @param niter The number of searchlight iterations (used only for 'randomized' method)
-#' @param ... Extra arguments passed to specific searchlight methods
+#' @param ... Extra arguments passed to specific searchlight methods. Currently supported:
+#'   \itemize{
+#'     \item \code{batch_size}: Integer specifying the number of searchlights to process per batch.
+#'           Default is 10\% of total searchlights. Lower values reduce memory usage but may impact 
+#'           performance. This controls how searchlights are grouped for processing - each batch is
+#'           processed sequentially, while searchlights within a batch are processed in parallel.
+#'   }
 #'
 #' @return A named list of \code{NeuroVol} objects containing performance metrics (e.g., AUC) at each voxel location
 #'
@@ -747,6 +753,14 @@ predict_model <- function(object, fit, newdata, ...) {
 #'     radius = 8,            # 8mm radius
 #'     method = "standard"    # Use standard searchlight
 #'   )
+#'   
+#'   # Run with custom batch size for memory management
+#'   # results <- run_searchlight(
+#'   #   mspec,
+#'   #   radius = 8,
+#'   #   method = "standard",
+#'   #   batch_size = 500      # Process 500 searchlights per batch
+#'   # )
 #'   
 #'   # Results contain performance metrics
 #'   # Access them with results$performance
