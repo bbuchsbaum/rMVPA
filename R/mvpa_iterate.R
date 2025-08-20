@@ -400,7 +400,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           results[[i]] <- run_future(mod_spec_stripped, sf, processor, verbose,
                                      analysis_type = analysis_type)
           # Clean up any completed futures and run garbage collection between batches
-          future::ClusterRegistry("cleanup")
+          # Clean up completed futures and run garbage collection
+          # Note: ClusterRegistry is no longer exported in future >= 1.34.0
+          # Using gc() alone for memory cleanup
           gc()
           processed_rois <- processed_rois + nrow(sf)
           
@@ -436,7 +438,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     # Combine all results
     final_results <- dplyr::bind_rows(results)
     # Ensure any remaining futures are cleared and memory is reclaimed
-    future::ClusterRegistry("cleanup")
+    # Clean up and run garbage collection
+    # Note: ClusterRegistry is no longer exported in future >= 1.34.0
     gc()
     return(final_results)
   }, error = function(e) {
@@ -541,7 +544,8 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analys
   }
   
   # Explicitly cleanup resolved futures to free memory before binding results
-  future::ClusterRegistry("cleanup")
+  # Final cleanup and garbage collection
+  # Note: ClusterRegistry is no longer exported in future >= 1.34.0
   gc()
 
   results %>% dplyr::bind_rows()
