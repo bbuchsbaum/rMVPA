@@ -7,7 +7,7 @@
 feature_rsa_model(
   dataset,
   design,
-  method = c("scca", "pls", "pca", "glmnet"),
+  method = c("pls", "pca", "glmnet"),
   crossval = NULL,
   cache_pca = FALSE,
   alpha = 0.5,
@@ -27,7 +27,6 @@ and including the component limit (`max_comps`).}
 
 \item{method}{Character string specifying the analysis method. One of:
 \describe{
-  \item{scca}{Sparse Canonical Correlation Analysis relating X and F.}
   \item{pls}{Partial Least Squares regression predicting X from F.}
   \item{pca}{Principal Component Analysis on F, followed by regression predicting X from the PCs.}
   \item{glmnet}{Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.}
@@ -75,8 +74,6 @@ sets an upper limit on the number of components used:
     (selected by variance explained) used to predict \code{X}. Actual components used: `min(max_comps, available_PCs)`.
   - \strong{pls}: Performs PLS regression predicting \code{X} from \code{F}. `max_comps` sets the
     maximum number of PLS components to compute. Actual components used may be fewer based on the PLS algorithm.
-  - \strong{scca}: Performs SCCA between \code{X} and \code{F}. `max_comps` limits the number of
-    canonical components retained (selected by correlation strength). Actual components used: `min(max_comps, effective_components)`.
   - \strong{glmnet}: Performs elastic net regression predicting \code{X} from \code{F} using the glmnet package
     with multivariate Gaussian response family. The regularization (lambda) can be automatically selected via cross-validation
     if cv_glmnet=TRUE. The alpha parameter controls the balance between L1 (lasso) and L2 (ridge) regularization.

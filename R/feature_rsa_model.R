@@ -12,7 +12,7 @@
 #'          automatically determines dimensions using eigenvalue threshold > 1 (minimum 2 dimensions kept).
 #'          This parameter is ignored if F is supplied directly (k becomes ncol(F)).
 #' @param max_comps Initial upper limit for the number of components to be derived from the
-#'          feature space F by subsequent `feature_rsa_model` methods (PCA, PLS, SCCA).
+#'          feature space F by subsequent `feature_rsa_model` methods (PCA, PLS).
 #'          This value is automatically capped by the final feature dimensionality `k`. Default 10.
 #' @param block_var Optional blocking variable for cross-validation. If provided and
 #'          `crossval` is `NULL` in `feature_rsa_model`, a blocked cross-validation
@@ -35,7 +35,7 @@
 #' `k` determines how many eigenvectors form the feature matrix F. If `k=0`,
 #' dimensions with eigenvalues > 1 are kept (minimum 2).
 #' `max_comps` sets an upper bound for the number of components that model-fitting
-#' methods (like PCA, PLS, SCCA in `feature_rsa_model`) can use, and it cannot
+#' methods (like PCA, PLS in `feature_rsa_model`) can use, and it cannot
 #' exceed the final feature dimensionality `k`.
 #'
 #' @export
@@ -101,7 +101,6 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   and including the component limit (`max_comps`).
 #' @param method Character string specifying the analysis method. One of:
 #'   \describe{
-#'     \item{scca}{Sparse Canonical Correlation Analysis relating X and F.}
 #'     \item{pls}{Partial Least Squares regression predicting X from F.}
 #'     \item{pca}{Principal Component Analysis on F, followed by regression predicting X from the PCs.}
 #'     \item{glmnet}{Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.}
@@ -135,8 +134,6 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'     (selected by variance explained) used to predict \code{X}. Actual components used: `min(max_comps, available_PCs)`.
 #'   - \strong{pls}: Performs PLS regression predicting \code{X} from \code{F}. `max_comps` sets the
 #'     maximum number of PLS components to compute. Actual components used may be fewer based on the PLS algorithm.
-#'   - \strong{scca}: Performs SCCA between \code{X} and \code{F}. `max_comps` limits the number of
-#'     canonical components retained (selected by correlation strength). Actual components used: `min(max_comps, effective_components)`.
 #'   - \strong{glmnet}: Performs elastic net regression predicting \code{X} from \code{F} using the glmnet package
 #'     with multivariate Gaussian response family. The regularization (lambda) can be automatically selected via cross-validation
 #'     if cv_glmnet=TRUE. The alpha parameter controls the balance between L1 (lasso) and L2 (ridge) regularization.
@@ -155,7 +152,7 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' @export
 feature_rsa_model <- function(dataset,
                                design,
-                               method = c("scca", "pls", "pca", "glmnet"),
+                               method = c("pls", "pca", "glmnet"),
                                crossval = NULL,
                                cache_pca = FALSE,
                                alpha = 0.5,
@@ -271,75 +268,6 @@ feature_rsa_model <- function(dataset,
 
 
 
-#' @noRd
-.predict_scca <- function(model, F_new) {
-  # SCCA prediction predicts X from F
-  # Check if training failed to find components (ncomp=0)
-  if (is.null(model$ncomp) || model$ncomp < 1) {
-      futile.logger::flog.warn(".predict_scca: SCCA training found no components (ncomp=%s). Using mean brain pattern fallback for prediction.", 
-                                ifelse(is.null(model$ncomp), "NULL", model$ncomp))
-      
-      # Fallback: Predict the mean brain pattern from training
-      n_test <- nrow(F_new)
-      mean_x_train <- model$scca_x_mean
-      n_voxels <- length(mean_x_train)
-      
-      if (n_test <= 0 || n_voxels <= 0) {
-         stop("Cannot create fallback prediction: invalid dimensions (n_test=%d, n_voxels=%d)", n_test, n_voxels)
-      }
-      
-      # Create matrix repeating the mean training pattern for each test sample
-      X_pred_fallback <- matrix(mean_x_train, nrow = n_test, ncol = n_voxels, byrow = TRUE)
-      return(X_pred_fallback)
-  }
-  
-  # --- Proceed with standard SCCA prediction if ncomp >= 1 ---
-  
-  # First check dimensions and ensure compatibility
-  F_new <- as.matrix(F_new)
-  n_features_new <- ncol(F_new)
-  n_features_expected <- length(model$scca_f_mean)
-  tm <- model$trained_model
-  ncomp <- model$ncomp
-  
-  # Strictly enforce dimensional consistency
-  if (n_features_new != n_features_expected) {
-    stop(sprintf("Feature matrix dimension mismatch for SCCA: expected %d features but got %d. This indicates a data inconsistency between training and testing.",
-                n_features_expected, n_features_new))
-  }
-  
-  # Standard case: dimensions match
-  # Standardize features using the stored means and standard deviations
-  Fsc <- sweep(sweep(F_new, 2, model$scca_f_mean, "-"), 2, model$scca_f_sd, "/")
-  
-  # Use canonical directions from F to predict X
-  fcoef <- t(tm$WY)[, 1:ncomp, drop=FALSE]
-  xcoef <- t(tm$WX)[, 1:ncomp, drop=FALSE]
-  x_inv <- corpcor::pseudoinverse(xcoef)
-  
-  # Project features to canonical space
-  F_canonical <- Fsc %*% fcoef
-
-  # -- Incorporate canonical correlations for prediction --
-  # Get the canonical correlations corresponding to the selected components
-  canonical_corrs <- tm$lambda[1:ncomp]
-  if (is.null(canonical_corrs) || length(canonical_corrs) != ncomp) {
-      stop(sprintf("Prediction error: Could not retrieve the expected %d canonical correlations.", ncomp))
-  }
-  
-  # Scale F canonical variates by the canonical correlations to get predicted U variates
-  # U_pred = V_test * Lambda
-  U_pred <- sweep(F_canonical, 2, canonical_corrs, "*")
-  
-  # Map predicted U variates back to standardized X space using pseudoinverse of X weights
-  # Xhat_sc = U_pred * Wx^+
-  Xhat <- U_pred %*% x_inv
-  # --------------------------------------------------------
-
-  # Xhat <- F_canonical %*% x_inv # OLD direct mapping
-  Xhat <- sweep(sweep(Xhat, 2, model$scca_x_sd, "*"), 2, model$scca_x_mean, "+")
-  return(Xhat)
-}
 
 
 #' @noRd
@@ -424,7 +352,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   }
   
   # Check if trained_model is missing, even if no explicit error was set
-  if (is.null(fit$trained_model) && object$method != "scca") { # SCCA might proceed with ncomp=0
+  if (is.null(fit$trained_model)) {
       error_msg <- sprintf("predict_model (%s): 'trained_model' is missing in the fit object provided. Cannot predict.", object$method)
       futile.logger::flog.error(error_msg)
       stop(error_msg)
@@ -458,7 +386,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
       if (ncomp_to_use < 1) {
          # This case should ideally be handled by training setting ncomp appropriately,
          # but predict.plsr might behave unexpectedly with ncomp=0.
-         # Let's return mean prediction similar to SCCA? Or error out?
+         # Return mean prediction as fallback
          # For now, let's error, assuming training should prevent ncomp=0 unless intended.
          stop(sprintf("predict_model (PLS): Number of components to use (ncomp=%d) is less than 1.", ncomp_to_use))
       }
@@ -493,11 +421,6 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
       # Un-standardize: X = X_sc * sd + mean
       preds <- sweep(sweep(preds_sc, 2, x_sd, "*"), 2, x_mean, "+")
       return(preds)
-      
-    } else if (method == "scca") {
-      # SCCA prediction logic is in .predict_scca
-      # Pass the entire 'fit' object which contains model and standardization params
-      return(.predict_scca(fit, F_new)) 
       
     } else if (method == "pca") {
       # PCA prediction logic is in .predict_pca
@@ -1047,52 +970,6 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
     result$pls_f_sd      <- sf$sd
     result$ncomp         <- k       # Need k from the try block scope
 
-  } else if (obj$method == "scca") {
-    # ---- SCCA Train ----
-    scca_res <- tryCatch({
-       sx <- .standardize(X)
-       sf <- .standardize(Fsub)
-       if (any(sx$sd < 1e-8) || any(sf$sd < 1e-8)) {
-          stop("Zero variance detected after standardization.")
-       }
-       # Store standardization details temporarily within this scope
-       list(res=whitening::scca(sx$X_sc, sf$X_sc, scale=FALSE), sx=sx, sf=sf)
-    }, error = function(e) {
-      error_msg <- sprintf("train_model (SCCA): SCCA execution error - %s", e$message)
-      futile.logger::flog.error(error_msg)
-      list(error = error_msg)
-    })
-
-    # Check if tryCatch returned an error object
-    if (!is.null(scca_res$error)) {
-      result$error <- scca_res$error
-      return(result)
-    }
-    
-    # Extract results if successful
-    scca_fit <- scca_res$res
-    sx <- scca_res$sx
-    sf <- scca_res$sf
-    
-    effective_ncomp <- if (!is.null(scca_fit$lambda)) sum(abs(scca_fit$lambda) > 1e-6) else 0
-    ncomp <- min(effective_ncomp, obj$max_comps)
-    
-    # Store standardization info regardless (needed for potential fallback in predict)
-    result$scca_x_mean <- sx$mean
-    result$scca_x_sd   <- sx$sd
-    result$scca_f_mean <- sf$mean
-    result$scca_f_sd   <- sf$sd
-    result$ncomp       <- ncomp 
-        
-    if (ncomp < 1) {
-      futile.logger::flog.info("train_model (SCCA): No effective canonical components found (effective: %d, max_comps: %d). Prediction will use mean fallback.", 
-                               effective_ncomp, obj$max_comps)
-      # Still store the (potentially empty) scca_fit
-      result$trained_model <- scca_fit
-    } else {
-      result$trained_model <- scca_fit
-    }
-    
   } else if (obj$method == "pca") {
     #browser()
     #
@@ -1625,7 +1502,7 @@ print.feature_rsa_model <- function(x, ...) {
   cat(crayon::bold(crayon::cyan("          Feature RSA Model           \n")))
   cat(border, "\n\n")
   
-  # Display the method used (e.g., scca, pls, or pca)
+  # Display the method used (e.g., pls, pca, or glmnet)
   cat(crayon::bold(crayon::green("Method: ")), x$method, "\n")
   
   # Check if the design component is present to extract dimensions

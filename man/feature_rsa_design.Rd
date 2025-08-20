@@ -26,7 +26,7 @@ automatically determines dimensions using eigenvalue threshold > 1 (minimum 2 di
 This parameter is ignored if F is supplied directly (k becomes ncol(F)).}
 
 \item{max_comps}{Initial upper limit for the number of components to be derived from the
-feature space F by subsequent `feature_rsa_model` methods (PCA, PLS, SCCA).
+feature space F by subsequent `feature_rsa_model` methods (PCA, PLS).
 This value is automatically capped by the final feature dimensionality `k`. Default 10.}
 
 \item{block_var}{Optional blocking variable for cross-validation. If provided and
@@ -56,6 +56,6 @@ If only S is supplied, an eigen decomposition of S is performed.
 `k` determines how many eigenvectors form the feature matrix F. If `k=0`,
 dimensions with eigenvalues > 1 are kept (minimum 2).
 `max_comps` sets an upper bound for the number of components that model-fitting
-methods (like PCA, PLS, SCCA in `feature_rsa_model`) can use, and it cannot
+methods (like PCA, PLS in `feature_rsa_model`) can use, and it cannot
 exceed the final feature dimensionality `k`.
 }

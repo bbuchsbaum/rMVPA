@@ -93,7 +93,7 @@ crossval <- blocked_cross_validation(data_out$design$block_var)
 feature_model <- feature_rsa_model(
   dataset = dset,
   design = feature_design,
-  method = "scca",  # Sparse Canonical Correlation Analysis
+  method = "pls",  # Partial Least Squares
   crossval = crossval  # Add cross-validation
 )
 
@@ -117,21 +117,21 @@ print(results$performance_table)
 
 Feature-Based RSA supports multiple analysis methods:
 
-1. **Sparse Canonical Correlation Analysis (SCCA)**:
-   - Finds canonical correlations between neural patterns and features
-   - Useful when features may be correlated
+1. **Partial Least Squares (PLS)**:
+   - Finds latent components that maximize covariance between neural patterns and features
+   - Good for prediction when features are highly correlated
 
-2. **Partial Least Squares (PLS)**:
-   - Projects data to maximize covariance with features
-   - Good for high-dimensional feature spaces
+2. **Principal Component Analysis (PCA)**:
+   - Uses PCA on features followed by regression
+   - Good for dimensionality reduction with clear interpretability
 
-3. **PCA Regression**:
-   - Reduces neural patterns via PCA then predicts features
-   - Useful for very high-dimensional neural data
+3. **GLMNet (Elastic Net)**:
+   - Elastic net regression with L1 and L2 regularization
+   - Useful for feature selection and handling correlated features
 
 ```{r}
 # Compare different methods
-methods <- c("scca", "pca") ## pls is not implemented yet
+methods <- c("pls", "pca", "glmnet")
 results_list <- lapply(methods, function(method) {
   model <- feature_rsa_model(
     dataset = dset,

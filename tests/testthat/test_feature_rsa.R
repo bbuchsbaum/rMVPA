@@ -40,8 +40,8 @@ test_that("regional feature_rsa_model with S-based feature extraction runs witho
   # Create feature_rsa_design using S
   fdes <- feature_rsa_design(S=S, labels=labels, k=10) # reduce to 5 dims
   
-  # Create a feature_rsa_model using scca this time
-  mspec <- feature_rsa_model(dset$dataset, fdes, method="scca", crossval=blocked_cross_validation(dset$design$block_var))
+  # Create a feature_rsa_model using pca this time
+  mspec <- feature_rsa_model(dset$dataset, fdes, method="pca", crossval=blocked_cross_validation(dset$design$block_var))
   
   # Create a region mask with 5 ROIs
   region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
@@ -263,7 +263,7 @@ test_that("can compare feature_rsa with different methods", {
   region_mask <- NeuroVol(sample(1:2, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
   
   # Compare different methods
-  methods <- c("scca", "pca", "pls")
+  methods <- c("pca", "pls")
   results_list <- list()
   
   for (method in methods) {
