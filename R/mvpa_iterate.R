@@ -94,8 +94,20 @@ external_crossval <- function(mspec, roi, id, center_global_id = NA, ...) {
   if (!is.na(center_global_id)) {
       center_local_id <- match(center_global_id, ind)
       if (is.na(center_local_id)) {
-          stop(paste0("external_crossval: Provided center_global_id ", center_global_id, 
-                      " not found within the voxel indices for this ROI/searchlight (id: ", id, ")."))
+          # Center voxel was filtered out - return graceful skip instead of crashing
+          futile.logger::flog.warn("Center voxel %s not present after filtering for ROI %s - skipping", 
+                                  center_global_id, id)
+          return(tibble::tibble(
+            class = list(NULL),
+            probs = list(NULL),
+            y_true = list(ytest),
+            fit = list(NULL),
+            error = TRUE,
+            error_message = sprintf("Center voxel %s not present after filter_roi; ROI skipped", 
+                                  center_global_id),
+            warning = TRUE,
+            warning_message = "Center voxel removed by filter_roi"
+          ))
       }
   }
 
@@ -215,9 +227,20 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA) {
   if (!is.na(center_global_id)) {
       center_local_id <- match(center_global_id, ind)
       if (is.na(center_local_id)) {
-           # This indicates an issue: a center ID was provided but not found in the voxel indices
-           stop(paste0("Provided center_global_id ", center_global_id, 
-                      " not found within the voxel indices for this ROI/searchlight (id: ", id, ")."))
+           # Center voxel was filtered out - return graceful skip instead of crashing
+           futile.logger::flog.warn("Center voxel %s not present after filtering for ROI %s - skipping", 
+                                   center_global_id, id)
+           return(tibble::tibble(
+             result = list(NULL),
+             indices = list(ind),
+             performance = list(NULL),
+             id = id,
+             error = TRUE,
+             error_message = sprintf("Center voxel %s not present after filter_roi; ROI skipped", 
+                                   center_global_id),
+             warning = TRUE,
+             warning_message = "Center voxel removed by filter_roi"
+           ))
       }
   }
 
@@ -268,13 +291,13 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA) {
 
 #' @keywords internal
 #' @noRd
-extract_roi <- function(sample, data) {
+extract_roi <- function(sample, data, center_global_id = NULL) {
   r <- as_roi(sample,data)
   v <- neuroim2::values(r$train_roi)
   
   # Use silent=TRUE to prevent error messages from being displayed on the console
-  ## TODO: this can remove the center voxel in a searchlight
-  r <- try(filter_roi(r), silent=TRUE)
+  # Pass center_global_id to preserve it during filtering (for searchlights)
+  r <- try(filter_roi(r, preserve = center_global_id), silent=TRUE)
   
   if (inherits(r, "try-error") || ncol(v) < 2) {
     # Only log at debug level so these expected errors don't alarm users
@@ -390,10 +413,18 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
         futile.logger::flog.debug("Sample frame has %d rows after filtering", nrow(sf))
         
         if (nrow(sf) > 0) {
-          sf <- sf %>% 
-            rowwise() %>% 
-            mutate(roi=list(extract_roi(sample,dset))) %>% 
-            select(-sample)
+          # For searchlight, pass center_global_id to preserve center during filtering
+          if (analysis_type == "searchlight") {
+            sf <- sf %>% 
+              rowwise() %>% 
+              mutate(roi=list(extract_roi(sample, dset, center_global_id = rnum))) %>% 
+              select(-sample)
+          } else {
+            sf <- sf %>% 
+              rowwise() %>% 
+              mutate(roi=list(extract_roi(sample, dset))) %>% 
+              select(-sample)
+          }
           
           # Strip the dataset from mod_spec before passing to parallel workers
           mod_spec_stripped <- strip_dataset(mod_spec)

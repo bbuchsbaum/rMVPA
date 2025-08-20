@@ -51,13 +51,13 @@ print.data_sample <- function(x, ...) {
 }
 
 #' @keywords internal
-filter_roi.default <- function(roi, ...) {
+filter_roi.default <- function(roi, preserve = NULL, ...) {
   stop("Unsupported ROI type")
 }
 
 #' @keywords internal
 #' @importFrom neuroim2 ROIVec space coords values
-filter_roi.ROIVec <- function(roi, ...) {
+filter_roi.ROIVec <- function(roi, preserve = NULL, ...) {
   # Extract the train data values
   trdat <- values(roi$train_roi)
   
@@ -69,6 +69,16 @@ filter_roi.ROIVec <- function(roi, ...) {
   
   # Determine columns to keep
   keep <- !nas & sdnonzero
+  
+  # Preserve specified voxel if requested (e.g., center voxel in searchlight)
+  if (!is.null(preserve)) {
+    gi <- neuroim2::indices(roi$train_roi)
+    kp <- match(preserve, gi)
+    if (!is.na(kp) && !keep[kp]) {
+      futile.logger::flog.debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
+      keep[kp] <- TRUE
+    }
+  }
   
   # If no valid columns are found, throw an error
   if (sum(keep) == 0) {
@@ -99,7 +109,7 @@ filter_roi.ROIVec <- function(roi, ...) {
 
 #' @keywords internal
 #' @importFrom neurosurf ROISurfaceVector geometry nodes
-filter_roi.ROISurfaceVector <- function(roi, ...) {
+filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, ...) {
   # Extract the train data values
   trdat <- roi$train_roi@data
   
@@ -111,6 +121,16 @@ filter_roi.ROISurfaceVector <- function(roi, ...) {
   
   # Determine columns to keep
   keep <- !nas & sdnonzero
+  
+  # Preserve specified voxel if requested (e.g., center voxel in searchlight)
+  if (!is.null(preserve)) {
+    gi <- roi$train_roi@indices
+    kp <- match(preserve, gi)
+    if (!is.na(kp) && !keep[kp]) {
+      futile.logger::flog.debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
+      keep[kp] <- TRUE
+    }
+  }
   
   # If no valid columns are found, throw an error
   if (sum(keep) == 0) {
