@@ -73,12 +73,13 @@ test_that("msreve_design constructor warns if contrast matrix has no column name
 
 test_that("add_interaction_contrasts creates orthonormal interactions", {
   mvpa_des <- mock_mvpa_design(n_cond = 4)
-  C <- matrix(c(1, -1, 0, 0,
-                0, 0, 1, -1), nrow = 4, byrow = FALSE,
+  # Use contrasts that will produce a non-zero interaction
+  C <- matrix(c(1, 1, -1, -1,    # A: first two vs last two
+                1, -1, 1, -1), nrow = 4, byrow = FALSE,   # B: alternating
                dimnames = list(NULL, c("A", "B")))
   base_des <- msreve_design(mvpa_des, C)
 
-  des_int <- add_interaction_contrasts(base_des)
+  des_int <- suppressMessages(add_interaction_contrasts(base_des))
 
   expect_true(all(c("A_x_B") %in% colnames(des_int$contrast_matrix)))
   expect_true(attr(des_int, "is_orthonormal"))
@@ -87,15 +88,34 @@ test_that("add_interaction_contrasts creates orthonormal interactions", {
 
 test_that("include_interactions parameter expands contrast matrix", {
   mvpa_des <- mock_mvpa_design(n_cond = 4)
-  C <- matrix(c(1, -1, 0, 0,
-                0, 0, 1, -1), nrow = 4, byrow = FALSE,
+  # Use contrasts that will produce a non-zero interaction
+  C <- matrix(c(1, 1, -1, -1,    # A: first two vs last two
+                1, -1, 1, -1), nrow = 4, byrow = FALSE,   # B: alternating
                dimnames = list(NULL, c("A", "B")))
 
-  des_int <- msreve_design(mvpa_des, C, include_interactions = TRUE)
+  des_int <- suppressMessages(msreve_design(mvpa_des, C, include_interactions = TRUE))
 
   expect_true(all(c("A_x_B") %in% colnames(des_int$contrast_matrix)))
   expect_true(attr(des_int, "is_orthonormal"))
   expect_equal(ncol(des_int$contrast_matrix), 3)
+})
+
+test_that("zero interactions are skipped with informative message", {
+  mvpa_des <- mock_mvpa_design(n_cond = 4)
+  # Use contrasts with non-overlapping support (will produce zero interaction)
+  C <- matrix(c(1, -1, 0, 0,     # A: conditions 1 vs 2
+                0, 0, 1, -1), nrow = 4, byrow = FALSE,   # B: conditions 3 vs 4
+               dimnames = list(NULL, c("A", "B")))
+
+  expect_message(
+    des_int <- msreve_design(mvpa_des, C, include_interactions = TRUE),
+    regexp = "is zero.*non-overlapping support.*will be skipped"
+  )
+  
+  # Should only have the original 2 contrasts, not the zero interaction
+  expect_equal(ncol(des_int$contrast_matrix), 2)
+  expect_equal(colnames(des_int$contrast_matrix), c("A", "B"))
+  expect_true(attr(des_int, "is_orthonormal"))
 })
 
 

@@ -505,8 +505,15 @@ custom_cross_validation <- function(sample_set) {
 #' samples <- crossval_samples(cval, as.data.frame(matrix(rnorm(50*50),50,50)), y=rep(letters[1:5],10))
 #' stopifnot(nrow(samples) == nreps)
 twofold_blocked_cross_validation <- function(block_var, nreps=10) {
+  if (nreps < 2) {
+    stop("'nreps' must be at least 2")
+  }
   block_var <- as.integer(as.character(block_var))
-  ret <- list(block_var=block_var, nfolds=2, nreps=nreps, block_ind=sort(unique(block_var)))
+  block_ind <- sort(unique(block_var))
+  if (length(block_ind) < 2) {
+    stop("`block_var` must contain at least two unique blocks for twofold cross-validation.", call. = FALSE)
+  }
+  ret <- list(block_var=block_var, nfolds=2, nreps=nreps, block_ind=block_ind)
   class(ret) <- c("twofold_blocked_cross_validation", "cross_validation", "list")
   ret
 }

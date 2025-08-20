@@ -23,3 +23,15 @@ This function applies a user-supplied performance metric to a prediction result 
 The function allows users to apply a custom performance metric to a prediction result object.
 If a split list is provided, the performance metric will be computed for each group separately, and the results will be returned as a named vector.
 }
+\examples{
+cres <- binary_classification_result(
+  observed  = factor(c("A", "B")),
+  predicted = factor(c("A", "A")),
+  probs = matrix(c(0.9, 0.1,
+                   0.6, 0.4),
+                 ncol = 2, byrow = TRUE,
+                 dimnames = list(NULL, c("A", "B")))
+)
+acc_fun <- function(x) mean(x$observed == x$predicted)
+custom_performance(cres, acc_fun)
+}

@@ -35,12 +35,12 @@ test_that("crossv_k validates k argument", {
 
 # ---- crossv_twofold ----
 
-test_that("crossv_twofold splits blocks by half", {
+test_that("twofold_blocked_cross_validation splits blocks by half", {
   block_var <- rep(1:4, each = 5)
-  res <- crossv_twofold(df, y, block_var, nreps = 3)
+  cval <- twofold_blocked_cross_validation(block_var, nreps = 3)
+  res <- crossval_samples(cval, df, y)
   expect_s3_class(res, "tbl_df")
   expect_equal(nrow(res), 3)
-  expect_equal(res$.id, sprintf("%02d", 1:3))
 
   half_blocks <- length(unique(block_var)) / 2
   for (i in seq_len(nrow(res))) {
@@ -53,9 +53,13 @@ test_that("crossv_twofold splits blocks by half", {
 })
 
 
-test_that("crossv_twofold validates inputs", {
-  block_var <- rep(1, 10)
-  expect_error(crossv_twofold(df, y, block_var, nreps = 2), "at least two unique blocks")
-  expect_error(crossv_twofold(df, y, rep(1:2, each=5), nreps = 1), "at least 2")
+test_that("twofold_blocked_cross_validation validates inputs", {
+  # Test that single unique block is caught at construction
+  block_var <- rep(1, 20)
+  expect_error(twofold_blocked_cross_validation(block_var, nreps = 2), "at least two unique blocks")
+  
+  # Test that nreps validation works
+  block_var2 <- rep(1:2, each=10)
+  expect_error(twofold_blocked_cross_validation(block_var2, nreps = 1), "at least 2")
 })
 

@@ -185,10 +185,10 @@ test_that("allow_nonorth_composite returns value with warning", {
       train_indices = .mock_train_indices_contrast2,
       .package = "rMVPA",
       {
-        suppressWarnings(train_model(spec,
-                                     sl_data = dset$train_data,
-                                     sl_info = list(center_local_id = 1, center_global_id = 1, radius = 0, n_voxels = n_voxels),
-                                     cv_spec = mock_cv_spec_s3(mvpa_des)))
+        train_model(spec,
+                   sl_data = dset$train_data,
+                   sl_info = list(center_local_id = 1, center_global_id = 1, radius = 0, n_voxels = n_voxels),
+                   cv_spec = mock_cv_spec_s3(mvpa_des))
       }
     ),
     regexp = "not orthonormal"

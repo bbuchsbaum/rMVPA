@@ -552,6 +552,28 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
       pred_vec
   })
   names(X_sl_list) <- contrast_names
+  
+  # Add nuisance RDMs if present
+  nuis_list <- list()
+  if (!is.null(obj$design$nuisance_rdms)) {
+    for (nm in names(obj$design$nuisance_rdms)) {
+      M <- obj$design$nuisance_rdms[[nm]]
+      # Extract lower triangle
+      v <- if (inherits(M, "dist")) {
+        as.vector(M)
+      } else {
+        M[lower.tri(M)]
+      }
+      # Apply include_vec mask if present
+      if (!is.null(include_vec)) {
+        v <- v[include_vec]
+      }
+      nuis_list[[paste0("nuis_", nm)]] <- v
+    }
+  }
+  
+  # Combine contrast and nuisance predictors
+  X_sl_list <- c(X_sl_list, nuis_list)
 
   # Combine predictors into a matrix
   Xmat <- tryCatch({
@@ -621,9 +643,12 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
 
   # --- Step 4: Run Regression to get β_sl ---
   beta_sl <- NULL
+  beta_all <- NULL  # Store all coefficients including nuisance
   n_obs <- nrow(Xmat_valid)
   p_preds <- ncol(Xmat_valid)
   Q_contrasts <- Q # Q from outer scope, number of original contrasts
+  all_pred_names <- colnames(Xmat_valid)  # Includes both contrast and nuisance names
+  contrast_idx <- seq_len(Q_contrasts)  # Indices for contrast predictors
 
   # Define SVD-based HKB ridge regression function (from audit)
   ridge_hkb_svd <- function(X, y, p_eff) {
@@ -701,9 +726,10 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   }
   
   if (obj$regression_type == "ridge_hkb") {
-      beta_sl_values <- ridge_hkb_svd(Xmat_valid, dvec_sl_valid, p_preds)
-      if (length(beta_sl_values) == p_preds) {
-        beta_sl <- setNames(beta_sl_values, contrast_names)
+      beta_all_values <- ridge_hkb_svd(Xmat_valid, dvec_sl_valid, p_preds)
+      if (length(beta_all_values) == p_preds) {
+        # Extract only contrast coefficients
+        beta_sl <- setNames(beta_all_values[contrast_idx], contrast_names)
       } else {
         warning("HKB (SVD) ridge regression did not return the expected number of coefficients. Returning NAs.")
         beta_sl <- setNames(rep(NA_real_, Q_contrasts), contrast_names)
@@ -728,7 +754,8 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
             beta_sl <- setNames(rep(NA_real_, Q_contrasts), contrast_names)
             attr(beta_sl, "na_reason") <- "OLS failed (e.g. singular XTX)"
         } else {
-            beta_sl <- setNames(as.vector(beta_ols_solve), contrast_names)
+            # Extract only contrast coefficients
+            beta_sl <- setNames(as.vector(beta_ols_solve)[contrast_idx], contrast_names)
         }
     }
   } else if (obj$regression_type %in% c("pearson", "spearman")) {
@@ -748,23 +775,35 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
           design = list(model_mat = as.list(data.frame(Xmat_for_cor))),
           distmethod = obj$regression_type 
       )
-      beta_sl <- tryCatch({
+      beta_all <- tryCatch({
           run_cor(dvec_sl_for_cor, temp_obj_for_helpers)
       }, error = function(e) {
           warning(paste("Correlation-based RSA failed (", obj$regression_type, "):", e$message, ". Returning NAs."))
-          setNames(rep(NA_real_, Q_contrasts), contrast_names)
+          setNames(rep(NA_real_, p_preds), all_pred_names)
       })
+      # Extract only contrast coefficients
+      if (!is.null(beta_all) && length(beta_all) >= Q_contrasts) {
+          beta_sl <- setNames(beta_all[contrast_idx], contrast_names)
+      } else {
+          beta_sl <- setNames(rep(NA_real_, Q_contrasts), contrast_names)
+      }
   } else if (obj$regression_type == "rfit") {
       temp_obj_for_helpers <- list(
           design = list(model_mat = Xmat_valid),
           distmethod = obj$regression_type
       )
-      beta_sl <- tryCatch({
+      beta_all <- tryCatch({
           run_rfit(dvec_sl_valid, temp_obj_for_helpers)
       }, error = function(e) {
           warning(paste("Rfit RSA failed:", e$message, ". Returning NAs."))
-          setNames(rep(NA_real_, Q_contrasts), contrast_names)
+          setNames(rep(NA_real_, p_preds), all_pred_names)
       })
+      # Extract only contrast coefficients
+      if (!is.null(beta_all) && length(beta_all) >= Q_contrasts) {
+          beta_sl <- setNames(beta_all[contrast_idx], contrast_names)
+      } else {
+          beta_sl <- setNames(rep(NA_real_, Q_contrasts), contrast_names)
+      }
   } else {
       rlang::abort(paste("Unsupported regression_type in train_model:", obj$regression_type))
   }

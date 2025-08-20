@@ -18,3 +18,17 @@ format_result(obj, result, error_message, ...)
 \description{
 Format Result Object
 }
+\examples{
+\donttest{
+dataset <- gen_sample_dataset(D = c(6, 6, 6), nobs = 20,
+                              response_type = "categorical",
+                              data_mode = "image")
+cval <- blocked_cross_validation(dataset$design$block_var)
+model <- load_model("sda_notune")
+mspec <- mvpa_model(model, dataset$dataset, dataset$design,
+                    "classification", crossval = cval)
+# Typically called internally during processing
+format_result(mspec, result = NULL, error_message = "example",
+              context = list(test = 1, ytest = factor("a")))
+}
+}

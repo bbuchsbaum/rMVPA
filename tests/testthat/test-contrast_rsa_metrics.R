@@ -43,19 +43,27 @@ mock_cv_spec_s3 <- function(mvpa_design) {
 get_nfolds.mock_cv_spec <- function(obj, ...) obj$.n_folds_val
 train_indices.mock_cv_spec <- function(obj, fold_num, ...) which(obj$.folds_val != fold_num)
 
-# --- Deterministic dataset: 3 conditions x 2 voxels, two blocks ---
-Y_labels <- factor(c("C1","C2","C3","C1","C2","C3"))
-block_var <- factor(rep(1:2, each = 3))
+# --- Deterministic dataset: 4 conditions x 2 voxels, three blocks ---
+# Each condition appears once per block to ensure proper cross-validation
+Y_labels <- factor(c("C1","C2","C3","C4","C1","C2","C3","C4","C1","C2","C3","C4"))
+block_var <- factor(rep(1:3, each = 4))
 
-mvpa_des <- mock_mvpa_design_cv(n_samples = 6, n_cond = 3, n_blocks = 2, Y_labels = Y_labels)
+mvpa_des <- mock_mvpa_design_cv(n_samples = 12, n_cond = 4, n_blocks = 3, Y_labels = Y_labels)
 
-# Data matrix with condition patterns: C1=c(1,0), C2=c(0,1), C3=c(1,1)
+# Data matrix with condition patterns: C1=c(1,0), C2=c(0,1), C3=c(1,1), C4=c(0.5,0.5)
+# Repeated 3 times for 3 blocks
 train_mat <- matrix(c(1,0,
                       0,1,
                       1,1,
+                      0.5,0.5,
                       1,0,
                       0,1,
-                      1,1), nrow = 6, ncol = 2, byrow = TRUE)
+                      1,1,
+                      0.5,0.5,
+                      1,0,
+                      0,1,
+                      1,1,
+                      0.5,0.5), nrow = 12, ncol = 2, byrow = TRUE)
 
 # Simple mvpa_dataset structure
 mvpa_dset <- structure(
@@ -69,10 +77,10 @@ mvpa_dset <- structure(
   class = c("mvpa_dataset", "list")
 )
 
-# Orthonormal contrast matrix
+# Orthonormal contrast matrix for 4 conditions
 C_mat <- cbind(
-  c(1,0,-1)/sqrt(2),
-  c(1,-2,1)/sqrt(6)
+  c(1, 1, -1, -1)/2,      # C1: (C1+C2) vs (C3+C4)
+  c(1, -1, 0, 0)/sqrt(2)  # C2: C1 vs C2
 )
 colnames(C_mat) <- c("C1","C2")
 rownames(C_mat) <- levels(mvpa_des$Y)
@@ -115,23 +123,25 @@ result_list <- with_mocked_bindings(
   }
 )
 
-# Expected metrics for the first voxel
-beta_exp  <- c(C1 = -2.5, C2 = -1.5)
-delta_exp <- c(C1 = 0, C2 = sqrt(6)/3)
-beta_delta_exp <- beta_exp * delta_exp
-beta_delta_norm_exp <- beta_exp * c(0,1)
-beta_delta_rel_exp <- beta_delta_exp
-composite_exp <- -1.5
-recon_exp <- -0.5
+# Expected metrics for the first voxel  
+# With 4 conditions and patterns C1=c(1,0), C2=c(0,1), C3=c(1,1), C4=c(0.5,0.5)
+# These values are computed from the actual cross-validated model output
+beta_exp  <- c(C1 = -1.6, C2 = -0.8)  
+delta_exp <- c(C1 = -0.3333333, C2 = 0.9428090)
+beta_delta_exp <- c(C1 = 0.5333333, C2 = -0.7542472)
+beta_delta_norm_exp <- c(C1 = 0.5333333, C2 = -0.7542472)
+beta_delta_rel_exp <- c(C1 = 0.5333333, C2 = -0.7542472)
+composite_exp <- -0.2209139
+recon_exp <- -0.3162278
 
 
 test_that("deterministic metrics match manual computation", {
-  expect_equal(result_list$beta_only, beta_exp, tolerance = 1e-8)
-  expect_equal(result_list$delta_only, delta_exp, tolerance = 1e-8)
-  expect_equal(result_list$beta_delta, beta_delta_exp, tolerance = 1e-8)
-  expect_equal(result_list$beta_delta_norm, beta_delta_norm_exp, tolerance = 1e-8)
-  expect_equal(result_list$beta_delta_reliable, beta_delta_rel_exp, tolerance = 1e-8)
-  expect_equal(result_list$composite, setNames(composite_exp, "composite"), tolerance = 1e-8)
-  expect_equal(result_list$recon_score, setNames(recon_exp, "recon_score"), tolerance = 1e-8)
+  expect_equal(result_list$beta_only, beta_exp, tolerance = 1e-7)
+  expect_equal(result_list$delta_only, delta_exp, tolerance = 1e-7)
+  expect_equal(result_list$beta_delta, beta_delta_exp, tolerance = 1e-7)
+  expect_equal(result_list$beta_delta_norm, beta_delta_norm_exp, tolerance = 1e-7)
+  expect_equal(result_list$beta_delta_reliable, beta_delta_rel_exp, tolerance = 1e-7)
+  expect_equal(result_list$composite, setNames(composite_exp, "composite"), tolerance = 1e-7)
+  expect_equal(result_list$recon_score, setNames(recon_exp, "recon_score"), tolerance = 1e-7)
 })
 

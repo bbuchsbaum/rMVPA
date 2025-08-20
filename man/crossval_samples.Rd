@@ -21,3 +21,9 @@ A tibble containing training and testing sets for each fold.
 \description{
 Apply a cross-validation scheme to split the data into training and testing sets.
 }
+\examples{
+cval <- kfold_cross_validation(len = 20, nfolds = 4)
+dat  <- as.data.frame(matrix(rnorm(20 * 2), 20, 2))
+y    <- factor(rep(letters[1:4], 5))
+crossval_samples(cval, dat, y)
+}

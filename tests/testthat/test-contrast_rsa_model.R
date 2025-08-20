@@ -46,7 +46,7 @@ mock_msreve_design <- function(n_cond = 4, name = "MockMSREVE", center_contrasts
   C <- matrix(rnorm(n_cond * 2), nrow = n_cond,
               dimnames = list(cond_names, c("C1", "C2")))
   if (center_contrasts && ncol(C) > 0) {
-    C_centered <- scale(C, center = TRUE, scale = FALSE)
+    C_centered <- base::scale(C, center = TRUE, scale = FALSE)
     # Retain original colnames and rownames
     dimnames(C_centered) <- dimnames(C)
     C <- C_centered
@@ -191,7 +191,7 @@ test_that("contrast_rsa_model constructor collinearity check works as expected",
   # Case 1: Non-collinear contrasts - ensure centered and correct dimnames
   C_noncollinear_raw <- matrix(c(1,1,-1,-1,  1,-1,0,0), nrow=n_cond, ncol=2, 
                                dimnames = list(cond_names_for_test, c("C1", "C2")))
-  C_noncollinear <- scale(C_noncollinear_raw, center=TRUE, scale=FALSE)
+  C_noncollinear <- base::scale(C_noncollinear_raw, center=TRUE, scale=FALSE)
   C_noncollinear <- round(C_noncollinear, 10)
   dimnames(C_noncollinear) <- dimnames(C_noncollinear_raw)
   
@@ -210,7 +210,7 @@ test_that("contrast_rsa_model constructor collinearity check works as expected",
   # Case 2: Collinear contrasts (C2 = 2 * C1) - ensure centered and correct dimnames
   C_collinear_raw <- matrix(c(1,1,-1,-1,  2,2,-2,-2), nrow=n_cond, ncol=2,
                             dimnames = list(cond_names_for_test, c("C1_orig", "C2_coll")))
-  C_collinear <- scale(C_collinear_raw, center=TRUE, scale=FALSE)
+  C_collinear <- base::scale(C_collinear_raw, center=TRUE, scale=FALSE)
   C_collinear <- round(C_collinear, 10)
   dimnames(C_collinear) <- dimnames(C_collinear_raw)
 
@@ -246,7 +246,7 @@ test_that("contrast_rsa_model constructor collinearity check works as expected",
   # Case 5: Contrast matrix with only 1 column - ensure centered and correct dimnames
   C_single_raw <- matrix(c(1,1,-1,-1), nrow=n_cond, ncol=1,
                          dimnames = list(cond_names_for_test, "C_single"))
-  C_single <- scale(C_single_raw, center=TRUE, scale=FALSE)
+  C_single <- base::scale(C_single_raw, center=TRUE, scale=FALSE)
   C_single <- round(C_single, 10)
   dimnames(C_single) <- dimnames(C_single_raw)
   
@@ -334,7 +334,7 @@ C_fixed_centered_4x2 <- matrix(c(
   1,  1, -1, -1,  # Contrast 1: (Cond1, Cond2) vs (Cond3, Cond4)
   1, -1,  1, -1   # Contrast 2: (Cond1, Cond3) vs (Cond2, Cond4)
 ), nrow = 4, ncol = 2, byrow = FALSE)
-C_fixed_centered_4x2_scaled <- scale(C_fixed_centered_4x2, center = TRUE, scale = FALSE)
+C_fixed_centered_4x2_scaled <- base::scale(C_fixed_centered_4x2, center = TRUE, scale = FALSE)
 colnames(C_fixed_centered_4x2_scaled) <- c("CFC1", "CFC2")
 # Rownames will be added dynamically based on dset$design$Y levels in tests
 
@@ -458,7 +458,7 @@ test_that("train_model handles NA from U_hat_for_delta_calc (formerly compute_cr
   n_cond_na <- 2
   C_mat_na <- matrix(c(1,-1, 1,1), nrow=n_cond_na, ncol=2, dimnames=list(paste0("Cond",1:n_cond_na), c("CN1", "CN2")))
   # Center the contrast matrix to avoid unrelated warnings
-  C_mat_na_centered <- scale(C_mat_na, center=TRUE, scale=FALSE)
+  C_mat_na_centered <- base::scale(C_mat_na, center=TRUE, scale=FALSE)
   dimnames(C_mat_na_centered) <- dimnames(C_mat_na)
   C_mat_na <- C_mat_na_centered
 
@@ -515,7 +515,7 @@ test_that("train_model handles insufficient data points for regression", {
     C_insufficient_orig <- matrix(c(1,-1,0,  0,1,-1,  1,0,-1), nrow=n_cond_insufficient, ncol=3,
                                   dimnames=list(paste0("Cond",1:n_cond_insufficient), paste0("CQ",1:3)))
     # Center it
-    C_insufficient_centered <- scale(C_insufficient_orig, center=TRUE, scale=FALSE)
+    C_insufficient_centered <- base::scale(C_insufficient_orig, center=TRUE, scale=FALSE)
     dimnames(C_insufficient_centered) <- dimnames(C_insufficient_orig)
     C_insufficient_final <- C_insufficient_centered
     
@@ -614,7 +614,7 @@ test_that("train_model.contrast_rsa_model handles whitening_matrix_W for crossno
   dset <- mock_mvpa_dataset_train(n_samples, n_cond, n_blocks, n_voxels = n_voxels_sl)
   
   C_mat_raw <- matrix(rnorm(n_cond * 2), nrow=n_cond, dimnames=list(levels(dset$design$Y), c("C1", "C2")))
-  C_mat_centered <- scale(C_mat_raw, center=TRUE, scale=FALSE)
+  C_mat_centered <- base::scale(C_mat_raw, center=TRUE, scale=FALSE)
   dimnames(C_mat_centered) <- dimnames(C_mat_raw)
   
   ms_des <- suppressWarnings(msreve_design(dset$design, C_mat_centered))

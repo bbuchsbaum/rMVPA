@@ -1,6 +1,6 @@
 #' @keywords internal
 gen_id <- function(n) {
-  width <- nchar(n)
+  width <- max(2, nchar(n))  # Minimum width of 2 for consistent formatting
   sprintf(paste0("%0", width, "d"), seq_len(n))
 }
 

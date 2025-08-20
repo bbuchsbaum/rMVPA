@@ -7,16 +7,15 @@
 has_test_set(obj)
 }
 \arguments{
-\item{obj}{The object to check for a test set.}
-}
-\description{
-Determine whether the object contains a separate test set.
+\item{obj}{Object to query.}
 }
 \value{
 Logical indicating if a test set exists.
 }
+\description{
+Determine whether the object contains a separate test set.
+}
 \examples{
 ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10, external_test = TRUE)
 has_test_set(ds$design)
-}
 }

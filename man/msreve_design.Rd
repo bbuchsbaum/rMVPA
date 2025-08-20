@@ -8,7 +8,8 @@ msreve_design(
   mvpa_design,
   contrast_matrix,
   name = "msreve_design_01",
-  include_interactions = FALSE
+  include_interactions = FALSE,
+  nuisance_rdms = NULL
 )
 }
 \arguments{
@@ -23,6 +24,11 @@ that columns are named to identify the contrasts.}
 \item{name}{An optional character string to name the design.}
 
 \item{include_interactions}{Logical. If TRUE, automatically add pairwise interaction contrasts using \code{\link{add_interaction_contrasts}}.}
+
+\item{nuisance_rdms}{Optional named list of K x K matrices or \code{dist} objects representing
+nuisance RDMs to be included as additional predictors in the MS-ReVE regression.
+These are typically temporal or spatial nuisance patterns that should be accounted
+for but are not of primary interest.}
 }
 \value{
 An object of class \\code{msreve_design}, which is a list containing:

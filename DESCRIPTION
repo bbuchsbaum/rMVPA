@@ -79,6 +79,7 @@ Collate:
     'contrasts.R'
     'compute_cv_means.R'
     'msreve_design.R'
+    'temporal_rdms.R'
     'contrast_rsa_model.R'
 RoxygenNote: 7.3.2.9000
 Suggests:

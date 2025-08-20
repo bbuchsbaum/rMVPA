@@ -15,3 +15,10 @@ A vector of predicted classes corresponding to the highest probability for each 
 \description{
 This function calculates the predicted class from a matrix of predicted probabilities. The class with the highest probability is selected as the predicted class.
 }
+\examples{
+prob <- matrix(c(0.2, 0.8,
+                 0.6, 0.4),
+               nrow = 2, byrow = TRUE,
+               dimnames = list(NULL, c("A", "B")))
+predicted_class(prob)
+}

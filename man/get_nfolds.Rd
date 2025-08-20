@@ -17,3 +17,7 @@ An integer representing the number of folds.
 \description{
 An S3 generic method to retrieve the number of folds from a cross-validation specification object.
 }
+\examples{
+cval <- kfold_cross_validation(len = 20, nfolds = 4)
+get_nfolds(cval)
+}

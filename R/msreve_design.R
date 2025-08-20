@@ -12,6 +12,10 @@
 #'   that columns are named to identify the contrasts.
 #' @param name An optional character string to name the design.
 #' @param include_interactions Logical. If TRUE, automatically add pairwise interaction contrasts using \code{\link{add_interaction_contrasts}}.
+#' @param nuisance_rdms Optional named list of K x K matrices or \code{dist} objects representing
+#'   nuisance RDMs to be included as additional predictors in the MS-ReVE regression.
+#'   These are typically temporal or spatial nuisance patterns that should be accounted
+#'   for but are not of primary interest.
 #'
 #' @return An object of class \\code{msreve_design}, which is a list containing:
 #'   \\item{mvpa_design}{The input \\code{mvpa_design} object.}
@@ -45,7 +49,8 @@
 #' # design_obj_int <- msreve_design(mvpa_des_obj, C_mat,
 #' #                                include_interactions = TRUE)
 #' # colnames(design_obj_int$contrast_matrix)
-msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01", include_interactions = FALSE) {
+msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01", 
+                         include_interactions = FALSE, nuisance_rdms = NULL) {
   # Basic assertions
   if (!inherits(mvpa_design, "mvpa_design")) {
     stop("`mvpa_design` must be an object of class \'mvpa_design\'.")
@@ -81,6 +86,39 @@ msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01
                   paste(non_centered_contrasts, collapse=", ")))
   }
 
+  # Validate nuisance_rdms if provided
+  if (!is.null(nuisance_rdms)) {
+    if (!is.list(nuisance_rdms)) {
+      stop("`nuisance_rdms` must be a named list of matrices or dist objects.")
+    }
+    if (is.null(names(nuisance_rdms)) || any(names(nuisance_rdms) == "")) {
+      stop("`nuisance_rdms` must be a named list with non-empty names.")
+    }
+    
+    # Check each nuisance RDM
+    for (nm in names(nuisance_rdms)) {
+      rdm <- nuisance_rdms[[nm]]
+      if (inherits(rdm, "dist")) {
+        # Convert dist to matrix for dimension check
+        n_dist <- attr(rdm, "Size")
+        if (n_dist != mvpa_design$ncond) {
+          stop(paste0("Nuisance RDM '", nm, "' has size ", n_dist, 
+                     " but mvpa_design has ", mvpa_design$ncond, " conditions."))
+        }
+      } else if (is.matrix(rdm)) {
+        if (nrow(rdm) != mvpa_design$ncond || ncol(rdm) != mvpa_design$ncond) {
+          stop(paste0("Nuisance RDM '", nm, "' must be a ", mvpa_design$ncond, 
+                     " x ", mvpa_design$ncond, " matrix."))
+        }
+        if (!isSymmetric(rdm)) {
+          warning(paste0("Nuisance RDM '", nm, "' is not symmetric."))
+        }
+      } else {
+        stop(paste0("Nuisance RDM '", nm, "' must be a matrix or dist object."))
+      }
+    }
+  }
+  
   # Check if contrast_matrix is orthonormal
   is_orthonormal <- FALSE
   if (ncol(contrast_matrix) > 0) {
@@ -96,7 +134,8 @@ msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01
   obj <- list(
       mvpa_design = mvpa_design,
       contrast_matrix = contrast_matrix,
-      name = name
+      name = name,
+      nuisance_rdms = nuisance_rdms
   )
   
   # Derive and store condition-to-block mapping if block_var exists
@@ -268,7 +307,16 @@ return(C_ortho)
 #' Add Interaction Contrasts to an msreve_design
 #'
 #' Creates new contrast columns representing pairwise interactions of existing
-#' contrasts in an \code{msreve_design} object.
+#' contrasts in an \code{msreve_design} object. Interactions are computed as
+#' element-wise products of the contrast vectors.
+#'
+#' @details
+#' Interaction contrasts are created by element-wise multiplication of pairs
+#' of contrast vectors. If the resulting interaction is a zero vector (which
+#' occurs when the original contrasts have non-overlapping support, i.e., no
+#' conditions where both contrasts are non-zero), the interaction is skipped
+#' with an informative message. This commonly happens with contrasts that
+#' compare distinct subsets of conditions, such as c(1,-1,0,0) and c(0,0,1,-1).
 #'
 #' @param design An object of class \code{msreve_design}.
 #' @param pairs Optional two-column matrix or list of character vectors
@@ -277,8 +325,22 @@ return(C_ortho)
 #' @param orthogonalize Logical; if \code{TRUE} (default) the expanded contrast
 #'   matrix is passed through \code{\link{orthogonalize_contrasts}}.
 #'
-#' @return The updated \code{msreve_design} object with interaction columns
-#'   appended.
+#' @return The updated \code{msreve_design} object with non-zero interaction 
+#'   columns appended. Zero interactions are automatically skipped.
+#'   
+#' @examples
+#' \dontrun{
+#' # Example with non-overlapping contrasts (zero interaction)
+#' C1 <- matrix(c(1,-1,0,0, 0,0,1,-1), nrow=4, 
+#'              dimnames=list(NULL, c("A","B")))
+#' # A compares conditions 1 vs 2, B compares 3 vs 4
+#' # Their interaction will be zero and skipped
+#' 
+#' # Example with overlapping contrasts (non-zero interaction)  
+#' C2 <- matrix(c(1,1,-1,-1, 1,-1,1,-1), nrow=4,
+#'              dimnames=list(NULL, c("Main1","Main2")))
+#' # These contrasts overlap and will produce a meaningful interaction
+#' }
 #' @export
 add_interaction_contrasts <- function(design, pairs = NULL, orthogonalize = TRUE) {
   if (!inherits(design, "msreve_design")) {
@@ -309,6 +371,14 @@ add_interaction_contrasts <- function(design, pairs = NULL, orthogonalize = TRUE
       stop("Each pair must contain two valid contrast column names")
     }
     new_col <- C[, p[1]] * C[, p[2]]
+    
+    # Check if interaction is effectively zero (contrasts have non-overlapping support)
+    if (all(abs(new_col) < 1e-10)) {
+      message(paste0("Interaction ", p[1], "_x_", p[2], 
+                     " is zero (contrasts have non-overlapping support) and will be skipped"))
+      next
+    }
+    
     new_name <- paste0(p[1], "_x_", p[2])
     C <- cbind(C, new_col)
     cn <- c(cn, new_name)

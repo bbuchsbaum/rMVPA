@@ -7,24 +7,22 @@
 tune_grid(obj, x, y, len)
 }
 \arguments{
-\item{obj}{The model object.}
+\item{obj}{A model or model specification.}
 
-\item{x}{The training data.}
+\item{x}{Training data.}
 
-\item{y}{The response vector.}
+\item{y}{Response variable.}
 
-\item{len}{The number of elements in the tuning grid.}
-}
-\description{
-Returns the parameter grid used to tune a model.
+\item{len}{Number of parameter sets to generate.}
 }
 \value{
 A data frame of tuning parameter combinations.
 }
+\description{
+Returns the parameter grid used to tune a model.
+}
 \examples{
-\donttest{
 ds  <- gen_sample_dataset(D = c(5, 5, 5), nobs = 10)
 mdl <- load_model("sda_notune")
 tune_grid(mdl, ds$dataset$train_data, ds$design$y_train, len = 1)
-}
 }

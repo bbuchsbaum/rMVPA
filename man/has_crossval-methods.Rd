@@ -7,19 +7,19 @@
 has_crossval(obj)
 }
 \arguments{
-\item{obj}{The model object.}
-}
-\description{
-Determine whether cross-validation is specified for the object.
+\item{obj}{Model specification object.}
 }
 \value{
 Logical indicating if cross-validation will be performed.
+}
+\description{
+Determine whether cross-validation is specified for the object.
 }
 \examples{
 ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10)
 cval <- blocked_cross_validation(ds$design$block_var)
 mdl <- load_model("sda_notune")
-mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification", crossval = cval)
+mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+                    "classification", crossval = cval)
 has_crossval(mspec)
-}
 }

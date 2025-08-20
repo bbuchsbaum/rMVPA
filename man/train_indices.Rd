@@ -20,3 +20,7 @@ An integer vector of training indices.
 An S3 generic method to retrieve the training sample indices for a specific fold 
 from a cross-validation specification object.
 }
+\examples{
+cval <- kfold_cross_validation(len = 20, nfolds = 4)
+train_indices(cval, 1)
+}
