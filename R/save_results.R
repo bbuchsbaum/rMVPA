@@ -6,10 +6,12 @@
 #'              - minimal: maps only
 #'              - standard: maps + manifest (default)
 #'              - complete: maps + manifest + tables + aux (if present)
-#' @param stack One of c("none","vec","auto"). If "vec", volumetric metrics
-#'              are stacked into one 4D NIfTI via neuroim2::concat + write_vec.
-#'              "auto" stacks if all maps are compatible; otherwise per-metric.
+#' @param stack One of c("none","auto","vec"). 
+#'              - "none": Write individual NIfTI files for each metric (default)
+#'              - "auto": Stack into 4D if all maps are compatible, otherwise individual files
+#'              - "vec": Force stacking into one 4D NIfTI file
 #' @param fname Base filename when writing a 4D file (default "searchlight.nii.gz")
+#'              Only used when stack="vec" or stack="auto" with compatible volumes
 #' @param include Character vector of extras to include; subset of
 #'                c("manifest","tables","aux"). `level` sets sensible defaults.
 #' @param dtype Optional data_type for neuroim2 write_* (e.g., "FLOAT","DOUBLE")
@@ -19,7 +21,7 @@
 #' @export
 save_results <- function(x, dir,
                          level = c("standard","minimal","complete"),
-                         stack = c("auto","none","vec"),
+                         stack = c("none","auto","vec"),
                          fname = "searchlight.nii.gz",
                          include = NULL,
                          dtype = NULL,
@@ -90,7 +92,7 @@ save_results <- function(x, dir,
 #' @export
 save_results.default <- function(x, dir,
                                  level = c("standard","minimal","complete"),
-                                 stack = c("auto","none","vec"),
+                                 stack = c("none","auto","vec"),
                                  fname = "searchlight.nii.gz",
                                  include = NULL,
                                  dtype = NULL,
@@ -121,7 +123,7 @@ save_results.default <- function(x, dir,
 #' @export
 save_results.searchlight_result <- function(x, dir,
                                             level = c("standard","minimal","complete"),
-                                            stack = c("auto","none","vec"),
+                                            stack = c("none","auto","vec"),
                                             fname = "searchlight.nii.gz",
                                             include = NULL,
                                             dtype = NULL,

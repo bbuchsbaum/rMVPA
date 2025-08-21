@@ -8,7 +8,7 @@ save_results(
   x,
   dir,
   level = c("standard", "minimal", "complete"),
-  stack = c("auto", "none", "vec"),
+  stack = c("none", "auto", "vec"),
   fname = "searchlight.nii.gz",
   include = NULL,
   dtype = NULL,
@@ -26,11 +26,13 @@ save_results(
 - standard: maps + manifest (default)
 - complete: maps + manifest + tables + aux (if present)}
 
-\item{stack}{One of c("none","vec","auto"). If "vec", volumetric metrics
-are stacked into one 4D NIfTI via neuroim2::concat + write_vec.
-"auto" stacks if all maps are compatible; otherwise per-metric.}
+\item{stack}{One of c("none","auto","vec"). 
+- "none": Write individual NIfTI files for each metric (default)
+- "auto": Stack into 4D if all maps are compatible, otherwise individual files
+- "vec": Force stacking into one 4D NIfTI file}
 
-\item{fname}{Base filename when writing a 4D file (default "searchlight.nii.gz")}
+\item{fname}{Base filename when writing a 4D file (default "searchlight.nii.gz")
+Only used when stack="vec" or stack="auto" with compatible volumes}
 
 \item{include}{Character vector of extras to include; subset of
 c("manifest","tables","aux"). `level` sets sensible defaults.}
