@@ -6,7 +6,10 @@
 #' @param neurovec A NeuroVec object containing the neuroimaging data
 #' @param labels A vector of labels/conditions corresponding to each volume in neurovec
 #' @param mask An optional mask (NeuroVol or logical array) to restrict analysis to specific voxels
-#' @param normalize Character string specifying normalization method:
+#' @param normalize Character string specifying normalization method applied to each volume 
+#'   before averaging. Note that after averaging normalized volumes, the resulting 
+#'   averages may not maintain the same normalization properties (e.g., averaged 
+#'   z-scored data will have SD < 1):
 #'   \describe{
 #'     \item{"none"}{No normalization (default)}
 #'     \item{"scale"}{Scale each volume to unit variance (divide by SD)}
