@@ -82,6 +82,7 @@ Collate:
     'msreve_design.R'
     'temporal_rdms.R'
     'contrast_rsa_model.R'
+    'average_labels.R'
 RoxygenNote: 7.3.2.9000
 Suggests:
     c060,
