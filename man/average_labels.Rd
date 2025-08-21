@@ -21,7 +21,10 @@ average_labels(
 
 \item{mask}{An optional mask (NeuroVol or logical array) to restrict analysis to specific voxels}
 
-\item{normalize}{Character string specifying normalization method:
+\item{normalize}{Character string specifying normalization method applied to each volume 
+before averaging. Note that after averaging normalized volumes, the resulting 
+averages may not maintain the same normalization properties (e.g., averaged 
+z-scored data will have SD < 1):
 \describe{
   \item{"none"}{No normalization (default)}
   \item{"scale"}{Scale each volume to unit variance (divide by SD)}
