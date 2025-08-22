@@ -8,9 +8,18 @@ setup_mvpa_logger <- function() {
   # Use the standard layout but with colored messages
   futile.logger::flog.layout(futile.logger::layout.simple)
   
-  # Set default threshold to INFO to hide DEBUG messages
-  # This prevents common/expected errors from being displayed
-  futile.logger::flog.threshold(futile.logger::INFO)
+  # Check if we're in a test environment or if user has set a custom threshold
+  # Don't override if already set to ERROR or higher (more restrictive)
+  current_threshold <- futile.logger::flog.threshold()
+  
+  # Only set to INFO if current threshold is less restrictive (DEBUG)
+  # or if running in interactive mode and not in tests
+  if (current_threshold <= futile.logger::DEBUG || 
+      (interactive() && Sys.getenv("TESTTHAT") == "")) {
+    # Set default threshold to INFO to hide DEBUG messages
+    # This prevents common/expected errors from being displayed
+    futile.logger::flog.threshold(futile.logger::INFO)
+  }
 }
 
 #' @keywords internal

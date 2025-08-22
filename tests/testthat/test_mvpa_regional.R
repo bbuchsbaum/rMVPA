@@ -1,8 +1,4 @@
-library(neuroim2)
-library(neurosurf)
-library(testthat)
-library(assertthat)
-
+# Libraries are loaded in helper-test-logging.R
 
 context("mvpa regional")
 
