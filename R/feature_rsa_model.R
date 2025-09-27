@@ -772,47 +772,70 @@ evaluate_model.feature_rsa_model <- function(object,
   observed  <- as.matrix(observed)
   predicted <- as.matrix(predicted)
 
-  
-  
-  # Check for constant predictions (zero variance) which cause issues
-  if (any(apply(predicted, 2, stats::sd) == 0) || any(apply(observed, 2, stats::sd) == 0)) {
-    warning("evaluate_model: Predictions or observed data have zero variance in some columns. Correlation metrics may be NA.")
-  }
-  
   if (ncol(observed) != ncol(predicted)) {
     stop(sprintf("Mismatch in columns: predicted has %d, observed has %d.", 
                  ncol(predicted), ncol(observed)))
   }
-  
-  # Base RSA metrics
-  cormat     <- cor(predicted, observed)
-  cors       <- diag(cormat)
-  mean_cor   <- mean(cors, na.rm = TRUE) # Add na.rm = TRUE for robustness
-  
-  # Calculate mean of off-diagonal correlations
-  n <- nrow(cormat)
-  off_diag_cors <- (sum(cormat, na.rm = TRUE) - sum(cors, na.rm = TRUE)) / (n*n - n) # Add na.rm
-  
-  # New metric: mean diagonal correlation minus mean off-diagonal correlation
-  # This measures how much better the model predicts the correct condition
-  # compared to incorrect conditions.
-  cor_difference <- mean_cor - off_diag_cors
-  
-  # Calculate rank percentile for each condition
-  ranks <- numeric(n)
-  for (i in 1:n) {
-    # Get correlations for the ith predicted pattern with all observed patterns
-    condition_cors <- cormat[i, ]
-    # Compute percentile rank of diagonal correlation among all other correlations
-    # Higher correlation = better rank; adjust to 0-1 scale excluding self-comparison
-    ranks[i] <- (sum(condition_cors <= condition_cors[i], na.rm = TRUE) - 1) / (sum(!is.na(condition_cors)) - 1) # Handle NAs
+
+  # Identify columns with sufficient variance to compute correlations safely
+  sd_thresh <- 1e-12
+  obs_sd <- apply(observed, 2, stats::sd)
+  pred_sd <- apply(predicted, 2, stats::sd)
+  valid_idx <- which(obs_sd > sd_thresh & pred_sd > sd_thresh)
+
+  if (length(valid_idx) == 0) {
+    futile.logger::flog.warn("evaluate_model: No columns with finite variance; returning NA metrics.")
+    return(list(
+      correlations = numeric(0),
+      mean_correlation = NA_real_,
+      off_diag_correlation = NA_real_,
+      cor_difference = NA_real_,
+      mean_rank_percentile = NA_real_,
+      voxel_correlation = NA_real_,
+      mse = mean((predicted - observed)^2, na.rm = TRUE),
+      r_squared = NA_real_,
+      cor_temporal_means = NA_real_,
+      mean_voxelwise_temporal_cor = NA_real_,
+      permutation_results = NULL
+    ))
   }
-  mean_rank_percentile <- mean(ranks, na.rm = TRUE) # Add na.rm
-  voxel_cor  <- cor(as.vector(predicted), as.vector(observed))
-  mse        <- mean((predicted - observed)^2, na.rm=TRUE) # Add na.rm
-  rss        <- sum((observed - predicted)^2, na.rm=TRUE)  # Add na.rm
-  tss        <- sum((observed - mean(observed, na.rm=TRUE))^2, na.rm=TRUE) # Add na.rm
-  r_squared  <- if (tss == 0) NA else 1 - (rss / tss) # Handle zero total sum of squares
+
+  # Compute correlation metrics using only valid columns to avoid warnings/NaNs
+  cormat <- stats::cor(predicted[, valid_idx, drop = FALSE],
+                       observed[, valid_idx, drop = FALSE])
+  cors <- diag(cormat)
+  mean_cor <- mean(cors, na.rm = TRUE)
+
+  n <- nrow(cormat)
+  if (n > 1) {
+    off_diag_cors <- (sum(cormat, na.rm = TRUE) - sum(cors, na.rm = TRUE)) / (n * n - n)
+  } else {
+    off_diag_cors <- NA_real_
+  }
+  cor_difference <- mean_cor - off_diag_cors
+
+  # Rank percentile for each condition (row) based on cormat
+  ranks <- numeric(n)
+  for (i in seq_len(n)) {
+    condition_cors <- cormat[i, ]
+    denom <- sum(!is.na(condition_cors)) - 1
+    ranks[i] <- if (denom > 0) (sum(condition_cors <= condition_cors[i], na.rm = TRUE) - 1) / denom else NA_real_
+  }
+  mean_rank_percentile <- mean(ranks, na.rm = TRUE)
+
+  # Voxel-wise overall correlation across all values (use only valid columns)
+  pred_vec <- as.vector(predicted[, valid_idx, drop = FALSE])
+  obs_vec  <- as.vector(observed[,  valid_idx, drop = FALSE])
+  if (stats::sd(pred_vec) > sd_thresh && stats::sd(obs_vec) > sd_thresh) {
+    voxel_cor <- stats::cor(pred_vec, obs_vec)
+  } else {
+    voxel_cor <- NA_real_
+  }
+
+  mse <- mean((predicted - observed)^2, na.rm = TRUE)
+  rss <- sum((observed - predicted)^2, na.rm = TRUE)
+  tss <- sum((observed - mean(observed, na.rm = TRUE))^2, na.rm = TRUE)
+  r_squared <- if (tss == 0) NA_real_ else 1 - (rss / tss)
   
   # Log warnings if key metrics are NA/NaN
   if (!is.finite(mean_cor)) futile.logger::flog.warn("Mean correlation is NA/NaN.")
@@ -824,10 +847,14 @@ evaluate_model.feature_rsa_model <- function(object,
   # --- Calculate Correlation of Temporal Means (Spatial Averages) ---
   cor_temporal_means <- NA_real_
   if (nrow(observed) > 1 && nrow(predicted) > 1) { # Need >1 observation
-      mean_obs_across_space <- tryCatch(rowMeans(observed, na.rm = TRUE), error=function(e) NULL)
-      mean_pred_across_space <- tryCatch(rowMeans(predicted, na.rm = TRUE), error=function(e) NULL)
+      mean_obs_across_space <- tryCatch(rowMeans(observed[, valid_idx, drop = FALSE], na.rm = TRUE), error=function(e) NULL)
+      mean_pred_across_space <- tryCatch(rowMeans(predicted[, valid_idx, drop = FALSE], na.rm = TRUE), error=function(e) NULL)
       if (!is.null(mean_obs_across_space) && !is.null(mean_pred_across_space)) {
-          cor_temporal_means <- tryCatch(cor(mean_obs_across_space, mean_pred_across_space), error=function(e) NA_real_)
+          if (stats::sd(mean_obs_across_space) > sd_thresh && stats::sd(mean_pred_across_space) > sd_thresh) {
+            cor_temporal_means <- tryCatch(stats::cor(mean_obs_across_space, mean_pred_across_space), error=function(e) NA_real_)
+          } else {
+            cor_temporal_means <- NA_real_
+          }
       } else {
          warning("evaluate_model: Could not compute rowMeans for cor_temporal_means.")
       }
@@ -839,11 +866,16 @@ evaluate_model.feature_rsa_model <- function(object,
 
   # --- Calculate Mean Voxelwise Temporal Correlation ---
   mean_voxelwise_temporal_cor <- NA_real_
-  if (nrow(observed) > 1 && nrow(predicted) > 1 && ncol(observed) > 0) { # Need >1 observation and >0 voxels
-      num_voxels <- ncol(observed)
+  if (nrow(observed) > 1 && nrow(predicted) > 1 && length(valid_idx) > 0) { # Need >1 observation and >0 valid voxels
+      num_voxels <- length(valid_idx)
       voxel_cors <- numeric(num_voxels)
-      for (i in 1:num_voxels) {
-          voxel_cors[i] <- tryCatch(cor(observed[, i], predicted[, i]), error = function(e) NA)
+      for (ii in seq_len(num_voxels)) {
+          j <- valid_idx[ii]
+          if (stats::sd(observed[, j]) > sd_thresh && stats::sd(predicted[, j]) > sd_thresh) {
+            voxel_cors[ii] <- tryCatch(stats::cor(observed[, j], predicted[, j]), error = function(e) NA_real_)
+          } else {
+            voxel_cors[ii] <- NA_real_
+          }
       }
       mean_voxelwise_temporal_cor <- mean(voxel_cors, na.rm = TRUE)
   } else {
@@ -1562,5 +1594,4 @@ print.feature_rsa_model <- function(x, ...) {
   # Footer
   cat("\n", border, "\n")
 }
-
 
