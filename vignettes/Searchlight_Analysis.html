@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Bradley Buchsbaum" />
+
+<meta name="date" content="2025-09-27" />
+
+<title>Searchlight Analysis</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Searchlight Analysis</h1>
+<h4 class="author">Bradley Buchsbaum</h4>
+<h4 class="date">2025-09-27</h4>
+
+
+
+<div id="searchlight-analysis" class="section level2">
+<h2>Searchlight Analysis</h2>
+<div id="generate-a-volumetric-dataset-with-100-observations-and-two-classes" class="section level3">
+<h3>Generate a volumetric dataset with 100 observations and two
+classes</h3>
+<p>To generate a dataset we use the <code>gen_sample_dataset</code>
+function. We are creating a 4-dimensional neuroimaging dataset, with
+6-by-6-by-6 spatial dimensions and 80 observations in the 4th dimension.
+These 80 observations are divided into 4 blocks, each consisting of 20
+trials. The generated <code>y</code> variable is a <code>factor</code>
+with 2 levels (‘a’ and ‘b’). the <code>gen_sample_dataset</code>
+function creates a list with two elements: an <code>mvpa_dataset</code>
+object (<code>dataset</code>) and an <code>mvpa_design</code> object
+(<code>design</code>). The first contains information about the data
+itself and the second contains information about the experimental
+design.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>dataset <span class="ot">&lt;-</span> <span class="fu">gen_sample_dataset</span>(<span class="at">D=</span><span class="fu">c</span>(<span class="dv">6</span>,<span class="dv">6</span>,<span class="dv">6</span>), <span class="at">nobs =</span> <span class="dv">80</span>, <span class="at">blocks=</span><span class="dv">4</span>, <span class="at">nlevels=</span><span class="dv">2</span>)</span></code></pre></div>
+<pre><code>## Warning in gen_sample_dataset(D = c(6, 6, 6), nobs = 80, blocks = 4, nlevels =
+## 2): strings not representable in native encoding will be translated to UTF-8</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">print</span>(dataset)</span></code></pre></div>
+<pre><code>## $dataset</code></pre>
+<pre><code>## Warning in get(method, envir = home): strings not representable in native
+## encoding will be translated to UTF-8</code></pre>
+<pre><code>## 
+##  &lt;U+2588&gt;&lt;U+2580&gt;&lt;U+2580&gt; MVPA Dataset &lt;U+2580&gt;&lt;U+2580&gt;&lt;U+2588&gt; 
+## 
+## &lt;U+251C&gt;&lt;U+2500&gt; Training Data 
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Dimensions:  6 &lt;U+00D7&gt; 6 &lt;U+00D7&gt; 6 &lt;U+00D7&gt; 80 observations 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt; Type:  DenseNeuroVec 
+## &lt;U+251C&gt;&lt;U+2500&gt; Test Data 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt;  None 
+## &lt;U+2514&gt;&lt;U+2500&gt; Mask Information 
+##    &lt;U+251C&gt;&lt;U+2500&gt; Areas:  1 : 120 
+##    &lt;U+2514&gt;&lt;U+2500&gt; Active voxels/vertices:  120 
+## 
+## 
+## $design</code></pre>
+<pre><code>## Warning in get(method, envir = home): strings not representable in native
+## encoding will be translated to UTF-8</code></pre>
+<pre><code>## 
+##  &lt;U+2588&gt;&lt;U+2580&gt;&lt;U+2580&gt; MVPA Design &lt;U+2580&gt;&lt;U+2580&gt;&lt;U+2588&gt; 
+## 
+## &lt;U+251C&gt;&lt;U+2500&gt; Training Data 
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Observations:  80 
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Response Type:  Factor
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Levels:  a, b 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt; Class Distribution:  a: 40, b: 40 
+## &lt;U+251C&gt;&lt;U+2500&gt; Test Data 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt;  None 
+## &lt;U+2514&gt;&lt;U+2500&gt; Structure 
+##    &lt;U+251C&gt;&lt;U+2500&gt; Blocking:  Present
+##    &lt;U+251C&gt;&lt;U+2500&gt; Number of Blocks:  4 
+##    &lt;U+251C&gt;&lt;U+2500&gt; Mean Block Size:  20  (SD:  0 ) 
+##    &lt;U+2514&gt;&lt;U+2500&gt; Split Groups:  None</code></pre>
+</div>
+<div id="create-a-cross-validation-object-using-a-pre-defined-blocking-variable." class="section level3">
+<h3>Create a cross-validation object using a pre-defined blocking
+variable.</h3>
+<p>Most MVPA analyses involve the collection of fMRI data over a series
+of scanning runs, or “blocks”. Due to intra-block serial correlations,
+it makes sense to take advantage of this block structure for
+cross-validation. In other words, we want to train the classifier on
+<code>k-1</code> blocks and test on the set of trials for all
+<code>k</code> held out blocks. This is a form of leave-one-group-out
+cross-validation, which is encapsulated in the
+<code>blocked_cross_validation</code> function.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>block <span class="ot">&lt;-</span> dataset<span class="sc">$</span>design<span class="sc">$</span>block_var</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>crossval <span class="ot">&lt;-</span> <span class="fu">blocked_cross_validation</span>(block)</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>crossval</span></code></pre></div>
+<pre><code>## Warning in get(method, envir = home): strings not representable in native
+## encoding will be translated to UTF-8</code></pre>
+<pre><code>## 
+##  &lt;U+2588&gt;&lt;U+2580&gt;&lt;U+2580&gt; Blocked Cross-Validation &lt;U+2580&gt;&lt;U+2580&gt;&lt;U+2588&gt; 
+## 
+## &lt;U+251C&gt;&lt;U+2500&gt; Dataset Information 
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Observations:  80 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt; Number of Folds:  4 
+## &lt;U+2514&gt;&lt;U+2500&gt; Block Information 
+##    &lt;U+251C&gt;&lt;U+2500&gt; Total Blocks:  4 
+##    &lt;U+251C&gt;&lt;U+2500&gt; Mean Block Size:  20  (SD:  0 ) 
+##    &lt;U+2514&gt;&lt;U+2500&gt; Block Sizes:  1: 20, 2: 20, 3: 20, 4: 20</code></pre>
+</div>
+<div id="construct-an-mvpa_model-object-with-a-shrinkage-discriminant-analysis-classifier-sda_notune" class="section level3">
+<h3>Construct an <code>mvpa_model</code> object with a Shrinkage
+Discriminant Analysis classifier (<code>sda_notune</code>)</h3>
+<p>The “sda_notune” model is an <code>sda</code> model where the
+<code>lambda</code> parameter is estimated from the training data. See
+documentation in the <a href="https://cran.r-project.org/web/packages/sda/index.html">sda
+package</a> package.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>sda_model <span class="ot">&lt;-</span> <span class="fu">load_model</span>(<span class="st">&quot;sda_notune&quot;</span>) </span></code></pre></div>
+<pre><code>## Warning in (function (n) : strings not representable in native encoding will be
+## translated to UTF-8</code></pre>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">mvpa_model</span>(<span class="at">model=</span>sda_model, <span class="at">dataset=</span>dataset<span class="sc">$</span>dataset, <span class="at">design=</span>dataset<span class="sc">$</span>design, <span class="at">crossval=</span>crossval)</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>model</span></code></pre></div>
+<pre><code>## mvpa_model object. 
+## model:  sda_notune 
+## model type:  classification 
+## 
+##  &lt;U+2588&gt;&lt;U+2580&gt;&lt;U+2580&gt; Blocked Cross-Validation &lt;U+2580&gt;&lt;U+2580&gt;&lt;U+2588&gt; 
+## 
+## &lt;U+251C&gt;&lt;U+2500&gt; Dataset Information 
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Observations:  80 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt; Number of Folds:  4 
+## &lt;U+2514&gt;&lt;U+2500&gt; Block Information 
+##    &lt;U+251C&gt;&lt;U+2500&gt; Total Blocks:  4 
+##    &lt;U+251C&gt;&lt;U+2500&gt; Mean Block Size:  20  (SD:  0 ) 
+##    &lt;U+2514&gt;&lt;U+2500&gt; Block Sizes:  1: 20, 2: 20, 3: 20, 4: 20 
+## 
+## 
+##  &lt;U+2588&gt;&lt;U+2580&gt;&lt;U+2580&gt; MVPA Dataset &lt;U+2580&gt;&lt;U+2580&gt;&lt;U+2588&gt; 
+## 
+## &lt;U+251C&gt;&lt;U+2500&gt; Training Data 
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Dimensions:  6 &lt;U+00D7&gt; 6 &lt;U+00D7&gt; 6 &lt;U+00D7&gt; 80 observations 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt; Type:  DenseNeuroVec 
+## &lt;U+251C&gt;&lt;U+2500&gt; Test Data 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt;  None 
+## &lt;U+2514&gt;&lt;U+2500&gt; Mask Information 
+##    &lt;U+251C&gt;&lt;U+2500&gt; Areas:  1 : 120 
+##    &lt;U+2514&gt;&lt;U+2500&gt; Active voxels/vertices:  120 
+## 
+## 
+##  &lt;U+2588&gt;&lt;U+2580&gt;&lt;U+2580&gt; MVPA Design &lt;U+2580&gt;&lt;U+2580&gt;&lt;U+2588&gt; 
+## 
+## &lt;U+251C&gt;&lt;U+2500&gt; Training Data 
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Observations:  80 
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Response Type:  Factor
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Levels:  a, b 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt; Class Distribution:  a: 40, b: 40 
+## &lt;U+251C&gt;&lt;U+2500&gt; Test Data 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt;  None 
+## &lt;U+2514&gt;&lt;U+2500&gt; Structure 
+##    &lt;U+251C&gt;&lt;U+2500&gt; Blocking:  Present
+##    &lt;U+251C&gt;&lt;U+2500&gt; Number of Blocks:  4 
+##    &lt;U+251C&gt;&lt;U+2500&gt; Mean Block Size:  20  (SD:  0 ) 
+##    &lt;U+2514&gt;&lt;U+2500&gt; Split Groups:  None</code></pre>
+</div>
+<div id="run-a-standard-searchlight-analysis" class="section level3">
+<h3>Run a standard searchlight analysis</h3>
+<p>The output of <code>run_searchlight</code> is a list of image volumes
+containing performance measures for each spherical searchlight. For a
+two-class classification problem, there are three output measures:
+<code>Accuracy</code> and <code>AUC</code> (<code>AUC</code> has .5
+subtracted from it, so that it is centered at 0 rather than .5).
+<code>Accuracy</code> is the raw cross-validated accuracy measure for
+each centroid and <code>AUC</code> is the area under the curve
+statistic. The <code>radius</code> argument indicates the radius in
+<code>mm</code> of the spherical searchlight. Finally,
+<code>method</code> indicates the searchlight scheme, which can be
+<code>standard</code> or <code>randomized</code>. See below for more
+information about the randomized searchlight.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">run_searchlight</span>(model, <span class="at">radius=</span><span class="dv">4</span>, <span class="at">method=</span><span class="st">&quot;standard&quot;</span>)</span></code></pre></div>
+<pre><code>## INFO [2025-09-27 16:58:35] Running standard searchlight with radius = 4
+## INFO [2025-09-27 16:58:35] creating standard searchlight
+## INFO [2025-09-27 16:58:35] running standard searchlight iterator</code></pre>
+<pre><code>## Warning in do_standard(model_spec, radius, combiner = chosen_combiner, ...):
+## strings not representable in native encoding will be translated to UTF-8</code></pre>
+<pre><code>## INFO [2025-09-27 16:58:35] &lt;U+26A1&gt; Processing batch 1/10 (12 ROIs in this batch)</code></pre>
+<pre><code>## Warning: package &#39;purrr&#39; was built under R version 4.3.3</code></pre>
+<pre><code>## INFO [2025-09-27 16:58:37] &lt;U+26A1&gt; Processing batch 2/10 (12 ROIs in this batch)
+## INFO [2025-09-27 16:58:38] &lt;U+26A1&gt; Processing batch 3/10 (12 ROIs in this batch)
+## INFO [2025-09-27 16:58:39] &lt;U+26A1&gt; Processing batch 4/10 (12 ROIs in this batch)
+## INFO [2025-09-27 16:58:40] &lt;U+26A1&gt; Processing batch 5/10 (12 ROIs in this batch)
+## INFO [2025-09-27 16:58:42] &lt;U+26A1&gt; Processing batch 6/10 (12 ROIs in this batch)
+## INFO [2025-09-27 16:58:43] &lt;U+26A1&gt; Processing batch 7/10 (12 ROIs in this batch)
+## INFO [2025-09-27 16:58:44] &lt;U+26A1&gt; Processing batch 8/10 (12 ROIs in this batch)
+## INFO [2025-09-27 16:58:45] &lt;U+26A1&gt; Processing batch 9/10 (12 ROIs in this batch)
+## INFO [2025-09-27 16:58:46] &lt;U+26A1&gt; Processing batch 10/10 (12 ROIs in this batch)
+## INFO [2025-09-27 16:58:47] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 120
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 120
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 0</code></pre>
+<pre><code>## New names:
+## * `` -&gt; `...1`
+## * `` -&gt; `...2`
+## * `` -&gt; `...3`
+## * `` -&gt; `...4`
+## * `` -&gt; `...5`
+## * `` -&gt; `...6`
+## * `` -&gt; `...7`
+## * `` -&gt; `...8`
+## * `` -&gt; `...9`
+## * `` -&gt; `...10`
+## * `` -&gt; `...11`
+## * `` -&gt; `...12`
+## * `` -&gt; `...13`
+## * `` -&gt; `...14`
+## * `` -&gt; `...15`
+## * `` -&gt; `...16`
+## * `` -&gt; `...17`
+## * `` -&gt; `...18`
+## * `` -&gt; `...19`
+## * `` -&gt; `...20`
+## * `` -&gt; `...21`
+## * `` -&gt; `...22`
+## * `` -&gt; `...23`
+## * `` -&gt; `...24`
+## * `` -&gt; `...25`
+## * `` -&gt; `...26`
+## * `` -&gt; `...27`
+## * `` -&gt; `...28`
+## * `` -&gt; `...29`
+## * `` -&gt; `...30`
+## * `` -&gt; `...31`
+## * `` -&gt; `...32`
+## * `` -&gt; `...33`
+## * `` -&gt; `...34`
+## * `` -&gt; `...35`
+## * `` -&gt; `...36`
+## * `` -&gt; `...37`
+## * `` -&gt; `...38`
+## * `` -&gt; `...39`
+## * `` -&gt; `...40`
+## * `` -&gt; `...41`
+## * `` -&gt; `...42`
+## * `` -&gt; `...43`
+## * `` -&gt; `...44`
+## * `` -&gt; `...45`
+## * `` -&gt; `...46`
+## * `` -&gt; `...47`
+## * `` -&gt; `...48`
+## * `` -&gt; `...49`
+## * `` -&gt; `...50`
+## * `` -&gt; `...51`
+## * `` -&gt; `...52`
+## * `` -&gt; `...53`
+## * `` -&gt; `...54`
+## * `` -&gt; `...55`
+## * `` -&gt; `...56`
+## * `` -&gt; `...57`
+## * `` -&gt; `...58`
+## * `` -&gt; `...59`
+## * `` -&gt; `...60`
+## * `` -&gt; `...61`
+## * `` -&gt; `...62`
+## * `` -&gt; `...63`
+## * `` -&gt; `...64`
+## * `` -&gt; `...65`
+## * `` -&gt; `...66`
+## * `` -&gt; `...67`
+## * `` -&gt; `...68`
+## * `` -&gt; `...69`
+## * `` -&gt; `...70`
+## * `` -&gt; `...71`
+## * `` -&gt; `...72`
+## * `` -&gt; `...73`
+## * `` -&gt; `...74`
+## * `` -&gt; `...75`
+## * `` -&gt; `...76`
+## * `` -&gt; `...77`
+## * `` -&gt; `...78`
+## * `` -&gt; `...79`
+## * `` -&gt; `...80`
+## * `` -&gt; `...81`
+## * `` -&gt; `...82`
+## * `` -&gt; `...83`
+## * `` -&gt; `...84`
+## * `` -&gt; `...85`
+## * `` -&gt; `...86`
+## * `` -&gt; `...87`
+## * `` -&gt; `...88`
+## * `` -&gt; `...89`
+## * `` -&gt; `...90`
+## * `` -&gt; `...91`
+## * `` -&gt; `...92`
+## * `` -&gt; `...93`
+## * `` -&gt; `...94`
+## * `` -&gt; `...95`
+## * `` -&gt; `...96`
+## * `` -&gt; `...97`
+## * `` -&gt; `...98`
+## * `` -&gt; `...99`
+## * `` -&gt; `...100`
+## * `` -&gt; `...101`
+## * `` -&gt; `...102`
+## * `` -&gt; `...103`
+## * `` -&gt; `...104`
+## * `` -&gt; `...105`
+## * `` -&gt; `...106`
+## * `` -&gt; `...107`
+## * `` -&gt; `...108`
+## * `` -&gt; `...109`
+## * `` -&gt; `...110`
+## * `` -&gt; `...111`
+## * `` -&gt; `...112`
+## * `` -&gt; `...113`
+## * `` -&gt; `...114`
+## * `` -&gt; `...115`
+## * `` -&gt; `...116`
+## * `` -&gt; `...117`
+## * `` -&gt; `...118`
+## * `` -&gt; `...119`
+## * `` -&gt; `...120`</code></pre>
+<pre><code>## WARN [2025-09-27 16:58:48] Observed probabilities map skipped: expected 216 rows but found 80.</code></pre>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a>result</span></code></pre></div>
+<pre><code>## Warning in get(method, envir = home): strings not representable in native
+## encoding will be translated to UTF-8</code></pre>
+<pre><code>## 
+##  &lt;U+2588&gt;&lt;U+2580&gt;&lt;U+2580&gt; Searchlight Analysis Results &lt;U+2580&gt;&lt;U+2580&gt;&lt;U+2588&gt; 
+## 
+## &lt;U+251C&gt;&lt;U+2500&gt; Coverage 
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Voxels/Vertices in Mask:  216 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt; Voxels/Vertices with Results:  120 
+## &lt;U+2514&gt;&lt;U+2500&gt; Output Maps (Metrics) 
+##    &lt;U+251C&gt;&lt;U+2500&gt;  Accuracy  (Type:  DenseNeuroVol ) 
+##    &lt;U+251C&gt;&lt;U+2500&gt;  AUC  (Type:  DenseNeuroVol )</code></pre>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(result<span class="sc">$</span>results<span class="sc">$</span>AUC)) {</span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a>  <span class="fu">safe_plot_hist</span>(neuroim2<span class="sc">::</span><span class="fu">values</span>(result<span class="sc">$</span>results<span class="sc">$</span>AUC), <span class="at">title =</span> <span class="st">&quot;Searchlight AUC (centered)&quot;</span>)</span>
+<span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a>}</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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83LFrZSH1K5dW84880x5+OGHBXEUwqDl89vf/lZef/11efLJJ2X9+vWiFJR8/vnngpZW48aN5YwzzpB//etfgcn93//9n5x99tly0UUXSd26dQP9FssxH67FkiVbvPvtt58ceOCBMnz48GxeCmafKgW0YMECrXhQGVUryIa04447aphNmzbVFdd2+PUCCgqVe/bs2YGVeNWqVfLGG28IFNvSpUvd0cjy5ctFvVnlxx9/1PGpt3yGnyVLlujw2bof8Lx582Z56623BN2y//3vfxnh3Tc1a9aU6tWru63lhx9+kNdee82WccWKFfqh9XhUFniAZ86cKatXr7ad1VtRICsM8oMujnoD2u5+F3B/6KGHRLU45bTTTtPhVMvOz2u57e655x6ZMWOGoOv4u9/9TnbYYQc7jt133113JxcuXCh//etfbXu/i+eff16++uorGTBggJ+zzjPKN1v55KonpvwROfhBgYOdMbm4ojv05Zdfyssvv5wRzoRH3UB8YI0u6meffWac9G8u+YxnlCnqx5o1a4yV53fQoEHyxBNP2PXA46FQFsVqWkURL5rp6oG0OnbsaKm3pEcE9fbJsEPzc+TIkbrbgK7DNttsY6k3uKXGKTL8qQdYN/kVc+0Xv/g77rjjdNfAeG7VqpV17rnnWujiwF29mS319rbmzZtn7bHHHtpuu+22093D008/3VIVTgc1XbArr7zSUm9m7Q/hGzRoYH3yyScmeitXFwz5UeNeVpUqVSykgzjOOecca++997aUUrbjgXw9e/a0+vfvb6cFv4MHD7ZUK0GniXvnn2pd2OH9LpRS1v7V2IF2btGihdW1a1eP13y6YCeddJLmYnh5IlUWSgFp2f3cjB2648i32+Qqn7D1BFyHDh2q64WT3e9//3tdD1CWTntcG64fffSRteeee2p3U3boXquXni2uGsfU7nfffbcdz5133mmFlQ91EfUD8Zs0/vznP+u4nF0wJIhnCcMYarzMTr8YF9CmqTI333yzViSqdaArguqiaAXgl0nVLdPwL7vsMgvjFxgXOO+887TdrFmz7CAYd1GtKEu9mSz1FtLxmQdJdTVsf1BAGP/AWJN6e1iPPvqo7kfvuuuu+mH8+uuvLShB1VLQadx///06rFFASAMP8Nq1a62nn35aVwAoU2NyKSAoP4yPICwq2z/+8Q+tfFDR3QoIdr17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" /><!-- --></p>
+</div>
+</div>
+<div id="run-a-randomized-searchlight-analysis" class="section level2">
+<h2>Run a randomized searchlight analysis</h2>
+<p>A randomized searchlight analysis is an iterative procedure in which
+searchlight regions are sampled <em>without replacement</em> from the
+voxel set. A classification analysis is run for each region, and the
+result is recorded for the center voxel and <em>all other voxels in the
+region</em>. This is done for each of <code>niter</code> times, where
+each iteration involves an exhaustive sampling of the voxel set. The
+performance at each voxel is the average performance for the set of
+analyses in which the given voxel was included as a feature. The result
+will be similar to the standard searchlight procedure, but emphasizes
+the contribution of a given voxel across different local contexts to
+classification performance. This should in principle offer slightly
+better spatial localization than the standard searchlight. The
+randomized searchlight procedure can also be faster, because the total
+number of estimated models is a function of
+<code>nvoxels/radius * niter</code>, which will be smaller than
+<code>nvoxels</code> for many choices of <code>radius</code> and
+<code>niter</code>.</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">run_searchlight</span>(model, <span class="at">radius=</span><span class="dv">4</span>, <span class="at">method=</span><span class="st">&quot;randomized&quot;</span>, <span class="at">niter=</span><span class="dv">8</span>)</span></code></pre></div>
+<pre><code>## INFO [2025-09-27 16:58:48] Running randomized searchlight with radius = 4 and niter = 8</code></pre>
+<pre><code>## Warning in run_searchlight_base(model_spec = model_spec, radius = radius, :
+## strings not representable in native encoding will be translated to UTF-8</code></pre>
+<pre><code>## INFO [2025-09-27 16:58:48] &lt;U+0001F504&gt; Starting randomized searchlight analysis:
+## INFO [2025-09-27 16:58:48] &lt;U+251C&gt;&lt;U+2500&gt; Radius: 4
+## INFO [2025-09-27 16:58:48] &lt;U+2514&gt;&lt;U+2500&gt; Iterations: 8
+## INFO [2025-09-27 16:58:48] 
+## &lt;U+0001F4CA&gt; Iteration 1/8
+## INFO [2025-09-27 16:58:48] &lt;U+26A1&gt; Processing batch 1/2 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:49] &lt;U+26A1&gt; Processing batch 2/2 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:49] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 2
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 2
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 0
+## INFO [2025-09-27 16:58:49] 
+## &lt;U+0001F4CA&gt; Iteration 2/8
+## INFO [2025-09-27 16:58:49] &lt;U+26A1&gt; Processing batch 1/5 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:50] &lt;U+26A1&gt; Processing batch 2/5 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:50] &lt;U+26A1&gt; Processing batch 3/5 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:51] &lt;U+26A1&gt; Processing batch 4/5 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:51] &lt;U+26A1&gt; Processing batch 5/5 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:51] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 5
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 5
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 0
+## INFO [2025-09-27 16:58:52] 
+## &lt;U+0001F4CA&gt; Iteration 3/8
+## INFO [2025-09-27 16:58:52] &lt;U+26A1&gt; Processing batch 1/3 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:52] &lt;U+26A1&gt; Processing batch 2/3 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:53] &lt;U+26A1&gt; Processing batch 3/3 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:53] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 3
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 3
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 0
+## INFO [2025-09-27 16:58:53] 
+## &lt;U+0001F4CA&gt; Iteration 4/8
+## INFO [2025-09-27 16:58:53] &lt;U+26A1&gt; Processing batch 1/3 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:54] &lt;U+26A1&gt; Processing batch 2/3 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:54] &lt;U+26A1&gt; Processing batch 3/3 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:55] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 3
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 3
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 0
+## INFO [2025-09-27 16:58:55] 
+## &lt;U+0001F4CA&gt; Iteration 5/8
+## INFO [2025-09-27 16:58:55] &lt;U+26A1&gt; Processing batch 1/4 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:55] &lt;U+26A1&gt; Processing batch 2/4 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:56] &lt;U+26A1&gt; Processing batch 3/4 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:56] &lt;U+26A1&gt; Processing batch 4/4 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:57] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 4
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 4
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 0
+## INFO [2025-09-27 16:58:57] 
+## &lt;U+0001F4CA&gt; Iteration 6/8
+## INFO [2025-09-27 16:58:57] &lt;U+26A1&gt; Processing batch 1/2 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:57] &lt;U+26A1&gt; Processing batch 2/2 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:58] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 2
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 2
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 0
+## INFO [2025-09-27 16:58:58] 
+## &lt;U+0001F4CA&gt; Iteration 7/8
+## INFO [2025-09-27 16:58:58] &lt;U+26A1&gt; Processing batch 1/2 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:59] &lt;U+26A1&gt; Processing batch 2/2 (1 ROIs in this batch)
+## INFO [2025-09-27 16:58:59] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 2
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 2
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 0
+## INFO [2025-09-27 16:58:59] 
+## &lt;U+0001F4CA&gt; Iteration 8/8
+## INFO [2025-09-27 16:58:59] &lt;U+26A1&gt; Processing batch 1/3 (1 ROIs in this batch)
+## INFO [2025-09-27 16:59:00] &lt;U+26A1&gt; Processing batch 2/3 (1 ROIs in this batch)
+## INFO [2025-09-27 16:59:00] &lt;U+26A1&gt; Processing batch 3/3 (1 ROIs in this batch)
+## WARN [2025-09-27 16:59:00] &lt;U+26A0&gt; Batch 3: All ROIs filtered out (size &lt; 2 voxels)
+## INFO [2025-09-27 16:59:00] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 3
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 2
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 1
+## INFO [2025-09-27 16:59:00] 
+## &lt;U+2728&gt; Searchlight Analysis Complete
+## INFO [2025-09-27 16:59:00] &lt;U+251C&gt;&lt;U+2500&gt; Total Models Fit: 23
+## INFO [2025-09-27 16:59:00] &lt;U+2514&gt;&lt;U+2500&gt; Failed ROIs: 1 (4.2%)</code></pre>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a>result</span></code></pre></div>
+<pre><code>## 
+##  &lt;U+2588&gt;&lt;U+2580&gt;&lt;U+2580&gt; Searchlight Analysis Results &lt;U+2580&gt;&lt;U+2580&gt;&lt;U+2588&gt; 
+## 
+## &lt;U+251C&gt;&lt;U+2500&gt; Coverage 
+## &lt;U+2502&gt;  &lt;U+251C&gt;&lt;U+2500&gt; Voxels/Vertices in Mask:  216 
+## &lt;U+2502&gt;  &lt;U+2514&gt;&lt;U+2500&gt; Voxels/Vertices with Results:  120 
+## &lt;U+2514&gt;&lt;U+2500&gt; Output Maps (Metrics) 
+##    &lt;U+251C&gt;&lt;U+2500&gt;  Metric1  (Type:  DenseNeuroVol ) 
+##    &lt;U+251C&gt;&lt;U+2500&gt;  Metric2  (Type:  DenseNeuroVol )</code></pre>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(result<span class="sc">$</span>results<span class="sc">$</span>AUC)) {</span>
+<span id="cb34-2"><a href="#cb34-2" tabindex="-1"></a>  <span class="fu">safe_plot_hist</span>(neuroim2<span class="sc">::</span><span class="fu">values</span>(result<span class="sc">$</span>results<span class="sc">$</span>AUC), <span class="at">title =</span> <span class="st">&quot;Randomized Searchlight AUC (centered)&quot;</span>)</span>
+<span id="cb34-3"><a href="#cb34-3" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="using-different-classifiers" class="section level2">
+<h2>Using different classifiers</h2>
+<p>All of the classifiers in the MVPAModels registry can be used for a
+searchlight analysis. Additional models can be registered using
+<code>register_mvpa_model()</code>. For example, to run an analysis
+using a built-in model:</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a>svm_model <span class="ot">&lt;-</span> <span class="fu">load_model</span>(<span class="st">&quot;svmLinear&quot;</span>) </span>
+<span id="cb35-2"><a href="#cb35-2" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">mvpa_model</span>(<span class="at">model=</span>svm_model, <span class="at">dataset=</span>dataset<span class="sc">$</span>dataset, <span class="at">design=</span>dataset<span class="sc">$</span>design, <span class="at">crossval=</span>crossval)</span>
+<span id="cb35-3"><a href="#cb35-3" tabindex="-1"></a>result_svm <span class="ot">&lt;-</span> <span class="fu">run_searchlight</span>(model, <span class="at">radius=</span><span class="dv">4</span>, <span class="at">method=</span><span class="st">&quot;randomized&quot;</span>, <span class="at">niter=</span><span class="dv">2</span>)</span></code></pre></div>
+<p>Here we use a random forest classifier. To fix the tuning parameter
+<code>mtry</code> at a known value, we supply a <code>tune_grid</code>
+argument to the <code>mvpa_model</code> function. Here, we set
+<code>mtry</code> to <code>2</code>. Sinc ethere is only one value, it
+means that this parameter will be fixed. If we supply a grid of values,
+then the paramter will be tuned for each searchlight sample. Since
+parameter tuning is costly in terms of computing time, this is not a
+recommended approach unless one has a great deal of computing power or
+one is running the searchlight over a small mask.</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" tabindex="-1"></a>rf_model <span class="ot">&lt;-</span> <span class="fu">load_model</span>(<span class="st">&quot;rf&quot;</span>) </span>
+<span id="cb36-2"><a href="#cb36-2" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">mvpa_model</span>(<span class="at">model=</span>rf_model, <span class="at">dataset=</span>dataset<span class="sc">$</span>dataset, <span class="at">design=</span>dataset<span class="sc">$</span>design, <span class="at">crossval=</span>crossval, <span class="at">tune_grid=</span><span class="fu">data.frame</span>(<span class="at">mtry=</span><span class="dv">2</span>))</span>
+<span id="cb36-3"><a href="#cb36-3" tabindex="-1"></a>result_rf <span class="ot">&lt;-</span> <span class="fu">run_searchlight</span>(model, <span class="at">radius=</span><span class="dv">4</span>, <span class="at">method=</span><span class="st">&quot;randomized&quot;</span>, <span class="at">niter=</span><span class="dv">2</span>)</span></code></pre></div>
+<pre><code>## INFO [2025-09-27 16:59:00] Running randomized searchlight with radius = 4 and niter = 2
+## INFO [2025-09-27 16:59:00] &lt;U+0001F504&gt; Starting randomized searchlight analysis:
+## INFO [2025-09-27 16:59:00] &lt;U+251C&gt;&lt;U+2500&gt; Radius: 4
+## INFO [2025-09-27 16:59:00] &lt;U+2514&gt;&lt;U+2500&gt; Iterations: 2
+## INFO [2025-09-27 16:59:00] 
+## &lt;U+0001F4CA&gt; Iteration 1/2
+## INFO [2025-09-27 16:59:00] &lt;U+26A1&gt; Processing batch 1/2 (1 ROIs in this batch)
+## INFO [2025-09-27 16:59:01] &lt;U+26A1&gt; Processing batch 2/2 (1 ROIs in this batch)
+## INFO [2025-09-27 16:59:02] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 2
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 2
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 0
+## INFO [2025-09-27 16:59:02] 
+## &lt;U+0001F4CA&gt; Iteration 2/2
+## INFO [2025-09-27 16:59:02] &lt;U+26A1&gt; Processing batch 1/4 (1 ROIs in this batch)
+## INFO [2025-09-27 16:59:03] &lt;U+26A1&gt; Processing batch 2/4 (1 ROIs in this batch)
+## INFO [2025-09-27 16:59:03] &lt;U+26A1&gt; Processing batch 3/4 (1 ROIs in this batch)
+## INFO [2025-09-27 16:59:04] &lt;U+26A1&gt; Processing batch 4/4 (1 ROIs in this batch)
+## INFO [2025-09-27 16:59:04] 
+## &lt;U+2728&gt; MVPA Iteration Complete
+## &lt;U+251C&gt;&lt;U+2500&gt; Total ROIs: 4
+## &lt;U+251C&gt;&lt;U+2500&gt; Processed: 4
+## &lt;U+2514&gt;&lt;U+2500&gt; Skipped: 0
+## INFO [2025-09-27 16:59:04] 
+## &lt;U+2728&gt; Searchlight Analysis Complete
+## INFO [2025-09-27 16:59:04] &lt;U+251C&gt;&lt;U+2500&gt; Total Models Fit: 6
+## INFO [2025-09-27 16:59:04] &lt;U+2514&gt;&lt;U+2500&gt; All ROIs processed successfully!</code></pre>
+<p>Here we specify a range of values for the <code>mtry</code> tuning
+parameter. In this case, by supplying the <code>tune_reps</code>
+argument to <code>mvpa_model</code> we control the number of resamples
+used to tune the model parameters. The default is 10, but here we speed
+up execution time by reducing it to 2. In general, more resamples are
+required to reliably estimate optimal tuning parameters. This means for
+a whole-brain searchlight, parameter tuning is
+<strong>generally</strong> impractical. This is why the classifier
+<code>sda_notune</code> is a good choice for searchlight analyses, since
+it “works well” with default tuning parameters.</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" tabindex="-1"></a>grid <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">mtry=</span><span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">4</span>,<span class="dv">6</span>,<span class="dv">8</span>))</span>
+<span id="cb38-2"><a href="#cb38-2" tabindex="-1"></a>model2 <span class="ot">&lt;-</span> <span class="fu">mvpa_model</span>(<span class="at">model=</span>rf_model, <span class="at">dataset=</span>dataset<span class="sc">$</span>dataset, <span class="at">design=</span>dataset<span class="sc">$</span>design, <span class="at">crossval=</span>crossval, <span class="at">tune_grid=</span>grid, <span class="at">tune_reps=</span><span class="dv">2</span>)</span>
+<span id="cb38-3"><a href="#cb38-3" tabindex="-1"></a></span>
+<span id="cb38-4"><a href="#cb38-4" tabindex="-1"></a>result_rf_tuned <span class="ot">&lt;-</span> <span class="fu">run_searchlight</span>(model2, <span class="at">radius=</span><span class="dv">6</span>, <span class="at">method=</span><span class="st">&quot;randomized&quot;</span>, <span class="at">niter=</span><span class="dv">1</span>)</span></code></pre></div>
+<!-- ## External Cross-Validation Example -->
+<!-- Instead of using internal cross-validation, as we used in the above examples, sometimes one might have a held-out test data that can be used as a validation set. Here we show how to  -->
+<!-- ```{r} -->
+<!-- # Create training data -->
+<!-- train_design <- data.frame(y = rep(letters[1:4], 5), x1 = rnorm(20), x2 = rnorm(20), block = rep(1:4, each = 5)) -->
+<!-- # Create test data -->
+<!-- test_design <- data.frame(y = sample(letters[1:4], 10, replace=TRUE)) -->
+<!-- # Create an MVPA design object with external cross-validation -->
+<!-- design <- mvpa_design(train_design, ~ y, block_var = ~ block, test_design = test_design, y_test = ~ y) -->
+<!-- # Display the MVPA design object -->
+<!-- print(design) -->
+<!-- # Create a new dataset for external cross-validation -->
+<!-- dataset_ext <- list(dataset = dataset$dataset, design = design) -->
+<!-- # Construct an `mvpa_model` object with a Shrinkage Discriminant Analysis classifier (`sda_notune`) -->
+<!-- sda_model_ext <- load_model("sda_notune") -->
+<!-- model_ext <- mvpa_model(model = sda_model_ext, dataset = dataset_ext$dataset, design = dataset_ext$design) -->
+<!-- # Run a randomized searchlight analysis using external cross-validation -->
+<!-- result_ext <- run_searchlight(model_ext, radius = 4, method = "randomized", niter = 8) -->
+<!-- # Display the results -->
+<!-- print(result_ext) -->
+<!-- # Plot a histogram of AUC values -->
+<!-- hist(result_ext$AUC) -->
+<!-- ``` -->
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

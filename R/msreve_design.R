@@ -55,6 +55,14 @@ msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01
   if (!inherits(mvpa_design, "mvpa_design")) {
     stop("`mvpa_design` must be an object of class \'mvpa_design\'.")
   }
+
+  if (is.null(mvpa_design$ncond)) {
+    mvpa_design$ncond <- nresponses(mvpa_design)
+  }
+  if (is.null(mvpa_design$Y)) {
+    mvpa_design$Y <- y_train(mvpa_design)
+  }
+
   if (!is.matrix(contrast_matrix) || !is.numeric(contrast_matrix)) {
     stop("`contrast_matrix` must be a numeric matrix.")
   }

@@ -232,7 +232,7 @@ Next, we run a searchlight analysis using the same custom function.
 custom_searchlight_results <- run_custom_searchlight(
   dataset = dataset_obj,
   custom_func = calculate_roi_stats,
-  radius = 7, # e.g., 7mm radius
+  radius = 4, # e.g., 4mm radius
   method = "standard",
   .cores = 2, # Use 2 cores if available
   .verbose = FALSE

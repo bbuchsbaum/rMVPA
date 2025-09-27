@@ -258,7 +258,15 @@ process_roi_default <- function(mod_spec, roi, rnum, center_global_id = NA, ...)
   # Assuming train_model methods will accept sl_info if needed
   # Also pass other ... args
   dots <- list(...)
-  train_result_obj <- try(do.call(train_model, c(list(mod_spec, xtrain, y = NULL, indices=ind, sl_info = sl_info), dots)))
+  train_args <- c(list(mod_spec, xtrain, y = NULL, indices = ind, sl_info = sl_info), dots)
+  if (is.null(train_args$cv_spec)) {
+    if (!is.null(mod_spec$cv_spec)) {
+      train_args$cv_spec <- mod_spec$cv_spec
+    } else if (!is.null(mod_spec$crossval)) {
+      train_args$cv_spec <- mod_spec$crossval
+    }
+  }
+  train_result_obj <- try(do.call(train_model, train_args))
   
   # Prepare a result set structure for merge_results
   if (inherits(train_result_obj, "try-error")) {

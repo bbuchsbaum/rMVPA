@@ -411,6 +411,27 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   if (center_idx < 1 || center_idx > ncol(sl_data)) {
       rlang::abort(paste0("`sl_info$center_local_id` (", center_idx, ") is out of bounds for `sl_data` columns (", ncol(sl_data), "). Global ID: ", sl_info$center_global_id))
   }
+
+  if (is.data.frame(sl_data)) {
+    sl_data <- as.matrix(sl_data)
+  } else if (inherits(sl_data, "Matrix")) {
+    sl_data <- as.matrix(sl_data)
+  } else if (inherits(sl_data, "neuroim2::ROIVec")) {
+    sl_data <- neuroim2::values(sl_data)
+  }
+  if (is.matrix(sl_data) && !is.numeric(sl_data)) {
+    storage.mode(sl_data) <- "double"
+  }
+  if (!is.matrix(sl_data) || !is.numeric(sl_data)) {
+    rlang::abort("`sl_data` must be coercible to a numeric matrix (samples x features).")
+  }
+
+  if (missing(cv_spec) || is.null(cv_spec)) {
+    cv_spec <- if (!is.null(obj$cv_spec)) obj$cv_spec else obj$crossval
+  }
+  if (is.null(cv_spec)) {
+    rlang::abort("`cv_spec` must be supplied either as an argument or stored on the model specification.")
+  }
   
   mvpa_des <- obj$design$mvpa_design
   C <- obj$design$contrast_matrix
@@ -1062,6 +1083,44 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   results_list
 }
 
+
+
+#' @export
+merge_results.contrast_rsa_model <- function(obj, result_set, indices, id, ...) {
+  if (any(result_set$error)) {
+    emessage <- result_set$error_message[which(result_set$error)[1]]
+    return(tibble::tibble(
+      result = list(NULL),
+      indices = list(indices),
+      performance = list(NULL),
+      id = id,
+      error = TRUE,
+      error_message = emessage
+    ))
+  }
+
+  metrics <- result_set$result[[1]]
+  if (is.null(metrics)) {
+    warning(sprintf('merge_results.contrast_rsa_model: Received NULL metrics for ROI %s.', id))
+    return(tibble::tibble(
+      result = list(NULL),
+      indices = list(indices),
+      performance = list(NULL),
+      id = id,
+      error = TRUE,
+      error_message = 'train_model returned NULL metrics'
+    ))
+  }
+
+  tibble::tibble(
+    result = list(metrics),
+    indices = list(indices),
+    performance = list(metrics),
+    id = id,
+    error = FALSE,
+    error_message = "~"
+  )
+}
 
 #' Run Searchlight Analysis for Contrast RSA Model
 #'

@@ -57,7 +57,7 @@
 <div class="section level3">
 <h3 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h3>
-<p><code>rMVPA</code> is an R library for multivariate pattern analysis of neuroimaging data. The goal of this library is to make MVPA analyses easy. It can be used both programmatically from within R or using a command line interface. ‘rMVPA’ leverages the ‘caret’ library for the underlying machine learning interface. What <code>rMVPA</code> provides is the infrastructure for conducting machine learning analyses on neuroimaging data.</p>
+<p><code>rMVPA</code> is an R library for multivariate pattern analysis of neuroimaging data. The goal of this library is to make MVPA analyses easy. It can be used both programmatically from within R or using a command line interface. ‘rMVPA’ provides a lightweight model registry and efficient resampling methods for machine learning. What <code>rMVPA</code> provides is the infrastructure for conducting machine learning analyses on neuroimaging data.</p>
 <p>Documentation and vignettes: <a href="https://bbuchsbaum.github.io/rMVPA/" class="external-link uri">https://bbuchsbaum.github.io/rMVPA/</a></p>
 </div>
 <div class="section level3">
@@ -87,6 +87,7 @@
 <p>Then, move these files to a folder on your <code>PATH</code> and make them executable:</p>
 <p><code>chmod +x MVPA_Searchlight.R</code></p>
 <p><code>chmod +x MVPA_Regional.R</code></p>
+<p>The MS-ReVE functionality is implemented in <code>R/contrast_rsa_model.R</code>. There is no file named <code>contrast_rsa.R</code>; all references should use the <code>contrast_rsa_model.R</code> filename.</p>
 </div>
 </div>
 
@@ -108,7 +109,7 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Bradley Buchsbaum <br><small class="roles"> Author, maintainer </small>  </li>
+<li>Bradley Buchsbaum <br><small class="roles"> Author, maintainer </small>   </li>
 </ul>
 </div>
 
@@ -128,7 +129,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
 </div>
 
     </footer>

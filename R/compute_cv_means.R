@@ -48,6 +48,14 @@ compute_crossvalidated_means_sl <- function(sl_data,
                                               return_folds = FALSE) {
 
   # --- Input Checks ---
+  if (is.data.frame(sl_data)) {
+    sl_data <- as.matrix(sl_data)
+  } else if (inherits(sl_data, "Matrix")) {
+    sl_data <- as.matrix(sl_data)
+  }
+  if (is.matrix(sl_data) && !is.numeric(sl_data)) {
+    storage.mode(sl_data) <- "double"
+  }
   if (!is.matrix(sl_data) || !is.numeric(sl_data)) {
     rlang::abort("`sl_data` must be a numeric matrix (samples x features).")
   }
@@ -58,8 +66,18 @@ compute_crossvalidated_means_sl <- function(sl_data,
   if (!inherits(cv_spec, "cross_validation")) {
     rlang::abort("`cv_spec` must be an object inheriting from class 'cross_validation'.")
   }
-  if (nrow(sl_data) != nrow(mvpa_design$design_matrix)) {
-     # Assuming design_matrix rows correspond to samples
+  design_rows <- NULL
+  if (!is.null(mvpa_design$design_matrix)) {
+    design_rows <- nrow(mvpa_design$design_matrix)
+  } else if (!is.null(mvpa_design$train_design)) {
+    design_rows <- nrow(mvpa_design$train_design)
+  } else if (!is.null(mvpa_design$Y)) {
+    design_rows <- length(mvpa_design$Y)
+  } else if (!is.null(mvpa_design$y_train)) {
+    design_rows <- length(mvpa_design$y_train)
+  }
+  if (!is.null(design_rows) && nrow(sl_data) != design_rows) {
+     # Assuming design-related rows correspond to samples
      rlang::abort("Number of rows in `sl_data` must match samples implied by `mvpa_design`.")
   }
 
@@ -83,6 +101,12 @@ compute_crossvalidated_means_sl <- function(sl_data,
 
   # --- Preparation ---
   condition_labels <- mvpa_design$Y # Assuming Y holds condition labels
+  if (is.null(condition_labels)) {
+      condition_labels <- mvpa_design$y_train
+  }
+  if (is.null(condition_labels)) {
+      condition_labels <- y_train(mvpa_design)
+  }
   if (is.null(condition_labels)) {
       rlang::abort("`mvpa_design` must contain condition labels, typically in `$Y`.")
   }

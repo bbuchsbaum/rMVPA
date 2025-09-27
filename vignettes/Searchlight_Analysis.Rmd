@@ -15,6 +15,43 @@ vignette: >
 suppressPackageStartupMessages(library(neuroim2))
 ##suppressPackageStartupMessages(library(devtools))
 library(rMVPA)
+
+# Safe histogram helper to avoid base-graphics segfaults in pkgdown/callr
+safe_plot_hist <- function(x, title = "Histogram") {
+  x <- as.numeric(x)
+  x <- x[is.finite(x)]
+  if (!length(x)) {
+    message("No finite AUC values to plot.")
+    return(invisible(NULL))
+  }
+  in_pkgdown <- identical(Sys.getenv("IN_PKGDOWN"), "true")
+  if (in_pkgdown && requireNamespace("ggplot2", quietly = TRUE)) {
+    df <- data.frame(x = x)
+    p <- ggplot2::ggplot(df, ggplot2::aes(x = x)) +
+      ggplot2::geom_histogram(bins = 30, fill = "grey80", color = "white") +
+      ggplot2::labs(title = title, x = "AUC", y = "Count") +
+      ggplot2::theme_minimal()
+    print(p)
+  } else if (in_pkgdown) {
+    # Create a minimal placeholder plot so pkgdown/knitr still emit a figure
+    # Avoid title()/labels to steer clear of device issues
+    grDevices::plot.new()
+    graphics::rect(0, 0, 1, 1, col = "white", border = NA)
+    graphics::text(0.5, 0.5, labels = title, cex = 0.9)
+    invisible(NULL)
+  } else if (requireNamespace("ggplot2", quietly = TRUE)) {
+    # Prefer ggplot2 when available to avoid device quirks
+    df <- data.frame(x = x)
+    p <- ggplot2::ggplot(df, ggplot2::aes(x = x)) +
+      ggplot2::geom_histogram(bins = 30, fill = "grey80", color = "white") +
+      ggplot2::labs(title = title, x = "AUC", y = "Count") +
+      ggplot2::theme_minimal()
+    print(p)
+  } else {
+    # Fallback to base only outside pkgdown
+    hist(x, main = title, xlab = "AUC", col = "grey80", border = "white")
+  }
+}
 ```
 
 ### Generate a volumetric dataset with 100 observations and two classes
@@ -59,7 +96,9 @@ The output of `run_searchlight` is a list of image volumes containing performanc
 result <- run_searchlight(model, radius=4, method="standard")
 result
 
-hist(result$results$AUC$data)
+if (!is.null(result$results$AUC)) {
+  safe_plot_hist(neuroim2::values(result$results$AUC), title = "Searchlight AUC (centered)")
+}
 
 ```
 
@@ -71,7 +110,9 @@ A randomized searchlight analysis is an iterative procedure in which searchlight
 result <- run_searchlight(model, radius=4, method="randomized", niter=8)
 result
 
-hist(result$results$AUC$data)
+if (!is.null(result$results$AUC)) {
+  safe_plot_hist(neuroim2::values(result$results$AUC), title = "Randomized Searchlight AUC (centered)")
+}
 
 ```
 
@@ -138,4 +179,3 @@ result_rf_tuned <- run_searchlight(model2, radius=6, method="randomized", niter=
 <!-- # Plot a histogram of AUC values -->
 <!-- hist(result_ext$AUC) -->
 <!-- ``` -->
-

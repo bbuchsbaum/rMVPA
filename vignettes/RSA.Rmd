@@ -203,14 +203,18 @@ Setting `keep_intra_run = TRUE` (default) might be appropriate when:
 You can examine and visualize the RSA results:
 
 ```{r, message=FALSE, warning=FALSE}
-# Get range of correlation values
-range(results$results$model_rdm$data)
+# Extract the searchlight map
+rsa_map <- results$results$model_rdm
 
-# Basic summary of results
+# Compute range of correlation values
+rsa_values <- neuroim2::values(rsa_map)
+range(rsa_values, na.rm = TRUE)
+
+# Basic summary of the searchlight result
 print(results)
 
 # Save results (commented out)
-# write_vol(results$model_rdm, "RSA_results.nii.gz")
+# neuroim2::write_vol(rsa_map, "RSA_results.nii.gz")
 ```
 
 ## Summary

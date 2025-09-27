@@ -35,36 +35,47 @@ data_info <- gen_sample_dataset(D = c(6,6,6), nobs = 32, blocks = 4)
 mvpa_dat <- data_info$dataset
 
 # Design with two simple contrasts across four conditions
-K <- data_info$design$ncond
+K <- nresponses(data_info$design)
 C_mat <- matrix(0, nrow = K, ncol = 2)
-rownames(C_mat) <- levels(data_info$design$Y)
+rownames(C_mat) <- levels(data_info$design$y_train)
 C_mat[1:2,1] <- 1; C_mat[3:4,1] <- -1
 C_mat[1,2] <- 1; C_mat[2,2] <- -1
-C_mat <- scale(C_mat, center = TRUE, scale = FALSE)
+C_mat <- base::scale(C_mat, center = TRUE, scale = FALSE)
 colnames(C_mat) <- c("AB_vs_CD", "A_vs_B")
 
-ms_des <- msreve_design(mvpa_dat$design, contrast_matrix = C_mat)
+ms_des <- msreve_design(data_info$design, contrast_matrix = C_mat)
 ```
 
-Next we create the model specification and run a tiny searchlight over the volume.  Here we request two output metrics: the default `"beta_delta"` and the optional `"recon_score"`.
+Next we create the model specification and run a tiny searchlight over the volume.  Here we request the default `"beta_delta"` metric.
 
 ```{r, message=FALSE, warning=FALSE}
+cv_spec <- blocked_cross_validation(data_info$design$block_var)
+
 model_spec <- contrast_rsa_model(
   dataset = mvpa_dat,
   design = ms_des,
-  output_metric = c("beta_delta", "recon_score"),
-  check_collinearity = FALSE
+  output_metric = "beta_delta",
+  check_collinearity = FALSE,
+  cv_spec = cv_spec
 )
 
-# Run a very small searchlight just for demonstration
-sl_result <- run_searchlight(
-  model_spec,
-  radius = 2,
-  method = "standard"
-)
+# Run a very small searchlight iterator
+slight <- get_searchlight(model_spec$dataset, type = "standard", radius = 2)
+center_indices <- which(model_spec$dataset$mask > 0)
+iter_res <- mvpa_iterate(model_spec, slight, center_indices, analysis_type = "searchlight")
 
-# Inspect the returned metrics for the first few voxels
-head(sl_result$results[, c("beta_delta", "recon_score")])
+# Inspect the beta_delta metric for the first few centers
+preview_ids <- seq_len(min(5, nrow(iter_res)))
+preview_tbl <- do.call(rbind, lapply(preview_ids, function(idx) {
+  vals <- iter_res$performance[[idx]]$beta_delta
+  data.frame(
+    center_id = iter_res$id[idx],
+    contrast = names(vals),
+    beta_delta = as.numeric(vals),
+    row.names = NULL
+  )
+}))
+preview_tbl
 ```
 
 ## Understanding the output metrics

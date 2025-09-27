@@ -16,129 +16,219 @@
 #'     \item `active_voxels`: Number of voxels/vertices with results.
 #'     \item `metrics`: Character vector of metric names.
 #'   }
-wrap_out <- function(perf_mat, dataset, ids=NULL) {
+wrap_out <- function(perf_mat, dataset, ids = NULL) {
+  validate_wrap_inputs(perf_mat, ids)
 
-  # Removed the strict stop condition for null ids if perf_mat has rows, 
-  # as combine_randomized might pass null ids for a dense matrix.
-  
-  # Check for dimension mismatch only if ids are provided
-  if (!is.null(ids) && !is.null(perf_mat) && nrow(perf_mat) > 0 && (nrow(perf_mat) != length(ids))) {
-    stop("Number of rows in `perf_mat` must match the length of `ids` when ids are provided.")
-  }
-  if (is.null(perf_mat) || ncol(perf_mat) == 0) {
-      # If perf_mat is NULL or has no columns, return an empty structure but with metadata
-      n_voxels_in_mask_empty <- 0
-      if (!is.null(dataset$mask)) {
-        if (inherits(dataset$mask, c("NeuroVol", "NeuroVec")))
-          n_voxels_in_mask_empty <- prod(dim(dataset$mask))
-        else if (inherits(dataset$mask, "NeuroSurface"))
-          n_voxels_in_mask_empty <- neurosurf::nvertices(dataset$mask)
-        else if (is.numeric(dataset$mask) || is.logical(dataset$mask))
-          n_voxels_in_mask_empty <- length(dataset$mask)
-      }
-      return(structure(
-          list(results = list(), 
-               n_voxels = n_voxels_in_mask_empty, 
-               active_voxels = 0, 
-               metrics = character(0)),
-          class = c("searchlight_result", "list")
-      ))
+  if (is_perf_empty(perf_mat)) {
+    return(empty_searchlight_result(dataset))
   }
 
-  output_maps <- list()
   metric_names <- colnames(perf_mat)
-  
   if (is.null(metric_names)) {
-    metric_names <- paste0("Metric", 1:ncol(perf_mat))
+    metric_names <- paste0("Metric", seq_len(ncol(perf_mat)))
   }
-  
-  for (i in 1:ncol(perf_mat)) {
-    metric_vector <- perf_mat[, i]
-    current_metric_name <- metric_names[i]
 
-    if (inherits(dataset, "mvpa_surface_dataset")) {
-      if (!requireNamespace("neurosurf", quietly = TRUE)) {
-        stop("Package 'neurosurf' is required to handle surface datasets.")
-      }
-      current_ids <- ids
-      if (is.null(current_ids)) {
-        # For surface, if ids is NULL, assume all vertices of the mask geometry
-        if (inherits(dataset$mask, "NeuroSurface")) {
-             current_ids <- seq_len(neurosurf::nodes(dataset$mask))
-        } else if (inherits(dataset$mask, "SurfaceGeometry")) {
-             current_ids <- seq_len(neurosurf::nodes(dataset$mask))
-        } else if (is.numeric(dataset$mask)) {
-            current_ids <- which(dataset$mask != 0)
-        } else {
-            stop("Cannot determine vertex indices for surface data when 'ids' is NULL and mask is not NeuroSurface/SurfaceGeometry.")
-        }
-        if (length(metric_vector) != length(current_ids)) {
-            stop(paste0("Length of metric_vector (", length(metric_vector), 
-                        ") does not match number of vertices (", length(current_ids), ") for dense surface map."))
-        }
-      }
-      output_maps[[current_metric_name]] <- neurosurf::NeuroSurface(
-        geometry = geometry(dataset$train_data), 
-        indices = current_ids, 
-        data = metric_vector
-      )
-    } else { # Assuming volumetric dataset
-      if (is.null(ids)) {
-        # Create a dense NeuroVol if ids is NULL
-        # Assume metric_vector length matches the number of voxels in the mask space
-        if (length(metric_vector) != prod(dim(neuroim2::space(dataset$mask)))) {
-            stop(paste0("Length of metric_vector (", length(metric_vector),
-                        ") does not match total voxels in mask space (", 
-                        prod(dim(neuroim2::space(dataset$mask))), ") for dense volumetric map when ids is NULL."))
-        }
-        # Reshape metric_vector to array and create NeuroVol
-        vol_array <- array(metric_vector, dim = dim(neuroim2::space(dataset$mask)))
-        output_maps[[current_metric_name]] <- neuroim2::NeuroVol(
-            data = vol_array,
-            space = neuroim2::space(dataset$mask) 
-            # Masking will be implicit if the space is from a masked NeuroVol
-            # Or, if dataset$mask is logical/numeric array, it could be applied: data = vol_array[dataset$mask]
-            # For now, assume space implies overall dimensions, data fills it.
-        )
-      } else {
-        # Create a SparseNeuroVec if ids are provided
-        output_maps[[current_metric_name]] <- neuroim2::NeuroVol(
-          data = metric_vector,
-          space = neuroim2::space(dataset$mask), 
-          indices = ids 
-        )
-      }
+  is_surface_dataset <- inherits(dataset, "mvpa_surface_dataset")
+  output_maps <- vector("list", length(metric_names))
+
+  for (idx in seq_along(metric_names)) {
+    metric_vector <- perf_mat[, idx]
+    output_maps[[idx]] <- if (is_surface_dataset) {
+      build_surface_map(dataset, metric_vector, ids)
+    } else {
+      build_volume_map(dataset, metric_vector, ids)
     }
   }
-  
-  n_voxels_in_mask <- 0
-  if (!is.null(dataset$mask)) {
-    if (inherits(dataset$mask, c("NeuroVol", "NeuroVec")))
-      n_voxels_in_mask <- prod(dim(dataset$mask))
-    else if (inherits(dataset$mask, "NeuroSurface"))
-      n_voxels_in_mask <- neurosurf::nvertices(dataset$mask)
-    else if (is.numeric(dataset$mask) || is.logical(dataset$mask))
-      n_voxels_in_mask <- length(dataset$mask)
-  }
-  
-  active_voxel_count <- 0
-  if (!is.null(ids)) {
-    active_voxel_count <- length(ids)
-  } else if (!is.null(dataset$mask)) {
-    active_voxel_count <- sum(dataset$mask != 0)
-  } else if (!is.null(perf_mat)) {
-    active_voxel_count <- nrow(perf_mat)
-  }
-  
+  names(output_maps) <- metric_names
+
   structure(
     list(
-      results = output_maps, 
-      n_voxels = n_voxels_in_mask, # Renamed for clarity from original n_voxels
-      active_voxels = active_voxel_count, 
+      results = output_maps,
+      n_voxels = estimate_mask_size(dataset),
+      active_voxels = count_active_voxels(dataset, ids, perf_mat),
       metrics = metric_names
     ),
     class = c("searchlight_result", "list")
   )
+}
+
+validate_wrap_inputs <- function(perf_mat, ids) {
+  if (!is.null(ids) && !is.null(perf_mat) && nrow(perf_mat) > 0L && nrow(perf_mat) != length(ids)) {
+    stop("Number of rows in `perf_mat` must match the length of `ids` when ids are provided.")
+  }
+}
+
+is_perf_empty <- function(perf_mat) {
+  is.null(perf_mat) || ncol(perf_mat) == 0L
+}
+
+empty_searchlight_result <- function(dataset) {
+  structure(
+    list(
+      results = list(),
+      n_voxels = estimate_mask_size(dataset),
+      active_voxels = 0L,
+      metrics = character(0)
+    ),
+    class = c("searchlight_result", "list")
+  )
+}
+
+build_surface_map <- function(dataset, metric_vector, ids) {
+  if (!requireNamespace("neurosurf", quietly = TRUE)) {
+    stop("Package 'neurosurf' is required to handle surface datasets.")
+  }
+  surface_ids <- resolve_surface_ids(dataset, ids, length(metric_vector))
+  neurosurf::NeuroSurface(
+    geometry = neurosurf::geometry(dataset$train_data),
+    indices = surface_ids,
+    data = metric_vector
+  )
+}
+
+resolve_surface_ids <- function(dataset, ids, vec_len) {
+  if (!is.null(ids)) {
+    return(ids)
+  }
+  if (!requireNamespace("neurosurf", quietly = TRUE)) {
+    stop("Package 'neurosurf' is required to handle surface datasets.")
+  }
+  mask <- dataset$mask
+  candidate <- NULL
+  if (inherits(mask, "NeuroSurface")) {
+    candidate <- seq_len(neurosurf::nvertices(mask))
+  } else if (inherits(mask, "SurfaceGeometry")) {
+    candidate <- seq_len(neurosurf::nodes(mask))
+  } else if (is.numeric(mask) || is.logical(mask)) {
+    candidate <- which(mask != 0)
+  } else if (!is.null(dataset$train_data)) {
+    candidate <- seq_len(neurosurf::nodes(neurosurf::geometry(dataset$train_data)))
+  }
+  if (is.null(candidate)) {
+    stop("Cannot determine vertex indices for surface data when 'ids' is NULL.")
+  }
+  if (vec_len != length(candidate)) {
+    stop(sprintf("Length of metric_vector (%s) does not match number of vertices (%s) for dense surface map.",
+                 vec_len, length(candidate)))
+  }
+  candidate
+}
+
+build_volume_map <- function(dataset, metric_vector, ids) {
+  space_obj <- resolve_volume_space(dataset)
+  if (is.null(ids)) {
+    expected_len <- spatial_dim_product(space_obj)
+    if (length(metric_vector) != expected_len) {
+      stop(sprintf("Length of metric_vector (%s) does not match total voxels in mask space (%s) for dense volumetric map when ids is NULL.",
+                   length(metric_vector), expected_len))
+    }
+    vol_dims <- spatial_dim_shape(space_obj)
+    vol_array <- array(metric_vector, dim = vol_dims)
+    return(neuroim2::NeuroVol(vol_array, space_obj))
+  }
+  neuroim2::NeuroVol(
+    data = metric_vector,
+    space = space_obj,
+    indices = ids
+  )
+}
+
+resolve_volume_space <- function(dataset) {
+  mask <- dataset$mask
+  if (inherits(mask, c("NeuroVol", "NeuroVec"))) {
+    return(spatial_only_space(neuroim2::space(mask)))
+  }
+  if (!is.null(mask) && (is.numeric(mask) || is.logical(mask))) {
+    if (!is.null(dataset$train_data) && inherits(dataset$train_data, "NeuroVec")) {
+      return(spatial_only_space(neuroim2::space(dataset$train_data)))
+    }
+    stop("Cannot determine volumetric space from numeric/logical mask without train_data.")
+  }
+  if (!is.null(dataset$train_data) && inherits(dataset$train_data, "NeuroVec")) {
+    return(spatial_only_space(neuroim2::space(dataset$train_data)))
+  }
+  stop("Cannot determine volumetric space from dataset mask or train_data.")
+}
+
+spatial_dim_product <- function(space_obj) {
+  dims <- spatial_dim_shape(space_obj)
+  prod(dims)
+}
+
+spatial_dim_shape <- function(space_obj) {
+  dims <- dim(space_obj)
+  if (length(dims) > 3L) {
+    dims <- dims[seq_len(3L)]
+  }
+  dims
+}
+
+spatial_only_space <- function(space_obj) {
+  dims <- spatial_dim_shape(space_obj)
+  spacing_vals <- neuroim2::spacing(space_obj)[seq_len(length(dims))]
+  origin_vals <- neuroim2::origin(space_obj)[seq_len(length(dims))]
+  neuroim2::NeuroSpace(dims, spacing = spacing_vals, origin = origin_vals)
+}
+
+resolve_volume_mask <- function(mask, spatial_length = NULL) {
+  if (inherits(mask, c("NeuroVol", "NeuroVec"))) {
+    vals <- neuroim2::values(mask)
+    if (is.matrix(vals)) {
+      vals <- vals[, 1, drop = TRUE]
+    }
+    return(as.logical(as.numeric(vals)))
+  }
+  if (is.numeric(mask) || is.logical(mask)) {
+    return(as.logical(mask))
+  }
+  if (!is.null(spatial_length)) {
+    return(rep(TRUE, spatial_length))
+  }
+  logical(0)
+}
+
+estimate_mask_size <- function(dataset) {
+  mask <- dataset$mask
+  if (inherits(mask, c("NeuroVol", "NeuroVec"))) {
+    return(spatial_dim_product(neuroim2::space(mask)))
+  }
+  if (inherits(mask, "NeuroSurface")) {
+    if (!requireNamespace("neurosurf", quietly = TRUE)) {
+      stop("Package 'neurosurf' is required to handle surface datasets.")
+    }
+    return(neurosurf::nvertices(mask))
+  }
+  if (is.numeric(mask) || is.logical(mask)) {
+    return(length(mask))
+  }
+  if (!is.null(dataset$train_data) && inherits(dataset$train_data, "NeuroVec")) {
+    return(spatial_dim_product(neuroim2::space(dataset$train_data)))
+  }
+  0L
+}
+
+count_active_voxels <- function(dataset, ids, perf_mat) {
+  if (!is.null(ids)) {
+    return(length(ids))
+  }
+  mask <- dataset$mask
+  if (inherits(mask, c("NeuroVol", "NeuroVec"))) {
+    mask_values <- neuroim2::values(mask)
+    return(sum(mask_values != 0))
+  }
+  if (inherits(mask, "NeuroSurface")) {
+    if (!requireNamespace("neurosurf", quietly = TRUE)) {
+      stop("Package 'neurosurf' is required to handle surface datasets.")
+    }
+    return(neurosurf::nvertices(mask))
+  }
+  if (is.numeric(mask) || is.logical(mask)) {
+    return(sum(mask != 0))
+  }
+  if (!is.null(perf_mat)) {
+    return(nrow(perf_mat))
+  }
+  0L
 }
 
 #' @export
@@ -276,34 +366,50 @@ combine_standard <- function(model_spec, good_results, bad_results) {
       if (any(!sapply(pob_list, is.null))) {
         # Filter out NULL values (from regression results)
         pob_list <- pob_list[!sapply(pob_list, is.null)]
-        
+
         if (length(pob_list) > 0) {
-          pobserved <- bind_cols(pob_list)
-          
-          # Create appropriate type of output based on dataset type
+          pobserved_tbl <- bind_cols(pob_list)
+          created_map <- NULL
+
           if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
-            # For surface data
-            pobserved <- neurosurf::NeuroSurfaceVector(
-              geometry = geometry(model_spec$dataset$train_data),
-              indices = seq_len(nrow(pobserved)),  # Or appropriate indices
-              mat = as.matrix(pobserved)
-            )
-          } else {
-            # For volume data
-            nc <- ncol(pobserved)
-            mask <- as.logical(model_spec$dataset$mask)
-            if (nrow(bad_results) > 0) {
-              bad_ind <- unlist(bad_results$id)
-              mask[bad_ind] <- FALSE
+            if (nrow(pobserved_tbl) > 0) {
+              created_map <- neurosurf::NeuroSurfaceVector(
+                geometry = neurosurf::geometry(model_spec$dataset$train_data),
+                indices = seq_len(nrow(pobserved_tbl)),
+                mat = as.matrix(pobserved_tbl)
+              )
             }
-            pobserved <- SparseNeuroVec(
-              as.matrix(pobserved), 
-              neuroim2::add_dim(neuroim2::space(model_spec$dataset$mask), ncol(pobserved)), 
-              mask=mask
-            )
+          } else {
+            space_obj <- resolve_volume_space(model_spec$dataset)
+            expected_len <- spatial_dim_product(space_obj)
+            if (nrow(pobserved_tbl) == expected_len) {
+              time_dim <- max(1L, ncol(pobserved_tbl))
+              if (length(dim(space_obj)) == 3L) {
+                space_obj <- neuroim2::add_dim(space_obj, time_dim)
+              } else if (dim(space_obj)[length(dim(space_obj))] != time_dim) {
+                space_obj <- neuroim2::add_dim(spatial_only_space(space_obj), time_dim)
+              }
+              mask_vec <- resolve_volume_mask(model_spec$dataset$mask, spatial_dim_product(space_obj))
+              if (nrow(bad_results) > 0 && length(mask_vec) > 0) {
+                bad_ind <- unlist(bad_results$id)
+                mask_vec[bad_ind] <- FALSE
+              }
+              created_map <- neuroim2::SparseNeuroVec(
+                data = as.matrix(pobserved_tbl),
+                space = space_obj,
+                mask = mask_vec
+              )
+            } else {
+              futile.logger::flog.warn(
+                "Observed probabilities map skipped: expected %s rows but found %s.",
+                expected_len, nrow(pobserved_tbl)
+              )
+            }
           }
-          
-          ret$pobserved <- pobserved
+
+          if (!is.null(created_map)) {
+            ret$pobserved <- created_map
+          }
         }
       }
     }
@@ -944,20 +1050,9 @@ combine_msreve_standard <- function(model_spec, good_results, bad_results) {
       
       # Create a single output map
       if (inherits(dataset, "mvpa_surface_dataset")) {
-          if (!requireNamespace("neurosurf", quietly = TRUE)) stop("Package 'neurosurf' required.")
-          q_data_mat <- matrix(perf_vec, ncol = 1)
-          output_maps[[expected_metric_name]] <- neurosurf::NeuroSurfaceVector(
-              geometry = neurosurf::geometry(dataset$mask), 
-              indices = good_results$id, 
-              data = q_data_mat
-          )
+          output_maps[[expected_metric_name]] <- build_surface_map(dataset, perf_vec, good_results$id)
       } else {
-          if (!requireNamespace("neuroim2", quietly = TRUE)) stop("Package 'neuroim2' required.")
-          output_maps[[expected_metric_name]] <- neuroim2::SparseNeuroVec(
-              data = perf_vec,
-              space = neuroim2::space(dataset$mask), 
-              indices = good_results$id
-          )
+          output_maps[[expected_metric_name]] <- build_volume_map(dataset, perf_vec, good_results$id)
       }
       final_metrics <- expected_metric_name
       
@@ -1005,20 +1100,9 @@ combine_msreve_standard <- function(model_spec, good_results, bad_results) {
             q_perf_vec <- perf_mat_from_list[, q_idx]
             
             if (inherits(dataset, "mvpa_surface_dataset")) {
-              if (!requireNamespace("neurosurf", quietly = TRUE)) stop("Package 'neurosurf' required.")
-              q_data_mat <- matrix(q_perf_vec, ncol = 1)
-              output_maps[[q_contrast_name]] <- neurosurf::NeuroSurfaceVector(
-                  geometry = neurosurf::geometry(dataset$mask), 
-                  indices = good_results$id, 
-                  data = q_data_mat
-              )
+              output_maps[[q_contrast_name]] <- build_surface_map(dataset, q_perf_vec, good_results$id)
             } else {
-              if (!requireNamespace("neuroim2", quietly = TRUE)) stop("Package 'neuroim2' required.")
-              output_maps[[q_contrast_name]] <- neuroim2::SparseNeuroVec(
-                  data = q_perf_vec,
-                  space = neuroim2::space(dataset$mask), 
-                  indices = good_results$id
-              )
+              output_maps[[q_contrast_name]] <- build_volume_map(dataset, q_perf_vec, good_results$id)
             }
           }
       } # End if Q > 0
@@ -1030,7 +1114,7 @@ combine_msreve_standard <- function(model_spec, good_results, bad_results) {
   structure(
     list(
       results = output_maps, # List of Q maps
-      n_voxels = prod(dim(dataset$mask)), # Total voxels/vertices in mask space
+      n_voxels = estimate_mask_size(dataset), # Total voxels/vertices in mask space
       active_voxels = length(good_results$id), # Number of voxels with results
       metrics = final_metrics # Names of the contrasts/maps
     ),

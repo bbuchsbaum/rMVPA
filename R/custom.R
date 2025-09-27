@@ -654,7 +654,9 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
 create_searchlight_performance <- function(data, metric_name, indices = NULL) {
   # Calculate summary statistics from the data
   values_vec <- if (inherits(data, c("NeuroVol", "NeuroSurface"))) {
-    neuroim2::values(data)
+    as.numeric(neuroim2::values(data))
+  } else if (inherits(data, "SparseNeuroVec")) {
+    as.numeric(neuroim2::as.matrix(data))
   } else {
     as.numeric(data)
   }
