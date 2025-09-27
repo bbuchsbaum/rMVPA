@@ -143,17 +143,19 @@ if (requireNamespace("randomForest", quietly = TRUE)) {
   model <- mvpa_model(model = rf_model, dataset = dataset$dataset, design = dataset$design,
                       crossval = crossval, tune_grid = data.frame(mtry = 2))
   result_rf <- run_searchlight(model, radius = 4, method = "randomized", niter = 2)
+  result_rf
 } else {
   message("Package 'randomForest' not installed; skipping RF example.")
 }
 ```
 
-```{r, message=FALSE, warning=FALSE, results='hide'}
+```{r, message=FALSE, warning=FALSE}
 if (requireNamespace("randomForest", quietly = TRUE)) {
   grid <- data.frame(mtry = c(2, 4, 6, 8))
   model2 <- mvpa_model(model = rf_model, dataset = dataset$dataset, design = dataset$design,
                        crossval = crossval, tune_grid = grid, tune_reps = 2)
   result_rf_tuned <- run_searchlight(model2, radius = 6, method = "randomized", niter = 1)
+  result_rf_tuned
 } else {
   message("Package 'randomForest' not installed; skipping tuned RF example.")
 }
