@@ -60,31 +60,53 @@ Unlike standard RSA which compares similarity matrices, Feature-Based RSA attemp
 Let's walk through a complete example:
 
 ```{r}
-# Generate a synthetic dataset with dimensions 6x6x6, 50 observations, divided into 4 blocks
-# This ensures that the number of trials matches the number of stimuli used below
+## Generate data and weakly-correlated features
+# Synthetic dataset: 6x6x6, 50 observations (4 blocks)
 data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 50, blocks = 4, nlevels = 2)
 print(data_out)
 
-# Generate synthetic feature space (e.g., visual features of stimuli)
 set.seed(123)
-n_stimuli <- 50
+n_stimuli  <- 50
 n_features <- 5
 
-# Create feature matrix (stimuli × features)
-feature_matrix <- matrix(rnorm(n_stimuli * n_features), n_stimuli, n_features)
+# Latent factors shared between features and brain data (weak signal)
+Z <- matrix(rnorm(n_stimuli * 2), n_stimuli, 2)
+
+# Build a weakly-correlated feature matrix: F = 0.5 * (Z %*% B) + 0.5 * noise
+B <- matrix(rnorm(2 * n_features), 2, n_features)
+feature_matrix <- 0.5 * (Z %*% B) + 0.5 * matrix(rnorm(n_stimuli * n_features), n_stimuli, n_features)
+feature_matrix <- scale(feature_matrix)
 colnames(feature_matrix) <- paste0("feature_", 1:n_features)
 
 # Create stimulus labels
 stim_labels <- paste0("stim_", 1:n_stimuli)
 
-# Create feature RSA design
+# Create a subtle latent signal in the brain data driven by the same Z
+mask_vol <- data_out$dataset$mask
+mask_idx <- which(mask_vol > 0)
+
+# Extract masked voxel-by-time matrix from NeuroVec (V x T)
+vol_list <- neuroim2::vols(data_out$dataset$train_data)
+datamat  <- do.call(cbind, lapply(vol_list, function(v) as.numeric(v[mask_idx])))
+
+# Two random spatial patterns within the mask
+set.seed(124)
+p1 <- rnorm(length(mask_idx))
+p2 <- rnorm(length(mask_idx))
+p1 <- p1 / sd(p1); p2 <- p2 / sd(p2)
+
+# Inject weak signal into brain data: X <- X + 0.2 * (p1 %*% t(Z1)) + 0.2 * (p2 %*% t(Z2))
+datamat <- datamat + p1 %*% t(0.2 * Z[,1]) + p2 %*% t(0.2 * Z[,2])
+
+# Repackage as a NeuroVec using the existing space and mask
+train_vec <- neuroim2::SparseNeuroVec(datamat, neuroim2::space(data_out$dataset$train_data), mask = mask_vol)
+dset <- mvpa_dataset(train_vec, mask = mask_vol)
+
+# Create feature RSA design from the correlated feature matrix
 feature_design <- feature_rsa_design(
-  F = feature_matrix,  # Direct feature matrix
+  F = feature_matrix,
   labels = stim_labels
 )
-
-# Create MVPA dataset from the generated data
-dset <- mvpa_dataset(data_out$dataset$train_data, mask = data_out$dataset$mask)
 
 # Create cross-validation structure using the block information
 crossval <- blocked_cross_validation(data_out$design$block_var)
@@ -268,6 +290,5 @@ For implementation details, refer to:
 - `feature_rsa_model.R`
 - `vector_rsa_model.R`
 - `rsa_model.R` 
-
 
 
