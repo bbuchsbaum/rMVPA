@@ -16,40 +16,27 @@ suppressPackageStartupMessages(library(neuroim2))
 ##suppressPackageStartupMessages(library(devtools))
 library(rMVPA)
 
-# Safe histogram helper that avoids base title() path
-safe_plot_hist <- function(x, title = "Histogram") {
+# Safe histogram helper: prefer ggplot2; otherwise print a compact summary
+safe_plot_hist <- function(x, title = "Histogram", bins = 30) {
   x <- as.numeric(x)
   x <- x[is.finite(x)]
   if (!length(x)) {
     message("No finite AUC values to plot.")
     return(invisible(NULL))
   }
-  h <- graphics::hist(x, plot = FALSE)
-  bw <- if (length(h$breaks) > 1) min(diff(h$breaks)) else 1
-  y_max <- max(h$counts, 1)
-  # Draw using grid to avoid base graphics device issues under callr
-  grid::grid.newpage()
-  grid::pushViewport(grid::plotViewport(margins = c(4, 4, 2, 2)))
-  grid::pushViewport(grid::dataViewport(xscale = range(h$breaks, finite = TRUE), yscale = c(0, y_max)))
-  # bars
-  for (i in seq_along(h$mids)) {
-    grid::grid.rect(x = h$mids[i], y = 0, width = bw, height = h$counts[i],
-                    just = c("center", "bottom"),
-                    default.units = "native",
-                    gp = grid::gpar(fill = "grey80", col = NA))
+  if (requireNamespace("ggplot2", quietly = TRUE)) {
+    df <- data.frame(x = x)
+    p <- ggplot2::ggplot(df, ggplot2::aes(x = x)) +
+      ggplot2::geom_histogram(bins = bins, fill = "grey80", color = "white") +
+      ggplot2::labs(title = title, x = "AUC", y = "Count") +
+      ggplot2::theme_minimal()
+    print(p)
+  } else {
+    smry <- sprintf("AUC summary: n=%d, mean=%.3f, sd=%.3f, min=%.3f, max=%.3f", 
+                    length(x), mean(x), stats::sd(x), min(x), max(x))
+    message(smry)
   }
-  # axes
-  grid::grid.xaxis()
-  grid::grid.yaxis()
-  # labels
-  grid::grid.text(title, y = grid::unit(1, "npc") - grid::unit(1.5, "lines"))
-  grid::grid.text("AUC", y = grid::unit(-2, "lines"))
-  grid::upViewport(2)
-  invisible(NULL)
 }
-
-# Toggle plotting in vignettes (disable by default for pkgdown stability)
-plot_ok <- identical(Sys.getenv("RMVPA_VIGNETTE_PLOTS"), "true")
 ```
 
 ### Generate a volumetric dataset with 100 observations and two classes
@@ -91,17 +78,14 @@ The output of `run_searchlight` is a list of image volumes containing performanc
 ```{r}
 result <- run_searchlight(model, radius=4, method="standard")
 result
+```
 
-if (plot_ok && !is.null(result$results$AUC)) {
+```{r, echo=FALSE}
+if (!is.null(result$results$AUC)) {
   auc_vals <- as.numeric(neuroim2::values(result$results$AUC))
   auc_vals <- auc_vals[is.finite(auc_vals)]
-  if (length(auc_vals) > 0) {
-    safe_plot_hist(auc_vals, title = "Searchlight AUC (centered)")
-  } else {
-    message("No finite AUC values to plot.")
-  }
+  if (length(auc_vals) > 0) safe_plot_hist(auc_vals, title = "Searchlight AUC (centered)")
 }
-
 ```
 
 ## Run a randomized searchlight analysis
@@ -111,17 +95,14 @@ A randomized searchlight analysis is an iterative procedure in which searchlight
 ```{r}
 result <- run_searchlight(model, radius=4, method="randomized", niter=8)
 result
+```
 
-if (plot_ok && !is.null(result$results$AUC)) {
+```{r, echo=FALSE}
+if (!is.null(result$results$AUC)) {
   auc_vals <- as.numeric(neuroim2::values(result$results$AUC))
   auc_vals <- auc_vals[is.finite(auc_vals)]
-  if (length(auc_vals) > 0) {
-    safe_plot_hist(auc_vals, title = "Randomized Searchlight AUC (centered)")
-  } else {
-    message("No finite AUC values to plot.")
-  }
+  if (length(auc_vals) > 0) safe_plot_hist(auc_vals, title = "Randomized Searchlight AUC (centered)")
 }
-
 ```
 
 ## Using different classifiers
