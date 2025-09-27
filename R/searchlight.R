@@ -368,7 +368,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
         pob_list <- pob_list[!sapply(pob_list, is.null)]
 
         if (length(pob_list) > 0) {
-          pobserved_tbl <- bind_cols(pob_list)
+          pobserved_tbl <- dplyr::bind_cols(pob_list, .name_repair = "minimal")
           created_map <- NULL
 
           if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
@@ -655,7 +655,7 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
     pob_list <- pob_list[!sapply(pob_list, is.null)]
     
     if (length(pob_list) > 0) {
-      pobserved <- bind_cols(pob_list)
+      pobserved <- dplyr::bind_cols(pob_list, .name_repair = "minimal")
     }
   }
   
@@ -1121,7 +1121,6 @@ combine_msreve_standard <- function(model_spec, good_results, bad_results) {
     class = c("msreve_searchlight_result", "searchlight_result", "list") # Reuse existing class
   )
 }
-
 
 
 
