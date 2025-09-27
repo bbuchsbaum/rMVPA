@@ -34,7 +34,7 @@ Imports:
     purrr,
     Rfit,
     rlang,
-    robustcov,
+    robustbase,
     sda,
     sparsediscrim,
     stringr,

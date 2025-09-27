@@ -15,6 +15,41 @@ vignette: >
 suppressPackageStartupMessages(library(neuroim2))
 ##suppressPackageStartupMessages(library(devtools))
 library(rMVPA)
+
+# Safe histogram helper that avoids base title() path
+safe_plot_hist <- function(x, title = "Histogram") {
+  x <- as.numeric(x)
+  x <- x[is.finite(x)]
+  if (!length(x)) {
+    message("No finite AUC values to plot.")
+    return(invisible(NULL))
+  }
+  h <- graphics::hist(x, plot = FALSE)
+  bw <- if (length(h$breaks) > 1) min(diff(h$breaks)) else 1
+  y_max <- max(h$counts, 1)
+  # Draw using grid to avoid base graphics device issues under callr
+  grid::grid.newpage()
+  grid::pushViewport(grid::plotViewport(margins = c(4, 4, 2, 2)))
+  grid::pushViewport(grid::dataViewport(xscale = range(h$breaks, finite = TRUE), yscale = c(0, y_max)))
+  # bars
+  for (i in seq_along(h$mids)) {
+    grid::grid.rect(x = h$mids[i], y = 0, width = bw, height = h$counts[i],
+                    just = c("center", "bottom"),
+                    default.units = "native",
+                    gp = grid::gpar(fill = "grey80", col = NA))
+  }
+  # axes
+  grid::grid.xaxis()
+  grid::grid.yaxis()
+  # labels
+  grid::grid.text(title, y = grid::unit(1, "npc") - grid::unit(1.5, "lines"))
+  grid::grid.text("AUC", y = grid::unit(-2, "lines"))
+  grid::upViewport(2)
+  invisible(NULL)
+}
+
+# Toggle plotting in vignettes (disable by default for pkgdown stability)
+plot_ok <- identical(Sys.getenv("RMVPA_VIGNETTE_PLOTS"), "true")
 ```
 
 ### Generate a volumetric dataset with 100 observations and two classes
@@ -57,11 +92,11 @@ The output of `run_searchlight` is a list of image volumes containing performanc
 result <- run_searchlight(model, radius=4, method="standard")
 result
 
-if (!is.null(result$results$AUC)) {
+if (plot_ok && !is.null(result$results$AUC)) {
   auc_vals <- as.numeric(neuroim2::values(result$results$AUC))
   auc_vals <- auc_vals[is.finite(auc_vals)]
   if (length(auc_vals) > 0) {
-    hist(auc_vals, main = "Searchlight AUC (centered)", xlab = "AUC", col = "grey80", border = "white")
+    safe_plot_hist(auc_vals, title = "Searchlight AUC (centered)")
   } else {
     message("No finite AUC values to plot.")
   }
@@ -77,11 +112,11 @@ A randomized searchlight analysis is an iterative procedure in which searchlight
 result <- run_searchlight(model, radius=4, method="randomized", niter=8)
 result
 
-if (!is.null(result$results$AUC)) {
+if (plot_ok && !is.null(result$results$AUC)) {
   auc_vals <- as.numeric(neuroim2::values(result$results$AUC))
   auc_vals <- auc_vals[is.finite(auc_vals)]
   if (length(auc_vals) > 0) {
-    hist(auc_vals, main = "Randomized Searchlight AUC (centered)", xlab = "AUC", col = "grey80", border = "white")
+    safe_plot_hist(auc_vals, title = "Randomized Searchlight AUC (centered)")
   } else {
     message("No finite AUC values to plot.")
   }
@@ -94,21 +129,34 @@ if (!is.null(result$results$AUC)) {
 All of the classifiers in the MVPAModels registry can be used for a searchlight analysis. Additional models can be registered using `register_mvpa_model()`. For example, to run an analysis using a built-in model:
 
 ```{r, eval=FALSE}
-rf_model <- load_model("rf") 
-model <- mvpa_model(model=rf_model, dataset=dataset$dataset, design=dataset$design, crossval=crossval)
-result_rf <- run_searchlight(model, radius=4, method="randomized", niter=2)
+svm_model <- load_model("svmLinear") 
+model <- mvpa_model(model=svm_model, dataset=dataset$dataset, design=dataset$design, crossval=crossval)
+result_svm <- run_searchlight(model, radius=4, method="randomized", niter=2)
 ```
 
 
 Here we specify a range of values for the `mtry` tuning parameter. In this case, by supplying the `tune_reps` argument to `mvpa_model` we control the number of resamples used to tune the model parameters. The default is 10, but here we speed up execution time by reducing it to 2. In general, more resamples are required to reliably estimate optimal tuning parameters. This means for a whole-brain searchlight, parameter tuning is **generally** impractical. This is why the classifier `sda_notune` is a good choice for searchlight analyses, since it "works well" with default tuning parameters.
 
+```{r}
+if (requireNamespace("randomForest", quietly = TRUE)) {
+  rf_model <- load_model("rf")
+  model <- mvpa_model(model = rf_model, dataset = dataset$dataset, design = dataset$design,
+                      crossval = crossval, tune_grid = data.frame(mtry = 2))
+  result_rf <- run_searchlight(model, radius = 4, method = "randomized", niter = 2)
+} else {
+  message("Package 'randomForest' not installed; skipping RF example.")
+}
+```
+
 ```{r, message=FALSE, warning=FALSE, results='hide'}
-
-grid <- data.frame(mtry=c(2,4,6,8))
-model2 <- mvpa_model(model=rf_model, dataset=dataset$dataset, design=dataset$design, crossval=crossval, tune_grid=grid, tune_reps=2)
-
-result_rf_tuned <- run_searchlight(model2, radius=6, method="randomized", niter=1)
-
+if (requireNamespace("randomForest", quietly = TRUE)) {
+  grid <- data.frame(mtry = c(2, 4, 6, 8))
+  model2 <- mvpa_model(model = rf_model, dataset = dataset$dataset, design = dataset$design,
+                       crossval = crossval, tune_grid = grid, tune_reps = 2)
+  result_rf_tuned <- run_searchlight(model2, radius = 6, method = "randomized", niter = 1)
+} else {
+  message("Package 'randomForest' not installed; skipping tuned RF example.")
+}
 ```
 
 <!-- ## External Cross-Validation Example -->

@@ -266,7 +266,9 @@ pairwise_dist.pcadist <- function(obj, X,...) {
 #' @return An \strong{N x N numeric matrix} of pairwise robust Mahalanobis distances.
 #'
 #' @details
-#' - Estimates a robust covariance with \code{robustcov::covGK(X)} (make sure the \code{robustcov} package is installed).
+#' - Estimates a robust covariance with either \code{robustcov::covGK(X)} if the
+#'   \pkg{robustcov} package is installed, or \code{robustbase::covOGK(X, sigmamu = robustbase::scaleTau2)$cov}
+#'   as a widely-available CRAN alternative.
 #' - Then calls \code{corpcor::invcov.shrink} to get an inverse covariance estimate.
 #' - Finally, loops over row pairs to compute \code{(x_i - x_j) * inv_cov * (x_i - x_j)^T}.
 #'
@@ -281,7 +283,16 @@ pairwise_dist.pcadist <- function(obj, X,...) {
 #' @export
 #' @noRd
 pairwise_dist.robustmahadist <- function(obj, X,...) {
-  robust_cov <- robustcov::covGK(X)
+  # Prefer robustcov::covGK if available; otherwise fall back to robustbase::covOGK
+  if (requireNamespace("robustcov", quietly = TRUE)) {
+    robust_cov <- robustcov::covGK(X)
+  } else if (requireNamespace("robustbase", quietly = TRUE)) {
+    # covOGK returns a list with $cov
+    robust_cov <- robustbase::covOGK(X, sigmamu = robustbase::scaleTau2)$cov
+  } else {
+    warning("Neither 'robustcov' nor 'robustbase' installed; falling back to stats::cov.")
+    robust_cov <- stats::cov(X)
+  }
   inv_cov <- corpcor::invcov.shrink(robust_cov)
   
   n <- nrow(X)
@@ -297,7 +308,6 @@ pairwise_dist.robustmahadist <- function(obj, X,...) {
   }
   dist_matrix
 }
-
 
 
 
