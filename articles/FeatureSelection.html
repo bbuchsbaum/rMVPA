@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-03-20</h4>
+            <h4 data-toc-skip class="date">2025-09-27</h4>
       
 
       <div class="d-none name"><code>FeatureSelection.Rmd</code></div>
@@ -108,14 +108,7 @@ the top 10 features):</p>
 <span><span class="co"># Create a feature selector using FTest with top_k cutoff (select top 10 features)</span></span>
 <span><span class="va">fsel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_selector.html">feature_selector</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"FTest"</span>, cutoff_type <span class="op">=</span> <span class="st">"top_k"</span>, cutoff_value <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="va">fsel</span></span></code></pre></div>
-<pre><code><span><span class="co">## $cutoff_type</span></span>
-<span><span class="co">## [1] "top_k"</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## $cutoff_value</span></span>
-<span><span class="co">## [1] 10</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## attr(,"class")</span></span>
-<span><span class="co">## [1] "FTest"            "feature_selector" "list"</span></span></code></pre>
+<pre><code><span><span class="co">## Feature Selector Object\n-----------------------\nMethod:         FTest \nCutoff Type:    top_k \nCutoff Value:   10 \n</span></span></code></pre>
 <p>Similarly, you can create a feature selector that selects a
 proportion of features using the top_p option. In the example below, we
 select the top 10% of features based on the FTest ranking:</p>
@@ -123,19 +116,12 @@ select the top 10% of features based on the FTest ranking:</p>
 <code class="sourceCode R"><span><span class="co"># Create a feature selector using FTest with top_p cutoff (select top 10% of features)</span></span>
 <span><span class="va">fsel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_selector.html">feature_selector</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"FTest"</span>, cutoff_type <span class="op">=</span> <span class="st">"top_p"</span>, cutoff_value <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span></span>
 <span><span class="va">fsel</span></span></code></pre></div>
-<pre><code><span><span class="co">## $cutoff_type</span></span>
-<span><span class="co">## [1] "top_p"</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## $cutoff_value</span></span>
-<span><span class="co">## [1] 0.1</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## attr(,"class")</span></span>
-<span><span class="co">## [1] "FTest"            "feature_selector" "list"</span></span></code></pre>
+<pre><code><span><span class="co">## Feature Selector Object\n-----------------------\nMethod:         FTest \nCutoff Type:    top_p \nCutoff Value:   0.1 \n</span></span></code></pre>
 </div>
 <div class="section level2">
 <h2 id="applying-feature-selection-to-data">Applying Feature Selection to Data<a class="anchor" aria-label="anchor" href="#applying-feature-selection-to-data"></a>
 </h2>
-<p>The <code><a href="../reference/select_features.html">select_features()</a></code> function applies the feature
+<p>The <code><a href="../reference/select_features-methods.html">select_features()</a></code> function applies the feature
 selection process to a given feature matrix <code>X</code> and a
 response variable <code>Y</code>. The function returns a logical vector
 with <code>TRUE</code> for selected features and <code>FALSE</code>
@@ -150,7 +136,7 @@ otherwise.</p>
 <span></span>
 <span><span class="co"># Apply feature selection using the FTest method with top_k cutoff</span></span>
 <span><span class="va">fsel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_selector.html">feature_selector</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"FTest"</span>, cutoff_type <span class="op">=</span> <span class="st">"top_k"</span>, cutoff_value <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
-<span><span class="va">selected_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_features.html">select_features</a></span><span class="op">(</span><span class="va">fsel</span>, <span class="va">X</span>, <span class="va">Y</span><span class="op">)</span></span>
+<span><span class="va">selected_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_features-methods.html">select_features</a></span><span class="op">(</span><span class="va">fsel</span>, <span class="va">X</span>, <span class="va">Y</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># The number of selected features should be equal to the cutoff value (10)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Number of selected features (top_k):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">selected_features</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
@@ -161,7 +147,7 @@ features will be selected:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Apply feature selection using the FTest method with top_p cutoff (select top 10% of features)</span></span>
 <span><span class="va">fsel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_selector.html">feature_selector</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"FTest"</span>, cutoff_type <span class="op">=</span> <span class="st">"top_p"</span>, cutoff_value <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span></span>
-<span><span class="va">selected_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_features.html">select_features</a></span><span class="op">(</span><span class="va">fsel</span>, <span class="va">X</span>, <span class="va">Y</span><span class="op">)</span></span>
+<span><span class="va">selected_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_features-methods.html">select_features</a></span><span class="op">(</span><span class="va">fsel</span>, <span class="va">X</span>, <span class="va">Y</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Calculate the proportion of features selected</span></span>
 <span><span class="va">the_proportion</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">selected_features</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span></span>
@@ -183,7 +169,7 @@ correlation-adjusted t-score for each feature. Here’s an example:</p>
 <span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">90</span> <span class="op">*</span> <span class="fl">50</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">90</span>, ncol <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Apply feature selection using catscore</span></span>
-<span><span class="va">selected_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_features.html">select_features</a></span><span class="op">(</span><span class="va">fsel</span>, <span class="va">X</span>, <span class="va">Y</span>, ranking.score <span class="op">=</span> <span class="st">"entropy"</span><span class="op">)</span></span>
+<span><span class="va">selected_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_features-methods.html">select_features</a></span><span class="op">(</span><span class="va">fsel</span>, <span class="va">X</span>, <span class="va">Y</span>, ranking.score <span class="op">=</span> <span class="st">"entropy"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Number of features selected using catscore (top_k):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">selected_features</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Number of features selected using catscore (top_k): 10</span></span></code></pre>
@@ -210,7 +196,7 @@ on your specific analysis needs.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
 </div>
 
     </footer>

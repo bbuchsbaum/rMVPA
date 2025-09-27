@@ -70,7 +70,11 @@ This object can be used for further multivariate statistical analysis using the 
 <span class="r-in"><span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu">create_mvpa_dataset</span><span class="op">(</span><span class="va">data_matrix</span>, <span class="va">labels</span>, <span class="va">subject_ids</span><span class="op">)</span></span></span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in create_mvpa_dataset(data_matrix, labels, subject_ids):</span> could not find function "create_mvpa_dataset"</span>
 <span class="r-in"><span><span class="va">formula</span> <span class="op">&lt;-</span> <span class="va">y</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span></span></span>
-<span class="r-in"><span><span class="va">data_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">dissimilarity_matrix_y</span>, x1 <span class="op">=</span> <span class="va">dissimilarity_matrix_x1</span>, x2 <span class="op">=</span> <span class="va">dissimilarity_matrix_x2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">data_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  y <span class="op">=</span> <span class="va">dissimilarity_matrix_y</span>,</span></span>
+<span class="r-in"><span>  x1 <span class="op">=</span> <span class="va">dissimilarity_matrix_x1</span>,</span></span>
+<span class="r-in"><span>  x2 <span class="op">=</span> <span class="va">dissimilarity_matrix_x2</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'dissimilarity_matrix_y' not found</span>
 <span class="r-in"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="manova_design.html">manova_design</a></span><span class="op">(</span><span class="va">formula</span>, <span class="va">data_list</span><span class="op">)</span></span></span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'data_list' not found</span>
@@ -87,7 +91,7 @@ This object can be used for further multivariate statistical analysis using the 
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
 </div>
 
     </footer></div>

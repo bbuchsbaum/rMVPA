@@ -44,9 +44,16 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">feature_rsa_model</span><span class="op">(</span></span>
 <span>  <span class="va">dataset</span>,</span>
 <span>  <span class="va">design</span>,</span>
-<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"scca"</span>, <span class="st">"pls"</span>, <span class="st">"pca"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pls"</span>, <span class="st">"pca"</span>, <span class="st">"glmnet"</span><span class="op">)</span>,</span>
 <span>  crossval <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  cache_pca <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  cache_pca <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  alpha <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>  cv_glmnet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  lambda <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  nperm <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  permute_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"features"</span>, <span class="st">"observations"</span><span class="op">)</span>,</span>
+<span>  save_distributions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -59,18 +66,19 @@
 
 
 <dt id="arg-design">design<a class="anchor" aria-label="anchor" href="#arg-design"></a></dt>
-<dd><p>A <code>feature_rsa_design</code> object specifying the feature space (<code>F</code>).</p></dd>
+<dd><p>A <code>feature_rsa_design</code> object specifying the feature space (<code>F</code>)
+and including the component limit (`max_comps`).</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
-<dd><p>Character string specifying the analysis method. One of:</p><dl><dt>scca</dt>
-<dd><p>Sparse Canonical Correlation Analysis</p></dd>
-
-  <dt>pls</dt>
-<dd><p>Partial Least Squares</p></dd>
+<dd><p>Character string specifying the analysis method. One of:</p><dl><dt>pls</dt>
+<dd><p>Partial Least Squares regression predicting X from F.</p></dd>
 
   <dt>pca</dt>
-<dd><p>Principal Component Analysis on feature space</p></dd>
+<dd><p>Principal Component Analysis on F, followed by regression predicting X from the PCs.</p></dd>
+
+  <dt>glmnet</dt>
+<dd><p>Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.</p></dd>
 
 
 </dl></dd>
@@ -79,6 +87,47 @@
 <dt id="arg-crossval">crossval<a class="anchor" aria-label="anchor" href="#arg-crossval"></a></dt>
 <dd><p>Optional cross-validation specification.</p></dd>
 
+
+<dt id="arg-cache-pca">cache_pca<a class="anchor" aria-label="anchor" href="#arg-cache-pca"></a></dt>
+<dd><p>Logical, if TRUE and method is "pca", cache the PCA decomposition of the
+feature matrix F across cross-validation folds involving the same training rows.
+Defaults to FALSE.</p></dd>
+
+
+<dt id="arg-alpha">alpha<a class="anchor" aria-label="anchor" href="#arg-alpha"></a></dt>
+<dd><p>Numeric value between 0 and 1, only used when method="glmnet". Controls the elastic net
+mixing parameter: 1 for lasso (default), 0 for ridge, values in between for a mixture.
+Defaults to 0.5 (equal mix of ridge and lasso).</p></dd>
+
+
+<dt id="arg-cv-glmnet">cv_glmnet<a class="anchor" aria-label="anchor" href="#arg-cv-glmnet"></a></dt>
+<dd><p>Logical, if TRUE and method="glmnet", use cv.glmnet to automatically select the
+optimal lambda value via cross-validation. Defaults to FALSE.</p></dd>
+
+
+<dt id="arg-lambda">lambda<a class="anchor" aria-label="anchor" href="#arg-lambda"></a></dt>
+<dd><p>Optional numeric value or sequence of values, only used when method="glmnet" and
+cv_glmnet=FALSE. Specifies the regularization parameter. If NULL (default), a sequence will be
+automatically determined by glmnet.</p></dd>
+
+
+<dt id="arg-nperm">nperm<a class="anchor" aria-label="anchor" href="#arg-nperm"></a></dt>
+<dd><p>Integer, number of permutations to run for statistical testing of model performance
+metrics after merging cross-validation folds. Default 0 (no permutation testing).</p></dd>
+
+
+<dt id="arg-permute-by">permute_by<a class="anchor" aria-label="anchor" href="#arg-permute-by"></a></dt>
+<dd><p>DEPRECATED. Permutation is always done by shuffling rows of the predicted matrix.</p></dd>
+
+
+<dt id="arg-save-distributions">save_distributions<a class="anchor" aria-label="anchor" href="#arg-save-distributions"></a></dt>
+<dd><p>Logical, if TRUE and nperm &gt; 0, save the full null distributions
+from the permutation test. Defaults to FALSE.</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Additional arguments (currently unused).</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -86,11 +135,25 @@
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Feature RSA models analyze how well a feature matrix <code>F</code> can predict
-neural data <code>X</code>. For example:
-  - <strong>pca</strong>: PCA on <code>F</code>, then regress <code>X</code> on those principal components.
-  - <strong>pls</strong>: partial least squares regression of <code>X</code> on <code>F</code>.
-  - <strong>scca</strong>: sparse CCA of <code>X</code> and <code>F</code>.</p>
+    <p>Feature RSA models analyze how well a feature matrix <code>F</code> (defined in the `design`)
+relates to neural data <code>X</code>. The `max_comps` parameter, inherited from the `design` object,
+sets an upper limit on the number of components used:
+  - <strong>pca</strong>: Performs PCA on <code>F</code>. `max_comps` limits the number of principal components
+    (selected by variance explained) used to predict <code>X</code>. Actual components used: `min(max_comps, available_PCs)`.
+  - <strong>pls</strong>: Performs PLS regression predicting <code>X</code> from <code>F</code>. `max_comps` sets the
+    maximum number of PLS components to compute. Actual components used may be fewer based on the PLS algorithm.
+  - <strong>glmnet</strong>: Performs elastic net regression predicting <code>X</code> from <code>F</code> using the glmnet package
+    with multivariate Gaussian response family. The regularization (lambda) can be automatically selected via cross-validation
+    if cv_glmnet=TRUE. The alpha parameter controls the balance between L1 (lasso) and L2 (ridge) regularization.</p>
+<p>**Performance Metrics** (computed by `evaluate_model` after cross-validation):
+  - `mean_correlation`: Average correlation between predicted and observed patterns for corresponding trials/conditions (diagonal of the prediction-observation correlation matrix).
+  - `cor_difference`: The `mean_correlation` minus the average off-diagonal correlation (`mean_correlation` - `off_diag_correlation`). Measures how much better the model predicts the correct trial/condition compared to incorrect ones.
+  - `mean_rank_percentile`: Average percentile rank of the diagonal correlations. For each condition, ranks how well the model's prediction correlates with the correct observed pattern compared to incorrect patterns. Values range from 0 to 1, with 0.5 expected by chance and 1 indicating perfect discrimination.
+  - `voxel_correlation`: Correlation between the vectorized predicted and observed data matrices across all trials and voxels.
+  - `mse`: Mean Squared Error between predicted and observed values.
+  - `r_squared`: Proportion of variance in the observed data explained by the predicted data.
+  - `p_*`, `z_*`: If `nperm &gt; 0`, permutation-based p-values and z-scores for the above metrics, assessing significance against a null distribution generated by shuffling predicted trial labels.</p>
+<p>The number of components actually used (`ncomp`) for the region/searchlight is also included in the performance output.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -102,7 +165,7 @@ neural data <code>X</code>. For example:
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
 </div>
 
     </footer></div>

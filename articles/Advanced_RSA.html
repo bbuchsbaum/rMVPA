@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-03-20</h4>
+            <h4 data-toc-skip class="date">2025-09-27</h4>
       
 
       <div class="d-none name"><code>Advanced_RSA.Rmd</code></div>
@@ -195,7 +195,7 @@ activity</li>
 <span><span class="va">feature_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_rsa_model.html">feature_rsa_model</a></span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">dset</span>,</span>
 <span>  design <span class="op">=</span> <span class="va">feature_design</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"scca"</span>,  <span class="co"># Sparse Canonical Correlation Analysis</span></span>
+<span>  method <span class="op">=</span> <span class="st">"pls"</span>,  <span class="co"># Partial Least Squares</span></span>
 <span>  crossval <span class="op">=</span> <span class="va">crossval</span>  <span class="co"># Add cross-validation</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -209,28 +209,23 @@ activity</li>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Run regional analysis</span></span>
-<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional.html">run_regional</a></span><span class="op">(</span><span class="va">feature_model</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Error in value[[3L]](cond) : </span></span>
-<span><span class="co">##   SCCA error: there is no package called 'whitening'</span></span>
-<span><span class="co">## Error in value[[3L]](cond) : </span></span>
-<span><span class="co">##   SCCA error: there is no package called 'whitening'</span></span>
-<span><span class="co">## Error in value[[3L]](cond) : </span></span>
-<span><span class="co">##   SCCA error: there is no package called 'whitening'</span></span>
-<span><span class="co">## INFO [2025-03-20 21:30:40] </span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">feature_model</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## INFO [2025-09-27 21:39:49] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
-<pre><code><span><span class="co">## Warning: Performance matrix is empty or invalid. Returning empty results.</span></span></code></pre>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Examine results</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 1</span></span></span>
-<span><span class="co">##   roinum</span></span>
-<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1</span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2</span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
+<span><span class="co">##   roinum mean_correlation cor_difference mean_rank_percentile voxel_correlation</span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1          -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">2</span>        -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">6</span>                0.399          -<span style="color: #BB0000;">0.005</span><span style="color: #BB0000; text-decoration: underline;">15</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2          -<span style="color: #BB0000;">0.109</span>         -<span style="color: #BB0000;">0.112</span>                 0.314          -<span style="color: #BB0000;">0.059</span><span style="color: #BB0000; text-decoration: underline;">3</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3          -<span style="color: #BB0000;">0.069</span><span style="color: #BB0000; text-decoration: underline;">3</span>        -<span style="color: #BB0000;">0.068</span><span style="color: #BB0000; text-decoration: underline;">7</span>                0.383          -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">89</span></span></span>
+<span><span class="co">## <span style="color: #949494;"># ℹ 5 more variables: mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, cor_temporal_means &lt;dbl&gt;,</span></span></span>
+<span><span class="co">## <span style="color: #949494;">#   mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span></code></pre>
 </div>
 <div class="section level3">
 <h3 id="available-methods">Available Methods<a class="anchor" aria-label="anchor" href="#available-methods"></a>
@@ -238,31 +233,31 @@ activity</li>
 <p>Feature-Based RSA supports multiple analysis methods:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Sparse Canonical Correlation Analysis (SCCA)</strong>:
-<ul>
-<li>Finds canonical correlations between neural patterns and
-features</li>
-<li>Useful when features may be correlated</li>
-</ul>
-</li>
-<li>
 <strong>Partial Least Squares (PLS)</strong>:
 <ul>
-<li>Projects data to maximize covariance with features</li>
-<li>Good for high-dimensional feature spaces</li>
+<li>Finds latent components that maximize covariance between neural
+patterns and features</li>
+<li>Good for prediction when features are highly correlated</li>
 </ul>
 </li>
 <li>
-<strong>PCA Regression</strong>:
+<strong>Principal Component Analysis (PCA)</strong>:
 <ul>
-<li>Reduces neural patterns via PCA then predicts features</li>
-<li>Useful for very high-dimensional neural data</li>
+<li>Uses PCA on features followed by regression</li>
+<li>Good for dimensionality reduction with clear interpretability</li>
+</ul>
+</li>
+<li>
+<strong>GLMNet (Elastic Net)</strong>:
+<ul>
+<li>Elastic net regression with L1 and L2 regularization</li>
+<li>Useful for feature selection and handling correlated features</li>
 </ul>
 </li>
 </ol>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Compare different methods</span></span>
-<span><span class="va">methods</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"scca"</span>, <span class="st">"pca"</span><span class="op">)</span> <span class="co">## pls is not implemented yet</span></span>
+<span><span class="va">methods</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pls"</span>, <span class="st">"pca"</span>, <span class="st">"glmnet"</span><span class="op">)</span></span>
 <span><span class="va">results_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">methods</span>, <span class="kw">function</span><span class="op">(</span><span class="va">method</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_rsa_model.html">feature_rsa_model</a></span><span class="op">(</span></span>
 <span>    dataset <span class="op">=</span> <span class="va">dset</span>,</span>
@@ -270,47 +265,635 @@ features</li>
 <span>    method <span class="op">=</span> <span class="va">method</span>,</span>
 <span>    crossval <span class="op">=</span> <span class="va">crossval</span>  <span class="co"># Add cross-validation</span></span>
 <span>  <span class="op">)</span></span>
-<span>  <span class="fu"><a href="../reference/run_regional.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">region_mask</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Error in value[[3L]](cond) : </span></span>
-<span><span class="co">##   SCCA error: there is no package called 'whitening'</span></span>
-<span><span class="co">## Error in value[[3L]](cond) : </span></span>
-<span><span class="co">##   SCCA error: there is no package called 'whitening'</span></span>
-<span><span class="co">## Error in value[[3L]](cond) : </span></span>
-<span><span class="co">##   SCCA error: there is no package called 'whitening'</span></span>
-<span><span class="co">## INFO [2025-03-20 21:30:41] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-27 21:39:52] </span></span>
+<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
+<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
+<span><span class="co">## INFO [2025-09-27 21:39:55] </span></span>
+<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
+<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:55] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:55] Correlation difference is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:55] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:55] Correlation difference is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:56] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:56] Correlation difference is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:56] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:56] Correlation difference is NA/NaN.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## WARN [2025-09-27 21:39:57] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:57] Correlation difference is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:57] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:57] Correlation difference is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:57] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:57] Correlation difference is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:57] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:57] Correlation difference is NA/NaN.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## WARN [2025-09-27 21:39:58] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:58] Correlation difference is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:58] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:58] Correlation difference is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:59] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:59] Correlation difference is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:59] Mean correlation is NA/NaN.</span></span>
+<span><span class="co">## WARN [2025-09-27 21:39:59] Correlation difference is NA/NaN.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in evaluate_model.feature_rsa_model(object = obj, predicted = Xpred, :</span></span>
+<span><span class="co">## evaluate_model: Predictions or observed data have zero variance in some</span></span>
+<span><span class="co">## columns. Correlation metrics may be NA.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(predicted, observed): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(mean_obs_across_space, mean_pred_across_space): the standard</span></span>
+<span><span class="co">## deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span>
+<span><span class="co">## Warning in cor(observed[, i], predicted[, i]): the standard deviation is zero</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-27 21:39:59] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
-<pre><code><span><span class="co">## Warning: Performance matrix is empty or invalid. Returning empty results.</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-03-20 21:30:42] </span></span>
-<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
-<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb62"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Compare performance</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">methods</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nMethod:"</span>, <span class="va">methods</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_list</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Method: scca </span></span>
-<span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 1</span></span></span>
-<span><span class="co">##   roinum</span></span>
-<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1</span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2</span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3</span></span>
+<span><span class="co">## Method: pls </span></span>
+<span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
+<span><span class="co">##   roinum mean_correlation cor_difference mean_rank_percentile voxel_correlation</span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1          -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">2</span>        -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">6</span>                0.399          -<span style="color: #BB0000;">0.005</span><span style="color: #BB0000; text-decoration: underline;">15</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2          -<span style="color: #BB0000;">0.109</span>         -<span style="color: #BB0000;">0.112</span>                 0.314          -<span style="color: #BB0000;">0.059</span><span style="color: #BB0000; text-decoration: underline;">3</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3          -<span style="color: #BB0000;">0.069</span><span style="color: #BB0000; text-decoration: underline;">3</span>        -<span style="color: #BB0000;">0.068</span><span style="color: #BB0000; text-decoration: underline;">7</span>                0.383          -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">89</span></span></span>
+<span><span class="co">## <span style="color: #949494;"># ℹ 5 more variables: mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, cor_temporal_means &lt;dbl&gt;,</span></span></span>
+<span><span class="co">## <span style="color: #949494;">#   mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## Method: pca </span></span>
-<span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 6</span></span></span>
-<span><span class="co">##   roinum mean_correlation spatial_specificity voxel_correlation   mse r_squared</span></span>
-<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1          -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">2</span>             -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">6</span>          -<span style="color: #BB0000;">0.005</span><span style="color: #BB0000; text-decoration: underline;">15</span>  1.13    -<span style="color: #BB0000;">0.183</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2          -<span style="color: #BB0000;">0.109</span>              -<span style="color: #BB0000;">0.112</span>           -<span style="color: #BB0000;">0.059</span><span style="color: #BB0000; text-decoration: underline;">3</span>   1.18    -<span style="color: #BB0000;">0.215</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3          -<span style="color: #BB0000;">0.069</span><span style="color: #BB0000; text-decoration: underline;">3</span>             -<span style="color: #BB0000;">0.068</span><span style="color: #BB0000; text-decoration: underline;">7</span>          -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">89</span>  1.18    -<span style="color: #BB0000;">0.184</span></span></span></code></pre>
+<span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
+<span><span class="co">##   roinum mean_correlation cor_difference mean_rank_percentile voxel_correlation</span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1          -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">2</span>        -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">6</span>                0.399          -<span style="color: #BB0000;">0.005</span><span style="color: #BB0000; text-decoration: underline;">15</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2          -<span style="color: #BB0000;">0.109</span>         -<span style="color: #BB0000;">0.112</span>                 0.314          -<span style="color: #BB0000;">0.059</span><span style="color: #BB0000; text-decoration: underline;">3</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3          -<span style="color: #BB0000;">0.069</span><span style="color: #BB0000; text-decoration: underline;">3</span>        -<span style="color: #BB0000;">0.068</span><span style="color: #BB0000; text-decoration: underline;">7</span>                0.383          -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">89</span></span></span>
+<span><span class="co">## <span style="color: #949494;"># ℹ 5 more variables: mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, cor_temporal_means &lt;dbl&gt;,</span></span></span>
+<span><span class="co">## <span style="color: #949494;">#   mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Method: glmnet </span></span>
+<span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
+<span><span class="co">##   roinum mean_correlation cor_difference mean_rank_percentile voxel_correlation</span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1           -<span style="color: #BB0000;">0.236</span>         -<span style="color: #BB0000;">0.237</span>               0.085<span style="text-decoration: underline;">0</span>           -<span style="color: #BB0000;">0.058</span><span style="color: #BB0000; text-decoration: underline;">0</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2           -<span style="color: #BB0000;">0.215</span>         -<span style="color: #BB0000;">0.211</span>               0.107            -<span style="color: #BB0000;">0.024</span><span style="color: #BB0000; text-decoration: underline;">5</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3           -<span style="color: #BB0000;">0.208</span>         -<span style="color: #BB0000;">0.200</span>               0.106            -<span style="color: #BB0000;">0.011</span><span style="color: #BB0000; text-decoration: underline;">7</span></span></span>
+<span><span class="co">## <span style="color: #949494;"># ℹ 5 more variables: mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, cor_temporal_means &lt;dbl&gt;,</span></span></span>
+<span><span class="co">## <span style="color: #949494;">#   mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
@@ -359,7 +942,7 @@ efficiently handle block structure.</p>
 <div class="section level3">
 <h3 id="implementation-example-1">Implementation Example<a class="anchor" aria-label="anchor" href="#implementation-example-1"></a>
 </h3>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb64"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create distance matrix for stimuli</span></span>
 <span><span class="va">stim_distances</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/dist.html" class="external-link">dist</a></span><span class="op">(</span><span class="va">feature_matrix</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">stim_distances</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">stim_labels</span></span>
@@ -383,22 +966,27 @@ efficiently handle block structure.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Run analysis</span></span>
-<span><span class="va">results_vector</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional.html">run_regional</a></span><span class="op">(</span><span class="va">vector_model</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-03-20 21:30:43] </span></span>
+<span><span class="va">results_vector</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">vector_model</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## INFO [2025-09-27 21:40:02] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb66"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Examine results</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_vector</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 0 × 0</span></span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
+<span><span class="co">##   roinum rsa_score</span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1  0.009<span style="text-decoration: underline;">48</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2 -<span style="color: #BB0000;">0.046</span><span style="color: #BB0000; text-decoration: underline;">7</span>  </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3  0.000<span style="text-decoration: underline;">723</span></span></span></code></pre>
 </div>
 <div class="section level3">
 <h3 id="efficient-block-handling">Efficient Block Handling<a class="anchor" aria-label="anchor" href="#efficient-block-handling"></a>
 </h3>
 <p>Vector-Based RSA automatically handles block structure:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb68"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Compare with different block structures</span></span>
 <span><span class="va">block_sizes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="va">results_blocks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">block_sizes</span>, <span class="kw">function</span><span class="op">(</span><span class="va">size</span><span class="op">)</span> <span class="op">{</span></span>
@@ -413,19 +1001,19 @@ efficiently handle block structure.</p>
 <span>    design <span class="op">=</span> <span class="va">design</span>,</span>
 <span>    distfun <span class="op">=</span> <span class="fu"><a href="../reference/distance-constructors.html">cordist</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
-<span>  <span class="fu"><a href="../reference/run_regional.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">region_mask</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-03-20 21:30:43] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-27 21:40:05] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-03-20 21:30:44] </span></span>
+<span><span class="co">## INFO [2025-09-27 21:40:08] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb70"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Compare results</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">block_sizes</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nBlock size:"</span>, <span class="va">block_sizes</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>, <span class="st">"\n"</span><span class="op">)</span></span>
@@ -433,10 +1021,20 @@ efficiently handle block structure.</p>
 <span><span class="op">}</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Block size: 5 </span></span>
-<span><span class="co">## <span style="color: #949494;"># A tibble: 0 × 0</span></span></span>
+<span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
+<span><span class="co">##   roinum rsa_score</span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1  -<span style="color: #BB0000;">0.018</span><span style="color: #BB0000; text-decoration: underline;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2  -<span style="color: #BB0000;">0.045</span><span style="color: #BB0000; text-decoration: underline;">0</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3   0.003<span style="text-decoration: underline;">23</span></span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## Block size: 10 </span></span>
-<span><span class="co">## <span style="color: #949494;"># A tibble: 0 × 0</span></span></span></code></pre>
+<span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
+<span><span class="co">##   roinum rsa_score</span></span>
+<span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1  -<span style="color: #BB0000;">0.019</span><span style="color: #BB0000; text-decoration: underline;">2</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2  -<span style="color: #BB0000;">0.037</span><span style="color: #BB0000; text-decoration: underline;">7</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3   0.005<span style="text-decoration: underline;">19</span></span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
@@ -507,7 +1105,7 @@ patterns.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
 </div>
 
     </footer>

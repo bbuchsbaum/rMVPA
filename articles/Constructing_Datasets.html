@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-03-20</h4>
+            <h4 data-toc-skip class="date">2025-09-27</h4>
       
 
       <div class="d-none name"><code>Constructing_Datasets.Rmd</code></div>
@@ -98,7 +98,8 @@ corresponding 3D brain mask file (“mask.nii.gz”).</p>
 corresponding to the number of vertices and the number of
 observations.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/neurosurf" class="external-link">neurosurf</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co">## remotes::install_github("bbuchsbaum/neurosurf")</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/neurosurf" class="external-link">neurosurf</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Load the cortical geometry</span></span>
 <span><span class="va">geom</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/neurosurf/man/read_surf_geometry.html" class="external-link">read_surf_geometry</a></span><span class="op">(</span><span class="st">"path/to/subject.lh.smoothwm.asc"</span><span class="op">)</span></span>
@@ -108,7 +109,7 @@ observations.</p>
 <span><span class="va">data_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="st">"path/to/surface_data.csv"</span>, header <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Verify that the number of rows in the data matches the geometry</span></span>
-<span><span class="va">nvert</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="fu">neurosurf</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/neurosurf/man/vertices.html" class="external-link">vertices</a></span><span class="op">(</span><span class="va">geom</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">nvert</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="fu">neurosurf</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/neurosurf/man/vertices-methods.html" class="external-link">vertices</a></span><span class="op">(</span><span class="va">geom</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">data_matrix</span><span class="op">)</span> <span class="op">!=</span> <span class="va">nvert</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"The number of vertices in the data does not match the geometry."</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
@@ -145,7 +146,7 @@ before running the code.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
 </div>
 
     </footer>
