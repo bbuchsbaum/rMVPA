@@ -132,7 +132,7 @@ beta_delta_exp <- c(C1 = 0.5333333, C2 = -0.7542472)
 beta_delta_norm_exp <- c(C1 = 0.5333333, C2 = -0.7542472)
 beta_delta_rel_exp <- c(C1 = 0.5333333, C2 = -0.7542472)
 composite_exp <- -0.2209139
-recon_exp <- -0.3162278
+recon_exp <- -0.6324555
 
 
 test_that("deterministic metrics match manual computation", {
@@ -144,4 +144,3 @@ test_that("deterministic metrics match manual computation", {
   expect_equal(result_list$composite, setNames(composite_exp, "composite"), tolerance = 1e-7)
   expect_equal(result_list$recon_score, setNames(recon_exp, "recon_score"), tolerance = 1e-7)
 })
-

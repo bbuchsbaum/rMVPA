@@ -47,7 +47,7 @@ generate_crossval_samples <- function(mspec, roi) {
 #' @noRd
 #' @keywords internal
 handle_model_training_error <- function(result, id, ytest) {
-  futile.logger::flog.warn("⚠ Model %s fitting error: %s", 
+  futile.logger::flog.warn("Model %s fitting error: %s", 
                           crayon::blue(id), 
                           crayon::red(attr(result, "condition")$message))
   emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
@@ -371,7 +371,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
   setup_mvpa_logger()
   
   if (length(vox_list) == 0) {
-    futile.logger::flog.warn("⚠ Empty voxel list provided. No analysis to perform.")
+    futile.logger::flog.warn("Empty voxel list provided. No analysis to perform.")
     return(tibble::tibble())
   }
 
@@ -402,7 +402,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
       tryCatch({
         if (verbose) {
           batch_size_current <- length(batch_ids[[i]])
-          futile.logger::flog.info("⚡ Processing batch %s/%s (%s ROIs in this batch)", 
+          futile.logger::flog.info("Processing batch %s/%s (%s ROIs in this batch)", 
                                   crayon::blue(i), 
                                   crayon::blue(nbatches),
                                   crayon::green(batch_size_current))
@@ -452,7 +452,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
         } else {
           skipped_rois <- skipped_rois + length(batch_ids[[i]])
           futile.logger::flog.warn("%s Batch %s: All ROIs filtered out (size < 2 voxels)", 
-                                  crayon::yellow("⚠"),
+                                  crayon::yellow("!"),
                                   crayon::blue(i))
           results[[i]] <- tibble::tibble(
             result = list(NULL),
@@ -473,7 +473,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     }
     
     # Final summary log
-    futile.logger::flog.info("\n✨ MVPA Iteration Complete\n├─ Total ROIs: %s\n├─ Processed: %s\n└─ Skipped: %s",
+    futile.logger::flog.info("\nMVPA Iteration Complete\n- Total ROIs: %s\n- Processed: %s\n- Skipped: %s",
                             crayon::blue(tot),
                             crayon::blue(processed_rois),
                             crayon::yellow(skipped_rois))
@@ -575,7 +575,6 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analys
 
   results %>% dplyr::bind_rows()
 }
-
 
 
 

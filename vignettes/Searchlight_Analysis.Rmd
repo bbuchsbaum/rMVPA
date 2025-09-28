@@ -37,6 +37,9 @@ safe_plot_hist <- function(x, title = "Histogram", bins = 30) {
     message(smry)
   }
 }
+
+# Light build mode for pkgdown to avoid long-running chunks
+light_build <- identical(Sys.getenv("IN_PKGDOWN"), "true")
 ```
 
 ### Simulated data
@@ -74,12 +77,12 @@ model
 
 `run_searchlight()` returns image volumes with performance metrics at each sphere center. For two‑class problems we report cross‑validated accuracy and AUC (centered at 0 by subtracting 0.5). The `radius` is in millimeters; `method = "standard"` evaluates one model per sphere centered on each voxel.
 
-```{r}
+```{r, eval=!light_build}
 result <- run_searchlight(model, radius=4, method="standard")
 result
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=!light_build}
 if (!is.null(result$results$AUC)) {
   auc_vals <- as.numeric(neuroim2::values(result$results$AUC))
   auc_vals <- auc_vals[is.finite(auc_vals)]
@@ -91,12 +94,12 @@ if (!is.null(result$results$AUC)) {
 
 The randomized variant samples non‑overlapping spheres and propagates each sphere’s score to all voxels it covers. Repeating this for `niter` exhaustive passes yields, at each voxel, the average performance across the spheres that included it. This can improve spatial localization and often reduces computation, since the number of models scales with `nvoxels / radius × niter` rather than the total number of voxels.
 
-```{r}
+```{r, eval=!light_build}
 result <- run_searchlight(model, radius=4, method="randomized", niter=8)
 result
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=!light_build}
 if (!is.null(result$results$AUC)) {
   auc_vals <- as.numeric(neuroim2::values(result$results$AUC))
   auc_vals <- auc_vals[is.finite(auc_vals)]
@@ -117,7 +120,7 @@ result_svm <- run_searchlight(model, radius=4, method="randomized", niter=2)
 
 For random forests, you can either fix `mtry` or tune it over a small grid. Tuning quickly becomes expensive in whole‑brain analyses, so `sda_notune` is often a good default when compute is limited.
 
-```{r}
+```{r, eval=!light_build}
 if (requireNamespace("randomForest", quietly = TRUE)) {
   rf_model <- load_model("rf")
   model <- mvpa_model(model = rf_model, dataset = dataset$dataset, design = dataset$design,
@@ -129,7 +132,7 @@ if (requireNamespace("randomForest", quietly = TRUE)) {
 }
 ```
 
-```{r, message=FALSE, warning=FALSE}
+```{r, message=FALSE, warning=FALSE, eval=!light_build}
 if (requireNamespace("randomForest", quietly = TRUE)) {
   grid <- data.frame(mtry = c(2, 4, 6, 8))
   model2 <- mvpa_model(model = rf_model, dataset = dataset$dataset, design = dataset$design,

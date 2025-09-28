@@ -18,8 +18,11 @@ nresponses.mvpa_design <- function(x) {
   }
 }
 
+#' Does the design include a test set?
+#'
+#' @inheritParams has_test_set
+#' @rdname has_test_set-methods
 #' @export
-#' has_test_set check for mvpa_design
 has_test_set.mvpa_design <- function(obj) {
   !is.null(obj$y_test)
 }
@@ -237,26 +240,26 @@ print.rsa_design <- function(x, ...) {
   var_style <- crayon::blue
   
   # Print header
-  cat("\n", header_style("█▀▀ RSA Design ▀▀█"), "\n\n")
+  cat("\n", header_style("RSA Design"), "\n\n")
   
   # Formula section
-  cat(section_style("├─ Formula"), "\n")
-  cat(info_style("│  └─ "), formula_style(deparse(x$formula)), "\n")
+  cat(section_style("- Formula"), "\n")
+  cat(info_style("  - "), formula_style(deparse(x$formula)), "\n")
   
   # Variables section
-  cat(section_style("├─ Variables"), "\n")
-  cat(info_style("│  └─ "), var_style(paste(names(x$data), collapse=", ")), "\n")
+  cat(section_style("- Variables"), "\n")
+  cat(info_style("  - "), var_style(paste(names(x$data), collapse=", ")), "\n")
   
   # Block information
-  cat(section_style("└─ Structure"), "\n")
+  cat(section_style("- Structure"), "\n")
   if (!is.null(x$block_var)) {
     blocks <- table(x$block_var)
-    cat(info_style("   ├─ Blocking: "), "Present\n")
-    cat(info_style("   ├─ Number of Blocks: "), crayon::green(length(blocks)), "\n")
-    cat(info_style("   └─ Block Sizes: "), 
+    cat(info_style("  - Blocking: "), "Present\n")
+    cat(info_style("  - Number of Blocks: "), crayon::green(length(blocks)), "\n")
+    cat(info_style("  - Block Sizes: "), 
         crayon::green(paste0(names(blocks), ": ", blocks, collapse=", ")), "\n")
   } else {
-    cat(info_style("   └─ Blocking: "), crayon::red("None"), "\n")
+    cat(info_style("  - Blocking: "), crayon::red("None"), "\n")
   }
   cat("\n")
 }
@@ -278,67 +281,64 @@ print.mvpa_design <- function(x, ...) {
   stat_style <- crayon::italic$white
   
   # Print header
-  cat("\n", header_style("█▀▀ MVPA Design ▀▀█"), "\n\n")
+  cat("\n", header_style("MVPA Design"), "\n\n")
   
   # Training section
-  cat(section_style("├─ Training Data"), "\n")
-  cat(info_style("│  ├─ Observations: "), number_style(format(length(x$y_train), big.mark=",")), "\n")
+  cat(section_style("- Training Data"), "\n")
+  cat(info_style("  - Observations: "), number_style(format(length(x$y_train), big.mark=",")), "\n")
   
   if (is.factor(x$y_train)) {
-    cat(info_style("│  ├─ Response Type: "), "Factor\n")
-    cat(info_style("│  ├─ Levels: "), level_style(paste(levels(x$y_train), collapse=", ")), "\n")
+    cat(info_style("  - Response Type: "), "Factor\n")
+    cat(info_style("  - Levels: "), level_style(paste(levels(x$y_train), collapse=", ")), "\n")
     level_counts <- table(x$y_train)
-    cat(info_style("│  └─ Class Distribution: "), 
+    cat(info_style("  - Class Distribution: "), 
         number_style(paste0(names(level_counts), ": ", level_counts, collapse=", ")), "\n")
   } else {
-    cat(info_style("│  ├─ Response Type: "), "Numeric\n")
-    cat(info_style("│  └─ Range: "), 
+    cat(info_style("  - Response Type: "), "Numeric\n")
+    cat(info_style("  - Range: "), 
         number_style(sprintf("[%.2f, %.2f]", min(x$y_train), max(x$y_train))), "\n")
   }
   
   # Test data section
-  cat(section_style("├─ Test Data"), "\n")
+  cat(section_style("- Test Data"), "\n")
   if (!is.null(x$y_test)) {
-    cat(info_style("│  ├─ Observations: "), number_style(format(length(x$y_test), big.mark=",")), "\n")
+    cat(info_style("  - Observations: "), number_style(format(length(x$y_test), big.mark=",")), "\n")
     if (is.factor(x$y_test)) {
       test_counts <- table(x$y_test)
-      cat(info_style("│  └─ Class Distribution: "), 
+      cat(info_style("  - Class Distribution: "), 
           number_style(paste0(names(test_counts), ": ", test_counts, collapse=", ")), "\n")
     } else {
-      cat(info_style("│  └─ Range: "), 
-          number_style(sprintf("[%.2f, %.2f]", min(x$y_test), max(x$y_test))), "\n")
-    }
+    cat(info_style("  - Range: "), 
+        number_style(sprintf("[%.2f, %.2f]", min(x$y_test), max(x$y_test))), "\n")
+  }
   } else {
-    cat(info_style("│  └─ "), crayon::red("None"), "\n")
+    cat(info_style("  - "), crayon::red("None"), "\n")
   }
   
   # Structure section
-  cat(section_style("└─ Structure"), "\n")
+  cat(section_style("- Structure"), "\n")
   
   # Block variable info
   if (!is.null(x$block_var)) {
     blocks <- table(x$block_var)
-    cat(info_style("   ├─ Blocking: "), "Present\n")
-    cat(info_style("   ├─ Number of Blocks: "), number_style(length(blocks)), "\n")
-    cat(info_style("   ├─ Mean Block Size: "), 
+    cat(info_style("  - Blocking: "), "Present\n")
+    cat(info_style("  - Number of Blocks: "), number_style(length(blocks)), "\n")
+    cat(info_style("  - Mean Block Size: "), 
         number_style(format(mean(blocks), digits=2)),
         stat_style(" (SD: "),
         number_style(format(sd(blocks), digits=2)),
         stat_style(")"), "\n")
   } else {
-    cat(info_style("   ├─ Blocking: "), crayon::red("None"), "\n")
+    cat(info_style("  - Blocking: "), crayon::red("None"), "\n")
   }
   
   # Split information
   if (!is.null(x$split_by)) {
     split_info <- table(x$split_by)
-    cat(info_style("   └─ Split Groups: "), 
+    cat(info_style("  - Split Groups: "), 
         number_style(paste0(names(split_info), ": ", split_info, collapse=", ")), "\n")
   } else {
-    cat(info_style("   └─ Split Groups: "), crayon::red("None"), "\n")
+    cat(info_style("  - Split Groups: "), crayon::red("None"), "\n")
   }
   cat("\n")
 }
-
-
-

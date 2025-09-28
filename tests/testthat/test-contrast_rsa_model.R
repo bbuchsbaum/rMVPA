@@ -152,10 +152,14 @@ test_that("contrast_rsa_model constructor validates parameters via match.arg", {
   ms_des <- mock_msreve_design()
   
   # Corrected regex based on typical match.arg output
-  expect_error(contrast_rsa_model(dset, ms_des, estimation_method = "wrong"),
-               regexp = "'arg' should be one of .*“average”, “L2_norm”, “crossnobis”")
-  expect_error(contrast_rsa_model(dset, ms_des, regression_type = "wrong"),
-               regexp = "'arg' should be one of .*“pearson”, “spearman”, “lm”, “rfit”, “ridge_hkb”")
+  expect_error(
+    contrast_rsa_model(dset, ms_des, estimation_method = "wrong"),
+    regexp = "'arg' should be one of .*average.*L2_norm.*crossnobis"
+  )
+  expect_error(
+    contrast_rsa_model(dset, ms_des, regression_type = "wrong"),
+    regexp = "'arg' should be one of .*pearson.*spearman.*lm.*rfit.*ridge_hkb"
+  )
   expect_error(contrast_rsa_model(dset, ms_des, output_metric = "wrong"),
                regexp = "`output_metric` must be a character vector containing only allowed metrics")
   expect_error(contrast_rsa_model(dset, ms_des, output_metric = c("beta_delta", "wrong_metric")),

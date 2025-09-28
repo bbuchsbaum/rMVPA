@@ -556,31 +556,32 @@ kfold_cross_validation <- function(len, nfolds=10) {
 # }
 
 #' @export
-#' @rdname crossval_samples-methods
+#' @rdname crossval_samples
 crossval_samples.sequential_blocked_cross_validation <- function(obj, data, y,...) {
   crossv_seq_block(data, y, nfolds=obj$nfolds, block_var=obj$block_var, nreps=obj$nreps, block_ind=obj$block_ind)
 }
 
 #' @export
-#' @rdname crossval_samples-methods
+#' @rdname crossval_samples
 crossval_samples.kfold_cross_validation <- function(obj, data,y,...) {
   crossv_k(data, y, obj$nfolds)
 }
 
 #' @export
-#' @rdname crossval_samples-methods
+#' @rdname crossval_samples
 crossval_samples.blocked_cross_validation <- function(obj, data, y,...) {
   crossv_block(data, y, obj$block_var)
 }
 
 #' @export
-#' @rdname crossval_samples-methods
+#' @rdname crossval_samples
 crossval_samples.bootstrap_blocked_cross_validation <- function(obj, data, y,...) {
   crossv_bootstrap_block(data, y, block_var=obj$block_var, nreps=obj$nreps, weights=obj$weights)
 }
 
 #' @export
-#' @rdname crossval_samples-methods
+#' @rdname crossval_samples
+#' @param id Column name used for the fold identifier column in the returned tibble.
 #' @importFrom modelr resample
 crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id",...) {
   fold <- function(train, test) {
@@ -599,7 +600,7 @@ crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id",..
 }
 
 #' @export
-#' @rdname crossval_samples-methods
+#' @rdname crossval_samples
 crossval_samples.twofold_blocked_cross_validation <- function(obj, data, y,...) {
   crossv_twofold(data, y, obj$block_var, obj$block_ind, nreps=obj$nreps)
 }
@@ -621,23 +622,23 @@ print.blocked_cross_validation <- function(x, ...) {
   stat_style <- crayon::italic$blue
   
   # Print header
-  cat("\n", header_style("█▀▀ Blocked Cross-Validation ▀▀█"), "\n\n")
+  cat("\n", header_style("Blocked Cross-Validation"), "\n\n")
   
   # Basic information
-  cat(section_style("├─ Dataset Information"), "\n")
-  cat(info_style("│  ├─ Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
-  cat(info_style("│  └─ Number of Folds: "), number_style(x$nfolds), "\n")
+  cat(section_style("- Dataset Information"), "\n")
+  cat(info_style("  - Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
+  cat(info_style("  - Number of Folds: "), number_style(x$nfolds), "\n")
   
   # Block statistics
   block_sizes <- table(x$block_var)
-  cat(section_style("└─ Block Information"), "\n")
-  cat(info_style("   ├─ Total Blocks: "), number_style(length(block_sizes)), "\n")
-  cat(info_style("   ├─ Mean Block Size: "), 
+  cat(section_style("- Block Information"), "\n")
+  cat(info_style("  - Total Blocks: "), number_style(length(block_sizes)), "\n")
+  cat(info_style("  - Mean Block Size: "), 
       number_style(format(mean(block_sizes), digits=2)), 
       stat_style(" (SD: "), 
       number_style(format(sd(block_sizes), digits=2)),
       stat_style(")"), "\n")
-  cat(info_style("   └─ Block Sizes: "), 
+  cat(info_style("  - Block Sizes: "), 
       number_style(paste0(names(block_sizes), ": ", block_sizes, collapse=", ")), "\n\n")
 }
 
@@ -657,24 +658,24 @@ print.twofold_blocked_cross_validation <- function(x, ...) {
   stat_style <- crayon::italic$blue
   
   # Print header
-  cat("\n", header_style("█▀▀ Two-Fold Blocked Cross-Validation ▀▀█"), "\n\n")
+  cat("\n", header_style("Two-Fold Blocked Cross-Validation"), "\n\n")
   
   # Basic information
-  cat(section_style("├─ Configuration"), "\n")
-  cat(info_style("│  ├─ Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
-  cat(info_style("│  ├─ Number of Folds: "), number_style("2"), "\n")
-  cat(info_style("│  └─ Repetitions: "), number_style(x$nreps), "\n")
+  cat(section_style("- Configuration"), "\n")
+  cat(info_style("  - Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
+  cat(info_style("  - Number of Folds: "), number_style("2"), "\n")
+  cat(info_style("  - Repetitions: "), number_style(x$nreps), "\n")
   
   # Block statistics
   block_sizes <- table(x$block_var)
-  cat(section_style("└─ Block Information"), "\n")
-  cat(info_style("   ├─ Total Blocks: "), number_style(length(block_sizes)), "\n")
-  cat(info_style("   ├─ Mean Block Size: "), 
+  cat(section_style("- Block Information"), "\n")
+  cat(info_style("  - Total Blocks: "), number_style(length(block_sizes)), "\n")
+  cat(info_style("  - Mean Block Size: "), 
       number_style(format(mean(block_sizes), digits=2)), 
       stat_style(" (SD: "), 
       number_style(format(sd(block_sizes), digits=2)),
       stat_style(")"), "\n")
-  cat(info_style("   └─ Block Sizes: "), 
+  cat(info_style("  - Block Sizes: "), 
       number_style(paste0(names(block_sizes), ": ", block_sizes, collapse=", ")), "\n\n")
 }
 
@@ -694,38 +695,38 @@ print.bootstrap_blocked_cross_validation <- function(x, ...) {
   stat_style <- crayon::italic$blue
   
   # Print header
-  cat("\n", header_style("█▀▀ Bootstrap Blocked Cross-Validation ▀▀█"), "\n\n")
+  cat("\n", header_style("Bootstrap Blocked Cross-Validation"), "\n\n")
   
   # Basic information
-  cat(section_style("├─ Configuration"), "\n")
-  cat(info_style("│  ├─ Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
-  cat(info_style("│  └─ Bootstrap Repetitions: "), number_style(x$nreps), "\n")
+  cat(section_style("- Configuration"), "\n")
+  cat(info_style("  - Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
+  cat(info_style("  - Bootstrap Repetitions: "), number_style(x$nreps), "\n")
   
   # Block statistics
   block_sizes <- table(x$block_var)
-  cat(section_style("├─ Block Information"), "\n")
-  cat(info_style("│  ├─ Total Blocks: "), number_style(length(block_sizes)), "\n")
-  cat(info_style("│  ├─ Mean Block Size: "), 
+  cat(section_style("- Block Information"), "\n")
+  cat(info_style("  - Total Blocks: "), number_style(length(block_sizes)), "\n")
+  cat(info_style("  - Mean Block Size: "), 
       number_style(format(mean(block_sizes), digits=2)), 
       stat_style(" (SD: "), 
       number_style(format(sd(block_sizes), digits=2)),
       stat_style(")"), "\n")
-  cat(info_style("│  └─ Block Sizes: "), 
+  cat(info_style("  - Block Sizes: "), 
       number_style(paste0(names(block_sizes), ": ", block_sizes, collapse=", ")), "\n")
   
   # Weight information if present
-  cat(section_style("└─ Sampling Weights"), "\n")
+  cat(section_style("- Sampling Weights"), "\n")
   if (!is.null(x$weights)) {
-    cat(info_style("   ├─ Status: "), crayon::green("Present"), "\n")
-    cat(info_style("   ├─ Range: "), 
+    cat(info_style("  - Status: "), crayon::green("Present"), "\n")
+    cat(info_style("  - Range: "), 
         number_style(sprintf("[%.3f, %.3f]", min(x$weights), max(x$weights))), "\n")
-    cat(info_style("   └─ Non-zero Weights: "), 
+    cat(info_style("  - Non-zero Weights: "), 
         number_style(sum(x$weights > 0)), 
         stat_style(" ("), 
         number_style(sprintf("%.1f%%", 100*mean(x$weights > 0))),
         stat_style(")"), "\n\n")
   } else {
-    cat(info_style("   └─ Status: "), crayon::red("None"), " (uniform sampling)\n\n")
+    cat(info_style("  - Status: "), crayon::red("None"), " (uniform sampling)\n\n")
   }
 }
 
@@ -745,22 +746,22 @@ print.kfold_cross_validation <- function(x, ...) {
   stat_style <- crayon::italic$blue
   
   # Print header
-  cat("\n", header_style("█▀▀ K-Fold Cross-Validation ▀▀█"), "\n\n")
+  cat("\n", header_style("K-Fold Cross-Validation"), "\n\n")
   
   # Basic information
-  cat(section_style("├─ Configuration"), "\n")
-  cat(info_style("│  ├─ Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
-  cat(info_style("│  ├─ Number of Folds: "), number_style(x$nfolds), "\n")
+  cat(section_style("- Configuration"), "\n")
+  cat(info_style("  - Observations: "), number_style(format(length(x$block_var), big.mark=",")), "\n")
+  cat(info_style("  - Number of Folds: "), number_style(x$nfolds), "\n")
   
   # Fold statistics
   fold_sizes <- table(x$block_var)
-  cat(section_style("└─ Fold Information"), "\n")
-  cat(info_style("   ├─ Mean Fold Size: "), 
+  cat(section_style("- Fold Information"), "\n")
+  cat(info_style("  - Mean Fold Size: "), 
       number_style(format(mean(fold_sizes), digits=2)), 
       stat_style(" (SD: "), 
       number_style(format(sd(fold_sizes), digits=2)),
       stat_style(")"), "\n")
-  cat(info_style("   └─ Fold Sizes: "), 
+  cat(info_style("  - Fold Sizes: "), 
       number_style(paste0("Fold ", names(fold_sizes), ": ", fold_sizes, collapse=", ")), 
       "\n\n")
 }
@@ -900,4 +901,3 @@ train_indices.custom_cross_validation <- function(obj, fold_num, ...) {
   }
   obj$sample_set[[fold_num]]$train
 }
-

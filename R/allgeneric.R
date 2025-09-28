@@ -68,6 +68,7 @@ select_features <- function(obj, X, Y, ...) {
 #' @param obj The result object to be formatted.
 #' @param result The result object to be formatted.
 #' @param error_message An optional error message.
+#' @param context Optional contextual metadata (e.g., ROI details) supplied to method implementations.
 #' @param ... Additional arguments to be passed to the method-specific function.
 #'
 #' @examples
@@ -846,14 +847,14 @@ run_regional <- function(model_spec, region_mask, ...) {
   UseMethod("run_regional")
 }
 
-#' crossval_samples
+#' Cross-validation samples
 #'
 #' Apply a cross-validation scheme to split the data into training and testing sets.
 #'
 #' @param obj A cross-validation control object.
 #' @param data A data frame containing the predictors.
 #' @param y A vector containing the response variable.
-#' @param ... Extra arguments passed to the specific cross-validation methods.
+#' @param ... Extra arguments passed to the specific cross-validation methods (e.g., `id` for custom cross-validation).
 #'
 #' @return A tibble containing training and testing sets for each fold.
 #'
@@ -928,4 +929,16 @@ train_indices <- function(obj, fold_num, ...) {
 }
 
 
-
+#' Data sample
+#'
+#' Construct a light-weight data sample descriptor for a set of features (e.g., voxels)
+#' associated with a dataset. Methods define how to interpret and convert this descriptor.
+#'
+#' @param obj An object (typically a dataset) from which to draw a sample.
+#' @param vox The feature indices or coordinates defining the sample.
+#' @param ... Additional arguments passed to methods.
+#'
+#' @return An object of class `data_sample` describing the sample; methods provide
+#'   conversions to ROI structures or data frames as needed.
+#' @name data_sample
+NULL

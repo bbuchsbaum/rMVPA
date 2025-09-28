@@ -18,13 +18,13 @@
 
 \method{merge_results}{mvpa_model}(obj, result_set, indices, id, ...)
 
-\method{merge_results}{binary_classification_result}(x, ...)
+\method{merge_results}{binary_classification_result}(obj, ...)
 
-\method{merge_results}{regression_result}(x, ...)
+\method{merge_results}{regression_result}(obj, ...)
 
-\method{merge_results}{multiway_classification_result}(x, ...)
+\method{merge_results}{multiway_classification_result}(obj, ...)
 
-\method{merge_results}{regional_mvpa_result}(x, ...)
+\method{merge_results}{regional_mvpa_result}(obj, ...)
 
 \method{merge_results}{rsa_model}(obj, result_set, indices, id, ...)
 
@@ -43,8 +43,6 @@ of `train_model.vector_rsa_model` (the scores vector) likely within `$result[[1]
 \item{id}{Identifier for the current ROI/searchlight center.}
 
 \item{...}{Additional arguments.}
-
-\item{x}{A \code{regional_mvpa_result} object.}
 }
 \value{
 A tibble row with the formatted performance metrics for the ROI/sphere.

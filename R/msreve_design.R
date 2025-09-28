@@ -207,22 +207,22 @@ print.msreve_design <- function(x, ...) {
   dim_style     <- if (has_crayon) crayon::green else function(txt) txt
   name_style    <- if (has_crayon) crayon::italic$blue else function(txt) txt
 
-  cat("\\n", header_style("█▀▀ MS-ReVE Design: "), name_style(x$name), header_style(" ▀▀█"), "\\n\\n")
+  cat("\\n", header_style("MS-ReVE Design: "), name_style(x$name), "\\n\\n")
 
-  cat(section_style("├─ MVPA Design Source"), "\\n")
+  cat(section_style("- MVPA Design Source"), "\\n")
   # This assumes mvpa_design might have a 'name' or can be summarized.
   # For now, just indicate its class.
-  cat(info_style("│  └─ Type: "), dim_style(class(x$mvpa_design)[1]), "\\n")
+  cat(info_style("  - Type: "), dim_style(class(x$mvpa_design)[1]), "\\n")
 
-  cat(section_style("└─ Contrast Matrix"), "\\n")
+  cat(section_style("- Contrast Matrix"), "\\n")
   dims_cm <- dim(x$contrast_matrix)
-  cat(info_style("   ├─ Dimensions: "), dim_style(paste0(dims_cm[1], " Conditions × ", dims_cm[2], " Contrasts")), "\\n")
+  cat(info_style("  - Dimensions: "), dim_style(paste0(dims_cm[1], " Conditions x ", dims_cm[2], " Contrasts")), "\\n")
 
   contrast_names <- colnames(x$contrast_matrix)
   if (!is.null(contrast_names) && length(contrast_names) > 0) {
-    cat(info_style("   └─ Contrast Names: "), info_style(paste(contrast_names, collapse=", ")), "\\n")
+    cat(info_style("  - Contrast Names: "), info_style(paste(contrast_names, collapse=", ")), "\\n")
   } else {
-    cat(info_style("   └─ Contrast Names: "), dim_style("Not specified or empty"), "\\n")
+    cat(info_style("  - Contrast Names: "), dim_style("Not specified or empty"), "\\n")
   }
 
   cat("\\n")

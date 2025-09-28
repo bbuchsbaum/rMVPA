@@ -252,21 +252,21 @@ print.searchlight_result <- function(x, ...) {
   type_style <- if (has_crayon) crayon::blue else function(txt) txt # For object types
   
   # Print header
-  cat("\n", header_style("█▀▀ Searchlight Analysis Results ▀▀█"), "\n\n")
+  cat("\n", header_style("Searchlight Analysis Results"), "\n\n")
   
   # Basic information
-  cat(section_style("├─ Coverage"), "\n")
-  cat(info_style("│  ├─ Voxels/Vertices in Mask: "), number_style(format(x$n_voxels, big.mark=",")), "\n")
-  cat(info_style("│  └─ Voxels/Vertices with Results: "), number_style(format(x$active_voxels, big.mark=",")), "\n")
+  cat(section_style("- Coverage"), "\n")
+  cat(info_style("  - Voxels/Vertices in Mask: "), number_style(format(x$n_voxels, big.mark=",")), "\n")
+  cat(info_style("  - Voxels/Vertices with Results: "), number_style(format(x$active_voxels, big.mark=",")), "\n")
   
   # Performance metrics (now direct spatial objects)
-  cat(section_style("└─ Output Maps (Metrics)"), "\n")
+  cat(section_style("- Output Maps (Metrics)"), "\n")
   if (length(x$metrics) > 0 && !is.null(x$results)) {
     for (metric_name in x$metrics) {
       if (metric_name %in% names(x$results)) {
         metric_map <- x$results[[metric_name]]
         map_type <- class(metric_map)[1]
-        cat(info_style("   ├─ "), metric_style(metric_name), 
+        cat(info_style("  - "), metric_style(metric_name), 
             info_style(" (Type: "), type_style(map_type), info_style(")"), "\n")
         
         # Optionally, add simple summary stats if feasible and desired
@@ -276,26 +276,26 @@ print.searchlight_result <- function(x, ...) {
         # if (!inherits(data_values, "try-error") && is.numeric(data_values)) {
         #   data_values_no_na <- data_values[!is.na(data_values) & data_values != 0]
         #   if (length(data_values_no_na) > 0) {
-        #     cat(info_style("   │  ├─ Mean (non-zero): "), number_style(sprintf("%.4f", mean(data_values_no_na))), "\n")
-        #     cat(info_style("   │  ├─ SD   (non-zero): "), number_style(sprintf("%.4f", sd(data_values_no_na))), "\n")
-        #     cat(info_style("   │  └─ Range(non-zero): "), number_style(sprintf("[%.4f, %.4f]", min(data_values_no_na), max(data_values_no_na))), "\n")
+        #     cat(info_style("    - Mean (non-zero): "), number_style(sprintf("%.4f", mean(data_values_no_na))), "\n")
+        #     cat(info_style("    - SD   (non-zero): "), number_style(sprintf("%.4f", sd(data_values_no_na))), "\n")
+        #     cat(info_style("    - Range(non-zero): "), number_style(sprintf("[%.4f, %.4f]", min(data_values_no_na), max(data_values_no_na))), "\n")
         #   } else {
-        #     cat(info_style("   │  └─ (No non-zero data for summary stats)"), "\n")
+        #     cat(info_style("    - (No non-zero data for summary stats)"), "\n")
         #   }
         # } else {
-        #    cat(info_style("   │  └─ (Summary stats not available for this map type)"), "\n")
+        #    cat(info_style("    - (Summary stats not available for this map type)"), "\n")
         # }
       } else {
-        cat(info_style("   ├─ "), metric_style(metric_name), info_style(" (Map data not found in results)"), "\n")
+        cat(info_style("  - "), metric_style(metric_name), info_style(" (Map data not found in results)"), "\n")
       }
     }
   } else {
-    cat(info_style("   └─ No output maps found or metrics list is empty."),"\n")
+    cat(info_style("  - No output maps found or metrics list is empty."),"\n")
   }
   
   if (!is.null(x$pobserved)) {
-    cat(section_style("\n└─ Observed Probabilities Map"), "\n")
-    cat(info_style("   └─ Type: "), type_style(class(x$pobserved)[1]), "\n")
+    cat(section_style("\n- Observed Probabilities Map"), "\n")
+    cat(info_style("  - Type: "), type_style(class(x$pobserved)[1]), "\n")
   }
   
   cat("\n")
@@ -591,8 +591,8 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
 #' @noRd
 pool_results <- function(...) {
   reslist <- list(...)
-  check <- sapply(reslist, function(res) inherits(res, "data.frame"))
-  assertthat::assert_that(all(check), msg="pool_results: all arguments must be of type 'data.frame'")
+  is_df <- sapply(reslist, function(res) inherits(res, "data.frame"))
+  assertthat::assert_that(all(is_df), msg="pool_results: all arguments must be of type 'data.frame'")
   good_results <- do.call(rbind, reslist)
 
   ## map every result to the set of indices in that set
@@ -730,12 +730,12 @@ do_randomized <- function(model_spec, radius, niter,
   total_models <- 0
   total_errors <- 0
   
-  futile.logger::flog.info("🔄 Starting randomized searchlight analysis:")
-  futile.logger::flog.info("├─ Radius: %s", crayon::blue(radius))
-  futile.logger::flog.info("└─ Iterations: %s", crayon::blue(niter))
+  futile.logger::flog.info("Starting randomized searchlight analysis:")
+  futile.logger::flog.info("- Radius: %s", crayon::blue(radius))
+  futile.logger::flog.info("- Iterations: %s", crayon::blue(niter))
   
   ret <- purrr::map(seq(1,niter), function(i) {
-    futile.logger::flog.info("\n📊 Iteration %s/%s", crayon::blue(i), crayon::blue(niter))
+    futile.logger::flog.info("\nIteration %s/%s", crayon::blue(i), crayon::blue(niter))
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
     
     ## hacky
@@ -757,7 +757,7 @@ do_randomized <- function(model_spec, radius, niter,
     total_errors <<- total_errors + n_errors
     
     if (n_errors > 0) {
-      futile.logger::flog.debug("└─ %s ROIs failed in this iteration", n_errors)
+      futile.logger::flog.debug("- %s ROIs failed in this iteration", n_errors)
     }
     
     result
@@ -768,18 +768,18 @@ do_randomized <- function(model_spec, radius, niter,
   bad_results <- results %>% dplyr::filter(error == TRUE)
   
   # Final summary with improved formatting
-  futile.logger::flog.info("\n✨ Searchlight Analysis Complete")
-  futile.logger::flog.info("├─ Total Models Fit: %s", crayon::green(total_models))
+  futile.logger::flog.info("\nSearchlight analysis complete")
+  futile.logger::flog.info("- Total Models Fit: %s", crayon::green(total_models))
   if (total_errors > 0) {
-    futile.logger::flog.info("└─ Failed ROIs: %s (%s%%)", 
+    futile.logger::flog.info("- Failed ROIs: %s (%s%%)", 
                             crayon::yellow(total_errors),
                             crayon::yellow(sprintf("%.1f", total_errors/(total_models + total_errors)*100)))
   } else {
-    futile.logger::flog.info("└─ All ROIs processed successfully!")
+    futile.logger::flog.info("- All ROIs processed successfully!")
   }
   
   if (nrow(good_results) == 0) {
-    futile.logger::flog.error("❌ No valid results for randomized searchlight")
+    futile.logger::flog.error("No valid results for randomized searchlight")
     stop("No valid results produced")
   }
   
@@ -879,7 +879,7 @@ run_searchlight_base <- function(model_spec,
   }
   
   # 3) Decide combiner if it's "pool" or "average"
-  #    (In your code, you might have do_standard/do_randomized handle this logic directly—this is just an example.)
+  #    (In your code, you might have do_standard/do_randomized handle this logic directly - this is just an example.)
   chosen_combiner <- combiner
   if (!is.function(combiner)) {
     # Default mapping for string-based combiner argument
@@ -1128,5 +1128,3 @@ combine_msreve_standard <- function(model_spec, good_results, bad_results) {
     class = c("msreve_searchlight_result", "searchlight_result", "list") # Reuse existing class
   )
 }
-
-

@@ -35,7 +35,7 @@ Currently supported: \code{"average"} (simple mean of training samples per condi
 Default is \code{"average"}.}
 
 \item{whitening_matrix_W}{Optional V x V numeric matrix, where V is the number of voxels/features in `sl_data`. 
-This matrix should be the whitening transformation (e.g., Σ_noise^(-1/2)) derived from GLM residuals.
+This matrix should be the whitening transformation (e.g., Sigma_noise^(-1/2)) derived from GLM residuals.
 Required and used only if `estimation_method = "crossnobis"`.}
 
 \item{return_folds}{Logical, if TRUE, the function returns a list containing both the

@@ -274,7 +274,7 @@ predict.regression_model_fit <- function(object, newdata, sub_indices=NULL,...) 
 }
 
 
-#' @rdname merge_predictions-methods
+#' @rdname merge_predictions
 #' @export
 #' @method merge_predictions regression_prediction
 merge_predictions.regression_prediction <- function(obj1, rest, ...) {
@@ -295,7 +295,7 @@ merge_predictions.regression_prediction <- function(obj1, rest, ...) {
 }
 
 
-#' @rdname merge_predictions-methods
+#' @rdname merge_predictions
 #' @export
 #' @method merge_predictions classification_prediction
 merge_predictions.classification_prediction <- function(obj1, rest, ...) {
@@ -535,5 +535,4 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
     stop(e$message)  # Re-throw the error after logging
   })
 }
-
 

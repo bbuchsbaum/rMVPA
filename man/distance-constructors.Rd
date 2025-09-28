@@ -46,11 +46,11 @@ These convenience functions build specific types of distance function objects vi
 Each returns an S3 object inheriting from \code{c("<method>", "distfun")}.
 }
 \details{
-- \code{cordist(labels, method="pearson")} → correlation-based distance.  
-- \code{mahadist(labels)} → Mahalanobis distance.  
-- \code{eucdist(labels)} → Euclidean distance.  
-- \code{robustmahadist(labels)} → Mahalanobis distance using robust covariance.  
-- \code{pcadist(labels, ...)} → distance in reduced PCA space.
+- \code{cordist(labels, method="pearson")} -> correlation-based distance.  
+- \code{mahadist(labels)} -> Mahalanobis distance.  
+- \code{eucdist(labels)} -> Euclidean distance.  
+- \code{robustmahadist(labels)} -> Mahalanobis distance using robust covariance.  
+- \code{pcadist(labels, ...)} -> distance in reduced PCA space.
 }
 \examples{
 dist_obj_1 <- cordist(method="pearson")

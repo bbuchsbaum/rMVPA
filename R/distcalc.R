@@ -61,11 +61,11 @@ create_dist <- function(name, labels=NULL, ...) {
 #' @return An S3 object with class \code{c("<method>", "distfun")}.
 #'
 #' @details
-#' - \code{cordist(labels, method="pearson")} → correlation-based distance.  
-#' - \code{mahadist(labels)} → Mahalanobis distance.  
-#' - \code{eucdist(labels)} → Euclidean distance.  
-#' - \code{robustmahadist(labels)} → Mahalanobis distance using robust covariance.  
-#' - \code{pcadist(labels, ...)} → distance in reduced PCA space.
+#' - \code{cordist(labels, method="pearson")} -> correlation-based distance.  
+#' - \code{mahadist(labels)} -> Mahalanobis distance.  
+#' - \code{eucdist(labels)} -> Euclidean distance.  
+#' - \code{robustmahadist(labels)} -> Mahalanobis distance using robust covariance.  
+#' - \code{pcadist(labels, ...)} -> distance in reduced PCA space.
 #'
 #' @examples
 #' dist_obj_1 <- cordist(method="pearson")
@@ -308,7 +308,6 @@ pairwise_dist.robustmahadist <- function(obj, X,...) {
   }
   dist_matrix
 }
-
 
 
 

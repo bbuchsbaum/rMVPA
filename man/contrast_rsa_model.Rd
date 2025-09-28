@@ -26,11 +26,11 @@ data and associated metadata.}
 \code{mvpa_design} and the contrast matrix. Created by \code{\\link{msreve_design}}.}
 
 \item{estimation_method}{Character string specifying the method to estimate
-cross-validated condition means (\code{Û}) or distances. Supported:
+cross-validated condition means (U_hat) or distances. Supported:
 \itemize{
-  \item \code{"average"}: Simple mean of training samples per condition (for \code{Û}).
-  \item \code{"L2_norm"}: Like \code{"average"}, but \code{Û} rows are L2-normalized.
-  \item \code{"crossnobis"}: Computes unbiased squared Euclidean distances directly using the Crossnobis method. Results in a distance vector for RSA, not a \code{Û} matrix for \(G_empirical\) construction in the same way. \code{U_hat} for \eqn{\Delta} calculation is still computed using "average" method internally when this is selected. Requires `return_folds=TRUE` from `compute_crossvalidated_means_sl`.
+  \item \code{"average"}: Simple mean of training samples per condition (for U_hat).
+  \item \code{"L2_norm"}: Like \code{"average"}, but U_hat rows are L2-normalized.
+  \item \code{"crossnobis"}: Computes unbiased squared Euclidean distances directly using the Crossnobis method. Results in a distance vector for RSA, not a U_hat matrix for empirical G construction in the same way. U_hat for delta calculation is still computed using "average" method internally when this is selected. Requires `return_folds=TRUE` from `compute_crossvalidated_means_sl`.
 }
 Passed to \code{\link{compute_crossvalidated_means_sl}} (for "average", "L2_norm", or to get per-fold means for "crossnobis").}
 
@@ -53,7 +53,7 @@ Supported options:
   \item \code{"recon_score"}: Voxel-specific RDM reconstruction score (r_v), correlating the RDM implied by the voxel's loadings with the empirical RDM.
   \item \code{"beta_delta_norm"}: Similar to `beta_delta`, but uses the L2-normalized voxel contribution vector (delta_q,v). Requires `normalize_delta=TRUE` to be meaningful.
   \item \code{"beta_delta_reliable"}: Reliability-weighted contributions, \eqn{\rho_{q,v} \beta_q \Delta_{q,v}}, where \eqn{\rho_{q,v}} reflects fold-wise stability.
-  \item \code{"composite"}: Sum of beta-weighted, L2-normalized voxel contributions (Σ_q β_q ~Δ_q,v). Represents the net projection onto the positive diagonal of the contrast space. Interpretation requires caution if contrasts are not orthonormal.
+  \item \code{"composite"}: Sum of beta-weighted, L2-normalized voxel contributions (sum over q of beta_q * delta_q,v). Represents the net projection onto the positive diagonal of the contrast space. Interpretation requires caution if contrasts are not orthonormal.
 }
 Default is \code{c("beta_delta")}.}
 
@@ -68,7 +68,7 @@ for the "beta_delta" output metric. Default is \code{FALSE}.}
 is not orthonormal, to avoid mis-interpretation. If TRUE, the composite score is returned regardless, but a warning
 is still emitted.}
 
-\item{calc_reliability}{Logical. If TRUE, voxel-wise contribution reliability (ρ
+\item{calc_reliability}{Logical. If TRUE, voxel-wise contribution reliability (rho
 values) are estimated across cross-validation folds during training and can
 be incorporated into the output metrics. Default is \code{FALSE}.}
 
@@ -94,12 +94,12 @@ This model is designed for MS-ReVE style analyses where the goal is to understan
 how different predefined contrasts contribute to the representational structure
 observed in neural data, particularly at a fine-grained (e.g., voxel) level.
 It involves:
-1. Estimating cross-validated condition mean patterns (Û) or distances (for Crossnobis).
-2. Constructing an empirical second-moment matrix (Ĝ) from Û or using the Crossnobis distances directly.
+1. Estimating cross-validated condition mean patterns (U_hat) or distances (for Crossnobis).
+2. Constructing an empirical second-moment matrix (G_hat) from U_hat or using the Crossnobis distances directly.
 3. Creating theoretical second-moment matrices (RDMs) from each contrast vector.
-4. Regressing the vectorized empirical RDM/distances onto the vectorized contrast RDMs to get β coefficients.
-5. Projecting voxel patterns (from Û) onto the contrast space to get Δ (delta) values.
-6. Combining β and Δ to form the final output metric (e.g., beta_delta).
+4. Regressing the vectorized empirical RDM/distances onto the vectorized contrast RDMs to get beta coefficients.
+5. Projecting voxel patterns (from U_hat) onto the contrast space to get delta values.
+6. Combining beta and delta to form the final output metric (e.g., beta_delta).
 
 **Cross-Validation Compatibility:**
 The `estimation_method` relies on `compute_crossvalidated_means_sl` which, in turn, requires
@@ -125,17 +125,18 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
   n_conditions <- 4 # condA, condB, condC, condD
   n_runs <- 2
 
-  dummy_sl_data <- matrix(rnorm(n_samples * n_voxels), n_samples, n_voxels)
-  colnames(dummy_sl_data) <- paste0("V", 1:n_voxels)
+  dummy_array <- array(rnorm(n_voxels * n_samples), c(n_voxels, 1, 1, n_samples))
+  dummy_space <- neuroim2::NeuroSpace(c(n_voxels, 1, 1, n_samples))
+  dummy_sl_vec <- neuroim2::NeuroVec(dummy_array, dummy_space)
 
-  dummy_mask <- neuroim2::NeuroVol(array(1, c(2,2,2)), neuroim2::NeuroSpace(c(2,2,2)))
+  dummy_mask <- neuroim2::NeuroVol(array(1, c(n_voxels, 1, 1)), neuroim2::NeuroSpace(c(n_voxels, 1, 1)))
 
   condition_labels <- factor(rep(paste0("cond", LETTERS[1:n_conditions]), each = n_samples / n_conditions))
   run_labels <- factor(rep(1:n_runs, each = n_samples / n_runs))
 
   # Create mvpa_dataset (without Y and block_var)
   mvpa_dat <- rMVPA::mvpa_dataset(
-    train_data = dummy_sl_data,
+    train_data = dummy_sl_vec,
     mask = dummy_mask
   )
 
@@ -146,14 +147,15 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
     block_var = ~run
   )
 
-  K <- mvpa_des$ncond # Use mvpa_des here
+  condition_levels <- levels(rMVPA::y_train(mvpa_des))
+  K <- length(condition_levels)
 
   C_mat <- matrix(0, nrow = K, ncol = 2)
-  rownames(C_mat) <- levels(mvpa_des$Y) # Use mvpa_des here
+  rownames(C_mat) <- condition_levels
   C_mat["condA", 1] <- 1; C_mat["condB", 1] <- 1
   C_mat["condC", 1] <- -1; C_mat["condD", 1] <- -1
   C_mat["condA", 2] <- 1; C_mat["condB", 2] <- -1
-  C_mat <- scale(C_mat, center = TRUE, scale = FALSE)
+  C_mat <- base::scale(C_mat, center = TRUE, scale = FALSE)
   colnames(C_mat) <- c("AB_vs_CD", "A_vs_B")
 
   msreve_des <- rMVPA::msreve_design(

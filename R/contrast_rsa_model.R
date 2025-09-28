@@ -9,11 +9,11 @@
 #' @param design An object of class \code{msreve_design}, containing the underlying
 #'   \code{mvpa_design} and the contrast matrix. Created by \code{\\link{msreve_design}}.
 #' @param estimation_method Character string specifying the method to estimate
-#'   cross-validated condition means (\code{Û}) or distances. Supported:
+#'   cross-validated condition means (U_hat) or distances. Supported:
 #'   \itemize{
-#'     \item \code{"average"}: Simple mean of training samples per condition (for \code{Û}).
-#'     \item \code{"L2_norm"}: Like \code{"average"}, but \code{Û} rows are L2-normalized.
-#'     \item \code{"crossnobis"}: Computes unbiased squared Euclidean distances directly using the Crossnobis method. Results in a distance vector for RSA, not a \code{Û} matrix for \(G_empirical\) construction in the same way. \code{U_hat} for \eqn{\Delta} calculation is still computed using "average" method internally when this is selected. Requires `return_folds=TRUE` from `compute_crossvalidated_means_sl`.
+#'     \item \code{"average"}: Simple mean of training samples per condition (for U_hat).
+#'     \item \code{"L2_norm"}: Like \code{"average"}, but U_hat rows are L2-normalized.
+#'     \item \code{"crossnobis"}: Computes unbiased squared Euclidean distances directly using the Crossnobis method. Results in a distance vector for RSA, not a U_hat matrix for empirical G construction in the same way. U_hat for delta calculation is still computed using "average" method internally when this is selected. Requires `return_folds=TRUE` from `compute_crossvalidated_means_sl`.
 #'   }
 #'   Passed to \code{\link{compute_crossvalidated_means_sl}} (for "average", "L2_norm", or to get per-fold means for "crossnobis").
 #' @param regression_type Character string specifying the method for the RSA regression
@@ -34,7 +34,7 @@
 #'     \item \code{"recon_score"}: Voxel-specific RDM reconstruction score (r_v), correlating the RDM implied by the voxel's loadings with the empirical RDM.
 #'     \item \code{"beta_delta_norm"}: Similar to `beta_delta`, but uses the L2-normalized voxel contribution vector (delta_q,v). Requires `normalize_delta=TRUE` to be meaningful.
 #'     \item \code{"beta_delta_reliable"}: Reliability-weighted contributions, \eqn{\rho_{q,v} \beta_q \Delta_{q,v}}, where \eqn{\rho_{q,v}} reflects fold-wise stability.
-#'     \item \code{"composite"}: Sum of beta-weighted, L2-normalized voxel contributions (Σ_q β_q ~Δ_q,v). Represents the net projection onto the positive diagonal of the contrast space. Interpretation requires caution if contrasts are not orthonormal.
+#'     \item \code{"composite"}: Sum of beta-weighted, L2-normalized voxel contributions (sum over q of beta_q * delta_q,v). Represents the net projection onto the positive diagonal of the contrast space. Interpretation requires caution if contrasts are not orthonormal.
 #'   }
 #'   Default is \code{c("beta_delta")}.
 #' @param check_collinearity Logical, whether to check for collinearity among contrast RDMs
@@ -45,7 +45,7 @@
 #' @param allow_nonorth_composite Logical. If FALSE (default) the composite metric will return NA when the contrast matrix
 #'   is not orthonormal, to avoid mis-interpretation. If TRUE, the composite score is returned regardless, but a warning
 #'   is still emitted.
-#' @param calc_reliability Logical. If TRUE, voxel-wise contribution reliability (ρ
+#' @param calc_reliability Logical. If TRUE, voxel-wise contribution reliability (rho
 #'   values) are estimated across cross-validation folds during training and can
 #'   be incorporated into the output metrics. Default is \code{FALSE}.
 #' @param whitening_matrix_W Optional V x V numeric matrix (voxels x voxels). Required if
@@ -60,12 +60,12 @@
 #' how different predefined contrasts contribute to the representational structure
 #' observed in neural data, particularly at a fine-grained (e.g., voxel) level.
 #' It involves:
-#' 1. Estimating cross-validated condition mean patterns (Û) or distances (for Crossnobis).
-#' 2. Constructing an empirical second-moment matrix (Ĝ) from Û or using the Crossnobis distances directly.
+#' 1. Estimating cross-validated condition mean patterns (U_hat) or distances (for Crossnobis).
+#' 2. Constructing an empirical second-moment matrix (G_hat) from U_hat or using the Crossnobis distances directly.
 #' 3. Creating theoretical second-moment matrices (RDMs) from each contrast vector.
-#' 4. Regressing the vectorized empirical RDM/distances onto the vectorized contrast RDMs to get β coefficients.
-#' 5. Projecting voxel patterns (from Û) onto the contrast space to get Δ (delta) values.
-#' 6. Combining β and Δ to form the final output metric (e.g., beta_delta).
+#' 4. Regressing the vectorized empirical RDM/distances onto the vectorized contrast RDMs to get beta coefficients.
+#' 5. Projecting voxel patterns (from U_hat) onto the contrast space to get delta values.
+#' 6. Combining beta and delta to form the final output metric (e.g., beta_delta).
 #'
 #' **Cross-Validation Compatibility:**
 #' The `estimation_method` relies on `compute_crossvalidated_means_sl` which, in turn, requires
@@ -97,17 +97,18 @@
 #'   n_conditions <- 4 # condA, condB, condC, condD
 #'   n_runs <- 2
 #'
-#'   dummy_sl_data <- matrix(rnorm(n_samples * n_voxels), n_samples, n_voxels)
-#'   colnames(dummy_sl_data) <- paste0("V", 1:n_voxels)
+#'   dummy_array <- array(rnorm(n_voxels * n_samples), c(n_voxels, 1, 1, n_samples))
+#'   dummy_space <- neuroim2::NeuroSpace(c(n_voxels, 1, 1, n_samples))
+#'   dummy_sl_vec <- neuroim2::NeuroVec(dummy_array, dummy_space)
 #'
-#'   dummy_mask <- neuroim2::NeuroVol(array(1, c(2,2,2)), neuroim2::NeuroSpace(c(2,2,2)))
+#'   dummy_mask <- neuroim2::NeuroVol(array(1, c(n_voxels, 1, 1)), neuroim2::NeuroSpace(c(n_voxels, 1, 1)))
 #'
 #'   condition_labels <- factor(rep(paste0("cond", LETTERS[1:n_conditions]), each = n_samples / n_conditions))
 #'   run_labels <- factor(rep(1:n_runs, each = n_samples / n_runs))
 #'
 #'   # Create mvpa_dataset (without Y and block_var)
 #'   mvpa_dat <- rMVPA::mvpa_dataset(
-#'     train_data = dummy_sl_data,
+#'     train_data = dummy_sl_vec,
 #'     mask = dummy_mask
 #'   )
 #'
@@ -118,14 +119,15 @@
 #'     block_var = ~run
 #'   )
 #'
-#'   K <- mvpa_des$ncond # Use mvpa_des here
+#'   condition_levels <- levels(rMVPA::y_train(mvpa_des))
+#'   K <- length(condition_levels)
 #'
 #'   C_mat <- matrix(0, nrow = K, ncol = 2)
-#'   rownames(C_mat) <- levels(mvpa_des$Y) # Use mvpa_des here
+#'   rownames(C_mat) <- condition_levels
 #'   C_mat["condA", 1] <- 1; C_mat["condB", 1] <- 1
 #'   C_mat["condC", 1] <- -1; C_mat["condD", 1] <- -1
 #'   C_mat["condA", 2] <- 1; C_mat["condB", 2] <- -1
-#'   C_mat <- scale(C_mat, center = TRUE, scale = FALSE)
+#'   C_mat <- base::scale(C_mat, center = TRUE, scale = FALSE)
 #'   colnames(C_mat) <- c("AB_vs_CD", "A_vs_B")
 #'
 #'   msreve_des <- rMVPA::msreve_design(
@@ -323,35 +325,35 @@ print.contrast_rsa_model <- function(x, ...) {
   param_style   <- magenta
   class_style   <- italic$blue
 
-  cat("\n", header_style("█▀▀ Contrast RSA Model Specification ▀▀█"), "\n\n")
+  cat("\n", header_style("Contrast RSA Model Specification"), "\n\n")
 
-  cat(section_style("├─ Dataset"), "\n")
-  cat(info_style("│  └─ Class: "), class_style(class(x$dataset)[1]), "\n")
+  cat(section_style("- Dataset"), "\n")
+  cat(info_style("  - Class: "), class_style(class(x$dataset)[1]), "\n")
 
-  cat(section_style("├─ Design (`msreve_design`)"), "\n")
+  cat(section_style("- Design (`msreve_design`)"), "\n")
   # Use ifelse for potentially NULL name
   design_name <- ifelse(is.null(x$design$name), "-", x$design$name)
-  cat(info_style("│  ├─ Name: "), info_style(design_name), "\n")
+  cat(info_style("  - Name: "), info_style(design_name), "\n")
   
   # Safely get dimensions of contrast_matrix
   if (!is.null(x$design$contrast_matrix) && is.matrix(x$design$contrast_matrix)) {
     dims_cm <- dim(x$design$contrast_matrix)
-    cat(info_style("│  ├─ Contrast Matrix Dims: "), param_style(paste0(dims_cm[1], " Cond × ", dims_cm[2], " Contrasts")), "\n")
+    cat(info_style("  - Contrast Matrix Dims: "), param_style(paste0(dims_cm[1], " Cond x ", dims_cm[2], " Contrasts")), "\n")
   } else {
-    cat(info_style("│  ├─ Contrast Matrix Dims: "), param_style("Not a valid matrix or NULL"), "\n")
+    cat(info_style("  - Contrast Matrix Dims: "), param_style("Not a valid matrix or NULL"), "\n")
   }
   
-  cat(info_style("│  └─ MVPA Design Class: "), class_style(class(x$design$mvpa_design)[1]), "\n")
+  cat(info_style("  - MVPA Design Class: "), class_style(class(x$design$mvpa_design)[1]), "\n")
 
-  cat(section_style("└─ Analysis Parameters"), "\n")
-  cat(info_style("   ├─ Estimation Method (Û/d): "), param_style(x$estimation_method), "\n")
+  cat(section_style("- Analysis Parameters"), "\n")
+  cat(info_style("  - Estimation Method (Uhat/d): "), param_style(x$estimation_method), "\n")
   if (identical(x$estimation_method, "crossnobis")) {
     whiten_status <- if (!is.null(x$whitening_matrix_W)) "Provided (for Mahalanobis)" else "None (for Euclidean)"
-    cat(info_style("   │  └─ Whitening Matrix (W): "), param_style(whiten_status), "\n")
+    cat(info_style("  - Whitening Matrix (W): "), param_style(whiten_status), "\n")
   }
-  cat(info_style("   ├─ Regression Type (β):   "), param_style(x$regression_type), "\n")
-  cat(info_style("   ├─ Calc Reliability:     "), param_style(ifelse(x$calc_reliability, "TRUE", "FALSE")), "\n")
-  cat(info_style("   └─ Output Metric(s):      "), param_style(paste(x$output_metric, collapse = ", ")), "\n")
+  cat(info_style("  - Regression Type (beta): "), param_style(x$regression_type), "\n")
+  cat(info_style("  - Calc Reliability:     "), param_style(ifelse(x$calc_reliability, "TRUE", "FALSE")), "\n")
+  cat(info_style("  - Output Metric(s):      "), param_style(paste(x$output_metric, collapse = ", ")), "\n")
 
   cat("\n")
   invisible(x)
@@ -429,8 +431,47 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   if (missing(cv_spec) || is.null(cv_spec)) {
     cv_spec <- if (!is.null(obj$cv_spec)) obj$cv_spec else obj$crossval
   }
+
+  if (is.null(cv_spec)) {
+    block_var_candidates <- list(
+      obj$design$mvpa_design$block_var,
+      obj$dataset$design$block_var,
+      obj$dataset$block_var
+    )
+
+    for (cand in block_var_candidates) {
+      if (!is.null(cand)) {
+        block_var_vec <- as.integer(as.factor(cand))
+        if (length(block_var_vec) == nrow(sl_data) && !anyNA(block_var_vec)) {
+          n_unique_blocks <- length(unique(block_var_vec))
+          if (n_unique_blocks >= 2) {
+            cv_spec <- blocked_cross_validation(block_var_vec)
+            attr(cv_spec, "auto_generated") <- "blocked_cross_validation"
+            break
+          }
+        }
+      }
+    }
+  }
+
+  if (is.null(cv_spec)) {
+    n_samples <- nrow(sl_data)
+    if (!is.null(n_samples) && n_samples >= 2) {
+      nfolds <- min(5, n_samples)
+      if (nfolds < 2) {
+        nfolds <- 2
+      }
+      cv_spec <- kfold_cross_validation(len = n_samples, nfolds = nfolds)
+      attr(cv_spec, "auto_generated") <- "kfold_cross_validation"
+    }
+  }
+
   if (is.null(cv_spec)) {
     rlang::abort("`cv_spec` must be supplied either as an argument or stored on the model specification.")
+  }
+
+  if (!inherits(cv_spec, "cross_validation")) {
+    rlang::abort("`cv_spec` must inherit from class `cross_validation`.")
   }
   
   mvpa_des <- obj$design$mvpa_design
@@ -447,7 +488,7 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
     if (is.null(current_na_reason)) current_na_reason <<- reason
   }
 
-  # --- Step 1: Compute Cross-Validated Means (Û_sl) or Distances --- 
+  # --- Step 1: Compute Cross-Validated Means (Uhat_sl) or Distances --- 
   # And also get U_hat for Delta calculation if using crossnobis for distances
   U_hat_for_delta_calc <- NULL
   dvec_sl              <- NULL
@@ -484,7 +525,7 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
       U_hat_for_delta_calc <- cv_outputs
       U_folds_data <- NULL
     }
-    # --- Step 2: Compute Empirical Second Moment Matrix (Ĝ_sl) ---
+    # --- Step 2: Compute Empirical Second Moment Matrix (Ghat_sl) ---
     # This step is only for "average" and "L2_norm" which produce U_hat directly for G_hat
     G_hat_sl <- U_hat_for_delta_calc %*% t(U_hat_for_delta_calc)
     dvec_sl <- G_hat_sl[lower.tri(G_hat_sl)]
@@ -662,7 +703,7 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
       }
   }
 
-  # --- Step 4: Run Regression to get β_sl ---
+  # --- Step 4: Run Regression to get beta_sl ---
   beta_sl <- NULL
   beta_all <- NULL  # Store all coefficients including nuisance
   n_obs <- nrow(Xmat_valid)
@@ -787,7 +828,7 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
       if (obj$regression_type == "pearson") {
           dvec_sl_for_cor <- dvec_sl_valid - mean(dvec_sl_valid)
       } else if (obj$regression_type == "spearman") {
-          # Rank–transform both outcome and predictors (no prior centering)
+          # Rank-transform both outcome and predictors (no prior centering)
           dvec_sl_for_cor <- rank(dvec_sl_valid, ties.method = "average")
           Xmat_for_cor    <- apply(Xmat_valid, 2, rank, ties.method = "average")
       }
@@ -844,7 +885,7 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
       set_na_reason("Regression for beta_sl produced NA values")
   }
   
-  # --- Step 5: Compute Voxel Projections (Δ_sl) ---
+  # --- Step 5: Compute Voxel Projections (delta_sl) ---
   # Ensure row order consistency between U_hat_for_delta_calc and C
   idx_match <- match(rownames(U_hat_for_delta_calc), rownames(C))
   if (anyNA(idx_match)) {
@@ -853,7 +894,7 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   C_ord <- C[idx_match, , drop = FALSE]
   Delta_sl <- t(U_hat_for_delta_calc) %*% C_ord # V_sl x Q matrix
 
-  # --- Step 6: Extract Center Voxel Projection (Δ_{v_c,sl}) ---
+  # --- Step 6: Extract Center Voxel Projection (delta_{v_c,sl}) ---
   delta_vc_sl <- Delta_sl[center_idx, , drop = TRUE] # Q-dimensional vector
   # Handle potential NAs from U_hat_for_delta_calc (though checked earlier) or C matrix
   if (anyNA(delta_vc_sl) && is.null(current_na_reason)) { # Only set if no prior reason

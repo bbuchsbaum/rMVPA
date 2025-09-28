@@ -20,7 +20,7 @@
 #'   }
 #'   Default is \code{"average"}.
 #' @param whitening_matrix_W Optional V x V numeric matrix, where V is the number of voxels/features in `sl_data`. 
-#'   This matrix should be the whitening transformation (e.g., Σ_noise^(-1/2)) derived from GLM residuals.
+#'   This matrix should be the whitening transformation (e.g., Sigma_noise^(-1/2)) derived from GLM residuals.
 #'   Required and used only if `estimation_method = "crossnobis"`.
 #' @param return_folds Logical, if TRUE, the function returns a list containing both the
 #'   overall mean estimate (`mean_estimate`) and an array of per-fold estimates (`fold_estimates`).
@@ -170,7 +170,20 @@ compute_crossvalidated_means_sl <- function(sl_data,
                          dimnames = list(unique_conditions, colnames(sl_data)))
     present_idx <- which(counts_by_cond > 0)
     if (length(present_idx) > 0) {
-      fold_means[present_idx, ] <- sums_by_cond[present_idx, , drop = FALSE] /
+      aligned_sums <- matrix(0, nrow = n_conditions, ncol = n_voxels,
+                             dimnames = list(unique_conditions, colnames(sl_data)))
+      if (nrow(sums_by_cond) > 0) {
+        sums_by_cond_mat <- as.matrix(sums_by_cond)
+        match_idx <- match(rownames(sums_by_cond_mat), unique_conditions)
+        valid_match <- !is.na(match_idx)
+        if (any(!valid_match)) {
+          warning("Encountered training condition without a matching level in unique_conditions when aggregating fold means. Ignoring unmatched rows.")
+        }
+        if (any(valid_match)) {
+          aligned_sums[match_idx[valid_match], ] <- sums_by_cond_mat[valid_match, , drop = FALSE]
+        }
+      }
+      fold_means[present_idx, ] <- aligned_sums[present_idx, , drop = FALSE] /
         counts_by_cond[present_idx]
       fold_means[is.nan(fold_means) | is.infinite(fold_means)] <- NA_real_
 

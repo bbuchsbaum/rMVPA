@@ -57,9 +57,9 @@ Your custom function must accept two arguments:
 1.  `roi_data`: A matrix or tibble containing the data (samples x features) for the *current* ROI.
 2.  `roi_info`: A list containing information about the ROI, including `id` (the ROI number from the mask) and `indices` (the feature indices within the `dataset` corresponding to this ROI).
 
-The function *must* return either:
-*   A **named list** of scalar values (e.g., `list(mean = m, sd = s)`).
-*   A **single-row data frame or tibble** where each column is a scalar value.
+The function must return either:
+- A named list of scalar values (for example, `list(mean = m, sd = s)`).
+- A single-row data frame or tibble where each column is a scalar value.
 
 The names of the list elements or columns will become columns in the final output table.
 
@@ -89,9 +89,9 @@ Your custom function must accept two arguments:
 1.  `sl_data`: A matrix or tibble containing the data (samples x features_in_sphere) for the *current* searchlight sphere.
 2.  `sl_info`: A list containing information about the sphere, including `center_index` (the index of the center voxel/vertex) and `indices` (the indices of all features within the sphere).
 
-Similar to the regional version, the function *must* return either:
-*   A **named list** of scalar values.
-*   A **single-row data frame or tibble** with scalar columns.
+Similar to the regional version, the function must return either:
+- A named list of scalar values.
+- A single-row data frame or tibble with scalar columns.
 
 All successfully processed spheres must return the *same set* of named metrics. The results will be aggregated into brain maps (`NeuroVol` or `NeuroSurface`).
 
@@ -198,11 +198,11 @@ print(custom_regional_error_results)
 
 **Explanation:**
 
-The output of `run_custom_regional` is a `tibble`. Each row corresponds to an ROI defined in `region_mask_vol`. The columns are:
-*   `id`: The ROI identifier (the integer value from the mask).
-*   Columns based on the named list returned by `custom_func` (`mean_signal`, `sd_signal`, `n_features`).
-*   `error`: A logical flag indicating if an error occurred within `custom_func` for this ROI.
-*   `error_message`: The error message if `error` is `TRUE`.
+The output of `run_custom_regional` is a tibble. Each row corresponds to an ROI defined in `region_mask_vol`. The columns include:
+- `id`: the ROI identifier (the integer value from the mask)
+- the metrics returned by `custom_func` (`mean_signal`, `sd_signal`, `n_features`)
+- `error`: a logical flag indicating if `custom_func` errored for this ROI
+- `error_message`: the error message if `error` is `TRUE`
 
 In the second example, if `calculate_roi_stats_robust` encountered an ROI with fewer than 5 voxels (potentially ROI 4), the corresponding row would show `error = TRUE`, the specific error message, and `NA` values for the metrics.
 
@@ -243,21 +243,21 @@ print(mean_signal_map_obj$summary_stats)
 
 **Explanation:**
 
-The output of `run_custom_searchlight` is a `searchlight_result` object (a list). Key components include:
-*   `results`: A named list where each element corresponds to a metric returned by `custom_func` (e.g., `results$mean_signal`, `results$sd_signal`).
-*   Each metric element (e.g., `results$mean_signal`) is a `searchlight_performance` object containing:
-    *   `$data`: A `NeuroVol` (or `NeuroSurface`) object holding the metric values mapped back to brain space.
-    *   `$summary_stats`: Basic statistics (mean, sd, min, max) calculated across the map values.
-    *   Other metadata like `$metric_name`, `$n_nonzero`.
-*   `metrics`: Names of the metrics computed.
-*   `n_voxels`: total voxels/vertices defined by the mask.
-*   `active_voxels`: number of voxels/vertices with results.
+The output of `run_custom_searchlight` is a `searchlight_result` list with:
+- `results`: a named list where each element corresponds to a metric returned by `custom_func` (for example, `results$mean_signal`, `results$sd_signal`)
+- each metric element is a `searchlight_performance` object containing
+  - `$data`: a `NeuroVol` (or `NeuroSurface`) holding the metric values in brain space
+  - `$summary_stats`: basic statistics (mean, sd, min, max) across map values
+  - related metadata like `$metric_name`, `$n_nonzero`
+- `metrics`: names of the metrics computed
+- `n_voxels`: total voxels/vertices defined by the mask
+- `active_voxels`: number of voxels/vertices with results
 
 The values in the output maps (`$data`) represent the result of your `custom_func` applied to the searchlight sphere centered at each voxel. If the "randomized" method is used, the map values represent the *average* metric across all spheres that included that voxel.
 
-# Key Considerations
+# Key considerations
 
-*   **`custom_func` Requirements**: Ensure your function strictly adheres to the input argument requirements (`roi_data`/`sl_data`, `roi_info`/`sl_info`) and returns a named list or single-row tibble of *scalar* values. Inconsistent return types or names across ROIs/spheres will cause errors during result aggregation.
+- `custom_func` requirements: ensure your function strictly follows the input contract (`roi_data`/`sl_data`, `roi_info`/`sl_info`) and returns a named list or single-row tibble of scalar values. Inconsistent return types or names across ROIs/spheres will cause aggregation errors.
 *   **Parallel Processing**: Set `.cores > 1` to speed up analysis. The `future` package backend will be used. For more control, set the `future::plan()` *before* calling the `run_custom_*` function (e.g., `future::plan(future::multisession, workers = 4)`).
 *   **Error Handling**: Errors occurring *within* your `custom_func` for a specific ROI or sphere are caught automatically. The analysis will continue, and the affected ROI/voxel will be marked with an error flag or contain `NA` in the output. Use `futile.logger::flog.warn` or `flog.error` inside your `custom_func` or the `tryCatch` blocks in `rMVPA` for detailed debugging messages.
 *   **Memory**: Searchlight analyses, especially with large radii or many randomized iterations, can be memory-intensive. Monitor usage accordingly.

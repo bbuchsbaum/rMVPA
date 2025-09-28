@@ -76,6 +76,62 @@ MVPAModels$rf <- list(
   }
 )
 
+# Linear SVM model (e1071) adapted for MVPAModels
+MVPAModels$svmLinear <- list(
+  type = "Classification",
+  library = "e1071",
+  label = "svmLinear",
+  loop = NULL,
+  parameters = data.frame(
+    parameters = "cost",
+    class = "numeric",
+    label = "Cost"
+  ),
+  grid = function(x, y, len = NULL, search = "grid") {
+    if (search == "grid") {
+      if (is.null(len) || len <= 1) {
+        data.frame(cost = 1)
+      } else {
+        # Exponentially spaced costs around 1
+        exps <- seq(-2, 2, length.out = len)
+        data.frame(cost = 2^exps)
+      }
+    } else {
+      data.frame(cost = 2^runif(len, min = -3, max = 3))
+    }
+  },
+  fit = function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    if (!requireNamespace("e1071", quietly = TRUE)) {
+      stop("Package 'e1071' is required for svmLinear model.")
+    }
+    mod <- e1071::svm(x = x, y = y,
+                      kernel = "linear",
+                      cost = param$cost,
+                      probability = TRUE, ...)
+    mod$obsLevels <- lev
+    mod
+  },
+  predict = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    predict(modelFit, newdata, type = "class")
+  },
+  prob = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    # e1071 returns probabilities in the attr of predict output
+    pred <- predict(modelFit, newdata, probability = TRUE)
+    probs <- attr(pred, "probabilities")
+    # Ensure columns align with training levels
+    lev <- modelFit$obsLevels
+    if (!is.null(lev)) {
+      # Add missing columns with 0 and reorder
+      missing <- setdiff(lev, colnames(probs))
+      if (length(missing) > 0) {
+        for (m in missing) probs <- cbind(probs, setNames(rep(0, nrow(probs)), m))
+      }
+      probs <- probs[, lev, drop = FALSE]
+    }
+    probs
+  }
+)
+
 # Sparse PLS model adapted from caret
 MVPAModels$spls <- list(
   type = c("Regression", "Classification"),

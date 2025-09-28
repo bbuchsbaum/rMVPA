@@ -33,7 +33,7 @@
 #'
 #' @references
 #'   Diedrichsen, J., & Kriegeskorte, N. (2017). Representational similarity
-#'   analysis – connecting the branches of systems neuroscience.
+#'   analysis - connecting the branches of systems neuroscience.
 #'   *Nature Reviews Neuroscience*, 18(3), 179-186.
 #'   (Specifically Equation 5 for the unbiased squared Euclidean distance).
 #'
@@ -76,18 +76,18 @@ compute_crossnobis_distances_sl <- function(U_folds, P_voxels = NULL) {
     return(setNames(numeric(0), character(0)))
   }
 
-  # Generate all unique unordered pairs of conditions in the
-  # same column-major order as `lower.tri()`
-  pair_indices <- utils::combn(K, 2)
-  n_pairs <- ncol(pair_indices)
+  # Generate all unique unordered pairs of conditions in the exact
+  # `lower.tri()` order (row index > column index)
+  pair_idx <- which(lower.tri(matrix(TRUE, nrow = K, ncol = K)), arr.ind = TRUE)
+  n_pairs <- nrow(pair_idx)
   
   if (n_pairs == 0) { # Should be caught by K < 2, but as a safeguard
       return(setNames(numeric(0), character(0)))
   }
 
   # Compute delta matrices for all pairs at once (pair x V x M)
-  delta_array <- U_folds[pair_indices[1, ], , , drop = FALSE] -
-                  U_folds[pair_indices[2, ], , , drop = FALSE]
+  delta_array <- U_folds[pair_idx[, 1], , , drop = FALSE] -
+                  U_folds[pair_idx[, 2], , , drop = FALSE]
 
   # Sum across folds and sum of squares across folds
   delta_sum <- apply(delta_array, c(1, 2), sum)
@@ -98,9 +98,9 @@ compute_crossnobis_distances_sl <- function(U_folds, P_voxels = NULL) {
 
   crossnobis_distances <- cross_sums / (P_voxels * M * (M - 1))
 
-  pair_names <- paste0(condition_names[pair_indices[1, ]],
+  pair_names <- paste0(condition_names[pair_idx[, 1]],
                        "_vs_",
-                       condition_names[pair_indices[2, ]])
+                       condition_names[pair_idx[, 2]])
 
   names(crossnobis_distances) <- pair_names
   return(crossnobis_distances)

@@ -79,7 +79,7 @@ temporal_rdm <- function(index,
   
   stopifnot(length(block) %in% c(0, n))
   
-  # Compute pairwise lags |Δ|
+  # Compute pairwise lags |delta|
   lag <- abs(outer(index, index, "-"))
   
   if (isTRUE(wrap)) {

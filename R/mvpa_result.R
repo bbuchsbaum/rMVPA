@@ -199,25 +199,25 @@ print.regression_result <- function(x, ...) {
   stat_style <- crayon::italic$blue
   
   # Print header
-  cat("\n", header_style("█▀▀ Regression Result ▀▀█"), "\n\n")
+  cat("\n", header_style("Regression Result"), "\n\n")
   
   # Basic information
-  cat(section_style("├─ Data Summary"), "\n")
-  cat(info_style("│  ├─ Observations: "), number_style(length(x$observed)), "\n")
-  cat(info_style("│  ├─ Test Indices: "), 
+  cat(section_style("- Data Summary"), "\n")
+  cat(info_style("  - Observations: "), number_style(length(x$observed)), "\n")
+  cat(info_style("  - Test Indices: "), 
       if(!is.null(x$testind)) number_style(length(x$testind)) else crayon::red("None"), "\n")
   
   # Performance metrics
-  cat(section_style("└─ Performance Metrics"), "\n")
+  cat(section_style("- Performance Metrics"), "\n")
   mse <- mean((x$observed - x$predicted)^2)
   rmse <- sqrt(mse)
   r2 <- cor(x$observed, x$predicted)^2
   mae <- mean(abs(x$observed - x$predicted))
   
-  cat(info_style("   ├─ MSE: "), number_style(sprintf("%.4f", mse)), "\n")
-  cat(info_style("   ├─ RMSE: "), number_style(sprintf("%.4f", rmse)), "\n")
-  cat(info_style("   ├─ MAE: "), number_style(sprintf("%.4f", mae)), "\n")
-  cat(info_style("   └─ R²: "), number_style(sprintf("%.4f", r2)), "\n\n")
+  cat(info_style("  - MSE: "), number_style(sprintf("%.4f", mse)), "\n")
+  cat(info_style("  - RMSE: "), number_style(sprintf("%.4f", rmse)), "\n")
+  cat(info_style("  - MAE: "), number_style(sprintf("%.4f", mae)), "\n")
+  cat(info_style("  - R2: "), number_style(sprintf("%.4f", r2)), "\n\n")
 }
 
 #' @export
@@ -236,25 +236,25 @@ print.binary_classification_result <- function(x, ...) {
   level_style <- crayon::blue
   
   # Print header
-  cat("\n", header_style("█▀▀ Binary Classification Result ▀▀█"), "\n\n")
+  cat("\n", header_style("Binary Classification Result"), "\n\n")
   
   # Basic information
-  cat(section_style("├─ Data Summary"), "\n")
-  cat(info_style("│  ├─ Observations: "), number_style(length(x$observed)), "\n")
-  cat(info_style("│  ├─ Classes: "), level_style(paste(levels(x$observed), collapse=", ")), "\n")
-  cat(info_style("│  └─ Test Indices: "), 
+  cat(section_style("- Data Summary"), "\n")
+  cat(info_style("  - Observations: "), number_style(length(x$observed)), "\n")
+  cat(info_style("  - Classes: "), level_style(paste(levels(x$observed), collapse=", ")), "\n")
+  cat(info_style("  - Test Indices: "), 
       if(!is.null(x$testind)) number_style(length(x$testind)) else crayon::red("None"), "\n")
   
   # Performance metrics
-  cat(section_style("└─ Performance Metrics"), "\n")
+  cat(section_style("- Performance Metrics"), "\n")
   conf_mat <- table(Observed=x$observed, Predicted=x$predicted)
   accuracy <- sum(diag(conf_mat)) / sum(conf_mat)
   sensitivity <- conf_mat[2,2] / sum(conf_mat[2,])
   specificity <- conf_mat[1,1] / sum(conf_mat[1,])
   
-  cat(info_style("   ├─ Accuracy: "), number_style(sprintf("%.4f", accuracy)), "\n")
-  cat(info_style("   ├─ Sensitivity: "), number_style(sprintf("%.4f", sensitivity)), "\n")
-  cat(info_style("   └─ Specificity: "), number_style(sprintf("%.4f", specificity)), "\n\n")
+  cat(info_style("  - Accuracy: "), number_style(sprintf("%.4f", accuracy)), "\n")
+  cat(info_style("  - Sensitivity: "), number_style(sprintf("%.4f", sensitivity)), "\n")
+  cat(info_style("  - Specificity: "), number_style(sprintf("%.4f", specificity)), "\n\n")
 }
 
 #' @export
@@ -273,18 +273,18 @@ print.multiway_classification_result <- function(x, ...) {
   level_style <- crayon::blue
   
   # Print header
-  cat("\n", header_style("█▀▀ Multiway Classification Result ▀▀█"), "\n\n")
+  cat("\n", header_style("Multiway Classification Result"), "\n\n")
   
   # Basic information
-  cat(section_style("├─ Data Summary"), "\n")
-  cat(info_style("│  ├─ Observations: "), number_style(length(x$observed)), "\n")
-  cat(info_style("│  ├─ Number of Classes: "), number_style(length(levels(x$observed))), "\n")
-  cat(info_style("│  ├─ Classes: "), level_style(paste(levels(x$observed), collapse=", ")), "\n")
-  cat(info_style("│  └─ Test Indices: "), 
+  cat(section_style("- Data Summary"), "\n")
+  cat(info_style("  - Observations: "), number_style(length(x$observed)), "\n")
+  cat(info_style("  - Number of Classes: "), number_style(length(levels(x$observed))), "\n")
+  cat(info_style("  - Classes: "), level_style(paste(levels(x$observed), collapse=", ")), "\n")
+  cat(info_style("  - Test Indices: "), 
       if(!is.null(x$testind)) number_style(length(x$testind)) else crayon::red("None"), "\n")
   
   # Performance metrics
-  cat(section_style("└─ Performance Metrics"), "\n")
+  cat(section_style("- Performance Metrics"), "\n")
   conf_mat <- table(Observed=x$observed, Predicted=x$predicted)
   accuracy <- sum(diag(conf_mat)) / sum(conf_mat)
   
@@ -299,16 +299,15 @@ print.multiway_classification_result <- function(x, ...) {
   })
   names(class_metrics) <- levels(x$observed)
   
-  cat(info_style("   ├─ Overall Accuracy: "), number_style(sprintf("%.4f", accuracy)), "\n")
-  cat(info_style("   └─ Per-Class Metrics:"), "\n")
+  cat(info_style("  - Overall Accuracy: "), number_style(sprintf("%.4f", accuracy)), "\n")
+  cat(info_style("  - Per-Class Metrics:"), "\n")
   
   for(cls in levels(x$observed)) {
     metrics <- class_metrics[[cls]]
-    cat(info_style("      ├─ "), level_style(cls), ":\n")
-    cat(info_style("      │  ├─ Recall: "), number_style(sprintf("%.4f", metrics["recall"])), "\n")
-    cat(info_style("      │  ├─ Precision: "), number_style(sprintf("%.4f", metrics["precision"])), "\n")
-    cat(info_style("      │  └─ F1: "), number_style(sprintf("%.4f", metrics["f1"])), "\n")
+    cat(info_style("    - "), level_style(cls), ":\n")
+    cat(info_style("      - Recall: "), number_style(sprintf("%.4f", metrics["recall"])), "\n")
+    cat(info_style("      - Precision: "), number_style(sprintf("%.4f", metrics["precision"])), "\n")
+    cat(info_style("      - F1: "), number_style(sprintf("%.4f", metrics["f1"])), "\n")
   }
   cat("\n")
 }
-

@@ -298,7 +298,7 @@ MVPAModels$lda_thomaz_boot <- list(
 
     split_y <- split(seq_along(y), y)
     if (!all(sapply(split_y, function(yy) length(yy) > 0))) {
-      stop("All levels in 'y' must have ≥1 instance for lda_thomaz_boot.")
+      stop("All levels in 'y' must have >= 1 instance for lda_thomaz_boot.")
     }
     assertthat::assert_that(param$frac > 0, msg="lda_thomaz_boot: 'frac' must be > 0")
 
@@ -737,4 +737,3 @@ calculate_log_posteriors <- function(modelFit, newdata) {
 
   log_posts
 }
-

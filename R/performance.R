@@ -97,26 +97,35 @@ custom_performance <- function(x, custom_fun, split_list=NULL) {
 }
 
 #' @rdname merge_results-methods
+#' @inheritParams merge_results
 #' @method merge_results binary_classification_result
 #' @export
-merge_results.binary_classification_result <- function(x,...) {
-  rlist <- list(x,...)
-  probs <- Reduce("+", lapply(rlist, function(x) x$probs))/length(rlist)
+merge_results.binary_classification_result <- function(obj, ...) {
+  rlist <- list(obj, ...)
+  probs <- Reduce("+", lapply(rlist, function(result) result$probs))/length(rlist)
   
   mc <- max.col(probs)
-  predicted <- levels(x$observed)[mc]
-  binary_classification_result(observed=x$observed, predicted=predicted, probs=probs, testind=x$testind, 
-                               test_design=x$test_design, predictor=x$predictor)
+  predicted <- levels(obj$observed)[mc]
+  binary_classification_result(observed = obj$observed,
+                               predicted = predicted,
+                               probs = probs,
+                               testind = obj$testind,
+                               test_design = obj$test_design,
+                               predictor = obj$predictor)
 }
 
 #' @rdname merge_results-methods
+#' @inheritParams merge_results
 #' @method merge_results regression_result
 #' @export
-merge_results.regression_result <- function(x,...) {
-  rlist <- list(x,...)
-  pred <- Reduce("+", lapply(rlist, function(x) x$predicted))/length(rlist)
-  regression_result(observed=x$observed, predicted=pred, testind=x$testind, 
-                               test_design=x$test_design, predictor=x$predictor)
+merge_results.regression_result <- function(obj, ...) {
+  rlist <- list(obj, ...)
+  pred <- Reduce("+", lapply(rlist, function(result) result$predicted))/length(rlist)
+  regression_result(observed = obj$observed,
+                    predicted = pred,
+                    testind = obj$testind,
+                    test_design = obj$test_design,
+                    predictor = obj$predictor)
 }
 
 
@@ -139,19 +148,24 @@ prob_observed.regression_result <- function(x) {
 }
 
 #' @rdname merge_results-methods
+#' @inheritParams merge_results
 #' @method merge_results multiway_classification_result
 #' @export
-merge_results.multiway_classification_result <- function(x,...) {
+merge_results.multiway_classification_result <- function(obj, ...) {
   
-  rlist <- list(x,...)
+  rlist <- list(obj, ...)
   #ds <- sapply(rlist, function(x) nrow(x$probs))
   
-  probs <- Reduce("+", lapply(rlist, function(x) x$probs))/length(rlist)
+  probs <- Reduce("+", lapply(rlist, function(result) result$probs))/length(rlist)
   mc <- max.col(probs)
-  predicted <- levels(x$observed)[mc]
+  predicted <- levels(obj$observed)[mc]
   
-  multiway_classification_result(observed=x$observed, predicted=predicted, probs=probs, 
-                                 testind=x$testind,  test_design=x$test_design, predictor=x$predictor)
+  multiway_classification_result(observed = obj$observed,
+                                 predicted = predicted,
+                                 probs = probs,
+                                 testind = obj$testind,
+                                 test_design = obj$test_design,
+                                 predictor = obj$predictor)
 }
 
 #' @export
@@ -274,7 +288,4 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   }
 }
   
-
-
-
 

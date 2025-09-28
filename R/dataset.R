@@ -202,7 +202,7 @@ mvpa_dataset <- function(train_data, test_data=NULL, mask) {
   total_voxels <- prod(mask_dims)
   if (total_voxels <= 1) {
     stop("Invalid dataset: Only 1 voxel detected (dimensions ",
-         paste(mask_dims, collapse="×"),
+         paste(mask_dims, collapse="x"),
          "). Feature RSA analysis requires multiple voxels.")
   }
   
@@ -315,36 +315,36 @@ print.mvpa_dataset <- function(x, ...) {
   dim_style <- crayon::italic$blue
   
   # Print header
-  cat("\n", header_style("█▀▀ MVPA Dataset ▀▀█"), "\n\n")
+  cat("\n", header_style("MVPA Dataset"), "\n\n")
   
   # Training data section
-  cat(section_style("├─ Training Data"), "\n")
+  cat(section_style("- Training Data"), "\n")
   dims <- dim(x$train_data)
-  dim_str <- paste0(paste(dims[-length(dims)], collapse=" × "), 
-                   " × ", dim_style(dims[length(dims)]), " observations")
-  cat(info_style("│  ├─ Dimensions: "), number_style(dim_str), "\n")
-  cat(info_style("│  └─ Type: "), class(x$train_data)[1], "\n")
+  dim_str <- paste0(paste(dims[-length(dims)], collapse=" x "), 
+                   " x ", dim_style(dims[length(dims)]), " observations")
+  cat(info_style("  - Dimensions: "), number_style(dim_str), "\n")
+  cat(info_style("  - Type: "), class(x$train_data)[1], "\n")
   
   # Test data section
-  cat(section_style("├─ Test Data"), "\n")
+  cat(section_style("- Test Data"), "\n")
   if (is.null(x$test_data)) {
-    cat(info_style("│  └─ "), crayon::red("None"), "\n")
+    cat(info_style("  - "), crayon::red("None"), "\n")
   } else {
     dims <- dim(x$test_data)
-    dim_str <- paste0(paste(dims[-length(dims)], collapse=" × "), 
-                     " × ", dim_style(dims[length(dims)]), " observations")
-    cat(info_style("│  ├─ Dimensions: "), number_style(dim_str), "\n")
-    cat(info_style("│  └─ Type: "), class(x$test_data)[1], "\n")
+    dim_str <- paste0(paste(dims[-length(dims)], collapse=" x "), 
+                     " x ", dim_style(dims[length(dims)]), " observations")
+    cat(info_style("  - Dimensions: "), number_style(dim_str), "\n")
+    cat(info_style("  - Type: "), class(x$test_data)[1], "\n")
   }
   
   # Mask information
-  cat(section_style("└─ Mask Information"), "\n")
+  cat(section_style("- Mask Information"), "\n")
   mids <- table(x$mask[x$mask != 0])
   if (length(mids) > 0) {
     midstr <- paste(names(mids), ":", number_style(mids), collapse = ", ")
-    cat(info_style("   ├─ Areas: "), midstr, "\n")
+    cat(info_style("  - Areas: "), midstr, "\n")
   }
-  cat(info_style("   └─ Active voxels/vertices: "), 
+  cat(info_style("  - Active voxels/vertices: "), 
       number_style(format(sum(x$mask > 0), big.mark=",")), "\n\n")
 }
 
@@ -365,39 +365,39 @@ print.mvpa_surface_dataset <- function(x, ...) {
   name_style <- crayon::magenta
   
   # Print header
-  cat("\n", header_style("█▀▀ Surface MVPA Dataset ▀▀█"), "\n\n")
+  cat("\n", header_style("Surface MVPA Dataset"), "\n\n")
   
   # Dataset name
   if (nzchar(x$name)) {
-    cat(section_style("├─ Name: "), name_style(x$name), "\n")
+    cat(section_style("- Name: "), name_style(x$name), "\n")
   }
   
   # Training data section
-  cat(section_style("├─ Training Data"), "\n")
+  cat(section_style("- Training Data"), "\n")
   dims <- dim(x$train_data)
   vertices <- length(nodes(geometry(x$train_data)))
-  cat(info_style("│  ├─ Vertices: "), number_style(format(vertices, big.mark=",")), "\n")
-  cat(info_style("│  ├─ Observations: "), number_style(dims[length(dims)]), "\n")
-  cat(info_style("│  └─ Type: "), class(x$train_data)[1], "\n")
+  cat(info_style("  - Vertices: "), number_style(format(vertices, big.mark=",")), "\n")
+  cat(info_style("  - Observations: "), number_style(dims[length(dims)]), "\n")
+  cat(info_style("  - Type: "), class(x$train_data)[1], "\n")
   
   # Test data section
-  cat(section_style("├─ Test Data"), "\n")
+  cat(section_style("- Test Data"), "\n")
   if (is.null(x$test_data)) {
-    cat(info_style("│  └─ "), crayon::red("None"), "\n")
+    cat(info_style("  - "), crayon::red("None"), "\n")
   } else {
     dims <- dim(x$test_data)
-    cat(info_style("│  ├─ Observations: "), number_style(dims[length(dims)]), "\n")
-    cat(info_style("│  └─ Type: "), class(x$test_data)[1], "\n")
+    cat(info_style("  - Observations: "), number_style(dims[length(dims)]), "\n")
+    cat(info_style("  - Type: "), class(x$test_data)[1], "\n")
   }
   
   # Mask information
-  cat(section_style("└─ Mask Information"), "\n")
+  cat(section_style("- Mask Information"), "\n")
   mids <- table(x$mask[x$mask != 0])
   if (length(mids) > 0) {
     midstr <- paste(names(mids), ":", number_style(mids), collapse = ", ")
-    cat(info_style("   ├─ Areas: "), midstr, "\n")
+    cat(info_style("  - Areas: "), midstr, "\n")
   }
-  cat(info_style("   └─ Active vertices: "), 
+  cat(info_style("  - Active vertices: "), 
       number_style(format(sum(x$mask > 0), big.mark=",")), "\n\n")
 }
 
@@ -476,6 +476,4 @@ nobs.mvpa_dataset <- function(x) {
     dims[length(dims)]
   }
 }
-
-
 

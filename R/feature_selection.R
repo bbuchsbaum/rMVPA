@@ -79,7 +79,6 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 
 #' @rdname select_features-methods
 #' @param ranking.score The feature score to use. Supported scores are "entropy", "avg", or "max". Default is "entropy".
-#' @describeIn select_features Feature selection using the CATSCORE method.
 #' @export
 #' @importFrom sda sda.ranking
 select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg", "max"),...) {
@@ -120,7 +119,6 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
 
 
 #' @rdname select_features-methods
-#' @describeIn select_features Feature selection using the F-test method.
 #' @export
 #' @importFrom assertthat assert_that
 select_features.FTest <- function(obj, X, Y,...) {
@@ -199,5 +197,4 @@ print.feature_selector <- function(x, ...) {
   cat("Cutoff Value:  ", x$cutoff_value, "\\n")
   invisible(x)
 }
-
 

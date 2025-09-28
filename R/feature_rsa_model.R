@@ -175,7 +175,7 @@ feature_rsa_model <- function(dataset,
   
   if (total_voxels <= 1) {
     stop("Invalid dataset for feature_rsa_model: Only 1 voxel detected (dimensions ",
-         paste(mask_dims, collapse="×"),
+         paste(mask_dims, collapse="x"),
          "). Feature RSA analysis requires multiple voxels.")
   }
   
@@ -1255,7 +1255,7 @@ y_train.feature_rsa_design <- function(obj) {
 }
 
 #' @export
-#' @rdname format_result-methods
+#' @rdname format_result
 format_result.feature_rsa_model <- function(obj, result, error_message=NULL, context, ...) {
   
   if (!is.null(error_message)) {
@@ -1344,7 +1344,6 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
 
 #' @rdname merge_results-methods
 #' @export
-#' @rdname merge_results-methods
 merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
  
   if (any(result_set$error)) {
@@ -1594,4 +1593,3 @@ print.feature_rsa_model <- function(x, ...) {
   # Footer
   cat("\n", border, "\n")
 }
-

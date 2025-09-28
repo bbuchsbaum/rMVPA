@@ -75,7 +75,7 @@ merge_results.mvpa_model <- function(obj, result_set, indices, id, ...) {
 }
 
 
-#' @rdname format_result-methods
+#' @rdname format_result
 #' @noRd
 #' @importFrom stats predict
 format_result.mvpa_model <- function(obj, result, error_message=NULL, context, ...) {
@@ -129,6 +129,7 @@ get_custom_perf <- function(fun, split_list) {
 
 #' @keywords internal
 #' @rdname compute_performance-methods
+#' @export
 compute_performance.mvpa_model <- function(obj, result) {
   obj$performance(result)
 }
@@ -156,7 +157,7 @@ select_features.mvpa_model <- function(obj, X, Y,...) {
 
 
 #' @export
-#' @rdname crossval_samples-methods
+#' @rdname crossval_samples
 crossval_samples.mvpa_model <- function(obj,data,y,...) {
   crossval_samples(obj$crossval,data,y)
 }
@@ -384,6 +385,3 @@ strip_dataset.mvpa_model <- function(obj, ...) {
 }
   
   
-
-
-

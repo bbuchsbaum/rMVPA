@@ -139,15 +139,16 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
 #'
 #' Merge multiple regional MVPA results into a single result.
 #'
-#' @param x A \code{regional_mvpa_result} object.
+#' @param obj A \code{regional_mvpa_result} object.
 #' @param ... Additional \code{regional_mvpa_result} objects to be merged.
 #'
 #' @return A merged \code{regional_mvpa_result} object.
 #' @rdname merge_results-methods
+#' @inheritParams merge_results
 #' @method merge_results regional_mvpa_result
 #' @export
-merge_results.regional_mvpa_result <- function(x, ...) {
-  rlist <- list(x,...)
+merge_results.regional_mvpa_result <- function(obj, ...) {
+  rlist <- list(obj, ...)
   combine_prediction_tables(rlist)
 }
 
