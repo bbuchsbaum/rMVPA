@@ -12,17 +12,7 @@ vignette: >
 
 ## Introduction
 
-In modern neuroimaging and machine learning analyses, datasets often contain a large number of features (e.g., voxels). Many of these features can be noisy or irrelevant for the prediction task at hand. Feature selection is a critical step to reduce dimensionality, improve model interpretability, and potentially enhance predictive performance. It is essential to integrate feature selection within the cross-validation framework to avoid introducing selection bias. In the `rMVPA` package, feature selection can be applied automatically as part of the analysis pipeline.
-
-In `rMVPA`, a *feature selector* object is used to specify the method and criteria for feature selection. Two primary methods are available:
-
-- **FTest**: Performs a one-way ANOVA F-test on each feature and uses the resulting p-values for selection.
-- **catscore**: Computes correlation-adjusted t-scores (using the `sda.ranking` function from the `sda` package) to rank features.
-
-Additionally, two types of cutoff criteria are supported:
-
-- **Top_k** (or "topk"): Selects the top *k* features based on their ranking.
-- **Top_p** (or "topp"): Selects a proportion *p* of the features (e.g., setting *p* to 0.1 selects the top 10% of features).
+Neuroimaging datasets often contain far more features than informative signal. Feature selection reduces dimensionality, improves interpretability, and can boost predictive performance—provided it is performed inside the cross‑validation loop to avoid selection bias. In `rMVPA`, you configure selection with a feature‑selector object. The package supports an ANOVA‑based F‑test (“FTest”) and correlation‑adjusted t‑scores (“catscore”, via `sda.ranking`) to rank features, together with simple cutoffs: keep the top `k` features or the top proportion `p` (e.g., `p = 0.1` keeps the top 10%).
 
 
 ## Creating a Feature Selector Object
@@ -105,5 +95,4 @@ suppressPackageStartupMessages({
   library(rMVPA)
 })
 ```
-
 

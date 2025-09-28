@@ -51,11 +51,7 @@ table(region_mask)
 
 # Setting Up the MVPA Model
 
-Next, we create an MVPA model to evaluate a classification task. This involves:
-
-1. Constructing an MVPA dataset using `mvpa_dataset()`.
-2. Specifying the design (including the block variable and response) via `mvpa_design()`.
-3. Defining the model with `mvpa_model()` using a chosen classifier and cross-validation strategy.
+Next, we create an MVPA model to evaluate a classification task. In brief, we construct an `mvpa_dataset`, specify the design (including the block variable and response), and define the model with `mvpa_model()` using a chosen classifier and cross‑validation strategy.
 
 ```{r, message=FALSE, warning=FALSE}
 # Create MVPA dataset object from the generated training data and mask
@@ -77,22 +73,14 @@ The `mvpa_model()` function, as defined in `mvpa_model.R`, packages all necessar
 
 # Running the Regional Analysis
 
-The regional analysis is executed with the `run_regional()` function, which:
-
-- Prepares the ROIs by extracting voxel indices from the region mask.
-- Iterates over the regions, applying the MVPA model to each ROI.
-- Compiles performance metrics and prediction tables.
+The regional analysis is executed with `run_regional()`. Internally it prepares ROI indices from the region mask, applies the MVPA model to each ROI, and then compiles performance metrics and prediction tables.
 
 ```{r, message=FALSE, warning=FALSE, results='hide'}
 # Run the regional analysis on the defined region mask
 regional_results <- run_regional(mvpa_mod, region_mask)
 ```
 
-The output is a `regional_mvpa_result` object containing:
-
-- **performance_table**: Cross-validated performance metrics per region.
-- **prediction_table**: Detailed predictions for each ROI and trial.
-- **vol_results**: Volumetric maps representing performance distributed across the brain.
+The output is a `regional_mvpa_result` object with a `performance_table` (cross‑validated metrics per region), a `prediction_table` (trial‑level predictions), and `vol_results` (volumetric maps of performance across the brain).
 
 # Examining the Results
 

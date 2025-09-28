@@ -11,9 +11,7 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
----
-
-This vignette demonstrates how to create real neuroimaging datasets for MVPA analysis. The examples below show how to create both volumetric (image-based) and surface-based datasets using functions defined in dataset.R. Note that the code examples are set to not evaluate (eval=FALSE) since they refer to file paths that must be replaced with actual data files.
+This vignette shows how to construct real neuroimaging datasets for MVPA. The examples cover both volumetric (image‑based) and surface‑based inputs using helpers in `dataset.R`. The code snippets are set to `eval = FALSE` because they reference file paths you should replace with your own data.
 
 ## Creating a Real Volumetric (Image-Based) Dataset
 

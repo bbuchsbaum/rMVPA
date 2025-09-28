@@ -17,8 +17,8 @@ using **MVPA_Searchlight.R**. The script performs a **local classification or re
 on fMRI data by iterating over each voxel (or node for surface data) and extracting information
 from a surrounding neighborhood.
 
-## Key Features:
-The script handles both volumetric (NIfTI) and surface-based neuroimaging data. It leverages parallel processing across multiple cores for faster computation. You can choose from various classifiers and regressors like `rf`, `sda_notune`, and `corsim`. The analysis generates reproducible outputs including config files and metric maps. Cross-validation options include both blocked and stratified approaches. Data can be optionally normalized through centering and scaling. The script supports different feature selection methods and works seamlessly with both volumetric and surface-based analyses.
+## Key features
+The script handles both volumetric (NIfTI) and surface data and can parallelize across cores. You can select classifiers and regressors such as `rf`, `sda_notune`, and `corsim`, enable feature selection, and choose cross‑validation schemes that respect run structure. Outputs include performance and probability maps together with a complete configuration file for reproducibility. Optional normalization (centering/scaling) is available in both data modes.
 
 ---
 
@@ -45,27 +45,21 @@ MVPA_Searchlight.R --radius=6 \
                            --output=my_searchlight_output
 ```
 
-## 2. Understanding Data Modes
+## 2. Data modes
 
 The script supports two primary data modes:
 
-### Image Mode (Volumetric Data)
-- Default mode (`--data_mode=image`)
-- Works with NIfTI format files
-- Requires a binary mask file
-- Processes voxel-wise data in 3D space
+### Image mode (volumetric)
+Default (`--data_mode=image`), operates on NIfTI files with a binary mask and processes voxels in 3D.
 
-### Surface Mode
-- Activated with `--data_mode=surface`
-- Works with surface-based neuroimaging data
-- Can handle multiple surface sections
-- Processes data on cortical surface meshes
+### Surface mode
+Use `--data_mode=surface` for cortical meshes; multiple sections are supported.
 
-## 3. Available Models
+## 3. Models
 
 The script supports various classification and regression models:
 
-### Built-in MVPA Models:
+### Built‑in MVPA models
 - `corclass`: Correlation-based classifier with template matching
 - `sda_notune`: Simple Shrinkage Discriminant Analysis without tuning
 - `sda_boot`: SDA with bootstrap resampling
@@ -76,10 +70,9 @@ The script supports various classification and regression models:
 - `lda_thomaz`: Modified LDA for high-dimensional data
 - `hdrda`: High-Dimensional Regularized Discriminant Analysis
 
-### Additional Models:
-- Custom models can be registered using `register_mvpa_model()`
+You can also register custom models via `register_mvpa_model()`.
 
-## 4. Cross-Validation Options
+## 4. Cross‑validation options
 
 The script supports multiple cross-validation strategies:
 
@@ -100,24 +93,16 @@ cross_validation:
   nreps: 10
 ```
 
-### Advanced Cross-Validation Methods
+### Advanced cross‑validation methods
 
-In addition to the standard options above, several advanced cross-validation strategies are available:
-
-- **Blocked Cross-Validation**: Divides the dataset based on a blocking variable (e.g., session) so that samples from the same block remain together.
-- **K-Fold Cross-Validation**: Randomly partitions the data into k folds, providing a robust estimate of model performance.
-- **Bootstrap Blocked Cross-Validation**: Generates bootstrap resamples within blocks to assess model stability in heterogeneous datasets.
-- **Sequential Blocked Cross-Validation**: Assigns sequential folds within each block, preserving temporal or ordered structures.
-- **Custom Cross-Validation**: Allows you to define custom training and testing splits if standard methods do not fit your experimental design.
-
-Specify the desired method in your configuration file by setting the `name` field under `cross_validation`. For example, to use bootstrap blocked cross-validation:
+Beyond standard blocked and k‑fold splits, you can use bootstrap blocked CV (resampling within runs), sequential blocked CV (ordered folds), or provide custom train/test indices. Specify the method in the config file under `cross_validation.name`. For example:
 ```yaml
 cross_validation:
   name: "bootstrap"   # Options: "twofold", "bootstrap", "sequential", "custom", "kfold"
   nreps: 10
 ```
 
-Choose the method that best aligns with your data structure and experimental design.
+Choose the method that best matches your data structure and experimental design.
 
 ## 5. Feature Selection
 
@@ -257,6 +242,5 @@ MVPA_Searchlight.R provides a flexible searchlight-based MVPA tool that works wi
 - Optimize performance with parallel processing
 
 Happy searchlighting!
-
 
 

@@ -18,13 +18,11 @@ suppressPackageStartupMessages({
 
 ## Introduction
 
-`contrast_rsa_model()` implements the Multi-Dimensional Signed Representational Voxel Encoding (MS-ReVE) approach.  It relates voxel patterns to a set of predefined contrasts and produces maps that summarize how each contrast contributes to the local representational geometry.
-
-This vignette walks through a minimal example and explains the available output metrics.
+`contrast_rsa_model()` implements the Multi‑Dimensional Signed Representational Voxel Encoding (MS‑ReVE) approach. It relates voxel patterns to a set of predefined contrasts and produces maps that summarize how each contrast contributes to the local representational geometry. This vignette walks through a compact example and explains the output metrics.
 
 ## Example setup
 
-We start by generating a small example dataset and defining two contrasts.  The contrasts should be column centered so that positive values indicate conditions that pull voxels in one direction and negative values pull in the opposite direction.
+We start by generating a small dataset and defining two contrasts. Contrasts should be column‑centered: positive values indicate conditions that pull voxel patterns in one direction, negatives in the opposite direction.
 
 ```{r, message=FALSE, warning=FALSE}
 # Generate dummy dataset (small 6x6x6 volume, 32 samples)
@@ -46,7 +44,7 @@ colnames(C_mat) <- c("AB_vs_CD", "A_vs_B")
 ms_des <- msreve_design(data_info$design, contrast_matrix = C_mat)
 ```
 
-Next we create the model specification and run a tiny searchlight over the volume.  Here we request the default `"beta_delta"` metric.
+Next we create the model specification and run a tiny searchlight over the volume, requesting the default `"beta_delta"` metric.
 
 ```{r, message=FALSE, warning=FALSE}
 cv_spec <- blocked_cross_validation(data_info$design$block_var)
@@ -78,7 +76,7 @@ preview_tbl <- do.call(rbind, lapply(preview_ids, function(idx) {
 preview_tbl
 ```
 
-## Understanding the output metrics
+## Understanding the metrics
 
 `contrast_rsa_model` can return several metrics.  Multiple metrics can be requested at once and are returned in a named list for each searchlight location.  The main options are:
 
@@ -103,7 +101,7 @@ Reliability-weighted contributions \(\rho_{q,v} \beta_q \Delta_{q,v}\).  The wei
 ### `composite`
 The sum of beta-weighted, normalized contributions across contrasts (\(\sum_q \beta_q \tilde{\Delta}_{q,v}\)).  This "net pull" summarizes whether a voxel overall favors the positive or negative side of the contrast space.  Interpretation is easiest when the contrast matrix is orthonormal.
 
-These metrics allow flexible interrogation of how each voxel or region participates in the specified representational contrasts.
+Together these metrics support flexible interrogation of how each voxel or region participates in the specified representational contrasts.
 
 ## Conclusion
 

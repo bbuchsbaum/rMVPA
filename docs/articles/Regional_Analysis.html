@@ -16,7 +16,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -149,15 +149,11 @@ partitioned into three regions of interest.</p>
 <div class="section level2">
 <h2 id="setting-up-the-mvpa-model">Setting Up the MVPA Model<a class="anchor" aria-label="anchor" href="#setting-up-the-mvpa-model"></a>
 </h2>
-<p>Next, we create an MVPA model to evaluate a classification task. This
-involves:</p>
-<ol style="list-style-type: decimal">
-<li>Constructing an MVPA dataset using <code><a href="../reference/mvpa_dataset.html">mvpa_dataset()</a></code>.</li>
-<li>Specifying the design (including the block variable and response)
-via <code><a href="../reference/mvpa_design.html">mvpa_design()</a></code>.</li>
-<li>Defining the model with <code><a href="../reference/mvpa_model.html">mvpa_model()</a></code> using a chosen
-classifier and cross-validation strategy.</li>
-</ol>
+<p>Next, we create an MVPA model to evaluate a classification task. In
+brief, we construct an <code>mvpa_dataset</code>, specify the design
+(including the block variable and response), and define the model with
+<code><a href="../reference/mvpa_model.html">mvpa_model()</a></code> using a chosen classifier and cross‑validation
+strategy.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create MVPA dataset object from the generated training data and mask</span></span>
 <span> <span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
@@ -224,30 +220,18 @@ cross-validation and performance computation.</p>
 <div class="section level2">
 <h2 id="running-the-regional-analysis">Running the Regional Analysis<a class="anchor" aria-label="anchor" href="#running-the-regional-analysis"></a>
 </h2>
-<p>The regional analysis is executed with the
-<code><a href="../reference/run_regional-methods.html">run_regional()</a></code> function, which:</p>
-<ul>
-<li>Prepares the ROIs by extracting voxel indices from the region
-mask.</li>
-<li>Iterates over the regions, applying the MVPA model to each ROI.</li>
-<li>Compiles performance metrics and prediction tables.</li>
-</ul>
+<p>The regional analysis is executed with <code><a href="../reference/run_regional-methods.html">run_regional()</a></code>.
+Internally it prepares ROI indices from the region mask, applies the
+MVPA model to each ROI, and then compiles performance metrics and
+prediction tables.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Run the regional analysis on the defined region mask</span></span>
 <span><span class="va">regional_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<p>The output is a <code>regional_mvpa_result</code> object
-containing:</p>
-<ul>
-<li>
-<strong>performance_table</strong>: Cross-validated performance
-metrics per region.</li>
-<li>
-<strong>prediction_table</strong>: Detailed predictions for each ROI
-and trial.</li>
-<li>
-<strong>vol_results</strong>: Volumetric maps representing
-performance distributed across the brain.</li>
-</ul>
+<p>The output is a <code>regional_mvpa_result</code> object with a
+<code>performance_table</code> (cross‑validated metrics per region), a
+<code>prediction_table</code> (trial‑level predictions), and
+<code>vol_results</code> (volumetric maps of performance across the
+brain).</p>
 </div>
 <div class="section level2">
 <h2 id="examining-the-results">Examining the Results<a class="anchor" aria-label="anchor" href="#examining-the-results"></a>

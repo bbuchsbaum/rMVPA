@@ -16,7 +16,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -64,37 +64,16 @@ Buchsbaum</h4>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p>In modern neuroimaging and machine learning analyses, datasets often
-contain a large number of features (e.g., voxels). Many of these
-features can be noisy or irrelevant for the prediction task at hand.
-Feature selection is a critical step to reduce dimensionality, improve
-model interpretability, and potentially enhance predictive performance.
-It is essential to integrate feature selection within the
-cross-validation framework to avoid introducing selection bias. In the
-<code>rMVPA</code> package, feature selection can be applied
-automatically as part of the analysis pipeline.</p>
-<p>In <code>rMVPA</code>, a <em>feature selector</em> object is used to
-specify the method and criteria for feature selection. Two primary
-methods are available:</p>
-<ul>
-<li>
-<strong>FTest</strong>: Performs a one-way ANOVA F-test on each
-feature and uses the resulting p-values for selection.</li>
-<li>
-<strong>catscore</strong>: Computes correlation-adjusted t-scores
-(using the <code>sda.ranking</code> function from the <code>sda</code>
-package) to rank features.</li>
-</ul>
-<p>Additionally, two types of cutoff criteria are supported:</p>
-<ul>
-<li>
-<strong>Top_k</strong> (or “topk”): Selects the top <em>k</em>
-features based on their ranking.</li>
-<li>
-<strong>Top_p</strong> (or “topp”): Selects a proportion <em>p</em>
-of the features (e.g., setting <em>p</em> to 0.1 selects the top 10% of
-features).</li>
-</ul>
+<p>Neuroimaging datasets often contain far more features than
+informative signal. Feature selection reduces dimensionality, improves
+interpretability, and can boost predictive performance—provided it is
+performed inside the cross‑validation loop to avoid selection bias. In
+<code>rMVPA</code>, you configure selection with a feature‑selector
+object. The package supports an ANOVA‑based F‑test (“FTest”) and
+correlation‑adjusted t‑scores (“catscore”, via <code>sda.ranking</code>)
+to rank features, together with simple cutoffs: keep the top
+<code>k</code> features or the top proportion <code>p</code> (e.g.,
+<code>p = 0.1</code> keeps the top 10%).</p>
 </div>
 <div class="section level2">
 <h2 id="creating-a-feature-selector-object">Creating a Feature Selector Object<a class="anchor" aria-label="anchor" href="#creating-a-feature-selector-object"></a>

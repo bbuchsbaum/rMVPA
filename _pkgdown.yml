@@ -1,6 +1,10 @@
 url: http://bbuchsbaum.github.io/rMVPA/
 template:
   bootstrap: 5
+  bslib:
+    bootswatch: flatly   # modern, readable theme
+    primary: "#2D6A9F"   # subtle accent color
+    font_scale: 1.00     # keep typography close to default
 
 articles:
   - title: "Getting Started"
@@ -36,4 +40,3 @@ navbar:
   structure:
     left:  [intro, reference, articles, tutorials, news]
     right: [search, github]
-

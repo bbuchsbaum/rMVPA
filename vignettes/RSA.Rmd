@@ -20,20 +20,13 @@ suppressPackageStartupMessages({
 
 Representational Similarity Analysis (RSA) compares neural activity patterns with computational models by measuring pattern similarities, matching them against model predictions, and quantifying how well models explain the neural data. The `rMVPA` package implements this technique for neuroimaging analysis.
 
-## Basic Concepts
+## Basic concepts
 
-### Dissimilarity Matrices
-A dissimilarity matrix represents pairwise differences between conditions or stimuli. In RSA:
-- Each cell (i,j) represents how different conditions i and j are
-- Can be derived from neural data or theoretical models
-- Common measures: correlation distance (1 - correlation), Euclidean distance
+### Dissimilarity matrices
+A dissimilarity matrix represents pairwise differences between conditions or stimuli. Each cell (i, j) quantifies how different two conditions are, and the matrix can be derived from either neural data or theoretical models. Common measures include correlation distance (1 − correlation) and Euclidean distance.
 
-### RSA Workflow in rMVPA
-
-1. Create an MVPA dataset
-2. Define your model dissimilarity matrices
-3. Create an RSA design
-4. Build and run the RSA model
+### RSA workflow in rMVPA
+In practice you (i) create an MVPA dataset, (ii) define one or more model dissimilarity matrices, (iii) build an RSA design, and (iv) fit and evaluate the RSA model.
 
 
 ## Step-by-Step Example
@@ -179,24 +172,11 @@ blocked_design <- rsa_design(
 )
 ```
 
-This creates an RSA design where:
-- Comparisons between patterns from different runs are included
-- Comparisons between patterns within the same run are excluded
-- The analysis focuses on more reliable between-run pattern similarities
+This creates an RSA design that includes only between‑run comparisons, excludes within‑run pairs, and focuses the analysis on more reliable across‑run similarities.
 
-#### When to Use keep_intra_run = FALSE
+#### When to use keep_intra_run = FALSE
 
-You should consider setting `keep_intra_run = FALSE` when:
-- Your experiment has multiple runs/blocks
-- You want to control for temporal autocorrelation
-- You want to minimize the impact of run-specific noise
-- You're following conservative analysis practices
-
-Setting `keep_intra_run = TRUE` (default) might be appropriate when:
-- You have very few runs and need more samples
-- Your runs are very short
-- You've carefully controlled for temporal confounds
-- You're doing exploratory analyses
+Set `keep_intra_run = FALSE` when your design includes multiple runs and you want to control for temporal autocorrelation and run‑specific noise; this is the conservative choice for most confirmatory analyses. Keeping within‑run comparisons (`keep_intra_run = TRUE`, the default) can be reasonable in short‑run designs, when sample size is limited, or for exploratory work where maximizing comparisons is more important than strict control of temporal structure.
 
 ### Visualizing Results
 

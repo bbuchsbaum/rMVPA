@@ -24,12 +24,7 @@ suppressPackageStartupMessages({
 
 Cross-validation is a critical component in evaluating the performance and generalizability of MVPA models. The `rMVPA` package provides several cross-validation strategies specifically designed for neuroimaging data, where temporal structure and run/block organization must be carefully considered.
 
-This vignette covers:
-- The importance of cross-validation in MVPA
-- Available cross-validation schemes
-- How to implement each scheme
-- Best practices and considerations
-- Working examples
+This vignette explains why cross‑validation matters for MVPA, introduces schemes tailored to neuroimaging data, shows how to implement them, and closes with practical guidance and examples.
 
 # Cross-Validation Fundamentals
 
@@ -37,16 +32,9 @@ This vignette covers:
 
 Cross-validation is essential in neuroimaging analyses. It gives us unbiased estimates of how well our models perform and shows whether brain activity patterns truly generalize to new data. By separating training and test sets, cross-validation prevents us from overfitting to noise in the data. It also maintains temporal independence between sets, which is crucial for time-series neuroimaging data.
 
-## Available Cross-Validation Schemes
+## Available cross‑validation schemes
 
-The `rMVPA` package implements several cross-validation strategies:
-
-1. **Blocked Cross-Validation**: Uses scanning runs as natural validation blocks
-2. **K-Fold Cross-Validation**: Randomly partitions data into k folds
-3. **Bootstrap Blocked Cross-Validation**: Resamples within blocks with replacement
-4. **Sequential Blocked Cross-Validation**: Creates sequential folds within blocks
-5. **Two-Fold Blocked Cross-Validation**: Splits blocks into two groups
-6. **Custom Cross-Validation**: Allows user-defined validation schemes
+`rMVPA` supports blocked CV (using runs as folds), k‑fold CV (random partitions), bootstrap blocked CV (resampling within runs), sequential blocked CV (ordered folds within runs), two‑fold blocked CV (fast split across runs), and fully custom schemes when you need explicit train/test indices.
 
 # Blocked Cross-Validation
 
@@ -78,14 +66,9 @@ samples <- crossval_samples(cval, dat, y)
 print(samples)
 ```
 
-## Understanding the Output
+## Understanding the output
 
-Each row in the samples tibble contains:
-- `ytrain`: Training labels
-- `ytest`: Test labels
-- `train`: Training data subset
-- `test`: Test data subset
-- `.id`: Fold identifier
+Each row in the samples tibble contains the training and test labels (`ytrain`, `ytest`), the corresponding data subsets (`train`, `test`), and a fold identifier (`.id`).
 
 # Bootstrap Blocked Cross-Validation
 
@@ -195,28 +178,11 @@ model_fits <- samples %>%
 print(model_fits)
 ```
 
-# Best Practices
+# Best practices
 
-When choosing a cross-validation strategy, consider:
+When choosing a cross‑validation strategy, align the scheme with your data structure and analysis goals. Blocked CV should be your default for fMRI because it respects run boundaries and temporal dependence. Sequential CV is helpful when order matters. Bootstrap variants trade additional computation for more stable estimates. Two‑fold CV offers a quick sanity check when you need speed.
 
-1. **Data Structure**
-   - Use blocked CV when data has clear run/session boundaries
-   - Consider sequential CV when temporal order matters
-   - Use bootstrap blocked CV for more stable estimates
-
-2. **Sample Size**
-   - For small datasets, bootstrap blocked CV can help
-   - For large datasets, simple blocked CV may suffice
-
-3. **Temporal Dependencies**
-   - Always respect the temporal structure of fMRI data
-   - Avoid mixing training/testing data from the same run
-   - Consider temporal autocorrelation
-
-4. **Computation Time**
-   - Bootstrap and sequential methods require more computation
-   - Two-fold CV offers quick preliminary results
-   - Balance estimation stability with computational cost
+In small datasets, bootstrap blocked CV can stabilize estimates; in larger datasets, simple blocked CV often suffices. Always keep train and test data from the same run separate to avoid temporal leakage. Balance stability against computation time: bootstrap and sequential methods are costlier, whereas two‑fold CV provides fast approximations for early exploration.
 
 # Summary
 
@@ -316,29 +282,9 @@ results_searchlight <- run_searchlight(
 )
 ```
 
-## Key Considerations
+## Key considerations
 
-When integrating cross-validation with regional or searchlight analyses:
-
-1. **Memory Usage**
-   - Bootstrap and sequential methods generate more folds
-   - Consider reducing `nreps` for large searchlight analyses
-   - Monitor memory usage with large datasets
-
-2. **Computation Time**
-   - Searchlight analysis multiplies computation across voxels
-   - Two-fold CV might be preferable for initial searchlight exploration
-   - Use parallel processing when available
-
-3. **Result Stability**
-   - Bootstrap methods provide confidence intervals but require more computation
-   - Consider the trade-off between estimation stability and computational cost
-   - For searchlight analyses, simpler CV schemes might be sufficient
-
-4. **Performance Metrics**
-   - Different CV schemes might produce slightly different performance estimates
-   - Bootstrap methods generally provide more conservative estimates
-   - Consider averaging results across repetitions for bootstrap and sequential CV
+Searchlights multiply computation by the number of centers, so prefer lighter schemes (two‑fold or blocked) for initial runs and reduce `nreps` if using bootstrap. Use parallel processing where possible. Expect minor differences in performance estimates across schemes; bootstrap tends to be more conservative. For repeated schemes, average over repetitions to summarize performance.
 
 ## Example: Comparing CV Strategies in Regional Analysis
 
@@ -379,7 +325,6 @@ print(all_performance)
 This integration demonstrates how different cross-validation strategies can be easily incorporated into the broader MVPA analysis framework, allowing researchers to choose the most appropriate validation approach for their specific analysis needs.
 
 For more details on regional and searchlight analyses, refer to their respective vignettes and the implementation in `regional.R` and `searchlight.R`.
-
 
 
 

@@ -16,13 +16,9 @@ This tutorial explains how to run **regional multivariate pattern analysis (MVPA
 The script performs MVPA on specified brain regions, enabling both classification and regression analyses on fMRI data. 
 Regional analysis can be conducted on volumetric (NIfTI) or surface-based neuroimaging data, and allows for separate training and testing subsets.
 
-## Key Features
+## Key features
 
-The script handles both volumetric NIfTI and surface-based data formats. You can evaluate specific regions by using separate training and testing subsets. All parameters are configurable through YAML or R files.
-
-The analysis produces comprehensive outputs including performance maps, prediction tables, and configuration records. Cross-validation options include blocked, k-fold, and two-fold approaches. 
-
-The script works with built-in MVPA models from the MVPAModels registry. Data preprocessing includes optional centering/scaling and flexible feature selection methods.
+The script supports volumetric NIfTI and surface data, separate training/testing subsets, and full configuration via YAML or R files. Outputs include region‑level performance maps, prediction tables, and a configuration record. Cross‑validation options include blocked, k‑fold, and two‑fold. Built‑in MVPA models are available from the registry, and preprocessing includes optional centering/scaling and feature selection.
 
 ---
 
@@ -48,25 +44,21 @@ Rscript MVPA_Regional.R --train_design=train_design.txt \
                          --output=my_regional_output
 ```
 
-## 2. Understanding Data Modes
+## 2. Data modes
 
 The script supports two primary data modes:
 
-### Image Mode (Volumetric Data)
-- Default mode (`--data_mode=image`)
-- Works with NIfTI files and a binary mask
-- Analyzes region-level data based on voxel masks
+### Image mode (volumetric)
+Default (`--data_mode=image`): NIfTI files with a binary mask; analyzes region‑level data based on voxel masks.
 
-### Surface Mode
-- Activated with `--data_mode=surface`
-- Processes surface-based neuroimaging data
-- Can handle multiple surface sections
+### Surface mode
+Use `--data_mode=surface` for cortical meshes; multiple surface sections are supported.
 
-## 3. Available Models
+## 3. Models
 
 The script supports various classification and regression models:
 
-### Built-in MVPA Models:
+### Built‑in MVPA models
 - `corclass`: Correlation-based classifier with template matching
 - `sda_notune`: Shrinkage Discriminant Analysis without tuning
 - `sda_boot`: SDA with bootstrap resampling
@@ -77,10 +69,9 @@ The script supports various classification and regression models:
 - `lda_thomaz`: Modified LDA for high-dimensional data
 - `hdrda`: High-Dimensional Regularized Discriminant Analysis
 
-### Caret Models:
-- Custom models can be registered using `register_mvpa_model()`
+You can also register custom models via `register_mvpa_model()`.
 
-## 4. Cross-Validation Options
+## 4. Cross‑validation options
 
 Multiple cross-validation strategies are available:
 
@@ -101,24 +92,16 @@ cross_validation:
   nreps: 10
 ```
 
-### Advanced Cross-Validation Methods
+### Advanced cross‑validation methods
 
-In addition to the standard options above, several advanced cross-validation strategies are available:
-
-- **Blocked Cross-Validation**: Divides the dataset based on a blocking variable (e.g., session) so that samples from the same block remain together.
-- **K-Fold Cross-Validation**: Randomly partitions the data into k folds, providing a robust estimate of model performance.
-- **Bootstrap Blocked Cross-Validation**: Generates bootstrap resamples within blocks to assess model stability in heterogeneous datasets.
-- **Sequential Blocked Cross-Validation**: Assigns sequential folds within each block, preserving temporal or ordered structures.
-- **Custom Cross-Validation**: Allows you to define custom training and testing splits if standard methods do not fit your experimental design.
-
-Specify the desired method in your configuration file by setting the `name` field under `cross_validation`. For example, to use bootstrap blocked cross-validation:
+Beyond blocked and k‑fold splits, you can use bootstrap blocked CV (resampling within runs), sequential blocked CV (ordered folds), or provide custom train/test indices. Specify the method in the config file under `cross_validation.name`. For example:
 ```yaml
 cross_validation:
   name: "bootstrap"   # Options: "twofold", "bootstrap", "sequential", "custom", "kfold"
   nreps: 10
 ```
 
-Choose the method that best aligns with your data structure and experimental design.
+Choose the method that best matches your data structure and experimental design.
 
 ## 5. Feature Selection
 

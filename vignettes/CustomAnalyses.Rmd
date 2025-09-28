@@ -25,26 +25,11 @@ future::plan(future::sequential)
 
 # Introduction
 
-The `rMVPA` package provides powerful tools for standard MVPA and RSA analyses. However, researchers often need to perform custom calculations within specific brain regions (ROIs) or searchlight spheres that go beyond the built-in models. For example, you might want to:
+`rMVPA` supports custom analyses for cases that go beyond the built‑in MVPA and RSA models. You might want to compute simple univariate statistics inside an ROI, apply a bespoke connectivity metric to each searchlight sphere, or prototype a new method without creating a full S3 model. To make this easy, `run_custom_regional()` and `run_custom_searchlight()` let you apply any R function to ROI or sphere data while reusing `rMVPA`’s data extraction, iteration, parallelization, and error handling.
 
-*   Calculate specific univariate statistics within an ROI.
-*   Compute a custom connectivity metric within a searchlight sphere.
-*   Integrate a novel analysis method not currently implemented as a standard `rMVPA` model.
-*   Perform a simpler analysis without the overhead of defining a full `mvpa_model` or `rsa_model` object.
+# Why custom functions?
 
-To facilitate this flexibility, `rMVPA` offers two functions: `run_custom_regional` and `run_custom_searchlight`. These functions allow you to apply any R function you define to the data extracted from ROIs or searchlight spheres, leveraging `rMVPA`'s data handling, iteration, parallel processing, and error management capabilities.
-
-This vignette explains the rationale behind these functions and provides practical examples of their use.
-
-# Rationale: Why Use Custom Analysis Functions?
-
-Using `run_custom_regional` and `run_custom_searchlight` offers several advantages:
-
-1.  **Flexibility**: Apply *any* R function to ROI or searchlight data, enabling bespoke analyses tailored to specific research questions.
-2.  **Simplicity**: For analyses that don't fit the standard `mvpa_model` structure (e.g., simple descriptive statistics), these functions provide a more direct interface than creating a custom S3 model class.
-3.  **Integration**: Seamlessly integrate custom metrics or methods from other R packages into the `rMVPA` workflow.
-4.  **Efficiency**: Benefit from `rMVPA`'s optimized iteration (`mvpa_iterate`) and parallel processing capabilities (`future` framework) for your custom analyses.
-5.  **Robustness**: Leverage built-in error handling that catches errors within your custom function for specific ROIs/spheres without halting the entire analysis.
+Custom functions offer flexibility (any R function over ROI/sphere data), simplicity (no need to define a full model for simple summaries), and easy integration of metrics from other packages. You also inherit efficient iteration via `mvpa_iterate`, optional parallelism (the `future` framework), and robust per‑ROI error handling that prevents one failure from stopping the entire run.
 
 # Core Functions
 
