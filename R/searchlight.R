@@ -368,7 +368,11 @@ combine_standard <- function(model_spec, good_results, bad_results) {
         pob_list <- pob_list[!sapply(pob_list, is.null)]
 
         if (length(pob_list) > 0) {
-          pobserved_tbl <- dplyr::bind_cols(pob_list, .name_repair = "minimal")
+          # Bind probability vectors without requiring column names; assign simple defaults
+          pobserved_tbl <- as.data.frame(do.call(cbind, pob_list), stringsAsFactors = FALSE)
+          if (is.null(colnames(pobserved_tbl)) || any(colnames(pobserved_tbl) == "")) {
+            colnames(pobserved_tbl) <- paste0("class_", seq_len(ncol(pobserved_tbl)))
+          }
           created_map <- NULL
 
           if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
@@ -655,7 +659,10 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
     pob_list <- pob_list[!sapply(pob_list, is.null)]
     
     if (length(pob_list) > 0) {
-      pobserved <- dplyr::bind_cols(pob_list, .name_repair = "minimal")
+      pobserved <- as.data.frame(do.call(cbind, pob_list), stringsAsFactors = FALSE)
+      if (is.null(colnames(pobserved)) || any(colnames(pobserved) == "")) {
+        colnames(pobserved) <- paste0("class_", seq_len(ncol(pobserved)))
+      }
     }
   }
   
@@ -1121,6 +1128,5 @@ combine_msreve_standard <- function(model_spec, good_results, bad_results) {
     class = c("msreve_searchlight_result", "searchlight_result", "list") # Reuse existing class
   )
 }
-
 
 
