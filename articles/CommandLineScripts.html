@@ -16,7 +16,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -52,7 +52,7 @@
       <h1>MVPA Searchlight Tutorial</h1>
                         <h4 data-toc-skip class="author">Your Name</h4>
             
-            <h4 data-toc-skip class="date">2025-09-27</h4>
+            <h4 data-toc-skip class="date">2025-09-28</h4>
       
 
       <div class="d-none name"><code>CommandLineScripts.Rmd</code></div>
@@ -70,18 +70,16 @@ classification or regression analysis</strong> on fMRI data by iterating
 over each voxel (or node for surface data) and extracting information
 from a surrounding neighborhood.</p>
 <div class="section level3">
-<h3 id="key-features">Key Features:<a class="anchor" aria-label="anchor" href="#key-features"></a>
+<h3 id="key-features">Key features<a class="anchor" aria-label="anchor" href="#key-features"></a>
 </h3>
-<p>The script handles both volumetric (NIfTI) and surface-based
-neuroimaging data. It leverages parallel processing across multiple
-cores for faster computation. You can choose from various classifiers
-and regressors like <code>rf</code>, <code>sda_notune</code>, and
-<code>corsim</code>. The analysis generates reproducible outputs
-including config files and metric maps. Cross-validation options include
-both blocked and stratified approaches. Data can be optionally
-normalized through centering and scaling. The script supports different
-feature selection methods and works seamlessly with both volumetric and
-surface-based analyses.</p>
+<p>The script handles both volumetric (NIfTI) and surface data and can
+parallelize across cores. You can select classifiers and regressors such
+as <code>rf</code>, <code>sda_notune</code>, and <code>corsim</code>,
+enable feature selection, and choose cross‑validation schemes that
+respect run structure. Outputs include performance and probability maps
+together with a complete configuration file for reproducibility.
+Optional normalization (centering/scaling) is available in both data
+modes.</p>
 <hr>
 </div>
 </div>
@@ -113,37 +111,28 @@ surface-based analyses.</p>
 <span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>                           <span class="at">--output</span><span class="op">=</span>my_searchlight_output</span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="understanding-data-modes">2. Understanding Data Modes<a class="anchor" aria-label="anchor" href="#understanding-data-modes"></a>
+<h3 id="data-modes">2. Data modes<a class="anchor" aria-label="anchor" href="#data-modes"></a>
 </h3>
 <p>The script supports two primary data modes:</p>
 <div class="section level4">
-<h4 id="image-mode-volumetric-data">Image Mode (Volumetric Data)<a class="anchor" aria-label="anchor" href="#image-mode-volumetric-data"></a>
+<h4 id="image-mode-volumetric">Image mode (volumetric)<a class="anchor" aria-label="anchor" href="#image-mode-volumetric"></a>
 </h4>
-<ul>
-<li>Default mode (<code>--data_mode=image</code>)</li>
-<li>Works with NIfTI format files</li>
-<li>Requires a binary mask file</li>
-<li>Processes voxel-wise data in 3D space</li>
-</ul>
+<p>Default (<code>--data_mode=image</code>), operates on NIfTI files
+with a binary mask and processes voxels in 3D.</p>
 </div>
 <div class="section level4">
-<h4 id="surface-mode">Surface Mode<a class="anchor" aria-label="anchor" href="#surface-mode"></a>
+<h4 id="surface-mode">Surface mode<a class="anchor" aria-label="anchor" href="#surface-mode"></a>
 </h4>
-<ul>
-<li>Activated with <code>--data_mode=surface</code>
-</li>
-<li>Works with surface-based neuroimaging data</li>
-<li>Can handle multiple surface sections</li>
-<li>Processes data on cortical surface meshes</li>
-</ul>
+<p>Use <code>--data_mode=surface</code> for cortical meshes; multiple
+sections are supported.</p>
 </div>
 </div>
 <div class="section level3">
-<h3 id="available-models">3. Available Models<a class="anchor" aria-label="anchor" href="#available-models"></a>
+<h3 id="models">3. Models<a class="anchor" aria-label="anchor" href="#models"></a>
 </h3>
 <p>The script supports various classification and regression models:</p>
 <div class="section level4">
-<h4 id="built-in-mvpa-models">Built-in MVPA Models:<a class="anchor" aria-label="anchor" href="#built-in-mvpa-models"></a>
+<h4 id="builtin-mvpa-models">Built‑in MVPA models<a class="anchor" aria-label="anchor" href="#builtin-mvpa-models"></a>
 </h4>
 <ul>
 <li>
@@ -169,19 +158,12 @@ optimization</li>
 <code>hdrda</code>: High-Dimensional Regularized Discriminant
 Analysis</li>
 </ul>
-</div>
-<div class="section level4">
-<h4 id="additional-models">Additional Models:<a class="anchor" aria-label="anchor" href="#additional-models"></a>
-</h4>
-<ul>
-<li>Custom models can be registered using
-<code><a href="../reference/register_mvpa_model.html">register_mvpa_model()</a></code>
-</li>
-</ul>
+<p>You can also register custom models via
+<code><a href="../reference/register_mvpa_model.html">register_mvpa_model()</a></code>.</p>
 </div>
 </div>
 <div class="section level3">
-<h3 id="cross-validation-options">4. Cross-Validation Options<a class="anchor" aria-label="anchor" href="#cross-validation-options"></a>
+<h3 id="crossvalidation-options">4. Cross‑validation options<a class="anchor" aria-label="anchor" href="#crossvalidation-options"></a>
 </h3>
 <p>The script supports multiple cross-validation strategies:</p>
 <div class="section level4">
@@ -205,39 +187,16 @@ splits.</p>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="at">  </span><span class="fu">nreps</span><span class="kw">:</span><span class="at"> </span><span class="dv">10</span></span></code></pre></div>
 </div>
 <div class="section level4">
-<h4 id="advanced-cross-validation-methods">Advanced Cross-Validation Methods<a class="anchor" aria-label="anchor" href="#advanced-cross-validation-methods"></a>
+<h4 id="advanced-crossvalidation-methods">Advanced cross‑validation methods<a class="anchor" aria-label="anchor" href="#advanced-crossvalidation-methods"></a>
 </h4>
-<p>In addition to the standard options above, several advanced
-cross-validation strategies are available:</p>
-<ul>
-<li>
-<strong>Blocked Cross-Validation</strong>: Divides the dataset based
-on a blocking variable (e.g., session) so that samples from the same
-block remain together.</li>
-<li>
-<strong>K-Fold Cross-Validation</strong>: Randomly partitions the
-data into k folds, providing a robust estimate of model
-performance.</li>
-<li>
-<strong>Bootstrap Blocked Cross-Validation</strong>: Generates
-bootstrap resamples within blocks to assess model stability in
-heterogeneous datasets.</li>
-<li>
-<strong>Sequential Blocked Cross-Validation</strong>: Assigns
-sequential folds within each block, preserving temporal or ordered
-structures.</li>
-<li>
-<strong>Custom Cross-Validation</strong>: Allows you to define
-custom training and testing splits if standard methods do not fit your
-experimental design.</li>
-</ul>
-<p>Specify the desired method in your configuration file by setting the
-<code>name</code> field under <code>cross_validation</code>. For
-example, to use bootstrap blocked cross-validation:</p>
+<p>Beyond standard blocked and k‑fold splits, you can use bootstrap
+blocked CV (resampling within runs), sequential blocked CV (ordered
+folds), or provide custom train/test indices. Specify the method in the
+config file under <code>cross_validation.name</code>. For example:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">cross_validation</span><span class="kw">:</span></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> </span><span class="st">"bootstrap"</span><span class="co">   # Options: "twofold", "bootstrap", "sequential", "custom", "kfold"</span></span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="at">  </span><span class="fu">nreps</span><span class="kw">:</span><span class="at"> </span><span class="dv">10</span></span></code></pre></div>
-<p>Choose the method that best aligns with your data structure and
+<p>Choose the method that best matches your data structure and
 experimental design.</p>
 </div>
 </div>

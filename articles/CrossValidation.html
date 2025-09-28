@@ -16,7 +16,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-09-27</h4>
+            <h4 data-toc-skip class="date">2025-09-28</h4>
       
 
       <div class="d-none name"><code>CrossValidation.Rmd</code></div>
@@ -72,9 +72,9 @@ performance and generalizability of MVPA models. The <code>rMVPA</code>
 package provides several cross-validation strategies specifically
 designed for neuroimaging data, where temporal structure and run/block
 organization must be carefully considered.</p>
-<p>This vignette covers: - The importance of cross-validation in MVPA -
-Available cross-validation schemes - How to implement each scheme - Best
-practices and considerations - Working examples</p>
+<p>This vignette explains why cross‑validation matters for MVPA,
+introduces schemes tailored to neuroimaging data, shows how to implement
+them, and closes with practical guidance and examples.</p>
 </div>
 <div class="section level2">
 <h2 id="cross-validation-fundamentals">Cross-Validation Fundamentals<a class="anchor" aria-label="anchor" href="#cross-validation-fundamentals"></a>
@@ -90,30 +90,13 @@ noise in the data. It also maintains temporal independence between sets,
 which is crucial for time-series neuroimaging data.</p>
 </div>
 <div class="section level3">
-<h3 id="available-cross-validation-schemes">Available Cross-Validation Schemes<a class="anchor" aria-label="anchor" href="#available-cross-validation-schemes"></a>
+<h3 id="available-crossvalidation-schemes">Available cross‑validation schemes<a class="anchor" aria-label="anchor" href="#available-crossvalidation-schemes"></a>
 </h3>
-<p>The <code>rMVPA</code> package implements several cross-validation
-strategies:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Blocked Cross-Validation</strong>: Uses scanning runs as
-natural validation blocks</li>
-<li>
-<strong>K-Fold Cross-Validation</strong>: Randomly partitions data
-into k folds</li>
-<li>
-<strong>Bootstrap Blocked Cross-Validation</strong>: Resamples
-within blocks with replacement</li>
-<li>
-<strong>Sequential Blocked Cross-Validation</strong>: Creates
-sequential folds within blocks</li>
-<li>
-<strong>Two-Fold Blocked Cross-Validation</strong>: Splits blocks
-into two groups</li>
-<li>
-<strong>Custom Cross-Validation</strong>: Allows user-defined
-validation schemes</li>
-</ol>
+<p><code>rMVPA</code> supports blocked CV (using runs as folds), k‑fold
+CV (random partitions), bootstrap blocked CV (resampling within runs),
+sequential blocked CV (ordered folds within runs), two‑fold blocked CV
+(fast split across runs), and fully custom schemes when you need
+explicit train/test indices.</p>
 </div>
 </div>
 <div class="section level2">
@@ -167,12 +150,12 @@ natural validation blocks.</p>
 <span><span class="co">## <span style="color: #BCBCBC;">5</span> <span style="color: #949494;">&lt;fct [80]&gt;</span>   <span style="color: #949494;">&lt;fct [20]&gt;</span>   <span style="color: #949494;">&lt;resample [80 x 3]&gt;</span> <span style="color: #949494;">&lt;resample [20 x 3]&gt;</span> 05</span></span></code></pre>
 </div>
 <div class="section level3">
-<h3 id="understanding-the-output">Understanding the Output<a class="anchor" aria-label="anchor" href="#understanding-the-output"></a>
+<h3 id="understanding-the-output">Understanding the output<a class="anchor" aria-label="anchor" href="#understanding-the-output"></a>
 </h3>
-<p>Each row in the samples tibble contains: - <code>ytrain</code>:
-Training labels - <code>ytest</code>: Test labels - <code>train</code>:
-Training data subset - <code>test</code>: Test data subset -
-<code>.id</code>: Fold identifier</p>
+<p>Each row in the samples tibble contains the training and test labels
+(<code>ytrain</code>, <code>ytest</code>), the corresponding data
+subsets (<code>train</code>, <code>test</code>), and a fold identifier
+(<code>.id</code>).</p>
 </div>
 </div>
 <div class="section level2">
@@ -413,42 +396,20 @@ classifier:</p>
 <span><span class="co">## <span style="color: #BCBCBC;">5</span> <span style="color: #949494;">&lt;sda&gt;</span></span></span></code></pre>
 </div>
 <div class="section level2">
-<h2 id="best-practices">Best Practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
+<h2 id="best-practices">Best practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
 </h2>
-<p>When choosing a cross-validation strategy, consider:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Data Structure</strong>
-<ul>
-<li>Use blocked CV when data has clear run/session boundaries</li>
-<li>Consider sequential CV when temporal order matters</li>
-<li>Use bootstrap blocked CV for more stable estimates</li>
-</ul>
-</li>
-<li>
-<strong>Sample Size</strong>
-<ul>
-<li>For small datasets, bootstrap blocked CV can help</li>
-<li>For large datasets, simple blocked CV may suffice</li>
-</ul>
-</li>
-<li>
-<strong>Temporal Dependencies</strong>
-<ul>
-<li>Always respect the temporal structure of fMRI data</li>
-<li>Avoid mixing training/testing data from the same run</li>
-<li>Consider temporal autocorrelation</li>
-</ul>
-</li>
-<li>
-<strong>Computation Time</strong>
-<ul>
-<li>Bootstrap and sequential methods require more computation</li>
-<li>Two-fold CV offers quick preliminary results</li>
-<li>Balance estimation stability with computational cost</li>
-</ul>
-</li>
-</ol>
+<p>When choosing a cross‑validation strategy, align the scheme with your
+data structure and analysis goals. Blocked CV should be your default for
+fMRI because it respects run boundaries and temporal dependence.
+Sequential CV is helpful when order matters. Bootstrap variants trade
+additional computation for more stable estimates. Two‑fold CV offers a
+quick sanity check when you need speed.</p>
+<p>In small datasets, bootstrap blocked CV can stabilize estimates; in
+larger datasets, simple blocked CV often suffices. Always keep train and
+test data from the same run separate to avoid temporal leakage. Balance
+stability against computation time: bootstrap and sequential methods are
+costlier, whereas two‑fold CV provides fast approximations for early
+exploration.</p>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
@@ -505,7 +466,7 @@ cross-validation strategies:</p>
 <span></span>
 <span><span class="co"># Run regional analysis with blocked CV</span></span>
 <span><span class="va">results_blocked</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod_blocked</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:44] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:50] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
@@ -526,7 +487,7 @@ cross-validation strategies:</p>
 <span></span>
 <span><span class="co"># Run regional analysis with bootstrap CV</span></span>
 <span><span class="va">results_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod_boot</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:52] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:57] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
@@ -585,51 +546,14 @@ analysis:</p>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="key-considerations">Key Considerations<a class="anchor" aria-label="anchor" href="#key-considerations"></a>
+<h3 id="key-considerations">Key considerations<a class="anchor" aria-label="anchor" href="#key-considerations"></a>
 </h3>
-<p>When integrating cross-validation with regional or searchlight
-analyses:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Memory Usage</strong>
-<ul>
-<li>Bootstrap and sequential methods generate more folds</li>
-<li>Consider reducing <code>nreps</code> for large searchlight
-analyses</li>
-<li>Monitor memory usage with large datasets</li>
-</ul>
-</li>
-<li>
-<strong>Computation Time</strong>
-<ul>
-<li>Searchlight analysis multiplies computation across voxels</li>
-<li>Two-fold CV might be preferable for initial searchlight
-exploration</li>
-<li>Use parallel processing when available</li>
-</ul>
-</li>
-<li>
-<strong>Result Stability</strong>
-<ul>
-<li>Bootstrap methods provide confidence intervals but require more
-computation</li>
-<li>Consider the trade-off between estimation stability and
-computational cost</li>
-<li>For searchlight analyses, simpler CV schemes might be
-sufficient</li>
-</ul>
-</li>
-<li>
-<strong>Performance Metrics</strong>
-<ul>
-<li>Different CV schemes might produce slightly different performance
-estimates</li>
-<li>Bootstrap methods generally provide more conservative estimates</li>
-<li>Consider averaging results across repetitions for bootstrap and
-sequential CV</li>
-</ul>
-</li>
-</ol>
+<p>Searchlights multiply computation by the number of centers, so prefer
+lighter schemes (two‑fold or blocked) for initial runs and reduce
+<code>nreps</code> if using bootstrap. Use parallel processing where
+possible. Expect minor differences in performance estimates across
+schemes; bootstrap tends to be more conservative. For repeated schemes,
+average over repetitions to summarize performance.</p>
 </div>
 <div class="section level3">
 <h3 id="example-comparing-cv-strategies-in-regional-analysis">Example: Comparing CV Strategies in Regional Analysis<a class="anchor" aria-label="anchor" href="#example-comparing-cv-strategies-in-regional-analysis"></a>
@@ -654,17 +578,17 @@ sequential CV</li>
 <span>  <span class="op">)</span></span>
 <span>  <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:56] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:08:01] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-27 22:04:04] </span></span>
+<span><span class="co">## INFO [2025-09-28 01:08:08] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-27 22:04:08] </span></span>
+<span><span class="co">## INFO [2025-09-28 01:08:11] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>

@@ -16,7 +16,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-09-27</h4>
+            <h4 data-toc-skip class="date">2025-09-28</h4>
       
 
       <div class="d-none name"><code>RSA.Rmd</code></div>
@@ -71,26 +71,23 @@ explain the neural data. The <code>rMVPA</code> package implements this
 technique for neuroimaging analysis.</p>
 </div>
 <div class="section level2">
-<h2 id="basic-concepts">Basic Concepts<a class="anchor" aria-label="anchor" href="#basic-concepts"></a>
+<h2 id="basic-concepts">Basic concepts<a class="anchor" aria-label="anchor" href="#basic-concepts"></a>
 </h2>
 <div class="section level3">
-<h3 id="dissimilarity-matrices">Dissimilarity Matrices<a class="anchor" aria-label="anchor" href="#dissimilarity-matrices"></a>
+<h3 id="dissimilarity-matrices">Dissimilarity matrices<a class="anchor" aria-label="anchor" href="#dissimilarity-matrices"></a>
 </h3>
 <p>A dissimilarity matrix represents pairwise differences between
-conditions or stimuli. In RSA: - Each cell (i,j) represents how
-different conditions i and j are - Can be derived from neural data or
-theoretical models - Common measures: correlation distance (1 -
-correlation), Euclidean distance</p>
+conditions or stimuli. Each cell (i, j) quantifies how different two
+conditions are, and the matrix can be derived from either neural data or
+theoretical models. Common measures include correlation distance (1 −
+correlation) and Euclidean distance.</p>
 </div>
 <div class="section level3">
-<h3 id="rsa-workflow-in-rmvpa">RSA Workflow in rMVPA<a class="anchor" aria-label="anchor" href="#rsa-workflow-in-rmvpa"></a>
+<h3 id="rsa-workflow-in-rmvpa">RSA workflow in rMVPA<a class="anchor" aria-label="anchor" href="#rsa-workflow-in-rmvpa"></a>
 </h3>
-<ol style="list-style-type: decimal">
-<li>Create an MVPA dataset</li>
-<li>Define your model dissimilarity matrices</li>
-<li>Create an RSA design</li>
-<li>Build and run the RSA model</li>
-</ol>
+<p>In practice you (i) create an MVPA dataset, (ii) define one or more
+model dissimilarity matrices, (iii) build an RSA design, and (iv) fit
+and evaluate the RSA model.</p>
 </div>
 </div>
 <div class="section level2">
@@ -164,21 +161,21 @@ computing neural dissimilarities and analyzing relationships:</p>
 <span>  radius <span class="op">=</span> <span class="fl">4</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"standard"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:05:33] Running standard searchlight with radius = 4</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:33] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:33] running standard searchlight iterator</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:33] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">24</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:34] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">24</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:36] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">24</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:38] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:39] ⚡ Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:41] ⚡ Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:42] ⚡ Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:44] ⚡ Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:45] ⚡ Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:46] ⚡ Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:48] ⚡ Processing batch <span style="color: #0000BB;">11</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:49] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:09:29] Running standard searchlight with radius = 4</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:29] creating standard searchlight</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:29] running standard searchlight iterator</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:29] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">24</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:30] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">24</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:32] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">24</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:33] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:34] ⚡ Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:35] ⚡ Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:37] ⚡ Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:38] ⚡ Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:39] ⚡ Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:40] ⚡ Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:42] ⚡ Processing batch <span style="color: #0000BB;">11</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:43] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">256</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">256</span></span></span>
@@ -273,23 +270,21 @@ does:</p>
 <span>  block_var <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span>,</span>
 <span>  keep_intra_run <span class="op">=</span> <span class="cn">FALSE</span>  <span class="co"># Exclude within-run comparisons</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>This creates an RSA design where: - Comparisons between patterns from
-different runs are included - Comparisons between patterns within the
-same run are excluded - The analysis focuses on more reliable
-between-run pattern similarities</p>
+<p>This creates an RSA design that includes only between‑run
+comparisons, excludes within‑run pairs, and focuses the analysis on more
+reliable across‑run similarities.</p>
 </div>
 <div class="section level4">
-<h4 id="when-to-use-keep_intra_run-false">When to Use keep_intra_run = FALSE<a class="anchor" aria-label="anchor" href="#when-to-use-keep_intra_run-false"></a>
+<h4 id="when-to-use-keep_intra_run-false">When to use keep_intra_run = FALSE<a class="anchor" aria-label="anchor" href="#when-to-use-keep_intra_run-false"></a>
 </h4>
-<p>You should consider setting <code>keep_intra_run = FALSE</code> when:
-- Your experiment has multiple runs/blocks - You want to control for
-temporal autocorrelation - You want to minimize the impact of
-run-specific noise - You’re following conservative analysis
-practices</p>
-<p>Setting <code>keep_intra_run = TRUE</code> (default) might be
-appropriate when: - You have very few runs and need more samples - Your
-runs are very short - You’ve carefully controlled for temporal confounds
-- You’re doing exploratory analyses</p>
+<p>Set <code>keep_intra_run = FALSE</code> when your design includes
+multiple runs and you want to control for temporal autocorrelation and
+run‑specific noise; this is the conservative choice for most
+confirmatory analyses. Keeping within‑run comparisons
+(<code>keep_intra_run = TRUE</code>, the default) can be reasonable in
+short‑run designs, when sample size is limited, or for exploratory work
+where maximizing comparisons is more important than strict control of
+temporal structure.</p>
 </div>
 </div>
 <div class="section level3">

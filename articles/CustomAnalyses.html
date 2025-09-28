@@ -16,7 +16,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Your Name
 Here</h4>
             
-            <h4 data-toc-skip class="date">2025-09-27</h4>
+            <h4 data-toc-skip class="date">2025-09-28</h4>
       
 
       <div class="d-none name"><code>CustomAnalyses.Rmd</code></div>
@@ -64,56 +64,24 @@ Here</h4>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p>The <code>rMVPA</code> package provides powerful tools for standard
-MVPA and RSA analyses. However, researchers often need to perform custom
-calculations within specific brain regions (ROIs) or searchlight spheres
-that go beyond the built-in models. For example, you might want to:</p>
-<ul>
-<li>Calculate specific univariate statistics within an ROI.</li>
-<li>Compute a custom connectivity metric within a searchlight
-sphere.</li>
-<li>Integrate a novel analysis method not currently implemented as a
-standard <code>rMVPA</code> model.</li>
-<li>Perform a simpler analysis without the overhead of defining a full
-<code>mvpa_model</code> or <code>rsa_model</code> object.</li>
-</ul>
-<p>To facilitate this flexibility, <code>rMVPA</code> offers two
-functions: <code>run_custom_regional</code> and
-<code>run_custom_searchlight</code>. These functions allow you to apply
-any R function you define to the data extracted from ROIs or searchlight
-spheres, leveraging <code>rMVPA</code>’s data handling, iteration,
-parallel processing, and error management capabilities.</p>
-<p>This vignette explains the rationale behind these functions and
-provides practical examples of their use.</p>
+<p><code>rMVPA</code> supports custom analyses for cases that go beyond
+the built‑in MVPA and RSA models. You might want to compute simple
+univariate statistics inside an ROI, apply a bespoke connectivity metric
+to each searchlight sphere, or prototype a new method without creating a
+full S3 model. To make this easy, <code><a href="../reference/run_custom_regional.html">run_custom_regional()</a></code> and
+<code><a href="../reference/run_custom_searchlight.html">run_custom_searchlight()</a></code> let you apply any R function to
+ROI or sphere data while reusing <code>rMVPA</code>’s data extraction,
+iteration, parallelization, and error handling.</p>
 </div>
 <div class="section level2">
-<h2 id="rationale-why-use-custom-analysis-functions">Rationale: Why Use Custom Analysis Functions?<a class="anchor" aria-label="anchor" href="#rationale-why-use-custom-analysis-functions"></a>
+<h2 id="why-custom-functions">Why custom functions?<a class="anchor" aria-label="anchor" href="#why-custom-functions"></a>
 </h2>
-<p>Using <code>run_custom_regional</code> and
-<code>run_custom_searchlight</code> offers several advantages:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Flexibility</strong>: Apply <em>any</em> R function to ROI
-or searchlight data, enabling bespoke analyses tailored to specific
-research questions.</li>
-<li>
-<strong>Simplicity</strong>: For analyses that don’t fit the
-standard <code>mvpa_model</code> structure (e.g., simple descriptive
-statistics), these functions provide a more direct interface than
-creating a custom S3 model class.</li>
-<li>
-<strong>Integration</strong>: Seamlessly integrate custom metrics or
-methods from other R packages into the <code>rMVPA</code> workflow.</li>
-<li>
-<strong>Efficiency</strong>: Benefit from <code>rMVPA</code>’s
-optimized iteration (<code>mvpa_iterate</code>) and parallel processing
-capabilities (<code>future</code> framework) for your custom
-analyses.</li>
-<li>
-<strong>Robustness</strong>: Leverage built-in error handling that
-catches errors within your custom function for specific ROIs/spheres
-without halting the entire analysis.</li>
-</ol>
+<p>Custom functions offer flexibility (any R function over ROI/sphere
+data), simplicity (no need to define a full model for simple summaries),
+and easy integration of metrics from other packages. You also inherit
+efficient iteration via <code>mvpa_iterate</code>, optional parallelism
+(the <code>future</code> framework), and robust per‑ROI error handling
+that prevents one failure from stopping the entire run.</p>
 </div>
 <div class="section level2">
 <h2 id="core-functions">Core Functions<a class="anchor" aria-label="anchor" href="#core-functions"></a>
@@ -277,14 +245,14 @@ function.</p>
 <span>  .cores <span class="op">=</span> <span class="fl">1</span>, </span>
 <span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:04:13] Starting custom regional analysis...</span></span>
-<span><span class="co">## INFO [2025-09-27 22:04:18] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:08:16] Starting custom regional analysis...</span></span>
+<span><span class="co">## INFO [2025-09-28 01:08:20] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-27 22:04:18] Custom regional analysis iteration complete.</span></span>
-<span><span class="co">## INFO [2025-09-27 22:04:18] Finished formatting custom regional results.</span></span></code></pre>
+<span><span class="co">## INFO [2025-09-28 01:08:20] Custom regional analysis iteration complete.</span></span>
+<span><span class="co">## INFO [2025-09-28 01:08:20] Finished formatting custom regional results.</span></span></code></pre>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Print the results table</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_regional_results</span><span class="op">)</span></span></code></pre></div>
@@ -307,14 +275,14 @@ function.</p>
 <span>      .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>    <span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:04:18] Starting custom regional analysis...</span></span>
-<span><span class="co">## INFO [2025-09-27 22:04:22] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:08:20] Starting custom regional analysis...</span></span>
+<span><span class="co">## INFO [2025-09-28 01:08:24] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-27 22:04:23] Custom regional analysis iteration complete.</span></span>
-<span><span class="co">## INFO [2025-09-27 22:04:23] Finished formatting custom regional results.</span></span></code></pre>
+<span><span class="co">## INFO [2025-09-28 01:08:24] Custom regional analysis iteration complete.</span></span>
+<span><span class="co">## INFO [2025-09-28 01:08:25] Finished formatting custom regional results.</span></span></code></pre>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nResults with potential errors:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
@@ -361,15 +329,15 @@ function.</p>
 <span>  .cores <span class="op">=</span> <span class="fl">2</span>, <span class="co"># Use 2 cores if available</span></span>
 <span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:04:24] Starting custom searchlight analysis (method: standard, radius: 4 mm)...</span></span>
-<span><span class="co">## INFO [2025-09-27 22:04:24] Preparing 512 standard searchlight spheres...</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:13] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:08:25] Starting custom searchlight analysis (method: standard, radius: 4 mm)...</span></span>
+<span><span class="co">## INFO [2025-09-28 01:08:25] Preparing 512 standard searchlight spheres...</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:11] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">512</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">512</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:13] Combining results from standard searchlight...</span></span>
-<span><span class="co">## INFO [2025-09-27 22:05:13] Finished custom searchlight analysis.</span></span></code></pre>
+<span><span class="co">## INFO [2025-09-28 01:09:11] Combining results from standard searchlight...</span></span>
+<span><span class="co">## INFO [2025-09-28 01:09:11] Finished custom searchlight analysis.</span></span></code></pre>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Print the results object summary</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_searchlight_results</span><span class="op">)</span></span></code></pre></div>

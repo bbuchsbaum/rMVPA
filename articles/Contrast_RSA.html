@@ -16,7 +16,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-09-27</h4>
+            <h4 data-toc-skip class="date">2025-09-28</h4>
       
 
       <div class="d-none name"><code>Contrast_RSA.Rmd</code></div>
@@ -64,21 +64,20 @@ Buchsbaum</h4>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p><code><a href="../reference/contrast_rsa_model.html">contrast_rsa_model()</a></code> implements the Multi-Dimensional
-Signed Representational Voxel Encoding (MS-ReVE) approach. It relates
+<p><code><a href="../reference/contrast_rsa_model.html">contrast_rsa_model()</a></code> implements the Multi‑Dimensional
+Signed Representational Voxel Encoding (MS‑ReVE) approach. It relates
 voxel patterns to a set of predefined contrasts and produces maps that
 summarize how each contrast contributes to the local representational
-geometry.</p>
-<p>This vignette walks through a minimal example and explains the
-available output metrics.</p>
+geometry. This vignette walks through a compact example and explains the
+output metrics.</p>
 </div>
 <div class="section level2">
 <h2 id="example-setup">Example setup<a class="anchor" aria-label="anchor" href="#example-setup"></a>
 </h2>
-<p>We start by generating a small example dataset and defining two
-contrasts. The contrasts should be column centered so that positive
-values indicate conditions that pull voxels in one direction and
-negative values pull in the opposite direction.</p>
+<p>We start by generating a small dataset and defining two contrasts.
+Contrasts should be column‑centered: positive values indicate conditions
+that pull voxel patterns in one direction, negatives in the opposite
+direction.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Generate dummy dataset (small 6x6x6 volume, 32 samples)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
@@ -98,7 +97,7 @@ negative values pull in the opposite direction.</p>
 <span></span>
 <span><span class="va">ms_des</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/msreve_design.html">msreve_design</a></span><span class="op">(</span><span class="va">data_info</span><span class="op">$</span><span class="va">design</span>, contrast_matrix <span class="op">=</span> <span class="va">C_mat</span><span class="op">)</span></span></code></pre></div>
 <p>Next we create the model specification and run a tiny searchlight
-over the volume. Here we request the default <code>"beta_delta"</code>
+over the volume, requesting the default <code>"beta_delta"</code>
 metric.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cv_spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">data_info</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span>
@@ -115,17 +114,17 @@ metric.</p>
 <span><span class="va">slight</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_searchlight.html">get_searchlight</a></span><span class="op">(</span><span class="va">model_spec</span><span class="op">$</span><span class="va">dataset</span>, type <span class="op">=</span> <span class="st">"standard"</span>, radius <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="va">center_indices</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">model_spec</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="va">iter_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_iterate.html">mvpa_iterate</a></span><span class="op">(</span><span class="va">model_spec</span>, <span class="va">slight</span>, <span class="va">center_indices</span>, analysis_type <span class="op">=</span> <span class="st">"searchlight"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:24] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:26] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:27] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:28] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:29] ⚡ Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:30] ⚡ Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:31] ⚡ Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:32] ⚡ Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:33] ⚡ Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:34] ⚡ Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:35] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:32] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:33] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:34] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:35] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:36] ⚡ Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:37] ⚡ Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:38] ⚡ Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:39] ⚡ Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:40] ⚡ Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:41] ⚡ Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:42] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">120</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">120</span></span></span>
@@ -156,7 +155,7 @@ metric.</p>
 <span><span class="co">## 10        50   A_vs_B -0.009356533</span></span></code></pre>
 </div>
 <div class="section level2">
-<h2 id="understanding-the-output-metrics">Understanding the output metrics<a class="anchor" aria-label="anchor" href="#understanding-the-output-metrics"></a>
+<h2 id="understanding-the-metrics">Understanding the metrics<a class="anchor" aria-label="anchor" href="#understanding-the-metrics"></a>
 </h2>
 <p><code>contrast_rsa_model</code> can return several metrics. Multiple
 metrics can be requested at once and are returned in a named list for
@@ -231,8 +230,9 @@ cross-validation folds, highlighting consistent effects.</p>
 This “net pull” summarizes whether a voxel overall favors the positive
 or negative side of the contrast space. Interpretation is easiest when
 the contrast matrix is orthonormal.</p>
-<p>These metrics allow flexible interrogation of how each voxel or
-region participates in the specified representational contrasts.</p>
+<p>Together these metrics support flexible interrogation of how each
+voxel or region participates in the specified representational
+contrasts.</p>
 </div>
 </div>
 <div class="section level2">

@@ -16,7 +16,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -53,7 +53,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-09-27</h4>
+            <h4 data-toc-skip class="date">2025-09-28</h4>
       
 
       <div class="d-none name"><code>Advanced_RSA.Rmd</code></div>
@@ -67,20 +67,13 @@ Buchsbaum</h4>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p>While standard Representational Similarity Analysis (RSA) compares
-neural patterns with model-based similarity structures, there are cases
-where more specialized approaches are needed. The <code>rMVPA</code>
-package provides two advanced RSA methods:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Feature-Based RSA</strong>: Projects neural patterns into a
-predefined feature space</li>
-<li>
-<strong>Vector-Based RSA</strong>: Directly compares vectorized
-distance matrices</li>
-</ol>
-<p>This vignette explains when and why to use these specialized
-approaches instead of standard RSA.</p>
+<p>Standard Representational Similarity Analysis (RSA) compares neural
+response patterns with model‑based similarity structures. In practice,
+you may want stronger control over the feature space, or more efficient
+handling of distance vectors and block structure. This vignette
+introduces two specialized variants in <code>rMVPA</code>—Feature‑Based
+RSA and Vector‑Based RSA—and shows when they offer advantages over
+standard RSA.</p>
 </div>
 <div class="section level2">
 <h2 id="feature-based-rsa">Feature-Based RSA<a class="anchor" aria-label="anchor" href="#feature-based-rsa"></a>
@@ -88,52 +81,31 @@ approaches instead of standard RSA.</p>
 <div class="section level3">
 <h3 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h3>
-<p>Feature-Based RSA is designed for cases where:</p>
-<ol style="list-style-type: decimal">
-<li>You have a rich feature space describing your stimuli</li>
-<li>You want to directly map neural patterns to these features</li>
-<li>You’re interested in reconstructing stimulus features from neural
-patterns</li>
-</ol>
-<p>Unlike standard RSA which compares similarity matrices, Feature-Based
-RSA attempts to find a mapping between neural patterns and a feature
-space.</p>
+<p>Feature‑Based RSA is useful when you have a well‑defined feature
+space for your stimuli and want to directly map neural activity into
+that space—for example, reconstructing semantic or visual features from
+brain responses. Rather than correlating similarity matrices, the method
+learns a mapping from neural patterns to feature dimensions and
+evaluates how well those features are recovered.</p>
 </div>
 <div class="section level3">
-<h3 id="key-differences-from-standard-rsa">Key Differences from Standard RSA<a class="anchor" aria-label="anchor" href="#key-differences-from-standard-rsa"></a>
+<h3 id="key-differences-from-standard-rsa">Key differences from standard RSA<a class="anchor" aria-label="anchor" href="#key-differences-from-standard-rsa"></a>
 </h3>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Direct Feature Mapping</strong>:
-<ul>
-<li>Standard RSA: Compares similarity structures</li>
-<li>Feature RSA: Maps neural patterns to feature dimensions</li>
-</ul>
-</li>
-<li>
-<strong>Output</strong>:
-<ul>
-<li>Standard RSA: Correlation/regression coefficients between RDMs</li>
-<li>Feature RSA: Predicted feature values for each stimulus</li>
-</ul>
-</li>
-<li>
-<strong>Use Cases</strong>:
-<ul>
-<li>Standard RSA: Testing theoretical models of representation</li>
-<li>Feature RSA: Reconstructing stimulus features from brain
-activity</li>
-</ul>
-</li>
-</ol>
+<p>The core distinction is that Feature‑Based RSA predicts feature
+values directly, whereas standard RSA compares similarity structures.
+Outputs are therefore different: standard RSA produces associations
+between RDMs, while Feature‑Based RSA yields predicted feature values
+per stimulus. This makes Feature‑Based RSA a natural choice for
+reconstruction tasks, while standard RSA remains ideal for testing
+theoretical representational models.</p>
 </div>
 <div class="section level3">
 <h3 id="implementation-example">Implementation Example<a class="anchor" aria-label="anchor" href="#implementation-example"></a>
 </h3>
 <p>Let’s walk through a complete example:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Generate a synthetic dataset with dimensions 6x6x6, 50 observations, divided into 4 blocks</span></span>
-<span><span class="co"># This ensures that the number of trials matches the number of stimuli used below</span></span>
+<code class="sourceCode R"><span><span class="co">## Generate data and weakly-correlated features</span></span>
+<span><span class="co"># Synthetic dataset: 6x6x6, 50 observations (4 blocks)</span></span>
 <span><span class="va">data_out</span> <span class="op">&lt;-</span> <span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>,<span class="fl">6</span>,<span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">50</span>, blocks <span class="op">=</span> <span class="fl">4</span>, nlevels <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## $dataset</span></span>
@@ -167,26 +139,50 @@ activity</li>
 <span><span class="co">## <span style="color: #BBBBBB;">   ├─ Mean Block Size: </span> <span style="color: #00BB00;">12</span> <span style="color: #BBBBBB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0.58</span> <span style="color: #BBBBBB; font-style: italic;">)</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">   └─ Split Groups: </span> <span style="color: #BB0000;">None</span></span></span></code></pre>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Generate synthetic feature space (e.g., visual features of stimuli)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
-<span><span class="va">n_stimuli</span> <span class="op">&lt;-</span> <span class="fl">50</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
+<span><span class="va">n_stimuli</span>  <span class="op">&lt;-</span> <span class="fl">50</span></span>
 <span><span class="va">n_features</span> <span class="op">&lt;-</span> <span class="fl">5</span></span>
 <span></span>
-<span><span class="co"># Create feature matrix (stimuli × features)</span></span>
-<span><span class="va">feature_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_stimuli</span> <span class="op">*</span> <span class="va">n_features</span><span class="op">)</span>, <span class="va">n_stimuli</span>, <span class="va">n_features</span><span class="op">)</span></span>
+<span><span class="co"># Latent factors shared between features and brain data (weak signal)</span></span>
+<span><span class="va">Z</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_stimuli</span> <span class="op">*</span> <span class="fl">2</span><span class="op">)</span>, <span class="va">n_stimuli</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Build a weakly-correlated feature matrix: F = 0.5 * (Z %*% B) + 0.5 * noise</span></span>
+<span><span class="va">B</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">2</span> <span class="op">*</span> <span class="va">n_features</span><span class="op">)</span>, <span class="fl">2</span>, <span class="va">n_features</span><span class="op">)</span></span>
+<span><span class="va">feature_matrix</span> <span class="op">&lt;-</span> <span class="fl">0.5</span> <span class="op">*</span> <span class="op">(</span><span class="va">Z</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">B</span><span class="op">)</span> <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_stimuli</span> <span class="op">*</span> <span class="va">n_features</span><span class="op">)</span>, <span class="va">n_stimuli</span>, <span class="va">n_features</span><span class="op">)</span></span>
+<span><span class="va">feature_matrix</span> <span class="op">&lt;-</span> <span class="fu">base</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">feature_matrix</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">feature_matrix</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"feature_"</span>, <span class="fl">1</span><span class="op">:</span><span class="va">n_features</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create stimulus labels</span></span>
 <span><span class="va">stim_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"stim_"</span>, <span class="fl">1</span><span class="op">:</span><span class="va">n_stimuli</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Create feature RSA design</span></span>
+<span><span class="co"># Create a subtle latent signal in the brain data driven by the same Z</span></span>
+<span><span class="va">mask_vol</span> <span class="op">&lt;-</span> <span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span></span>
+<span><span class="co"># Extract logical mask values and indices</span></span>
+<span><span class="va">mask_vals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">as.logical</a></span><span class="op">(</span><span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/values-methods.html" class="external-link">values</a></span><span class="op">(</span><span class="va">mask_vol</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">mask_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">mask_vals</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Extract masked voxel-by-time matrix from NeuroVec (V x T)</span></span>
+<span><span class="va">vol_list</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/vols-methods.html" class="external-link">vols</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span><span class="op">)</span></span>
+<span><span class="va">datamat</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">cbind</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">vol_list</span>, <span class="kw">function</span><span class="op">(</span><span class="va">v</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">v</span><span class="op">[</span><span class="va">mask_idx</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Two random spatial patterns within the mask</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">124</span><span class="op">)</span></span>
+<span><span class="va">p1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">mask_idx</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">p2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">mask_idx</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">p1</span> <span class="op">&lt;-</span> <span class="va">p1</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/stats/sd.html" class="external-link">sd</a></span><span class="op">(</span><span class="va">p1</span><span class="op">)</span>; <span class="va">p2</span> <span class="op">&lt;-</span> <span class="va">p2</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/stats/sd.html" class="external-link">sd</a></span><span class="op">(</span><span class="va">p2</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Inject weak signal into brain data: X &lt;- X + 0.2 * (p1 %*% t(Z1)) + 0.2 * (p2 %*% t(Z2))</span></span>
+<span><span class="va">datamat</span> <span class="op">&lt;-</span> <span class="va">datamat</span> <span class="op">+</span> <span class="va">p1</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fl">0.2</span> <span class="op">*</span> <span class="va">Z</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op">+</span> <span class="va">p2</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fl">0.2</span> <span class="op">*</span> <span class="va">Z</span><span class="op">[</span>,<span class="fl">2</span><span class="op">]</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Repackage as a NeuroVec using the existing space and logical mask</span></span>
+<span><span class="va">train_vec</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/SparseNeuroVec-class.html" class="external-link">SparseNeuroVec</a></span><span class="op">(</span><span class="va">datamat</span>, <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span><span class="op">)</span>, mask <span class="op">=</span> <span class="va">mask_vals</span><span class="op">)</span></span>
+<span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">train_vec</span>, mask <span class="op">=</span> <span class="va">mask_vol</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create feature RSA design from the correlated feature matrix</span></span>
 <span><span class="va">feature_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_rsa_design.html">feature_rsa_design</a></span><span class="op">(</span></span>
-<span>  F <span class="op">=</span> <span class="va">feature_matrix</span>,  <span class="co"># Direct feature matrix</span></span>
+<span>  F <span class="op">=</span> <span class="va">feature_matrix</span>,</span>
 <span>  labels <span class="op">=</span> <span class="va">stim_labels</span></span>
 <span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Create MVPA dataset from the generated data</span></span>
-<span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create cross-validation structure using the block information</span></span>
 <span><span class="va">crossval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span>
@@ -210,7 +206,7 @@ activity</li>
 <span></span>
 <span><span class="co"># Run regional analysis</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">feature_model</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:02:56] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:06] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
@@ -221,40 +217,21 @@ activity</li>
 <pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
 <span><span class="co">##   roinum mean_correlation cor_difference mean_rank_percentile voxel_correlation</span></span>
 <span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1          -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">2</span>        -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">6</span>                0.399          -<span style="color: #BB0000;">0.005</span><span style="color: #BB0000; text-decoration: underline;">15</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2          -<span style="color: #BB0000;">0.109</span>         -<span style="color: #BB0000;">0.112</span>                 0.314          -<span style="color: #BB0000;">0.059</span><span style="color: #BB0000; text-decoration: underline;">3</span> </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3          -<span style="color: #BB0000;">0.069</span><span style="color: #BB0000; text-decoration: underline;">3</span>        -<span style="color: #BB0000;">0.068</span><span style="color: #BB0000; text-decoration: underline;">7</span>                0.383          -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">89</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1         -<span style="color: #BB0000;">0.003</span><span style="color: #BB0000; text-decoration: underline;">60</span>       -<span style="color: #BB0000;">0.002</span><span style="color: #BB0000; text-decoration: underline;">34</span>                0.501            0.072<span style="text-decoration: underline;">2</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2          0.027<span style="text-decoration: underline;">1</span>         0.025<span style="text-decoration: underline;">1</span>                 0.496            0.108 </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3          0.058<span style="text-decoration: underline;">3</span>         0.050<span style="text-decoration: underline;">8</span>                 0.566            0.120 </span></span>
 <span><span class="co">## <span style="color: #949494;"># ℹ 5 more variables: mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, cor_temporal_means &lt;dbl&gt;,</span></span></span>
 <span><span class="co">## <span style="color: #949494;">#   mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span></code></pre>
 </div>
 <div class="section level3">
-<h3 id="available-methods">Available Methods<a class="anchor" aria-label="anchor" href="#available-methods"></a>
+<h3 id="available-methods">Available methods<a class="anchor" aria-label="anchor" href="#available-methods"></a>
 </h3>
-<p>Feature-Based RSA supports multiple analysis methods:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Partial Least Squares (PLS)</strong>:
-<ul>
-<li>Finds latent components that maximize covariance between neural
-patterns and features</li>
-<li>Good for prediction when features are highly correlated</li>
-</ul>
-</li>
-<li>
-<strong>Principal Component Analysis (PCA)</strong>:
-<ul>
-<li>Uses PCA on features followed by regression</li>
-<li>Good for dimensionality reduction with clear interpretability</li>
-</ul>
-</li>
-<li>
-<strong>GLMNet (Elastic Net)</strong>:
-<ul>
-<li>Elastic net regression with L1 and L2 regularization</li>
-<li>Useful for feature selection and handling correlated features</li>
-</ul>
-</li>
-</ol>
+<p>Feature‑Based RSA supports several estimators. PLS finds components
+that maximize covariance between brain data and features, and works well
+when features are correlated. PCA reduces the feature space before
+regression, providing a compact, interpretable basis. GLMNet (elastic
+net) adds regularization that helps with feature selection and
+multicollinearity.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Compare different methods</span></span>
 <span><span class="va">methods</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pls"</span>, <span class="st">"pca"</span>, <span class="st">"glmnet"</span><span class="op">)</span></span>
@@ -267,29 +244,29 @@ patterns and features</li>
 <span>  <span class="op">)</span></span>
 <span>  <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:02:59] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:09] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-27 22:03:02] </span></span>
+<span><span class="co">## INFO [2025-09-28 01:07:12] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:03] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:03] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:03] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:04] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:05] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:05] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:05] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:05] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:06] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:06] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:07] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## WARN [2025-09-27 22:03:07] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
-<span><span class="co">## INFO [2025-09-27 22:03:07] </span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:13] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:13] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:13] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:13] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:14] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:14] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:14] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:15] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:16] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:16] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:16] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## WARN [2025-09-28 01:07:16] evaluate_model: No columns with finite variance; returning NA metrics.</span></span>
+<span><span class="co">## INFO [2025-09-28 01:07:16] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
@@ -305,9 +282,9 @@ patterns and features</li>
 <span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
 <span><span class="co">##   roinum mean_correlation cor_difference mean_rank_percentile voxel_correlation</span></span>
 <span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1          -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">2</span>        -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">6</span>                0.399          -<span style="color: #BB0000;">0.005</span><span style="color: #BB0000; text-decoration: underline;">15</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2          -<span style="color: #BB0000;">0.109</span>         -<span style="color: #BB0000;">0.112</span>                 0.314          -<span style="color: #BB0000;">0.059</span><span style="color: #BB0000; text-decoration: underline;">3</span> </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3          -<span style="color: #BB0000;">0.069</span><span style="color: #BB0000; text-decoration: underline;">3</span>        -<span style="color: #BB0000;">0.068</span><span style="color: #BB0000; text-decoration: underline;">7</span>                0.383          -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">89</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1         -<span style="color: #BB0000;">0.003</span><span style="color: #BB0000; text-decoration: underline;">60</span>       -<span style="color: #BB0000;">0.002</span><span style="color: #BB0000; text-decoration: underline;">34</span>                0.501            0.072<span style="text-decoration: underline;">2</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2          0.027<span style="text-decoration: underline;">1</span>         0.025<span style="text-decoration: underline;">1</span>                 0.496            0.108 </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3          0.058<span style="text-decoration: underline;">3</span>         0.050<span style="text-decoration: underline;">8</span>                 0.566            0.120 </span></span>
 <span><span class="co">## <span style="color: #949494;"># ℹ 5 more variables: mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, cor_temporal_means &lt;dbl&gt;,</span></span></span>
 <span><span class="co">## <span style="color: #949494;">#   mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span>
 <span><span class="co">## </span></span>
@@ -315,9 +292,9 @@ patterns and features</li>
 <span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
 <span><span class="co">##   roinum mean_correlation cor_difference mean_rank_percentile voxel_correlation</span></span>
 <span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1          -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">2</span>        -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">6</span>                0.399          -<span style="color: #BB0000;">0.005</span><span style="color: #BB0000; text-decoration: underline;">15</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2          -<span style="color: #BB0000;">0.109</span>         -<span style="color: #BB0000;">0.112</span>                 0.314          -<span style="color: #BB0000;">0.059</span><span style="color: #BB0000; text-decoration: underline;">3</span> </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3          -<span style="color: #BB0000;">0.069</span><span style="color: #BB0000; text-decoration: underline;">3</span>        -<span style="color: #BB0000;">0.068</span><span style="color: #BB0000; text-decoration: underline;">7</span>                0.383          -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">89</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1         -<span style="color: #BB0000;">0.003</span><span style="color: #BB0000; text-decoration: underline;">60</span>       -<span style="color: #BB0000;">0.002</span><span style="color: #BB0000; text-decoration: underline;">34</span>                0.501            0.072<span style="text-decoration: underline;">2</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2          0.027<span style="text-decoration: underline;">1</span>         0.025<span style="text-decoration: underline;">1</span>                 0.496            0.108 </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3          0.058<span style="text-decoration: underline;">3</span>         0.050<span style="text-decoration: underline;">8</span>                 0.566            0.120 </span></span>
 <span><span class="co">## <span style="color: #949494;"># ℹ 5 more variables: mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, cor_temporal_means &lt;dbl&gt;,</span></span></span>
 <span><span class="co">## <span style="color: #949494;">#   mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span>
 <span><span class="co">## </span></span>
@@ -325,9 +302,9 @@ patterns and features</li>
 <span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
 <span><span class="co">##   roinum mean_correlation cor_difference mean_rank_percentile voxel_correlation</span></span>
 <span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1           -<span style="color: #BB0000;">0.236</span>         -<span style="color: #BB0000;">0.237</span>               0.085<span style="text-decoration: underline;">0</span>           -<span style="color: #BB0000;">0.058</span><span style="color: #BB0000; text-decoration: underline;">0</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2           -<span style="color: #BB0000;">0.215</span>         -<span style="color: #BB0000;">0.211</span>               0.107            -<span style="color: #BB0000;">0.024</span><span style="color: #BB0000; text-decoration: underline;">5</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3           -<span style="color: #BB0000;">0.208</span>         -<span style="color: #BB0000;">0.200</span>               0.106            -<span style="color: #BB0000;">0.011</span><span style="color: #BB0000; text-decoration: underline;">7</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1           -<span style="color: #BB0000;">0.213</span>         -<span style="color: #BB0000;">0.205</span>               0.101           -<span style="color: #BB0000;">0.022</span><span style="color: #BB0000; text-decoration: underline;">3</span> </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2           -<span style="color: #BB0000;">0.219</span>         -<span style="color: #BB0000;">0.225</span>               0.090<span style="text-decoration: underline;">9</span>           0.009<span style="text-decoration: underline;">86</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3           -<span style="color: #BB0000;">0.209</span>         -<span style="color: #BB0000;">0.213</span>               0.093<span style="text-decoration: underline;">1</span>          -<span style="color: #BB0000;">0.029</span><span style="color: #BB0000; text-decoration: underline;">9</span> </span></span>
 <span><span class="co">## <span style="color: #949494;"># ℹ 5 more variables: mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, cor_temporal_means &lt;dbl&gt;,</span></span></span>
 <span><span class="co">## <span style="color: #949494;">#   mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span></code></pre>
 </div>
@@ -338,42 +315,20 @@ patterns and features</li>
 <div class="section level3">
 <h3 id="overview-1">Overview<a class="anchor" aria-label="anchor" href="#overview-1"></a>
 </h3>
-<p>Vector-Based RSA is designed for cases where:</p>
-<ol style="list-style-type: decimal">
-<li>You have pre-computed distance matrices</li>
-<li>You want to compare across-block distances only</li>
-<li>You need efficient computation for large datasets</li>
-</ol>
-<p>Unlike standard RSA which works with full similarity matrices,
-Vector-Based RSA operates on vectorized distance matrices and can
-efficiently handle block structure.</p>
+<p>Vector‑Based RSA starts from pre‑computed distance matrices and
+operates directly on vectorized distances. It is particularly helpful
+when you need to ignore within‑block comparisons or scale to large
+datasets—it avoids materializing full similarity matrices and handles
+blocks efficiently.</p>
 </div>
 <div class="section level3">
-<h3 id="key-differences-from-standard-rsa-1">Key Differences from Standard RSA<a class="anchor" aria-label="anchor" href="#key-differences-from-standard-rsa-1"></a>
+<h3 id="key-differences-from-standard-rsa-1">Key differences from standard RSA<a class="anchor" aria-label="anchor" href="#key-differences-from-standard-rsa-1"></a>
 </h3>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Computation</strong>:
-<ul>
-<li>Standard RSA: Works with full similarity matrices</li>
-<li>Vector RSA: Works with vectorized distances</li>
-</ul>
-</li>
-<li>
-<strong>Block Handling</strong>:
-<ul>
-<li>Standard RSA: Manual block exclusion</li>
-<li>Vector RSA: Built-in efficient block handling</li>
-</ul>
-</li>
-<li>
-<strong>Memory Usage</strong>:
-<ul>
-<li>Standard RSA: Stores full matrices</li>
-<li>Vector RSA: Stores only necessary comparisons</li>
-</ul>
-</li>
-</ol>
+<p>Compared to standard RSA, the vector approach (i) works on distance
+vectors instead of full matrices, (ii) builds block‑wise exclusions into
+the workflow, and (iii) reduces memory use by retaining only the
+necessary comparisons. These properties make it a good fit for
+high‑resolution or long‑duration datasets.</p>
 </div>
 <div class="section level3">
 <h3 id="implementation-example-1">Implementation Example<a class="anchor" aria-label="anchor" href="#implementation-example-1"></a>
@@ -403,7 +358,7 @@ efficiently handle block structure.</p>
 <span></span>
 <span><span class="co"># Run analysis</span></span>
 <span><span class="va">results_vector</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">vector_model</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:11] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:19] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
@@ -414,9 +369,9 @@ efficiently handle block structure.</p>
 <pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
 <span><span class="co">##   roinum rsa_score</span></span>
 <span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1  0.009<span style="text-decoration: underline;">48</span> </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2 -<span style="color: #BB0000;">0.046</span><span style="color: #BB0000; text-decoration: underline;">7</span>  </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3  0.000<span style="text-decoration: underline;">723</span></span></span></code></pre>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1    0.095<span style="text-decoration: underline;">4</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2    0.090<span style="text-decoration: underline;">9</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3    0.127</span></span></code></pre>
 </div>
 <div class="section level3">
 <h3 id="efficient-block-handling">Efficient Block Handling<a class="anchor" aria-label="anchor" href="#efficient-block-handling"></a>
@@ -439,12 +394,12 @@ efficiently handle block structure.</p>
 <span>  <span class="op">)</span></span>
 <span>  <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 22:03:14] </span></span>
+<pre><code><span><span class="co">## INFO [2025-09-28 01:07:22] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-27 22:03:17] </span></span>
+<span><span class="co">## INFO [2025-09-28 01:07:25] </span></span>
 <span><span class="co">## ✨ MVPA Iteration Complete</span></span>
 <span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
 <span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
@@ -460,75 +415,56 @@ efficiently handle block structure.</p>
 <span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
 <span><span class="co">##   roinum rsa_score</span></span>
 <span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1  -<span style="color: #BB0000;">0.018</span><span style="color: #BB0000; text-decoration: underline;">5</span> </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2  -<span style="color: #BB0000;">0.045</span><span style="color: #BB0000; text-decoration: underline;">0</span> </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3   0.003<span style="text-decoration: underline;">23</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1    0.085<span style="text-decoration: underline;">3</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2    0.113 </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3    0.124 </span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## Block size: 10 </span></span>
 <span><span class="co">## <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
 <span><span class="co">##   roinum rsa_score</span></span>
 <span><span class="co">##    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1  -<span style="color: #BB0000;">0.019</span><span style="color: #BB0000; text-decoration: underline;">2</span> </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2  -<span style="color: #BB0000;">0.037</span><span style="color: #BB0000; text-decoration: underline;">7</span> </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3   0.005<span style="text-decoration: underline;">19</span></span></span></code></pre>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>      1    0.082<span style="text-decoration: underline;">3</span></span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>      2    0.121 </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>      3    0.145</span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
 <h2 id="when-to-use-each-method">When to Use Each Method<a class="anchor" aria-label="anchor" href="#when-to-use-each-method"></a>
 </h2>
 <div class="section level3">
-<h3 id="feature-based-rsa-1">Feature-Based RSA<a class="anchor" aria-label="anchor" href="#feature-based-rsa-1"></a>
+<h3 id="featurebased-rsa">Feature‑Based RSA<a class="anchor" aria-label="anchor" href="#featurebased-rsa"></a>
 </h3>
-<p>Feature-Based RSA is most appropriate when working with a
-well-defined feature space where the dimensions have meaningful
-interpretations. This approach excels at reconstructing and predicting
-specific stimulus features from neural activity patterns. Common
-applications include predicting visual features from visual cortex
-responses, reconstructing semantic dimensions from language area
-activity, and mapping motion parameters from MT/V5 activation
-patterns.</p>
+<p>Choose Feature‑Based RSA when you have a meaningful feature space and
+care about predicting or reconstructing those dimensions from neural
+activity (e.g., semantic features in language regions, low‑level visual
+features in early visual cortex).</p>
 </div>
 <div class="section level3">
-<h3 id="vector-based-rsa-1">Vector-Based RSA<a class="anchor" aria-label="anchor" href="#vector-based-rsa-1"></a>
+<h3 id="vectorbased-rsa">Vector‑Based RSA<a class="anchor" aria-label="anchor" href="#vectorbased-rsa"></a>
 </h3>
-<p>Vector-Based RSA is ideal for analyzing large datasets with
-pre-computed distance matrices. It handles memory efficiently and
-provides sophisticated block handling capabilities. This makes it
-particularly valuable when comparing across multiple experimental runs,
-working with high-resolution fMRI data, or analyzing large-scale
-similarity structures.</p>
+<p>Use Vector‑Based RSA for large datasets or when block handling is
+central to your design. Working with vectorized distances keeps memory
+use in check and makes across‑block comparisons straightforward.</p>
 </div>
 <div class="section level3">
 <h3 id="standard-rsa">Standard RSA<a class="anchor" aria-label="anchor" href="#standard-rsa"></a>
 </h3>
-<p>Stick with standard RSA when: - You’re testing theoretical models -
-You want to compare similarity structures - Block structure isn’t
-critical - Memory usage isn’t a concern</p>
+<p>Standard RSA remains the best choice when your primary goal is to
+test theoretical similarity structures and neither strict block handling
+nor extreme memory efficiency is required.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h2>
-<p>The <code>rMVPA</code> package provides three complementary RSA
-approaches:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Standard RSA</strong>: General-purpose similarity
-analysis</li>
-<li>
-<strong>Feature-Based RSA</strong>: Direct feature mapping and
-reconstruction</li>
-<li>
-<strong>Vector-Based RSA</strong>: Efficient similarity comparison
-with block handling</li>
-</ol>
-<p>Your choice of RSA method should align with your research goals,
-match your data’s structure, fit within computational constraints, and
-reflect whether you’re analyzing feature spaces or similarity
-patterns.</p>
-<p>For implementation details, refer to: -
-<code>feature_rsa_model.R</code> - <code>vector_rsa_model.R</code> -
-<code>rsa_model.R</code></p>
+<p><code>rMVPA</code> offers three complementary RSA workflows: standard
+RSA for model testing, Feature‑Based RSA for direct feature
+reconstruction, and Vector‑Based RSA for efficient block‑aware distance
+comparisons. Pick the approach that matches your research goal, data
+structure, and computational budget.</p>
+<p>For implementation details, see the reference pages for
+<code><a href="../reference/feature_rsa_model.html">feature_rsa_model()</a></code>, <code><a href="../reference/vector_rsa_model.html">vector_rsa_model()</a></code>, and
+<code><a href="../reference/rsa_model.html">rsa_model()</a></code>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
