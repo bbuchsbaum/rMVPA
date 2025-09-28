@@ -75,9 +75,9 @@ data and associated metadata.</p></dd>
 
 <dt id="arg-estimation-method">estimation_method<a class="anchor" aria-label="anchor" href="#arg-estimation-method"></a></dt>
 <dd><p>Character string specifying the method to estimate
-cross-validated condition means (<code>Û</code>) or distances. Supported:</p><ul><li><p><code>"average"</code>: Simple mean of training samples per condition (for <code>Û</code>).</p></li>
-<li><p><code>"L2_norm"</code>: Like <code>"average"</code>, but <code>Û</code> rows are L2-normalized.</p></li>
-<li><p><code>"crossnobis"</code>: Computes unbiased squared Euclidean distances directly using the Crossnobis method. Results in a distance vector for RSA, not a <code>Û</code> matrix for \(G_empirical\) construction in the same way. <code>U_hat</code> for \(\Delta\) calculation is still computed using "average" method internally when this is selected. Requires `return_folds=TRUE` from `compute_crossvalidated_means_sl`.</p></li>
+cross-validated condition means (U_hat) or distances. Supported:</p><ul><li><p><code>"average"</code>: Simple mean of training samples per condition (for U_hat).</p></li>
+<li><p><code>"L2_norm"</code>: Like <code>"average"</code>, but U_hat rows are L2-normalized.</p></li>
+<li><p><code>"crossnobis"</code>: Computes unbiased squared Euclidean distances directly using the Crossnobis method. Results in a distance vector for RSA, not a U_hat matrix for empirical G construction in the same way. U_hat for delta calculation is still computed using "average" method internally when this is selected. Requires `return_folds=TRUE` from `compute_crossvalidated_means_sl`.</p></li>
 </ul><p>Passed to <code><a href="compute_crossvalidated_means_sl.html">compute_crossvalidated_means_sl</a></code> (for "average", "L2_norm", or to get per-fold means for "crossnobis").</p></dd>
 
 
@@ -101,7 +101,7 @@ Supported options:</p><ul><li><p><code>"beta_delta"</code>: The product of the R
 <li><p><code>"recon_score"</code>: Voxel-specific RDM reconstruction score (r_v), correlating the RDM implied by the voxel's loadings with the empirical RDM.</p></li>
 <li><p><code>"beta_delta_norm"</code>: Similar to `beta_delta`, but uses the L2-normalized voxel contribution vector (delta_q,v). Requires `normalize_delta=TRUE` to be meaningful.</p></li>
 <li><p><code>"beta_delta_reliable"</code>: Reliability-weighted contributions, \(\rho_{q,v} \beta_q \Delta_{q,v}\), where \(\rho_{q,v}\) reflects fold-wise stability.</p></li>
-<li><p><code>"composite"</code>: Sum of beta-weighted, L2-normalized voxel contributions (Σ_q β_q ~Δ_q,v). Represents the net projection onto the positive diagonal of the contrast space. Interpretation requires caution if contrasts are not orthonormal.</p></li>
+<li><p><code>"composite"</code>: Sum of beta-weighted, L2-normalized voxel contributions (sum over q of beta_q * delta_q,v). Represents the net projection onto the positive diagonal of the contrast space. Interpretation requires caution if contrasts are not orthonormal.</p></li>
 </ul><p>Default is <code>c("beta_delta")</code>.</p></dd>
 
 
@@ -123,7 +123,7 @@ is still emitted.</p></dd>
 
 
 <dt id="arg-calc-reliability">calc_reliability<a class="anchor" aria-label="anchor" href="#arg-calc-reliability"></a></dt>
-<dd><p>Logical. If TRUE, voxel-wise contribution reliability (ρ
+<dd><p>Logical. If TRUE, voxel-wise contribution reliability (rho
 values) are estimated across cross-validation folds during training and can
 be incorporated into the output metrics. Default is <code>FALSE</code>.</p></dd>
 
@@ -151,12 +151,12 @@ Default is `NULL` (Euclidean distances for Crossnobis).</p></dd>
 how different predefined contrasts contribute to the representational structure
 observed in neural data, particularly at a fine-grained (e.g., voxel) level.
 It involves:
-1. Estimating cross-validated condition mean patterns (Û) or distances (for Crossnobis).
-2. Constructing an empirical second-moment matrix (Ĝ) from Û or using the Crossnobis distances directly.
+1. Estimating cross-validated condition mean patterns (U_hat) or distances (for Crossnobis).
+2. Constructing an empirical second-moment matrix (G_hat) from U_hat or using the Crossnobis distances directly.
 3. Creating theoretical second-moment matrices (RDMs) from each contrast vector.
-4. Regressing the vectorized empirical RDM/distances onto the vectorized contrast RDMs to get β coefficients.
-5. Projecting voxel patterns (from Û) onto the contrast space to get Δ (delta) values.
-6. Combining β and Δ to form the final output metric (e.g., beta_delta).</p>
+4. Regressing the vectorized empirical RDM/distances onto the vectorized contrast RDMs to get beta coefficients.
+5. Projecting voxel patterns (from U_hat) onto the contrast space to get delta values.
+6. Combining beta and delta to form the final output metric (e.g., beta_delta).</p>
 <p>**Cross-Validation Compatibility:**
 The `estimation_method` relies on `compute_crossvalidated_means_sl` which, in turn, requires
 the cross-validation specification (`cv_spec` derived from `mvpa_design$crossval`)
@@ -187,20 +187,20 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
 <span class="r-in"><span>  <span class="va">n_conditions</span> <span class="op">&lt;-</span> <span class="fl">4</span> <span class="co"># condA, condB, condC, condD</span></span></span>
 <span class="r-in"><span>  <span class="va">n_runs</span> <span class="op">&lt;-</span> <span class="fl">2</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="va">dummy_sl_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_samples</span> <span class="op">*</span> <span class="va">n_voxels</span><span class="op">)</span>, <span class="va">n_samples</span>, <span class="va">n_voxels</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">dummy_sl_data</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"V"</span>, <span class="fl">1</span><span class="op">:</span><span class="va">n_voxels</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">dummy_array</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_voxels</span> <span class="op">*</span> <span class="va">n_samples</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">n_voxels</span>, <span class="fl">1</span>, <span class="fl">1</span>, <span class="va">n_samples</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">dummy_space</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroSpace.html" class="external-link">NeuroSpace</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">n_voxels</span>, <span class="fl">1</span>, <span class="fl">1</span>, <span class="va">n_samples</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">dummy_sl_vec</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVec-class.html" class="external-link">NeuroVec</a></span><span class="op">(</span><span class="va">dummy_array</span>, <span class="va">dummy_space</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="va">dummy_mask</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>,<span class="fl">2</span>,<span class="fl">2</span><span class="op">)</span><span class="op">)</span>, <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroSpace.html" class="external-link">NeuroSpace</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>,<span class="fl">2</span>,<span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">dummy_mask</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">n_voxels</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span>, <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroSpace.html" class="external-link">NeuroSpace</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">n_voxels</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="va">condition_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"cond"</span>, <span class="va">LETTERS</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="va">n_conditions</span><span class="op">]</span><span class="op">)</span>, each <span class="op">=</span> <span class="va">n_samples</span> <span class="op">/</span> <span class="va">n_conditions</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">run_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">n_runs</span>, each <span class="op">=</span> <span class="va">n_samples</span> <span class="op">/</span> <span class="va">n_runs</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># Create mvpa_dataset (without Y and block_var)</span></span></span>
 <span class="r-in"><span>  <span class="va">mvpa_dat</span> <span class="op">&lt;-</span> <span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    train_data <span class="op">=</span> <span class="va">dummy_sl_data</span>,</span></span>
+<span class="r-in"><span>    train_data <span class="op">=</span> <span class="va">dummy_sl_vec</span>,</span></span>
 <span class="r-in"><span>    mask <span class="op">=</span> <span class="va">dummy_mask</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> train_data does not inherit from class NeuroVec</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># Create mvpa_design</span></span></span>
 <span class="r-in"><span>  <span class="va">mvpa_des</span> <span class="op">&lt;-</span> <span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="mvpa_design.html">mvpa_design</a></span><span class="op">(</span></span></span>
@@ -209,37 +209,43 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
 <span class="r-in"><span>    block_var <span class="op">=</span> <span class="op">~</span><span class="va">run</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="va">K</span> <span class="op">&lt;-</span> <span class="va">mvpa_des</span><span class="op">$</span><span class="va">ncond</span> <span class="co"># Use mvpa_des here</span></span></span>
+<span class="r-in"><span>  <span class="va">condition_levels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="y_train-methods.html">y_train</a></span><span class="op">(</span><span class="va">mvpa_des</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">K</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">condition_levels</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="va">C_mat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, nrow <span class="op">=</span> <span class="va">K</span>, ncol <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in matrix(0, nrow = K, ncol = 2):</span> non-numeric matrix extent</span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">C_mat</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="va">mvpa_des</span><span class="op">$</span><span class="va">Y</span><span class="op">)</span> <span class="co"># Use mvpa_des here</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'C_mat' not found</span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">C_mat</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">condition_levels</span></span></span>
 <span class="r-in"><span>  <span class="va">C_mat</span><span class="op">[</span><span class="st">"condA"</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span>; <span class="va">C_mat</span><span class="op">[</span><span class="st">"condB"</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'C_mat' not found</span>
 <span class="r-in"><span>  <span class="va">C_mat</span><span class="op">[</span><span class="st">"condC"</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="fl">1</span>; <span class="va">C_mat</span><span class="op">[</span><span class="st">"condD"</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="fl">1</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'C_mat' not found</span>
 <span class="r-in"><span>  <span class="va">C_mat</span><span class="op">[</span><span class="st">"condA"</span>, <span class="fl">2</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span>; <span class="va">C_mat</span><span class="op">[</span><span class="st">"condB"</span>, <span class="fl">2</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="fl">1</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'C_mat' not found</span>
-<span class="r-in"><span>  <span class="va">C_mat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">C_mat</span>, center <span class="op">=</span> <span class="cn">TRUE</span>, scale <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'C_mat' not found</span>
+<span class="r-in"><span>  <span class="va">C_mat</span> <span class="op">&lt;-</span> <span class="fu">base</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">C_mat</span>, center <span class="op">=</span> <span class="cn">TRUE</span>, scale <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">C_mat</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"AB_vs_CD"</span>, <span class="st">"A_vs_B"</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'C_mat' not found</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="va">msreve_des</span> <span class="op">&lt;-</span> <span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="msreve_design.html">msreve_design</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    mvpa_design <span class="op">=</span> <span class="va">mvpa_des</span>, <span class="co"># Use mvpa_des here</span></span></span>
 <span class="r-in"><span>    contrast_matrix <span class="op">=</span> <span class="va">C_mat</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'C_mat' not found</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># --- Example 1: Basic contrast_rsa_model ---</span></span></span>
 <span class="r-in"><span>  <span class="va">model_basic</span> <span class="op">&lt;-</span> <span class="fu">contrast_rsa_model</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    dataset <span class="op">=</span> <span class="va">mvpa_dat</span>,</span></span>
 <span class="r-in"><span>    design <span class="op">=</span> <span class="va">msreve_des</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'mvpa_dat' not found</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">model_basic</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'model_basic' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  <span style="color: #00BBBB; font-weight: bold;">Contrast RSA Model Specification</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_image_dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Design (`msreve_design`)</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Name: </span> <span style="color: #BBBBBB;">msreve_design_01</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Contrast Matrix Dims: </span> <span style="color: #BB00BB;">4 Cond x 2 Contrasts</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - MVPA Design Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_design</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Analysis Parameters</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Estimation Method (Uhat/d): </span> <span style="color: #BB00BB;">average</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Regression Type (beta): </span> <span style="color: #BB00BB;">lm</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Calc Reliability:     </span> <span style="color: #BB00BB;">FALSE</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Output Metric(s):      </span> <span style="color: #BB00BB;">beta_delta</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># --- Example 1b: Requesting multiple metrics ---</span></span></span>
 <span class="r-in"><span>  <span class="va">model_multi_metric</span> <span class="op">&lt;-</span> <span class="fu">contrast_rsa_model</span><span class="op">(</span></span></span>
@@ -247,9 +253,22 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
 <span class="r-in"><span>    design <span class="op">=</span> <span class="va">msreve_des</span>,</span></span>
 <span class="r-in"><span>    output_metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"beta_delta"</span>, <span class="st">"recon_score"</span>, <span class="st">"beta_only"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'mvpa_dat' not found</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">model_multi_metric</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'model_multi_metric' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  <span style="color: #00BBBB; font-weight: bold;">Contrast RSA Model Specification</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_image_dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Design (`msreve_design`)</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Name: </span> <span style="color: #BBBBBB;">msreve_design_01</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Contrast Matrix Dims: </span> <span style="color: #BB00BB;">4 Cond x 2 Contrasts</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - MVPA Design Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_design</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Analysis Parameters</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Estimation Method (Uhat/d): </span> <span style="color: #BB00BB;">average</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Regression Type (beta): </span> <span style="color: #BB00BB;">lm</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Calc Reliability:     </span> <span style="color: #BB00BB;">FALSE</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Output Metric(s):      </span> <span style="color: #BB00BB;">beta_delta, recon_score, beta_only</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># --- Example 2: Using L2_norm for U_hat and normalize_delta ---</span></span></span>
 <span class="r-in"><span>  <span class="va">model_l2_norm_delta</span> <span class="op">&lt;-</span> <span class="fu">contrast_rsa_model</span><span class="op">(</span></span></span>
@@ -259,9 +278,22 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
 <span class="r-in"><span>    normalize_delta <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
 <span class="r-in"><span>    output_metric <span class="op">=</span> <span class="st">"beta_delta_norm"</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'mvpa_dat' not found</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">model_l2_norm_delta</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'model_l2_norm_delta' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  <span style="color: #00BBBB; font-weight: bold;">Contrast RSA Model Specification</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_image_dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Design (`msreve_design`)</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Name: </span> <span style="color: #BBBBBB;">msreve_design_01</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Contrast Matrix Dims: </span> <span style="color: #BB00BB;">4 Cond x 2 Contrasts</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - MVPA Design Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_design</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Analysis Parameters</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Estimation Method (Uhat/d): </span> <span style="color: #BB00BB;">L2_norm</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Regression Type (beta): </span> <span style="color: #BB00BB;">lm</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Calc Reliability:     </span> <span style="color: #BB00BB;">FALSE</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Output Metric(s):      </span> <span style="color: #BB00BB;">beta_delta_norm</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># --- Example 3: Ridge Regression (HKB) ---</span></span></span>
 <span class="r-in"><span>  <span class="va">model_ridge</span> <span class="op">&lt;-</span> <span class="fu">contrast_rsa_model</span><span class="op">(</span></span></span>
@@ -269,9 +301,22 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
 <span class="r-in"><span>    design <span class="op">=</span> <span class="va">msreve_des</span>,</span></span>
 <span class="r-in"><span>    regression_type <span class="op">=</span> <span class="st">"ridge_hkb"</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'mvpa_dat' not found</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">model_ridge</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'model_ridge' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  <span style="color: #00BBBB; font-weight: bold;">Contrast RSA Model Specification</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_image_dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Design (`msreve_design`)</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Name: </span> <span style="color: #BBBBBB;">msreve_design_01</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Contrast Matrix Dims: </span> <span style="color: #BB00BB;">4 Cond x 2 Contrasts</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - MVPA Design Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_design</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Analysis Parameters</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Estimation Method (Uhat/d): </span> <span style="color: #BB00BB;">average</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Regression Type (beta): </span> <span style="color: #BB00BB;">ridge_hkb</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Calc Reliability:     </span> <span style="color: #BB00BB;">FALSE</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Output Metric(s):      </span> <span style="color: #BB00BB;">beta_delta</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># --- Example 4: Reconstruction Score Output ---</span></span></span>
 <span class="r-in"><span>  <span class="va">model_recon</span> <span class="op">&lt;-</span> <span class="fu">contrast_rsa_model</span><span class="op">(</span></span></span>
@@ -279,20 +324,32 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
 <span class="r-in"><span>    design <span class="op">=</span> <span class="va">msreve_des</span>,</span></span>
 <span class="r-in"><span>    output_metric <span class="op">=</span> <span class="st">"recon_score"</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'mvpa_dat' not found</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">model_recon</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'model_recon' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  <span style="color: #00BBBB; font-weight: bold;">Contrast RSA Model Specification</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_image_dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Design (`msreve_design`)</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Name: </span> <span style="color: #BBBBBB;">msreve_design_01</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Contrast Matrix Dims: </span> <span style="color: #BB00BB;">4 Cond x 2 Contrasts</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - MVPA Design Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_design</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Analysis Parameters</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Estimation Method (Uhat/d): </span> <span style="color: #BB00BB;">average</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Regression Type (beta): </span> <span style="color: #BB00BB;">lm</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Calc Reliability:     </span> <span style="color: #BB00BB;">FALSE</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Output Metric(s):      </span> <span style="color: #BB00BB;">recon_score</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># --- Example 5: Composite Score Output ---</span></span></span>
 <span class="r-in"><span>  <span class="va">C_mat_ortho</span> <span class="op">&lt;-</span> <span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="orthogonalize_contrasts.html">orthogonalize_contrasts</a></span><span class="op">(</span><span class="va">C_mat</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'C_mat' not found</span>
 <span class="r-in"><span>  <span class="va">msreve_des_ortho</span> <span class="op">&lt;-</span> <span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="msreve_design.html">msreve_design</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>      mvpa_design <span class="op">=</span> <span class="va">mvpa_des</span>, <span class="co"># Use mvpa_des here</span></span></span>
 <span class="r-in"><span>      contrast_matrix <span class="op">=</span> <span class="va">C_mat_ortho</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'C_mat_ortho' not found</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Contrast matrix has no rownames and mvpa_design$conditions is NULL. Assuming row order matches sorted unique condition labels from Y for block mapping.</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Is contrast matrix orthonormal:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">msreve_des_ortho</span>, <span class="st">"is_orthonormal"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'msreve_des_ortho' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Is contrast matrix orthonormal: TRUE"</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="va">model_composite</span> <span class="op">&lt;-</span> <span class="fu">contrast_rsa_model</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    dataset <span class="op">=</span> <span class="va">mvpa_dat</span>,</span></span>
@@ -300,9 +357,22 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
 <span class="r-in"><span>    output_metric <span class="op">=</span> <span class="st">"composite"</span>,</span></span>
 <span class="r-in"><span>    normalize_delta <span class="op">=</span> <span class="cn">TRUE</span> </span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'mvpa_dat' not found</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">model_composite</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'model_composite' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  <span style="color: #00BBBB; font-weight: bold;">Contrast RSA Model Specification</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_image_dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Design (`msreve_design`)</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Name: </span> <span style="color: #BBBBBB;">msreve_design_01</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Contrast Matrix Dims: </span> <span style="color: #BB00BB;">4 Cond x 2 Contrasts</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - MVPA Design Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_design</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Analysis Parameters</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Estimation Method (Uhat/d): </span> <span style="color: #BB00BB;">average</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Regression Type (beta): </span> <span style="color: #BB00BB;">lm</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Calc Reliability:     </span> <span style="color: #BB00BB;">FALSE</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Output Metric(s):      </span> <span style="color: #BB00BB;">composite</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># --- Example 6: Crossnobis estimation_method ---</span></span></span>
 <span class="r-in"><span>  <span class="co"># This only shows setting the method. Actual training would require passing</span></span></span>
@@ -313,9 +383,23 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
 <span class="r-in"><span>      design <span class="op">=</span> <span class="va">msreve_des</span>,</span></span>
 <span class="r-in"><span>      estimation_method <span class="op">=</span> <span class="st">"crossnobis"</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'mvpa_dat' not found</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">model_crossnobis</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'model_crossnobis' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  <span style="color: #00BBBB; font-weight: bold;">Contrast RSA Model Specification</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_image_dataset</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Design (`msreve_design`)</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Name: </span> <span style="color: #BBBBBB;">msreve_design_01</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Contrast Matrix Dims: </span> <span style="color: #BB00BB;">4 Cond x 2 Contrasts</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - MVPA Design Class: </span> <span style="color: #0000BB; font-style: italic;">mvpa_design</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Analysis Parameters</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Estimation Method (Uhat/d): </span> <span style="color: #BB00BB;">crossnobis</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Whitening Matrix (W): </span> <span style="color: #BB00BB;">None (for Euclidean)</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Regression Type (beta): </span> <span style="color: #BB00BB;">lm</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Calc Reliability:     </span> <span style="color: #BB00BB;">FALSE</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Output Metric(s):      </span> <span style="color: #BB00BB;">beta_delta</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -38,7 +38,10 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">format_result</span><span class="op">(</span><span class="va">obj</span>, <span class="va">result</span>, <span class="va">error_message</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">format_result</span><span class="op">(</span><span class="va">obj</span>, <span class="va">result</span>, <span class="va">error_message</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'feature_rsa_model'</span></span>
+<span><span class="fu">format_result</span><span class="op">(</span><span class="va">obj</span>, <span class="va">result</span>, error_message <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">context</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -59,6 +62,10 @@
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments to be passed to the method-specific function.</p></dd>
+
+
+<dt id="arg-context">context<a class="anchor" aria-label="anchor" href="#arg-context"></a></dt>
+<dd><p>Optional contextual metadata (e.g., ROI details) supplied to method implementations.</p></dd>
 
 </dl></div>
 

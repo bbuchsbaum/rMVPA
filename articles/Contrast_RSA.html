@@ -114,21 +114,21 @@ metric.</p>
 <span><span class="va">slight</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_searchlight.html">get_searchlight</a></span><span class="op">(</span><span class="va">model_spec</span><span class="op">$</span><span class="va">dataset</span>, type <span class="op">=</span> <span class="st">"standard"</span>, radius <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="va">center_indices</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">model_spec</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="va">iter_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_iterate.html">mvpa_iterate</a></span><span class="op">(</span><span class="va">model_spec</span>, <span class="va">slight</span>, <span class="va">center_indices</span>, analysis_type <span class="op">=</span> <span class="st">"searchlight"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:32] ⚡ Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:33] ⚡ Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:34] ⚡ Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:35] ⚡ Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:36] ⚡ Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:37] ⚡ Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:38] ⚡ Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:39] ⚡ Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:40] ⚡ Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:41] ⚡ Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2025-09-28 01:07:42] </span></span>
-<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
-<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">120</span></span></span>
-<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">120</span></span></span>
-<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:32] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:33] Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:34] Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:35] Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:36] Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:37] Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:38] Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:39] Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:40] Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:41] Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">10</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-09-28 19:05:42] </span></span>
+<span><span class="co">## MVPA Iteration Complete</span></span>
+<span><span class="co">## - Total ROIs: <span style="color: #0000BB;">120</span></span></span>
+<span><span class="co">## - Processed: <span style="color: #0000BB;">120</span></span></span>
+<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Inspect the beta_delta metric for the first few centers</span></span>
 <span><span class="va">preview_ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">iter_res</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
@@ -142,17 +142,17 @@ metric.</p>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">preview_tbl</span></span></code></pre></div>
-<pre><code><span><span class="co">##    center_id contrast   beta_delta</span></span>
-<span><span class="co">## 1         22 AB_vs_CD -0.732517139</span></span>
-<span><span class="co">## 2         22   A_vs_B -0.057170966</span></span>
-<span><span class="co">## 3         45 AB_vs_CD -0.097480423</span></span>
-<span><span class="co">## 4         45   A_vs_B -0.086342936</span></span>
-<span><span class="co">## 5         46 AB_vs_CD -0.261304552</span></span>
-<span><span class="co">## 6         46   A_vs_B  0.033916449</span></span>
-<span><span class="co">## 7         47 AB_vs_CD -0.064381988</span></span>
-<span><span class="co">## 8         47   A_vs_B  0.346159334</span></span>
-<span><span class="co">## 9         50 AB_vs_CD  0.027530531</span></span>
-<span><span class="co">## 10        50   A_vs_B -0.009356533</span></span></code></pre>
+<pre><code><span><span class="co">##    center_id contrast    beta_delta</span></span>
+<span><span class="co">## 1         22 AB_vs_CD -0.0001394451</span></span>
+<span><span class="co">## 2         22   A_vs_B  0.0127592249</span></span>
+<span><span class="co">## 3         45 AB_vs_CD  0.2508820186</span></span>
+<span><span class="co">## 4         45   A_vs_B  1.0927397711</span></span>
+<span><span class="co">## 5         46 AB_vs_CD -0.1441971002</span></span>
+<span><span class="co">## 6         46   A_vs_B  0.0781998715</span></span>
+<span><span class="co">## 7         47 AB_vs_CD  0.1138588720</span></span>
+<span><span class="co">## 8         47   A_vs_B  0.1319847554</span></span>
+<span><span class="co">## 9         50 AB_vs_CD  0.0656749320</span></span>
+<span><span class="co">## 10        50   A_vs_B  0.2271856375</span></span></code></pre>
 </div>
 <div class="section level2">
 <h2 id="understanding-the-metrics">Understanding the metrics<a class="anchor" aria-label="anchor" href="#understanding-the-metrics"></a>

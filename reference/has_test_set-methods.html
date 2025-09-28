@@ -38,7 +38,10 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">has_test_set</span><span class="op">(</span><span class="va">obj</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">has_test_set</span><span class="op">(</span><span class="va">obj</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'mvpa_design'</span></span>
+<span><span class="fu">has_test_set</span><span class="op">(</span><span class="va">obj</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -59,7 +62,7 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">4</span>, <span class="fl">4</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">10</span>, external_test <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> external test</span>
 <span class="r-in"><span><span class="fu">has_test_set</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">design</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in UseMethod("has_test_set"):</span> no applicable method for 'has_test_set' applied to an object of class "c('mvpa_design', 'list')"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
