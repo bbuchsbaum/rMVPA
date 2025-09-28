@@ -282,21 +282,18 @@ test_that("Nuisance RDMs in contrast_rsa_model don't affect output dimensions", 
   n_voxels <- 10
   n_conditions <- 4
   
-  # Skip this test if we can't create proper NeuroVec objects
-  # The mvpa_dataset requires NeuroVec inputs which need proper setup
-  skip("Skipping contrast_rsa_model test - requires proper NeuroVec setup")
-  
-  # Create dummy data
-  dummy_data <- matrix(rnorm(n_samples * n_voxels), n_samples, n_voxels)
-  dummy_mask <- neuroim2::NeuroVol(array(1, c(2,2,3)), 
-                                   neuroim2::NeuroSpace(c(2,2,3)))
+  # Create dummy data as NeuroVec so mvpa_dataset accepts it
+  dummy_array <- array(rnorm(n_voxels * n_samples), c(n_voxels, 1, 1, n_samples))
+  dummy_space <- neuroim2::NeuroSpace(c(n_voxels, 1, 1, n_samples))
+  dummy_sl_vec <- neuroim2::NeuroVec(dummy_array, dummy_space)
+  dummy_mask <- neuroim2::NeuroVol(array(1, c(n_voxels, 1, 1)), neuroim2::NeuroSpace(c(n_voxels, 1, 1)))
   
   condition_labels <- factor(rep(paste0("cond", 1:n_conditions), 
                                  each = n_samples / n_conditions))
   run_labels <- factor(rep(1:2, each = n_samples / 2))
   
   # Create mvpa objects
-  mvpa_dat <- mvpa_dataset(train_data = dummy_data, mask = dummy_mask)
+  mvpa_dat <- mvpa_dataset(train_data = dummy_sl_vec, mask = dummy_mask)
   mvpa_des <- mvpa_design(
     train_design = data.frame(condition = condition_labels, run = run_labels),
     y_train = ~ condition,
@@ -305,7 +302,8 @@ test_that("Nuisance RDMs in contrast_rsa_model don't affect output dimensions", 
   
   # Create contrast matrix
   C_mat <- matrix(c(1, 1, -1, -1), nrow = n_conditions, ncol = 1)
-  rownames(C_mat) <- levels(mvpa_des$Y)
+  condition_levels <- levels(rMVPA::y_train(mvpa_des))
+  rownames(C_mat) <- condition_levels
   colnames(C_mat) <- "Contrast1"
   
   # Test without nuisance

@@ -59,7 +59,7 @@ test_that("msreve_design constructor errors on invalid contrast_matrix", {
 
 test_that("msreve_design constructor errors on dimension mismatch", {
   mvpa_des <- mock_mvpa_design(n_cond = 4) # 4 conditions
-  C_wrong_rows <- matrix(1, nrow = 3, ncol = 1) # Only 3 rows
+  C_wrong_rows <- matrix(1, nrow = 3, ncol = 1, dimnames = list(NULL, "Contrast1")) # Only 3 rows
   expect_error(msreve_design(mvpa_des, C_wrong_rows),
                regexp = "Number of rows in contrast_matrix .*3.* must match number of conditions in mvpa_design .*4.*")
 })
