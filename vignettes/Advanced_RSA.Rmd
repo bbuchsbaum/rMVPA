@@ -1,18 +1,29 @@
 ---
-title: "Advanced RSA Methods: Feature-Based and Vector-Based Approaches"
-author: "Bradley Buchsbaum"
-date: "`r Sys.Date()`"
-output: 
+title: 'Advanced RSA Methods: Feature-Based and Vector-Based Approaches'
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output:
   rmarkdown::html_vignette:
-    toc: true
+    toc: yes
     toc_depth: 3
-vignette: >
-  %\VignetteIndexEntry{Advanced RSA Methods: Feature-Based and Vector-Based Approaches}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+vignette: '%\VignetteIndexEntry{Advanced RSA Methods: Feature-Based and Vector-Based
+  Approaches} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 ```{r setup, echo=FALSE, message=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 suppressPackageStartupMessages({
   library(neuroim2)
   library(rMVPA)
@@ -51,9 +62,9 @@ n_features <- 5
 # Latent factors shared between features and brain data (weak signal)
 Z <- matrix(rnorm(n_stimuli * 2), n_stimuli, 2)
 
-# Build a weakly-correlated feature matrix: F = 0.5 * (Z %*% B) + 0.5 * noise
+# Build a feature matrix with moderate correlation: F = 0.7 * (Z %*% B) + 0.3 * noise
 B <- matrix(rnorm(2 * n_features), 2, n_features)
-feature_matrix <- 0.5 * (Z %*% B) + 0.5 * matrix(rnorm(n_stimuli * n_features), n_stimuli, n_features)
+feature_matrix <- 0.7 * (Z %*% B) + 0.3 * matrix(rnorm(n_stimuli * n_features), n_stimuli, n_features)
 feature_matrix <- base::scale(feature_matrix)
 colnames(feature_matrix) <- paste0("feature_", 1:n_features)
 
@@ -76,17 +87,20 @@ p1 <- rnorm(length(mask_idx))
 p2 <- rnorm(length(mask_idx))
 p1 <- p1 / sd(p1); p2 <- p2 / sd(p2)
 
-# Inject weak signal into brain data: X <- X + 0.2 * (p1 %*% t(Z1)) + 0.2 * (p2 %*% t(Z2))
-datamat <- datamat + p1 %*% t(0.2 * Z[,1]) + p2 %*% t(0.2 * Z[,2])
+# Inject moderate signal into brain data: X <- X + 0.5 * (p1 %*% t(Z1)) + 0.5 * (p2 %*% t(Z2))
+datamat <- datamat + p1 %*% t(0.5 * Z[,1]) + p2 %*% t(0.5 * Z[,2])
 
 # Repackage as a NeuroVec using the existing space and logical mask
 train_vec <- neuroim2::SparseNeuroVec(datamat, neuroim2::space(data_out$dataset$train_data), mask = mask_vals)
 dset <- mvpa_dataset(train_vec, mask = mask_vol)
 
-# Create feature RSA design from the correlated feature matrix
+# Create feature RSA design from the correlated feature matrix.
+# Limit max_comps so PLS and PCA use a low‑dimensional subspace,
+# making their behavior distinguishable in the example.
 feature_design <- feature_rsa_design(
   F = feature_matrix,
-  labels = stim_labels
+  labels = stim_labels,
+  max_comps = 2
 )
 
 # Create cross-validation structure using the block information
@@ -109,8 +123,8 @@ region_mask <- neuroim2::NeuroVol(
   indices = which(mask_vol > 0)
 )
 
-# Run regional analysis
-results <- run_regional(feature_model, region_mask)
+# Run regional analysis (suppress log messages for clarity)
+results <- suppressWarnings(suppressMessages(run_regional(feature_model, region_mask)))
 
 # Examine results
 print(results$performance_table)
@@ -130,7 +144,7 @@ results_list <- lapply(methods, function(method) {
     method = method,
     crossval = crossval  # Add cross-validation
   )
-  run_regional(model, region_mask)
+  suppressWarnings(suppressMessages(run_regional(model, region_mask)))
 })
 
 # Compare performance
@@ -175,8 +189,8 @@ vector_model <- vector_rsa_model(
   rsa_simfun = "pearson"
 )
 
-# Run analysis
-results_vector <- run_regional(vector_model, region_mask)
+# Run analysis (suppress log messages for clarity)
+results_vector <- suppressWarnings(suppressMessages(run_regional(vector_model, region_mask)))
 
 # Examine results
 print(results_vector$performance_table)
@@ -201,7 +215,7 @@ results_blocks <- lapply(block_sizes, function(size) {
     design = design,
     distfun = cordist()
   )
-  run_regional(model, region_mask)
+  suppressWarnings(suppressMessages(run_regional(model, region_mask)))
 })
 
 # Compare results

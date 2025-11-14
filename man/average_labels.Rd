@@ -47,7 +47,7 @@ z-scored data will have SD < 1):
 \value{
 A NeuroVec object with averaged data (one volume per unique label), or a matrix if return_matrix=TRUE.
         The returned object has attributes:
-        \itemize{
+        \describe{
           \item{condition_labels}{The unique labels in order}
           \item{n_averaged}{Number of volumes averaged for each label}
           \item{normalization}{The normalization method used}

@@ -9,6 +9,9 @@ temporal_nuisance_for_msreve(
   time_idx,
   reduce = c("min", "mean", "median", "nn_min"),
   kernel = c("adjacent", "boxcar", "linear", "poly", "exp", "gauss"),
+  units = c("auto", "sec", "TR", "index"),
+  TR = NULL,
+  metric = c("distance", "similarity"),
   within_blocks_only = TRUE,
   ...
 )
@@ -19,14 +22,20 @@ temporal_nuisance_for_msreve(
 \item{time_idx}{numeric/integer vector of temporal indices, length = nrow(mvpa_design$train_design)}
 
 \item{reduce}{character string specifying reduction method:
-\itemize{
-  \item{"min"}{Minimum lag between any pair of trials from two conditions}
-  \item{"mean"}{Average lag between all pairs of trials}
-  \item{"median"}{Median lag between all pairs of trials}
-  \item{"nn_min"}{Minimum nearest-neighbor distance}
+\describe{
+  \item{min}{Minimum lag between any pair of trials from two conditions}
+  \item{mean}{Average lag between all pairs of trials}
+  \item{median}{Median lag between all pairs of trials}
+  \item{nn_min}{Minimum nearest-neighbor distance}
 }}
 
 \item{kernel}{character string specifying kernel type (see \code{\link{temporal_rdm}})}
+
+\item{units}{one of \code{"auto"}, \code{"sec"}, \code{"TR"}, or \code{"index"}; used to select sensible defaults for decay}
+
+\item{TR}{repetition time in seconds (optional)}
+
+\item{metric}{return type: \code{"distance"} or \code{"similarity"} (default \code{"distance"})}
 
 \item{within_blocks_only}{logical; if TRUE, ignore pairs spanning different blocks (default TRUE)}
 

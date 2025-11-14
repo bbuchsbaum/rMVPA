@@ -13,11 +13,11 @@ msreve_design(
 )
 }
 \arguments{
-\item{mvpa_design}{An object of class \\code{mvpa_design}, containing
+\item{mvpa_design}{An object of class \code{mvpa_design}, containing
 information about conditions, blocks, and cross-validation.}
 
-\item{contrast_matrix}{A numeric matrix (\\code{K x Q}) where \\code{K} is
-the number of conditions and \\code{Q} is the number of contrasts.
+\item{contrast_matrix}{A numeric matrix (\code{K x Q}) where \code{K} is
+the number of conditions and \code{Q} is the number of contrasts.
 Each column represents a contrast vector. It is highly recommended
 that columns are named to identify the contrasts.}
 
@@ -31,10 +31,12 @@ These are typically temporal or spatial nuisance patterns that should be account
 for but are not of primary interest.}
 }
 \value{
-An object of class \\code{msreve_design}, which is a list containing:
-  \\item{mvpa_design}{The input \\code{mvpa_design} object.}
-  \\item{contrast_matrix}{The input \\code{contrast_matrix}.}
-  \\item{name}{The name of the design.}
+An object of class \code{msreve_design}, which is a list containing:
+\describe{
+  \item{mvpa_design}{The input \code{mvpa_design} object.}
+  \item{contrast_matrix}{The input \code{contrast_matrix}.}
+  \item{name}{The name of the design.}
+}
 }
 \description{
 Creates an msreve_design object, which encapsulates the necessary

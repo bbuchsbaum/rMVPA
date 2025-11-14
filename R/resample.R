@@ -191,6 +191,20 @@ as_roi.data_sample <- function(x, data, ...) {
 
 #' @keywords internal
 #' @noRd
+as_roi.numeric <- function(x, data, ...) {
+  ds <- data_sample(data, x)
+  as_roi(ds, data, ...)
+}
+
+#' @keywords internal
+#' @noRd
+as_roi.integer <- function(x, data, ...) {
+  ds <- data_sample(data, x)
+  as_roi(ds, data, ...)
+}
+
+#' @keywords internal
+#' @noRd
 #' @importFrom neuroim2 space series series_roi
 as.data.frame.data_sample <- function(x, data, ...) {
   train_mat <- neuroim2::series(data$train_data, x$vox)

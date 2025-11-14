@@ -1,14 +1,23 @@
 ---
-title: "Advanced Regional MVPA Analysis in rMVPA"
-author: "Bradley Buchsbaum"
-date: "`r Sys.Date()`"
+title: Advanced Regional MVPA Analysis in rMVPA
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
 output:
   rmarkdown::html_vignette:
-    toc: true
-vignette: >
-  %\VignetteIndexEntry{Advanced Regional MVPA Analysis in rMVPA}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+    toc: yes
+vignette: '%\VignetteIndexEntry{Advanced Regional MVPA Analysis in rMVPA} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 # Introduction

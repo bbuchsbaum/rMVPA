@@ -25,9 +25,19 @@ This function processes the input data and prepares the regions for MVPA analysi
 voxel indices for each region of interest (ROI) specified in the region_mask.
 }
 \examples{
-# Create example inputs
-model_spec <- list(dataset = "Example dataset")
-region_mask <- matrix(c(rep(0, 5), rep(1, 5), rep(2, 5), rep(3, 5)), nrow = 5)
+# Create example data
+sample_data <- gen_sample_dataset(c(5, 5, 5), nobs = 100, blocks = 4)
+
+# Create a simple region mask with 3 ROIs
+mask_vol <- sample_data$dataset$mask
+region_mask <- neuroim2::NeuroVol(
+  sample(1:3, size = sum(mask_vol > 0), replace = TRUE),
+  space = neuroim2::space(mask_vol),
+  indices = which(mask_vol > 0)
+)
+
+# Create a basic model spec
+model_spec <- list(dataset = sample_data$dataset)
 
 # Prepare regional data
 regional_data <- prep_regional(model_spec, region_mask)

@@ -1,0 +1,280 @@
+---
+title: Running Custom Analyses with rMVPA
+author: Your Name Here
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 3
+vignette: '%\VignetteIndexEntry{Running Custom Analyses with rMVPA} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
+---
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+suppressPackageStartupMessages({
+  library(neuroim2)
+  library(rMVPA)
+  library(dplyr)
+  library(tibble)
+})
+# Ensure sequential plan for examples unless specified
+future::plan(future::sequential) 
+```
+
+# Introduction
+
+`rMVPA` supports custom analyses for cases that go beyond the built‑in MVPA and RSA models. You might want to compute simple univariate statistics inside an ROI, apply a bespoke connectivity metric to each searchlight sphere, or prototype a new method without creating a full S3 model. To make this easy, `run_custom_regional()` and `run_custom_searchlight()` let you apply any R function to ROI or sphere data while reusing `rMVPA`’s data extraction, iteration, parallelization, and error handling.
+
+# Why custom functions?
+
+Custom functions offer flexibility (any R function over ROI/sphere data), simplicity (no need to define a full model for simple summaries), and easy integration of metrics from other packages. You also inherit efficient iteration via `mvpa_iterate`, optional parallelism (the `future` framework), and robust per‑ROI error handling that prevents one failure from stopping the entire run.
+
+# Core Functions
+
+## `run_custom_regional`
+
+This function applies a custom analysis function to data within predefined regions of interest (ROIs).
+
+**Usage:**
+
+```R
+run_custom_regional(
+  dataset,      # mvpa_dataset or mvpa_surface_dataset
+  region_mask,  # NeuroVol or NeuroSurface mask defining ROIs
+  custom_func,  # Your R function
+  ...,          # Optional args passed to mvpa_iterate
+  .cores = 1,   # Number of cores for parallel processing
+  .verbose = FALSE # Print progress messages?
+)
+```
+
+**The `custom_func` for Regional Analysis:**
+
+Your custom function must accept two arguments:
+
+1.  `roi_data`: A matrix or tibble containing the data (samples x features) for the *current* ROI.
+2.  `roi_info`: A list containing information about the ROI, including `id` (the ROI number from the mask) and `indices` (the feature indices within the `dataset` corresponding to this ROI).
+
+The function must return either:
+- A named list of scalar values (for example, `list(mean = m, sd = s)`).
+- A single-row data frame or tibble where each column is a scalar value.
+
+The names of the list elements or columns will become columns in the final output table.
+
+## `run_custom_searchlight`
+
+This function applies a custom analysis function to data within moving searchlight spheres across the brain.
+
+**Usage:**
+
+```R
+run_custom_searchlight(
+  dataset,      # mvpa_dataset or mvpa_surface_dataset
+  custom_func,  # Your R function
+  radius,       # Searchlight radius (mm for volume, connections for surface)
+  method = "standard", # "standard" or "randomized"
+  niter = 100,  # Iterations for "randomized" method
+  ...,          # Optional args passed to mvpa_iterate
+  .cores = 1,   # Number of cores for parallel processing
+  .verbose = FALSE # Print progress messages?
+)
+```
+
+**The `custom_func` for Searchlight Analysis:**
+
+Your custom function must accept two arguments:
+
+1.  `sl_data`: A matrix or tibble containing the data (samples x features_in_sphere) for the *current* searchlight sphere.
+2.  `sl_info`: A list containing information about the sphere, including `center_index` (the index of the center voxel/vertex) and `indices` (the indices of all features within the sphere).
+
+Similar to the regional version, the function must return either:
+- A named list of scalar values.
+- A single-row data frame or tibble with scalar columns.
+
+All successfully processed spheres must return the *same set* of named metrics. The results will be aggregated into brain maps (`NeuroVol` or `NeuroSurface`).
+
+# End-to-End Example
+
+Let's demonstrate both functions with a simple custom analysis: calculating the mean and standard deviation of the signal within each ROI and searchlight sphere.
+
+## 1. Setup: Data and Custom Function
+
+First, we generate a sample volumetric dataset and define our custom function.
+
+```{r setup_example}
+# Generate sample dataset (e.g., 10x10x10 volume, 50 observations, 2 blocks)
+dset_info <- gen_sample_dataset(D = c(10, 10, 10), nobs = 50, blocks = 2, nlevels=2)
+dataset_obj <- dset_info$dataset
+
+# Define our custom analysis function
+# It calculates mean, sd, and number of features (voxels)
+calculate_roi_stats <- function(data, info) {
+  # Inputs:
+  # data: matrix (samples x features) for the current ROI/sphere
+  # info: list with id/center_index and feature indices
+  
+  # Perform calculations
+  mean_signal <- mean(data, na.rm = TRUE)
+  sd_signal <- sd(data, na.rm = TRUE)
+  num_features <- ncol(data)
+  
+  # Return results as a named list of scalars
+  list(
+    mean_signal = mean_signal,
+    sd_signal = sd_signal,
+    n_features = num_features
+  )
+}
+
+# Define a version that might fail for small ROIs/spheres
+calculate_roi_stats_robust <- function(data, info) {
+    if (ncol(data) < 5) {
+        stop("Too few features (< 5) in this region!")
+    }
+    # If enough features, proceed as normal
+    mean_signal <- mean(data, na.rm = TRUE)
+    sd_signal <- sd(data, na.rm = TRUE)
+    num_features <- ncol(data)
+    list(
+        mean_signal = mean_signal,
+        sd_signal = sd_signal,
+        n_features = num_features
+    )
+}
+
+```
+
+## 2. Custom Regional Analysis
+
+Now, we create a region mask and run `run_custom_regional`.
+
+```{r regional_example}
+# Create a region mask with 4 ROIs covering parts of the dataset mask
+mask_vol <- dataset_obj$mask
+mask_arr <- array(0, dim(mask_vol))
+active_indices <- which(mask_vol > 0)
+n_active <- length(active_indices)
+
+# Assign active voxels roughly to 4 regions
+set.seed(456) # for reproducibility
+roi_assignments <- sample(1:4, size = n_active, replace = TRUE) 
+# Make ROI 4 potentially small to test error handling
+roi_assignments[sample(which(roi_assignments==4), size=round(sum(roi_assignments==4)*0.9))] <- sample(1:3, size=round(sum(roi_assignments==4)*0.9), replace=TRUE)
+
+
+mask_arr[active_indices] <- roi_assignments
+region_mask_vol <- NeuroVol(mask_arr, space(mask_vol))
+
+# Run the custom regional analysis (sequentially first)
+custom_regional_results <- run_custom_regional(
+  dataset = dataset_obj,
+  region_mask = region_mask_vol,
+  custom_func = calculate_roi_stats,
+  .cores = 1, 
+  .verbose = FALSE
+)
+
+# Print the results table
+print(custom_regional_results)
+
+# Example with error handling (using the robust function and potential small ROI 4)
+# Suppress expected warnings from the logger about the error
+suppressWarnings({
+    custom_regional_error_results <- run_custom_regional(
+      dataset = dataset_obj,
+      region_mask = region_mask_vol,
+      custom_func = calculate_roi_stats_robust, # Function that might error
+      .cores = 1, 
+      .verbose = FALSE
+    )
+})
+
+cat("\nResults with potential errors:\n")
+print(custom_regional_error_results)
+
+```
+
+**Explanation:**
+
+The output of `run_custom_regional` is a tibble. Each row corresponds to an ROI defined in `region_mask_vol`. The columns include:
+- `id`: the ROI identifier (the integer value from the mask)
+- the metrics returned by `custom_func` (`mean_signal`, `sd_signal`, `n_features`)
+- `error`: a logical flag indicating if `custom_func` errored for this ROI
+- `error_message`: the error message if `error` is `TRUE`
+
+In the second example, if `calculate_roi_stats_robust` encountered an ROI with fewer than 5 voxels (potentially ROI 4), the corresponding row would show `error = TRUE`, the specific error message, and `NA` values for the metrics.
+
+## 3. Custom Searchlight Analysis
+
+Next, we run a searchlight analysis using the same custom function.
+
+```{r searchlight_example, message=FALSE, warning=FALSE}
+# Run the custom searchlight analysis (standard method)
+# Use a moderate radius; set cores > 1 for parallel execution if available
+# Note: Running in parallel might print messages about the future plan setting.
+custom_searchlight_results <- run_custom_searchlight(
+  dataset = dataset_obj,
+  custom_func = calculate_roi_stats,
+  radius = 4, # e.g., 4mm radius
+  method = "standard",
+  .cores = 2, # Use 2 cores if available
+  .verbose = FALSE
+)
+
+# Print the results object summary
+print(custom_searchlight_results)
+
+# Access the results for a specific metric (e.g., mean_signal)
+mean_signal_map_obj <- custom_searchlight_results$results$mean_signal
+
+# The map itself is stored in the 'data' slot
+mean_signal_map_vol <- mean_signal_map_obj$data
+cat("\nClass of the mean_signal map:", class(mean_signal_map_vol), "\n")
+cat("Dimensions of the map:", dim(mean_signal_map_vol), "\n")
+
+# Print summary stats for the map
+print(mean_signal_map_obj$summary_stats)
+
+# You can plot the map using neuroim2's plotting functions (example commented out)
+# plot(mean_signal_map_vol) 
+```
+
+**Explanation:**
+
+The output of `run_custom_searchlight` is a `searchlight_result` list with:
+- `results`: a named list where each element corresponds to a metric returned by `custom_func` (for example, `results$mean_signal`, `results$sd_signal`)
+- each metric element is a `searchlight_performance` object containing
+  - `$data`: a `NeuroVol` (or `NeuroSurface`) holding the metric values in brain space
+  - `$summary_stats`: basic statistics (mean, sd, min, max) across map values
+  - related metadata like `$metric_name`, `$n_nonzero`
+- `metrics`: names of the metrics computed
+- `n_voxels`: total voxels/vertices defined by the mask
+- `active_voxels`: number of voxels/vertices with results
+
+The values in the output maps (`$data`) represent the result of your `custom_func` applied to the searchlight sphere centered at each voxel. If the "randomized" method is used, the map values represent the *average* metric across all spheres that included that voxel.
+
+# Key considerations
+
+- `custom_func` requirements: ensure your function strictly follows the input contract (`roi_data`/`sl_data`, `roi_info`/`sl_info`) and returns a named list or single-row tibble of scalar values. Inconsistent return types or names across ROIs/spheres will cause aggregation errors.
+*   **Parallel Processing**: Set `.cores > 1` to speed up analysis. The `future` package backend will be used. For more control, set the `future::plan()` *before* calling the `run_custom_*` function (e.g., `future::plan(future::multisession, workers = 4)`).
+*   **Error Handling**: Errors occurring *within* your `custom_func` for a specific ROI or sphere are caught automatically. The analysis will continue, and the affected ROI/voxel will be marked with an error flag or contain `NA` in the output. Use `futile.logger::flog.warn` or `flog.error` inside your `custom_func` or the `tryCatch` blocks in `rMVPA` for detailed debugging messages.
+*   **Memory**: Searchlight analyses, especially with large radii or many randomized iterations, can be memory-intensive. Monitor usage accordingly.
+*   **Randomized Searchlight**: If using `method = "randomized"`, ensure the metric returned by `custom_func` is meaningful when averaged across overlapping spheres.
+
+# Summary
+
+The `run_custom_regional` and `run_custom_searchlight` functions provide a powerful mechanism to extend `rMVPA`'s capabilities. They allow researchers to apply bespoke analyses within ROIs or searchlight spheres while benefiting from the package's iteration, parallelization, and error-handling infrastructure. By defining a custom function that meets the specified input and output requirements, you can easily integrate diverse analytical approaches into your neuroimaging workflow.
+
+For implementation details, refer to the source code in `R/custom.R`.

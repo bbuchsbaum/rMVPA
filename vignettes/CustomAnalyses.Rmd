@@ -1,18 +1,29 @@
 ---
-title: "Running Custom Analyses with rMVPA"
-author: "Your Name Here"
-date: "`r Sys.Date()`"
-output: 
+title: Running Custom Analyses with rMVPA
+author: Your Name Here
+date: '`r Sys.Date()`'
+output:
   rmarkdown::html_vignette:
-    toc: true
+    toc: yes
     toc_depth: 3
-vignette: >
-  %\VignetteIndexEntry{Running Custom Analyses with rMVPA}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+vignette: '%\VignetteIndexEntry{Running Custom Analyses with rMVPA} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 suppressPackageStartupMessages({
   library(neuroim2)
   library(rMVPA)
@@ -263,8 +274,106 @@ The values in the output maps (`$data`) represent the result of your `custom_fun
 *   **Memory**: Searchlight analyses, especially with large radii or many randomized iterations, can be memory-intensive. Monitor usage accordingly.
 *   **Randomized Searchlight**: If using `method = "randomized"`, ensure the metric returned by `custom_func` is meaningful when averaged across overlapping spheres.
 
-# Summary
+# Custom performance metrics for mvpa_model
 
-The `run_custom_regional` and `run_custom_searchlight` functions provide a powerful mechanism to extend `rMVPA`'s capabilities. They allow researchers to apply bespoke analyses within ROIs or searchlight spheres while benefiting from the package's iteration, parallelization, and error-handling infrastructure. By defining a custom function that meets the specified input and output requirements, you can easily integrate diverse analytical approaches into your neuroimaging workflow.
+In addition to fully custom ROI/sphere functions, you can plug your own
+performance metrics into the standard `mvpa_model` / `run_regional` /
+`run_searchlight` pipeline.
 
-For implementation details, refer to the source code in `R/custom.R`.
+## Basic custom metric
+
+A custom performance function always receives a single *result* object –
+typically a `classification_result` – and must return a **numeric vector**
+of scalar metrics (named if you return more than one):
+
+```r
+my_perf <- function(result) {
+  # classification_result: result$observed, result$predicted, result$probs
+  acc  <- mean(result$observed == result$predicted)
+  pobs <- prob_observed(result)  # prob. of the true class for each trial
+
+  c(
+    accuracy    = acc,
+    mean_pobs   = mean(pobs),
+    max_pobs    = max(pobs)
+  )
+}
+```
+
+You pass this function to `mvpa_model()` via the `performance` argument:
+
+```r
+data <- gen_sample_dataset(
+  D = c(6, 6, 6),
+  nobs = 100,
+  response_type = "categorical",
+  data_mode = "image",
+  blocks = 4,
+  nlevels = 2
+)
+
+cval  <- blocked_cross_validation(data$design$block_var)
+mvdes <- data$design
+mod   <- load_model("sda_notune")
+
+mspec <- mvpa_model(
+  model      = mod,
+  dataset    = data$dataset,
+  design     = mvdes,
+  crossval   = cval,
+  performance = my_perf
+)
+
+res_sl <- run_searchlight(mspec, radius = 4, method = "standard")
+names(res_sl$results)
+```
+
+Each named entry from `my_perf()` (`accuracy`, `mean_pobs`, `max_pobs`) becomes
+one volumetric map in the searchlight or regional result.
+
+## Using split_by with custom performance
+
+If your design specifies `split_by`, `mvpa_design` stores the grouping in
+`split_groups`, and `mvpa_model()` automatically applies your metric both
+globally and within each group:
+
+```r
+design_df <- data.frame(
+  Y   = rep(letters[1:2], 50),
+  run = rep(1:5, length.out = 100)
+)
+
+mvdes <- mvpa_design(
+  train_design = design_df,
+  y_train      = ~ Y,
+  block_var    = ~ run,
+  split_by     = ~ run
+)
+
+mspec <- mvpa_model(
+  model      = mod,
+  dataset    = data$dataset,
+  design     = mvdes,
+  crossval   = cval,
+  performance = my_perf
+)
+
+res_reg <- run_regional(mspec, region_mask = data$dataset$mask)
+head(res_reg$performance_table)
+```
+
+Internally, `rMVPA` computes `my_perf(result)` on the full result and then
+again for each split group in `mvdes$split_groups`. Metrics for group `run=1`
+are suffixed with `"_run1"`, those for `run=2` with `"_run2"`, and so on. When
+a test set is present, the grouping indices are interpreted in the design
+space and mapped to the appropriate rows of the result via `testind`.
+
+## Summary
+
+The `run_custom_regional` and `run_custom_searchlight` functions provide a
+powerful mechanism to extend `rMVPA`'s capabilities at the ROI/searchlight
+level, while the `performance` hook in `mvpa_model()` lets you swap in
+custom scalar metrics for standard MVPA workflows. Together, these tools
+allow you to integrate bespoke analyses into `rMVPA` with minimal boilerplate.
+
+For implementation details, see `R/custom.R` and `R/performance.R`.

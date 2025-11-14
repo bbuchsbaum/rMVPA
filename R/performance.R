@@ -24,7 +24,7 @@ predicted_class <- function(prob) {
 #' This function calculates performance metrics for a regression result object, including R-squared, Root Mean Squared Error (RMSE), and Spearman correlation.
 #'
 #' @param x A \code{regression_result} object.
-#' @param split_list Split results by indexed sub-groups (not supported for regression analyses yet).
+#' @param split_list Optional named list of split index groups for computing metrics on sub-groups in addition to the full result.
 #' @param ... extra args (not used).
 #' @return A named vector with the calculated performance metrics: R-squared, RMSE, and Spearman correlation.
 #' @details
@@ -37,36 +37,149 @@ predicted_class <- function(prob) {
 #' @importFrom yardstick rsq_vec rmse_vec
 #' @importFrom stats cor
 performance.regression_result <- function(x, split_list=NULL,...) {
-  if (!is.null(split_list)) {
-    ## TODO: add support
-    stop("split_by not supported for regression analyses yet.")
+  metric_fun <- function(res) {
+    obs <- res$observed
+    pred <- as.numeric(res$predicted)
+
+    res_rsq <- yardstick::rsq_vec(truth = obs, estimate = pred)
+    res_rmse <- yardstick::rmse_vec(truth = obs, estimate = pred)
+    res_spearcor <- tryCatch(
+      stats::cor(obs, pred, method = "spearman", use = "pairwise.complete.obs"),
+      error = function(e) NA_real_
+    )
+
+    c(R2 = res_rsq, RMSE = res_rmse, spearcor = res_spearcor)
   }
-  
-  obs <- x$observed
-  pred <- x$predicted
-  
-  # Ensure pred is a numeric vector without table attributes
-  pred <- as.numeric(pred)
-  
-  res_rsq <- yardstick::rsq_vec(truth = obs, estimate = pred)
-  res_rmse <- yardstick::rmse_vec(truth = obs, estimate = pred)
-  res_spearcor <- tryCatch(stats::cor(obs, pred, method="spearman", use="pairwise.complete.obs"), error = function(e) NA_real_)
-  
-  c(R2=res_rsq, RMSE=res_rmse, spearcor=res_spearcor)
+
+  base_vals <- metric_fun(x)
+
+  if (is.null(split_list) || length(split_list) == 0L) {
+    return(base_vals)
+  }
+
+  testind <- x$testind
+
+  split_vecs <- lapply(names(split_list), function(tag) {
+    design_idx <- split_list[[tag]]
+
+    res_idx <- if (!is.null(testind)) {
+      which(testind %in% design_idx)
+    } else {
+      design_idx
+    }
+
+    if (!length(res_idx)) {
+      vals <- rep(NA_real_, length(base_vals))
+      names(vals) <- paste0(names(base_vals), "_", tag)
+      return(vals)
+    }
+
+    sub_res <- x
+    sub_res$observed <- x$observed[res_idx]
+    sub_res$predicted <- x$predicted[res_idx]
+
+    if (!is.null(x$testind)) {
+      sub_res$testind <- x$testind[res_idx]
+    }
+
+    if (!is.null(x$test_design)) {
+      sub_res$test_design <- x$test_design[res_idx, , drop = FALSE]
+    }
+
+    vals <- tryCatch(
+      metric_fun(sub_res),
+      error = function(e) {
+        warning(sprintf("regression performance failed for split '%s': %s", tag, e$message))
+        rep(NA_real_, length(base_vals))
+      }
+    )
+
+    if (is.null(names(vals))) {
+      names(vals) <- names(base_vals)
+    }
+    names(vals) <- paste0(names(vals), "_", tag)
+    vals
+  })
+
+  c(base_vals, unlist(split_vecs))
+}
+
+
+## ----------------------------------------------------------------------
+## Split-aware performance helpers
+## ----------------------------------------------------------------------
+
+#' @keywords internal
+#' @noRd
+apply_metric_with_splits <- function(result, metric_fun, split_groups = NULL) {
+  stopifnot(is.function(metric_fun))
+
+  base_vals <- metric_fun(result)
+
+  if (is.null(split_groups) || length(split_groups) == 0L) {
+    return(base_vals)
+  }
+
+  testind <- result$testind
+
+  split_vecs <- lapply(names(split_groups), function(tag) {
+    design_idx <- split_groups[[tag]]
+
+    res_idx <- if (!is.null(testind)) {
+      which(testind %in% design_idx)
+    } else {
+      design_idx
+    }
+
+    if (!length(res_idx)) {
+      vals <- rep(NA_real_, length(base_vals))
+      names(vals) <- paste0(names(base_vals), "_", tag)
+      return(vals)
+    }
+
+    sub_res <- sub_result(result, res_idx)
+
+    vals <- tryCatch(
+      metric_fun(sub_res),
+      error = function(e) {
+        warning(sprintf("custom performance failed for split '%s': %s", tag, e$message))
+        rep(NA_real_, length(base_vals))
+      }
+    )
+
+    if (is.null(names(vals))) {
+      names(vals) <- names(base_vals)
+    }
+    names(vals) <- paste0(names(vals), "_", tag)
+    vals
+  })
+
+  c(base_vals, unlist(split_vecs))
 }
 
 
 #' Apply Custom Performance Metric to Prediction Result
 #'
-#' This function applies a user-supplied performance metric to a prediction result object.
+#' This function applies a user-supplied performance metric to a prediction
+#' result object. The custom function should take a single result object
+#' (e.g., a \code{classification_result}) and return a named numeric vector
+#' of scalar metrics.
 #'
 #' @param x The prediction result object.
-#' @param custom_fun The function used to compute performance metrics, i.e., \code{custom_fun(x)}.
-#' @param split_list An optional named list of splitting groups. If provided, the performance metric will be computed for each group and returned as a named vector.
-#' @return A named vector with the calculated custom performance metric(s).
+#' @param custom_fun The function used to compute performance metrics,
+#'   i.e., \code{custom_fun(x)}; must return a numeric vector (named if
+#'   multiple metrics are returned).
+#' @param split_list An optional named list of splitting groups. If provided,
+#'   metrics are computed on the full result and separately within each group,
+#'   with group-specific metrics suffixed by \code{"_<group>"}.
+#' @return A named numeric vector with the calculated custom performance
+#'   metric(s).
 #' @details
-#' The function allows users to apply a custom performance metric to a prediction result object.
-#' If a split list is provided, the performance metric will be computed for each group separately, and the results will be returned as a named vector.
+#' When a design includes \code{split_by}, the corresponding split groups
+#' (typically \code{mvpa_design$split_groups}) can be passed as
+#' \code{split_list}. If the result object contains \code{testind}, indices
+#' in \code{split_list} are interpreted in the design space and mapped to
+#' rows of the result.
 #' @examples
 #' cres <- binary_classification_result(
 #'   observed  = factor(c("A", "B")),
@@ -76,24 +189,26 @@ performance.regression_result <- function(x, split_list=NULL,...) {
 #'                  ncol = 2, byrow = TRUE,
 #'                  dimnames = list(NULL, c("A", "B")))
 #' )
-#' acc_fun <- function(x) mean(x$observed == x$predicted)
+#' acc_fun <- function(x) c(acc = mean(x$observed == x$predicted))
 #' custom_performance(cres, acc_fun)
 #' @export
-custom_performance <- function(x, custom_fun, split_list=NULL) {
-  if (is.null(split_list)) {
-    custom_fun(x)
-  } else {
-    total <- custom_fun(x)
-    subtots <- unlist(lapply(names(split_list), function(tag) {
-      ind <- split_list[[tag]]
-      ret <- custom_fun(sub_result(x, ind))
-      names(ret) <- paste0(names(ret), "_", tag)
-      ret
-    }))
-    
-    c(total, subtots)
+custom_performance <- function(x, custom_fun, split_list = NULL) {
+  if (!is.function(custom_fun)) {
+    stop("custom_fun must be a function taking a single result object.")
   }
-  
+
+  metric_fun <- function(res) {
+    out <- custom_fun(res)
+    if (!is.numeric(out)) {
+      stop("custom_fun must return a numeric vector.")
+    }
+    if (is.null(names(out)) && length(out) > 1L) {
+      warning("custom_fun returned an unnamed vector with multiple entries; metric names may be ambiguous.")
+    }
+    out
+  }
+
+  apply_metric_with_splits(x, metric_fun, split_list)
 }
 
 #' @rdname merge_results-methods
@@ -171,24 +286,10 @@ merge_results.multiway_classification_result <- function(obj, ...) {
 #' @export
 performance.binary_classification_result <- function(x, split_list=NULL,...) {
   stopifnot(length(x$observed) == length(x$predicted))
-  
-  if (is.null(split_list)) {
-    ret <- binary_perf(x$observed, x$predicted, x$probs)
-  } else {
-    total <- binary_perf(x$observed, x$predicted, x$probs)
-    
-    subtots <- unlist(lapply(names(split_list), function(tag) {
-      ind <- split_list[[tag]]
-      if (!is.null(x$testind)) {
-        ind <- which(x$testind %in% ind)
-      }
-      ret <- binary_perf(x$observed[ind], x$predicted[ind], x$probs[ind,])
-      names(ret) <- paste0(names(ret), "_", tag)
-      ret
-    }))
-    
-    ret <- c(total, subtots)
+  metric_fun <- function(res) {
+    binary_perf(res$observed, res$predicted, res$probs)
   }
+  apply_metric_with_splits(x, metric_fun, split_list)
 }
 
 
@@ -196,26 +297,10 @@ performance.binary_classification_result <- function(x, split_list=NULL,...) {
 performance.multiway_classification_result <- function(x, split_list=NULL, class_metrics=FALSE,...) {
   stopifnot(length(x$observed) == length(x$predicted))
 
-  if (is.null(split_list)) {
-    multiclass_perf(x$observed, x$predicted, x$probs, class_metrics)
-  } else {
-    total <- multiclass_perf(x$observed, x$predicted, x$probs, class_metrics)
-    subtots <- unlist(lapply(names(split_list), function(tag) {
-      ind <- split_list[[tag]]
-      
-      if (!is.null(x$testind)) {
-        ind <- which(x$testind %in% ind)
-      }
-      
-      ret <- multiclass_perf(x$observed[ind], x$predicted[ind], x$probs[ind,], class_metrics)
-      names(ret) <- paste0(names(ret), "_", tag)
-      ret
-    }))
-    
-    c(total, subtots)
-    
+  metric_fun <- function(res) {
+    multiclass_perf(res$observed, res$predicted, res$probs, class_metrics)
   }
-  
+  apply_metric_with_splits(x, metric_fun, split_list)
 }
 
 #' @keywords internal
@@ -288,4 +373,3 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   }
 }
   
-

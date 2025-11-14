@@ -287,4 +287,94 @@ save_results.searchlight_result <- function(x, dir,
   invisible(paths)
 }
 
+# ---------- regional_mvpa_result method ----------
+#' @export
+save_results.regional_mvpa_result <- function(x, dir,
+                                               level = c("standard","minimal","complete"),
+                                               stack = c("none","auto","vec"),
+                                               fname = "regional.nii.gz",
+                                               include = NULL,
+                                               dtype = NULL,
+                                               overwrite = FALSE,
+                                               quiet = FALSE) {
+
+  level   <- match.arg(level)
+  include <- .compute_includes(level, include)
+
+  .ensure_dir(dir)
+  paths <- list()
+  paths$root <- dir
+
+  # Use searchlight_result method for vol_results (maps)
+  if (!is.null(x$vol_results)) {
+    vol_paths <- save_results.searchlight_result(
+      x$vol_results, dir, level = "minimal", stack, fname,
+      include = NULL, dtype, overwrite, quiet
+    )
+    paths <- c(paths, vol_paths)
+  }
+
+  # Save performance_table
+  if (!is.null(x$performance_table)) {
+    perf_file <- file.path(dir, "performance_table.txt")
+    perf_file <- .unique_path(perf_file, overwrite)
+    utils::write.table(x$performance_table, perf_file,
+                      row.names = FALSE, quote = FALSE, sep = "\t")
+    paths$performance_table <- perf_file
+    if (!quiet) message("Wrote performance table: ", perf_file)
+  }
+
+  # Save prediction_table
+  if (!is.null(x$prediction_table)) {
+    pred_file <- file.path(dir, "prediction_table.txt")
+    pred_file <- .unique_path(pred_file, overwrite)
+    utils::write.table(x$prediction_table, pred_file,
+                      row.names = FALSE, quote = FALSE, sep = "\t")
+    paths$prediction_table <- pred_file
+    if (!quiet) message("Wrote prediction table: ", pred_file)
+  }
+
+  # Save fits if present and not minimal level
+  if (!is.null(x$fits) && length(x$fits) > 0 && level != "minimal") {
+    fits_dir <- file.path(dir, "fits")
+    .ensure_dir(fits_dir)
+
+    fit_files <- character(length(x$fits))
+    for (i in seq_along(x$fits)) {
+      # Get ROI identifier from performance_table if available
+      roi_id <- if (!is.null(x$performance_table$roinum)) {
+        x$performance_table$roinum[i]
+      } else {
+        i
+      }
+
+      fit_file <- file.path(fits_dir, sprintf("roi_%03d.rds", roi_id))
+      fit_file <- .unique_path(fit_file, overwrite)
+      saveRDS(x$fits[[i]], fit_file)
+      fit_files[i] <- fit_file
+    }
+
+    paths$fits_dir <- fits_dir
+    paths$fit_files <- fit_files
+    if (!quiet) message("Wrote ", length(fit_files), " ROI fits to: ", fits_dir)
+  }
+
+  # Manifest
+  if ("manifest" %in% include) {
+    man <- list(
+      created = as.character(Sys.time()),
+      rMVPA_version = tryCatch(as.character(utils::packageVersion("rMVPA")),
+                               error = function(e) NA_character_),
+      class = class(x),
+      n_rois = if (!is.null(x$performance_table)) nrow(x$performance_table) else NA_integer_,
+      has_fits = !is.null(x$fits) && length(x$fits) > 0,
+      files = paths
+    )
+    mfile <- .write_manifest(man, dir, quiet)
+    paths$manifest <- mfile
+  }
+
+  invisible(paths)
+}
+
 `%||%` <- function(a, b) if (is.null(a)) b else a

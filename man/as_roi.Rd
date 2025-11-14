@@ -19,4 +19,3 @@ An ROIVolume or ROISurface object.
 \description{
 Convert the provided object into an ROIVolume or ROISurface object.
 }
-\keyword{internal}

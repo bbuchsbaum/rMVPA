@@ -10,13 +10,14 @@
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Cross-Validation Strategies in rMVPA">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<script src="../extra.js"></script><meta property="og:title" content="Cross-Validation Strategies in rMVPA">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -53,7 +54,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-09-27</h4>
+            <h4 data-toc-skip class="date">2025-11-14</h4>
       
 
       <div class="d-none name"><code>CrossValidation.Rmd</code></div>
@@ -111,15 +112,15 @@ natural validation blocks.</p>
 <span><span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">block_var</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">cval</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">█▀▀ Blocked Cross-Validation ▀▀█</span> </span></span>
+<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">Blocked Cross-Validation</span> </span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">├─ Dataset Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Number of Folds: </span> <span style="color: #00BB00;">5</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">└─ Block Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">   └─ Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span></span></span></code></pre>
+<span><span class="co">## <span style="color: #BBBB00;">- Dataset Information</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Number of Folds: </span> <span style="color: #00BB00;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">- Block Information</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span></span></span></code></pre>
 </div>
 <div class="section level3">
 <h3 id="implementation-example">Implementation Example<a class="anchor" aria-label="anchor" href="#implementation-example"></a>
@@ -169,17 +170,17 @@ structure.</p>
 <span><span class="va">boot_cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">bootstrap_blocked_cross_validation</a></span><span class="op">(</span><span class="va">block_var</span>, nreps <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">boot_cval</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">█▀▀ Bootstrap Blocked Cross-Validation ▀▀█</span> </span></span>
+<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">Bootstrap Blocked Cross-Validation</span> </span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">├─ Configuration</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Bootstrap Repetitions: </span> <span style="color: #00BB00;">20</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">├─ Block Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">└─ Sampling Weights</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">   └─ Status: </span> <span style="color: #BB0000;">None</span>  (uniform sampling)</span></span></code></pre>
+<span><span class="co">## <span style="color: #BBBB00;">- Configuration</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Bootstrap Repetitions: </span> <span style="color: #00BB00;">20</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">- Block Information</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">- Sampling Weights</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Status: </span> <span style="color: #BB0000;">None</span>  (uniform sampling)</span></span></code></pre>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Generate samples</span></span>
 <span><span class="va">boot_samples</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/crossval_samples.html">crossval_samples</a></span><span class="op">(</span><span class="va">boot_cval</span>, <span class="va">dat</span>, <span class="va">y</span><span class="op">)</span></span>
@@ -213,19 +214,19 @@ structure.</p>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">weighted_boot_cval</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">█▀▀ Bootstrap Blocked Cross-Validation ▀▀█</span> </span></span>
+<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">Bootstrap Blocked Cross-Validation</span> </span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">├─ Configuration</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Bootstrap Repetitions: </span> <span style="color: #00BB00;">20</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">├─ Block Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">└─ Sampling Weights</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Status: </span> <span style="color: #00BB00;">Present</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Range: </span> <span style="color: #00BB00;">[0.001, 0.020]</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">   └─ Non-zero Weights: </span> <span style="color: #00BB00;">100</span> <span style="color: #0000BB; font-style: italic;"> (</span> <span style="color: #00BB00;">100.0%</span> <span style="color: #0000BB; font-style: italic;">)</span></span></span></code></pre>
+<span><span class="co">## <span style="color: #BBBB00;">- Configuration</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Bootstrap Repetitions: </span> <span style="color: #00BB00;">20</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">- Block Information</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">- Sampling Weights</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Status: </span> <span style="color: #00BB00;">Present</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Range: </span> <span style="color: #00BB00;">[0.001, 0.020]</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Non-zero Weights: </span> <span style="color: #00BB00;">100</span> <span style="color: #0000BB; font-style: italic;"> (</span> <span style="color: #00BB00;">100.0%</span> <span style="color: #0000BB; font-style: italic;">)</span></span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
@@ -276,16 +277,16 @@ rapid performance estimation.</p>
 <span><span class="va">twofold_cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/twofold_blocked_cross_validation.html">twofold_blocked_cross_validation</a></span><span class="op">(</span><span class="va">block_var</span>, nreps <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">twofold_cval</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">█▀▀ Two-Fold Blocked Cross-Validation ▀▀█</span> </span></span>
+<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">Two-Fold Blocked Cross-Validation</span> </span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">├─ Configuration</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  ├─ Number of Folds: </span> <span style="color: #00BB00;">2</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">│  └─ Repetitions: </span> <span style="color: #00BB00;">10</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">└─ Block Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">   ├─ Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">   └─ Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span></span></span></code></pre>
+<span><span class="co">## <span style="color: #BBBB00;">- Configuration</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">100</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Number of Folds: </span> <span style="color: #00BB00;">2</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Repetitions: </span> <span style="color: #00BB00;">10</span> </span></span>
+<span><span class="co">## <span style="color: #BBBB00;">- Block Information</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Total Blocks: </span> <span style="color: #00BB00;">5</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20, 5: 20</span></span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
@@ -463,11 +464,11 @@ cross-validation strategies:</p>
 <span></span>
 <span><span class="co"># Run regional analysis with blocked CV</span></span>
 <span><span class="va">results_blocked</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod_blocked</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 20:29:54] </span></span>
-<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
-<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-11-14 07:31:24] </span></span>
+<span><span class="co">## MVPA Iteration Complete</span></span>
+<span><span class="co">## - Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## - Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example 2: Using Bootstrap Blocked Cross-Validation</span></span>
 <span><span class="va">bootstrap_cv</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">bootstrap_blocked_cross_validation</a></span><span class="op">(</span></span>
@@ -484,11 +485,11 @@ cross-validation strategies:</p>
 <span></span>
 <span><span class="co"># Run regional analysis with bootstrap CV</span></span>
 <span><span class="va">results_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod_boot</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 20:29:58] </span></span>
-<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
-<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-11-14 07:31:28] </span></span>
+<span><span class="co">## MVPA Iteration Complete</span></span>
+<span><span class="co">## - Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## - Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Compare performance between CV strategies</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Blocked CV Performance:\n"</span><span class="op">)</span></span></code></pre></div>
@@ -575,21 +576,21 @@ average over repetitions to summarize performance.</p>
 <span>  <span class="op">)</span></span>
 <span>  <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mvpa_mod</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-27 20:29:59] </span></span>
-<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
-<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-27 20:30:03] </span></span>
-<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
-<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-27 20:30:05] </span></span>
-<span><span class="co">## ✨ MVPA Iteration Complete</span></span>
-<span><span class="co">## ├─ Total ROIs: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## ├─ Processed: <span style="color: #0000BB;">3</span></span></span>
-<span><span class="co">## └─ Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2025-11-14 07:31:29] </span></span>
+<span><span class="co">## MVPA Iteration Complete</span></span>
+<span><span class="co">## - Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## - Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span>
+<span><span class="co">## INFO [2025-11-14 07:31:33] </span></span>
+<span><span class="co">## MVPA Iteration Complete</span></span>
+<span><span class="co">## - Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## - Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span>
+<span><span class="co">## INFO [2025-11-14 07:31:34] </span></span>
+<span><span class="co">## MVPA Iteration Complete</span></span>
+<span><span class="co">## - Total ROIs: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## - Processed: <span style="color: #0000BB;">3</span></span></span>
+<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
 <div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Compare performance across CV schemes</span></span>
 <span><span class="va">performance_comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">{</span></span>
@@ -633,7 +634,7 @@ and <code>searchlight.R</code>.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

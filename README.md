@@ -56,3 +56,11 @@ executable:
 The MS-ReVE functionality is implemented in `R/contrast_rsa_model.R`.
 There is no file named `contrast_rsa.R`; all references should use the
 `contrast_rsa_model.R` filename.
+
+
+## Albers theme
+This package uses the albersdown theme. Vignettes are styled with `vignettes/albers.css` and a local `vignettes/albers.js`; the palette family is provided via `params$family` (default 'red'). The pkgdown site uses `template: { package: albersdown }`.
+
+
+## Albers theme
+This package uses the albersdown theme. Vignettes are styled with `vignettes/albers.css` and a local `vignettes/albers.js`; the palette family is provided via `params$family` (default 'red'). The pkgdown site uses `template: { package: albersdown }`.

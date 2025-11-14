@@ -598,7 +598,7 @@ data_sample <- function(obj, vox, ...) {
 #' @param data The associated data object.
 #' @param ... Additional arguments passed to methods.
 #' @return An ROIVolume or ROISurface object.
-#' @keywords internal
+#' @export
 as_roi <- function(obj, data, ...) {
   UseMethod("as_roi")
 }

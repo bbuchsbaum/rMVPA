@@ -50,8 +50,8 @@ option_list <- list(
               help="Binary image mask file (.nii)."),
   make_option(c("-p", "--ncores"), type="numeric", default=1,
               help="Number of CPU cores to use in parallel."),
-  make_option(c("-b", "--batch-size"), type="numeric", default=NULL,
-              help="Number of searchlights per batch. Default: 10% of total searchlights. Lower values reduce memory usage but may decrease performance."),
+  make_option(c("--batch-size"), type="numeric", default=NULL,
+              help="Number of searchlights per batch (optional). Lower values reduce memory usage but may decrease performance."),
   make_option(c("-l", "--label_column"), type="character", default="labels",
               help="Name of the training label column in the design file."),
   make_option(c("--test_label_column"), type="character",
@@ -61,12 +61,12 @@ option_list <- list(
   make_option(c("-b", "--block_column"), type="character",
               help="Block (strata) column for cross-validation."),
   make_option(c("-g", "--tune_grid"), type="character",
-              help="Parameter grid, e.g. a=\\(1,2\\), b=\\('one','two'\\)."),
+              help="Parameter grid, e.g. 'alpha=c(0.1,0.5,1.0)', 'ncomp=c(2,5,10)'."),
   make_option(c("--tune_length"), type="numeric", 
               help="Number of levels for each model tuning parameter."),
-  make_option(c("-i", "--niter"), type="character", default="16",
+  make_option(c("-i", "--niter"), type="numeric", default=16,
               help="Number of randomized searchlight iterations. [default: %default]"),
-  make_option(c("--class_metrics"), type="character", default="TRUE",
+  make_option(c("--class_metrics"), action="store_true", default=FALSE,
               help="Write out performance metrics for each class in multiclass settings."),
   make_option(c("-c", "--config"), type="character",
               help="YAML or R config file specifying program parameters.")
@@ -227,7 +227,7 @@ for (i in seq_along(dataset)) {
     searchlight_args$batch_size <- config$batch_size
   }
   
-  searchres <- do.call(rMVPA:::run_searchlight, searchlight_args)
+  searchres <- do.call(run_searchlight, searchlight_args)
   
   write_output(searchres, name=dset_name, output=output_folder, data_mode=config$data_mode)
 }

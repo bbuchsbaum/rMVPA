@@ -9,19 +9,30 @@ custom_performance(x, custom_fun, split_list = NULL)
 \arguments{
 \item{x}{The prediction result object.}
 
-\item{custom_fun}{The function used to compute performance metrics, i.e., \code{custom_fun(x)}.}
+\item{custom_fun}{The function used to compute performance metrics,
+i.e., \code{custom_fun(x)}; must return a numeric vector (named if
+multiple metrics are returned).}
 
-\item{split_list}{An optional named list of splitting groups. If provided, the performance metric will be computed for each group and returned as a named vector.}
+\item{split_list}{An optional named list of splitting groups. If provided,
+metrics are computed on the full result and separately within each group,
+with group-specific metrics suffixed by \code{"_<group>"}.}
 }
 \value{
-A named vector with the calculated custom performance metric(s).
+A named numeric vector with the calculated custom performance
+  metric(s).
 }
 \description{
-This function applies a user-supplied performance metric to a prediction result object.
+This function applies a user-supplied performance metric to a prediction
+result object. The custom function should take a single result object
+(e.g., a \code{classification_result}) and return a named numeric vector
+of scalar metrics.
 }
 \details{
-The function allows users to apply a custom performance metric to a prediction result object.
-If a split list is provided, the performance metric will be computed for each group separately, and the results will be returned as a named vector.
+When a design includes \code{split_by}, the corresponding split groups
+(typically \code{mvpa_design$split_groups}) can be passed as
+\code{split_list}. If the result object contains \code{testind}, indices
+in \code{split_list} are interpreted in the design space and mapped to
+rows of the result.
 }
 \examples{
 cres <- binary_classification_result(
@@ -32,6 +43,6 @@ cres <- binary_classification_result(
                  ncol = 2, byrow = TRUE,
                  dimnames = list(NULL, c("A", "B")))
 )
-acc_fun <- function(x) mean(x$observed == x$predicted)
+acc_fun <- function(x) c(acc = mean(x$observed == x$predicted))
 custom_performance(cres, acc_fun)
 }

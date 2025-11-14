@@ -1,0 +1,132 @@
+---
+title: Advanced Regional MVPA Analysis in rMVPA
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+vignette: '%\VignetteIndexEntry{Advanced Regional MVPA Analysis in rMVPA} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
+---
+
+# Introduction
+
+Regional MVPA evaluates prediction performance within predefined brain regions. This vignette walks through the complete workflow using rMVPA:
+
+We'll generate synthetic data, define ROIs with a region mask, build the MVPA model with cross-validation, run the analysis, and examine the results. The implementation follows the approach in `regional.R`, `mvpa_model.R`, and `dataset.R`.
+
+# Data Generation and Preparation
+
+We begin by generating a synthetic volumetric dataset using the `gen_sample_dataset()` function. This function creates a 4D array (with spatial dimensions and multiple observations), along with a binary mask and an associated design for cross-validation.
+
+```{r, message=FALSE, warning=FALSE}
+library(rMVPA)
+library(neuroim2)
+# Generate a synthetic dataset with dimensions 6x6x6, 80 observations, divided into 4 blocks
+data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 80, blocks = 4, nlevels = 2)
+print(data_out)
+```
+
+The returned list contains:
+
+- **dataset**: an MVPA dataset object with training data and a binary mask.
+- **design**: an MVPA design object specifying the response variable and block structure.
+
+## Creating a Region Mask
+
+For regional analysis, we need to define ROIs. Here, we create a region mask by randomly assigning each active voxel in the binary mask a region label (from 1 to 3). This simulates a scenario where the brain is partitioned into three regions of interest.
+
+```{r, message=FALSE, warning=FALSE}
+# Extract the binary mask from the dataset
+mask <- data_out$dataset$mask
+nvox <- sum(mask)
+
+# Create a regional mask: assign each voxel a random region number (1 to 3)
+set.seed(123)  # for reproducibility
+region_mask <- neuroim2::NeuroVol(sample(1:3, size = nvox, replace = TRUE), neuroim2::space(mask), indices = which(mask > 0))
+table(region_mask)
+```
+
+# Setting Up the MVPA Model
+
+Next, we create an MVPA model to evaluate a classification task. In brief, we construct an `mvpa_dataset`, specify the design (including the block variable and response), and define the model with `mvpa_model()` using a chosen classifier and cross‑validation strategy.
+
+```{r, message=FALSE, warning=FALSE}
+# Create MVPA dataset object from the generated training data and mask
+ dset <- mvpa_dataset(data_out$dataset$train_data, mask = data_out$dataset$mask)
+
+# Build cross-validation structure using block information from the design
+cval <- blocked_cross_validation(data_out$design$block_var)
+
+# Load a classification model; here we use "sda" (Shrinkage Discriminant Analysis)
+mod <- load_model("sda")
+tune_grid <- data.frame(lambda = 0.01, diagonal = FALSE)
+
+# Create the MVPA model object
+mvpa_mod <- mvpa_model(mod, dataset = dset, design = data_out$design, crossval = cval, tune_grid = tune_grid)
+print(mvpa_mod)
+```
+
+The `mvpa_model()` function, as defined in `mvpa_model.R`, packages all necessary parameters including cross-validation and performance computation.
+
+# Running the Regional Analysis
+
+The regional analysis is executed with `run_regional()`. Internally it prepares ROI indices from the region mask, applies the MVPA model to each ROI, and then compiles performance metrics and prediction tables.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+# Run the regional analysis on the defined region mask
+regional_results <- run_regional(mvpa_mod, region_mask)
+```
+
+The output is a `regional_mvpa_result` object with a `performance_table` (cross‑validated metrics per region), a `prediction_table` (trial‑level predictions), and `vol_results` (volumetric maps of performance across the brain).
+
+# Examining the Results
+
+We can inspect the performance table to evaluate model accuracy in each region.
+
+```{r}
+# Display performance metrics for each region
+print(regional_results$performance_table)
+```
+
+For a more detailed view, the prediction table shows trial-by-trial predictions:
+
+```{r}
+# Display the prediction table
+print(regional_results$prediction_table)
+```
+
+Volumetric results (`vol_results`) can be further visualized with neuroimaging tools to determine spatial patterns of performance.
+
+# Under the Hood: How It Works
+
+The `run_regional()` function internally calls `prep_regional()` (from `regional.R`) to process the region mask, and then uses `mvpa_iterate()` to apply the MVPA model across each ROI. Functions such as `combine_regional_results()` and `combine_prediction_tables()` merge the individual regional outputs into a comprehensive result.
+
+This modular design, laid out in `mvpa_model.R` and `dataset.R`, ensures that:
+
+- Data integrity is maintained.
+- Cross-validation is properly applied.
+- Results are aggregated for clear interpretation at the regional level.
+
+# Summary 
+
+This vignette showed you how to generate synthetic neuroimaging data, define ROIs with region masks, set up MVPA models with cross-validation, run analyses across ROIs, and interpret the performance metrics. You now have the tools to conduct regional MVPA analyses on your own neuroimaging data.
+
+For further details, please refer to the source files:
+
+- `regional.R` for regional analysis methods.
+- `mvpa_model.R` for MVPA model creation and result formatting.
+- `dataset.R` for dataset generation routines.
+
+Happy analyzing!

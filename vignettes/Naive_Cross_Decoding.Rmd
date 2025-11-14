@@ -1,0 +1,528 @@
+---
+title: "Naive Cross-Decoding: Baseline Multi-Domain Classification"
+author: "rMVPA authors"
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Naive Cross-Decoding: Baseline Multi-Domain Classification}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+params:
+  family: red
+css: albers.css
+resource_files:
+  - albers.css
+  - albers.js
+includes:
+  in_header: |
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+---
+
+```{r setup, include=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+knitr::opts_chunk$set(comment = NA, message = FALSE, warning = FALSE)
+suppressPackageStartupMessages({
+  library(rMVPA)
+  library(neuroim2)
+})
+```
+
+## Introduction
+
+### What is "Naive" Cross-Decoding?
+
+The term **"naive"** in naive cross-decoding is a technical designation, not a value judgment. It means **"without domain adaptation"**—the method makes no attempt to learn or correct for systematic differences between training and test domains. This is analogous to "naive Bayes" in statistics, where "naive" refers to the independence assumption, not the method's sophistication.
+
+Other names for this approach in machine learning include:
+- **Zero-shot transfer**: Applying knowledge without retraining
+- **Direct transfer**: Using source-domain prototypes directly on target data
+- **Prototype matching**: Classifying by correlation to template patterns
+
+Naive cross-decoding serves as the **principled baseline** for evaluating domain-adaptive methods. If it works well, your representations generalize naturally. If it fails, the performance gap quantifies the benefit of adaptation.
+
+### What is Cross-Decoding?
+
+Cross-decoding trains a classifier on neural patterns from one context (Domain A) and tests it on patterns from a different context (Domain B). Examples include:
+
+- **Perception → Memory**: Train on stimulus viewing, test on recall
+- **Visual → Auditory**: Train on visual stimuli, test on auditory equivalents
+- **Encoding → Retrieval**: Train on study phase, test on test phase
+- **Task A → Task B**: Train on one experimental task, test on another
+
+The key question: **Do neural representations generalize across contexts?**
+
+### When Naive Cross-Decoding Works
+
+Naive cross-decoding succeeds when:
+- **Domains share core structure**: Category boundaries are preserved
+- **Differences are noise-like**: Random variations rather than systematic shifts
+- **Representations are abstract**: Not tied to surface features of the domain
+
+### When It Fails (and What to Do)
+
+Naive cross-decoding fails when:
+- **Systematic domain shifts**: Memory patterns are consistently shifted/rotated relative to perception
+- **Amplitude differences**: One domain has stronger/weaker signals
+- **Nonlinear transformations**: Complex warping between domains
+
+**Solution**: Use domain adaptation methods:
+- `remap_rrr_model()` for low-rank linear corrections (see `vignette("REMAP_RRR")`)
+- `repmap_model()` for full linear transformations
+- `repmed_model()` and `repnet_model()` for nonlinear mappings
+
+## The Algorithm
+
+Naive cross-decoding follows a simple three-step process:
+
+### Step 1: Compute Prototypes
+
+For each category in the **training domain**, compute the mean pattern (prototype):
+
+```
+For each category c:
+  prototype[c] = mean(training_patterns[category == c])
+```
+
+### Step 2: Correlate Test Patterns
+
+For each pattern in the **test domain**, compute correlation with all prototypes:
+
+```
+For each test pattern t:
+  For each category c:
+    score[t, c] = correlation(test_pattern[t], prototype[c])
+```
+
+### Step 3: Classify
+
+Assign each test pattern to the category with highest correlation:
+
+```
+predicted_category[t] = argmax(score[t, ])
+```
+
+### Why Correlation?
+
+Correlation is used instead of Euclidean distance because it's:
+- **Scale-invariant**: Handles amplitude differences between domains
+- **Sign-invariant**: Direction matters, not polarity
+- **Rotation-sensitive**: Captures pattern similarity, not just magnitude
+
+The method also applies **softmax** to correlations to generate pseudo-probabilities for each class.
+
+## Basic Example: Regional Analysis
+
+Let's run naive cross-decoding on a synthetic perception-to-memory dataset.
+
+```{r basic_example}
+# Generate dataset with separate train (perception) and test (memory) sets
+set.seed(42)
+data_info <- gen_sample_dataset(
+  D = c(10, 10, 10),     # Small 10x10x10 volume
+  nobs = 80,             # 80 training observations
+  nlevels = 4,           # 4 categories
+  blocks = 4,            # 4 runs
+  external_test = TRUE   # Create separate test set (required for cross-decoding)
+)
+
+# Create a simple ROI mask (3 regions)
+roi_mask <- NeuroVol(
+  sample(1:3, length(data_info$dataset$mask), replace = TRUE),
+  space(data_info$dataset$mask)
+)
+
+# Create naive cross-decoding model
+model <- naive_xdec_model(
+  dataset = data_info$dataset,
+  design = data_info$design,
+  link_by = NULL,              # Match by class labels (y_train ↔ y_test)
+  return_predictions = TRUE    # Keep per-trial predictions for analysis
+)
+
+# Run regional analysis
+results <- run_regional(model, roi_mask)
+
+# View results
+print(results)
+```
+
+### Interpreting the Output
+
+The `results` tibble contains:
+
+- **`id`**: ROI identifier (1, 2, 3 in our example)
+- **`performance`**: Named vector with accuracy, AUC, and per-class metrics
+- **`result`**: Classification result object with predictions and probabilities
+- **`error`**: Whether the analysis failed for this ROI
+
+```{r examine_performance}
+# Extract performance for each ROI
+performance_df <- do.call(rbind, lapply(seq_len(nrow(results)), function(i) {
+  perf <- results$performance[[i]]
+  data.frame(
+    roi = results$id[i],
+    accuracy = perf["Accuracy"],
+    row.names = NULL
+  )
+}))
+
+print(performance_df)
+```
+
+### Above-Chance Performance?
+
+To assess statistical significance, compare to chance level:
+
+```{r chance_level}
+n_categories <- nlevels(data_info$design$y_test)
+chance_level <- 1 / n_categories
+
+cat(sprintf("Chance level: %.2f%%\n", chance_level * 100))
+cat(sprintf("Mean accuracy: %.2f%%\n", mean(performance_df$accuracy) * 100))
+```
+
+## Key Parameters Explained
+
+### The `link_by` Parameter
+
+The `link_by` parameter controls how training and test observations are paired:
+
+#### Option 1: `link_by = NULL` (Class-Based Matching)
+
+Match by class labels (`y_train` ↔ `y_test`). Use this when:
+- Training and test sets have the same categories
+- You're testing category-level generalization
+
+```{r link_by_null, eval=FALSE}
+model <- naive_xdec_model(
+  dataset = data_info$dataset,
+  design = data_info$design,
+  link_by = NULL  # Match by class labels
+)
+```
+
+#### Option 2: `link_by = "column_name"` (Item-Based Matching)
+
+Match by a specific column in both `train_design` and `test_design`. Use this when:
+- The same items appear in both domains (e.g., same images shown during perception and memory)
+- You want item-specific prototypes
+
+```{r link_by_column, eval=FALSE}
+# Example with item-level matching
+design_with_items <- mvpa_design(
+  train_design = data.frame(
+    y = data_info$design$y_train,
+    item_id = paste0("item_", seq_along(data_info$design$y_train)),
+    block = data_info$design$block_var
+  ),
+  test_design = data.frame(
+    y = data_info$design$y_test,
+    item_id = paste0("item_", seq_along(data_info$design$y_test))
+  ),
+  y_train = ~ y,
+  block_var = ~ block
+)
+
+model <- naive_xdec_model(
+  dataset = data_info$dataset,
+  design = design_with_items,
+  link_by = "item_id"  # Match by item IDs
+)
+```
+
+### The `return_predictions` Parameter
+
+Controls whether to keep per-trial predictions:
+
+- `TRUE`: Store full classification results for post-hoc analysis
+- `FALSE`: Only store aggregate performance metrics (saves memory for large searchlights)
+
+## Searchlight Analysis
+
+Naive cross-decoding integrates seamlessly with searchlight analysis:
+
+```{r searchlight_example, eval=FALSE}
+# Create searchlight model
+model <- naive_xdec_model(
+  dataset = data_info$dataset,
+  design = data_info$design
+)
+
+# Run searchlight with radius of 3 voxels
+sl_results <- run_searchlight(model, radius = 3)
+
+# Results contain accuracy map for each voxel
+# You can threshold and visualize:
+# write_vol(sl_results$performance, "naive_xdec_accuracy.nii.gz")
+```
+
+## Use Cases
+
+### Use Case 1: Perception → Memory
+
+Test whether perceptual category codes survive in memory:
+
+```{r perception_memory, eval=FALSE}
+# Training data: fMRI during stimulus viewing
+# Test data: fMRI during memory recall
+
+model <- naive_xdec_model(perception_memory_dataset, design)
+results <- run_regional(model, hippocampus_mask)
+
+# High accuracy → perceptual codes reactivated in memory
+# Low accuracy → memory uses different representational format
+```
+
+### Use Case 2: Cross-Modal Decoding
+
+Test for abstract/amodal representations:
+
+```{r cross_modal, eval=FALSE}
+# Training data: Visual presentation of objects
+# Test data: Auditory names of objects
+
+model <- naive_xdec_model(visual_auditory_dataset, design)
+results <- run_regional(model, semantic_rois)
+
+# Above-chance → abstract semantic codes shared across modalities
+```
+
+### Use Case 3: Baseline for Domain Adaptation
+
+Quantify the benefit of learning domain transformations:
+
+```{r adaptation_comparison, eval=FALSE}
+# Naive baseline
+naive_model <- naive_xdec_model(dataset, design)
+naive_results <- run_regional(naive_model, roi_mask)
+
+# Domain-adaptive method
+remap_model <- remap_rrr_model(dataset, design, rank = "auto")
+remap_results <- run_regional(remap_model, roi_mask)
+
+# Compare performance
+# benefit_of_adaptation = remap_accuracy - naive_accuracy
+```
+
+## Comparison with Domain-Adaptive Methods
+
+| Method | Adaptation Type | Learns | When to Use | Typical Performance |
+|--------|----------------|--------|-------------|---------------------|
+| **naive_xdec_model** | None (direct transfer) | Class prototypes only | Baseline; domains naturally similar | Moderate (if domains match) |
+| **remap_rrr_model** | Low-rank linear | Small systematic shift | Moderate domain gap | Higher (learns correction) |
+| **repmap_model** | Full linear | Arbitrary linear transform | Large linear shift | High (if sufficient data) |
+| **repmed_model** | Nonlinear (median) | Robust nonlinear mapping | Outliers/noise in domain shift | High (robust to outliers) |
+| **repnet_model** | Nonlinear (neural) | Complex nonlinear mapping | Severe domain warping | Highest (if enough data) |
+
+**Decision tree:**
+1. Try naive first (always!)
+2. If accuracy < 10% above chance → try domain adaptation
+3. Start with `remap_rrr_model` (most efficient)
+4. If still poor → try nonlinear methods
+
+## Troubleshooting
+
+### Error: "requires external test set"
+
+**Cause**: Naive cross-decoding needs separate training and test data.
+
+**Solution**: Create dataset with `external_test = TRUE`:
+
+```{r external_test_fix, eval=FALSE}
+# Correct way
+data_info <- gen_sample_dataset(..., external_test = TRUE)
+
+# Or manually provide test data
+dataset <- mvpa_dataset(
+  train_data = perception_data,
+  test_data = memory_data,
+  mask = brain_mask
+)
+```
+
+### All Predictions Are the Same Class
+
+**Possible causes:**
+1. **Prototypes too similar**: Categories not distinguishable in training domain
+2. **Data quality issues**: Noise overwhelming signal
+3. **Insufficient training samples**: Not enough data to form stable prototypes
+
+**Diagnosis:**
+```{r diagnose_prototypes, eval=FALSE}
+# Check prototype similarity
+train_data <- data_info$dataset$train_data
+train_labels <- data_info$design$y_train
+
+prototypes <- do.call(rbind, lapply(levels(train_labels), function(lev) {
+  colMeans(train_data[train_labels == lev, ])
+}))
+
+# Compute pairwise correlations between prototypes
+prototype_cors <- cor(t(prototypes))
+print(prototype_cors)
+
+# If all correlations > 0.9, categories are too similar
+```
+
+### Chance-Level Performance Across All ROIs
+
+**Interpretation**: Large domain shift—direct transfer fails completely.
+
+**Next steps:**
+1. **Verify data quality**: Check that both domains have signal
+2. **Try domain adaptation**: Use `remap_rrr_model()` or similar
+3. **Check category balance**: Ensure all classes represented in both domains
+
+```{r check_balance, eval=FALSE}
+table(data_info$design$y_train)  # Training distribution
+table(data_info$design$y_test)   # Test distribution
+# Should be similar
+```
+
+## Advanced: Item-Level Prototype Matching
+
+When the same specific items (e.g., particular images, words, or trials) appear in both training and test domains, you can use item-level matching for more precise prototypes.
+
+```{r item_level_example, eval=FALSE}
+# Setup: Same 20 images shown during perception and memory
+# Each image has unique ID, multiple repetitions per domain
+
+train_df <- data.frame(
+  y = train_labels,          # Category labels
+  item_id = train_item_ids,  # Item identifiers (e.g., "image_001")
+  run = train_runs
+)
+
+test_df <- data.frame(
+  y = test_labels,
+  item_id = test_item_ids    # Same items as training
+)
+
+design <- mvpa_design(
+  train_design = train_df,
+  test_design = test_df,
+  y_train = ~ y,
+  block_var = ~ run
+)
+
+# link_by = "item_id" creates item-specific prototypes
+model <- naive_xdec_model(
+  dataset = dataset,
+  design = design,
+  link_by = "item_id"
+)
+
+results <- run_regional(model, roi_mask)
+
+# Now each test trial is classified against its item-specific
+# perception prototype, not just the category prototype
+```
+
+**When to use item-level matching:**
+- Same stimuli in both domains
+- Want to test item-specific (not category-general) codes
+- Have sufficient repetitions per item in training domain
+
+## Visualizing Results
+
+### Confusion Matrix
+
+Examine which categories are confused:
+
+```{r confusion_matrix, eval=FALSE}
+# Extract predictions for first ROI
+roi1_result <- results$result[[1]]
+
+# Create confusion matrix
+conf_mat <- table(
+  Observed = roi1_result$observed,
+  Predicted = roi1_result$predicted
+)
+
+print(conf_mat)
+
+# Visualize (if ggplot2 available)
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  library(ggplot2)
+
+  conf_df <- as.data.frame(conf_mat)
+
+  ggplot(conf_df, aes(x = Predicted, y = Observed, fill = Freq)) +
+    geom_tile() +
+    geom_text(aes(label = Freq), color = "white") +
+    scale_fill_gradient(low = "darkblue", high = "red") +
+    theme_minimal() +
+    labs(title = "Naive Cross-Decoding Confusion Matrix",
+         subtitle = "ROI 1")
+}
+```
+
+### Probability Distributions
+
+Examine classifier confidence:
+
+```{r probability_dist, eval=FALSE}
+# Get probabilities for correct class
+roi1_result <- results$result[[1]]
+correct_probs <- roi1_result$probs[
+  cbind(seq_along(roi1_result$observed),
+        as.integer(roi1_result$observed))
+]
+
+# Plot histogram
+hist(correct_probs,
+     main = "Probability Assigned to True Class",
+     xlab = "Probability",
+     col = "steelblue",
+     breaks = 20)
+abline(v = 0.25, col = "red", lty = 2)  # Chance level for 4-class problem
+```
+
+## Conclusion
+
+### Key Takeaways
+
+1. **"Naive" is technical, not pejorative**: It means "without domain adaptation"
+2. **Always start here**: Naive cross-decoding is the principled baseline
+3. **Interprets as generalization**: Above-chance = representations transfer naturally
+4. **Quantifies adaptation benefit**: Gap between naive and adaptive = value of learning transformations
+5. **Simple and interpretable**: Direct prototype matching is easy to understand and diagnose
+
+### When Naive Cross-Decoding is Sufficient
+
+- **High accuracy (>70-80%)**: Representations generalize naturally
+- **Domain differences minimal**: Surface features differ but structure preserved
+- **Computational efficiency matters**: No need to learn transformations
+
+### When to Use Domain Adaptation
+
+- **Low accuracy (<60% for 4-class)**: Systematic domain shift present
+- **Error patterns systematic**: Confusions show structured biases
+- **Goal is maximal accuracy**: Want best possible cross-domain performance
+
+### Next Steps
+
+- **Good performance?** Celebrate! Your representations are robust.
+- **Poor performance?** Try domain adaptation:
+  - Start with `remap_rrr_model()` (efficient, works for linear shifts)
+  - See `vignette("REMAP_RRR")` for details
+- **Want more control?** See `repmap_model()`, `repmed_model()`, `repnet_model()` for nonlinear adaptation
+
+### Related Vignettes
+
+- **REMAP-RRR**: Domain-adaptive cross-decoding with low-rank corrections
+- **repmap_model**: Full linear transformation learning
+- **repmed_model**: Robust median-based nonlinear mapping
+- **repnet_model**: Neural network-based nonlinear adaptation
+
+## References
+
+**Prototype-based classification:**
+- Haxby et al. (2001). *Science*. Distributed and overlapping representations.
+
+**Cross-decoding in neuroscience:**
+- Xue et al. (2010). *Nature*. Greater than the sum of its parts.
+
+**Domain adaptation in machine learning:**
+- Pan & Yang (2010). *IEEE TKDE*. A survey on transfer learning.

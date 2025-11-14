@@ -1,42 +1,69 @@
 url: http://bbuchsbaum.github.io/rMVPA/
 template:
   bootstrap: 5
-  bslib:
-    bootswatch: flatly   # modern, readable theme
-    primary: "#2D6A9F"   # subtle accent color
-    font_scale: 1.00     # keep typography close to default
-
+  package: albersdown
 articles:
-  - title: "Getting Started"
-    desc: >
-      Tutorials and guides for getting started with rMVPA
-    contents:
-      - RSA
-      - Contrast_RSA
-      - Advanced_RSA
-      - CrossValidation
-      - FeatureSelection
-      - Searchlight_Analysis
-      - Constructing_Datasets
-  
-  - title: "Advanced Topics"
-    desc: >
-      In-depth guides for advanced usage
-    contents:
-      - Regional_Analysis
-      - CustomAnalyses
-      - CommandLineScripts
-      - MVPA_RegionalCmdline
-      
-
-reference:
-- title: "All Functions"
-  desc: >
-    All functions exported by rMVPA
+- title: Core Concepts
+  desc: |
+    Essential concepts and basic workflows
   contents:
-  - matches(".*")
-
+  - Constructing_Datasets
+  - CrossValidation
+  - FeatureSelection
+- title: Standard MVPA Analysis
+  desc: |
+    Classification and regression analyses using searchlight and regional approaches
+  contents:
+  - Searchlight_Analysis
+  - Regional_Analysis
+  - CommandLineScripts
+  - MVPA_RegionalCmdline
+- title: Representational Similarity Analysis
+  desc: |
+    RSA methods from basic to specialized approaches
+  contents:
+  - RSA
+  - Contrast_RSA
+  - Temporal_Confounds_in_RSA
+  - Advanced_RSA
+- title: Continuous Decoding
+  desc: |
+    TR-level continuous-time decoding methods
+  contents:
+  - Continuous_Decoding
+- title: Representation Mapping (REMAP) Models
+  desc: |
+    Models for learning transformations between perception and memory representations
+  contents:
+  - Naive_Cross_Decoding
+  - REMAP_RRR
+  - repmap_model
+  - repmed_model
+  - repnet_model
+- title: Extensibility
+  desc: |
+    Customizing and extending rMVPA functionality
+  contents:
+  - CustomAnalyses
+reference:
+- title: REMAP Diagnostics
+  desc: |
+    Summaries that quantify how far memory is from perception and how large the learned correction is.
+  contents:
+  - summarize_remap_roi
+  - summarize_remap_items
+- title: All Functions
+  desc: |
+    All functions exported by rMVPA
+  contents: matches(".*")
 navbar:
   structure:
-    left:  [intro, reference, articles, tutorials, news]
-    right: [search, github]
+    left:
+    - intro
+    - reference
+    - articles
+    - tutorials
+    - news
+    right:
+    - search
+    - github

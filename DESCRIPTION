@@ -84,7 +84,18 @@ Collate:
     'contrast_rsa_model.R'
     'average_labels.R'
     'table_to_rdm.R'
-RoxygenNote: 7.3.2.9000
+    'hrfdecoder_design.R'
+    'hrfdecoder_model.R'
+    'naive_xdec_model.R'
+    'remap_rrr_model.R'
+    'era_rsa_design.R'
+    'era_rsa_model.R'
+    'remap_utils.R'
+    'rena_design.R'
+    'repmap_model.R'
+    'repmed_model.R'
+    'repnet_model.R'
+RoxygenNote: 7.3.3
 Suggests:
     c060,
     covr,
@@ -107,3 +118,4 @@ Remotes:
 VignetteBuilder: knitr
 Encoding: UTF-8
 URL: http://bbuchsbaum.github.io/rMVPA/
+Config/Needs/website: albersdown

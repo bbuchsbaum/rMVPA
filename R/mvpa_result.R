@@ -62,6 +62,11 @@ classification_result <- function(observed, predicted, probs, testind=NULL, test
 #' @family classification_result
 #' @export
 binary_classification_result <- function(observed, predicted, probs, testind=NULL, test_design=NULL, predictor=NULL) {
+  # Ensure observed and predicted share the same factor levels so that
+  # operations like equality comparisons work without errors.
+  observed <- as.factor(observed)
+  predicted <- factor(predicted, levels = levels(observed))
+
   assertthat::assert_that(length(observed) == length(predicted))
   ret <- list(
     observed=observed,

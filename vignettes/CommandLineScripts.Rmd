@@ -1,13 +1,21 @@
 ---
-title: "MVPA Searchlight Tutorial"
-author: "Your Name"
-date: "`r Sys.Date()`"
-output:
-  rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{MVPA Searchlight Tutorial}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+title: MVPA Searchlight Tutorial
+author: Your Name
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: '%\VignetteIndexEntry{MVPA Searchlight Tutorial} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 # Introduction

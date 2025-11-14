@@ -18,9 +18,6 @@ nresponses.mvpa_design <- function(x) {
   }
 }
 
-#' Does the design include a test set?
-#'
-#' @inheritParams has_test_set
 #' @rdname has_test_set-methods
 #' @export
 has_test_set.mvpa_design <- function(obj) {

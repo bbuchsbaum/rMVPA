@@ -72,15 +72,46 @@ corsimFit <- function(x, y, method, robust) {
 #' @keywords internal
 #' @noRd
 predict_corsimFit <- function(modelFit, newData) {
-  cres <- cor(t(newData), t(modelFit$conditionMeans), method=modelFit$method)
+  X <- as.matrix(newData)
+  M <- as.matrix(modelFit$conditionMeans)
+  if (identical(modelFit$method, "pearson")) {
+    # Fast row-wise Pearson correlation via standardization + tcrossprod
+    p <- ncol(X)
+    if (is.null(p) || p < 2L) {
+      cres <- cor(t(X), t(M), method = "pearson")
+    } else {
+      Xc <- sweep(X, 1, rowMeans(X), "-")
+      Mc <- sweep(M, 1, rowMeans(M), "-")
+      Xs <- sweep(Xc, 1, pmax(matrixStats::rowSds(X), .Machine$double.eps), "/")
+      Ms <- sweep(Mc, 1, pmax(matrixStats::rowSds(M), .Machine$double.eps), "/")
+      cres <- tcrossprod(Xs, Ms) / (p - 1)
+    }
+  } else {
+    cres <- cor(t(X), t(M), method = modelFit$method)
+  }
   res <- max.col(cres)
-  modelFit$levs[res]
+  factor(modelFit$levs[res], levels = modelFit$levs)
 }
 
 #' @keywords internal
 #' @noRd
 prob_corsimFit <- function(modelFit, newData) {
-  scores <- cor(t(newData), t(modelFit$conditionMeans), method=modelFit$method)
+  X <- as.matrix(newData)
+  M <- as.matrix(modelFit$conditionMeans)
+  if (identical(modelFit$method, "pearson")) {
+    p <- ncol(X)
+    if (is.null(p) || p < 2L) {
+      scores <- cor(t(X), t(M), method = "pearson")
+    } else {
+      Xc <- sweep(X, 1, rowMeans(X), "-")
+      Mc <- sweep(M, 1, rowMeans(M), "-")
+      Xs <- sweep(Xc, 1, pmax(matrixStats::rowSds(X), .Machine$double.eps), "/")
+      Ms <- sweep(Mc, 1, pmax(matrixStats::rowSds(M), .Machine$double.eps), "/")
+      scores <- tcrossprod(Xs, Ms) / (p - 1)
+    }
+  } else {
+    scores <- cor(t(X), t(M), method = modelFit$method)
+  }
   mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores, ties.method = "first"))]
   probs <- exp(sweep(scores, 1, mc, "-"))
   probs <- zapsmall(probs / rowSums(probs))

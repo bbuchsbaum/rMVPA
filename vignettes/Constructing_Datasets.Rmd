@@ -1,15 +1,24 @@
 ---
-title: "Constructing Datasets for MVPA Analysis"
-author: "Bradley Buchsbaum"
-date: "`r Sys.Date()`"
-output: 
+title: Constructing Datasets for MVPA Analysis
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output:
   rmarkdown::html_vignette:
-    toc: true
+    toc: yes
     toc_depth: 3
-vignette: >
-  %\VignetteIndexEntry{Constructing Datasets for MVPA Analysis}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+vignette: '%\VignetteIndexEntry{Constructing Datasets for MVPA Analysis} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 This vignette shows how to construct real neuroimaging datasets for MVPA. The examples cover both volumetric (image‑based) and surface‑based inputs using helpers in `dataset.R`. The code snippets are set to `eval = FALSE` because they reference file paths you should replace with your own data.
 

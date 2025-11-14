@@ -31,8 +31,13 @@ initialize_standard_parameters <- function(config, args, analysisType) {
   set_arg("pthreads", config, args, 1)
   set_arg("label_column", config, args, "labels")
   set_arg("skip_if_folder_exists", config, args, FALSE)
-  set_arg("output", config, args, paste0(analysisType, "_", config$labelColumn))
+  # Ensure sane default output name; prefer label_column if present
+  default_out <- paste0(analysisType, "_", if (!is.null(config$label_column)) config$label_column else "analysis")
+  set_arg("output", config, args, default_out)
   set_arg("block_column", config, args, NULL)
+  # Backward-compatible: allow CLI flag --normalize to drive normalize_samples
+  # If args$normalize is provided, map it; otherwise fall back to normalize_samples
+  if (!is.null(args$normalize)) config$normalize_samples <- isTRUE(args$normalize)
   set_arg("normalize_samples", config, args, FALSE)
   set_arg("tune_grid", config, args, NULL)
   set_arg("mask", config, args, NULL)
@@ -42,6 +47,8 @@ initialize_standard_parameters <- function(config, args, analysisType) {
   set_arg("test_label_column", config, args, NULL)
   set_arg("data_mode", config, args, "image")
   
+  # Default model_type if not supplied elsewhere
+  if (is.null(config$model_type)) config$model_type <- "classification"
   config
 }
 
@@ -496,15 +503,46 @@ load_design <- function(config, name) {
 
 #' @noRd
 load_mvpa_model <- function(config, dataset, design, crossval, feature_selector) {
+  model_name <- tolower(as.character(config$model))
+
+  # Specialized analysis models that are not part of MVPAModels registry
+  if (model_name %in% c("remap_rrr", "remap_rrr_model", "remap")) {
+    # Map optional config overrides if present; otherwise defaults inside constructor
+    rank_opt       <- if (!is.null(config$remap_rank)) config$remap_rank else "auto"
+    lambda_gridopt <- if (!is.null(config$remap_lambda_grid)) config$remap_lambda_grid else c(0, 0.25, 0.5, 0.75, 1)
+    loko_opt       <- if (!is.null(config$remap_leave_one_key_out)) isTRUE(config$remap_leave_one_key_out) else TRUE
+    minpairs_opt   <- if (!is.null(config$remap_min_pairs)) as.integer(config$remap_min_pairs) else 5L
+    link_by_opt    <- if (!is.null(config$link_by)) config$link_by else NULL
+    return(remap_rrr_model(
+      dataset        = dataset,
+      design         = design,
+      link_by        = link_by_opt,
+      rank           = rank_opt,
+      lambda_grid    = lambda_gridopt,
+      leave_one_key_out = loko_opt,
+      min_pairs      = minpairs_opt,
+      return_adapter = TRUE
+    ))
+  }
+
+  if (model_name %in% c("naive_xdec", "naive_xdec_model", "naive_crossdecode")) {
+    link_by_opt <- if (!is.null(config$link_by)) config$link_by else NULL
+    return(naive_xdec_model(dataset = dataset, design = design, link_by = link_by_opt, return_predictions = TRUE))
+  }
+
+  # Default path: MVPAModels registry
   mod <- load_model(config$model)
-  mvp_mod <- mvpa_model(mod,dataset, design=design, 
-                        model_type=config$model_type,
-                        crossval=crossval,
-                        feature_selector=feature_selector, 
-                        tune_grid=config$tune_grid,
-                        performance=config$performance,
-                        class_metrics=config$class_metrics)
-  
+  mvpa_model(
+    mod,
+    dataset,
+    design = design,
+    model_type = config$model_type,
+    crossval = crossval,
+    feature_selector = feature_selector,
+    tune_grid = config$tune_grid,
+    performance = config$performance,
+    class_metrics = config$class_metrics
+  )
 }
 
 #' @keywords internal

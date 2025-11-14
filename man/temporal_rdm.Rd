@@ -10,10 +10,13 @@ temporal_rdm(
   kernel = c("adjacent", "boxcar", "linear", "poly", "exp", "gauss"),
   width = 1L,
   power = 1,
-  lambda = 1,
-  sigma = 1,
+  lambda = NULL,
+  sigma = NULL,
   within_blocks_only = TRUE,
   wrap = FALSE,
+  units = c("auto", "sec", "TR", "index"),
+  TR = NULL,
+  metric = c("similarity", "distance"),
   normalize = c("rank", "z", "none"),
   as_dist = TRUE
 )
@@ -24,32 +27,38 @@ temporal_rdm(
 \item{block}{optional vector (length N) of run/block identifiers}
 
 \item{kernel}{character string specifying the kernel type, one of:
-\itemize{
-  \item{"adjacent"}{Binary kernel for immediate neighbors within specified width}
-  \item{"boxcar"}{Binary kernel including diagonal up to specified width}
-  \item{"linear"}{Linear decay based on lag}
-  \item{"poly"}{Polynomial decay with specified power}
-  \item{"exp"}{Exponential decay with specified lambda}
-  \item{"gauss"}{Gaussian decay with specified sigma}
+\describe{
+  \item{adjacent}{Binary kernel for immediate neighbors within specified width}
+  \item{boxcar}{Binary kernel including diagonal up to specified width}
+  \item{linear}{Linear distance based on lag}
+  \item{poly}{Polynomial distance with specified power}
+  \item{exp}{Exponential similarity with specified lambda}
+  \item{gauss}{Gaussian similarity with specified sigma}
 }}
 
 \item{width}{integer window for "adjacent"/"boxcar" kernels (default 1)}
 
 \item{power}{exponent for "poly" kernel (default 1)}
 
-\item{lambda}{decay constant for "exp" kernel (default 1)}
+\item{lambda}{decay constant for "exp" kernel (in units; default chosen automatically if NULL)}
 
-\item{sigma}{standard deviation for "gauss" kernel (default 1)}
+\item{sigma}{standard deviation for "gauss" kernel (in units; default chosen automatically if NULL)}
 
 \item{within_blocks_only}{logical; if TRUE, zero nuisance across blocks (default TRUE)}
 
 \item{wrap}{logical; if TRUE, treat index as circular (default FALSE)}
 
+\item{units}{one of \code{"auto"}, \code{"sec"}, \code{"TR"}, or \code{"index"}; used to choose sensible defaults for decay parameters}
+
+\item{TR}{repetition time in seconds (optional, but recommended when \code{units="sec"} or \code{units="TR"})}
+
+\item{metric}{return type: \code{"distance"} (increasing with lag) or \code{"similarity"} (decreasing with lag). Default \code{"distance"}.}
+
 \item{normalize}{character string specifying normalization method:
-\itemize{
-  \item{"rank"}{Rank transform (ties averaged)}
-  \item{"z"}{Z-score normalization}
-  \item{"none"}{No normalization}
+\describe{
+  \item{rank}{Rank transform (ties averaged)}
+  \item{z}{Z-score normalization}
+  \item{none}{No normalization}
 }}
 
 \item{as_dist}{logical; if TRUE return a \code{dist} object, otherwise return matrix (default TRUE)}
@@ -59,15 +68,17 @@ A \code{dist} object or symmetric matrix (N x N) with 0 on the diagonal,
   representing temporal/ordinal relationships between observations
 }
 \description{
-Creates a temporal or ordinal nuisance representational dissimilarity matrix (RDM) 
+Creates a temporal or ordinal nuisance representational dissimilarity matrix (RDM)
 for use in RSA analyses. This function generates various kernels to model temporal
-proximity effects in neuroimaging data.
+proximity effects in neuroimaging data and can return either similarity- or
+distance-like outputs.
 }
 \details{
 This function creates temporal nuisance RDMs for modeling carry-over effects,
 scanner drift, or other temporal confounds in fMRI data. The resulting RDM
 can be included as a nuisance regressor in RSA models to account for temporal
-proximity effects while preserving statistical power.
+proximity effects while preserving statistical power. By default, it returns
+a distance-like quantity that increases with temporal separation (\code{metric="distance"}).
 }
 \examples{
 # Create temporal RDM for 20 trials across 4 runs

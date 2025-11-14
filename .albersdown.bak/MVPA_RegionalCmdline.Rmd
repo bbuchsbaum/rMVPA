@@ -1,0 +1,227 @@
+---
+title: MVPA Regional Analysis Tutorial
+author: Your Name
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: '%\VignetteIndexEntry{MVPA Regional Analysis Tutorial} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
+---
+
+# Introduction
+
+This tutorial explains how to run **regional multivariate pattern analysis (MVPA)** using **MVPA_Regional.R**. 
+The script performs MVPA on specified brain regions, enabling both classification and regression analyses on fMRI data. 
+Regional analysis can be conducted on volumetric (NIfTI) or surface-based neuroimaging data, and allows for separate training and testing subsets.
+
+## Key features
+
+The script supports volumetric NIfTI and surface data, separate training/testing subsets, and full configuration via YAML or R files. Outputs include region‑level performance maps, prediction tables, and a configuration record. Cross‑validation options include blocked, k‑fold, and two‑fold. Built‑in MVPA models are available from the registry, and preprocessing includes optional centering/scaling and feature selection.
+
+---
+
+# Running the Script
+
+## 1. Basic Usage
+
+If you have:
+
+- A **4D fMRI file** for training (e.g., `train_data.nii`)
+- A **trial-by-trial design matrix** (e.g., `train_design.txt`)
+- A **brain mask file** (e.g., `mask.nii`)
+
+You can run the regional analysis from the command line:
+
+```bash
+Rscript MVPA_Regional.R --train_design=train_design.txt \
+                         --train_data=train_data.nii \
+                         --mask=mask.nii \
+                         --model=sda_notune \
+                         --label_column=condition \
+                         --ncores=4 \
+                         --output=my_regional_output
+```
+
+## 2. Data modes
+
+The script supports two primary data modes:
+
+### Image mode (volumetric)
+Default (`--data_mode=image`): NIfTI files with a binary mask; analyzes region‑level data based on voxel masks.
+
+### Surface mode
+Use `--data_mode=surface` for cortical meshes; multiple surface sections are supported.
+
+## 3. Models
+
+The script supports various classification and regression models:
+
+### Built‑in MVPA models
+- `corclass`: Correlation-based classifier with template matching
+- `sda_notune`: Shrinkage Discriminant Analysis without tuning
+- `sda_boot`: SDA with bootstrap resampling
+- `glmnet_opt`: Elastic net with EPSGO parameter optimization
+- `sparse_sda`: SDA with sparsity constraints
+- `sda_ranking`: SDA with automatic feature ranking
+- `mgsda`: Multi-Group Sparse Discriminant Analysis
+- `lda_thomaz`: Modified LDA for high-dimensional data
+- `hdrda`: High-Dimensional Regularized Discriminant Analysis
+
+You can also register custom models via `register_mvpa_model()`.
+
+## 4. Cross‑validation options
+
+Multiple cross-validation strategies are available:
+
+### Blocked Cross-Validation
+```bash
+--block_column=session
+```
+Uses a blocking variable (e.g., session) for splitting the data.
+
+### K-Fold Cross-Validation
+Default when no block column is specified; uses random splits.
+
+### Two-Fold Cross-Validation
+Specify in the configuration file:
+```yaml
+cross_validation:
+  name: "twofold"
+  nreps: 10
+```
+
+### Advanced cross‑validation methods
+
+Beyond blocked and k‑fold splits, you can use bootstrap blocked CV (resampling within runs), sequential blocked CV (ordered folds), or provide custom train/test indices. Specify the method in the config file under `cross_validation.name`. For example:
+```yaml
+cross_validation:
+  name: "bootstrap"   # Options: "twofold", "bootstrap", "sequential", "custom", "kfold"
+  nreps: 10
+```
+
+Choose the method that best matches your data structure and experimental design.
+
+## 5. Feature Selection
+
+Enable feature selection with:
+```yaml
+feature_selector:
+  method: "anova"  # Options: "correlation", "t-test", etc.
+  cutoff_type: "percentile"
+  cutoff_value: 0.1
+```
+
+## 6. Understanding `label_column`
+
+The **label column** specifies the target variable:
+
+- For **classification**, it should contain categorical labels (e.g., "Face", "House").
+- For **regression**, it should contain continuous values (e.g., reaction times).
+
+**Example Design File (`train_design.txt`):**
+
+```
+trial  condition  subject  session
+1      Face       S01      1
+2      House      S01      1
+3      Face       S01      1
+4      House      S01      1
+5      Face       S01      2
+```
+
+## 7. Using a Configuration File
+
+Instead of specifying all options on the command line, you can use a configuration file.
+
+**Example YAML Config File (`regional_config.yaml`):**
+
+```yaml
+# Data Sources
+train_design: "train_design.txt"
+test_design: "test_design.txt"
+train_data: "train_data.nii"
+test_data: "test_data.nii"
+mask: "mask.nii"
+
+# Analysis Parameters
+model: "rf"  # Random Forest classifier
+data_mode: "image"  # or "surface"
+ncores: 4
+label_column: "condition"
+block_column: "session"
+
+# Output Options
+output: "regional_results"
+normalize_samples: TRUE
+class_metrics: TRUE
+
+# Advanced Options
+feature_selector:
+  method: "anova"
+  cutoff_type: "percentile"
+  cutoff_value: 0.1
+
+cross_validation:
+  name: "twofold"
+  nreps: 10
+
+# Optional Subsetting: Define different subsets for training and testing
+train_subset: "subject == 'S01'"
+test_subset: "subject == 'S02'"
+```
+
+**Running with a Config File:**
+
+```bash
+Rscript MVPA_Regional.R --config=regional_config.yaml
+```
+
+## 8. Expected Outputs
+
+After running the script, the output directory (e.g., `regional_results/`) contains:
+
+- **Performance Maps**: NIfTI files with region-level performance metrics (e.g., accuracy, AUC).
+- **Prediction Tables**: Text files summarizing predictions for each region.
+- **Configuration File**: `config.yaml` with complete analysis parameters for reproducibility.
+
+Example directory structure:
+
+```
+regional_results/
+├── performance_table.txt   # Regional performance metrics
+├── prediction_table.txt    # Prediction details per region
+├── regional_metric1.nii    # Regional performance map (e.g., accuracy or AUC)
+├── regional_metric2.nii    # Additional metric maps (if applicable)
+└── config.yaml             # Analysis configuration
+```
+
+For regression analyses, different metrics (e.g., `r2.nii`, `rmse.nii`, `spearcor.nii`) will be output.
+
+## 9. Performance Considerations
+
+- Use `--normalize_samples=TRUE` for improved model performance.
+- Increase `--ncores` to leverage multi-core systems.
+- Adjust parameters based on spatial resolution and hypotheses.
+- Select appropriate cross-validation strategies to prevent overfitting.
+
+# Summary
+
+MVPA_Regional.R provides comprehensive regional MVPA analysis capabilities. It handles both volumetric and surface-based data formats with flexible configuration through command line or config files. The tool generates detailed performance maps and prediction tables, while incorporating robust cross-validation and feature selection to ensure reliable results.
+
+**Next Steps:**
+- Experiment with various models (`--model=rf`, `--model=sda_notune`).
+- Test different feature selection methods.
+- Evaluate both classification and regression scenarios.
+- Optimize processing using parallel computation.
+
+Happy regional analysis! 

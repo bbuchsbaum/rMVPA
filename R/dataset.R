@@ -174,14 +174,13 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
 #'   }
 #'
 #' @examples
-#' # Create dataset from NeuroVec objects
-#' train_vec <- NeuroVec(array(rnorm(1000*100), c(10,10,10,100)))
-#' mask_vol <- NeuroVol(array(1, c(10,10,10)))
-#' dataset <- mvpa_dataset(train_vec, mask=mask_vol)
+#' # Use gen_sample_dataset helper to create a simple dataset
+#' sample_data <- gen_sample_dataset(c(5, 5, 5), nobs = 100, blocks = 4)
+#' dataset <- sample_data$dataset
 #'
-#' # Create dataset with test data
-#' test_vec <- NeuroVec(array(rnorm(1000*20), c(10,10,10,20)))
-#' dataset_with_test <- mvpa_dataset(train_vec, test_vec, mask=mask_vol)
+#' # Access components
+#' print(dim(dataset$train_data))
+#' print(sum(dataset$mask > 0))
 #'
 #' @seealso 
 #' \code{\link{mvpa_surface_dataset}} for creating surface-based MVPA datasets

@@ -1,18 +1,29 @@
 ---
-title: "Cross-Validation Strategies in rMVPA"
-author: "Bradley Buchsbaum"
-date: "`r Sys.Date()`"
-output: 
+title: Cross-Validation Strategies in rMVPA
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output:
   rmarkdown::html_vignette:
-    toc: true
+    toc: yes
     toc_depth: 3
-vignette: >
-  %\VignetteIndexEntry{Cross-Validation Strategies in rMVPA}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+vignette: '%\VignetteIndexEntry{Cross-Validation Strategies in rMVPA} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 ```{r setup, echo=FALSE, message=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 suppressPackageStartupMessages({
   library(neuroim2)
   library(rMVPA)

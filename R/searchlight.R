@@ -352,67 +352,92 @@ combine_standard <- function(model_spec, good_results, bad_results) {
     ind <- unlist(good_results$id)
     perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
     
-    has_results <- any(unlist(purrr::map(good_results$result, function(x) !is.null(x))))
     ret <- wrap_out(perf_mat, model_spec$dataset, ind)
     
+    # Optionally construct a 4D (space × trial) map of
+    # prob_observed for classification results, when available.
+    has_results <- any(unlist(purrr::map(good_results$result, function(x) !is.null(x))))
     if (has_results) {
-      # Get prob_observed values - these may be NULL for regression
-      pob_list <- good_results %>% 
-        dplyr::select(result) %>% 
-        pull(result) %>% 
+      pob_list <- good_results %>%
+        dplyr::select(result) %>%
+        dplyr::pull(result) %>%
         purrr::map(~ prob_observed(.))
-      
-      # Only process pobserved if we have non-NULL values (i.e., classification results)
-      if (any(!sapply(pob_list, is.null))) {
-        # Filter out NULL values (from regression results)
-        pob_list <- pob_list[!sapply(pob_list, is.null)]
 
-        if (length(pob_list) > 0) {
-          # Bind probability vectors without requiring column names; assign simple defaults
-          pobserved_tbl <- as.data.frame(do.call(cbind, pob_list), stringsAsFactors = FALSE)
-          if (is.null(colnames(pobserved_tbl)) || any(colnames(pobserved_tbl) == "")) {
-            colnames(pobserved_tbl) <- paste0("class_", seq_len(ncol(pobserved_tbl)))
-          }
-          created_map <- NULL
+      if (any(!vapply(pob_list, is.null, logical(1)))) {
+        if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
+          # TODO: implement surface-based prob_observed maps if needed.
+          futile.logger::flog.debug("pobserved maps for surface datasets are not yet implemented; skipping.")
+        } else {
+          # Volumetric case: build a SparseNeuroVec where rows are mask
+          # voxels and columns are trials (probability of true class).
+          space_obj <- resolve_volume_space(model_spec$dataset)
+          mask_vec  <- resolve_volume_mask(model_spec$dataset$mask, spatial_dim_product(space_obj))
+          mask_idx  <- which(mask_vec)
+          n_mask    <- length(mask_idx)
 
-          if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
-            if (nrow(pobserved_tbl) > 0) {
-              created_map <- neurosurf::NeuroSurfaceVector(
-                geometry = neurosurf::geometry(model_spec$dataset$train_data),
-                indices = seq_len(nrow(pobserved_tbl)),
-                mat = as.matrix(pobserved_tbl)
-              )
+          # Map global voxel index -> row in prob matrix
+          row_map <- integer(length(mask_vec))
+          row_map[mask_idx] <- seq_len(n_mask)
+
+          # Trials correspond to y_test (or y_train if no explicit test set)
+          n_trials <- length(y_test(model_spec$design))
+          prob_mat <- matrix(NA_real_, nrow = n_mask, ncol = n_trials)
+
+          for (i in seq_len(nrow(good_results))) {
+            p_i <- pob_list[[i]]
+            if (is.null(p_i) || length(p_i) == 0L) next
+
+            res_i <- good_results$result[[i]]
+            testind <- res_i$testind
+            if (is.null(testind)) {
+              # Fallback: assume full coverage in order
+              testind <- seq_along(p_i)
             }
-          } else {
-            space_obj <- resolve_volume_space(model_spec$dataset)
-            expected_len <- spatial_dim_product(space_obj)
-            if (nrow(pobserved_tbl) == expected_len) {
-              time_dim <- max(1L, ncol(pobserved_tbl))
-              if (length(dim(space_obj)) == 3L) {
-                space_obj <- neuroim2::add_dim(space_obj, time_dim)
-              } else if (dim(space_obj)[length(dim(space_obj))] != time_dim) {
-                space_obj <- neuroim2::add_dim(spatial_only_space(space_obj), time_dim)
-              }
-              mask_vec <- resolve_volume_mask(model_spec$dataset$mask, spatial_dim_product(space_obj))
-              if (nrow(bad_results) > 0 && length(mask_vec) > 0) {
-                bad_ind <- unlist(bad_results$id)
-                mask_vec[bad_ind] <- FALSE
-              }
-              created_map <- neuroim2::SparseNeuroVec(
-                data = as.matrix(pobserved_tbl),
-                space = space_obj,
-                mask = mask_vec
-              )
-            } else {
+            if (length(testind) != length(p_i)) {
               futile.logger::flog.warn(
-                "Observed probabilities map skipped: expected %s rows but found %s.",
-                expected_len, nrow(pobserved_tbl)
+                "combine_standard: length mismatch between testind (%s) and prob_observed (%s); skipping ROI %s.",
+                length(testind), length(p_i), as.character(good_results$id[i])
               )
+              next
             }
+
+            # Keep only indices within the available trial range
+            keep <- testind >= 1L & testind <= n_trials
+            if (!any(keep)) next
+            if (!all(keep)) {
+              p_i     <- p_i[keep]
+              testind <- testind[keep]
+            }
+
+            trial_vec <- rep(NA_real_, n_trials)
+            trial_vec[testind] <- p_i
+
+            center_id <- unlist(good_results$id[i])
+            row_idx   <- if (center_id >= 1L && center_id <= length(row_map)) row_map[center_id] else 0L
+            if (row_idx == 0L) next
+
+            prob_mat[row_idx, ] <- trial_vec
           }
 
-          if (!is.null(created_map)) {
+          if (any(is.finite(prob_mat))) {
+            time_dim <- n_trials
+            # Extend space with a time dimension if needed
+            if (length(dim(space_obj)) == 3L) {
+              space_prob <- neuroim2::add_dim(space_obj, time_dim)
+            } else if (dim(space_obj)[length(dim(space_obj))] != time_dim) {
+              space_prob <- neuroim2::add_dim(spatial_only_space(space_obj), time_dim)
+            } else {
+              space_prob <- space_obj
+            }
+
+            created_map <- neuroim2::SparseNeuroVec(
+              data  = prob_mat,
+              space = space_prob,
+              mask  = mask_vec
+            )
             ret$pobserved <- created_map
+          } else {
+            futile.logger::flog.debug("combine_standard: no finite prob_observed values; skipping pobserved map.")
           }
         }
       }

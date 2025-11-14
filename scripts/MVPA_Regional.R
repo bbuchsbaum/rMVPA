@@ -54,13 +54,13 @@ option_list <- list(
               help="Output folder where results will be stored"),
   make_option(c("-b", "--block_column"), type="character", 
               help="Name of the column indicating the block variable for cross-validation"),
-  make_option(c("-g", "--tune_grid"), type="character", 
-              help="String containing grid parameters (e.g., a=\(1,2\), b=\('one','two'\))"),
+  make_option(c("-g", "--tune_grid"), type="character",
+              help="String containing grid parameters (e.g., 'alpha=c(0.1,0.5,1.0)', 'ncomp=c(2,5,10)')"),
   make_option(c("--tune_length"), type="numeric", 
               help="Number of levels for model tuning parameters"),
-  make_option(c("--save_predictors"), type="logical", action="store_true", default=FALSE,
+  make_option(c("--save_predictors"), action="store_true", default=FALSE,
               help="Save model fits for predicting new data sets (default FALSE)"),
-  make_option(c("--skip_if_folder_exists"), type="logical", action="store_true", default=FALSE,
+  make_option(c("--skip_if_folder_exists"), action="store_true", default=FALSE,
               help="Skip analysis if output folder already exists"),
   make_option(c("--class_metrics"), type="logical", default=FALSE,
               help="Write out performance metrics for each class in multiclass settings"),
@@ -173,30 +173,22 @@ for (i in 1:length(dataset)) {
   mvpa_mod <- rMVPA:::load_mvpa_model(config, dset, design, crossval, feature_selector)
   flog.info("MVPA model loaded.")
   
-  # Run regional analysis using the regional function
-  regional_res <- rMVPA:::run_regional(mvpa_mod, region_mask, return_fits=TRUE)
+  # Choose appropriate region mask: volumetric or surface
+  rmask <- if (config$data_mode == "image") region_mask else dset$mask
+  # Run regional analysis
+  regional_res <- run_regional(mvpa_mod, rmask, return_fits=config$save_predictors)
   
   # Log performance summary
   flog.info("Regional analysis performance:")
   print(regional_res$performance)
-  
-  # Write output volumes (e.g., importance or performance maps)
-  write_output(regional_res$vol_results, name=dname, output, data_mode=config$data_mode)
-  
-  # Write out performance and prediction tables
-  out_perf <- if (dname != "") {
-    paste0(output, "/", dname, "_performance_table.txt")
-  } else {
-    paste0(output, "/performance_table.txt")
-  }
-  out_pred <- if (dname != "") {
-    paste0(output, "/", dname, "_prediction_table.txt")
-  } else {
-    paste0(output, "/prediction_table.txt")
-  }
-  
-  write.table(regional_res$performance, out_perf, row.names=FALSE, quote=FALSE, sep="\t")
-  write.table(regional_res$prediction_table, out_pred, row.names=FALSE, quote=FALSE, sep="\t")
+
+  # Determine save level based on save_predictors flag
+  save_level <- if (config$save_predictors) "standard" else "minimal"
+
+  # Use unified save_results method for regional_mvpa_result
+  # This saves maps, tables, and fits (if return_fits=TRUE and level != "minimal")
+  out_subdir <- if (dname != "") file.path(output, dname) else output
+  rMVPA::save_results(regional_res, dir = out_subdir, level = save_level)
 }
 
 ###############################################################################
@@ -204,5 +196,4 @@ for (i in 1:length(dataset)) {
 ###############################################################################
 
 flog.info("Regional MVPA analysis complete! Results saved to: %s", output)
-
 

@@ -1,13 +1,21 @@
 ---
-title: "MVPA Regional Analysis Tutorial"
-author: "Your Name"
-date: "`r Sys.Date()`"
-output:
-  rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{MVPA Regional Analysis Tutorial}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+title: MVPA Regional Analysis Tutorial
+author: Your Name
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: '%\VignetteIndexEntry{MVPA Regional Analysis Tutorial} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 # Introduction
@@ -49,10 +57,55 @@ Rscript MVPA_Regional.R --train_design=train_design.txt \
 The script supports two primary data modes:
 
 ### Image mode (volumetric)
-Default (`--data_mode=image`): NIfTI files with a binary mask; analyzes region‑level data based on voxel masks.
+Default (`--data_mode=image`). For regional analysis, the `--mask` argument should be a label map (aka ROI parcellation) in NIfTI format:
+
+- The mask is a 3D image in the same space as your data.
+- Voxels with value `0` are ignored (background).
+- Each non‑zero integer value defines a distinct ROI ID (e.g., 1, 2, 3, ...).
+- The script treats every unique non‑zero value as a separate region and runs one MVPA per region.
+
+Typical sources for region masks:
+- Atlas/parcellation volumes (e.g., cortical/functional parcellations) where integers index regions.
+- Custom ROI sets you create by combining binary masks into a single labeled volume.
+
+Create a simple labeled ROI mask in R (example):
+```r
+library(neuroim2)
+
+# Start from two binary ROI masks in the same space
+roi1 <- read_vol("roi_left.nii.gz")
+roi2 <- read_vol("roi_right.nii.gz")
+
+# Build a labeled mask: left=1, right=2; background stays 0
+lab <- array(0L, dim = dim(roi1))
+v1 <- as.logical(values(roi1))
+v2 <- as.logical(values(roi2))
+lab[v1] <- 1L
+lab[v2] <- 2L
+
+roi_mask <- NeuroVol(lab, space(roi1))
+write_vol(roi_mask, "my_roi_mask.nii.gz")
+```
+
+Use this file with the regional script:
+```bash
+Rscript MVPA_Regional.R \
+  --train_design=train_design.txt \
+  --train_data=train_data.nii.gz \
+  --mask=my_roi_mask.nii.gz \
+  --model=sda_notune \
+  --label_column=condition \
+  --output=regional_out
+```
+
+Notes
+- To analyze only a subset of atlas regions, make a copy of the atlas and set all unwanted labels to 0.
+- The script logs the number of detected regions; this should match the count of unique non‑zero labels.
 
 ### Surface mode
 Use `--data_mode=surface` for cortical meshes; multiple surface sections are supported.
+
+For surface analyses, `--mask` can be a labeled surface (one file per section/hemisphere) matching the mesh. The loader will use the non‑zero labels as ROI IDs, similar to volumetric masks.
 
 ## 3. Models
 
@@ -94,13 +147,12 @@ cross_validation:
 
 ### Advanced cross‑validation methods
 
-Beyond blocked and k‑fold splits, you can use bootstrap blocked CV (resampling within runs), sequential blocked CV (ordered folds), or provide custom train/test indices. Specify the method in the config file under `cross_validation.name`. For example:
+Beyond blocked and k‑fold splits, you can use two‑fold resampling (repeated), or provide custom train/test indices. Specify the method in the config file under `cross_validation.name`. For example:
 ```yaml
 cross_validation:
-  name: "bootstrap"   # Options: "twofold", "bootstrap", "sequential", "custom", "kfold"
+  name: "twofold"   # Options: "twofold", "blocked", "custom" (kfold is the default when unspecified)
   nreps: 10
 ```
-
 Choose the method that best matches your data structure and experimental design.
 
 ## 5. Feature Selection
@@ -201,10 +253,36 @@ For regression analyses, different metrics (e.g., `r2.nii`, `rmse.nii`, `spearco
 
 ## 9. Performance Considerations
 
-- Use `--normalize_samples=TRUE` for improved model performance.
+- Use `--normalize` on the CLI (or `normalize_samples: TRUE` in YAML) for improved model performance.
 - Increase `--ncores` to leverage multi-core systems.
 - Adjust parameters based on spatial resolution and hypotheses.
 - Select appropriate cross-validation strategies to prevent overfitting.
+
+## 10. Domain‑adaptive cross‑decoding from the CLI (REMAP‑RRR)
+
+To run REMAP‑RRR from MVPA_Regional.R, set `--model=remap_rrr` and provide both train and test datasets/designs (source→target). Optionally supply a pairing key shared by train/test designs:
+
+```bash
+Rscript MVPA_Regional.R \
+  --train_design=perception_design.txt \
+  --test_design=memory_design.txt \
+  --train_data=perception_data.nii \
+  --test_data=memory_data.nii \
+  --mask=mask.nii \
+  --model=remap_rrr \
+  --label_column=condition \
+  --output=remap_roi
+```
+
+Optional config fields for REMAP (YAML):
+```yaml
+link_by: image_id              # item ID present in both designs
+remap_rank: auto               # or small integer (e.g., 4)
+remap_lambda_grid: [0, 0.25, 0.5, 0.75, 1]
+remap_leave_one_key_out: true
+remap_min_pairs: 5
+```
+Outputs include standard metrics plus REMAP diagnostics per ROI: `remap_improv`, `delta_frob_mean`, `lambda_mean`.
 
 # Summary
 

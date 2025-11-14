@@ -4,10 +4,10 @@
 #' design information for a Multi-Dimensional Signed Representational
 #' Voxel Encoding (MS-ReVE) analysis.
 #'
-#' @param mvpa_design An object of class \\code{mvpa_design}, containing
+#' @param mvpa_design An object of class \code{mvpa_design}, containing
 #'   information about conditions, blocks, and cross-validation.
-#' @param contrast_matrix A numeric matrix (\\code{K x Q}) where \\code{K} is
-#'   the number of conditions and \\code{Q} is the number of contrasts.
+#' @param contrast_matrix A numeric matrix (\code{K x Q}) where \code{K} is
+#'   the number of conditions and \code{Q} is the number of contrasts.
 #'   Each column represents a contrast vector. It is highly recommended
 #'   that columns are named to identify the contrasts.
 #' @param name An optional character string to name the design.
@@ -17,10 +17,12 @@
 #'   These are typically temporal or spatial nuisance patterns that should be accounted
 #'   for but are not of primary interest.
 #'
-#' @return An object of class \\code{msreve_design}, which is a list containing:
-#'   \\item{mvpa_design}{The input \\code{mvpa_design} object.}
-#'   \\item{contrast_matrix}{The input \\code{contrast_matrix}.}
-#'   \\item{name}{The name of the design.}
+#' @return An object of class \code{msreve_design}, which is a list containing:
+#' \describe{
+#'   \item{mvpa_design}{The input \code{mvpa_design} object.}
+#'   \item{contrast_matrix}{The input \code{contrast_matrix}.}
+#'   \item{name}{The name of the design.}
+#' }
 #'
 #' @export
 #' @examples

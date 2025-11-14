@@ -1,0 +1,122 @@
+/* ---------- Homage family: default = Homage-Red ---------- */
+:root{
+  /* Semantic roles */
+  --ink:#111111;                 /* body text */
+  --bg:#ffffff;                  /* page background */
+  --muted:#6b7280;
+  --border:#e5e7eb;
+  --code-bg:#f6f8fa;
+  --content: 80ch;               /* content column width */
+  --anchor-offset: 72px;         /* scroll offset for anchored headings */
+
+  /* Homage palette tokens (default family: Red) */
+  --A900:#CD2D26;  /* core / deepest */
+  --A700:#DC3925;
+  --A500:#E44926;
+  --A300:#E35B2D;
+
+  /* Role aliases derived from tones */
+  --accent-ink-light: var(--A900); /* link text, focus outline in light */
+  --accent-ink-dark:  var(--A300); /* link text, focus outline in dark  */
+  --accent-ink: var(--accent-ink-light);
+  --accent-strong: var(--A700);
+  --accent: var(--A500);     /* general accent if needed */
+  --accent-tint: color-mix(in srgb, var(--A300) 8%, transparent); /* quiet background */
+}
+
+/* Optional palette families via body class */
+.palette-lapis{ --A900:#1B2A74; --A700:#20399C; --A500:#2C4FCC; --A300:#4968D6; }
+.palette-ochre{ --A900:#6F5200; --A700:#8B6700; --A500:#B48900; --A300:#D7A700; }
+.palette-teal{  --A900:#0D4A4A; --A700:#0F5E5E; --A500:#127373; --A300:#2F8C8C; }
+.palette-green{ --A900:#1B5E20; --A700:#2E7D32; --A500:#388E3C; --A300:#66BB6A; }
+.palette-violet{ --A900:#4A148C; --A700:#6A1B9A; --A500:#8E24AA; --A300:#BA68C8; --accent-ink-dark:#BA68C8; }
+
+/* Dark mode flips link/readability choices */
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0b0c0e; --ink:#e6e6e6; --muted:#9aa0a6; --border:#2a2f36; --code-bg:#161b22;
+    --accent-ink: var(--accent-ink-dark);                /* ensure AA in dark */
+    --accent-tint: color-mix(in srgb, var(--A700) 18%, transparent);
+  }
+}
+/* Also respect Bootstrap 5.3 color modes used by pkgdown light-switch */
+[data-bs-theme="dark"]{
+  --bg:#0b0c0e; --ink:#e6e6e6; --muted:#9aa0a6; --border:#2a2f36; --code-bg:#161b22;
+  --accent-ink: var(--accent-ink-dark);
+  --accent-tint: color-mix(in srgb, var(--A700) 18%, transparent);
+}
+
+/* Core typography & layout */
+html,body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;line-height:1.6;font-size:17.5px;}
+main,.content,.container,.page-content,.vignette,.contents{max-width:var(--content);margin-inline:auto;padding-inline:clamp(16px,2vw,32px);} 
+p{margin-block:16px;}
+h1,h2,h3{font-weight:600;line-height:1.25;margin-top:32px;margin-bottom:12px;}
+h1{font-size:1.9rem; text-wrap:balance;} h2{font-size:1.4rem;} h3{font-size:1.2rem;}
+h2, h3{position:relative; padding-right:1.25em; scroll-margin-top: var(--anchor-offset);} 
+
+/* Links */
+a, a:visited{color:var(--accent-ink) !important; text-decoration:underline; text-decoration-thickness:.08em; text-underline-offset:2px; text-decoration-skip-ink:auto;}
+a:hover{color:color-mix(in srgb, var(--accent-ink) 85%, black);} /* light-mode darken */
+@media (prefers-color-scheme: dark){ a:hover{ color: color-mix(in srgb, var(--accent-ink) 85%, white); } }
+a:focus-visible{outline:2px solid var(--accent-ink); outline-offset:2px;}
+a:focus{outline:none;}
+
+/* Code blocks + copy button */
+code,pre,kbd,samp{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono","Roboto Mono",monospace;font-size:0.95em; line-height:1.45;}
+pre{background:var(--code-bg); border:1px solid var(--border); padding:24px; border-radius:6px; overflow:auto; margin-block:24px; position:relative; box-shadow:none; tab-size:2; -moz-tab-size:2;}
+pre code{background:transparent; border:none; padding:0; word-break:normal; overflow-wrap:anywhere;}
+button.copy-code{position:absolute; top:8px; right:8px; border:1px solid var(--border); background:var(--accent-tint); color:var(--ink); padding:4px 8px; border-radius:4px; font:600 12px system-ui; cursor:pointer;}
+button.copy-code:focus{outline:2px solid var(--accent-ink); outline-offset:2px;}
+p code{background:var(--code-bg); padding:0.12em 0.38em; border-radius:4px; border:1px solid var(--border);} 
+
+/* Tables */
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;}
+th,td{border-bottom:1px solid var(--border); padding:10px 8px;}
+thead th{font-weight:600;}
+tbody tr:nth-child(odd){background: color-mix(in srgb, var(--A300) 8%, transparent);} 
+caption{caption-side:bottom; color:var(--muted); padding-top:12px; font-size:0.95em;}
+
+/* Callouts (Homage tint) */
+blockquote,.callout{border-left:3px solid var(--A500); background:var(--accent-tint); padding:16px 24px; margin-block:24px; border-radius:6px;}
+blockquote p{margin:0;}
+
+/* Anchors (square) at H2/H3 */
+h2:hover .anchor, h3:hover .anchor{opacity:1;}
+h2:focus-within .anchor, h3:focus-within .anchor{opacity:1;}
+.anchor{opacity:0; position:absolute; right:0; top:50%; transform:translateY(-50%); text-decoration:none; color:var(--A500); font-weight:700; line-height:1; transition:opacity .15s ease-in-out;}
+
+/* “Homage” hero tile (optional) */
+.homage-hero{ aspect-ratio:3/2; background:var(--bg); box-shadow: inset 0 0 0 84px var(--A300), inset 0 0 0 56px var(--A500), inset 0 0 0 28px var(--A700), inset 0 0 0 0 var(--A900); border-radius:4px; margin-block:24px; }
+/* Letterbox variant for calmer presence */
+.homage-hero--letterbox{ aspect-ratio:6/1; background:var(--bg); box-shadow: inset 0 0 0 48px var(--A300), inset 0 0 0 32px var(--A500), inset 0 0 0 16px var(--A700), inset 0 0 0 0 var(--A900); border-radius:4px; margin-block:16px 8px; }
+
+/* Hairline rules with square notch */
+.hr-notch{position:relative; height:1px; background:var(--border); margin:24px 0;}
+.hr-notch::before{content:""; position:absolute; left:0; top:-4px; width:8px; height:8px; background:var(--A500);} 
+
+/* Optional square bullets in overview lists */
+.overview ul{list-style:square;}
+
+/* Code blocks: add homage square corner */
+pre::before{content:""; position:absolute; left:10px; top:10px; width:10px; height:10px; background:var(--A500); border-radius:2px;}
+
+/* Nav active: tiny square */
+.navbar .nav-link.active::after, .navbar .active > a::after{content:""; display:inline-block; width:6px; height:6px; background:var(--A700); margin-left:6px; vertical-align:middle;}
+
+/* Print */
+@media print{ a{text-decoration:none; color:inherit;} pre{page-break-inside:avoid;} .navbar, .sidebar, .toc, .page-header{display:none!important;} }
+
+/* Prevent layout shift when scrollbars appear */
+:root { scrollbar-gutter: stable both-edges; }
+
+/* Small screens: maintain comfort */
+@media (max-width: 880px){
+  html, body { font-size: 17px; }
+  :root{ --anchor-offset: 64px; }
+}
+
+/* Prefer higher contrast if requested */
+@media (prefers-contrast: more){
+  :root{ --border: color-mix(in srgb, var(--A500) 28%, white); }
+  .hr-notch::before { background: var(--A700); }
+}

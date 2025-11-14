@@ -27,10 +27,14 @@ combine_regional_results = function(results) {
   if (is.factor(results$result[[1]]$observed)) {
     results %>% dplyr::rowwise() %>% dplyr::do( {
       
+      # Use test indices if provided in the classification_result to preserve
+      # alignment with the original test design (important when some rows are dropped)
+      row_index <- if (!is.null(.$result$testind)) .$result$testind else seq_along(.$result$observed)
+
       # Create a tibble containing observed, predicted, and additional information
       tib1 <- tibble::tibble(
-        .rownum=seq_along(.$result$observed),
-        roinum=rep(.$id, length(.$result$observed)),
+        .rownum=row_index,
+        roinum=rep(.$id, length(row_index)),
         observed=.$result$observed,
         pobserved=sapply(seq_along(.$result$observed), function(i) .$result$probs[i, .$result$observed[i]]),
         predicted=.$result$predicted,
@@ -46,13 +50,14 @@ combine_regional_results = function(results) {
     })
   } else {
     # For non-factor observed values (for continuous data)
-    results %>% dplyr::rowwise() %>% dplyr::do(
+    results %>% dplyr::rowwise() %>% dplyr::do({
+      row_index <- if (!is.null(.$result$testind)) .$result$testind else seq_along(.$result$observed)
       tibble::tibble(
-        .rownum=seq_along(.$result$observed),
-        roinum=rep(.$id, length(.$result$observed)),
+        .rownum=row_index,
+        roinum=rep(.$id, length(row_index)),
         observed=.$result$observed,
         predicted=.$result$predicted)
-    )
+    })
   }
 }
 
@@ -206,9 +211,19 @@ regional_mvpa_result <- function(model_spec, performance_table, prediction_table
 #'   * keep: A logical vector indicating if an ROI should be kept for analysis (those with more than one voxel).
 #'
 #' @examples
-#' # Create example inputs
-#' model_spec <- list(dataset = "Example dataset")
-#' region_mask <- matrix(c(rep(0, 5), rep(1, 5), rep(2, 5), rep(3, 5)), nrow = 5)
+#' # Create example data
+#' sample_data <- gen_sample_dataset(c(5, 5, 5), nobs = 100, blocks = 4)
+#'
+#' # Create a simple region mask with 3 ROIs
+#' mask_vol <- sample_data$dataset$mask
+#' region_mask <- neuroim2::NeuroVol(
+#'   sample(1:3, size = sum(mask_vol > 0), replace = TRUE),
+#'   space = neuroim2::space(mask_vol),
+#'   indices = which(mask_vol > 0)
+#' )
+#'
+#' # Create a basic model spec
+#' model_spec <- list(dataset = sample_data$dataset)
 #'
 #' # Prepare regional data
 #' regional_data <- prep_regional(model_spec, region_mask)

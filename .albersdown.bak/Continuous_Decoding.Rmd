@@ -1,0 +1,467 @@
+---
+title: Continuous Decoding with hrfdecoder
+author: rMVPA
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: '%\VignetteIndexEntry{Continuous Decoding with hrfdecoder} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
+---
+
+```{r setup, include = FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE  # Set to TRUE if hrfdecoder is available
+)
+```
+
+## Introduction
+
+Traditional MVPA approaches estimate trial-level activation patterns (betas) through a General Linear Model (GLM), then train classifiers on these beta estimates. **Continuous decoding** takes a different approach: it operates directly on continuous TR-level fMRI data without requiring separate beta estimation.
+
+The `hrfdecoder` package implements a continuous-time decoder that:
+
+1. **Operates on raw TRs**: No trial-level GLM needed
+2. **Jointly estimates**: Decoder weights, TR-level soft labels, and HRF parameters
+3. **Handles temporal structure**: Incorporates smoothness penalties and HRF conformity constraints
+4. **Aggregates to events**: Converts TR-level predictions to event-level classifications
+
+This vignette demonstrates how to use `hrfdecoder` within the rMVPA framework for both searchlight and regional analyses.
+
+## Installation
+
+```{r install, eval=FALSE}
+# Install hrfdecoder (and dependencies)
+# remotes::install_github("bbuchsbaum/fmridesign")
+# remotes::install_github("bbuchsbaum/fmrihrf")
+# remotes::install_github("bbuchsbaum/hrfdecoder")
+
+library(rMVPA)
+library(hrfdecoder)
+library(fmridesign)
+library(fmrihrf)
+```
+
+## Key Concepts
+
+### Continuous vs Trial-Level MVPA
+
+| Aspect | Traditional MVPA | Continuous Decoding |
+|--------|------------------|---------------------|
+| **Input** | Trial-level betas | Continuous TR data |
+| **GLM Required** | Yes (per trial) | No |
+| **Temporal Modeling** | Static per trial | Dynamic across TRs |
+| **Overlapping Events** | Difficult | Natural |
+| **HRF** | Fixed assumption | Data-driven estimation |
+
+### The hrfdecoder Optimization
+
+The decoder solves:
+
+```
+min_{W, P, θ} ||XW - P||² + λ_HRF ||P - HRF(θ)||² + λ_smooth ||ΔP||² + λ_W ||W||²
+```
+
+Where:
+- **W**: Decoder weights (voxels × conditions)
+- **P**: TR-level soft labels (TRs × conditions)
+- **θ**: HRF basis coefficients
+- **X**: fMRI data (TRs × voxels)
+
+**Constraints:**
+- `λ_W`: Ridge penalty on decoder weights
+- `λ_HRF`: Pulls soft labels toward HRF-convolved event design
+- `λ_smooth`: Temporal smoothness (prevents wiggliness)
+
+## Basic Workflow
+
+### Step 1: Prepare Event Table
+
+Your event table must contain `onset` (seconds) and `condition` columns:
+
+```{r event_table}
+events_df <- data.frame(
+  onset = c(5, 15, 25, 35, 45, 55, 65, 75, 85, 95,
+            105, 115, 125, 135, 145, 155, 165, 175, 185, 195),
+  condition = factor(rep(c("face", "house", "object", "scrambled"), 5)),
+  run = rep(1:2, each = 10)
+)
+
+head(events_df)
+```
+
+### Step 2: Define Temporal Structure
+
+Create a `sampling_frame` that specifies the TR structure of your acquisition:
+
+```{r sampling_frame}
+# 2 runs of 100 TRs each, TR = 2 seconds
+sframe <- sampling_frame(
+  blocklens = c(100, 100),  # TRs per run
+  TR = 2                     # Repetition time in seconds
+)
+```
+
+### Step 3: Build Event Model
+
+The event model connects events to the TR grid using HRF convolution:
+
+```{r event_model}
+# Use SPM canonical HRF with time and dispersion derivatives
+evmod <- event_model(
+  onset ~ hrf(condition, basis = "spmg3"),
+  data = events_df,
+  block = ~run,
+  sampling_frame = sframe
+)
+```
+
+**HRF Basis Options:**
+- `"spmg1"`: SPM canonical + time derivative
+- `"spmg3"`: SPM canonical + time + dispersion derivatives
+- Custom via `fmrihrf::FIRHrf()` or other basis functions
+
+### Step 4: Create rMVPA Dataset
+
+```{r dataset}
+library(neuroim2)
+
+# Load your fMRI data (200 TRs total in this example)
+mask <- NeuroVol(...)  # Binary mask
+fmri_data <- NeuroVec(...)  # 4D: x × y × z × 200 TRs
+
+dset <- mvpa_dataset(
+  train_data = fmri_data,
+  mask = mask
+)
+```
+
+### Step 5: Create hrfdecoder Design
+
+This is where continuous decoding differs from standard rMVPA:
+
+```{r design}
+# Block variable: one ID per TR (not per event!)
+block_var <- rep(1:2, each = 100)  # 100 TRs in run 1, 100 in run 2
+
+design <- hrfdecoder_design(
+  event_model = evmod,
+  events = events_df,
+  block_var = block_var
+)
+
+# Inspect the design
+print(design)
+```
+
+**Key Points:**
+- `block_var` has length = number of TRs (200), not number of events (20)
+- The design's `y_train` field is a **dummy variable** (TR indices 1:200)
+- This dummy `y` is used only for:
+  1. Length validation in CV machinery
+  2. Creating `ytrain`/`ytest` subsets (which `train_model` ignores)
+- **Fold assignment uses `block_var` ONLY** - entire runs are held out
+- **Real targets** come from `event_model` and `events` fields
+
+### Step 6: Specify Model
+
+```{r model_spec}
+mspec <- hrfdecoder_model(
+  dataset = dset,
+  design = design,
+  lambda_W = 10,        # Decoder ridge penalty
+  lambda_HRF = 1,       # HRF conformity weight
+  lambda_smooth = 5,    # Temporal smoothness
+  basis = fmrihrf::spmg1(),  # HRF basis
+  window = c(4, 8),     # Aggregation window (seconds post-onset)
+  nonneg = TRUE,        # Non-negative soft labels
+  max_iter = 15,        # ALS iterations
+  tol = 1e-4            # Convergence tolerance
+)
+```
+
+**Hyperparameter Tuning Tips:**
+- **High `λ_HRF` + `λ_smooth`**: Forces solution close to canonical GLM
+- **Low `λ_HRF`**: Allows data-driven timing corrections
+- **`window`**: Adjust based on your HRF expectations (typically 4-8 or 4-10 seconds)
+
+### Step 7: Run Analysis
+
+#### Searchlight Analysis
+
+```{r searchlight}
+results <- run_searchlight(
+  mspec,
+  radius = 8,           # 8mm spherical searchlights
+  method = "randomized",
+  niter = 4             # Number of random searchlights per voxel
+)
+
+# Extract performance map
+perf_map <- performance_map(results, metric = "accuracy")
+
+# Write to disk
+write_vol(perf_map, "hrfdecoder_searchlight_accuracy.nii")
+```
+
+#### Regional Analysis
+
+```{r regional}
+# Define ROI mask
+roi_mask <- NeuroVol(...)
+
+# Run regional analysis
+roi_result <- run_regional(
+  mspec,
+  region_mask = roi_mask
+)
+
+# Extract event-level predictions
+event_probs <- roi_result$result[[1]]$probs
+event_true <- roi_result$result[[1]]$observed
+event_pred <- roi_result$result[[1]]$predicted
+
+# Compute accuracy
+accuracy <- mean(event_pred == event_true)
+print(paste("ROI Accuracy:", accuracy))
+```
+
+## Cross-Validation Strategy
+
+Continuous decoding uses **TR-level cross-validation**, typically blocked by run:
+
+```{r cross_validation}
+# Automatic blocked CV (default)
+mspec <- hrfdecoder_model(
+  dataset = dset,
+  design = design,
+  # crossval is automatically set to blocked_cross_validation(block_var)
+  ...
+)
+
+# Or explicitly specify:
+mspec <- hrfdecoder_model(
+  dataset = dset,
+  design = design,
+  crossval = blocked_cross_validation(block_var),
+  ...
+)
+```
+
+**Why block by run?**
+- Entire runs are held out (all TRs from that run)
+- Prevents temporal leakage between adjacent TRs
+- Mimics real-world generalization (new scanning session)
+- Event-level metrics computed by aggregating test TRs
+
+**Flow:**
+1. Train on runs 1-2 → Test on run 3 (all TRs)
+2. Predict TR-level soft labels on test TRs
+3. Aggregate to events using `window` parameter
+4. Compute accuracy/AUC on aggregated events
+
+## Advanced Topics
+
+### Custom Performance Metrics
+
+```{r custom_perf}
+my_perf <- function(classification_result) {
+  obs <- classification_result$observed
+  pred <- classification_result$predicted
+  probs <- classification_result$probs
+
+  # Per-class accuracy
+  class_acc <- sapply(levels(obs), function(cl) {
+    idx <- obs == cl
+    if (sum(idx) == 0) return(NA)
+    mean(pred[idx] == cl)
+  })
+
+  # Overall accuracy
+  acc <- mean(obs == pred)
+
+  tibble::tibble(
+    metric = c("accuracy", paste0("acc_", levels(obs))),
+    value = c(acc, class_acc)
+  )
+}
+
+mspec <- hrfdecoder_model(
+  dataset = dset,
+  design = design,
+  performance = my_perf,
+  ...
+)
+```
+
+### Baseline/Nuisance Regressors
+
+If you want to remove nuisance variance (motion, drift) before decoding:
+
+```{r baseline}
+# Create nuisance data frame (one row per TR)
+nuisance_df <- data.frame(
+  TR = 1:200,
+  motion1 = rnorm(200),
+  motion2 = rnorm(200)
+)
+
+# Build baseline model
+base_model <- baseline_model(
+  ~ poly(TR, 3) + motion1 + motion2,
+  block = ~run,
+  data = nuisance_df,
+  sampling_frame = sframe
+)
+
+# Attach to event model
+evmod$baseline <- base_model
+
+# Now hrfdecoder will residualize before decoding
+```
+
+### Handling Events at Run Boundaries
+
+Events near run boundaries may have incomplete aggregation windows:
+
+```{r boundary_handling}
+# The design validation will warn you:
+design <- hrfdecoder_design(
+  event_model = evmod,
+  events = events_df,
+  block_var = block_var
+)
+# Warning: 2 event(s) have onsets beyond total acquisition time
+
+# Events with zero probabilities after aggregation trigger warnings:
+# Warning: 2 event(s) have zero probabilities (aggregation window may fall outside available TRs)
+```
+
+**Solutions:**
+1. Exclude events too close to run start/end
+2. Adjust `window` parameter to be more conservative
+3. Accept that some events will have partial windows
+
+## Extending rMVPA for Other Continuous Decoders
+
+The hrfdecoder integration demonstrates the pattern for adding continuous decoding models to rMVPA. If you're implementing a new continuous decoder, follow these steps:
+
+### 1. Create a Specialized Design
+
+```{r custom_design, eval=FALSE}
+my_continuous_design <- function(temporal_model, metadata, block_var, ...) {
+  # Build base mvpa_design with dummy y_train
+  Tlen <- length(block_var)
+  train_df <- data.frame(y = seq_len(Tlen), block = block_var)
+
+  mvdes <- mvpa_design(
+    train_design = train_df,
+    y_train = ~ y,
+    block_var = ~ block,
+    ...
+  )
+
+  # Attach your temporal metadata
+  mvdes$temporal_model <- temporal_model
+  mvdes$metadata <- metadata
+
+  # Add custom class
+  class(mvdes) <- c("my_continuous_design", class(mvdes))
+  mvdes
+}
+```
+
+### 2. Implement S3 Methods
+
+```{r s3_methods, eval=FALSE}
+# Model constructor
+my_continuous_model <- function(dataset, design, ...) {
+  create_model_spec("my_continuous_model", dataset, design, ...)
+}
+
+# Dummy y_train for CV fold construction
+y_train.my_continuous_model <- function(obj) {
+  seq_len(nobs(obj$dataset))
+}
+
+# Training
+train_model.my_continuous_model <- function(obj, train_dat, y, ...) {
+  # Access temporal metadata: obj$design$temporal_model
+  # Train on TR-level data
+  # Return fitted model
+}
+
+# Result formatting (TR → event aggregation)
+format_result.my_continuous_model <- function(obj, result, error_message, context, ...) {
+  # Predict on test TRs
+  # Aggregate to events
+  # Return tibble(class, probs, y_true, test_ind, fit, error, error_message)
+}
+
+# Merge folds
+merge_results.my_continuous_model <- function(obj, result_set, indices, id, ...) {
+  # Concatenate event-level predictions across folds
+  # Build classification_result
+  # Compute performance
+}
+```
+
+### 3. Key Design Principles
+
+- **TR-level data**: `mvpa_dataset` already supports continuous matrices
+- **Dummy `y_train`**: Only for CV fold construction
+- **Metadata in design**: Store temporal info in design subclass fields
+- **Aggregation in `format_result`**: Convert TR predictions to event predictions
+- **Standard output**: Return `classification_result` or `regression_result`
+
+**No core framework changes needed!** The S3 generic system handles everything.
+
+## Troubleshooting
+
+### Error: "Missing required package 'hrfdecoder'"
+
+```{r install_hrfdecoder, eval=FALSE}
+remotes::install_github("bbuchsbaum/hrfdecoder")
+```
+
+### Warning: "block_var length does not match sampling_frame total TRs"
+
+Check that `length(block_var) == sum(sframe$blocklens)`.
+
+### Warning: "event(s) have zero probabilities"
+
+Events too close to run boundaries may have aggregation windows that fall outside available TRs. Consider:
+- Excluding boundary events
+- Adjusting `window` parameter
+- Checking event timing
+
+### Poor Performance
+
+Try adjusting hyperparameters:
+- **Increase `lambda_smooth`** if predictions are too noisy
+- **Decrease `lambda_HRF`** if canonical HRF doesn't fit your data
+- **Increase `max_iter`** if convergence is slow
+- **Try different HRF bases** (`spmg1` vs `spmg3`)
+
+## References
+
+- Buchsbaum, B. R. (2024). *hrfdecoder: HRF-aware continuous-time decoding for fMRI*. GitHub.
+- Haxby, J. V., et al. (2001). Distributed and overlapping representations of faces and objects in ventral temporal cortex. *Science*, 293(5539), 2425-2430.
+
+## Session Info
+
+```{r session_info}
+sessionInfo()
+```

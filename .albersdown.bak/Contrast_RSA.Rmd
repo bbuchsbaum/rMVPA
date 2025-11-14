@@ -1,0 +1,118 @@
+---
+title: Contrast RSA with contrast_rsa_model
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: '%\VignetteIndexEntry{Contrast RSA with contrast_rsa_model} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
+---
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+suppressPackageStartupMessages({
+  library(neuroim2)
+  library(rMVPA)
+})
+```
+
+## Introduction
+
+`contrast_rsa_model()` implements the Multi‑Dimensional Signed Representational Voxel Encoding (MS‑ReVE) approach. It relates voxel patterns to a set of predefined contrasts and produces maps that summarize how each contrast contributes to the local representational geometry. This vignette walks through a compact example and explains the output metrics.
+
+## Example setup
+
+We start by generating a small dataset and defining two contrasts. Contrasts should be column‑centered: positive values indicate conditions that pull voxel patterns in one direction, negatives in the opposite direction.
+
+```{r, message=FALSE, warning=FALSE}
+# Generate dummy dataset (small 6x6x6 volume, 32 samples)
+set.seed(42)
+data_info <- gen_sample_dataset(D = c(6,6,6), nobs = 32, blocks = 4)
+
+# mvpa_dataset object
+mvpa_dat <- data_info$dataset
+
+# Design with two simple contrasts across four conditions
+K <- nresponses(data_info$design)
+C_mat <- matrix(0, nrow = K, ncol = 2)
+rownames(C_mat) <- levels(data_info$design$y_train)
+C_mat[1:2,1] <- 1; C_mat[3:4,1] <- -1
+C_mat[1,2] <- 1; C_mat[2,2] <- -1
+C_mat <- base::scale(C_mat, center = TRUE, scale = FALSE)
+colnames(C_mat) <- c("AB_vs_CD", "A_vs_B")
+
+ms_des <- msreve_design(data_info$design, contrast_matrix = C_mat)
+```
+
+Next we create the model specification and run a tiny searchlight over the volume, requesting the default `"beta_delta"` metric.
+
+```{r, message=FALSE, warning=FALSE}
+cv_spec <- blocked_cross_validation(data_info$design$block_var)
+
+model_spec <- contrast_rsa_model(
+  dataset = mvpa_dat,
+  design = ms_des,
+  output_metric = "beta_delta",
+  check_collinearity = FALSE,
+  cv_spec = cv_spec
+)
+
+# Run a very small searchlight iterator
+slight <- get_searchlight(model_spec$dataset, type = "standard", radius = 2)
+center_indices <- which(model_spec$dataset$mask > 0)
+iter_res <- mvpa_iterate(model_spec, slight, center_indices, analysis_type = "searchlight")
+
+# Inspect the beta_delta metric for the first few centers
+preview_ids <- seq_len(min(5, nrow(iter_res)))
+preview_tbl <- do.call(rbind, lapply(preview_ids, function(idx) {
+  vals <- iter_res$performance[[idx]]$beta_delta
+  data.frame(
+    center_id = iter_res$id[idx],
+    contrast = names(vals),
+    beta_delta = as.numeric(vals),
+    row.names = NULL
+  )
+}))
+preview_tbl
+```
+
+## Understanding the metrics
+
+`contrast_rsa_model` can return several metrics.  Multiple metrics can be requested at once and are returned in a named list for each searchlight location.  The main options are:
+
+### `beta_delta`
+The product of the RSA regression coefficient (\(\beta_q\)) and the voxel's projection onto each contrast (\(\Delta_{q,v}\)).  This signed quantity indicates how strongly the voxel supports the representational difference captured by each contrast.  Positive values mean the voxel pattern aligns with the predicted direction; negative values indicate the opposite.
+
+### `beta_only`
+Only the regression coefficients \(\beta_q\).  Useful when you want a map of how much each contrast explains the local RDM independent of the voxel projections.
+
+### `delta_only`
+The projection values \(\Delta_{q,v}\) by themselves.  These show the raw contribution of each voxel to the contrast space before weighting by \(\beta_q\).
+
+### `recon_score`
+A single value (per voxel) measuring how well the voxel's beta-weighted pattern reconstructs the empirical RDM of the searchlight.  Higher values indicate the voxel is individually informative about the multi-contrast representational structure.
+
+### `beta_delta_norm`
+Like `beta_delta` but using an L2-normalized contribution vector.  This emphasizes the direction of the contribution rather than its magnitude and requires `normalize_delta = TRUE` when constructing the model.
+
+### `beta_delta_reliable`
+Reliability-weighted contributions \(\rho_{q,v} \beta_q \Delta_{q,v}\).  The weights \(\rho_{q,v}\) reflect how stable each voxel's contributions are across cross-validation folds, highlighting consistent effects.
+
+### `composite`
+The sum of beta-weighted, normalized contributions across contrasts (\(\sum_q \beta_q \tilde{\Delta}_{q,v}\)).  This "net pull" summarizes whether a voxel overall favors the positive or negative side of the contrast space.  Interpretation is easiest when the contrast matrix is orthonormal.
+
+Together these metrics support flexible interrogation of how each voxel or region participates in the specified representational contrasts.
+
+## Conclusion
+
+`contrast_rsa_model` extends standard RSA by decomposing voxel contributions along user-defined contrasts.  By selecting appropriate output metrics you can visualize beta weights, raw contributions, reliability-weighted effects, or overall reconstruction quality.  The combination of metrics provides a rich picture of the representational landscape revealed by the analysis.

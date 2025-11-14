@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{A \code{regression_result} object.}
 
-\item{split_list}{Split results by indexed sub-groups (not supported for regression analyses yet).}
+\item{split_list}{Optional named list of split index groups for computing metrics on sub-groups in addition to the full result.}
 
 \item{...}{extra args (not used).}
 }

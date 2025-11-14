@@ -1,0 +1,342 @@
+---
+title: Cross-Validation Strategies in rMVPA
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 3
+vignette: '%\VignetteIndexEntry{Cross-Validation Strategies in rMVPA} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
+---
+
+```{r setup, echo=FALSE, message=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+suppressPackageStartupMessages({
+  library(neuroim2)
+  library(rMVPA)
+  library(dplyr)
+})
+```
+
+# Introduction
+
+Cross-validation is a critical component in evaluating the performance and generalizability of MVPA models. The `rMVPA` package provides several cross-validation strategies specifically designed for neuroimaging data, where temporal structure and run/block organization must be carefully considered.
+
+This vignette explains why cross‑validation matters for MVPA, introduces schemes tailored to neuroimaging data, shows how to implement them, and closes with practical guidance and examples.
+
+# Cross-Validation Fundamentals
+
+## Why Cross-Validation Matters in MVPA
+
+Cross-validation is essential in neuroimaging analyses. It gives us unbiased estimates of how well our models perform and shows whether brain activity patterns truly generalize to new data. By separating training and test sets, cross-validation prevents us from overfitting to noise in the data. It also maintains temporal independence between sets, which is crucial for time-series neuroimaging data.
+
+## Available cross‑validation schemes
+
+`rMVPA` supports blocked CV (using runs as folds), k‑fold CV (random partitions), bootstrap blocked CV (resampling within runs), sequential blocked CV (ordered folds within runs), two‑fold blocked CV (fast split across runs), and fully custom schemes when you need explicit train/test indices.
+
+# Blocked Cross-Validation
+
+## Overview
+
+Blocked cross-validation is the most common approach for fMRI data. It respects the temporal structure of the data by using scanning runs as natural validation blocks.
+
+```{r}
+# Create a simple blocked structure: 5 runs with 20 trials each
+block_var <- rep(1:5, each = 20)
+cval <- blocked_cross_validation(block_var)
+print(cval)
+```
+
+## Implementation Example
+
+```{r}
+# Generate example data
+set.seed(123)
+dat <- data.frame(
+  x1 = rnorm(100),  # 100 trials total
+  x2 = rnorm(100),
+  x3 = rnorm(100)
+)
+y <- factor(rep(letters[1:5], length.out = 100))  # 5 conditions
+
+# Generate cross-validation samples
+samples <- crossval_samples(cval, dat, y)
+print(samples)
+```
+
+## Understanding the output
+
+Each row in the samples tibble contains the training and test labels (`ytrain`, `ytest`), the corresponding data subsets (`train`, `test`), and a fold identifier (`.id`).
+
+# Bootstrap Blocked Cross-Validation
+
+## Overview
+
+This method combines blocking with bootstrap resampling, providing more stable performance estimates while respecting the run structure.
+
+```{r}
+# Create bootstrap blocked CV with 20 repetitions
+boot_cval <- bootstrap_blocked_cross_validation(block_var, nreps = 20)
+print(boot_cval)
+
+# Generate samples
+boot_samples <- crossval_samples(boot_cval, dat, y)
+print(boot_samples)
+```
+
+## Optional Weighted Sampling
+
+You can provide weights to influence the sampling probability:
+
+```{r}
+# Create weights (e.g., based on motion parameters)
+weights <- runif(length(block_var))
+weighted_boot_cval <- bootstrap_blocked_cross_validation(
+  block_var, 
+  nreps = 20,
+  weights = weights
+)
+print(weighted_boot_cval)
+```
+
+# Sequential Blocked Cross-Validation
+
+## Overview
+
+This method creates sequential folds within each block, useful when temporal order matters.
+
+```{r}
+# Create sequential blocked CV with 2 folds and 4 repetitions
+seq_cval <- sequential_blocked_cross_validation(
+  block_var,
+  nfolds = 2,
+  nreps = 4
+)
+print(seq_cval)
+```
+
+# Two-Fold Blocked Cross-Validation
+
+## Overview
+
+This approach randomly splits blocks into two groups, useful for rapid performance estimation.
+
+```{r}
+# Create two-fold blocked CV with 10 repetitions
+twofold_cval <- twofold_blocked_cross_validation(block_var, nreps = 10)
+print(twofold_cval)
+```
+
+# Custom Cross-Validation
+
+## Overview
+
+For specialized validation schemes, you can define custom training/testing splits:
+
+```{r}
+# Define custom splits
+custom_splits <- list(
+  list(train = 1:60, test = 61:100),
+  list(train = 1:40, test = 41:100),
+  list(train = 1:80, test = 81:100)
+)
+
+# Create custom CV
+custom_cval <- custom_cross_validation(custom_splits)
+print(custom_cval)
+```
+
+# Practical Example: Model Training
+
+Here's a complete example using blocked cross-validation with an SDA classifier:
+
+```{r}
+# Setup cross-validation
+block_var <- rep(1:5, each = 20)
+cval <- blocked_cross_validation(block_var)
+
+# Generate data
+set.seed(123)
+dat <- data.frame(matrix(rnorm(100 * 10), 100, 10))
+y <- factor(rep(letters[1:5], 20))
+
+# Generate CV samples
+samples <- crossval_samples(cval, dat, y)
+
+# Train models for each fold
+model_fits <- samples %>% 
+  rowwise() %>% 
+  do({
+    train_dat <- as.data.frame(.$train)
+    y_train <- .$ytrain
+    fit <- sda::sda(as.matrix(train_dat), y_train, verbose = FALSE)
+    tibble::tibble(fit = list(fit))
+  })
+
+print(model_fits)
+```
+
+# Best practices
+
+When choosing a cross‑validation strategy, align the scheme with your data structure and analysis goals. Blocked CV should be your default for fMRI because it respects run boundaries and temporal dependence. Sequential CV is helpful when order matters. Bootstrap variants trade additional computation for more stable estimates. Two‑fold CV offers a quick sanity check when you need speed.
+
+In small datasets, bootstrap blocked CV can stabilize estimates; in larger datasets, simple blocked CV often suffices. Always keep train and test data from the same run separate to avoid temporal leakage. Balance stability against computation time: bootstrap and sequential methods are costlier, whereas two‑fold CV provides fast approximations for early exploration.
+
+# Summary
+
+Choose the right cross-validation strategy for your neuroimaging data. Match the CV approach to your data structure, account for temporal dependencies in fMRI, and use bootstrap methods when you need more stable estimates. The rMVPA package supports all these approaches, including custom schemes for specialized needs.
+
+For implementation details, refer to the source code in `crossval.R`.
+
+# Integration with Regional and Searchlight Analyses
+
+Cross-validation strategies in `rMVPA` are designed to work seamlessly with both regional and searchlight analyses. Here we'll demonstrate how to incorporate different cross-validation schemes into these analyses.
+
+## Regional Analysis Example
+
+Let's perform a regional MVPA analysis using different cross-validation strategies:
+
+```{r, message=FALSE, warning=FALSE}
+# Generate a sample dataset
+data_out <- gen_sample_dataset(D = c(6,6,6), nobs = 80, blocks = 4, nlevels = 2)
+
+# Create a region mask
+mask <- data_out$dataset$mask
+nvox <- sum(mask)
+region_mask <- neuroim2::NeuroVol(
+  sample(1:3, size = nvox, replace = TRUE), 
+  space(mask), 
+  indices = which(mask > 0)
+)
+
+# Create MVPA dataset
+dset <- mvpa_dataset(data_out$dataset$train_data, mask = data_out$dataset$mask)
+
+# Load the classification model
+mod <- load_model("sda_notune")
+tune_grid <- data.frame(lambda = 0.01, diagonal = FALSE)
+
+# Example 1: Using Blocked Cross-Validation
+blocked_cv <- blocked_cross_validation(data_out$design$block_var)
+mvpa_mod_blocked <- mvpa_model(
+  mod, 
+  dataset = dset, 
+  design = data_out$design,
+  crossval = blocked_cv,
+  tune_grid = tune_grid
+)
+
+# Run regional analysis with blocked CV
+results_blocked <- run_regional(mvpa_mod_blocked, region_mask)
+
+# Example 2: Using Bootstrap Blocked Cross-Validation
+bootstrap_cv <- bootstrap_blocked_cross_validation(
+  data_out$design$block_var,
+  nreps = 10
+)
+mvpa_mod_boot <- mvpa_model(
+  mod,
+  dataset = dset,
+  design = data_out$design,
+  crossval = bootstrap_cv,
+  tune_grid = tune_grid
+)
+
+# Run regional analysis with bootstrap CV
+results_boot <- run_regional(mvpa_mod_boot, region_mask)
+
+# Compare performance between CV strategies
+cat("Blocked CV Performance:\n")
+print(results_blocked$performance_table)
+cat("\nBootstrap CV Performance:\n")
+print(results_boot$performance_table)
+```
+
+## Searchlight Analysis Example
+
+We can also use different cross-validation strategies in searchlight analysis:
+
+```{r, eval=FALSE, message=FALSE, warning=FALSE}
+# Example 3: Searchlight with Sequential Blocked Cross-Validation
+seq_cv <- sequential_blocked_cross_validation(
+  data_out$design$block_var,
+  nfolds = 2,
+  nreps = 4
+)
+
+mvpa_mod_seq <- mvpa_model(
+  mod,
+  dataset = dset,
+  design = data_out$design,
+  crossval = seq_cv,
+  tune_grid = tune_grid
+)
+
+# Run searchlight analysis
+results_searchlight <- run_searchlight(
+  mvpa_mod_seq,
+  radius = 2,
+  method = "standard"
+)
+```
+
+## Key considerations
+
+Searchlights multiply computation by the number of centers, so prefer lighter schemes (two‑fold or blocked) for initial runs and reduce `nreps` if using bootstrap. Use parallel processing where possible. Expect minor differences in performance estimates across schemes; bootstrap tends to be more conservative. For repeated schemes, average over repetitions to summarize performance.
+
+## Example: Comparing CV Strategies in Regional Analysis
+
+Here's a more detailed comparison of different CV strategies:
+
+```{r, message=FALSE, warning=FALSE}
+# Create different CV schemes
+cv_schemes <- list(
+  blocked = blocked_cross_validation(data_out$design$block_var),
+  bootstrap = bootstrap_blocked_cross_validation(data_out$design$block_var, nreps = 10),
+  twofold = twofold_blocked_cross_validation(data_out$design$block_var, nreps = 5)
+)
+
+# Run regional analysis with each CV scheme
+results <- lapply(cv_schemes, function(cv) {
+  mvpa_mod <- mvpa_model(
+    mod,
+    dataset = dset,
+    design = data_out$design,
+    crossval = cv,
+    tune_grid = tune_grid
+  )
+  run_regional(mvpa_mod, region_mask)
+})
+
+# Compare performance across CV schemes
+performance_comparison <- lapply(names(results), function(name) {
+  perf <- results[[name]]$performance_table
+  perf$cv_scheme <- name
+  perf
+})
+
+# Combine results
+all_performance <- do.call(rbind, performance_comparison)
+print(all_performance)
+```
+
+This integration demonstrates how different cross-validation strategies can be easily incorporated into the broader MVPA analysis framework, allowing researchers to choose the most appropriate validation approach for their specific analysis needs.
+
+For more details on regional and searchlight analyses, refer to their respective vignettes and the implementation in `regional.R` and `searchlight.R`.
+
+
+
+
+

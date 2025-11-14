@@ -1,12 +1,12 @@
 * using log directory ‘/Users/bbuchsbaum/code/rMVPA/..Rcheck’
-* using R version 4.3.2 (2023-10-31)
-* using platform: aarch64-apple-darwin20 (64-bit)
+* using R version 4.5.1 (2025-06-13)
+* using platform: aarch64-apple-darwin20
 * R was compiled by
-    Apple clang version 14.0.0 (clang-1400.0.29.202)
-    GNU Fortran (GCC) 12.2.0
+    Apple clang version 16.0.0 (clang-1600.0.26.6)
+    GNU Fortran (GCC) 14.2.0
 * running under: macOS Sonoma 14.3
 * using session charset: UTF-8
-* using options ‘--no-manual --no-vignettes’
+* using options ‘--no-manual --no-build-vignettes’
 * checking for file ‘./DESCRIPTION’ ... ERROR
 Required field missing or empty:
   ‘Author’
