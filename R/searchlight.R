@@ -17,7 +17,23 @@
 #'     \item `metrics`: Character vector of metric names.
 #'   }
 wrap_out <- function(perf_mat, dataset, ids = NULL) {
+  # Normalize to a standard matrix type for downstream operations
+  if (!is.null(perf_mat)) {
+    perf_mat <- as.matrix(perf_mat)
+  }
+
   validate_wrap_inputs(perf_mat, ids)
+
+  # Drop metrics (columns) that are entirely NA across all ROIs.
+  # This commonly occurs for optional metrics that were never computed
+  # (e.g., ERA-RSA block/lag/run metrics when no corresponding inputs
+  # were provided). Keeping all-NA columns would just produce empty maps.
+  if (!is.null(perf_mat) && ncol(perf_mat) > 0L) {
+    col_all_na <- colSums(!is.na(perf_mat)) == 0L
+    if (any(col_all_na)) {
+      perf_mat <- perf_mat[, !col_all_na, drop = FALSE]
+    }
+  }
 
   if (is_perf_empty(perf_mat)) {
     return(empty_searchlight_result(dataset))
