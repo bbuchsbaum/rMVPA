@@ -163,50 +163,44 @@ filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, ...) {
 #' @keywords internal
 #' @noRd
 #' @importFrom neuroim2 series_roi
-as_roi.data_sample <- function(x, data, ...) {
-  
-  train_roi <- try(series_roi(data$train_data, x$vox), silent=TRUE)
-  
+#' @method as_roi data_sample
+#' @export
+as_roi.data_sample <- function(obj, data, ...) {
+  train_roi <- try(series_roi(data$train_data, obj$vox), silent = TRUE)
+
   test_roi <- if (has_test_set(data)) {
-    # Also use try with silent=TRUE for test data
-    try(series_roi(data$test_data, x$vox), silent=TRUE)
+    try(series_roi(data$test_data, obj$vox), silent = TRUE)
   }
-  
-  #cds <- if (is.vector(x$vox)) {
-  #  cds <- indexToGrid(space(x$data$mask), x$vox)
-  #} else {
-  #  x$vox
-  #}
 
   if (is.null(test_roi)) {
-    list(train_roi=train_roi,
-         test_roi=NULL)
+    list(train_roi = train_roi, test_roi = NULL)
   } else {
-    list(train_roi=train_roi,
-         test_roi=test_roi)
+    list(train_roi = train_roi, test_roi = test_roi)
   }
-  
-  
 }
 
 #' @keywords internal
 #' @noRd
-as_roi.numeric <- function(x, data, ...) {
-  ds <- data_sample(data, x)
+#' @method as_roi numeric
+#' @export
+as_roi.numeric <- function(obj, data, ...) {
+  ds <- data_sample(data, obj)
   as_roi(ds, data, ...)
 }
 
 #' @keywords internal
 #' @noRd
-as_roi.integer <- function(x, data, ...) {
-  ds <- data_sample(data, x)
+#' @method as_roi integer
+#' @export
+as_roi.integer <- function(obj, data, ...) {
+  ds <- data_sample(data, obj)
   as_roi(ds, data, ...)
 }
 
 #' @keywords internal
 #' @noRd
 #' @importFrom neuroim2 space series series_roi
-as.data.frame.data_sample <- function(x, data, ...) {
+as.data.frame.data_sample <- function(x, row.names = NULL, optional = FALSE, ..., data) {
   train_mat <- neuroim2::series(data$train_data, x$vox)
   
   test_mat <- if (has_test_set(data)) {

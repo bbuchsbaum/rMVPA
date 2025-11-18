@@ -7,7 +7,14 @@
 \usage{
 run_future(obj, frame, processor, ...)
 
-\method{run_future}{default}(obj, frame, processor = NULL, verbose = FALSE, analysis_type, ...)
+\method{run_future}{default}(
+  obj,
+  frame,
+  processor = NULL,
+  verbose = FALSE,
+  analysis_type = "searchlight",
+  ...
+)
 }
 \arguments{
 \item{obj}{An object specifying the computation.}

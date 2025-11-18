@@ -303,6 +303,7 @@ print.vector_rsa_model <- function(x, ...) {
 #'
 #' @param x A vector_rsa_design object.
 #' @param ... Additional arguments (ignored).
+#' @importFrom utils head
 #' @export
 print.vector_rsa_design <- function(x, ...) {
   # Create a border line

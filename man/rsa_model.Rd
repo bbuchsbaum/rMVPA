@@ -49,18 +49,22 @@ An object of class \code{"rsa_model"} (and \code{"list"}), containing:
 This function creates an RSA model object by taking an MVPA (Multi-Variate Pattern Analysis) dataset and an RSA design.
 }
 \examples{
-# Create a random MVPA dataset
-data <- matrix(rnorm(100 * 100), 100, 100)
-labels <- factor(rep(1:2, each = 50))
-mvpa_data <- mvpa_dataset(data, labels)
+# Create a random MVPA dataset (image data)
+arr  <- array(rnorm(100 * 5), c(5, 5, 4, 5))   # 5 voxels x 5 voxels x 4 slices x 5 observations
+sp   <- neuroim2::NeuroSpace(c(5, 5, 4, 5))
+vec  <- neuroim2::NeuroVec(arr, sp)
+mask <- neuroim2::LogicalNeuroVol(array(1, c(5, 5, 4)), neuroim2::NeuroSpace(c(5, 5, 4)))
+mvpa_data <- mvpa_dataset(train_data = vec, mask = mask)
 
-# Create an RSA design with two distance matrices
-dismat1 <- dist(data)
-dismat2 <- dist(matrix(rnorm(100*100), 100, 100))
-rdes <- rsa_design(~ dismat1 + dismat2, list(dismat1=dismat1, dismat2=dismat2))
+# Create two random RDMs (distance matrices) over the 5 observations
+data_mat  <- matrix(rnorm(5 * 10), 5, 10)
+dismat1   <- dist(data_mat)
+dismat2   <- dist(matrix(rnorm(5 * 10), 5, 10))
+rdes <- rsa_design(~ dismat1 + dismat2,
+                   list(dismat1 = dismat1, dismat2 = dismat2))
 
 # Create an RSA model with standard 'lm' (returns t-values):
-rsa_mod <- rsa_model(mvpa_data, rdes, regtype="lm")
+rsa_mod <- rsa_model(mvpa_data, rdes, regtype = "lm")
 
 # Create an RSA model enforcing non-negativity for dismat2 only:
 # Requires the 'glmnet' package to be installed
@@ -68,11 +72,11 @@ rsa_mod <- rsa_model(mvpa_data, rdes, regtype="lm")
 #                          nneg = list(dismat2 = TRUE))
 
 # Create an RSA model using 'lm' but returning semi-partial correlations:
-rsa_mod_sp <- rsa_model(mvpa_data, rdes, regtype="lm",
+rsa_mod_sp <- rsa_model(mvpa_data, rdes, regtype = "lm",
                         semipartial = TRUE)
 
-# Train the model
-fit_params <- train_model(rsa_mod_sp, mvpa_data$train_data)
+# Train the model using a trial-by-feature matrix
+fit_params <- train_model(rsa_mod_sp, data_mat, y = NULL, indices = NULL)
 # 'fit_params' = named vector of semi-partial correlations for each predictor
 
 }

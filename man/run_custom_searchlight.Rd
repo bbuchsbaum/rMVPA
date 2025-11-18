@@ -115,7 +115,7 @@ my_sl_stats <- function(sl_data, sl_info) {
 \donttest{
 
 custom_sl_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
-                                            radius = 7, method = "standard",
+                                            radius = 3, method = "standard",
                                             .cores = 2, .verbose = TRUE)
 print(custom_sl_results)
 
@@ -137,7 +137,7 @@ print(error_sl_results) # Errors will be caught, corresponding voxels may be NA
 
 # Run randomized searchlight (faster for large datasets/radii)
 custom_sl_rand_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
-                                                 radius = 7, method = "randomized",
+                                                 radius = 3, method = "randomized",
                                                  niter = 50, # Fewer iterations for example
                                                  .cores = 2, .verbose = TRUE)
 print(custom_sl_rand_results)

@@ -36,12 +36,10 @@ Imports:
     rlang,
     robustbase,
     sda,
-    sparsediscrim,
     stringr,
     tibble,
     tidyr,
     tidyselect,
-    whitening,
     rsample,
     yardstick
 Collate:
@@ -101,17 +99,24 @@ Suggests:
     covr,
     doParallel,
     e1071,
+    fmrihrf,
     foreach,
+    hrfdecoder,
     iterators,
     itertools,
+    jsonlite,
     knitr,
     parallel,
     randomForest,
+    robustcov,
     rmarkdown,
     roxygen2,
+    sparsediscrim,
     spls,
     testthat,
-    xgboost
+    rrpack,
+    xgboost,
+    yaml
 Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf

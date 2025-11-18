@@ -432,7 +432,7 @@ get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "random
 #' @keywords internal
 #' @noRd
 #' @importFrom neuroim2 NeuroVol
-wrap_output.mvpa_dataset <- function(obj, vals, indices=NULL) {
+wrap_output.mvpa_dataset <- function(obj, vals, indices = NULL, ...) {
   if (!is.null(indices)) {
     NeuroVol(vals, space(obj$mask), indices=indices)
   } else {
@@ -444,7 +444,7 @@ wrap_output.mvpa_dataset <- function(obj, vals, indices=NULL) {
 #' @keywords internal
 #' @noRd
 #' @importFrom neurosurf nodes geometry NeuroSurface
-wrap_output.mvpa_surface_dataset <- function(obj, vals, indices) {
+wrap_output.mvpa_surface_dataset <- function(obj, vals, indices, ...) {
   #browser()
   
   dvals <- numeric(length(nodes(geometry(obj$train_data))))
@@ -475,4 +475,3 @@ nobs.mvpa_dataset <- function(x) {
     dims[length(dims)]
   }
 }
-

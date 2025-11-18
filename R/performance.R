@@ -38,7 +38,7 @@ predicted_class <- function(prob) {
 #' @importFrom stats cor
 performance.regression_result <- function(x, split_list=NULL,...) {
   metric_fun <- function(res) {
-    obs <- res$observed
+    obs  <- res$observed
     pred <- as.numeric(res$predicted)
 
     res_rsq <- yardstick::rsq_vec(truth = obs, estimate = pred)
@@ -51,57 +51,7 @@ performance.regression_result <- function(x, split_list=NULL,...) {
     c(R2 = res_rsq, RMSE = res_rmse, spearcor = res_spearcor)
   }
 
-  base_vals <- metric_fun(x)
-
-  if (is.null(split_list) || length(split_list) == 0L) {
-    return(base_vals)
-  }
-
-  testind <- x$testind
-
-  split_vecs <- lapply(names(split_list), function(tag) {
-    design_idx <- split_list[[tag]]
-
-    res_idx <- if (!is.null(testind)) {
-      which(testind %in% design_idx)
-    } else {
-      design_idx
-    }
-
-    if (!length(res_idx)) {
-      vals <- rep(NA_real_, length(base_vals))
-      names(vals) <- paste0(names(base_vals), "_", tag)
-      return(vals)
-    }
-
-    sub_res <- x
-    sub_res$observed <- x$observed[res_idx]
-    sub_res$predicted <- x$predicted[res_idx]
-
-    if (!is.null(x$testind)) {
-      sub_res$testind <- x$testind[res_idx]
-    }
-
-    if (!is.null(x$test_design)) {
-      sub_res$test_design <- x$test_design[res_idx, , drop = FALSE]
-    }
-
-    vals <- tryCatch(
-      metric_fun(sub_res),
-      error = function(e) {
-        warning(sprintf("regression performance failed for split '%s': %s", tag, e$message))
-        rep(NA_real_, length(base_vals))
-      }
-    )
-
-    if (is.null(names(vals))) {
-      names(vals) <- names(base_vals)
-    }
-    names(vals) <- paste0(names(vals), "_", tag)
-    vals
-  })
-
-  c(base_vals, unlist(split_vecs))
+  apply_metric_with_splits(x, metric_fun, split_groups = split_list)
 }
 
 
@@ -137,12 +87,26 @@ apply_metric_with_splits <- function(result, metric_fun, split_groups = NULL) {
       return(vals)
     }
 
-    sub_res <- sub_result(result, res_idx)
+    if (inherits(result, "regression_result")) {
+      sub_res <- result
+      sub_res$observed  <- result$observed[res_idx]
+      sub_res$predicted <- result$predicted[res_idx]
+
+      if (!is.null(result$testind)) {
+        sub_res$testind <- result$testind[res_idx]
+      }
+
+      if (!is.null(result$test_design)) {
+        sub_res$test_design <- result$test_design[res_idx, , drop = FALSE]
+      }
+    } else {
+      sub_res <- sub_result(result, res_idx)
+    }
 
     vals <- tryCatch(
       metric_fun(sub_res),
       error = function(e) {
-        warning(sprintf("custom performance failed for split '%s': %s", tag, e$message))
+        warning(sprintf("performance metric failed for split '%s': %s", tag, e$message))
         rep(NA_real_, length(base_vals))
       }
     )
@@ -197,18 +161,39 @@ custom_performance <- function(x, custom_fun, split_list = NULL) {
     stop("custom_fun must be a function taking a single result object.")
   }
 
-  metric_fun <- function(res) {
-    out <- custom_fun(res)
-    if (!is.numeric(out)) {
-      stop("custom_fun must return a numeric vector.")
-    }
-    if (is.null(names(out)) && length(out) > 1L) {
-      warning("custom_fun returned an unnamed vector with multiple entries; metric names may be ambiguous.")
-    }
-    out
+  if (is.null(split_list) || length(split_list) == 0L) {
+    return(custom_fun(x))
   }
 
-  apply_metric_with_splits(x, metric_fun, split_list)
+  base_vals <- custom_fun(x)
+  testind <- x$testind
+
+  split_vecs <- lapply(names(split_list), function(tag) {
+    design_idx <- split_list[[tag]]
+
+    res_idx <- if (!is.null(testind)) {
+      which(testind %in% design_idx)
+    } else {
+      design_idx
+    }
+
+    if (!length(res_idx)) {
+      vals <- rep(NA_real_, length(base_vals))
+      names(vals) <- paste0(names(base_vals), "_", tag)
+      return(vals)
+    }
+
+    sub_res <- sub_result(x, res_idx)
+    vals <- custom_fun(sub_res)
+
+    if (is.null(names(vals))) {
+      names(vals) <- names(base_vals)
+    }
+    names(vals) <- paste0(names(vals), "_", tag)
+    vals
+  })
+
+  c(base_vals, unlist(split_vecs))
 }
 
 #' @rdname merge_results-methods
@@ -318,25 +303,39 @@ combinedACC <- function(Pred, Obs) {
 #' @importFrom yardstick accuracy_vec roc_auc_vec
 binary_perf <- function(observed, predicted, probs) {
   # Ensure observed is a factor with levels in a consistent order
-  # and probs columns match this order.
   lvls <- levels(observed)
   if (length(lvls) != 2) stop("binary_perf expects 2 levels in observed.")
-  
+
   # Ensure predicted is a factor with the same levels as observed
   predicted_factor <- factor(predicted, levels = lvls)
-  
-  # Assuming probs has columns named after levels(observed) or in the same order.
-  # And positive class is the second level.
-  prob_positive_class <- if (ncol(probs) == 2) probs[, lvls[2]] else probs[,1] # Adapt if probs is single col
+
+  # Positive class is the second level; prefer named columns if available
+  if (!is.null(colnames(probs)) && all(lvls %in% colnames(probs))) {
+    prob_positive_class <- probs[, lvls[2]]
+  } else if (ncol(probs) >= 2) {
+    prob_positive_class <- probs[, 2]
+  } else {
+    prob_positive_class <- probs[, 1]
+  }
 
   res_acc <- yardstick::accuracy_vec(truth = observed, estimate = predicted_factor)
-  res_auc <- tryCatch(
-     yardstick::roc_auc_vec(truth = observed, estimate = prob_positive_class, event_level = "second"),
-     error = function(e) NA_real_
-  )
-  
-  # Note: The original code subtracted 0.5 from AUC. This is unusual but preserved for compatibility
-  c(Accuracy = res_acc, AUC = res_auc - 0.5) # yardstick returns numeric, ensure it's named
+
+  tab <- table(observed)
+  if (length(tab) < 2L || any(tab == 0L)) {
+    # Yardstick would warn about missing control/event; return NA without calling it.
+    res_auc <- NA_real_
+  } else {
+    res_auc <- suppressWarnings(
+      yardstick::roc_auc_vec(
+        truth       = observed,
+        estimate    = prob_positive_class,
+        event_level = "second"
+      )
+    )
+  }
+
+  # Preserve historical convention of returning AUC - 0.5
+  c(Accuracy = res_acc, AUC = res_auc - 0.5)
 }
 
 #' @keywords internal
@@ -355,10 +354,24 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
     pother <- rowMeans(probs[,-i, drop=FALSE])
     # Original uses pclass - pother as the score
     score <- pclass - pother
-    binary_truth <- factor(ifelse(pos, "positive", "negative"), levels = c("negative", "positive"))
-    tryCatch(
-      yardstick::roc_auc_vec(truth = binary_truth, estimate = score, event_level = "second") - 0.5,
-      error = function(e) NA_real_
+    binary_truth <- factor(ifelse(pos, "positive", "negative"),
+                           levels = c("negative", "positive"))
+
+    # Skip AUC when one of the levels is absent to avoid yardstick warnings.
+    tab <- table(binary_truth)
+    if (length(tab) < 2L || any(tab == 0L)) {
+      return(NA_real_)
+    }
+
+    suppressWarnings(
+      tryCatch(
+        yardstick::roc_auc_vec(
+          truth       = binary_truth,
+          estimate    = score,
+          event_level = "second"
+        ) - 0.5,
+        error = function(e) NA_real_
+      )
     )
   })
   

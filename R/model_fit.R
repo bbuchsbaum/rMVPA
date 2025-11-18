@@ -149,31 +149,41 @@ tune_model <- function(mspec, x, y, wts, param_grid, nreps = 10) {
 
 #' Fit an MVPA model
 #'
-#' This function fits a multivariate pattern analysis (MVPA) model to the given data.
+#' This method fits a multivariate pattern analysis (MVPA) model to the
+#' provided training data.
 #'
-#' @param obj An object derived from the \code{mvpa_model} class.
-#' @param x The training data matrix.
-#' @param y The response vector.
-#' @param wts Optional class weights (if the underlying model supports it).
-#' @param param The hyperparameters of the model.
-#' @param classProbs Logical; if TRUE, class probabilities should be computed (default is FALSE).
-#' @param ... Additional arguments to be passed to the underlying model fitting function.
-#' @return A fitted model object with additional attributes "obsLevels" and "problemType".
+#' @param obj An object of class \code{mvpa_model}.
+#' @inheritParams fit_model
+#' @return A fitted model object with additional attributes
+#'   \code{"obsLevels"} and \code{"problemType"}.
 #' @rdname fit_model-methods
-#' @noRd
-fit_model.mvpa_model <- function(obj, x, y, wts, param, classProbs, ...) {
-  fit <- obj$model$fit(x,y,wts=wts,param=param,lev=levels(y), classProbs=classProbs, ...)
-  
-  # Add levels both as attribute and list element for consistency
-  fit$obsLevels <- levels(y)
-  attr(fit, "obsLevels") <- levels(y)
-  
+#' @method fit_model mvpa_model
+#' @export
+fit_model.mvpa_model <- function(obj, roi_x, y, wts, param,
+                                 lev = NULL, last = FALSE,
+                                 classProbs = FALSE, ...) {
+  x <- roi_x
+
+  if (is.null(lev) && is.factor(y)) {
+    lev <- levels(y)
+  }
+
+  fit <- obj$model$fit(x, y,
+                       wts = wts,
+                       param = param,
+                       lev = lev,
+                       classProbs = classProbs,
+                       ...)
+
   if (is.factor(y)) {
+    fit$obsLevels <- levels(y)
+    attr(fit, "obsLevels") <- levels(y)
     attr(fit, "problemType") <- "Classification"
   } else {
+    fit$obsLevels <- NULL
     attr(fit, "problemType") <- "Regression"
   }
-  
+
   fit
 }
 
@@ -449,7 +459,9 @@ predict.list_model <- function(object, newdata=NULL,...) {
 #' @param wts Optional class weights (if the underlying model supports it).
 #' @param ... Additional arguments passed to other methods.
 #' @return A model fit object containing the trained model, its fit, the model type (classification or regression), the best tuning parameters, the voxel indices, and the feature mask.
+#' @importFrom utils capture.output
 #' @method train_model mvpa_model
+#' @export
 train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
   
   tryCatch({
@@ -535,4 +547,3 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
     stop(e$message)  # Re-throw the error after logging
   })
 }
-

@@ -66,12 +66,12 @@ mask <- neuroim2::LogicalNeuroVol(array(rnorm(6*6*6)>-.2, c(6,6,6)), neuroim2::N
 mvdset <- mvpa_dataset(traindat,mask=mask)
 design <- data.frame(fac=rep(letters[1:4], 25), block=rep(1:10, each=10))
 cval <- blocked_cross_validation(design$block)
-mvdes <- mvpa_design(design, ~ fac, block_var=~block)
+mvdes <- mvpa_design(design, y_train = ~ fac, block_var = ~ block)
 
 custom_perf <- function(result) {
   c(accuracy=sum(result$observed == result$predicted)/length(result$observed))
 }
 mvpmod <- mvpa_model(mod, dataset=mvdset, design=mvdes, crossval=cval, performance=custom_perf)
 ret <- run_searchlight(mvpmod)
-stopifnot("accuracy" \%in\% names(ret))
+stopifnot("accuracy" \%in\% ret$metrics)
 }

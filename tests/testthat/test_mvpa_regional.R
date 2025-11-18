@@ -112,7 +112,7 @@ test_that("mvpa_regional with 5 ROIS with sda_boot and custom_performance runs w
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, performance=p)
   res <- run_regional(mspec, regionMask)
   expect_true(!is.null(res))
-  expect_true(names(res$vol_results) == "x")
+  expect_true("x" %in% names(res$vol_results))
 })
 
 test_that("mvpa_regional with 5 ROIS runs and sda without error", {

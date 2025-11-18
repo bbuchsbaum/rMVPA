@@ -74,7 +74,7 @@ mask_arr <- array(0, dim(dataset_obj$mask))
 mask_arr[1:4, 1:4, 1:4] <- 1
 mask_arr[5:8, 1:4, 1:4] <- 2
 mask_arr[1:4, 5:8, 5:8] <- 3
-region_mask_vol <- NeuroVol(mask_arr, space(dataset_obj$mask))
+region_mask_vol <- neuroim2::NeuroVol(mask_arr, neuroim2::space(dataset_obj$mask))
 
 # Define a custom function: calculate mean and sd for each ROI
 my_roi_stats <- function(roi_data, roi_info) {

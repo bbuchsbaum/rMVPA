@@ -76,8 +76,8 @@ A named list where each element corresponds to a requested `output_metric` from 
     \item For metrics like "recon_score", "composite": A single numeric value
   }
   The list will have an attribute "na_reason" if any metric calculation failed, which can be used for diagnostics.
-  
-  For example, if `obj$output_metric = c("beta_delta", "recon_score")`, the returned list will have 
+
+  For example, if `obj$output_metric = c("beta_delta", "recon_score")`, the returned list will have
   two elements: `$beta_delta` (a Q-length vector) and `$recon_score` (a single value).
 
 A named list where each element corresponds to a requested metric from \code{obj$output_metric}.
@@ -118,12 +118,16 @@ searchlight or region.
     crossval = cval
   )
 
-  # Train the model
+  # Extract voxel-wise data as a numeric matrix for training
+  vox <- which(dset_info$dataset$mask > 0)
+  X   <- neuroim2::series(dset_info$dataset$train_data, vox)
+
+  # Train the model on the voxel matrix
   fit <- train_model(
     mspec,
-    dset_info$dataset$train_data,
+    X,
     dset_info$design$y_train,
-    indices = seq_len(ncol(dset_info$dataset$train_data))
+    indices = vox
   )
 }
 # This example shows the structure of the returned list but doesn't actually run the function

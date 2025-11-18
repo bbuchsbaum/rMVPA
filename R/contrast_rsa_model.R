@@ -380,9 +380,11 @@ print.contrast_rsa_model <- function(x, ...) {
 #'     \item For metrics like "recon_score", "composite": A single numeric value
 #'   }
 #'   The list will have an attribute "na_reason" if any metric calculation failed, which can be used for diagnostics.
-#'   
-#'   For example, if `obj$output_metric = c("beta_delta", "recon_score")`, the returned list will have 
+#'
+#'   For example, if `obj$output_metric = c("beta_delta", "recon_score")`, the returned list will have
 #'   two elements: `$beta_delta` (a Q-length vector) and `$recon_score` (a single value).
+#'
+#' @importFrom stats complete.cases
 #'
 #' @examples
 #' # This example shows the structure of the returned list but doesn't actually run the function
@@ -1284,10 +1286,10 @@ run_searchlight.contrast_rsa_model <- function(model_spec,
   if (method == "standard") {
     futile.logger::flog.info("Running standard MS-ReVE/Contrast RSA searchlight (radius = %s)", radius)
     # Pass the specific combiner for contrast RSA
-    rMVPA:::do_standard(model_spec, radius, combiner = the_combiner, ...)
+    do_standard(model_spec, radius, combiner = the_combiner, ...)
   } else { # method == "randomized"
     futile.logger::flog.info("Running randomized MS-ReVE/Contrast RSA searchlight (radius = %s, niter = %s)", radius, niter)
     # Pass the specific combiner for contrast RSA - Note: Applicability might need review
-    rMVPA:::do_randomized(model_spec, radius, niter = niter, combiner = the_combiner, ...)
+    do_randomized(model_spec, radius, niter = niter, combiner = the_combiner, ...)
   }
 } 

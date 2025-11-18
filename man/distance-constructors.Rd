@@ -4,6 +4,7 @@
 \alias{cordist}
 \alias{mahadist}
 \alias{eucdist}
+\alias{euclidean}
 \alias{robustmahadist}
 \alias{pcadist}
 \title{Distance Function Constructors}
@@ -13,6 +14,8 @@ cordist(labels = NULL, method = c("pearson", "spearman"))
 mahadist(labels = NULL)
 
 eucdist(labels = NULL)
+
+euclidean(labels = NULL)
 
 robustmahadist(labels = NULL)
 

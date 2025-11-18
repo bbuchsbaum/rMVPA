@@ -136,6 +136,7 @@ balance_partitions.custom_cross_validation <- function(obj, design, method = "su
 # Internal helper function to perform the balancing logic
 # Takes a cross_validation object and design, returns a custom_cross_validation obj
 #' @keywords internal
+#' @importFrom stats runif
 #' @noRd
 perform_balancing_on_cv_obj <- function(obj, design, method = "subsample",
                                         balance_test_set = TRUE, seed = NULL, ...) {

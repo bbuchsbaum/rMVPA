@@ -110,16 +110,29 @@ format_result <- function(obj, result, error_message, ...) {
 #' ds <- gen_sample_dataset(D = c(5, 5, 5), nobs = 20, nlevels = 2)
 #' model <- load_model("sda_notune")
 #' mspec <- mvpa_model(
-#'   model = model,
+#'   model   = model,
 #'   dataset = ds$dataset,
-#'   design = ds$design,
+#'   design  = ds$design,
 #'   model_type = "classification"
 #' )
+#'
+#' # Construct a minimal result_set resembling a single CV fold:
+#' obs  <- ds$design$y_train
+#' levs <- levels(obs)
+#' prob_mat <- matrix(
+#'   1 / length(levs),
+#'   nrow = length(obs),
+#'   ncol = length(levs),
+#'   dimnames = list(NULL, levs)
+#' )
+#'
 #' result_set <- tibble::tibble(
-#'   result = list(NULL),
-#'   error = FALSE,
+#'   test_ind      = list(seq_along(obs)),
+#'   probs         = list(prob_mat),
+#'   error         = FALSE,
 #'   error_message = "~"
 #' )
+#'
 #' merge_results(mspec, result_set, indices = list(1:10), id = 1)
 #' }
 #'
@@ -158,6 +171,7 @@ merge_results <- function(obj, result_set, indices, id, ...) {
 #'
 #' @rdname run_future-methods
 #' @keywords internal
+#' @export
 run_future <- function(obj, frame, processor, ...) {
   UseMethod("run_future")
 }
@@ -192,7 +206,7 @@ run_future <- function(obj, frame, processor, ...) {
 #' }
 #'
 #' @rdname process_roi-methods
-#' @keywords internal
+#' @export
 process_roi <- function(mod_spec, roi, rnum, ...) {
   UseMethod("process_roi")
 }
@@ -339,12 +353,16 @@ process_roi_default <- function(mod_spec, roi, rnum, center_global_id = NA, ...)
 #'     crossval = cval
 #'   )
 #'
-#'   # Train the model
+#'   # Extract voxel-wise data as a numeric matrix for training
+#'   vox <- which(dset_info$dataset$mask > 0)
+#'   X   <- neuroim2::series(dset_info$dataset$train_data, vox)
+#'
+#'   # Train the model on the voxel matrix
 #'   fit <- train_model(
 #'     mspec,
-#'     dset_info$dataset$train_data,
+#'     X,
 #'     dset_info$design$y_train,
-#'     indices = seq_len(ncol(dset_info$dataset$train_data))
+#'     indices = vox
 #'   )
 #' }
 #' @export
@@ -451,9 +469,12 @@ fit_model <- function(obj, roi_x, y, wts, param, lev=NULL, last=FALSE, classProb
 #' @export
 #'
 #' @examples
+#' \donttest{
 #' ds  <- gen_sample_dataset(D = c(5, 5, 5), nobs = 10)
 #' mdl <- load_model("sda_notune")
-#' tune_grid(mdl, ds$dataset$train_data, ds$design$y_train, len = 1)
+#' mspec <- mvpa_model(mdl, ds$dataset, ds$design, model_type = "classification")
+#' tune_grid(mspec, ds$dataset$train_data, ds$design$y_train, len = 1)
+#' }
 tune_grid <- function(obj, x, y, len) {
   UseMethod("tune_grid")
 }
@@ -721,10 +742,15 @@ predict_model <- function(object, fit, newdata, ...) {
 #' @param niter The number of searchlight iterations (used only for 'randomized' method)
 #' @param ... Extra arguments passed to specific searchlight methods. Currently supported:
 #'   \itemize{
-#'     \item \code{batch_size}: Integer specifying the number of searchlights to process per batch.
-#'           Default is 10\% of total searchlights. Lower values reduce memory usage but may impact 
-#'           performance. This controls how searchlights are grouped for processing - each batch is
-#'           processed sequentially, while searchlights within a batch are processed in parallel.
+#'     \item \code{batch_size}: Integer specifying how many searchlights (ROIs) are grouped
+#'           into a single batch for processing by \code{\link{mvpa_iterate}}. Each batch is
+#'           launched sequentially, while ROIs within a batch are processed in parallel (using
+#'           the active \pkg{future}/\pkg{furrr} plan). The default is 10\% of the total number
+#'           of searchlights. Smaller values lower peak memory usage and can improve load
+#'           balancing, at the cost of more scheduling overhead; larger values reduce overhead
+#'           but require more memory per worker. As a rule of thumb, start with the default,
+#'           decrease \code{batch_size} if you hit memory limits, and increase it if you have
+#'           many ROIs, ample RAM, and see low CPU utilization.
 #'   }
 #'
 #' @return A named list of \code{NeuroVol} objects containing performance metrics (e.g., AUC) at each voxel location
@@ -811,9 +837,9 @@ run_searchlight <- function(model_spec, radius, method = c("standard", "randomiz
 #'   )
 #'   
 #'   # Create region mask with 5 ROIs
-#'   region_mask <- NeuroVol(
+#'   region_mask <- neuroim2::NeuroVol(
 #'     sample(1:5, size=length(dataset$dataset$mask), replace=TRUE),
-#'     space(dataset$dataset$mask)
+#'     neuroim2::space(dataset$dataset$mask)
 #'   )
 #'   
 #'   # Create cross-validation specification

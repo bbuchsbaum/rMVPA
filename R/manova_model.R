@@ -13,10 +13,15 @@
 #' @importFrom purrr is_formula
 #' @importFrom ffmanova ffmanova
 #' @examples
+#' # Create simple dissimilarity matrices
+#' dissimilarity_matrix_y  <- matrix(rnorm(9), nrow = 3)
+#' dissimilarity_matrix_x1 <- matrix(rnorm(9), nrow = 3)
+#' dissimilarity_matrix_x2 <- matrix(rnorm(9), nrow = 3)
+#'
 #' # Create a MANOVA design
-#' formula <- y ~ x1 + x2
+#' formula   <- y ~ x1 + x2
 #' data_list <- list(
-#'   y = dissimilarity_matrix_y,
+#'   y  = dissimilarity_matrix_y,
 #'   x1 = dissimilarity_matrix_x1,
 #'   x2 = dissimilarity_matrix_x2
 #' )
@@ -48,16 +53,20 @@ manova_design <- function(formula, data) {
 #' @importFrom assertthat assert_that
 #' @importFrom purrr is_formula
 #' @examples
-#' # Create a MANOVA model
-#' dataset <- create_mvpa_dataset(data_matrix, labels, subject_ids)
+#' \dontrun{
+#' # Create a MANOVA model using gen_sample_dataset
+#' dset <- gen_sample_dataset(D = c(5, 5, 5), nobs = 50, nlevels = 3, blocks = 3)
+#'
+#' # Create dissimilarity matrices for MANOVA design
 #' formula <- y ~ x1 + x2
 #' data_list <- list(
-#'   y = dissimilarity_matrix_y,
-#'   x1 = dissimilarity_matrix_x1,
-#'   x2 = dissimilarity_matrix_x2
+#'   y = matrix(rnorm(9), nrow = 3),
+#'   x1 = matrix(rnorm(9), nrow = 3),
+#'   x2 = matrix(rnorm(9), nrow = 3)
 #' )
 #' design <- manova_design(formula, data_list)
-#' manova_model_obj <- manova_model(dataset, design)
+#' manova_model_obj <- manova_model(dset$dataset, design)
+#' }
 #' @export
 manova_model <- function(dataset,
                       design) {
@@ -84,6 +93,7 @@ manova_model <- function(dataset,
 #' @return A named numeric vector of -log(p-values) for each predictor in the MANOVA model.
 #' @importFrom stats as.formula
 #' @method train_model manova_model
+#' @export
 train_model.manova_model <- function(obj, train_dat, y, indices, ...) {
   dframe <- obj$design$data
   dframe$response <- as.matrix(train_dat)
@@ -240,5 +250,4 @@ merge_results.manova_model <- function(obj, result_set, indices, id, ...) {
     error_message = "~" 
   )
 }
-
 

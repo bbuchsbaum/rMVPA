@@ -109,9 +109,9 @@ If `model_spec$return_predictions` is TRUE, this method will assemble an `observ
   )
   
   # Create region mask with 5 ROIs
-  region_mask <- NeuroVol(
+  region_mask <- neuroim2::NeuroVol(
     sample(1:5, size=length(dataset$dataset$mask), replace=TRUE),
-    space(dataset$dataset$mask)
+    neuroim2::space(dataset$dataset$mask)
   )
   
   # Create cross-validation specification

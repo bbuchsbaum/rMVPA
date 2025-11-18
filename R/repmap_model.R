@@ -109,7 +109,7 @@ repmap_model <- function(dataset,
   }
 
   C_hat <- tryCatch({
-    if (!is.null(fit$coef)) fit$coef else rrpack::coef(fit)
+    if (!is.null(fit$coef)) fit$coef else stats::coef(fit)
   }, error = function(e) matrix(0, nrow = p, ncol = q))
 
   singvals <- tryCatch(as.numeric(fit$Ad), error = function(e) numeric(0))

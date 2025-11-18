@@ -23,14 +23,18 @@ The object is a list that contains the dataset and the design with class attribu
 This object can be used for further multivariate statistical analysis using the MANOVA method.
 }
 \examples{
-# Create a MANOVA model
-dataset <- create_mvpa_dataset(data_matrix, labels, subject_ids)
+\dontrun{
+# Create a MANOVA model using gen_sample_dataset
+dset <- gen_sample_dataset(D = c(5, 5, 5), nobs = 50, nlevels = 3, blocks = 3)
+
+# Create dissimilarity matrices for MANOVA design
 formula <- y ~ x1 + x2
 data_list <- list(
-  y = dissimilarity_matrix_y,
-  x1 = dissimilarity_matrix_x1,
-  x2 = dissimilarity_matrix_x2
+  y = matrix(rnorm(9), nrow = 3),
+  x1 = matrix(rnorm(9), nrow = 3),
+  x2 = matrix(rnorm(9), nrow = 3)
 )
 design <- manova_design(formula, data_list)
-manova_model_obj <- manova_model(dataset, design)
+manova_model_obj <- manova_model(dset$dataset, design)
+}
 }

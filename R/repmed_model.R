@@ -189,7 +189,7 @@ process_roi.repmed_model <- function(mod_spec,
   a <- NA_real_
   a_fit <- try(stats::lm(m ~ ., data = df_a), silent = TRUE)
   if (!inherits(a_fit, "try-error")) {
-    cf_a <- stats::coef(summary(a_fit))
+    cf_a <- suppressWarnings(stats::coef(summary(a_fit)))
     if ("x" %in% rownames(cf_a)) {
       a <- cf_a["x", "Estimate"]
     }
@@ -201,7 +201,7 @@ process_roi.repmed_model <- function(mod_spec,
   c_tot <- NA_real_
   b_fit <- try(stats::lm(y ~ ., data = df_b), silent = TRUE)
   if (!inherits(b_fit, "try-error")) {
-    cf_b <- stats::coef(summary(b_fit))
+    cf_b <- suppressWarnings(stats::coef(summary(b_fit)))
     if ("m" %in% rownames(cf_b)) {
       b <- cf_b["m", "Estimate"]
     }
@@ -212,7 +212,7 @@ process_roi.repmed_model <- function(mod_spec,
 
   c_fit <- try(stats::lm(y ~ ., data = df_c), silent = TRUE)
   if (!inherits(c_fit, "try-error")) {
-    cf_c <- stats::coef(summary(c_fit))
+    cf_c <- suppressWarnings(stats::coef(summary(c_fit)))
     if ("x" %in% rownames(cf_c)) {
       c_tot <- cf_c["x", "Estimate"]
     }
@@ -227,8 +227,8 @@ process_roi.repmed_model <- function(mod_spec,
       !inherits(b_fit, "try-error") &&
       is.finite(a) && is.finite(b)) {
 
-    cf_a <- stats::coef(summary(a_fit))
-    cf_b <- stats::coef(summary(b_fit))
+    cf_a <- suppressWarnings(stats::coef(summary(a_fit)))
+    cf_b <- suppressWarnings(stats::coef(summary(b_fit)))
 
     if ("x" %in% rownames(cf_a) && "m" %in% rownames(cf_b)) {
       sa <- cf_a["x", "Std. Error"]

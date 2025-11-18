@@ -352,6 +352,7 @@ return(C_ortho)
 #' # These contrasts overlap and will produce a meaningful interaction
 #' }
 #' @export
+#' @importFrom utils combn
 add_interaction_contrasts <- function(design, pairs = NULL, orthogonalize = TRUE) {
   if (!inherits(design, "msreve_design")) {
     stop("`design` must be an object of class 'msreve_design'.")

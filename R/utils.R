@@ -155,6 +155,20 @@ coalesce_join <- function(x, y,
   dplyr::bind_cols(joined, coalesced)[cols]
 }
 
+# Declare global variables used in non-standard evaluation (dplyr, etc.)
+# to satisfy R CMD check's global variable notes.
+utils::globalVariables(c(
+  "error",
+  "item",
+  "observation_index",
+  "pmap",
+  "res_naive",
+  "res_remap",
+  "rnum",
+  "scores_list",
+  "vector_rsa_iterate"
+))
+
 #' Report System and Package Information for rMVPA
 #'
 #' Gathers and displays information about the R session, operating system,

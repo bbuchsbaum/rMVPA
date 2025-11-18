@@ -1,23 +1,80 @@
-#' Save searchlight results to disk (S3 generic)
+#' Save MVPA Results to Disk
 #'
-#' @param x     A result object (e.g., `searchlight_result`, list of NeuroVols, etc.)
-#' @param dir   Directory to write into (created if needed)
-#' @param level One of "minimal", "standard", "complete"
-#'              - minimal: maps only
-#'              - standard: maps + manifest (default)
-#'              - complete: maps + manifest + tables + aux (if present)
-#' @param stack One of c("none","auto","vec"). 
-#'              - "none": Write individual NIfTI files for each metric (default)
-#'              - "auto": Stack into 4D if all maps are compatible, otherwise individual files
-#'              - "vec": Force stacking into one 4D NIfTI file
-#' @param fname Base filename when writing a 4D file (default "searchlight.nii.gz")
-#'              Only used when stack="vec" or stack="auto" with compatible volumes
+#' Generic function for writing MVPA result objects (searchlight, regional, or
+#' simple lists of maps) to a directory on disk in a reproducible layout.
+#'
+#' @param x     A result object (typically a \code{searchlight_result},
+#'   \code{regional_mvpa_result}, or a named list of \code{NeuroVol}/\code{NeuroVec}
+#'   (and optionally \code{NeuroSurface}/\code{NeuroSurfaceVector}) objects.
+#' @param dir   Directory to write into. It is created if it does not exist.
+#' @param level One of \code{"minimal"}, \code{"standard"}, \code{"complete"}:
+#'   \itemize{
+#'     \item \code{"minimal"}: write only map files (no manifest, no tables, no aux).
+#'     \item \code{"standard"}: maps + a manifest describing files (default).
+#'     \item \code{"complete"}: maps + manifest + summary tables and auxiliary
+#'       objects when available.
+#'   }
+#' @param stack One of \code{c("none","auto","vec")}.
+#'   \itemize{
+#'     \item \code{"none"}: write one NIfTI file per metric (default).
+#'     \item \code{"auto"}: if all volumes are compatible (same space), stack
+#'       them along the 4th dimension; otherwise fall back to one file per metric.
+#'     \item \code{"vec"}: always stack into a single 4D NIfTI (error if not compatible).
+#'   }
+#' @param fname Base filename when writing a 4D file (default
+#'   \code{"searchlight.nii.gz"}). Only used when \code{stack = "vec"} or when
+#'   \code{stack = "auto"} and stacking is possible.
 #' @param include Character vector of extras to include; subset of
-#'                c("manifest","tables","aux"). `level` sets sensible defaults.
-#' @param dtype Optional data_type for neuroim2 write_* (e.g., "FLOAT","DOUBLE")
-#' @param overwrite Logical; if FALSE and a target exists, stop.
-#' @param quiet Logical; suppress messages.
-#' @return (invisible) a list describing what was written.
+#'   \code{c("manifest","tables","aux")}. The \code{level} argument sets sensible
+#'   defaults but \code{include} can add to these.
+#' @param dtype Optional \code{data_type} passed to \pkg{neuroim2} writers
+#'   (e.g., \code{"FLOAT"}, \code{"DOUBLE"}).
+#' @param overwrite Logical; if \code{FALSE} and a target file already exists,
+#'   a numeric suffix is appended instead of overwriting.
+#' @param quiet Logical; if \code{TRUE}, suppress progress messages.
+#'
+#' @details
+#' \code{save_results()} is an S3 generic. The main methods are:
+#' \itemize{
+#'   \item \strong{\code{save_results.searchlight_result}}: writes volumetric maps
+#'     under \code{<dir>/maps} and (optionally) surface maps under
+#'     \code{<dir>/surfaces}. Depending on \code{level}/\code{include}, it can also
+#'     write a per-metric summary table (\code{<dir>/tables/metric_summary.csv}),
+#'     auxiliary objects (e.g. predictions, CV folds, design) as \code{.rds} files
+#'     under \code{<dir>/aux}, and a manifest (\code{manifest.yaml/json/rds})
+#'     describing all files and their metric names.
+#'   \item \strong{\code{save_results.regional_mvpa_result}}: uses the
+#'     \code{searchlight_result} method to write volumetric maps in \code{vol_results},
+#'     then saves regional tables such as \code{performance_table} and
+#'     \code{prediction_table} as tab-delimited text. For \code{level != "minimal"},
+#'     ROI-wise fits (if present) are saved under \code{<dir>/fits}. A manifest can
+#'     be written summarizing ROI counts, presence of fits, and all file paths.
+#'   \item \strong{\code{save_results.default}}: if \code{x} is a named list of
+#'     \code{NeuroVol}/\code{NeuroVec} (and/or surface) objects, it is treated as a
+#'     lightweight searchlight-style result and handled as above. Otherwise a
+#'     simple \code{result.rds} is written to \code{dir}.
+#' }
+#'
+#' All methods return (invisibly) a nested list of file paths that can be used
+#' to track outputs or drive downstream packaging/publishing.
+#'
+#' @return (invisible) a list describing what was written (file paths grouped
+#'   by type such as \code{maps}, \code{surfaces}, \code{tables}, \code{aux},
+#'   and \code{manifest}).
+#'
+#' @examples
+#' \donttest{
+#'   # After running a searchlight analysis:
+#'   #   sl_res <- run_searchlight(mspec, radius = 2)
+#'   # Save maps and a manifest into "sl_output"
+#'   # save_results(sl_res, "sl_output", level = "standard")
+#'
+#'   # After running a regional analysis:
+#'   #   reg_res <- run_regional(mspec, regionMask)
+#'   # Save regional maps, performance table, and fits
+#'   # save_results(reg_res, "regional_output", level = "complete")
+#' }
+#'
 #' @export
 save_results <- function(x, dir,
                          level = c("standard","minimal","complete"),

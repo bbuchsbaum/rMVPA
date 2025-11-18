@@ -485,16 +485,19 @@ test_that("train_model handles NA from U_hat_for_delta_calc (formerly compute_cr
   # This mock needs to be active when train_model.contrast_rsa_model calls it
   # The first call to compute_cv_means_sl is for U_hat_for_delta_calc
   
-  result_list <- with_mocked_bindings(
-    compute_crossvalidated_means_sl = function(...) U_hat_with_na,
-    .package = "rMVPA",
-    {
-      train_model(
-        model_spec_na, 
-        sl_data = model_spec_na$dataset$train_data[1:4, 1:5, drop=FALSE],
-        sl_info = list(center_local_id = 1, center_global_id = 1, radius=0, n_voxels=5)
-      )
-    }
+  # Suppress expected warning about NA values in cross-validated means
+  result_list <- suppressWarnings(
+    with_mocked_bindings(
+      compute_crossvalidated_means_sl = function(...) U_hat_with_na,
+      .package = "rMVPA",
+      {
+        train_model(
+          model_spec_na,
+          sl_data = model_spec_na$dataset$train_data[1:4, 1:5, drop=FALSE],
+          sl_info = list(center_local_id = 1, center_global_id = 1, radius=0, n_voxels=5)
+        )
+      }
+    )
   )
   
   expect_type(result_list, "list")
@@ -676,23 +679,26 @@ test_that("train_model.contrast_rsa_model handles whitening_matrix_W for crossno
   # The actual result of train_model doesn't matter as much as the mock's internal check
   
   W_was_received <- FALSE
-  with_mocked_bindings(
-    compute_crossvalidated_means_sl = function(sl_data, mvpa_des, cv_spec, estimation_method, whitening_matrix_W = NULL, ...) {
-        if (!is.null(whitening_matrix_W)) {
-          expect_identical(whitening_matrix_W, W_dummy)
-          W_was_received <<- TRUE 
-        }
-        mock_compute_cv_means_cn(sl_data, mvpa_des, cv_spec, estimation_method, whitening_matrix_W, ...)
-    },
-    compute_crossnobis_distances_sl = function(...) rep(NA_real_, 3),
-    .package = "rMVPA",
-    {
-      train_model(
-        model_spec_cn, 
-        sl_data = dset$train_data,
-        sl_info = list(center_local_id = 1, center_global_id = 1, radius=0, n_voxels=n_voxels_sl)
-      )
-    }
+  # Suppress expected warning about insufficient data points (intentional test with NA distances)
+  suppressWarnings(
+    with_mocked_bindings(
+      compute_crossvalidated_means_sl = function(sl_data, mvpa_des, cv_spec, estimation_method, whitening_matrix_W = NULL, ...) {
+          if (!is.null(whitening_matrix_W)) {
+            expect_identical(whitening_matrix_W, W_dummy)
+            W_was_received <<- TRUE
+          }
+          mock_compute_cv_means_cn(sl_data, mvpa_des, cv_spec, estimation_method, whitening_matrix_W, ...)
+      },
+      compute_crossnobis_distances_sl = function(...) rep(NA_real_, 3),
+      .package = "rMVPA",
+      {
+        train_model(
+          model_spec_cn,
+          sl_data = dset$train_data,
+          sl_info = list(center_local_id = 1, center_global_id = 1, radius=0, n_voxels=n_voxels_sl)
+        )
+      }
+    )
   )
   
   expect_true(W_was_received, 

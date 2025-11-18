@@ -53,7 +53,7 @@
 #' mask_arr[1:4, 1:4, 1:4] <- 1
 #' mask_arr[5:8, 1:4, 1:4] <- 2
 #' mask_arr[1:4, 5:8, 5:8] <- 3
-#' region_mask_vol <- NeuroVol(mask_arr, space(dataset_obj$mask))
+#' region_mask_vol <- neuroim2::NeuroVol(mask_arr, neuroim2::space(dataset_obj$mask))
 #'
 #' # Define a custom function: calculate mean and sd for each ROI
 #' my_roi_stats <- function(roi_data, roi_info) {
@@ -381,9 +381,9 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #'
 #' # Run the custom searchlight (standard method)
 #' \donttest{
-#' 
+#'
 #' custom_sl_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
-#'                                             radius = 7, method = "standard",
+#'                                             radius = 3, method = "standard",
 #'                                             .cores = 2, .verbose = TRUE)
 #' print(custom_sl_results)
 #'
@@ -405,7 +405,7 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #'
 #' # Run randomized searchlight (faster for large datasets/radii)
 #' custom_sl_rand_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
-#'                                                  radius = 7, method = "randomized",
+#'                                                  radius = 3, method = "randomized",
 #'                                                  niter = 50, # Fewer iterations for example
 #'                                                  .cores = 2, .verbose = TRUE)
 #' print(custom_sl_rand_results)

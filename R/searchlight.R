@@ -96,13 +96,15 @@ resolve_surface_ids <- function(dataset, ids, vec_len) {
   mask <- dataset$mask
   candidate <- NULL
   if (inherits(mask, "NeuroSurface")) {
-    candidate <- seq_len(neurosurf::nvertices(mask))
+    geom <- neurosurf::geometry(mask)
+    candidate <- neurosurf::nodes(geom)
   } else if (inherits(mask, "SurfaceGeometry")) {
-    candidate <- seq_len(neurosurf::nodes(mask))
+    candidate <- neurosurf::nodes(mask)
   } else if (is.numeric(mask) || is.logical(mask)) {
     candidate <- which(mask != 0)
   } else if (!is.null(dataset$train_data)) {
-    candidate <- seq_len(neurosurf::nodes(neurosurf::geometry(dataset$train_data)))
+    geom <- neurosurf::geometry(dataset$train_data)
+    candidate <- neurosurf::nodes(geom)
   }
   if (is.null(candidate)) {
     stop("Cannot determine vertex indices for surface data when 'ids' is NULL.")
@@ -196,7 +198,8 @@ estimate_mask_size <- function(dataset) {
     if (!requireNamespace("neurosurf", quietly = TRUE)) {
       stop("Package 'neurosurf' is required to handle surface datasets.")
     }
-    return(neurosurf::nvertices(mask))
+    geom <- neurosurf::geometry(mask)
+    return(length(neurosurf::nodes(geom)))
   }
   if (is.numeric(mask) || is.logical(mask)) {
     return(length(mask))
@@ -220,7 +223,8 @@ count_active_voxels <- function(dataset, ids, perf_mat) {
     if (!requireNamespace("neurosurf", quietly = TRUE)) {
       stop("Package 'neurosurf' is required to handle surface datasets.")
     }
-    return(neurosurf::nvertices(mask))
+    geom <- neurosurf::geometry(mask)
+    return(length(neurosurf::nodes(geom)))
   }
   if (is.numeric(mask) || is.logical(mask)) {
     return(sum(mask != 0))
@@ -569,37 +573,62 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
     stop("No valid results for randomized searchlight")
   }
   
-  all_ind <- sort(unlist(good_results$indices))
+  all_ind   <- sort(unlist(good_results$indices))
   ind_count <- table(all_ind)
-  ind_set <- unique(all_ind)
+  ind_set   <- unique(all_ind)
   
-  # Get the number of performance metrics
-  ncols <- length(good_results$performance[[1]])
+  # Prototype performance entry to determine metric count and names
+  perf_proto <- good_results$performance[[1]]
+  if (is.matrix(perf_proto) || is.data.frame(perf_proto)) {
+    ncols        <- ncol(perf_proto)
+    metric_names <- colnames(perf_proto)
+  } else {
+    ncols        <- length(perf_proto)
+    metric_names <- names(perf_proto)
+  }
   
   # Create sparse matrix to hold results
-  perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, ncols), j=rep(1:ncols, each=length(ind_set)), 
-                                  x=rep(0, length(ind_set)*ncols), 
-                                  dims=c(length(model_spec$dataset$mask), ncols))
+  perf_mat <- Matrix::sparseMatrix(
+    i    = rep(ind_set, ncols),
+    j    = rep(seq_len(ncols), each = length(ind_set)),
+    x    = rep(0, length(ind_set) * ncols),
+    dims = c(length(model_spec$dataset$mask), ncols)
+  )
   
   # Process each result
-  for (i in 1:nrow(good_results)) {
-    ind <- good_results$indices[[i]]
-    if (!is.null(ind) && !is.null(good_results$performance[[i]])) {
-      # Use tryCatch to handle errors gracefully
-      tryCatch({
-        m <- kronecker(matrix(good_results$performance[[i]], 1, ncols), rep(1, length(ind)))
-        perf_mat[ind,] <- perf_mat[ind,] + m
-      }, error = function(e) {
-        futile.logger::flog.warn("Error processing result %d: %s", i, e$message)
-      })
+  for (i in seq_len(nrow(good_results))) {
+    ind_i   <- good_results$indices[[i]]
+    perf_i  <- good_results$performance[[i]]
+    if (is.null(ind_i) || is.null(perf_i)) next
+
+    # Coerce performance entry to a numeric vector of length ncols
+    perf_vec <- if (is.matrix(perf_i) || is.data.frame(perf_i)) {
+      as.numeric(perf_i[1, , drop = FALSE])
+    } else {
+      as.numeric(perf_i)
     }
+    if (length(perf_vec) != ncols) {
+      futile.logger::flog.warn("combine_randomized: performance length mismatch in row %d", i)
+      next
+    }
+
+    tryCatch({
+      m <- kronecker(matrix(perf_vec, 1, ncols), rep(1, length(ind_i)))
+      perf_mat[ind_i, ] <- perf_mat[ind_i, ] + m
+    }, error = function(e) {
+      futile.logger::flog.warn("Error processing result %d: %s", i, e$message)
+    })
   }
 
   # Normalize by the count of overlapping searchlights
-  perf_mat[ind_set,] <- sweep(perf_mat[ind_set,,drop=FALSE], 1, as.integer(ind_count), FUN="/")
+  perf_mat[ind_set, ] <- sweep(perf_mat[ind_set, , drop = FALSE],
+                               1, as.integer(ind_count), FUN = "/")
   
-  # Set column names from the performance metrics
-  colnames(perf_mat) <- colnames(good_results$performance[[1]])
+  # Set column names from the performance metrics (fallback to generic names if needed)
+  if (is.null(metric_names)) {
+    metric_names <- paste0("Metric", seq_len(ncols))
+  }
+  colnames(perf_mat) <- metric_names
   
   # Wrap and return results
   ret <- wrap_out(perf_mat, model_spec$dataset)
@@ -819,6 +848,7 @@ do_randomized <- function(model_spec, radius, niter,
 #' It can be customized with different MVPA functions, combiners, and permutation options.
 #'
 #' @keywords internal
+#' @importFrom utils head
 #' @param model_spec An object specifying the model to be used in the searchlight analysis.
 #' @param radius The radius of the searchlight sphere.
 #' @param mvpa_fun The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).

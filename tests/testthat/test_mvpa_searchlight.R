@@ -236,7 +236,8 @@ test_that("standard mvpa_searchlight and tune_grid runs without error", {
   tuneGrid <- expand.grid(lambda=c(.1,.8), diagonal=c(TRUE, FALSE))
   model <- load_model("sda")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, tune_grid=tuneGrid)
-  res <- run_searchlight(mspec, radius=2, method="standard")
+  # Suppress yardstick warnings about missing control observations in small synthetic data
+  res <- suppressWarnings(run_searchlight(mspec, radius=2, method="standard"))
   expect_true(!is.null(res))
   
 })

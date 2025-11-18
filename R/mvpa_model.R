@@ -76,7 +76,8 @@ merge_results.mvpa_model <- function(obj, result_set, indices, id, ...) {
 
 
 #' @rdname format_result
-#' @noRd
+#' @method format_result mvpa_model
+#' @export
 #' @importFrom stats predict
 format_result.mvpa_model <- function(obj, result, error_message=NULL, context, ...) {
   if (!is.null(error_message)) {
@@ -249,14 +250,14 @@ create_model_spec <- function(name, dataset, design, return_predictions=FALSE,
 #' mvdset <- mvpa_dataset(traindat,mask=mask)
 #' design <- data.frame(fac=rep(letters[1:4], 25), block=rep(1:10, each=10))
 #' cval <- blocked_cross_validation(design$block)
-#' mvdes <- mvpa_design(design, ~ fac, block_var=~block)
+#' mvdes <- mvpa_design(design, y_train = ~ fac, block_var = ~ block)
 #'
 #' custom_perf <- function(result) {
 #'   c(accuracy=sum(result$observed == result$predicted)/length(result$observed))
 #' }
 #' mvpmod <- mvpa_model(mod, dataset=mvdset, design=mvdes, crossval=cval, performance=custom_perf)
 #' ret <- run_searchlight(mvpmod)
-#' stopifnot("accuracy" %in% names(ret))
+#' stopifnot("accuracy" %in% ret$metrics)
 mvpa_model <- function(model, 
                        dataset,
                        design,

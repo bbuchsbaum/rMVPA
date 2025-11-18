@@ -22,9 +22,12 @@ get_unique_regions.NeuroSurface <- function(region_mask, ...) {
 combine_regional_results = function(results) {
   roinum=NULL
   .rownum=NULL
-  
+
+  if (!is.data.frame(results) || !"result" %in% names(results) || nrow(results) == 0) {
+    return(tibble::tibble())
+  }
   # Check if the observed values are factors (for categorical data)
-  if (is.factor(results$result[[1]]$observed)) {
+  if (!is.null(results$result[[1]]) && is.factor(results$result[[1]]$observed)) {
     results %>% dplyr::rowwise() %>% dplyr::do( {
       
       # Use test indices if provided in the classification_result to preserve
@@ -48,7 +51,7 @@ combine_regional_results = function(results) {
       # Combine tib1 and tib2
       cbind(tib1, tib2)
     })
-  } else {
+  } else if (!is.null(results$result[[1]])) {
     # For non-factor observed values (for continuous data)
     results %>% dplyr::rowwise() %>% dplyr::do({
       row_index <- if (!is.null(.$result$testind)) .$result$testind else seq_along(.$result$observed)
@@ -58,6 +61,8 @@ combine_regional_results = function(results) {
         observed=.$result$observed,
         predicted=.$result$predicted)
     })
+  } else {
+    tibble::tibble()
   }
 }
 
@@ -275,6 +280,11 @@ prep_regional <- function(model_spec, region_mask) {
 comp_perf <- function(results, region_mask) {
  
   roinum <- NULL
+
+  # If results is not a data frame/tibble or lacks expected columns, return empty
+  if (!is.data.frame(results) || !all(c("performance", "id") %in% names(results))) {
+    return(list(vols = list(), perf_mat = tibble::tibble(roinum = integer(0))))
+  }
   ## compile performance results
   perf_mat <- tryCatch({
     do.call(rbind, results$performance)
@@ -289,14 +299,19 @@ comp_perf <- function(results, region_mask) {
   # Check if perf_mat is NULL or has 0 columns
   if (is.null(perf_mat) || !is.data.frame(perf_mat) || ncol(perf_mat) == 0) {
     message("Warning: Performance matrix is empty or invalid. Returning empty results.")
-    return(list(vols=list(), perf_mat=tibble::tibble(roinum=unlist(results$id))))
+    id_vec <- if ("id" %in% names(results)) unlist(results$id) else integer(0)
+    return(list(vols = list(), perf_mat = tibble::tibble(roinum = id_vec)))
   }
   
   ## generate volumetric results
   ## TODO fails when region_mask is an logical vol
-  vols <- lapply(1:ncol(perf_mat), function(i) map_values(region_mask,
-                                                         cbind(as.integer(results$id),
-                                                               perf_mat[[i]])))
+  id_vec <- if ("id" %in% names(results)) as.integer(unlist(results$id)) else integer(0)
+  vols <- lapply(seq_len(ncol(perf_mat)), function(i) {
+    if (length(id_vec) == 0L) {
+      return(NULL)
+    }
+    map_values(region_mask, cbind(id_vec, perf_mat[[i]]))
+  })
   names(vols) <- names(perf_mat)
   
   perfmat <- tibble::as_tibble(perf_mat,.name_repair=.name_repair) %>% dplyr::mutate(roinum = unlist(results$id)) %>% dplyr::select(roinum, dplyr::everything())
@@ -348,7 +363,10 @@ run_regional_base <- function(model_spec,
   if (isTRUE(return_predictions)) {
     prediction_table <- combine_regional_results(results)
     
-    if (coalesce_design_vars && !is.null(prediction_table)) {
+    if (coalesce_design_vars &&
+        !is.null(prediction_table) &&
+        nrow(prediction_table) > 0L &&
+        ".rownum" %in% names(prediction_table)) {
       prediction_table <- coalesce_join(
         prediction_table,
         test_design(model_spec$design),

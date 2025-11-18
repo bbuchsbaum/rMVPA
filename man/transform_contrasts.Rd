@@ -88,10 +88,10 @@ If `keep_attr = TRUE`:
 }
 
 \examples{
-C_manual <- matrix(c( 1,  1,  0,  0,
-                     -1,  1,  0,  0,
-                      0,  0,  1,  1,
-                      0,  0, -1,  1), nrow = 4, byrow = TRUE,
+C_manual <- matrix(c( 1, -1,
+                      1,  1,
+                      0,  0,
+                      0,  0), nrow = 4, byrow = TRUE,
                    dimnames = list(paste0("Cond", 1:4), c("MainA", "MainB")))
 
 # Center and make orthonormal

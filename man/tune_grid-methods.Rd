@@ -22,7 +22,10 @@ A data frame of tuning parameter combinations.
 Returns the parameter grid used to tune a model.
 }
 \examples{
+\donttest{
 ds  <- gen_sample_dataset(D = c(5, 5, 5), nobs = 10)
 mdl <- load_model("sda_notune")
-tune_grid(mdl, ds$dataset$train_data, ds$design$y_train, len = 1)
+mspec <- mvpa_model(mdl, ds$dataset, ds$design, model_type = "classification")
+tune_grid(mspec, ds$dataset$train_data, ds$design$y_train, len = 1)
+}
 }

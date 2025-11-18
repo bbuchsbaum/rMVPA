@@ -48,4 +48,3 @@ Process a region of interest (ROI) and return the formatted results.
 }
 
 }
-\keyword{internal}

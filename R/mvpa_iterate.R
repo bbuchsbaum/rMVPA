@@ -361,7 +361,7 @@ extract_roi <- function(sample, data, center_global_id = NULL) {
 #' }
 #'
 #' @importFrom furrr future_pmap
-#' @importFrom purrr map
+#' @importFrom purrr map pmap
 #' @export
 mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list), 
                          batch_size = as.integer(.1 * length(ids)),
@@ -494,7 +494,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
 #' @param analysis_type The type of analysis (e.g., "searchlight").
 #' @rdname run_future-methods
 #' @export
-run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analysis_type, ...) {
+run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
+                               analysis_type = "searchlight", ...) {
   gc()
   total_items <- nrow(frame)
   
@@ -575,7 +576,6 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE, analys
 
   results %>% dplyr::bind_rows()
 }
-
 
 
 

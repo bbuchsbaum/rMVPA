@@ -23,10 +23,15 @@ The object is a list that contains the formula expression and the named list of 
 This object can be further used for MANOVA analysis or other related multivariate statistical methods.
 }
 \examples{
+# Create simple dissimilarity matrices
+dissimilarity_matrix_y  <- matrix(rnorm(9), nrow = 3)
+dissimilarity_matrix_x1 <- matrix(rnorm(9), nrow = 3)
+dissimilarity_matrix_x2 <- matrix(rnorm(9), nrow = 3)
+
 # Create a MANOVA design
-formula <- y ~ x1 + x2
+formula   <- y ~ x1 + x2
 data_list <- list(
-  y = dissimilarity_matrix_y,
+  y  = dissimilarity_matrix_y,
   x1 = dissimilarity_matrix_x1,
   x2 = dissimilarity_matrix_x2
 )

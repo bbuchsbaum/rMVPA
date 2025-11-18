@@ -97,6 +97,12 @@ eucdist <- function(labels=NULL) {
 
 #' @rdname distance-constructors
 #' @export
+euclidean <- function(labels = NULL) {
+  eucdist(labels)
+}
+
+#' @rdname distance-constructors
+#' @export
 robustmahadist <- function(labels=NULL) {
   create_dist("robustmahadist", labels)
 }
@@ -308,7 +314,6 @@ pairwise_dist.robustmahadist <- function(obj, X,...) {
   }
   dist_matrix
 }
-
 
 
 

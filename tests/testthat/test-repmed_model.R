@@ -51,7 +51,8 @@ test_that("repmed_model + process_roi.repmed_model produce mediation metrics", {
   samp <- data_sample(ds$dataset, vox)
   roi  <- as_roi(samp, ds$dataset)
 
-  res <- process_roi(mspec, roi, rnum = 1L, center_global_id = NA)
+  # Suppress "essentially perfect fit" warning - expected with low-noise synthetic mediation data
+  res <- suppressWarnings(process_roi(mspec, roi, rnum = 1L, center_global_id = NA))
 
   expect_s3_class(res, "tbl_df")
   expect_false(res$error)

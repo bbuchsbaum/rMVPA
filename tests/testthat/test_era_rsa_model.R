@@ -161,7 +161,7 @@ test_that("era_rsa_model works with euclidean distfun", {
     design  = toy$design,
     key_var = ~ item,
     phase_var = ~ block_var,
-    distfun = euclidean()
+    distfun = eucdist()
   )
   regionMask <- neuroim2::NeuroVol(sample(1:2, size = length(toy$dataset$mask), replace = TRUE),
                                    neuroim2::space(toy$dataset$mask))

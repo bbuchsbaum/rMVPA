@@ -33,16 +33,29 @@ Merge Multiple Results
 ds <- gen_sample_dataset(D = c(5, 5, 5), nobs = 20, nlevels = 2)
 model <- load_model("sda_notune")
 mspec <- mvpa_model(
-  model = model,
+  model   = model,
   dataset = ds$dataset,
-  design = ds$design,
+  design  = ds$design,
   model_type = "classification"
 )
+
+# Construct a minimal result_set resembling a single CV fold:
+obs  <- ds$design$y_train
+levs <- levels(obs)
+prob_mat <- matrix(
+  1 / length(levs),
+  nrow = length(obs),
+  ncol = length(levs),
+  dimnames = list(NULL, levs)
+)
+
 result_set <- tibble::tibble(
-  result = list(NULL),
-  error = FALSE,
+  test_ind      = list(seq_along(obs)),
+  probs         = list(prob_mat),
+  error         = FALSE,
   error_message = "~"
 )
+
 merge_results(mspec, result_set, indices = list(1:10), id = 1)
 }
 

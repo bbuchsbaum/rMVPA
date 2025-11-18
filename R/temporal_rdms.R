@@ -130,7 +130,8 @@ temporal_rdm <- function(index,
   # Convert to distance if requested (do this BEFORE handling NA so masked pairs become 0 later)
   if (metric == "distance") {
     if (kernel %in% c("adjacent", "boxcar", "exp", "gauss")) {
-      mx <- max(dv, na.rm = TRUE)
+      # Handle edge case where all values are NA (e.g., all pairs masked by within_blocks_only)
+      mx <- if (all(is.na(dv))) 1 else max(dv, na.rm = TRUE)
       dv <- if (is.finite(mx) && mx > 0) 1 - (dv / mx) else 1 - dv
     } else {
       # linear/poly already distance-like
@@ -454,6 +455,7 @@ temporal_from_onsets <- function(onsets, run = NULL, ..., units = c("auto", "sec
 #' @return A \code{dist} object or symmetric matrix (N x N)
 #' @export
 #' @importFrom stats cor convolve sd as.dist
+#' @importFrom utils head
 temporal_hrf_overlap <- function(onsets,
                                  durations = NULL,
                                  run = NULL,

@@ -98,6 +98,7 @@ remap_rrr_model <- function(dataset,
 # --- helpers ---------------------------------------------------------------
 
 #' @keywords internal
+#' @importFrom stats cov
 .remap_whiten <- function(X, do_shrink = TRUE, center = TRUE) {
   if (center) X <- scale(X, center = TRUE, scale = FALSE)
   S <- try({
@@ -204,7 +205,9 @@ remap_rrr_model <- function(dataset,
   }
 
   # Try to extract coefficients and leading singulars consistently
-  Delta <- try({ if (!is.null(fit$coef)) fit$coef else rrpack::coef(fit) }, silent = TRUE)
+  Delta <- try({
+    if (!is.null(fit$coef)) fit$coef else stats::coef(fit)
+  }, silent = TRUE)
   if (inherits(Delta, "try-error")) Delta <- matrix(0, nrow = p, ncol = q)
   Ad <- tryCatch(as.numeric(fit$Ad), error = function(...) numeric(0))
   r_used <- tryCatch({ if (!is.null(fit$rank)) fit$rank else if (length(Ad)) length(Ad) else NA_integer_ }, error = function(...) NA_integer_)
