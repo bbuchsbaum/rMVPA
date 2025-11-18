@@ -123,6 +123,61 @@ coalesce_join2 <- function(x, y,
 }
 
 
+#' Set rMVPA Logging Level
+#'
+#' Convenience helper to control the verbosity of rMVPA's logging output.
+#' Internally this wraps \code{futile.logger::flog.threshold()} for the
+#' package's logger.
+#'
+#' @param level Logging level to use. Can be a character string
+#'   (\code{"TRACE"}, \code{"DEBUG"}, \code{"INFO"}, \code{"WARN"},
+#'   \code{"ERROR"}, \code{"FATAL"}, \code{"OFF"}) or the corresponding
+#'   \code{futile.logger} constant (e.g. \code{futile.logger::DEBUG}).
+#'
+#' @details
+#' Typical usage:
+#' \itemize{
+#'   \item \code{set_log_level("INFO")} – default, hides debug messages.
+#'   \item \code{set_log_level("DEBUG")} – show detailed per-batch timing and ROI diagnostics.
+#'   \item \code{set_log_level("WARN")} – only warnings and errors.
+#' }
+#'
+#' This affects all rMVPA logging performed via \pkg{futile.logger}.
+#'
+#' @examples
+#' \dontrun{
+#'   rMVPA::set_log_level("DEBUG")
+#'   rMVPA::set_log_level("WARN")
+#' }
+#'
+#' @export
+set_log_level <- function(level = "INFO") {
+  if (!requireNamespace("futile.logger", quietly = TRUE)) {
+    stop("Package 'futile.logger' is required to control logging. Please install it.")
+  }
+
+  lvl_num <- if (is.character(level)) {
+    # Normalize and map string levels to flog constants
+    lvl <- toupper(level)
+    switch(lvl,
+           "TRACE" = futile.logger::TRACE,
+           "DEBUG" = futile.logger::DEBUG,
+           "INFO"  = futile.logger::INFO,
+           "WARN"  = futile.logger::WARN,
+           "ERROR" = futile.logger::ERROR,
+           "FATAL" = futile.logger::FATAL,
+           "OFF"   = futile.logger::OFF,
+           stop(sprintf("Unknown log level '%s'. Use one of TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF.", level))
+    )
+  } else {
+    level
+  }
+
+  futile.logger::flog.threshold(lvl_num)
+  invisible(lvl_num)
+}
+
+
 #' @keywords internal
 coalesce_join <- function(x, y, 
                           by = NULL, suffix = c(".x", ".y"), 

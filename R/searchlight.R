@@ -857,12 +857,16 @@ do_randomized <- function(model_spec, radius, niter,
 do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ...) {
   error=NULL
   flog.info("creating standard searchlight")
+  t_sl_create <- proc.time()[3]
   slight <- get_searchlight(model_spec$dataset, "standard", radius)
+  flog.debug("get_searchlight (standard) took %.3f sec", proc.time()[3] - t_sl_create)
   
-   
+  t_iterate <- proc.time()[3]
   cind <- which(model_spec$dataset$mask > 0)
   flog.info("running standard searchlight iterator")
   ret <- mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", ...)
+  flog.debug("mvpa_iterate (standard searchlight) took %.3f sec",
+             proc.time()[3] - t_iterate)
   good_results <- ret %>% dplyr::filter(!error)
   bad_results <- ret %>% dplyr::filter(error == TRUE)
   
@@ -883,7 +887,12 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
     }
   }
   
-  combiner(model_spec, good_results, bad_results)
+  t_combine <- proc.time()[3]
+  out <- combiner(model_spec, good_results, bad_results)
+  flog.debug("Combiner '%s' took %.3f sec",
+             deparse(substitute(combiner)),
+             proc.time()[3] - t_combine)
+  out
 }
 
 

@@ -400,6 +400,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     
     for (i in seq_along(batch_ids)) {
       tryCatch({
+        batch_t0 <- proc.time()[3]
         if (verbose) {
           batch_size_current <- length(batch_ids[[i]])
           futile.logger::flog.info("Processing batch %s/%s (%s ROIs in this batch)", 
@@ -408,20 +409,22 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                                   crayon::green(batch_size_current))
         }
 
-       
-        
+        # ---- build sample frame (serial) ----
+        t_get_samples <- proc.time()[3]
         vlist <- vox_list[batch_ids[[i]]]
         size <- sapply(vlist, function(v) length(v))
-        
         futile.logger::flog.debug("Processing batch %d with %d voxels", i, length(vlist))
-        
         sf <- get_samples(mod_spec$dataset, vox_list[batch_ids[[i]]]) %>% 
           mutate(.id=batch_ids[[i]], rnum=rnums[[i]], size=size) %>% 
           filter(size>=2)
+        futile.logger::flog.debug("Batch %d: get_samples + filter(size>=2) took %.3f sec",
+                                  i, proc.time()[3] - t_get_samples)
         
         futile.logger::flog.debug("Sample frame has %d rows after filtering", nrow(sf))
         
         if (nrow(sf) > 0) {
+          # ---- ROI extraction (serial) ----
+          t_extract_roi <- proc.time()[3]
           # For searchlight, pass center_global_id to preserve center during filtering
           if (analysis_type == "searchlight") {
             sf <- sf %>% 
@@ -434,18 +437,18 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
               mutate(roi=list(extract_roi(sample, dset))) %>% 
               select(-sample)
           }
+          futile.logger::flog.debug("Batch %d: ROI extraction (extract_roi) took %.3f sec",
+                                    i, proc.time()[3] - t_extract_roi)
           
           # Strip the dataset from mod_spec before passing to parallel workers
           mod_spec_stripped <- strip_dataset(mod_spec)
           
-          # Pass the stripped version and analysis_type
+          # ---- parallel processing via run_future ----
+          t_run_future <- proc.time()[3]
           results[[i]] <- run_future(mod_spec_stripped, sf, processor, verbose,
                                      analysis_type = analysis_type)
-          # Clean up any completed futures and run garbage collection between batches
-          # Clean up completed futures and run garbage collection
-          # Note: ClusterRegistry is no longer exported in future >= 1.34.0
-          # Using gc() alone for memory cleanup
-          gc()
+          futile.logger::flog.debug("Batch %d: run_future (parallel section) took %.3f sec",
+                                    i, proc.time()[3] - t_run_future)
           processed_rois <- processed_rois + nrow(sf)
           
           futile.logger::flog.debug("Batch %d produced %d results", i, nrow(results[[i]]))
@@ -576,8 +579,6 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
 
   results %>% dplyr::bind_rows()
 }
-
-
 
 
 

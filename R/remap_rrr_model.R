@@ -102,7 +102,12 @@ remap_rrr_model <- function(dataset,
 .remap_whiten <- function(X, do_shrink = TRUE, center = TRUE) {
   if (center) X <- scale(X, center = TRUE, scale = FALSE)
   S <- try({
-    if (!isTRUE(do_shrink)) cov(X) else corpcor::cov.shrink(X)
+    if (!isTRUE(do_shrink)) {
+      cov(X)
+    } else {
+      # Suppress verbose console output from corpcor during shrinkage
+      corpcor::cov.shrink(X, verbose = FALSE)
+    }
   }, silent = TRUE)
   if (inherits(S, "try-error")) S <- cov(X)
   E <- eigen(S, symmetric = TRUE)
