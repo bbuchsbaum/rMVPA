@@ -36,6 +36,7 @@ articles:
     Models for learning transformations between perception and memory representations
   contents:
   - Naive_Cross_Decoding
+  - ERA_RSA_Cross_Decoding
   - REMAP_RRR
   - repmap_model
   - repmed_model
