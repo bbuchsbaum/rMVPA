@@ -330,14 +330,22 @@ process_roi.era_rsa_model <- function(mod_spec,
 
 #' Searchlight method for era_rsa_model
 #'
-#' Uses mvpa_iterate with the ERA-RSA ROI processor and combine_standard to
-#' create metric maps per sphere center.
+#' Uses \code{mvpa_iterate} with the ERA-RSA ROI processor to create metric
+#' maps per sphere center. Both standard and randomized searchlight are
+#' supported:
+#' \itemize{
+#'   \item \code{method = "standard"}: deterministic coverage, combined via
+#'     \code{combine_standard}.
+#'   \item \code{method = "randomized"}: randomized centers with multiple
+#'     iterations, combined via \code{combine_randomized} (averaging metrics
+#'     over coverage).
+#' }
 #'
-#' @param model_spec An era_rsa_model object
-#' @param radius Searchlight radius in voxels (default: 8)
-#' @param method Searchlight method: "standard" or "randomized" (default: "standard")
-#' @param niter Number of iterations for randomized searchlight (default: 4)
-#' @param ... Additional arguments passed to underlying methods
+#' @param model_spec An era_rsa_model object.
+#' @param radius Searchlight radius in voxels (default: 8).
+#' @param method Searchlight method: "standard" or "randomized" (default: "standard").
+#' @param niter Number of iterations for randomized searchlight (default: 4).
+#' @param ... Additional arguments passed to underlying methods (e.g., \code{batch_size}).
 #'
 #' @export
 run_searchlight.era_rsa_model <- function(model_spec,
@@ -346,14 +354,21 @@ run_searchlight.era_rsa_model <- function(model_spec,
                                           niter = 4,
                                           ...) {
   method <- match.arg(method)
-  if (method != "standard") {
-    stop("run_searchlight.era_rsa_model currently supports method='standard' only.")
+
+  if (method == "standard") {
+    do_standard(model_spec, radius,
+                mvpa_fun  = mvpa_iterate,
+                combiner  = combine_standard,
+                processor = process_roi.era_rsa_model,
+                ...)
+  } else {
+    do_randomized(model_spec, radius,
+                  niter     = niter,
+                  mvpa_fun  = mvpa_iterate,
+                  combiner  = combine_randomized,
+                  processor = process_roi.era_rsa_model,
+                  ...)
   }
-  do_standard(model_spec, radius,
-              mvpa_fun = mvpa_iterate,
-              combiner = combine_standard,
-              processor = process_roi.era_rsa_model,
-              ...)
 }
 
 

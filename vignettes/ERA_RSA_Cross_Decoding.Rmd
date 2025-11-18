@@ -1,0 +1,219 @@
+---
+title: "ERA-RSA: Cross-Decoding Between Encoding and Retrieval"
+author: "rMVPA authors"
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ERA-RSA: Cross-Decoding Between Encoding and Retrieval}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+params:
+  family: purple
+css: albers.css
+resource_files:
+  - albers.css
+  - albers.js
+includes:
+  in_header: |
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-purple'));</script>
+---
+
+```{r setup, include=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+knitr::opts_chunk$set(comment = NA, message = FALSE, warning = FALSE)
+suppressPackageStartupMessages({
+  library(rMVPA)
+  library(neuroim2)
+})
+```
+
+## Overview
+
+The **ERA-RSA model** (`era_rsa_model()`) combines:
+
+- **Encoding–Retrieval Accuracy (ERA)** — first-order similarity between
+  encoding and retrieval patterns for each item, and
+- **Representational Geometry** — second-order similarity between
+  encoding and retrieval representational dissimilarity matrices (RDMs).
+
+This vignette walks through a small synthetic example of
+**encoding → retrieval cross-decoding** using ERA-RSA, and illustrates
+how to run both **regional** and **searchlight** analyses.
+
+ERA-RSA is designed for situations where you have:
+
+- an encoding phase (e.g., stimulus viewing),
+- a retrieval phase (e.g., recognition or recall),
+- an item key that links encoding and retrieval trials.
+
+## 1. Synthetic Encoding/Retrieval Dataset
+
+We start from `gen_sample_dataset()` and treat its training split as
+**encoding** and its external test split as **retrieval**.
+
+```{r era_data}
+set.seed(123)
+
+toy <- gen_sample_dataset(
+  D            = c(6, 6, 6),  # modest volume for speed
+  nobs         = 48,
+  nlevels      = 3,           # 3 item categories
+  blocks       = 3,           # 3 runs
+  external_test = TRUE        # required for encoding → retrieval
+)
+
+# Add an item key column to both train and test designs
+toy$design$train_design$item <- toy$design$train_design$Y
+toy$design$test_design$item  <- toy$design$test_design$Ytest
+
+str(toy$design$train_design[item = 1:6, ])
+```
+
+Each row in `train_design` and `test_design` corresponds to a trial.
+The `item` column links encoding and retrieval presentations of the
+same stimulus.
+
+### `key_var` vs `y_train` / `y_test` and `phase_var`
+
+An `mvpa_design` already contains `y_train` / `y_test`, which are the
+**response labels for each trial** (often category labels). ERA-RSA
+adds two extra notions:
+
+- **`key_var`**: an *item key* that links encoding and retrieval trials
+  belonging to the same underlying stimulus (e.g., image ID). ERA
+  metrics such as `era_top1_acc` operate at the item level: for each
+  retrieval trial we ask whether its top match among encoding trials
+  has the same `key_var`, not just the same category.
+- **`phase_var`**: a phase label (e.g., encoding vs retrieval). In the
+  external-test setup used here, the train split is treated as
+  encoding and the test split as retrieval, so `phase_var` is mostly
+  a placeholder to keep the interface consistent. It becomes important
+  in single-dataset designs where both phases live in the same time
+  series.
+
+In short, `y_train`/`y_test` describe *what was shown* on each trial
+(class/category), while `key_var` defines *which item* that trial
+belongs to; ERA-RSA uses the item keys to build encoding–retrieval
+similarity and geometry.
+
+## 2. Regional ERA-RSA Model
+
+We build an `era_rsa_model` and run a simple regional analysis with a
+small number of regions.
+
+```{r era_regional_model}
+# Simple 3-region mask for demonstration
+region_mask <- NeuroVol(
+  sample(1:3, size = length(toy$dataset$mask), replace = TRUE),
+  space(toy$dataset$mask)
+)
+
+era_ms <- era_rsa_model(
+  dataset   = toy$dataset,
+  design    = toy$design,
+  key_var   = ~ item,          # item key linking encoding ↔ retrieval
+  phase_var = ~ block_var,     # phase label (not critical in external-test path)
+  distfun   = cordist("pearson"),
+  rsa_simfun = "spearman"
+)
+
+era_res <- run_regional(era_ms, region_mask)
+era_res
+```
+
+The `performance_table` contains one row per region and several ERA-RSA
+metrics.
+
+```{r era_regional_perf}
+head(era_res$performance_table)
+```
+
+Key metrics include:
+
+- `era_top1_acc` — top-1 encoding→retrieval accuracy for the item key.
+- `era_diag_mean` — mean encoding–retrieval similarity on the diagonal.
+- `era_diag_minus_off` — diagonal minus off-diagonal similarity.
+- `geom_cor` — correlation between encoding and retrieval RDMs.
+
+These quantify both cross-decoding performance and representational
+geometry alignment between phases.
+
+## 3. Searchlight ERA-RSA
+
+We can also run ERA-RSA in a searchlight mode to obtain whole-brain
+maps of the same metrics.
+
+```{r era_searchlight}
+set.seed(456)
+
+era_sl <- run_searchlight(
+  era_ms,
+  radius = 3,         # searchlight radius in voxels
+  method = "standard" # ERA-RSA currently uses standard searchlight
+)
+
+era_sl
+```
+
+The `searchlight_result` contains:
+
+- `metrics`: names of the output maps (e.g., `geom_cor`, `era_top1_acc`),
+- `results`: a list of `NeuroVol` maps, one per metric.
+
+```{r era_searchlight_metrics}
+era_sl$metrics
+```
+
+We can save the searchlight maps using `save_results()`:
+
+```{r era_save, eval=FALSE}
+out_dir <- tempfile("era_rsa_sl_")
+dir.create(out_dir, showWarnings = FALSE)
+
+save_results(era_sl, out_dir, level = "standard")
+list.files(file.path(out_dir, "maps"))
+```
+
+This will create one NIfTI file per metric (e.g., `geom_cor.nii.gz`,
+`era_top1_acc.nii.gz`) that can be viewed in your favorite neuroimaging
+software.
+
+## 4. Adding Confounds and Lag Information
+
+ERA-RSA can optionally incorporate item-level confounds and lag
+variables:
+
+- `confound_rdms`: list of nuisance RDMs (e.g., block or run structure),
+- `item_block`: factor of per-item blocks,
+- `item_lag`: numeric lag between encoding and retrieval,
+- `item_run_enc` / `item_run_ret`: per-item encoding/retrieval runs.
+
+These are used to compute additional metrics such as:
+
+- `geom_cor_run_partial`: geometry correlation after regressing out
+  run confounds.
+- `geom_cor_xrun`: geometry correlation restricted to cross-run pairs.
+- `era_diag_minus_off_same_block` / `era_diag_minus_off_diff_block`.
+- `era_lag_cor`: correlation between ERA diagonal and lag.
+
+For a full confound example, see the unit tests in
+`tests/testthat/test_era_rsa_model.R`. In applied analyses, you would
+derive these item-level vectors from your experimental design and pass
+them to `era_rsa_model()` in the same way.
+
+## 5. Summary
+
+- `era_rsa_model()` provides a unified framework for:
+  - cross-decoding between encoding and retrieval, and
+  - comparing encoding and retrieval representational geometries.
+- It integrates naturally with:
+  - `run_regional()` for ROI-based analyses, and
+  - `run_searchlight()` for whole-brain mapping.
+- Outputs are standard rMVPA result objects, so the same tooling
+  (`save_results()`, plotting, etc.) applies as for other models such
+  as `naive_xdec_model()` and `remap_rrr_model()`.
+
+ERA-RSA is particularly useful when you want to go beyond simple
+accuracy and ask **how similar the geometry of neural representations
+is across phases**, and how that similarity varies across brain regions.

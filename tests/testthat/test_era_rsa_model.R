@@ -56,6 +56,29 @@ test_that("era_rsa_model searchlight returns metric maps", {
 })
 
 
+test_that("era_rsa_model randomized searchlight returns metric maps", {
+  skip_on_cran()
+  set.seed(457)
+
+  toy <- gen_sample_dataset(D = c(4,4,4), nobs = 40, nlevels = 2, blocks = 2, external_test = TRUE)
+  toy$design$train_design$item <- toy$design$train_design$Y
+  toy$design$test_design$item  <- toy$design$test_design$Ytest
+
+  ms <- era_rsa_model(
+    dataset = toy$dataset,
+    design  = toy$design,
+    key_var = ~ item,
+    phase_var = ~ block_var,
+    distfun = cordist("pearson"),
+    rsa_simfun = "pearson"
+  )
+
+  sl_rand <- run_searchlight(ms, radius = 3, method = "randomized", niter = 2)
+  expect_s3_class(sl_rand, "searchlight_result")
+  expect_true(all(c("geom_cor", "era_top1_acc") %in% sl_rand$metrics))
+})
+
+
 test_that("era_rsa_model accepts confound RDMs and emits beta_* metrics", {
   skip_on_cran()
   set.seed(789)

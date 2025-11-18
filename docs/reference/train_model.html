@@ -168,14 +168,17 @@ searchlight or region.</p>
 <span class="r-in"><span>    crossval <span class="op">=</span> <span class="va">cval</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="co"># Train the model</span></span></span>
+<span class="r-in"><span>  <span class="co"># Extract voxel-wise data as a numeric matrix for training</span></span></span>
+<span class="r-in"><span>  <span class="va">vox</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">dset_info</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">X</span>   <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/series-methods.html" class="external-link">series</a></span><span class="op">(</span><span class="va">dset_info</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, <span class="va">vox</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span>  <span class="co"># Train the model on the voxel matrix</span></span></span>
 <span class="r-in"><span>  <span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">train_model</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="va">mspec</span>,</span></span>
-<span class="r-in"><span>    <span class="va">dset_info</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>,</span></span>
+<span class="r-in"><span>    <span class="va">X</span>,</span></span>
 <span class="r-in"><span>    <span class="va">dset_info</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">y_train</span>,</span></span>
-<span class="r-in"><span>    indices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">dset_info</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    indices <span class="op">=</span> <span class="va">vox</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in UseMethod("train_model"):</span> no applicable method for 'train_model' applied to an object of class "c('mvpa_model', 'model_spec', 'list')"</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span><span class="co"># This example shows the structure of the returned list but doesn't actually run the function</span></span></span>
 <span class="r-in"><span><span class="co"># For a multi-metric model: output_metric = c("beta_delta", "recon_score", "beta_only")</span></span></span>

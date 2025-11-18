@@ -9,8 +9,10 @@ articles:
   Contrast_RSA: Contrast_RSA.html
   CrossValidation: CrossValidation.html
   CustomAnalyses: CustomAnalyses.html
+  ERA_RSA_Cross_Decoding: ERA_RSA_Cross_Decoding.html
   FeatureSelection: FeatureSelection.html
   MVPA_RegionalCmdline: MVPA_RegionalCmdline.html
+  Naive_Cross_Decoding: Naive_Cross_Decoding.html
   Regional_Analysis: Regional_Analysis.html
   REMAP_RRR: REMAP_RRR.html
   repmap_model: repmap_model.html
@@ -19,7 +21,7 @@ articles:
   RSA: RSA.html
   Searchlight_Analysis: Searchlight_Analysis.html
   Temporal_Confounds_in_RSA: Temporal_Confounds_in_RSA.html
-last_built: 2025-11-14T12:29Z
+last_built: 2025-11-18T19:42Z
 urls:
   reference: http://bbuchsbaum.github.io/rMVPA/reference
   article: http://bbuchsbaum.github.io/rMVPA/articles
