@@ -869,37 +869,45 @@ do_randomized <- function(model_spec, radius, niter,
   
   ret <- purrr::map(seq(1,niter), function(i) {
     futile.logger::flog.info("\nIteration %s/%s", crayon::blue(i), crayon::blue(niter))
+    futile.logger::flog.debug("do_randomized iter %d: Generating searchlight with radius %d", i, radius)
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
-    
+
     ## hacky
-  
+    futile.logger::flog.debug("do_randomized iter %d: Got %d ROIs, extracting center indices", i, length(slight))
+
     cind <- if (is.integer(slight[[1]])) {
       ## SurfaceSearchlight...
       purrr::map_int(slight, ~ attr(., "center.index"))
     } else {
       purrr::map_int(slight, ~ .@parent_index)
     }
-    
+
     # Pass analysis_type to the mvpa function
+    futile.logger::flog.debug("do_randomized iter %d: Calling mvpa_fun with %d ROIs", i, length(slight))
     result <- mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", ...)
-    
+    futile.logger::flog.debug("do_randomized iter %d: mvpa_fun returned %d results", i, nrow(result))
+
     # Count successful and failed models
     n_success <- sum(!result$error, na.rm=TRUE)
     n_errors <- sum(result$error, na.rm=TRUE)
     total_models <<- total_models + n_success
     total_errors <<- total_errors + n_errors
-    
+
     if (n_errors > 0) {
       futile.logger::flog.debug("- %s ROIs failed in this iteration", n_errors)
     }
-    
+
+    futile.logger::flog.debug("do_randomized iter %d: Complete (success=%d, errors=%d)", i, n_success, n_errors)
     result
   })
   
+  futile.logger::flog.debug("do_randomized: Combining %d iteration results", length(ret))
   results <- dplyr::bind_rows(ret)
+  futile.logger::flog.debug("do_randomized: Combined into %d total results", nrow(results))
   good_results <- results %>% dplyr::filter(error == FALSE)
   bad_results <- results %>% dplyr::filter(error == TRUE)
-  
+  futile.logger::flog.debug("do_randomized: Split into %d good, %d bad results", nrow(good_results), nrow(bad_results))
+
   # Final summary with improved formatting
   futile.logger::flog.info("\nSearchlight analysis complete")
   futile.logger::flog.info("- Total Models Fit: %s", crayon::green(total_models))
