@@ -162,10 +162,51 @@ filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, ...) {
 
 #' @keywords internal
 #' @noRd
+compute_mask_indices <- function(mask) {
+  if (inherits(mask, c("NeuroVol", "NeuroVec"))) {
+    vals <- neuroim2::values(mask)
+    if (is.matrix(vals)) {
+      vals <- vals[, 1, drop = TRUE]
+    }
+    which(vals != 0)
+  } else {
+    which(mask != 0)
+  }
+}
+
+#' @keywords internal
+#' @noRd
 #' @importFrom neuroim2 series_roi
 #' @method as_roi data_sample
 #' @export
 as_roi.data_sample <- function(obj, data, ...) {
+
+  # Defensive validation: ensure all voxel indices are within the mask.
+  # Use any precomputed mask_indices if present to avoid O(#voxels) work per ROI.
+  if (!is.null(data$mask)) {
+    mask_indices <- data$mask_indices
+    if (is.null(mask_indices)) {
+      mask_indices <- compute_mask_indices(data$mask)
+    }
+
+    invalid_vox <- setdiff(obj$vox, mask_indices)
+
+    if (length(invalid_vox) > 0) {
+      futile.logger::flog.warn("as_roi.data_sample: %d voxel indices are outside the mask (e.g., %s). Filtering to mask.",
+                              length(invalid_vox), paste(head(invalid_vox, 3), collapse=", "))
+      # Filter to only valid mask indices
+      obj$vox <- intersect(obj$vox, mask_indices)
+
+      if (length(obj$vox) < 2) {
+        futile.logger::flog.debug("as_roi.data_sample: After mask filtering, ROI has < 2 voxels. Returning error ROI.")
+        # Return a try-error to signal failure
+        train_roi <- structure(list(message = "Insufficient voxels after mask filtering"),
+                              class = "try-error")
+        return(list(train_roi = train_roi, test_roi = NULL))
+      }
+    }
+  }
+
   train_roi <- try(series_roi(data$train_data, obj$vox), silent = TRUE)
 
   test_roi <- if (has_test_set(data)) {

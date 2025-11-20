@@ -392,6 +392,10 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     rnums <- split(ids, batch_group)
     
     dset <- mod_spec$dataset
+    # Precompute nonzero mask indices once per invocation to avoid repeated O(#voxels) scans in as_roi.
+    if (!is.null(dset$mask) && is.null(dset$mask_indices)) {
+      dset$mask_indices <- compute_mask_indices(dset$mask)
+    }
     tot <- length(ids)
     
     results <- vector("list", length(batch_ids))
@@ -579,7 +583,6 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
 
   results %>% dplyr::bind_rows()
 }
-
 
 
 

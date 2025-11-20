@@ -90,7 +90,7 @@ if (is.null(result) || !is.data.frame(result) || !"error" %in% names(result)) {
 - Prevents cryptic "invalid argument type" errors
 - Logged errors help diagnose HPC issues
 
-### 3. Performance Refactoring (combine_randomized)
+### 2. Performance Refactoring (combine_randomized)
 
 **Location**: [R/searchlight.R:585-715](R/searchlight.R#L585-L715)
 
@@ -131,7 +131,7 @@ perf_mat <- vals_mat / pmax(counts_mat, 1)
 - Metric names now searched across all ROIs (not just first)
 - Prevents loss of meaningful names like "Accuracy", "AUC"
 
-### 4. Debug Logging Infrastructure
+### 3. Debug Logging Infrastructure
 
 **Activation**: Use `rMVPA::set_log_level("DEBUG")` at the start of your script
 
@@ -155,7 +155,7 @@ perf_mat <- vals_mat / pmax(counts_mat, 1)
 - Results combination progress
 - Combiner function entry/exit
 
-### 5. Example Debug Output
+### 4. Example Debug Output
 
 When you run with `set_log_level("DEBUG")`, you'll see:
 
