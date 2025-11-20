@@ -583,6 +583,8 @@ combine_vector_rsa_standard <- function(model_spec, good_results, bad_results) {
 #' @param bad_results A data frame containing the unsuccessful classifier results.
 #' @return A list containing the combined and normalized performance matrix along with other information from the dataset.
 combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
+  futile.logger::flog.debug("combine_randomized: Starting with %d ROI results", nrow(good_results))
+
   # Check if we have results
   if (nrow(good_results) == 0 || length(good_results$performance) == 0) {
     futile.logger::flog.error("No valid results for randomized searchlight")
@@ -590,6 +592,7 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
   }
 
   # Find first non-NULL performance entry to determine metric count and names
+  futile.logger::flog.debug("combine_randomized: Scanning for metric prototype and names")
   perf_proto <- NULL
   metric_names <- NULL
   for (idx in seq_len(nrow(good_results))) {
@@ -613,17 +616,26 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
     stop("No valid performance entries found")
   }
 
+  futile.logger::flog.debug("combine_randomized: Found %d metrics: %s",
+                           ncols,
+                           paste(if (is.null(metric_names)) paste0("Metric", seq_len(ncols)) else metric_names, collapse=", "))
+
   # Accumulate triplets for sparse matrix construction
+  futile.logger::flog.debug("combine_randomized: Building triplet lists from ROI results")
   I_list <- list()
   J_list <- list()
   X_list <- list()
   k <- 1L
+  skipped <- 0L
 
   # Process each result
   for (i in seq_len(nrow(good_results))) {
     ind_i   <- good_results$indices[[i]]
     perf_i  <- good_results$performance[[i]]
-    if (is.null(ind_i) || is.null(perf_i)) next
+    if (is.null(ind_i) || is.null(perf_i)) {
+      skipped <- skipped + 1L
+      next
+    }
 
     # Coerce performance entry to a numeric vector of length ncols
     perf_vec <- if (is.matrix(perf_i) || is.data.frame(perf_i)) {
@@ -633,6 +645,7 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
     }
     if (length(perf_vec) != ncols) {
       futile.logger::flog.warn("combine_randomized: performance length mismatch in row %d", i)
+      skipped <- skipped + 1L
       next
     }
 
@@ -645,16 +658,26 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
       k <- k + 1L
     }, error = function(e) {
       futile.logger::flog.warn("Error processing result %d: %s", i, e$message)
+      skipped <- skipped + 1L
     })
   }
 
+  futile.logger::flog.debug("combine_randomized: Processed %d valid ROIs, skipped %d", k - 1L, skipped)
+
   # Flatten triplet lists
+  futile.logger::flog.debug("combine_randomized: Flattening triplet lists")
   I <- unlist(I_list, use.names = FALSE)
   J <- unlist(J_list, use.names = FALSE)
   X <- unlist(X_list, use.names = FALSE)
 
+  futile.logger::flog.debug("combine_randomized: Total triplets: %d (%.1f MB)",
+                           length(I),
+                           (length(I) * 8 * 3) / 1024^2)
+
   # Build sparse matrices for sums and counts in one pass
   # sparseMatrix automatically sums duplicate (i,j) entries
+  futile.logger::flog.debug("combine_randomized: Constructing sparse values matrix (%d x %d)",
+                           length(model_spec$dataset$mask), ncols)
   vals_mat <- Matrix::sparseMatrix(
     i = I,
     j = J,
@@ -662,6 +685,7 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
     dims = c(length(model_spec$dataset$mask), ncols)
   )
 
+  futile.logger::flog.debug("combine_randomized: Constructing sparse counts matrix")
   counts_mat <- Matrix::sparseMatrix(
     i = I,
     j = J,
@@ -670,7 +694,12 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
   )
 
   # Normalize by counts (avoid division by zero)
+  futile.logger::flog.debug("combine_randomized: Normalizing by counts")
   perf_mat <- vals_mat / pmax(counts_mat, 1)
+
+  futile.logger::flog.debug("combine_randomized: Result sparsity: %.2f%% (non-zero: %d)",
+                           100 * Matrix::nnzero(perf_mat) / prod(dim(perf_mat)),
+                           Matrix::nnzero(perf_mat))
 
   # Set column names from the performance metrics (fallback to generic names if needed)
   if (is.null(metric_names)) {
@@ -679,7 +708,9 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
   colnames(perf_mat) <- metric_names
 
   # Wrap and return results
+  futile.logger::flog.debug("combine_randomized: Wrapping output")
   ret <- wrap_out(perf_mat, model_spec$dataset)
+  futile.logger::flog.debug("combine_randomized: Complete")
   ret
 }
 
@@ -884,8 +915,11 @@ do_randomized <- function(model_spec, radius, niter,
     futile.logger::flog.error("No valid results for randomized searchlight")
     stop("No valid results produced")
   }
-  
-  combiner(model_spec, good_results)
+
+  futile.logger::flog.debug("do_randomized: Calling combiner function with %d good results", nrow(good_results))
+  result <- combiner(model_spec, good_results)
+  futile.logger::flog.debug("do_randomized: Combiner complete, returning results")
+  result
 }
 
 
