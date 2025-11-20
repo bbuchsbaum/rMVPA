@@ -884,7 +884,30 @@ do_randomized <- function(model_spec, radius, niter,
 
     # Pass analysis_type to the mvpa function
     futile.logger::flog.debug("do_randomized iter %d: Calling mvpa_fun with %d ROIs", i, length(slight))
-    result <- mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", ...)
+
+    result <- tryCatch({
+      mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", ...)
+    }, error = function(e) {
+      futile.logger::flog.error("do_randomized iter %d: mvpa_fun threw error: %s", i, e$message)
+      # Return a tibble with all errors to maintain structure
+      tibble::tibble(
+        result = rep(list(NULL), length(slight)),
+        indices = rep(list(NULL), length(slight)),
+        performance = rep(list(NULL), length(slight)),
+        id = seq_along(slight),
+        error = TRUE,
+        error_message = sprintf("Iteration failed: %s", e$message)
+      )
+    })
+
+    # Defensive check: ensure result is a valid data frame with error column
+    if (is.null(result) || !is.data.frame(result) || !"error" %in% names(result)) {
+      futile.logger::flog.error("do_randomized iter %d: mvpa_fun returned invalid result (type: %s, has_error_col: %s)",
+                               i, class(result)[1], if (!is.null(result)) "error" %in% names(result) else FALSE)
+      futile.logger::flog.error("This usually indicates an interrupted process or unexpected failure in mvpa_iterate")
+      stop(sprintf("Invalid result from mvpa_fun in iteration %d - expected data.frame with 'error' column", i))
+    }
+
     futile.logger::flog.debug("do_randomized iter %d: mvpa_fun returned %d results", i, nrow(result))
 
     # Count successful and failed models
