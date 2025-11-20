@@ -802,7 +802,7 @@ predict_model <- function(object, fit, newdata, ...) {
 #' }
 #'
 #' @export
-run_searchlight <- function(model_spec, radius, method = c("standard", "randomized"), niter = NULL, ...) {
+run_searchlight <- function(model_spec, radius, method = c("standard", "randomized", "resampled"), niter = NULL, ...) {
   UseMethod("run_searchlight")
 }
 

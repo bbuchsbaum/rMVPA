@@ -403,24 +403,30 @@ print.mvpa_surface_dataset <- function(x, ...) {
 
 #' @export
 #' @method get_searchlight mvpa_image_dataset
-get_searchlight.mvpa_image_dataset <- function(obj, type=c("standard", "randomized"), radius=8,...) {
+get_searchlight.mvpa_image_dataset <- function(obj, type=c("standard", "randomized", "resampled"), radius=8, iter=NULL, ...) {
   type <- match.arg(type)
   if (type == "standard") {
     neuroim2::searchlight(obj$mask, radius=radius,...)
-  } else {
+  } else if (type == "randomized") {
     neuroim2::random_searchlight(obj$mask, radius=radius,...)
+  } else { # resampled
+    if (is.null(iter)) iter <- 1L
+    neuroim2::resampled_searchlight(obj$mask, radius=radius, iter=iter, ...)
   }
 }
 
 #' @export
 #' @method get_searchlight mvpa_surface_dataset
-get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "randomized"), radius=8,...) {
+get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "randomized", "resampled"), radius=8, iter=NULL, ...) {
   type <- match.arg(type)
   #browser()
   # Create the iterator once
   slight <- if (type == "standard") {
     neurosurf::SurfaceSearchlight(geometry(obj$train_data), radius, nodeset=which(obj$mask>0), as_deflist=TRUE)
+  } else if (type == "randomized") {
+    neurosurf::RandomSurfaceSearchlight(geometry(obj$train_data), radius, nodeset=which(obj$mask>0), as_deflist=TRUE)
   } else {
+    # No direct analogue of resampled searchlight for surfaces; fall back to randomized sampling.
     neurosurf::RandomSurfaceSearchlight(geometry(obj$train_data), radius, nodeset=which(obj$mask>0), as_deflist=TRUE)
   }
   
