@@ -41,3 +41,27 @@ test_that("remap_rrr_model LOKO path executes when rank>0 but rrpack missing", {
   res <- run_regional(mspec, mask)
   expect_s3_class(res, "regional_mvpa_result")
 })
+
+test_that("remap_rrr_model runs randomized searchlight with niter=4", {
+  skip_on_cran()
+  set.seed(313)
+  toy <- gen_sample_dataset(D = c(4,4,4), nobs = 48, nlevels = 3, blocks = 3, external_test = TRUE)
+
+  mspec <- remap_rrr_model(
+    dataset = toy$dataset,
+    design  = toy$design,
+    rank = 0,                 # avoid rrpack dependency; just test searchlight plumbing
+    leave_one_key_out = FALSE # faster for randomized searchlight
+  )
+
+  res <- run_searchlight(
+    mspec,
+    radius = 2,
+    method = "randomized",
+    niter = 4
+  )
+
+  expect_s3_class(res, "searchlight_result")
+  expect_gt(length(res$results), 0)
+  expect_true(any(!is.na(neuroim2::values(res$results[[1]]))))
+})

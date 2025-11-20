@@ -588,29 +588,37 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
     futile.logger::flog.error("No valid results for randomized searchlight")
     stop("No valid results for randomized searchlight")
   }
-  
-  all_ind   <- sort(unlist(good_results$indices))
-  ind_count <- table(all_ind)
-  ind_set   <- unique(all_ind)
-  
-  # Prototype performance entry to determine metric count and names
-  perf_proto <- good_results$performance[[1]]
-  if (is.matrix(perf_proto) || is.data.frame(perf_proto)) {
-    ncols        <- ncol(perf_proto)
-    metric_names <- colnames(perf_proto)
-  } else {
-    ncols        <- length(perf_proto)
-    metric_names <- names(perf_proto)
+
+  # Find first non-NULL performance entry to determine metric count and names
+  perf_proto <- NULL
+  metric_names <- NULL
+  for (idx in seq_len(nrow(good_results))) {
+    perf_candidate <- good_results$performance[[idx]]
+    if (!is.null(perf_candidate)) {
+      perf_proto <- perf_candidate
+      if (is.matrix(perf_proto) || is.data.frame(perf_proto)) {
+        ncols <- ncol(perf_proto)
+        metric_names <- colnames(perf_proto)
+      } else {
+        ncols <- length(perf_proto)
+        metric_names <- names(perf_proto)
+      }
+      # If we found names, we're done; otherwise keep looking
+      if (!is.null(metric_names)) break
+    }
   }
-  
-  # Create sparse matrix to hold results
-  perf_mat <- Matrix::sparseMatrix(
-    i    = rep(ind_set, ncols),
-    j    = rep(seq_len(ncols), each = length(ind_set)),
-    x    = rep(0, length(ind_set) * ncols),
-    dims = c(length(model_spec$dataset$mask), ncols)
-  )
-  
+
+  if (is.null(perf_proto)) {
+    futile.logger::flog.error("No valid performance entries found")
+    stop("No valid performance entries found")
+  }
+
+  # Accumulate triplets for sparse matrix construction
+  I_list <- list()
+  J_list <- list()
+  X_list <- list()
+  k <- 1L
+
   # Process each result
   for (i in seq_len(nrow(good_results))) {
     ind_i   <- good_results$indices[[i]]
@@ -629,23 +637,47 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
     }
 
     tryCatch({
-      m <- kronecker(matrix(perf_vec, 1, ncols), rep(1, length(ind_i)))
-      perf_mat[ind_i, ] <- perf_mat[ind_i, ] + m
+      len <- length(ind_i)
+      # Build triplets: each voxel gets all metric values
+      I_list[[k]] <- rep(ind_i, each = ncols)
+      J_list[[k]] <- rep.int(seq_len(ncols), times = len)
+      X_list[[k]] <- rep(perf_vec, times = len)
+      k <- k + 1L
     }, error = function(e) {
       futile.logger::flog.warn("Error processing result %d: %s", i, e$message)
     })
   }
 
-  # Normalize by the count of overlapping searchlights
-  perf_mat[ind_set, ] <- sweep(perf_mat[ind_set, , drop = FALSE],
-                               1, as.integer(ind_count), FUN = "/")
-  
+  # Flatten triplet lists
+  I <- unlist(I_list, use.names = FALSE)
+  J <- unlist(J_list, use.names = FALSE)
+  X <- unlist(X_list, use.names = FALSE)
+
+  # Build sparse matrices for sums and counts in one pass
+  # sparseMatrix automatically sums duplicate (i,j) entries
+  vals_mat <- Matrix::sparseMatrix(
+    i = I,
+    j = J,
+    x = X,
+    dims = c(length(model_spec$dataset$mask), ncols)
+  )
+
+  counts_mat <- Matrix::sparseMatrix(
+    i = I,
+    j = J,
+    x = 1,
+    dims = c(length(model_spec$dataset$mask), ncols)
+  )
+
+  # Normalize by counts (avoid division by zero)
+  perf_mat <- vals_mat / pmax(counts_mat, 1)
+
   # Set column names from the performance metrics (fallback to generic names if needed)
   if (is.null(metric_names)) {
     metric_names <- paste0("Metric", seq_len(ncols))
   }
   colnames(perf_mat) <- metric_names
-  
+
   # Wrap and return results
   ret <- wrap_out(perf_mat, model_spec$dataset)
   ret
