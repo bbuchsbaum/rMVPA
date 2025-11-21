@@ -64,10 +64,10 @@ remap_rrr_model <- function(dataset,
                             max_rank = 20,
                             forward_adapt = TRUE,
                             ridge_rrr_lambda = NULL,
-                            leave_one_key_out = TRUE,
+                            leave_one_key_out = FALSE,
                             min_pairs = 5,
                             save_fold_singulars = FALSE,
-                            return_adapter = TRUE,
+                            return_adapter = FALSE,
                             lambda_grid = c(0, 0.25, 0.5, 0.75, 1),
                             return_diag = FALSE,
                             ...) {
@@ -314,10 +314,10 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
   yte   <- y_test(des)
 
   # Guard: ensure non-degenerate ROI
-  if (ncol(Xtrain) < 2L || ncol(Xtest) < 2L) {
+  if (ncol(Xtrain) < 1L || ncol(Xtest) < 1L) {
     return(tibble::tibble(
       result = list(NULL), indices = list(ind), performance = list(NULL), id = rnum,
-      error = TRUE, error_message = "ROI has fewer than 2 features"
+      error = TRUE, error_message = "ROI has fewer than 1 feature"
     ))
   }
 

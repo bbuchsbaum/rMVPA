@@ -129,9 +129,15 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
   dummy_space <- neuroim2::NeuroSpace(c(n_voxels, 1, 1, n_samples))
   dummy_sl_vec <- neuroim2::NeuroVec(dummy_array, dummy_space)
 
-  dummy_mask <- neuroim2::NeuroVol(array(1, c(n_voxels, 1, 1)), neuroim2::NeuroSpace(c(n_voxels, 1, 1)))
+  dummy_mask <- neuroim2::NeuroVol(
+    array(1, c(n_voxels, 1, 1)),
+    neuroim2::NeuroSpace(c(n_voxels, 1, 1))
+  )
 
-  condition_labels <- factor(rep(paste0("cond", LETTERS[1:n_conditions]), each = n_samples / n_conditions))
+  condition_labels <- factor(
+    rep(paste0("cond", LETTERS[1:n_conditions]),
+        each = n_samples / n_conditions)
+  )
   run_labels <- factor(rep(1:n_runs, each = n_samples / n_runs))
 
   # Create mvpa_dataset (without Y and block_var)

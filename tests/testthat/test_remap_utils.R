@@ -28,7 +28,7 @@ test_that("summarize_remap_items works with return_fits", {
                                    neuroim2::space(toy$dataset$mask))
 
   ms <- remap_rrr_model(dataset = toy$dataset, design = toy$design,
-                        rank = 0, leave_one_key_out = TRUE)
+                        rank = 0, leave_one_key_out = TRUE, return_adapter = TRUE)
   res <- run_regional(ms, regionMask, return_fits = TRUE)
 
   items <- summarize_remap_items(res, roi = 1)

@@ -3,8 +3,8 @@ simulate_repmed_latent <- function(K = 24,
                                    a = 1,
                                    b = 1,
                                    c = 0,
-                                   sd_m = 0.08,
-                                   sd_y = 0.08) {
+                                   sd_m = 0.04,
+                                   sd_y = 0.04) {
 
   items <- paste0("it", seq_len(K))
 

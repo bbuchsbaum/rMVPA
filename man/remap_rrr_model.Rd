@@ -87,3 +87,17 @@ method automatically shrinks to the naïve cross-decoder (\eqn{\lambda = 0}).
 }
 }
 
+\section{LOKO vs. single-fit adapters}{
+
+When `leave_one_key_out = TRUE`, REMAP performs a leave-one-key-out (LOKO)
+loop over items to estimate adaptor diagnostics (e.g. per-voxel R2 and
+improvement over naïve) in an item-wise cross-validated fashion. This is
+computationally heavy but yields less optimistic adaptor-level summaries.
+Test-set classification performance (accuracy/AUC on `dataset$test_data`)
+is always evaluated on trials that were not used to fit the adaptor, so
+standard train→test performance remains out-of-sample regardless of the
+LOKO setting. For large searchlight analyses where adaptor diagnostics are
+secondary, it is often practical to set `leave_one_key_out = FALSE` and use
+a fixed rank to obtain much faster single-fit adapters per ROI.
+}
+

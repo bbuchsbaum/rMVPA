@@ -197,7 +197,6 @@ custom_performance <- function(x, custom_fun, split_list = NULL) {
 }
 
 #' @rdname merge_results-methods
-#' @inheritParams merge_results
 #' @method merge_results binary_classification_result
 #' @export
 merge_results.binary_classification_result <- function(obj, ...) {
@@ -215,7 +214,6 @@ merge_results.binary_classification_result <- function(obj, ...) {
 }
 
 #' @rdname merge_results-methods
-#' @inheritParams merge_results
 #' @method merge_results regression_result
 #' @export
 merge_results.regression_result <- function(obj, ...) {
@@ -248,7 +246,6 @@ prob_observed.regression_result <- function(x) {
 }
 
 #' @rdname merge_results-methods
-#' @inheritParams merge_results
 #' @method merge_results multiway_classification_result
 #' @export
 merge_results.multiway_classification_result <- function(obj, ...) {

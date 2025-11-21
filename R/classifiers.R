@@ -48,6 +48,22 @@ colHuber <- function(x, k=1.5, tol=1e-04) {
 #' @export
 MVPAModels <- new.env()
 
+#' @keywords internal
+#' @noRd
+quiet_sda <- function(...) {
+  res <- NULL
+  invisible(capture.output(res <- sda::sda(...)))
+  res
+}
+
+#' @keywords internal
+#' @noRd
+quiet_sda_ranking <- function(...) {
+  res <- NULL
+  invisible(capture.output(res <- sda::sda.ranking(...)))
+  res
+}
+
 #' @importFrom MASS huber
 #' @importFrom stats median
 #' @noRd
@@ -207,7 +223,7 @@ MVPAModels$sda_notune <- list(
   grid=function(x, y, len = NULL) data.frame(parameter="none"),
 
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-    m <- sda::sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...)
+    m <- quiet_sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...)
     m$obsLevels <- lev
     m
   },
@@ -258,12 +274,12 @@ MVPAModels$sda_boot <- list(
       ret <- if (param$frac > 0 && param$frac < 1) {
         nkeep <- max(param$frac * ncol(x),1)
         ind <- sample(seq_len(ncol(x)), nkeep)
-        fit <- try(sda::sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y[row.idx], lambda=lambda[count], verbose=FALSE, ...),
+        fit <- try(quiet_sda(Xtrain=x[row.idx,ind,drop=FALSE], L=y[row.idx], lambda=lambda[count], verbose=FALSE, ...),
                    silent=TRUE)
         attr(fit, "keep.ind") <- ind
         fit
       } else {
-        fit <- try(sda::sda(Xtrain=x[row.idx,], L=y[row.idx], lambda=lambda[count], verbose=FALSE, ...),
+        fit <- try(quiet_sda(Xtrain=x[row.idx,], L=y[row.idx], lambda=lambda[count], verbose=FALSE, ...),
                    silent=TRUE)
         attr(fit, "keep.ind") <- seq_len(ncol(x))
         fit
@@ -400,7 +416,7 @@ MVPAModels$lda_thomaz_boot <- list(
 #' @importFrom sda sda.ranking
 #' @noRd
 memo_rank <- memoise::memoise(function(X, L, fdr) {
-  sda::sda.ranking(X,L,fdr=fdr,verbose=FALSE)
+  quiet_sda_ranking(X,L,fdr=fdr,verbose=FALSE)
 })
 
 # glmnet_opt
@@ -485,7 +501,7 @@ MVPAModels$sparse_sda <- list(
     rank <- memo_rank(x, L=y, fdr=FALSE)
     ind <- rank[,"idx"][1:nkeep]
 
-    fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, lambda=param$lambda, verbose=FALSE)
+    fit <- quiet_sda(Xtrain=x[,ind,drop=FALSE], L=y, lambda=param$lambda, verbose=FALSE)
     attr(fit, "keep.ind") <- ind
     fit$obsLevels <- lev
     fit
@@ -516,7 +532,7 @@ MVPAModels$sda_ranking <- list(
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
     x <- as.matrix(x)
     if (ncol(x) > 2) {
-      rank <- sda::sda.ranking(Xtrain=x, L=y, fdr=TRUE, verbose=FALSE, ...)
+      rank <- quiet_sda_ranking(Xtrain=x, L=y, fdr=TRUE, verbose=FALSE, ...)
       hcind <- which.max(rank[,"HC"])
       keep.ind <- if (hcind < 2) seq(1, min(ncol(x), 2)) else 1:hcind
       ind <- rank[keep.ind,"idx"]
@@ -524,7 +540,7 @@ MVPAModels$sda_ranking <- list(
       ind <- seq_len(ncol(x))
     }
 
-    fit <- sda::sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
+    fit <- quiet_sda(Xtrain=x[,ind,drop=FALSE], L=y, verbose=FALSE)
     attr(fit, "keep.ind") <- ind
     fit$obsLevels <- lev
     fit

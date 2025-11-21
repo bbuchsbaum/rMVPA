@@ -300,25 +300,26 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA) {
 
 #' @keywords internal
 #' @noRd
-extract_roi <- function(sample, data, center_global_id = NULL) {
+extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
   r <- as_roi(sample,data)
-  v <- neuroim2::values(r$train_roi)
-  
+
+  # Check if as_roi returned an error object (e.g., insufficient voxels after mask filtering)
+  if (inherits(r$train_roi, "try-error")) {
+    futile.logger::flog.debug("Skipping ROI: as_roi returned error (likely voxels outside mask)")
+    return(NULL)
+  }
+
   # Use silent=TRUE to prevent error messages from being displayed on the console
   # Pass center_global_id to preserve it during filtering (for searchlights)
-  r <- try(filter_roi(r, preserve = center_global_id), silent=TRUE)
-  
-  if (inherits(r, "try-error") || ncol(v) < 2) {
-    # Only log at debug level so these expected errors don't alarm users
-    if (inherits(r, "try-error")) {
-      futile.logger::flog.debug("Skipping ROI: insufficient valid columns")
-    } else if (ncol(v) < 2) {
-      futile.logger::flog.debug("Skipping ROI: less than 2 columns")
-    }
-    NULL
-  } else {
-    r
+  # filter_roi will throw an error if < 2 valid voxels remain
+  r <- try(filter_roi(r, preserve = center_global_id, min_voxels = min_voxels), silent=TRUE)
+
+  if (inherits(r, "try-error")) {
+    futile.logger::flog.debug("Skipping ROI: filter_roi failed (likely < 2 valid voxels after filtering)")
+    return(NULL)
   }
+
+  r
 }
   
 #' Iterate MVPA Analysis Over Multiple ROIs
@@ -367,7 +368,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                          batch_size = as.integer(.1 * length(ids)),
                          verbose = TRUE,
                          processor = NULL,
-                         analysis_type = c("searchlight", "regional")) {
+                         analysis_type = c("searchlight", "regional"),
+                         drop_probs = FALSE) {
   setup_mvpa_logger()
   
   if (length(vox_list) == 0) {
@@ -418,29 +420,31 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
         vlist <- vox_list[batch_ids[[i]]]
         size <- sapply(vlist, function(v) length(v))
         futile.logger::flog.debug("Processing batch %d with %d voxels", i, length(vlist))
+        # Minimum features allowed (relaxed to 1 for searchlight to keep edge spheres)
+        min_voxels_required <- if (analysis_type == "searchlight") 1L else 2L
         sf <- get_samples(mod_spec$dataset, vox_list[batch_ids[[i]]]) %>% 
           mutate(.id=batch_ids[[i]], rnum=rnums[[i]], size=size) %>% 
-          filter(size>=2)
-        futile.logger::flog.debug("Batch %d: get_samples + filter(size>=2) took %.3f sec",
-                                  i, proc.time()[3] - t_get_samples)
+          filter(size >= min_voxels_required)
+        futile.logger::flog.debug("Batch %d: get_samples + filter(size>=%d) took %.3f sec",
+                                  i, min_voxels_required, proc.time()[3] - t_get_samples)
         
         futile.logger::flog.debug("Sample frame has %d rows after filtering", nrow(sf))
         
         if (nrow(sf) > 0) {
           # ---- ROI extraction (serial) ----
           t_extract_roi <- proc.time()[3]
-          # For searchlight, pass center_global_id to preserve center during filtering
-          if (analysis_type == "searchlight") {
-            sf <- sf %>% 
-              rowwise() %>% 
-              mutate(roi=list(extract_roi(sample, dset, center_global_id = rnum))) %>% 
-              select(-sample)
-          } else {
-            sf <- sf %>% 
-              rowwise() %>% 
-              mutate(roi=list(extract_roi(sample, dset))) %>% 
-              select(-sample)
-          }
+        # For searchlight, pass center_global_id to preserve center during filtering
+        if (analysis_type == "searchlight") {
+          sf <- sf %>% 
+            rowwise() %>% 
+            mutate(roi=list(extract_roi(sample, dset, center_global_id = rnum, min_voxels = min_voxels_required))) %>% 
+            select(-sample)
+        } else {
+          sf <- sf %>% 
+            rowwise() %>% 
+            mutate(roi=list(extract_roi(sample, dset, min_voxels = min_voxels_required))) %>% 
+            select(-sample)
+        }
           futile.logger::flog.debug("Batch %d: ROI extraction (extract_roi) took %.3f sec",
                                     i, proc.time()[3] - t_extract_roi)
           
@@ -450,7 +454,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           # ---- parallel processing via run_future ----
           t_run_future <- proc.time()[3]
           results[[i]] <- run_future(mod_spec_stripped, sf, processor, verbose,
-                                     analysis_type = analysis_type)
+                                     analysis_type = analysis_type,
+                                     drop_probs = drop_probs)
           futile.logger::flog.debug("Batch %d: run_future (parallel section) took %.3f sec",
                                     i, proc.time()[3] - t_run_future)
           processed_rois <- processed_rois + nrow(sf)
@@ -502,7 +507,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
 #' @rdname run_future-methods
 #' @export
 run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
-                               analysis_type = "searchlight", ...) {
+                               analysis_type = "searchlight", drop_probs = FALSE, ...) {
   gc()
   total_items <- nrow(frame)
   
@@ -558,7 +563,29 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
       if (!obj$return_predictions) {
         result <- result %>% mutate(result = list(NULL))
       }
-      
+      # Optionally drop dense per-ROI probability matrices after performance
+      # has been computed, keeping only prob_observed (one number per trial).
+      if (drop_probs) {
+        result <- result %>%
+          dplyr::mutate(
+            prob_observed = purrr::map(result, function(res) {
+              if (is.null(res)) return(NULL)
+              if (!is.null(res$probs)) {
+                tryCatch(prob_observed(res), error = function(e) NULL)
+              } else {
+                NULL
+              }
+            }),
+            result = purrr::map(result, function(res) {
+              if (is.null(res)) return(NULL)
+              if (!is.null(res$probs)) {
+                res$probs <- NULL
+              }
+              res
+            })
+          )
+      }
+
       result
     }, error = function(e) {
       # Use debug level to avoid alarming users with expected errors
@@ -583,7 +610,3 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
 
   results %>% dplyr::bind_rows()
 }
-
-
-
-

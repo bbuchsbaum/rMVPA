@@ -131,8 +131,8 @@ coalesce_join2 <- function(x, y,
 #'
 #' @param level Logging level to use. Can be a character string
 #'   (\code{"TRACE"}, \code{"DEBUG"}, \code{"INFO"}, \code{"WARN"},
-#'   \code{"ERROR"}, \code{"FATAL"}, \code{"OFF"}) or the corresponding
-#'   \code{futile.logger} constant (e.g. \code{futile.logger::DEBUG}).
+#'   \code{"ERROR"}, \code{"FATAL"}, \code{"OFF"}) or a numeric level
+#'   constant from the \pkg{futile.logger} package.
 #'
 #' @details
 #' Typical usage:
@@ -159,6 +159,8 @@ set_log_level <- function(level = "INFO") {
   lvl_num <- if (is.character(level)) {
     # Normalize and map string levels to flog constants
     lvl <- toupper(level)
+    off_const <- get0("OFF", envir = asNamespace("futile.logger"), inherits = FALSE)
+    if (is.null(off_const)) off_const <- Inf
     switch(lvl,
            "TRACE" = futile.logger::TRACE,
            "DEBUG" = futile.logger::DEBUG,
@@ -166,7 +168,7 @@ set_log_level <- function(level = "INFO") {
            "WARN"  = futile.logger::WARN,
            "ERROR" = futile.logger::ERROR,
            "FATAL" = futile.logger::FATAL,
-           "OFF"   = futile.logger::OFF,
+           "OFF"   = off_const,
            stop(sprintf("Unknown log level '%s'. Use one of TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF.", level))
     )
   } else {

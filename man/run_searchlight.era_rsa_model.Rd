@@ -13,17 +13,25 @@
 )
 }
 \arguments{
-\item{model_spec}{An era_rsa_model object}
+\item{model_spec}{An era_rsa_model object.}
 
-\item{radius}{Searchlight radius in voxels (default: 8)}
+\item{radius}{Searchlight radius in voxels (default: 8).}
 
-\item{method}{Searchlight method: "standard" or "randomized" (default: "standard")}
+\item{method}{Searchlight method: "standard" or "randomized" (default: "standard").}
 
-\item{niter}{Number of iterations for randomized searchlight (default: 4)}
+\item{niter}{Number of iterations for randomized searchlight (default: 4).}
 
-\item{...}{Additional arguments passed to underlying methods}
+\item{...}{Additional arguments passed to underlying methods (e.g., \code{batch_size}).}
 }
 \description{
-Uses mvpa_iterate with the ERA-RSA ROI processor and combine_standard to
-create metric maps per sphere center.
+Uses \code{mvpa_iterate} with the ERA-RSA ROI processor to create metric
+maps per sphere center. Both standard and randomized searchlight are
+supported:
+\itemize{
+  \item \code{method = "standard"}: deterministic coverage, combined via
+    \code{combine_standard}.
+  \item \code{method = "randomized"}: randomized centers with multiple
+    iterations, combined via \code{combine_randomized} (averaging metrics
+    over coverage).
+}
 }

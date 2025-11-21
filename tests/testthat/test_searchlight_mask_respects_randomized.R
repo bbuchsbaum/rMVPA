@@ -42,7 +42,8 @@ test_that("randomized searchlight respects the provided mask", {
   ms_full  <- make_model(full_mask)
   ms_small <- make_model(small_mask)
 
-  withr::local_options(list(futile.logger.threshold = "ERROR"))
+  old_opts <- options(futile.logger.threshold = "ERROR")
+  on.exit(options(old_opts), add = TRUE)
 
   res_full  <- suppressWarnings(run_searchlight(ms_full,  radius = 1, method = "randomized", niter = 1))
   res_small <- suppressWarnings(run_searchlight(ms_small, radius = 1, method = "randomized", niter = 1))

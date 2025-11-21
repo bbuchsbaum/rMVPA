@@ -7,7 +7,7 @@
 run_searchlight(
   model_spec,
   radius,
-  method = c("standard", "randomized"),
+  method = c("standard", "randomized", "resampled"),
   niter = NULL,
   ...
 )
@@ -23,10 +23,15 @@ run_searchlight(
 
 \item{...}{Extra arguments passed to specific searchlight methods. Currently supported:
 \itemize{
-  \item \code{batch_size}: Integer specifying the number of searchlights to process per batch.
-        Default is 10\% of total searchlights. Lower values reduce memory usage but may impact 
-        performance. This controls how searchlights are grouped for processing - each batch is
-        processed sequentially, while searchlights within a batch are processed in parallel.
+  \item \code{batch_size}: Integer specifying how many searchlights (ROIs) are grouped
+        into a single batch for processing by \code{\link{mvpa_iterate}}. Each batch is
+        launched sequentially, while ROIs within a batch are processed in parallel (using
+        the active \pkg{future}/\pkg{furrr} plan). The default is 10\% of the total number
+        of searchlights. Smaller values lower peak memory usage and can improve load
+        balancing, at the cost of more scheduling overhead; larger values reduce overhead
+        but require more memory per worker. As a rule of thumb, start with the default,
+        decrease \code{batch_size} if you hit memory limits, and increase it if you have
+        many ROIs, ample RAM, and see low CPU utilization.
 }}
 }
 \value{

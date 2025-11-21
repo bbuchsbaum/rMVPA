@@ -6,7 +6,6 @@
     GNU Fortran (GCC) 14.2.0
 * running under: macOS Sonoma 14.3
 * using session charset: UTF-8
-* using options ‘--no-manual --no-build-vignettes’
 * checking for file ‘./DESCRIPTION’ ... ERROR
 Required field missing or empty:
   ‘Author’

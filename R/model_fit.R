@@ -153,7 +153,14 @@ tune_model <- function(mspec, x, y, wts, param_grid, nreps = 10) {
 #' provided training data.
 #'
 #' @param obj An object of class \code{mvpa_model}.
-#' @inheritParams fit_model
+#' @param roi_x An ROI containing the training data.
+#' @param y The response vector.
+#' @param wts A set of case weights.
+#' @param param Tuning parameters.
+#' @param lev Factor levels (for classification).
+#' @param last Logical indicating if this is the last iteration.
+#' @param classProbs Logical indicating if class probabilities should be returned.
+#' @param ... Additional arguments to be passed to the method-specific function.
 #' @return A fitted model object with additional attributes
 #'   \code{"obsLevels"} and \code{"problemType"}.
 #' @rdname fit_model-methods

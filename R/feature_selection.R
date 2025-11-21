@@ -90,9 +90,7 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
     medY <- median(Y)
     Y <- factor(ifelse(Y > medY, "high", "low"))
   }
-  
-  
-  sda.1 <- sda.ranking(as.matrix(X), Y, ranking.score=ranking.score, fdr=FALSE, verbose=FALSE)
+  sda.1 <- quiet_sda_ranking(as.matrix(X), Y, ranking.score=ranking.score, fdr=FALSE, verbose=FALSE)
   
   keep.idx <- if (obj$cutoff_type == "top_k") {
     k <- min(ncol(X), obj$cutoff_value)
@@ -197,4 +195,3 @@ print.feature_selector <- function(x, ...) {
   cat("Cutoff Value:  ", x$cutoff_value, "\\n")
   invisible(x)
 }
-

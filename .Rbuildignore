@@ -28,3 +28,5 @@ test2
 ^vignettes/Searchlight_Analysis_callr2_files$
 ^vignettes/albers\.css$
 ^vignettes/albers\.js$
+^test_debug_logging\.R$
+^tmp_test_vec\.nii$

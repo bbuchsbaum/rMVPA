@@ -10,7 +10,9 @@ do_randomized(
   niter,
   mvpa_fun = mvpa_iterate,
   combiner = pool_randomized,
-  ...
+  ...,
+  chunk_size = NULL,
+  return_pobserved = TRUE
 )
 }
 \arguments{

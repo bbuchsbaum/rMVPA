@@ -7,7 +7,7 @@
 \method{run_searchlight}{default}(
   model_spec,
   radius = 8,
-  method = c("randomized", "standard"),
+  method = c("standard", "randomized", "resampled"),
   niter = 4,
   combiner = "average",
   ...

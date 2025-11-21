@@ -101,9 +101,15 @@
 #'   dummy_space <- neuroim2::NeuroSpace(c(n_voxels, 1, 1, n_samples))
 #'   dummy_sl_vec <- neuroim2::NeuroVec(dummy_array, dummy_space)
 #'
-#'   dummy_mask <- neuroim2::NeuroVol(array(1, c(n_voxels, 1, 1)), neuroim2::NeuroSpace(c(n_voxels, 1, 1)))
+#'   dummy_mask <- neuroim2::NeuroVol(
+#'     array(1, c(n_voxels, 1, 1)),
+#'     neuroim2::NeuroSpace(c(n_voxels, 1, 1))
+#'   )
 #'
-#'   condition_labels <- factor(rep(paste0("cond", LETTERS[1:n_conditions]), each = n_samples / n_conditions))
+#'   condition_labels <- factor(
+#'     rep(paste0("cond", LETTERS[1:n_conditions]),
+#'         each = n_samples / n_conditions)
+#'   )
 #'   run_labels <- factor(rep(1:n_runs, each = n_samples / n_runs))
 #'
 #'   # Create mvpa_dataset (without Y and block_var)
@@ -1165,6 +1171,95 @@ merge_results.contrast_rsa_model <- function(obj, result_set, indices, id, ...) 
   )
 }
 
+#' Process ROI for contrast_rsa_model
+#'
+#' Runs the MS-ReVE training pipeline for a single ROI/searchlight, ensuring the
+#' necessary searchlight metadata (center voxel IDs) and cross-validation spec
+#' are forwarded to \code{train_model.contrast_rsa_model}. This avoids the
+#' classification/regression dispatch used in \code{process_roi.default}.
+#'
+#' @param mod_spec A \code{contrast_rsa_model} object.
+#' @param roi ROI object containing \code{train_roi}.
+#' @param rnum Identifier for the ROI/searchlight (typically the center voxel's global index).
+#' @param center_global_id Optional global ID of the center voxel.
+#' @param ... Additional arguments forwarded to \code{train_model.contrast_rsa_model} (e.g., \code{cv_spec}).
+#'
+#' @export
+#' @method process_roi contrast_rsa_model
+process_roi.contrast_rsa_model <- function(mod_spec,
+                                           roi,
+                                           rnum,
+                                           center_global_id = NA,
+                                           ...) {
+
+  sl_data <- as.matrix(neuroim2::values(roi$train_roi))
+  ind     <- neuroim2::indices(roi$train_roi)
+
+  # Basic sanity checks
+  if (nrow(sl_data) < 2L || ncol(sl_data) < 1L) {
+    return(tibble::tibble(
+      result = list(NULL),
+      indices = list(ind),
+      performance = list(NULL),
+      id = rnum,
+      error = TRUE,
+      error_message = "contrast_rsa_model: ROI too small (need >=2 rows and >=1 column)."
+    ))
+  }
+
+  # Map center_global_id to local column index if provided
+  center_local_id <- NA
+  if (!is.na(center_global_id)) {
+    center_local_id <- match(center_global_id, ind)
+    if (is.na(center_local_id)) {
+      return(tibble::tibble(
+        result = list(NULL),
+        indices = list(ind),
+        performance = list(NULL),
+        id = rnum,
+        error = TRUE,
+        error_message = sprintf("Center voxel %s not present in ROI %s after filtering.", center_global_id, rnum)
+      ))
+    }
+  }
+
+  sl_info <- list(
+    center_local_id = center_local_id,
+    center_global_id = center_global_id
+  )
+
+  dots <- list(...)
+  train_args <- c(list(mod_spec, sl_data, sl_info = sl_info), dots)
+
+  # Provide cv_spec if not injected via dots
+  if (is.null(train_args$cv_spec)) {
+    if (!is.null(mod_spec$cv_spec)) {
+      train_args$cv_spec <- mod_spec$cv_spec
+    } else if (!is.null(mod_spec$crossval)) {
+      train_args$cv_spec <- mod_spec$crossval
+    }
+  }
+
+  train_result_obj <- try(do.call(train_model, train_args), silent = TRUE)
+
+  if (inherits(train_result_obj, "try-error")) {
+    error_msg <- attr(train_result_obj, "condition")$message
+    result_set <- tibble::tibble(
+      result = list(NULL),
+      error = TRUE,
+      error_message = ifelse(is.null(error_msg), "Unknown training error", error_msg)
+    )
+  } else {
+    result_set <- tibble::tibble(
+      result = list(train_result_obj),
+      error = FALSE,
+      error_message = "~"
+    )
+  }
+
+  merge_results(mod_spec, result_set, indices = ind, id = rnum)
+}
+
 #' Run Searchlight Analysis for Contrast RSA Model
 #'
 #' This is the S3 method for running a searchlight analysis specifically for a
@@ -1263,10 +1358,11 @@ merge_results.contrast_rsa_model <- function(obj, result_set, indices, id, ...) 
 #' @export
 #' @importFrom futile.logger flog.info
 run_searchlight.contrast_rsa_model <- function(model_spec,
-                                                 radius = NULL,
-                                                 method = c("standard", "randomized"),
-                                                 niter = NULL, # niter only relevant for randomized
-                                                 ...) {
+                                                radius = NULL,
+                                                method = c("standard", "randomized"),
+                                                niter = NULL, # niter only relevant for randomized
+                                                drop_probs = FALSE,
+                                                ...) {
   method <- match.arg(method)
 
   # Currently, only standard method is fully recommended with the specific combiner
@@ -1286,10 +1382,10 @@ run_searchlight.contrast_rsa_model <- function(model_spec,
   if (method == "standard") {
     futile.logger::flog.info("Running standard MS-ReVE/Contrast RSA searchlight (radius = %s)", radius)
     # Pass the specific combiner for contrast RSA
-    do_standard(model_spec, radius, combiner = the_combiner, ...)
+    do_standard(model_spec, radius, combiner = the_combiner, drop_probs = drop_probs, ...)
   } else { # method == "randomized"
     futile.logger::flog.info("Running randomized MS-ReVE/Contrast RSA searchlight (radius = %s, niter = %s)", radius, niter)
     # Pass the specific combiner for contrast RSA - Note: Applicability might need review
-    do_randomized(model_spec, radius, niter = niter, combiner = the_combiner, ...)
+    do_randomized(model_spec, radius, niter = niter, combiner = the_combiner, drop_probs = drop_probs, ...)
   }
 } 

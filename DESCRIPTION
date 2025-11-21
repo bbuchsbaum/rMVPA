@@ -86,6 +86,7 @@ Collate:
     'hrfdecoder_model.R'
     'naive_xdec_model.R'
     'remap_rrr_model.R'
+    'run_searchlight_remap_rrr.R'
     'era_rsa_design.R'
     'era_rsa_model.R'
     'remap_utils.R'
@@ -95,7 +96,6 @@ Collate:
     'repnet_model.R'
 RoxygenNote: 7.3.3
 Suggests:
-    c060,
     covr,
     doParallel,
     e1071,
@@ -115,6 +115,7 @@ Suggests:
     spls,
     testthat,
     rrpack,
+    withr,
     xgboost,
     yaml
 Remotes:

@@ -195,6 +195,21 @@ process_roi.repnet_model <- function(mod_spec,
       keep <- rownames(cf) != "(Intercept)"
       beta <- cf[keep, "Estimate"]
       names(beta) <- rownames(cf)[keep]
+
+      # If confounds are present, compute a partial (residual-residual) effect for seed
+      if ("seed" %in% names(mm) && length(mm) > 1L) {
+        conf_df <- as.data.frame(mm[names(mm) != "seed"], stringsAsFactors = FALSE)
+        resid_seed <- try(stats::lm(mm$seed ~ ., data = conf_df)$residuals, silent = TRUE)
+        if (!inherits(resid_seed, "try-error")) {
+          pc <- suppressWarnings(stats::cor(resid_seed, d_roi,
+                                            method = mod_spec$simfun,
+                                            use = "complete.obs"))
+          if (is.finite(pc)) {
+            beta["seed"] <- pc
+          }
+        }
+      }
+
       beta_vec <- beta
     }
 

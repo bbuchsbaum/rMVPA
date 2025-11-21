@@ -2,7 +2,7 @@ test_that("resampled searchlight respects mask size and uses total samples", {
   set.seed(123)
 
   D <- c(4, 4, 4)
-  nobs <- 5
+  nobs <- 18  # Increased from 5 to ensure sufficient paired items (3 levels * 6 reps)
   space_tr <- neuroim2::NeuroSpace(c(D, nobs))
   space_te <- neuroim2::NeuroSpace(c(D, nobs))
   train <- neuroim2::NeuroVec(array(rnorm(prod(D) * nobs), c(D, nobs)), space_tr)
@@ -31,7 +31,7 @@ test_that("resampled searchlight supports vector radii", {
   set.seed(321)
 
   D <- c(3, 3, 3)
-  nobs <- 4
+  nobs <- 12  # Increased from 4 to ensure sufficient paired items (2 levels * 6 reps)
   train <- neuroim2::NeuroVec(array(rnorm(prod(D) * nobs), c(D, nobs)), neuroim2::NeuroSpace(c(D, nobs)))
   test  <- neuroim2::NeuroVec(array(rnorm(prod(D) * nobs), c(D, nobs)), neuroim2::NeuroSpace(c(D, nobs)))
 

@@ -57,7 +57,7 @@ filter_roi.default <- function(roi, preserve = NULL, ...) {
 
 #' @keywords internal
 #' @importFrom neuroim2 ROIVec space coords values
-filter_roi.ROIVec <- function(roi, preserve = NULL, ...) {
+filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Extract the train data values
   trdat <- values(roi$train_roi)
   
@@ -69,7 +69,7 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, ...) {
   
   # Determine columns to keep
   keep <- !nas & sdnonzero
-  
+
   # Preserve specified voxel if requested (e.g., center voxel in searchlight)
   if (!is.null(preserve)) {
     gi <- neuroim2::indices(roi$train_roi)
@@ -79,10 +79,11 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, ...) {
       keep[kp] <- TRUE
     }
   }
-  
-  # If no valid columns are found, throw an error
-  if (sum(keep) == 0) {
-    stop("filter_roi: roi has no valid columns")
+
+  # Need at least 2 valid columns for multivariate analysis
+  # (even with preserve, searchlight edges need multiple voxels)
+  if (sum(keep) < min_voxels) {
+    stop(sprintf("filter_roi: roi has %d valid columns (need at least %d)", sum(keep), min_voxels))
   }
   
   # If there's no test ROI data, return filtered train ROI data only
@@ -108,8 +109,34 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, ...) {
 }
 
 #' @keywords internal
+#' @noRd
+filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
+  # Expect a list with train_roi/test_roi as produced by as_roi()
+  if (!is.list(roi) || is.null(roi$train_roi)) {
+    stop("filter_roi.list: expected list with train_roi/test_roi")
+  }
+  filtered <- filter_roi(roi$train_roi, preserve = preserve, min_voxels = min_voxels, ...)
+  list(train_roi = filtered$train_roi,
+       test_roi  = if (!is.null(roi$test_roi)) {
+         # Apply the same voxel filter to the test ROI if present
+         # Use the logical mask from filtered train ROI indices
+         keep_idx <- neuroim2::indices(filtered$train_roi)
+         orig_idx <- neuroim2::indices(roi$train_roi)
+         kp <- match(keep_idx, orig_idx)
+         # Guard against mismatch
+         if (any(is.na(kp))) {
+           roi$test_roi
+         } else {
+           neuroim2::ROIVec(neuroim2::space(roi$test_roi),
+                            neuroim2::coords(roi$test_roi)[kp,,drop=FALSE],
+                            data = neuroim2::values(roi$test_roi)[, kp, drop = FALSE])
+         }
+       } else NULL)
+}
+
+#' @keywords internal
 #' @importFrom neurosurf ROISurfaceVector geometry nodes
-filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, ...) {
+filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Extract the train data values
   trdat <- roi$train_roi@data
   
@@ -131,10 +158,11 @@ filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, ...) {
       keep[kp] <- TRUE
     }
   }
-  
-  # If no valid columns are found, throw an error
-  if (sum(keep) == 0) {
-    stop("filter_roi: roi has no valid columns")
+
+  # Need at least 2 valid columns for multivariate analysis
+  # (even with preserve, searchlight edges need multiple voxels)
+  if (sum(keep) < min_voxels) {
+    stop(sprintf("filter_roi: roi has %d valid columns (need at least %d)", sum(keep), min_voxels))
   }
   
   # If there's no test ROI data, return filtered train ROI data only
@@ -192,15 +220,17 @@ as_roi.data_sample <- function(obj, data, ...) {
     invalid_vox <- setdiff(obj$vox, mask_indices)
 
     if (length(invalid_vox) > 0) {
-      futile.logger::flog.warn("as_roi.data_sample: %d voxel indices are outside the mask (e.g., %s). Filtering to mask.",
-                              length(invalid_vox), paste(head(invalid_vox, 3), collapse=", "))
+      futile.logger::flog.debug("as_roi.data_sample: %d voxel indices are outside the mask. Filtering to mask (normal for edge searchlights).",
+                              length(invalid_vox))
       # Filter to only valid mask indices
       obj$vox <- intersect(obj$vox, mask_indices)
 
-      if (length(obj$vox) < 2) {
-        futile.logger::flog.debug("as_roi.data_sample: After mask filtering, ROI has < 2 voxels. Returning error ROI.")
+      # Don't fail here for <2 voxels - let filter_roi and extract_roi handle that
+      # This is important for searchlights where partial spheres at brain edges are expected
+      if (length(obj$vox) == 0) {
+        futile.logger::flog.debug("as_roi.data_sample: After mask filtering, ROI has 0 voxels. Returning error ROI.")
         # Return a try-error to signal failure
-        train_roi <- structure(list(message = "Insufficient voxels after mask filtering"),
+        train_roi <- structure(list(message = "No voxels remaining after mask filtering"),
                               class = "try-error")
         return(list(train_roi = train_roi, test_roi = NULL))
       }

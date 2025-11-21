@@ -4,7 +4,14 @@
 \alias{pool_randomized}
 \title{Combine randomized searchlight results by pooling}
 \usage{
-pool_randomized(model_spec, good_results, bad_results)
+pool_randomized(
+  model_spec,
+  good_results,
+  bad_results = NULL,
+  chunk_size = NULL,
+  return_pobserved = TRUE,
+  ...
+)
 }
 \arguments{
 \item{model_spec}{An object specifying the model used in the searchlight analysis.}

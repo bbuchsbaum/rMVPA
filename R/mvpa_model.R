@@ -51,7 +51,8 @@ merge_results.mvpa_model <- function(obj, result_set, indices, id, ...) {
   # Check if any errors occurred during the process
   if (any(result_set$error)) {
     emessage <- result_set$error_message[which(result_set$error)[1]]
-    tibble::tibble(result=list(NULL), indices=list(indices), performance=list(NULL), error=TRUE, error_message=emessage)
+    tibble::tibble(result=list(NULL), indices=list(indices), performance=list(NULL),
+                   id=id, error=TRUE, error_message=emessage)
   } else {
     # If no errors, wrap the result and compute performance if required
     cres <- if (obj$return_fit) {
@@ -256,8 +257,10 @@ create_model_spec <- function(name, dataset, design, return_predictions=FALSE,
 #'   c(accuracy=sum(result$observed == result$predicted)/length(result$observed))
 #' }
 #' mvpmod <- mvpa_model(mod, dataset=mvdset, design=mvdes, crossval=cval, performance=custom_perf)
-#' ret <- run_searchlight(mvpmod)
-#' stopifnot("accuracy" %in% ret$metrics)
+#' \donttest{
+#'   ret <- run_searchlight(mvpmod, radius = 1)
+#'   stopifnot("accuracy" %in% ret$metrics)
+#' }
 mvpa_model <- function(model, 
                        dataset,
                        design,

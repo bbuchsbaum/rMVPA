@@ -7,7 +7,7 @@
 \method{run_searchlight}{vector_rsa}(
   model_spec,
   radius = 8,
-  method = c("randomized", "standard"),
+  method = c("randomized", "standard", "resampled"),
   niter = 4,
   ...
 )

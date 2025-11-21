@@ -24,17 +24,6 @@ wrap_out <- function(perf_mat, dataset, ids = NULL) {
 
   validate_wrap_inputs(perf_mat, ids)
 
-  # Drop metrics (columns) that are entirely NA across all ROIs.
-  # This commonly occurs for optional metrics that were never computed
-  # (e.g., ERA-RSA block/lag/run metrics when no corresponding inputs
-  # were provided). Keeping all-NA columns would just produce empty maps.
-  if (!is.null(perf_mat) && ncol(perf_mat) > 0L) {
-    col_all_na <- colSums(!is.na(perf_mat)) == 0L
-    if (any(col_all_na)) {
-      perf_mat <- perf_mat[, !col_all_na, drop = FALSE]
-    }
-  }
-
   if (is_perf_empty(perf_mat)) {
     return(empty_searchlight_result(dataset))
   }
@@ -378,10 +367,14 @@ combine_standard <- function(model_spec, good_results, bad_results) {
     # prob_observed for classification results, when available.
     has_results <- any(unlist(purrr::map(good_results$result, function(x) !is.null(x))))
     if (has_results) {
-      pob_list <- good_results %>%
-        dplyr::select(result) %>%
-        dplyr::pull(result) %>%
-        purrr::map(~ prob_observed(.))
+      pob_list <- if ("prob_observed" %in% names(good_results)) {
+        good_results$prob_observed
+      } else {
+        good_results %>%
+          dplyr::select(result) %>%
+          dplyr::pull(result) %>%
+          purrr::map(~ prob_observed(.))
+      }
 
       if (any(!vapply(pob_list, is.null, logical(1)))) {
         if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
@@ -582,7 +575,7 @@ combine_vector_rsa_standard <- function(model_spec, good_results, bad_results) {
 #' @param good_results A data frame containing the successful classifier results.
 #' @param bad_results A data frame containing the unsuccessful classifier results.
 #' @return A list containing the combined and normalized performance matrix along with other information from the dataset.
-combine_randomized <- function(model_spec, good_results, bad_results=NULL) {
+combine_randomized <- function(model_spec, good_results, bad_results=NULL, ...) {
   futile.logger::flog.debug("combine_randomized: Starting with %d ROI results", nrow(good_results))
 
   # Check if we have results
@@ -774,35 +767,114 @@ do_merge_results <- function(r1, good_results) {
 #' @param good_results A data frame containing the valid searchlight results.
 #' @param bad_results A data frame containing the invalid searchlight results.
 #' @return An object containing the combined searchlight results.
-pool_randomized <- function(model_spec, good_results, bad_results) {
+pool_randomized <- function(model_spec,
+                            good_results,
+                            bad_results = NULL,
+                            chunk_size = NULL,
+                            return_pobserved = TRUE,
+                            ...) {
   if (nrow(good_results) == 0) {
     stop("searchlight: no searchlight samples produced valid results")
   }
-  
-  
-  merged_results <- pool_results(good_results)
-  
-  # Get prob_observed values - these may be NULL for regression
-  pob_list <- merged_results %>% purrr::map(~ prob_observed(.))
-  
-  # Only process pobserved if we have non-NULL values (i.e., classification results)
-  pobserved <- NULL
-  if (any(!sapply(pob_list, is.null))) {
-    # Filter out NULL values (from regression results)
-    pob_list <- pob_list[!sapply(pob_list, is.null)]
-    
-    if (length(pob_list) > 0) {
-      pobserved <- as.data.frame(do.call(cbind, pob_list), stringsAsFactors = FALSE)
-      if (is.null(colnames(pobserved)) || any(colnames(pobserved) == "")) {
-        colnames(pobserved) <- paste0("class_", seq_len(ncol(pobserved)))
-      }
-    }
+  # Heuristic: aim for ~20 chunks, bounded to avoid extremes.
+  # This keeps temporary merged objects small without paying excessive loop overhead.
+  nvox <- length(unique(unlist(good_results$indices)))
+  chunk_size <- if (is.null(chunk_size) || is.na(chunk_size) || chunk_size <= 0) {
+    as.integer(max(1000L, min(50000L, ceiling(nvox / 20))))
+  } else {
+    max(1L, as.integer(chunk_size))
   }
-  
-  ind_set <- sort(unique(unlist(good_results$indices)))
+
+  # Build voxel -> ROI map (keeps deterministic ordering)
+  indmap <- do.call(rbind, lapply(seq_len(nrow(good_results)), function(i) {
+    cbind(i, good_results$indices[[i]])
+  }))
+  respsets <- split(indmap[, 1], indmap[, 2])
+  ind_set <- as.integer(names(respsets))
+
+  # Prototype for metrics and optional pobserved
+  proto_merge <- do_merge_results(respsets[[1]], good_results)
+  proto_perf  <- compute_performance(model_spec, proto_merge)
+  perf_names  <- names(proto_perf)
+  ncols       <- length(proto_perf)
+  if (is.null(perf_names)) {
+    perf_names <- paste0("Metric", seq_len(ncols))
+  }
+
+  proto_pobs <- if (return_pobserved) prob_observed(proto_merge) else NULL
+  keep_pobs  <- return_pobserved && !is.null(proto_pobs)
+  n_trials   <- if (keep_pobs) length(proto_pobs) else 0L
+
+  nvox <- length(ind_set)
+  trip_len <- nvox * ncols
+  I_perf <- integer(trip_len)
+  J_perf <- integer(trip_len)
+  X_perf <- numeric(trip_len)
+
+  if (keep_pobs) {
+    pobs_mat <- matrix(NA_real_, nrow = n_trials, ncol = nvox)
+  }
+
+  fill_voxel_block <- function(block_inds, block_offset) {
+    for (i in seq_along(block_inds)) {
+      voxel_id <- block_inds[i]
+      rset     <- respsets[[as.character(voxel_id)]]
+      merged   <- do_merge_results(rset, good_results)
+
+      # performance
+      perf_vec <- compute_performance(model_spec, merged)
+      perf_num <- as.numeric(perf_vec)
+      if (length(perf_num) != ncols) {
+        futile.logger::flog.warn(
+          "pool_randomized: performance length mismatch for voxel %s (expected %s, got %s)",
+          voxel_id, ncols, length(perf_num)
+        )
+        perf_num <- rep(NA_real_, ncols)
+      }
+      idx_range <- ((block_offset + i - 1L) * ncols + 1L):((block_offset + i) * ncols)
+      I_perf[idx_range] <<- voxel_id
+      J_perf[idx_range] <<- seq_len(ncols)
+      X_perf[idx_range] <<- perf_num
+
+      # pobserved
+      if (keep_pobs) {
+        pobs_vec <- prob_observed(merged)
+        if (is.null(pobs_vec)) {
+          pobs_vec <- rep(NA_real_, n_trials)
+        } else if (length(pobs_vec) != n_trials) {
+          futile.logger::flog.warn(
+            "pool_randomized: prob_observed length mismatch for voxel %s (expected %s, got %s)",
+            voxel_id, n_trials, length(pobs_vec)
+          )
+          pobs_vec <- rep(NA_real_, n_trials)
+        }
+        pobs_mat[, block_offset + i] <<- pobs_vec
+      }
+
+      rm(merged)
+    }
+    invisible()
+  }
+
+  # Stream through voxels in chunks
+  voxel_indices <- seq_len(nvox)
+  block_starts  <- seq(1L, nvox, by = chunk_size)
+  for (bs in block_starts) {
+    be <- min(bs + chunk_size - 1L, nvox)
+    fill_voxel_block(ind_set[bs:be], bs - 1L)
+    # Light GC hint; avoid forced collection
+    if ((be - bs + 1L) * ncols > 1e6) gc(FALSE)
+  }
+
+  perf_mat <- Matrix::sparseMatrix(
+    i    = I_perf,
+    j    = J_perf,
+    x    = X_perf,
+    dims = c(length(model_spec$dataset$mask), ncols)
+  )
+  colnames(perf_mat) <- perf_names
 
   all_ids <- which(model_spec$dataset$mask > 0)
-  ## if we did not get a result for all voxel ids returned results...
   mask <- if (length(ind_set) != length(all_ids)) {
     mask <- model_spec$dataset$mask
     keep <- all_ids %in% ind_set
@@ -811,31 +883,16 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
   } else {
     model_spec$dataset$mask
   }
-  
-  
-  # Only create SparseNeuroVec for pobserved if we have classification results
-  if (!is.null(pobserved)) {
-    pobserved <- SparseNeuroVec(as.matrix(pobserved), neuroim2::space(mask), mask=as.logical(mask))
+
+  ret <- wrap_out(perf_mat, model_spec$dataset, ids = NULL)
+
+  if (keep_pobs) {
+    if (is.null(colnames(pobs_mat)) || any(colnames(pobs_mat) == "")) {
+      colnames(pobs_mat) <- paste0("class_", seq_len(ncol(pobs_mat)))
+    }
+    ret$pobserved <- SparseNeuroVec(as.matrix(pobs_mat), neuroim2::space(mask), mask = as.logical(mask))
   }
-  
-  #perf_list <- furrr::future_map(merged_results, function(res) compute_performance(model_spec, res))
-  perf_list <- purrr::map(merged_results, function(res) compute_performance(model_spec, res))
-  
-  ncols <- length(perf_list[[1]])
-  pmat <- do.call(rbind, perf_list)
-  
-  perf_mat <- Matrix::sparseMatrix(i=rep(ind_set, ncols), j=rep(1:ncols, each=length(ind_set)), 
-                                   x=as.vector(pmat), dims=c(length(model_spec$dataset$mask), ncols))
-  
-  
-  colnames(perf_mat) <- names(perf_list[[1]])
-  ret <- wrap_out(perf_mat, model_spec$dataset, ids=NULL) 
-  
-  # Only add pobserved if it's not NULL (i.e., for classification results)
-  if (!is.null(pobserved)) {
-    ret$pobserved <- pobserved
-  }
-  
+
   ret
 }
 
@@ -858,10 +915,17 @@ pool_randomized <- function(model_spec, good_results, bad_results) {
 do_randomized <- function(model_spec, radius, niter, 
                          mvpa_fun=mvpa_iterate, 
                          combiner=pool_randomized, 
-                         ...) {
+                         ...,
+                         chunk_size = NULL,
+                         return_pobserved = TRUE,
+                         drop_probs = FALSE) {
   error=NULL
   total_models <- 0
   total_errors <- 0
+  
+  if (drop_probs && identical(combiner, pool_randomized)) {
+    stop("drop_probs = TRUE is incompatible with combiner=pool_randomized (probs are required for merging). Choose combiner='average' or FALSE.")
+  }
   
   futile.logger::flog.info("Starting randomized searchlight analysis:")
   futile.logger::flog.info("- Radius: %s", crayon::blue(radius))
@@ -886,7 +950,7 @@ do_randomized <- function(model_spec, radius, niter,
     futile.logger::flog.debug("do_randomized iter %d: Calling mvpa_fun with %d ROIs", i, length(slight))
 
     result <- tryCatch({
-      mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", ...)
+      mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", drop_probs = drop_probs, ...)
     }, error = function(e) {
       futile.logger::flog.error("do_randomized iter %d: mvpa_fun threw error: %s", i, e$message)
       # Return a tibble with all errors to maintain structure
@@ -938,17 +1002,50 @@ do_randomized <- function(model_spec, radius, niter,
     futile.logger::flog.info("- Failed ROIs: %s (%s%%)", 
                             crayon::yellow(total_errors),
                             crayon::yellow(sprintf("%.1f", total_errors/(total_models + total_errors)*100)))
+    # Surface the most common failure reasons
+    top_errs <- sort(table(bad_results$error_message), decreasing = TRUE)
+    if (length(top_errs) > 0) {
+      top_errs <- head(top_errs, 3L)
+      futile.logger::flog.info("- Top failure causes:")
+      for (msg in names(top_errs)) {
+        futile.logger::flog.info("    - %s (n=%s)", msg, top_errs[[msg]])
+      }
+    }
   } else {
     futile.logger::flog.info("- All ROIs processed successfully!")
   }
   
   if (nrow(good_results) == 0) {
-    futile.logger::flog.error("No valid results for randomized searchlight")
-    stop("No valid results produced")
+    futile.logger::flog.warn(
+      "do_randomized: all randomized ROIs failed across %d iteration(s); returning NA maps sized to mask.",
+      niter
+    )
+    mask_ids <- which(model_spec$dataset$mask > 0)
+    if (length(mask_ids) == 0) {
+      stop("do_randomized: all ROIs failed and mask has zero active voxels.")
+    }
+    metric_name <- "NA_metric"
+    na_vec <- rep(NA_real_, length(mask_ids))
+    na_map <- if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
+      build_surface_map(model_spec$dataset, na_vec, mask_ids)
+    } else {
+      build_volume_map(model_spec$dataset, na_vec, mask_ids)
+    }
+    return(structure(
+      list(
+        results = setNames(list(na_map), metric_name),
+        n_voxels = estimate_mask_size(model_spec$dataset),
+        active_voxels = length(mask_ids),
+        metrics = metric_name
+      ),
+      class = c("searchlight_result", "list")
+    ))
   }
 
   futile.logger::flog.debug("do_randomized: Calling combiner function with %d good results", nrow(good_results))
-  result <- combiner(model_spec, good_results)
+  result <- combiner(model_spec, good_results, bad_results,
+                     chunk_size = chunk_size,
+                     return_pobserved = return_pobserved)
   futile.logger::flog.debug("do_randomized: Combiner complete, returning results")
   result
 }
@@ -966,13 +1063,21 @@ do_randomized <- function(model_spec, radius, niter,
 #' @param mvpa_fun The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).
 #' @param combiner The function to be used to combine results (default is \code{combine_randomized}).
 #' @param ... Additional arguments to be passed to the MVPA function.
+#' @param drop_probs Logical; drop per-ROI probability matrices after computing metrics (default \code{FALSE}).
+#' @param return_pobserved Logical; placeholder for API symmetry with randomized searchlight. Currently ignored because \code{combine_randomized} does not aggregate prob-observed.
 do_resampled <- function(model_spec, radius, niter,
                         mvpa_fun = mvpa_iterate,
                         combiner = combine_randomized,
-                        ...) {
+                        ...,
+                        drop_probs = FALSE,
+                        return_pobserved = FALSE) {
   futile.logger::flog.info("Starting resampled searchlight analysis:")
   futile.logger::flog.info("- Radius: %s", crayon::blue(paste(radius, collapse = ", ")))
   futile.logger::flog.info("- Samples: %s", crayon::blue(niter))
+  
+  if (drop_probs && identical(combiner, pool_randomized)) {
+    stop("drop_probs = TRUE is incompatible with combiner=pool_randomized (probs are required for merging). Choose combiner='average' or set drop_probs=FALSE.")
+  }
 
   slight <- get_searchlight(model_spec$dataset, type = "resampled", radius = radius, iter = niter)
   futile.logger::flog.debug("do_resampled: Got %d ROIs, extracting center indices", length(slight))
@@ -984,7 +1089,7 @@ do_resampled <- function(model_spec, radius, niter,
   }
 
   result <- tryCatch({
-    mvpa_fun(model_spec, slight, cind, analysis_type = "searchlight", ...)
+    mvpa_fun(model_spec, slight, cind, analysis_type = "searchlight", drop_probs = drop_probs, ...)
   }, error = function(e) {
     futile.logger::flog.error("do_resampled: mvpa_fun threw error: %s", e$message)
     tibble::tibble(
@@ -1046,7 +1151,7 @@ do_resampled <- function(model_spec, radius, niter,
 #' @param mvpa_fun The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).
 #' @param combiner The function to be used to combine results (default is \code{combine_standard}).
 #' @param ... Additional arguments to be passed to the MVPA function.
-do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ...) {
+do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ..., drop_probs = FALSE) {
   error=NULL
   flog.info("creating standard searchlight")
   t_sl_create <- proc.time()[3]
@@ -1056,7 +1161,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   t_iterate <- proc.time()[3]
   cind <- which(model_spec$dataset$mask > 0)
   flog.info("running standard searchlight iterator")
-  ret <- mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", ...)
+  ret <- mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", drop_probs = drop_probs, ...)
   flog.debug("mvpa_iterate (standard searchlight) took %.3f sec",
              proc.time()[3] - t_iterate)
   good_results <- ret %>% dplyr::filter(!error)
@@ -1115,9 +1220,10 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' @export
 run_searchlight_base <- function(model_spec,
                                  radius = 8,
-                                 method = c("randomized", "standard", "resampled"),
+                                 method = c("standard", "randomized", "resampled"),
                                  niter = 4,
                                  combiner = "average",
+                                 drop_probs = FALSE,
                                  ...) {
 
   
@@ -1199,13 +1305,13 @@ run_searchlight_base <- function(model_spec,
   # 4) Dispatch to do_standard or do_randomized
   res <- if (method == "standard") {
     flog.info("Running standard searchlight with radius = %s", radius)
-    do_standard(model_spec, radius, combiner = chosen_combiner, ...)
+    do_standard(model_spec, radius, combiner = chosen_combiner, drop_probs = drop_probs, ...)
   } else if (method == "randomized") {
     flog.info("Running randomized searchlight with radius = %s and niter = %s", radius, niter)
-    do_randomized(model_spec, radius, niter = niter, combiner = chosen_combiner, ...)
+    do_randomized(model_spec, radius, niter = niter, combiner = chosen_combiner, drop_probs = drop_probs, ...)
   } else { # resampled
     flog.info("Running resampled searchlight with radius = %s and samples = %s", radius, niter)
-    do_resampled(model_spec, radius, niter = niter, combiner = chosen_combiner, ...)
+    do_resampled(model_spec, radius, niter = niter, combiner = chosen_combiner, drop_probs = drop_probs, ...)
   }
   
   res
@@ -1221,14 +1327,15 @@ run_searchlight_base <- function(model_spec,
 #' @inheritParams run_searchlight_base
 #'
 #' @export
-run_searchlight.default <- function(model_spec, radius = 8, method = c("randomized","standard","resampled"),
-                                    niter = 4, combiner = "average", ...) {
+run_searchlight.default <- function(model_spec, radius = 8, method = c("standard","randomized","resampled"),
+                                    niter = 4, combiner = "average", drop_probs = FALSE, ...) {
   run_searchlight_base(
     model_spec    = model_spec,
     radius        = radius,
     method        = method,
     niter         = niter,
     combiner      = combiner,
+    drop_probs    = drop_probs,
     ...
   )
 }
@@ -1245,18 +1352,19 @@ run_searchlight.vector_rsa <- function(model_spec,
                                        radius = 8,
                                        method = c("randomized","standard","resampled"),
                                        niter = 4,
+                                       drop_probs = FALSE,
                                        ...) {
   method <- match.arg(method)
   
   if (method == "standard") {
     flog.info("Running standard vector RSA searchlight (radius = %s)", radius)
-    do_standard(model_spec, radius, mvpa_fun = vector_rsa_iterate, combiner = combine_vector_rsa_standard, ...)
+    do_standard(model_spec, radius, mvpa_fun = vector_rsa_iterate, combiner = combine_vector_rsa_standard, drop_probs = drop_probs, ...)
   } else if (method == "randomized") {
     flog.info("Running randomized vector RSA searchlight (radius = %s, niter = %s)", radius, niter)
-    do_randomized(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate, combiner = combine_randomized, ...)
+    do_randomized(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate, combiner = combine_randomized, drop_probs = drop_probs, ...)
   } else {
     flog.info("Running resampled vector RSA searchlight (radius = %s, samples = %s)", radius, niter)
-    do_resampled(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate, combiner = combine_randomized, ...)
+    do_resampled(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate, combiner = combine_randomized, drop_probs = drop_probs, ...)
   }
 }
 

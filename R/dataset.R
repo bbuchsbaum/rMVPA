@@ -88,9 +88,10 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     bspace <- neuroim2::NeuroSpace(c(D,nobs), spacing)
     bvec <- neuroim2::NeuroVec(mat, bspace)
     
-    mask <- as.logical(neuroim2::NeuroVol(array(rep(0, prod(D)), D), neuroim2::NeuroSpace(D, spacing)))
-    roi <- neuroim2::spherical_roi(mask, ceiling((dim(bspace)[1:3])/2), radius=ceiling(min(dim(bspace)/2)))
-    mask[coords(roi)] <- 1
+    # Use a dense mask by default so small synthetic datasets yield valid
+    # searchlights even at the edges (multivariate methods still enforce
+    # their own minimum voxel count down‑stream).
+    mask <- as.logical(neuroim2::NeuroVol(array(1, D), neuroim2::NeuroSpace(D, spacing)))
     
     if (external_test) {
       mat <- array(rnorm(prod(D)*ntest_obs), c(D,ntest_obs))
@@ -403,15 +404,21 @@ print.mvpa_surface_dataset <- function(x, ...) {
 
 #' @export
 #' @method get_searchlight mvpa_image_dataset
-get_searchlight.mvpa_image_dataset <- function(obj, type=c("standard", "randomized", "resampled"), radius=8, iter=NULL, ...) {
+#' @importFrom neuroim2 searchlight random_searchlight resampled_searchlight
+get_searchlight.mvpa_image_dataset <- function(obj,
+                                               type = c("standard", "randomized", "resampled"),
+                                               radius = 8,
+                                               iter = NULL,
+                                               nonzero = TRUE,
+                                               ...) {
   type <- match.arg(type)
   if (type == "standard") {
-    neuroim2::searchlight(obj$mask, radius=radius,...)
+    neuroim2::searchlight(obj$mask, radius = radius, nonzero = nonzero, ...)
   } else if (type == "randomized") {
-    neuroim2::random_searchlight(obj$mask, radius=radius,...)
+    neuroim2::random_searchlight(obj$mask, radius = radius, ...)
   } else { # resampled
     if (is.null(iter)) iter <- 1L
-    neuroim2::resampled_searchlight(obj$mask, radius=radius, iter=iter, ...)
+    neuroim2::resampled_searchlight(obj$mask, radius = radius, iter = iter, ...)
   }
 }
 
