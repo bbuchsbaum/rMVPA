@@ -7,7 +7,18 @@ gen_id <- function(n) {
 #' @keywords internal
 .get_samples <- function(obj, voxlist) {
   ret <- lapply(voxlist, function(vox) {
-    sam <- data_sample(obj, vox)
+    # Expand searchlight windows to full voxel indices when possible (duck-typed)
+    vox_expanded <- tryCatch({
+      coords <- tryCatch(vox@coords, error = function(...) NULL)
+      sp     <- tryCatch(vox@space,  error = function(...) NULL)
+      if (!is.null(coords) && !is.null(sp)) {
+        neuroim2::grid_to_index(sp, coords)
+      } else {
+        vox
+      }
+    }, error = function(...) vox)
+
+    sam <- data_sample(obj, vox_expanded)
   })
   
   n <- length(ret)
