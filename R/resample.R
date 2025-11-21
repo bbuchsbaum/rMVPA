@@ -83,6 +83,14 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Need at least 2 valid columns for multivariate analysis
   # (even with preserve, searchlight edges need multiple voxels)
   if (sum(keep) < min_voxels) {
+    reasons <- c()
+    if (any(nas)) reasons <- c(reasons, sprintf("NA voxels: %d", sum(nas)))
+    if (any(!sdnonzero)) reasons <- c(reasons, sprintf("zero-variance voxels: %d", sum(!sdnonzero)))
+    futile.logger::flog.debug(
+      "filter_roi.ROIVec: %d valid columns (< %d). Reasons: %s",
+      sum(keep), min_voxels,
+      paste(reasons, collapse = "; ")
+    )
     stop(sprintf("filter_roi: roi has %d valid columns (need at least %d)", sum(keep), min_voxels))
   }
   
