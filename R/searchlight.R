@@ -973,7 +973,12 @@ do_randomized <- function(model_spec, radius, niter,
                                i, class(result)[1], has_err_col)
       futile.logger::flog.error("This usually indicates an interrupted process or unexpected failure in mvpa_iterate")
       # Instead of aborting, wrap into an all-error row so the run can finish and report
-      msg <- sprintf("Invalid mvpa_fun result (iter %d): type=%s, has_error_col=%s", i, class(result)[1], has_err_col)
+      raw_desc <- tryCatch(
+        paste(utils::capture.output(utils::str(result, vec.len = 10, max.level = 1)), collapse = "\n"),
+        error = function(...) NA_character_
+      )
+      msg <- sprintf("Invalid mvpa_fun result (iter %d): type=%s, has_error_col=%s\nraw:%s",
+                     i, class(result)[1], has_err_col, raw_desc)
       result <- tibble::tibble(
         result = list(NULL),
         indices = list(NULL),
@@ -1123,7 +1128,12 @@ do_resampled <- function(model_spec, radius, niter,
     futile.logger::flog.error("do_resampled: mvpa_fun returned invalid result (type: %s, has_error_col: %s)",
                              class(result)[1], has_err_col)
     # Wrap into an error-only tibble to keep pipeline alive and surface the issue
-    msg <- sprintf("Invalid mvpa_fun result (resampled): type=%s, has_error_col=%s", class(result)[1], has_err_col)
+    raw_desc <- tryCatch(
+      paste(utils::capture.output(utils::str(result, vec.len = 10, max.level = 1)), collapse = "\n"),
+      error = function(...) NA_character_
+    )
+    msg <- sprintf("Invalid mvpa_fun result (resampled): type=%s, has_error_col=%s\nraw:%s",
+                   class(result)[1], has_err_col, raw_desc)
     result <- tibble::tibble(
       result = rep(list(NULL), length(cind)),
       indices = rep(list(NULL), length(cind)),
