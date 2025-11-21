@@ -55,6 +55,7 @@ Collate:
     'design.R'
     'feature_selection.R'
     'globals.R'
+    'manual_debug_helpers.R'
     'manova_model.R'
     'mvpa_iterate.R'
     'mvpa_model.R'
