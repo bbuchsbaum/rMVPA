@@ -1050,7 +1050,8 @@ do_randomized <- function(model_spec, radius, niter,
         active_voxels = length(mask_ids),
         metrics = metric_name
       ),
-      class = c("searchlight_result", "list")
+      class = c("searchlight_result", "list"),
+      bad_results = bad_results
     ))
   }
 
