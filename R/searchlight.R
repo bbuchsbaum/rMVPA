@@ -1059,6 +1059,7 @@ do_randomized <- function(model_spec, radius, niter,
                      chunk_size = chunk_size,
                      return_pobserved = return_pobserved)
   futile.logger::flog.debug("do_randomized: Combiner complete, returning results")
+  attr(result, "bad_results") <- bad_results
   result
 }
 
@@ -1158,6 +1159,7 @@ do_resampled <- function(model_spec, radius, niter,
   futile.logger::flog.debug("do_resampled: Calling combiner function with %d good results", nrow(good_results))
   res <- combiner(model_spec, good_results, bad_results)
   futile.logger::flog.debug("do_resampled: Combiner complete, returning results")
+  attr(res, "bad_results") <- bad_results
   res
 }
 
@@ -1214,6 +1216,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   flog.debug("Combiner '%s' took %.3f sec",
              deparse(substitute(combiner)),
              proc.time()[3] - t_combine)
+  attr(out, "bad_results") <- bad_results
   out
 }
 
