@@ -1362,6 +1362,7 @@ run_searchlight.contrast_rsa_model <- function(model_spec,
                                                 method = c("standard", "randomized"),
                                                 niter = NULL, # niter only relevant for randomized
                                                 drop_probs = FALSE,
+                                                fail_fast = FALSE,
                                                 ...) {
   method <- match.arg(method)
 
@@ -1382,10 +1383,12 @@ run_searchlight.contrast_rsa_model <- function(model_spec,
   if (method == "standard") {
     futile.logger::flog.info("Running standard MS-ReVE/Contrast RSA searchlight (radius = %s)", radius)
     # Pass the specific combiner for contrast RSA
-    do_standard(model_spec, radius, combiner = the_combiner, drop_probs = drop_probs, ...)
+    do_standard(model_spec, radius, combiner = the_combiner,
+                drop_probs = drop_probs, fail_fast = fail_fast, ...)
   } else { # method == "randomized"
     futile.logger::flog.info("Running randomized MS-ReVE/Contrast RSA searchlight (radius = %s, niter = %s)", radius, niter)
     # Pass the specific combiner for contrast RSA - Note: Applicability might need review
-    do_randomized(model_spec, radius, niter = niter, combiner = the_combiner, drop_probs = drop_probs, ...)
+    do_randomized(model_spec, radius, niter = niter, combiner = the_combiner,
+                  drop_probs = drop_probs, fail_fast = fail_fast, ...)
   }
 } 

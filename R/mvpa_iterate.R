@@ -491,16 +491,26 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                             crayon::blue(tot),
                             crayon::blue(processed_rois),
                             crayon::yellow(skipped_rois))
-    # Combine all results
-    final_results <- dplyr::bind_rows(results)
-    # Ensure any remaining futures are cleared and memory is reclaimed
-    # Clean up and run garbage collection
-    # Note: ClusterRegistry is no longer exported in future >= 1.34.0
-    gc()
-    return(final_results)
+  # Combine all results
+  final_results <- dplyr::bind_rows(results)
+  # Ensure any remaining futures are cleared and memory is reclaimed
+  # Clean up and run garbage collection
+  # Note: ClusterRegistry is no longer exported in future >= 1.34.0
+  gc()
+  return(final_results)
   }, error = function(e) {
     futile.logger::flog.error("mvpa_iterate failed: %s", e$message)
-    return(tibble::tibble())
+    # Return a well-formed error tibble so upstream callers don't crash
+    tibble::tibble(
+      result = list(NULL),
+      indices = list(NULL),
+      performance = list(NULL),
+      id = NA_integer_,
+      error = TRUE,
+      error_message = paste("mvpa_iterate fatal error:", e$message),
+      warning = TRUE,
+      warning_message = "mvpa_iterate fatal error"
+    )
   })
 }
 

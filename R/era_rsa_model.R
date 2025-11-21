@@ -437,6 +437,7 @@ run_searchlight.era_rsa_model <- function(model_spec,
                                           method = c("standard", "randomized"),
                                           niter = 4,
                                           drop_probs = FALSE,
+                                          fail_fast = FALSE,
                                           ...) {
   method <- match.arg(method)
 
@@ -446,6 +447,7 @@ run_searchlight.era_rsa_model <- function(model_spec,
                 combiner  = combine_standard,
                 processor = process_roi.era_rsa_model,
                 drop_probs = drop_probs,
+                fail_fast = fail_fast,
                 ...)
   } else {
     do_randomized(model_spec, radius,
@@ -454,6 +456,7 @@ run_searchlight.era_rsa_model <- function(model_spec,
                   combiner  = combine_randomized,
                   processor = process_roi.era_rsa_model,
                   drop_probs = drop_probs,
+                  fail_fast = fail_fast,
                   ...)
   }
 }

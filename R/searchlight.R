@@ -1364,18 +1364,22 @@ run_searchlight.vector_rsa <- function(model_spec,
                                        method = c("randomized","standard","resampled"),
                                        niter = 4,
                                        drop_probs = FALSE,
+                                       fail_fast = FALSE,
                                        ...) {
   method <- match.arg(method)
   
   if (method == "standard") {
     flog.info("Running standard vector RSA searchlight (radius = %s)", radius)
-    do_standard(model_spec, radius, mvpa_fun = vector_rsa_iterate, combiner = combine_vector_rsa_standard, drop_probs = drop_probs, ...)
+    do_standard(model_spec, radius, mvpa_fun = vector_rsa_iterate, combiner = combine_vector_rsa_standard,
+                drop_probs = drop_probs, fail_fast = fail_fast, ...)
   } else if (method == "randomized") {
     flog.info("Running randomized vector RSA searchlight (radius = %s, niter = %s)", radius, niter)
-    do_randomized(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate, combiner = combine_randomized, drop_probs = drop_probs, ...)
+    do_randomized(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate,
+                  combiner = combine_randomized, drop_probs = drop_probs, fail_fast = fail_fast, ...)
   } else {
     flog.info("Running resampled vector RSA searchlight (radius = %s, samples = %s)", radius, niter)
-    do_resampled(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate, combiner = combine_randomized, drop_probs = drop_probs, ...)
+    do_resampled(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate,
+                 combiner = combine_randomized, drop_probs = drop_probs, fail_fast = fail_fast, ...)
   }
 }
 
