@@ -968,10 +968,20 @@ do_randomized <- function(model_spec, radius, niter,
 
     # Defensive check: ensure result is a valid data frame with error column
     if (is.null(result) || !is.data.frame(result) || !"error" %in% names(result)) {
+      has_err_col <- if (!is.null(result)) "error" %in% names(result) else FALSE
       futile.logger::flog.error("do_randomized iter %d: mvpa_fun returned invalid result (type: %s, has_error_col: %s)",
-                               i, class(result)[1], if (!is.null(result)) "error" %in% names(result) else FALSE)
+                               i, class(result)[1], has_err_col)
       futile.logger::flog.error("This usually indicates an interrupted process or unexpected failure in mvpa_iterate")
-      stop(sprintf("Invalid result from mvpa_fun in iteration %d - expected data.frame with 'error' column", i))
+      # Instead of aborting, wrap into an all-error row so the run can finish and report
+      msg <- sprintf("Invalid mvpa_fun result (iter %d): type=%s, has_error_col=%s", i, class(result)[1], has_err_col)
+      result <- tibble::tibble(
+        result = list(NULL),
+        indices = list(NULL),
+        performance = list(NULL),
+        id = seq_along(cind),
+        error = TRUE,
+        error_message = msg
+      )
     }
 
     futile.logger::flog.debug("do_randomized iter %d: mvpa_fun returned %d results", i, nrow(result))
@@ -1107,9 +1117,19 @@ do_resampled <- function(model_spec, radius, niter,
   })
 
   if (is.null(result) || !is.data.frame(result) || !"error" %in% names(result)) {
+    has_err_col <- if (!is.null(result)) "error" %in% names(result) else FALSE
     futile.logger::flog.error("do_resampled: mvpa_fun returned invalid result (type: %s, has_error_col: %s)",
-                             class(result)[1], if (!is.null(result)) "error" %in% names(result) else FALSE)
-    stop("Invalid result from mvpa_fun in do_resampled - expected data.frame with 'error' column")
+                             class(result)[1], has_err_col)
+    # Wrap into an error-only tibble to keep pipeline alive and surface the issue
+    msg <- sprintf("Invalid mvpa_fun result (resampled): type=%s, has_error_col=%s", class(result)[1], has_err_col)
+    result <- tibble::tibble(
+      result = rep(list(NULL), length(cind)),
+      indices = rep(list(NULL), length(cind)),
+      performance = rep(list(NULL), length(cind)),
+      id = seq_along(cind),
+      error = TRUE,
+      error_message = msg
+    )
   }
 
   n_success <- sum(!result$error, na.rm = TRUE)
