@@ -369,7 +369,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                          verbose = TRUE,
                          processor = NULL,
                          analysis_type = c("searchlight", "regional"),
-                         drop_probs = FALSE) {
+                         drop_probs = FALSE,
+                         fail_fast = FALSE) {
   setup_mvpa_logger()
   
   if (length(vox_list) == 0) {
@@ -455,7 +456,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           t_run_future <- proc.time()[3]
           results[[i]] <- run_future(mod_spec_stripped, sf, processor, verbose,
                                      analysis_type = analysis_type,
-                                     drop_probs = drop_probs)
+                                     drop_probs = drop_probs,
+                                     fail_fast = fail_fast)
           futile.logger::flog.debug("Batch %d: run_future (parallel section) took %.3f sec",
                                     i, proc.time()[3] - t_run_future)
           processed_rois <- processed_rois + nrow(sf)
@@ -507,7 +509,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
 #' @rdname run_future-methods
 #' @export
 run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
-                               analysis_type = "searchlight", drop_probs = FALSE, ...) {
+                               analysis_type = "searchlight", drop_probs = FALSE,
+                               fail_fast = FALSE, ...) {
   gc()
   total_items <- nrow(frame)
   
@@ -530,15 +533,19 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
       if (is.null(roi)) {
         # ROI failed validation (e.g. from extract_roi returning NULL due to <2 voxels after filter_roi)
         futile.logger::flog.debug("ROI ID %s: Skipped (failed initial validation in extract_roi, e.g. <2 voxels).", rnum)
+        msg <- sprintf("ROI %s failed validation (e.g., <2 voxels after filtering or other extract_roi issue)", rnum)
+        if (fail_fast) {
+          rlang::abort(message = sprintf("ROI %s failed validation: <2 voxels or invalid after filtering.", rnum))
+        }
         return(tibble::tibble(
           result = list(NULL),
           indices = list(NULL),
           performance = list(NULL),
           id = rnum,
           error = TRUE,
-          error_message = "ROI failed validation (e.g., <2 voxels after filtering or other extract_roi issue)",
+          error_message = msg,
           warning = TRUE,
-          warning_message = "ROI failed validation (e.g., <2 voxels after filtering or other extract_roi issue)"
+          warning_message = msg
         ))
 
       }
@@ -588,7 +595,16 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
 
       result
     }, error = function(e) {
-      # Use debug level to avoid alarming users with expected errors
+      # If fail_fast, bubble the error immediately with context + traceback
+      if (fail_fast) {
+        rlang::abort(
+          message = sprintf("ROI %s processing error: %s", rnum, e$message),
+          parent = e
+        )
+      }
+      # Otherwise, capture a traceback string for debugging
+      tb <- tryCatch(paste(capture.output(rlang::trace_back()), collapse = "\n"),
+                     error = function(...) NA_character_)
       futile.logger::flog.debug("ROI %d: Processing error (%s)", rnum, e$message)
       tibble::tibble(
         result = list(NULL),
@@ -596,7 +612,8 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
         performance = list(NULL),
         id = rnum,
         error = TRUE,
-        error_message = paste("Error processing ROI:", e$message),
+        error_message = paste0("Error processing ROI: ", e$message,
+                               if (!is.na(tb)) paste0("\ntrace:\n", tb) else ""),
         warning = TRUE,
         warning_message = paste("Error processing ROI:", e$message)
       )

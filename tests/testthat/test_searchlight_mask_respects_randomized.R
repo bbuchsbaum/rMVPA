@@ -62,3 +62,37 @@ test_that("randomized searchlight respects the provided mask", {
   expect_equal(length(neuroim2::values(res_small$results[[1]])),
                length(neuroim2::values(small_mask)))
 })
+
+test_that("randomized searchlight runs with a single iteration", {
+  set.seed(99)
+
+  D <- c(3, 3, 3)
+  nobs <- 10
+  train <- neuroim2::NeuroVec(array(rnorm(prod(D) * nobs), c(D, nobs)),
+                              neuroim2::NeuroSpace(c(D, nobs)))
+  test  <- neuroim2::NeuroVec(array(rnorm(prod(D) * nobs), c(D, nobs)),
+                              neuroim2::NeuroSpace(c(D, nobs)))
+
+  mask <- neuroim2::NeuroVol(array(1, D), neuroim2::NeuroSpace(D))
+
+  train_des <- data.frame(Y = factor(rep(letters[1:2], length.out = nobs)),
+                          block_var = rep(1, nobs))
+  test_des  <- data.frame(Ytest = factor(rep(letters[1:2], length.out = nobs)))
+  design <- mvpa_design(train_des, test_design = test_des,
+                        y_train = ~Y, y_test = ~Ytest, block_var = "block_var")
+
+  mspec <- remap_rrr_model(mvpa_dataset(train, test, mask),
+                           design,
+                           rank = 0,
+                           leave_one_key_out = FALSE)
+
+  old_opts <- options(futile.logger.threshold = "ERROR")
+  on.exit(options(old_opts), add = TRUE)
+
+  res <- suppressWarnings(run_searchlight(mspec, radius = 1, method = "randomized", niter = 1))
+
+  expect_s3_class(res, "searchlight_result")
+  expect_equal(res$active_voxels, sum(neuroim2::values(mask) != 0))
+  expect_equal(length(neuroim2::values(res$results[[1]])),
+               length(neuroim2::values(mask)))
+})

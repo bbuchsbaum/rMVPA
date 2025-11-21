@@ -134,6 +134,182 @@ Current `combine_randomized`, `combine_standard`, `pool_randomized` become aggre
 - **Recommendation**: Document memory requirements; consider `drop_diagnostics` parameter for searchlight mode
 - Diagnostics should be opt-in for searchlight, default for regional
 
+## Maintaining both interfaces: the `to_kernel()` bridge
+
+### The core challenge
+**Old approach**: S3 dispatch on model type
+```r
+model <- remap_rrr_model(dataset, design, rank = 0)
+run_searchlight(model, radius = 8)  # → dispatches to run_searchlight.remap_rrr_model()
+```
+
+**New approach**: Explicit kernel selection
+```r
+kernel_searchlight(dataset, model_spec,
+                  kernel = remap_rrr_kernel(),
+                  materializer = spherical_materializer(8))
+```
+
+### Solution: Model objects become kernel factories
+
+Model objects don't disappear—they gain a `to_kernel()` method that extracts their analysis logic:
+
+```r
+#' Extract kernel function from model specification
+#' @return A kernel function with signature:
+#'   function(roi_data, roi_indices, ...) → list(metrics = c(...), diagnostics = list(...))
+to_kernel <- function(x, ...) UseMethod("to_kernel")
+
+to_kernel.remap_rrr_model <- function(model_spec, ...) {
+  force(model_spec)  # capture in closure
+
+  function(roi, rnum, ...) {
+    # Call existing process_roi - already has right signature!
+    result <- process_roi(model_spec, roi, rnum, ...)
+
+    # Reshape to kernel contract
+    if (!result$error) {
+      list(
+        metrics = result$performance[[1]],
+        diagnostics = if (isTRUE(model_spec$return_adapter)) {
+          result$result[[1]]$predictor  # diag_by_fold, etc.
+        } else NULL
+      )
+    } else {
+      list(metrics = NA_real_, diagnostics = NULL)
+    }
+  }
+}
+```
+
+### The adapter pattern: `run_searchlight()` delegates
+
+```r
+run_searchlight <- function(model_spec, ...) UseMethod("run_searchlight")
+
+# Generic dispatcher delegates to kernel_searchlight
+run_searchlight.mvpa_model <- function(model_spec, radius = 8,
+                                       method = "standard", ...) {
+  kernel_searchlight(
+    dataset = model_spec$dataset,
+    model_spec = model_spec,
+    sampler = grid_sampler(),
+    materializer = spherical_materializer(radius),
+    kernel = to_kernel(model_spec),  # ← Extract kernel from model
+    aggregator = get_aggregator(method),
+    ...
+  )
+}
+
+# Model-specific methods provide specialized defaults
+run_searchlight.remap_rrr_model <- function(model_spec, radius = 8,
+                                            method = "resampled",
+                                            niter = 4,
+                                            drop_probs = TRUE, ...) {
+  # REMAP-RRR defaults: resampled method, lean memory
+  NextMethod("run_searchlight",
+            method = method, niter = niter, drop_probs = drop_probs, ...)
+}
+```
+
+### Three tiers of interface complexity
+
+**Tier 1: Basic users (unchanged)**
+```r
+# Create model, run searchlight - just works
+model <- remap_rrr_model(dataset, design, rank = 0)
+results <- run_searchlight(model, radius = 8)
+```
+
+**Tier 2: Customization (opt-in)**
+```r
+# Same model, but customize geometry
+results <- run_searchlight(
+  model,
+  materializer = ellipsoidal_materializer(radii = c(8, 8, 4))
+)
+
+# Or sampling strategy
+results <- run_searchlight(
+  model,
+  sampler = poisson_disk_sampler(min_distance = 3)
+)
+```
+
+**Tier 3: Power users (full control)**
+```r
+# Direct kernel API for maximum flexibility
+my_kernel <- function(roi_data, roi_indices) {
+  # Custom analysis
+  list(metrics = c(my_metric = 0.5), diagnostics = list())
+}
+
+results <- kernel_searchlight(
+  dataset = my_data,
+  sampler = poisson_disk_sampler(...),
+  materializer = my_materializer(...),
+  kernel = my_kernel,
+  aggregator = my_aggregator()
+)
+```
+
+### Benefits of this approach
+
+**No confusion**:
+- Old code continues to work: `run_searchlight(model, radius = 8)` unchanged
+- Clear boundaries:
+  - `run_searchlight()` = user-facing, model-based (Tier 1-2)
+  - `kernel_searchlight()` = power-user, hook-based (Tier 3)
+- Users don't learn about hooks unless they need customization
+
+**Clean dispatch**:
+- Model-specific behavior stays in `run_searchlight.model_class()` S3 methods
+- No separate `remap_rrr_kernel()` constructors needed—kernel IS the model's `process_roi()`, just wrapped
+- S3 dispatch works exactly as before
+
+**Incremental migration path**:
+```r
+# Phase 1: Everything unchanged
+model <- mvpa_model(dataset, design, model = "sda")
+run_searchlight(model, radius = 8)  # works via to_kernel()
+
+# Phase 2: Discover customization options
+run_searchlight(model, radius = 8,
+               materializer = ellipsoidal_materializer(c(8,8,4)))
+
+# Phase 3: Graduate to full hooks if needed
+kernel_searchlight(dataset, model,
+                  sampler = custom_sampler(),
+                  kernel = to_kernel(model))
+```
+
+**Regional/searchlight unification for free**:
+```r
+# Same kernel works in both contexts
+run_searchlight(model, radius = 8)   # uses grid sampler
+run_regional(model, roi_mask)        # uses atlas provider
+
+# Both delegate to their kernel_* equivalents, extracting
+# the same kernel via to_kernel(model)
+```
+
+### Implementation notes
+
+**`to_kernel()` is mostly a thin wrapper**:
+- Existing `process_roi()` methods already have the right semantics
+- Wrapper just captures model in closure and optionally reshapes output
+- Backward compatibility is nearly free since `process_roi()` is already written
+
+**Kernel return format standardization**:
+- Current `process_roi()` returns tibble row: `list(result, performance, indices, error, ...)`
+- `to_kernel()` extracts and reshapes to: `list(metrics = c(...), diagnostics = list(...))`
+- This standardization happens at the boundary, not in core model code
+
+**Model-specific defaults preserved**:
+- `run_searchlight.remap_rrr_model()` defaults to `method = "resampled"`, `drop_probs = TRUE`
+- `run_searchlight.mvpa_model()` defaults to `method = "standard"`
+- Hook-based `kernel_searchlight()` has no model-specific defaults (fully explicit)
+
 ## Implementation roadmap
 
 ### Phase 1: Core infrastructure (backward compatibility focus)

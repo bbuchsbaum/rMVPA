@@ -918,7 +918,8 @@ do_randomized <- function(model_spec, radius, niter,
                          ...,
                          chunk_size = NULL,
                          return_pobserved = TRUE,
-                         drop_probs = FALSE) {
+                         drop_probs = FALSE,
+                         fail_fast = FALSE) {
   error=NULL
   total_models <- 0
   total_errors <- 0
@@ -950,7 +951,8 @@ do_randomized <- function(model_spec, radius, niter,
     futile.logger::flog.debug("do_randomized iter %d: Calling mvpa_fun with %d ROIs", i, length(slight))
 
     result <- tryCatch({
-      mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", drop_probs = drop_probs, ...)
+      mvpa_fun(model_spec, slight, cind, analysis_type="searchlight",
+               drop_probs = drop_probs, fail_fast = fail_fast, ...)
     }, error = function(e) {
       futile.logger::flog.error("do_randomized iter %d: mvpa_fun threw error: %s", i, e$message)
       # Return a tibble with all errors to maintain structure
@@ -1070,7 +1072,8 @@ do_resampled <- function(model_spec, radius, niter,
                         combiner = combine_randomized,
                         ...,
                         drop_probs = FALSE,
-                        return_pobserved = FALSE) {
+                        return_pobserved = FALSE,
+                        fail_fast = FALSE) {
   futile.logger::flog.info("Starting resampled searchlight analysis:")
   futile.logger::flog.info("- Radius: %s", crayon::blue(paste(radius, collapse = ", ")))
   futile.logger::flog.info("- Samples: %s", crayon::blue(niter))
@@ -1089,7 +1092,8 @@ do_resampled <- function(model_spec, radius, niter,
   }
 
   result <- tryCatch({
-    mvpa_fun(model_spec, slight, cind, analysis_type = "searchlight", drop_probs = drop_probs, ...)
+    mvpa_fun(model_spec, slight, cind, analysis_type = "searchlight",
+             drop_probs = drop_probs, fail_fast = fail_fast, ...)
   }, error = function(e) {
     futile.logger::flog.error("do_resampled: mvpa_fun threw error: %s", e$message)
     tibble::tibble(
@@ -1151,7 +1155,7 @@ do_resampled <- function(model_spec, radius, niter,
 #' @param mvpa_fun The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).
 #' @param combiner The function to be used to combine results (default is \code{combine_standard}).
 #' @param ... Additional arguments to be passed to the MVPA function.
-do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ..., drop_probs = FALSE) {
+do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ..., drop_probs = FALSE, fail_fast = FALSE) {
   error=NULL
   flog.info("creating standard searchlight")
   t_sl_create <- proc.time()[3]
@@ -1161,7 +1165,8 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   t_iterate <- proc.time()[3]
   cind <- which(model_spec$dataset$mask > 0)
   flog.info("running standard searchlight iterator")
-  ret <- mvpa_fun(model_spec, slight, cind, analysis_type="searchlight", drop_probs = drop_probs, ...)
+  ret <- mvpa_fun(model_spec, slight, cind, analysis_type="searchlight",
+                  drop_probs = drop_probs, fail_fast = fail_fast, ...)
   flog.debug("mvpa_iterate (standard searchlight) took %.3f sec",
              proc.time()[3] - t_iterate)
   good_results <- ret %>% dplyr::filter(!error)
@@ -1224,6 +1229,7 @@ run_searchlight_base <- function(model_spec,
                                  niter = 4,
                                  combiner = "average",
                                  drop_probs = FALSE,
+                                 fail_fast = FALSE,
                                  ...) {
 
   
@@ -1305,13 +1311,16 @@ run_searchlight_base <- function(model_spec,
   # 4) Dispatch to do_standard or do_randomized
   res <- if (method == "standard") {
     flog.info("Running standard searchlight with radius = %s", radius)
-    do_standard(model_spec, radius, combiner = chosen_combiner, drop_probs = drop_probs, ...)
+    do_standard(model_spec, radius, combiner = chosen_combiner, drop_probs = drop_probs,
+                fail_fast = fail_fast, ...)
   } else if (method == "randomized") {
     flog.info("Running randomized searchlight with radius = %s and niter = %s", radius, niter)
-    do_randomized(model_spec, radius, niter = niter, combiner = chosen_combiner, drop_probs = drop_probs, ...)
+    do_randomized(model_spec, radius, niter = niter, combiner = chosen_combiner,
+                  drop_probs = drop_probs, fail_fast = fail_fast, ...)
   } else { # resampled
     flog.info("Running resampled searchlight with radius = %s and samples = %s", radius, niter)
-    do_resampled(model_spec, radius, niter = niter, combiner = chosen_combiner, drop_probs = drop_probs, ...)
+    do_resampled(model_spec, radius, niter = niter, combiner = chosen_combiner,
+                 drop_probs = drop_probs, fail_fast = fail_fast, ...)
   }
   
   res
@@ -1328,7 +1337,8 @@ run_searchlight_base <- function(model_spec,
 #'
 #' @export
 run_searchlight.default <- function(model_spec, radius = 8, method = c("standard","randomized","resampled"),
-                                    niter = 4, combiner = "average", drop_probs = FALSE, ...) {
+                                    niter = 4, combiner = "average", drop_probs = FALSE,
+                                    fail_fast = FALSE, ...) {
   run_searchlight_base(
     model_spec    = model_spec,
     radius        = radius,
@@ -1336,6 +1346,7 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
     niter         = niter,
     combiner      = combiner,
     drop_probs    = drop_probs,
+    fail_fast     = fail_fast,
     ...
   )
 }
