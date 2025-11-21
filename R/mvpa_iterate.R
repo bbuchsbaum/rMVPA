@@ -305,7 +305,7 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
 
   # Check if as_roi returned an error object (e.g., insufficient voxels after mask filtering)
   if (inherits(r$train_roi, "try-error")) {
-    futile.logger::flog.debug("Skipping ROI: as_roi returned error (likely voxels outside mask)")
+    futile.logger::flog.debug("Skipping ROI: as_roi returned error (%s)", as.character(r$train_roi))
     return(NULL)
   }
 
@@ -315,7 +315,7 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
   r <- try(filter_roi(r, preserve = center_global_id, min_voxels = min_voxels), silent=TRUE)
 
   if (inherits(r, "try-error")) {
-    futile.logger::flog.debug("Skipping ROI: filter_roi failed (likely < 2 valid voxels after filtering)")
+    futile.logger::flog.debug("Skipping ROI: filter_roi failed (%s)", as.character(r))
     return(NULL)
   }
 
