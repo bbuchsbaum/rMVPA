@@ -12,7 +12,8 @@ do_resampled(
   combiner = combine_randomized,
   ...,
   drop_probs = FALSE,
-  return_pobserved = FALSE
+  return_pobserved = FALSE,
+  fail_fast = FALSE
 )
 }
 \arguments{
@@ -30,7 +31,7 @@ do_resampled(
 
 \item{drop_probs}{Logical; drop per-ROI probability matrices after computing metrics (default \code{FALSE}).}
 
-\item{return_pobserved}{Logical; placeholder for API symmetry with randomized searchlight. Currently ignored for resampled searchlights (probability maps are not aggregated by \code{combine_randomized}).}
+\item{return_pobserved}{Logical; placeholder for API symmetry with randomized searchlight. Currently ignored because \code{combine_randomized} does not aggregate prob-observed.}
 }
 \description{
 Similar to randomized searchlight but uses neuroim2::resampled_searchlight,

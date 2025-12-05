@@ -19,6 +19,7 @@ Imports:
     future.apply,
     furrr,
     futile.logger,
+    irlba,
     glmnet,
     io,
     MASS,
@@ -95,6 +96,7 @@ Collate:
     'repmap_model.R'
     'repmed_model.R'
     'repnet_model.R'
+    'subspace_alignment_model.R'
 RoxygenNote: 7.3.3
 Suggests:
     covr,

@@ -9,6 +9,8 @@
   radius = 8,
   method = c("randomized", "standard", "resampled"),
   niter = 4,
+  drop_probs = FALSE,
+  fail_fast = FALSE,
   ...
 )
 }

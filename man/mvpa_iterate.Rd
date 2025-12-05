@@ -11,7 +11,9 @@ mvpa_iterate(
   batch_size = as.integer(0.1 * length(ids)),
   verbose = TRUE,
   processor = NULL,
-  analysis_type = c("searchlight", "regional")
+  analysis_type = c("searchlight", "regional"),
+  drop_probs = FALSE,
+  fail_fast = FALSE
 )
 }
 \arguments{

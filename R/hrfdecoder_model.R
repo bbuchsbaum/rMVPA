@@ -163,7 +163,7 @@ hrfdecoder_model <- function(dataset, design,
   perf_fun <- if (!is.null(performance) && is.function(performance)) {
     get_custom_perf(performance, design$split_groups)
   } else {
-    get_multiclass_perf(design$split_groups, class_metrics = TRUE)
+    get_multiclass_perf(design$split_groups, class_metrics = FALSE)
   }
 
   create_model_spec(

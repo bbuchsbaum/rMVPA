@@ -9,7 +9,9 @@ do_standard(
   radius,
   mvpa_fun = mvpa_iterate,
   combiner = combine_standard,
-  ...
+  ...,
+  drop_probs = FALSE,
+  fail_fast = FALSE
 )
 }
 \arguments{

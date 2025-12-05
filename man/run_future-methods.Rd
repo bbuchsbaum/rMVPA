@@ -13,6 +13,8 @@ run_future(obj, frame, processor, ...)
   processor = NULL,
   verbose = FALSE,
   analysis_type = "searchlight",
+  drop_probs = FALSE,
+  fail_fast = FALSE,
   ...
 )
 }

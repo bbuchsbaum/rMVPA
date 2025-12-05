@@ -21,17 +21,31 @@
 #' @param rank "auto" for `rrpack::cv.rrr` rank selection, integer for fixed rank, or `0`
 #'   for identity/no adaptation fallback.
 #' @param max_rank Upper bound on rank search (default 20).
-#' @param forward_adapt Logical; kept for compatibility, currently ignored.
 #' @param ridge_rrr_lambda Optional numeric lambda for `rrpack::rrs.fit` (ridge RRR) on the residuals.
 #' @param leave_one_key_out logical; if TRUE, use leave-one-key-out (LOKO) over items for adaptor learning (default TRUE).
 #' @param min_pairs Minimum number of paired prototypes required for adaptor fitting (default 5).
 #' @param save_fold_singulars logical; if TRUE, save singular values from each fold's adaptor (default FALSE).
 #' @param return_adapter logical; if TRUE, store diagnostics (e.g., per-voxel R2, per-fold stats) in `result$predictor`.
 #' @param lambda_grid Numeric vector of candidate \eqn{\lambda} values for shrinkage toward naïve; defaults to `c(0, .25, .5, .75, 1)`.
-#' @param return_diag Logical; reserved for future detailed diagnostics (currently unused).
+#' @param compute_naive_baseline logical; if TRUE, also compute performance with \eqn{\lambda = 0} (no adaptor) to provide baseline metrics (default FALSE).
 #' @param ... Additional arguments passed to `create_model_spec`.
 #'
 #' @return A model spec of class `remap_rrr_model` compatible with `run_regional()` / `run_searchlight()`.
+#'
+#' @section Performance metrics (added to base metrics):
+#' \itemize{
+#'   \item Base metrics: whatever `compute_performance()` returns for the response type (e.g., accuracy/AUC for classification or regression metrics).
+#'   \item Naive baseline metrics (if `compute_naive_baseline = TRUE`): base metrics recomputed with \eqn{\lambda = 0} (no adaptor), prefixed `naive_` (e.g., `naive_Accuracy`, `naive_AUC`).
+#'   \item `adapter_rank`: Mean adaptor rank used (LOKO folds or single fit).
+#'   \item `adapter_sv1`: Mean leading singular value of the adaptor across folds.
+#'   \item `adapter_mean_r2`: Mean per-voxel cross-validated R\eqn{^2} (LOKO only).
+#'   \item `remap_improv`: Mean relative reduction in residual sum of squares vs. naïve (Y\_w - X\_w).
+#'   \item `delta_frob_mean`: Mean Frobenius norm of \eqn{\lambda \Delta} (magnitude of the learned correction).
+#'   \item `lambda_mean`: Mean selected \eqn{\lambda} across folds or the single fit.
+#'   \item `n_pairs_used`: Number of paired prototypes used.
+#'   \item `n_skipped_keys`: Keys skipped during LOKO due to insufficient pairs or fit issues.
+#' }
+#' If `return_adapter = TRUE`, the result also includes ROI-level diagnostics (e.g., per-voxel R\eqn{^2}, per-item residuals, ranks, singular spectra) in `result$predictor`.
 #'
 #' @section Key ideas:
 #' \itemize{
@@ -62,21 +76,20 @@ remap_rrr_model <- function(dataset,
                             shrink_whiten = TRUE,
                             rank = "auto",
                             max_rank = 20,
-                            forward_adapt = TRUE,
                             ridge_rrr_lambda = NULL,
                             leave_one_key_out = FALSE,
                             min_pairs = 5,
                             save_fold_singulars = FALSE,
                             return_adapter = FALSE,
                             lambda_grid = c(0, 0.25, 0.5, 0.75, 1),
-                            return_diag = FALSE,
+                            compute_naive_baseline = FALSE,
                             ...) {
 
   # Decide performance function based on response type
   perf_fun <- if (is.numeric(design$y_train)) {
     get_regression_perf(design$split_groups)
   } else if (length(levels(design$y_train)) > 2) {
-    get_multiclass_perf(design$split_groups, class_metrics = TRUE)
+    get_multiclass_perf(design$split_groups, class_metrics = FALSE)
   } else {
     get_binary_perf(design$split_groups)
   }
@@ -91,14 +104,13 @@ remap_rrr_model <- function(dataset,
     shrink_whiten = shrink_whiten,
     rank = rank,
     max_rank = max_rank,
-    forward_adapt = forward_adapt,
     ridge_rrr_lambda = ridge_rrr_lambda,
     leave_one_key_out = leave_one_key_out,
     min_pairs = min_pairs,
     save_fold_singulars = save_fold_singulars,
     return_adapter = return_adapter,
     lambda_grid = lambda_grid,
-    return_diag = return_diag,
+    compute_naive_baseline = compute_naive_baseline,
     performance = perf_fun,
     compute_performance = TRUE,
     return_predictions = TRUE,
@@ -355,6 +367,11 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
   levs <- unique_keys
   prob_all <- matrix(0, nrow(Xtest), length(levs), dimnames = list(NULL, levs))
   pred_all <- rep(NA_character_, nrow(Xtest))
+  use_naive <- isTRUE(mod_spec$compute_naive_baseline)
+  if (use_naive) {
+    prob_naive <- matrix(0, nrow(Xtest), length(levs), dimnames = list(NULL, levs))
+    pred_naive <- rep(NA_character_, nrow(Xtest))
+  }
 
   # CV R^2 accumulator per voxel
   sse_vox <- rep(0, ncol(Xtrain))
@@ -430,8 +447,16 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
           sshift <- scores - max(scores)
           w <- exp(sshift)
           probs <- w / sum(w)
-          prob_all[rr, ] <- probs
-          pred_all[rr] <- unique_keys[which.max(scores)]
+          prob_all[rr, ]   <- probs
+          pred_all[rr]     <- unique_keys[which.max(scores)]
+          if (use_naive) {
+            scores_naive <- .row_cor(Xw_all, y_w[1, ])
+            sshift_n <- scores_naive - max(scores_naive)
+            w_naive <- exp(sshift_n)
+            probs_naive <- w_naive / sum(w_naive)
+            prob_naive[rr, ] <- probs_naive
+            pred_naive[rr]   <- unique_keys[which.max(scores_naive)]
+          }
         }
         keys_scored <- c(keys_scored, k)
       }
@@ -499,6 +524,13 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
         probs <- w / sum(w)
         prob_all[rr, ] <- probs
         pred_all[rr] <- unique_keys[which.max(scores)]
+        if (use_naive) {
+          scores_naive <- .row_cor(Xw_all, y_w[1, ])
+          sshift_n <- scores_naive - max(scores_naive)
+          w_naive <- exp(sshift_n)
+          prob_naive[rr, ] <- w_naive / sum(w_naive)
+          pred_naive[rr] <- unique_keys[which.max(scores_naive)]
+        }
       }
     }
 
@@ -511,6 +543,14 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
     if (any(is.na(pred))) {
       mc <- max.col(prob)
       pred <- factor(levs[mc], levels = levs)
+    }
+    if (use_naive) {
+      prob_naive_full <- prob_naive
+      pred_naive_fac <- factor(pred_naive, levels = levs)
+      if (any(is.na(pred_naive_fac))) {
+        mc_naive <- max.col(prob_naive_full)
+        pred_naive_fac <- factor(levs[mc_naive], levels = levs)
+      }
     }
 
     # Observed labels are the key factor
@@ -533,15 +573,24 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
                                   testind = keep_rows,
                                   test_design = des$test_design[keep_rows, , drop = FALSE],
                                   predictor = predictor_obj)
-
     base_perf <- compute_performance(mod_spec, cres)
+    base_perf_naive <- NULL
+    if (use_naive) {
+      cres_naive <- classification_result(obs[keep_rows], pred_naive_fac[keep_rows],
+                                          prob_naive_full[keep_rows, , drop = FALSE],
+                                          testind = keep_rows,
+                                          test_design = des$test_design[keep_rows, , drop = FALSE],
+                                          predictor = NULL)
+      base_perf_naive <- compute_performance(mod_spec, cres_naive)
+      base_perf_naive <- setNames(base_perf_naive, paste0("naive_", names(base_perf_naive)))
+    }
     extra <- c(adapter_rank    = suppressWarnings(mean(adapter_ranks, na.rm = TRUE)),
                adapter_sv1     = suppressWarnings(mean(adapter_svals, na.rm = TRUE)),
                adapter_mean_r2 = mean(r2_cv_vox, na.rm = TRUE),
                remap_improv    = suppressWarnings(mean(roi_improv_vals, na.rm = TRUE)),
                delta_frob_mean = suppressWarnings(mean(delta_frob_vals, na.rm = TRUE)),
                lambda_mean     = suppressWarnings(mean(lambda_vals, na.rm = TRUE)))
-    perf_vec <- c(base_perf, extra)
+    perf_vec <- if (use_naive) c(base_perf, base_perf_naive, extra) else c(base_perf, extra)
 
     return(tibble::tibble(
       result = list(cres),
@@ -581,7 +630,9 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
   Xw_all <- (sweep(Xp[unique_keys, , drop = FALSE], 2, JW$mu, "-")) %*% JW$W
   Yhat_all <- Xw_all + lam_opt * (Xw_all %*% Delta)
   prob <- matrix(0, nrow(Xtest), length(unique_keys), dimnames = list(NULL, unique_keys))
+  if (use_naive) prob_naive <- matrix(0, nrow(Xtest), length(unique_keys), dimnames = list(NULL, unique_keys))
   pred_chr <- character(nrow(Xtest))
+  if (use_naive) pred_naive_chr <- character(nrow(Xtest))
   for (i in seq_len(nrow(Xtest))) {
     y_w <- (Xtest[i, , drop = FALSE] - matrix(JW$mu, nrow = 1)) %*% JW$W
     scores <- .row_cor(Yhat_all, y_w[1, ])
@@ -589,8 +640,26 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
     w <- exp(sshift); probs <- w / sum(w)
     prob[i, ] <- probs
     pred_chr[i] <- unique_keys[which.max(scores)]
+    if (use_naive) {
+      scores_naive <- .row_cor(Xw_all, y_w[1, ])
+      sshift_n <- scores_naive - max(scores_naive)
+      w_naive <- exp(sshift_n); probs_naive <- w_naive / sum(w_naive)
+      prob_naive[i, ] <- probs_naive
+      pred_naive_chr[i] <- unique_keys[which.max(scores_naive)]
+    }
   }
   pred <- factor(pred_chr, levels = unique_keys)
+  if (any(is.na(pred))) {
+    mc <- max.col(prob)
+    pred <- factor(unique_keys[mc], levels = unique_keys)
+  }
+  if (use_naive) {
+    pred_naive <- factor(pred_naive_chr, levels = unique_keys)
+    if (any(is.na(pred_naive))) {
+      mc_naive <- max.col(prob_naive)
+      pred_naive <- factor(unique_keys[mc_naive], levels = unique_keys)
+    }
+  }
   obs <- factor(as.character(key_te_full), levels = unique_keys)
 
   # Diagnostics on prototypes in voxel space
@@ -608,13 +677,22 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
                                 test_design = des$test_design[keep_rows, , drop = FALSE],
                                 predictor = if (isTRUE(mod_spec$return_adapter)) list(rank = rnk, singvals = svals, r2_per_voxel = r2) else NULL)
   base_perf <- compute_performance(mod_spec, cres)
+  base_perf_naive <- NULL
+  if (use_naive) {
+    cres_naive <- classification_result(obs[keep_rows], pred_naive[keep_rows], prob_naive[keep_rows, , drop = FALSE],
+                                        testind = keep_rows,
+                                        test_design = des$test_design[keep_rows, , drop = FALSE],
+                                        predictor = NULL)
+    base_perf_naive <- compute_performance(mod_spec, cres_naive)
+    base_perf_naive <- setNames(base_perf_naive, paste0("naive_", names(base_perf_naive)))
+  }
   extra <- c(adapter_rank    = as.numeric(rnk %||% NA_real_),
              adapter_sv1     = if (!is.null(svals) && length(svals) > 0) svals[1] else NA_real_,
              adapter_mean_r2 = mean(r2, na.rm = TRUE),
              remap_improv    = roi_improv,
              delta_frob_mean = delta_frob,
              lambda_mean     = lam_opt)
-  perf_vec <- c(base_perf, extra)
+  perf_vec <- if (use_naive) c(base_perf, base_perf_naive, extra) else c(base_perf, extra)
 
   tibble::tibble(
     result = list(cres),

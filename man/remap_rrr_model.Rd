@@ -15,10 +15,10 @@ remap_rrr_model(
   max_rank = 20,
   forward_adapt = TRUE,
   ridge_rrr_lambda = NULL,
-  leave_one_key_out = TRUE,
+  leave_one_key_out = FALSE,
   min_pairs = 5,
   save_fold_singulars = FALSE,
-  return_adapter = TRUE,
+  return_adapter = FALSE,
   lambda_grid = c(0, 0.25, 0.5, 0.75, 1),
   return_diag = FALSE,
   ...
@@ -76,6 +76,22 @@ Classification of held-out target trials is performed by correlating their white
 patterns with \eqn{\hat Y_w}. When the data do not support a reliable residual, the
 method automatically shrinks to the naïve cross-decoder (\eqn{\lambda = 0}).
 }
+\section{Performance metrics (added to base metrics)}{
+
+\itemize{
+  \item Base metrics: whatever `compute_performance()` returns for the response type (e.g., accuracy/AUC for classification or regression metrics).
+  \item `adapter_rank`: Mean adaptor rank used (LOKO folds or single fit).
+  \item `adapter_sv1`: Mean leading singular value of the adaptor across folds.
+  \item `adapter_mean_r2`: Mean per-voxel cross-validated R\eqn{^2} (LOKO only).
+  \item `remap_improv`: Mean relative reduction in residual sum of squares vs. naïve (Y\_w - X\_w).
+  \item `delta_frob_mean`: Mean Frobenius norm of \eqn{\lambda \Delta} (magnitude of the learned correction).
+  \item `lambda_mean`: Mean selected \eqn{\lambda} across folds or the single fit.
+  \item `n_pairs_used`: Number of paired prototypes used.
+  \item `n_skipped_keys`: Keys skipped during LOKO due to insufficient pairs or fit issues.
+}
+If `return_adapter = TRUE`, the result also includes ROI-level diagnostics (e.g., per-voxel R\eqn{^2}, per-item residuals, ranks, singular spectra) in `result$predictor`.
+}
+
 \section{Key ideas}{
 
 \itemize{

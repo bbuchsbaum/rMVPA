@@ -20,9 +20,16 @@ Expose four small, composable hooks with safe defaults:
 - **Backward compatible**: Defaults mirror current behavior; legacy calls to `run_searchlight()` are unaffected.
 - **Future-proof**: New ideas—adaptive refinement, weighted aggregators, GPU-friendly soft shapes—fit by adding hook implementations, not new monoliths.
 
-### On "metrics" as a separate concern
-- Metrics often sit inside kernels (e.g., RSA may emit multiple similarity stats; REMAP-RRR returns accuracy, AUC, adaptor diagnostics). Pulling "metric" out as a universal hook is attractive, but many kernels bundle task-specific logic (e.g., class labels, crossvalidation folds) that a generic metric stage would need to re-learn.
+### On “metrics” as a separate concern
+- Metrics often sit inside kernels (e.g., RSA may emit multiple similarity stats; REMAP-RRR returns accuracy, AUC, adaptor diagnostics). Pulling “metric” out as a universal hook is attractive, but many kernels bundle task-specific logic (e.g., class labels, crossvalidation folds) that a generic metric stage would need to re-learn.
 - Pragmatic compromise: kernels return a named vector/list of metrics; the **aggregator** chooses which metric(s) to project back to voxels/ROIs (e.g., pick `accuracy`, `auc`, or a user-specified `metric_name`). This keeps multi-metric support without forcing every kernel into a common metric interface.
+
+### Coexistence with the legacy (“behemoth”) pipeline
+- Keep `run_searchlight` / `run_regional` as thin adapters that call `kernel_searchlight` / `kernel_regional` with today’s defaults (grid sampler, spherical shapes, mvpa kernel, legacy combiner, default CV). Legacy scripts keep working.
+- Provide a hooks registry (`as_hooks.<model_class>`) that maps existing models (mvpa_model, remap_rrr_model, RSA variants) to sampler/shape/materializer/kernel/aggregator/CV choices.
+- Allow opt-in modular use via `kernel_searchlight()` directly, or by passing `hooks` into `run_searchlight` while preserving defaults.
+- Add `cv_policy` as a hook to make cross-validation explicit and swappable, but default to the model’s current scheme.
+- Add `trace = TRUE` to both paths to return `bad_results`, resolved hooks, and per-iteration summaries for debugging.
 
 **Standardized kernel return format**: To prevent aggregator complexity from handling arbitrary structures, enforce a simple contract:
 ```r
@@ -133,6 +140,13 @@ Current `combine_randomized`, `combine_standard`, `pool_randomized` become aggre
 - Large searchlights with `return_adapter=TRUE` or heavy diagnostics can OOM
 - **Recommendation**: Document memory requirements; consider `drop_diagnostics` parameter for searchlight mode
 - Diagnostics should be opt-in for searchlight, default for regional
+
+## Permutation support as a hook
+- Add a `permutation_policy` hook (default: identity/no shuffles) that returns a bank/iterator of label permutations or split-label permutations, with block/strata restrictions and optional prototype-level shuffles.
+- Wrap kernels transparently: `permuted_kernel(base_kernel, permutation_policy)` feeds each permuted design to the base kernel; kernel code stays unchanged and still returns `list(metrics, diagnostics)`.
+- Aggregators become permutation-aware: they receive the observed metrics plus N permuted metric vectors per ROI and can compute voxelwise p-values or max‑T thresholds; allow `subset_roi_frac` to estimate the max-null on a subset of ROIs.
+- Executors are unaffected; they just schedule more kernel calls. Precompute/broadcast permutation banks so generation isn’t repeated per ROI.
+- Optional `tail_fit` (e.g., GPD) and small-N options live in `permutation_policy`; defaults stay conservative.
 
 ## Maintaining both interfaces: the `to_kernel()` bridge
 

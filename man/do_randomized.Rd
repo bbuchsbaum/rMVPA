@@ -12,7 +12,9 @@ do_randomized(
   combiner = pool_randomized,
   ...,
   chunk_size = NULL,
-  return_pobserved = TRUE
+  return_pobserved = TRUE,
+  drop_probs = FALSE,
+  fail_fast = FALSE
 )
 }
 \arguments{

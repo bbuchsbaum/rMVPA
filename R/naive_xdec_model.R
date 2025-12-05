@@ -26,7 +26,7 @@ naive_xdec_model <- function(dataset, design, link_by = NULL, return_predictions
   perf_fun <- if (is.numeric(design$y_train)) {
     get_regression_perf(design$split_groups)
   } else if (length(levels(design$y_train)) > 2) {
-    get_multiclass_perf(design$split_groups, class_metrics = TRUE)
+    get_multiclass_perf(design$split_groups, class_metrics = FALSE)
   } else {
     get_binary_perf(design$split_groups)
   }
@@ -116,4 +116,3 @@ process_roi.naive_xdec_model <- function(mod_spec, roi, rnum, ...) {
     error_message = "~"
   )
 }
-

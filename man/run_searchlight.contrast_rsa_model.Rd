@@ -9,6 +9,8 @@
   radius = NULL,
   method = c("standard", "randomized"),
   niter = NULL,
+  drop_probs = FALSE,
+  fail_fast = FALSE,
   ...
 )
 }

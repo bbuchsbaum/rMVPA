@@ -99,7 +99,7 @@ format_result.mvpa_model <- function(obj, result, error_message=NULL, context, .
 
 
 #' @keywords internal
-get_multiclass_perf <- function(split_list=NULL, class_metrics=TRUE) {
+get_multiclass_perf <- function(split_list=NULL, class_metrics=FALSE) {
   function(result) {
     performance(result, split_list, class_metrics)
   }
@@ -270,7 +270,7 @@ mvpa_model <- function(model,
                        tune_grid=NULL, 
                        tune_reps=15,
                        performance=NULL,
-                       class_metrics=TRUE,
+                       class_metrics=FALSE,
                        compute_performance=TRUE,
                        return_predictions=TRUE,
                        return_fits=FALSE) {

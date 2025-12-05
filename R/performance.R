@@ -331,8 +331,8 @@ binary_perf <- function(observed, predicted, probs) {
     )
   }
 
-  # Preserve historical convention of returning AUC - 0.5
-  c(Accuracy = res_acc, AUC = res_auc - 0.5)
+  auc_centered <- if (is.na(res_auc)) NA_real_ else (2 * res_auc - 1)  # chance-centered, range [-1,1]
+  c(Accuracy = res_acc, AUC = auc_centered)
 }
 
 #' @keywords internal
@@ -366,18 +366,22 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
           truth       = binary_truth,
           estimate    = score,
           event_level = "second"
-        ) - 0.5,
+        ),
         error = function(e) NA_real_
       )
     )
   })
   
   names(aucres) <- paste0("AUC_", colnames(probs))
+
+  auc_centered <- 2 * aucres - 1
+  mean_auc_centered <- mean(auc_centered, na.rm = TRUE)
   
-  metrics <- c(Accuracy = acc, AUC = mean(aucres, na.rm=TRUE))
+  metrics <- c(Accuracy = acc, AUC = mean_auc_centered)
   
   if (class_metrics) {
-    c(metrics, aucres)
+    names(auc_centered) <- paste0("AUC_", colnames(probs))
+    c(metrics, auc_centered)
   } else {
     metrics
   }

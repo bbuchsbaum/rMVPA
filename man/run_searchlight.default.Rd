@@ -10,6 +10,8 @@
   method = c("standard", "randomized", "resampled"),
   niter = 4,
   combiner = "average",
+  drop_probs = FALSE,
+  fail_fast = FALSE,
   ...
 )
 }
