@@ -71,6 +71,8 @@ Collate:
     'rsa_model.R'
     'roisplit.R'
     'searchlight.R'
+    'spatial_nmf.R'
+    'spatial_nmf_inference.R'
     'save_results.R'
     'vector_rsa_model.R'
     'distcalc.R'

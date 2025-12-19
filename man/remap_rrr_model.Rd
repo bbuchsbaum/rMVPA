@@ -13,14 +13,13 @@ remap_rrr_model(
   shrink_whiten = TRUE,
   rank = "auto",
   max_rank = 20,
-  forward_adapt = TRUE,
   ridge_rrr_lambda = NULL,
   leave_one_key_out = FALSE,
   min_pairs = 5,
   save_fold_singulars = FALSE,
   return_adapter = FALSE,
   lambda_grid = c(0, 0.25, 0.5, 0.75, 1),
-  return_diag = FALSE,
+  compute_naive_baseline = FALSE,
   ...
 )
 }
@@ -43,8 +42,6 @@ for identity/no adaptation fallback.}
 
 \item{max_rank}{Upper bound on rank search (default 20).}
 
-\item{forward_adapt}{Logical; kept for compatibility, currently ignored.}
-
 \item{ridge_rrr_lambda}{Optional numeric lambda for `rrpack::rrs.fit` (ridge RRR) on the residuals.}
 
 \item{leave_one_key_out}{logical; if TRUE, use leave-one-key-out (LOKO) over items for adaptor learning (default TRUE).}
@@ -57,7 +54,7 @@ for identity/no adaptation fallback.}
 
 \item{lambda_grid}{Numeric vector of candidate \eqn{\lambda} values for shrinkage toward naïve; defaults to `c(0, .25, .5, .75, 1)`.}
 
-\item{return_diag}{Logical; reserved for future detailed diagnostics (currently unused).}
+\item{compute_naive_baseline}{logical; if TRUE, also compute performance with \eqn{\lambda = 0} (no adaptor) to provide baseline metrics (default FALSE).}
 
 \item{...}{Additional arguments passed to `create_model_spec`.}
 }
@@ -80,6 +77,7 @@ method automatically shrinks to the naïve cross-decoder (\eqn{\lambda = 0}).
 
 \itemize{
   \item Base metrics: whatever `compute_performance()` returns for the response type (e.g., accuracy/AUC for classification or regression metrics).
+  \item Naive baseline metrics (if `compute_naive_baseline = TRUE`): base metrics recomputed with \eqn{\lambda = 0} (no adaptor), prefixed `naive_` (e.g., `naive_Accuracy`, `naive_AUC`).
   \item `adapter_rank`: Mean adaptor rank used (LOKO folds or single fit).
   \item `adapter_sv1`: Mean leading singular value of the adaptor across folds.
   \item `adapter_mean_r2`: Mean per-voxel cross-validated R\eqn{^2} (LOKO only).

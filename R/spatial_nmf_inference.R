@@ -1,0 +1,745 @@
+#' Component-level Inference for Spatial NMF
+#'
+#' Permutation-based inference for component significance using NMF loadings.
+#' Supports two-group tests (label permutations) and one-group tests given a
+#' null distribution of loadings.
+#'
+#' @param fit A spatial_nmf_fit object containing a W matrix.
+#' @param W Optional n x k matrix of loadings (overrides fit$W).
+#' @param groups Factor or vector of group labels (length n); required for two-group tests.
+#' @param covariates Optional data frame of covariates (n rows).
+#' @param test One of "two_group" or "one_group".
+#' @param nperm Number of permutations (ignored for one_group if null_W provided).
+#' @param correction One of "maxT" or "none".
+#' @param alternative Alternative hypothesis: "two.sided" or "greater".
+#' @param null_W Null distribution of W for one-group inference (list or 3D array).
+#' @param alpha Significance threshold for counting significant components.
+#' @param seed Optional RNG seed for permutations.
+#' @param return_perm Logical; return permutation statistics.
+#'
+#' @return A list with a component-level results table and summary stats.
+#' @export
+spatial_nmf_component_test <- function(fit = NULL,
+                                       W = NULL,
+                                       groups = NULL,
+                                       covariates = NULL,
+                                       test = c("two_group", "one_group"),
+                                       nperm = 1000,
+                                       correction = c("maxT", "none"),
+                                       alternative = c("greater", "two.sided"),
+                                       null_W = NULL,
+                                       alpha = 0.05,
+                                       seed = NULL,
+                                       return_perm = FALSE) {
+  test <- match.arg(test)
+  correction <- match.arg(correction)
+  alternative <- match.arg(alternative)
+
+  if (!is.null(fit)) {
+    W <- fit$W
+  }
+  if (is.null(W)) {
+    stop("Provide either fit or W.")
+  }
+  W <- as.matrix(W)
+  n <- nrow(W)
+  k <- ncol(W)
+
+  if (!is.null(seed)) set.seed(seed)
+
+  if (test == "two_group") {
+    alternative <- "two.sided"
+    if (is.null(groups)) stop("groups is required for two_group inference.")
+    groups <- factor(groups)
+    if (length(groups) != n) stop("groups length must match nrow(W).")
+    if (nlevels(groups) != 2) stop("two_group inference requires exactly 2 groups.")
+
+    design <- .component_design(groups, covariates)
+    stat_obs <- .component_t_stats(W, design, coef_index = 2L)
+    perm_stats <- matrix(NA_real_, nrow = nperm, ncol = k)
+
+    for (i in seq_len(nperm)) {
+      perm_groups <- sample(groups)
+      perm_design <- .component_design(perm_groups, covariates)
+      perm_stats[i, ] <- .component_t_stats(W, perm_design, coef_index = 2L)
+    }
+
+    p_unc <- .perm_pvals(stat_obs, perm_stats, two_sided = TRUE)
+
+    if (correction == "maxT") {
+      max_stat <- apply(abs(perm_stats), 1, max)
+      p_fwer <- (colSums(outer(max_stat, abs(stat_obs), ">=")) + 1) / (nperm + 1)
+    } else {
+      p_fwer <- p_unc
+    }
+
+    p_global <- (sum(apply(abs(perm_stats), 1, max) >= max(abs(stat_obs))) + 1) / (nperm + 1)
+
+    group_means <- vapply(levels(groups), function(g) {
+      colMeans(W[groups == g, , drop = FALSE])
+    }, numeric(k))
+    group_means <- matrix(group_means, nrow = k)
+
+    res_table <- data.frame(
+      component = seq_len(k),
+      stat = stat_obs,
+      mean_group1 = group_means[, 1],
+      mean_group2 = group_means[, 2],
+      p_unc = p_unc,
+      p_fwer = p_fwer,
+      stringsAsFactors = FALSE
+    )
+  } else {
+    if (is.null(null_W)) {
+      stop("null_W is required for one_group inference.")
+    }
+    null_list <- .as_null_W_list(null_W, n, k)
+    nperm <- length(null_list)
+
+    stat_obs <- colMeans(W)
+    perm_stats <- vapply(null_list, function(Wp) colMeans(Wp), numeric(k))
+    perm_stats <- t(perm_stats)
+
+    if (alternative == "two.sided") {
+      p_unc <- .perm_pvals(stat_obs, perm_stats, two_sided = TRUE)
+      obs_max <- max(abs(stat_obs))
+      max_stat <- apply(abs(perm_stats), 1, max)
+    } else {
+      p_unc <- (colSums(perm_stats >= matrix(stat_obs, nrow = nperm, ncol = k, byrow = TRUE)) + 1) / (nperm + 1)
+      obs_max <- max(stat_obs)
+      max_stat <- apply(perm_stats, 1, max)
+    }
+
+    if (correction == "maxT") {
+      p_fwer <- (colSums(outer(max_stat, if (alternative == "two.sided") abs(stat_obs) else stat_obs, ">=")) + 1) /
+        (nperm + 1)
+    } else {
+      p_fwer <- p_unc
+    }
+
+    p_global <- (sum(max_stat >= obs_max) + 1) / (nperm + 1)
+
+    res_table <- data.frame(
+      component = seq_len(k),
+      stat = stat_obs,
+      p_unc = p_unc,
+      p_fwer = p_fwer,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  list(
+    table = res_table,
+    alpha = alpha,
+    n_sig = sum(res_table$p_fwer < alpha, na.rm = TRUE),
+    p_global = p_global,
+    test = test,
+    correction = correction,
+    alternative = alternative,
+    nperm = nperm,
+    perm_stats = if (isTRUE(return_perm)) perm_stats else NULL
+  )
+}
+
+#' Global Cross-validated Group Test for Spatial NMF
+#'
+#' Performs a permutation-based global test by cross-validating a classifier
+#' on NMF component loadings learned within each fold.
+#'
+#' @param x Optional spatial_nmf_maps_result with return_data=TRUE.
+#' @param X Optional subject-by-voxel matrix (overrides x$data).
+#' @param groups Factor or vector of group labels (length n).
+#' @param k Number of components (defaults to x$fit$k if available).
+#' @param lambda Spatial regularization strength (defaults to x$fit$lambda if available).
+#' @param graph Optional graph Laplacian list (required if lambda > 0).
+#' @param neighbors Neighborhood size for volumetric adjacency (6/18/26).
+#' @param nfolds Number of cross-validation folds.
+#' @param folds Optional fold specification (vector of fold IDs or list of test indices).
+#' @param nperm Number of label permutations.
+#' @param metric Performance metric: "auc" or "accuracy".
+#' @param classifier Classifier: "glm", "lda", or "centroid".
+#' @param scale Logical; z-score W within each fold.
+#' @param positive Optional positive class label (defaults to second factor level).
+#' @param seed Optional RNG seed.
+#' @param project_args List of arguments passed to spatial_nmf_project.
+#' @param return_perm Logical; return permutation statistics.
+#' @param return_cv Logical; return cross-validated predictions and fold IDs.
+#' @param ... Additional arguments passed to spatial_nmf_fit.
+#'
+#' @return A list with the observed statistic, permutation p-value, and metadata.
+#' @export
+spatial_nmf_global_test <- function(x = NULL,
+                                    X = NULL,
+                                    groups = NULL,
+                                    k = NULL,
+                                    lambda = NULL,
+                                    graph = NULL,
+                                    neighbors = 6,
+                                    nfolds = 5,
+                                    folds = NULL,
+                                    nperm = 1000,
+                                    metric = c("auc", "accuracy"),
+                                    classifier = c("glm", "lda", "centroid"),
+                                    scale = TRUE,
+                                    positive = NULL,
+                                    seed = NULL,
+                                    project_args = list(max_iter = 100, check_every = 5),
+                                    return_perm = FALSE,
+                                    return_cv = FALSE,
+                                    ...) {
+  metric <- match.arg(metric)
+  classifier <- match.arg(classifier)
+
+  if (!is.null(seed)) set.seed(seed)
+
+  if (!is.null(x)) {
+    if (!inherits(x, "spatial_nmf_maps_result")) {
+      stop("x must be a spatial_nmf_maps_result.")
+    }
+    if (is.null(X) && !is.null(x$data)) X <- x$data
+    if (is.null(groups) && !is.null(x$groups)) groups <- x$groups
+    if (is.null(k) && !is.null(x$fit)) k <- x$fit$k
+    if (missing(lambda) && !is.null(x$fit)) lambda <- x$fit$lambda
+  }
+
+  if (is.null(X)) {
+    stop("X is required (pass spatial_nmf_maps with return_data=TRUE or supply X).")
+  }
+  X <- as.matrix(X)
+  if (any(!is.finite(X))) stop("X contains non-finite values.")
+  if (any(X < 0)) stop("X must be non-negative.")
+
+  if (is.null(groups)) stop("groups is required.")
+  label_info <- .prepare_binary_groups(groups, positive)
+  groups <- label_info$groups
+  positive <- label_info$positive
+  n <- nrow(X)
+  if (length(groups) != n) stop("groups length must match nrow(X).")
+
+  if (is.null(k)) stop("k is required.")
+  if (!is.numeric(k) || length(k) != 1L || k < 1) stop("k must be a positive integer.")
+  k <- as.integer(k)
+  if (is.null(lambda)) lambda <- 0
+  if (!is.numeric(nperm) || length(nperm) != 1L || nperm < 1) {
+    stop("nperm must be a positive integer.")
+  }
+  nperm <- as.integer(nperm)
+
+  if (!is.list(project_args)) stop("project_args must be a list.")
+
+  if (lambda > 0 && is.null(graph)) {
+    if (!is.null(x) && inherits(x, "spatial_nmf_maps_result")) {
+      if (identical(x$map_type, "volume") && !is.null(x$mask) && !is.null(x$dims)) {
+        if (length(x$dims) == 2L && neighbors == 6) {
+          neighbors <- 4
+        }
+        A <- build_voxel_adjacency(x$mask, dims = x$dims, neighbors = neighbors)
+        graph <- build_graph_laplacian(A)
+      } else {
+        stop("graph is required for lambda > 0 when using surface inputs.")
+      }
+    } else {
+      stop("graph is required for lambda > 0.")
+    }
+  }
+
+  fold_info <- .coerce_folds(folds, groups, nfolds)
+  fold_list <- fold_info$folds
+  fold_id <- fold_info$fold_id
+
+  min_train <- min(vapply(fold_list, function(idx) n - length(idx), integer(1)))
+  if (k > min_train) stop("k must be <= min training size across folds.")
+  if (k > ncol(X)) stop("k must be <= ncol(X).")
+  if (any(table(groups) < 2)) stop("Each group must have at least 2 samples.")
+
+  fold_data <- vector("list", length(fold_list))
+  for (i in seq_along(fold_list)) {
+    test_idx <- fold_list[[i]]
+    train_idx <- setdiff(seq_len(n), test_idx)
+    if (length(unique(groups[train_idx])) < 2L) {
+      stop("Each fold must have both groups represented in training.")
+    }
+
+    fit_args <- list(...)
+    fit_args$X <- X[train_idx, , drop = FALSE]
+    fit_args$k <- k
+    fit_args$graph <- graph
+    fit_args$lambda <- lambda
+
+    fit <- do.call(spatial_nmf_fit, fit_args)
+
+    proj_args <- project_args
+    proj_args$X <- X[test_idx, , drop = FALSE]
+    proj_args$H <- fit$H
+    proj <- do.call(spatial_nmf_project, proj_args)
+
+    W_train <- fit$W
+    W_test <- proj$W
+    if (isTRUE(scale)) {
+      scaled <- .scale_train_test(W_train, W_test)
+      W_train <- scaled$train
+      W_test <- scaled$test
+    }
+
+    fold_data[[i]] <- list(
+      train_idx = train_idx,
+      test_idx = test_idx,
+      W_train = W_train,
+      W_test = W_test
+    )
+  }
+
+  cv_pred <- .cv_predict(fold_data, groups, classifier, positive)
+  stat_obs <- .metric_score(groups, cv_pred, metric, positive)
+
+  perm_stats <- numeric(nperm)
+  for (i in seq_len(nperm)) {
+    perm_groups <- sample(groups)
+    perm_pred <- .cv_predict(fold_data, perm_groups, classifier, positive)
+    perm_stats[i] <- .metric_score(perm_groups, perm_pred, metric, positive)
+  }
+
+  p_value <- (sum(perm_stats >= stat_obs, na.rm = TRUE) + 1) / (nperm + 1)
+
+  list(
+    stat = stat_obs,
+    p_value = p_value,
+    metric = metric,
+    classifier = classifier,
+    nperm = nperm,
+    nfolds = length(fold_list),
+    positive = positive,
+    perm_stats = if (isTRUE(return_perm)) perm_stats else NULL,
+    cv = if (isTRUE(return_cv)) list(pred = cv_pred, fold_id = fold_id) else NULL
+  )
+}
+
+#' Bootstrap Stability for Spatial NMF Components
+#'
+#' Estimates voxelwise stability of component maps via bootstrap resampling.
+#'
+#' @param x A spatial_nmf_maps_result or spatial_nmf_fit object.
+#' @param X Optional data matrix (n x p) if not included in x.
+#' @param fit Optional spatial_nmf_fit object (if x is not provided).
+#' @param graph Optional graph Laplacian list (required if lambda > 0).
+#' @param lambda Spatial regularization strength (defaults to fit$lambda).
+#' @param n_boot Number of bootstrap samples.
+#' @param sample One of "bootstrap" or "subsample".
+#' @param sample_frac Fraction of subjects to sample.
+#' @param init NMF initialization for bootstrap fits.
+#' @param normalize Component normalization ("H" rescales rows to sum 1).
+#' @param similarity Similarity measure for component matching ("cosine" or "cor").
+#' @param match Matching strategy (currently "greedy").
+#' @param top_frac Fraction of top voxels used to compute selection frequency.
+#' @param seed Optional RNG seed.
+#' @param return_maps Logical; return stability maps as NeuroVol/NeuroSurface.
+#' @param ... Additional arguments passed to spatial_nmf_fit.
+#'
+#' @return A list with stability summaries and optional maps.
+#' @export
+spatial_nmf_stability <- function(x = NULL,
+                                  X = NULL,
+                                  fit = NULL,
+                                  graph = NULL,
+                                  lambda = NULL,
+                                  n_boot = 200,
+                                  sample = c("bootstrap", "subsample"),
+                                  sample_frac = 1,
+                                  init = c("nndsvd", "random"),
+                                  normalize = c("H", "none"),
+                                  similarity = c("cosine", "cor"),
+                                  match = c("greedy"),
+                                  top_frac = 0.1,
+                                  seed = NULL,
+                                  return_maps = FALSE,
+                                  ...) {
+  sample <- match.arg(sample)
+  init <- match.arg(init)
+  normalize <- match.arg(normalize)
+  similarity <- match.arg(similarity)
+  match <- match.arg(match)
+
+  mask_idx <- NULL
+  map_type <- NULL
+  mask <- NULL
+  dims <- NULL
+  ref_map <- NULL
+  full_length <- NULL
+
+  if (!is.null(x) && inherits(x, "spatial_nmf_maps_result")) {
+    fit <- x$fit
+    if (is.null(X)) X <- x$data
+    mask_idx <- x$mask_indices
+    map_type <- x$map_type
+    mask <- x$mask
+    dims <- x$dims
+    ref_map <- x$ref_map
+    full_length <- x$full_length
+  } else if (!is.null(x) && inherits(x, "spatial_nmf_fit")) {
+    fit <- x
+  }
+
+  if (is.null(fit)) stop("fit is required.")
+  if (is.null(X)) stop("X is required (pass return_data=TRUE in spatial_nmf_maps).")
+
+  X <- as.matrix(X)
+  n <- nrow(X)
+  k <- nrow(fit$H)
+  p <- ncol(fit$H)
+
+  if (is.null(lambda)) lambda <- fit$lambda
+  if (lambda > 0 && is.null(graph)) {
+    stop("graph is required for stability when lambda > 0.")
+  }
+  if (!is.numeric(sample_frac) || sample_frac <= 0 || sample_frac > 1) {
+    stop("sample_frac must be in (0, 1].")
+  }
+  if (!is.numeric(top_frac) || top_frac <= 0 || top_frac > 1) {
+    stop("top_frac must be in (0, 1].")
+  }
+
+  if (!is.null(seed)) set.seed(seed)
+
+  H_ref <- fit$H
+  if (normalize == "H") {
+    H_ref <- .normalize_components(H_ref)
+  }
+
+  mean_acc <- matrix(0, nrow = k, ncol = p)
+  m2_acc <- matrix(0, nrow = k, ncol = p)
+  sel_counts <- matrix(0, nrow = k, ncol = p)
+  sim_sum <- numeric(k)
+
+  for (b in seq_len(n_boot)) {
+    if (sample == "bootstrap") {
+      idx <- sample.int(n, size = ceiling(n * sample_frac), replace = TRUE)
+    } else {
+      idx <- sample.int(n, size = ceiling(n * sample_frac), replace = FALSE)
+    }
+
+    fit_b <- spatial_nmf_fit(
+      X = X[idx, , drop = FALSE],
+      k = k,
+      graph = graph,
+      lambda = lambda,
+      init = init,
+      ...
+    )
+
+    H_b <- fit_b$H
+    sim <- .component_similarity(H_ref, H_b, similarity)
+    order <- .match_components(sim, match)
+    sim_sum <- sim_sum + sim[cbind(seq_len(k), order)]
+    H_b <- H_b[order, , drop = FALSE]
+
+    if (normalize == "H") {
+      H_b <- .normalize_components(H_b)
+    }
+
+    delta <- H_b - mean_acc
+    mean_acc <- mean_acc + delta / b
+    m2_acc <- m2_acc + delta * (H_b - mean_acc)
+
+    if (!is.null(top_frac) && top_frac > 0) {
+      top_n <- max(1L, ceiling(p * top_frac))
+      for (j in seq_len(k)) {
+        ord <- order(H_b[j, ], decreasing = TRUE)
+        sel_counts[j, ord[seq_len(top_n)]] <- sel_counts[j, ord[seq_len(top_n)]] + 1
+      }
+    }
+  }
+
+  sd_acc <- sqrt(m2_acc / pmax(n_boot - 1, 1))
+  cv_acc <- sd_acc / pmax(mean_acc, .Machine$double.eps)
+  selection_freq <- sel_counts / n_boot
+  comp_similarity <- sim_sum / n_boot
+
+  out <- list(
+    mean = mean_acc,
+    sd = sd_acc,
+    cv = cv_acc,
+    selection = selection_freq,
+    component_similarity = comp_similarity,
+    n_boot = n_boot,
+    k = k,
+    p = p
+  )
+
+  if (isTRUE(return_maps)) {
+    if (is.null(mask_idx) || is.null(map_type)) {
+      stop("return_maps requires spatial metadata (use spatial_nmf_maps result).")
+    }
+    out$maps <- list(
+      mean = .components_to_maps(mean_acc, mask_idx, map_type, mask, dims, full_length, ref_map),
+      sd = .components_to_maps(sd_acc, mask_idx, map_type, mask, dims, full_length, ref_map),
+      cv = .components_to_maps(cv_acc, mask_idx, map_type, mask, dims, full_length, ref_map),
+      selection = .components_to_maps(selection_freq, mask_idx, map_type, mask, dims, full_length, ref_map)
+    )
+  }
+
+  out
+}
+
+.component_design <- function(groups, covariates) {
+  data <- data.frame(group = groups)
+  if (!is.null(covariates)) {
+    if (!is.data.frame(covariates)) covariates <- as.data.frame(covariates)
+    if (nrow(covariates) != nrow(data)) {
+      stop("covariates must have the same number of rows as W.")
+    }
+    data <- cbind(data, covariates)
+  }
+  stats::model.matrix(~ ., data = data)
+}
+
+.component_t_stats <- function(W, design, coef_index) {
+  qrX <- qr(design)
+  coef <- qr.coef(qrX, W)
+  fitted <- design %*% coef
+  resid <- W - fitted
+  df <- nrow(W) - qrX$rank
+  sigma2 <- colSums(resid^2) / df
+  R <- qr.R(qrX)
+  invR <- solve(R)
+  xtx_inv <- invR %*% t(invR)
+  se <- sqrt(xtx_inv[coef_index, coef_index] * sigma2)
+  coef[coef_index, ] / se
+}
+
+.perm_pvals <- function(stat_obs, perm_stats, two_sided = TRUE) {
+  nperm <- nrow(perm_stats)
+  k <- length(stat_obs)
+  if (two_sided) {
+    cmp <- abs(perm_stats) >= matrix(abs(stat_obs), nrow = nperm, ncol = k, byrow = TRUE)
+  } else {
+    cmp <- perm_stats >= matrix(stat_obs, nrow = nperm, ncol = k, byrow = TRUE)
+  }
+  (colSums(cmp) + 1) / (nperm + 1)
+}
+
+.as_null_W_list <- function(null_W, n, k) {
+  if (is.list(null_W)) {
+    if (!all(vapply(null_W, function(mat) is.matrix(mat) && all(dim(mat) == c(n, k)), logical(1)))) {
+      stop("Each null_W entry must be an n x k matrix.")
+    }
+    return(null_W)
+  }
+
+  if (is.array(null_W) && length(dim(null_W)) == 3L) {
+    dims <- dim(null_W)
+    if (dims[2] == n && dims[3] == k) {
+      return(lapply(seq_len(dims[1]), function(i) null_W[i, , ]))
+    }
+    if (dims[1] == n && dims[2] == k) {
+      return(lapply(seq_len(dims[3]), function(i) null_W[, , i]))
+    }
+  }
+
+  stop("null_W must be a list of matrices or a 3D array matching n and k.")
+}
+
+.normalize_components <- function(H) {
+  scale <- pmax(rowSums(H), .Machine$double.eps)
+  H / scale
+}
+
+.component_similarity <- function(H_ref, H_boot, method) {
+  if (method == "cosine") {
+    ref_norm <- H_ref / sqrt(pmax(rowSums(H_ref^2), .Machine$double.eps))
+    boot_norm <- H_boot / sqrt(pmax(rowSums(H_boot^2), .Machine$double.eps))
+    ref_norm %*% t(boot_norm)
+  } else {
+    sim <- stats::cor(t(H_ref), t(H_boot))
+    sim[is.na(sim)] <- 0
+    sim
+  }
+}
+
+.match_components <- function(sim_mat, method) {
+  if (method != "greedy") stop("Only greedy matching is implemented.")
+  k <- nrow(sim_mat)
+  pairs <- expand.grid(ref = seq_len(k), boot = seq_len(k))
+  pairs$sim <- as.vector(sim_mat)
+  pairs <- pairs[order(-pairs$sim), , drop = FALSE]
+
+  ref_used <- rep(FALSE, k)
+  boot_used <- rep(FALSE, k)
+  order <- integer(k)
+
+  for (i in seq_len(nrow(pairs))) {
+    r <- pairs$ref[i]
+    b <- pairs$boot[i]
+    if (!ref_used[r] && !boot_used[b]) {
+      order[r] <- b
+      ref_used[r] <- TRUE
+      boot_used[b] <- TRUE
+    }
+    if (all(ref_used)) break
+  }
+
+  if (any(order == 0)) {
+    remaining_ref <- which(order == 0)
+    remaining_boot <- setdiff(seq_len(k), order)
+    order[remaining_ref] <- remaining_boot
+  }
+
+  order
+}
+
+.prepare_binary_groups <- function(groups, positive) {
+  groups <- factor(groups)
+  if (nlevels(groups) != 2L) {
+    stop("groups must have exactly 2 levels.")
+  }
+  if (is.null(positive)) {
+    positive <- levels(groups)[2]
+  }
+  if (!positive %in% levels(groups)) {
+    stop("positive must match a level in groups.")
+  }
+  list(groups = groups, positive = positive)
+}
+
+.coerce_folds <- function(folds, groups, nfolds) {
+  n <- length(groups)
+  if (is.null(folds)) {
+    fold_id <- .stratified_folds(groups, nfolds)
+  } else if (is.list(folds)) {
+    fold_list <- lapply(folds, function(idx) as.integer(idx))
+    all_idx <- sort(unlist(fold_list, use.names = FALSE))
+    if (!identical(all_idx, seq_len(n))) {
+      stop("folds must partition all indices 1..n without overlap.")
+    }
+    fold_id <- integer(n)
+    for (i in seq_along(fold_list)) {
+      fold_id[fold_list[[i]]] <- i
+    }
+  } else if (is.numeric(folds) && length(folds) == n) {
+    fold_id <- as.integer(folds)
+    if (any(is.na(fold_id))) stop("folds contains NA values.")
+  } else {
+    stop("folds must be NULL, a fold ID vector, or a list of test indices.")
+  }
+
+  fold_list <- split(seq_len(n), fold_id)
+  fold_list <- fold_list[order(as.integer(names(fold_list)))]
+  list(folds = fold_list, fold_id = fold_id)
+}
+
+.stratified_folds <- function(groups, nfolds) {
+  groups <- factor(groups)
+  if (!is.numeric(nfolds) || length(nfolds) != 1L) {
+    stop("nfolds must be a single integer.")
+  }
+  nfolds <- as.integer(nfolds)
+  counts <- table(groups)
+  min_count <- min(counts)
+  if (nfolds > min_count) {
+    warning("nfolds reduced to ", min_count, " to preserve stratification.")
+    nfolds <- min_count
+  }
+  if (nfolds < 2L) stop("nfolds must be at least 2.")
+
+  fold_id <- integer(length(groups))
+  for (lvl in levels(groups)) {
+    idx <- which(groups == lvl)
+    idx <- sample(idx)
+    fold_id[idx] <- rep(seq_len(nfolds), length.out = length(idx))
+  }
+  fold_id
+}
+
+.scale_train_test <- function(W_train, W_test) {
+  mu <- colMeans(W_train)
+  sigma <- apply(W_train, 2, stats::sd)
+  sigma[!is.finite(sigma) | sigma == 0] <- 1
+  train <- sweep(W_train, 2, mu, "-")
+  train <- sweep(train, 2, sigma, "/")
+  test <- sweep(W_test, 2, mu, "-")
+  test <- sweep(test, 2, sigma, "/")
+  list(train = train, test = test)
+}
+
+.cv_predict <- function(fold_data, groups, classifier, positive) {
+  n <- length(groups)
+  preds <- rep(NA_real_, n)
+  for (i in seq_along(fold_data)) {
+    info <- fold_data[[i]]
+    model <- .fit_binary_classifier(info$W_train, groups[info$train_idx], classifier, positive)
+    preds[info$test_idx] <- .predict_binary_classifier(model, info$W_test, positive)
+  }
+  if (any(!is.finite(preds))) stop("Non-finite predictions in CV.")
+  preds
+}
+
+.fit_binary_classifier <- function(W_train, groups, classifier, positive) {
+  df <- as.data.frame(W_train)
+  if (is.null(colnames(df))) colnames(df) <- paste0("V", seq_len(ncol(df)))
+
+  if (classifier == "centroid") {
+    mu_pos <- colMeans(W_train[groups == positive, , drop = FALSE])
+    mu_neg <- colMeans(W_train[groups != positive, , drop = FALSE])
+    return(list(type = "centroid", mu_pos = mu_pos, mu_neg = mu_neg))
+  }
+
+  if (classifier == "lda") {
+    fit <- tryCatch(
+      MASS::lda(x = df, grouping = factor(groups)),
+      error = function(e) NULL
+    )
+    if (is.null(fit)) {
+      return(.fit_binary_classifier(W_train, groups, "centroid", positive))
+    }
+    return(list(type = "lda", fit = fit))
+  }
+
+  y <- as.integer(groups == positive)
+  df$y <- y
+  fit <- suppressWarnings(
+    tryCatch(
+      stats::glm(y ~ ., data = df, family = stats::binomial()),
+      error = function(e) NULL
+    )
+  )
+  if (is.null(fit) || !isTRUE(fit$converged)) {
+    return(.fit_binary_classifier(W_train, groups, "lda", positive))
+  }
+  list(type = "glm", fit = fit)
+}
+
+.predict_binary_classifier <- function(model, W_test, positive) {
+  if (model$type == "centroid") {
+    score <- as.vector(W_test %*% (model$mu_pos - model$mu_neg))
+    return(stats::plogis(score))
+  }
+
+  df <- as.data.frame(W_test)
+  if (is.null(colnames(df))) colnames(df) <- paste0("V", seq_len(ncol(df)))
+
+  if (model$type == "lda") {
+    pred <- predict(model$fit, df)
+    probs <- pred$posterior[, positive]
+    return(as.numeric(probs))
+  }
+
+  as.numeric(stats::predict(model$fit, newdata = df, type = "response"))
+}
+
+.metric_score <- function(groups, preds, metric, positive) {
+  y <- as.integer(groups == positive)
+  if (metric == "accuracy") {
+    mean((preds >= 0.5) == y)
+  } else {
+    .auc_score(y, preds)
+  }
+}
+
+.auc_score <- function(y, score) {
+  y <- as.integer(y)
+  pos <- y == 1L
+  n_pos <- sum(pos)
+  n_neg <- length(y) - n_pos
+  if (n_pos == 0 || n_neg == 0) return(NA_real_)
+  r <- rank(score, ties.method = "average")
+  (sum(r[pos]) - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
+}
