@@ -110,28 +110,28 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
   
   if (is.character(predtabs[[1]]$observed) || is.factor(predtabs[[1]]$observed)) {
     ## applies constant weight to each table and concatenates
-    ptab <- map(seq_along(predtabs), function(i) predtabs[[i]] %>% mutate(.tableid=i, .weight=wts[i])) %>% 
+    ptab <- map(seq_along(predtabs), function(i) predtabs[[i]] %>% mutate(.tableid=i, .weight=wts[i])) %>%
       map_df(bind_rows) %>% as_tibble(.name_repair=.name_repair)
-    
+
     probs <- if (collapse_regions) {
-      
-      ptab %>% dplyr::group_by(.rownum,observed) %>% summarise_at(vars(starts_with("prob_")), 
+
+      ptab %>% dplyr::group_by(.rownum,observed) %>% summarise_at(vars(starts_with("prob_")),
                                                                   list(~stats::weighted.mean(., w = .weight)))
     } else {
-     
+
       ## groups over rownames, condition, and roinum, then compute weighted means of probabilities
-      ptab %>% dplyr::group_by(.rownum,observed,roinum) %>% summarise_at(vars(starts_with("prob_")), 
+      ptab %>% dplyr::group_by(.rownum,observed,roinum) %>% summarise_at(vars(starts_with("prob_")),
                                                                          list(~stats::weighted.mean(., w = .weight)))
     }
-    
+
     p <- probs %>% ungroup() %>% dplyr::select(dplyr::starts_with("prob_"))
     pmat <- as.matrix(p)
-      
+
     pobserved <- pmat[cbind(seq(1,nrow(probs)),as.integer(probs$observed))]
     mc <- max.col(pmat)
     preds <- levels(probs$observed)[mc]
-    
-    
+
+
     prediction_table <- tibble(
       .rownum=probs$.rownum,
       roinum=if (collapse_regions) 1 else probs$roinum,
@@ -140,8 +140,12 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
       predicted=preds,
       correct = predicted == probs$observed,
     ) %>% bind_cols(p)
+
+    return(prediction_table)
   } else if (is.numeric(predtabs[[1]]$observed)) {
     stop("combining continuous predictions not implemented")
+  } else {
+    stop("observed values must be character, factor, or numeric")
   }
 }
 
@@ -158,7 +162,15 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
 #' @export
 merge_results.regional_mvpa_result <- function(obj, ...) {
   rlist <- list(obj, ...)
-  combine_prediction_tables(rlist)
+  # Extract prediction_table from each regional_mvpa_result object
+  pred_tables <- lapply(rlist, function(r) r$prediction_table)
+  # Filter out NULL tables
+  pred_tables <- pred_tables[!sapply(pred_tables, is.null)]
+  if (length(pred_tables) == 0) {
+    warning("No valid prediction tables to merge")
+    return(tibble::tibble())
+  }
+  combine_prediction_tables(pred_tables)
 }
 
 
@@ -186,7 +198,7 @@ merge_results.regional_mvpa_result <- function(obj, ...) {
 #' regional_result <- regional_mvpa_result(model_spec, performance_table,
 #'                                         prediction_table, vol_results, fits = fits)
 #' @export
-regional_mvpa_result <- function(model_spec, performance_table, prediction_table, vol_results, fits=fits) {
+regional_mvpa_result <- function(model_spec, performance_table, prediction_table, vol_results, fits=NULL) {
   ret <- list(model_spec=model_spec, 
               performance_table=performance_table,
               prediction_table=prediction_table,

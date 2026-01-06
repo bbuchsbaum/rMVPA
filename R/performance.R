@@ -16,7 +16,7 @@
 #' @export
 predicted_class <- function(prob) {
   maxid <- max.col(prob, ties.method="random")
-  pclass <- colnames(prob)[maxid]
+  colnames(prob)[maxid]
 }
 
 #' Calculate Performance Metrics for Regression Result

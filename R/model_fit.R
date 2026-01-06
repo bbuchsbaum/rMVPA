@@ -439,7 +439,6 @@ predict.weighted_model <- function(object, newdata=NULL, ...) {
 
   preds <- lapply(object, function(fit) predict(fit, newdata, ...))
   merge_predictions(preds[[1]], preds[2:length(preds)], attr(object, "weights"))
-  
 }
 
 #' @export
@@ -449,11 +448,10 @@ predict.list_model <- function(object, newdata=NULL,...) {
   if (is.null(newdata)) {
     stop("newdata cannot be null")
   }
-  
-  res <- lapply(object, function(fit) {
+
+  lapply(object, function(fit) {
     predict(fit, newdata,...)
   })
-  
 }
 
 

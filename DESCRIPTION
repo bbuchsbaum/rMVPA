@@ -49,7 +49,7 @@ Collate:
     'balance.R'
     'classifiers.R'
     'caret_models.R'
-     crossnobis_helpers.R
+    'crossnobis_helpers.R'
     'common.R'
     'crossval.R'
     'dataset.R'
