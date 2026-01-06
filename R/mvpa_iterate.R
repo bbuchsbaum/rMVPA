@@ -434,18 +434,21 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
         if (nrow(sf) > 0) {
           # ---- ROI extraction (serial) ----
           t_extract_roi <- proc.time()[3]
-        # For searchlight, pass center_global_id to preserve center during filtering
-        if (analysis_type == "searchlight") {
-          sf <- sf %>% 
-            rowwise() %>% 
-            mutate(roi=list(extract_roi(sample, dset, center_global_id = rnum, min_voxels = min_voxels_required))) %>% 
-            select(-sample)
-        } else {
-          sf <- sf %>% 
-            rowwise() %>% 
-            mutate(roi=list(extract_roi(sample, dset, min_voxels = min_voxels_required))) %>% 
-            select(-sample)
-        }
+          # Use lapply instead of rowwise() + mutate() for better performance
+          # rowwise() has significant overhead due to grouped tibble creation
+          if (analysis_type == "searchlight") {
+            # For searchlight, pass center_global_id to preserve center during filtering
+            sf$roi <- lapply(seq_len(nrow(sf)), function(j) {
+              extract_roi(sf$sample[[j]], dset,
+                          center_global_id = sf$rnum[j],
+                          min_voxels = min_voxels_required)
+            })
+          } else {
+            sf$roi <- lapply(seq_len(nrow(sf)), function(j) {
+              extract_roi(sf$sample[[j]], dset, min_voxels = min_voxels_required)
+            })
+          }
+          sf$sample <- NULL  # Remove sample column
           futile.logger::flog.debug("Batch %d: ROI extraction (extract_roi) took %.3f sec",
                                     i, proc.time()[3] - t_extract_roi)
           

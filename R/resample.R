@@ -71,13 +71,28 @@ filter_roi.default <- function(roi, preserve = NULL, ...) {
 filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Extract the train data values
   trdat <- values(roi$train_roi)
-  
-  # Find columns with missing values (NA)
-  nas <- apply(trdat, 2, function(v) any(is.na(v)))
-  
-  # Find columns with non-zero standard deviation
-  sdnonzero <- apply(trdat, 2, sd, na.rm=TRUE) > 0
-  
+
+  # Find columns with missing values (NA) - vectorized for performance
+  # colSums is much faster than apply() for this operation
+
+  nas <- colSums(is.na(trdat)) > 0
+
+  # Find columns with non-zero standard deviation - vectorized
+  # Use matrixStats if available for best performance, otherwise use vectorized base R
+  if (requireNamespace("matrixStats", quietly = TRUE)) {
+    sdnonzero <- matrixStats::colSds(trdat, na.rm = TRUE) > 0
+  } else {
+    # Vectorized variance calculation: Var(X) = E[X^2] - E[X]^2
+    n <- nrow(trdat)
+    col_means <- colMeans(trdat, na.rm = TRUE)
+    col_sq_means <- colMeans(trdat^2, na.rm = TRUE)
+    col_vars <- col_sq_means - col_means^2
+    # Adjust for sample variance (n-1) and handle edge cases
+    col_vars <- col_vars * n / (n - 1)
+    col_vars[is.na(col_vars) | col_vars < 0] <- 0
+    sdnonzero <- col_vars > .Machine$double.eps
+  }
+
   # Determine columns to keep
   keep <- !nas & sdnonzero
 
@@ -158,13 +173,23 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
 filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Extract the train data values
   trdat <- roi$train_roi@data
-  
-  # Find columns with missing values (NA)
-  nas <- apply(trdat, 2, function(v) any(is.na(v)))
-  
-  # Find columns with non-zero standard deviation
-  sdnonzero <- apply(trdat, 2, sd, na.rm=TRUE) > 0
-  
+
+  # Find columns with missing values (NA) - vectorized for performance
+  nas <- colSums(is.na(trdat)) > 0
+
+  # Find columns with non-zero standard deviation - vectorized
+  if (requireNamespace("matrixStats", quietly = TRUE)) {
+    sdnonzero <- matrixStats::colSds(trdat, na.rm = TRUE) > 0
+  } else {
+    n <- nrow(trdat)
+    col_means <- colMeans(trdat, na.rm = TRUE)
+    col_sq_means <- colMeans(trdat^2, na.rm = TRUE)
+    col_vars <- col_sq_means - col_means^2
+    col_vars <- col_vars * n / (n - 1)
+    col_vars[is.na(col_vars) | col_vars < 0] <- 0
+    sdnonzero <- col_vars > .Machine$double.eps
+  }
+
   # Determine columns to keep
   keep <- !nas & sdnonzero
   

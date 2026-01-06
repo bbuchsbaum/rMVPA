@@ -28,38 +28,44 @@ combine_regional_results = function(results) {
   }
   # Check if the observed values are factors (for categorical data)
   if (!is.null(results$result[[1]]) && is.factor(results$result[[1]]$observed)) {
-    results %>% dplyr::rowwise() %>% dplyr::do( {
-      
+    # Use purrr::map_dfr instead of deprecated rowwise() + do() for better performance
+    purrr::map_dfr(seq_len(nrow(results)), function(i) {
+      result <- results$result[[i]]
+      id <- results$id[[i]]
+
       # Use test indices if provided in the classification_result to preserve
       # alignment with the original test design (important when some rows are dropped)
-      row_index <- if (!is.null(.$result$testind)) .$result$testind else seq_along(.$result$observed)
+      row_index <- if (!is.null(result$testind)) result$testind else seq_along(result$observed)
 
       # Create a tibble containing observed, predicted, and additional information
       tib1 <- tibble::tibble(
         .rownum=row_index,
-        roinum=rep(.$id, length(row_index)),
-        observed=.$result$observed,
-        pobserved=sapply(seq_along(.$result$observed), function(i) .$result$probs[i, .$result$observed[i]]),
-        predicted=.$result$predicted,
-        correct=as.character(.$result$observed) == as.character(.$result$predicted)
+        roinum=rep(id, length(row_index)),
+        observed=result$observed,
+        pobserved=sapply(seq_along(result$observed), function(j) result$probs[j, result$observed[j]]),
+        predicted=result$predicted,
+        correct=as.character(result$observed) == as.character(result$predicted)
       )
-      
+
       # Create a tibble with the probabilities for each class
-      tib2 <- tibble::as_tibble(.$result$probs, .name_repair=.name_repair)
+      tib2 <- tibble::as_tibble(result$probs, .name_repair=.name_repair)
       names(tib2) <- paste0("prob_", names(tib2))
-      
+
       # Combine tib1 and tib2
       cbind(tib1, tib2)
     })
   } else if (!is.null(results$result[[1]])) {
     # For non-factor observed values (for continuous data)
-    results %>% dplyr::rowwise() %>% dplyr::do({
-      row_index <- if (!is.null(.$result$testind)) .$result$testind else seq_along(.$result$observed)
+    # Use purrr::map_dfr instead of deprecated rowwise() + do()
+    purrr::map_dfr(seq_len(nrow(results)), function(i) {
+      result <- results$result[[i]]
+      id <- results$id[[i]]
+      row_index <- if (!is.null(result$testind)) result$testind else seq_along(result$observed)
       tibble::tibble(
         .rownum=row_index,
-        roinum=rep(.$id, length(row_index)),
-        observed=.$result$observed,
-        predicted=.$result$predicted)
+        roinum=rep(id, length(row_index)),
+        observed=result$observed,
+        predicted=result$predicted)
     })
   } else {
     tibble::tibble()
