@@ -696,7 +696,7 @@ spatial_nmf_maps <- function(group_A,
     ...
   )
   futile.logger::flog.info("spatial_nmf_maps: NMF fit complete (converged=%s, iterations=%d)",
-                           as.character(fit$converged), fit$iterations)
+                           as.character(fit$converged), as.integer(fit$iter))
 
   components <- NULL
   if (isTRUE(return_maps)) {
