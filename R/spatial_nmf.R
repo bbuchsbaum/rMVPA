@@ -570,6 +570,9 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
 #'   passed to spatial_nmf_global_test.
 #' @param stability NULL to skip, TRUE for defaults, or a list of arguments
 #'   passed to spatial_nmf_stability.
+#' @param voxelwise_stats Optional voxelwise statistics to compute. Use "stability_zp"
+#'   to return bootstrap z- and p-value maps derived from `stability` (forces
+#'   `stability$return_maps = TRUE`).
 #' @param ... Additional arguments passed to spatial_nmf_fit.
 #'
 #' @return A list with fields:
@@ -580,6 +583,7 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
 #'     \item mask_indices: indices used to vectorize maps.
 #'     \item map_type: "volume" or "surface".
 #'     \item data: subject-by-voxel matrix (if return_data).
+#'     \item voxelwise: list of voxelwise z/p maps (if requested).
 #'   }
 #' @export
 spatial_nmf_maps <- function(group_A,
@@ -596,8 +600,10 @@ spatial_nmf_maps <- function(group_A,
                              component_test = NULL,
                              global_test = NULL,
                              stability = NULL,
+                             voxelwise_stats = c("none", "stability_zp"),
                              ...) {
   na_action <- match.arg(na_action)
+  voxelwise_stats <- match.arg(voxelwise_stats)
 
   group_A <- .ensure_map_list(group_A, "group_A")
   group_B <- .ensure_map_list(group_B, "group_B")
@@ -710,12 +716,53 @@ spatial_nmf_maps <- function(group_A,
 
   stability_res <- NULL
   stability_args <- .as_arg_list(stability, "stability")
+
+  if (voxelwise_stats != "none" && is.null(stability_args)) {
+    stability_args <- list()
+  }
+  if (voxelwise_stats != "none" && is.null(stability_args$return_maps)) {
+    stability_args$return_maps <- TRUE
+  }
   if (!is.null(stability_args)) {
-    if (is.null(stability_args$fit)) stability_args$fit <- fit
-    if (is.null(stability_args$X)) stability_args$X <- X
+    # Build a minimal spatial_nmf_maps_result to pass spatial metadata
+    # to spatial_nmf_stability when return_maps is requested
+    if (isTRUE(stability_args$return_maps) && is.null(stability_args$x)) {
+      stability_args$x <- structure(
+        list(
+          fit = fit,
+          data = X,
+          mask_indices = mask_idx,
+          map_type = map_type,
+          mask = mask,
+          dims = dims,
+          full_length = full_length,
+          ref_map = group_A[[1]]
+        ),
+        class = "spatial_nmf_maps_result"
+      )
+      # Clear fit and X since they're in x now
+      stability_args$fit <- NULL
+      stability_args$X <- NULL
+    } else {
+      if (is.null(stability_args$fit)) stability_args$fit <- fit
+      if (is.null(stability_args$X)) stability_args$X <- X
+    }
     if (is.null(stability_args$graph)) stability_args$graph <- graph
     if (is.null(stability_args$lambda)) stability_args$lambda <- lambda
     stability_res <- do.call(spatial_nmf_stability, stability_args)
+  }
+
+  voxelwise_res <- NULL
+  if (voxelwise_stats != "none") {
+    voxelwise_res <- spatial_nmf_voxelwise_stats(
+      stability = stability_res,
+      map_type = map_type,
+      mask = mask,
+      dims = dims,
+      mask_indices = mask_idx,
+      full_length = full_length,
+      ref_map = group_A[[1]]
+    )
   }
 
   res <- list(
@@ -733,6 +780,7 @@ spatial_nmf_maps <- function(group_A,
   if (!is.null(component_res)) res$component_test <- component_res
   if (!is.null(global_res)) res$global_test <- global_res
   if (!is.null(stability_res)) res$stability <- stability_res
+  if (!is.null(voxelwise_res)) res$voxelwise <- voxelwise_res
 
   structure(res, class = "spatial_nmf_maps_result")
 }

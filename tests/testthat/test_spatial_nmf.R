@@ -526,3 +526,44 @@ test_that("spatial_nmf_maps errors on mismatched volume dimensions", {
 
   expect_error(spatial_nmf_maps(group_A = list(map_bad), mask = mask, k = 1, lambda = 0))
 })
+
+test_that("spatial_nmf_maps stability with return_maps=TRUE passes spatial metadata", {
+
+  # Regression test: stability analysis with return_maps=TRUE was failing because
+
+# spatial_nmf_maps didn't pass spatial metadata to spatial_nmf_stability.
+  # See: https://github.com/bbuchsbaum/rMVPA/issues/XXX
+  mask <- neuroim2::NeuroVol(array(1, dim = c(3, 3, 2)), neuroim2::NeuroSpace(c(3, 3, 2)))
+  space_obj <- neuroim2::space(mask)
+
+  set.seed(42)
+  # Create a few test maps with non-negative values (required for NMF)
+  maps <- lapply(1:4, function(i) {
+    neuroim2::NeuroVol(array(rexp(18), dim = c(3, 3, 2)), space_obj)
+  })
+
+  # This should not error - previously failed with:
+# "return_maps requires spatial metadata (use spatial_nmf_maps result)"
+  res <- spatial_nmf_maps(
+    group_A = maps,
+    mask = mask,
+    k = 2,
+    lambda = 0,
+    return_maps = TRUE,
+    return_data = TRUE,
+    stability = list(
+      n_boot = 3,
+      return_maps = TRUE,
+      seed = 123
+    ),
+    max_iter = 10
+  )
+
+  # Verify the stability results include maps
+  expect_true(!is.null(res$stability))
+  expect_true(!is.null(res$stability$maps))
+  expect_true(!is.null(res$stability$maps$mean))
+  expect_true(!is.null(res$stability$maps$sd))
+  expect_length(res$stability$maps$mean, 2)  # k=2 components
+  expect_true(inherits(res$stability$maps$mean[[1]], "NeuroVol"))
+})
