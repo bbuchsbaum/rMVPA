@@ -24,6 +24,8 @@ spatial_nmf_global_test(
   project_args = list(max_iter = 100, check_every = 5),
   return_perm = FALSE,
   return_cv = FALSE,
+  parallel = FALSE,
+  future_seed = TRUE,
   ...
 )
 }
@@ -71,12 +73,32 @@ and refits NMF within each fold. If `folds` is supplied, "full" falls back to
 
 \item{return_cv}{Logical; return cross-validated predictions and fold IDs.}
 
+\item{parallel}{Logical; use future_lapply for permutations (requires future.apply).}
+
+\item{future_seed}{Optional seed control for future.apply (passed to future_lapply).}
+
 \item{...}{Additional arguments passed to spatial_nmf_fit.}
 }
 \value{
 A list with the observed statistic, permutation p-value, and metadata.
 }
 \description{
-Performs a permutation-based global test by cross-validating a classifier
-on NMF component loadings learned within each fold.
+Tests whether groups are distinguishable in component space, without
+attributing the effect to any single component. This is a multivariate,
+cross-validated test: for each fold, NMF is fit on the training data and
+component loadings for held-out subjects are used to train/test a classifier.
+Permuting group labels yields a null distribution for the chosen metric
+(AUC or accuracy).
+}
+\details{
+Use this when you want a single omnibus test of group separability in the
+learned component space.
+
+
+\itemize{
+  \item \code{stat} is the cross-validated performance (AUC or accuracy).
+  \item \code{p_value} is the permutation p-value under the chosen strategy.
+  \item \code{permute = "labels"} keeps folds fixed; \code{"full"} re-derives
+  folds and refits NMF for each permutation (more expensive).
+}
 }

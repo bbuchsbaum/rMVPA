@@ -16,7 +16,9 @@ spatial_nmf_component_test(
   null_W = NULL,
   alpha = 0.05,
   seed = NULL,
-  return_perm = FALSE
+  return_perm = FALSE,
+  parallel = FALSE,
+  future_seed = TRUE
 )
 }
 \arguments{
@@ -45,12 +47,36 @@ relative to the first.}
 \item{seed}{Optional RNG seed for permutations.}
 
 \item{return_perm}{Logical; return permutation statistics.}
+
+\item{parallel}{Logical; use future_lapply for permutations (requires future.apply).}
+
+\item{future_seed}{Optional seed control for future.apply (passed to future_lapply).}
 }
 \value{
 A list with a component-level results table and summary stats.
 }
 \description{
-Permutation-based inference for component significance using NMF loadings.
-Supports two-group tests (label permutations) and one-group tests given a
-null distribution of loadings.
+Tests whether subjects express NMF components differently between groups,
+using the component loadings \eqn{W} from a spatial NMF fit. This is a
+component-wise analysis (not voxelwise): each component gets a statistic and
+a permutation p-value.
+}
+\details{
+For two-group inference, the function fits a linear model for each component
+(group plus optional covariates) and uses label permutations to build a null
+distribution of the component-level t-statistics. For one-group inference,
+the user supplies a null distribution of \eqn{W} (e.g., from permuted fits)
+and the observed component means are compared to that null.
+
+Use this when you want to identify which components show reliable group
+differences in expression, rather than testing individual voxels.
+
+
+\itemize{
+  \item \code{stat} is the component-level test statistic (t-statistic for
+  two-group tests; mean loading for one-group tests).
+  \item \code{p_unc} is the uncorrected permutation p-value.
+  \item \code{p_fwer} applies maxT family-wise error correction across components.
+  \item \code{p_global} tests whether any component is significant.
+}
 }

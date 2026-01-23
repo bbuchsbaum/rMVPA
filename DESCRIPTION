@@ -107,6 +107,7 @@ Suggests:
     covr,
     doParallel,
     e1071,
+    future.apply,
     fmrihrf,
     foreach,
     hrfdecoder,

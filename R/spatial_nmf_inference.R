@@ -1,8 +1,18 @@
 #' Component-level Inference for Spatial NMF
 #'
-#' Permutation-based inference for component significance using NMF loadings.
-#' Supports two-group tests (label permutations) and one-group tests given a
-#' null distribution of loadings.
+#' Tests whether subjects express NMF components differently between groups,
+#' using the component loadings \eqn{W} from a spatial NMF fit. This is a
+#' component-wise analysis (not voxelwise): each component gets a statistic and
+#' a permutation p-value.
+#'
+#' For two-group inference, the function fits a linear model for each component
+#' (group plus optional covariates) and uses label permutations to build a null
+#' distribution of the component-level t-statistics. For one-group inference,
+#' the user supplies a null distribution of \eqn{W} (e.g., from permuted fits)
+#' and the observed component means are compared to that null.
+#'
+#' Use this when you want to identify which components show reliable group
+#' differences in expression, rather than testing individual voxels.
 #'
 #' @param fit A spatial_nmf_fit object containing a W matrix.
 #' @param W Optional n x k matrix of loadings (overrides fit$W).
@@ -18,8 +28,19 @@
 #' @param alpha Significance threshold for counting significant components.
 #' @param seed Optional RNG seed for permutations.
 #' @param return_perm Logical; return permutation statistics.
+#' @param parallel Logical; use future_lapply for permutations (requires future.apply).
+#' @param future_seed Optional seed control for future.apply (passed to future_lapply).
 #'
 #' @return A list with a component-level results table and summary stats.
+#'
+#' @details
+#' \itemize{
+#'   \item \code{stat} is the component-level test statistic (t-statistic for
+#'   two-group tests; mean loading for one-group tests).
+#'   \item \code{p_unc} is the uncorrected permutation p-value.
+#'   \item \code{p_fwer} applies maxT family-wise error correction across components.
+#'   \item \code{p_global} tests whether any component is significant.
+#' }
 #' @export
 spatial_nmf_component_test <- function(fit = NULL,
                                        W = NULL,
@@ -32,7 +53,9 @@ spatial_nmf_component_test <- function(fit = NULL,
                                        null_W = NULL,
                                        alpha = 0.05,
                                        seed = NULL,
-                                       return_perm = FALSE) {
+                                       return_perm = FALSE,
+                                       parallel = FALSE,
+                                       future_seed = TRUE) {
   test <- match.arg(test)
   correction <- match.arg(correction)
   alternative <- match.arg(alternative)
@@ -59,15 +82,25 @@ spatial_nmf_component_test <- function(fit = NULL,
     }
     nperm <- as.integer(nperm)
 
+    futile.logger::flog.info(
+      "Spatial NMF component test: %d permutations (%s)",
+      nperm,
+      if (isTRUE(parallel)) "parallel" else "serial"
+    )
+
     design <- .component_design(groups, covariates)
     stat_obs <- .component_t_stats(W, design, coef_index = 2L)
-    perm_stats <- matrix(NA_real_, nrow = nperm, ncol = k)
+    perm_stats <- .permute_component_stats(
+      nperm = nperm,
+      groups = groups,
+      covariates = covariates,
+      W = W,
+      coef_index = 2L,
+      parallel = parallel,
+      future_seed = future_seed
+    )
 
-    for (i in seq_len(nperm)) {
-      perm_groups <- sample(groups)
-      perm_design <- .component_design(perm_groups, covariates)
-      perm_stats[i, ] <- .component_t_stats(W, perm_design, coef_index = 2L)
-    }
+    futile.logger::flog.info("Spatial NMF component test: permutations complete.")
 
     two_sided <- alternative == "two.sided"
     p_unc <- .perm_pvals(stat_obs, perm_stats, two_sided = two_sided)
@@ -158,8 +191,15 @@ spatial_nmf_component_test <- function(fit = NULL,
 
 #' Global Cross-validated Group Test for Spatial NMF
 #'
-#' Performs a permutation-based global test by cross-validating a classifier
-#' on NMF component loadings learned within each fold.
+#' Tests whether groups are distinguishable in component space, without
+#' attributing the effect to any single component. This is a multivariate,
+#' cross-validated test: for each fold, NMF is fit on the training data and
+#' component loadings for held-out subjects are used to train/test a classifier.
+#' Permuting group labels yields a null distribution for the chosen metric
+#' (AUC or accuracy).
+#'
+#' Use this when you want a single omnibus test of group separability in the
+#' learned component space.
 #'
 #' @param x Optional spatial_nmf_maps_result with return_data=TRUE.
 #' @param X Optional subject-by-voxel matrix (overrides x$data).
@@ -185,9 +225,19 @@ spatial_nmf_component_test <- function(fit = NULL,
 #' @param project_args List of arguments passed to spatial_nmf_project.
 #' @param return_perm Logical; return permutation statistics.
 #' @param return_cv Logical; return cross-validated predictions and fold IDs.
+#' @param parallel Logical; use future_lapply for permutations (requires future.apply).
+#' @param future_seed Optional seed control for future.apply (passed to future_lapply).
 #' @param ... Additional arguments passed to spatial_nmf_fit.
 #'
 #' @return A list with the observed statistic, permutation p-value, and metadata.
+#'
+#' @details
+#' \itemize{
+#'   \item \code{stat} is the cross-validated performance (AUC or accuracy).
+#'   \item \code{p_value} is the permutation p-value under the chosen strategy.
+#'   \item \code{permute = "labels"} keeps folds fixed; \code{"full"} re-derives
+#'   folds and refits NMF for each permutation (more expensive).
+#' }
 #' @export
 spatial_nmf_global_test <- function(x = NULL,
                                     X = NULL,
@@ -208,6 +258,8 @@ spatial_nmf_global_test <- function(x = NULL,
                                     project_args = list(max_iter = 100, check_every = 5),
                                     return_perm = FALSE,
                                     return_cv = FALSE,
+                                    parallel = FALSE,
+                                    future_seed = TRUE,
                                     ...) {
   metric <- match.arg(metric)
   classifier <- match.arg(classifier)
@@ -286,36 +338,40 @@ spatial_nmf_global_test <- function(x = NULL,
   cv_pred <- .cv_predict(fold_data, groups, classifier, positive)
   stat_obs <- .metric_score(groups, cv_pred, metric, positive)
 
-  perm_stats <- numeric(nperm)
+  futile.logger::flog.info(
+    "Spatial NMF global test: %d permutations (%s, %s)",
+    nperm,
+    permute,
+    if (isTRUE(parallel)) "parallel" else "serial"
+  )
+
   if (permute == "full" && !is.null(folds)) {
     warning("permute='full' requested but folds supplied; using fixed folds (equivalent to permute='labels').")
     permute <- "labels"
   }
-  if (permute == "labels") {
-    for (i in seq_len(nperm)) {
-      perm_groups <- sample(groups)
-      perm_pred <- .cv_predict(fold_data, perm_groups, classifier, positive)
-      perm_stats[i] <- .metric_score(perm_groups, perm_pred, metric, positive)
-    }
-  } else {
-    for (i in seq_len(nperm)) {
-      perm_groups <- sample(groups)
-      perm_fold <- suppressWarnings(.build_fold_data(
-        X = X,
-        groups = perm_groups,
-        k = k,
-        lambda = lambda,
-        graph = graph,
-        folds = NULL,
-        nfolds = nfolds,
-        project_args = project_args,
-        fit_args = fit_args_base,
-        scale = scale
-      ))
-      perm_pred <- .cv_predict(perm_fold$fold_data, perm_groups, classifier, positive)
-      perm_stats[i] <- .metric_score(perm_groups, perm_pred, metric, positive)
-    }
-  }
+  perm_stats <- .global_perm_stats(
+    nperm = nperm,
+    permute = permute,
+    X = X,
+    groups = groups,
+    fold_data = fold_data,
+    folds = fold_list,
+    nfolds = nfolds,
+    k = k,
+    lambda = lambda,
+    graph = graph,
+    neighbors = neighbors,
+    metric = metric,
+    classifier = classifier,
+    scale = scale,
+    positive = positive,
+    project_args = project_args,
+    fit_args = fit_args_base,
+    parallel = parallel,
+    future_seed = future_seed
+  )
+
+  futile.logger::flog.info("Spatial NMF global test: permutations complete.")
 
   p_value <- (sum(perm_stats >= stat_obs, na.rm = TRUE) + 1) / (nperm + 1)
 
@@ -334,7 +390,12 @@ spatial_nmf_global_test <- function(x = NULL,
 
 #' Bootstrap Stability for Spatial NMF Components
 #'
-#' Estimates voxelwise stability of component maps via bootstrap resampling.
+#' Quantifies how stable the learned component maps are to resampling subjects.
+#' For each bootstrap (or subsample), the NMF is re-fit, components are matched
+#' to the reference solution, and summary maps are accumulated.
+#'
+#' Use this to assess whether components are reproducible and which voxels are
+#' consistently among the strongest loadings.
 #'
 #' @param x A spatial_nmf_maps_result or spatial_nmf_fit object.
 #' @param X Optional data matrix (n x p) if not included in x.
@@ -351,9 +412,18 @@ spatial_nmf_global_test <- function(x = NULL,
 #' @param top_frac Fraction of top voxels used to compute selection frequency.
 #' @param seed Optional RNG seed.
 #' @param return_maps Logical; return stability maps as NeuroVol/NeuroSurface.
+#' @param parallel Logical; use future_lapply for bootstrap resamples (requires future.apply).
+#' @param future_seed Optional seed control for future.apply (passed to future_lapply).
 #' @param ... Additional arguments passed to spatial_nmf_fit.
 #'
 #' @return A list with stability summaries and optional maps.
+#'
+#' @details
+#' \itemize{
+#'   \item \code{mean}, \code{sd}, \code{cv}: bootstrap mean/SD/CV of component maps.
+#'   \item \code{selection}: frequency with which a voxel appears in the top fraction.
+#'   \item \code{component_similarity}: average similarity to the reference components.
+#' }
 #' @export
 spatial_nmf_stability <- function(x = NULL,
                                   X = NULL,
@@ -370,6 +440,8 @@ spatial_nmf_stability <- function(x = NULL,
                                   top_frac = 0.1,
                                   seed = NULL,
                                   return_maps = FALSE,
+                                  parallel = FALSE,
+                                  future_seed = TRUE,
                                   ...) {
   sample <- match.arg(sample)
   init <- match.arg(init)
@@ -423,49 +495,39 @@ spatial_nmf_stability <- function(x = NULL,
     H_ref <- .normalize_components(H_ref)
   }
 
-  mean_acc <- matrix(0, nrow = k, ncol = p)
-  m2_acc <- matrix(0, nrow = k, ncol = p)
-  sel_counts <- matrix(0, nrow = k, ncol = p)
-  sim_sum <- numeric(k)
+  futile.logger::flog.info(
+    "Spatial NMF stability: %d bootstrap samples (%s)",
+    n_boot,
+    if (isTRUE(parallel)) "parallel" else "serial"
+  )
 
-  for (b in seq_len(n_boot)) {
-    if (sample == "bootstrap") {
-      idx <- sample.int(n, size = ceiling(n * sample_frac), replace = TRUE)
-    } else {
-      idx <- sample.int(n, size = ceiling(n * sample_frac), replace = FALSE)
-    }
+  boot_res <- .stability_bootstrap(
+    n_boot = n_boot,
+    n = n,
+    k = k,
+    p = p,
+    X = X,
+    graph = graph,
+    lambda = lambda,
+    init = init,
+    sample = sample,
+    sample_frac = sample_frac,
+    normalize = normalize,
+    similarity = similarity,
+    match = match,
+    H_ref = H_ref,
+    top_frac = top_frac,
+    parallel = parallel,
+    future_seed = future_seed,
+    ...
+  )
 
-    fit_b <- spatial_nmf_fit(
-      X = X[idx, , drop = FALSE],
-      k = k,
-      graph = graph,
-      lambda = lambda,
-      init = init,
-      ...
-    )
+  futile.logger::flog.info("Spatial NMF stability: bootstrap complete.")
 
-    H_b <- fit_b$H
-    sim <- .component_similarity(H_ref, H_b, similarity)
-    order <- .match_components(sim, match)
-    sim_sum <- sim_sum + sim[cbind(seq_len(k), order)]
-    H_b <- H_b[order, , drop = FALSE]
-
-    if (normalize == "H") {
-      H_b <- .normalize_components(H_b)
-    }
-
-    delta <- H_b - mean_acc
-    mean_acc <- mean_acc + delta / b
-    m2_acc <- m2_acc + delta * (H_b - mean_acc)
-
-    if (!is.null(top_frac) && top_frac > 0) {
-      top_n <- max(1L, ceiling(p * top_frac))
-      for (j in seq_len(k)) {
-        ord <- order(H_b[j, ], decreasing = TRUE)
-        sel_counts[j, ord[seq_len(top_n)]] <- sel_counts[j, ord[seq_len(top_n)]] + 1
-      }
-    }
-  }
+  mean_acc <- boot_res$mean
+  m2_acc <- boot_res$m2
+  sel_counts <- boot_res$sel_counts
+  sim_sum <- boot_res$sim_sum
 
   sd_acc <- sqrt(m2_acc / pmax(n_boot - 1, 1))
   cv_acc <- sd_acc / pmax(mean_acc, .Machine$double.eps)
@@ -496,6 +558,277 @@ spatial_nmf_stability <- function(x = NULL,
   }
 
   out
+}
+
+#' Voxelwise Statistics from Spatial NMF Stability
+#'
+#' Convenience function that converts stability summaries into voxelwise z- and
+#' p-value maps (based on bootstrap mean/SD).
+#'
+#' @param x Optional spatial_nmf_maps_result containing stability results.
+#' @param stability Optional spatial_nmf_stability result (overrides x$stability).
+#' @param map_type Map type ("volume" or "surface") when providing stability without maps.
+#' @param mask Mask object for volumetric maps or surface mask (optional for surface).
+#' @param dims Optional spatial dimensions for volumetric masks.
+#' @param mask_indices Optional mask indices used to vectorize maps.
+#' @param full_length Optional full map length for surface/vectorized outputs.
+#' @param ref_map Optional reference map to copy metadata from.
+#'
+#' @return A list with `z` and `p` component maps.
+#' @export
+spatial_nmf_voxelwise_stats <- function(x = NULL,
+                                        stability = NULL,
+                                        map_type = NULL,
+                                        mask = NULL,
+                                        dims = NULL,
+                                        mask_indices = NULL,
+                                        full_length = NULL,
+                                        ref_map = NULL) {
+  if (is.null(stability) && !is.null(x)) {
+    if (!inherits(x, "spatial_nmf_maps_result")) {
+      stop("x must be a spatial_nmf_maps_result when provided.")
+    }
+    stability <- x$stability
+    if (is.null(map_type)) map_type <- x$map_type
+    if (is.null(mask)) mask <- x$mask
+    if (is.null(dims)) dims <- x$dims
+    if (is.null(mask_indices)) mask_indices <- x$mask_indices
+    if (is.null(full_length)) full_length <- x$full_length
+    if (is.null(ref_map)) ref_map <- x$ref_map
+  }
+  if (is.null(stability)) stop("stability is required.")
+
+  mean_maps <- NULL
+  sd_maps <- NULL
+  if (!is.null(stability$maps)) {
+    mean_maps <- stability$maps$mean
+    sd_maps <- stability$maps$sd
+  }
+
+  if (is.null(mean_maps) || is.null(sd_maps)) {
+    if (is.null(map_type) || is.null(mask_indices) || is.null(ref_map)) {
+      stop("stability maps are missing; supply spatial metadata or use spatial_nmf_maps with stability$return_maps=TRUE.")
+    }
+    mean_maps <- .components_to_maps(
+      stability$mean,
+      mask_idx = mask_indices,
+      map_type = map_type,
+      mask = mask,
+      dims = dims,
+      full_length = full_length,
+      ref_map = ref_map
+    )
+    sd_maps <- .components_to_maps(
+      stability$sd,
+      mask_idx = mask_indices,
+      map_type = map_type,
+      mask = mask,
+      dims = dims,
+      full_length = full_length,
+      ref_map = ref_map
+    )
+  }
+
+  k <- length(mean_maps)
+  z_maps <- vector("list", k)
+  p_maps <- vector("list", k)
+  for (i in seq_len(k)) {
+    z_map <- mean_maps[[i]]
+    p_map <- mean_maps[[i]]
+    z_vals <- neuroim2::values(mean_maps[[i]]) /
+      pmax(neuroim2::values(sd_maps[[i]]), .Machine$double.eps)
+    neuroim2::values(z_map) <- z_vals
+    neuroim2::values(p_map) <- 2 * stats::pnorm(-abs(z_vals))
+    z_maps[[i]] <- z_map
+    p_maps[[i]] <- p_map
+  }
+
+  list(z = z_maps, p = p_maps)
+}
+
+.permute_component_stats <- function(nperm,
+                                     groups,
+                                     covariates,
+                                     W,
+                                     coef_index,
+                                     parallel = FALSE,
+                                     future_seed = TRUE) {
+  iter_fun <- function(i) {
+    perm_groups <- sample(groups)
+    perm_design <- .component_design(perm_groups, covariates)
+    .component_t_stats(W, perm_design, coef_index = coef_index)
+  }
+
+  if (isTRUE(parallel)) {
+    if (!requireNamespace("future.apply", quietly = TRUE)) {
+      stop("parallel=TRUE requires the future.apply package.")
+    }
+    perm_list <- future.apply::future_lapply(seq_len(nperm), iter_fun, future.seed = future_seed)
+    return(do.call(rbind, perm_list))
+  }
+
+  perm_stats <- matrix(NA_real_, nrow = nperm, ncol = ncol(W))
+  step <- .progress_step(nperm)
+  for (i in seq_len(nperm)) {
+    perm_stats[i, ] <- iter_fun(i)
+    .maybe_log_progress(i, nperm, step, "Component permutations")
+  }
+  perm_stats
+}
+
+.global_perm_stats <- function(nperm,
+                               permute,
+                               X,
+                               groups,
+                               fold_data,
+                               folds,
+                               nfolds,
+                               k,
+                               lambda,
+                               graph,
+                               neighbors,
+                               metric,
+                               classifier,
+                               scale,
+                               positive,
+                               project_args,
+                               fit_args,
+                               parallel = FALSE,
+                               future_seed = TRUE) {
+  iter_fun <- function(i) {
+    perm_groups <- sample(groups)
+    if (permute == "labels") {
+      perm_pred <- .cv_predict(fold_data, perm_groups, classifier, positive)
+      .metric_score(perm_groups, perm_pred, metric, positive)
+    } else {
+      perm_fold <- suppressWarnings(.build_fold_data(
+        X = X,
+        groups = perm_groups,
+        k = k,
+        lambda = lambda,
+        graph = graph,
+        folds = NULL,
+        nfolds = nfolds,
+        project_args = project_args,
+        fit_args = fit_args,
+        scale = scale
+      ))
+      perm_pred <- .cv_predict(perm_fold$fold_data, perm_groups, classifier, positive)
+      .metric_score(perm_groups, perm_pred, metric, positive)
+    }
+  }
+
+  if (isTRUE(parallel)) {
+    if (!requireNamespace("future.apply", quietly = TRUE)) {
+      stop("parallel=TRUE requires the future.apply package.")
+    }
+    return(unlist(future.apply::future_lapply(seq_len(nperm), iter_fun, future.seed = future_seed)))
+  }
+
+  perm_stats <- numeric(nperm)
+  step <- .progress_step(nperm)
+  for (i in seq_len(nperm)) {
+    perm_stats[i] <- iter_fun(i)
+    .maybe_log_progress(i, nperm, step, "Global permutations")
+  }
+  perm_stats
+}
+
+.stability_bootstrap <- function(n_boot,
+                                 n,
+                                 k,
+                                 p,
+                                 X,
+                                 graph,
+                                 lambda,
+                                 init,
+                                 sample,
+                                 sample_frac,
+                                 normalize,
+                                 similarity,
+                                 match,
+                                 H_ref,
+                                 top_frac,
+                                 parallel = FALSE,
+                                 future_seed = TRUE,
+                                 ...) {
+  iter_fun <- function(i) {
+    if (sample == "bootstrap") {
+      idx <- sample.int(n, size = ceiling(n * sample_frac), replace = TRUE)
+    } else {
+      idx <- sample.int(n, size = ceiling(n * sample_frac), replace = FALSE)
+    }
+    fit_b <- spatial_nmf_fit(
+      X = X[idx, , drop = FALSE],
+      k = k,
+      graph = graph,
+      lambda = lambda,
+      init = init,
+      ...
+    )
+    H_b <- fit_b$H
+    sim <- .component_similarity(H_ref, H_b, similarity)
+    order <- .match_components(sim, match)
+    H_b <- H_b[order, , drop = FALSE]
+    if (normalize == "H") {
+      H_b <- .normalize_components(H_b)
+    }
+    top_idx <- NULL
+    if (!is.null(top_frac) && top_frac > 0) {
+      top_n <- max(1L, ceiling(ncol(H_b) * top_frac))
+      top_idx <- lapply(seq_len(nrow(H_b)), function(j) {
+        order(H_b[j, ], decreasing = TRUE)[seq_len(top_n)]
+      })
+    }
+    list(H = H_b, sim = sim[cbind(seq_len(k), order)], top_idx = top_idx)
+  }
+
+  if (isTRUE(parallel)) {
+    if (!requireNamespace("future.apply", quietly = TRUE)) {
+      stop("parallel=TRUE requires the future.apply package.")
+    }
+    res_list <- future.apply::future_lapply(seq_len(n_boot), iter_fun, future.seed = future_seed)
+  } else {
+    res_list <- vector("list", n_boot)
+    step <- .progress_step(n_boot)
+    for (b in seq_len(n_boot)) {
+      res_list[[b]] <- iter_fun(b)
+      .maybe_log_progress(b, n_boot, step, "Stability bootstrap")
+    }
+  }
+
+  mean_acc <- matrix(0, nrow = k, ncol = p)
+  m2_acc <- matrix(0, nrow = k, ncol = p)
+  sel_counts <- matrix(0, nrow = k, ncol = p)
+  sim_sum <- numeric(k)
+
+  for (b in seq_len(n_boot)) {
+    H_b <- res_list[[b]]$H
+    sim_sum <- sim_sum + res_list[[b]]$sim
+    delta <- H_b - mean_acc
+    mean_acc <- mean_acc + delta / b
+    m2_acc <- m2_acc + delta * (H_b - mean_acc)
+    if (!is.null(res_list[[b]]$top_idx)) {
+      for (j in seq_len(k)) {
+        sel_counts[j, res_list[[b]]$top_idx[[j]]] <- sel_counts[j, res_list[[b]]$top_idx[[j]]] + 1
+      }
+    }
+  }
+
+  list(mean = mean_acc, m2 = m2_acc, sel_counts = sel_counts, sim_sum = sim_sum)
+}
+
+.progress_step <- function(n, n_updates = 10L) {
+  if (!is.numeric(n) || length(n) != 1L || n < 1) return(1L)
+  step <- floor(n / n_updates)
+  if (step < 1L) 1L else as.integer(step)
+}
+
+.maybe_log_progress <- function(i, n, step, label) {
+  if (i %% step == 0 || i == n) {
+    futile.logger::flog.debug("%s %d/%d", label, i, n)
+  }
+  invisible(NULL)
 }
 
 .component_design <- function(groups, covariates) {

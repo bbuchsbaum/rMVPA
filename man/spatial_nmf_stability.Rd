@@ -20,6 +20,8 @@ spatial_nmf_stability(
   top_frac = 0.1,
   seed = NULL,
   return_maps = FALSE,
+  parallel = FALSE,
+  future_seed = TRUE,
   ...
 )
 }
@@ -54,11 +56,28 @@ spatial_nmf_stability(
 
 \item{return_maps}{Logical; return stability maps as NeuroVol/NeuroSurface.}
 
+\item{parallel}{Logical; use future_lapply for bootstrap resamples (requires future.apply).}
+
+\item{future_seed}{Optional seed control for future.apply (passed to future_lapply).}
+
 \item{...}{Additional arguments passed to spatial_nmf_fit.}
 }
 \value{
 A list with stability summaries and optional maps.
 }
 \description{
-Estimates voxelwise stability of component maps via bootstrap resampling.
+Quantifies how stable the learned component maps are to resampling subjects.
+For each bootstrap (or subsample), the NMF is re-fit, components are matched
+to the reference solution, and summary maps are accumulated.
+}
+\details{
+Use this to assess whether components are reproducible and which voxels are
+consistently among the strongest loadings.
+
+
+\itemize{
+  \item \code{mean}, \code{sd}, \code{cv}: bootstrap mean/SD/CV of component maps.
+  \item \code{selection}: frequency with which a voxel appears in the top fraction.
+  \item \code{component_similarity}: average similarity to the reference components.
+}
 }
