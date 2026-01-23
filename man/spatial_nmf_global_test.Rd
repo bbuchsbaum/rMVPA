@@ -15,6 +15,7 @@ spatial_nmf_global_test(
   nfolds = 5,
   folds = NULL,
   nperm = 1000,
+  permute = c("labels", "full"),
   metric = c("auc", "accuracy"),
   classifier = c("glm", "lda", "centroid"),
   scale = TRUE,
@@ -37,15 +38,22 @@ spatial_nmf_global_test(
 
 \item{lambda}{Spatial regularization strength (defaults to x$fit$lambda if available).}
 
-\item{graph}{Optional graph Laplacian list (required if lambda > 0).}
+\item{graph}{Optional graph Laplacian list (required if lambda > 0). If `graph$A`
+is weighted, set `graph$weighted=TRUE` to preserve weights; otherwise edges are binarized.}
 
 \item{neighbors}{Neighborhood size for volumetric adjacency (6/18/26).}
 
 \item{nfolds}{Number of cross-validation folds.}
 
-\item{folds}{Optional fold specification (vector of fold IDs or list of test indices).}
+\item{folds}{Optional fold specification (vector of fold IDs or list of test indices).
+If NULL, folds are stratified by `groups`.}
 
 \item{nperm}{Number of label permutations.}
+
+\item{permute}{Permutation strategy: "labels" permutes labels with fixed folds
+and fixed NMF projections; "full" re-derives folds based on permuted labels
+and refits NMF within each fold. If `folds` is supplied, "full" falls back to
+"labels" (fixed folds).}
 
 \item{metric}{Performance metric: "auc" or "accuracy".}
 

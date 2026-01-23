@@ -20,7 +20,9 @@ pairwise_dist.default <- function(obj, X, ...) {
 #'
 #' @param name A character string specifying the distance method (e.g., "euclidean", "cordist").
 #' @param labels A vector of row labels (optional), primarily for informational/reference purposes.
-#' @param ... Additional parameters for the distance method (e.g. `method="pearson"` for correlation, 
+#' @param center Optional pattern-centering method applied to \code{X} before distances are computed.
+#'   Use \code{"stimulus_mean"} to subtract the across-stimulus mean pattern (Hanson-style).
+#' @param ... Additional parameters for the distance method (e.g. `method="pearson"` for correlation,
 #'            or \code{whiten=TRUE} for PCA-based distances).
 #'
 #' @return An S3 object with class \code{c(name, "distfun")} that can be passed to \code{pairwise_dist()}.
@@ -37,9 +39,10 @@ pairwise_dist.default <- function(obj, X, ...) {
 #' dist_obj_cor <- create_dist("cordist", method="spearman")
 #'
 #' @export
-create_dist <- function(name, labels=NULL, ...) {
+create_dist <- function(name, labels=NULL, center = c("none", "stimulus_mean"), ...) {
+  center <- match.arg(center)
   structure(
-    list(name = name, labels = labels, ...), 
+    list(name = name, labels = labels, center = center, ...), 
     class = c(name, "distfun")
   )
 }
@@ -52,6 +55,8 @@ create_dist <- function(name, labels=NULL, ...) {
 #'
 #' @param labels Optional vector of row labels (not directly used in distance calculation).
 #' @param method For \code{cordist}, the correlation method: "pearson" or "spearman".
+#' @param center Optional pattern-centering method applied to \code{X} before distances are computed.
+#'   Use \code{"stimulus_mean"} to subtract the across-stimulus mean pattern (Hanson-style).
 #' @param ncomp For \code{pcadist}, the number of components (or a function threshold).
 #' @param whiten For \code{pcadist}, whether to whiten principal components (logical).
 #' @param threshfun For \code{pcadist}, an optional function that determines how many PCs to retain 
@@ -78,38 +83,39 @@ create_dist <- function(name, labels=NULL, ...) {
 #'
 #' @rdname distance-constructors
 #' @export
-cordist <- function(labels=NULL, method=c("pearson", "spearman")) {
+cordist <- function(labels=NULL, method=c("pearson", "spearman"), center = c("none", "stimulus_mean")) {
   method <- match.arg(method)
-  create_dist(name="cordist", labels=labels, method=method)
+  create_dist(name="cordist", labels=labels, method=method, center = center)
 }
 
 #' @rdname distance-constructors
 #' @export
-mahadist <- function(labels=NULL) {
-  create_dist("mahalanobis", labels)
+mahadist <- function(labels=NULL, center = c("none", "stimulus_mean")) {
+  create_dist("mahalanobis", labels, center = center)
 }
 
 #' @rdname distance-constructors
 #' @export
-eucdist <- function(labels=NULL) {
-  create_dist("euclidean", labels)
+eucdist <- function(labels=NULL, center = c("none", "stimulus_mean")) {
+  create_dist("euclidean", labels, center = center)
 }
 
 #' @rdname distance-constructors
 #' @export
-euclidean <- function(labels = NULL) {
-  eucdist(labels)
+euclidean <- function(labels = NULL, center = c("none", "stimulus_mean")) {
+  eucdist(labels, center = center)
 }
 
 #' @rdname distance-constructors
 #' @export
-robustmahadist <- function(labels=NULL) {
-  create_dist("robustmahadist", labels)
+robustmahadist <- function(labels=NULL, center = c("none", "stimulus_mean")) {
+  create_dist("robustmahadist", labels, center = center)
 }
 
 #' @rdname distance-constructors
 #' @export
 pcadist <- function(labels=NULL, ncomp=2, whiten=TRUE, threshfun=NULL,
+                    center = c("none", "stimulus_mean"),
                     dist_method=c("euclidean", "manhattan", "cosine")) {
   dist_method <- match.arg(dist_method)
   if (is.null(threshfun)) {
@@ -119,7 +125,7 @@ pcadist <- function(labels=NULL, ncomp=2, whiten=TRUE, threshfun=NULL,
     stopifnot(is.function(threshfun))
     tfun <- threshfun
   }
-  create_dist("pcadist", labels, whiten=whiten, threshfun=tfun, dist_method=dist_method)
+  create_dist("pcadist", labels, whiten=whiten, threshfun=tfun, dist_method=dist_method, center = center)
 }
 
 
@@ -146,6 +152,7 @@ pcadist <- function(labels=NULL, ncomp=2, whiten=TRUE, threshfun=NULL,
 #' @export
 #' @noRd 
 pairwise_dist.cordist <- function(obj, X,...) {
+  X <- center_patterns(X, method = obj$center %||% "none")
   1 - cor(t(X), method=obj$method)
 }
 
@@ -171,6 +178,7 @@ pairwise_dist.cordist <- function(obj, X,...) {
 #' @export
 #' @noRd
 pairwise_dist.euclidean <- function(obj, X,...) {
+  X <- center_patterns(X, method = obj$center %||% "none")
   as.matrix(dist(X, method="euclidean"))
 }
 
@@ -199,6 +207,7 @@ pairwise_dist.euclidean <- function(obj, X,...) {
 #' @importFrom stats mahalanobis
 #' @noRd
 pairwise_dist.mahalanobis <- function(obj, X,...) {
+  X <- center_patterns(X, method = obj$center %||% "none")
   inv_cov <- corpcor::invcov.shrink(X)
   n <- nrow(X)
   
@@ -236,6 +245,7 @@ pairwise_dist.mahalanobis <- function(obj, X,...) {
 #' @importFrom stats prcomp dist
 #' @noRd
 pairwise_dist.pcadist <- function(obj, X,...) {
+  X <- center_patterns(X, method = obj$center %||% "none")
   pres <- prcomp(X, center = TRUE, scale. = TRUE)
   ncomp <- obj$threshfun(pres$sdev^2)
   if (ncomp < 1) {
@@ -289,6 +299,7 @@ pairwise_dist.pcadist <- function(obj, X,...) {
 #' @export
 #' @noRd
 pairwise_dist.robustmahadist <- function(obj, X,...) {
+  X <- center_patterns(X, method = obj$center %||% "none")
   # Prefer robustcov::covGK if available; otherwise fall back to robustbase::covOGK
   if (requireNamespace("robustcov", quietly = TRUE)) {
     robust_cov <- robustcov::covGK(X)
@@ -314,6 +325,5 @@ pairwise_dist.robustmahadist <- function(obj, X,...) {
   }
   dist_matrix
 }
-
 
 

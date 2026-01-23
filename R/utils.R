@@ -32,6 +32,35 @@ group_means <- function(X, margin, group) {
   }
 }
 
+#' @keywords internal
+#' @noRd
+center_patterns <- function(X, method = c("none", "stimulus_mean")) {
+  method <- match.arg(method)
+  X <- as.matrix(X)
+  if (method == "none") return(X)
+  if (nrow(X) < 1L) return(X)
+  mu <- colMeans(X)
+  sweep(X, 2, mu, "-")
+}
+
+#' @keywords internal
+#' @noRd
+center_patterns_train_test <- function(X_train, X_test = NULL, method = c("none", "stimulus_mean")) {
+  method <- match.arg(method)
+  X_train <- as.matrix(X_train)
+  X_test <- if (!is.null(X_test)) as.matrix(X_test) else NULL
+  if (method == "none") {
+    return(list(train = X_train, test = X_test))
+  }
+  if (!is.null(X_test) && ncol(X_train) != ncol(X_test)) {
+    stop("center_patterns_train_test: ncol(X_test) must match ncol(X_train).")
+  }
+  mu <- if (nrow(X_train) > 0) colMeans(X_train) else rep(0, ncol(X_train))
+  train_c <- sweep(X_train, 2, mu, "-")
+  test_c <- if (!is.null(X_test)) sweep(X_test, 2, mu, "-") else NULL
+  list(train = train_c, test = test_c)
+}
+
 #' @noRd
 spearman_cor <- function(x, y=NULL, use="everything") {
   cor(x,y,use, method="spearman")

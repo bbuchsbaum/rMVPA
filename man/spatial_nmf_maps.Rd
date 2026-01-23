@@ -23,9 +23,10 @@ spatial_nmf_maps(
 )
 }
 \arguments{
-\item{group_A}{List of NeuroVol/NeuroSurface maps for group A.}
+\item{group_A}{List of NeuroVol/NeuroSurface maps for group A. All maps must share
+the same spatial grid/geometry; if maps carry sparse indices, those indices must match.}
 
-\item{group_B}{Optional list of NeuroVol/NeuroSurface maps for group B.}
+\item{group_B}{Optional list of NeuroVol/NeuroSurface maps for group B (same requirements as group_A).}
 
 \item{mask}{Mask object for volumetric data (NeuroVol or logical/numeric vector).
 Required for volumetric inputs; optional for surface inputs.}
@@ -36,7 +37,8 @@ Required for volumetric inputs; optional for surface inputs.}
 
 \item{lambda}{Spatial regularization strength (0 = none).}
 
-\item{graph}{Optional graph Laplacian list (from build_graph_laplacian).}
+\item{graph}{Optional graph Laplacian list (from build_graph_laplacian). If `graph$A`
+is weighted, set `graph$weighted=TRUE` to preserve weights; otherwise edges are binarized.}
 
 \item{neighbors}{Neighborhood size for volumetric adjacency (6/18/26).}
 
@@ -66,12 +68,41 @@ A list with fields:
     \item mask_indices: indices used to vectorize maps.
     \item map_type: "volume" or "surface".
     \item data: subject-by-voxel matrix (if return_data).
-    \item component_test: component-level inference (if requested).
-    \item global_test: global CV permutation test (if requested).
-    \item stability: stability results (if requested).
   }
 }
 \description{
+\strong{Raison d'etre.}
+Spatial NMF factorizes a non-negative subject-by-voxel matrix \eqn{X} into
+\eqn{W} (subject loadings) and \eqn{H} (spatial components) such that
+\eqn{X \approx W H}. \eqn{W} captures how strongly each subject expresses each
+component, while \eqn{H} encodes spatially interpretable, additive patterns.
+An optional graph Laplacian penalty encourages smooth, neuroanatomically
+plausible components. The resulting representation is compact and supports
+downstream inference (component tests, global CV tests, and stability).
+}
+\details{
+\strong{Why not just voxelwise t-tests?}
+Spatial NMF targets multivariate structure by learning \emph{patterns of
+covarying voxels} rather than testing each voxel independently. This yields a
+low-dimensional representation that is often more interpretable, statistically
+powerful (fewer multiple comparisons), and robust to noise. With optional
+spatial regularization, components are anatomically smoother than voxelwise
+maps, and the framework provides component-level inference and stability
+analyses that reflect network-level effects.
+
+\strong{Interpreting inference outputs.}
+\itemize{
+  \item \emph{Component tests} (`spatial_nmf_component_test`): use `p_fwer` to
+  identify components whose loadings differ reliably between groups; `p_unc`
+  is uncorrected. `p_global` tests whether any component differs.
+  \item \emph{Global test} (`spatial_nmf_global_test`): `stat` is cross-validated
+  performance (AUC or accuracy) on component loadings; a significant `p_value`
+  indicates a multivariate group difference without pinpointing a component.
+  \item \emph{Stability} (`spatial_nmf_stability`): interpret `selection` as
+  voxelwise stability (frequency among top-loadings), and `cv` as variability;
+  higher `component_similarity` indicates stable component identity.
+}
+
 Convenience wrapper that converts lists of NeuroVol/NeuroSurface maps into
 a subject-by-voxel matrix and fits spatially regularized NMF.
 }

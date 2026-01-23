@@ -22,6 +22,7 @@
 #'   \item \code{\link{mvpa_dataset}} for creating datasets
 #'   \item \code{\link{run_searchlight}} for searchlight analyses
 #'   \item \code{\link{run_regional}} for ROI analyses
+#'   \item \code{\link{spatial_nmf_maps}} for spatial NMF and component inference
 #'   \item \code{\link{rsa_model}}, \code{\link{contrast_rsa_model}}, \code{\link{vector_rsa_model}} for different RSA approaches
 #' }
 #' For a detailed introduction and examples, see the package vignette:

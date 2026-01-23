@@ -1,3 +1,5 @@
+testthat::skip_if_not_installed("neuroim2")
+testthat::skip_if_not_installed("neurosurf")
 library(neuroim2)
 library(neurosurf)
 
@@ -57,7 +59,10 @@ gen_dataset <- function(D, nobs, nlevels, spacing=c(1,1,1), folds=5) {
 
 gen_surface_dataset <- function(nobs, nlevels, folds=5) {
   library(neurosurf)
-  fname <- system.file("extdata/std.lh.smoothwm.asc", package="neuroim2")
+  fname <- rmvpa_test_surface_geom_file()
+  if (identical(fname, "")) {
+    testthat::skip("surface geometry not available (no packaged test surface found)")
+  }
   geom <- read_surf_geometry(fname)
   nvert <- nrow(vertices(geom))
   mat <- matrix(rnorm(nvert*nobs), nvert, nobs)
@@ -433,8 +438,6 @@ test_that("mvpa_searchlight works with split_var", {
 #                          })
 #     expect_true(!is.null(res))
 # })
-
-
 
 
 

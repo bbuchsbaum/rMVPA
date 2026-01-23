@@ -12,7 +12,7 @@ spatial_nmf_component_test(
   test = c("two_group", "one_group"),
   nperm = 1000,
   correction = c("maxT", "none"),
-  alternative = c("greater", "two.sided"),
+  alternative = c("two.sided", "greater"),
   null_W = NULL,
   alpha = 0.05,
   seed = NULL,
@@ -34,7 +34,9 @@ spatial_nmf_component_test(
 
 \item{correction}{One of "maxT" or "none".}
 
-\item{alternative}{Alternative hypothesis: "two.sided" or "greater".}
+\item{alternative}{Alternative hypothesis: "two.sided" or "greater". For two_group
+tests, "greater" evaluates positive differences for the second factor level
+relative to the first.}
 
 \item{null_W}{Null distribution of W for one-group inference (list or 3D array).}
 

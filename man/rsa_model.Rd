@@ -11,7 +11,8 @@ rsa_model(
   regtype = "pearson",
   check_collinearity = TRUE,
   nneg = NULL,
-  semipartial = FALSE
+  semipartial = FALSE,
+  pattern_center = c("none", "stimulus_mean")
 )
 }
 \arguments{
@@ -33,6 +34,10 @@ Only applies when \code{regtype="lm"}. Default is TRUE.}
 
 \item{semipartial}{Logical indicating whether to compute semi-partial correlations in the \code{"lm"} case 
 (only if \code{nneg} is not used). Defaults to \code{FALSE}.}
+
+\item{pattern_center}{Optional pattern-centering method applied to the stimulus-by-voxel matrix
+before distances are computed. Use \code{"stimulus_mean"} to subtract the across-stimulus
+mean pattern (Hanson-style). Default is \code{"none"}.}
 }
 \value{
 An object of class \code{"rsa_model"} (and \code{"list"}), containing:

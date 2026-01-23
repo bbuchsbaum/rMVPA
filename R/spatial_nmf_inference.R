@@ -11,7 +11,9 @@
 #' @param test One of "two_group" or "one_group".
 #' @param nperm Number of permutations (ignored for one_group if null_W provided).
 #' @param correction One of "maxT" or "none".
-#' @param alternative Alternative hypothesis: "two.sided" or "greater".
+#' @param alternative Alternative hypothesis: "two.sided" or "greater". For two_group
+#'   tests, "greater" evaluates positive differences for the second factor level
+#'   relative to the first.
 #' @param null_W Null distribution of W for one-group inference (list or 3D array).
 #' @param alpha Significance threshold for counting significant components.
 #' @param seed Optional RNG seed for permutations.
@@ -26,7 +28,7 @@ spatial_nmf_component_test <- function(fit = NULL,
                                        test = c("two_group", "one_group"),
                                        nperm = 1000,
                                        correction = c("maxT", "none"),
-                                       alternative = c("greater", "two.sided"),
+                                       alternative = c("two.sided", "greater"),
                                        null_W = NULL,
                                        alpha = 0.05,
                                        seed = NULL,
@@ -48,11 +50,14 @@ spatial_nmf_component_test <- function(fit = NULL,
   if (!is.null(seed)) set.seed(seed)
 
   if (test == "two_group") {
-    alternative <- "two.sided"
     if (is.null(groups)) stop("groups is required for two_group inference.")
     groups <- factor(groups)
     if (length(groups) != n) stop("groups length must match nrow(W).")
     if (nlevels(groups) != 2) stop("two_group inference requires exactly 2 groups.")
+    if (!is.numeric(nperm) || length(nperm) != 1L || nperm < 1) {
+      stop("nperm must be a positive integer.")
+    }
+    nperm <- as.integer(nperm)
 
     design <- .component_design(groups, covariates)
     stat_obs <- .component_t_stats(W, design, coef_index = 2L)
@@ -64,16 +69,26 @@ spatial_nmf_component_test <- function(fit = NULL,
       perm_stats[i, ] <- .component_t_stats(W, perm_design, coef_index = 2L)
     }
 
-    p_unc <- .perm_pvals(stat_obs, perm_stats, two_sided = TRUE)
+    two_sided <- alternative == "two.sided"
+    p_unc <- .perm_pvals(stat_obs, perm_stats, two_sided = two_sided)
 
     if (correction == "maxT") {
-      max_stat <- apply(abs(perm_stats), 1, max)
-      p_fwer <- (colSums(outer(max_stat, abs(stat_obs), ">=")) + 1) / (nperm + 1)
+      if (two_sided) {
+        max_stat <- apply(abs(perm_stats), 1, max)
+        p_fwer <- (colSums(outer(max_stat, abs(stat_obs), ">=")) + 1) / (nperm + 1)
+      } else {
+        max_stat <- apply(perm_stats, 1, max)
+        p_fwer <- (colSums(outer(max_stat, stat_obs, ">=")) + 1) / (nperm + 1)
+      }
     } else {
       p_fwer <- p_unc
     }
 
-    p_global <- (sum(apply(abs(perm_stats), 1, max) >= max(abs(stat_obs))) + 1) / (nperm + 1)
+    if (two_sided) {
+      p_global <- (sum(apply(abs(perm_stats), 1, max) >= max(abs(stat_obs))) + 1) / (nperm + 1)
+    } else {
+      p_global <- (sum(apply(perm_stats, 1, max) >= max(stat_obs)) + 1) / (nperm + 1)
+    }
 
     group_means <- vapply(levels(groups), function(g) {
       colMeans(W[groups == g, , drop = FALSE])
@@ -151,11 +166,17 @@ spatial_nmf_component_test <- function(fit = NULL,
 #' @param groups Factor or vector of group labels (length n).
 #' @param k Number of components (defaults to x$fit$k if available).
 #' @param lambda Spatial regularization strength (defaults to x$fit$lambda if available).
-#' @param graph Optional graph Laplacian list (required if lambda > 0).
+#' @param graph Optional graph Laplacian list (required if lambda > 0). If `graph$A`
+#'   is weighted, set `graph$weighted=TRUE` to preserve weights; otherwise edges are binarized.
 #' @param neighbors Neighborhood size for volumetric adjacency (6/18/26).
 #' @param nfolds Number of cross-validation folds.
 #' @param folds Optional fold specification (vector of fold IDs or list of test indices).
+#'   If NULL, folds are stratified by `groups`.
 #' @param nperm Number of label permutations.
+#' @param permute Permutation strategy: "labels" permutes labels with fixed folds
+#'   and fixed NMF projections; "full" re-derives folds based on permuted labels
+#'   and refits NMF within each fold. If `folds` is supplied, "full" falls back to
+#'   "labels" (fixed folds).
 #' @param metric Performance metric: "auc" or "accuracy".
 #' @param classifier Classifier: "glm", "lda", or "centroid".
 #' @param scale Logical; z-score W within each fold.
@@ -178,6 +199,7 @@ spatial_nmf_global_test <- function(x = NULL,
                                     nfolds = 5,
                                     folds = NULL,
                                     nperm = 1000,
+                                    permute = c("labels", "full"),
                                     metric = c("auc", "accuracy"),
                                     classifier = c("glm", "lda", "centroid"),
                                     scale = TRUE,
@@ -189,6 +211,7 @@ spatial_nmf_global_test <- function(x = NULL,
                                     ...) {
   metric <- match.arg(metric)
   classifier <- match.arg(classifier)
+  permute <- match.arg(permute)
 
   if (!is.null(seed)) set.seed(seed)
 
@@ -243,60 +266,55 @@ spatial_nmf_global_test <- function(x = NULL,
     }
   }
 
-  fold_info <- .coerce_folds(folds, groups, nfolds)
-  fold_list <- fold_info$folds
+  fit_args_base <- list(...)
+  fold_info <- .build_fold_data(
+    X = X,
+    groups = groups,
+    k = k,
+    lambda = lambda,
+    graph = graph,
+    folds = folds,
+    nfolds = nfolds,
+    project_args = project_args,
+    fit_args = fit_args_base,
+    scale = scale
+  )
+  fold_data <- fold_info$fold_data
   fold_id <- fold_info$fold_id
-
-  min_train <- min(vapply(fold_list, function(idx) n - length(idx), integer(1)))
-  if (k > min_train) stop("k must be <= min training size across folds.")
-  if (k > ncol(X)) stop("k must be <= ncol(X).")
-  if (any(table(groups) < 2)) stop("Each group must have at least 2 samples.")
-
-  fold_data <- vector("list", length(fold_list))
-  for (i in seq_along(fold_list)) {
-    test_idx <- fold_list[[i]]
-    train_idx <- setdiff(seq_len(n), test_idx)
-    if (length(unique(groups[train_idx])) < 2L) {
-      stop("Each fold must have both groups represented in training.")
-    }
-
-    fit_args <- list(...)
-    fit_args$X <- X[train_idx, , drop = FALSE]
-    fit_args$k <- k
-    fit_args$graph <- graph
-    fit_args$lambda <- lambda
-
-    fit <- do.call(spatial_nmf_fit, fit_args)
-
-    proj_args <- project_args
-    proj_args$X <- X[test_idx, , drop = FALSE]
-    proj_args$H <- fit$H
-    proj <- do.call(spatial_nmf_project, proj_args)
-
-    W_train <- fit$W
-    W_test <- proj$W
-    if (isTRUE(scale)) {
-      scaled <- .scale_train_test(W_train, W_test)
-      W_train <- scaled$train
-      W_test <- scaled$test
-    }
-
-    fold_data[[i]] <- list(
-      train_idx = train_idx,
-      test_idx = test_idx,
-      W_train = W_train,
-      W_test = W_test
-    )
-  }
+  fold_list <- fold_info$fold_list
 
   cv_pred <- .cv_predict(fold_data, groups, classifier, positive)
   stat_obs <- .metric_score(groups, cv_pred, metric, positive)
 
   perm_stats <- numeric(nperm)
-  for (i in seq_len(nperm)) {
-    perm_groups <- sample(groups)
-    perm_pred <- .cv_predict(fold_data, perm_groups, classifier, positive)
-    perm_stats[i] <- .metric_score(perm_groups, perm_pred, metric, positive)
+  if (permute == "full" && !is.null(folds)) {
+    warning("permute='full' requested but folds supplied; using fixed folds (equivalent to permute='labels').")
+    permute <- "labels"
+  }
+  if (permute == "labels") {
+    for (i in seq_len(nperm)) {
+      perm_groups <- sample(groups)
+      perm_pred <- .cv_predict(fold_data, perm_groups, classifier, positive)
+      perm_stats[i] <- .metric_score(perm_groups, perm_pred, metric, positive)
+    }
+  } else {
+    for (i in seq_len(nperm)) {
+      perm_groups <- sample(groups)
+      perm_fold <- suppressWarnings(.build_fold_data(
+        X = X,
+        groups = perm_groups,
+        k = k,
+        lambda = lambda,
+        graph = graph,
+        folds = NULL,
+        nfolds = nfolds,
+        project_args = project_args,
+        fit_args = fit_args_base,
+        scale = scale
+      ))
+      perm_pred <- .cv_predict(perm_fold$fold_data, perm_groups, classifier, positive)
+      perm_stats[i] <- .metric_score(perm_groups, perm_pred, metric, positive)
+    }
   }
 
   p_value <- (sum(perm_stats >= stat_obs, na.rm = TRUE) + 1) / (nperm + 1)
@@ -493,17 +511,34 @@ spatial_nmf_stability <- function(x = NULL,
 }
 
 .component_t_stats <- function(W, design, coef_index) {
+  if (!is.numeric(coef_index) || length(coef_index) != 1L) {
+    stop("coef_index must be a single integer.")
+  }
+  coef_index <- as.integer(coef_index)
+  if (coef_index < 1L || coef_index > ncol(design)) {
+    stop("coef_index is out of bounds for design matrix.")
+  }
   qrX <- qr(design)
   coef <- qr.coef(qrX, W)
   fitted <- design %*% coef
   resid <- W - fitted
   df <- nrow(W) - qrX$rank
+  if (df <= 0) return(rep(NA_real_, ncol(W)))
   sigma2 <- colSums(resid^2) / df
-  R <- qr.R(qrX)
-  invR <- solve(R)
-  xtx_inv <- invR %*% t(invR)
+  xtx_inv <- tryCatch(
+    {
+      R <- qr.R(qrX)
+      chol2inv(R)
+    },
+    error = function(e) MASS::ginv(crossprod(design))
+  )
+  if (coef_index > nrow(xtx_inv) || coef_index > ncol(xtx_inv)) {
+    return(rep(NA_real_, ncol(W)))
+  }
   se <- sqrt(xtx_inv[coef_index, coef_index] * sigma2)
-  coef[coef_index, ] / se
+  out <- coef[coef_index, ] / se
+  out[!is.finite(out)] <- NA_real_
+  out
 }
 
 .perm_pvals <- function(stat_obs, perm_stats, two_sided = TRUE) {
@@ -658,6 +693,56 @@ spatial_nmf_stability <- function(x = NULL,
   test <- sweep(W_test, 2, mu, "-")
   test <- sweep(test, 2, sigma, "/")
   list(train = train, test = test)
+}
+
+.build_fold_data <- function(X, groups, k, lambda, graph, folds, nfolds, project_args, fit_args, scale) {
+  n <- nrow(X)
+  fold_info <- .coerce_folds(folds, groups, nfolds)
+  fold_list <- fold_info$folds
+  fold_id <- fold_info$fold_id
+
+  min_train <- min(vapply(fold_list, function(idx) n - length(idx), integer(1)))
+  if (k > min_train) stop("k must be <= min training size across folds.")
+  if (k > ncol(X)) stop("k must be <= ncol(X).")
+  if (any(table(groups) < 2)) stop("Each group must have at least 2 samples.")
+
+  fold_data <- vector("list", length(fold_list))
+  for (i in seq_along(fold_list)) {
+    test_idx <- fold_list[[i]]
+    train_idx <- setdiff(seq_len(n), test_idx)
+    if (length(unique(groups[train_idx])) < 2L) {
+      stop("Each fold must have both groups represented in training.")
+    }
+
+    fit_args$X <- X[train_idx, , drop = FALSE]
+    fit_args$k <- k
+    fit_args$graph <- graph
+    fit_args$lambda <- lambda
+
+    fit <- do.call(spatial_nmf_fit, fit_args)
+
+    proj_args <- project_args
+    proj_args$X <- X[test_idx, , drop = FALSE]
+    proj_args$H <- fit$H
+    proj <- do.call(spatial_nmf_project, proj_args)
+
+    W_train <- fit$W
+    W_test <- proj$W
+    if (isTRUE(scale)) {
+      scaled <- .scale_train_test(W_train, W_test)
+      W_train <- scaled$train
+      W_test <- scaled$test
+    }
+
+    fold_data[[i]] <- list(
+      train_idx = train_idx,
+      test_idx = test_idx,
+      W_train = W_train,
+      W_test = W_test
+    )
+  }
+
+  list(fold_data = fold_data, fold_id = fold_id, fold_list = fold_list)
 }
 
 .cv_predict <- function(fold_data, groups, classifier, positive) {

@@ -365,6 +365,7 @@ run_lm_semipartial <- function(dvec, obj) {
 #' @export
 train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
   # 1) correlation-based distance
+  train_dat <- center_patterns(train_dat, method = obj$pattern_center %||% "none")
   dtrain <- 1 - cor(t(train_dat), method=obj$distmethod)
   dvec   <- dtrain[lower.tri(dtrain)]
   
@@ -639,6 +640,9 @@ print.rsa_design <- function(x, ...) {
 #'        (only if \code{regtype="lm"}). Defaults to \code{NULL} (no constraints).
 #' @param semipartial Logical indicating whether to compute semi-partial correlations in the \code{"lm"} case 
 #'        (only if \code{nneg} is not used). Defaults to \code{FALSE}.
+#' @param pattern_center Optional pattern-centering method applied to the stimulus-by-voxel matrix
+#'   before distances are computed. Use \code{"stimulus_mean"} to subtract the across-stimulus
+#'   mean pattern (Hanson-style). Default is \code{"none"}.
 #'
 #' @return An object of class \code{"rsa_model"} (and \code{"list"}), containing:
 #' \itemize{
@@ -687,13 +691,15 @@ rsa_model <- function(dataset,
                       regtype = "pearson", 
                       check_collinearity = TRUE,
                       nneg = NULL,
-                      semipartial = FALSE) {
+                      semipartial = FALSE,
+                      pattern_center = c("none", "stimulus_mean")) {
   
   assert_that(inherits(dataset, "mvpa_dataset"))
   assert_that(inherits(design, "rsa_design"))
   
   distmethod <- match.arg(distmethod, c("pearson", "spearman"))
   regtype    <- match.arg(regtype, c("pearson", "spearman", "lm", "rfit"))
+  pattern_center <- match.arg(pattern_center)
   
   # Check for glmnet if nneg constraints are provided
   if (!is.null(nneg) && length(nneg) > 0 && regtype == "lm") {
@@ -736,7 +742,8 @@ rsa_model <- function(dataset,
     distmethod = distmethod, 
     regtype    = regtype,
     nneg       = nneg,
-    semipartial = semipartial
+    semipartial = semipartial,
+    pattern_center = pattern_center
   )
   obj
 }

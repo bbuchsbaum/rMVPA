@@ -20,6 +20,28 @@ spatial_nmf_fit <- function(X,
   if (any(X < 0)) stop("X must be non-negative.")
   if (!is.numeric(k) || length(k) != 1L || k < 1) stop("k must be a positive integer.")
   k <- as.integer(k)
+  if (!is.numeric(lambda) || length(lambda) != 1L || !is.finite(lambda) || lambda < 0) {
+    stop("lambda must be a finite non-negative scalar.")
+  }
+  if (!is.numeric(max_iter) || length(max_iter) != 1L || max_iter < 1) {
+    stop("max_iter must be a positive integer.")
+  }
+  if (!is.numeric(min_iter) || length(min_iter) != 1L || min_iter < 0) {
+    stop("min_iter must be a non-negative integer.")
+  }
+  if (!is.numeric(check_every) || length(check_every) != 1L || check_every < 1) {
+    stop("check_every must be a positive integer.")
+  }
+  if (!is.numeric(tol) || length(tol) != 1L || !is.finite(tol) || tol <= 0) {
+    stop("tol must be a positive scalar.")
+  }
+  if (!is.numeric(eps) || length(eps) != 1L || !is.finite(eps) || eps <= 0) {
+    stop("eps must be a positive scalar.")
+  }
+  max_iter <- as.integer(max_iter)
+  min_iter <- as.integer(min_iter)
+  check_every <- as.integer(check_every)
+  if (min_iter > max_iter) stop("min_iter must be <= max_iter.")
 
   init <- match.arg(init)
   normalize <- match.arg(normalize)
@@ -123,6 +145,25 @@ spatial_nmf_project <- function(X,
   if (any(!is.finite(H))) stop("H contains non-finite values.")
   if (any(H < 0)) stop("H must be non-negative.")
   if (ncol(X) != ncol(H)) stop("ncol(X) must match ncol(H).")
+  if (!is.numeric(max_iter) || length(max_iter) != 1L || max_iter < 1) {
+    stop("max_iter must be a positive integer.")
+  }
+  if (!is.numeric(min_iter) || length(min_iter) != 1L || min_iter < 0) {
+    stop("min_iter must be a non-negative integer.")
+  }
+  if (!is.numeric(check_every) || length(check_every) != 1L || check_every < 1) {
+    stop("check_every must be a positive integer.")
+  }
+  if (!is.numeric(tol) || length(tol) != 1L || !is.finite(tol) || tol <= 0) {
+    stop("tol must be a positive scalar.")
+  }
+  if (!is.numeric(eps) || length(eps) != 1L || !is.finite(eps) || eps <= 0) {
+    stop("eps must be a positive scalar.")
+  }
+  max_iter <- as.integer(max_iter)
+  min_iter <- as.integer(min_iter)
+  check_every <- as.integer(check_every)
+  if (min_iter > max_iter) stop("min_iter must be <= max_iter.")
 
   n <- nrow(X)
   k <- nrow(H)
@@ -287,14 +328,23 @@ spatial_nmf_project <- function(X,
   }
   A <- (A + Matrix::t(A)) * 0.5
   Matrix::diag(A) <- 0
-  if (!is.null(A@x)) A@x[A@x != 0] <- 1
+  weighted <- isTRUE(graph$weighted)
+  if (!weighted) {
+    if (!is.null(A@x) && any(A@x != 0 & abs(A@x - 1) > 1e-12)) {
+      warning("graph$A has non-binary weights; binarizing. Set graph$weighted=TRUE to preserve weights.")
+    }
+    if (!is.null(A@x)) A@x[A@x != 0] <- 1
+  }
 
   degree <- graph$degree
-  if (is.null(degree)) {
+  if (is.null(degree) || length(degree) != p) {
+    if (!is.null(degree) && length(degree) != p) {
+      warning("graph$degree length does not match ncol(X); recomputing degree from A.")
+    }
     degree <- Matrix::rowSums(A)
   }
 
-  meta <- list(n_edges = Matrix::nnzero(A) / 2L)
+  meta <- list(n_edges = Matrix::nnzero(A) / 2L, weighted = weighted)
 
   list(use_graph = TRUE, A = A, degree = degree, meta = meta)
 }
@@ -466,17 +516,50 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
 
 #' Spatial NMF on Map Lists
 #'
+#' \strong{Raison d'etre.}
+#' Spatial NMF factorizes a non-negative subject-by-voxel matrix \eqn{X} into
+#' \eqn{W} (subject loadings) and \eqn{H} (spatial components) such that
+#' \eqn{X \approx W H}. \eqn{W} captures how strongly each subject expresses each
+#' component, while \eqn{H} encodes spatially interpretable, additive patterns.
+#' An optional graph Laplacian penalty encourages smooth, neuroanatomically
+#' plausible components. The resulting representation is compact and supports
+#' downstream inference (component tests, global CV tests, and stability).
+#'
+#' \strong{Why not just voxelwise t-tests?}
+#' Spatial NMF targets multivariate structure by learning \emph{patterns of
+#' covarying voxels} rather than testing each voxel independently. This yields a
+#' low-dimensional representation that is often more interpretable, statistically
+#' powerful (fewer multiple comparisons), and robust to noise. With optional
+#' spatial regularization, components are anatomically smoother than voxelwise
+#' maps, and the framework provides component-level inference and stability
+#' analyses that reflect network-level effects.
+#'
+#' \strong{Interpreting inference outputs.}
+#' \itemize{
+#'   \item \emph{Component tests} (`spatial_nmf_component_test`): use `p_fwer` to
+#'   identify components whose loadings differ reliably between groups; `p_unc`
+#'   is uncorrected. `p_global` tests whether any component differs.
+#'   \item \emph{Global test} (`spatial_nmf_global_test`): `stat` is cross-validated
+#'   performance (AUC or accuracy) on component loadings; a significant `p_value`
+#'   indicates a multivariate group difference without pinpointing a component.
+#'   \item \emph{Stability} (`spatial_nmf_stability`): interpret `selection` as
+#'   voxelwise stability (frequency among top-loadings), and `cv` as variability;
+#'   higher `component_similarity` indicates stable component identity.
+#' }
+#'
 #' Convenience wrapper that converts lists of NeuroVol/NeuroSurface maps into
 #' a subject-by-voxel matrix and fits spatially regularized NMF.
 #'
-#' @param group_A List of NeuroVol/NeuroSurface maps for group A.
-#' @param group_B Optional list of NeuroVol/NeuroSurface maps for group B.
+#' @param group_A List of NeuroVol/NeuroSurface maps for group A. All maps must share
+#'   the same spatial grid/geometry; if maps carry sparse indices, those indices must match.
+#' @param group_B Optional list of NeuroVol/NeuroSurface maps for group B (same requirements as group_A).
 #' @param mask Mask object for volumetric data (NeuroVol or logical/numeric vector).
 #'   Required for volumetric inputs; optional for surface inputs.
 #' @param dims Optional spatial dimensions for volumetric masks given as vectors.
 #' @param k Number of components.
 #' @param lambda Spatial regularization strength (0 = none).
-#' @param graph Optional graph Laplacian list (from build_graph_laplacian).
+#' @param graph Optional graph Laplacian list (from build_graph_laplacian). If `graph$A`
+#'   is weighted, set `graph$weighted=TRUE` to preserve weights; otherwise edges are binarized.
 #' @param neighbors Neighborhood size for volumetric adjacency (6/18/26).
 #' @param na_action How to handle NA values in maps: "zero" or "error".
 #' @param return_maps Logical; return component maps as NeuroVol/NeuroSurface.
@@ -523,6 +606,10 @@ spatial_nmf_maps <- function(group_A,
   .validate_map_list(group_A, map_type, "group_A")
   if (!is.null(group_B)) {
     .validate_map_list(group_B, map_type, "group_B")
+  }
+  .validate_map_indices(group_A, "group_A")
+  if (!is.null(group_B)) {
+    .validate_map_indices(group_B, "group_B")
   }
 
   if (map_type == "volume") {
@@ -687,6 +774,27 @@ spatial_nmf_maps <- function(group_A,
   }, logical(1))
   if (!all(ok)) {
     stop(sprintf("%s contains maps with incompatible types.", name))
+  }
+  invisible(NULL)
+}
+
+.validate_map_indices <- function(lst, name) {
+  if (is.null(lst)) return(invisible(NULL))
+  idx_list <- lapply(lst, function(x) {
+    tryCatch(neuroim2::indices(x), error = function(e) NULL)
+  })
+  has_idx <- vapply(idx_list, function(idx) !is.null(idx), logical(1))
+  if (any(has_idx) && !all(has_idx)) {
+    stop(sprintf("%s maps must either all have indices or none do.", name))
+  }
+  if (any(has_idx)) {
+    ref <- as.integer(idx_list[[which(has_idx)[1L]]])
+    for (i in seq_along(idx_list)) {
+      idx <- as.integer(idx_list[[i]])
+      if (length(idx) != length(ref) || any(idx != ref)) {
+        stop(sprintf("%s maps have inconsistent indices; resample to a common grid.", name))
+      }
+    }
   }
   invisible(NULL)
 }

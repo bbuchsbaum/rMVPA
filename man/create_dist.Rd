@@ -4,14 +4,17 @@
 \alias{create_dist}
 \title{Create a Distance Function Object}
 \usage{
-create_dist(name, labels = NULL, ...)
+create_dist(name, labels = NULL, center = c("none", "stimulus_mean"), ...)
 }
 \arguments{
 \item{name}{A character string specifying the distance method (e.g., "euclidean", "cordist").}
 
 \item{labels}{A vector of row labels (optional), primarily for informational/reference purposes.}
 
-\item{...}{Additional parameters for the distance method (e.g. `method="pearson"` for correlation, 
+\item{center}{Optional pattern-centering method applied to \code{X} before distances are computed.
+Use \code{"stimulus_mean"} to subtract the across-stimulus mean pattern (Hanson-style).}
+
+\item{...}{Additional parameters for the distance method (e.g. `method="pearson"` for correlation,
 or \code{whiten=TRUE} for PCA-based distances).}
 }
 \value{

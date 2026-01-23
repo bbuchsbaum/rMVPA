@@ -9,21 +9,26 @@
 \alias{pcadist}
 \title{Distance Function Constructors}
 \usage{
-cordist(labels = NULL, method = c("pearson", "spearman"))
+cordist(
+  labels = NULL,
+  method = c("pearson", "spearman"),
+  center = c("none", "stimulus_mean")
+)
 
-mahadist(labels = NULL)
+mahadist(labels = NULL, center = c("none", "stimulus_mean"))
 
-eucdist(labels = NULL)
+eucdist(labels = NULL, center = c("none", "stimulus_mean"))
 
-euclidean(labels = NULL)
+euclidean(labels = NULL, center = c("none", "stimulus_mean"))
 
-robustmahadist(labels = NULL)
+robustmahadist(labels = NULL, center = c("none", "stimulus_mean"))
 
 pcadist(
   labels = NULL,
   ncomp = 2,
   whiten = TRUE,
   threshfun = NULL,
+  center = c("none", "stimulus_mean"),
   dist_method = c("euclidean", "manhattan", "cosine")
 )
 }
@@ -31,6 +36,9 @@ pcadist(
 \item{labels}{Optional vector of row labels (not directly used in distance calculation).}
 
 \item{method}{For \code{cordist}, the correlation method: "pearson" or "spearman".}
+
+\item{center}{Optional pattern-centering method applied to \code{X} before distances are computed.
+Use \code{"stimulus_mean"} to subtract the across-stimulus mean pattern (Hanson-style).}
 
 \item{ncomp}{For \code{pcadist}, the number of components (or a function threshold).}
 
