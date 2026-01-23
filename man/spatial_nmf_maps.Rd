@@ -11,6 +11,7 @@ spatial_nmf_maps(
   dims = NULL,
   k,
   lambda = 0,
+  fast = FALSE,
   graph = NULL,
   neighbors = 6,
   na_action = c("zero", "error"),
@@ -19,6 +20,8 @@ spatial_nmf_maps(
   component_test = NULL,
   global_test = NULL,
   stability = NULL,
+  voxelwise_stats = c("none", "stability_zp"),
+  parallel = NULL,
   ...
 )
 }
@@ -36,6 +39,10 @@ Required for volumetric inputs; optional for surface inputs.}
 \item{k}{Number of components.}
 
 \item{lambda}{Spatial regularization strength (0 = none).}
+
+\item{fast}{Logical; use faster, lower-iteration defaults in the NMF fit
+(e.g., random init, fewer iterations). You can still override specific
+optimization settings via `...`.}
 
 \item{graph}{Optional graph Laplacian list (from build_graph_laplacian). If `graph$A`
 is weighted, set `graph$weighted=TRUE` to preserve weights; otherwise edges are binarized.}
@@ -57,6 +64,14 @@ passed to spatial_nmf_global_test.}
 \item{stability}{NULL to skip, TRUE for defaults, or a list of arguments
 passed to spatial_nmf_stability.}
 
+\item{voxelwise_stats}{Optional voxelwise statistics to compute. Use "stability_zp"
+to return bootstrap z- and p-value maps derived from `stability` (forces
+`stability$return_maps = TRUE`).}
+
+\item{parallel}{Logical; enable parallel processing for inference functions
+(component_test, global_test, stability). If NULL (default), auto-detects
+based on active future plan and availability of future.apply.}
+
 \item{...}{Additional arguments passed to spatial_nmf_fit.}
 }
 \value{
@@ -68,6 +83,7 @@ A list with fields:
     \item mask_indices: indices used to vectorize maps.
     \item map_type: "volume" or "surface".
     \item data: subject-by-voxel matrix (if return_data).
+    \item voxelwise: list of voxelwise z/p maps (if requested).
   }
 }
 \description{
@@ -105,4 +121,9 @@ analyses that reflect network-level effects.
 
 Convenience wrapper that converts lists of NeuroVol/NeuroSurface maps into
 a subject-by-voxel matrix and fits spatially regularized NMF.
+
+If `component_test`, `global_test`, or `stability` are requested and their
+argument lists do not specify `parallel`, `spatial_nmf_maps` will enable
+parallel execution automatically when a future plan with more than one worker
+is active and the `future.apply` package is available.
 }

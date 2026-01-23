@@ -590,6 +590,9 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
 #' @param voxelwise_stats Optional voxelwise statistics to compute. Use "stability_zp"
 #'   to return bootstrap z- and p-value maps derived from `stability` (forces
 #'   `stability$return_maps = TRUE`).
+#' @param parallel Logical; enable parallel processing for inference functions
+#'   (component_test, global_test, stability). If NULL (default), auto-detects
+#'   based on active future plan and availability of future.apply.
 #' @param ... Additional arguments passed to spatial_nmf_fit.
 #'
 #' @return A list with fields:
@@ -619,6 +622,7 @@ spatial_nmf_maps <- function(group_A,
                              global_test = NULL,
                              stability = NULL,
                              voxelwise_stats = c("none", "stability_zp"),
+                             parallel = NULL,
                              ...) {
   na_action <- match.arg(na_action)
   voxelwise_stats <- match.arg(voxelwise_stats)
@@ -702,9 +706,11 @@ spatial_nmf_maps <- function(group_A,
 
   component_res <- NULL
   component_args <- .as_arg_list(component_test, "component_test")
-  auto_parallel <- .auto_parallel()
+  # Determine parallel setting: explicit parameter > auto-detect
+
+  use_parallel <- if (!is.null(parallel)) parallel else .auto_parallel()
   if (!is.null(component_args)) {
-    if (is.null(component_args$parallel)) component_args$parallel <- auto_parallel
+    if (is.null(component_args$parallel)) component_args$parallel <- use_parallel
     if (is.null(component_args$fit) && is.null(component_args$W)) {
       component_args$fit <- fit
     }
@@ -723,7 +729,7 @@ spatial_nmf_maps <- function(group_A,
   global_res <- NULL
   global_args <- .as_arg_list(global_test, "global_test")
   if (!is.null(global_args)) {
-    if (is.null(global_args$parallel)) global_args$parallel <- auto_parallel
+    if (is.null(global_args$parallel)) global_args$parallel <- use_parallel
     if (is.null(group_B)) stop("global_test requires group_B.")
     if (is.null(global_args$X)) global_args$X <- X
     if (is.null(global_args$groups)) global_args$groups <- groups
@@ -746,7 +752,7 @@ spatial_nmf_maps <- function(group_A,
     stability_args$return_maps <- TRUE
   }
   if (!is.null(stability_args)) {
-    if (is.null(stability_args$parallel)) stability_args$parallel <- auto_parallel
+    if (is.null(stability_args$parallel)) stability_args$parallel <- use_parallel
     # Build a minimal spatial_nmf_maps_result to pass spatial metadata
     # to spatial_nmf_stability when return_maps is requested
     if (isTRUE(stability_args$return_maps) && is.null(stability_args$x)) {
