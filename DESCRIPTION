@@ -108,6 +108,7 @@ Suggests:
     doParallel,
     e1071,
     future.apply,
+    progressr,
     fmrihrf,
     foreach,
     hrfdecoder,

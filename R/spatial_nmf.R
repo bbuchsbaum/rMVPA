@@ -593,6 +593,8 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
 #' @param parallel Logical; enable parallel processing for inference functions
 #'   (component_test, global_test, stability). If NULL (default), auto-detects
 #'   based on active future plan and availability of future.apply.
+#' @param progress Logical; report progress via progressr package (works with
+#'   parallel futures). Default FALSE.
 #' @param ... Additional arguments passed to spatial_nmf_fit.
 #'
 #' @return A list with fields:
@@ -623,6 +625,7 @@ spatial_nmf_maps <- function(group_A,
                              stability = NULL,
                              voxelwise_stats = c("none", "stability_zp"),
                              parallel = NULL,
+                             progress = FALSE,
                              ...) {
   na_action <- match.arg(na_action)
   voxelwise_stats <- match.arg(voxelwise_stats)
@@ -682,6 +685,8 @@ spatial_nmf_maps <- function(group_A,
     }
   }
 
+  futile.logger::flog.info("spatial_nmf_maps: fitting NMF (n=%d, p=%d, k=%d, lambda=%.3g)",
+                           nrow(X), ncol(X), k, lambda)
   fit <- spatial_nmf_fit(
     X = X,
     k = k,
@@ -690,6 +695,8 @@ spatial_nmf_maps <- function(group_A,
     fast = fast,
     ...
   )
+  futile.logger::flog.info("spatial_nmf_maps: NMF fit complete (converged=%s, iterations=%d)",
+                           as.character(fit$converged), fit$iterations)
 
   components <- NULL
   if (isTRUE(return_maps)) {
@@ -714,6 +721,7 @@ spatial_nmf_maps <- function(group_A,
                            as.character(!is.null(parallel)))
   if (!is.null(component_args)) {
     if (is.null(component_args$parallel)) component_args$parallel <- use_parallel
+    if (is.null(component_args$progress)) component_args$progress <- progress
     if (is.null(component_args$fit) && is.null(component_args$W)) {
       component_args$fit <- fit
     }
@@ -733,6 +741,7 @@ spatial_nmf_maps <- function(group_A,
   global_args <- .as_arg_list(global_test, "global_test")
   if (!is.null(global_args)) {
     if (is.null(global_args$parallel)) global_args$parallel <- use_parallel
+    if (is.null(global_args$progress)) global_args$progress <- progress
     if (is.null(group_B)) stop("global_test requires group_B.")
     if (is.null(global_args$X)) global_args$X <- X
     if (is.null(global_args$groups)) global_args$groups <- groups
@@ -756,6 +765,7 @@ spatial_nmf_maps <- function(group_A,
   }
   if (!is.null(stability_args)) {
     if (is.null(stability_args$parallel)) stability_args$parallel <- use_parallel
+    if (is.null(stability_args$progress)) stability_args$progress <- progress
     # Build a minimal spatial_nmf_maps_result to pass spatial metadata
     # to spatial_nmf_stability when return_maps is requested
     if (isTRUE(stability_args$return_maps) && is.null(stability_args$x)) {

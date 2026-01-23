@@ -22,6 +22,7 @@ spatial_nmf_stability(
   return_maps = FALSE,
   parallel = FALSE,
   future_seed = TRUE,
+  progress = FALSE,
   ...
 )
 }
@@ -59,6 +60,8 @@ spatial_nmf_stability(
 \item{parallel}{Logical; use future_lapply for bootstrap resamples (requires future.apply).}
 
 \item{future_seed}{Optional seed control for future.apply (passed to future_lapply).}
+
+\item{progress}{Logical; report progress via progressr (works with parallel futures).}
 
 \item{...}{Additional arguments passed to spatial_nmf_fit.}
 }

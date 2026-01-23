@@ -30,6 +30,7 @@
 #' @param return_perm Logical; return permutation statistics.
 #' @param parallel Logical; use future_lapply for permutations (requires future.apply).
 #' @param future_seed Optional seed control for future.apply (passed to future_lapply).
+#' @param progress Logical; report progress via progressr (works with parallel futures).
 #'
 #' @return A list with a component-level results table and summary stats.
 #'
@@ -55,7 +56,8 @@ spatial_nmf_component_test <- function(fit = NULL,
                                        seed = NULL,
                                        return_perm = FALSE,
                                        parallel = FALSE,
-                                       future_seed = TRUE) {
+                                       future_seed = TRUE,
+                                       progress = FALSE) {
   test <- match.arg(test)
   correction <- match.arg(correction)
   alternative <- match.arg(alternative)
@@ -97,7 +99,8 @@ spatial_nmf_component_test <- function(fit = NULL,
       W = W,
       coef_index = 2L,
       parallel = parallel,
-      future_seed = future_seed
+      future_seed = future_seed,
+      progress = progress
     )
 
     futile.logger::flog.info("Spatial NMF component test: permutations complete.")
@@ -227,6 +230,7 @@ spatial_nmf_component_test <- function(fit = NULL,
 #' @param return_cv Logical; return cross-validated predictions and fold IDs.
 #' @param parallel Logical; use future_lapply for permutations (requires future.apply).
 #' @param future_seed Optional seed control for future.apply (passed to future_lapply).
+#' @param progress Logical; report progress via progressr (works with parallel futures).
 #' @param ... Additional arguments passed to spatial_nmf_fit.
 #'
 #' @return A list with the observed statistic, permutation p-value, and metadata.
@@ -260,6 +264,7 @@ spatial_nmf_global_test <- function(x = NULL,
                                     return_cv = FALSE,
                                     parallel = FALSE,
                                     future_seed = TRUE,
+                                    progress = FALSE,
                                     ...) {
   metric <- match.arg(metric)
   classifier <- match.arg(classifier)
@@ -368,7 +373,8 @@ spatial_nmf_global_test <- function(x = NULL,
     project_args = project_args,
     fit_args = fit_args_base,
     parallel = parallel,
-    future_seed = future_seed
+    future_seed = future_seed,
+    progress = progress
   )
 
   futile.logger::flog.info("Spatial NMF global test: permutations complete.")
@@ -414,6 +420,7 @@ spatial_nmf_global_test <- function(x = NULL,
 #' @param return_maps Logical; return stability maps as NeuroVol/NeuroSurface.
 #' @param parallel Logical; use future_lapply for bootstrap resamples (requires future.apply).
 #' @param future_seed Optional seed control for future.apply (passed to future_lapply).
+#' @param progress Logical; report progress via progressr (works with parallel futures).
 #' @param ... Additional arguments passed to spatial_nmf_fit.
 #'
 #' @return A list with stability summaries and optional maps.
@@ -442,6 +449,7 @@ spatial_nmf_stability <- function(x = NULL,
                                   return_maps = FALSE,
                                   parallel = FALSE,
                                   future_seed = TRUE,
+                                  progress = FALSE,
                                   ...) {
   sample <- match.arg(sample)
   init <- match.arg(init)
@@ -519,6 +527,7 @@ spatial_nmf_stability <- function(x = NULL,
     top_frac = top_frac,
     parallel = parallel,
     future_seed = future_seed,
+    progress = progress,
     ...
   )
 
@@ -652,7 +661,8 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
                                      W,
                                      coef_index,
                                      parallel = FALSE,
-                                     future_seed = TRUE) {
+                                     future_seed = TRUE,
+                                     progress = FALSE) {
   iter_fun <- function(i) {
     perm_groups <- sample(groups)
     perm_design <- .component_design(perm_groups, covariates)
@@ -663,11 +673,42 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
     if (!requireNamespace("future.apply", quietly = TRUE)) {
       stop("parallel=TRUE requires the future.apply package.")
     }
+    if (isTRUE(progress)) {
+      if (!requireNamespace("progressr", quietly = TRUE)) {
+        stop("progress=TRUE requires the progressr package.")
+      }
+      return(progressr::with_progress({
+        p <- progressr::progressor(steps = nperm)
+        perm_list <- future.apply::future_lapply(
+          seq_len(nperm),
+          function(i) {
+            res <- iter_fun(i)
+            p()
+            res
+          },
+          future.seed = future_seed
+        )
+        do.call(rbind, perm_list)
+      }))
+    }
     perm_list <- future.apply::future_lapply(seq_len(nperm), iter_fun, future.seed = future_seed)
     return(do.call(rbind, perm_list))
   }
 
   perm_stats <- matrix(NA_real_, nrow = nperm, ncol = ncol(W))
+  if (isTRUE(progress)) {
+    if (!requireNamespace("progressr", quietly = TRUE)) {
+      stop("progress=TRUE requires the progressr package.")
+    }
+    return(progressr::with_progress({
+      p <- progressr::progressor(steps = nperm)
+      for (i in seq_len(nperm)) {
+        perm_stats[i, ] <- iter_fun(i)
+        p()
+      }
+      perm_stats
+    }))
+  }
   step <- .progress_step(nperm)
   for (i in seq_len(nperm)) {
     perm_stats[i, ] <- iter_fun(i)
@@ -694,7 +735,8 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
                                project_args,
                                fit_args,
                                parallel = FALSE,
-                               future_seed = TRUE) {
+                               future_seed = TRUE,
+                               progress = FALSE) {
   iter_fun <- function(i) {
     perm_groups <- sample(groups)
     if (permute == "labels") {
@@ -722,10 +764,40 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
     if (!requireNamespace("future.apply", quietly = TRUE)) {
       stop("parallel=TRUE requires the future.apply package.")
     }
+    if (isTRUE(progress)) {
+      if (!requireNamespace("progressr", quietly = TRUE)) {
+        stop("progress=TRUE requires the progressr package.")
+      }
+      return(progressr::with_progress({
+        p <- progressr::progressor(steps = nperm)
+        unlist(future.apply::future_lapply(
+          seq_len(nperm),
+          function(i) {
+            res <- iter_fun(i)
+            p()
+            res
+          },
+          future.seed = future_seed
+        ))
+      }))
+    }
     return(unlist(future.apply::future_lapply(seq_len(nperm), iter_fun, future.seed = future_seed)))
   }
 
   perm_stats <- numeric(nperm)
+  if (isTRUE(progress)) {
+    if (!requireNamespace("progressr", quietly = TRUE)) {
+      stop("progress=TRUE requires the progressr package.")
+    }
+    return(progressr::with_progress({
+      p <- progressr::progressor(steps = nperm)
+      for (i in seq_len(nperm)) {
+        perm_stats[i] <- iter_fun(i)
+        p()
+      }
+      perm_stats
+    }))
+  }
   step <- .progress_step(nperm)
   for (i in seq_len(nperm)) {
     perm_stats[i] <- iter_fun(i)
@@ -751,6 +823,7 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
                                  top_frac,
                                  parallel = FALSE,
                                  future_seed = TRUE,
+                                 progress = FALSE,
                                  ...) {
   iter_fun <- function(i) {
     if (sample == "bootstrap") {
@@ -787,13 +860,44 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
     if (!requireNamespace("future.apply", quietly = TRUE)) {
       stop("parallel=TRUE requires the future.apply package.")
     }
-    res_list <- future.apply::future_lapply(seq_len(n_boot), iter_fun, future.seed = future_seed)
+    if (isTRUE(progress)) {
+      if (!requireNamespace("progressr", quietly = TRUE)) {
+        stop("progress=TRUE requires the progressr package.")
+      }
+      res_list <- progressr::with_progress({
+        p <- progressr::progressor(steps = n_boot)
+        future.apply::future_lapply(
+          seq_len(n_boot),
+          function(i) {
+            res <- iter_fun(i)
+            p()
+            res
+          },
+          future.seed = future_seed
+        )
+      })
+    } else {
+      res_list <- future.apply::future_lapply(seq_len(n_boot), iter_fun, future.seed = future_seed)
+    }
   } else {
     res_list <- vector("list", n_boot)
-    step <- .progress_step(n_boot)
-    for (b in seq_len(n_boot)) {
-      res_list[[b]] <- iter_fun(b)
-      .maybe_log_progress(b, n_boot, step, "Stability bootstrap")
+    if (isTRUE(progress)) {
+      if (!requireNamespace("progressr", quietly = TRUE)) {
+        stop("progress=TRUE requires the progressr package.")
+      }
+      progressr::with_progress({
+        p <- progressr::progressor(steps = n_boot)
+        for (b in seq_len(n_boot)) {
+          res_list[[b]] <- iter_fun(b)
+          p()
+        }
+      })
+    } else {
+      step <- .progress_step(n_boot)
+      for (b in seq_len(n_boot)) {
+        res_list[[b]] <- iter_fun(b)
+        .maybe_log_progress(b, n_boot, step, "Stability bootstrap")
+      }
     }
   }
 

@@ -26,6 +26,7 @@ spatial_nmf_global_test(
   return_cv = FALSE,
   parallel = FALSE,
   future_seed = TRUE,
+  progress = FALSE,
   ...
 )
 }
@@ -76,6 +77,8 @@ and refits NMF within each fold. If `folds` is supplied, "full" falls back to
 \item{parallel}{Logical; use future_lapply for permutations (requires future.apply).}
 
 \item{future_seed}{Optional seed control for future.apply (passed to future_lapply).}
+
+\item{progress}{Logical; report progress via progressr (works with parallel futures).}
 
 \item{...}{Additional arguments passed to spatial_nmf_fit.}
 }

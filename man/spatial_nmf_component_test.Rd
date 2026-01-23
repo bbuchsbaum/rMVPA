@@ -18,7 +18,8 @@ spatial_nmf_component_test(
   seed = NULL,
   return_perm = FALSE,
   parallel = FALSE,
-  future_seed = TRUE
+  future_seed = TRUE,
+  progress = FALSE
 )
 }
 \arguments{
@@ -51,6 +52,8 @@ relative to the first.}
 \item{parallel}{Logical; use future_lapply for permutations (requires future.apply).}
 
 \item{future_seed}{Optional seed control for future.apply (passed to future_lapply).}
+
+\item{progress}{Logical; report progress via progressr (works with parallel futures).}
 }
 \value{
 A list with a component-level results table and summary stats.
