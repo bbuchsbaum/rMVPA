@@ -567,3 +567,138 @@ test_that("spatial_nmf_maps stability with return_maps=TRUE passes spatial metad
   expect_length(res$stability$maps$mean, 2)  # k=2 components
   expect_true(inherits(res$stability$maps$mean[[1]], "NeuroVol"))
 })
+
+test_that("nmf_preprocess_maps shift method makes data non-negative", {
+  space_obj <- neuroim2::NeuroSpace(c(3, 3, 1))
+
+  # Create maps with negative values
+  set.seed(1)
+  maps <- lapply(1:3, function(i) {
+    neuroim2::NeuroVol(array(rnorm(9), dim = c(3, 3, 1)), space_obj)
+  })
+
+  prepped <- nmf_preprocess_maps(maps, method = "shift", min_val = 0)
+
+  # All values should be >= 0
+  for (m in prepped$maps) {
+    expect_true(all(neuroim2::values(m) >= 0))
+  }
+
+  # Offset should be recorded
+
+  expect_true(prepped$offset > 0)
+  expect_equal(prepped$method, "shift")
+})
+
+test_that("nmf_preprocess_maps auc method handles chance-centered AUC",
+{
+  space_obj <- neuroim2::NeuroSpace(c(3, 3, 1))
+
+  # Create AUC-0.5 maps (range -0.5 to 0.5)
+  set.seed(2)
+  maps <- lapply(1:3, function(i) {
+    vals <- runif(9, -0.3, 0.4)  # typical AUC-0.5 range
+    neuroim2::NeuroVol(array(vals, dim = c(3, 3, 1)), space_obj)
+  })
+
+  prepped <- nmf_preprocess_maps(maps, method = "auc")
+
+  # All values should be >= 0
+  for (m in prepped$maps) {
+    expect_true(all(neuroim2::values(m) >= 0))
+  }
+
+  # Offset should be 0.5 (shifting floor of -0.5 to 0)
+  expect_equal(prepped$offset, 0.5)
+})
+
+test_that("nmf_preprocess_maps auc_raw method converts raw AUC", {
+  space_obj <- neuroim2::NeuroSpace(c(3, 3, 1))
+
+  # Create raw AUC maps (range 0 to 1)
+  set.seed(3)
+  maps <- lapply(1:3, function(i) {
+    vals <- runif(9, 0.3, 0.8)  # typical raw AUC range
+    neuroim2::NeuroVol(array(vals, dim = c(3, 3, 1)), space_obj)
+  })
+
+  prepped <- nmf_preprocess_maps(maps, method = "auc_raw")
+
+  # All values should be >= 0
+  for (m in prepped$maps) {
+    expect_true(all(neuroim2::values(m) >= 0))
+  }
+
+  # Check that 0.5 (chance) maps to 0
+  # offset is 0.5, so raw 0.5 -> (0.5 - 0.5) + 0.5 = 0.5... wait
+  # Actually: raw - 0.5 + offset where offset = -floor + min_val = 0.5
+  # So raw 0.5 -> 0 + 0.5 = 0.5, raw 0.3 -> -0.2 + 0.5 = 0.3
+  expect_equal(prepped$offset, 0.5)
+})
+
+test_that("nmf_preprocess_maps relu method clamps negatives", {
+  space_obj <- neuroim2::NeuroSpace(c(3, 3, 1))
+
+  maps <- list(
+    neuroim2::NeuroVol(array(c(-1, 0, 1, 2, -2, 3, -0.5, 0.5, 1.5), dim = c(3, 3, 1)), space_obj)
+  )
+
+  prepped <- nmf_preprocess_maps(maps, method = "relu", min_val = 0)
+
+  vals <- as.numeric(neuroim2::values(prepped$maps[[1]]))
+  expect_equal(vals, c(0, 0, 1, 2, 0, 3, 0, 0.5, 1.5))
+})
+
+test_that("nmf_preprocess_maps abs method takes absolute value", {
+  space_obj <- neuroim2::NeuroSpace(c(3, 2, 1))
+
+  maps <- list(
+    neuroim2::NeuroVol(array(c(-1, 0, 1, -2, 2, -3), dim = c(3, 2, 1)), space_obj)
+  )
+
+  prepped <- nmf_preprocess_maps(maps, method = "abs", min_val = 0)
+
+  vals <- as.numeric(neuroim2::values(prepped$maps[[1]]))
+  expect_equal(vals, c(1, 0, 1, 2, 2, 3))
+})
+
+test_that("nmf_preprocess_maps with min_val adds floor", {
+  space_obj <- neuroim2::NeuroSpace(c(2, 2, 1))
+
+  maps <- list(
+    neuroim2::NeuroVol(array(c(-1, 0, 1, 2), dim = c(2, 2, 1)), space_obj)
+  )
+
+  prepped <- nmf_preprocess_maps(maps, method = "shift", min_val = 0.01)
+
+  # Minimum should be 0.01, not 0
+  min_val <- min(neuroim2::values(prepped$maps[[1]]))
+  expect_equal(min_val, 0.01, tolerance = 1e-10)
+})
+
+test_that("nmf_preprocess_maps works with spatial_nmf_maps", {
+  mask <- neuroim2::NeuroVol(array(1, dim = c(3, 3, 1)), neuroim2::NeuroSpace(c(3, 3, 1)))
+  space_obj <- neuroim2::space(mask)
+
+  # Create maps with negative values (simulating AUC-0.5)
+  set.seed(42)
+  maps <- lapply(1:4, function(i) {
+    vals <- runif(9, -0.3, 0.4)
+    neuroim2::NeuroVol(array(vals, dim = c(3, 3, 1)), space_obj)
+  })
+
+  # Preprocess
+  prepped <- nmf_preprocess_maps(maps, method = "auc")
+
+  # Should work with spatial_nmf_maps now
+  res <- spatial_nmf_maps(
+    group_A = prepped$maps,
+    mask = mask,
+    k = 2,
+    lambda = 0,
+    max_iter = 10
+  )
+
+  expect_true(inherits(res, "spatial_nmf_maps_result"))
+  expect_equal(res$fit$k, 2)
+})

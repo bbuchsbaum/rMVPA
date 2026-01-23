@@ -7,6 +7,7 @@ spatial_nmf_fit <- function(X,
                             init = c("nndsvd", "random"),
                             W_init = NULL,
                             H_init = NULL,
+                            fast = FALSE,
                             max_iter = 200,
                             min_iter = 5,
                             tol = 1e-4,
@@ -15,6 +16,14 @@ spatial_nmf_fit <- function(X,
                             normalize = c("none", "H"),
                             seed = NULL,
                             verbose = FALSE) {
+  if (isTRUE(fast)) {
+    if (missing(init)) init <- "random"
+    if (missing(max_iter)) max_iter <- 100
+    if (missing(min_iter)) min_iter <- 3
+    if (missing(tol)) tol <- 1e-3
+    if (missing(check_every)) check_every <- 5
+  }
+
   X <- as.matrix(X)
   if (any(!is.finite(X))) stop("X contains non-finite values.")
   if (any(X < 0)) stop("X must be non-negative.")
@@ -550,6 +559,11 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
 #' Convenience wrapper that converts lists of NeuroVol/NeuroSurface maps into
 #' a subject-by-voxel matrix and fits spatially regularized NMF.
 #'
+#' If `component_test`, `global_test`, or `stability` are requested and their
+#' argument lists do not specify `parallel`, `spatial_nmf_maps` will enable
+#' parallel execution automatically when a future plan with more than one worker
+#' is active and the `future.apply` package is available.
+#'
 #' @param group_A List of NeuroVol/NeuroSurface maps for group A. All maps must share
 #'   the same spatial grid/geometry; if maps carry sparse indices, those indices must match.
 #' @param group_B Optional list of NeuroVol/NeuroSurface maps for group B (same requirements as group_A).
@@ -558,6 +572,9 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
 #' @param dims Optional spatial dimensions for volumetric masks given as vectors.
 #' @param k Number of components.
 #' @param lambda Spatial regularization strength (0 = none).
+#' @param fast Logical; use faster, lower-iteration defaults in the NMF fit
+#'   (e.g., random init, fewer iterations). You can still override specific
+#'   optimization settings via `...`.
 #' @param graph Optional graph Laplacian list (from build_graph_laplacian). If `graph$A`
 #'   is weighted, set `graph$weighted=TRUE` to preserve weights; otherwise edges are binarized.
 #' @param neighbors Neighborhood size for volumetric adjacency (6/18/26).
@@ -592,6 +609,7 @@ spatial_nmf_maps <- function(group_A,
                              dims = NULL,
                              k,
                              lambda = 0,
+                             fast = FALSE,
                              graph = NULL,
                              neighbors = 6,
                              na_action = c("zero", "error"),
@@ -665,6 +683,7 @@ spatial_nmf_maps <- function(group_A,
     k = k,
     graph = graph,
     lambda = lambda,
+    fast = fast,
     ...
   )
 
@@ -683,7 +702,9 @@ spatial_nmf_maps <- function(group_A,
 
   component_res <- NULL
   component_args <- .as_arg_list(component_test, "component_test")
+  auto_parallel <- .auto_parallel()
   if (!is.null(component_args)) {
+    if (is.null(component_args$parallel)) component_args$parallel <- auto_parallel
     if (is.null(component_args$fit) && is.null(component_args$W)) {
       component_args$fit <- fit
     }
@@ -702,6 +723,7 @@ spatial_nmf_maps <- function(group_A,
   global_res <- NULL
   global_args <- .as_arg_list(global_test, "global_test")
   if (!is.null(global_args)) {
+    if (is.null(global_args$parallel)) global_args$parallel <- auto_parallel
     if (is.null(group_B)) stop("global_test requires group_B.")
     if (is.null(global_args$X)) global_args$X <- X
     if (is.null(global_args$groups)) global_args$groups <- groups
@@ -724,6 +746,7 @@ spatial_nmf_maps <- function(group_A,
     stability_args$return_maps <- TRUE
   }
   if (!is.null(stability_args)) {
+    if (is.null(stability_args$parallel)) stability_args$parallel <- auto_parallel
     # Build a minimal spatial_nmf_maps_result to pass spatial metadata
     # to spatial_nmf_stability when return_maps is requested
     if (isTRUE(stability_args$return_maps) && is.null(stability_args$x)) {
@@ -809,6 +832,13 @@ spatial_nmf_maps <- function(group_A,
   if (inherits(x, c("NeuroVol", "NeuroVec"))) return("volume")
   if (inherits(x, c("NeuroSurface", "NeuroSurfaceVector"))) return("surface")
   stop("Maps must inherit from NeuroVol/NeuroVec or NeuroSurface/NeuroSurfaceVector.")
+}
+
+.auto_parallel <- function() {
+  if (!requireNamespace("future.apply", quietly = TRUE)) return(FALSE)
+  if (!requireNamespace("future", quietly = TRUE)) return(FALSE)
+  nworkers <- tryCatch(future::nbrOfWorkers(), error = function(e) 1L)
+  is.numeric(nworkers) && length(nworkers) == 1L && nworkers > 1
 }
 
 .validate_map_list <- function(lst, map_type, name) {
@@ -987,4 +1017,176 @@ spatial_nmf_maps <- function(group_A,
   }
 
   comps
+}
+
+#' Preprocess Maps for Spatial NMF
+#'
+#' Transforms a list of neuroimaging maps to ensure non-negativity for NMF.
+#' NMF requires non-negative input data; this function provides common
+#' transformations for different data types.
+#'
+#' @param maps A list of NeuroVol or NeuroSurface objects.
+#' @param method Preprocessing method:
+#'   \describe{
+#'     \item{"shift"}{Shifts all values so the minimum becomes `min_val` (default 0).
+#'       Use for data with arbitrary negative values.}
+#'     \item{"auc"}{For AUC values centered at chance (i.e., AUC - 0.5, ranging
+#'       from -0.5 to 0.5). Shifts by 0.5 so chance becomes 0 and perfect
+#'       classification becomes 0.5.
+#'       Values below `floor` (default -0.5) are clamped.}
+#'     \item{"auc_raw"}{For raw AUC values (0 to 1). Subtracts 0.5 then applies
+#'       "auc" method, so chance (0.5) becomes 0.}
+#'     \item{"zscore"}{For z-scored data. Shifts by `abs(min) + min_val`.}
+#'     \item{"relu"}{Clamps negative values to zero (rectified linear).}
+#'     \item{"abs"}{Takes absolute value of all data.}
+#'   }
+#' @param min_val Minimum value after transformation (default 0). A small
+#'   positive value (e.g., 0.01) can help numerical stability.
+#' @param floor For "auc" method, values below this are clamped (default -0.5).
+#' @param mask Optional mask; if provided, statistics are computed only within mask.
+#'
+#' @return A list with:
+#'   \itemize{
+#'     \item \code{maps}: Transformed maps (same class as input).
+#'     \item \code{offset}: The offset added (for "shift", "auc", "zscore" methods).
+#'     \item \code{method}: The method used.
+#'     \item \code{original_range}: Range of original data within mask.
+#'   }
+#'
+#' @details
+#' For group-level NMF analyses, the transformation is computed across all
+#' subjects jointly to preserve relative differences. The returned `offset`
+#' can be used to interpret results in the original scale.
+#'
+#' @examples
+#' \dontrun{
+#' # For AUC-0.5 maps (chance-centered)
+#' prepped <- nmf_preprocess_maps(auc_maps, method = "auc")
+#' result <- spatial_nmf_maps(prepped$maps, mask = mask, k = 5)
+#'
+#' # For raw AUC maps
+#' prepped <- nmf_preprocess_maps(auc_maps, method = "auc_raw")
+#'
+#' # For z-score maps with small positive floor
+#' prepped <- nmf_preprocess_maps(zmaps, method = "shift", min_val = 0.01)
+#' }
+#'
+#' @export
+nmf_preprocess_maps <- function(maps,
+                                method = c("shift", "auc", "auc_raw", "zscore", "relu", "abs"),
+                                min_val = 0,
+                                floor = -0.5,
+                                mask = NULL) {
+  method <- match.arg(method)
+
+  if (!is.list(maps) || length(maps) == 0) {
+    stop("maps must be a non-empty list of NeuroVol/NeuroSurface objects.")
+  }
+
+  # Determine mask indices
+  mask_idx <- NULL
+  if (!is.null(mask)) {
+    if (inherits(mask, c("NeuroVol", "NeuroVec"))) {
+      mask_vec <- as.logical(as.numeric(neuroim2::values(mask)))
+    } else if (inherits(mask, "NeuroSurface")) {
+      mask_vec <- as.logical(as.numeric(neuroim2::values(mask)))
+    } else {
+      mask_vec <- as.logical(mask)
+    }
+    mask_idx <- which(mask_vec)
+  }
+
+  # Extract values from all maps
+  get_vals <- function(m) {
+    v <- neuroim2::values(m)
+    if (is.matrix(v)) v <- as.numeric(v)
+    if (!is.null(mask_idx)) v[mask_idx] else v
+  }
+
+  all_vals <- unlist(lapply(maps, get_vals))
+  all_vals <- all_vals[is.finite(all_vals)]
+
+  if (length(all_vals) == 0) {
+    stop("No finite values found in maps.")
+  }
+
+  original_range <- range(all_vals)
+  offset <- 0
+
+  # Determine transformation
+  transform_fn <- switch(method,
+    shift = {
+      offset <- -min(all_vals) + min_val
+      function(v) v + offset
+    },
+    auc = {
+      # For AUC - 0.5 data (range approx -0.5 to 0.5)
+      # Clamp floor, then shift so floor becomes min_val
+      offset <- -floor + min_val
+      function(v) {
+        v[v < floor] <- floor
+        v + offset
+      }
+    },
+    auc_raw = {
+      # For raw AUC (0 to 1), subtract 0.5 first then treat as auc
+      offset <- -floor + min_val
+      function(v) {
+        v <- v - 0.5  # center at chance
+        v[v < floor] <- floor
+        v + offset
+      }
+    },
+    zscore = {
+      offset <- -min(all_vals) + min_val
+      function(v) v + offset
+    },
+    relu = {
+      function(v) pmax(v, min_val)
+    },
+    abs = {
+      function(v) abs(v) + min_val
+    }
+  )
+
+  # Apply transformation to each map
+  transformed <- lapply(maps, function(m) {
+    vals <- neuroim2::values(m)
+    is_mat <- is.matrix(vals)
+    if (is_mat) {
+      new_vals <- matrix(transform_fn(as.numeric(vals)), nrow = nrow(vals), ncol = ncol(vals))
+    } else if (is.array(vals)) {
+      new_vals <- array(transform_fn(as.numeric(vals)), dim = dim(vals))
+    } else {
+      new_vals <- transform_fn(as.numeric(vals))
+    }
+
+    # Create new object of same type
+    if (inherits(m, "NeuroVol")) {
+      idx <- tryCatch(neuroim2::indices(m), error = function(e) NULL)
+      if (!is.null(idx)) {
+        neuroim2::NeuroVol(data = new_vals, space = neuroim2::space(m), indices = idx)
+      } else {
+        neuroim2::NeuroVol(data = new_vals, space = neuroim2::space(m))
+      }
+    } else if (inherits(m, "NeuroSurface")) {
+      idx <- tryCatch(neuroim2::indices(m), error = function(e) NULL)
+      geom <- neurosurf::geometry(m)
+      if (!is.null(idx)) {
+        neurosurf::NeuroSurface(geometry = geom, indices = idx, data = new_vals)
+      } else {
+        neurosurf::NeuroSurface(geometry = geom, indices = seq_along(new_vals), data = new_vals)
+      }
+    } else {
+      stop("Unsupported map type: ", class(m)[1])
+    }
+  })
+
+  list(
+    maps = transformed,
+    offset = offset,
+    method = method,
+    original_range = original_range,
+    min_val = min_val
+  )
 }
