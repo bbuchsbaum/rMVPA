@@ -709,6 +709,9 @@ spatial_nmf_maps <- function(group_A,
   # Determine parallel setting: explicit parameter > auto-detect
 
   use_parallel <- if (!is.null(parallel)) parallel else .auto_parallel()
+  futile.logger::flog.info("spatial_nmf_maps: parallel=%s (explicit=%s)",
+                           as.character(use_parallel),
+                           as.character(!is.null(parallel)))
   if (!is.null(component_args)) {
     if (is.null(component_args$parallel)) component_args$parallel <- use_parallel
     if (is.null(component_args$fit) && is.null(component_args$W)) {
@@ -841,10 +844,19 @@ spatial_nmf_maps <- function(group_A,
 }
 
 .auto_parallel <- function() {
-  if (!requireNamespace("future.apply", quietly = TRUE)) return(FALSE)
-  if (!requireNamespace("future", quietly = TRUE)) return(FALSE)
+  if (!requireNamespace("future.apply", quietly = TRUE)) {
+    futile.logger::flog.debug("auto_parallel: future.apply not available")
+    return(FALSE)
+  }
+  if (!requireNamespace("future", quietly = TRUE)) {
+    futile.logger::flog.debug("auto_parallel: future not available")
+    return(FALSE)
+  }
   nworkers <- tryCatch(future::nbrOfWorkers(), error = function(e) 1L)
-  is.numeric(nworkers) && length(nworkers) == 1L && nworkers > 1
+  result <- is.numeric(nworkers) && length(nworkers) == 1L && nworkers > 1
+  futile.logger::flog.debug("auto_parallel: nbrOfWorkers=%s, using_parallel=%s",
+                            as.character(nworkers), as.character(result))
+  result
 }
 
 .validate_map_list <- function(lst, map_type, name) {
