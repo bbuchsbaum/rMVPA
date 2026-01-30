@@ -14,6 +14,7 @@ spatial_nmf_stability(
   sample = c("bootstrap", "subsample"),
   sample_frac = 1,
   init = c("nndsvd", "random"),
+  fast = FALSE,
   normalize = c("H", "none"),
   similarity = c("cosine", "cor"),
   match = c("greedy"),
@@ -44,6 +45,9 @@ spatial_nmf_stability(
 \item{sample_frac}{Fraction of subjects to sample.}
 
 \item{init}{NMF initialization for bootstrap fits.}
+
+\item{fast}{Logical; use faster defaults for each bootstrap fit (e.g., random init,
+fewer iterations). You can still override specific optimization settings via `...`.}
 
 \item{normalize}{Component normalization ("H" rescales rows to sum 1).}
 

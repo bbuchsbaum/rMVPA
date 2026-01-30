@@ -412,6 +412,8 @@ spatial_nmf_global_test <- function(x = NULL,
 #' @param sample One of "bootstrap" or "subsample".
 #' @param sample_frac Fraction of subjects to sample.
 #' @param init NMF initialization for bootstrap fits.
+#' @param fast Logical; use faster defaults for each bootstrap fit (e.g., random init,
+#'   fewer iterations). You can still override specific optimization settings via `...`.
 #' @param normalize Component normalization ("H" rescales rows to sum 1).
 #' @param similarity Similarity measure for component matching ("cosine" or "cor").
 #' @param match Matching strategy (currently "greedy").
@@ -441,6 +443,7 @@ spatial_nmf_stability <- function(x = NULL,
                                   sample = c("bootstrap", "subsample"),
                                   sample_frac = 1,
                                   init = c("nndsvd", "random"),
+                                  fast = FALSE,
                                   normalize = c("H", "none"),
                                   similarity = c("cosine", "cor"),
                                   match = c("greedy"),
@@ -496,6 +499,15 @@ spatial_nmf_stability <- function(x = NULL,
     stop("top_frac must be in (0, 1].")
   }
 
+  fit_args <- list(...)
+  if (isTRUE(fast)) {
+    if (missing(init)) init <- "random"
+    if (is.null(fit_args$max_iter)) fit_args$max_iter <- 100
+    if (is.null(fit_args$min_iter)) fit_args$min_iter <- 3
+    if (is.null(fit_args$tol)) fit_args$tol <- 1e-3
+    if (is.null(fit_args$check_every)) fit_args$check_every <- 5
+  }
+
   if (!is.null(seed)) set.seed(seed)
 
   H_ref <- fit$H
@@ -528,7 +540,7 @@ spatial_nmf_stability <- function(x = NULL,
     parallel = parallel,
     future_seed = future_seed,
     progress = progress,
-    ...
+    fit_args = fit_args
   )
 
   futile.logger::flog.info("Spatial NMF stability: bootstrap complete.")
@@ -824,21 +836,24 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
                                  parallel = FALSE,
                                  future_seed = TRUE,
                                  progress = FALSE,
-                                 ...) {
+                                 fit_args = list()) {
   iter_fun <- function(i) {
     if (sample == "bootstrap") {
       idx <- sample.int(n, size = ceiling(n * sample_frac), replace = TRUE)
     } else {
       idx <- sample.int(n, size = ceiling(n * sample_frac), replace = FALSE)
     }
-    fit_b <- spatial_nmf_fit(
-      X = X[idx, , drop = FALSE],
-      k = k,
-      graph = graph,
-      lambda = lambda,
-      init = init,
-      ...
+    fit_call <- c(
+      list(
+        X = X[idx, , drop = FALSE],
+        k = k,
+        graph = graph,
+        lambda = lambda,
+        init = init
+      ),
+      fit_args
     )
+    fit_b <- do.call(spatial_nmf_fit, fit_call)
     H_b <- fit_b$H
     sim <- .component_similarity(H_ref, H_b, similarity)
     order <- .match_components(sim, match)

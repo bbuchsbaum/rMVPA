@@ -469,7 +469,26 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
     if (is.matrix(vals)) {
       vals <- vals[, 1, drop = TRUE]
     }
-    return(as.logical(as.numeric(vals)))
+    vals <- as.numeric(vals)
+
+    # If mask is stored sparsely (with indices), expand to full spatial length.
+    idx <- tryCatch(neuroim2::indices(mask), error = function(e) NULL)
+    if (!is.null(idx) &&
+        !is.null(spatial_length) &&
+        length(idx) == length(vals) &&
+        length(vals) != spatial_length) {
+      full <- numeric(spatial_length)
+      full[as.integer(idx)] <- vals
+      vals <- full
+    }
+
+    if (!is.null(spatial_length) && length(vals) != spatial_length) {
+      stop("mask length does not match spatial dimensions.")
+    }
+
+    # Treat NA as inactive voxels
+    vals[is.na(vals)] <- 0
+    return(vals != 0)
   }
   if (is.numeric(mask) || is.logical(mask)) {
     mask_vec <- as.logical(mask)
@@ -563,6 +582,9 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
 #' argument lists do not specify `parallel`, `spatial_nmf_maps` will enable
 #' parallel execution automatically when a future plan with more than one worker
 #' is active and the `future.apply` package is available.
+#' If `fast = TRUE`, the same setting is passed through to `global_test` and
+#' `stability` (unless explicitly overridden) so bootstrap/CV refits use the
+#' faster defaults too.
 #'
 #' @param group_A List of NeuroVol/NeuroSurface maps for group A. All maps must share
 #'   the same spatial grid/geometry; if maps carry sparse indices, those indices must match.
@@ -740,6 +762,7 @@ spatial_nmf_maps <- function(group_A,
   global_res <- NULL
   global_args <- .as_arg_list(global_test, "global_test")
   if (!is.null(global_args)) {
+    if (isTRUE(fast) && is.null(global_args$fast)) global_args$fast <- TRUE
     if (is.null(global_args$parallel)) global_args$parallel <- use_parallel
     if (is.null(global_args$progress)) global_args$progress <- progress
     if (is.null(group_B)) stop("global_test requires group_B.")
@@ -764,6 +787,7 @@ spatial_nmf_maps <- function(group_A,
     stability_args$return_maps <- TRUE
   }
   if (!is.null(stability_args)) {
+    if (isTRUE(fast) && is.null(stability_args$fast)) stability_args$fast <- TRUE
     if (is.null(stability_args$parallel)) stability_args$parallel <- use_parallel
     if (is.null(stability_args$progress)) stability_args$progress <- progress
     # Build a minimal spatial_nmf_maps_result to pass spatial metadata

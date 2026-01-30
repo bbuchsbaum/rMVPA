@@ -407,6 +407,35 @@ test_that("spatial_nmf_maps builds data matrix for volumetric maps", {
   expect_equal(as.numeric(res$data[2, ]), c(10, 0, 30, 40))
 })
 
+test_that("spatial_nmf_maps supports sparse volumetric mask with indices", {
+  dims <- c(3, 3, 2)
+  space_obj <- neuroim2::NeuroSpace(dims)
+
+  idx <- c(1, 2, 5, 10, 18)
+  mask_sparse <- neuroim2::NeuroVol(
+    data = rep(1, length(idx)),
+    space = space_obj,
+    indices = idx
+  )
+
+  map1 <- neuroim2::NeuroVol(array(1:prod(dims), dim = dims), space_obj)
+
+  res <- spatial_nmf_maps(
+    group_A = list(map1),
+    mask = mask_sparse,
+    k = 1,
+    lambda = 0,
+    return_data = TRUE,
+    return_maps = TRUE,
+    max_iter = 5
+  )
+
+  expect_equal(as.integer(res$mask_indices), as.integer(idx))
+  expect_equal(ncol(res$data), length(idx))
+  expect_equal(as.numeric(res$data[1, ]), as.numeric(neuroim2::values(map1))[idx])
+  expect_equal(as.integer(neuroim2::indices(res$components[[1]])), as.integer(idx))
+})
+
 test_that("spatial_nmf_maps enforces consistent indices across maps", {
   geom_file <- rmvpa_test_surface_geom_file()
   if (identical(geom_file, "")) {
