@@ -95,8 +95,8 @@ test_that("repmap_model: known low-rank mapping is recovered (C1)", {
   X <- sim$X
   Y <- sim$Y
 
-  Xc <- scale(X, center = TRUE, scale = FALSE)
-  Yc <- scale(Y, center = TRUE, scale = FALSE)
+  Xc <- base::scale(X, center = TRUE, scale = FALSE)
+  Yc <- base::scale(Y, center = TRUE, scale = FALSE)
 
   fit_full <- rMVPA:::.repmap_fit_rrr(
     Xc,
@@ -143,8 +143,8 @@ test_that("repmap_model: pure noise mapping does not hallucinate structure (C2)"
   Y <- matrix(rnorm(K * V), nrow = K, ncol = V)
   rownames(X) <- rownames(Y) <- items
 
-  Xc <- scale(X, center = TRUE, scale = FALSE)
-  Yc <- scale(Y, center = TRUE, scale = FALSE)
+  Xc <- base::scale(X, center = TRUE, scale = FALSE)
+  Yc <- base::scale(Y, center = TRUE, scale = FALSE)
 
   fit_noise <- rMVPA:::.repmap_fit_rrr(
     Xc,
@@ -187,8 +187,8 @@ test_that("repmap_model: mapping reflects only used feature subspace (C3)", {
   rownames(Y) <- items
 
   ## Mapping using all features
-  Xc_all <- scale(X_all, center = TRUE, scale = FALSE)
-  Yc <- scale(Y, center = TRUE, scale = FALSE)
+  Xc_all <- base::scale(X_all, center = TRUE, scale = FALSE)
+  Yc <- base::scale(Y, center = TRUE, scale = FALSE)
   fit_all <- rMVPA:::.repmap_fit_rrr(
     Xc_all,
     Yc,
@@ -202,7 +202,7 @@ test_that("repmap_model: mapping reflects only used feature subspace (C3)", {
   r2_all <- mean(1 - ss_res_all / ss_tot)
 
   ## Mapping using only unused features X2
-  Xc_2 <- scale(X2, center = TRUE, scale = FALSE)
+  Xc_2 <- base::scale(X2, center = TRUE, scale = FALSE)
   fit_2 <- rMVPA:::.repmap_fit_rrr(
     Xc_2,
     Yc,
@@ -227,14 +227,14 @@ test_that("repmap_model: orthogonal rotation of seed space preserves mapping qua
   X <- sim$X
   Y <- sim$Y
 
-  Xc <- scale(X, center = TRUE, scale = FALSE)
-  Yc <- scale(Y, center = TRUE, scale = FALSE)
+  Xc <- base::scale(X, center = TRUE, scale = FALSE)
+  Yc <- base::scale(Y, center = TRUE, scale = FALSE)
 
   ## Random orthogonal rotation in feature space
   P <- ncol(X)
   Rmat <- qr.Q(qr(matrix(rnorm(P * P), nrow = P, ncol = P)))
   X_rot <- X %*% Rmat
-  Xc_rot <- scale(X_rot, center = TRUE, scale = FALSE)
+  Xc_rot <- base::scale(X_rot, center = TRUE, scale = FALSE)
 
   rank_used <- 3
   fit_orig <- rMVPA:::.repmap_fit_rrr(
@@ -298,8 +298,8 @@ test_that("repmap_model: train-test generalization behaves sensibly (C5)", {
   X_test  <- X[test_idx, , drop = FALSE]
   Y_test  <- Y[test_idx, , drop = FALSE]
 
-  Xc_train <- scale(X_train, center = TRUE, scale = FALSE)
-  Yc_train <- scale(Y_train, center = TRUE, scale = FALSE)
+  Xc_train <- base::scale(X_train, center = TRUE, scale = FALSE)
+  Yc_train <- base::scale(Y_train, center = TRUE, scale = FALSE)
   x_mean <- attr(Xc_train, "scaled:center")
   y_mean <- attr(Yc_train, "scaled:center")
 

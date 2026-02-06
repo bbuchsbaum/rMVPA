@@ -17,7 +17,7 @@ test_that("synthetic multi-ROI system shows expected ReNA patterns (D)", {
   d_seed <- 10
   F_A <- matrix(rnorm(K * d_seed), nrow = K, ncol = d_seed)
   rownames(F_A) <- items
-  D_A <- pairwise_dist(cordist("pearson"), F_A)
+  D_A <- rMVPA:::pairwise_dist(cordist("pearson"), F_A)
   rownames(D_A) <- colnames(D_A) <- items
 
   ## Predictor/Outcome RDMs for mediation
@@ -91,8 +91,8 @@ test_that("synthetic multi-ROI system shows expected ReNA patterns (D)", {
   conn_roi1 <- unname(res_net_1$performance[[1]]["conn_raw"])
 
   ## Mapping from seed features to ROI1
-  Xc_A <- scale(F_A, center = TRUE, scale = FALSE)
-  Yc_1 <- scale(roi1_items, center = TRUE, scale = FALSE)
+  Xc_A <- base::scale(F_A, center = TRUE, scale = FALSE)
+  Yc_1 <- base::scale(roi1_items, center = TRUE, scale = FALSE)
   fit_map_1 <- rMVPA:::.repmap_fit_rrr(
     Xc_A,
     Yc_1,
@@ -180,8 +180,8 @@ test_that("synthetic multi-ROI system shows expected ReNA patterns (D)", {
   ind_roi4 <- unname(res_med_4$performance[[1]]["med_indirect"])
 
   X_noise <- matrix(rnorm(K * d_seed), nrow = K, ncol = d_seed)
-  Xc_noise <- scale(X_noise, center = TRUE, scale = FALSE)
-  Yc_4 <- scale(roi4_items, center = TRUE, scale = FALSE)
+  Xc_noise <- base::scale(X_noise, center = TRUE, scale = FALSE)
+  Yc_4 <- base::scale(roi4_items, center = TRUE, scale = FALSE)
   fit_map_4 <- rMVPA:::.repmap_fit_rrr(
     Xc_noise,
     Yc_4,

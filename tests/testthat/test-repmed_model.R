@@ -252,7 +252,7 @@ test_that("repmed_model: confound-driven pseudo-mediation collapses with confoun
 
   scale_rdm <- function(M) {
     v <- M[lower.tri(M)]
-    v_sc <- as.numeric(scale(v))
+    v_sc <- as.numeric(base::scale(v))
     S <- matrix(0, nrow(M), ncol(M))
     S[lower.tri(S)] <- v_sc
     S <- S + t(S)

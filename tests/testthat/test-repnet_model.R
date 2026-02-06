@@ -88,7 +88,7 @@ simulate_repnet_roi_patterns <- function(K = 40,
   rownames(F) <- items
 
   cord <- cordist("pearson")
-  D_seed <- pairwise_dist(cord, F)
+  D_seed <- rMVPA:::pairwise_dist(cord, F)
   rownames(D_seed) <- colnames(D_seed) <- items
 
   list(
@@ -236,7 +236,7 @@ test_that("repnet_model: confound block RDM is factored out (A2)", {
   latent_block <- matrix(rnorm(blocks * d_seed), nrow = blocks, ncol = d_seed)
   F1 <- latent_block[block_labels, ] + matrix(rnorm(K * d_seed), nrow = K, ncol = d_seed) * 0.01
   rownames(F1) <- items
-  D_seed1 <- pairwise_dist(cordist("pearson"), F1)
+  D_seed1 <- rMVPA:::pairwise_dist(cordist("pearson"), F1)
   rownames(D_seed1) <- colnames(D_seed1) <- items
 
   ## ROI patterns depend only on block
@@ -275,7 +275,7 @@ test_that("repnet_model: confound block RDM is factored out (A2)", {
   perm_items <- sample(items)
   F2 <- F1[perm_items, , drop = FALSE]
   rownames(F2) <- items
-  D_seed2 <- pairwise_dist(cordist("pearson"), F2)
+  D_seed2 <- rMVPA:::pairwise_dist(cordist("pearson"), F2)
   rownames(D_seed2) <- colnames(D_seed2) <- items
 
   perf_w2_raw <- run_world(D_seed2, use_confound = FALSE)
@@ -340,9 +340,9 @@ test_that("repnet_model: multiple seeds show selective connectivity (A4)", {
                  matrix(rnorm(K * (d_sem - 1L)), nrow = K, ncol = d_sem - 1L))
   rownames(F_sem) <- items
 
-  D_low <- pairwise_dist(cordist("pearson"), F_low)
+  D_low <- rMVPA:::pairwise_dist(cordist("pearson"), F_low)
   rownames(D_low) <- colnames(D_low) <- items
-  D_sem <- pairwise_dist(cordist("pearson"), F_sem)
+  D_sem <- rMVPA:::pairwise_dist(cordist("pearson"), F_sem)
   rownames(D_sem) <- colnames(D_sem) <- items
 
   ## ROI L: depends only on low-level features
