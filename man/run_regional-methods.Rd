@@ -8,6 +8,7 @@
 \alias{run_regional.mvpa_model}
 \alias{run_regional.rsa_model}
 \alias{run_regional.vector_rsa_model}
+\alias{run_regional.feature_rsa_model}
 \alias{run_regional.banded_ridge_da_model}
 \title{Region of Interest Based MVPA Analysis}
 \usage{
@@ -50,6 +51,15 @@ run_regional_base(
   region_mask,
   return_fits = FALSE,
   compute_performance = TRUE,
+  coalesce_design_vars = FALSE,
+  processor = NULL,
+  verbose = FALSE,
+  ...
+)
+
+\method{run_regional}{feature_rsa_model}(
+  model_spec,
+  region_mask,
   coalesce_design_vars = FALSE,
   processor = NULL,
   verbose = FALSE,
@@ -108,6 +118,10 @@ For `rsa_model` objects, `return_predictions` defaults to `FALSE` as standard RS
 
 For `vector_rsa_model` objects, `return_predictions` defaults to `FALSE` in `run_regional_base`.
 If `model_spec$return_predictions` is TRUE, this method will assemble an `observation_scores_table`.
+
+For `feature_rsa_model` objects, `return_predictions` defaults to `FALSE`
+  (set at model creation via `create_model_spec`). This method delegates to
+  `run_regional_base`.
 }
 \examples{
 \donttest{
