@@ -539,6 +539,10 @@ as_worker_spec <- function(obj) {
 
 #' @param verbose Logical; print progress messages if \code{TRUE}.
 #' @param analysis_type The type of analysis (e.g., "searchlight").
+#' @details
+#' If the \pkg{progressr} package is installed, this method emits per-task
+#' progress updates from parallel workers. Progress handling is enabled for
+#' the scope of this call and uses the currently configured handlers.
 #' @rdname run_future-methods
 #' @export
 run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
@@ -557,103 +561,117 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
     processor
   }
 
-  
-  results <- frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
-    # Note: Progress tracking removed here because it doesn't work correctly
-    # with parallel execution. Each worker would have its own counter,
-    # causing duplicate messages and incorrect percentages.
-    # Progress is now tracked at the batch level in mvpa_iterate.
-    
-    tryCatch({
-      if (is.null(roi)) {
-        # ROI failed validation (e.g. from extract_roi returning NULL due to <2 voxels after filter_roi)
-        futile.logger::flog.debug("ROI ID %s: Skipped (failed initial validation in extract_roi, e.g. <2 voxels).", rnum)
-        msg <- sprintf("ROI %s failed validation (e.g., <2 voxels after filtering or other extract_roi issue)", rnum)
-        if (fail_fast) {
-          rlang::abort(message = sprintf("ROI %s failed validation: <2 voxels or invalid after filtering.", rnum))
+  invoke_processor <- function(fun, obj, roi, rnum, center_global_id) {
+    fmls <- tryCatch(names(formals(fun)), error = function(...) character(0))
+    supports_center <- "center_global_id" %in% fmls || "..." %in% fmls
+    if (supports_center) {
+      fun(obj, roi, rnum, center_global_id = center_global_id)
+    } else {
+      fun(obj, roi, rnum)
+    }
+  }
+
+  run_map <- function(progress_tick = NULL) {
+    frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
+      if (!is.null(progress_tick)) {
+        on.exit(progress_tick(), add = TRUE)
+      }
+
+      tryCatch({
+        if (is.null(roi)) {
+          # ROI failed validation (e.g. from extract_roi returning NULL due to <2 voxels after filter_roi)
+          futile.logger::flog.debug("ROI ID %s: Skipped (failed initial validation in extract_roi, e.g. <2 voxels).", rnum)
+          msg <- sprintf("ROI %s failed validation (e.g., <2 voxels after filtering or other extract_roi issue)", rnum)
+          if (fail_fast) {
+            rlang::abort(message = sprintf("ROI %s failed validation: <2 voxels or invalid after filtering.", rnum))
+          }
+          return(tibble::tibble(
+            result = list(NULL),
+            indices = list(NULL),
+            performance = list(NULL),
+            id = rnum,
+            error = TRUE,
+            error_message = msg,
+            warning = TRUE,
+            warning_message = msg
+          ))
+
         }
-        return(tibble::tibble(
+
+        # Determine the center_global_id based on analysis type
+        center_global_id_to_pass <- if (analysis_type == "searchlight") rnum else NA
+
+        # Pass center_global_id when the processor supports it.
+        result <- invoke_processor(do_fun, obj, roi, rnum, center_global_id_to_pass)
+
+        if (!obj$return_predictions) {
+          result <- result %>% mutate(result = list(NULL))
+        }
+        # Optionally drop dense per-ROI probability matrices after performance
+        # has been computed, keeping only prob_observed (one number per trial).
+        if (drop_probs) {
+          result <- result %>%
+            dplyr::mutate(
+              prob_observed = purrr::map(result, function(res) {
+                if (is.null(res)) return(NULL)
+                if (!is.null(res$probs)) {
+                  tryCatch(prob_observed(res), error = function(e) NULL)
+                } else {
+                  NULL
+                }
+              }),
+              result = purrr::map(result, function(res) {
+                if (is.null(res)) return(NULL)
+                if (!is.null(res$probs)) {
+                  res$probs <- NULL
+                }
+                res
+              })
+            )
+        }
+
+        result
+      }, error = function(e) {
+        # If fail_fast, bubble the error immediately with context + traceback
+        if (fail_fast) {
+          rlang::abort(
+            message = sprintf("ROI %s processing error: %s", rnum, e$message),
+            parent = e
+          )
+        }
+        # Otherwise, capture a traceback string for debugging
+        tb <- tryCatch(paste(capture.output(rlang::trace_back()), collapse = "\n"),
+                       error = function(...) NA_character_)
+        futile.logger::flog.debug("ROI %d: Processing error (%s)", rnum, e$message)
+        tibble::tibble(
           result = list(NULL),
           indices = list(NULL),
           performance = list(NULL),
           id = rnum,
           error = TRUE,
-          error_message = msg,
+          error_message = paste0("Error processing ROI: ", e$message,
+                                 if (!is.na(tb)) paste0("\ntrace:\n", tb) else ""),
           warning = TRUE,
-          warning_message = msg
-        ))
-
-      }
-      
-      # Determine the center_global_id based on analysis type
-      center_global_id_to_pass <- if (analysis_type == "searchlight") rnum else NA
-      
-      # If we are here, ROI is valid. Call the processing function
-      # Note: Pass center_global_id_to_pass to the processor if it needs it,
-      # otherwise it will be handled if the processor calls internal_crossval
-      # The default process_roi likely needs to be adapted or replaced.
-      # For now, assuming do_fun (process_roi) will handle it implicitly
-      # or pass it down to internal_crossval.
-      # TODO: We might need to modify process_roi explicitly or make this call directly
-      # to internal_crossval depending on the model type.
-      # Let's assume for now the default processor logic implicitly handles internal_crossval
-      # and we just need to ensure center_global_id_to_pass is available.
-      # If a custom processor is used, it's the user's responsibility to handle it.
-
-      result <- do_fun(obj, roi, rnum, center_global_id = center_global_id_to_pass)
-      
-      if (!obj$return_predictions) {
-        result <- result %>% mutate(result = list(NULL))
-      }
-      # Optionally drop dense per-ROI probability matrices after performance
-      # has been computed, keeping only prob_observed (one number per trial).
-      if (drop_probs) {
-        result <- result %>%
-          dplyr::mutate(
-            prob_observed = purrr::map(result, function(res) {
-              if (is.null(res)) return(NULL)
-              if (!is.null(res$probs)) {
-                tryCatch(prob_observed(res), error = function(e) NULL)
-              } else {
-                NULL
-              }
-            }),
-            result = purrr::map(result, function(res) {
-              if (is.null(res)) return(NULL)
-              if (!is.null(res$probs)) {
-                res$probs <- NULL
-              }
-              res
-            })
-          )
-      }
-
-      result
-    }, error = function(e) {
-      # If fail_fast, bubble the error immediately with context + traceback
-      if (fail_fast) {
-        rlang::abort(
-          message = sprintf("ROI %s processing error: %s", rnum, e$message),
-          parent = e
+          warning_message = paste("Error processing ROI:", e$message)
         )
-      }
-      # Otherwise, capture a traceback string for debugging
-      tb <- tryCatch(paste(capture.output(rlang::trace_back()), collapse = "\n"),
-                     error = function(...) NA_character_)
-      futile.logger::flog.debug("ROI %d: Processing error (%s)", rnum, e$message)
-      tibble::tibble(
-        result = list(NULL),
-        indices = list(NULL),
-        performance = list(NULL),
-        id = rnum,
-        error = TRUE,
-        error_message = paste0("Error processing ROI: ", e$message,
-                               if (!is.na(tb)) paste0("\ntrace:\n", tb) else ""),
-        warning = TRUE,
-        warning_message = paste("Error processing ROI:", e$message)
-      )
-    })
-  }, .options=furrr::furrr_options(seed=TRUE))
+      })
+    }, .options = furrr::furrr_options(seed = TRUE, conditions = "condition"))
+  }
+
+  use_progressr <- total_items > 0 && requireNamespace("progressr", quietly = TRUE)
+
+  if (isTRUE(verbose) && total_items > 0 && !use_progressr) {
+    futile.logger::flog.debug("progressr unavailable; using batch-level progress logs only.")
+  }
+
+  results <- if (use_progressr) {
+    progressr::with_progress({
+      p <- progressr::progressor(steps = total_items)
+      run_map(progress_tick = p)
+    }, handlers = progressr::handlers(), enable = TRUE)
+  } else {
+    run_map(progress_tick = NULL)
+  }
   
   # Explicitly cleanup resolved futures to free memory before binding results
   # Final cleanup and garbage collection
