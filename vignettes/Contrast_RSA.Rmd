@@ -14,12 +14,11 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
 
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 suppressPackageStartupMessages({
   library(neuroim2)
@@ -41,7 +40,7 @@ This vignette walks through a compact example and explains the output metrics.
 
 We start by generating a small dataset and defining two contrasts. Contrasts should be column‑centered: positive values indicate conditions that pull voxel patterns in one direction, negatives in the opposite direction.
 
-```{r, message=FALSE, warning=FALSE}
+```{r define_contrasts, message=FALSE, warning=FALSE}
 # Generate dummy dataset (small 6x6x6 volume, 32 samples)
 set.seed(42)
 data_info <- gen_sample_dataset(D = c(6,6,6), nobs = 32, blocks = 4)
@@ -78,7 +77,7 @@ ms_des <- msreve_design(data_info$design, contrast_matrix = C_mat)
 
 Next we create the model specification and run a tiny searchlight over the volume, requesting the default `"beta_delta"` metric.
 
-```{r, message=FALSE, warning=FALSE}
+```{r run_msreve_searchlight, message=FALSE, warning=FALSE}
 cv_spec <- blocked_cross_validation(data_info$design$block_var)
 
 model_spec <- contrast_rsa_model(

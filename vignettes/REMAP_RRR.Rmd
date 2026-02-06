@@ -14,7 +14,7 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
 
 ---
 
@@ -68,7 +68,7 @@ Key points
 We simulate a dataset with an external test set (perception→memory) and run
 both a naive cross‑decoding baseline and REMAP‑RRR over a small ROI mask.
 
-```{r, eval=!light_build}
+```{r minimal_example, eval=!light_build}
 set.seed(1)
 toy <- gen_sample_dataset(D = c(6,6,6), nobs = 120, nlevels = 4, blocks = 3, external_test = TRUE)
 
@@ -118,7 +118,7 @@ When `return_adapter = TRUE` (default), each ROI row also carries a rich
 vectors. The easiest way to inspect it is to call `process_roi()` on a single
 ROI and examine the `result$predictor` field.
 
-```{r, eval=!light_build}
+```{r inspect_diagnostics, eval=!light_build}
 # Inspect diagnostics for a single ROI
 vox <- which(toy$dataset$mask > 0)[1:40]
 one_roi <- extract_roi(vox, toy$dataset)
@@ -140,7 +140,7 @@ Key fields
 Two convenience helpers make it easy to quantify “how transformed is memory?” and
 “which items are closer/farther from perception?”
 
-```{r, eval=!light_build}
+```{r summary_helpers, eval=!light_build}
 # ROI‑level summary (works from performance_table; no fits required)
 roi_tab <- summarize_remap_roi(res_remap)
 head(roi_tab)
@@ -161,7 +161,7 @@ Interpretation
 The ROI metrics in `performance_table` are also available as volumetric maps in
 `res_remap$vol_results`. You can write them with `save_results()`:
 
-```{r, eval=!light_build}
+```{r write_maps, eval=!light_build}
 maps_to_write <- res_remap$vol_results[c("remap_improv", "delta_frob_mean", "lambda_mean")]
 save_results(maps_to_write, dir = "remap_maps", level = "minimal")
 ```
@@ -188,7 +188,7 @@ The same spec works in a searchlight. For brevity we show the call; running it
 on large volumes may be time‑consuming. Use a small radius and/or fixed rank for
 quick checks.
 
-```{r, eval=!light_build}
+```{r searchlight_usage, eval=!light_build}
 sl_res <- run_searchlight(ms_remap, radius = 6, method = "randomized", niter = 2)
 sl_res
 # Maps include standard metrics and adapter_* summaries. Use names(sl_res$results).

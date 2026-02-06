@@ -1,13 +1,23 @@
 ---
-title: "Representational Mediation (ReNA-RM): repmed_model"
+title: 'Representational Mediation (ReNA-RM): repmed_model'
 output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Representational Mediation (ReNA-RM): repmed_model}
-  %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
+vignette: '%\VignetteIndexEntry{Representational Mediation (ReNA-RM): repmed_model}
+  %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+
 ---
 
 ```{r setup, echo=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 set.seed(3)
 ```
@@ -54,7 +64,7 @@ Data requirements
 Quick start: single ROI
 -----------------------
 
-```r
+```{r repmed_quick_start, eval=FALSE}
 library(rMVPA)
 
 ## Synthetic dataset
@@ -85,7 +95,7 @@ out$performance[[1]]
 Regional analysis
 -----------------
 
-```r
+```{r repmed_regional, eval=FALSE}
 ## Toy two-ROI mask (demo only)
 region_vec <- as.vector(ds$dataset$mask)
 inds <- which(region_vec > 0)
@@ -116,10 +126,17 @@ Notes and pitfalls
 - Label alignment: X/Y/confound RDMs must be labeled by items; items are intersected and sorted across sources.
 - Small K: results are flagged when K < 5.
 
+See also
+--------
+
+- `vignette("repmap_model")` -- Representational Mapping (ReNA-Map)
+- `vignette("repnet_model")` -- Representational Connectivity (ReNA-RC)
+- `vignette("Naive_Cross_Decoding")` -- Naive cross-decoding baseline
+
 Session info
 ------------
 
-```r
+```{r repmed_session_info, eval=FALSE}
 sessionInfo()
 ```
 

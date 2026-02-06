@@ -14,12 +14,11 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
 
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 suppressPackageStartupMessages({
   library(neuroim2)
@@ -46,7 +45,7 @@ In practice you (i) create an MVPA dataset, (ii) define one or more model dissim
 
 Let's create a simple example dataset with known structure:
 
-```{r, message=FALSE, warning=FALSE}
+```{r create_sample_data, message=FALSE, warning=FALSE}
 # Generate a sample dataset (20x20x8 volume, 80 observations, 4 blocks)
 dataset <- rMVPA::gen_sample_dataset(D=c(20,20,8), nobs = 80, blocks=4)
 ```
@@ -55,7 +54,7 @@ dataset <- rMVPA::gen_sample_dataset(D=c(20,20,8), nobs = 80, blocks=4)
 
 You can use different types of dissimilarity matrices:
 
-```{r, message=FALSE, warning=FALSE}
+```{r create_model_rdms, message=FALSE, warning=FALSE}
 # Method 1: Using dist() on feature vectors
 model_features <- matrix(rnorm(80*10), 80, 10)  # 80 trials, 10 features
 model_rdm <- dist(model_features)  # Default is Euclidean distance
@@ -68,7 +67,7 @@ model_matrix <- 1 - cor(t(model_features))  # Correlation distance
 
 The RSA design specifies how to compare neural and model dissimilarity patterns:
 
-```{r, message=FALSE, warning=FALSE}
+```{r rsa_design_creation, message=FALSE, warning=FALSE}
 # Basic design with one model RDM
 basic_design <- rsa_design(
   formula = ~ model_rdm,
@@ -93,7 +92,7 @@ complex_design <- rsa_design(
 
 The `rsa_model()` function supports different methods for computing neural dissimilarities and analyzing relationships:
 
-```{r, message=FALSE, warning=FALSE}
+```{r run_rsa_searchlight, message=FALSE, warning=FALSE}
 # Create MVPA dataset
 dset <- mvpa_dataset(dataset$dataset$train_data, mask=dataset$dataset$mask)
 
@@ -119,7 +118,7 @@ results <- run_searchlight(
 
 `rMVPA` supports several methods for comparing neural and model RDMs:
 
-```{r, message=FALSE, warning=FALSE}
+```{r comparison_methods, message=FALSE, warning=FALSE}
 # Pearson correlation
 rsa_pearson <- rsa_model(dset, basic_design, 
                         distmethod = "pearson", 
@@ -150,7 +149,7 @@ The `keep_intra_run = FALSE` parameter tells RSA to exclude comparisons between 
 
 Here's a visualization of what `keep_intra_run = FALSE` does:
 
-```{r, message=FALSE, warning=FALSE}
+```{r run_structure_example, message=FALSE, warning=FALSE}
 # Create a small example with 2 runs, 4 trials each
 mini_data <- matrix(1:8, ncol=1)  # Trial numbers 1-8
 run_labels <- c(1,1,1,1, 2,2,2,2)  # Two runs with 4 trials each
@@ -173,7 +172,7 @@ print(comparison_matrix[lower.tri(comparison_matrix)])
 
 When we create an RSA design with `keep_intra_run = FALSE`:
 
-```{r, message=FALSE, warning=FALSE}
+```{r blocked_rsa_design, message=FALSE, warning=FALSE}
 # Create design excluding within-run comparisons
 blocked_design <- rsa_design(
   formula = ~ model_rdm,
@@ -193,7 +192,7 @@ Set `keep_intra_run = FALSE` when your design includes multiple runs and you wan
 
 You can examine and visualize the RSA results:
 
-```{r, message=FALSE, warning=FALSE}
+```{r visualize_rsa_results, message=FALSE, warning=FALSE}
 # Extract the searchlight map
 rsa_map <- results$results$model_rdm
 
@@ -214,8 +213,13 @@ The rMVPA package provides a comprehensive RSA implementation with flexible mode
 
 When using RSA in rMVPA, carefully consider your experimental design when setting block variables and intra-run parameters, choose distance methods that match your theoretical framework, and select statistical approaches appropriate for your analysis goals.
 
+## Further reading
+
+- `vignette("Advanced_RSA")` -- Feature-Based and Vector-Based RSA methods
+- `vignette("Contrast_RSA")` -- MS-ReVE: contrast-based decomposition of representational geometry
+- `vignette("Temporal_Confounds_in_RSA")` -- controlling for temporal proximity confounds
+
 ## References
 
-For more information on RSA:
 - Kriegeskorte et al. (2008). Representational similarity analysis - connecting the branches of systems neuroscience. Front Syst Neurosci.
 - Nili et al. (2014). A toolbox for representational similarity analysis. PLoS Comput Biol.

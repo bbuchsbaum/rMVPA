@@ -1,15 +1,26 @@
 ---
-title: "Temporal Confounds in RSA"
+title: Temporal Confounds in RSA
+author: Bradley Buchsbaum
 output:
   rmarkdown::html_vignette:
-    toc: true
-vignette: >
-  %\VignetteIndexEntry{Temporal Confounds in RSA}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+    toc: yes
+vignette: '%\VignetteIndexEntry{Temporal Confounds in RSA} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+
 ---
 
 ```{r setup, include=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 knitr::opts_chunk$set(message=FALSE, warning=FALSE, comment = NA)
 # Hide package startup/masking messages in the rendered vignette
 suppressPackageStartupMessages(library(rMVPA))
@@ -27,7 +38,7 @@ RSA and MS-ReVE designs using convenience functions.
 Trial-level temporal RDMs
 -------------------------
 
-```{r}
+```{r temporal_rdm_example}
 set.seed(1)
 n <- 30
 onsets <- seq(0, by=1, length.out=n)  # seconds
@@ -48,7 +59,7 @@ td_plot <- if (is.finite(mx - mn) && (mx - mn) > 0) (td_mat - mn) / (mx - mn) el
 Visualizing temporal RDMs
 -------------------------
 
-```{r fig.width=5, fig.height=5}
+```{r plot_temporal_rdm, fig.width=5, fig.height=5}
 op <- par(mar=c(3,3,2,1))
 image(t(td_plot[nrow(td_plot):1, ]), axes=FALSE, col=cols(64))
 box(); title("Temporal RDM (exp kernel)")
@@ -59,7 +70,7 @@ invisible(par(op))
 Using in rsa_design
 -------------------
 
-```{r}
+```{r rsa_design_temporal}
 task_rdm <- as.dist(matrix(stats::runif(n*n), n, n))
 rdes <- rsa_design(~ task_rdm + temporal(onsets, block = runs, kernel = "exp"),
                    data=list(task_rdm=task_rdm, onsets=onsets, runs=runs),
@@ -70,7 +81,7 @@ print(rdes)
 Assessing overlap with a task RDM
 ---------------------------------
 
-```{r fig.width=5.5, fig.height=4.2}
+```{r task_temporal_overlap, fig.width=5.5, fig.height=4.2}
 task_mat <- as.matrix(task_rdm)
 tvec <- lower_tri(td_plot)
 avec <- lower_tri(task_mat)
@@ -86,7 +97,7 @@ invisible(par(op))
 HRF-overlap confound
 --------------------
 
-```{r fig.width=5, fig.height=5}
+```{r hrf_overlap_rdm, fig.width=5, fig.height=5}
 hrf_rdm <- temporal_hrf_overlap(onsets, durations=rep(1, n), run=runs,
                                 TR=0.8, similarity="overlap", metric="distance")
 hrf_mat <- as.matrix(hrf_rdm)
@@ -105,7 +116,7 @@ invisible(par(op))
 Multiple confounds at once
 --------------------------
 
-```{r}
+```{r multiple_confounds}
 spec <- list(adj=list(kernel="adjacent", width=1),
              exp3=list(kernel="exp", lambda=3),
              hrf=list(kind="hrf", TR=0.8))
@@ -113,7 +124,7 @@ tc <- temporal_confounds(spec, onsets, run=runs, units="sec", TR=0.8)
 str(tc)
 ```
 
-```{r fig.width=9, fig.height=3}
+```{r plot_confounds, fig.width=9, fig.height=3}
 op <- par(mfrow=c(1,3), mar=c(3,3,2,1))
 for (nm in names(tc)) {
   M <- as.matrix(tc[[nm]])
@@ -126,7 +137,7 @@ invisible(par(op))
 Condition-level nuisances for MS-ReVE
 -------------------------------------
 
-```{r}
+```{r msreve_nuisances}
 df <- data.frame(cond = factor(rep(letters[1:3], each=10)), run=runs)
 mvdes <- mvpa_design(df, y_train=~cond, block_var=~run)
 
@@ -154,7 +165,7 @@ Recommendations
 Appendix: Residualizing a toy RDM
 ---------------------------------
 
-```{r fig.width=9, fig.height=4}
+```{r residualize_rdm, fig.width=9, fig.height=4}
 # Simulate a toy ROI RDM as a mixture of task + temporal + noise
 toy_roi <- scale(0.6 * task_mat + 0.3 * td_mat + matrix(rnorm(n*n, sd=.1), n, n))
 diag(toy_roi) <- 0; toy_roi <- (toy_roi + t(toy_roi))/2

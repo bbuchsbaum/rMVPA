@@ -1,6 +1,6 @@
 ---
 title: Running Custom Analyses with rMVPA
-author: Your Name Here
+author: Bradley Buchsbaum
 date: '`r Sys.Date()`'
 output:
   rmarkdown::html_vignette:
@@ -17,12 +17,11 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
 
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 suppressPackageStartupMessages({
   library(neuroim2)
@@ -376,4 +375,4 @@ level, while the `performance` hook in `mvpa_model()` lets you swap in
 custom scalar metrics for standard MVPA workflows. Together, these tools
 allow you to integrate bespoke analyses into `rMVPA` with minimal boilerplate.
 
-For implementation details, see `R/custom.R` and `R/performance.R`.
+For implementation details, see `run_custom_regional()`, `run_custom_searchlight()`, and `mvpa_model()`.

@@ -14,12 +14,11 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
 
 ---
 
 ```{r setup, include = FALSE}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -140,8 +139,8 @@ evmod <- event_model(
 library(neuroim2)
 
 # Load your fMRI data (200 TRs total in this example)
-mask <- NeuroVol(...)  # Binary mask
-fmri_data <- NeuroVec(...)  # 4D: x × y × z × 200 TRs
+# mask <- read_vol("brain_mask.nii.gz")
+# fmri_data <- read_vec("bold_data.nii.gz")
 
 dset <- mvpa_dataset(
   train_data = fmri_data,
@@ -221,7 +220,7 @@ write_vol(perf_map, "hrfdecoder_searchlight_accuracy.nii")
 
 ```{r regional}
 # Define ROI mask
-roi_mask <- NeuroVol(...)
+# roi_mask <- read_vol("roi_atlas.nii.gz")
 
 # Run regional analysis
 roi_result <- run_regional(
@@ -249,7 +248,7 @@ mspec <- hrfdecoder_model(
   dataset = dset,
   design = design,
   # crossval is automatically set to blocked_cross_validation(block_var)
-  ...
+  lambda_W = 10, lambda_HRF = 1, lambda_smooth = 5
 )
 
 # Or explicitly specify:
@@ -257,7 +256,7 @@ mspec <- hrfdecoder_model(
   dataset = dset,
   design = design,
   crossval = blocked_cross_validation(block_var),
-  ...
+  lambda_W = 10, lambda_HRF = 1, lambda_smooth = 5
 )
 ```
 
@@ -303,7 +302,7 @@ mspec <- hrfdecoder_model(
   dataset = dset,
   design = design,
   performance = my_perf,
-  ...
+  lambda_W = 10, lambda_HRF = 1, lambda_smooth = 5
 )
 ```
 

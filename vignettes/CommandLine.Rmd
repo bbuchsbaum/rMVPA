@@ -1,0 +1,280 @@
+---
+title: Command-Line MVPA Scripts
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 3
+vignette: '%\VignetteIndexEntry{Command-Line MVPA Scripts} %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+
+---
+
+# Introduction
+
+rMVPA ships two command-line scripts for running MVPA analyses directly from
+the terminal:
+
+- **MVPA_Searchlight.R** -- searchlight-based analysis, iterating over local
+  voxel neighbourhoods across the brain
+- **MVPA_Regional.R** -- region-based analysis on predefined ROIs
+
+Both scripts support volumetric (NIfTI) and surface data, multiple classifiers,
+flexible cross-validation, feature selection, and YAML configuration files.
+This vignette covers the shared options first, then the specifics of each script.
+
+# Shared Options
+
+## Data inputs
+
+Both scripts require:
+
+- A **4D fMRI file** (`--train_data`)
+- A **trial-by-trial design matrix** (`--train_design`)
+- A **brain mask** (`--mask`)
+
+An optional held-out test set can be provided via `--test_data` and
+`--test_design`.
+
+## Design files
+
+The design file is a tab- or space-delimited text file with one row per trial.
+The `--label_column` flag names the column that contains the target variable
+(categorical for classification, numeric for regression).
+
+```
+trial  condition  subject  session
+1      Face       S01      1
+2      House      S01      1
+3      Face       S01      1
+4      House      S01      1
+5      Face       S01      2
+```
+
+## Data modes
+
+### Image mode (volumetric)
+Default (`--data_mode=image`). Operates on NIfTI files with a binary or labeled
+mask in 3D.
+
+### Surface mode
+Use `--data_mode=surface` for cortical meshes; multiple surface sections are
+supported.
+
+## Models
+
+Both scripts draw from the same model registry:
+
+- `corclass`: Correlation-based classifier with template matching
+- `sda_notune`: Shrinkage Discriminant Analysis without tuning
+- `sda_boot`: SDA with bootstrap resampling
+- `glmnet_opt`: Elastic net with EPSGO parameter optimization
+- `sparse_sda`: SDA with sparsity constraints
+- `sda_ranking`: SDA with automatic feature ranking
+- `mgsda`: Multi-Group Sparse Discriminant Analysis
+- `lda_thomaz`: Modified LDA for high-dimensional data
+- `hdrda`: High-Dimensional Regularized Discriminant Analysis
+
+You can also register custom models via `register_mvpa_model()`.
+
+## Cross-validation options
+
+### Blocked Cross-Validation
+```bash
+--block_column=session
+```
+Uses a blocking variable (e.g., session) for cross-validation splits.
+
+### K-Fold Cross-Validation
+Default when no block column is specified; uses random splits.
+
+### Advanced methods
+Specify in a YAML configuration file:
+```yaml
+cross_validation:
+  name: "twofold"   # Options: "twofold", "bootstrap", "sequential", "custom", "kfold"
+  nreps: 10
+```
+
+See `vignette("CrossValidation")` for details on each scheme.
+
+## Feature selection
+
+Enable feature selection via:
+```yaml
+feature_selector:
+  method: "anova"
+  cutoff_type: "percentile"
+  cutoff_value: 0.1
+```
+
+See `vignette("FeatureSelection")` for available methods and cutoff types.
+
+## Performance considerations
+
+- Use `--normalize_samples=TRUE` for better model performance
+- Increase `--ncores` for faster processing on multi-core systems
+- Set appropriate memory limits with `options(future.globals.maxSize)`
+
+# Searchlight Analysis (MVPA_Searchlight.R)
+
+## Basic usage
+
+```bash
+MVPA_Searchlight.R --radius=6 \
+  --train_design=train_design.txt \
+  --train_data=train_data.nii \
+  --mask=mask.nii \
+  --model=sda_notune \
+  --label_column=condition \
+  --ncores=4 \
+  --output=my_searchlight_output
+```
+
+Key searchlight-specific options:
+
+- `--radius`: Searchlight radius in mm
+- `--type`: `"standard"` (default) or `"randomized"` for faster approximate searchlights
+
+## Example YAML config
+
+```yaml
+train_design: "train_design.txt"
+train_data: "train_data.nii"
+mask: "mask.nii"
+model: "sda_notune"
+data_mode: "image"
+ncores: 4
+radius: 6
+label_column: "condition"
+block_column: "session"
+output: "searchlight_results"
+normalize_samples: TRUE
+class_metrics: TRUE
+```
+
+```bash
+Rscript MVPA_Searchlight.R --config=config.yaml
+```
+
+## Expected outputs
+
+```
+searchlight_results/
++-- accuracy.nii          # Overall classification accuracy
++-- auc.nii               # Mean AUC across classes
++-- auc_class1.nii        # AUC for class 1 (if class_metrics: TRUE)
++-- auc_class2.nii        # AUC for class 2 (if class_metrics: TRUE)
++-- prob_observed.nii     # Probabilities for observed classes
++-- prob_predicted.nii    # Probabilities for predicted classes
++-- config.yaml           # Analysis configuration
+```
+
+For regression analyses: `r2.nii`, `rmse.nii`, `spearcor.nii`.
+
+# Regional Analysis (MVPA_Regional.R)
+
+## Basic usage
+
+```bash
+Rscript MVPA_Regional.R --train_design=train_design.txt \
+  --train_data=train_data.nii \
+  --mask=mask.nii \
+  --model=sda_notune \
+  --label_column=condition \
+  --ncores=4 \
+  --output=my_regional_output
+```
+
+For regional analysis, the `--mask` argument should be a **label map** (ROI
+parcellation) where each non-zero integer value defines a distinct region.
+
+## Creating an ROI mask
+
+```r
+library(neuroim2)
+
+# Start from two binary ROI masks in the same space
+roi1 <- read_vol("roi_left.nii.gz")
+roi2 <- read_vol("roi_right.nii.gz")
+
+# Build a labeled mask: left=1, right=2; background stays 0
+lab <- array(0L, dim = dim(roi1))
+v1 <- as.logical(values(roi1))
+v2 <- as.logical(values(roi2))
+lab[v1] <- 1L
+lab[v2] <- 2L
+
+roi_mask <- NeuroVol(lab, space(roi1))
+write_vol(roi_mask, "my_roi_mask.nii.gz")
+```
+
+## Example YAML config
+
+```yaml
+train_design: "train_design.txt"
+train_data: "train_data.nii"
+mask: "my_roi_mask.nii.gz"
+model: "sda_notune"
+data_mode: "image"
+ncores: 4
+label_column: "condition"
+block_column: "session"
+output: "regional_results"
+normalize_samples: TRUE
+```
+
+```bash
+Rscript MVPA_Regional.R --config=regional_config.yaml
+```
+
+## Expected outputs
+
+```
+regional_results/
++-- performance_table.txt   # Regional performance metrics
++-- prediction_table.txt    # Prediction details per region
++-- regional_metric1.nii    # Regional performance map
++-- config.yaml             # Analysis configuration
+```
+
+## Domain-adaptive cross-decoding (REMAP-RRR)
+
+To run REMAP-RRR from the command line, set `--model=remap_rrr` and provide
+both train and test datasets (source and target):
+
+```bash
+Rscript MVPA_Regional.R \
+  --train_design=perception_design.txt \
+  --test_design=memory_design.txt \
+  --train_data=perception_data.nii \
+  --test_data=memory_data.nii \
+  --mask=mask.nii \
+  --model=remap_rrr \
+  --label_column=condition \
+  --output=remap_roi
+```
+
+Optional REMAP config fields:
+```yaml
+link_by: image_id
+remap_rank: auto
+remap_lambda_grid: [0, 0.25, 0.5, 0.75, 1]
+remap_leave_one_key_out: true
+remap_min_pairs: 5
+```
+
+Outputs include standard metrics plus REMAP diagnostics per ROI:
+`remap_improv`, `delta_frob_mean`, `lambda_mean`.
+See `vignette("REMAP_RRR")` for details.

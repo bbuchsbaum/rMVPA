@@ -1,13 +1,23 @@
 ---
-title: "Representational Connectivity (ReNA-RC): repnet_model"
+title: 'Representational Connectivity (ReNA-RC): repnet_model'
 output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Representational Connectivity (ReNA-RC): repnet_model}
-  %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
+vignette: '%\VignetteIndexEntry{Representational Connectivity (ReNA-RC): repnet_model}
+  %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+
 ---
 
 ```{r setup, echo=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 set.seed(2)
 ```
@@ -60,7 +70,7 @@ Data requirements
 Quick start: single ROI
 -----------------------
 
-```r
+```{r repnet_quick_start, eval=FALSE}
 library(rMVPA)
 
 ## Synthetic dataset
@@ -97,7 +107,7 @@ out$performance[[1]]
 Regional analysis
 -----------------
 
-```r
+```{r repnet_regional, eval=FALSE}
 ## Toy two-ROI mask (demo only)
 region_vec <- as.vector(ds$dataset$mask)
 inds <- which(region_vec > 0)
@@ -125,9 +135,16 @@ Notes and pitfalls
 - Small K: results are flagged as potentially unstable for K < 5.
 - NA connectivity: if the correlation has no complete pairs, the result warns and sets conn_raw = NA.
 
+See also
+--------
+
+- `vignette("repmap_model")` -- Representational Mapping (ReNA-Map)
+- `vignette("repmed_model")` -- Representational Mediation (ReNA-RM)
+- `vignette("Naive_Cross_Decoding")` -- Naive cross-decoding baseline
+
 Session info
 ------------
 
-```r
+```{r repnet_session_info, eval=FALSE}
 sessionInfo()
 ```

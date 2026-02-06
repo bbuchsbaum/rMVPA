@@ -14,12 +14,18 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
 
 ---
 
+```{r setup, echo=FALSE, message=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
 
 ## Introduction
+
+Your searchlight has 200 voxels but only 40 trials -- far more features than observations. Without feature selection, classifiers may overfit to noise, producing inflated accuracy inside the training set that fails to generalize. Feature selection identifies the most discriminative voxels _within each cross-validation fold_, keeping only those that carry genuine signal.
 
 Neuroimaging datasets often contain far more features than informative signal. Feature selection reduces dimensionality, improves interpretability, and can boost predictive performance—provided it is performed inside the cross‑validation loop to avoid selection bias. In `rMVPA`, you configure selection with a feature‑selector object. The package supports an ANOVA‑based F‑test (“FTest”) and correlation‑adjusted t‑scores (“catscore”, via `sda.ranking`) to rank features, together with simple cutoffs: keep the top `k` features or the top proportion `p` (e.g., `p = 0.1` keeps the top 10%).
 
@@ -28,7 +34,7 @@ Neuroimaging datasets often contain far more features than informative signal. F
 
 To create a feature selector in `rMVPA`, use the `feature_selector()` function. For example, to construct a feature selector using the FTest method with a top_k cutoff (selecting the top 10 features):
 
-```{r, message=FALSE, warning=FALSE}
+```{r ftest_top_k, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages(library(rMVPA))
 # Create a feature selector using FTest with top_k cutoff (select top 10 features)
 fsel <- feature_selector(method = "FTest", cutoff_type = "top_k", cutoff_value = 10)
@@ -37,7 +43,7 @@ fsel
 
 Similarly, you can create a feature selector that selects a proportion of features using the top_p option. In the example below, we select the top 10% of features based on the FTest ranking:
 
-```{r, message=FALSE, warning=FALSE}
+```{r ftest_top_p, message=FALSE, warning=FALSE}
 # Create a feature selector using FTest with top_p cutoff (select top 10% of features)
 fsel <- feature_selector(method = "FTest", cutoff_type = "top_p", cutoff_value = 0.1)
 fsel
@@ -49,7 +55,7 @@ The `select_features()` function applies the feature selection process to a give
 
 Below is an example using simulated data:
 
-```{r, message=FALSE, warning=FALSE}
+```{r apply_ftest_top_k, message=FALSE, warning=FALSE}
 # Simulate a response variable (categorical)
 Y <- factor(rep(letters[1:4], each = 25))
 
@@ -66,7 +72,7 @@ cat("Number of selected features (top_k):", sum(selected_features), "\n")
 
 Now, let's use the top_p option. This will select a proportion of the features. For example, with a cutoff value of 0.1, the top 10% of features will be selected:
 
-```{r, message=FALSE, warning=FALSE}
+```{r apply_ftest_top_p, message=FALSE, warning=FALSE}
 # Apply feature selection using the FTest method with top_p cutoff (select top 10% of features)
 fsel <- feature_selector(method = "FTest", cutoff_type = "top_p", cutoff_value = 0.1)
 selected_features <- select_features(fsel, X, Y)
@@ -80,7 +86,7 @@ cat("Proportion of features selected (top_p):", the_proportion, "\n")
 
 Alternatively, you can use the `catscore` method to perform feature selection. The `catscore` method computes a correlation-adjusted t-score for each feature. Here's an example:
 
-```{r, message=FALSE, warning=FALSE}
+```{r catscore_method, message=FALSE, warning=FALSE}
 # Create a feature selector using catscore with top_k cutoff (select top 10 features)
 fsel <- feature_selector(method = "catscore", cutoff_type = "top_k", cutoff_value = 10)
 
@@ -98,10 +104,4 @@ cat("Number of features selected using catscore (top_k):", sum(selected_features
 
 Feature selection is a powerful tool to reduce dimensionality in high-dimensional datasets, especially in neuroimaging applications. In `rMVPA`, the integration of feature selection into cross-validation workflows helps ensure that models are built on unbiased, relevant subsets of data. You can choose between different methods (FTest or catscore) and cutoff strategies (top_k vs top_p) based on your specific analysis needs.
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-suppressPackageStartupMessages({
-  library(neuroim2)
-  library(rMVPA)
-})
-```
 

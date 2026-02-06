@@ -1,6 +1,6 @@
 ---
 title: MVPA Searchlight Tutorial
-author: Your Name
+author: Bradley Buchsbaum
 date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
 vignette: '%\VignetteIndexEntry{MVPA Searchlight Tutorial} %\VignetteEngine{knitr::rmarkdown}
@@ -14,7 +14,7 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
 
 ---
 
@@ -248,7 +248,5 @@ MVPA_Searchlight.R provides a flexible searchlight-based MVPA tool that works wi
 - Explore surface-based MVPA with `--data_mode=surface`
 - Use cross-validation strategies appropriate for your design
 - Optimize performance with parallel processing
-
-Happy searchlighting!
 
 

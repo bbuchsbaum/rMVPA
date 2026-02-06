@@ -1,13 +1,23 @@
 ---
-title: "Representational Mapping (ReNA-Map): repmap_model"
+title: 'Representational Mapping (ReNA-Map): repmap_model'
 output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Representational Mapping (ReNA-Map): repmap_model}
-  %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
+vignette: '%\VignetteIndexEntry{Representational Mapping (ReNA-Map): repmap_model}
+  %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}'
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+
 ---
 
 ```{r setup, echo=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 set.seed(1)
 ```
@@ -60,7 +70,7 @@ Quick start: single ROI
 
 The minimal path uses a small synthetic dataset and a single ROI built from a handful of voxels.
 
-```r
+```{r repmap_quick_start, eval=FALSE}
 library(rMVPA)
 
 ## Synthetic dataset
@@ -97,7 +107,7 @@ Regional analysis (run_regional)
 
 The same model can be applied across labeled regions. The example below builds a simple two-ROI mask for demonstration. This step can take longer; we keep it disabled by default.
 
-```r
+```{r repmap_regional, eval=FALSE}
 ## Create a toy two-ROI mask by splitting the active mask indices
 ## (This is just to illustrate the API; use real ROI atlases in practice.)
 region_vec <- as.vector(ds$dataset$mask)
@@ -130,10 +140,17 @@ Notes and pitfalls
 - Small K: results are flagged as potentially unstable when K < 5.
 - rrpack missing: the method returns a zero map (rank=0) and logs a warning.
 
+See also
+--------
+
+- `vignette("repmed_model")` -- Representational Mediation (ReNA-RM)
+- `vignette("repnet_model")` -- Representational Connectivity (ReNA-RC)
+- `vignette("Naive_Cross_Decoding")` -- Naive cross-decoding baseline
+
 Session info
 ------------
 
-```r
+```{r repmap_session_info, eval=FALSE}
 sessionInfo()
 ```
 

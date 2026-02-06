@@ -17,12 +17,11 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
 
 ---
 
 ```{r setup, echo=FALSE, message=FALSE}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 suppressPackageStartupMessages({
   library(neuroim2)
@@ -49,7 +48,7 @@ The core distinction is that Feature‑Based RSA predicts feature values directl
 
 Let's walk through a complete example:
 
-```{r}
+```{r generate_data}
 ## Generate data and weakly-correlated features
 # Synthetic dataset: 6x6x6, 50 observations (4 blocks)
 data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 50, blocks = 4, nlevels = 2)
@@ -134,7 +133,7 @@ print(results$performance_table)
 
 Feature‑Based RSA supports several estimators. PLS finds components that maximize covariance between brain data and features, and works well when features are correlated. PCA reduces the feature space before regression, providing a compact, interpretable basis. GLMNet (elastic net) adds regularization that helps with feature selection and multicollinearity.
 
-```{r}
+```{r compare_methods}
 # Compare different methods
 methods <- c("pls", "pca", "glmnet")
 results_list <- lapply(methods, function(method) {
@@ -166,7 +165,7 @@ Compared to standard RSA, the vector approach (i) works on distance vectors inst
 
 ## Implementation Example
 
-```{r}
+```{r vector_rsa_example}
 # Create distance matrix for stimuli
 stim_distances <- as.matrix(dist(feature_matrix))
 rownames(stim_distances) <- stim_labels
@@ -200,7 +199,7 @@ print(results_vector$performance_table)
 
 Vector-Based RSA automatically handles block structure:
 
-```{r}
+```{r block_handling}
 # Compare with different block structures
 block_sizes <- c(5, 10)
 results_blocks <- lapply(block_sizes, function(size) {

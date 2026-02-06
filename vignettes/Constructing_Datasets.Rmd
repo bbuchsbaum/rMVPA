@@ -17,12 +17,46 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
 
 ---
-This vignette shows how to construct real neuroimaging datasets for MVPA. The examples cover both volumetric (image‑based) and surface‑based inputs using helpers in `dataset.R`. The code snippets are set to `eval = FALSE` because they reference file paths you should replace with your own data.
+
+```{r setup, echo=FALSE, message=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+This vignette shows how to construct neuroimaging datasets for MVPA. We start with a runnable synthetic example, then show the pattern for real volumetric and surface data.
+
+## Quick Start with Synthetic Data
+
+The easiest way to get started is with `gen_sample_dataset()`, which creates a complete dataset and design in one call:
+
+```{r synthetic_example, message=FALSE, warning=FALSE}
+library(rMVPA)
+library(neuroim2)
+
+# Create a synthetic 6x6x6 dataset with 80 observations in 4 runs, 2 conditions
+ds <- gen_sample_dataset(D = c(6, 6, 6), nobs = 80, blocks = 4, nlevels = 2)
+
+# The result contains a dataset and a design
+print(ds$dataset)
+print(ds$design)
+
+# You can also construct each piece manually:
+dset <- mvpa_dataset(ds$dataset$train_data, mask = ds$dataset$mask)
+
+design_df <- data.frame(
+  Y     = ds$design$y_train,
+  block = ds$design$block_var
+)
+mvdes <- mvpa_design(design_df, y_train = ~ Y, block_var = ~ block)
+print(mvdes)
+```
 
 ## Creating a Real Volumetric (Image-Based) Dataset
+
+The examples below use `eval = FALSE` because they reference file paths you should replace with your own data.
 
 This example assumes you have a 4D fMRI file ("bold.nii.gz") and a corresponding 3D brain mask file ("mask.nii.gz").
 
