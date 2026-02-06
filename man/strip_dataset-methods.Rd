@@ -24,6 +24,11 @@ The model specification object with the `dataset` element removed or set to NULL
 Removes the potentially large dataset component from a model specification object
 to avoid copying it during parallel processing.
 }
+\note{
+For internal parallel dispatch, \code{as_worker_spec()} is now
+  preferred. \code{strip_dataset} remains exported for backward
+  compatibility and external use.
+}
 \examples{
 \donttest{
   ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 20)

@@ -19,6 +19,9 @@ get_unique_regions <- function(region_mask, ...) {
 #' @param obj The model specification object.
 #' @param ... Additional arguments.
 #' @return The model specification object with the `dataset` element removed or set to NULL.
+#' @note For internal parallel dispatch, \code{as_worker_spec()} is now
+#'   preferred. \code{strip_dataset} remains exported for backward
+#'   compatibility and external use.
 #' @rdname strip_dataset-methods
 #' @examples
 #' \donttest{
@@ -968,3 +971,153 @@ train_indices <- function(obj, fold_num, ...) {
 #'   conversions to ROI structures or data frames as needed.
 #' @name data_sample
 NULL
+
+#' Get Center IDs for Searchlight Iteration
+#'
+#' Returns the set of center IDs over which a searchlight analysis iterates.
+#' For volumetric datasets this is the set of nonzero mask voxels; for clustered
+#' datasets it is the sequence of cluster indices.
+#'
+#' @param dataset The dataset object.
+#' @param ... Additional arguments.
+#' @return Integer vector of center IDs.
+#' @export
+get_center_ids <- function(dataset, ...) UseMethod("get_center_ids")
+
+#' Build Spatial Output Map for a Single Metric
+#'
+#' Constructs a spatial object (e.g., \code{NeuroVol}, \code{NeuroSurface}) from
+#' a numeric vector of per-center metric values and the corresponding center IDs.
+#'
+#' @param dataset The dataset object.
+#' @param metric_vector Numeric vector of metric values (one per center).
+#' @param ids Integer vector of center IDs corresponding to \code{metric_vector}.
+#' @param ... Additional arguments.
+#' @return A spatial object (\code{NeuroVol}, \code{NeuroSurface}, etc.)
+#' @keywords internal
+build_output_map <- function(dataset, metric_vector, ids, ...) UseMethod("build_output_map")
+
+#' Get Searchlight Scope
+#'
+#' Returns the analysis scope for a dataset, controlling how \code{mvpa_iterate}
+#' handles center IDs and whether \code{pobserved} maps are constructed.
+#'
+#' @param dataset The dataset object.
+#' @param ... Additional arguments.
+#' @return Character string: \code{"searchlight"} or \code{"regional"}.
+#' @keywords internal
+searchlight_scope <- function(dataset, ...) UseMethod("searchlight_scope")
+
+#' Extract Raw Model Weights
+#'
+#' Extract the raw weight matrix from a fitted model object. Returns a
+#' P x D numeric matrix (features x discriminant directions).
+#'
+#' @param object A fitted model object (e.g., from \code{sda}, \code{glmnet}).
+#' @param ... Additional arguments passed to methods.
+#' @return A numeric matrix of dimension P x D.
+#' @export
+extract_weights <- function(object, ...) UseMethod("extract_weights")
+
+#' Extract Full Feature Matrix from a Dataset
+#'
+#' Returns the full T x P feature matrix (observations x features) for
+#' whole-brain analyses. For clustered datasets this is the parcel time-series;
+#' for image datasets this is the voxel series under the mask.
+#'
+#' @param dataset An \code{mvpa_dataset} or a plain matrix.
+#' @param ... Additional arguments passed to methods.
+#' @return A numeric matrix of dimension T x P.
+#' @export
+get_feature_matrix <- function(dataset, ...) UseMethod("get_feature_matrix")
+
+#' Region Importance via Random Subset Comparison
+#'
+#' Assess each feature's (region/parcel/voxel) contribution to model performance
+#' by comparing cross-validated accuracy when the feature is included vs. excluded
+#' across many random feature subsets.
+#'
+#' @details
+#' \strong{Interpretation.}
+#' \code{region_importance} measures each feature's \emph{marginal predictive
+#' contribution}: how much cross-validated performance improves, on average,
+#' when the feature is included versus excluded across random feature subsets.
+#' This is an approximation of Shapley values and is purely a \strong{decoding}
+#' (backward) measure -- it never examines model weights.
+#'
+#' \strong{Haufe et al. (2014) considerations.}
+#' Because this method works through out-of-sample performance deltas rather
+#' than weight interpretation, it sidesteps the core failure mode described by
+#' Haufe et al. (2014), where backward-model weights are misinterpreted as
+#' activation patterns.
+#'
+#' However, \emph{suppressor variables} -- features that improve classification
+#' by cancelling correlated noise rather than carrying signal -- will receive
+#' positive importance, since they genuinely improve generalization.
+#' This is correct from a decoding perspective ("which features help classify?")
+#' but potentially misleading from a neuroscience perspective ("where does the
+#' signal originate?").
+#'
+#' \strong{Complementary methods.}
+#' For forward-model (activation-pattern) interpretation of linear models,
+#' use \code{\link{haufe_importance}} directly or rely on the
+#' \code{importance_vector} returned by \code{\link{run_global}}, which uses
+#' \code{\link{model_importance}} internally.  For non-linear models such as
+#' random forests, \code{region_importance} is the recommended approach.
+#'
+#' @param model_spec An \code{mvpa_model} specification.
+#' @param ... Additional arguments passed to methods.
+#' @return A \code{region_importance_result} object.
+#' @export
+region_importance <- function(model_spec, ...) UseMethod("region_importance")
+
+#' Per-Feature Model Importance
+#'
+#' Generic function that extracts a per-feature importance vector from a fitted
+#' model object.
+#'
+#' @details
+#' The importance measure returned depends on the model class:
+#'
+#' \describe{
+#'   \item{\strong{SDA / glmnet (linear models)}}{Computes Haufe et al. (2014)
+#'     \emph{forward-model} activation patterns: A = Sigma_x * W * inv(W' Sigma_x W).
+#'     The returned vector is the L2 norm (or custom \code{summary_fun}) of the
+#'     rows of A.
+#'     This is the recommended importance measure for neuroscience interpretation
+#'     because it reflects where the neural signal originates, not merely which
+#'     features carry discriminative weight.}
+#'   \item{\strong{randomForest}}{Returns MeanDecreaseGini (or MeanDecreaseAccuracy
+#'     when available).
+#'     This is a \strong{backward} (decoding) measure and is \strong{not}
+#'     Haufe-safe: suppressor variables that reduce node impurity without
+#'     carrying neural signal will receive high importance.
+#'     Use \code{\link{region_importance}} for a slower but more robust
+#'     backward measure that is bounded by out-of-sample performance, or
+#'     restrict neuroscience interpretation to linear models with Haufe-based
+#'     importance.}
+#'   \item{\strong{default}}{Returns \code{NULL}, signaling that no importance
+#'     is available for the model class.}
+#' }
+#'
+#' @param object A fitted model object (e.g., from \code{sda}, \code{glmnet},
+#'   \code{randomForest}).
+#' @param X_train The training data matrix (T x P) used to fit \code{object}.
+#'   Required for Haufe-based methods; ignored by tree-based methods.
+#' @param ... Additional arguments passed to methods.
+#' @return A numeric vector of length P with per-feature importance scores,
+#'   or \code{NULL} if importance is not available for this model class.
+#' @export
+model_importance <- function(object, X_train, ...) UseMethod("model_importance")
+
+#' Run Global (Whole-Brain) MVPA Analysis
+#'
+#' Train a single classifier on ALL features (parcels or voxels) with
+#' cross-validation, and compute per-feature importance via Haufe et al.
+#' (2014) activation patterns.
+#'
+#' @param model_spec An \code{mvpa_model} specification.
+#' @param ... Additional arguments passed to methods.
+#' @return A \code{global_mvpa_result} object.
+#' @export
+run_global <- function(model_spec, ...) UseMethod("run_global")

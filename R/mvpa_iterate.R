@@ -449,12 +449,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           futile.logger::flog.debug("Batch %d: ROI extraction (extract_roi) took %.3f sec",
                                     i, proc.time()[3] - t_extract_roi)
           
-          # Strip the dataset from mod_spec before passing to parallel workers
-          mod_spec_stripped <- strip_dataset(mod_spec)
-          
           # ---- parallel processing via run_future ----
           t_run_future <- proc.time()[3]
-          results[[i]] <- run_future(mod_spec_stripped, sf, processor, verbose,
+          results[[i]] <- run_future(mod_spec, sf, processor, verbose,
                                      analysis_type = analysis_type,
                                      drop_probs = drop_probs,
                                      fail_fast = fail_fast)
@@ -514,6 +511,32 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
   })
 }
 
+#' Create a lightweight model spec for parallel workers
+#'
+#' Copies a model specification, excluding the large \code{dataset} field
+#' that should never be serialised to parallel workers.
+#' ROI data is extracted serially and passed via the sample frame,
+#' so workers never need the full dataset.
+#'
+#' @section Long-term (Tier 3) -- file-backed proxy references:
+#' Instead of NULLing the dataset, a future enhancement would replace it
+#' with a lightweight proxy holding a file path or \pkg{neuroim2} connection
+#' (e.g. \code{H5NeuroVec}).
+#' Workers that truly need dataset access (such as
+#' \code{y_train.hrfdecoder_model}, which calls \code{nobs(obj$dataset)})
+#' could then lazily materialise only the metadata they need, eliminating
+#' the serial extraction bottleneck entirely.
+#'
+#' @param obj A model specification object (inheriting from \code{"model_spec"}).
+#' @return A copy of \code{obj} with \code{$dataset} set to \code{NULL},
+#'   preserving the S3 class chain for dispatch.
+#' @keywords internal
+#' @noRd
+as_worker_spec <- function(obj) {
+  obj$dataset <- NULL
+  obj
+}
+
 #' @param verbose Logical; print progress messages if \code{TRUE}.
 #' @param analysis_type The type of analysis (e.g., "searchlight").
 #' @rdname run_future-methods
@@ -522,6 +545,8 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
                                analysis_type = "searchlight", drop_probs = FALSE,
                                fail_fast = FALSE, ...) {
   gc()
+  # Ensure workers never receive the full dataset.
+  obj <- as_worker_spec(obj)
   total_items <- nrow(frame)
   
   do_fun <- if (is.null(processor)) {

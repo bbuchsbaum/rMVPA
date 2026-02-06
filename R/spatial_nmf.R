@@ -1047,10 +1047,10 @@ spatial_nmf_maps <- function(group_A,
       space_obj <- neuroim2::NeuroSpace(dims)
     }
     for (i in seq_len(k)) {
-      comps[[i]] <- neuroim2::NeuroVol(
+      comps[[i]] <- neuroim2::SparseNeuroVol(
         data = as.numeric(H[i, ]),
         space = space_obj,
-        indices = mask_idx
+        indices = as.integer(mask_idx)
       )
     }
   } else {

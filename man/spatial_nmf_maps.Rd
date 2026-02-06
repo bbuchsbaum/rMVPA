@@ -22,6 +22,7 @@ spatial_nmf_maps(
   stability = NULL,
   voxelwise_stats = c("none", "stability_zp"),
   parallel = NULL,
+  progress = FALSE,
   ...
 )
 }
@@ -71,6 +72,9 @@ to return bootstrap z- and p-value maps derived from `stability` (forces
 \item{parallel}{Logical; enable parallel processing for inference functions
 (component_test, global_test, stability). If NULL (default), auto-detects
 based on active future plan and availability of future.apply.}
+
+\item{progress}{Logical; report progress via progressr package (works with
+parallel futures). Default FALSE.}
 
 \item{...}{Additional arguments passed to spatial_nmf_fit.}
 }

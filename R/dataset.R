@@ -410,6 +410,7 @@ get_searchlight.mvpa_image_dataset <- function(obj,
                                                radius = 8,
                                                iter = NULL,
                                                nonzero = TRUE,
+                                               k = NULL,
                                                ...) {
   type <- match.arg(type)
   if (type == "standard") {
@@ -424,7 +425,7 @@ get_searchlight.mvpa_image_dataset <- function(obj,
 
 #' @export
 #' @method get_searchlight mvpa_surface_dataset
-get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "randomized", "resampled"), radius=8, iter=NULL, ...) {
+get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "randomized", "resampled"), radius=8, iter=NULL, k=NULL, ...) {
   type <- match.arg(type)
   #browser()
   # Create the iterator once
@@ -481,10 +482,39 @@ has_test_set.mvpa_dataset <- function(obj) {
 
 #' @export
 nobs.mvpa_dataset <- function(x) {
+
   dims <- dim(x$train_data)
   if (is.null(dims)) {
     length(x$train_data)
   } else {
     dims[length(dims)]
   }
+}
+
+
+# ---- Default implementations of the new searchlight generics ----
+
+#' @export
+get_center_ids.mvpa_image_dataset <- function(dataset, ...) {
+  which(dataset$mask > 0)
+}
+
+#' @export
+get_center_ids.mvpa_surface_dataset <- function(dataset, ...) {
+  which(dataset$mask > 0)
+}
+
+#' @export
+build_output_map.mvpa_image_dataset <- function(dataset, metric_vector, ids, ...) {
+  build_volume_map(dataset, metric_vector, ids)
+}
+
+#' @export
+build_output_map.mvpa_surface_dataset <- function(dataset, metric_vector, ids, ...) {
+  build_surface_map(dataset, metric_vector, ids)
+}
+
+#' @export
+searchlight_scope.default <- function(dataset, ...) {
+  "searchlight"
 }

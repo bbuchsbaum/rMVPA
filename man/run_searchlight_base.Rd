@@ -12,6 +12,7 @@ run_searchlight_base(
   combiner = "average",
   drop_probs = FALSE,
   fail_fast = FALSE,
+  k = NULL,
   ...
 )
 }

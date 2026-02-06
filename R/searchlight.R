@@ -33,16 +33,11 @@ wrap_out <- function(perf_mat, dataset, ids = NULL) {
     metric_names <- paste0("Metric", seq_len(ncol(perf_mat)))
   }
 
-  is_surface_dataset <- inherits(dataset, "mvpa_surface_dataset")
   output_maps <- vector("list", length(metric_names))
 
   for (idx in seq_along(metric_names)) {
     metric_vector <- perf_mat[, idx]
-    output_maps[[idx]] <- if (is_surface_dataset) {
-      build_surface_map(dataset, metric_vector, ids)
-    } else {
-      build_volume_map(dataset, metric_vector, ids)
-    }
+    output_maps[[idx]] <- build_output_map(dataset, metric_vector, ids)
   }
   names(output_maps) <- metric_names
 
@@ -377,9 +372,9 @@ combine_standard <- function(model_spec, good_results, bad_results) {
       }
 
       if (any(!vapply(pob_list, is.null, logical(1)))) {
-        if (inherits(model_spec$dataset, "mvpa_surface_dataset")) {
-          # TODO: implement surface-based prob_observed maps if needed.
-          futile.logger::flog.debug("pobserved maps for surface datasets are not yet implemented; skipping.")
+        if (!inherits(model_spec$dataset, "mvpa_image_dataset") ||
+            searchlight_scope(model_spec$dataset) != "searchlight") {
+          futile.logger::flog.debug("pobserved maps not supported for this dataset type/scope; skipping.")
         } else {
           # Volumetric case: build a SparseNeuroVec where rows are mask
           # voxels and columns are trials (probability of true class).
@@ -1188,17 +1183,18 @@ do_resampled <- function(model_spec, radius, niter,
 #' @param mvpa_fun The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).
 #' @param combiner The function to be used to combine results (default is \code{combine_standard}).
 #' @param ... Additional arguments to be passed to the MVPA function.
-do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ..., drop_probs = FALSE, fail_fast = FALSE) {
+do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ..., k = NULL, drop_probs = FALSE, fail_fast = FALSE) {
   error=NULL
   flog.info("creating standard searchlight")
   t_sl_create <- proc.time()[3]
-  slight <- get_searchlight(model_spec$dataset, "standard", radius)
+  slight <- get_searchlight(model_spec$dataset, "standard", radius, k = k)
   flog.debug("get_searchlight (standard) took %.3f sec", proc.time()[3] - t_sl_create)
-  
+
   t_iterate <- proc.time()[3]
-  cind <- which(model_spec$dataset$mask > 0)
+  cind <- get_center_ids(model_spec$dataset)
+  atype <- searchlight_scope(model_spec$dataset)
   flog.info("running standard searchlight iterator")
-  ret <- mvpa_fun(model_spec, slight, cind, analysis_type="searchlight",
+  ret <- mvpa_fun(model_spec, slight, cind, analysis_type=atype,
                   drop_probs = drop_probs, fail_fast = fail_fast, ...)
   flog.debug("mvpa_iterate (standard searchlight) took %.3f sec",
              proc.time()[3] - t_iterate)
@@ -1264,6 +1260,7 @@ run_searchlight_base <- function(model_spec,
                                  combiner = "average",
                                  drop_probs = FALSE,
                                  fail_fast = FALSE,
+                                 k = NULL,
                                  ...) {
 
   
@@ -1345,8 +1342,8 @@ run_searchlight_base <- function(model_spec,
   # 4) Dispatch to do_standard or do_randomized
   res <- if (method == "standard") {
     flog.info("Running standard searchlight with radius = %s", radius)
-    do_standard(model_spec, radius, combiner = chosen_combiner, drop_probs = drop_probs,
-                fail_fast = fail_fast, ...)
+    do_standard(model_spec, radius, combiner = chosen_combiner, k = k,
+                drop_probs = drop_probs, fail_fast = fail_fast, ...)
   } else if (method == "randomized") {
     flog.info("Running randomized searchlight with radius = %s and niter = %s", radius, niter)
     do_randomized(model_spec, radius, niter = niter, combiner = chosen_combiner,
@@ -1372,7 +1369,7 @@ run_searchlight_base <- function(model_spec,
 #' @export
 run_searchlight.default <- function(model_spec, radius = 8, method = c("standard","randomized","resampled"),
                                     niter = 4, combiner = "average", drop_probs = FALSE,
-                                    fail_fast = FALSE, ...) {
+                                    fail_fast = FALSE, k = NULL, ...) {
   run_searchlight_base(
     model_spec    = model_spec,
     radius        = radius,
@@ -1381,6 +1378,7 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
     combiner      = combiner,
     drop_probs    = drop_probs,
     fail_fast     = fail_fast,
+    k             = k,
     ...
   )
 }
