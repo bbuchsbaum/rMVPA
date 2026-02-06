@@ -43,6 +43,19 @@ naive_xdec_model <- function(dataset, design, link_by = NULL, return_predictions
   )
 }
 
+#' @export
+print.naive_xdec_model <- function(x, ...) {
+  cat("Naive Cross-Decoding Model\n")
+  cat("  link_by:            ", x$link_by %||% "(class labels)", "\n")
+  cat("  training levels:    ", paste(levels(x$design$y_train), collapse = ", "), "\n")
+  cat("  n_train:            ", length(x$design$y_train), "\n")
+  if (!is.null(x$design$y_test)) {
+    cat("  n_test:             ", length(x$design$y_test), "\n")
+  }
+  cat("  return_predictions: ", x$return_predictions, "\n")
+  invisible(x)
+}
+
 #' @keywords internal
 .nx_rowsum_mean <- function(X, f) {
   f <- factor(f)

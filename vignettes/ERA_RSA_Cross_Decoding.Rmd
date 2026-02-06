@@ -1,22 +1,21 @@
 ---
-title: "ERA-RSA: Cross-Decoding Between Encoding and Retrieval"
-author: "rMVPA authors"
+title: 'ERA-RSA: Cross-Decoding Between Encoding and Retrieval'
+author: rMVPA authors
 date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{ERA-RSA: Cross-Decoding Between Encoding and Retrieval}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+vignette: |
+  %\VignetteIndexEntry{ERA-RSA: Cross-Decoding Between Encoding and Retrieval} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
 params:
-  family: purple
+  family: violet
 css: albers.css
 resource_files:
-  - albers.css
-  - albers.js
+- albers.css
+- albers.js
 includes:
-  in_header: |
+  in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-purple'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+
 ---
 
 ```{r setup, include=FALSE}

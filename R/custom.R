@@ -43,10 +43,10 @@
 #' output into a convenient flat table.
 #'
 #' @examples
+#' \dontrun{
 #' # Generate sample dataset
 #' dset_info <- gen_sample_dataset(D = c(8,8,8), nobs = 50, nlevels = 2)
 #' dataset_obj <- dset_info$dataset
-#' design_obj <- dset_info$design # Not used by custom_func here, but needed for setup
 #'
 #' # Create a region mask with 3 ROIs
 #' mask_arr <- array(0, dim(dataset_obj$mask))
@@ -57,41 +57,13 @@
 #'
 #' # Define a custom function: calculate mean and sd for each ROI
 #' my_roi_stats <- function(roi_data, roi_info) {
-#'   # roi_data is samples x features matrix
-#'   # roi_info$id is the region number
-#'   # roi_info$indices are the feature indices
 #'   mean_signal <- mean(roi_data, na.rm = TRUE)
 #'   sd_signal <- sd(roi_data, na.rm = TRUE)
-#'   num_features <- ncol(roi_data)
-#'   list(
-#'     roi_id = roi_info$id, # Can include id if desired, or rely on output table
-#'     mean_signal = mean_signal,
-#'     sd_signal = sd_signal,
-#'     n_features = num_features
-#'   )
+#'   list(mean_signal = mean_signal, sd_signal = sd_signal, n_features = ncol(roi_data))
 #' }
 #'
-#' # Run the custom regional analysis
-#' \donttest{
-#' # Set up parallel processing (optional)
-#' 
-#' custom_results <- run_custom_regional(dataset_obj, region_mask_vol, my_roi_stats,
-#'                                       .cores = 2, .verbose = TRUE)
+#' custom_results <- run_custom_regional(dataset_obj, region_mask_vol, my_roi_stats)
 #' print(custom_results)
-#'
-#' # Example with an error in one ROI
-#' my_error_func <- function(roi_data, roi_info) {
-#'   if (roi_info$id == 2) {
-#'     stop("Something went wrong in ROI 2!")
-#'   }
-#'   list(mean_signal = mean(roi_data))
-#' }
-#'
-#' error_results <- run_custom_regional(dataset_obj, region_mask_vol, my_error_func)
-#' print(error_results)
-#'
-#' # Clean up parallel plan
-#' future::plan(future::sequential)
 #' }
 #' @importFrom dplyr bind_rows select rename all_of
 #' @importFrom tidyr unnest_wider
@@ -361,57 +333,29 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #' scalar metrics for every sphere it successfully processes.
 #'
 #' @examples
+#' \dontrun{
 #' # Generate sample dataset
 #' dset_info <- gen_sample_dataset(D = c(10, 10, 10), nobs = 30, nlevels = 2)
 #' dataset_obj <- dset_info$dataset
 #'
 #' # Define a custom function: calculate mean and sd within the sphere
 #' my_sl_stats <- function(sl_data, sl_info) {
-#'   # sl_data is samples x features_in_sphere matrix
-#'   # sl_info contains center_index, indices, etc.
 #'   mean_signal <- mean(sl_data, na.rm = TRUE)
 #'   sd_signal <- sd(sl_data, na.rm = TRUE)
-#'   n_features <- ncol(sl_data)
-#'   list(
-#'     mean_signal = mean_signal,
-#'     sd_signal = sd_signal,
-#'     n_vox_in_sphere = n_features
-#'   )
+#'   list(mean_signal = mean_signal, sd_signal = sd_signal,
+#'        n_vox_in_sphere = ncol(sl_data))
 #' }
 #'
 #' # Run the custom searchlight (standard method)
-#' \donttest{
-#'
 #' custom_sl_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
-#'                                             radius = 3, method = "standard",
-#'                                             .cores = 2, .verbose = TRUE)
+#'                                             radius = 3, method = "standard")
 #' print(custom_sl_results)
 #'
-#' # Access the NeuroVol for a specific metric
-#' mean_signal_map <- custom_sl_results$results$mean_signal$data
-#' # plot(mean_signal_map) # Requires neuroim2 plotting capabilities
-#'
-#' # Example with an error in some spheres (e.g., if too few voxels)
-#' my_error_sl_func <- function(sl_data, sl_info) {
-#'   if (ncol(sl_data) < 5) {
-#'     stop("Too few voxels in this sphere!")
-#'   }
-#'   list(mean_signal = mean(sl_data))
-#' }
-#'
-#' error_sl_results <- run_custom_searchlight(dataset_obj, my_error_sl_func,
-#'                                            radius = 4, method = "standard")
-#' print(error_sl_results) # Errors will be caught, corresponding voxels may be NA
-#'
-#' # Run randomized searchlight (faster for large datasets/radii)
-#' custom_sl_rand_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
-#'                                                  radius = 3, method = "randomized",
-#'                                                  niter = 50, # Fewer iterations for example
-#'                                                  .cores = 2, .verbose = TRUE)
-#' print(custom_sl_rand_results)
-#'
-#' # Clean up parallel plan
-#' future::plan(future::sequential)
+#' # Run randomized searchlight
+#' custom_sl_rand <- run_custom_searchlight(dataset_obj, my_sl_stats,
+#'                                          radius = 3, method = "randomized",
+#'                                          niter = 50)
+#' print(custom_sl_rand)
 #' }
 #'
 #' @importFrom dplyr bind_rows select filter pull mutate

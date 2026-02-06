@@ -1,4 +1,6 @@
 url: http://bbuchsbaum.github.io/rMVPA/
+code:
+  run_dont_test: false
 template:
   bootstrap: 5
   package: albersdown
@@ -16,6 +18,7 @@ articles:
   contents:
   - Searchlight_Analysis
   - Regional_Analysis
+  - CommandLine
   - CommandLineScripts
   - MVPA_RegionalCmdline
 - title: Representational Similarity Analysis
@@ -29,8 +32,7 @@ articles:
 - title: Continuous Decoding
   desc: |
     TR-level continuous-time decoding methods
-  contents:
-  - Continuous_Decoding
+  contents: Continuous_Decoding
 - title: Representation Mapping (REMAP) Models
   desc: |
     Models for learning transformations between perception and memory representations
@@ -44,8 +46,7 @@ articles:
 - title: Extensibility
   desc: |
     Customizing and extending rMVPA functionality
-  contents:
-  - CustomAnalyses
+  contents: CustomAnalyses
 reference:
 - title: REMAP Diagnostics
   desc: |

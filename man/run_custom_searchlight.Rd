@@ -93,57 +93,29 @@ averageable.
 scalar metrics for every sphere it successfully processes.
 }
 \examples{
+\dontrun{
 # Generate sample dataset
 dset_info <- gen_sample_dataset(D = c(10, 10, 10), nobs = 30, nlevels = 2)
 dataset_obj <- dset_info$dataset
 
 # Define a custom function: calculate mean and sd within the sphere
 my_sl_stats <- function(sl_data, sl_info) {
-  # sl_data is samples x features_in_sphere matrix
-  # sl_info contains center_index, indices, etc.
   mean_signal <- mean(sl_data, na.rm = TRUE)
   sd_signal <- sd(sl_data, na.rm = TRUE)
-  n_features <- ncol(sl_data)
-  list(
-    mean_signal = mean_signal,
-    sd_signal = sd_signal,
-    n_vox_in_sphere = n_features
-  )
+  list(mean_signal = mean_signal, sd_signal = sd_signal,
+       n_vox_in_sphere = ncol(sl_data))
 }
 
 # Run the custom searchlight (standard method)
-\donttest{
-
 custom_sl_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
-                                            radius = 3, method = "standard",
-                                            .cores = 2, .verbose = TRUE)
+                                            radius = 3, method = "standard")
 print(custom_sl_results)
 
-# Access the NeuroVol for a specific metric
-mean_signal_map <- custom_sl_results$results$mean_signal$data
-# plot(mean_signal_map) # Requires neuroim2 plotting capabilities
-
-# Example with an error in some spheres (e.g., if too few voxels)
-my_error_sl_func <- function(sl_data, sl_info) {
-  if (ncol(sl_data) < 5) {
-    stop("Too few voxels in this sphere!")
-  }
-  list(mean_signal = mean(sl_data))
-}
-
-error_sl_results <- run_custom_searchlight(dataset_obj, my_error_sl_func,
-                                           radius = 4, method = "standard")
-print(error_sl_results) # Errors will be caught, corresponding voxels may be NA
-
-# Run randomized searchlight (faster for large datasets/radii)
-custom_sl_rand_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
-                                                 radius = 3, method = "randomized",
-                                                 niter = 50, # Fewer iterations for example
-                                                 .cores = 2, .verbose = TRUE)
-print(custom_sl_rand_results)
-
-# Clean up parallel plan
-future::plan(future::sequential)
+# Run randomized searchlight
+custom_sl_rand <- run_custom_searchlight(dataset_obj, my_sl_stats,
+                                         radius = 3, method = "randomized",
+                                         niter = 50)
+print(custom_sl_rand)
 }
 
 }

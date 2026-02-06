@@ -64,10 +64,10 @@ in parallel), catching errors from `custom_func`, and formatting the
 output into a convenient flat table.
 }
 \examples{
+\dontrun{
 # Generate sample dataset
 dset_info <- gen_sample_dataset(D = c(8,8,8), nobs = 50, nlevels = 2)
 dataset_obj <- dset_info$dataset
-design_obj <- dset_info$design # Not used by custom_func here, but needed for setup
 
 # Create a region mask with 3 ROIs
 mask_arr <- array(0, dim(dataset_obj$mask))
@@ -78,40 +78,12 @@ region_mask_vol <- neuroim2::NeuroVol(mask_arr, neuroim2::space(dataset_obj$mask
 
 # Define a custom function: calculate mean and sd for each ROI
 my_roi_stats <- function(roi_data, roi_info) {
-  # roi_data is samples x features matrix
-  # roi_info$id is the region number
-  # roi_info$indices are the feature indices
   mean_signal <- mean(roi_data, na.rm = TRUE)
   sd_signal <- sd(roi_data, na.rm = TRUE)
-  num_features <- ncol(roi_data)
-  list(
-    roi_id = roi_info$id, # Can include id if desired, or rely on output table
-    mean_signal = mean_signal,
-    sd_signal = sd_signal,
-    n_features = num_features
-  )
+  list(mean_signal = mean_signal, sd_signal = sd_signal, n_features = ncol(roi_data))
 }
 
-# Run the custom regional analysis
-\donttest{
-# Set up parallel processing (optional)
-
-custom_results <- run_custom_regional(dataset_obj, region_mask_vol, my_roi_stats,
-                                      .cores = 2, .verbose = TRUE)
+custom_results <- run_custom_regional(dataset_obj, region_mask_vol, my_roi_stats)
 print(custom_results)
-
-# Example with an error in one ROI
-my_error_func <- function(roi_data, roi_info) {
-  if (roi_info$id == 2) {
-    stop("Something went wrong in ROI 2!")
-  }
-  list(mean_signal = mean(roi_data))
-}
-
-error_results <- run_custom_regional(dataset_obj, region_mask_vol, my_error_func)
-print(error_results)
-
-# Clean up parallel plan
-future::plan(future::sequential)
 }
 }
