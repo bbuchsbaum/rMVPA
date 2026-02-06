@@ -55,8 +55,8 @@ test_that("regional feature_rsa_model with S-based feature extraction runs witho
   expect_true(!is.null(res$performance_table))
   
   # Check that performance_table has expected columns
-  expect_true("mean_correlation" %in% colnames(res$performance_table))
-  expect_true("cor_difference" %in% colnames(res$performance_table))
+  expect_true("pattern_correlation" %in% colnames(res$performance_table))
+  expect_true("pattern_discrimination" %in% colnames(res$performance_table))
   expect_true("voxel_correlation" %in% colnames(res$performance_table))
   expect_true("mse" %in% colnames(res$performance_table))
   expect_true("r_squared" %in% colnames(res$performance_table))
@@ -102,10 +102,10 @@ test_that("feature_rsa_model with permutation testing works correctly", {
   expect_true(any(grepl("^z_", perf_cols)))  # z-scores
   
   # Check specific permutation columns
-  expect_true("p_mean_correlation" %in% perf_cols)
-  expect_true("z_mean_correlation" %in% perf_cols)
-  expect_true("p_cor_difference" %in% perf_cols)
-  expect_true("z_cor_difference" %in% perf_cols)
+  expect_true("p_pattern_correlation" %in% perf_cols)
+  expect_true("z_pattern_correlation" %in% perf_cols)
+  expect_true("p_pattern_discrimination" %in% perf_cols)
+  expect_true("z_pattern_discrimination" %in% perf_cols)
 })
 
 test_that("feature_rsa_model with permute_by='features' works correctly", {
@@ -147,7 +147,7 @@ test_that("feature_rsa_model with permute_by='features' works correctly", {
   expect_true(any(grepl("^z_", perf_cols)))
 })
 
-test_that("feature_rsa_model with cache_pca=TRUE works correctly", {
+test_that("feature_rsa_model errors on removed cache_pca argument", {
   set.seed(123)
   
   # Create a small dataset
@@ -160,25 +160,16 @@ test_that("feature_rsa_model with cache_pca=TRUE works correctly", {
   # Create feature_rsa_design
   fdes <- feature_rsa_design(F=Fmat, labels=labels)
   
-  # Create a feature_rsa_model with PCA caching
-  mspec <- feature_rsa_model(
-    dset$dataset, 
-    fdes, 
-    method="pca", 
-    crossval=blocked_cross_validation(dset$design$block_var),
-    cache_pca=TRUE  # Enable PCA caching
+  expect_error(
+    feature_rsa_model(
+      dset$dataset,
+      fdes,
+      method = "pca",
+      crossval = blocked_cross_validation(dset$design$block_var),
+      cache_pca = TRUE
+    ),
+    "cache_pca.*no longer supported"
   )
-  
-  # Create a region mask with just 2 ROIs
-  region_mask <- NeuroVol(sample(1:2, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
-  
-  # Run regional analysis
-  res <- run_regional(mspec, region_mask)
-  
-  # Check results
-  expect_true(!is.null(res))
-  expect_s3_class(res, "regional_mvpa_result")
-  expect_true(!is.null(res$performance_table))
 })
 
 test_that("feature_rsa_model with different max_comps values works correctly", {
@@ -238,8 +229,8 @@ test_that("regional feature_rsa_model with pca method runs without error and ret
   # Check if performance metrics are available
   expect_true("performance_table" %in% names(res))
   # Check specific performance metrics
-  expect_true("mean_correlation" %in% colnames(res$performance_table))
-  expect_true("cor_difference" %in% colnames(res$performance_table))
+  expect_true("pattern_correlation" %in% colnames(res$performance_table))
+  expect_true("pattern_discrimination" %in% colnames(res$performance_table))
   expect_true("voxel_correlation" %in% colnames(res$performance_table))
   expect_true("mse" %in% colnames(res$performance_table))
   expect_true("r_squared" %in% colnames(res$performance_table))
@@ -289,8 +280,8 @@ test_that("can compare feature_rsa with different methods", {
   for (method in methods) {
     # Check that each method has the expected performance metrics
     perf_table <- results_list[[method]]$performance_table
-    expect_true("mean_correlation" %in% colnames(perf_table))
-    expect_true("cor_difference" %in% colnames(perf_table))
+    expect_true("pattern_correlation" %in% colnames(perf_table))
+    expect_true("pattern_discrimination" %in% colnames(perf_table))
     expect_true("voxel_correlation" %in% colnames(perf_table))
     expect_true("mse" %in% colnames(perf_table))
     expect_true("r_squared" %in% colnames(perf_table))
@@ -345,4 +336,71 @@ test_that("feature_rsa_model with permutation testing produces valid p-values", 
     z_scores <- res$performance_table[[col]]
     expect_true(all(!is.na(z_scores)))
   }
+})
+
+# ---- ncomp_selection tests ----
+
+test_that("ncomp_selection='loo' selects components via LOO for PLS", {
+  set.seed(42)
+  dset <- gen_sample_dataset(c(4,4,4), 60, blocks=3)
+  Fmat <- matrix(rnorm(60 * 8), 60, 8)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("o", 1:60), max_comps = 8)
+  region_mask <- NeuroVol(sample(1:2, length(dset$dataset$mask), replace = TRUE),
+                          space(dset$dataset$mask))
+  mspec <- feature_rsa_model(dset$dataset, fdes, method = "pls",
+                              ncomp_selection = "loo",
+                              crossval = blocked_cross_validation(dset$design$block_var))
+  res <- run_regional(mspec, region_mask)
+  expect_s3_class(res, "regional_mvpa_result")
+  expect_true("ncomp" %in% colnames(res$performance_table))
+  # LOO may select fewer components than max_comps
+  ncomps <- res$performance_table$ncomp
+  expect_true(all(ncomps >= 1 & ncomps <= 8))
+})
+
+test_that("ncomp_selection='loo' works for PCA (via pcr)", {
+  set.seed(42)
+  dset <- gen_sample_dataset(c(4,4,4), 60, blocks=3)
+  Fmat <- matrix(rnorm(60 * 8), 60, 8)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("o", 1:60), max_comps = 8)
+  region_mask <- NeuroVol(sample(1:2, length(dset$dataset$mask), replace = TRUE),
+                          space(dset$dataset$mask))
+  mspec <- feature_rsa_model(dset$dataset, fdes, method = "pca",
+                              ncomp_selection = "loo",
+                              crossval = blocked_cross_validation(dset$design$block_var))
+  res <- run_regional(mspec, region_mask)
+  expect_s3_class(res, "regional_mvpa_result")
+  ncomps <- res$performance_table$ncomp
+  expect_true(all(ncomps >= 1 & ncomps <= 8))
+})
+
+test_that("ncomp_selection='pve' keeps components to meet variance threshold", {
+  set.seed(42)
+  dset <- gen_sample_dataset(c(4,4,4), 60, blocks=3)
+  Fmat <- matrix(rnorm(60 * 8), 60, 8)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("o", 1:60), max_comps = 8)
+  region_mask <- NeuroVol(sample(1:2, length(dset$dataset$mask), replace = TRUE),
+                          space(dset$dataset$mask))
+
+  mspec <- feature_rsa_model(dset$dataset, fdes, method = "pls",
+                              ncomp_selection = "pve", pve_threshold = 0.8,
+                              crossval = blocked_cross_validation(dset$design$block_var))
+  res <- run_regional(mspec, region_mask)
+  expect_s3_class(res, "regional_mvpa_result")
+  ncomps <- res$performance_table$ncomp
+  expect_true(all(ncomps >= 1 & ncomps <= 8))
+})
+
+test_that("ncomp_selection='max' uses all max_comps (legacy behaviour)", {
+  set.seed(42)
+  dset <- gen_sample_dataset(c(4,4,4), 60, blocks=3)
+  Fmat <- matrix(rnorm(60 * 6), 60, 6)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("o", 1:60), max_comps = 6)
+  region_mask <- NeuroVol(sample(1:2, length(dset$dataset$mask), replace = TRUE),
+                          space(dset$dataset$mask))
+  mspec <- feature_rsa_model(dset$dataset, fdes, method = "pls",
+                              ncomp_selection = "max",
+                              crossval = blocked_cross_validation(dset$design$block_var))
+  res <- run_regional(mspec, region_mask)
+  expect_s3_class(res, "regional_mvpa_result")
 })

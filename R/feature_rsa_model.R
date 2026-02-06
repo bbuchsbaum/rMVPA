@@ -101,14 +101,26 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   and including the component limit (`max_comps`).
 #' @param method Character string specifying the analysis method. One of:
 #'   \describe{
-#'     \item{pls}{Partial Least Squares regression predicting X from F.}
-#'     \item{pca}{Principal Component Analysis on F, followed by regression predicting X from the PCs.}
+#'     \item{pls}{Partial Least Squares regression predicting X from F (via \code{pls::plsr}).}
+#'     \item{pca}{Principal Component Regression predicting X from PCs of F (via \code{pls::pcr}).}
 #'     \item{glmnet}{Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.}
 #'   }
 #' @param crossval Optional cross-validation specification.
-#' @param cache_pca Logical, if TRUE and method is "pca", cache the PCA decomposition of the
-#'   feature matrix F across cross-validation folds involving the same training rows.
-#'   Defaults to FALSE.
+#' @param ncomp_selection Character string controlling how the number of components
+#'   is chosen for \code{pls} and \code{pca} methods.  One of:
+#'   \describe{
+#'     \item{loo}{(Default) Fit with leave-one-out validation and select the
+#'       fewest components within one standard error of the minimum RMSEP
+#'       (\code{pls::selectNcomp}, method \code{"onesigma"}).}
+#'     \item{pve}{Keep the fewest components whose cumulative explained
+#'       variance reaches \code{pve_threshold} of the total explained by all
+#'       fitted components.}
+#'     \item{max}{Use all \code{max_comps} components (legacy behaviour).}
+#'   }
+#'   Ignored when \code{method = "glmnet"}.
+#' @param pve_threshold Numeric in (0, 1].  When \code{ncomp_selection = "pve"},
+#'   the proportion of total explained X-variance at which to stop adding
+#'   components.  Default 0.9.
 #' @param alpha Numeric value between 0 and 1, only used when method="glmnet". Controls the elastic net
 #'   mixing parameter: 1 for lasso (default), 0 for ridge, values in between for a mixture.
 #'   Defaults to 0.5 (equal mix of ridge and lasso).
@@ -122,39 +134,62 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' @param permute_by DEPRECATED. Permutation is always done by shuffling rows of the predicted matrix.
 #' @param save_distributions Logical, if TRUE and nperm > 0, save the full null distributions
 #'   from the permutation test. Defaults to FALSE.
-#' @param ... Additional arguments (currently unused).
+#' @param ... Additional arguments (currently unused). Passing deprecated
+#'   arguments such as \code{cache_pca} now results in an error.
 #'
 #' @return A \code{feature_rsa_model} object (S3 class).
 #'
 #' @details
 #' Feature RSA models analyze how well a feature matrix \code{F} (defined in the `design`)
 #' relates to neural data \code{X}. The `max_comps` parameter, inherited from the `design` object,
-#' sets an upper limit on the number of components used:
-#'   - \strong{pca}: Performs PCA on \code{F}. `max_comps` limits the number of principal components
-#'     (selected by variance explained) used to predict \code{X}. Actual components used: `min(max_comps, available_PCs)`.
-#'   - \strong{pls}: Performs PLS regression predicting \code{X} from \code{F}. `max_comps` sets the
-#'     maximum number of PLS components to compute. Actual components used may be fewer based on the PLS algorithm.
-#'   - \strong{glmnet}: Performs elastic net regression predicting \code{X} from \code{F} using the glmnet package
-#'     with multivariate Gaussian response family. The regularization (lambda) can be automatically selected via cross-validation
-#'     if cv_glmnet=TRUE. The alpha parameter controls the balance between L1 (lasso) and L2 (ridge) regularization.
+#' sets an upper limit on the number of components fitted:
+#'   - \strong{pls}: PLS regression via \code{pls::plsr}. Fits up to `max_comps` components;
+#'     the actual number used for prediction is chosen by \code{ncomp_selection}.
+#'   - \strong{pca}: Principal Component Regression via \code{pls::pcr}. Fits up to
+#'     `max_comps` components; selection controlled by \code{ncomp_selection}.
+#'   - \strong{glmnet}: Elastic net regression via \code{glmnet} with multivariate Gaussian
+#'     response. Regularisation (lambda) can be auto-selected via \code{cv_glmnet=TRUE}.
+#'
+#' For \code{pls} and \code{pca}, the \code{ncomp_selection} argument determines how many
+#' of the fitted components are actually used for prediction.  The default
+#' (\code{"loo"}) fits the model with leave-one-out cross-validation and picks
+#' the fewest components within one SE of the minimum RMSEP.
 #'
 #' **Performance Metrics** (computed by `evaluate_model` after cross-validation):
-#'   - `mean_correlation`: Average correlation between predicted and observed patterns for corresponding trials/conditions (diagonal of the prediction-observation correlation matrix).
-#'   - `cor_difference`: The `mean_correlation` minus the average off-diagonal correlation (`mean_correlation` - `off_diag_correlation`). Measures how much better the model predicts the correct trial/condition compared to incorrect ones.
-#'   - `mean_rank_percentile`: Average percentile rank of the diagonal correlations. For each condition, ranks how well the model's prediction correlates with the correct observed pattern compared to incorrect patterns. Values range from 0 to 1, with 0.5 expected by chance and 1 indicating perfect discrimination.
-#'   - `voxel_correlation`: Correlation between the vectorized predicted and observed data matrices across all trials and voxels.
-#'   - `mse`: Mean Squared Error between predicted and observed values.
-#'   - `r_squared`: Proportion of variance in the observed data explained by the predicted data.
-#'   - `p_*`, `z_*`: If `nperm > 0`, permutation-based p-values and z-scores for the above metrics, assessing significance against a null distribution generated by shuffling predicted trial labels.
 #'
-#' The number of components actually used (`ncomp`) for the region/searchlight is also included in the performance output.
+#' *Condition-pattern metrics* (trial x trial correlation matrix):
+#'   - `pattern_correlation`: Average correlation between the predicted and observed
+#'     spatial patterns for corresponding trials (diagonal of the trial x trial
+#'     correlation matrix computed across voxels).
+#'   - `pattern_discrimination`: `pattern_correlation` minus the mean off-diagonal
+#'     correlation.  Measures how much better the model predicts the correct trial's
+#'     pattern compared to incorrect trials.
+#'   - `pattern_rank_percentile`: For each trial, percentile rank of the correct
+#'     pattern match among all candidates.  0.5 = chance, 1 = perfect.
+#'
+#' *Global reconstruction metrics*:
+#'   - `voxel_correlation`: Correlation of the flattened predicted and observed
+#'     matrices (all trials x all voxels).
+#'   - `mse`: Mean Squared Error.
+#'   - `r_squared`: 1 - RSS/TSS.
+#'
+#' *Voxel encoding fidelity*:
+#'   - `mean_voxelwise_temporal_cor`: Average per-voxel temporal correlation
+#'     between predicted and observed time courses.
+#'
+#'   - `p_*`, `z_*`: If `nperm > 0`, permutation-based p-values and z-scores for
+#'     the above metrics.
+#'
+#' The number of components actually used (`ncomp`) for the region/searchlight is
+#' also included in the performance output.
 #'
 #' @export
 feature_rsa_model <- function(dataset,
                                design,
                                method = c("pls", "pca", "glmnet"),
                                crossval = NULL,
-                               cache_pca = FALSE,
+                               ncomp_selection = c("loo", "max", "pve"),
+                               pve_threshold = 0.9,
                                alpha = 0.5,
                                cv_glmnet = FALSE,
                                lambda = NULL,
@@ -164,9 +199,19 @@ feature_rsa_model <- function(dataset,
                                ...) {
   
   method <- match.arg(method)
+  ncomp_selection <- match.arg(ncomp_selection)
   permute_by <- match.arg(permute_by)
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "feature_rsa_design"))
+  extra_args <- list(...)
+  if ("cache_pca" %in% names(extra_args)) {
+    stop("`cache_pca` is no longer supported. PCA caching was removed; use `ncomp_selection` controls for `method='pca'`.")
+  }
+
+  if (ncomp_selection == "pve") {
+    assertthat::assert_that(is.numeric(pve_threshold) && pve_threshold > 0 && pve_threshold <= 1,
+                           msg = "pve_threshold must be in (0, 1]")
+  }
   
   # Additional validation for dataset dimensions
   mask_dims <- dim(dataset$mask)[1:3]
@@ -225,14 +270,11 @@ feature_rsa_model <- function(dataset,
   
   # Single "max_comps" in use
   model_spec$max_comps <- max_comps
-  
-  # new logic for caching
-  model_spec$cache_pca <- cache_pca
-  
-  # We'll store PCA objects in a named list:
-  # each entry is keyed by a "hash" of the training row indices
-  model_spec$pca_cache <- list()
-  
+
+  # Component selection strategy (for PLS/PCA)
+  model_spec$ncomp_selection <- ncomp_selection
+  model_spec$pve_threshold <- pve_threshold
+
   # GLMNet parameters
   if (method == "glmnet") {
     model_spec$alpha <- alpha
@@ -249,15 +291,6 @@ feature_rsa_model <- function(dataset,
 
 
 #' @noRd
-.hash_row_indices <- function(idx) {
-  # Sort them so that permutations of the same set produce the same key
-  idx_sorted <- sort(idx)
-  # Convert to string
-  paste0(idx_sorted, collapse="_")
-  # Or use a real hash function, e.g., digest::digest(idx_sorted)
-}
-
-#' @noRd
 .standardize <- function(X) {
   cm <- colMeans(X)
   csd <- apply(X, 2, sd)
@@ -270,37 +303,7 @@ feature_rsa_model <- function(dataset,
 
 
 
-#' @noRd
-.predict_pca <- function(model, F_new) {
-  # F_new is test features (subset for that fold).
-  F_new <- as.matrix(F_new)
-  
-  # Standardize with the same mean/sd from training
-  f_means <- model$pca_f_mean
-  f_sds   <- model$pca_f_sd
-  
-  if (length(f_means) != ncol(F_new)) {
-    stop("Mismatch in the number of features for PCA prediction vs training.")
-  }
-  
-  Fsc <- sweep(sweep(F_new, 2, f_means, "-"), 2, f_sds, "/")
-  
-  # Project onto the fold-trained PCA rotation
-  PC_new <- Fsc %*% model$pcarot
-  
-  # Predict X in standardized space
-  X_sc_pred <- cbind(1, PC_new) %*% model$pca_coefs  # dim => [nTest, nVoxelsInRegion (or columns in X)]
-  
-  # Undo standardization of X
-  x_means <- model$pca_x_mean
-  x_sds   <- model$pca_x_sd
-  
-  X_pred <- sweep(sweep(X_sc_pred, 2, x_sds, "*"), 2, x_means, "+")
-  X_pred
-}
-
-
-#' @importFrom glmnet cv.glmnet glmnet 
+#' @importFrom glmnet cv.glmnet glmnet
 #' @noRd
 .predict_glmnet <- function(model, F_new) {
   # F_new is test features (subset for that fold)
@@ -369,77 +372,52 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 
   # Wrap the entire prediction logic in tryCatch
   predictions <- tryCatch({
-    if (method == "pls") {
-      
-      # Retrieve necessary components from 'fit'
-      pls_model <- fit$trained_model
-      f_mean <- fit$pls_f_mean
-      f_sd <- fit$pls_f_sd
-      x_mean <- fit$pls_x_mean
-      x_sd <- fit$pls_x_sd
+    if (method %in% c("pls", "pca")) {
+      # PLS and PCA (via pls::pcr) share the same prediction path
+      pls_model    <- fit$trained_model
+      f_mean       <- fit$f_mean
+      f_sd         <- fit$f_sd
+      x_mean       <- fit$x_mean
+      x_sd         <- fit$x_sd
       ncomp_to_use <- fit$ncomp
 
-      # Validate fit components
-      if (is.null(pls_model) || is.null(f_mean) || is.null(f_sd) || is.null(x_mean) || is.null(x_sd) || is.null(ncomp_to_use)) {
-        stop("predict_model (PLS): Missing essential components (model, means, sds, ncomp) in the fit object.")
+      if (is.null(pls_model) || is.null(f_mean) || is.null(f_sd) ||
+          is.null(x_mean) || is.null(x_sd) || is.null(ncomp_to_use)) {
+        stop(sprintf("predict_model (%s): Missing essential components in the fit object.", method))
       }
       if (ncomp_to_use < 1) {
-         # This case should ideally be handled by training setting ncomp appropriately,
-         # but predict.plsr might behave unexpectedly with ncomp=0.
-         # Return mean prediction as fallback
-         # For now, let's error, assuming training should prevent ncomp=0 unless intended.
-         stop(sprintf("predict_model (PLS): Number of components to use (ncomp=%d) is less than 1.", ncomp_to_use))
+        stop(sprintf("predict_model (%s): ncomp (%d) < 1.", method, ncomp_to_use))
       }
 
       expected_cols <- length(f_mean)
-      actual_cols <- ncol(F_new)
-      if (actual_cols != expected_cols) {
-        stop(sprintf("predict_model (PLS): Feature column mismatch. Model expects %d columns, newdata has %d.",
-                     expected_cols, actual_cols))
+      if (ncol(F_new) != expected_cols) {
+        stop(sprintf("predict_model (%s): Feature column mismatch. Expected %d, got %d.",
+                     method, expected_cols, ncol(F_new)))
       }
-      
-      # Standardize newdata using training parameters
+
       sf_test <- scale(F_new, center = f_mean, scale = f_sd)
-      # Check for NaNs after scaling (can happen if sd was zero and scale didn't handle it perfectly)
       if (any(is.nan(sf_test))) {
-         stop("predict_model (PLS): NaNs generated during standardization of newdata. Check feature variances.")
+        stop(sprintf("predict_model (%s): NaNs after standardization.", method))
       }
 
-      # Make predictions using pls::predict
-      # preds_raw is expected to be the prediction using ncomp_to_use components,
-      # potentially in a 3D array [obs, resp, 1]
       preds_raw <- predict(pls_model, newdata = sf_test, ncomp = ncomp_to_use)
-      
-      # Drop any singleton dimensions (e.g., the component dimension if size 1)
-      preds_sc <- drop(preds_raw)
+      preds_sc  <- drop(preds_raw)
 
-      # Ensure preds_sc is a matrix even if only one observation/response
       if (!is.matrix(preds_sc)) {
-         preds_sc <- matrix(preds_sc, nrow=nrow(F_new), ncol=length(x_mean))
+        preds_sc <- matrix(preds_sc, nrow = nrow(F_new), ncol = length(x_mean))
       }
 
-      # Un-standardize: X = X_sc * sd + mean
       preds <- sweep(sweep(preds_sc, 2, x_sd, "*"), 2, x_mean, "+")
       return(preds)
-      
-    } else if (method == "pca") {
-      # PCA prediction logic is in .predict_pca
-      # Pass the entire 'fit' object
-      return(.predict_pca(fit, F_new))
-      
+
     } else if (method == "glmnet") {
-      # GLMNet prediction logic is in .predict_glmnet
-      # Pass the entire 'fit' object
       return(.predict_glmnet(fit, F_new))
-      
     } else {
       stop(paste("Unknown method in predict_model.feature_rsa_model:", method))
     }
   }, error = function(e) {
-      # Catch any error from the specific prediction methods or checks
       error_msg <- sprintf("predict_model (%s): Prediction failed - %s", method, e$message)
       futile.logger::flog.error(error_msg)
-      # Re-throw the error so format_result can catch it
       stop(error_msg)
   })
   
@@ -468,281 +446,151 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #' @param predicted Matrix of predicted data
 #' @param nperm Number of permutations
 #' @param save_distributions Logical, whether to save all permutation distributions
-#' @param mean_cor Scalar: the observed mean correlation
-#' @param cor_difference Scalar: the observed correlation difference (mean_cor - off_diag_cor)
-#' @param mean_rank_percentile Scalar: the observed mean percentile rank of diagonal correlations
+#' @param pattern_cor Scalar: the observed pattern correlation
+#' @param pattern_discrim Scalar: the observed pattern discrimination
+#' @param pattern_rank Scalar: the observed pattern rank percentile
 #' @param voxel_cor Scalar: the observed voxel correlation
 #' @param mse Scalar: the observed MSE
 #' @param r_squared Scalar: the observed R^2
-#' @param cor_temporal_means Scalar: the observed correlation of temporal means
 #' @param mean_voxelwise_temporal_cor Scalar: the observed mean voxelwise temporal correlation
-#' @param cors Vector of diagonal correlations
+#' @param valid_col Integer vector of valid voxel columns
 #' @return A list with p-values, z-scores, and optionally a list of permutations
 .perm_test_feature_rsa <- function(observed,
                                    predicted,
                                    nperm,
                                    save_distributions,
-                                   mean_cor,
-                                   cor_difference,
-                                   mean_rank_percentile,
+                                   pattern_cor,
+                                   pattern_discrim,
+                                   pattern_rank,
                                    voxel_cor,
                                    mse,
                                    r_squared,
-                                   cor_temporal_means,
                                    mean_voxelwise_temporal_cor,
-                                   cors)
+                                   valid_col)
 {
   message("Performing permutation tests with ", nperm, " permutations... (feature_rsa_model)")
-  
+
   n_rows <- nrow(predicted)
-  n_cols <- ncol(predicted)
-  rss <- sum((observed - predicted)^2)
-  tss <- sum((observed - mean(observed))^2)
+  sd_thresh <- 1e-12
+  tss <- sum((observed - mean(observed, na.rm = TRUE))^2, na.rm = TRUE)
 
-  # Counters for how many permutations are "better" than the true model
-  count_better_mean_corr  <- 0
-  count_better_cor_diff <- 0
-  count_better_rank_perc <- 0
-  count_better_voxel_corr <- 0
-  count_better_mse        <- 0
-  count_better_r_squared  <- 0
-  count_better_cor_temp_means <- 0 # New
-  count_better_mean_vox_temp_cor <- 0 # New
+  ## Metric names and observed values (order matters)
+  metric_names <- c("pattern_correlation", "pattern_discrimination",
+                    "pattern_rank_percentile", "voxel_correlation",
+                    "mse", "r_squared", "mean_voxelwise_temporal_cor")
+  obs_vals <- c(pattern_cor, pattern_discrim, pattern_rank,
+                voxel_cor, mse, r_squared, mean_voxelwise_temporal_cor)
+  names(obs_vals) <- metric_names
+  n_met <- length(metric_names)
 
-  # For mean & SD (to calculate z-scores)
-  sum_mean_corr    <- 0; sum_sq_mean_corr <- 0
-  sum_cor_diff    <- 0; sum_sq_cor_diff <- 0
-  sum_rank_perc    <- 0; sum_sq_rank_perc <- 0
-  sum_voxel_corr    <- 0; sum_sq_voxel_corr <- 0
-  sum_mse    <- 0; sum_sq_mse <- 0
-  sum_r_squared    <- 0; sum_sq_r_squared <- 0
-  sum_cor_temp_means <- 0; sum_sq_cor_temp_means <- 0 # New
-  sum_mean_vox_temp_cor <- 0; sum_sq_mean_vox_temp_cor <- 0 # New
+  ## Accumulators
+  count_better <- rep(0L, n_met); names(count_better) <- metric_names
+  sum_perm     <- rep(0,  n_met); names(sum_perm) <- metric_names
+  sum_sq_perm  <- rep(0,  n_met); names(sum_sq_perm) <- metric_names
+  n_valid_perm <- rep(0L, n_met); names(n_valid_perm) <- metric_names
 
-  # Optionally store entire distributions
   if (save_distributions) {
-    perm_mean_corr     <- numeric(nperm)
-    perm_cor_diff      <- numeric(nperm)
-    perm_rank_perc     <- numeric(nperm)
-    perm_voxel_corr    <- numeric(nperm)
-    perm_mse           <- numeric(nperm)
-    perm_r_squared     <- numeric(nperm)
-    perm_correlations  <- matrix(NA, nrow=nperm, ncol=length(cors))
-    perm_cor_temp_means <- numeric(nperm) # New
-    perm_mean_vox_temp_cor <- numeric(nperm) # New
+    dist_mat <- matrix(NA_real_, nrow = nperm, ncol = n_met,
+                       dimnames = list(NULL, metric_names))
   }
-  
-  # Pre-calculate observed spatial means for efficiency in loop
-  mean_obs_across_space <- rowMeans(observed, na.rm = TRUE)
-  
+
   for (i in seq_len(nperm)) {
-    # Permute row order of predicted
-    perm_idx <- sample(n_rows)
-    perm_pred <- predicted[perm_idx, , drop=FALSE]
+    perm_idx  <- sample(n_rows)
+    perm_pred <- predicted[perm_idx, , drop = FALSE]
 
-    # --- Compute metrics for this permutation ---
-    # Standard metrics
-    perm_cormat <- tryCatch(cor(perm_pred, observed), error=function(e) matrix(NA, nrow=n_rows, ncol=n_rows))
-    perm_cors <- diag(perm_cormat)
-    pmc  <- mean(perm_cors, na.rm=TRUE)
-    
-    n <- nrow(perm_cormat)
-    perm_off_diag <- NA_real_
-    if (n > 1 && sum(!is.na(perm_cormat)) > sum(!is.na(perm_cors))) {
-        perm_off_diag <- (sum(perm_cormat, na.rm=TRUE) - sum(perm_cors, na.rm=TRUE)) / (n*n - n)
-    }
-    pcd <- pmc - perm_off_diag  # Correlation difference
-    
-    perm_ranks <- rep(NA_real_, n)
-    if (n > 1) {
-        for (j in 1:n) {
-            condition_cors <- perm_cormat[j, ]
-            n_valid_cors <- sum(!is.na(condition_cors))
-            if (n_valid_cors > 1) {
-                perm_ranks[j] <- (sum(condition_cors <= condition_cors[j], na.rm = TRUE) - 1) / (n_valid_cors - 1)
-            }
+    ## -- Condition-pattern metrics (trial x trial) --
+    ppc <- ppd <- ppr <- NA_real_
+    obs_row_sd  <- apply(observed[, valid_col, drop = FALSE], 1, stats::sd)
+    pred_row_sd <- apply(perm_pred[, valid_col, drop = FALSE], 1, stats::sd)
+    vr <- which(obs_row_sd > sd_thresh & pred_row_sd > sd_thresh)
+    if (length(vr) >= 2) {
+      cm <- tryCatch(stats::cor(t(perm_pred[vr, valid_col, drop = FALSE]),
+                                t(observed[vr, valid_col, drop = FALSE])),
+                     error = function(e) NULL)
+      if (!is.null(cm)) {
+        dc  <- diag(cm)
+        ppc <- mean(dc, na.rm = TRUE)
+        nc  <- nrow(cm)
+        if (nc > 1) {
+          off_vals <- cm[row(cm) != col(cm)]
+          off_vals <- off_vals[!is.na(off_vals)]
+          od <- if (length(off_vals) > 0) mean(off_vals) else NA_real_
+        } else {
+          od <- NA_real_
         }
-    }
-    prp <- mean(perm_ranks, na.rm=TRUE)  # Mean rank percentile
-    
-    pvc  <- tryCatch(cor(as.vector(perm_pred), as.vector(observed)), error=function(e) NA_real_)
-    pmse <- mean((perm_pred - observed)^2, na.rm=TRUE)
-    prsq <- NA_real_
-    if (tss > 0) {
-      rss_perm <- sum((observed - perm_pred)^2, na.rm=TRUE)
-      prsq <- 1 - rss_perm / tss
-    }
-
-    # Correlation of Temporal Means for permutation
-    pctm <- NA_real_
-    if (nrow(perm_pred) > 1) {
-       mean_perm_pred_across_space <- rowMeans(perm_pred, na.rm = TRUE)
-       pctm <- tryCatch(cor(mean_perm_pred_across_space, mean_obs_across_space), error=function(e) NA_real_)
+        ppd <- if (is.finite(ppc) && is.finite(od)) ppc - od else NA_real_
+        rnk <- numeric(nc)
+        for (j in seq_len(nc)) {
+          rc <- cm[j, ]
+          dn <- sum(!is.na(rc)) - 1
+          rnk[j] <- if (dn > 0 && is.finite(rc[j])) {
+            (sum(rc <= rc[j], na.rm = TRUE) - 1) / dn
+          } else {
+            NA_real_
+          }
+        }
+        ppr <- mean(rnk, na.rm = TRUE)
+      }
     }
 
-    # Mean Voxelwise Temporal Correlation for permutation
+    ## -- Global reconstruction --
+    pvc  <- tryCatch(stats::cor(as.vector(perm_pred[, valid_col, drop = FALSE]),
+                                as.vector(observed[, valid_col, drop = FALSE])),
+                     error = function(e) NA_real_)
+    pmse <- mean((perm_pred - observed)^2, na.rm = TRUE)
+    prsq <- if (tss > 0) 1 - sum((observed - perm_pred)^2, na.rm = TRUE) / tss else NA_real_
+
+    ## -- Voxel encoding --
     pmvtc <- NA_real_
-    if (nrow(perm_pred) > 1 && n_cols > 0) {
-       perm_voxel_cors <- numeric(n_cols)
-       for (k in 1:n_cols) {
-           perm_voxel_cors[k] <- tryCatch(cor(observed[, k], perm_pred[, k]), error=function(e) NA)
-       }
-       pmvtc <- mean(perm_voxel_cors, na.rm = TRUE)
+    if (n_rows > 1 && length(valid_col) > 0) {
+      pmvtc <- mean(vapply(valid_col, function(j) {
+        tryCatch(stats::cor(observed[, j], perm_pred[, j]), error = function(e) NA_real_)
+      }, numeric(1)), na.rm = TRUE)
     }
 
-    # --- Update counters --- 
-    if (!is.na(pmc) && !is.na(mean_cor) && pmc >= mean_cor) count_better_mean_corr <- count_better_mean_corr + 1
-    if (!is.na(pcd) && !is.na(cor_difference) && pcd >= cor_difference) count_better_cor_diff <- count_better_cor_diff + 1
-    if (!is.na(prp) && !is.na(mean_rank_percentile) && prp >= mean_rank_percentile) count_better_rank_perc <- count_better_rank_perc + 1
-    if (!is.na(pvc) && !is.na(voxel_cor) && pvc >= voxel_cor) count_better_voxel_corr <- count_better_voxel_corr + 1
-    if (!is.na(pmse) && !is.na(mse) && pmse <= mse) count_better_mse <- count_better_mse + 1 # Lower is better for MSE
-    if (!is.na(prsq) && !is.na(r_squared) && prsq >= r_squared) count_better_r_squared <- count_better_r_squared + 1
-    if (!is.na(pctm) && !is.na(cor_temporal_means) && pctm >= cor_temporal_means) count_better_cor_temp_means <- count_better_cor_temp_means + 1 # New
-    if (!is.na(pmvtc) && !is.na(mean_voxelwise_temporal_cor) && pmvtc >= mean_voxelwise_temporal_cor) count_better_mean_vox_temp_cor <- count_better_mean_vox_temp_cor + 1 # New
+    pvals <- c(ppc, ppd, ppr, pvc, pmse, prsq, pmvtc)
 
-    # --- Sums for z-scores --- 
-    if (!is.na(pmc)) { sum_mean_corr    <- sum_mean_corr + pmc; sum_sq_mean_corr <- sum_sq_mean_corr + pmc^2 }
-    if (!is.na(pcd)) { sum_cor_diff    <- sum_cor_diff + pcd; sum_sq_cor_diff <- sum_sq_cor_diff + pcd^2 }
-    if (!is.na(prp)) { sum_rank_perc    <- sum_rank_perc + prp; sum_sq_rank_perc <- sum_sq_rank_perc + prp^2 }
-    if (!is.na(pvc)) { sum_voxel_corr    <- sum_voxel_corr + pvc; sum_sq_voxel_corr <- sum_sq_voxel_corr + pvc^2 }
-    if (!is.na(pmse)) { sum_mse    <- sum_mse + pmse; sum_sq_mse <- sum_sq_mse + pmse^2 }
-    if (!is.na(prsq)) { sum_r_squared    <- sum_r_squared + prsq; sum_sq_r_squared <- sum_sq_r_squared + prsq^2 }
-    if (!is.na(pctm)) { sum_cor_temp_means <- sum_cor_temp_means + pctm; sum_sq_cor_temp_means <- sum_sq_cor_temp_means + pctm^2 } # New
-    if (!is.na(pmvtc)) { sum_mean_vox_temp_cor <- sum_mean_vox_temp_cor + pmvtc; sum_sq_mean_vox_temp_cor <- sum_sq_mean_vox_temp_cor + pmvtc^2 } # New
-
-    # Possibly store the full permutation distribution
-    if (save_distributions) {
-      perm_mean_corr[i]    <- pmc
-      perm_cor_diff[i]     <- pcd
-      perm_rank_perc[i]    <- prp
-      perm_voxel_corr[i]   <- pvc
-      perm_mse[i]          <- pmse
-      perm_r_squared[i]    <- prsq
-      perm_correlations[i,] <- perm_cors
-      perm_cor_temp_means[i] <- pctm # New
-      perm_mean_vox_temp_cor[i] <- pmvtc # New
-    }
-  }
-
-  # --- Compute p-values --- 
-  # Calculate effective N for each metric (number of permutations where metric was computable)
-  # Needs stored distributions if save_distributions=TRUE
-  n_eff_list <- list()
-  if (save_distributions) {
-     n_eff_list$mean_corr <- sum(!is.na(perm_mean_corr))
-     n_eff_list$cor_diff <- sum(!is.na(perm_cor_diff))
-     n_eff_list$rank_perc <- sum(!is.na(perm_rank_perc))
-     n_eff_list$voxel_corr <- sum(!is.na(perm_voxel_corr))
-     n_eff_list$mse <- sum(!is.na(perm_mse))
-     n_eff_list$r_squared <- sum(!is.na(perm_r_squared))
-     n_eff_list$cor_temp_means <- sum(!is.na(perm_cor_temp_means))
-     n_eff_list$mean_vox_temp_cor <- sum(!is.na(perm_mean_vox_temp_cor))
-  } else {
-     # If not saving distributions, estimate N_eff based on initial valid check (less precise)
-     n_eff_list <- lapply(list(mean_cor, cor_difference, mean_rank_percentile, voxel_cor, mse, r_squared, cor_temporal_means, mean_voxelwise_temporal_cor), function(x) if(is.na(x)) 0 else nperm)
-     names(n_eff_list) <- c("mean_corr", "cor_diff", "rank_perc", "voxel_corr", "mse", "r_squared", "cor_temp_means", "mean_vox_temp_cor")
-  }
-  
-  # Helper for p-value calculation
-  safe_p <- function(count_better, n_eff) {
-       if (n_eff > 0) (count_better + 1) / (n_eff + 1) else NA_real_
-  }
-
-  p_mean_corr  <- safe_p(count_better_mean_corr, n_eff_list$mean_corr)
-  p_cor_diff   <- safe_p(count_better_cor_diff, n_eff_list$cor_diff)
-  p_rank_perc  <- safe_p(count_better_rank_perc, n_eff_list$rank_perc)
-  p_voxel_corr <- safe_p(count_better_voxel_corr, n_eff_list$voxel_corr)
-  p_mse        <- safe_p(count_better_mse, n_eff_list$mse)
-  p_r_squared  <- safe_p(count_better_r_squared, n_eff_list$r_squared)
-  p_cor_temp_means <- safe_p(count_better_cor_temp_means, n_eff_list$cor_temp_means)
-  p_mean_vox_temp_cor <- safe_p(count_better_mean_vox_temp_cor, n_eff_list$mean_vox_temp_cor)
-
-  # --- Compute means and SDs of permutation distributions --- 
-  safe_mean_sd <- function(sum_val, sum_sq_val, n_eff) {
-      if (n_eff > 0) {
-          mean_perm = sum_val / n_eff
-          var_perm = max(0, (sum_sq_val / n_eff) - mean_perm^2)
-          sd_perm = sqrt(var_perm)
-      } else {
-          mean_perm = NA_real_
-          sd_perm = NA_real_
+    ## Update accumulators
+    for (m in seq_len(n_met)) {
+      pv <- pvals[m]
+      ov <- obs_vals[m]
+      if (!is.na(pv)) {
+        n_valid_perm[m] <- n_valid_perm[m] + 1L
+        sum_perm[m]    <- sum_perm[m] + pv
+        sum_sq_perm[m] <- sum_sq_perm[m] + pv^2
+        if (!is.na(ov)) {
+          better <- if (metric_names[m] == "mse") pv <= ov else pv >= ov
+          if (better) count_better[m] <- count_better[m] + 1L
+        }
       }
-      list(mean = mean_perm, sd = sd_perm)
+    }
+    if (save_distributions) dist_mat[i, ] <- pvals
   }
-  
-  stats_mean_corr <- safe_mean_sd(sum_mean_corr, sum_sq_mean_corr, n_eff_list$mean_corr)
-  stats_cor_diff <- safe_mean_sd(sum_cor_diff, sum_sq_cor_diff, n_eff_list$cor_diff)
-  stats_rank_perc <- safe_mean_sd(sum_rank_perc, sum_sq_rank_perc, n_eff_list$rank_perc)
-  stats_voxel_corr <- safe_mean_sd(sum_voxel_corr, sum_sq_voxel_corr, n_eff_list$voxel_corr)
-  stats_mse <- safe_mean_sd(sum_mse, sum_sq_mse, n_eff_list$mse)
-  stats_r_squared <- safe_mean_sd(sum_r_squared, sum_sq_r_squared, n_eff_list$r_squared)
-  stats_cor_temp_means <- safe_mean_sd(sum_cor_temp_means, sum_sq_cor_temp_means, n_eff_list$cor_temp_means) # New
-  stats_mean_vox_temp_cor <- safe_mean_sd(sum_mean_vox_temp_cor, sum_sq_mean_vox_temp_cor, n_eff_list$mean_vox_temp_cor) # New
-  
-  mean_perm_mean_corr <- stats_mean_corr$mean; sd_perm_mean_corr <- stats_mean_corr$sd
-  mean_perm_cor_diff <- stats_cor_diff$mean; sd_perm_cor_diff <- stats_cor_diff$sd
-  mean_perm_rank_perc <- stats_rank_perc$mean; sd_perm_rank_perc <- stats_rank_perc$sd
-  mean_perm_voxel_corr <- stats_voxel_corr$mean; sd_perm_voxel_corr <- stats_voxel_corr$sd
-  mean_perm_mse <- stats_mse$mean; sd_perm_mse <- stats_mse$sd
-  mean_perm_r_squared <- stats_r_squared$mean; sd_perm_r_squared <- stats_r_squared$sd
-  mean_perm_cor_temp_means <- stats_cor_temp_means$mean; sd_perm_cor_temp_means <- stats_cor_temp_means$sd # New
-  mean_perm_mean_vox_temp_cor <- stats_mean_vox_temp_cor$mean; sd_perm_mean_vox_temp_cor <- stats_mean_vox_temp_cor$sd # New
-  
-  # --- z-scores --- 
+
+  ## --- p-values and z-scores ---
   eps <- .Machine$double.eps
-  safe_z <- function(observed_val, mean_perm, sd_perm, lower_is_better=FALSE) {
-      if (is.na(observed_val) || is.na(mean_perm) || is.na(sd_perm)) return(NA_real_)
-      # Ensure sd is not effectively zero
-      sd_use <- max(sd_perm, eps)
-      if (lower_is_better) {
-         (mean_perm - observed_val) / sd_use # e.g., for MSE
-      } else {
-         (observed_val - mean_perm) / sd_use # For correlations, R^2 etc.
-      }
-  }
-  
-  z_mean_corr  <- safe_z(mean_cor, mean_perm_mean_corr, sd_perm_mean_corr)
-  z_cor_diff   <- safe_z(cor_difference, mean_perm_cor_diff, sd_perm_cor_diff)
-  z_rank_perc  <- safe_z(mean_rank_percentile, mean_perm_rank_perc, sd_perm_rank_perc)
-  z_voxel_corr <- safe_z(voxel_cor, mean_perm_voxel_corr, sd_perm_voxel_corr)
-  z_mse        <- safe_z(mse, mean_perm_mse, sd_perm_mse, lower_is_better=TRUE) 
-  z_r_squared  <- safe_z(r_squared, mean_perm_r_squared, sd_perm_r_squared)
-  z_cor_temp_means <- safe_z(cor_temporal_means, mean_perm_cor_temp_means, sd_perm_cor_temp_means) # New
-  z_mean_vox_temp_cor <- safe_z(mean_voxelwise_temporal_cor, mean_perm_mean_vox_temp_cor, sd_perm_mean_vox_temp_cor) # New
+  n_eff <- n_valid_perm
 
-  out <- list(
-    p_values = c(mean_correlation = p_mean_corr,
-                 cor_difference = p_cor_diff,
-                 mean_rank_percentile = p_rank_perc,
-                 voxel_correlation= p_voxel_corr,
-                 mse = p_mse,
-                 r_squared = p_r_squared,
-                 cor_temporal_means = p_cor_temp_means,
-                 mean_voxelwise_temporal_cor = p_mean_vox_temp_cor),
-    z_scores = c(mean_correlation = z_mean_corr,
-                 cor_difference = z_cor_diff,
-                 mean_rank_percentile = z_rank_perc,
-                 voxel_correlation= z_voxel_corr,
-                 mse = z_mse,
-                 r_squared = z_r_squared,
-                 cor_temporal_means = z_cor_temp_means,
-                 mean_voxelwise_temporal_cor = z_mean_vox_temp_cor)
-  )
+  p_values <- vapply(seq_len(n_met), function(m) {
+    if (n_eff[m] > 0) (count_better[m] + 1) / (n_eff[m] + 1) else NA_real_
+  }, numeric(1))
+  names(p_values) <- metric_names
 
+  z_scores <- vapply(seq_len(n_met), function(m) {
+    if (n_eff[m] > 0) {
+      mn <- sum_perm[m] / n_eff[m]
+      sd_p <- sqrt(max(0, sum_sq_perm[m] / n_eff[m] - mn^2))
+      sd_use <- max(sd_p, eps)
+      if (metric_names[m] == "mse") (mn - obs_vals[m]) / sd_use
+      else (obs_vals[m] - mn) / sd_use
+    } else NA_real_
+  }, numeric(1))
+  names(z_scores) <- metric_names
+
+  out <- list(p_values = p_values, z_scores = z_scores)
   if (save_distributions) {
-    out$permutation_distributions <- list(
-      mean_correlation  = perm_mean_corr,
-      cor_difference    = perm_cor_diff,
-      mean_rank_percentile = perm_rank_perc,
-      voxel_correlation = perm_voxel_corr,
-      mse               = perm_mse,
-      r_squared         = perm_r_squared,
-      correlations      = perm_correlations,
-      cor_temporal_means = perm_cor_temp_means,
-      mean_voxelwise_temporal_cor = perm_mean_vox_temp_cor
-    )
+    out$permutation_distributions <- as.list(as.data.frame(dist_mat))
   }
-  
   out
 }
 
@@ -750,178 +598,189 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 
 #' Evaluate model performance for feature RSA
 #'
-#' Computes correlation-based metrics (diag correlation, mean correlation, voxel correlation),
-#' MSE, R^2, and optionally performs permutation tests (via a helper function).
+#' Computes condition-pattern metrics (trial x trial correlation matrix),
+#' voxel-level encoding metrics, global reconstruction metrics (MSE, R-squared),
+#' and optionally performs permutation tests.
 #'
 #' @param object The feature RSA model
-#' @param predicted Matrix of predicted values (from feature space F to voxel space X)
-#' @param observed Matrix of observed values (actual voxel space X)
-#' @param nperm Number of permutations for statistical testing (default: 0, no permutation)
+#' @param predicted Matrix of predicted values (observations x voxels)
+#' @param observed Matrix of observed values (observations x voxels)
+#' @param nperm Number of permutations for statistical testing (default: 0)
 #' @param save_distributions Logical indicating whether to save full permutation distributions
 #' @param ... Additional arguments
 #'
-#' @return A list containing performance metrics and optional permutation results
+#' @return A list containing:
+#'   \describe{
+#'     \item{pattern_correlation}{Mean diagonal of the trial x trial correlation
+#'       matrix — how well the predicted spatial pattern for each trial matches
+#'       the correct observed pattern.}
+#'     \item{pattern_discrimination}{Diagonal minus off-diagonal of the trial x
+#'       trial correlation matrix — how much better the correct trial is matched
+#'       than incorrect trials.}
+#'     \item{pattern_rank_percentile}{For each trial, percentile rank of the
+#'       correct pattern among all candidates.  0.5 = chance, 1 = perfect.}
+#'     \item{voxel_correlation}{Correlation of the flattened predicted and
+#'       observed matrices (global reconstruction quality).}
+#'     \item{mse}{Mean squared error.}
+#'     \item{r_squared}{1 - RSS/TSS.}
+#'     \item{mean_voxelwise_temporal_cor}{Average per-voxel temporal correlation
+#'       (encoding fidelity).}
+#'     \item{permutation_results}{If \code{nperm > 0}, a list with p-values and
+#'       z-scores for each metric.}
+#'   }
 #' @export
 evaluate_model.feature_rsa_model <- function(object,
                                              predicted,
                                              observed,
                                              nperm = 0,
                                              save_distributions = FALSE,
-                                             ...) 
+                                             ...)
 {
   observed  <- as.matrix(observed)
   predicted <- as.matrix(predicted)
 
   if (ncol(observed) != ncol(predicted)) {
-    stop(sprintf("Mismatch in columns: predicted has %d, observed has %d.", 
+    stop(sprintf("Mismatch in columns: predicted has %d, observed has %d.",
                  ncol(predicted), ncol(observed)))
   }
 
-  # Identify columns with sufficient variance to compute correlations safely
   sd_thresh <- 1e-12
-  obs_sd <- apply(observed, 2, stats::sd)
+  n_obs  <- nrow(observed)
+  n_vox  <- ncol(observed)
+
+  ## -- helpers to avoid repeating variance checks --
+  obs_sd  <- apply(observed, 2, stats::sd)
   pred_sd <- apply(predicted, 2, stats::sd)
-  valid_idx <- which(obs_sd > sd_thresh & pred_sd > sd_thresh)
+  valid_col <- which(obs_sd > sd_thresh & pred_sd > sd_thresh)
 
-  if (length(valid_idx) == 0) {
+  ## -- check rows (trials) have variance across voxels --
+  obs_row_sd  <- apply(observed[, valid_col, drop = FALSE], 1, stats::sd)
+  pred_row_sd <- apply(predicted[, valid_col, drop = FALSE], 1, stats::sd)
+  valid_row   <- which(obs_row_sd > sd_thresh & pred_row_sd > sd_thresh)
+
+  na_result <- list(
+    pattern_correlation        = NA_real_,
+    pattern_discrimination     = NA_real_,
+    pattern_rank_percentile    = NA_real_,
+    voxel_correlation          = NA_real_,
+    mse                        = mean((predicted - observed)^2, na.rm = TRUE),
+    r_squared                  = NA_real_,
+    mean_voxelwise_temporal_cor = NA_real_,
+    permutation_results        = NULL
+  )
+
+  if (length(valid_col) == 0) {
     futile.logger::flog.warn("evaluate_model: No columns with finite variance; returning NA metrics.")
-    return(list(
-      correlations = numeric(0),
-      mean_correlation = NA_real_,
-      off_diag_correlation = NA_real_,
-      cor_difference = NA_real_,
-      mean_rank_percentile = NA_real_,
-      voxel_correlation = NA_real_,
-      mse = mean((predicted - observed)^2, na.rm = TRUE),
-      r_squared = NA_real_,
-      cor_temporal_means = NA_real_,
-      mean_voxelwise_temporal_cor = NA_real_,
-      permutation_results = NULL
-    ))
+    return(na_result)
   }
 
-  # Compute correlation metrics using only valid columns to avoid warnings/NaNs
-  cormat <- stats::cor(predicted[, valid_idx, drop = FALSE],
-                       observed[, valid_idx, drop = FALSE])
-  cors <- diag(cormat)
-  mean_cor <- mean(cors, na.rm = TRUE)
+  ## ================================================================
+  ## 1. Condition-pattern metrics  (trial x trial cormat)
+  ## ================================================================
+  ## cor(t(predicted), t(observed)):  n_obs x n_obs
+  ##   entry (i,j) = cor(predicted[i, ], observed[j, ])  across voxels
+  pattern_cor     <- NA_real_
+  pattern_discrim <- NA_real_
+  pattern_rank    <- NA_real_
 
-  n <- nrow(cormat)
-  if (n > 1) {
-    off_diag_cors <- (sum(cormat, na.rm = TRUE) - sum(cors, na.rm = TRUE)) / (n * n - n)
+  if (length(valid_row) >= 2) {
+    pmat <- predicted[valid_row, valid_col, drop = FALSE]
+    omat <- observed[valid_row,  valid_col, drop = FALSE]
+    cormat_cond <- stats::cor(t(pmat), t(omat))
+
+    diag_cors   <- diag(cormat_cond)
+    pattern_cor <- mean(diag_cors, na.rm = TRUE)
+
+    nc <- nrow(cormat_cond)
+    if (nc > 1) {
+      off_vals <- cormat_cond[row(cormat_cond) != col(cormat_cond)]
+      off_vals <- off_vals[!is.na(off_vals)]
+      off_diag <- if (length(off_vals) > 0) mean(off_vals) else NA_real_
+    } else {
+      off_diag <- NA_real_
+    }
+    pattern_discrim <- if (is.finite(pattern_cor) && is.finite(off_diag)) {
+      pattern_cor - off_diag
+    } else {
+      NA_real_
+    }
+
+    # rank percentile per trial
+    ranks <- numeric(nc)
+    for (i in seq_len(nc)) {
+      row_cors <- cormat_cond[i, ]
+      denom <- sum(!is.na(row_cors)) - 1
+      ranks[i] <- if (denom > 0 && is.finite(row_cors[i])) {
+        (sum(row_cors <= row_cors[i], na.rm = TRUE) - 1) / denom
+      } else {
+        NA_real_
+      }
+    }
+    pattern_rank <- mean(ranks, na.rm = TRUE)
+  }
+
+  ## ================================================================
+  ## 2. Global reconstruction metrics
+  ## ================================================================
+  pred_vec <- as.vector(predicted[, valid_col, drop = FALSE])
+  obs_vec  <- as.vector(observed[,  valid_col, drop = FALSE])
+  voxel_cor <- if (stats::sd(pred_vec) > sd_thresh && stats::sd(obs_vec) > sd_thresh) {
+    stats::cor(pred_vec, obs_vec)
   } else {
-    off_diag_cors <- NA_real_
-  }
-  cor_difference <- mean_cor - off_diag_cors
-
-  # Rank percentile for each condition (row) based on cormat
-  ranks <- numeric(n)
-  for (i in seq_len(n)) {
-    condition_cors <- cormat[i, ]
-    denom <- sum(!is.na(condition_cors)) - 1
-    ranks[i] <- if (denom > 0) (sum(condition_cors <= condition_cors[i], na.rm = TRUE) - 1) / denom else NA_real_
-  }
-  mean_rank_percentile <- mean(ranks, na.rm = TRUE)
-
-  # Voxel-wise overall correlation across all values (use only valid columns)
-  pred_vec <- as.vector(predicted[, valid_idx, drop = FALSE])
-  obs_vec  <- as.vector(observed[,  valid_idx, drop = FALSE])
-  if (stats::sd(pred_vec) > sd_thresh && stats::sd(obs_vec) > sd_thresh) {
-    voxel_cor <- stats::cor(pred_vec, obs_vec)
-  } else {
-    voxel_cor <- NA_real_
+    NA_real_
   }
 
   mse <- mean((predicted - observed)^2, na.rm = TRUE)
   rss <- sum((observed - predicted)^2, na.rm = TRUE)
   tss <- sum((observed - mean(observed, na.rm = TRUE))^2, na.rm = TRUE)
   r_squared <- if (tss == 0) NA_real_ else 1 - (rss / tss)
-  
-  # Log warnings if key metrics are NA/NaN
-  if (!is.finite(mean_cor)) futile.logger::flog.warn("Mean correlation is NA/NaN.")
-  if (!is.finite(cor_difference)) futile.logger::flog.warn("Correlation difference is NA/NaN.")
-  if (!is.finite(mean_rank_percentile)) futile.logger::flog.warn("Mean rank percentile is NA/NaN.")
-  if (!is.finite(voxel_cor)) futile.logger::flog.warn("Voxel correlation is NA/NaN.")
-  if (!is.finite(r_squared)) futile.logger::flog.warn("R-squared is NA/NaN.")
-  
-  # --- Calculate Correlation of Temporal Means (Spatial Averages) ---
-  cor_temporal_means <- NA_real_
-  if (nrow(observed) > 1 && nrow(predicted) > 1) { # Need >1 observation
-      mean_obs_across_space <- tryCatch(rowMeans(observed[, valid_idx, drop = FALSE], na.rm = TRUE), error=function(e) NULL)
-      mean_pred_across_space <- tryCatch(rowMeans(predicted[, valid_idx, drop = FALSE], na.rm = TRUE), error=function(e) NULL)
-      if (!is.null(mean_obs_across_space) && !is.null(mean_pred_across_space)) {
-          if (stats::sd(mean_obs_across_space) > sd_thresh && stats::sd(mean_pred_across_space) > sd_thresh) {
-            cor_temporal_means <- tryCatch(stats::cor(mean_obs_across_space, mean_pred_across_space), error=function(e) NA_real_)
-          } else {
-            cor_temporal_means <- NA_real_
-          }
-      } else {
-         warning("evaluate_model: Could not compute rowMeans for cor_temporal_means.")
-      }
-  } else {
-       warning("evaluate_model: Cannot calculate cor_temporal_means with < 2 observations.")
-  }
-  if (!is.finite(cor_temporal_means)) cor_temporal_means <- NA_real_ # Ensure NA if calculation failed
-  # ------------------------------------------------------------------
 
-  # --- Calculate Mean Voxelwise Temporal Correlation ---
+  ## ================================================================
+  ## 3. Voxel encoding fidelity
+  ## ================================================================
   mean_voxelwise_temporal_cor <- NA_real_
-  if (nrow(observed) > 1 && nrow(predicted) > 1 && length(valid_idx) > 0) { # Need >1 observation and >0 valid voxels
-      num_voxels <- length(valid_idx)
-      voxel_cors <- numeric(num_voxels)
-      for (ii in seq_len(num_voxels)) {
-          j <- valid_idx[ii]
-          if (stats::sd(observed[, j]) > sd_thresh && stats::sd(predicted[, j]) > sd_thresh) {
-            voxel_cors[ii] <- tryCatch(stats::cor(observed[, j], predicted[, j]), error = function(e) NA_real_)
-          } else {
-            voxel_cors[ii] <- NA_real_
-          }
+  if (n_obs > 1 && length(valid_col) > 0) {
+    vcors <- vapply(valid_col, function(j) {
+      if (stats::sd(observed[, j]) > sd_thresh && stats::sd(predicted[, j]) > sd_thresh) {
+        tryCatch(stats::cor(observed[, j], predicted[, j]), error = function(e) NA_real_)
+      } else {
+        NA_real_
       }
-      mean_voxelwise_temporal_cor <- mean(voxel_cors, na.rm = TRUE)
-  } else {
-       warning("evaluate_model: Cannot calculate mean_voxelwise_temporal_cor with < 2 observations or 0 voxels.")
+    }, numeric(1))
+    mean_voxelwise_temporal_cor <- mean(vcors, na.rm = TRUE)
   }
-   if (!is.finite(mean_voxelwise_temporal_cor)) mean_voxelwise_temporal_cor <- NA_real_ # Ensure NA if calculation failed
-  # ------------------------------------------------------
+  if (!is.finite(mean_voxelwise_temporal_cor)) mean_voxelwise_temporal_cor <- NA_real_
 
-
+  ## ================================================================
+  ## 4. Permutation testing
+  ## ================================================================
   perm_results <- NULL
-  # Placeholder for incremental correlation - calculation requires comparing
-  # results from models trained on feature subsets, which is not possible
-  # within the evaluation of a single model run.
-  # incremental_correlation <- NA_real_  # <<< REMOVE THIS COMPLETELY
-
   if (nperm > 0) {
     perm_results <- .perm_test_feature_rsa(
-      observed = observed,
+      observed  = observed,
       predicted = predicted,
-      nperm = nperm,
+      nperm     = nperm,
       save_distributions = save_distributions,
-      mean_cor = mean_cor,
-      cor_difference = cor_difference,
-      mean_rank_percentile = mean_rank_percentile,
-      voxel_cor = voxel_cor,
-      mse = mse,
-      r_squared = r_squared,
-      # incremental_correlation = incremental_correlation, # Pass the calculated value # <<< REMOVE THIS
-      cor_temporal_means = cor_temporal_means, # Pass new metric 1
-      mean_voxelwise_temporal_cor = mean_voxelwise_temporal_cor, # Pass new metric 2
-      cors = cors
+      pattern_cor    = pattern_cor,
+      pattern_discrim = pattern_discrim,
+      pattern_rank   = pattern_rank,
+      voxel_cor      = voxel_cor,
+      mse            = mse,
+      r_squared      = r_squared,
+      mean_voxelwise_temporal_cor = mean_voxelwise_temporal_cor,
+      valid_col      = valid_col
     )
   }
-  
+
   list(
-    correlations        = cors,
-    mean_correlation    = mean_cor,
-    off_diag_correlation= off_diag_cors,
-    cor_difference      = cor_difference,
-    mean_rank_percentile = mean_rank_percentile,
-    voxel_correlation   = voxel_cor,
-    mse                 = mse,
-    r_squared           = r_squared,
-    cor_temporal_means = cor_temporal_means, # Add new metric 1
-    mean_voxelwise_temporal_cor = mean_voxelwise_temporal_cor, # Add new metric 2
-    permutation_results = perm_results
+    pattern_correlation         = pattern_cor,
+    pattern_discrimination      = pattern_discrim,
+    pattern_rank_percentile     = pattern_rank,
+    voxel_correlation           = voxel_cor,
+    mse                         = mse,
+    r_squared                   = r_squared,
+    mean_voxelwise_temporal_cor = mean_voxelwise_temporal_cor,
+    permutation_results         = perm_results
   )
 }
 
@@ -952,130 +811,77 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
     return(result)
   }
   
-  # ---- PLS Train ----
-  if (obj$method == "pls") {
+  # ---- PLS / PCA (unified via pls package) ----
+  if (obj$method %in% c("pls", "pca")) {
+    fit_func <- if (obj$method == "pls") pls::plsr else pls::pcr
+    method_label <- toupper(obj$method)
+    ncomp_sel <- obj$ncomp_selection %||% "max"
+
     pls_res <- tryCatch({
-      # Check for near-zero variance *before* standardization attempt
+      # Check for near-zero variance before standardization
       var_X <- apply(X, 2, var, na.rm = TRUE)
       var_F <- apply(Fsub, 2, var, na.rm = TRUE)
       if (any(var_X < 1e-10) || any(var_F < 1e-10)) {
         stop("Near zero variance detected in X or F before standardization.")
       }
-      
+
       sx <- .standardize(X)
       sf <- .standardize(Fsub)
-      
-      # Check variance *after* standardization (shouldn't happen if .standardize handles sd=0, but double-check)
+
       if (any(sx$sd < 1e-10) || any(sf$sd < 1e-10)) {
-         stop("Near zero variance detected after standardization.")
+        stop("Near zero variance detected after standardization.")
       }
-      
+
       max_k_possible <- min(nrow(sf$X_sc) - 1, ncol(sf$X_sc))
       k <- min(obj$max_comps, max_k_possible)
-      
+
       if (k < 1) {
-        stop(sprintf("Calculated number of PLS components (%d) is less than 1 (max_comps: %d, max_possible: %d).", 
+        stop(sprintf("Number of components (%d) < 1 (max_comps: %d, max_possible: %d).",
                      k, obj$max_comps, max_k_possible))
       }
-      
-      # Fit PLS model
-      pls::plsr(sx$X_sc ~ sf$X_sc, ncomp = k, scale = FALSE, validation = "none")
-      
+
+      validation <- if (ncomp_sel == "loo") "LOO" else "none"
+      model <- fit_func(sx$X_sc ~ sf$X_sc, ncomp = k, scale = FALSE,
+                        validation = validation)
+
+      # --- Component selection ---
+      ncomp_use <- k
+      if (ncomp_sel == "loo" && k > 1) {
+        ncomp_use <- tryCatch({
+          nc <- pls::selectNcomp(model, method = "onesigma", plot = FALSE)
+          max(1L, nc)
+        }, error = function(e) {
+          futile.logger::flog.warn(
+            "train_model (%s): selectNcomp failed (%s); using all %d components.",
+            method_label, e$message, k)
+          k
+        })
+      } else if (ncomp_sel == "pve") {
+        xvar <- pls::explvar(model)
+        cum_ratio <- cumsum(xvar) / sum(xvar)
+        ncomp_use <- max(1L, which(cum_ratio >= obj$pve_threshold)[1])
+      }
+
+      list(model = model, sx = sx, sf = sf, ncomp_use = ncomp_use)
     }, error = function(e) {
-      error_msg <- sprintf("train_model (PLS): Error during training - %s", e$message)
+      error_msg <- sprintf("train_model (%s): Error during training - %s",
+                           method_label, e$message)
       futile.logger::flog.error(error_msg)
-      # Return an error indicator object
-      list(error = error_msg) 
+      list(error = error_msg)
     })
 
-    # Check if tryCatch returned an error object
     if (!is.null(pls_res$error)) {
-       result$error <- pls_res$error
-       return(result)
+      result$error <- pls_res$error
+      return(result)
     }
 
-    # Store necessary results ONLY if successful
-    result$trained_model <- pls_res
-    result$pls_x_mean    <- sx$mean # Need sx/sf from the try block scope
-    result$pls_x_sd      <- sx$sd
-    result$pls_f_mean    <- sf$mean
-    result$pls_f_sd      <- sf$sd
-    result$ncomp         <- k       # Need k from the try block scope
+    result$trained_model <- pls_res$model
+    result$x_mean        <- pls_res$sx$mean
+    result$x_sd          <- pls_res$sx$sd
+    result$f_mean        <- pls_res$sf$mean
+    result$f_sd          <- pls_res$sf$sd
+    result$ncomp         <- pls_res$ncomp_use
 
-  } else if (obj$method == "pca") {
-    #browser()
-    #
-    # -- PCA with possible caching --
-    #
-    pca_result <- tryCatch({
-        key <- .hash_row_indices(indices)
-        cached_pca <- NULL
-        if (isTRUE(obj$cache_pca) && !is.null(obj$pca_cache[[key]])) {
-          cached_pca <- obj$pca_cache[[key]]
-          sx <- .standardize(X) # Still standardize X for this ROI
-          pca_res <- cached_pca$pca_res
-          sf_mean <- cached_pca$f_mean
-          sf_sd   <- cached_pca$f_sd
-        } else {
-          sx <- .standardize(X)
-          sf <- .standardize(Fsub)
-          if (any(sf$sd < 1e-10)) { # Check variance before prcomp
-             stop("Zero variance detected in features (F) before PCA.")
-          }
-          pca_res <- prcomp(sf$X_sc, scale.=FALSE)
-          sf_mean <- sf$mean
-          sf_sd   <- sf$sd
-          # Store if caching is enabled
-          if (isTRUE(obj$cache_pca)) {
-            obj$pca_cache[[key]] <- list(
-              pca_res = pca_res, f_mean = sf_mean, f_sd = sf_sd
-            )
-          }
-        }
-        
-        available_k <- ncol(pca_res$x)
-        k <- min(obj$max_comps, available_k)
-        if (k < 1) {
-          stop(sprintf("No principal components available (k=%d) after PCA (max_comps: %d, available: %d).", 
-                      k, obj$max_comps, available_k))
-        }
-        PC_train_subset <- pca_res$x[, seq_len(k), drop=FALSE]
-        
-        df_pcs <- as.data.frame(PC_train_subset)
-        if (nrow(df_pcs) <= k) {
-          stop(sprintf("Insufficient data for PCA regression (samples: %d, components: %d). Need more samples than components.", 
-                       nrow(df_pcs), k))
-        }
-        
-        fit <- lm(sx$X_sc ~ ., data=df_pcs)
-        
-        # Return all necessary components from successful run
-        list(
-          pcarot     = pca_res$rotation[, seq_len(k), drop=FALSE],
-          pca_f_mean = sf_mean,
-          pca_f_sd   = sf_sd,
-          pca_coefs  = coef(fit),
-          pca_x_mean = sx$mean,
-          pca_x_sd   = sx$sd,
-          ncomp      = k,
-          trained_model = fit # Add the lm fit object here
-        )
-        
-    }, error = function(e) {
-        error_msg <- sprintf("train_model (PCA): Error during training - %s", e$message)
-        futile.logger::flog.error(error_msg)
-        list(error = error_msg)
-    })
-
-    # Check if tryCatch returned an error object
-    if (!is.null(pca_result$error)) {
-        result$error <- pca_result$error
-        return(result)
-    }
-    
-    # Assign results if successful
-    result <- c(result, pca_result) # Merge the list of results
-    
   } else if (obj$method == "glmnet") {
     #
     # ---- GLMNet Train ----
@@ -1318,18 +1124,20 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
   
   # Summarize
   perf_mat <- matrix(
-    c(perf$mean_correlation,
-      perf$cor_difference,
-      perf$mean_rank_percentile,
+    c(perf$pattern_correlation,
+      perf$pattern_discrimination,
+      perf$pattern_rank_percentile,
       perf$voxel_correlation,
       perf$mse,
       perf$r_squared,
-      perf$cor_temporal_means, # Add new metric 1
-      perf$mean_voxelwise_temporal_cor, # Add new metric 2
+      perf$mean_voxelwise_temporal_cor,
       ncomp_used),
     nrow = 1,
-    ncol = 9,
-    dimnames = list(NULL, c("mean_correlation", "cor_difference", "mean_rank_percentile", "voxel_correlation", "mse", "r_squared", "cor_temporal_means", "mean_voxelwise_temporal_cor", "ncomp"))
+    ncol = 8,
+    dimnames = list(NULL, c("pattern_correlation", "pattern_discrimination",
+                            "pattern_rank_percentile", "voxel_correlation",
+                            "mse", "r_squared", "mean_voxelwise_temporal_cor",
+                            "ncomp"))
   )
   
   tibble::tibble(
@@ -1392,22 +1200,19 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   
   # Collate results
   base_metrics <- c(
-    perf$mean_correlation,
-    perf$cor_difference,
-    perf$mean_rank_percentile,
+    perf$pattern_correlation,
+    perf$pattern_discrimination,
+    perf$pattern_rank_percentile,
     perf$voxel_correlation,
     perf$mse,
     perf$r_squared,
-    # perf$incremental_correlation, # REMOVED
-    perf$cor_temporal_means, # Add new metric 1
-    perf$mean_voxelwise_temporal_cor, # Add new metric 2
+    perf$mean_voxelwise_temporal_cor,
     ncomp_used
   )
   base_names <- c(
-    "mean_correlation", "cor_difference", "mean_rank_percentile", 
-    "voxel_correlation", "mse", "r_squared", 
-    # "incremental_correlation", # REMOVED
-    "cor_temporal_means", "mean_voxelwise_temporal_cor", # Add names here
+    "pattern_correlation", "pattern_discrimination", "pattern_rank_percentile",
+    "voxel_correlation", "mse", "r_squared",
+    "mean_voxelwise_temporal_cor",
     "ncomp"
   )
 
@@ -1558,9 +1363,12 @@ print.feature_rsa_model <- function(x, ...) {
   }
   cat(crayon::bold(crayon::blue("Max components limit:   ")), comp_limit, "\n")
 
-  if (x$method == "pca" && !is.null(x$precomputed_pca)) {
-    cat(crayon::bold(crayon::green("PCA Optimization:       ")),
-        "PCA precomputed for efficiency\n")
+  if (x$method %in% c("pls", "pca")) {
+    sel <- if (!is.null(x$ncomp_selection)) x$ncomp_selection else "max"
+    cat(crayon::bold(crayon::blue("Component selection:    ")), sel, "\n")
+    if (sel == "pve" && !is.null(x$pve_threshold)) {
+      cat(crayon::bold(crayon::blue("PVE threshold:          ")), x$pve_threshold, "\n")
+    }
   } else if (x$method == "glmnet") {
     cat(crayon::bold(crayon::blue("Elastic Net alpha:      ")), x$alpha, "\n")
     cat(crayon::bold(crayon::blue("Cross-validate lambda:  ")), 

@@ -9,7 +9,8 @@ feature_rsa_model(
   design,
   method = c("pls", "pca", "glmnet"),
   crossval = NULL,
-  cache_pca = FALSE,
+  ncomp_selection = c("loo", "max", "pve"),
+  pve_threshold = 0.9,
   alpha = 0.5,
   cv_glmnet = FALSE,
   lambda = NULL,
@@ -27,16 +28,29 @@ and including the component limit (`max_comps`).}
 
 \item{method}{Character string specifying the analysis method. One of:
 \describe{
-  \item{pls}{Partial Least Squares regression predicting X from F.}
-  \item{pca}{Principal Component Analysis on F, followed by regression predicting X from the PCs.}
+  \item{pls}{Partial Least Squares regression predicting X from F (via \code{pls::plsr}).}
+  \item{pca}{Principal Component Regression predicting X from PCs of F (via \code{pls::pcr}).}
   \item{glmnet}{Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.}
 }}
 
 \item{crossval}{Optional cross-validation specification.}
 
-\item{cache_pca}{Logical, if TRUE and method is "pca", cache the PCA decomposition of the
-feature matrix F across cross-validation folds involving the same training rows.
-Defaults to FALSE.}
+\item{ncomp_selection}{Character string controlling how the number of components
+is chosen for \code{pls} and \code{pca} methods. One of:
+\describe{
+\item{loo}{(Default) Fit with leave-one-out validation and select the
+fewest components within one standard error of the minimum RMSEP
+(\code{pls::selectNcomp}, method \code{"onesigma"}).}
+\item{pve}{Keep the fewest components whose cumulative explained
+variance reaches \code{pve_threshold} of the total explained by all
+fitted components.}
+\item{max}{Use all \code{max_comps} components (legacy behaviour).}
+}
+Ignored when \code{method = "glmnet"}.}
+
+\item{pve_threshold}{Numeric in (0, 1]. When \code{ncomp_selection = "pve"},
+the proportion of total explained X-variance at which to stop adding
+components. Default 0.9.}
 
 \item{alpha}{Numeric value between 0 and 1, only used when method="glmnet". Controls the elastic net
 mixing parameter: 1 for lasso (default), 0 for ridge, values in between for a mixture.
@@ -57,7 +71,8 @@ metrics after merging cross-validation folds. Default 0 (no permutation testing)
 \item{save_distributions}{Logical, if TRUE and nperm > 0, save the full null distributions
 from the permutation test. Defaults to FALSE.}
 
-\item{...}{Additional arguments (currently unused).}
+\item{...}{Additional arguments (currently unused). Passing deprecated
+arguments such as \code{cache_pca} now results in an error.}
 }
 \value{
 A \code{feature_rsa_model} object (S3 class).
@@ -69,23 +84,44 @@ Creates a model for feature-based Representational Similarity Analysis (RSA) tha
 \details{
 Feature RSA models analyze how well a feature matrix \code{F} (defined in the `design`)
 relates to neural data \code{X}. The `max_comps` parameter, inherited from the `design` object,
-sets an upper limit on the number of components used:
-  - \strong{pca}: Performs PCA on \code{F}. `max_comps` limits the number of principal components
-    (selected by variance explained) used to predict \code{X}. Actual components used: `min(max_comps, available_PCs)`.
-  - \strong{pls}: Performs PLS regression predicting \code{X} from \code{F}. `max_comps` sets the
-    maximum number of PLS components to compute. Actual components used may be fewer based on the PLS algorithm.
-  - \strong{glmnet}: Performs elastic net regression predicting \code{X} from \code{F} using the glmnet package
-    with multivariate Gaussian response family. The regularization (lambda) can be automatically selected via cross-validation
-    if cv_glmnet=TRUE. The alpha parameter controls the balance between L1 (lasso) and L2 (ridge) regularization.
+sets an upper limit on the number of components fitted:
+  - \strong{pls}: PLS regression via \code{pls::plsr}. Fits up to `max_comps` components;
+    the actual number used for prediction is chosen by \code{ncomp_selection}.
+  - \strong{pca}: Principal Component Regression via \code{pls::pcr}. Fits up to
+    `max_comps` components; selection controlled by \code{ncomp_selection}.
+  - \strong{glmnet}: Elastic net regression via \code{glmnet} with multivariate Gaussian
+    response. Regularisation (lambda) can be auto-selected via \code{cv_glmnet=TRUE}.
 
-**Performance Metrics** (computed by `evaluate_model` after cross-validation):
-  - `mean_correlation`: Average correlation between predicted and observed patterns for corresponding trials/conditions (diagonal of the prediction-observation correlation matrix).
-  - `cor_difference`: The `mean_correlation` minus the average off-diagonal correlation (`mean_correlation` - `off_diag_correlation`). Measures how much better the model predicts the correct trial/condition compared to incorrect ones.
-  - `mean_rank_percentile`: Average percentile rank of the diagonal correlations. For each condition, ranks how well the model's prediction correlates with the correct observed pattern compared to incorrect patterns. Values range from 0 to 1, with 0.5 expected by chance and 1 indicating perfect discrimination.
-  - `voxel_correlation`: Correlation between the vectorized predicted and observed data matrices across all trials and voxels.
-  - `mse`: Mean Squared Error between predicted and observed values.
-  - `r_squared`: Proportion of variance in the observed data explained by the predicted data.
-  - `p_*`, `z_*`: If `nperm > 0`, permutation-based p-values and z-scores for the above metrics, assessing significance against a null distribution generated by shuffling predicted trial labels.
+For \code{pls} and \code{pca}, the \code{ncomp_selection} argument determines how many
+of the fitted components are actually used for prediction. The default
+(\code{"loo"}) fits the model with leave-one-out cross-validation and picks
+the fewest components within one SE of the minimum RMSEP.
 
-The number of components actually used (`ncomp`) for the region/searchlight is also included in the performance output.
+\strong{Performance Metrics} (computed by \code{evaluate_model} after cross-validation):
+
+Condition-pattern metrics (trial x trial correlation matrix):
+  - \code{pattern_correlation}: Average correlation between the predicted and observed
+    spatial patterns for corresponding trials (diagonal of the trial x trial
+    correlation matrix computed across voxels).
+  - \code{pattern_discrimination}: \code{pattern_correlation} minus the mean off-diagonal
+    correlation. Measures how much better the model predicts the correct trial's
+    pattern compared to incorrect trials.
+  - \code{pattern_rank_percentile}: For each trial, percentile rank of the correct
+    pattern match among all candidates. 0.5 = chance, 1 = perfect.
+
+Global reconstruction metrics:
+  - \code{voxel_correlation}: Correlation of the flattened predicted and observed
+    matrices (all trials x all voxels).
+  - \code{mse}: Mean Squared Error.
+  - \code{r_squared}: 1 - RSS/TSS.
+
+Voxel encoding fidelity:
+  - \code{mean_voxelwise_temporal_cor}: Average per-voxel temporal correlation
+    between predicted and observed time courses.
+
+  - \code{p_*}, \code{z_*}: If \code{nperm > 0}, permutation-based p-values and z-scores for
+    the above metrics.
+
+The number of components actually used (\code{ncomp}) for the region/searchlight is
+also included in the performance output.
 }
