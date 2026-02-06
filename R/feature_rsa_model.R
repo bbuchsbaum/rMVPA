@@ -639,6 +639,11 @@ evaluate_model.feature_rsa_model <- function(object,
   observed  <- as.matrix(observed)
   predicted <- as.matrix(predicted)
 
+  if (nrow(observed) != nrow(predicted)) {
+    stop(sprintf("Mismatch in rows: predicted has %d, observed has %d.",
+                 nrow(predicted), nrow(observed)))
+  }
+
   if (ncol(observed) != ncol(predicted)) {
     stop(sprintf("Mismatch in columns: predicted has %d, observed has %d.",
                  ncol(predicted), ncol(observed)))
@@ -1077,6 +1082,11 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
   
   Xobs  <- as.data.frame(context$test)
   Ftest <- as.matrix(context$ytest)
+
+  if (nrow(Ftest) != nrow(Xobs)) {
+    stop(sprintf("Mismatch in rows: feature rows (Ftest=%d) must match observed trial rows (Xobs=%d).",
+                 nrow(Ftest), nrow(Xobs)))
+  }
   
   Xpred <- tryCatch({
     predict_model.feature_rsa_model(obj, result, Ftest)

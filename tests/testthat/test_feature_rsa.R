@@ -338,6 +338,21 @@ test_that("feature_rsa_model with permutation testing produces valid p-values", 
   }
 })
 
+test_that("evaluate_model.feature_rsa_model errors on row mismatch", {
+  observed <- matrix(rnorm(10 * 4), nrow = 10, ncol = 4)
+  predicted <- matrix(rnorm(9 * 4), nrow = 9, ncol = 4)
+
+  expect_error(
+    evaluate_model.feature_rsa_model(
+      object = NULL,
+      predicted = predicted,
+      observed = observed,
+      nperm = 0
+    ),
+    "Mismatch in rows"
+  )
+})
+
 # ---- ncomp_selection tests ----
 
 test_that("ncomp_selection='loo' selects components via LOO for PLS", {
