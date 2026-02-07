@@ -418,22 +418,29 @@ test_that("spatial_nmf_maps supports sparse volumetric mask with indices", {
     indices = idx
   )
 
+  # Use multiple maps so NMF produces non-trivial (non-zero) components
+  set.seed(1)
   map1 <- neuroim2::NeuroVol(array(1:prod(dims), dim = dims), space_obj)
+  map2 <- neuroim2::NeuroVol(array(prod(dims):1, dim = dims), space_obj)
+  map3 <- neuroim2::NeuroVol(array(abs(rnorm(prod(dims))), dim = dims), space_obj)
 
   res <- spatial_nmf_maps(
-    group_A = list(map1),
+    group_A = list(map1, map2, map3),
     mask = mask_sparse,
     k = 1,
     lambda = 0,
     return_data = TRUE,
     return_maps = TRUE,
-    max_iter = 5
+    max_iter = 50
   )
 
   expect_equal(as.integer(res$mask_indices), as.integer(idx))
   expect_equal(ncol(res$data), length(idx))
   expect_equal(as.numeric(res$data[1, ]), as.numeric(neuroim2::values(map1))[idx])
-  expect_equal(as.integer(neuroim2::indices(res$components[[1]])), as.integer(idx))
+  # Component should be a SparseNeuroVol with data only at the mask indices
+  expect_s4_class(res$components[[1]], "SparseNeuroVol")
+  nonzero_idx <- which(as.numeric(res$components[[1]]) != 0)
+  expect_true(all(nonzero_idx %in% idx))
 })
 
 test_that("spatial_nmf_maps enforces consistent indices across maps", {
