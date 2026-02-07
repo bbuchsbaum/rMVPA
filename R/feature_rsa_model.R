@@ -1365,10 +1365,6 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
       dimnames = list(NULL, perf_names)
   )
   
-  # Remove any potential columns that are all NA (handles case where incremental_corr placeholders might be NA)
-  # Though they are explicitly set to NA_real_, this adds robustness
-  perf_mat <- perf_mat[, colSums(is.na(perf_mat)) < nrow(perf_mat), drop = FALSE]
-
   tibble::tibble(
     result      = list(NULL),
     indices     = list(indices),
