@@ -559,12 +559,17 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
   total_items <- nrow(frame)
 
   # --- chunk_size controls per-worker memory pressure ---
-  # With the default (chunk_size = 1) each ROI becomes its own future.
-  # Workers hold only one ROI's data at a time instead of an entire chunk,
- # which can reduce per-worker memory by orders of magnitude.
-  # Set options(rMVPA.chunk_size = N) to trade memory for less scheduling
-  # overhead (useful when individual ROIs are very cheap, e.g. RSA).
-  chunk_size <- getOption("rMVPA.chunk_size", 1L)
+  # Without an explicit chunk_size furrr creates one chunk per worker,
+  # so each worker receives (batch_size / n_workers) ROIs at once —
+  # potentially thousands of ROIs whose data all sit in the worker heap
+  # simultaneously.  A small chunk_size (default 20) limits per-worker
+  # memory to ~20 ROIs while keeping scheduling overhead low (~2500
+  # futures for a 50K-ROI searchlight).
+  # Set options(rMVPA.chunk_size = N) to tune:
+  #   1   = minimum memory, one future per ROI (high overhead)
+  #   20  = good default balance
+  #   Inf = original furrr behaviour (fewest futures, highest memory)
+  chunk_size <- getOption("rMVPA.chunk_size", 20L)
 
   do_fun <- if (is.null(processor)) {
     function(obj, roi, rnum, center_global_id = NA) {
