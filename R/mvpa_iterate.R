@@ -436,19 +436,20 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           t_extract_roi <- proc.time()[3]
         # For searchlight, pass center_global_id to preserve center during filtering
         if (analysis_type == "searchlight") {
-          sf <- sf %>% 
-            rowwise() %>% 
-            mutate(roi=list(extract_roi(sample, dset, center_global_id = rnum, min_voxels = min_voxels_required))) %>% 
+          sf <- sf %>%
+            rowwise() %>%
+            mutate(roi=list(extract_roi(sample, dset, center_global_id = rnum, min_voxels = min_voxels_required))) %>%
             select(-sample)
         } else {
-          sf <- sf %>% 
-            rowwise() %>% 
-            mutate(roi=list(extract_roi(sample, dset, min_voxels = min_voxels_required))) %>% 
+          sf <- sf %>%
+            rowwise() %>%
+            mutate(roi=list(extract_roi(sample, dset, min_voxels = min_voxels_required))) %>%
             select(-sample)
         }
           futile.logger::flog.debug("Batch %d: ROI extraction (extract_roi) took %.3f sec",
                                     i, proc.time()[3] - t_extract_roi)
-          
+
+          n_sf <- nrow(sf)
           # ---- parallel processing via run_future ----
           t_run_future <- proc.time()[3]
           results[[i]] <- run_future(mod_spec, sf, processor, verbose,
@@ -457,9 +458,15 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                                      fail_fast = fail_fast)
           futile.logger::flog.debug("Batch %d: run_future (parallel section) took %.3f sec",
                                     i, proc.time()[3] - t_run_future)
-          processed_rois <- processed_rois + nrow(sf)
+          processed_rois <- processed_rois + n_sf
           
           futile.logger::flog.debug("Batch %d produced %d results", i, nrow(results[[i]]))
+
+          # Free batch-local ROI data so it doesn't linger until the next
+          # iteration reassigns sf.  run_future already freed its copy of
+          # the frame; this drops the main-process reference.
+          rm(sf, vlist)
+          gc(FALSE)
         } else {
           skipped_rois <- skipped_rois + length(batch_ids[[i]])
           futile.logger::flog.warn("%s Batch %s: All ROIs filtered out (size < 2 voxels)", 
@@ -488,11 +495,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                             crayon::blue(tot),
                             crayon::blue(processed_rois),
                             crayon::yellow(skipped_rois))
-  # Combine all results
+  # Combine all results and free the per-batch list immediately
   final_results <- dplyr::bind_rows(results)
-  # Ensure any remaining futures are cleared and memory is reclaimed
-  # Clean up and run garbage collection
-  # Note: ClusterRegistry is no longer exported in future >= 1.34.0
+  rm(results)
   gc()
   return(final_results)
   }, error = function(e) {
@@ -552,7 +557,15 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
   # Ensure workers never receive the full dataset.
   obj <- as_worker_spec(obj)
   total_items <- nrow(frame)
-  
+
+  # --- chunk_size controls per-worker memory pressure ---
+  # With the default (chunk_size = 1) each ROI becomes its own future.
+  # Workers hold only one ROI's data at a time instead of an entire chunk,
+ # which can reduce per-worker memory by orders of magnitude.
+  # Set options(rMVPA.chunk_size = N) to trade memory for less scheduling
+  # overhead (useful when individual ROIs are very cheap, e.g. RSA).
+  chunk_size <- getOption("rMVPA.chunk_size", 1L)
+
   do_fun <- if (is.null(processor)) {
     function(obj, roi, rnum, center_global_id = NA) {
       process_roi(obj, roi, rnum, center_global_id = center_global_id)
@@ -639,9 +652,12 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
             parent = e
           )
         }
-        # Otherwise, capture a traceback string for debugging
-        tb <- tryCatch(paste(capture.output(rlang::trace_back()), collapse = "\n"),
-                       error = function(...) NA_character_)
+        # Capture a short traceback (truncated to avoid memory bloat from
+        # thousands of failed edge-of-brain ROIs).
+        tb <- tryCatch({
+          raw <- paste(utils::capture.output(rlang::trace_back()), collapse = "\n")
+          if (nchar(raw) > 500L) paste0(substr(raw, 1L, 500L), "\n... [truncated]") else raw
+        }, error = function(...) NA_character_)
         futile.logger::flog.debug("ROI %d: Processing error (%s)", rnum, e$message)
         tibble::tibble(
           result = list(NULL),
@@ -655,7 +671,8 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
           warning_message = paste("Error processing ROI:", e$message)
         )
       })
-    }, .options = furrr::furrr_options(seed = TRUE, conditions = "condition"))
+    }, .options = furrr::furrr_options(seed = TRUE, conditions = "condition",
+                                       chunk_size = chunk_size))
   }
 
   use_progressr <- total_items > 0 && requireNamespace("progressr", quietly = TRUE)
@@ -672,11 +689,11 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
   } else {
     run_map(progress_tick = NULL)
   }
-  
-  # Explicitly cleanup resolved futures to free memory before binding results
-  # Final cleanup and garbage collection
-  # Note: ClusterRegistry is no longer exported in future >= 1.34.0
+
+  # Free the frame (which holds all batch ROI data) and the closure
+  # before GC so the memory is actually reclaimable.
+  rm(frame, run_map)
   gc()
 
-  results %>% dplyr::bind_rows()
+  dplyr::bind_rows(results)
 }
