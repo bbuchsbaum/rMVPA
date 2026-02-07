@@ -364,31 +364,42 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
 #' @importFrom furrr future_pmap
 #' @importFrom purrr map pmap
 #' @export
-mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list), 
-                         batch_size = as.integer(.1 * length(ids)),
+mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
+                         batch_size = NULL,
                          verbose = TRUE,
                          processor = NULL,
                          analysis_type = c("searchlight", "regional"),
                          drop_probs = FALSE,
                          fail_fast = FALSE) {
   setup_mvpa_logger()
-  
+
   if (length(vox_list) == 0) {
     futile.logger::flog.warn("Empty voxel list provided. No analysis to perform.")
     return(tibble::tibble())
   }
 
 
-  
   futile.logger::flog.debug("Starting mvpa_iterate with %d voxels", length(vox_list))
-  
+
   tryCatch({
-    assert_that(length(ids) == length(vox_list), 
+    assert_that(length(ids) == length(vox_list),
                 msg = paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
-    
+
     analysis_type <- match.arg(analysis_type)
 
-    batch_size <- max(1, batch_size)
+    # --- auto-size batches based on analysis type and available workers ---
+    nworkers <- future::nbrOfWorkers()
+    if (is.null(batch_size)) {
+      if (analysis_type == "regional") {
+        # Regional: few large ROIs. One batch maximises parallelism.
+        batch_size <- length(ids)
+      } else {
+        # Searchlight: many small ROIs. Batch for memory, but keep
+        # batches large enough to fill all workers several times over.
+        batch_size <- max(nworkers * 20L, as.integer(0.1 * length(ids)))
+      }
+    }
+    batch_size <- max(1L, min(as.integer(batch_size), length(ids)))
     nbatches <- ceiling(length(ids) / batch_size)
     batch_group <- sort(rep(1:nbatches, length.out = length(ids)))
     batch_ids <- split(1:length(ids), batch_group)
@@ -558,18 +569,18 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
   obj <- as_worker_spec(obj)
   total_items <- nrow(frame)
 
-  # --- chunk_size controls per-worker memory pressure ---
-  # Without an explicit chunk_size furrr creates one chunk per worker,
-  # so each worker receives (batch_size / n_workers) ROIs at once —
-  # potentially thousands of ROIs whose data all sit in the worker heap
-  # simultaneously.  A small chunk_size (default 20) limits per-worker
-  # memory to ~20 ROIs while keeping scheduling overhead low (~2500
-  # futures for a 50K-ROI searchlight).
-  # Set options(rMVPA.chunk_size = N) to tune:
-  #   1   = minimum memory, one future per ROI (high overhead)
-  #   20  = good default balance
+  # --- chunk_size controls parallelism and per-worker memory ---
+  # Each chunk becomes one future; items within a chunk run serially
+  # on a single worker.  We target ~4 chunks per worker for good load
+  # balancing while keeping scheduling overhead reasonable.
+  # Set options(rMVPA.chunk_size = N) to override:
+  #   1   = maximum parallelism, one future per ROI (high overhead)
   #   Inf = original furrr behaviour (fewest futures, highest memory)
-  chunk_size <- getOption("rMVPA.chunk_size", 20L)
+  chunk_size <- getOption("rMVPA.chunk_size", NULL)
+  if (is.null(chunk_size)) {
+    nworkers <- future::nbrOfWorkers()
+    chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
+  }
 
   do_fun <- if (is.null(processor)) {
     function(obj, roi, rnum, center_global_id = NA) {
