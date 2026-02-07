@@ -1,0 +1,183 @@
+---
+title: "Temporal Confounds in RSA"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Temporal Confounds in RSA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, comment = NA)
+# Hide package startup/masking messages in the rendered vignette
+suppressPackageStartupMessages(library(rMVPA))
+cols <- grDevices::colorRampPalette(c("#08306b", "#deebf7", "#fee0d2", "#99000d"))
+lower_tri <- function(M) as.numeric(M[lower.tri(M)])
+```
+
+Introduction
+------------
+
+Temporal proximity can induce similarity between trial patterns (adaptation,
+drift, HRF overlap). This vignette shows how to add temporal nuisance RDMs to
+RSA and MS-ReVE designs using convenience functions.
+
+Trial-level temporal RDMs
+-------------------------
+
+```{r}
+set.seed(1)
+n <- 30
+onsets <- seq(0, by=1, length.out=n)  # seconds
+runs <- rep(1:3, each=10)
+
+# Exponential decay, returned as distance
+td <- temporal_rdm(onsets, block = runs, units = "sec", TR = 0.8,
+                   kernel = "exp", metric = "distance")
+td
+
+# Matrix for plotting
+td_mat  <- as.matrix(td)
+mn      <- min(td_mat[lower.tri(td_mat)], na.rm = TRUE)
+mx      <- max(td_mat[lower.tri(td_mat)], na.rm = TRUE)
+td_plot <- if (is.finite(mx - mn) && (mx - mn) > 0) (td_mat - mn) / (mx - mn) else td_mat * 0
+```
+
+Visualizing temporal RDMs
+-------------------------
+
+```{r fig.width=5, fig.height=5}
+op <- par(mar=c(3,3,2,1))
+image(t(td_plot[nrow(td_plot):1, ]), axes=FALSE, col=cols(64))
+box(); title("Temporal RDM (exp kernel)")
+axis(1, at=c(0,1), labels=c("1","n")); axis(2, at=c(0,1), labels=c("n","1"))
+invisible(par(op))
+```
+
+Using in rsa_design
+-------------------
+
+```{r}
+task_rdm <- as.dist(matrix(stats::runif(n*n), n, n))
+rdes <- rsa_design(~ task_rdm + temporal(onsets, block = runs, kernel = "exp"),
+                   data=list(task_rdm=task_rdm, onsets=onsets, runs=runs),
+                   block_var=~ runs, keep_intra_run=TRUE)
+print(rdes)
+```
+
+Assessing overlap with a task RDM
+---------------------------------
+
+```{r fig.width=5.5, fig.height=4.2}
+task_mat <- as.matrix(task_rdm)
+tvec <- lower_tri(td_plot)
+avec <- lower_tri(task_mat)
+op <- par(mar=c(4,4,2,1))
+plot(tvec, avec, pch=16, cex=.6, col="#444444",
+     xlab="Temporal distance (lower tri)", ylab="Task RDM (lower tri)")
+abline(lm(avec ~ tvec), col="#cc0000", lwd=2)
+legend("topleft", bty="n",
+       legend=sprintf("r = %.2f", stats::cor(tvec, avec)))
+invisible(par(op))
+```
+
+HRF-overlap confound
+--------------------
+
+```{r fig.width=5, fig.height=5}
+hrf_rdm <- temporal_hrf_overlap(onsets, durations=rep(1, n), run=runs,
+                                TR=0.8, similarity="overlap", metric="distance")
+hrf_mat <- as.matrix(hrf_rdm)
+
+# Stretch dynamic range for plotting (rescale to 0..1 over lower-tri)
+rng <- range(hrf_mat[lower.tri(hrf_mat)], na.rm = TRUE)
+hrf_plot <- if (is.finite(diff(rng)) && diff(rng) > 0) (hrf_mat - rng[1]) / diff(rng) else hrf_mat * 0
+
+op <- par(mar=c(3,3,2,1))
+image(t(hrf_plot[nrow(hrf_plot):1, ]), axes=FALSE, col=cols(64))
+box(); title("HRF overlap RDM (distance)")
+axis(1, at=c(0,1), labels=c("1","n")); axis(2, at=c(0,1), labels=c("n","1"))
+invisible(par(op))
+```
+
+Multiple confounds at once
+--------------------------
+
+```{r}
+spec <- list(adj=list(kernel="adjacent", width=1),
+             exp3=list(kernel="exp", lambda=3),
+             hrf=list(kind="hrf", TR=0.8))
+tc <- temporal_confounds(spec, onsets, run=runs, units="sec", TR=0.8)
+str(tc)
+```
+
+```{r fig.width=9, fig.height=3}
+op <- par(mfrow=c(1,3), mar=c(3,3,2,1))
+for (nm in names(tc)) {
+  M <- as.matrix(tc[[nm]])
+  image(t(M[nrow(M):1, ]), axes=FALSE, col=cols(64))
+  box(); title(paste("confound:", nm))
+}
+invisible(par(op))
+```
+
+Condition-level nuisances for MS-ReVE
+-------------------------------------
+
+```{r}
+df <- data.frame(cond = factor(rep(letters[1:3], each=10)), run=runs)
+mvdes <- mvpa_design(df, y_train=~cond, block_var=~run)
+
+# Single nuisance via kernel
+Ktemp <- temporal_nuisance_for_msreve(mvpa_design=mvdes,
+                                      time_idx=seq_len(nrow(df)),
+                                      kernel="exp", units="index",
+                                      metric="distance")
+
+# Multiple nuisances from a spec (kernel + HRF)
+ms_spec <- list(expk=list(kernel="exp", lambda=2), hrf=list(kind="hrf", TR=0.8))
+ms_tc <- msreve_temporal_confounds(mvpa_design=mvdes,
+                                   time_idx=seq_len(nrow(df)), spec=ms_spec)
+str(ms_tc)
+```
+
+Recommendations
+---------------
+
+- Prefer within_blocks_only=TRUE for trial-level designs unless cross-run timing
+  is meaningful.
+- Use rank normalization for robust nuisance regressors.
+- HRF overlap is most relevant when events are dense and durations > 0.
+
+Appendix: Residualizing a toy RDM
+---------------------------------
+
+```{r fig.width=9, fig.height=4}
+# Simulate a toy ROI RDM as a mixture of task + temporal + noise
+toy_roi <- scale(0.6 * task_mat + 0.3 * td_mat + matrix(rnorm(n*n, sd=.1), n, n))
+diag(toy_roi) <- 0; toy_roi <- (toy_roi + t(toy_roi))/2
+
+# Correlation before residualization
+v_roi  <- lower_tri(toy_roi)
+v_temp <- tvec
+cat(sprintf("Before residualization: cor(ROI, temporal) = %.2f\n", stats::cor(v_roi, v_temp)))
+
+# Residualize ROI distances on temporal distances
+resid_roi <- stats::lm(v_roi ~ v_temp)$residuals
+cat(sprintf("After residualization:  cor(resid ROI, temporal) = %.2f\n", stats::cor(resid_roi, v_temp)))
+
+# Visualize effect
+op <- par(mfrow=c(1,2), mar=c(4,4,2,1))
+plot(v_temp, v_roi, pch=16, cex=.6, col="#444444",
+     xlab="Temporal distance (lower tri)", ylab="ROI distances (lower tri)",
+     main="Before residualization")
+abline(lm(v_roi ~ v_temp), col="#cc0000", lwd=2)
+
+plot(v_temp, resid_roi, pch=16, cex=.6, col="#444444",
+     xlab="Temporal distance (lower tri)", ylab="Residual ROI distances",
+     main="After residualization")
+abline(h=0, col="#cc0000", lwd=2)
+invisible(par(op))
+```

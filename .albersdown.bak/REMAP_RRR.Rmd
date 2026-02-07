@@ -3,14 +3,23 @@ title: REMAP‑RRR — Domain‑Adaptive Cross‑Decoding
 author: rMVPA authors
 date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{REMAP‑RRR — Domain‑Adaptive Cross‑Decoding}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
-params: {}
+vignette: |
+  %\VignetteIndexEntry{REMAP‑RRR — Domain‑Adaptive Cross‑Decoding} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 ```{r setup, include=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 knitr::opts_chunk$set(comment = NA, message = FALSE, warning = FALSE)
 suppressWarnings(options(rmarkdown.html_vignette.check_title = FALSE))
 suppressPackageStartupMessages({
@@ -40,8 +49,19 @@ Key points
 - Joint shrinkage whitening of perception and memory prototypes (stable in small‑n, large‑p).
 - Residual reduced‑rank regression (RRR) learns Δ on R_w = Y_w − X_w.
 - Automatic λ selection on training items shrinks toward the naïve cross‑decoder when data are weak.
-- Optional leave‑one‑key‑out (LOKO) so each test item is scored with an adapter trained without its own target prototype.
+- Optional leave‑one‑key‑out (LOKO) so each item’s adaptor diagnostics (e.g., R², improvement over naïve)
+  are estimated in an item‑wise cross‑validated fashion.
 - Correlation classification against predicted templates in the whitened space.
+
+> **LOKO vs single‑fit**  
+> LOKO (`leave_one_key_out = TRUE`) is primarily about unbiased adaptor **diagnostics** at the item level.
+> Test‑set classification metrics (accuracy/AUC on the external test set) are always computed on trials
+> that were not used to fit the adaptor, regardless of the LOKO setting. For large searchlight runs where
+> adaptor diagnostics are secondary and speed is critical, it is often reasonable to set
+> `leave_one_key_out = FALSE` and use a fixed rank, trading slightly more optimistic adaptor diagnostics
+> for much faster single‑fit adapters per ROI.
+
+> **Note**: For a complete introduction to naive cross-decoding (the baseline method), see `vignette("Naive_Cross_Decoding")`. That vignette explains the algorithm, use cases, and when domain adaptation is needed.
 
 ## Minimal example (regional)
 

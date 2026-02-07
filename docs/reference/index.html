@@ -15,7 +15,8 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/rMVPA.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -100,10 +101,38 @@
 
         <dt>
 
+          <code><a href="banded_ridge_da.html">banded_ridge_da()</a></code> <code><a href="banded_ridge_da.html">grouped_ridge_da()</a></code>
+
+        </dt>
+        <dd>Convenience wrapper: build a grouped-ridge domain-adaptation model from matrices</dd>
+
+        <dt>
+
+          <code><a href="banded_ridge_da_model.html">banded_ridge_da_model()</a></code> <code><a href="banded_ridge_da_model.html">grouped_ridge_da_model()</a></code>
+
+        </dt>
+        <dd>Grouped (banded) ridge domain-adaptation model (continuous predictors → brain)</dd>
+
+        <dt>
+
           <code><a href="binary_classification_result.html">binary_classification_result()</a></code>
 
         </dt>
         <dd>Classification results for binary outcome</dd>
+
+        <dt>
+
+          <code><a href="blocks.html">blocks()</a></code>
+
+        </dt>
+        <dd>Define consecutive column blocks as feature sets</dd>
+
+        <dt>
+
+          <code><a href="by_set.html">by_set()</a></code>
+
+        </dt>
+        <dd>Define feature sets by a per-column set label</dd>
 
         <dt>
 
@@ -233,6 +262,20 @@
 
         <dt>
 
+          <code><a href="expected_features.html">expected_features()</a></code>
+
+        </dt>
+        <dd>Build expected-domain features from a soft alignment matrix</dd>
+
+        <dt>
+
+          <code><a href="extract_weights.html">extract_weights()</a></code>
+
+        </dt>
+        <dd>Extract Raw Model Weights</dd>
+
+        <dt>
+
           <code><a href="feature_rsa_design.html">feature_rsa_design()</a></code>
 
         </dt>
@@ -261,6 +304,20 @@
 
         <dt>
 
+          <code><a href="feature_sets.html">feature_sets()</a></code>
+
+        </dt>
+        <dd>Feature sets: grouped predictor matrices</dd>
+
+        <dt>
+
+          <code><a href="feature_sets_design.html">feature_sets_design()</a></code>
+
+        </dt>
+        <dd>Feature-sets design (mvpa_design extension for continuous regression)</dd>
+
+        <dt>
+
           <code><a href="fit_model-methods.html">fit_model()</a></code>
 
         </dt>
@@ -282,10 +339,31 @@
 
         <dt>
 
+          <code><a href="gen_clustered_sample_dataset.html">gen_clustered_sample_dataset()</a></code>
+
+        </dt>
+        <dd>Generate a Synthetic Clustered MVPA Dataset</dd>
+
+        <dt>
+
           <code><a href="gen_sample_dataset.html">gen_sample_dataset()</a></code>
 
         </dt>
         <dd>Generate Sample Dataset for MVPA Analysis</dd>
+
+        <dt>
+
+          <code><a href="get_center_ids.html">get_center_ids()</a></code>
+
+        </dt>
+        <dd>Get Center IDs for Searchlight Iteration</dd>
+
+        <dt>
+
+          <code><a href="get_feature_matrix.html">get_feature_matrix()</a></code>
+
+        </dt>
+        <dd>Extract Full Feature Matrix from a Dataset</dd>
 
         <dt>
 
@@ -310,6 +388,13 @@
 
         <dt>
 
+          <code><a href="global_mvpa_result.html">global_mvpa_result()</a></code>
+
+        </dt>
+        <dd>Construct a Global MVPA Result</dd>
+
+        <dt>
+
           <code><a href="group_means.html">group_means()</a></code>
 
         </dt>
@@ -328,6 +413,13 @@
 
         </dt>
         <dd>Test Set Availability</dd>
+
+        <dt>
+
+          <code><a href="haufe_importance.html">haufe_importance()</a></code>
+
+        </dt>
+        <dd>Haufe Feature Importance (Activation Patterns)</dd>
 
         <dt>
 
@@ -415,6 +507,13 @@
 
         <dt>
 
+          <code><a href="model_importance.html">model_importance()</a></code>
+
+        </dt>
+        <dd>Per-Feature Model Importance</dd>
+
+        <dt>
+
           <code><a href="msreve_design.html">msreve_design()</a></code>
 
         </dt>
@@ -433,6 +532,13 @@
 
         </dt>
         <dd>Create a Multiway Classification Result Object</dd>
+
+        <dt>
+
+          <code><a href="mvpa_clustered_dataset.html">mvpa_clustered_dataset()</a></code>
+
+        </dt>
+        <dd>Create an MVPA Dataset for Clustered/Parcellated Data</dd>
 
         <dt>
 
@@ -489,6 +595,13 @@
 
         </dt>
         <dd>Extending the MVPA Framework: Creating a New Analysis Type</dd>
+
+        <dt>
+
+          <code><a href="nmf_preprocess_maps.html">nmf_preprocess_maps()</a></code>
+
+        </dt>
+        <dd>Preprocess Maps for Spatial NMF</dd>
 
         <dt>
 
@@ -562,6 +675,20 @@
 
         <dt>
 
+          <code><a href="print.feature_sets.html">print(<i>&lt;feature_sets&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print method for feature_sets</dd>
+
+        <dt>
+
+          <code><a href="print.feature_sets_design.html">print(<i>&lt;feature_sets_design&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print method for feature_sets_design</dd>
+
+        <dt>
+
           <code><a href="print.hrfdecoder_design.html">print(<i>&lt;hrfdecoder_design&gt;</i>)</a></code>
 
         </dt>
@@ -594,6 +721,27 @@
 
         </dt>
         <dd>Process ROI</dd>
+
+        <dt>
+
+          <code><a href="process_roi.contrast_rsa_model.html">process_roi(<i>&lt;contrast_rsa_model&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Process ROI for contrast_rsa_model</dd>
+
+        <dt>
+
+          <code><a href="region_importance.html">region_importance()</a></code>
+
+        </dt>
+        <dd>Region Importance via Random Subset Comparison</dd>
+
+        <dt>
+
+          <code><a href="region_importance_result.html">region_importance_result()</a></code>
+
+        </dt>
+        <dd>Construct a Region Importance Result</dd>
 
         <dt>
 
@@ -695,6 +843,13 @@
 
         <dt>
 
+          <code><a href="run_global.html">run_global()</a></code>
+
+        </dt>
+        <dd>Run Global (Whole-Brain) MVPA Analysis</dd>
+
+        <dt>
+
           <code><a href="run_regional-methods.html">run_regional()</a></code> <code><a href="run_regional-methods.html">run_regional_base()</a></code>
 
         </dt>
@@ -737,6 +892,13 @@
 
         <dt>
 
+          <code><a href="run_searchlight.remap_rrr_model.html">run_searchlight(<i>&lt;remap_rrr_model&gt;</i>)</a></code>
+
+        </dt>
+        <dd>run_searchlight method for remap_rrr_model</dd>
+
+        <dt>
+
           <code><a href="run_searchlight.vector_rsa.html">run_searchlight(<i>&lt;vector_rsa&gt;</i>)</a></code>
 
         </dt>
@@ -754,7 +916,7 @@
           <code><a href="save_results.html">save_results()</a></code>
 
         </dt>
-        <dd>Save searchlight results to disk (S3 generic)</dd>
+        <dd>Save MVPA Results to Disk</dd>
 
         <dt>
 
@@ -769,6 +931,48 @@
 
         </dt>
         <dd>Select Features</dd>
+
+        <dt>
+
+          <code><a href="set_log_level.html">set_log_level()</a></code>
+
+        </dt>
+        <dd>Set rMVPA Logging Level</dd>
+
+        <dt>
+
+          <code><a href="spatial_nmf_component_test.html">spatial_nmf_component_test()</a></code>
+
+        </dt>
+        <dd>Component-level Inference for Spatial NMF</dd>
+
+        <dt>
+
+          <code><a href="spatial_nmf_global_test.html">spatial_nmf_global_test()</a></code>
+
+        </dt>
+        <dd>Global Cross-validated Group Test for Spatial NMF</dd>
+
+        <dt>
+
+          <code><a href="spatial_nmf_maps.html">spatial_nmf_maps()</a></code>
+
+        </dt>
+        <dd>Spatial NMF on Map Lists</dd>
+
+        <dt>
+
+          <code><a href="spatial_nmf_stability.html">spatial_nmf_stability()</a></code>
+
+        </dt>
+        <dd>Bootstrap Stability for Spatial NMF Components</dd>
+
+        <dt>
+
+          <code><a href="spatial_nmf_voxelwise_stats.html">spatial_nmf_voxelwise_stats()</a></code>
+
+        </dt>
+        <dd>Voxelwise Statistics from Spatial NMF Stability</dd>
 
         <dt>
 
@@ -790,6 +994,13 @@
 
         </dt>
         <dd>Extract Row-wise Subset of a Result</dd>
+
+        <dt>
+
+          <code><a href="subspace_alignment_model.html">subspace_alignment_model()</a></code>
+
+        </dt>
+        <dd>Subspace Alignment cross-decoder</dd>
 
         <dt>
 

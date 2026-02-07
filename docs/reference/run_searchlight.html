@@ -15,7 +15,8 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/rMVPA.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -41,7 +42,7 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">run_searchlight</span><span class="op">(</span></span>
 <span>  <span class="va">model_spec</span>,</span>
 <span>  <span class="va">radius</span>,</span>
-<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"standard"</span>, <span class="st">"randomized"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"standard"</span>, <span class="st">"randomized"</span>, <span class="st">"resampled"</span><span class="op">)</span>,</span>
 <span>  niter <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -68,10 +69,15 @@
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Extra arguments passed to specific searchlight methods. Currently supported:</p><ul><li><p><code>batch_size</code>: Integer specifying the number of searchlights to process per batch.
-        Default is 10% of total searchlights. Lower values reduce memory usage but may impact
-        performance. This controls how searchlights are grouped for processing - each batch is
-        processed sequentially, while searchlights within a batch are processed in parallel.</p></li>
+<dd><p>Extra arguments passed to specific searchlight methods. Currently supported:</p><ul><li><p><code>batch_size</code>: Integer specifying how many searchlights (ROIs) are grouped
+        into a single batch for processing by <code><a href="mvpa_iterate.html">mvpa_iterate</a></code>. Each batch is
+        launched sequentially, while ROIs within a batch are processed in parallel (using
+        the active <span class="pkg">future</span>/<span class="pkg">furrr</span> plan). The default is 10% of the total number
+        of searchlights. Smaller values lower peak memory usage and can improve load
+        balancing, at the cost of more scheduling overhead; larger values reduce overhead
+        but require more memory per worker. As a rule of thumb, start with the default,
+        decrease <code>batch_size</code> if you hit memory limits, and increase it if you have
+        many ROIs, ample RAM, and see low CPU utilization.</p></li>
 </ul></dd>
 
 </dl></div>
@@ -114,24 +120,24 @@
 <span class="r-in"><span>    radius <span class="op">=</span> <span class="fl">8</span>,            <span class="co"># 8mm radius</span></span></span>
 <span class="r-in"><span>    method <span class="op">=</span> <span class="st">"standard"</span>    <span class="co"># Use standard searchlight</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:55:50] Running standard searchlight with radius = 8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:55:50] creating standard searchlight</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:55:50] running standard searchlight iterator</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:55:50] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">24</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:55:54] Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:55:58] Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:56:02] Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:56:05] Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:56:09] Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:56:13] Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:56:16] Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:56:20] Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:56:24] Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:56:27] Processing batch <span style="color: #0000BB;">11</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:56:30] </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:34] Running standard searchlight with radius = 8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:34] creating standard searchlight</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:34] running standard searchlight iterator</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:34] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">47</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:41] Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">47</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:48] Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">47</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:56] Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">47</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:49:04] Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">47</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:49:12] Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">47</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:49:19] Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">46</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:49:27] Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">46</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:49:34] Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">46</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:49:42] Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">46</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:49:50] Processing batch <span style="color: #0000BB;">11</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">46</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:49:57] </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">254</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">254</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">512</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">512</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="co"># Run with custom batch size for memory management</span></span></span>

@@ -118,44 +118,29 @@ if (!is.null(result$results$AUC)) {
 
 ## Using different classifiers
 
-Any classifier in the model registry can be used in a searchlight. You can also register your own with `register_mvpa_model()`. For example, to run a linear SVM:
-
-```{r, eval=FALSE}
-svm_model <- load_model("svmLinear") 
-model <- mvpa_model(model=svm_model, dataset=dataset$dataset, design=dataset$design, crossval=crossval)
-result_svm <- run_searchlight(model, radius=4, method="randomized", niter=2)
-```
-
-
-For random forests, you can either fix `mtry` or tune it over a small grid. Tuning quickly becomes expensive in whole‑brain analyses, so `sda_notune` is often a good default when compute is limited.
+Any classifier in the rMVPA registry can be used in a searchlight. You can also register your own with `register_mvpa_model()`. Two robust options that ship with rMVPA are `hdrda` and `pca_lda`:
 
 ```{r, eval=!light_build}
-if (requireNamespace("randomForest", quietly = TRUE)) {
-  rf_model <- load_model("rf")
-  model <- mvpa_model(model = rf_model, dataset = dataset$dataset, design = dataset$design,
-                      crossval = crossval, tune_grid = data.frame(mtry = 2))
-  result_rf <- run_searchlight(model, radius = 4, method = "randomized", niter = 2)
-  result_rf
-} else {
-  message("Package 'randomForest' not installed; skipping RF example.")
-}
+# High‑Dimensional Regularized Discriminant Analysis
+hdrda <- load_model("hdrda")
+model_hdrda <- mvpa_model(model = hdrda, dataset = dataset$dataset, design = dataset$design,
+                          crossval = crossval)
+res_hdrda <- run_searchlight(model_hdrda, radius = 4, method = "randomized", niter = 2)
+res_hdrda
 ```
 
-```{r, message=FALSE, warning=FALSE, eval=!light_build}
-if (requireNamespace("randomForest", quietly = TRUE)) {
-  grid <- data.frame(mtry = c(2, 4, 6, 8))
-  model2 <- mvpa_model(model = rf_model, dataset = dataset$dataset, design = dataset$design,
-                       crossval = crossval, tune_grid = grid, tune_reps = 2)
-  result_rf_tuned <- run_searchlight(model2, radius = 6, method = "randomized", niter = 1)
-result_rf_tuned
-} else {
-  message("Package 'randomForest' not installed; skipping tuned RF example.")
-}
+```{r, eval=!light_build}
+# PCA + LDA pipeline
+pca_lda <- load_model("pca_lda")
+model_pca_lda <- mvpa_model(model = pca_lda, dataset = dataset$dataset, design = dataset$design,
+                            crossval = crossval)
+res_pca_lda <- run_searchlight(model_pca_lda, radius = 4, method = "randomized", niter = 2)
+res_pca_lda
 ```
 
-## Domain-adaptive cross-decoding (REMAP‑RRR)
+## Domain‑adaptive cross‑decoding (REMAP‑RRR)
 
-REMAP‑RRR learns a low‑rank affine map from a source domain (e.g., perception) to a target domain (e.g., memory) and trains a classifier in the target space. Provide an external test set in your dataset/design (same pattern as localizer→WM), and optionally a `link_by` column shared by train/test designs to pair items across domains.
+REMAP‑RRR models memory as perception plus a low‑rank correction in a jointly whitened space. It learns a residual map Δ on the prototype residuals (Y_w − X_w) ≈ X_w Δ, builds predicted memory templates Ŷ_w = X_w + λ X_w Δ (with λ tuned on training items), and classifies held‑out memory trials by correlation to Ŷ_w. Provide an external test set in your dataset/design (same pattern as localizer→WM), and optionally a `link_by` column shared by train/test designs to pair items across domains.
 
 ```{r, eval=!light_build}
 # Synthetic source→target setup
@@ -166,13 +151,12 @@ regionMask <- neuroim2::NeuroVol(sample(1:5, size = length(toy$dataset$mask), re
 mspec <- remap_rrr_model(
   dataset = toy$dataset,
   design  = toy$design,
-  base_classifier   = "sda_notune",
-  link_by           = NULL,     # defaults to class-wise pairing
-  rank              = 0,        # identity fallback (no rrpack required)
+  link_by = NULL,            # defaults to class-wise pairing
+  rank    = 0,               # identity fallback (no rrpack required)
   leave_one_key_out = TRUE
 )
 remap_res <- run_regional(mspec, regionMask)
-names(remap_res$vol_results)  # includes adapter_rank and adapter_mean_r2
+names(remap_res$vol_results)  # includes remap_improv, delta_frob_mean, lambda_mean
 ```
 
 Set `rank = "auto"` or a positive integer to enable reduced‑rank mapping via `rrpack`.

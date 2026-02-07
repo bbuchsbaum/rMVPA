@@ -3,6 +3,7 @@ pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   Advanced_RSA: Advanced_RSA.html
+  CommandLine: CommandLine.html
   CommandLineScripts: CommandLineScripts.html
   Constructing_Datasets: Constructing_Datasets.html
   Continuous_Decoding: Continuous_Decoding.html
@@ -18,10 +19,11 @@ articles:
   repmap_model: repmap_model.html
   repmed_model: repmed_model.html
   repnet_model: repnet_model.html
+  rMVPA: rMVPA.html
   RSA: RSA.html
   Searchlight_Analysis: Searchlight_Analysis.html
   Temporal_Confounds_in_RSA: Temporal_Confounds_in_RSA.html
-last_built: 2025-11-18T19:42Z
+last_built: 2026-02-06T04:47Z
 urls:
   reference: http://bbuchsbaum.github.io/rMVPA/reference
   article: http://bbuchsbaum.github.io/rMVPA/articles

@@ -15,7 +15,8 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/rMVPA.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -48,7 +49,7 @@
 <span>  tune_grid <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  tune_reps <span class="op">=</span> <span class="fl">15</span>,</span>
 <span>  performance <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  class_metrics <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  class_metrics <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  compute_performance <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  return_predictions <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  return_fits <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -136,49 +137,33 @@ See example below.</p>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>accuracy<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">observed</span> <span class="op">==</span> <span class="va">result</span><span class="op">$</span><span class="va">predicted</span><span class="op">)</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">observed</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span><span class="va">mvpmod</span> <span class="op">&lt;-</span> <span class="fu">mvpa_model</span><span class="op">(</span><span class="va">mod</span>, dataset<span class="op">=</span><span class="va">mvdset</span>, design<span class="op">=</span><span class="va">mvdes</span>, crossval<span class="op">=</span><span class="va">cval</span>, performance<span class="op">=</span><span class="va">custom_perf</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">ret</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">mvpmod</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:00] Running randomized searchlight with radius = 8 and niter = 4</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:00] Starting randomized searchlight analysis:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:00] - Radius: <span style="color: #0000BB;">8</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:00] - Iterations: <span style="color: #0000BB;">4</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:00] </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Iteration <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">4</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:00] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">1</span> (<span style="color: #00BB00;">1</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:01] </span>
+<span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+<span class="r-in"><span>  <span class="va">ret</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">mvpmod</span>, radius <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:47:50] Running standard searchlight with radius = 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:47:50] creating standard searchlight</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:47:50] running standard searchlight iterator</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:47:50] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>package ‘future’ was built under R version 4.5.2</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>package ‘purrr’ was built under R version 4.5.2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:47:53] Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:47:56] Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:47:59] Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:02] Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:04] Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:07] Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:10] Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">12</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:13] Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">11</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:15] Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">11</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:18] Processing batch <span style="color: #0000BB;">11</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">11</span> ROIs in this batch)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:21] </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">1</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">1</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">129</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">129</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:01] </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Iteration <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">4</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:01] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">1</span> (<span style="color: #00BB00;">1</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:02] </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">1</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">1</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:02] </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Iteration <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">4</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:02] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">1</span> (<span style="color: #00BB00;">1</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:03] </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">1</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">1</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:03] </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Iteration <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">4</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:03] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">2</span> (<span style="color: #00BB00;">1</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:04] Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">2</span> (<span style="color: #00BB00;">1</span> ROIs in this batch)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:04] </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">2</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">2</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:04] </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Searchlight analysis complete</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:04] - Total Models Fit: <span style="color: #00BB00;">5</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2025-11-18 14:43:04] - All ROIs processed successfully!</span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="st">"accuracy"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">ret</span><span class="op">$</span><span class="va">metrics</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:21] error: less than 2 features</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO [2026-02-05 23:48:21] error: less than 2 features</span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="st">"accuracy"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">ret</span><span class="op">$</span><span class="va">metrics</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
