@@ -1,3 +1,22 @@
+#' Coerce a ClusteredNeuroVol to DenseNeuroVol
+#'
+#' Several regional-analysis helpers rely on \code{as.vector()} and logical
+#' indexing (\code{x[x > 0]}), neither of which are defined for
+#' \code{ClusteredNeuroVol}.
+#' This helper converts to dense when needed, and is a no-op otherwise.
+#'
+#' @param x A \code{NeuroVol} (or subclass).
+#' @return A \code{NeuroVol} that supports \code{as.vector()} and \code{[}.
+#' @keywords internal
+#' @noRd
+.ensure_dense_vol <- function(x) {
+  if (inherits(x, "ClusteredNeuroVol")) {
+    neuroim2::as.dense(x)
+  } else {
+    x
+  }
+}
+
 #' @keywords internal
 get_unique_regions.NeuroVol <- function(region_mask, ...) {
   sort(unique(region_mask[region_mask > 0]))
@@ -233,6 +252,7 @@ regional_mvpa_result <- function(model_spec, performance_table, prediction_table
 #' regional_data <- prep_regional(model_spec, region_mask)
 #' @export
 prep_regional <- function(model_spec, region_mask) {
+  region_mask <- .ensure_dense_vol(region_mask)
   allrois <- get_unique_regions(region_mask)
   ##allrois <- sort(unique(region_mask[region_mask>0]))
   region_vec <- as.vector(region_mask)
@@ -277,7 +297,7 @@ prep_regional <- function(model_spec, region_mask) {
 #' @keywords internal
 #' @noRd
 comp_perf <- function(results, region_mask) {
- 
+  region_mask <- .ensure_dense_vol(region_mask)
   roinum <- NULL
 
   # If results is not a data frame/tibble or lacks expected columns, return empty

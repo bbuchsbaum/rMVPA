@@ -3,17 +3,38 @@
 context("mvpa regional")
 
 test_that("mvpa_regional with 5 ROIS runs without error", {
-  
-  dset <- gen_sample_dataset(c(10,10,8), nobs=100, nlevels=3, data_mode="image", 
+
+  dset <- gen_sample_dataset(c(10,10,8), nobs=100, nlevels=3, data_mode="image",
                              response_type="categorical")
   cval <- twofold_blocked_cross_validation(dset$design$block_var)
-  
+
   region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dset$dataset, dset$design, model_type="classification", crossval=cval, return_fits=TRUE)
   res <- run_regional(mspec, region_mask)
   expect_true(!is.null(res))
-  
+
+})
+
+test_that("mvpa_regional works with ClusteredNeuroVol region_mask", {
+  dset <- gen_sample_dataset(c(10,10,4), nobs=80, nlevels=2, data_mode="image",
+                             response_type="categorical")
+  cval <- twofold_blocked_cross_validation(dset$design$block_var)
+
+  # Build a ClusteredNeuroVol with 3 clusters from the dataset mask
+  sp <- space(dset$dataset$mask)
+  mask_arr <- as.logical(dset$dataset$mask)
+  mask_vol <- LogicalNeuroVol(mask_arr, sp)
+  n_vox <- sum(mask_arr)
+  clusters <- rep(seq_len(3), length.out = n_vox)
+  region_mask <- ClusteredNeuroVol(mask_vol, clusters)
+
+  model <- load_model("sda_notune")
+  mspec <- mvpa_model(model, dset$dataset, dset$design,
+                      model_type = "classification", crossval = cval)
+  res <- run_regional(mspec, region_mask)
+  expect_true(!is.null(res))
+  expect_true(nrow(res$performance_table) >= 1)
 })
 
 
