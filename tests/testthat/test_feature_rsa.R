@@ -57,6 +57,7 @@ test_that("regional feature_rsa_model with S-based feature extraction runs witho
   # Check that performance_table has expected columns
   expect_true("pattern_correlation" %in% colnames(res$performance_table))
   expect_true("pattern_discrimination" %in% colnames(res$performance_table))
+  expect_true("rdm_correlation" %in% colnames(res$performance_table))
   expect_true("voxel_correlation" %in% colnames(res$performance_table))
   expect_true("mse" %in% colnames(res$performance_table))
   expect_true("r_squared" %in% colnames(res$performance_table))
@@ -106,6 +107,8 @@ test_that("feature_rsa_model with permutation testing works correctly", {
   expect_true("z_pattern_correlation" %in% perf_cols)
   expect_true("p_pattern_discrimination" %in% perf_cols)
   expect_true("z_pattern_discrimination" %in% perf_cols)
+  expect_true("p_rdm_correlation" %in% perf_cols)
+  expect_true("z_rdm_correlation" %in% perf_cols)
 })
 
 test_that("feature_rsa_model with permute_by='features' works correctly", {
@@ -231,6 +234,7 @@ test_that("regional feature_rsa_model with pca method runs without error and ret
   # Check specific performance metrics
   expect_true("pattern_correlation" %in% colnames(res$performance_table))
   expect_true("pattern_discrimination" %in% colnames(res$performance_table))
+  expect_true("rdm_correlation" %in% colnames(res$performance_table))
   expect_true("voxel_correlation" %in% colnames(res$performance_table))
   expect_true("mse" %in% colnames(res$performance_table))
   expect_true("r_squared" %in% colnames(res$performance_table))
@@ -282,10 +286,28 @@ test_that("can compare feature_rsa with different methods", {
     perf_table <- results_list[[method]]$performance_table
     expect_true("pattern_correlation" %in% colnames(perf_table))
     expect_true("pattern_discrimination" %in% colnames(perf_table))
+    expect_true("rdm_correlation" %in% colnames(perf_table))
     expect_true("voxel_correlation" %in% colnames(perf_table))
     expect_true("mse" %in% colnames(perf_table))
     expect_true("r_squared" %in% colnames(perf_table))
   }
+})
+
+test_that("evaluate_model.feature_rsa_model computes RDM correlation for predicted vs observed geometry", {
+  set.seed(123)
+  observed <- matrix(rnorm(12 * 30), nrow = 12, ncol = 30)
+  predicted <- observed + matrix(rnorm(12 * 30, sd = 0.05), nrow = 12, ncol = 30)
+
+  perf <- evaluate_model.feature_rsa_model(
+    object = NULL,
+    predicted = predicted,
+    observed = observed,
+    nperm = 0
+  )
+
+  expect_true("rdm_correlation" %in% names(perf))
+  expect_true(is.finite(perf$rdm_correlation))
+  expect_gt(perf$rdm_correlation, 0.8)
 })
 
 test_that("feature_rsa_model with permutation testing produces valid p-values", {

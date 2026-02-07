@@ -167,6 +167,11 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   - `pattern_rank_percentile`: For each trial, percentile rank of the correct
 #'     pattern match among all candidates.  0.5 = chance, 1 = perfect.
 #'
+#' *Representational geometry*:
+#'   - `rdm_correlation`: Spearman correlation between the upper triangles of the
+#'     observed and predicted RDMs (defined as 1 - trial-by-trial correlation
+#'     across voxels).  Captures similarity of representational geometry.
+#'
 #' *Global reconstruction metrics*:
 #'   - `voxel_correlation`: Correlation of the flattened predicted and observed
 #'     matrices (all trials x all voxels).
@@ -449,6 +454,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #' @param pattern_cor Scalar: the observed pattern correlation
 #' @param pattern_discrim Scalar: the observed pattern discrimination
 #' @param pattern_rank Scalar: the observed pattern rank percentile
+#' @param rdm_cor Scalar: the observed RDM correlation
 #' @param voxel_cor Scalar: the observed voxel correlation
 #' @param mse Scalar: the observed MSE
 #' @param r_squared Scalar: the observed R^2
@@ -462,6 +468,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
                                    pattern_cor,
                                    pattern_discrim,
                                    pattern_rank,
+                                   rdm_cor,
                                    voxel_cor,
                                    mse,
                                    r_squared,
@@ -476,9 +483,10 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 
   ## Metric names and observed values (order matters)
   metric_names <- c("pattern_correlation", "pattern_discrimination",
-                    "pattern_rank_percentile", "voxel_correlation",
+                    "pattern_rank_percentile", "rdm_correlation",
+                    "voxel_correlation",
                     "mse", "r_squared", "mean_voxelwise_temporal_cor")
-  obs_vals <- c(pattern_cor, pattern_discrim, pattern_rank,
+  obs_vals <- c(pattern_cor, pattern_discrim, pattern_rank, rdm_cor,
                 voxel_cor, mse, r_squared, mean_voxelwise_temporal_cor)
   names(obs_vals) <- metric_names
   n_met <- length(metric_names)
@@ -499,7 +507,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
     perm_pred <- predicted[perm_idx, , drop = FALSE]
 
     ## -- Condition-pattern metrics (trial x trial) --
-    ppc <- ppd <- ppr <- NA_real_
+    ppc <- ppd <- ppr <- prdm <- NA_real_
     obs_row_sd  <- apply(observed[, valid_col, drop = FALSE], 1, stats::sd)
     pred_row_sd <- apply(perm_pred[, valid_col, drop = FALSE], 1, stats::sd)
     vr <- which(obs_row_sd > sd_thresh & pred_row_sd > sd_thresh)
@@ -533,6 +541,24 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
       }
     }
 
+    ## -- Representational geometry (RDM correlation) --
+    if (length(vr) >= 3) {
+      pc <- tryCatch(stats::cor(t(perm_pred[vr, valid_col, drop = FALSE])),
+                     error = function(e) NULL)
+      oc <- tryCatch(stats::cor(t(observed[vr, valid_col, drop = FALSE])),
+                     error = function(e) NULL)
+      if (!is.null(pc) && !is.null(oc)) {
+        pd <- 1 - pc
+        od <- 1 - oc
+        pv <- pd[upper.tri(pd)]
+        ov <- od[upper.tri(od)]
+        if (length(pv) >= 2 && length(pv) == length(ov)) {
+          prdm <- tryCatch(stats::cor(pv, ov, method = "spearman", use = "complete.obs"),
+                           error = function(e) NA_real_)
+        }
+      }
+    }
+
     ## -- Global reconstruction --
     pvc  <- tryCatch(stats::cor(as.vector(perm_pred[, valid_col, drop = FALSE]),
                                 as.vector(observed[, valid_col, drop = FALSE])),
@@ -548,7 +574,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
       }, numeric(1)), na.rm = TRUE)
     }
 
-    pvals <- c(ppc, ppd, ppr, pvc, pmse, prsq, pmvtc)
+    pvals <- c(ppc, ppd, ppr, prdm, pvc, pmse, prsq, pmvtc)
 
     ## Update accumulators
     for (m in seq_len(n_met)) {
@@ -667,6 +693,7 @@ evaluate_model.feature_rsa_model <- function(object,
     pattern_correlation        = NA_real_,
     pattern_discrimination     = NA_real_,
     pattern_rank_percentile    = NA_real_,
+    rdm_correlation            = NA_real_,
     voxel_correlation          = NA_real_,
     mse                        = mean((predicted - observed)^2, na.rm = TRUE),
     r_squared                  = NA_real_,
@@ -687,6 +714,7 @@ evaluate_model.feature_rsa_model <- function(object,
   pattern_cor     <- NA_real_
   pattern_discrim <- NA_real_
   pattern_rank    <- NA_real_
+  rdm_cor         <- NA_real_
 
   if (length(valid_row) >= 2) {
     pmat <- predicted[valid_row, valid_col, drop = FALSE]
@@ -723,6 +751,29 @@ evaluate_model.feature_rsa_model <- function(object,
     }
     pattern_rank <- mean(ranks, na.rm = TRUE)
   }
+
+  ## ================================================================
+  ## 1b. Representational geometry metric (RDM correlation)
+  ## ================================================================
+  ## Compute within-space RDMs (1 - trial-by-trial correlation) and correlate
+  ## upper triangles between predicted and observed.
+  if (length(valid_row) >= 3) {
+    pmat <- predicted[valid_row, valid_col, drop = FALSE]
+    omat <- observed[valid_row,  valid_col, drop = FALSE]
+    pc <- tryCatch(stats::cor(t(pmat)), error = function(e) NULL)
+    oc <- tryCatch(stats::cor(t(omat)), error = function(e) NULL)
+    if (!is.null(pc) && !is.null(oc)) {
+      prdm <- 1 - pc
+      ordm <- 1 - oc
+      pv <- prdm[upper.tri(prdm)]
+      ov <- ordm[upper.tri(ordm)]
+      if (length(pv) >= 2 && length(pv) == length(ov)) {
+        rdm_cor <- tryCatch(stats::cor(pv, ov, method = "spearman", use = "complete.obs"),
+                            error = function(e) NA_real_)
+      }
+    }
+  }
+  if (!is.finite(rdm_cor)) rdm_cor <- NA_real_
 
   ## ================================================================
   ## 2. Global reconstruction metrics
@@ -769,6 +820,7 @@ evaluate_model.feature_rsa_model <- function(object,
       pattern_cor    = pattern_cor,
       pattern_discrim = pattern_discrim,
       pattern_rank   = pattern_rank,
+      rdm_cor        = rdm_cor,
       voxel_cor      = voxel_cor,
       mse            = mse,
       r_squared      = r_squared,
@@ -781,6 +833,7 @@ evaluate_model.feature_rsa_model <- function(object,
     pattern_correlation         = pattern_cor,
     pattern_discrimination      = pattern_discrim,
     pattern_rank_percentile     = pattern_rank,
+    rdm_correlation             = rdm_cor,
     voxel_correlation           = voxel_cor,
     mse                         = mse,
     r_squared                   = r_squared,
@@ -1137,17 +1190,18 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
     c(perf$pattern_correlation,
       perf$pattern_discrimination,
       perf$pattern_rank_percentile,
+      perf$rdm_correlation,
       perf$voxel_correlation,
       perf$mse,
       perf$r_squared,
       perf$mean_voxelwise_temporal_cor,
       ncomp_used),
     nrow = 1,
-    ncol = 8,
+    ncol = 9,
     dimnames = list(NULL, c("pattern_correlation", "pattern_discrimination",
-                            "pattern_rank_percentile", "voxel_correlation",
-                            "mse", "r_squared", "mean_voxelwise_temporal_cor",
-                            "ncomp"))
+                            "pattern_rank_percentile", "rdm_correlation",
+                            "voxel_correlation", "mse", "r_squared",
+                            "mean_voxelwise_temporal_cor", "ncomp"))
   )
   
   tibble::tibble(
@@ -1213,6 +1267,7 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
     perf$pattern_correlation,
     perf$pattern_discrimination,
     perf$pattern_rank_percentile,
+    perf$rdm_correlation,
     perf$voxel_correlation,
     perf$mse,
     perf$r_squared,
@@ -1221,6 +1276,7 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   )
   base_names <- c(
     "pattern_correlation", "pattern_discrimination", "pattern_rank_percentile",
+    "rdm_correlation",
     "voxel_correlation", "mse", "r_squared",
     "mean_voxelwise_temporal_cor",
     "ncomp"
