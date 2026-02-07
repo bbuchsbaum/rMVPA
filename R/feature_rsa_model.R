@@ -295,6 +295,40 @@ feature_rsa_model <- function(dataset,
 }
 
 
+#' Onesigma component selection for multivariate responses
+#'
+#' \code{pls::selectNcomp} only supports univariate responses.
+#' This helper averages CV-MSEP across all response columns and
+#' applies the same onesigma rule: pick the fewest components whose
+#' mean MSEP is within one SE of the minimum.
+#' @noRd
+.selectNcomp_mv <- function(model, method = "onesigma") {
+  msep_obj  <- pls::MSEP(model, estimate = "CV")
+  msep_vals <- msep_obj$val                        # [estimate, response, ncomp+1]
+
+  nresp     <- dim(msep_vals)[2]
+  ncomp_max <- dim(msep_vals)[3] - 1L              # first slot = intercept-only
+  if (ncomp_max < 1L) return(1L)
+
+  # Average MSEP across responses for each ncomp (drop intercept slot)
+  avg_msep <- drop(apply(msep_vals[1, , -1, drop = FALSE], 3, mean))
+
+  min_idx <- which.min(avg_msep)
+  min_val <- avg_msep[min_idx]
+
+  if (method == "onesigma" && nresp > 1L) {
+    # SE of mean MSEP across responses at the optimum
+    per_resp <- msep_vals[1, , min_idx + 1L]        # per-response MSEP at best ncomp
+    se       <- sd(per_resp) / sqrt(nresp)
+    thresh   <- min_val + se
+    selected <- which(avg_msep <= thresh)[1]
+    return(as.integer(selected))
+  }
+
+  as.integer(min_idx)
+}
+
+
 #' @noRd
 .standardize <- function(X) {
   cm <- colMeans(X)
@@ -433,12 +467,23 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
      stop(error_msg)
   }
    if (nrow(predictions) != nrow(F_new)) {
-     error_msg <- sprintf("predict_model (%s): Prediction result has %d rows, but expected %d (matching newdata).", 
+     error_msg <- sprintf("predict_model (%s): Prediction result has %d rows, but expected %d (matching newdata).",
                          method, nrow(predictions), nrow(F_new))
      futile.logger::flog.error(error_msg)
      stop(error_msg)
   }
-  
+
+  # Early diagnostic: warn if predictions are constant across trials
+  if (nrow(predictions) > 1) {
+    pred_sds <- apply(predictions, 2, stats::sd)
+    if (all(pred_sds < 1e-12, na.rm = TRUE)) {
+      futile.logger::flog.debug(
+        "predict_model (%s): all %d voxel predictions are constant across %d trials (max sd=%.2e). Model has no predictive power for this ROI.",
+        method, ncol(predictions), nrow(predictions),
+        max(pred_sds, na.rm = TRUE))
+    }
+  }
+
   return(predictions)
 }
 
@@ -702,7 +747,22 @@ evaluate_model.feature_rsa_model <- function(object,
   )
 
   if (length(valid_col) == 0) {
-    futile.logger::flog.warn("evaluate_model: No columns with finite variance; returning NA metrics.")
+    n_obs_ok  <- sum(obs_sd  > sd_thresh, na.rm = TRUE)
+    n_pred_ok <- sum(pred_sd > sd_thresh, na.rm = TRUE)
+    futile.logger::flog.warn(
+      paste0("evaluate_model: No columns with finite variance; returning NA metrics. ",
+             "dims=%d obs x %d vox, obs cols with var=%d (max sd=%.2e), ",
+             "pred cols with var=%d (max sd=%.2e). ",
+             if (n_pred_ok == 0 && n_obs_ok > 0)
+               "Predictions are constant across trials — the model likely has no predictive power for this ROI."
+             else if (n_obs_ok == 0)
+               "Observed data has no cross-trial variance — ROI may be too small or data is constant."
+             else
+               "Both predicted and observed lack variance."),
+      n_obs, n_vox, n_obs_ok,
+      if (all(is.na(obs_sd))) NA_real_ else max(obs_sd, na.rm = TRUE),
+      n_pred_ok,
+      if (all(is.na(pred_sd))) NA_real_ else max(pred_sd, na.rm = TRUE))
     return(na_result)
   }
 
@@ -906,7 +966,7 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
       ncomp_use <- k
       if (ncomp_sel == "loo" && k > 1) {
         ncomp_use <- tryCatch({
-          nc <- pls::selectNcomp(model, method = "onesigma", plot = FALSE)
+          nc <- .selectNcomp_mv(model, method = "onesigma")
           max(1L, nc)
         }, error = function(e) {
           futile.logger::flog.warn(
