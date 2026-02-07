@@ -261,21 +261,40 @@ prep_regional <- function(model_spec, region_mask) {
     stop("run_regional: invalid ROI mask, number of ROIs = 0")
   }
 
-  vox_iter <- lapply(region_set, function(rnum) which(region_vec == rnum & model_spec$dataset$mask > 0))
-  lens <- sapply(vox_iter, length)
-  keep <- lens > 1
-  
-  if (all(!keep)) {
-    futile.logger::flog.error("run_regional: no ROIs have more than one voxel.")
-    stop()
+  # Intersect region_mask with dataset$mask: only voxels present in BOTH
+  # are included.  Voxels that are in a region but outside the data mask
+  # (e.g. no valid fMRI signal) are silently dropped here.
+  mask_vec <- as.vector(model_spec$dataset$mask)
+  roi_lens  <- sapply(region_set, function(rnum) sum(region_vec == rnum))
+  vox_iter  <- lapply(region_set, function(rnum) which(region_vec == rnum & mask_vec > 0))
+  lens      <- sapply(vox_iter, length)
+
+  # Report voxels lost to data-mask exclusion
+  lost <- roi_lens - lens
+  if (any(lost > 0)) {
+    affected <- which(lost > 0)
+    detail   <- sprintf("ROI %d: %d/%d voxels outside data mask",
+                        region_set[affected], lost[affected], roi_lens[affected])
+    futile.logger::flog.info(
+      "prep_regional: %d of %d ROIs lost voxels to the data mask:\n  %s",
+      length(affected), length(region_set), paste(detail, collapse = "\n  "))
   }
-  
+
+  keep <- lens > 1
+
+  if (all(!keep)) {
+    futile.logger::flog.error("run_regional: no ROIs have more than one voxel after intersecting with the data mask.")
+    stop("run_regional: no ROIs have more than one voxel.")
+  }
+
   if (any(lens < 2)) {
-    futile.logger::flog.warn(paste("some ROIs have less than two voxels, removing them from list: ", paste(region_set[lens < 2], collapse=",")))
-    vox_iter <- vox_iter[keep]
+    futile.logger::flog.warn(
+      "prep_regional: removing %d ROI(s) with < 2 voxels after mask intersection: %s",
+      sum(!keep), paste(region_set[!keep], collapse = ", "))
+    vox_iter   <- vox_iter[keep]
     region_set <- region_set[keep]
   }
-  
+
   list(allrois=allrois, region_vec=region_vec, region_set=region_set,
        vox_iter=vox_iter, lens=lens, keep=keep)
   

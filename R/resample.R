@@ -81,6 +81,15 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Determine columns to keep
   keep <- !nas & sdnonzero
 
+  n_removed <- sum(!keep)
+  if (n_removed > 0) {
+    n_na  <- sum(nas)
+    n_zv  <- sum(!sdnonzero & !nas)  # zero-var but not already counted as NA
+    futile.logger::flog.debug(
+      "filter_roi: removing %d/%d voxels (NA: %d, zero-variance: %d); %d remain.",
+      n_removed, length(keep), n_na, n_zv, sum(keep))
+  }
+
   # Preserve specified voxel if requested (e.g., center voxel in searchlight)
   if (!is.null(preserve)) {
     gi <- neuroim2::indices(roi$train_roi)
@@ -228,8 +237,11 @@ compute_mask_indices <- function(mask) {
 #' @export
 as_roi.data_sample <- function(obj, data, ...) {
 
-  # Defensive validation: ensure all voxel indices are within the mask.
-  # Use any precomputed mask_indices if present to avoid O(#voxels) work per ROI.
+  # Defensive validation: ensure all voxel indices fall within the data mask.
+  # For regional analysis this is normally a no-op (prep_regional already
+
+  # intersects region_mask with dataset$mask).  For searchlight analysis
+  # edge spheres may extend beyond the brain mask, so this catch is needed.
   if (!is.null(data$mask)) {
     mask_indices <- data$mask_indices
     if (is.null(mask_indices)) {
@@ -239,16 +251,14 @@ as_roi.data_sample <- function(obj, data, ...) {
     invalid_vox <- setdiff(obj$vox, mask_indices)
 
     if (length(invalid_vox) > 0) {
-      futile.logger::flog.debug("as_roi.data_sample: %d voxel indices are outside the mask. Filtering to mask (normal for edge searchlights).",
-                              length(invalid_vox))
-      # Filter to only valid mask indices
+      futile.logger::flog.debug(
+        "as_roi.data_sample: %d voxel(s) outside data mask (expected for edge searchlights; should not occur for regional).",
+        length(invalid_vox))
       obj$vox <- intersect(obj$vox, mask_indices)
 
-      # Don't fail here for <2 voxels - let filter_roi and extract_roi handle that
-      # This is important for searchlights where partial spheres at brain edges are expected
+      # Don't fail for <2 voxels — let filter_roi handle the minimum check
       if (length(obj$vox) == 0) {
-        futile.logger::flog.debug("as_roi.data_sample: After mask filtering, ROI has 0 voxels. Returning error ROI.")
-        # Return a try-error to signal failure
+        futile.logger::flog.debug("as_roi.data_sample: 0 voxels remain after mask filtering.")
         train_roi <- structure(list(message = "No voxels remaining after mask filtering"),
                               class = "try-error")
         return(list(train_roi = train_roi, test_roi = NULL))
