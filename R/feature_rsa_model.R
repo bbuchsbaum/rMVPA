@@ -1069,7 +1069,7 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
         
         # Fit standard glmnet (either as fallback or primary)
         final_fit <- glmnet::glmnet(
-          x = sf$X_sc, 
+          x = sf$X_sc,
           y = sx$X_sc,
           family = "mgaussian",
           alpha = obj$alpha,
@@ -1077,12 +1077,24 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
           standardize = FALSE,
           intercept = TRUE
         )
-        
+
         # Determine lambda used for prediction
         lambda_used_for_pred <- if (run_cv && !is.null(cv_results)) {
            lambda_to_use # lambda.min from successful CV
-        } else if (!is.null(final_fit$lambda)) {
-           final_fit$lambda[1] # First lambda if multiple were fit (e.g., obj$lambda=NULL)
+        } else if (!is.null(lambda_to_use)) {
+           # User supplied an explicit lambda
+           if (length(final_fit$lambda) > 0) final_fit$lambda[1] else lambda_to_use
+        } else if (!is.null(final_fit$lambda) && length(final_fit$lambda) > 1) {
+           # No lambda specified and no CV: glmnet auto-generated a sequence
+           # (descending from lambda_max). Picking lambda[1] = lambda_max would
+           # shrink all coefficients to zero.  Use 1% of lambda_max as a
+           # heuristic that provides light regularisation without collapsing
+           # predictions to the mean.
+           heuristic <- final_fit$lambda[1] * 0.01
+           futile.logger::flog.info(
+             "train_model (GLMNet): no lambda specified; using heuristic lambda = %.4e (1%% of lambda_max). Set lambda explicitly or use cv_glmnet=TRUE for optimal selection.",
+             heuristic)
+           heuristic
         } else {
            NA # Should not happen if fit succeeded
         }
