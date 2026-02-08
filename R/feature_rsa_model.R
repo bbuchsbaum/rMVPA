@@ -313,15 +313,20 @@ feature_rsa_model <- function(dataset,
   # Average MSEP across responses for each ncomp (drop intercept slot)
   avg_msep <- drop(apply(msep_vals[1, , -1, drop = FALSE], 3, mean))
 
+  # Guard against all-NaN MSEP (degenerate model)
+  if (all(is.na(avg_msep) | !is.finite(avg_msep))) return(NA_integer_)
+
   min_idx <- which.min(avg_msep)
+  if (length(min_idx) == 0L) return(NA_integer_)
   min_val <- avg_msep[min_idx]
 
   if (method == "onesigma" && nresp > 1L) {
     # SE of mean MSEP across responses at the optimum
-    per_resp <- msep_vals[1, , min_idx + 1L]        # per-response MSEP at best ncomp
+    per_resp <- msep_vals[1, , min_idx + 1L]
     se       <- sd(per_resp) / sqrt(nresp)
     thresh   <- min_val + se
     selected <- which(avg_msep <= thresh)[1]
+    if (is.na(selected)) return(as.integer(min_idx))
     return(as.integer(selected))
   }
 
@@ -962,12 +967,19 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
       model <- fit_func(sx$X_sc ~ sf$X_sc, ncomp = k, scale = FALSE,
                         validation = validation)
 
-      # --- Component selection ---
+      # --- Component selection (always >= 1) ---
       ncomp_use <- k
       if (ncomp_sel == "loo" && k > 1) {
         ncomp_use <- tryCatch({
           nc <- .selectNcomp_mv(model, method = "onesigma")
-          max(1L, nc)
+          if (is.na(nc) || nc < 1L) {
+            futile.logger::flog.warn(
+              "train_model (%s): selectNcomp returned %s; falling back to %d components.",
+              method_label, as.character(nc), k)
+            k
+          } else {
+            nc
+          }
         }, error = function(e) {
           futile.logger::flog.warn(
             "train_model (%s): selectNcomp failed (%s); using all %d components.",
@@ -977,7 +989,15 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
       } else if (ncomp_sel == "pve") {
         xvar <- pls::explvar(model)
         cum_ratio <- cumsum(xvar) / sum(xvar)
-        ncomp_use <- max(1L, which(cum_ratio >= obj$pve_threshold)[1])
+        idx <- which(cum_ratio >= obj$pve_threshold)[1]
+        if (is.na(idx)) {
+          futile.logger::flog.warn(
+            "train_model (%s): no component reaches pve_threshold=%.2f (max cum ratio=%.4f); using all %d components.",
+            method_label, obj$pve_threshold, max(cum_ratio, na.rm = TRUE), k)
+          ncomp_use <- k
+        } else {
+          ncomp_use <- max(1L, idx)
+        }
       }
 
       list(model = model, sx = sx, sf = sf, ncomp_use = ncomp_use)
