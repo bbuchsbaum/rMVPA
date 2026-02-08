@@ -31,3 +31,4 @@ test2
 ^test_debug_logging\.R$
 ^tmp_test_vec\.nii$
 ^\.omc$
+^check\.log$
