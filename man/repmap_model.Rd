@@ -42,7 +42,7 @@ vectors (X) to ROI item-level patterns (Y), summarizing mapping rank and fit.
 }
 \details{
 Internally, the item-level seed features (X) and ROI patterns (Y) are column-centered
-prior to reduced-rank regression. Returned voxelwise R² values are in-sample and may be
+prior to reduced-rank regression. Returned voxelwise R-squared values are in-sample and may be
 negative when the mapping underperforms the mean model; this can be useful as a diagnostic
 rather than an error.
 }

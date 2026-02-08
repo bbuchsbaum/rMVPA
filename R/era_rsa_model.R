@@ -1,6 +1,6 @@
-#' ERA-RSA: Encoding–Retrieval Similarity and ER Geometry
+#' ERA-RSA: Encoding-Retrieval Similarity and ER Geometry
 #'
-#' Combines first-order encoding–retrieval similarity (ERA) with second-order
+#' Combines first-order encoding-retrieval similarity (ERA) with second-order
 #' RSA between encoding and retrieval representational geometries. Works with
 #' \code{run_regional()} and \code{run_searchlight()} using the standard rMVPA
 #' iterators.
@@ -17,7 +17,7 @@
 #' \describe{
 #'   \item{n_items}{
 #'     Number of unique item keys contributing to this ROI/sphere
-#'     (i.e., length of the common encoding–retrieval item set).
+#'     (i.e., length of the common encoding-retrieval item set).
 #'   }
 #'   \item{era_top1_acc}{
 #'     Top-1 encoding\eqn{\rightarrow}retrieval accuracy at the item level:
@@ -25,7 +25,7 @@
 #'     (over items) has the same \code{key_var}.
 #'   }
 #'   \item{era_diag_mean}{
-#'     Mean encoding–retrieval similarity for matching items
+#'     Mean encoding-retrieval similarity for matching items
 #'     (mean of the diagonal of the encoding\eqn{\times}retrieval similarity
 #'     matrix).
 #'   }
@@ -49,7 +49,7 @@
 #'     diagonal ERA minus the mean similarity to items in different blocks.
 #'   }
 #'   \item{era_lag_cor}{
-#'     Lag–ERA correlation when \code{item_lag} is supplied: Spearman
+#'     Lag-ERA correlation when \code{item_lag} is supplied: Spearman
 #'     correlation between diagonal ERA values and the per-item lag
 #'     (e.g., retrieval minus encoding onset), using complete cases only.
 #'   }
@@ -203,7 +203,7 @@ era_rsa_model <- function(dataset,
 
 #' ERA-RSA per-ROI processor
 #'
-#' Computes first-order ERA metrics and second-order encoding–retrieval geometry
+#' Computes first-order ERA metrics and second-order encoding-retrieval geometry
 #' for a single ROI/searchlight sphere. Designed to be passed as the `processor`
 #' argument to `mvpa_iterate()` (used by run_regional/run_searchlight methods).
 #'
@@ -430,6 +430,8 @@ process_roi.era_rsa_model <- function(mod_spec,
 #' @param method Searchlight method: "standard" or "randomized" (default: "standard").
 #' @param niter Number of iterations for randomized searchlight (default: 4).
 #' @param ... Additional arguments passed to underlying methods (e.g., \code{batch_size}).
+#' @param drop_probs Logical; if TRUE, drop per-ROI probability matrices after metrics. Default FALSE.
+#' @param fail_fast Logical; if TRUE, stop on first ROI error. Default FALSE.
 #'
 #' @export
 run_searchlight.era_rsa_model <- function(model_spec,

@@ -15,7 +15,7 @@ expected_features(
 \arguments{
 \item{train}{feature_sets object for encoding-domain predictors.}
 
-\item{gamma}{Numeric matrix of shape (T_rec × T_enc) or (T_rec × (T_enc+1)) if null column present.}
+\item{gamma}{Numeric matrix of shape (T_rec x T_enc) or (T_rec x (T_enc+1)) if null column present.}
 
 \item{drop_null}{Logical; if TRUE and gamma has T_enc+1 columns, drop the first column.}
 
@@ -27,7 +27,7 @@ expected_features(
 A feature_sets object for recall-domain predictors with the same set layout.
 }
 \description{
-Given encoding-domain predictors and a recall→encoding alignment posterior,
+Given encoding-domain predictors and a recall->encoding alignment posterior,
 compute expected recall-domain predictors:
 \deqn{X_{rec} = \Gamma X_{enc}.}
 }
@@ -40,8 +40,8 @@ recall TRs do not have a known one-to-one correspondence with encoding TRs.
 `gamma` should be a numeric matrix where rows index recall TRs and columns
 index encoding TRs:
 \itemize{
-  \item without a NULL state: \code{(T_rec × T_enc)}
-  \item with a NULL state in the first column: \code{(T_rec × (T_enc+1))}
+  \item without a NULL state: \code{(T_rec x T_enc)}
+  \item with a NULL state in the first column: \code{(T_rec x (T_enc+1))}
 }
 
 When a NULL column is present and `drop_null = TRUE`, the NULL column is dropped.

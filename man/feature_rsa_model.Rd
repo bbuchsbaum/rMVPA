@@ -36,21 +36,21 @@ and including the component limit (`max_comps`).}
 \item{crossval}{Optional cross-validation specification.}
 
 \item{ncomp_selection}{Character string controlling how the number of components
-is chosen for \code{pls} and \code{pca} methods. One of:
+is chosen for \code{pls} and \code{pca} methods.  One of:
 \describe{
-\item{loo}{(Default) Fit with leave-one-out validation and select the
-fewest components within one standard error of the minimum RMSEP
-(\code{pls::selectNcomp}, method \code{"onesigma"}).}
-\item{pve}{Keep the fewest components whose cumulative explained
-variance reaches \code{pve_threshold} of the total explained by all
-fitted components.}
-\item{max}{Use all \code{max_comps} components (legacy behaviour).}
+  \item{loo}{(Default) Fit with leave-one-out validation and select the
+    fewest components within one standard error of the minimum RMSEP
+    (\code{pls::selectNcomp}, method \code{"onesigma"}).}
+  \item{pve}{Keep the fewest components whose cumulative explained
+    variance reaches \code{pve_threshold} of the total explained by all
+    fitted components.}
+  \item{max}{Use all \code{max_comps} components (legacy behaviour).}
 }
 Ignored when \code{method = "glmnet"}.}
 
-\item{pve_threshold}{Numeric in (0, 1]. When \code{ncomp_selection = "pve"},
+\item{pve_threshold}{Numeric in (0, 1].  When \code{ncomp_selection = "pve"},
 the proportion of total explained X-variance at which to stop adding
-components. Default 0.9.}
+components.  Default 0.9.}
 
 \item{alpha}{Numeric value between 0 and 1, only used when method="glmnet". Controls the elastic net
 mixing parameter: 1 for lasso (default), 0 for ridge, values in between for a mixture.
@@ -93,35 +93,40 @@ sets an upper limit on the number of components fitted:
     response. Regularisation (lambda) can be auto-selected via \code{cv_glmnet=TRUE}.
 
 For \code{pls} and \code{pca}, the \code{ncomp_selection} argument determines how many
-of the fitted components are actually used for prediction. The default
+of the fitted components are actually used for prediction.  The default
 (\code{"loo"}) fits the model with leave-one-out cross-validation and picks
 the fewest components within one SE of the minimum RMSEP.
 
-\strong{Performance Metrics} (computed by \code{evaluate_model} after cross-validation):
+**Performance Metrics** (computed by `evaluate_model` after cross-validation):
 
-Condition-pattern metrics (trial x trial correlation matrix):
-  - \code{pattern_correlation}: Average correlation between the predicted and observed
+*Condition-pattern metrics* (trial x trial correlation matrix):
+  - `pattern_correlation`: Average correlation between the predicted and observed
     spatial patterns for corresponding trials (diagonal of the trial x trial
     correlation matrix computed across voxels).
-  - \code{pattern_discrimination}: \code{pattern_correlation} minus the mean off-diagonal
-    correlation. Measures how much better the model predicts the correct trial's
+  - `pattern_discrimination`: `pattern_correlation` minus the mean off-diagonal
+    correlation.  Measures how much better the model predicts the correct trial's
     pattern compared to incorrect trials.
-  - \code{pattern_rank_percentile}: For each trial, percentile rank of the correct
-    pattern match among all candidates. 0.5 = chance, 1 = perfect.
+  - `pattern_rank_percentile`: For each trial, percentile rank of the correct
+    pattern match among all candidates.  0.5 = chance, 1 = perfect.
 
-Global reconstruction metrics:
-  - \code{voxel_correlation}: Correlation of the flattened predicted and observed
+*Representational geometry*:
+  - `rdm_correlation`: Spearman correlation between the upper triangles of the
+    observed and predicted RDMs (defined as 1 - trial-by-trial correlation
+    across voxels).  Captures similarity of representational geometry.
+
+*Global reconstruction metrics*:
+  - `voxel_correlation`: Correlation of the flattened predicted and observed
     matrices (all trials x all voxels).
-  - \code{mse}: Mean Squared Error.
-  - \code{r_squared}: 1 - RSS/TSS.
+  - `mse`: Mean Squared Error.
+  - `r_squared`: 1 - RSS/TSS.
 
-Voxel encoding fidelity:
-  - \code{mean_voxelwise_temporal_cor}: Average per-voxel temporal correlation
+*Voxel encoding fidelity*:
+  - `mean_voxelwise_temporal_cor`: Average per-voxel temporal correlation
     between predicted and observed time courses.
 
-  - \code{p_*}, \code{z_*}: If \code{nperm > 0}, permutation-based p-values and z-scores for
+  - `p_*`, `z_*`: If `nperm > 0`, permutation-based p-values and z-scores for
     the above metrics.
 
-The number of components actually used (\code{ncomp}) for the region/searchlight is
+The number of components actually used (`ncomp`) for the region/searchlight is
 also included in the performance output.
 }

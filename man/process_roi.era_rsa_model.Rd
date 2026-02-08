@@ -7,7 +7,7 @@
 \method{process_roi}{era_rsa_model}(mod_spec, roi, rnum, center_global_id = NA, ...)
 }
 \description{
-Computes first-order ERA metrics and second-order encoding–retrieval geometry
+Computes first-order ERA metrics and second-order encoding-retrieval geometry
 for a single ROI/searchlight sphere. Designed to be passed as the `processor`
 argument to `mvpa_iterate()` (used by run_regional/run_searchlight methods).
 }

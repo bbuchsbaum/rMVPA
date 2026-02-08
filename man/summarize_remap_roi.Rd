@@ -14,7 +14,7 @@ A tibble with one row per ROI containing:
   - `roinum`: ROI id
   - `mean_rank`: mean adapter rank
   - `mean_lambda`: mean selected lambda
-  - `mean_roi_improv`: mean fraction of P→M mismatch explained
+  - `mean_roi_improv`: mean fraction of P->M mismatch explained
   - `mean_delta_frob`: mean Frobenius norm of the learned correction
 }
 \description{

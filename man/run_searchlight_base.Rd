@@ -28,6 +28,12 @@ run_searchlight_base(
 \item{combiner}{Either a function that combines partial results or a string
 ("pool", "average") that selects a built-in combiner.}
 
+\item{drop_probs}{Logical; if TRUE, drop per-ROI probability matrices after computing metrics to save memory. Default FALSE.}
+
+\item{fail_fast}{Logical; if TRUE, stop immediately on first ROI error instead of continuing. Default FALSE.}
+
+\item{k}{Optional integer; number of cross-validation folds. Default NULL (use model default).}
+
 \item{...}{Additional arguments passed on to \code{do_standard} or \code{do_randomized}.}
 }
 \value{

@@ -90,7 +90,7 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
     
     # Use a dense mask by default so small synthetic datasets yield valid
     # searchlights even at the edges (multivariate methods still enforce
-    # their own minimum voxel count down‑stream).
+    # their own minimum voxel count downstream).
     mask <- as.logical(neuroim2::NeuroVol(array(1, D), neuroim2::NeuroSpace(D, spacing)))
     
     if (external_test) {

@@ -3,7 +3,7 @@
 \name{banded_ridge_da_model}
 \alias{banded_ridge_da_model}
 \alias{grouped_ridge_da_model}
-\title{Grouped (banded) ridge domain-adaptation model (continuous predictors → brain)}
+\title{Grouped (banded) ridge domain-adaptation model (continuous predictors -> brain)}
 \usage{
 banded_ridge_da_model(
   dataset,
@@ -77,8 +77,10 @@ If provided, overrides `recall_nfolds`.}
 (default: all sets).}
 
 \item{return_diagnostics}{Logical; if TRUE, store fold-level diagnostics (fold definitions,
-per-fold R²/MSE, hyperparameters) in `regional_mvpa_result$fits` when running
+per-fold R-squared/MSE, hyperparameters) in `regional_mvpa_result$fits` when running
 `run_regional()` (default FALSE).}
+
+\item{...}{Additional arguments (currently unused).}
 }
 \value{
 A model spec of class `banded_ridge_da_model` compatible with `run_regional()` and `run_searchlight()`.
@@ -86,8 +88,8 @@ A model spec of class `banded_ridge_da_model` compatible with `run_regional()` a
 A model spec of class `banded_ridge_da_model` compatible with `run_regional()` and `run_searchlight()`.
 }
 \description{
-Fit multivariate linear models from continuous predictors (TR×features)
-to ROI/searchlight activity (TR×voxels), with predictors organized into named
+Fit multivariate linear models from continuous predictors (TR x features)
+to ROI/searchlight activity (TR x voxels), with predictors organized into named
 \emph{feature sets}. This supports both:
 \itemize{
   \item \strong{domain adaptation}: allow or enforce similarity between train/source and test/target mappings, and
@@ -119,7 +121,7 @@ ridge penalty is applied per-column based on that set, i.e. a diagonal penalty
   \item \emph{stacked}: fit a single \eqn{\beta} by stacking train and test rows
         (with test down-weighted by `alpha_recall`/`alpha_target` and optional test TR weights from `design$X_test$row_weights`).
   \item \emph{coupled}: fit \eqn{\beta_{train}} and \eqn{\beta_{test}} with coupling strength `rho`,
-        allowing a controlled train→test shift while still borrowing strength across domains.
+        allowing a controlled train->test shift while still borrowing strength across domains.
 }
 
 \strong{Test/target-time cross-validation (default).}

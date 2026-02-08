@@ -113,7 +113,7 @@ by_set <- function(set, order = NULL) {
 #' @details
 #' You can supply predictors in two equivalent ways:
 #' \enumerate{
-#'   \item A single matrix \code{X} (observations × features) plus a set specification
+#'   \item A single matrix \code{X} (observations x features) plus a set specification
 #'         via `blocks()` or `by_set()`.
 #'   \item A named list of matrices, one per set, each with the same number of rows.
 #'         The matrices are column-bound in `set_order`.
@@ -123,12 +123,12 @@ by_set <- function(set, order = NULL) {
 #' \itemize{
 #'   \item `X`: the concatenated numeric predictor matrix,
 #'   \item `set`: a factor of length `ncol(X)` giving per-column set membership,
-#'   \item `indices`: a named list mapping set name → integer column indices,
+#'   \item `indices`: a named list mapping set name -> integer column indices,
 #'   \item `dims`: number of columns per set,
 #'   \item `row_weights`: optional observation weights (length `nrow(X)`).
 #' }
 #'
-#' @param x Either (1) a numeric matrix (observations × features) with a set spec,
+#' @param x Either (1) a numeric matrix (observations x features) with a set spec,
 #'   or (2) a named list of numeric matrices, one per set (all with the same number
 #'   of rows), which will be column-bound in `set_order`.
 #' @param spec A set spec as created by `blocks()` or `by_set()` (required when `x` is a matrix).
@@ -287,7 +287,7 @@ print.feature_sets <- function(x, ...) {
 
 #' Build expected-domain features from a soft alignment matrix
 #'
-#' Given encoding-domain predictors and a recall→encoding alignment posterior,
+#' Given encoding-domain predictors and a recall->encoding alignment posterior,
 #' compute expected recall-domain predictors:
 #' \deqn{X_{rec} = \Gamma X_{enc}.}
 #'
@@ -299,8 +299,8 @@ print.feature_sets <- function(x, ...) {
 #' `gamma` should be a numeric matrix where rows index recall TRs and columns
 #' index encoding TRs:
 #' \itemize{
-#'   \item without a NULL state: \code{(T_rec × T_enc)}
-#'   \item with a NULL state in the first column: \code{(T_rec × (T_enc+1))}
+#'   \item without a NULL state: \code{(T_rec x T_enc)}
+#'   \item with a NULL state in the first column: \code{(T_rec x (T_enc+1))}
 #' }
 #'
 #' When a NULL column is present and `drop_null = TRUE`, the NULL column is dropped.
@@ -310,7 +310,7 @@ print.feature_sets <- function(x, ...) {
 #' renormalized to sum to 1 and `row_weights` is set to 1.
 #'
 #' @param train feature_sets object for encoding-domain predictors.
-#' @param gamma Numeric matrix of shape (T_rec × T_enc) or (T_rec × (T_enc+1)) if null column present.
+#' @param gamma Numeric matrix of shape (T_rec x T_enc) or (T_rec x (T_enc+1)) if null column present.
 #' @param drop_null Logical; if TRUE and gamma has T_enc+1 columns, drop the first column.
 #' @param renormalize Logical; if TRUE, renormalize rows to sum to 1 after dropping null.
 #' @param eps Small constant to avoid division by zero in renormalization.

@@ -32,12 +32,12 @@ grouped_ridge_da(
 \arguments{
 \item{dataset}{mvpa_dataset with train_data/test_data.}
 
-\item{X_train}{Train predictor matrix (T_train × D) or a `feature_sets` object.}
+\item{X_train}{Train predictor matrix (T_train x D) or a `feature_sets` object.}
 
 \item{spec}{Feature-set spec for matrix inputs, created by `blocks()` or `by_set()`.
 Ignored if `X_train` is already a `feature_sets`.}
 
-\item{X_test}{Optional test predictor matrix (T_test × D) or a `feature_sets` object.}
+\item{X_test}{Optional test predictor matrix (T_test x D) or a `feature_sets` object.}
 
 \item{gamma}{Optional alignment matrix used when `X_test` is NULL. See `expected_features()`.}
 
@@ -64,7 +64,7 @@ A model spec of class `banded_ridge_da_model`.
 Preferred name for `banded_ridge_da()`. See that function for full details.
 }
 \details{
-Use this when you already have \code{X_train} (TR×features) as a single matrix
+Use this when you already have \code{X_train} (TR x features) as a single matrix
 and you want to declare sets via `blocks()` or `by_set()`.
 }
 \examples{

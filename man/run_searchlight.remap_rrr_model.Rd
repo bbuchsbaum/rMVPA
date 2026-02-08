@@ -28,11 +28,17 @@
 \item{combiner}{Either a function that combines partial results or a string
 ("pool", "average") that selects a built-in combiner.}
 
+\item{drop_probs}{Logical; if TRUE, drop per-ROI probability matrices after metrics. Default TRUE for this model.}
+
+\item{return_pobserved}{Logical; if TRUE, return voxel-by-trial probability maps. Default FALSE.}
+
+\item{fail_fast}{Logical; if TRUE, stop on first ROI error. Default FALSE.}
+
 \item{...}{Additional arguments passed on to \code{do_standard} or \code{do_randomized}.}
 }
 \description{
 Defaults to a lean, memory-friendly configuration:
 - drop_probs = TRUE strips per-ROI probability matrices after metrics.
-- return_pobserved = FALSE skips voxel×trial probability maps.
+- return_pobserved = FALSE skips voxel x trial probability maps.
 - combiner = "average" (combine_randomized) for randomized/resampled.
 }

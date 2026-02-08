@@ -1,7 +1,7 @@
 #' Feature-sets design (mvpa_design extension for continuous regression)
 #'
 #' `feature_sets_design()` defines a small `mvpa_design` extension that attaches
-#' grouped continuous predictors for stimulus→brain regression.
+#' grouped continuous predictors for stimulus->brain regression.
 #'
 #' This mirrors the pattern in `hrfdecoder_design()`: rMVPA's core infrastructure
 #' expects `mvpa_design` fields like `train_design`, `y_train`, etc. For continuous
@@ -12,7 +12,7 @@
 #' \strong{Where the data live.}
 #' \itemize{
 #'   \item Predictors live on the design: `design$X_train` and `design$X_test` (both `feature_sets`).
-#'   \item Responses live on the dataset: `dataset$train_data` and `dataset$test_data` (TR×voxel matrices per ROI).
+#'   \item Responses live on the dataset: `dataset$train_data` and `dataset$test_data` (TRxvoxel matrices per ROI).
 #' }
 #'
 #' \strong{Why `y_train` is a dummy.}
@@ -40,11 +40,11 @@
 #'   \code{\link{banded_ridge_da_model}}, \code{\link{grouped_ridge_da_model}},
 #'   \code{\link{banded_ridge_da}}, \code{\link{grouped_ridge_da}}
 #' @examples
-#' # Train predictors (TR × features), split into named sets:
+#' # Train predictors (TR x features), split into named sets:
 #' X_enc <- matrix(rnorm(20 * 8), 20, 8)
 #' fs_enc <- feature_sets(X_enc, blocks(low = 3, sem = 5))
 #'
-#' # Test predictors (TR × features), for example from a soft alignment:
+#' # Test predictors (TR x features), for example from a soft alignment:
 #' gamma <- matrix(runif(10 * 20), 10, 20)
 #' gamma <- gamma / rowSums(gamma)
 #' fs_rec <- expected_features(fs_enc, gamma, drop_null = FALSE, renormalize = TRUE)
@@ -109,12 +109,12 @@ print.feature_sets_design <- function(x, ...) {
   cat("feature_sets_design\n")
   cat("=================\n\n")
   if (!is.null(x$X_train) && inherits(x$X_train, "feature_sets")) {
-    cat(sprintf("Train (encoding): %d × %d (sets: %s)\n",
+    cat(sprintf("Train (encoding): %d x %d (sets: %s)\n",
                 nrow(x$X_train$X), ncol(x$X_train$X),
                 paste(names(x$X_train$indices), collapse = ", ")))
   }
   if (!is.null(x$X_test) && inherits(x$X_test, "feature_sets")) {
-    cat(sprintf("Test (recall):    %d × %d\n",
+    cat(sprintf("Test (recall):    %d x %d\n",
                 nrow(x$X_test$X), ncol(x$X_test$X)))
     if (!is.null(x$block_var_test)) {
       cat(sprintf("Recall blocks:    %d\n", length(unique(x$block_var_test))))

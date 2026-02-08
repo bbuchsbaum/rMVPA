@@ -358,7 +358,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
     
     ret <- wrap_out(perf_mat, model_spec$dataset, ind)
     
-    # Optionally construct a 4D (space × trial) map of
+    # Optionally construct a 4D (space x trial) map of
     # prob_observed for classification results, when available.
     has_results <- any(unlist(purrr::map(good_results$result, function(x) !is.null(x))))
     if (has_results) {
@@ -1248,6 +1248,9 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' @param niter Number of iterations if \code{method="randomized"}.
 #' @param combiner Either a function that combines partial results or a string
 #'        ("pool", "average") that selects a built-in combiner.
+#' @param drop_probs Logical; if TRUE, drop per-ROI probability matrices after computing metrics to save memory. Default FALSE.
+#' @param fail_fast Logical; if TRUE, stop immediately on first ROI error instead of continuing. Default FALSE.
+#' @param k Optional integer; number of cross-validation folds. Default NULL (use model default).
 #' @param ... Additional arguments passed on to \code{do_standard} or \code{do_randomized}.
 #'
 #' @return The result object from \code{do_standard} or \code{do_randomized} (often a \code{searchlight_result} or similar).

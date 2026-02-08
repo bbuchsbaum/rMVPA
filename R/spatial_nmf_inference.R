@@ -596,6 +596,7 @@ spatial_nmf_stability <- function(x = NULL,
 #' @param ref_map Optional reference map to copy metadata from.
 #'
 #' @return A list with `z` and `p` component maps.
+#' @importFrom neuroim2 values
 #' @export
 spatial_nmf_voxelwise_stats <- function(x = NULL,
                                         stability = NULL,
@@ -654,14 +655,28 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
   z_maps <- vector("list", k)
   p_maps <- vector("list", k)
   for (i in seq_len(k)) {
-    z_map <- mean_maps[[i]]
-    p_map <- mean_maps[[i]]
     z_vals <- neuroim2::values(mean_maps[[i]]) /
       pmax(neuroim2::values(sd_maps[[i]]), .Machine$double.eps)
-    neuroim2::values(z_map) <- z_vals
-    neuroim2::values(p_map) <- 2 * stats::pnorm(-abs(z_vals))
-    z_maps[[i]] <- z_map
-    p_maps[[i]] <- p_map
+    p_vals <- 2 * stats::pnorm(-abs(z_vals))
+    ref <- mean_maps[[i]]
+    if (inherits(ref, "SparseNeuroVol")) {
+      z_maps[[i]] <- neuroim2::SparseNeuroVol(
+        data = as.numeric(z_vals), space = neuroim2::space(ref),
+        indices = as.integer(neuroim2::indices(ref)))
+      p_maps[[i]] <- neuroim2::SparseNeuroVol(
+        data = as.numeric(p_vals), space = neuroim2::space(ref),
+        indices = as.integer(neuroim2::indices(ref)))
+    } else if (inherits(ref, "NeuroSurface")) {
+      z_maps[[i]] <- neurosurf::NeuroSurface(
+        geometry = neurosurf::geometry(ref),
+        indices = ref@indices, data = as.numeric(z_vals))
+      p_maps[[i]] <- neurosurf::NeuroSurface(
+        geometry = neurosurf::geometry(ref),
+        indices = ref@indices, data = as.numeric(p_vals))
+    } else {
+      z_maps[[i]] <- neuroim2::NeuroVol(as.numeric(z_vals), neuroim2::space(ref))
+      p_maps[[i]] <- neuroim2::NeuroVol(as.numeric(p_vals), neuroim2::space(ref))
+    }
   }
 
   list(z = z_maps, p = p_maps)

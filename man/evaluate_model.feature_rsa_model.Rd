@@ -16,20 +16,39 @@ evaluate_model.feature_rsa_model(
 \arguments{
 \item{object}{The feature RSA model}
 
-\item{predicted}{Matrix of predicted values (from feature space F to voxel space X)}
+\item{predicted}{Matrix of predicted values (observations x voxels)}
 
-\item{observed}{Matrix of observed values (actual voxel space X)}
+\item{observed}{Matrix of observed values (observations x voxels)}
 
-\item{nperm}{Number of permutations for statistical testing (default: 0, no permutation)}
+\item{nperm}{Number of permutations for statistical testing (default: 0)}
 
 \item{save_distributions}{Logical indicating whether to save full permutation distributions}
 
 \item{...}{Additional arguments}
 }
 \value{
-A list containing performance metrics and optional permutation results
+A list containing:
+  \describe{
+    \item{pattern_correlation}{Mean diagonal of the trial x trial correlation
+      matrix -- how well the predicted spatial pattern for each trial matches
+      the correct observed pattern.}
+    \item{pattern_discrimination}{Diagonal minus off-diagonal of the trial x
+      trial correlation matrix -- how much better the correct trial is matched
+      than incorrect trials.}
+    \item{pattern_rank_percentile}{For each trial, percentile rank of the
+      correct pattern among all candidates.  0.5 = chance, 1 = perfect.}
+    \item{voxel_correlation}{Correlation of the flattened predicted and
+      observed matrices (global reconstruction quality).}
+    \item{mse}{Mean squared error.}
+    \item{r_squared}{1 - RSS/TSS.}
+    \item{mean_voxelwise_temporal_cor}{Average per-voxel temporal correlation
+      (encoding fidelity).}
+    \item{permutation_results}{If \code{nperm > 0}, a list with p-values and
+      z-scores for each metric.}
+  }
 }
 \description{
-Computes correlation-based metrics (diag correlation, mean correlation, voxel correlation),
-MSE, R^2, and optionally performs permutation tests (via a helper function).
+Computes condition-pattern metrics (trial x trial correlation matrix),
+voxel-level encoding metrics, global reconstruction metrics (MSE, R-squared),
+and optionally performs permutation tests.
 }

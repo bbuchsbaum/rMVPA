@@ -339,6 +339,8 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
 #' @param processor Optional custom processing function. If NULL, uses default processor.
 #'        Must accept parameters (obj, roi, rnum) and return a tibble.
 #' @param analysis_type Character indicating the type of analysis. Defaults to "searchlight".
+#' @param drop_probs Logical; if TRUE, drop per-ROI probability matrices after computing metrics. Default FALSE.
+#' @param fail_fast Logical; if TRUE, stop immediately on first ROI error. Default FALSE.
 #'
 #' @details
 #' The function processes ROIs in batches to manage memory usage. For each batch:

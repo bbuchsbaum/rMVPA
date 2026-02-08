@@ -2,11 +2,14 @@
 #'
 #' Defaults to a lean, memory-friendly configuration:
 #' - drop_probs = TRUE strips per-ROI probability matrices after metrics.
-#' - return_pobserved = FALSE skips voxel×trial probability maps.
+#' - return_pobserved = FALSE skips voxel x trial probability maps.
 #' - combiner = "average" (combine_randomized) for randomized/resampled.
 #'
 #' @param model_spec A \code{remap_rrr_model} object.
 #' @inheritParams run_searchlight_base
+#' @param drop_probs Logical; if TRUE, drop per-ROI probability matrices after metrics. Default TRUE for this model.
+#' @param return_pobserved Logical; if TRUE, return voxel-by-trial probability maps. Default FALSE.
+#' @param fail_fast Logical; if TRUE, stop on first ROI error. Default FALSE.
 #' @export
 run_searchlight.remap_rrr_model <- function(model_spec,
                                             radius = 8,

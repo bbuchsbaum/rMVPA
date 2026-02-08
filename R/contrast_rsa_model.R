@@ -1355,6 +1355,12 @@ process_roi.contrast_rsa_model <- function(mod_spec,
 #'  message("It can be time-consuming and depends on prior setup.")
 #' }
 #'
+#' @param radius Numeric searchlight radius (default: NULL uses dataset default).
+#' @param method Character: "standard" or "randomized".
+#' @param niter Number of iterations for randomized searchlight.
+#' @param drop_probs Logical; if TRUE, drop per-ROI probability matrices after metrics. Default FALSE.
+#' @param fail_fast Logical; if TRUE, stop on first ROI error. Default FALSE.
+#' @param ... Additional arguments passed to underlying methods.
 #' @export
 #' @importFrom futile.logger flog.info
 run_searchlight.contrast_rsa_model <- function(model_spec,

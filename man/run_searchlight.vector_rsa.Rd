@@ -23,6 +23,10 @@
 
 \item{niter}{Number of iterations if \code{method="randomized"}.}
 
+\item{drop_probs}{Logical; if TRUE, drop per-ROI probability matrices after computing metrics to save memory. Default FALSE.}
+
+\item{fail_fast}{Logical; if TRUE, stop immediately on first ROI error instead of continuing. Default FALSE.}
+
 \item{...}{Additional arguments passed on to \code{do_standard} or \code{do_randomized}.}
 }
 \description{

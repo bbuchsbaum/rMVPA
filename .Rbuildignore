@@ -30,3 +30,4 @@ test2
 ^vignettes/albers\.js$
 ^test_debug_logging\.R$
 ^tmp_test_vec\.nii$
+^\.omc$

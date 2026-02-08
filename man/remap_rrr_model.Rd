@@ -52,7 +52,7 @@ for identity/no adaptation fallback.}
 
 \item{return_adapter}{logical; if TRUE, store diagnostics (e.g., per-voxel R2, per-fold stats) in `result$predictor`.}
 
-\item{lambda_grid}{Numeric vector of candidate \eqn{\lambda} values for shrinkage toward naïve; defaults to `c(0, .25, .5, .75, 1)`.}
+\item{lambda_grid}{Numeric vector of candidate \eqn{\lambda} values for shrinkage toward naive; defaults to `c(0, .25, .5, .75, 1)`.}
 
 \item{compute_naive_baseline}{logical; if TRUE, also compute performance with \eqn{\lambda = 0} (no adaptor) to provide baseline metrics (default FALSE).}
 
@@ -71,7 +71,7 @@ on the whitened source prototypes \eqn{X_w}. Predicted target templates are then
 where \eqn{\lambda \in [0,1]} is chosen on the training items (prototype self-retrieval).
 Classification of held-out target trials is performed by correlating their whitened
 patterns with \eqn{\hat Y_w}. When the data do not support a reliable residual, the
-method automatically shrinks to the naïve cross-decoder (\eqn{\lambda = 0}).
+method automatically shrinks to the naive cross-decoder (\eqn{\lambda = 0}).
 }
 \section{Performance metrics (added to base metrics)}{
 
@@ -81,7 +81,7 @@ method automatically shrinks to the naïve cross-decoder (\eqn{\lambda = 0}).
   \item `adapter_rank`: Mean adaptor rank used (LOKO folds or single fit).
   \item `adapter_sv1`: Mean leading singular value of the adaptor across folds.
   \item `adapter_mean_r2`: Mean per-voxel cross-validated R\eqn{^2} (LOKO only).
-  \item `remap_improv`: Mean relative reduction in residual sum of squares vs. naïve (Y\_w - X\_w).
+  \item `remap_improv`: Mean relative reduction in residual sum of squares vs. naive (\code{Y_w - X_w}).
   \item `delta_frob_mean`: Mean Frobenius norm of \eqn{\lambda \Delta} (magnitude of the learned correction).
   \item `lambda_mean`: Mean selected \eqn{\lambda} across folds or the single fit.
   \item `n_pairs_used`: Number of paired prototypes used.
@@ -95,9 +95,9 @@ If `return_adapter = TRUE`, the result also includes ROI-level diagnostics (e.g.
 \itemize{
   \item Joint whitening (shared covariance) puts perception and memory in the same coordinates.
   \item Residual RRR learns a low-rank correction \eqn{\Delta} on \eqn{R_w = Y_w - X_w}.
-  \item Automatic shrinkage to naïve via \eqn{\lambda} selection on training items.
+  \item Automatic shrinkage to naive via \eqn{\lambda} selection on training items.
   \item Prediction/classification by correlation to \eqn{\hat Y_w} in the whitened space.
-  \item Fallback to naïve cross-decoding when `rank = 0` or `rrpack` is unavailable.
+  \item Fallback to naive cross-decoding when `rank = 0` or `rrpack` is unavailable.
 }
 }
 
@@ -105,11 +105,11 @@ If `return_adapter = TRUE`, the result also includes ROI-level diagnostics (e.g.
 
 When `leave_one_key_out = TRUE`, REMAP performs a leave-one-key-out (LOKO)
 loop over items to estimate adaptor diagnostics (e.g. per-voxel R2 and
-improvement over naïve) in an item-wise cross-validated fashion. This is
+improvement over naive) in an item-wise cross-validated fashion. This is
 computationally heavy but yields less optimistic adaptor-level summaries.
 Test-set classification performance (accuracy/AUC on `dataset$test_data`)
 is always evaluated on trials that were not used to fit the adaptor, so
-standard train→test performance remains out-of-sample regardless of the
+standard train->test performance remains out-of-sample regardless of the
 LOKO setting. For large searchlight analyses where adaptor diagnostics are
 secondary, it is often practical to set `leave_one_key_out = FALSE` and use
 a fixed rank to obtain much faster single-fit adapters per ROI.

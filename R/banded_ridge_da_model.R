@@ -1,7 +1,7 @@
-#' Grouped (banded) ridge domain-adaptation model (continuous predictors → brain)
+#' Grouped (banded) ridge domain-adaptation model (continuous predictors -> brain)
 #'
-#' Fit multivariate linear models from continuous predictors (TR×features)
-#' to ROI/searchlight activity (TR×voxels), with predictors organized into named
+#' Fit multivariate linear models from continuous predictors (TR x features)
+#' to ROI/searchlight activity (TR x voxels), with predictors organized into named
 #' \emph{feature sets}. This supports both:
 #' \itemize{
 #'   \item \strong{domain adaptation}: allow or enforce similarity between train/source and test/target mappings, and
@@ -31,7 +31,7 @@
 #'   \item \emph{stacked}: fit a single \eqn{\beta} by stacking train and test rows
 #'         (with test down-weighted by `alpha_recall`/`alpha_target` and optional test TR weights from `design$X_test$row_weights`).
 #'   \item \emph{coupled}: fit \eqn{\beta_{train}} and \eqn{\beta_{test}} with coupling strength `rho`,
-#'         allowing a controlled train→test shift while still borrowing strength across domains.
+#'         allowing a controlled train->test shift while still borrowing strength across domains.
 #' }
 #'
 #' \strong{Test/target-time cross-validation (default).}
@@ -69,8 +69,9 @@
 #' @param delta_sets Optional character vector of set names to compute \eqn{\Delta R^2} for
 #'   (default: all sets).
 #' @param return_diagnostics Logical; if TRUE, store fold-level diagnostics (fold definitions,
-#'   per-fold R²/MSE, hyperparameters) in `regional_mvpa_result$fits` when running
+#'   per-fold R-squared/MSE, hyperparameters) in `regional_mvpa_result$fits` when running
 #'   `run_regional()` (default FALSE).
+#' @param ... Additional arguments (currently unused).
 #'
 #' @return A model spec of class `banded_ridge_da_model` compatible with `run_regional()` and `run_searchlight()`.
 #' @export
@@ -256,14 +257,14 @@ grouped_ridge_da_model <- function(dataset,
 #'   \item the final `banded_ridge_da_model` spec.
 #' }
 #'
-#' Use this when you already have \code{X_train} (TR×features) as a single matrix
+#' Use this when you already have \code{X_train} (TR x features) as a single matrix
 #' and you want to declare sets via `blocks()` or `by_set()`.
 #'
 #' @param dataset mvpa_dataset with train_data/test_data.
-#' @param X_train Train predictor matrix (T_train × D) or a `feature_sets` object.
+#' @param X_train Train predictor matrix (T_train x D) or a `feature_sets` object.
 #' @param spec Feature-set spec for matrix inputs, created by `blocks()` or `by_set()`.
 #'   Ignored if `X_train` is already a `feature_sets`.
-#' @param X_test Optional test predictor matrix (T_test × D) or a `feature_sets` object.
+#' @param X_test Optional test predictor matrix (T_test x D) or a `feature_sets` object.
 #' @param gamma Optional alignment matrix used when `X_test` is NULL. See `expected_features()`.
 #' @param drop_null,renormalize Passed to `expected_features()` when using `gamma`.
 #' @param block_var_test Optional test run/block vector (length T_test).

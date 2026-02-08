@@ -2,7 +2,7 @@
 % Please edit documentation in R/era_rsa_model.R
 \name{era_rsa_model}
 \alias{era_rsa_model}
-\title{ERA-RSA: Encoding–Retrieval Similarity and ER Geometry}
+\title{ERA-RSA: Encoding-Retrieval Similarity and ER Geometry}
 \usage{
 era_rsa_model(
   dataset,
@@ -78,7 +78,7 @@ item keys. See \code{item_run_enc} for how it is used.}
 A model spec of class "era_rsa_model" compatible with run_regional()/run_searchlight().
 }
 \description{
-Combines first-order encoding–retrieval similarity (ERA) with second-order
+Combines first-order encoding-retrieval similarity (ERA) with second-order
 RSA between encoding and retrieval representational geometries. Works with
 \code{run_regional()} and \code{run_searchlight()} using the standard rMVPA
 iterators.
@@ -97,7 +97,7 @@ and \code{run_searchlight()}:
 \describe{
   \item{n_items}{
     Number of unique item keys contributing to this ROI/sphere
-    (i.e., length of the common encoding–retrieval item set).
+    (i.e., length of the common encoding-retrieval item set).
   }
   \item{era_top1_acc}{
     Top-1 encoding\eqn{\rightarrow}retrieval accuracy at the item level:
@@ -105,7 +105,7 @@ and \code{run_searchlight()}:
     (over items) has the same \code{key_var}.
   }
   \item{era_diag_mean}{
-    Mean encoding–retrieval similarity for matching items
+    Mean encoding-retrieval similarity for matching items
     (mean of the diagonal of the encoding\eqn{\times}retrieval similarity
     matrix).
   }
@@ -129,7 +129,7 @@ and \code{run_searchlight()}:
     diagonal ERA minus the mean similarity to items in different blocks.
   }
   \item{era_lag_cor}{
-    Lag–ERA correlation when \code{item_lag} is supplied: Spearman
+    Lag-ERA correlation when \code{item_lag} is supplied: Spearman
     correlation between diagonal ERA values and the per-item lag
     (e.g., retrieval minus encoding onset), using complete cases only.
   }

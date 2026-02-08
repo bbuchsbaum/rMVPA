@@ -8,7 +8,7 @@ mvpa_iterate(
   mod_spec,
   vox_list,
   ids = 1:length(vox_list),
-  batch_size = as.integer(0.1 * length(ids)),
+  batch_size = NULL,
   verbose = TRUE,
   processor = NULL,
   analysis_type = c("searchlight", "regional"),
@@ -34,6 +34,10 @@ Defaults to 10\% of total ROIs.}
 Must accept parameters (obj, roi, rnum) and return a tibble.}
 
 \item{analysis_type}{Character indicating the type of analysis. Defaults to "searchlight".}
+
+\item{drop_probs}{Logical; if TRUE, drop per-ROI probability matrices after computing metrics. Default FALSE.}
+
+\item{fail_fast}{Logical; if TRUE, stop immediately on first ROI error. Default FALSE.}
 }
 \value{
 A tibble containing results for each ROI with columns:

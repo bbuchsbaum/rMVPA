@@ -166,9 +166,9 @@ coalesce_join2 <- function(x, y,
 #' @details
 #' Typical usage:
 #' \itemize{
-#'   \item \code{set_log_level("INFO")} – default, hides debug messages.
-#'   \item \code{set_log_level("DEBUG")} – show detailed per-batch timing and ROI diagnostics.
-#'   \item \code{set_log_level("WARN")} – only warnings and errors.
+#'   \item \code{set_log_level("INFO")} - default, hides debug messages.
+#'   \item \code{set_log_level("DEBUG")} - show detailed per-batch timing and ROI diagnostics.
+#'   \item \code{set_log_level("WARN")} - only warnings and errors.
 #' }
 #'
 #' This affects all rMVPA logging performed via \pkg{futile.logger}.

@@ -94,6 +94,7 @@ haufe_importance <- function(W, Sigma_x,
 # ---------- model_importance methods ----------
 
 #' @rdname model_importance
+#' @param summary_fun Optional function to summarize the activation pattern matrix rows. Default NULL uses L2 norm.
 #' @export
 model_importance.sda <- function(object, X_train, summary_fun = NULL, ...) {
   W <- extract_weights(object)
@@ -107,6 +108,7 @@ model_importance.sda <- function(object, X_train, summary_fun = NULL, ...) {
 }
 
 #' @rdname model_importance
+#' @param summary_fun Optional function to summarize the activation pattern matrix rows. Default NULL uses L2 norm.
 #' @export
 model_importance.glmnet <- function(object, X_train, summary_fun = NULL, ...) {
   W <- extract_weights(object)

@@ -26,7 +26,7 @@ An object inheriting from `mvpa_design` with class `feature_sets_design`.
 }
 \description{
 `feature_sets_design()` defines a small `mvpa_design` extension that attaches
-grouped continuous predictors for stimulus→brain regression.
+grouped continuous predictors for stimulus->brain regression.
 }
 \details{
 This mirrors the pattern in `hrfdecoder_design()`: rMVPA's core infrastructure
@@ -38,7 +38,7 @@ while the \emph{actual} predictors are carried explicitly as `feature_sets` obje
 \strong{Where the data live.}
 \itemize{
   \item Predictors live on the design: `design$X_train` and `design$X_test` (both `feature_sets`).
-  \item Responses live on the dataset: `dataset$train_data` and `dataset$test_data` (TR×voxel matrices per ROI).
+  \item Responses live on the dataset: `dataset$train_data` and `dataset$test_data` (TRxvoxel matrices per ROI).
 }
 
 \strong{Why `y_train` is a dummy.}
@@ -54,11 +54,11 @@ to define blocked cross-validation on test/target time (e.g. leave-one-run-out),
 to contiguous folds when only a single run is present.
 }
 \examples{
-# Train predictors (TR × features), split into named sets:
+# Train predictors (TR x features), split into named sets:
 X_enc <- matrix(rnorm(20 * 8), 20, 8)
 fs_enc <- feature_sets(X_enc, blocks(low = 3, sem = 5))
 
-# Test predictors (TR × features), for example from a soft alignment:
+# Test predictors (TR x features), for example from a soft alignment:
 gamma <- matrix(runif(10 * 20), 10, 20)
 gamma <- gamma / rowSums(gamma)
 fs_rec <- expected_features(fs_enc, gamma, drop_null = FALSE, renormalize = TRUE)

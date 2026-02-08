@@ -23,6 +23,10 @@
 
 \item{niter}{Number of iterations for randomized searchlight (default: 4).}
 
+\item{drop_probs}{Logical; if TRUE, drop per-ROI probability matrices after metrics. Default FALSE.}
+
+\item{fail_fast}{Logical; if TRUE, stop on first ROI error. Default FALSE.}
+
 \item{...}{Additional arguments passed to underlying methods (e.g., \code{batch_size}).}
 }
 \description{

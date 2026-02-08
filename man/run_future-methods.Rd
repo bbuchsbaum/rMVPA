@@ -37,6 +37,11 @@ A tibble containing the processed results.
 \description{
 Run a future-based computation defined by the object and frame.
 }
+\details{
+If the \pkg{progressr} package is installed, this method emits per-task
+progress updates from parallel workers. Progress handling is enabled for
+the scope of this call and uses the currently configured handlers.
+}
 \examples{
 frame <- tibble::tibble(
   .id = 1:2,

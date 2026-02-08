@@ -7,7 +7,7 @@
 feature_sets(x, spec = NULL, set_order = NULL, row_weights = NULL)
 }
 \arguments{
-\item{x}{Either (1) a numeric matrix (observations × features) with a set spec,
+\item{x}{Either (1) a numeric matrix (observations x features) with a set spec,
 or (2) a named list of numeric matrices, one per set (all with the same number
 of rows), which will be column-bound in `set_order`.}
 
@@ -42,7 +42,7 @@ indices so that downstream models do not need to manually track slices.
 
 You can supply predictors in two equivalent ways:
 \enumerate{
-  \item A single matrix \code{X} (observations × features) plus a set specification
+  \item A single matrix \code{X} (observations x features) plus a set specification
         via `blocks()` or `by_set()`.
   \item A named list of matrices, one per set, each with the same number of rows.
         The matrices are column-bound in `set_order`.
@@ -52,7 +52,7 @@ The returned object includes:
 \itemize{
   \item `X`: the concatenated numeric predictor matrix,
   \item `set`: a factor of length `ncol(X)` giving per-column set membership,
-  \item `indices`: a named list mapping set name → integer column indices,
+  \item `indices`: a named list mapping set name -> integer column indices,
   \item `dims`: number of columns per set,
   \item `row_weights`: optional observation weights (length `nrow(X)`).
 }

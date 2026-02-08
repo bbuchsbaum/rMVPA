@@ -26,6 +26,8 @@ model_importance(object, X_train, ...)
 Required for Haufe-based methods; ignored by tree-based methods.}
 
 \item{...}{Additional arguments passed to methods.}
+
+\item{summary_fun}{Optional function to summarize the activation pattern matrix rows. Default NULL uses L2 norm.}
 }
 \value{
 A numeric vector of length P with per-feature importance scores,

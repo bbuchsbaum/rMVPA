@@ -18,29 +18,17 @@
 \item{model_spec}{A \code{contrast_rsa_model} object created by
 \code{\\link{contrast_rsa_model}}.}
 
-\item{radius}{The radius of the searchlight sphere (in mm for volume data, or
-geodesic distance/vertex count for surface data - interpretation depends
-on the \code{distance_metric} used in \code{neuroim2::searchlight} or
-\code{neurosurf::SurfaceSearchlight}).}
+\item{radius}{Numeric searchlight radius (default: NULL uses dataset default).}
 
-\item{method}{The type of searchlight procedure. Currently, only \code{"standard"}
-is fully supported and recommended for contrast RSA. The "standard" method
-iterates through all voxels/vertices in the mask, treating each as the center
-and calculating its specific contribution metric (e.g., beta_delta). The results
-are combined directly into Q output maps using \code{combine_msreve_standard}.
-\cr
-Using \code{"randomized"} is **not recommended** for this model. While the code
-will run, the default combiner (\code{combine_msreve_standard}) will produce sparse
-maps with values only at the random center locations. A proper interpretation of
-randomized searchlight (averaging results based on voxel coverage) would require a
-different, model-specific combiner (e.g., \code{combine_msreve_randomized}), which
-is not currently implemented due to conceptual challenges in averaging the center-voxel
-specific MS-ReVE metric.}
+\item{method}{Character: "standard" or "randomized".}
 
-\item{niter}{The number of iterations if \code{method = "randomized"} is used (but see note above).}
+\item{niter}{Number of iterations for randomized searchlight.}
 
-\item{...}{Additional arguments passed down to the underlying searchlight
-machinery (e.g., \code{mvpa_iterate}).}
+\item{drop_probs}{Logical; if TRUE, drop per-ROI probability matrices after metrics. Default FALSE.}
+
+\item{fail_fast}{Logical; if TRUE, stop on first ROI error. Default FALSE.}
+
+\item{...}{Additional arguments passed to underlying methods.}
 }
 \value{
 A \code{searchlight_result} object (specifically with class

@@ -256,7 +256,7 @@ as_roi.data_sample <- function(obj, data, ...) {
         length(invalid_vox))
       obj$vox <- intersect(obj$vox, mask_indices)
 
-      # Don't fail for <2 voxels — let filter_roi handle the minimum check
+      # Don't fail for <2 voxels -- let filter_roi handle the minimum check
       if (length(obj$vox) == 0) {
         futile.logger::flog.debug("as_roi.data_sample: 0 voxels remain after mask filtering.")
         train_roi <- structure(list(message = "No voxels remaining after mask filtering"),

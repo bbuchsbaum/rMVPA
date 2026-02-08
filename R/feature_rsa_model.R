@@ -688,10 +688,10 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #' @return A list containing:
 #'   \describe{
 #'     \item{pattern_correlation}{Mean diagonal of the trial x trial correlation
-#'       matrix — how well the predicted spatial pattern for each trial matches
+#'       matrix -- how well the predicted spatial pattern for each trial matches
 #'       the correct observed pattern.}
 #'     \item{pattern_discrimination}{Diagonal minus off-diagonal of the trial x
-#'       trial correlation matrix — how much better the correct trial is matched
+#'       trial correlation matrix -- how much better the correct trial is matched
 #'       than incorrect trials.}
 #'     \item{pattern_rank_percentile}{For each trial, percentile rank of the
 #'       correct pattern among all candidates.  0.5 = chance, 1 = perfect.}
@@ -759,9 +759,9 @@ evaluate_model.feature_rsa_model <- function(object,
              "dims=%d obs x %d vox, obs cols with var=%d (max sd=%.2e), ",
              "pred cols with var=%d (max sd=%.2e). ",
              if (n_pred_ok == 0 && n_obs_ok > 0)
-               "Predictions are constant across trials — the model likely has no predictive power for this ROI."
+               "Predictions are constant across trials -- the model likely has no predictive power for this ROI."
              else if (n_obs_ok == 0)
-               "Observed data has no cross-trial variance — ROI may be too small or data is constant."
+               "Observed data has no cross-trial variance -- ROI may be too small or data is constant."
              else
                "Both predicted and observed lack variance."),
       n_obs, n_vox, n_obs_ok,
