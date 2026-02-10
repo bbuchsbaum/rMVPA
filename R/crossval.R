@@ -586,8 +586,8 @@ crossval_samples.bootstrap_blocked_cross_validation <- function(obj, data, y,...
 crossval_samples.custom_cross_validation <- function(obj, data, y, id = ".id",...) {
   fold <- function(train, test) {
     list(
-      ytrain = y[train],
-      ytest = y[test],
+      ytrain = subset_y(y, train),
+      ytest = subset_y(y, test),
       train = modelr::resample(data, train),
       test = modelr::resample(data, test)
     )
