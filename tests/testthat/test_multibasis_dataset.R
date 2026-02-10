@@ -476,3 +476,161 @@ test_that("run_searchlight with manova_model works on multibasis dataset", {
   expect_s3_class(res, "searchlight_result")
   expect_true(length(res$results) > 0)
 })
+
+# ===========================================================================
+# Block-wise feature selection enforcement (model_fit.R:520-530)
+# ===========================================================================
+
+test_that("block-wise feature selection preserves k-per-voxel invariant", {
+  # Direct unit test of the block-wise enforcement logic
+  # Simulate: 5 physical voxels, k=3 bases -> 15 columns
+  basis_count <- 3L
+  V_phys <- 5L
+
+  # feature_selector picks only columns 1 and 7 (voxel 1 in basis 1, voxel 2 in basis 2)
+  feature_mask <- rep(FALSE, V_phys * basis_count)
+  feature_mask[1] <- TRUE   # voxel 1, basis 1
+  feature_mask[7] <- TRUE   # voxel 2, basis 2
+
+  # Apply the block-wise enforcement logic from model_fit.R
+  group_idx <- rMVPA:::make_group_idx(V_phys, basis_count)
+  group_any <- as.logical(tapply(feature_mask, group_idx, any))
+  expanded <- as.logical(group_any[group_idx])
+
+  # Voxel 1 (cols 1,6,11) and voxel 2 (cols 2,7,12) should ALL be kept
+  expect_true(all(expanded[c(1, 6, 11)]))   # voxel 1: all 3 bases kept
+  expect_true(all(expanded[c(2, 7, 12)]))   # voxel 2: all 3 bases kept
+  expect_false(any(expanded[c(3, 8, 13)]))  # voxel 3: none selected
+  expect_false(any(expanded[c(4, 9, 14)]))  # voxel 4: none selected
+  expect_false(any(expanded[c(5, 10, 15)])) # voxel 5: none selected
+})
+
+test_that("feature selection with multibasis dataset uses block-wise enforcement", {
+  skip_if_not_installed("sda")
+  # Integration test: run_searchlight with feature_selector on multibasis data
+  mb <- gen_multibasis_sample_dataset(D = c(4, 4, 4), n_events = 20, k = 2,
+                                       n_classes = 2, n_blocks = 4)
+
+  model <- load_model("sda_notune")
+  fsel <- feature_selector("FTest", "top_k", 5)
+  mspec <- mvpa_model(model, mb$dataset, mb$design,
+                      model_type = "classification", crossval = mb$crossval,
+                      feature_selector = fsel)
+
+  # Should run without error; block-wise enforcement keeps groups intact
+  res <- suppressWarnings(run_searchlight(mspec, radius = 2, method = "standard"))
+  expect_s3_class(res, "searchlight_result")
+  expect_true(length(res$results) > 0)
+})
+
+# ===========================================================================
+# build_output_map aggregation modes: sum and maxabs
+# ===========================================================================
+
+test_that("build_output_map sum aggregation works for multibasis", {
+  fx <- make_multibasis_fixture(n_events = 5, k = 3)
+  dset <- mvpa_multibasis_dataset(train_data = fx$basis_vecs, mask = fx$mask)
+
+  ids <- rep(which(dset$mask > 0), times = dset$basis_count)
+  V <- sum(dset$mask > 0)
+  metric_vec <- c(rep(1, V), rep(2, V), rep(4, V))
+
+  out_map <- rMVPA:::build_output_map(dset, metric_vec, ids, aggregation = "sum")
+  mask_ids <- which(dset$mask > 0)
+  expect_true(all(abs(out_map[mask_ids] - 7) < 1e-10))  # 1+2+4 = 7
+})
+
+test_that("build_output_map maxabs aggregation works for multibasis", {
+  fx <- make_multibasis_fixture(n_events = 5, k = 3)
+  dset <- mvpa_multibasis_dataset(train_data = fx$basis_vecs, mask = fx$mask)
+
+  ids <- rep(which(dset$mask > 0), times = dset$basis_count)
+  V <- sum(dset$mask > 0)
+  metric_vec <- c(rep(-5, V), rep(2, V), rep(4, V))
+
+  out_map <- rMVPA:::build_output_map(dset, metric_vec, ids, aggregation = "maxabs")
+  mask_ids <- which(dset$mask > 0)
+  expect_true(all(abs(out_map[mask_ids] - (-5)) < 1e-10))  # |-5| > |4| > |2|
+})
+
+test_that("build_output_map no-duplicate fast path works for multibasis", {
+  fx <- make_multibasis_fixture(n_events = 5, k = 1)
+  dset <- mvpa_multibasis_dataset(train_data = fx$basis_vecs, mask = fx$mask)
+
+  ids <- which(dset$mask > 0)
+  V <- length(ids)
+  metric_vec <- seq_len(V) * 1.0
+
+  out_map <- rMVPA:::build_output_map(dset, metric_vec, ids)
+  expect_true(all(abs(out_map[ids] - metric_vec) < 1e-10))
+})
+
+# ===========================================================================
+# Regression model + multibasis integration
+# ===========================================================================
+
+test_that("run_searchlight with regression model works on multibasis dataset", {
+  skip_if_not_installed("spls")
+  fx <- make_random_multibasis_fixture(D = c(4, 4, 4), n_events = 20, k = 2)
+
+  y <- rnorm(fx$n_events)
+  blocks <- rep(1:4, each = 5)
+  design <- mvpa_design(data.frame(y = y, block = blocks), y_train = ~y, block_var = ~block)
+
+  dset <- mvpa_multibasis_dataset(train_data = fx$basis_vecs, mask = fx$mask)
+  cv <- blocked_cross_validation(design$block_var)
+  model <- load_model("spls")
+  tune_grid <- expand.grid(K = 3, eta = 0.5, kappa = 0.5)
+  mspec <- mvpa_model(model, dset, design, model_type = "regression",
+                      crossval = cv, tune_grid = tune_grid)
+
+  res <- suppressWarnings(run_searchlight(mspec, radius = 2, method = "standard"))
+  expect_s3_class(res, "searchlight_result")
+  expect_true(length(res$results) > 0)
+})
+
+# ===========================================================================
+# contrast_rsa_model + multibasis integration
+# ===========================================================================
+
+test_that("run_searchlight with contrast_rsa_model works on multibasis dataset", {
+  # Need enough events per condition×block to avoid NA in cross-validated means
+  mb <- gen_random_multibasis_sample_dataset(D = c(4, 4, 4), n_events = 48, k = 2,
+                                              n_classes = 4, n_blocks = 4)
+
+  # Build contrast matrix: 4 conditions, 2 contrasts
+  cmat <- matrix(c(1, -1, 0, 0,
+                   0, 0, 1, -1), nrow = 4, ncol = 2)
+  colnames(cmat) <- c("AvsB", "CvsD")
+  rownames(cmat) <- levels(mb$design$y_train)
+
+  msreve_des <- msreve_design(mb$design, cmat)
+  mspec <- contrast_rsa_model(dataset = mb$dataset, design = msreve_des)
+
+  res <- suppressWarnings(run_searchlight(mspec, radius = 2, method = "standard"))
+  expect_s3_class(res, "searchlight_result")
+  expect_true(length(res$results) > 0)
+})
+
+# ===========================================================================
+# vector_rsa searchlight with multibasis (from _problems/415)
+# ===========================================================================
+
+test_that("run_searchlight with vector_rsa works on multibasis dataset", {
+  mb <- gen_random_multibasis_sample_dataset(D = c(4, 4, 4), n_events = 12, k = 2,
+                                              n_classes = 3, n_blocks = 3)
+  n_classes <- 3
+  set.seed(42)
+  Dref <- as.matrix(dist(matrix(rnorm(n_classes * 3), n_classes, 3)))
+  class_labels <- levels(mb$design$y_train)
+  rownames(Dref) <- colnames(Dref) <- class_labels
+
+  labels <- mb$design$y_train
+  block_var <- mb$design$block_var
+  vdes <- vector_rsa_design(Dref, labels, block_var)
+  mspec <- vector_rsa_model(dataset = mb$dataset, design = vdes)
+
+  res <- suppressWarnings(run_searchlight(mspec, radius = 2, method = "standard"))
+  expect_s3_class(res, "searchlight_result")
+  expect_true(length(res$results) > 0)
+})

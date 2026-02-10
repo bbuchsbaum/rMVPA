@@ -11,11 +11,14 @@ register_mvpa_model(name, model_spec)
 
 \item{model_spec}{A list containing the model specification. It must include
 elements: `type` ("Classification" or "Regression"), `library` (character vector
-of required packages for the *model itself*, not for rMVPA's wrappers), 
+of required packages for the *model itself*, not for rMVPA's wrappers),
 `label` (character, usually same as name), `parameters`
 (data.frame of tunable parameters: parameter, class, label), `grid` (function to
-generate tuning grid, takes x, y, len args), `fit` (function), `predict` (function), 
+generate tuning grid, takes x, y, len args), `fit` (function), `predict` (function),
 and `prob` (function for classification, takes modelFit, newdata; should return matrix/df with colnames as levels).}
+}
+\value{
+Invisibly returns the registered model specification.
 }
 \description{
 Adds a user-defined model specification to the rMVPA model registry (MVPAModels).

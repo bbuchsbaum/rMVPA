@@ -26,6 +26,13 @@ Computes per-feature importance using the Haufe et al. (2014) transformation
 from decoding weights to encoding (activation) patterns:
 \code{A = Sigma_x \%*\% W \%*\% solve(t(W) \%*\% Sigma_x \%*\% W)}.
 }
+\examples{
+\donttest{
+  W <- matrix(rnorm(10*2), 10, 2)
+  X <- matrix(rnorm(50*10), 50, 10)
+  haufe_importance(W, cov(X))
+}
+}
 \references{
 Haufe, S., Meinecke, F., Goergen, K., Daehne, S., Haynes, J.D.,
 Blankertz, B., & Biessmann, F. (2014). On the interpretation of weight

@@ -4,6 +4,7 @@
 \alias{get_feature_matrix}
 \alias{get_feature_matrix.mvpa_clustered_dataset}
 \alias{get_feature_matrix.mvpa_image_dataset}
+\alias{get_feature_matrix.mvpa_multibasis_image_dataset}
 \alias{get_feature_matrix.mvpa_surface_dataset}
 \alias{get_feature_matrix.matrix}
 \title{Extract Full Feature Matrix from a Dataset}
@@ -13,6 +14,8 @@ get_feature_matrix(dataset, ...)
 \method{get_feature_matrix}{mvpa_clustered_dataset}(dataset, ...)
 
 \method{get_feature_matrix}{mvpa_image_dataset}(dataset, ...)
+
+\method{get_feature_matrix}{mvpa_multibasis_image_dataset}(dataset, ...)
 
 \method{get_feature_matrix}{mvpa_surface_dataset}(dataset, ...)
 
@@ -30,4 +33,9 @@ A numeric matrix of dimension T x P.
 Returns the full T x P feature matrix (observations x features) for
 whole-brain analyses. For clustered datasets this is the parcel time-series;
 for image datasets this is the voxel series under the mask.
+}
+\examples{
+ds <- gen_sample_dataset(c(5,5,5), 20)
+X <- get_feature_matrix(ds$dataset)
+dim(X)
 }

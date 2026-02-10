@@ -17,3 +17,9 @@ A searchlight iterator object.
 \description{
 Generate a searchlight iterator suitable for given data.
 }
+\examples{
+\donttest{
+  ds <- gen_sample_dataset(c(5,5,5), 20)
+  sl <- get_searchlight(ds$dataset, radius=4)
+}
+}

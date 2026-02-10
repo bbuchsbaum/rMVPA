@@ -17,9 +17,18 @@
 
 \item{...}{Additional arguments forwarded to \code{train_model.contrast_rsa_model} (e.g., \code{cv_spec}).}
 }
+\value{
+A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+}
 \description{
 Runs the MS-ReVE training pipeline for a single ROI/searchlight, ensuring the
 necessary searchlight metadata (center voxel IDs) and cross-validation spec
 are forwarded to \code{train_model.contrast_rsa_model}. This avoids the
 classification/regression dispatch used in \code{process_roi.default}.
+}
+\examples{
+\dontrun{
+  # Internal method called by run_searchlight/run_regional
+  # See contrast_rsa_model examples for usage
+}
 }

@@ -516,7 +516,19 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
     } else {
       nzero
     }
-    
+
+    ## Block-wise enforcement for multibasis datasets:
+    ## If basis_count > 1, a voxel is kept if ANY of its k basis columns
+    ## was selected.  This preserves the k-per-voxel invariant.
+    bc <- if (is.null(obj$basis_count)) 1L else obj$basis_count
+    if (bc > 1L && !is.null(obj$feature_selector)) {
+      n_cols <- length(feature_mask)
+      V_phys <- n_cols %/% bc
+      group_idx <- make_group_idx(V_phys, bc)
+      group_any <- as.logical(tapply(feature_mask, group_idx, any))
+      feature_mask <- as.logical(group_any[group_idx])
+    }
+
     futile.logger::flog.debug("Features selected: %d", sum(feature_mask))
     
     if (sum(feature_mask) < 2) {

@@ -15,6 +15,14 @@ get_feature_matrix.mvpa_image_dataset <- function(dataset, ...) {
 
 #' @rdname get_feature_matrix
 #' @export
+get_feature_matrix.mvpa_multibasis_image_dataset <- function(dataset, ...) {
+  idx <- which(dataset$mask > 0)
+  mats <- lapply(dataset$train_data, function(v) neuroim2::series(v, idx))
+  do.call(cbind, mats)
+}
+
+#' @rdname get_feature_matrix
+#' @export
 get_feature_matrix.mvpa_surface_dataset <- function(dataset, ...) {
   idx <- which(dataset$mask > 0)
   neuroim2::series(dataset$train_data, idx)
@@ -35,6 +43,8 @@ get_feature_matrix.matrix <- function(dataset, ...) {
 feature_ids_for_dataset <- function(dataset, P) {
   if (inherits(dataset, "mvpa_clustered_dataset")) {
     get_center_ids(dataset)
+  } else if (inherits(dataset, "mvpa_multibasis_image_dataset")) {
+    rep(which(dataset$mask > 0), times = dataset$basis_count)
   } else if (inherits(dataset, "mvpa_image_dataset")) {
     which(dataset$mask > 0)
   } else if (inherits(dataset, "mvpa_surface_dataset")) {
@@ -216,12 +226,14 @@ cv_run_global <- function(mspec, X, y, crossval, feature_ids,
 #' @param summary_fun Function to summarize activation pattern matrix rows
 #'   into a scalar importance per feature. Default: L2 norm.
 #' @param return_fits Logical; if TRUE, store per-fold model fits.
+#' @param aggregation How to aggregate multi-basis feature importance (default "mean").
 #' @param ... Additional arguments (currently unused).
 #'
 #' @return A \code{global_mvpa_result} object.
 #' @export
 run_global.mvpa_model <- function(model_spec, X = NULL, summary_fun = NULL,
-                                   return_fits = FALSE, ...) {
+                                   return_fits = FALSE, aggregation = c("mean", "sum", "maxabs"), ...) {
+  aggregation <- match.arg(aggregation)
 
   dataset <- model_spec$dataset
   design  <- model_spec$design
@@ -270,7 +282,7 @@ run_global.mvpa_model <- function(model_spec, X = NULL, summary_fun = NULL,
     importance_vec <- Reduce("+", valid_imp) / length(valid_imp)
 
     importance_map <- tryCatch(
-      build_output_map(dataset, importance_vec, feature_ids),
+      build_output_map(dataset, importance_vec, feature_ids, aggregation = aggregation),
       error = function(e) {
         futile.logger::flog.warn("run_global: build_output_map failed: %s", e$message)
         NULL
@@ -337,6 +349,20 @@ run_global.mvpa_model <- function(model_spec, X = NULL, summary_fun = NULL,
 #' @param model_spec The input model specification.
 #'
 #' @return An S3 object of class \code{global_mvpa_result}.
+#' @examples
+#' \dontrun{
+#'   # Typically created by run_global(), not directly
+#'   result <- global_mvpa_result(
+#'     performance_table = tibble::tibble(Accuracy = 0.8),
+#'     result = NULL,
+#'     importance_map = NULL,
+#'     importance_vector = c(0.1, 0.2),
+#'     activation_patterns = NULL,
+#'     raw_weights = NULL,
+#'     fold_fits = NULL,
+#'     model_spec = list()
+#'   )
+#' }
 #' @export
 global_mvpa_result <- function(performance_table, result,
                                 importance_map, importance_vector,

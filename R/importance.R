@@ -64,6 +64,12 @@ extract_weights.default <- function(object, ...) {
 #' Blankertz, B., & Biessmann, F. (2014). On the interpretation of weight
 #' vectors of linear models in multivariate neuroimaging. NeuroImage, 87, 96-110.
 #'
+#' @examples
+#' \donttest{
+#'   W <- matrix(rnorm(10*2), 10, 2)
+#'   X <- matrix(rnorm(50*10), 50, 10)
+#'   haufe_importance(W, cov(X))
+#' }
 #' @export
 haufe_importance <- function(W, Sigma_x,
                               summary_fun = function(A) sqrt(rowSums(A^2))) {
@@ -214,12 +220,14 @@ cv_score_global <- function(mspec, X, y, crossval, feature_ids, metric = NULL) {
 #' @param subset_fraction Fraction of features sampled per iteration (default 0.5).
 #' @param metric Character name of performance metric to use (e.g. "Accuracy").
 #'   NULL uses the first metric returned by \code{compute_performance}.
+#' @param aggregation How to aggregate multi-basis feature importance (default "mean").
 #' @param ... Additional arguments (currently unused).
 #' @return A \code{region_importance_result} object.
 #' @export
 region_importance.mvpa_model <- function(model_spec, n_iter = 200,
                                           subset_fraction = 0.5,
-                                          metric = NULL, ...) {
+                                          metric = NULL, aggregation = c("mean", "sum", "maxabs"), ...) {
+  aggregation <- match.arg(aggregation)
   dataset <- model_spec$dataset
   design  <- model_spec$design
 
@@ -346,7 +354,7 @@ region_importance.mvpa_model <- function(model_spec, n_iter = 200,
 
   # Build spatial maps
   importance_map <- tryCatch(
-    build_output_map(dataset, importance, feature_ids),
+    build_output_map(dataset, importance, feature_ids, aggregation = aggregation),
     error = function(e) {
       futile.logger::flog.warn("region_importance: build_output_map failed for importance: %s", e$message)
       NULL
@@ -355,7 +363,7 @@ region_importance.mvpa_model <- function(model_spec, n_iter = 200,
 
   neglog10p <- -log10(pmax(p_values, .Machine$double.xmin))
   p_value_map <- tryCatch(
-    build_output_map(dataset, neglog10p, feature_ids),
+    build_output_map(dataset, neglog10p, feature_ids, aggregation = aggregation),
     error = function(e) {
       futile.logger::flog.warn("region_importance: build_output_map failed for p-values: %s", e$message)
       NULL
@@ -363,13 +371,14 @@ region_importance.mvpa_model <- function(model_spec, n_iter = 200,
   )
 
   region_importance_result(
-    importance     = importance,
-    importance_map = importance_map,
-    p_values       = p_values,
-    p_value_map    = p_value_map,
-    stats_table    = stats_table,
-    iteration_log  = iteration_log,
-    model_spec     = model_spec
+    importance            = importance,
+    importance_map        = importance_map,
+    p_values              = p_values,
+    p_value_map           = p_value_map,
+    stats_table           = stats_table,
+    iteration_log         = iteration_log,
+    model_spec            = model_spec,
+    importance_vector_raw = importance
   )
 }
 
@@ -385,22 +394,37 @@ region_importance.mvpa_model <- function(model_spec, n_iter = 200,
 #' @param stats_table Tibble with per-feature statistics.
 #' @param iteration_log Tibble with per-iteration performance.
 #' @param model_spec The input model specification.
+#' @param importance_vector_raw Raw importance vector before spatial mapping (default NULL).
 #'
 #' @return An S3 object of class \code{region_importance_result}.
+#' @examples
+#' \dontrun{
+#'   # Typically created by region_importance(), not directly
+#'   result <- region_importance_result(
+#'     importance = c(0.1, 0.2),
+#'     importance_map = NULL,
+#'     p_values = c(0.05, 0.01),
+#'     p_value_map = NULL,
+#'     stats_table = tibble::tibble(feature_id = 1:2),
+#'     iteration_log = tibble::tibble(iter = 1:10),
+#'     model_spec = list()
+#'   )
+#' }
 #' @export
 region_importance_result <- function(importance, importance_map,
                                       p_values, p_value_map,
                                       stats_table, iteration_log,
-                                      model_spec) {
+                                      model_spec, importance_vector_raw = NULL) {
   structure(
     list(
-      importance     = importance,
-      importance_map = importance_map,
-      p_values       = p_values,
-      p_value_map    = p_value_map,
-      stats_table    = stats_table,
-      iteration_log  = iteration_log,
-      model_spec     = model_spec
+      importance            = importance,
+      importance_map        = importance_map,
+      p_values              = p_values,
+      p_value_map           = p_value_map,
+      stats_table           = stats_table,
+      iteration_log         = iteration_log,
+      model_spec            = model_spec,
+      importance_vector_raw = importance_vector_raw
     ),
     class = "region_importance_result"
   )

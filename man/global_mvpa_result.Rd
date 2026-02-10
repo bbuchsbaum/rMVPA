@@ -38,3 +38,18 @@ An S3 object of class \code{global_mvpa_result}.
 \description{
 Construct a Global MVPA Result
 }
+\examples{
+\dontrun{
+  # Typically created by run_global(), not directly
+  result <- global_mvpa_result(
+    performance_table = tibble::tibble(Accuracy = 0.8),
+    result = NULL,
+    importance_map = NULL,
+    importance_vector = c(0.1, 0.2),
+    activation_patterns = NULL,
+    raw_weights = NULL,
+    fold_fits = NULL,
+    model_spec = list()
+  )
+}
+}

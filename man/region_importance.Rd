@@ -12,6 +12,7 @@ region_importance(model_spec, ...)
   n_iter = 200,
   subset_fraction = 0.5,
   metric = NULL,
+  aggregation = c("mean", "sum", "maxabs"),
   ...
 )
 }
@@ -26,6 +27,8 @@ region_importance(model_spec, ...)
 
 \item{metric}{Character name of performance metric to use (e.g. "Accuracy").
 NULL uses the first metric returned by \code{compute_performance}.}
+
+\item{aggregation}{How to aggregate multi-basis feature importance (default "mean").}
 }
 \value{
 A \code{region_importance_result} object.
@@ -64,4 +67,14 @@ use \code{\link{haufe_importance}} directly or rely on the
 \code{importance_vector} returned by \code{\link{run_global}}, which uses
 \code{\link{model_importance}} internally.  For non-linear models such as
 random forests, \code{region_importance} is the recommended approach.
+}
+\examples{
+\donttest{
+  ds <- gen_sample_dataset(c(5,5,5), 40, nlevels=2, blocks=3)
+  cval <- blocked_cross_validation(ds$design$block_var)
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+    "classification", crossval=cval)
+  imp <- region_importance(mspec, n_regions=5, n_subsets=10)
+}
 }

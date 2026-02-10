@@ -6,6 +6,9 @@
 \usage{
 as_roi_from_sl(sl_win, dataset, min_voxels = 2, preserve_center = TRUE)
 }
+\value{
+An ROI object suitable for model training/testing.
+}
 \description{
 Create an ROI list from a single searchlight window for debugging
 }

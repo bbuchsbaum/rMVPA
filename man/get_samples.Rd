@@ -17,3 +17,10 @@ A list of data samples.
 \description{
 Extract multiple data samples based on a list of voxel/index sets from a dataset object.
 }
+\examples{
+\donttest{
+  ds <- gen_sample_dataset(c(5,5,5), 20, blocks=2)
+  vox_list <- list(1:10, 11:20)
+  samples <- get_samples(ds$dataset, vox_list)
+}
+}

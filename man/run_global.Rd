@@ -7,7 +7,14 @@
 \usage{
 run_global(model_spec, ...)
 
-\method{run_global}{mvpa_model}(model_spec, X = NULL, summary_fun = NULL, return_fits = FALSE, ...)
+\method{run_global}{mvpa_model}(
+  model_spec,
+  X = NULL,
+  summary_fun = NULL,
+  return_fits = FALSE,
+  aggregation = c("mean", "sum", "maxabs"),
+  ...
+)
 }
 \arguments{
 \item{model_spec}{An \code{mvpa_model} specification.}
@@ -21,6 +28,8 @@ from \code{model_spec$dataset} via \code{get_feature_matrix}.}
 into a scalar importance per feature. Default: L2 norm.}
 
 \item{return_fits}{Logical; if TRUE, store per-fold model fits.}
+
+\item{aggregation}{How to aggregate multi-basis feature importance (default "mean").}
 }
 \value{
 A \code{global_mvpa_result} object.
@@ -31,4 +40,14 @@ A \code{global_mvpa_result} object.
 Train a single classifier on ALL features (parcels or voxels) with
 cross-validation, and compute per-feature importance via Haufe et al.
 (2014) activation patterns.
+}
+\examples{
+\donttest{
+  ds <- gen_sample_dataset(c(5,5,5), 40, nlevels=2, blocks=3)
+  cval <- blocked_cross_validation(ds$design$block_var)
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+    "classification", crossval=cval)
+  result <- run_global(mspec)
+}
 }

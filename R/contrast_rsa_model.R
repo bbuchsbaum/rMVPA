@@ -417,8 +417,17 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   }
   
   center_idx <- sl_info$center_local_id
+
+  basis_count <- sl_info$basis_count %||% 1L
+  if (basis_count > 1L) {
+    V_phys <- ncol(sl_data) %/% basis_count
+    center_col_indices <- center_idx + (seq_len(basis_count) - 1L) * V_phys
+  } else {
+    center_col_indices <- center_idx
+  }
+
   # This check should now be more robust due to the abort above if center_local_id is NA
-  if (center_idx < 1 || center_idx > ncol(sl_data)) {
+  if (any(center_col_indices < 1) || any(center_col_indices > ncol(sl_data))) {
       rlang::abort(paste0("`sl_info$center_local_id` (", center_idx, ") is out of bounds for `sl_data` columns (", ncol(sl_data), "). Global ID: ", sl_info$center_global_id))
   }
 
@@ -903,7 +912,11 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   Delta_sl <- t(U_hat_for_delta_calc) %*% C_ord # V_sl x Q matrix
 
   # --- Step 6: Extract Center Voxel Projection (delta_{v_c,sl}) ---
-  delta_vc_sl <- Delta_sl[center_idx, , drop = TRUE] # Q-dimensional vector
+  if (length(center_col_indices) > 1L) {
+    delta_vc_sl <- colMeans(Delta_sl[center_col_indices, , drop = FALSE])
+  } else {
+    delta_vc_sl <- Delta_sl[center_col_indices, , drop = TRUE]
+  }
   # Handle potential NAs from U_hat_for_delta_calc (though checked earlier) or C matrix
   if (anyNA(delta_vc_sl) && is.null(current_na_reason)) { # Only set if no prior reason
        set_na_reason("NA in delta_vc_sl projection")
@@ -972,7 +985,11 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
         if (anyNA(idx_match_fold)) next
         C_fold <- C[idx_match_fold, , drop = FALSE]
         Delta_fold_sl <- t(U_fold) %*% C_fold
-        delta_fold_center <- Delta_fold_sl[center_idx, , drop = TRUE]
+        if (length(center_col_indices) > 1L) {
+          delta_fold_center <- colMeans(Delta_fold_sl[center_col_indices, , drop = FALSE])
+        } else {
+          delta_fold_center <- Delta_fold_sl[center_col_indices, , drop = TRUE]
+        }
         if (anyNA(delta_fold_center)) next
         valid_folds <- valid_folds + 1
         delta_diff <- delta_fold_center - mean_delta
@@ -1183,7 +1200,12 @@ merge_results.contrast_rsa_model <- function(obj, result_set, indices, id, ...) 
 #' @param rnum Identifier for the ROI/searchlight (typically the center voxel's global index).
 #' @param center_global_id Optional global ID of the center voxel.
 #' @param ... Additional arguments forwarded to \code{train_model.contrast_rsa_model} (e.g., \code{cv_spec}).
-#'
+#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+#' @examples
+#' \dontrun{
+#'   # Internal method called by run_searchlight/run_regional
+#'   # See contrast_rsa_model examples for usage
+#' }
 #' @export
 #' @method process_roi contrast_rsa_model
 process_roi.contrast_rsa_model <- function(mod_spec,
@@ -1225,7 +1247,8 @@ process_roi.contrast_rsa_model <- function(mod_spec,
 
   sl_info <- list(
     center_local_id = center_local_id,
-    center_global_id = center_global_id
+    center_global_id = center_global_id,
+    basis_count = roi$basis_count %||% 1L
   )
 
   dots <- list(...)

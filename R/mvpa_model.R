@@ -203,10 +203,12 @@ create_model_spec <- function(name, dataset, design, return_predictions=FALSE,
     args$has_test_set <- !is.null(dataset$test_data) && !is.null(design$y_test)
   }
   
-  ret <- list(name=name, dataset=dataset, design=design, 
-              return_predictions=return_predictions, compute_performance=compute_performance, 
+  ret <- list(name=name, dataset=dataset, design=design,
+              return_predictions=return_predictions, compute_performance=compute_performance,
               tune_reps=tune_reps)
-  
+
+  ret$basis_count <- dataset$basis_count %||% 1L
+
   # Add the remaining arguments
   ret <- c(ret, args)
   
@@ -231,6 +233,8 @@ create_model_spec <- function(name, dataset, design, return_predictions=FALSE,
 #' @param compute_performance A \code{logical} indicating whether to compute and store performance measures for each voxel set (defaults to TRUE).
 #' @param return_predictions A \code{logical} indicating whether to return row-wise predictions for each voxel set (defaults to TRUE).
 #' @param return_fits A \code{logical} indicating whether to return the model fit for each voxel set (defaults to FALSE).
+#'
+#' @return An `mvpa_model` object (a list with class 'mvpa_model').
 #'
 #' @export
 #'

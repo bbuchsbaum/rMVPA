@@ -51,6 +51,18 @@ data_sample.mvpa_dataset <- function(obj, vox, ...) {
   )
 }
 
+#' @rdname data_sample
+#' @export
+data_sample.mvpa_multibasis_image_dataset <- function(obj, vox, ...) {
+  structure(
+    list(
+      data = NULL,
+      vox = vox
+    ),
+    class = c("multibasis_data_sample", "data_sample")
+  )
+}
+
 
 #' @export
 print.data_sample <- function(x, ...) {
@@ -62,89 +74,167 @@ print.data_sample <- function(x, ...) {
 }
 
 #' @keywords internal
+#' @export
 filter_roi.default <- function(roi, preserve = NULL, ...) {
   stop("Unsupported ROI type")
 }
 
 #' @keywords internal
+#' @export
 #' @importFrom neuroim2 ROIVec space coords values
 filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Extract the train data values
   trdat <- values(roi$train_roi)
-  
-  # Find columns with missing values (NA)
-  nas <- apply(trdat, 2, function(v) any(is.na(v)))
-  
-  # Find columns with non-zero standard deviation
-  sdnonzero <- apply(trdat, 2, sd, na.rm=TRUE) > 0
-  
-  # Determine columns to keep
-  keep <- !nas & sdnonzero
 
-  n_removed <- sum(!keep)
-  if (n_removed > 0) {
-    n_na  <- sum(nas)
-    n_zv  <- sum(!sdnonzero & !nas)  # zero-var but not already counted as NA
-    futile.logger::flog.debug(
-      "filter_roi: removing %d/%d voxels (NA: %d, zero-variance: %d); %d remain.",
-      n_removed, length(keep), n_na, n_zv, sum(keep))
-  }
+  # Read basis_count: NULL for standard datasets, integer for multibasis
 
-  # Preserve specified voxel if requested (e.g., center voxel in searchlight)
-  if (!is.null(preserve)) {
-    gi <- neuroim2::indices(roi$train_roi)
-    kp <- match(preserve, gi)
-    if (!is.na(kp) && !keep[kp]) {
-      futile.logger::flog.debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
-      keep[kp] <- TRUE
+  basis_count <- roi$basis_count
+
+  # --- Multibasis branch: filter by voxel group ---
+  if (!is.null(basis_count) && basis_count > 1L) {
+    if (ncol(trdat) %% basis_count != 0L) {
+      stop(sprintf("filter_roi: ncol(train_roi) = %d is not divisible by basis_count = %d",
+                   ncol(trdat), basis_count))
+    }
+    V_phys <- ncol(trdat) %/% basis_count
+    # Column layout is basis-major: [b1_v1..b1_vV, b2_v1..b2_vV, ...]
+    group_idx <- make_group_idx(V_phys, basis_count)
+
+    # Per-column checks (same criteria as standard path)
+    nas <- apply(trdat, 2, function(v) any(is.na(v)))
+    sdnonzero <- apply(trdat, 2, sd, na.rm = TRUE) > 0
+    col_bad <- nas | !sdnonzero
+
+    # A physical voxel group is bad if ANY of its k columns fails
+    group_bad <- as.logical(tapply(col_bad, group_idx, any))
+    group_keep <- !group_bad
+
+    n_removed <- sum(!group_keep)
+    if (n_removed > 0) {
+      # Count reasons at column level, report at group level
+      group_na <- as.logical(tapply(nas, group_idx, any))
+      group_zv <- as.logical(tapply(!sdnonzero, group_idx, any))
+      n_na  <- sum(group_na & !group_keep)
+      n_zv  <- sum(group_zv & !group_na & !group_keep)
+      futile.logger::flog.debug(
+        "filter_roi: removing %d/%d physical voxels (NA: %d, zero-variance: %d); %d remain. [basis_count=%d]",
+        n_removed, V_phys, n_na, n_zv, sum(group_keep), basis_count)
+    }
+
+    # Preserve specified voxel if requested (e.g., center voxel in searchlight)
+    if (!is.null(preserve)) {
+      gi <- neuroim2::indices(roi$train_roi)
+      # First V_phys indices correspond to basis-1 block
+      first_block_ids <- gi[seq_len(V_phys)]
+      preserve_group <- match(preserve, first_block_ids)
+      if (!is.na(preserve_group) && !group_keep[preserve_group]) {
+        futile.logger::flog.debug(
+          "Preserving voxel group %s that would have been filtered (NA or zero variance)",
+          preserve)
+        group_keep[preserve_group] <- TRUE
+      }
+    }
+
+    # min_voxels check on physical voxel count
+    if (sum(group_keep) < min_voxels) {
+      group_na <- as.logical(tapply(nas, group_idx, any))
+      group_zv <- as.logical(tapply(!sdnonzero, group_idx, any))
+      reasons <- c()
+      if (any(group_na)) reasons <- c(reasons, sprintf("NA voxel groups: %d", sum(group_na)))
+      if (any(group_zv)) reasons <- c(reasons, sprintf("zero-variance voxel groups: %d", sum(group_zv)))
+      futile.logger::flog.debug(
+        "filter_roi.ROIVec: %d valid physical voxels (< %d). Reasons: %s",
+        sum(group_keep), min_voxels,
+        paste(reasons, collapse = "; ")
+      )
+      stop(sprintf("filter_roi: roi has %d valid physical voxels (need at least %d)",
+                    sum(group_keep), min_voxels))
+    }
+
+    # Expand group-level keep to column-level keep
+    keep <- as.logical(group_keep[group_idx])
+
+  } else {
+    # --- Standard (non-multibasis) path: unchanged ---
+
+    # Find columns with missing values (NA)
+    nas <- apply(trdat, 2, function(v) any(is.na(v)))
+
+    # Find columns with non-zero standard deviation
+    sdnonzero <- apply(trdat, 2, sd, na.rm=TRUE) > 0
+
+    # Determine columns to keep
+    keep <- !nas & sdnonzero
+
+    n_removed <- sum(!keep)
+    if (n_removed > 0) {
+      n_na  <- sum(nas)
+      n_zv  <- sum(!sdnonzero & !nas)  # zero-var but not already counted as NA
+      futile.logger::flog.debug(
+        "filter_roi: removing %d/%d voxels (NA: %d, zero-variance: %d); %d remain.",
+        n_removed, length(keep), n_na, n_zv, sum(keep))
+    }
+
+    # Preserve specified voxel if requested (e.g., center voxel in searchlight)
+    if (!is.null(preserve)) {
+      gi <- neuroim2::indices(roi$train_roi)
+      kp <- match(preserve, gi)
+      if (!is.na(kp) && !keep[kp]) {
+        futile.logger::flog.debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
+        keep[kp] <- TRUE
+      }
+    }
+
+    # Need at least 2 valid columns for multivariate analysis
+    # (even with preserve, searchlight edges need multiple voxels)
+    if (sum(keep) < min_voxels) {
+      reasons <- c()
+      if (any(nas)) reasons <- c(reasons, sprintf("NA voxels: %d", sum(nas)))
+      if (any(!sdnonzero)) reasons <- c(reasons, sprintf("zero-variance voxels: %d", sum(!sdnonzero)))
+      futile.logger::flog.debug(
+        "filter_roi.ROIVec: %d valid columns (< %d). Reasons: %s",
+        sum(keep), min_voxels,
+        paste(reasons, collapse = "; ")
+      )
+      stop(sprintf("filter_roi: roi has %d valid columns (need at least %d)", sum(keep), min_voxels))
     }
   }
 
-  # Need at least 2 valid columns for multivariate analysis
-  # (even with preserve, searchlight edges need multiple voxels)
-  if (sum(keep) < min_voxels) {
-    reasons <- c()
-    if (any(nas)) reasons <- c(reasons, sprintf("NA voxels: %d", sum(nas)))
-    if (any(!sdnonzero)) reasons <- c(reasons, sprintf("zero-variance voxels: %d", sum(!sdnonzero)))
-    futile.logger::flog.debug(
-      "filter_roi.ROIVec: %d valid columns (< %d). Reasons: %s",
-      sum(keep), min_voxels,
-      paste(reasons, collapse = "; ")
-    )
-    stop(sprintf("filter_roi: roi has %d valid columns (need at least %d)", sum(keep), min_voxels))
-  }
-  
-  # If there's no test ROI data, return filtered train ROI data only
+  # --- Shared: build filtered ROI and return ---
   if (is.null(roi$test_roi)) {
-    troi <- ROIVec(space(roi$train_roi), 
-                   coords(roi$train_roi)[keep,,drop=FALSE], 
+    troi <- ROIVec(space(roi$train_roi),
+                   coords(roi$train_roi)[keep,,drop=FALSE],
                    data=trdat[,keep,drop=FALSE])
-    list(train_roi=troi, test_roi=NULL)
+    result <- list(train_roi=troi, test_roi=NULL)
   } else {
     # Filter train ROI data
-    troi <- ROIVec(space(roi$train_roi), 
-                   coords(roi$train_roi)[keep,,drop=FALSE], 
+    troi <- ROIVec(space(roi$train_roi),
+                   coords(roi$train_roi)[keep,,drop=FALSE],
                    data=trdat[,keep,drop=FALSE])
-    
+
     # Filter test ROI data
     tedat <- values(roi$test_roi)
-    teroi <- ROIVec(space(roi$test_roi), 
-                    coords(roi$test_roi)[keep,,drop=FALSE], 
+    teroi <- ROIVec(space(roi$test_roi),
+                    coords(roi$test_roi)[keep,,drop=FALSE],
                     data=tedat[,keep,drop=FALSE])
-    
-    list(train_roi=troi, test_roi=teroi)
+
+    result <- list(train_roi=troi, test_roi=teroi)
   }
+
+  # Propagate basis_count to downstream consumers
+  result$basis_count <- roi$basis_count
+  result
 }
 
 #' @keywords internal
-#' @noRd
+#' @export
 filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Expect a list with train_roi/test_roi as produced by as_roi()
   if (!is.list(roi) || is.null(roi$train_roi)) {
     stop("filter_roi.list: expected list with train_roi/test_roi")
   }
   filtered <- filter_roi(roi$train_roi, preserve = preserve, min_voxels = min_voxels, ...)
-  list(train_roi = filtered$train_roi,
+  result <- list(train_roi = filtered$train_roi,
        test_roi  = if (!is.null(roi$test_roi)) {
          # Apply the same voxel filter to the test ROI if present
          # Use the logical mask from filtered train ROI indices
@@ -160,9 +250,12 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
                             data = neuroim2::values(roi$test_roi)[, kp, drop = FALSE])
          }
        } else NULL)
+  result$basis_count <- roi$basis_count
+  result
 }
 
 #' @keywords internal
+#' @export
 #' @importFrom neurosurf ROISurfaceVector geometry nodes
 filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Extract the train data values
@@ -277,6 +370,59 @@ as_roi.data_sample <- function(obj, data, ...) {
   } else {
     list(train_roi = train_roi, test_roi = test_roi)
   }
+}
+
+#' @keywords internal
+#' @noRd
+#' @importFrom neuroim2 ROIVec coords values space series_roi
+combine_multibasis_roi <- function(vec_list, vox) {
+  roi_list <- lapply(vec_list, function(v) try(neuroim2::series_roi(v, vox), silent = TRUE))
+  err_idx <- which(vapply(roi_list, function(x) inherits(x, "try-error"), logical(1)))
+  if (length(err_idx) > 0) {
+    return(roi_list[[err_idx[1]]])
+  }
+
+  ref <- roi_list[[1]]
+  coords_ref <- neuroim2::coords(ref)
+  space_ref <- neuroim2::space(ref)
+
+  all_data <- do.call(cbind, lapply(roi_list, neuroim2::values))
+  all_coords <- do.call(rbind, replicate(length(roi_list), coords_ref, simplify = FALSE))
+  neuroim2::ROIVec(space_ref, all_coords, data = all_data)
+}
+
+#' @keywords internal
+#' @noRd
+#' @method as_roi multibasis_data_sample
+#' @export
+as_roi.multibasis_data_sample <- function(obj, data, ...) {
+  if (!is.null(data$mask)) {
+    mask_indices <- data$mask_indices
+    if (is.null(mask_indices)) {
+      mask_indices <- compute_mask_indices(data$mask)
+    }
+
+    invalid_vox <- setdiff(obj$vox, mask_indices)
+    if (length(invalid_vox) > 0) {
+      futile.logger::flog.debug(
+        "as_roi.multibasis_data_sample: %d voxel(s) outside data mask.",
+        length(invalid_vox)
+      )
+      obj$vox <- intersect(obj$vox, mask_indices)
+      if (length(obj$vox) == 0) {
+        train_roi <- structure(
+          list(message = "No voxels remaining after mask filtering"),
+          class = "try-error"
+        )
+        return(list(train_roi = train_roi, test_roi = NULL))
+      }
+    }
+  }
+
+  train_roi <- combine_multibasis_roi(data$train_data, obj$vox)
+  test_roi <- if (has_test_set(data)) combine_multibasis_roi(data$test_data, obj$vox) else NULL
+
+  list(train_roi = train_roi, test_roi = test_roi, basis_count = length(data$train_data))
 }
 
 #' @keywords internal

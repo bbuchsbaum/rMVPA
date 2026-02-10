@@ -19,3 +19,11 @@ An ROIVolume or ROISurface object.
 \description{
 Convert the provided object into an ROIVolume or ROISurface object.
 }
+\examples{
+\donttest{
+  ds <- gen_sample_dataset(c(5,5,5), 20, blocks=2)
+  vox <- sample(which(ds$dataset$mask > 0), 10)
+  samp <- data_sample(ds$dataset, vox)
+  roi <- as_roi(samp, ds$dataset)
+}
+}

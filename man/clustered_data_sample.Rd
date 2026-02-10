@@ -6,6 +6,9 @@
 \usage{
 clustered_data_sample(seed, neighbors)
 }
+\value{
+A \code{clustered_data_sample} object.
+}
 \description{
 Clustered data sample descriptor
 }

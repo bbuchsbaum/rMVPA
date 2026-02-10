@@ -47,6 +47,9 @@ mvpa_model(
 
 \item{return_fits}{A \code{logical} indicating whether to return the model fit for each voxel set (defaults to FALSE).}
 }
+\value{
+An `mvpa_model` object (a list with class 'mvpa_model').
+}
 \description{
 Create an MVPA model based on a classification or regression model from the MVPAModels registry.
 }

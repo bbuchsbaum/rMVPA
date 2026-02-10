@@ -75,3 +75,36 @@ gen_multibasis_sample_dataset <- function(D = c(4, 4, 4), n_events = 20, k = 2,
   cv <- rMVPA::blocked_cross_validation(design$block_var)
   list(dataset = dset, design = design, crossval = cv, fixture = fx)
 }
+
+# Like make_multibasis_fixture but with random (spatially varying) data.
+# Needed for models that require spatial variance (contrast_rsa, vector_rsa, etc.)
+make_random_multibasis_fixture <- function(D = c(4, 4, 4), n_events = 20, k = 2) {
+  sp3 <- neuroim2::NeuroSpace(D)
+  sp4 <- neuroim2::NeuroSpace(c(D, n_events))
+  mask <- neuroim2::NeuroVol(array(1L, D), sp3)
+
+  basis_arrays <- lapply(seq_len(k), function(b) {
+    array(rnorm(prod(D) * n_events), c(D, n_events))
+  })
+
+  basis_vecs <- lapply(basis_arrays, function(arr) neuroim2::NeuroVec(arr, sp4))
+
+  list(D = D, n_events = n_events, k = k, mask = mask,
+       basis_arrays = basis_arrays, basis_vecs = basis_vecs)
+}
+
+gen_random_multibasis_sample_dataset <- function(D = c(4, 4, 4), n_events = 20, k = 2,
+                                                  n_classes = 2, n_blocks = 4) {
+  fx <- make_random_multibasis_fixture(D = D, n_events = n_events, k = k)
+  # Use a properly crossed design: all conditions in every block
+  reps_per_block <- ceiling(n_events / n_blocks)
+  blocks <- rep(seq_len(n_blocks), each = reps_per_block)[seq_len(n_events)]
+  y <- factor(rep(letters[seq_len(n_classes)], length.out = n_events))
+  design <- rMVPA::mvpa_design(
+    data.frame(y = y, block = blocks),
+    y_train = ~y, block_var = ~block
+  )
+  dset <- rMVPA::mvpa_multibasis_dataset(train_data = fx$basis_vecs, mask = fx$mask)
+  cv <- rMVPA::blocked_cross_validation(design$block_var)
+  list(dataset = dset, design = design, crossval = cv, fixture = fx)
+}

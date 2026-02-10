@@ -30,3 +30,9 @@ Creates a dataset object for MVPA analysis on parcellated brain data stored
 as \code{ClusteredNeuroVec} objects from \pkg{neuroim2}. A "clustered searchlight"
 iterates over all K parcels, pooling nearby parcels as features for each analysis.
 }
+\examples{
+\dontrun{
+  ds <- gen_clustered_sample_dataset(K=5, nobs=20)
+  print(ds$dataset)
+}
+}

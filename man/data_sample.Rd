@@ -3,11 +3,14 @@
 \name{data_sample}
 \alias{data_sample}
 \alias{data_sample.mvpa_dataset}
+\alias{data_sample.mvpa_multibasis_image_dataset}
 \title{Extract Sample from Dataset}
 \usage{
 data_sample(obj, vox, ...)
 
 \method{data_sample}{mvpa_dataset}(obj, vox, ...)
+
+\method{data_sample}{mvpa_multibasis_image_dataset}(obj, vox, ...)
 }
 \arguments{
 \item{obj}{An object (typically a dataset) from which to draw a sample.}
@@ -27,4 +30,11 @@ Extract a sample from a given dataset object.
 
 Construct a light-weight data sample descriptor for a set of features (e.g., voxels)
 associated with a dataset. Methods define how to interpret and convert this descriptor.
+}
+\examples{
+\dontrun{
+  ds <- gen_sample_dataset(c(5,5,5), 20)
+  vox <- sample(which(ds$dataset$mask > 0), 10)
+  samp <- data_sample(ds$dataset, vox)
+}
 }
