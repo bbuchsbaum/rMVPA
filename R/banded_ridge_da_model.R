@@ -64,6 +64,21 @@
 #' @param recall_nfolds Integer number of contiguous folds to use when only one test block is present.
 #' @param target_nfolds Integer number of contiguous folds to use when only one test block is present.
 #'   If provided, overrides `recall_nfolds`.
+#' @param recall_gap Non-negative integer purge gap (in TRs) used only when test/target data
+#'   consist of a single run and contiguous folds are generated automatically. For each held-out
+#'   test segment, `recall_gap` TRs on each side are excluded from the training set to reduce
+#'   temporal leakage from autocorrelation/physiological noise. Default 0.
+#' @param target_gap Optional non-negative integer purge gap for target folds. If provided,
+#'   overrides `recall_gap`.
+#' @param target_nperm Non-negative integer. If > 0 and the target domain is a single run,
+#'   compute a permutation null by rearranging target timing while preserving local temporal
+#'   structure (`target_perm_strategy`). Default 0 (disabled).
+#' @param target_perm_strategy Permutation strategy for single-run target nulls when
+#'   `target_nperm > 0`: `"circular_shift"` (preserves full run autocorrelation under
+#'   cyclic shifts) or `"block_shuffle"` (preserves within-block structure and shuffles
+#'   block order).
+#' @param target_perm_block Optional positive integer block size (TRs) used only when
+#'   `target_perm_strategy = "block_shuffle"`. If NULL, a heuristic block size is used.
 #' @param compute_delta_r2 Logical; if TRUE, compute leave-one-set-out unique contribution
 #'   \eqn{\Delta R^2} on held-out test (default TRUE).
 #' @param delta_sets Optional character vector of set names to compute \eqn{\Delta R^2} for
@@ -112,12 +127,18 @@ banded_ridge_da_model <- function(dataset,
                                   target_folds = NULL,
                                   recall_nfolds = 5L,
                                   target_nfolds = NULL,
+                                  recall_gap = 0L,
+                                  target_gap = NULL,
+                                  target_nperm = 0L,
+                                  target_perm_strategy = c("circular_shift", "block_shuffle"),
+                                  target_perm_block = NULL,
                                   compute_delta_r2 = TRUE,
                                   delta_sets = NULL,
                                   return_diagnostics = FALSE,
                                   ...) {
 
   mode <- match.arg(mode)
+  target_perm_strategy <- match.arg(target_perm_strategy)
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "feature_sets_design"))
 
@@ -171,11 +192,43 @@ banded_ridge_da_model <- function(dataset,
     nfolds_input <- target_nfolds
   }
 
+  gap_input <- recall_gap
+  if (!is.numeric(gap_input) || length(gap_input) != 1L || !is.finite(gap_input) || gap_input < 0) {
+    stop("banded_ridge_da_model: recall_gap must be a finite non-negative scalar.", call. = FALSE)
+  }
+  if (!is.null(target_gap)) {
+    if (!is.numeric(target_gap) || length(target_gap) != 1L || !is.finite(target_gap) || target_gap < 0) {
+      stop("banded_ridge_da_model: target_gap must be a finite non-negative scalar.", call. = FALSE)
+    }
+    if (!missing(recall_gap) && !isTRUE(all.equal(recall_gap, target_gap))) {
+      rlang::warn("banded_ridge_da_model: both `recall_gap` and `target_gap` supplied; using `target_gap`.")
+    }
+    gap_input <- target_gap
+  }
+
+  if (!is.numeric(target_nperm) || length(target_nperm) != 1L || !is.finite(target_nperm) || target_nperm < 0) {
+    stop("banded_ridge_da_model: target_nperm must be a finite non-negative scalar.", call. = FALSE)
+  }
+  target_nperm <- as.integer(target_nperm)
+
+  if (!is.null(target_perm_block)) {
+    if (!is.numeric(target_perm_block) || length(target_perm_block) != 1L || !is.finite(target_perm_block) || target_perm_block < 1) {
+      stop("banded_ridge_da_model: target_perm_block must be a finite positive scalar when provided.", call. = FALSE)
+    }
+    target_perm_block <- as.integer(target_perm_block)
+  }
+
+  n_blocks_target <- if (is.null(design$block_var_test)) 1L else length(unique(design$block_var_test))
+  if (target_nperm > 0L && n_blocks_target >= 2L) {
+    rlang::warn("banded_ridge_da_model: target_nperm > 0 requested with multi-run target data; permutation null is only used for single-run targets. Disabling target permutations.")
+    target_nperm <- 0L
+  }
+
   # Precompute test/target folds once at spec construction time
   folds <- if (!is.null(folds_input)) {
     folds_input
   } else {
-    .br_make_recall_folds(design$block_var_test, nrow(design$X_test$X), nfolds_input)
+    .br_make_recall_folds(design$block_var_test, nrow(design$X_test$X), nfolds_input, gap = gap_input)
   }
 
   # Default regression-style "performance" fields for rMVPA maps
@@ -192,6 +245,11 @@ banded_ridge_da_model <- function(dataset,
     rho = rho,
     recall_folds = folds,
     target_folds = folds,
+    recall_gap = as.integer(gap_input),
+    target_gap = as.integer(gap_input),
+    target_nperm = target_nperm,
+    target_perm_strategy = target_perm_strategy,
+    target_perm_block = target_perm_block,
     compute_delta_r2 = compute_delta_r2,
     delta_sets = delta_sets,
     return_diagnostics = return_diagnostics,
@@ -224,6 +282,11 @@ grouped_ridge_da_model <- function(dataset,
                                    target_folds = NULL,
                                    recall_nfolds = 5L,
                                    target_nfolds = NULL,
+                                   recall_gap = 0L,
+                                   target_gap = NULL,
+                                   target_nperm = 0L,
+                                   target_perm_strategy = "circular_shift",
+                                   target_perm_block = NULL,
                                    compute_delta_r2 = TRUE,
                                    delta_sets = NULL,
                                    return_diagnostics = FALSE,
@@ -240,6 +303,11 @@ grouped_ridge_da_model <- function(dataset,
     target_folds = target_folds,
     recall_nfolds = recall_nfolds,
     target_nfolds = target_nfolds,
+    recall_gap = recall_gap,
+    target_gap = target_gap,
+    target_nperm = target_nperm,
+    target_perm_strategy = target_perm_strategy,
+    target_perm_block = target_perm_block,
     compute_delta_r2 = compute_delta_r2,
     delta_sets = delta_sets,
     return_diagnostics = return_diagnostics,
@@ -361,10 +429,14 @@ grouped_ridge_da <- function(dataset,
 }
 # ---- internal helpers ------------------------------------------------------
 
-.br_make_recall_folds <- function(block_var_test, T_rec, nfolds) {
+.br_make_recall_folds <- function(block_var_test, T_rec, nfolds, gap = 0L) {
   if (!is.numeric(T_rec) || length(T_rec) != 1L || T_rec < 2L) {
     stop(".br_make_recall_folds: T_rec must be >= 2.", call. = FALSE)
   }
+  if (!is.numeric(gap) || length(gap) != 1L || !is.finite(gap) || gap < 0) {
+    stop(".br_make_recall_folds: gap must be a finite non-negative scalar.", call. = FALSE)
+  }
+  gap <- as.integer(gap)
 
   if (!is.null(block_var_test)) {
     if (length(block_var_test) != T_rec) {
@@ -390,9 +462,25 @@ grouped_ridge_da <- function(dataset,
   nfolds <- min(nfolds, max(2L, floor(T_rec / 2L)))
   groups <- split(seq_len(T_rec), cut(seq_len(T_rec), nfolds, labels = FALSE))
   folds <- lapply(groups, function(test) {
-    train <- setdiff(seq_len(T_rec), test)
+    if (gap > 0L) {
+      lo <- max(1L, min(test) - gap)
+      hi <- min(T_rec, max(test) + gap)
+      excluded <- seq.int(lo, hi)
+      train <- setdiff(seq_len(T_rec), excluded)
+    } else {
+      train <- setdiff(seq_len(T_rec), test)
+    }
     list(train = train, test = test)
   })
+
+  folds <- Filter(function(f) length(f$test) >= 2L && length(f$train) >= 2L, folds)
+  if (length(folds) < 2L) {
+    stop(
+      ".br_make_recall_folds: unable to form at least 2 valid single-run folds ",
+      sprintf("(T_rec=%d, nfolds=%d, gap=%d). Reduce gap or nfolds.", T_rec, nfolds, gap),
+      call. = FALSE
+    )
+  }
   folds
 }
 
@@ -417,16 +505,28 @@ grouped_ridge_da <- function(dataset,
   as.numeric(lambdas[set_names])
 }
 
-.br_r2_mean <- function(Y_true, Y_pred, eps = 1e-12) {
+.br_r2_mean <- function(Y_true, Y_pred, min_var = 1e-6) {
   y_mu <- colMeans(Y_true)
-  ss_tot <- colSums((sweep(Y_true, 2, y_mu, "-"))^2) + eps
+  ss_tot <- colSums((sweep(Y_true, 2, y_mu, "-"))^2)
   ss_res <- colSums((Y_true - Y_pred)^2)
-  r2 <- 1 - (ss_res / ss_tot)
+  valid <- ss_tot > min_var
+  if (!any(valid)) return(NA_real_)
+  r2 <- 1 - (ss_res[valid] / ss_tot[valid])
   mean(r2, na.rm = TRUE)
 }
 
 .br_mse <- function(Y_true, Y_pred) {
   mean((Y_true - Y_pred)^2, na.rm = TRUE)
+}
+
+.br_safe_solve <- function(A, B) {
+  tryCatch(
+    solve(A, B),
+    error = function(e) {
+      diag(A) <- diag(A) + 1e-8
+      solve(A, B)
+    }
+  )
 }
 
 .br_fit_stacked <- function(Xe, Ye, Xr_tr, Yr_tr, pen, alpha_recall, w_rec_tr) {
@@ -448,7 +548,7 @@ grouped_ridge_da <- function(dataset,
 
   A <- crossprod(Xs) + diag(pen, ncol(Xs))
   B <- crossprod(Xs, Ys)
-  beta <- solve(A, B)
+  beta <- .br_safe_solve(A, B)
 
   list(beta = beta, x_mu = xs$mu, x_sd = xs$sd, y_mu = yc$mu)
 }
@@ -487,11 +587,42 @@ grouped_ridge_da <- function(dataset,
   B2 <- crossprod(Xr_w, Yr_w)
   B <- rbind(B1, B2)
 
-  sol <- solve(A, B)
+  sol <- .br_safe_solve(A, B)
   beta_enc <- sol[seq_len(D), , drop = FALSE]
   beta_rec <- sol[(D + 1L):(2L * D), , drop = FALSE]
 
   list(beta_enc = beta_enc, beta_rec = beta_rec, x_mu = xs$mu, x_sd = xs$sd, y_mu = yc$mu)
+}
+
+.br_perm_indices <- function(T_rec,
+                             strategy = c("circular_shift", "block_shuffle"),
+                             block_size = NULL) {
+  strategy <- match.arg(strategy)
+  idx <- seq_len(T_rec)
+  if (T_rec <= 2L) return(idx)
+
+  if (strategy == "circular_shift") {
+    shift <- sample.int(T_rec - 1L, 1L)
+    return(((idx - 1L + shift) %% T_rec) + 1L)
+  }
+
+  if (is.null(block_size)) {
+    block_size <- max(2L, floor(sqrt(T_rec)))
+  }
+  block_size <- as.integer(max(1L, min(T_rec, block_size)))
+
+  blocks <- split(idx, ceiling(idx / block_size))
+  if (length(blocks) <= 1L) {
+    return(sample(idx))
+  }
+
+  ord <- sample.int(length(blocks))
+  perm <- unlist(blocks[ord], use.names = FALSE)
+  if (identical(perm, idx)) {
+    ord <- sample.int(length(blocks))
+    perm <- unlist(blocks[ord], use.names = FALSE)
+  }
+  perm
 }
 
 .br_predict <- function(X, fit, mode = c("stacked", "coupled")) {
@@ -592,7 +723,12 @@ process_roi.banded_ridge_da_model <- function(mod_spec,
 
   folds <- mod_spec$recall_folds
   w_rec <- Xtest_fs$row_weights
-  if (is.null(w_rec) || length(w_rec) != nrow(Xr)) w_rec <- rep(1, nrow(Xr))
+  if (is.null(w_rec)) {
+    w_rec <- rep(1, nrow(Xr))
+  } else if (length(w_rec) != nrow(Xr)) {
+    stop(sprintf("banded_ridge_da_model: row_weights length (%d) != nrow(X_test) (%d)",
+                 length(w_rec), nrow(Xr)), call. = FALSE)
+  }
 
   mode <- mod_spec$mode
   alpha <- mod_spec$alpha_recall
@@ -603,7 +739,10 @@ process_roi.banded_ridge_da_model <- function(mod_spec,
   mse_full <- numeric(0)
   per_fold_diag <- list()
 
-  fit_fold <- function(keep_cols, lambdas_pen) {
+  # NOTE: Encoding cross-products cannot be cached across folds because
+  # centering/scaling statistics are recomputed per fold (they depend on
+  # the fold-specific recall training subset).
+  fit_fold <- function(keep_cols, lambdas_pen, Yr_use = Yr) {
     Xe_k <- Xe[, keep_cols, drop = FALSE]
     Xr_k <- Xr[, keep_cols, drop = FALSE]
     pen_k <- lambdas_pen[keep_cols]
@@ -616,9 +755,9 @@ process_roi.banded_ridge_da_model <- function(mod_spec,
       }
 
       Xr_tr <- Xr_k[tr, , drop = FALSE]
-      Yr_tr <- Yr[tr, , drop = FALSE]
+      Yr_tr <- Yr_use[tr, , drop = FALSE]
       Xr_te <- Xr_k[te, , drop = FALSE]
-      Yr_te <- Yr[te, , drop = FALSE]
+      Yr_te <- Yr_use[te, , drop = FALSE]
       w_tr <- w_rec[tr]
 
       fit <- if (mode == "stacked") {
@@ -651,6 +790,65 @@ process_roi.banded_ridge_da_model <- function(mod_spec,
             target_r2_full = r2_full_mean,
             target_mse_full = mse_full_mean)
 
+  # Optional single-run target permutation null (preserving temporal structure)
+  perm_n <- as.integer(mod_spec$target_nperm %||% 0L)
+  if (perm_n > 0L) {
+    T_rec <- nrow(Yr)
+    perm_strategy <- mod_spec$target_perm_strategy %||% "circular_shift"
+    perm_block <- mod_spec$target_perm_block %||% NULL
+    null_r2 <- rep(NA_real_, perm_n)
+    null_mse <- rep(NA_real_, perm_n)
+
+    for (pi in seq_len(perm_n)) {
+      perm_idx <- .br_perm_indices(T_rec, strategy = perm_strategy, block_size = perm_block)
+      Yr_perm <- Yr[perm_idx, , drop = FALSE]
+      perm_fit <- fit_fold(full_cols, pen_full, Yr_use = Yr_perm)
+      null_r2[pi] <- perm_fit$r2_mean
+      null_mse[pi] <- perm_fit$mse_mean
+    }
+
+    ok_r2 <- is.finite(null_r2)
+    ok_mse <- is.finite(null_mse)
+    n_ok_r2 <- sum(ok_r2)
+    n_ok_mse <- sum(ok_mse)
+
+    p_r2 <- if (n_ok_r2 > 0L && is.finite(r2_full_mean)) {
+      (sum(null_r2[ok_r2] >= r2_full_mean) + 1) / (n_ok_r2 + 1)
+    } else {
+      NA_real_
+    }
+    z_r2 <- if (n_ok_r2 > 1L && is.finite(r2_full_mean)) {
+      mu <- mean(null_r2[ok_r2])
+      sdv <- stats::sd(null_r2[ok_r2])
+      (r2_full_mean - mu) / max(sdv, .Machine$double.eps)
+    } else {
+      NA_real_
+    }
+
+    p_mse <- if (n_ok_mse > 0L && is.finite(mse_full_mean)) {
+      (sum(null_mse[ok_mse] <= mse_full_mean) + 1) / (n_ok_mse + 1)
+    } else {
+      NA_real_
+    }
+    z_mse <- if (n_ok_mse > 1L && is.finite(mse_full_mean)) {
+      mu <- mean(null_mse[ok_mse])
+      sdv <- stats::sd(null_mse[ok_mse])
+      (mu - mse_full_mean) / max(sdv, .Machine$double.eps)
+    } else {
+      NA_real_
+    }
+
+    perf <- c(
+      perf,
+      target_perm_p_r2_full = p_r2,
+      target_perm_z_r2_full = z_r2,
+      target_perm_p_mse_full = p_mse,
+      target_perm_z_mse_full = z_mse,
+      target_perm_nvalid_r2 = n_ok_r2,
+      target_perm_nvalid_mse = n_ok_mse
+    )
+  }
+
   # Leave-one-set-out unique contribution on recall
   if (isTRUE(mod_spec$compute_delta_r2)) {
     delta_sets <- mod_spec$delta_sets
@@ -678,6 +876,10 @@ process_roi.banded_ridge_da_model <- function(mod_spec,
       lambdas = mod_spec$lambdas,
       alpha_recall = alpha,
       alpha_target = alpha,
+      target_gap = mod_spec$target_gap %||% 0L,
+      target_nperm = perm_n,
+      target_perm_strategy = mod_spec$target_perm_strategy %||% "circular_shift",
+      target_perm_block = mod_spec$target_perm_block %||% NA_integer_,
       rho = if (mode == "coupled") rho else NA_real_,
       mode = mode
     )

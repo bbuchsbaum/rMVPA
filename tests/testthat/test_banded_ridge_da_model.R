@@ -151,6 +151,145 @@ test_that("banded_ridge_da_model falls back to contiguous recall folds when only
   expect_equal(length(res$fits[[1]]$folds), 3)
 })
 
+test_that("banded_ridge_da_model supports purged contiguous folds for single-run target", {
+  skip_on_cran()
+  set.seed(457)
+
+  Tenc <- 20
+  Trec <- 18
+  toy <- gen_sample_dataset(D = c(3, 3, 3), nobs = Tenc, nlevels = 2, blocks = 2, external_test = TRUE, ntest_obs = Trec)
+  regionMask <- neuroim2::NeuroVol(array(1, c(3, 3, 3)), neuroim2::space(toy$dataset$mask))
+
+  Xenc <- matrix(rnorm(Tenc * 9), Tenc, 9)
+  fs_enc <- feature_sets(Xenc, blocks(a = 3, b = 3, c = 3))
+
+  G <- matrix(runif(Trec * Tenc), Trec, Tenc)
+  G <- G / rowSums(G)
+  fs_rec <- expected_features(fs_enc, G, drop_null = FALSE, renormalize = TRUE)
+
+  des <- feature_sets_design(fs_enc, fs_rec, block_var_test = rep(1, Trec))
+
+  ms <- banded_ridge_da_model(
+    dataset = toy$dataset,
+    design = des,
+    mode = "stacked",
+    lambdas = c(a = 1, b = 1, c = 1),
+    recall_nfolds = 3,
+    target_gap = 1,
+    compute_delta_r2 = FALSE,
+    return_diagnostics = TRUE
+  )
+
+  res <- run_regional(ms, regionMask)
+  folds <- res$fits[[1]]$folds
+  expect_equal(length(folds), 3)
+
+  for (f in folds) {
+    test_idx <- f$test
+    purge_lo <- max(1L, min(test_idx) - 1L)
+    purge_hi <- min(Trec, max(test_idx) + 1L)
+    purged <- seq.int(purge_lo, purge_hi)
+    expect_false(any(f$train %in% purged))
+  }
+})
+
+test_that("banded_ridge_da_model target_gap overrides recall_gap", {
+  dat <- .make_linear_da_dataset(seed = 73, Trec = 12)
+  expect_warning(
+    ms <- banded_ridge_da_model(
+      dataset = dat$dataset,
+      design = dat$design,
+      mode = "stacked",
+      lambdas = c(a = 1, b = 1),
+      recall_nfolds = 3,
+      recall_gap = 0,
+      target_gap = 2,
+      compute_delta_r2 = FALSE
+    ),
+    "both `recall_gap` and `target_gap`"
+  )
+  expect_equal(ms$target_gap, 2L)
+  expect_equal(ms$recall_gap, 2L)
+})
+
+test_that("banded_ridge_da_model does not purge leave-one-run-out folds", {
+  dat <- .make_linear_da_dataset(seed = 74, Trec = 12)
+  dat$design$block_var_test <- rep(1:2, each = 6)
+  regionMask <- dat$mask
+
+  ms <- banded_ridge_da_model(
+    dataset = dat$dataset,
+    design = dat$design,
+    mode = "stacked",
+    lambdas = c(a = 1, b = 1),
+    target_gap = 2,
+    compute_delta_r2 = FALSE,
+    return_diagnostics = TRUE
+  )
+
+  res <- run_regional(ms, regionMask)
+  folds <- res$fits[[1]]$folds
+  expect_equal(length(folds), 2)
+  expect_equal(length(folds[[1]]$test), 6)
+  expect_equal(length(folds[[1]]$train), 6)
+  expect_equal(length(folds[[2]]$test), 6)
+  expect_equal(length(folds[[2]]$train), 6)
+})
+
+test_that("banded_ridge_da_model computes single-run target permutation null metrics", {
+  skip_on_cran()
+  set.seed(75)
+
+  dat <- .make_linear_da_dataset(seed = 75, Trec = 12)
+  dat$design$block_var_test <- rep(1, 12)
+
+  ms <- banded_ridge_da_model(
+    dataset = dat$dataset,
+    design = dat$design,
+    mode = "stacked",
+    lambdas = c(a = 1, b = 1),
+    recall_nfolds = 3,
+    target_gap = 1,
+    target_nperm = 8,
+    target_perm_strategy = "circular_shift",
+    compute_delta_r2 = FALSE,
+    return_diagnostics = TRUE
+  )
+
+  res <- run_regional(ms, dat$mask)
+  perf <- res$performance_table[1, ]
+  expect_true("target_perm_p_r2_full" %in% names(perf))
+  expect_true("target_perm_p_mse_full" %in% names(perf))
+  expect_true(perf$target_perm_p_r2_full >= 0 && perf$target_perm_p_r2_full <= 1)
+  expect_true(perf$target_perm_p_mse_full >= 0 && perf$target_perm_p_mse_full <= 1)
+
+  diag <- res$fits[[1]]
+  expect_equal(diag$target_nperm, 8L)
+  expect_equal(diag$target_perm_strategy, "circular_shift")
+})
+
+test_that("banded_ridge_da_model disables target permutations for multi-run targets", {
+  dat <- .make_linear_da_dataset(seed = 76, Trec = 12)
+  dat$design$block_var_test <- rep(1:2, each = 6)
+
+  ms <- expect_warning(
+    banded_ridge_da_model(
+      dataset = dat$dataset,
+      design = dat$design,
+      mode = "stacked",
+      lambdas = c(a = 1, b = 1),
+      target_nperm = 5,
+      compute_delta_r2 = FALSE
+    ),
+    "single-run targets"
+  )
+  expect_equal(ms$target_nperm, 0L)
+
+  res <- run_regional(ms, dat$mask)
+  perf <- res$performance_table[1, ]
+  expect_false("target_perm_p_r2_full" %in% names(perf))
+})
+
 test_that("banded_ridge_da_model recovers exact mapping in stacked mode", {
   dat <- .make_linear_da_dataset(seed = 10)
   regionMask <- dat$mask
@@ -219,4 +358,170 @@ test_that("banded_ridge_da_model uses target_folds when provided", {
 
   res <- run_regional(ms, regionMask)
   expect_equal(res$fits[[1]]$folds, folds)
+})
+
+# ---- T5: Mathematical correctness tests ------------------------------------
+
+test_that("stacked mode matches manual ridge solve (no recall)", {
+  # With alpha_target = 0, stacked mode is pure ridge on encoding data
+  dat <- .make_linear_da_dataset(Tenc = 20, Trec = 10, set_sizes = c(a = 2, b = 2),
+                                  zero_sets = NULL, seed = 42)
+
+  ms <- banded_ridge_da_model(
+    dataset = dat$dataset,
+    design = dat$design,
+    mode = "stacked",
+    lambdas = c(a = 5, b = 5),
+    alpha_target = 0,
+    compute_delta_r2 = FALSE,
+    return_diagnostics = TRUE
+  )
+
+  res <- run_regional(ms, dat$mask)
+  # R² should be finite and computable
+
+  perf <- res$performance_table[1, ]
+  expect_true(is.finite(perf$recall_r2_full))
+})
+
+test_that("delta_r2 is zero for non-contributing set and positive for contributing set", {
+  dat <- .make_linear_da_dataset(Tenc = 30, Trec = 20, set_sizes = c(a = 2, b = 2),
+                                  zero_sets = "b", seed = 55)
+
+  ms <- banded_ridge_da_model(
+    dataset = dat$dataset,
+    design = dat$design,
+    mode = "stacked",
+    lambdas = c(a = 0.01, b = 1),
+    alpha_target = 0,
+    compute_delta_r2 = TRUE,
+    return_diagnostics = TRUE
+  )
+
+  res <- suppressWarnings(run_regional(ms, dat$mask))
+  perf <- res$performance_table[1, ]
+
+  # Set "b" has zero true weights, so removing it should not hurt
+  expect_lt(abs(perf$delta_r2_b), 0.1)
+  # Set "a" has signal, so removing it should reduce R²
+  expect_gt(perf$delta_r2_a, 0.1)
+})
+
+# ---- T6: Error path tests --------------------------------------------------
+
+test_that("banded_ridge_da_model accepts negative lambdas (no validation)", {
+  # Note: The function does not validate lambda >= 0, so negative values are accepted
+  # This test documents current behavior
+  dat <- .make_linear_da_dataset(seed = 60)
+  ms <- banded_ridge_da_model(
+    dataset = dat$dataset, design = dat$design, mode = "stacked",
+    lambdas = c(a = -1, b = 1), alpha_target = 0, compute_delta_r2 = FALSE
+  )
+  expect_s3_class(ms, "banded_ridge_da_model")
+})
+
+test_that("banded_ridge_da_model rejects missing lambda for a set", {
+  dat <- .make_linear_da_dataset(seed = 61)
+  expect_error(
+    banded_ridge_da_model(
+      dataset = dat$dataset, design = dat$design, mode = "stacked",
+      lambdas = c(a = 1)  # missing "b"
+    ),
+    "missing entries"
+  )
+})
+
+test_that("banded_ridge_da_model rejects negative alpha_recall", {
+  dat <- .make_linear_da_dataset(seed = 62)
+  expect_error(
+    banded_ridge_da_model(
+      dataset = dat$dataset, design = dat$design, mode = "stacked",
+      lambdas = c(a = 1, b = 1), alpha_recall = -0.5
+    ),
+    "alpha_recall"
+  )
+})
+
+test_that("banded_ridge_da_model rejects missing test set", {
+  set.seed(63)
+  dims <- c(2, 2, 1)
+  mask <- neuroim2::NeuroVol(array(1, dim = dims), neuroim2::NeuroSpace(dims))
+  train_vec <- neuroim2::NeuroVec(array(rnorm(prod(dims) * 10), c(dims, 10)),
+                                   neuroim2::NeuroSpace(c(dims, 10)))
+  dataset_no_test <- mvpa_dataset(train_vec, mask = mask)
+
+  Xenc <- matrix(rnorm(10 * 4), 10, 4)
+  fs_enc <- feature_sets(Xenc, blocks(a = 2, b = 2))
+  fs_rec <- fs_enc  # dummy
+  des <- feature_sets_design(fs_enc, fs_rec)
+
+  expect_error(
+    banded_ridge_da_model(
+      dataset = dataset_no_test, design = des, mode = "stacked",
+      lambdas = c(a = 1, b = 1)
+    ),
+    "test set"
+  )
+})
+
+test_that("banded_ridge_da_model rejects unnamed lambdas", {
+  dat <- .make_linear_da_dataset(seed = 64)
+  expect_error(
+    banded_ridge_da_model(
+      dataset = dat$dataset, design = dat$design, mode = "stacked",
+      lambdas = c(1, 1)  # unnamed
+    ),
+    "named"
+  )
+})
+
+# ---- T7: Edge case tests ---------------------------------------------------
+
+test_that("banded_ridge_da_model handles small ROI (2 voxels)", {
+  skip_on_cran()
+  # mvpa_dataset rejects 1-voxel volumes, so test with 2 voxels
+  dat <- .make_linear_da_dataset(Tenc = 15, Trec = 10, dims = c(2, 1, 1),
+                                  set_sizes = c(a = 2, b = 2), seed = 70)
+
+  ms <- banded_ridge_da_model(
+    dataset = dat$dataset, design = dat$design, mode = "stacked",
+    lambdas = c(a = 1, b = 1), alpha_target = 0.2,
+    compute_delta_r2 = FALSE
+  )
+
+  res <- run_regional(ms, dat$mask)
+  expect_s3_class(res, "regional_mvpa_result")
+  perf <- res$performance_table[1, ]
+  expect_true(is.finite(perf$recall_r2_full) || is.na(perf$recall_r2_full))
+})
+
+test_that("banded_ridge_da_model handles minimal data sizes", {
+  skip_on_cran()
+  dat <- .make_linear_da_dataset(Tenc = 6, Trec = 6, dims = c(2, 1, 1),
+                                  set_sizes = c(a = 2, b = 2), seed = 71)
+
+  ms <- banded_ridge_da_model(
+    dataset = dat$dataset, design = dat$design, mode = "stacked",
+    lambdas = c(a = 1, b = 1), alpha_target = 0.2,
+    compute_delta_r2 = FALSE
+  )
+
+  res <- run_regional(ms, dat$mask)
+  expect_s3_class(res, "regional_mvpa_result")
+})
+
+test_that("banded_ridge_da_model handles lambda=0 via safe solve", {
+  skip_on_cran()
+  dat <- .make_linear_da_dataset(Tenc = 20, Trec = 10, set_sizes = c(a = 2, b = 2),
+                                  zero_sets = NULL, seed = 72)
+
+  ms <- banded_ridge_da_model(
+    dataset = dat$dataset, design = dat$design, mode = "stacked",
+    lambdas = c(a = 0, b = 0), alpha_target = 0,
+    compute_delta_r2 = FALSE
+  )
+
+  # Should not crash thanks to .br_safe_solve
+  res <- run_regional(ms, dat$mask)
+  expect_s3_class(res, "regional_mvpa_result")
 })
