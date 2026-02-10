@@ -46,3 +46,9 @@ prior to reduced-rank regression. Returned voxelwise R-squared values are in-sam
 negative when the mapping underperforms the mean model; this can be useful as a diagnostic
 rather than an error.
 }
+\examples{
+\dontrun{
+  # Requires repmap_design with seed features
+  # model <- repmap_model(dataset, design, repmap_des, key_var=~ImageID)
+}
+}

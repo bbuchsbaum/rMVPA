@@ -60,6 +60,14 @@ classification_result <- function(observed, predicted, probs, testind=NULL, test
 #'
 #' @return A binary classification result object, with the class attribute set to "binary_classification_result".
 #' @family classification_result
+#' @examples
+#' \dontrun{
+#'   obs <- factor(c("a", "b", "a", "b"))
+#'   pred <- factor(c("a", "b", "b", "a"))
+#'   probs <- matrix(c(0.8, 0.2, 0.7, 0.3, 0.4, 0.6, 0.3, 0.7),
+#'                   ncol=2, dimnames=list(NULL, c("a","b")))
+#'   res <- binary_classification_result(obs, pred, probs)
+#' }
 #' @export
 binary_classification_result <- function(observed, predicted, probs, testind=NULL, test_design=NULL, predictor=NULL) {
   # Ensure observed and predicted share the same factor levels so that
@@ -92,6 +100,15 @@ binary_classification_result <- function(observed, predicted, probs, testind=NUL
 #'
 #' @return A \code{multiway_classification_result} object containing the subset of results specified by the indices.
 #'
+#' @examples
+#' \dontrun{
+#'   # S3 method - called via sub_result generic
+#'   cres <- multiway_classification_result(
+#'     factor(c("a","b","c")), factor(c("a","b","c")),
+#'     matrix(runif(9), 3, 3, dimnames=list(NULL, c("a","b","c")))
+#'   )
+#'   subset <- sub_result(cres, 1:2)
+#' }
 #' @export
 #' @rdname sub_result-methods
 sub_result.multiway_classification_result <- function(x, indices) {

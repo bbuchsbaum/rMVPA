@@ -36,3 +36,9 @@ Convenience function to produce a named list of temporal nuisance RDMs from
 a compact specification. Items can be kernel-based (\code{temporal_rdm}) or
 HRF-overlap based (\code{temporal_hrf_overlap}).
 }
+\examples{
+\dontrun{
+  spec <- list(lag=list(kernel="exp", lambda=3), hrf=list(kind="hrf"))
+  conf <- temporal_confounds(spec, onsets=1:20, run=rep(1:4,each=5), TR=2)
+}
+}

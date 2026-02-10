@@ -22,6 +22,9 @@ y_train(obj)
 \arguments{
 \item{obj}{The object from which to extract the training response variable.}
 }
+\value{
+The training response variable (factor for classification, numeric for regression).
+}
 \description{
 Extract the training labels or response variable from an object.
 }

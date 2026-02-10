@@ -15,3 +15,7 @@ The number of observations.
 \description{
 Retrieve the number of observations in an object.
 }
+\examples{
+ds <- gen_sample_dataset(c(5,5,5), 20)
+nobs(ds$dataset)
+}

@@ -6,8 +6,17 @@
 \usage{
 \method{process_roi}{repmap_model}(mod_spec, roi, rnum, center_global_id = NA, ...)
 }
+\value{
+A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+}
 \description{
 Fits a reduced-rank mapping from seed features to ROI patterns and computes
 summary metrics (rank, R2, Frobenius norm, singular values).
+}
+\examples{
+\dontrun{
+  # Internal method called by run_searchlight/run_regional
+  # See repmap_model examples for usage
+}
 }
 \keyword{internal}

@@ -130,3 +130,11 @@ the fewest components within one SE of the minimum RMSEP.
 The number of components actually used (`ncomp`) for the region/searchlight is
 also included in the performance output.
 }
+\examples{
+\donttest{
+  D <- dist(matrix(rnorm(5*3), 5, 3))
+  labels <- factor(rep(letters[1:5], 2))
+  des <- feature_rsa_design(D, labels)
+  # mdl <- feature_rsa_model(dataset, des, method="pls")
+}
+}

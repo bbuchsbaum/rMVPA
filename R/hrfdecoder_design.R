@@ -134,6 +134,12 @@ hrfdecoder_design <- function(event_model, events, block_var, split_by = NULL) {
 #'
 #' @param x An hrfdecoder_design object
 #' @param ... Additional arguments (ignored)
+#' @return Invisibly returns the input object \code{x} (called for side effects).
+#' @examples
+#' \dontrun{
+#'   # Requires hrfdecoder and fmridesign packages
+#'   # print(hrfdecoder_design_object)
+#' }
 #' @export
 print.hrfdecoder_design <- function(x, ...) {
   cat("hrfdecoder_design\n")

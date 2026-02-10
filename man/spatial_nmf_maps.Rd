@@ -134,3 +134,9 @@ If `fast = TRUE`, the same setting is passed through to `global_test` and
 `stability` (unless explicitly overridden) so bootstrap/CV refits use the
 faster defaults too.
 }
+\examples{
+\dontrun{
+  # Requires list of NeuroVol objects per group
+  # result <- spatial_nmf_maps(group_A_vols, group_B_vols, k=5)
+}
+}

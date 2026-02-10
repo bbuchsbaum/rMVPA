@@ -38,6 +38,12 @@
 #' methods (like PCA, PLS in `feature_rsa_model`) can use, and it cannot
 #' exceed the final feature dimensionality `k`.
 #'
+#' @examples
+#' \donttest{
+#'   D <- dist(matrix(rnorm(5*3), 5, 3))
+#'   labels <- factor(letters[1:5])
+#'   des <- feature_rsa_design(D, labels)
+#' }
 #' @export
 feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_var=NULL) {
   assertthat::assert_that(!is.null(labels))
@@ -139,6 +145,13 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'
 #' @return A \code{feature_rsa_model} object (S3 class).
 #'
+#' @examples
+#' \donttest{
+#'   D <- dist(matrix(rnorm(5*3), 5, 3))
+#'   labels <- factor(rep(letters[1:5], 2))
+#'   des <- feature_rsa_design(D, labels)
+#'   # mdl <- feature_rsa_model(dataset, des, method="pls")
+#' }
 #' @details
 #' Feature RSA models analyze how well a feature matrix \code{F} (defined in the `design`)
 #' relates to neural data \code{X}. The `max_comps` parameter, inherited from the `design` object,
@@ -704,6 +717,11 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #'     \item{permutation_results}{If \code{nperm > 0}, a list with p-values and
 #'       z-scores for each metric.}
 #'   }
+#' @examples
+#' \dontrun{
+#'   # Internal S3 method called after cross-validation
+#'   # perf <- evaluate_model(feature_rsa_model, newdata, observed)
+#' }
 #' @export
 evaluate_model.feature_rsa_model <- function(object,
                                              predicted,
@@ -1411,6 +1429,15 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
 #'
 #' @param object The feature RSA model
 #' @param ... Additional args
+#' @return A list of summary statistics for the feature RSA model (printed as side effect).
+#' @examples
+#' \donttest{
+#'   D <- dist(matrix(rnorm(5*3), 5, 3))
+#'   labels <- factor(letters[1:5])
+#'   des <- feature_rsa_design(D, labels)
+#'   mdl <- feature_rsa_model(des)
+#'   summary(mdl)
+#' }
 #' @export
 summary.feature_rsa_model <- function(object, ...) {
   print(object)
@@ -1426,6 +1453,14 @@ summary.feature_rsa_model <- function(object, ...) {
 #'
 #' @param x A feature_rsa_design object.
 #' @param ... Additional arguments (ignored).
+#' @return Invisibly returns the input object \code{x} (called for side effects).
+#' @examples
+#' \donttest{
+#'   D <- dist(matrix(rnorm(5*3), 5, 3))
+#'   labels <- factor(letters[1:5])
+#'   des <- feature_rsa_design(D, labels)
+#'   print(des)
+#' }
 #' @export
 print.feature_rsa_design <- function(x, ...) {
   # Create a border line for styling
@@ -1482,6 +1517,15 @@ print.feature_rsa_design <- function(x, ...) {
 #'
 #' @param x A feature_rsa_model object.
 #' @param ... Additional arguments (ignored).
+#' @return Invisibly returns the input object \code{x} (called for side effects).
+#' @examples
+#' \donttest{
+#'   D <- dist(matrix(rnorm(5*3), 5, 3))
+#'   labels <- factor(letters[1:5])
+#'   des <- feature_rsa_design(D, labels)
+#'   mdl <- feature_rsa_model(des)
+#'   print(mdl)
+#' }
 #' @export
 print.feature_rsa_model <- function(x, ...) {
   # Create a border line for styling

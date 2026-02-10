@@ -27,3 +27,9 @@ the continuous predictions to event-level using the time window specified
 in the model. Ground truth labels are extracted from the events table during
 aggregation.
 }
+\examples{
+\dontrun{
+  # Requires hrfdecoder package
+  # See vignette("Continuous_Decoding") for full workflow
+}
+}

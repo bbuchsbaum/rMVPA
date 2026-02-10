@@ -26,3 +26,9 @@ This method concatenates event-level predictions across all CV folds, filters
 out zero-probability events (which occur when events fall outside the test fold),
 and builds a standard classification_result for metric computation.
 }
+\examples{
+\dontrun{
+  # Requires hrfdecoder package
+  # See vignette("Continuous_Decoding") for full workflow
+}
+}

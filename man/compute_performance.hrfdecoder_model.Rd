@@ -18,3 +18,9 @@ Named numeric vector of performance metrics (e.g., Accuracy, AUC)
 This method calls the performance function stored in the model specification
 to compute metrics on the classification_result produced by merge_results.
 }
+\examples{
+\dontrun{
+  # Requires hrfdecoder package
+  # See vignette("Continuous_Decoding") for full workflow
+}
+}

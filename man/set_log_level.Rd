@@ -12,6 +12,9 @@ set_log_level(level = "INFO")
 \code{"ERROR"}, \code{"FATAL"}, \code{"OFF"}) or a numeric level
 constant from the \pkg{futile.logger} package.}
 }
+\value{
+Invisibly returns the numeric log level.
+}
 \description{
 Convenience helper to control the verbosity of rMVPA's logging output.
 Internally this wraps \code{futile.logger::flog.threshold()} for the

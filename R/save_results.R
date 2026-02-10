@@ -391,6 +391,26 @@ save_results.regional_mvpa_result <- function(x, dir,
     if (!quiet) message("Wrote prediction table: ", pred_file)
   }
 
+  # Save pooled prediction/performance tables when available
+  if (!is.null(x$pooled_prediction_table)) {
+    pooled_pred_file <- file.path(dir, "pooled_prediction_table.txt")
+    pooled_pred_file <- .unique_path(pooled_pred_file, overwrite)
+    utils::write.table(x$pooled_prediction_table, pooled_pred_file,
+                       row.names = FALSE, quote = FALSE, sep = "\t")
+    paths$pooled_prediction_table <- pooled_pred_file
+    if (!quiet) message("Wrote pooled prediction table: ", pooled_pred_file)
+  }
+
+  if (!is.null(x$pooled_performance)) {
+    pooled_perf_file <- file.path(dir, "pooled_performance_table.txt")
+    pooled_perf_file <- .unique_path(pooled_perf_file, overwrite)
+    pooled_perf_df <- tibble::enframe(as.list(x$pooled_performance), name = "metric", value = "value")
+    utils::write.table(pooled_perf_df, pooled_perf_file,
+                       row.names = FALSE, quote = FALSE, sep = "\t")
+    paths$pooled_performance_table <- pooled_perf_file
+    if (!quiet) message("Wrote pooled performance table: ", pooled_perf_file)
+  }
+
   # Save fits if present and not minimal level
   if (!is.null(x$fits) && length(x$fits) > 0 && level != "minimal") {
     fits_dir <- file.path(dir, "fits")

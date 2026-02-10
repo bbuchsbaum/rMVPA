@@ -903,6 +903,7 @@ pool_randomized <- function(model_spec,
 #' @param mvpa_fun The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).
 #' @param combiner The function to be used to combine results (default is \code{pool_randomized}).
 #' @param ... Additional arguments to be passed to the MVPA function.
+#' @return A searchlight_result object containing spatial maps for each metric.
 #'
 #' @importFrom futile.logger flog.error flog.info
 #' @importFrom dplyr filter bind_rows
@@ -1079,6 +1080,7 @@ do_randomized <- function(model_spec, radius, niter,
 #' @param ... Additional arguments to be passed to the MVPA function.
 #' @param drop_probs Logical; drop per-ROI probability matrices after computing metrics (default \code{FALSE}).
 #' @param return_pobserved Logical; placeholder for API symmetry with randomized searchlight. Currently ignored because \code{combine_randomized} does not aggregate prob-observed.
+#' @return A searchlight_result object containing spatial maps for each metric.
 do_resampled <- function(model_spec, radius, niter,
                         mvpa_fun = mvpa_iterate,
                         combiner = combine_randomized,
@@ -1183,6 +1185,7 @@ do_resampled <- function(model_spec, radius, niter,
 #' @param mvpa_fun The MVPA function to be used in the searchlight analysis (default is \code{mvpa_iterate}).
 #' @param combiner The function to be used to combine results (default is \code{combine_standard}).
 #' @param ... Additional arguments to be passed to the MVPA function.
+#' @return A searchlight_result object containing spatial maps for each metric.
 do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ..., k = NULL, drop_probs = FALSE, fail_fast = FALSE) {
   error=NULL
   flog.info("creating standard searchlight")
@@ -1255,6 +1258,12 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #'
 #' @return The result object from \code{do_standard} or \code{do_randomized} (often a \code{searchlight_result} or similar).
 #'
+#' @examples
+#' \dontrun{
+#'   # Internal base function - users should call run_searchlight instead
+#'   # result <- run_searchlight_base(model_spec, radius=8, method="standard")
+#' }
+#' @keywords internal
 #' @export
 run_searchlight_base <- function(model_spec,
                                  radius = 8,
@@ -1362,13 +1371,17 @@ run_searchlight_base <- function(model_spec,
 
 #' Default method for run_searchlight
 #'
-#' By default, if an object's class does not implement a specific 
+#' By default, if an object's class does not implement a specific
 #' \code{run_searchlight.<class>} method, this fallback will call
 #' \code{run_searchlight_base}.
 #'
 #' @param model_spec The generic model specification object.
 #' @inheritParams run_searchlight_base
-#'
+#' @return A `searchlight_result` object containing spatial maps for each metric.
+#' @examples
+#' \dontrun{
+#'   # See run_searchlight generic for examples
+#' }
 #' @export
 run_searchlight.default <- function(model_spec, radius = 8, method = c("standard","randomized","resampled"),
                                     niter = 4, combiner = "average", drop_probs = FALSE,
@@ -1388,11 +1401,16 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
 
 #' run_searchlight method for vector_rsa_model
 #'
-#' This sets a custom \code{mvpa_fun} (e.g., \code{vector_rsa_iterate}) or 
+#' This sets a custom \code{mvpa_fun} (e.g., \code{vector_rsa_iterate}) or
 #' different combiners for standard vs. randomized, etc.
 #'
 #' @param model_spec A \code{vector_rsa_model} object.
 #' @inheritParams run_searchlight_base
+#' @return A `searchlight_result` object containing spatial maps for each metric.
+#' @examples
+#' \dontrun{
+#'   # See vector_rsa_model examples for complete workflow
+#' }
 #' @export
 run_searchlight.vector_rsa <- function(model_spec,
                                        radius = 8,
@@ -1435,10 +1453,15 @@ run_searchlight.vector_rsa <- function(model_spec,
 #'   \item{results}{A named list of \code{SparseNeuroVec} or \code{NeuroSurfaceVector} objects,
 #'     one for each contrast (Q maps in total).}
 #'   \item{...}{Other standard searchlight metadata.}
+#' @examples
+#' \dontrun{
+#'   # Internal function for combining MS-ReVE results
+#'   # result <- combine_msreve_standard(model_spec, good_results, bad_results)
+#' }
 #' @keywords internal
 #' @importFrom neuroim2 SparseNeuroVec space add_dim
 #' @importFrom neurosurf NeuroSurfaceVector geometry
-#' @importFrom purrr map 
+#' @importFrom purrr map
 #' @importFrom dplyr bind_cols select pull
 #' @export
 combine_msreve_standard <- function(model_spec, good_results, bad_results) {
@@ -1490,7 +1513,14 @@ combine_msreve_standard <- function(model_spec, good_results, bad_results) {
       final_metrics <- expected_metric_name
       
   } else {
-      # --- Handle multi-value (Q-length) metrics --- 
+      # --- Handle multi-value (Q-length) metrics ---
+      # Unwrap list-wrapped performance (e.g. list(beta_delta = c(AvsB=v, CvsD=v)))
+      # into the inner numeric vector so Q and contrast_names reflect the actual contrasts.
+      if (is.list(first_perf) && !is.numeric(first_perf) &&
+          output_metric %in% names(first_perf)) {
+        valid_perf_list <- lapply(valid_perf_list, function(x) x[[output_metric]])
+        first_perf <- valid_perf_list[[1]]
+      }
       Q <- length(first_perf)
       contrast_names <- names(first_perf)
       if (is.null(contrast_names) || Q == 0) {

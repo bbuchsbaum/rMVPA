@@ -29,6 +29,9 @@
 
 \item{...}{Additional arguments passed to underlying methods (e.g., \code{batch_size}).}
 }
+\value{
+A searchlight_result object containing spatial maps for each metric.
+}
 \description{
 Uses \code{mvpa_iterate} with the ERA-RSA ROI processor to create metric
 maps per sphere center. Both standard and randomized searchlight are
@@ -39,5 +42,11 @@ supported:
   \item \code{method = "randomized"}: randomized centers with multiple
     iterations, combined via \code{combine_randomized} (averaging metrics
     over coverage).
+}
+}
+\examples{
+\dontrun{
+  # See era_rsa_model examples for complete workflow
+  # results <- run_searchlight(model_spec, radius = 8)
 }
 }

@@ -17,6 +17,11 @@ banded_ridge_da_model(
   target_folds = NULL,
   recall_nfolds = 5L,
   target_nfolds = NULL,
+  recall_gap = 0L,
+  target_gap = NULL,
+  target_nperm = 0L,
+  target_perm_strategy = c("circular_shift", "block_shuffle"),
+  target_perm_block = NULL,
   compute_delta_r2 = TRUE,
   delta_sets = NULL,
   return_diagnostics = FALSE,
@@ -35,6 +40,11 @@ grouped_ridge_da_model(
   target_folds = NULL,
   recall_nfolds = 5L,
   target_nfolds = NULL,
+  recall_gap = 0L,
+  target_gap = NULL,
+  target_nperm = 0L,
+  target_perm_strategy = "circular_shift",
+  target_perm_block = NULL,
   compute_delta_r2 = TRUE,
   delta_sets = NULL,
   return_diagnostics = FALSE,
@@ -69,6 +79,26 @@ when available; otherwise, contiguous K-fold splits are used.}
 
 \item{target_nfolds}{Integer number of contiguous folds to use when only one test block is present.
 If provided, overrides `recall_nfolds`.}
+
+\item{recall_gap}{Non-negative integer purge gap (in TRs) used only when test/target data
+consist of a single run and contiguous folds are generated automatically. For each held-out
+test segment, `recall_gap` TRs on each side are excluded from the training set to reduce
+temporal leakage from autocorrelation/physiological noise. Default 0.}
+
+\item{target_gap}{Optional non-negative integer purge gap for target folds. If provided,
+overrides `recall_gap`.}
+
+\item{target_nperm}{Non-negative integer. If > 0 and the target domain is a single run,
+compute a permutation null by rearranging target timing while preserving local temporal
+structure (`target_perm_strategy`). Default 0 (disabled).}
+
+\item{target_perm_strategy}{Permutation strategy for single-run target nulls when
+`target_nperm > 0`: `"circular_shift"` (preserves full run autocorrelation under
+cyclic shifts) or `"block_shuffle"` (preserves within-block structure and shuffles
+block order).}
+
+\item{target_perm_block}{Optional positive integer block size (TRs) used only when
+`target_perm_strategy = "block_shuffle"`. If NULL, a heuristic block size is used.}
 
 \item{compute_delta_r2}{Logical; if TRUE, compute leave-one-set-out unique contribution
 \eqn{\Delta R^2} on held-out test (default TRUE).}

@@ -15,3 +15,11 @@ The number of response categories.
 \description{
 Get the number of response categories or levels.
 }
+\examples{
+cres <- binary_classification_result(
+  observed = factor(c("a","b")),
+  predicted = factor(c("a","b")),
+  probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))
+)
+nresponses(cres)
+}

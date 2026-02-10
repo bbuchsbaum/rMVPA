@@ -11,8 +11,17 @@
 
 \item{...}{Ignored.}
 }
+\value{
+Invisibly returns the input object \code{x} (called for side effects).
+}
 \description{
 Formats and prints the system information gathered by \code{mvpa_sysinfo}.
 This method provides a user-friendly display of the system configuration.
+}
+\examples{
+\dontrun{
+  info <- mvpa_sysinfo()
+  print(info)
+}
 }
 \keyword{internal}

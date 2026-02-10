@@ -25,6 +25,11 @@ The function calculates the following performance metrics for the given regressi
 - RMSE: root mean squared error, a measure of the differences between predicted and observed values.
 - Spearman correlation: a measure of the monotonic relationship between predicted and observed values.
 }
+\examples{
+\dontrun{
+  # See performance() generic for examples
+}
+}
 \seealso{
 \code{\link{regression_result}}
 }

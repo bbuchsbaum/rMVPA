@@ -30,9 +30,15 @@ evaluate_model.vector_rsa_model(
 \item{...}{Additional arguments.}
 }
 \value{
-A list containing the mean RSA score (`rsa_score`), raw scores, and 
+A list containing the mean RSA score (`rsa_score`), raw scores, and
   optional permutation results (`p_values`, `z_scores`, `permutation_distributions`).
 }
 \description{
 Computes the mean second-order similarity score and handles permutation testing.
+}
+\examples{
+\dontrun{
+  # Internal S3 method called during processing
+  # perf <- evaluate_model(vector_rsa_model, observed, roi_data)
+}
 }

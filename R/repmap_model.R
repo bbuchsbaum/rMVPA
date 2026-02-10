@@ -22,6 +22,11 @@
 #' prior to reduced-rank regression. Returned voxelwise R-squared values are in-sample and may be
 #' negative when the mapping underperforms the mean model; this can be useful as a diagnostic
 #' rather than an error.
+#' @examples
+#' \dontrun{
+#'   # Requires repmap_design with seed features
+#'   # model <- repmap_model(dataset, design, repmap_des, key_var=~ImageID)
+#' }
 #' @export
 repmap_model <- function(dataset,
                          design,
@@ -58,6 +63,7 @@ repmap_model <- function(dataset,
 
 #' Internal helper: reduced-rank regression fit for repmap_model
 #'
+#' @return A list with fitted repmap RRR components.
 #' @keywords internal
 .repmap_fit_rrr <- function(X, Y,
                             rank = "auto",
@@ -130,6 +136,12 @@ repmap_model <- function(dataset,
 #' Fits a reduced-rank mapping from seed features to ROI patterns and computes
 #' summary metrics (rank, R2, Frobenius norm, singular values).
 #'
+#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+#' @examples
+#' \dontrun{
+#'   # Internal method called by run_searchlight/run_regional
+#'   # See repmap_model examples for usage
+#' }
 #' @keywords internal
 #' @export
 process_roi.repmap_model <- function(mod_spec,

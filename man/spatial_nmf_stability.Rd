@@ -88,3 +88,11 @@ consistently among the strongest loadings.
   \item \code{component_similarity}: average similarity to the reference components.
 }
 }
+\examples{
+\dontrun{
+  stab <- spatial_nmf_stability(
+    matrix(rnorm(100*10), 100, 10),
+    k = 3, nruns = 5
+  )
+}
+}

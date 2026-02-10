@@ -196,6 +196,11 @@ hrfdecoder_model <- function(dataset, design,
 #'
 #' @param obj hrfdecoder_model specification object
 #' @return Integer vector of length equal to number of TRs (observations) in the dataset
+#' @examples
+#' \dontrun{
+#'   # Requires hrfdecoder package
+#'   # See vignette("Continuous_Decoding") for full workflow
+#' }
 #' @export
 y_train.hrfdecoder_model <- function(obj) {
   seq_len(nobs(obj$dataset))
@@ -219,6 +224,11 @@ y_train.hrfdecoder_model <- function(obj) {
 #' @param ... Additional arguments (unused)
 #' @return A list with class "hrfdecoder_fit_wrap" containing the fitted model,
 #'   searchlight info, and ROI indices
+#' @examples
+#' \dontrun{
+#'   # Requires hrfdecoder package
+#'   # See vignette("Continuous_Decoding") for full workflow
+#' }
 #' @export
 train_model.hrfdecoder_model <- function(obj, train_dat, y, sl_info, cv_spec, indices, ...) {
   if (!requireNamespace("hrfdecoder", quietly = TRUE)) {
@@ -277,6 +287,11 @@ train_model.hrfdecoder_model <- function(obj, train_dat, y, sl_info, cv_spec, in
 #' @param ... Additional arguments (unused)
 #' @return A tibble with one row containing class predictions, probabilities,
 #'   true labels, test indices, optional fit object, error status, and error message
+#' @examples
+#' \dontrun{
+#'   # Requires hrfdecoder package
+#'   # See vignette("Continuous_Decoding") for full workflow
+#' }
 #' @export
 format_result.hrfdecoder_model <- function(obj, result, error_message = NULL, context, ...) {
   if (!is.null(error_message)) {
@@ -395,6 +410,11 @@ format_result.hrfdecoder_model <- function(obj, result, error_message = NULL, co
 #' @param ... Additional arguments (unused)
 #' @return A tibble with one row containing the classification_result, performance
 #'   metrics, optional fast metrics, primary metric name/value, and error status
+#' @examples
+#' \dontrun{
+#'   # Requires hrfdecoder package
+#'   # See vignette("Continuous_Decoding") for full workflow
+#' }
 #' @export
 merge_results.hrfdecoder_model <- function(obj, result_set, indices, id, ...) {
   if (any(result_set$error)) {
@@ -474,6 +494,11 @@ merge_results.hrfdecoder_model <- function(obj, result_set, indices, id, ...) {
 #' @param obj hrfdecoder_model specification object
 #' @param result A classification_result object from merge_results
 #' @return Named numeric vector of performance metrics (e.g., Accuracy, AUC)
+#' @examples
+#' \dontrun{
+#'   # Requires hrfdecoder package
+#'   # See vignette("Continuous_Decoding") for full workflow
+#' }
 #' @export
 compute_performance.hrfdecoder_model <- function(obj, result) {
   obj$performance(result)

@@ -15,6 +15,9 @@ y_test(obj)
 \arguments{
 \item{obj}{The object from which to extract the test response variable.}
 }
+\value{
+The test response variable.
+}
 \description{
 Extract the test labels or response variable from an object.
 }

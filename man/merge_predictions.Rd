@@ -26,3 +26,18 @@ A combined object with merged predictions.
 \description{
 Combine predictions from multiple models on the same test set.
 }
+\examples{
+\donttest{
+cres1 <- binary_classification_result(
+  observed = factor(c("a","b")),
+  predicted = factor(c("a","b")),
+  probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))
+)
+cres2 <- binary_classification_result(
+  observed = factor(c("a","b")),
+  predicted = factor(c("b","a")),
+  probs = matrix(c(.4,.6,.6,.4), ncol=2, dimnames=list(NULL,c("a","b")))
+)
+merge_predictions(cres1, list(cres2))
+}
+}

@@ -10,6 +10,11 @@
 #' @param drop_probs Logical; if TRUE, drop per-ROI probability matrices after metrics. Default TRUE for this model.
 #' @param return_pobserved Logical; if TRUE, return voxel-by-trial probability maps. Default FALSE.
 #' @param fail_fast Logical; if TRUE, stop on first ROI error. Default FALSE.
+#' @return A `searchlight_result` object containing spatial maps for each metric.
+#' @examples
+#' \dontrun{
+#'   # See remap_rrr_model examples for complete workflow
+#' }
 #' @export
 run_searchlight.remap_rrr_model <- function(model_spec,
                                             radius = 8,

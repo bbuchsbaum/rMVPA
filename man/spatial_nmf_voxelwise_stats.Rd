@@ -39,3 +39,8 @@ A list with `z` and `p` component maps.
 Convenience function that converts stability summaries into voxelwise z- and
 p-value maps (based on bootstrap mean/SD).
 }
+\examples{
+\dontrun{
+  # stats <- spatial_nmf_voxelwise_stats(nmf_result, design_matrix)
+}
+}

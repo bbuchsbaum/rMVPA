@@ -227,6 +227,252 @@ mvpa_dataset <- function(train_data, test_data=NULL, mask) {
   ret
 }
 
+#' @keywords internal
+#' @noRd
+validate_image_mask <- function(mask) {
+  assert_that(inherits(mask, "NeuroVol"))
+
+  mask_dims <- dim(mask)[1:3]
+  total_voxels <- prod(mask_dims)
+  if (total_voxels <= 1) {
+    stop(
+      "Invalid dataset: Only 1 voxel detected (dimensions ",
+      paste(mask_dims, collapse = "x"),
+      "). Feature RSA analysis requires multiple voxels."
+    )
+  }
+
+  active_voxels <- sum(mask > 0)
+  if (active_voxels <= 1) {
+    stop(
+      "Invalid dataset: Only ", active_voxels,
+      " active voxel(s) in mask. Feature RSA analysis requires multiple active voxels."
+    )
+  }
+}
+
+#' @keywords internal
+#' @noRd
+split_multibasis_vector <- function(vec, basis_count, ordering = c("event_major", "basis_major"), arg_name = "train_data") {
+  ordering <- match.arg(ordering)
+
+  if (is.null(basis_count) || length(basis_count) != 1 || is.na(basis_count)) {
+    stop(arg_name, ": `basis_count` must be supplied when using a single concatenated 4D series.")
+  }
+
+  basis_count <- as.integer(basis_count)
+  if (basis_count < 1) {
+    stop(arg_name, ": `basis_count` must be >= 1.")
+  }
+
+  dims <- dim(vec)
+  if (is.null(dims) || length(dims) < 4) {
+    stop(arg_name, ": expected a 4D NeuroVec.")
+  }
+
+  nvol <- dims[length(dims)]
+  if (nvol %% basis_count != 0) {
+    stop(
+      arg_name, ": number of volumes (", nvol, ") is not divisible by basis_count (", basis_count, ")."
+    )
+  }
+
+  n_events <- nvol %/% basis_count
+  idx_sets <- if (ordering == "event_major") {
+    lapply(seq_len(basis_count), function(b) seq.int(from = b, to = nvol, by = basis_count))
+  } else {
+    lapply(seq_len(basis_count), function(b) {
+      start <- (b - 1L) * n_events + 1L
+      seq.int(from = start, length.out = n_events)
+    })
+  }
+
+  lapply(idx_sets, function(idx) neuroim2::sub_vector(vec, idx))
+}
+
+#' @keywords internal
+#' @noRd
+as_multibasis_series <- function(x, mask, basis_count = NULL, ordering = c("event_major", "basis_major"), arg_name = "train_data") {
+  ordering <- match.arg(ordering)
+  mask_for_read <- tryCatch(methods::as(mask, "LogicalNeuroVol"), error = function(...) mask)
+
+  read_one <- function(path) {
+    if (!file.exists(path)) {
+      stop(arg_name, ": file not found: ", path)
+    }
+    neuroim2::read_vec(path, mask = mask_for_read)
+  }
+
+  as_neurovec <- function(item, idx) {
+    if (inherits(item, "NeuroVec")) {
+      return(item)
+    }
+    if (is.character(item) && length(item) == 1L) {
+      return(read_one(item))
+    }
+    stop(arg_name, "[[", idx, "]] must be a NeuroVec or a single file path.")
+  }
+
+  series_list <- if (inherits(x, "NeuroVec")) {
+    split_multibasis_vector(x, basis_count = basis_count, ordering = ordering, arg_name = arg_name)
+  } else if (is.character(x) && !is.list(x)) {
+    if (length(x) == 1L) {
+      vec <- read_one(x)
+      split_multibasis_vector(vec, basis_count = basis_count, ordering = ordering, arg_name = arg_name)
+    } else {
+      lapply(x, read_one)
+    }
+  } else if (is.list(x)) {
+    if (length(x) == 0L) {
+      stop(arg_name, " cannot be an empty list.")
+    }
+    lapply(seq_along(x), function(i) as_neurovec(x[[i]], i))
+  } else {
+    stop(arg_name, " must be one of: NeuroVec, list of NeuroVec/file paths, character vector of file paths.")
+  }
+
+  if (length(series_list) == 0L) {
+    stop(arg_name, ": no basis series were resolved.")
+  }
+
+  if (!is.null(basis_count)) {
+    basis_count <- as.integer(basis_count)
+    if (is.na(basis_count) || basis_count < 1L) {
+      stop(arg_name, ": `basis_count` must be a positive integer.")
+    }
+    if (length(series_list) != basis_count) {
+      stop(
+        arg_name, ": resolved ", length(series_list),
+        " basis series but basis_count=", basis_count, "."
+      )
+    }
+  }
+
+  dims0 <- dim(series_list[[1]])
+  if (is.null(dims0) || length(dims0) < 4) {
+    stop(arg_name, ": resolved basis series must be 4D NeuroVec objects.")
+  }
+
+  for (i in seq_along(series_list)) {
+    if (!inherits(series_list[[i]], "NeuroVec")) {
+      stop(arg_name, "[[", i, "]] is not a NeuroVec.")
+    }
+    if (!identical(dim(series_list[[i]]), dims0)) {
+      stop(arg_name, ": all basis series must have identical dimensions.")
+    }
+  }
+
+  series_list
+}
+
+#' Create a Multibasis MVPA Image Dataset
+#'
+#' Creates an image dataset where each event has \code{k} basis beta maps. The
+#' dataset stores basis images separately and presents event-level observations
+#' with basis-concatenated features in downstream extraction methods.
+#'
+#' @param train_data Training data in one of the following forms:
+#'   \itemize{
+#'     \item A list of \code{NeuroVec} objects (one per basis).
+#'     \item A character vector of 4D image paths (one file per basis).
+#'     \item A single 4D \code{NeuroVec} or image path containing concatenated
+#'       basis volumes, where \code{basis_count} specifies splitting.
+#'   }
+#' @param test_data Optional test data in the same format as \code{train_data}.
+#' @param mask A \code{NeuroVol} mask.
+#' @param basis_count Number of basis functions when using a single concatenated
+#'   4D series.
+#' @param ordering Ordering of volumes in concatenated series:
+#'   \code{"event_major"} means \code{event1(b1..bk), event2(b1..bk), ...};
+#'   \code{"basis_major"} means \code{b1(all events), b2(all events), ...}.
+#' @param basis_labels Optional character labels for basis functions.
+#'
+#' @return An object of class \code{mvpa_multibasis_image_dataset}.
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(5,5,5), 20)
+#'   # Create two basis series from same data
+#'   mb <- mvpa_multibasis_dataset(
+#'     train_data = list(ds$dataset$train_data, ds$dataset$train_data),
+#'     mask = ds$dataset$mask
+#'   )
+#' }
+#' @export
+mvpa_multibasis_dataset <- function(train_data,
+                                    test_data = NULL,
+                                    mask,
+                                    basis_count = NULL,
+                                    ordering = c("event_major", "basis_major"),
+                                    basis_labels = NULL) {
+  ordering <- match.arg(ordering)
+  validate_image_mask(mask)
+
+  train_series <- as_multibasis_series(
+    train_data,
+    mask = mask,
+    basis_count = basis_count,
+    ordering = ordering,
+    arg_name = "train_data"
+  )
+
+  k <- length(train_series)
+
+  test_series <- if (!is.null(test_data)) {
+    out <- as_multibasis_series(
+      test_data,
+      mask = mask,
+      basis_count = k,
+      ordering = ordering,
+      arg_name = "test_data"
+    )
+    if (length(out) != k) {
+      stop("test_data basis count must match train_data basis count.")
+    }
+    out
+  } else {
+    NULL
+  }
+
+  if (is.null(basis_labels)) {
+    basis_labels <- paste0("b", seq_len(k))
+  } else {
+    if (length(basis_labels) != k) {
+      stop("basis_labels length must match the number of basis series (", k, ").")
+    }
+    basis_labels <- as.character(basis_labels)
+  }
+
+  has_test <- !is.null(test_series)
+
+  structure(
+    list(
+      train_data = train_series,
+      test_data = test_series,
+      mask = mask,
+      basis_count = k,
+      basis_labels = basis_labels,
+      has_test_set = has_test
+    ),
+    class = c("mvpa_multibasis_image_dataset", "mvpa_image_dataset", "mvpa_dataset", "list")
+  )
+}
+
+#' Alias for \code{mvpa_multibasis_dataset}
+#'
+#' @inheritParams mvpa_multibasis_dataset
+#' @return An object of class \code{mvpa_multibasis_image_dataset}.
+#' @examples
+#' \dontrun{
+#'   # See mvpa_multibasis_dataset for examples
+#'   ds <- gen_sample_dataset(c(5,5,5), 20)
+#'   mb <- mvpa_multibasis_image_dataset(
+#'     list(ds$dataset$train_data, ds$dataset$train_data),
+#'     mask = ds$dataset$mask
+#'   )
+#' }
+#' @export
+mvpa_multibasis_image_dataset <- mvpa_multibasis_dataset
+
 
 #' Create a Surface-Based MVPA Dataset Object
 #'
@@ -346,6 +592,47 @@ print.mvpa_dataset <- function(x, ...) {
   }
   cat(info_style("  - Active voxels/vertices: "), 
       number_style(format(sum(x$mask > 0), big.mark=",")), "\n\n")
+}
+
+#' @export
+#' @method print mvpa_multibasis_image_dataset
+print.mvpa_multibasis_image_dataset <- function(x, ...) {
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    stop("Package 'crayon' is required for pretty printing. Please install it.")
+  }
+
+  header_style <- crayon::bold$cyan
+  section_style <- crayon::yellow
+  info_style <- crayon::white
+  number_style <- crayon::green
+
+  cat("\n", header_style("Multibasis MVPA Dataset"), "\n\n")
+  cat(section_style("- Basis Functions"), "\n")
+  cat(info_style("  - Count: "), number_style(x$basis_count), "\n")
+  cat(info_style("  - Labels: "), paste(x$basis_labels, collapse = ", "), "\n")
+
+  train_dims <- dim(x$train_data[[1]])
+  n_events <- train_dims[length(train_dims)]
+  cat(section_style("- Training Data"), "\n")
+  cat(info_style("  - Event observations: "), number_style(n_events), "\n")
+  cat(info_style("  - Basis files/series: "), number_style(length(x$train_data)), "\n")
+  cat(info_style("  - Spatial dims: "), paste(train_dims[1:3], collapse = " x "), "\n")
+
+  cat(section_style("- Test Data"), "\n")
+  if (is.null(x$test_data)) {
+    cat(info_style("  - "), crayon::red("None"), "\n")
+  } else {
+    test_dims <- dim(x$test_data[[1]])
+    cat(info_style("  - Event observations: "), number_style(test_dims[length(test_dims)]), "\n")
+    cat(info_style("  - Basis files/series: "), number_style(length(x$test_data)), "\n")
+  }
+
+  cat(section_style("- Mask Information"), "\n")
+  cat(
+    info_style("  - Active voxels: "),
+    number_style(format(sum(x$mask > 0), big.mark = ",")),
+    "\n\n"
+  )
 }
 
 #' @export
@@ -491,6 +778,12 @@ nobs.mvpa_dataset <- function(x) {
   }
 }
 
+#' @export
+nobs.mvpa_multibasis_image_dataset <- function(x) {
+  dims <- dim(x$train_data[[1]])
+  dims[length(dims)]
+}
+
 
 # ---- Default implementations of the new searchlight generics ----
 
@@ -507,6 +800,37 @@ get_center_ids.mvpa_surface_dataset <- function(dataset, ...) {
 #' @export
 build_output_map.mvpa_image_dataset <- function(dataset, metric_vector, ids, ...) {
   build_volume_map(dataset, metric_vector, ids)
+}
+
+#' @export
+build_output_map.mvpa_multibasis_image_dataset <- function(dataset, metric_vector, ids, aggregation = c("mean", "sum", "maxabs"), ...) {
+  aggregation <- match.arg(aggregation)
+
+  if (is.null(ids)) {
+    return(build_volume_map(dataset, metric_vector, ids))
+  }
+
+  if (length(metric_vector) != length(ids)) {
+    stop("Length of metric_vector must match length(ids).")
+  }
+
+  if (!anyDuplicated(ids)) {
+    return(build_volume_map(dataset, metric_vector, ids))
+  }
+
+  split_vals <- split(metric_vector, ids)
+  agg_fun <- switch(
+    aggregation,
+    mean = function(x) mean(x, na.rm = TRUE),
+    sum = function(x) sum(x, na.rm = TRUE),
+    maxabs = function(x) x[which.max(abs(x))]
+  )
+
+  ids_u <- as.integer(names(split_vals))
+  vals_u <- vapply(split_vals, agg_fun, numeric(1))
+  ord <- order(ids_u)
+
+  build_volume_map(dataset, vals_u[ord], ids_u[ord])
 }
 
 #' @export

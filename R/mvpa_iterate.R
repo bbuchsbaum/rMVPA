@@ -363,6 +363,18 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
 #'   \item{warning_message}{Warning message if applicable.}
 #' }
 #'
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(5,5,5), 20, blocks=2, nlevels=2)
+#'   cval <- blocked_cross_validation(ds$design$block_var)
+#'   mdl <- load_model("sda_notune")
+#'   mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+#'     "classification", crossval=cval)
+#'   sl <- get_searchlight(ds$dataset, radius=3)
+#'   vox_iter <- lapply(sl, function(x) x)
+#'   results <- mvpa_iterate(mspec, vox_iter[1:5],
+#'     ids=seq_along(vox_iter[1:5]))
+#' }
 #' @importFrom furrr future_pmap
 #' @importFrom purrr map pmap
 #' @export

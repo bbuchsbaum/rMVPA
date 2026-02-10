@@ -21,6 +21,10 @@
 #'     \item item_run_enc, item_run_ret: optional per-item run factors
 #'     \item confound_rdms: named list of item-level RDMs (block/time/run)
 #'   }
+#' @examples
+#' \dontrun{
+#'   # See era_rsa_model for full ERA-RSA workflow with design construction
+#' }
 #' @export
 era_rsa_design <- function(design,
                            key_var,

@@ -11,6 +11,15 @@
 
 \item{...}{Additional arguments (ignored)}
 }
+\value{
+Invisibly returns the input object \code{x} (called for side effects).
+}
 \description{
 Print method for hrfdecoder_design
+}
+\examples{
+\dontrun{
+  # Requires hrfdecoder and fmridesign packages
+  # print(hrfdecoder_design_object)
+}
 }

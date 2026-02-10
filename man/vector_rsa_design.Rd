@@ -23,3 +23,12 @@ This function constructs a design for an RSA model using a single distance matri
 The function verifies that all `labels` appear in `rownames(D)` and creates an expanded
 dissimilarity matrix (`Dexpanded`) matching the order of `labels`.
 }
+\examples{
+\donttest{
+  D <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
+  rownames(D) <- colnames(D) <- letters[1:5]
+  labels <- factor(rep(letters[1:5], 2))
+  block_var <- rep(1:2, each=5)
+  des <- vector_rsa_design(D, labels, block_var)
+}
+}

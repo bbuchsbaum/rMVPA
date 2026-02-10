@@ -40,3 +40,13 @@ This function integrates a vector_rsa_design and an mvpa_dataset to create a vec
 If `return_predictions` is TRUE, the output of `run_regional` or `run_searchlight`
 will include a `prediction_table` tibble containing the observation-level RSA scores.
 }
+\examples{
+\donttest{
+  D <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
+  rownames(D) <- colnames(D) <- letters[1:5]
+  labels <- factor(rep(letters[1:5], 2))
+  block_var <- rep(1:2, each=5)
+  des <- vector_rsa_design(D, labels, block_var)
+  # mdl <- vector_rsa_model(dataset, des)
+}
+}

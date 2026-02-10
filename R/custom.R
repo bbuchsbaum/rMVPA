@@ -593,6 +593,11 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
 #' @param metric_name Character string naming the metric
 #' @param indices Numeric vector of center indices (optional)
 #' @return A searchlight_performance object
+#' @examples
+#' \dontrun{
+#'   # Internal function for creating searchlight performance objects
+#'   perf <- create_searchlight_performance(neurovol, "Accuracy")
+#' }
 #' @export
 #' @keywords internal
 create_searchlight_performance <- function(data, metric_name, indices = NULL) {

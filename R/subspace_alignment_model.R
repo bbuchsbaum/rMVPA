@@ -16,6 +16,11 @@
 #' @return A model spec of class `subspace_alignment_model` for use with
 #'   `run_regional()` / `run_searchlight()`.
 #'
+#' @examples
+#' \dontrun{
+#'   ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
+#'   model <- subspace_alignment_model(ds$dataset, ds$design, d=10)
+#' }
 #' @export
 subspace_alignment_model <- function(dataset,
                                      design,
@@ -65,6 +70,12 @@ compute_performance.subspace_alignment_model <- function(obj, result) {
 #' classifies target trials by correlation to source class prototypes in the
 #' aligned space.
 #'
+#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+#' @examples
+#' \dontrun{
+#'   # Internal method called by run_searchlight/run_regional
+#'   # See subspace_alignment_model examples for usage
+#' }
 #' @keywords internal
 #' @export
 process_roi.subspace_alignment_model <- function(mod_spec, roi, rnum, ...) {

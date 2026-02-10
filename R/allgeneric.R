@@ -73,6 +73,7 @@ select_features <- function(obj, X, Y, ...) {
 #' @param error_message An optional error message.
 #' @param context Optional contextual metadata (e.g., ROI details) supplied to method implementations.
 #' @param ... Additional arguments to be passed to the method-specific function.
+#' @return A formatted result object, typically a tibble row.
 #'
 #' @examples
 #' \donttest{
@@ -378,6 +379,7 @@ train_model <- function(obj,...) {
 #' Extract the training labels or response variable from an object.
 #'
 #' @param obj The object from which to extract the training response variable.
+#' @return The training response variable (factor for classification, numeric for regression).
 #'
 #' @rdname y_train-methods
 #' @examples
@@ -393,6 +395,7 @@ y_train <- function(obj) {
 #' Extract the test labels or response variable from an object.
 #'
 #' @param obj The object from which to extract the test response variable.
+#' @return The test response variable.
 #'
 #' @rdname y_test-methods
 #' @examples
@@ -408,6 +411,7 @@ y_test <- function(obj) {
 #' Return the design table associated with the test set from an object.
 #'
 #' @param obj The object from which to extract the test design table.
+#' @return A data frame containing the test set design variables.
 #'
 #' @rdname test_design-methods
 #' @examples
@@ -581,7 +585,18 @@ compute_performance <- function(obj, result) {
 #' @param ... Additional classification/regression result objects.
 #'
 #' @return A single merged classification/regression result object.
-#'
+#' @examples
+#' cres1 <- binary_classification_result(
+#'   observed = factor(c("a","b")),
+#'   predicted = factor(c("a","b")),
+#'   probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))
+#' )
+#' cres2 <- binary_classification_result(
+#'   observed = factor(c("b","a")),
+#'   predicted = factor(c("b","a")),
+#'   probs = matrix(c(.2,.8,.7,.3), ncol=2, dimnames=list(NULL,c("a","b")))
+#' )
+#' merged <- merge_classif_results(cres1, cres2)
 #' @export
 merge_classif_results <- function(x, ...) {
   UseMethod("merge_classif_results")
@@ -595,6 +610,12 @@ merge_classif_results <- function(x, ...) {
 #' @param vox_list A list of vectors containing voxel indices to extract.
 #'
 #' @return A list of data samples.
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(5,5,5), 20, blocks=2)
+#'   vox_list <- list(1:10, 11:20)
+#'   samples <- get_samples(ds$dataset, vox_list)
+#' }
 #' @export
 get_samples <- function(obj, vox_list) {
   UseMethod("get_samples")
@@ -622,6 +643,13 @@ data_sample <- function(obj, vox, ...) {
 #' @param data The associated data object.
 #' @param ... Additional arguments passed to methods.
 #' @return An ROIVolume or ROISurface object.
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(5,5,5), 20, blocks=2)
+#'   vox <- sample(which(ds$dataset$mask > 0), 10)
+#'   samp <- data_sample(ds$dataset, vox)
+#'   roi <- as_roi(samp, ds$dataset)
+#' }
 #' @export
 as_roi <- function(obj, data, ...) {
   UseMethod("as_roi")
@@ -635,6 +663,11 @@ as_roi <- function(obj, data, ...) {
 #' @param ... Additional arguments to methods.
 #'
 #' @return A searchlight iterator object.
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(5,5,5), 20)
+#'   sl <- get_searchlight(ds$dataset, radius=4)
+#' }
 #' @export
 get_searchlight <- function(obj, ...) {
   UseMethod("get_searchlight")
@@ -662,6 +695,20 @@ wrap_output <- function(obj, vals, ...) {
 #' @param ... Additional arguments. Methods for this generic may implement specific arguments
 #'   such as `weights` to control how predictions are combined.
 #' @return A combined object with merged predictions.
+#' @examples
+#' \donttest{
+#' cres1 <- binary_classification_result(
+#'   observed = factor(c("a","b")),
+#'   predicted = factor(c("a","b")),
+#'   probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))
+#' )
+#' cres2 <- binary_classification_result(
+#'   observed = factor(c("a","b")),
+#'   predicted = factor(c("b","a")),
+#'   probs = matrix(c(.4,.6,.6,.4), ncol=2, dimnames=list(NULL,c("a","b")))
+#' )
+#' merge_predictions(cres1, list(cres2))
+#' }
 #' @export
 merge_predictions <- function(obj1, rest, ...) {
   UseMethod("merge_predictions")
@@ -675,6 +722,13 @@ merge_predictions <- function(obj1, rest, ...) {
 #' @param indices Row indices to extract.
 #'
 #' @return A new result object with the specified rows.
+#' @examples
+#' cres <- binary_classification_result(
+#'   observed = factor(c("a","b","a")),
+#'   predicted = factor(c("a","b","b")),
+#'   probs = matrix(c(.8,.2,.4,.3,.7,.6), ncol=2, dimnames=list(NULL,c("a","b")))
+#' )
+#' sub_result(cres, 1:2)
 #' @export
 sub_result <- function(x, indices) {
   UseMethod("sub_result")
@@ -686,6 +740,9 @@ sub_result <- function(x, indices) {
 #'
 #' @param x The input object.
 #' @return The number of observations.
+#' @examples
+#' ds <- gen_sample_dataset(c(5,5,5), 20)
+#' nobs(ds$dataset)
 #' @export
 nobs <- function(x) {
   UseMethod("nobs")
@@ -697,6 +754,13 @@ nobs <- function(x) {
 #'
 #' @param x The object from which to extract the probability.
 #' @return A vector of predicted probabilities.
+#' @examples
+#' cres <- binary_classification_result(
+#'   observed = factor(c("a","b")),
+#'   predicted = factor(c("a","b")),
+#'   probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))
+#' )
+#' prob_observed(cres)
 #' @export
 prob_observed <- function(x) {
   UseMethod("prob_observed")
@@ -708,6 +772,13 @@ prob_observed <- function(x) {
 #'
 #' @param x The object from which to extract the number of categories.
 #' @return The number of response categories.
+#' @examples
+#' cres <- binary_classification_result(
+#'   observed = factor(c("a","b")),
+#'   predicted = factor(c("a","b")),
+#'   probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))
+#' )
+#' nresponses(cres)
 #' @export
 nresponses <- function(x) {
   UseMethod("nresponses")
@@ -726,6 +797,16 @@ nresponses <- function(x) {
 #'
 #' @return Predictions whose structure depends on the specific method (e.g., a vector,
 #'   matrix, or data frame).
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(5,5,5), 20, nlevels=2)
+#'   mdl <- load_model("sda_notune")
+#'   mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification")
+#'   vox <- which(ds$dataset$mask > 0)
+#'   X <- neuroim2::series(ds$dataset$train_data, vox)
+#'   fit <- train_model(mspec, X, ds$design$y_train, indices=vox)
+#'   preds <- predict_model(mspec, fit, X)
+#' }
 #' @export
 predict_model <- function(object, fit, newdata, ...) {
   UseMethod("predict_model")
@@ -823,6 +904,8 @@ run_searchlight <- function(model_spec, radius, method = c("standard", "randomiz
 #' @return A \code{regional_mvpa_result} object (list) containing:
 #'   \item{performance_table}{A tibble of performance metrics for each region (if computed).}
 #'   \item{prediction_table}{A tibble with detailed predictions for each observation/region (if generated).}
+#'   \item{pooled_prediction_table}{Optional pooled trial-level prediction table when pooling is requested.}
+#'   \item{pooled_performance}{Optional pooled performance metrics when pooling is requested.}
 #'   \item{vol_results}{A list of volumetric maps representing performance metrics across space (if computed).}
 #'   \item{fits}{A list of fitted model objects for each region (if requested via `return_fits=TRUE`).}
 #'   \item{model_spec}{The original model specification object provided.} # Note: Original documentation said 'performance', clarified here.
@@ -865,7 +948,7 @@ run_searchlight <- function(model_spec, radius, method = c("standard", "randomiz
 #'   results <- run_regional(mspec, region_mask)
 #'   
 #'   # Access results
-#'   head(results$performance)           # Performance metrics
+#'   head(results$performance_table)     # Performance metrics
 #'   head(results$prediction_table)      # Predictions
 #'   first_roi_fit <- results$fits[[1]]  # First ROI's fitted model
 #' }
@@ -921,6 +1004,7 @@ pairwise_dist <- function(obj, X,...) {
 #'
 #' @return A list with filtered train and test ROI data.
 #' @keywords internal
+#' @export
 filter_roi <- function(roi, ...) {
   UseMethod("filter_roi", roi$train_roi)
 }
@@ -969,6 +1053,12 @@ train_indices <- function(obj, fold_num, ...) {
 #'
 #' @return An object of class `data_sample` describing the sample; methods provide
 #'   conversions to ROI structures or data frames as needed.
+#' @examples
+#' \dontrun{
+#'   ds <- gen_sample_dataset(c(5,5,5), 20)
+#'   vox <- sample(which(ds$dataset$mask > 0), 10)
+#'   samp <- data_sample(ds$dataset, vox)
+#' }
 #' @name data_sample
 NULL
 
@@ -981,6 +1071,10 @@ NULL
 #' @param dataset The dataset object.
 #' @param ... Additional arguments.
 #' @return Integer vector of center IDs.
+#' @examples
+#' ds <- gen_sample_dataset(c(5,5,5), 20)
+#' ids <- get_center_ids(ds$dataset)
+#' length(ids)
 #' @export
 get_center_ids <- function(dataset, ...) UseMethod("get_center_ids")
 
@@ -1016,6 +1110,16 @@ searchlight_scope <- function(dataset, ...) UseMethod("searchlight_scope")
 #' @param object A fitted model object (e.g., from \code{sda}, \code{glmnet}).
 #' @param ... Additional arguments passed to methods.
 #' @return A numeric matrix of dimension P x D.
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(5,5,5), 20, nlevels=2)
+#'   mdl <- load_model("sda_notune")
+#'   mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification")
+#'   vox <- which(ds$dataset$mask > 0)
+#'   X <- neuroim2::series(ds$dataset$train_data, vox)
+#'   fit <- train_model(mspec, X, ds$design$y_train, indices=vox)
+#'   w <- extract_weights(fit)
+#' }
 #' @export
 extract_weights <- function(object, ...) UseMethod("extract_weights")
 
@@ -1028,6 +1132,10 @@ extract_weights <- function(object, ...) UseMethod("extract_weights")
 #' @param dataset An \code{mvpa_dataset} or a plain matrix.
 #' @param ... Additional arguments passed to methods.
 #' @return A numeric matrix of dimension T x P.
+#' @examples
+#' ds <- gen_sample_dataset(c(5,5,5), 20)
+#' X <- get_feature_matrix(ds$dataset)
+#' dim(X)
 #' @export
 get_feature_matrix <- function(dataset, ...) UseMethod("get_feature_matrix")
 
@@ -1068,6 +1176,15 @@ get_feature_matrix <- function(dataset, ...) UseMethod("get_feature_matrix")
 #' @param model_spec An \code{mvpa_model} specification.
 #' @param ... Additional arguments passed to methods.
 #' @return A \code{region_importance_result} object.
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(5,5,5), 40, nlevels=2, blocks=3)
+#'   cval <- blocked_cross_validation(ds$design$block_var)
+#'   mdl <- load_model("sda_notune")
+#'   mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+#'     "classification", crossval=cval)
+#'   imp <- region_importance(mspec, n_regions=5, n_subsets=10)
+#' }
 #' @export
 region_importance <- function(model_spec, ...) UseMethod("region_importance")
 
@@ -1107,6 +1224,16 @@ region_importance <- function(model_spec, ...) UseMethod("region_importance")
 #' @param ... Additional arguments passed to methods.
 #' @return A numeric vector of length P with per-feature importance scores,
 #'   or \code{NULL} if importance is not available for this model class.
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(5,5,5), 40, nlevels=2)
+#'   mdl <- load_model("sda_notune")
+#'   mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification")
+#'   vox <- which(ds$dataset$mask > 0)
+#'   X <- neuroim2::series(ds$dataset$train_data, vox)
+#'   fit <- train_model(mspec, X, ds$design$y_train, indices=vox)
+#'   imp <- model_importance(fit, X)
+#' }
 #' @export
 model_importance <- function(object, X_train, ...) UseMethod("model_importance")
 
@@ -1119,5 +1246,14 @@ model_importance <- function(object, X_train, ...) UseMethod("model_importance")
 #' @param model_spec An \code{mvpa_model} specification.
 #' @param ... Additional arguments passed to methods.
 #' @return A \code{global_mvpa_result} object.
+#' @examples
+#' \donttest{
+#'   ds <- gen_sample_dataset(c(5,5,5), 40, nlevels=2, blocks=3)
+#'   cval <- blocked_cross_validation(ds$design$block_var)
+#'   mdl <- load_model("sda_notune")
+#'   mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+#'     "classification", crossval=cval)
+#'   result <- run_global(mspec)
+#' }
 #' @export
 run_global <- function(model_spec, ...) UseMethod("run_global")

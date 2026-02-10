@@ -52,3 +52,10 @@ This function implements the generic logic for running a searchlight:
 It does not assume any specific model type, but expects that \code{model_spec}
 is compatible with \code{do_standard(...)} or \code{do_randomized(...)} in your code.
 }
+\examples{
+\dontrun{
+  # Internal base function - users should call run_searchlight instead
+  # result <- run_searchlight_base(model_spec, radius=8, method="standard")
+}
+}
+\keyword{internal}

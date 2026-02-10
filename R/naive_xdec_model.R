@@ -20,6 +20,12 @@
 #'
 #' @return model spec object of class `naive_xdec_model` for use with
 #'   `run_regional()` or `run_searchlight()`.
+#' @examples
+#' \dontrun{
+#'   # Requires dataset with train_data and test_data
+#'   ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
+#'   model <- naive_xdec_model(ds$dataset, ds$design)
+#' }
 #' @export
 naive_xdec_model <- function(dataset, design, link_by = NULL, return_predictions = TRUE, ...) {
   # Choose performance function based on training response
@@ -76,6 +82,12 @@ compute_performance.naive_xdec_model <- function(obj, result) {
 }
 
 #' Naive cross-decoding per ROI
+#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+#' @examples
+#' \dontrun{
+#'   # Internal method called by run_searchlight/run_regional
+#'   # See naive_xdec_model examples for usage
+#' }
 #' @keywords internal
 #' @export
 process_roi.naive_xdec_model <- function(mod_spec, roi, rnum, ...) {

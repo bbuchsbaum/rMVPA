@@ -57,4 +57,9 @@ If `return_folds = FALSE` (default): A numeric matrix (K x V_sl) where K is the 
 This helper function calculates the mean activation pattern for each condition
 using data from other cross-validation folds.
 }
+\examples{
+\dontrun{
+  # See vignette for cross-validated mean computation
+}
+}
 \keyword{internal}

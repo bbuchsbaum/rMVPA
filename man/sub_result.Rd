@@ -17,3 +17,11 @@ A new result object with the specified rows.
 \description{
 Extract a subset of rows from a classification/regression result object.
 }
+\examples{
+cres <- binary_classification_result(
+  observed = factor(c("a","b","a")),
+  predicted = factor(c("a","b","b")),
+  probs = matrix(c(.8,.2,.4,.3,.7,.6), ncol=2, dimnames=list(NULL,c("a","b")))
+)
+sub_result(cres, 1:2)
+}

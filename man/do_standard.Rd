@@ -26,6 +26,9 @@ do_standard(
 
 \item{...}{Additional arguments to be passed to the MVPA function.}
 }
+\value{
+A searchlight_result object containing spatial maps for each metric.
+}
 \description{
 This function performs standard searchlight analysis using a specified model and radius.
 It can be customized with different MVPA functions, combiners, and permutation options.

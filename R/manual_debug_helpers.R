@@ -5,6 +5,7 @@
 
 #' Create an ROI list from a single searchlight window for debugging
 #'
+#' @return An ROI object suitable for model training/testing.
 #' @keywords internal
 as_roi_from_sl <- function(sl_win, dataset, min_voxels = 2, preserve_center = TRUE) {
   # Determine voxel indices from the searchlight window
@@ -34,6 +35,7 @@ as_roi_from_sl <- function(sl_win, dataset, min_voxels = 2, preserve_center = TR
 
 #' Run a single ROI through process_roi for debugging
 #'
+#' @return A tibble row with ROI analysis results.
 #' @keywords internal
 run_single_roi <- function(mod_spec,
                            sl_win,

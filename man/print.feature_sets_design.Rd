@@ -11,6 +11,14 @@
 
 \item{...}{ignored}
 }
+\value{
+Invisibly returns the input object \code{x} (called for side effects).
+}
 \description{
 Print method for feature_sets_design
+}
+\examples{
+\dontrun{
+  # print method called on feature_sets_design object
+}
 }

@@ -173,6 +173,8 @@ coalesce_join2 <- function(x, y,
 #'
 #' This affects all rMVPA logging performed via \pkg{futile.logger}.
 #'
+#' @return Invisibly returns the numeric log level.
+#'
 #' @examples
 #' \dontrun{
 #'   rMVPA::set_log_level("DEBUG")
@@ -380,6 +382,12 @@ mvpa_sysinfo <- function() {
 #'
 #' @param x An object of class `mvpa_sysinfo`.
 #' @param ... Ignored.
+#' @return Invisibly returns the input object \code{x} (called for side effects).
+#' @examples
+#' \dontrun{
+#'   info <- mvpa_sysinfo()
+#'   print(info)
+#' }
 #' @export
 #' @keywords internal
 print.mvpa_sysinfo <- function(x, ...) {
@@ -431,4 +439,18 @@ print.mvpa_sysinfo <- function(x, ...) {
 #' @keywords internal
 `%||%` <- function(x, y) {
   if (is.null(x) || length(x) == 0) y else x
+}
+
+#' Build a group index for multibasis column layout
+#'
+#' Maps each column to its physical voxel in basis-major layout:
+#' \code{[b1_v1..b1_vV, b2_v1..b2_vV, ..., bk_v1..bk_vV]}.
+#'
+#' @param V_phys Integer. Number of physical voxels.
+#' @param basis_count Integer. Number of basis functions (k).
+#' @return Integer vector of length \code{V_phys * basis_count}.
+#' @noRd
+#' @keywords internal
+make_group_idx <- function(V_phys, basis_count) {
+  rep(seq_len(V_phys), times = basis_count)
 }

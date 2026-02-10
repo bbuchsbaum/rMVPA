@@ -425,6 +425,11 @@ to_distance <- function(dv) {
 #' @param as_dist logical; if TRUE return a dist object (default TRUE)
 #'
 #' @return A dist object or matrix representing temporal relationships
+#' @examples
+#' \dontrun{
+#'   onsets <- c(0, 2.5, 5.0, 7.5, 10.0)
+#'   temp_rdm <- temporal_from_onsets(onsets, kernel="exp", lambda=3)
+#' }
 #' @export
 temporal_from_onsets <- function(onsets, run = NULL, ..., units = c("auto", "sec", "TR", "index"), TR = NULL, as_dist = TRUE) {
   units <- match.arg(units)
@@ -453,6 +458,11 @@ temporal_from_onsets <- function(onsets, run = NULL, ..., units = c("auto", "sec
 #' @param as_dist logical; if TRUE return a \code{dist} object (default TRUE)
 #'
 #' @return A \code{dist} object or symmetric matrix (N x N)
+#' @examples
+#' \dontrun{
+#'   onsets <- c(0, 5, 10, 15, 20)
+#'   hrf_rdm <- temporal_hrf_overlap(onsets, TR=2, hrf="spm")
+#' }
 #' @export
 #' @importFrom stats cor convolve sd as.dist
 #' @importFrom utils head
@@ -601,6 +611,11 @@ hrf_glover <- function(t) {
 #' @param as_dist logical; if TRUE return \code{dist} objects (default TRUE)
 #'
 #' @return A named list of \code{dist} objects (or matrices if \code{as_dist=FALSE})
+#' @examples
+#' \dontrun{
+#'   spec <- list(lag=list(kernel="exp", lambda=3), hrf=list(kind="hrf"))
+#'   conf <- temporal_confounds(spec, onsets=1:20, run=rep(1:4,each=5), TR=2)
+#' }
 #' @export
 temporal_confounds <- function(spec, onsets, run = NULL, units = c("auto", "sec", "TR", "index"), TR = NULL, as_dist = TRUE) {
   units <- match.arg(units)
@@ -665,6 +680,11 @@ temporal_confounds <- function(spec, onsets, run = NULL, units = c("auto", "sec"
 #' @param within_blocks_only logical; if TRUE ignore across-run pairs
 #'
 #' @return a named list of K x K matrices aligned to levels(mvpa_design$Y)
+#' @examples
+#' \dontrun{
+#'   spec <- list(lag=list(kernel="exp", lambda=3))
+#'   conf <- msreve_temporal_confounds(mvpa_design, time_idx=1:100, spec)
+#' }
 #' @export
 msreve_temporal_confounds <- function(mvpa_design,
                                       time_idx,

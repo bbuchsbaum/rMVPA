@@ -67,6 +67,12 @@
 #' LOKO setting. For large searchlight analyses where adaptor diagnostics are
 #' secondary, it is often practical to set `leave_one_key_out = FALSE` and use
 #' a fixed rank to obtain much faster single-fit adapters per ROI.
+#' @examples
+#' \dontrun{
+#'   # Requires dataset with paired train/test data
+#'   ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
+#'   model <- remap_rrr_model(ds$dataset, ds$design, rank=5)
+#' }
 #' @export
 remap_rrr_model <- function(dataset,
                             design,
@@ -174,6 +180,7 @@ remap_rrr_model <- function(dataset,
 
 #' Joint whitening on stacked X/Y prototypes to place them in common coords
 #' Returns whitened fits for X and Y plus the whitening transform.
+#' @return A list with whitened data matrices.
 #' @keywords internal
 .joint_whiten <- function(X_fit, Y_fit, do_shrink = TRUE, center = TRUE, eps = 1e-7) {
   Z <- rbind(X_fit, Y_fit)
@@ -201,6 +208,7 @@ remap_rrr_model <- function(dataset,
 }
 
 #' Row-wise correlation of matrix rows with a vector
+#' @return A numeric vector of row-wise correlations.
 #' @keywords internal
 .row_cor <- function(A, v) {
   A0 <- .row_center(A)
@@ -210,6 +218,7 @@ remap_rrr_model <- function(dataset,
 }
 
 #' Residual reduced-rank regression: (Yw - Xw) ~ Xw
+#' @return A list with fitted residual RRR components.
 #' @keywords internal
 .fit_residual_rrr <- function(Xw, Yw, rank = "auto", max_rank = 20, ridge_lambda = NULL) {
   stopifnot(nrow(Xw) == nrow(Yw))
@@ -244,6 +253,7 @@ remap_rrr_model <- function(dataset,
 }
 
 #' Select lambda by prototype self-retrieval on training items
+#' @return A numeric scalar: the selected lambda value.
 #' @keywords internal
 .select_lambda <- function(Xw_fit, Yw_fit, Delta, lambda_grid) {
   if (length(lambda_grid) <= 1L) return(list(lambda = lambda_grid, accs = 1))
@@ -305,6 +315,12 @@ compute_performance.remap_rrr_model <- function(obj, result) {
 #' base classifier in the target domain, and classify target-domain trials.
 #' Emits a standard classification_result plus ROI-level performance.
 #'
+#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+#' @examples
+#' \dontrun{
+#'   # Internal method called by run_searchlight/run_regional
+#'   # See remap_rrr_model examples for usage
+#' }
 #' @keywords internal
 #' @export
 process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {

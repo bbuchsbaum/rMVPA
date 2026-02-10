@@ -6,9 +6,18 @@
 \usage{
 \method{process_roi}{era_rsa_model}(mod_spec, roi, rnum, center_global_id = NA, ...)
 }
+\value{
+A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+}
 \description{
 Computes first-order ERA metrics and second-order encoding-retrieval geometry
 for a single ROI/searchlight sphere. Designed to be passed as the `processor`
 argument to `mvpa_iterate()` (used by run_regional/run_searchlight methods).
+}
+\examples{
+\dontrun{
+  # Internal method called by run_searchlight/run_regional
+  # See era_rsa_model examples for usage
+}
 }
 \keyword{internal}

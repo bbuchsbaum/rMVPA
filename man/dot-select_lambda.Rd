@@ -6,6 +6,9 @@
 \usage{
 .select_lambda(Xw_fit, Yw_fit, Delta, lambda_grid)
 }
+\value{
+A numeric scalar: the selected lambda value.
+}
 \description{
 Select lambda by prototype self-retrieval on training items
 }

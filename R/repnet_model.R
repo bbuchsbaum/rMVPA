@@ -16,6 +16,11 @@
 #'
 #' @return A model spec of class \code{"repnet_model"} compatible with
 #'   \code{run_regional()} and \code{run_searchlight()}.
+#' @examples
+#' \dontrun{
+#'   # Requires repnet_design with seed_rdm
+#'   # model <- repnet_model(dataset, design, repnet_des)
+#' }
 #' @export
 repnet_model <- function(dataset,
                          design,
@@ -58,6 +63,12 @@ repnet_model <- function(dataset,
 #'
 #' Computes representational connectivity metrics for a single ROI/searchlight.
 #'
+#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+#' @examples
+#' \dontrun{
+#'   # Internal method called by run_searchlight/run_regional
+#'   # See repnet_model examples for usage
+#' }
 #' @keywords internal
 #' @export
 process_roi.repnet_model <- function(mod_spec,

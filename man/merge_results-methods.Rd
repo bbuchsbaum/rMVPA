@@ -65,3 +65,9 @@ Aggregates results (scores) and calls evaluate_model.
 Vector RSA typically doesn't involve folds in the same way as classifiers,
 so this mainly formats the output of train_model for the specific ROI/sphere.
 }
+\examples{
+\dontrun{
+  # Internal S3 method called during ROI processing
+  # result <- merge_results(manova_model, result_set, indices, id)
+}
+}

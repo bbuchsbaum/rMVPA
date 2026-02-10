@@ -6,8 +6,17 @@
 \usage{
 \method{process_roi}{repmed_model}(mod_spec, roi, rnum, center_global_id = NA, ...)
 }
+\value{
+A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+}
 \description{
 Computes mediation paths a, b, c' and the indirect effect in RDM space for
 a single ROI/searchlight.
+}
+\examples{
+\dontrun{
+  # Internal method called by run_searchlight/run_regional
+  # See repmed_model examples for usage
+}
 }
 \keyword{internal}

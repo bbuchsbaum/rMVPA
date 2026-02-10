@@ -36,8 +36,16 @@
 
 \item{...}{Additional arguments passed on to \code{do_standard} or \code{do_randomized}.}
 }
+\value{
+A `searchlight_result` object containing spatial maps for each metric.
+}
 \description{
-By default, if an object's class does not implement a specific 
+By default, if an object's class does not implement a specific
 \code{run_searchlight.<class>} method, this fallback will call
 \code{run_searchlight_base}.
+}
+\examples{
+\dontrun{
+  # See run_searchlight generic for examples
+}
 }

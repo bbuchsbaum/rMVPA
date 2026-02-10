@@ -188,6 +188,11 @@ print.manova_design <- function(x, ...) {
 #' @param ... Additional arguments (ignored).
 #'
 #' @return A tibble row with the formatted performance metrics for the ROI/sphere.
+#' @examples
+#' \dontrun{
+#'   # Internal S3 method called during ROI processing
+#'   # result <- merge_results(manova_model, result_set, indices, id)
+#' }
 #' @importFrom tibble tibble
 #' @importFrom futile.logger flog.error flog.warn
 #' @rdname merge_results-methods

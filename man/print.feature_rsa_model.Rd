@@ -11,6 +11,18 @@
 
 \item{...}{Additional arguments (ignored).}
 }
+\value{
+Invisibly returns the input object \code{x} (called for side effects).
+}
 \description{
 Print Method for Feature RSA Model
+}
+\examples{
+\donttest{
+  D <- dist(matrix(rnorm(5*3), 5, 3))
+  labels <- factor(letters[1:5])
+  des <- feature_rsa_design(D, labels)
+  mdl <- feature_rsa_model(des)
+  print(mdl)
+}
 }

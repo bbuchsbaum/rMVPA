@@ -52,3 +52,9 @@ Computes condition-pattern metrics (trial x trial correlation matrix),
 voxel-level encoding metrics, global reconstruction metrics (MSE, R-squared),
 and optionally performs permutation tests.
 }
+\examples{
+\dontrun{
+  # Internal S3 method called after cross-validation
+  # perf <- evaluate_model(feature_rsa_model, newdata, observed)
+}
+}

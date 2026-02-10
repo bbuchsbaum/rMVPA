@@ -32,3 +32,6 @@ A list with \code{dataset} (mvpa_clustered_dataset) and \code{design} (mvpa_desi
 \description{
 Creates a synthetic \code{ClusteredNeuroVec} and associated design for testing.
 }
+\examples{
+ds <- gen_clustered_sample_dataset(K=10, nobs=20, nlevels=2)
+}

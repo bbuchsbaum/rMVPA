@@ -629,6 +629,11 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
 #'     \item data: subject-by-voxel matrix (if return_data).
 #'     \item voxelwise: list of voxelwise z/p maps (if requested).
 #'   }
+#' @examples
+#' \dontrun{
+#'   # Requires list of NeuroVol objects per group
+#'   # result <- spatial_nmf_maps(group_A_vols, group_B_vols, k=5)
+#' }
 #' @export
 spatial_nmf_maps <- function(group_A,
                              group_B = NULL,

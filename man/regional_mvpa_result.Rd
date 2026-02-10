@@ -9,7 +9,9 @@ regional_mvpa_result(
   performance_table,
   prediction_table,
   vol_results,
-  fits = fits
+  fits = fits,
+  pooled_prediction_table = NULL,
+  pooled_performance = NULL
 )
 }
 \arguments{
@@ -22,6 +24,10 @@ regional_mvpa_result(
 \item{vol_results}{A list of voxel-level results.}
 
 \item{fits}{Optional model fits.}
+
+\item{pooled_prediction_table}{Optional pooled prediction table (e.g., ROI-averaged or stacked).}
+
+\item{pooled_performance}{Optional named numeric vector of pooled performance metrics.}
 }
 \value{
 A \code{regional_mvpa_result} object.

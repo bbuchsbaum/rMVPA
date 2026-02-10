@@ -59,3 +59,10 @@ dimensions with eigenvalues > 1 are kept (minimum 2).
 methods (like PCA, PLS in `feature_rsa_model`) can use, and it cannot
 exceed the final feature dimensionality `k`.
 }
+\examples{
+\donttest{
+  D <- dist(matrix(rnorm(5*3), 5, 3))
+  labels <- factor(letters[1:5])
+  des <- feature_rsa_design(D, labels)
+}
+}

@@ -6,9 +6,18 @@
 \usage{
 \method{process_roi}{subspace_alignment_model}(mod_spec, roi, rnum, ...)
 }
+\value{
+A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+}
 \description{
 Computes PCA subspaces on source/target, aligns them, projects data, and
 classifies target trials by correlation to source class prototypes in the
 aligned space.
+}
+\examples{
+\dontrun{
+  # Internal method called by run_searchlight/run_regional
+  # See subspace_alignment_model examples for usage
+}
 }
 \keyword{internal}

@@ -6,6 +6,9 @@
 \usage{
 clustered_roi_spec(seed, neighbors)
 }
+\value{
+A \code{clustered_roi_spec} object.
+}
 \description{
 Clustered ROI specification (lightweight descriptor)
 }

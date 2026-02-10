@@ -41,3 +41,10 @@ The term "naive" is a technical designation meaning "without domain adaptation"
 evaluating domain-adaptive methods like REMAP-RRR. Also known as "zero-shot
 transfer" or "direct transfer" in machine learning literature.
 }
+\examples{
+\dontrun{
+  # Requires dataset with train_data and test_data
+  ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
+  model <- naive_xdec_model(ds$dataset, ds$design)
+}
+}

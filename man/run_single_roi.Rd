@@ -13,6 +13,9 @@ run_single_roi(
   drop_probs = FALSE
 )
 }
+\value{
+A tibble row with ROI analysis results.
+}
 \description{
 Run a single ROI through process_roi for debugging
 }

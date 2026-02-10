@@ -53,3 +53,9 @@ Each event is convolved with a canonical HRF and pairwise similarity is computed
 as either normalized overlap (cosine similarity) or Pearson correlation. The
 result can be returned as a distance-like quantity suitable for regression.
 }
+\examples{
+\dontrun{
+  onsets <- c(0, 5, 10, 15, 20)
+  hrf_rdm <- temporal_hrf_overlap(onsets, TR=2, hrf="spm")
+}
+}

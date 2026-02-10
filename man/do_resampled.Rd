@@ -33,6 +33,9 @@ do_resampled(
 
 \item{return_pobserved}{Logical; placeholder for API symmetry with randomized searchlight. Currently ignored because \code{combine_randomized} does not aggregate prob-observed.}
 }
+\value{
+A searchlight_result object containing spatial maps for each metric.
+}
 \description{
 Similar to randomized searchlight but uses neuroim2::resampled_searchlight,
 which draws a fixed total number of centers (`niter`), optionally with a

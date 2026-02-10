@@ -12,6 +12,9 @@ test_design(obj)
 \arguments{
 \item{obj}{The object from which to extract the test design table.}
 }
+\value{
+A data frame containing the test set design variables.
+}
 \description{
 Return the design table associated with the test set from an object.
 }

@@ -16,3 +16,9 @@ Integer vector of length equal to number of TRs (observations) in the dataset
 internal_crossval() uses y_train only to create CV folds; the actual decoder
 ignores it. We return a simple sequence matching the number of rows (TRs).
 }
+\examples{
+\dontrun{
+  # Requires hrfdecoder package
+  # See vignette("Continuous_Decoding") for full workflow
+}
+}

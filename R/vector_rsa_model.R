@@ -7,10 +7,18 @@
 #' @param block_var A vector indicating the block (strata) each label belongs to. Must be the same length as `labels`.
 #'
 #' @return A list containing the elements of the RSA design, class attributes "vector_rsa_design" and "list".
+#' @examples
+#' \donttest{
+#'   D <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
+#'   rownames(D) <- colnames(D) <- letters[1:5]
+#'   labels <- factor(rep(letters[1:5], 2))
+#'   block_var <- rep(1:2, each=5)
+#'   des <- vector_rsa_design(D, labels, block_var)
+#' }
 #' @details
 #' The function verifies that all `labels` appear in `rownames(D)` and creates an expanded
 #' dissimilarity matrix (`Dexpanded`) matching the order of `labels`.
-#' 
+#'
 #' @export
 vector_rsa_design <- function(D, labels, block_var) {
   # Verify that all labels are present in row.names of D
@@ -74,10 +82,19 @@ vector_rsa_model_mat <- function(design) {
 #'
 #' @return A \code{vector_rsa_model} object (S3 class) containing references to the dataset, design, and function parameters.
 #'
+#' @examples
+#' \donttest{
+#'   D <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
+#'   rownames(D) <- colnames(D) <- letters[1:5]
+#'   labels <- factor(rep(letters[1:5], 2))
+#'   block_var <- rep(1:2, each=5)
+#'   des <- vector_rsa_design(D, labels, block_var)
+#'   # mdl <- vector_rsa_model(dataset, des)
+#' }
 #' @details
 #' If `return_predictions` is TRUE, the output of `run_regional` or `run_searchlight`
 #' will include a `prediction_table` tibble containing the observation-level RSA scores.
-#' 
+#'
 #' @export
 vector_rsa_model <- function(dataset, design, 
                            distfun = cordist(), 
@@ -251,6 +268,15 @@ second_order_similarity <- function(distfun, X, Dref, block_var, method=c("pears
 #'
 #' @param x An object of class \code{vector_rsa_model}.
 #' @param ... Additional arguments (ignored).
+#' @return Invisibly returns the input object \code{x} (called for side effects).
+#' @examples
+#' \donttest{
+#'   S <- matrix(rnorm(10*3), 10, 3)
+#'   labels <- factor(rep(letters[1:5], 2))
+#'   des <- vector_rsa_design(S, labels)
+#'   mdl <- vector_rsa_model(des)
+#'   print(mdl)
+#' }
 #' @export
 print.vector_rsa_model <- function(x, ...) {
   # Header
@@ -303,6 +329,14 @@ print.vector_rsa_model <- function(x, ...) {
 #'
 #' @param x A vector_rsa_design object.
 #' @param ... Additional arguments (ignored).
+#' @return Invisibly returns the input object \code{x} (called for side effects).
+#' @examples
+#' \donttest{
+#'   S <- matrix(rnorm(10*3), 10, 3)
+#'   labels <- factor(rep(letters[1:5], 2))
+#'   des <- vector_rsa_design(S, labels)
+#'   print(des)
+#' }
 #' @importFrom utils head
 #' @export
 print.vector_rsa_design <- function(x, ...) {
@@ -364,8 +398,13 @@ print.vector_rsa_design <- function(x, ...) {
 #' @param save_distributions Logical, whether to save full permutation distributions.
 #' @param ... Additional arguments.
 #'
-#' @return A list containing the mean RSA score (`rsa_score`), raw scores, and 
+#' @return A list containing the mean RSA score (`rsa_score`), raw scores, and
 #'   optional permutation results (`p_values`, `z_scores`, `permutation_distributions`).
+#' @examples
+#' \dontrun{
+#'   # Internal S3 method called during processing
+#'   # perf <- evaluate_model(vector_rsa_model, observed, roi_data)
+#' }
 #' @importFrom stats sd
 #' @export
 evaluate_model.vector_rsa_model <- function(object,

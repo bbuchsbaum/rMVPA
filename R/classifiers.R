@@ -38,6 +38,8 @@ colHuber <- function(x, k=1.5, tol=1e-04) {
 #' @details
 #' Models are accessed via \code{load_model(name)}. Each model specification includes \code{fit}, \code{predict}, and \code{prob} methods.
 #'
+#' @return An environment containing registered MVPA model specifications.
+#'
 #' @examples
 #' # Load simple SDA classifier
 #' model <- load_model("sda_notune")

@@ -32,3 +32,9 @@ training fold. Unlike standard MVPA, it does not use the `y` parameter
 for training - the actual decoding targets come from the event model and
 events stored in the design object.
 }
+\examples{
+\dontrun{
+  # Requires hrfdecoder package
+  # See vignette("Continuous_Decoding") for full workflow
+}
+}

@@ -22,6 +22,9 @@ An environment with the following models:
 \usage{
 MVPAModels
 }
+\value{
+An environment containing registered MVPA model specifications.
+}
 \description{
 An environment containing custom classification models for MVPA analysis.
 }

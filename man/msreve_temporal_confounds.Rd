@@ -35,3 +35,9 @@ nuisance RDMs for MS-ReVE analyses given an \code{mvpa_design}, a time index
 kernel-based nuisance (delegates to \code{temporal_nuisance_for_msreve}) or
 an HRF-overlap-based nuisance built trial-wise then reduced to condition level.
 }
+\examples{
+\dontrun{
+  spec <- list(lag=list(kernel="exp", lambda=3))
+  conf <- msreve_temporal_confounds(mvpa_design, time_idx=1:100, spec)
+}
+}

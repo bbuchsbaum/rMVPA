@@ -36,6 +36,10 @@
 #'       containing the mean estimate for each condition from each fold.}
 #'   }
 #'
+#' @examples
+#' \dontrun{
+#'   # See vignette for cross-validated mean computation
+#' }
 #' @importFrom stats aggregate
 #' @importFrom rlang abort
 #' @keywords internal

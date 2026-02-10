@@ -24,3 +24,14 @@ Predictions whose structure depends on the specific method (e.g., a vector,
 \description{
 Generic function to predict outcomes from a fitted model object using new data.
 }
+\examples{
+\donttest{
+  ds <- gen_sample_dataset(c(5,5,5), 20, nlevels=2)
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification")
+  vox <- which(ds$dataset$mask > 0)
+  X <- neuroim2::series(ds$dataset$train_data, vox)
+  fit <- train_model(mspec, X, ds$design$y_train, indices=vox)
+  preds <- predict_model(mspec, fit, X)
+}
+}

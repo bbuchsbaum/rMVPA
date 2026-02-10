@@ -24,6 +24,11 @@ A combined prediction table (data frame).
 Combines multiple prediction tables (e.g., from different models or regions) into a single table.
 Supports weighted combination and collapsing regions.
 }
+\details{
+For classification, this function pools class-probability columns (`prob_*`)
+and returns pooled predicted class and correctness. For regression (numeric
+`observed`), it pools `predicted` values and returns residual diagnostics.
+}
 \examples{
 # Create example prediction tables
 observed = factor(sample(letters[1:2], 10, replace = TRUE))

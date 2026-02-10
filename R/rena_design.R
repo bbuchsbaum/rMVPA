@@ -23,6 +23,10 @@
 #'     \item \code{seed_rdm}: seed RDM as a matrix with row/colnames
 #'     \item \code{confound_rdms}: named list of confound RDM matrices
 #'   }
+#' @examples
+#' \dontrun{
+#'   des <- repnet_design(design, ~ ImageID, seed_rdm=my_rdm)
+#' }
 #' @export
 repnet_design <- function(design,
                           key_var,
@@ -113,6 +117,13 @@ repnet_design <- function(design,
 #'     \item \code{X_rdm}, \code{Y_rdm}: predictor and outcome RDMs as matrices
 #'     \item \code{confound_rdms}: named list of confound RDM matrices
 #'   }
+#' @examples
+#' \dontrun{
+#'   items <- letters[1:10]
+#'   X_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
+#'   Y_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
+#'   des <- repmed_design(items, X_rdm, Y_rdm)
+#' }
 #' @export
 repmed_design <- function(items,
                           X_rdm,
@@ -173,6 +184,12 @@ repmed_design <- function(items,
 #'     \item \code{items}: character vector of items
 #'     \item \code{seed_features}: K x P feature matrix with rownames = items
 #'   }
+#' @examples
+#' \dontrun{
+#'   items <- letters[1:10]
+#'   seed_features <- matrix(rnorm(10*5), 10, 5)
+#'   des <- repmap_design(items, seed_features)
+#' }
 #' @export
 repmap_design <- function(items,
                           seed_features) {

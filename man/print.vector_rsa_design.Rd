@@ -11,6 +11,17 @@
 
 \item{...}{Additional arguments (ignored).}
 }
+\value{
+Invisibly returns the input object \code{x} (called for side effects).
+}
 \description{
 Print Method for vector_rsa_design
+}
+\examples{
+\donttest{
+  S <- matrix(rnorm(10*3), 10, 3)
+  labels <- factor(rep(letters[1:5], 2))
+  des <- vector_rsa_design(S, labels)
+  print(des)
+}
 }

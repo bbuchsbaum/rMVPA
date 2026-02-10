@@ -24,6 +24,9 @@ format_result(obj, result, error_message, ...)
 
 \item{context}{Optional contextual metadata (e.g., ROI details) supplied to method implementations.}
 }
+\value{
+A formatted result object, typically a tibble row.
+}
 \description{
 Format Result Object
 }

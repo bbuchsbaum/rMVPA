@@ -28,3 +28,8 @@ A list with fields:
 Build a design object for representational connectivity, specifying item keys,
 a seed RDM, and optional confound RDMs.
 }
+\examples{
+\dontrun{
+  des <- repnet_design(design, ~ ImageID, seed_rdm=my_rdm)
+}
+}

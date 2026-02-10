@@ -36,3 +36,9 @@ For each ROI or searchlight, computes representational connectivity between
 the ROI RDM and a seed RDM, optionally controlling for confound RDMs (block,
 lag, behavior, etc.).
 }
+\examples{
+\dontrun{
+  # Requires repnet_design with seed_rdm
+  # model <- repnet_model(dataset, design, repnet_des)
+}
+}

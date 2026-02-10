@@ -15,6 +15,11 @@
 #' @param ... Extra fields stored on the model spec.
 #'
 #' @return A model spec of class \code{"repmed_model"}.
+#' @examples
+#' \dontrun{
+#'   # Requires repmed_design with X_rdm and Y_rdm
+#'   # model <- repmed_model(dataset, design, repmed_des, key_var=~ImageID)
+#' }
 #' @export
 repmed_model <- function(dataset,
                          design,
@@ -57,6 +62,12 @@ repmed_model <- function(dataset,
 #' Computes mediation paths a, b, c' and the indirect effect in RDM space for
 #' a single ROI/searchlight.
 #'
+#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+#' @examples
+#' \dontrun{
+#'   # Internal method called by run_searchlight/run_regional
+#'   # See repmed_model examples for usage
+#' }
 #' @keywords internal
 #' @export
 process_roi.repmed_model <- function(mod_spec,

@@ -36,9 +36,17 @@
 
 \item{...}{Additional arguments passed on to \code{do_standard} or \code{do_randomized}.}
 }
+\value{
+A `searchlight_result` object containing spatial maps for each metric.
+}
 \description{
 Defaults to a lean, memory-friendly configuration:
 - drop_probs = TRUE strips per-ROI probability matrices after metrics.
 - return_pobserved = FALSE skips voxel x trial probability maps.
 - combiner = "average" (combine_randomized) for randomized/resampled.
+}
+\examples{
+\dontrun{
+  # See remap_rrr_model examples for complete workflow
+}
 }

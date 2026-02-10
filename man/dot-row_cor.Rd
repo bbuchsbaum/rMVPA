@@ -6,6 +6,9 @@
 \usage{
 .row_cor(A, v)
 }
+\value{
+A numeric vector of row-wise correlations.
+}
 \description{
 Row-wise correlation of matrix rows with a vector
 }

@@ -19,6 +19,11 @@
 #'     \item{has_test_set}{Logical flag.}
 #'   }
 #'
+#' @examples
+#' \dontrun{
+#'   ds <- gen_clustered_sample_dataset(K=5, nobs=20)
+#'   print(ds$dataset)
+#' }
 #' @importFrom assertthat assert_that
 #' @importFrom neuroim2 NeuroVol space num_clusters
 #' @export
@@ -107,6 +112,7 @@ searchlight_scope.mvpa_clustered_dataset <- function(dataset, ...) {
 
 #' Clustered ROI specification (lightweight descriptor)
 #'
+#' @return A \code{clustered_roi_spec} object.
 #' @keywords internal
 clustered_roi_spec <- function(seed, neighbors) {
   structure(
@@ -158,6 +164,7 @@ get_searchlight.mvpa_clustered_dataset <- function(obj,
 # ---- Data sampling for clustered datasets ----
 
 #' Clustered data sample descriptor
+#' @return A \code{clustered_data_sample} object.
 #' @keywords internal
 clustered_data_sample <- function(seed, neighbors) {
   structure(
@@ -232,6 +239,8 @@ as_roi.clustered_data_sample <- function(obj, data, ...) {
 #' @param external_test Whether to generate an external test set.
 #'
 #' @return A list with \code{dataset} (mvpa_clustered_dataset) and \code{design} (mvpa_design).
+#' @examples
+#' ds <- gen_clustered_sample_dataset(K=10, nobs=20, nlevels=2)
 #' @export
 gen_clustered_sample_dataset <- function(D = c(10, 10, 10), nobs = 20, K = 5,
                                           nlevels = 2, blocks = 3,

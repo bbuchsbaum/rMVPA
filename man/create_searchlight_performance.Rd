@@ -19,4 +19,10 @@ A searchlight_performance object
 \description{
 Creates a searchlight_performance object with the expected structure for tests
 }
+\examples{
+\dontrun{
+  # Internal function for creating searchlight performance objects
+  perf <- create_searchlight_performance(neurovol, "Accuracy")
+}
+}
 \keyword{internal}

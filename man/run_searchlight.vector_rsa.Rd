@@ -29,7 +29,15 @@
 
 \item{...}{Additional arguments passed on to \code{do_standard} or \code{do_randomized}.}
 }
+\value{
+A `searchlight_result` object containing spatial maps for each metric.
+}
 \description{
-This sets a custom \code{mvpa_fun} (e.g., \code{vector_rsa_iterate}) or 
+This sets a custom \code{mvpa_fun} (e.g., \code{vector_rsa_iterate}) or
 different combiners for standard vs. randomized, etc.
+}
+\examples{
+\dontrun{
+  # See vector_rsa_model examples for complete workflow
+}
 }

@@ -23,6 +23,11 @@ run_regional_base(
   compute_performance = model_spec$compute_performance,
   return_predictions = model_spec$return_predictions,
   return_fits = model_spec$return_fits,
+  pool_predictions = c("none", "mean", "stack"),
+  pooled_weights = NULL,
+  stack_folds = NULL,
+  stack_seed = NULL,
+  stack_lambda = 0.001,
   ...
 )
 
@@ -95,11 +100,27 @@ run_regional_base(
 \item{return_predictions}{Logical indicating whether to combine a full prediction table (defaults to \code{model_spec$return_predictions}).}
 
 \item{return_fits}{Logical indicating whether to return the fitted models (default \code{FALSE}).}
+
+\item{pool_predictions}{Character scalar controlling pooled outputs:
+\code{"none"} (default), \code{"mean"} (weighted mean pooling across ROIs),
+or \code{"stack"} (cheap cross-fitted stacking on OOF ROI predictions).}
+
+\item{pooled_weights}{Optional numeric vector of ROI weights used when
+\code{pool_predictions = "mean"}. Must have one weight per ROI.}
+
+\item{stack_folds}{Optional fold specification for stacking. Can be:
+an integer number of folds, a fold-id vector, or a list of fold indices.}
+
+\item{stack_seed}{Optional seed used when auto-generating stacking folds.}
+
+\item{stack_lambda}{Ridge penalty used by \pkg{glmnet} in stacking.}
 }
 \value{
 A \code{regional_mvpa_result} object (list) containing:
   \item{performance_table}{A tibble of performance metrics for each region (if computed).}
   \item{prediction_table}{A tibble with detailed predictions for each observation/region (if generated).}
+  \item{pooled_prediction_table}{Optional pooled trial-level prediction table when pooling is requested.}
+  \item{pooled_performance}{Optional pooled performance metrics when pooling is requested.}
   \item{vol_results}{A list of volumetric maps representing performance metrics across space (if computed).}
   \item{fits}{A list of fitted model objects for each region (if requested via `return_fits=TRUE`).}
   \item{model_spec}{The original model specification object provided.} # Note: Original documentation said 'performance', clarified here.
@@ -161,7 +182,7 @@ For `feature_rsa_model` objects, `return_predictions` defaults to `FALSE`
   results <- run_regional(mspec, region_mask)
   
   # Access results
-  head(results$performance)           # Performance metrics
+  head(results$performance_table)     # Performance metrics
   head(results$prediction_table)      # Predictions
   first_roi_fit <- results$fits[[1]]  # First ROI's fitted model
 }

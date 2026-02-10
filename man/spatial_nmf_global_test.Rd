@@ -105,3 +105,11 @@ learned component space.
   folds and refits NMF for each permutation (more expensive).
 }
 }
+\examples{
+\dontrun{
+  result <- spatial_nmf_global_test(
+    matrix(rnorm(100*10), 100, 10),
+    k = 3, nperm = 99
+  )
+}
+}

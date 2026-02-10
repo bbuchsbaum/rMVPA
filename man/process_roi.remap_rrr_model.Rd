@@ -6,10 +6,19 @@
 \usage{
 \method{process_roi}{remap_rrr_model}(mod_spec, roi, rnum, ...)
 }
+\value{
+A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+}
 \description{
 Implements the end-to-end REMAP flow for one ROI/searchlight: build paired
 prototypes, whiten, fit reduced-rank mapping, transform source trials, train
 base classifier in the target domain, and classify target-domain trials.
 Emits a standard classification_result plus ROI-level performance.
+}
+\examples{
+\dontrun{
+  # Internal method called by run_searchlight/run_regional
+  # See remap_rrr_model examples for usage
+}
 }
 \keyword{internal}

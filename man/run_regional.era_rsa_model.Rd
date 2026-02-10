@@ -13,6 +13,15 @@
 
 \item{...}{Additional arguments passed to underlying methods}
 }
+\value{
+A regional_mvpa_result object containing results for each region.
+}
 \description{
 Runs regional analysis using mvpa_iterate with the ERA-RSA ROI processor.
+}
+\examples{
+\dontrun{
+  # Internal S3 method called by run_regional generic
+  # result <- run_regional(era_model, region_mask)
+}
 }

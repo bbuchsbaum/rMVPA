@@ -45,3 +45,8 @@ Constructs per-item summaries (block/run/time/lag) and item-level confound RDMs
 that plug directly into \code{era_rsa_model(..., confound_rdms=...)}. Reuses
 temporal helpers in R/temporal_rdms.R to avoid redundancy.
 }
+\examples{
+\dontrun{
+  # See era_rsa_model for full ERA-RSA workflow with design construction
+}
+}

@@ -42,6 +42,13 @@
 #'   \item \code{p_fwer} applies maxT family-wise error correction across components.
 #'   \item \code{p_global} tests whether any component is significant.
 #' }
+#' @examples
+#' \dontrun{
+#'   # Requires completed spatial NMF fit
+#'   W <- matrix(rnorm(20*5), 20, 5)
+#'   groups <- factor(rep(c("A","B"), each=10))
+#'   result <- spatial_nmf_component_test(W=W, groups=groups, nperm=100)
+#' }
 #' @export
 spatial_nmf_component_test <- function(fit = NULL,
                                        W = NULL,
@@ -242,6 +249,13 @@ spatial_nmf_component_test <- function(fit = NULL,
 #'   \item \code{permute = "labels"} keeps folds fixed; \code{"full"} re-derives
 #'   folds and refits NMF for each permutation (more expensive).
 #' }
+#' @examples
+#' \dontrun{
+#'   result <- spatial_nmf_global_test(
+#'     matrix(rnorm(100*10), 100, 10),
+#'     k = 3, nperm = 99
+#'   )
+#' }
 #' @export
 spatial_nmf_global_test <- function(x = NULL,
                                     X = NULL,
@@ -433,6 +447,13 @@ spatial_nmf_global_test <- function(x = NULL,
 #'   \item \code{selection}: frequency with which a voxel appears in the top fraction.
 #'   \item \code{component_similarity}: average similarity to the reference components.
 #' }
+#' @examples
+#' \dontrun{
+#'   stab <- spatial_nmf_stability(
+#'     matrix(rnorm(100*10), 100, 10),
+#'     k = 3, nruns = 5
+#'   )
+#' }
 #' @export
 spatial_nmf_stability <- function(x = NULL,
                                   X = NULL,
@@ -596,6 +617,10 @@ spatial_nmf_stability <- function(x = NULL,
 #' @param ref_map Optional reference map to copy metadata from.
 #'
 #' @return A list with `z` and `p` component maps.
+#' @examples
+#' \dontrun{
+#'   # stats <- spatial_nmf_voxelwise_stats(nmf_result, design_matrix)
+#' }
 #' @importFrom neuroim2 values
 #' @export
 spatial_nmf_voxelwise_stats <- function(x = NULL,

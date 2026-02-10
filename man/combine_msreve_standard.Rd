@@ -25,4 +25,10 @@ A \code{searchlight_result} object containing:
 This function gathers the Q-dimensional performance vectors from each successful
 searchlight center and combines them into Q separate output maps.
 }
+\examples{
+\dontrun{
+  # Internal function for combining MS-ReVE results
+  # result <- combine_msreve_standard(model_spec, good_results, bad_results)
+}
+}
 \keyword{internal}

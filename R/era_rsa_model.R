@@ -116,6 +116,10 @@
 #' @param ... Additional fields stored on the model spec.
 #'
 #' @return A model spec of class "era_rsa_model" compatible with run_regional()/run_searchlight().
+#' @examples
+#' \dontrun{
+#'   # See vignette for complete ERA-RSA workflow
+#' }
 #' @export
 era_rsa_model <- function(dataset,
                           design,
@@ -207,6 +211,12 @@ era_rsa_model <- function(dataset,
 #' for a single ROI/searchlight sphere. Designed to be passed as the `processor`
 #' argument to `mvpa_iterate()` (used by run_regional/run_searchlight methods).
 #'
+#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+#' @examples
+#' \dontrun{
+#'   # Internal method called by run_searchlight/run_regional
+#'   # See era_rsa_model examples for usage
+#' }
 #' @keywords internal
 #' @export
 process_roi.era_rsa_model <- function(mod_spec,
@@ -432,7 +442,12 @@ process_roi.era_rsa_model <- function(mod_spec,
 #' @param ... Additional arguments passed to underlying methods (e.g., \code{batch_size}).
 #' @param drop_probs Logical; if TRUE, drop per-ROI probability matrices after metrics. Default FALSE.
 #' @param fail_fast Logical; if TRUE, stop on first ROI error. Default FALSE.
-#'
+#' @return A searchlight_result object containing spatial maps for each metric.
+#' @examples
+#' \dontrun{
+#'   # See era_rsa_model examples for complete workflow
+#'   # results <- run_searchlight(model_spec, radius = 8)
+#' }
 #' @export
 run_searchlight.era_rsa_model <- function(model_spec,
                                           radius = 8,
@@ -471,7 +486,13 @@ run_searchlight.era_rsa_model <- function(model_spec,
 #' @param model_spec An era_rsa_model object
 #' @param region_mask A brain mask defining the region(s) of interest
 #' @param ... Additional arguments passed to underlying methods
+#' @return A regional_mvpa_result object containing results for each region.
 #'
+#' @examples
+#' \dontrun{
+#'   # Internal S3 method called by run_regional generic
+#'   # result <- run_regional(era_model, region_mask)
+#' }
 #' @export
 run_regional.era_rsa_model <- function(model_spec,
                                        region_mask,

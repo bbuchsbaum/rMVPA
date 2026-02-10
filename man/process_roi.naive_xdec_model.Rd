@@ -6,7 +6,16 @@
 \usage{
 \method{process_roi}{naive_xdec_model}(mod_spec, roi, rnum, ...)
 }
+\value{
+A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
+}
 \description{
 Naive cross-decoding per ROI
+}
+\examples{
+\dontrun{
+  # Internal method called by run_searchlight/run_regional
+  # See naive_xdec_model examples for usage
+}
 }
 \keyword{internal}

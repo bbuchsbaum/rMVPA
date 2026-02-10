@@ -30,6 +30,9 @@ do_randomized(
 
 \item{...}{Additional arguments to be passed to the MVPA function.}
 }
+\value{
+A searchlight_result object containing spatial maps for each metric.
+}
 \description{
 This function performs randomized searchlight analysis using a specified model, radius, and number of iterations.
 It can be customized with different MVPA functions, combiners, and permutation options.

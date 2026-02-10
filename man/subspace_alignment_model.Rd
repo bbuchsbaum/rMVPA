@@ -38,3 +38,9 @@ with a closed-form map \eqn{M = X_S^T X_T}, projects both domains, and
 classifies target trials via correlation to source class prototypes in the
 aligned space. Requires an external test set but no target labels for fitting.
 }
+\examples{
+\dontrun{
+  ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
+  model <- subspace_alignment_model(ds$dataset, ds$design, d=10)
+}
+}

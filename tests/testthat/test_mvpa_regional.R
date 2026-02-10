@@ -81,6 +81,76 @@ test_that("can combine two prediction tables from two regional analyses", {
   expect_true(nrow(ptab2) == nrow(res1$prediction_table))
 })
 
+test_that("combine_prediction_tables supports numeric predictions", {
+  set.seed(1)
+  observed <- rnorm(8)
+  predtab1 <- tibble::tibble(
+    .rownum = seq_along(observed),
+    roinum = 1L,
+    observed = observed,
+    predicted = observed + rnorm(length(observed), sd = 0.2)
+  )
+  predtab2 <- tibble::tibble(
+    .rownum = seq_along(observed),
+    roinum = 2L,
+    observed = observed,
+    predicted = observed + rnorm(length(observed), sd = 0.2)
+  )
+
+  pooled <- combine_prediction_tables(list(predtab1, predtab2), collapse_regions = TRUE)
+  expect_true(is.data.frame(pooled))
+  expect_equal(nrow(pooled), length(observed))
+  expect_true(all(c(".rownum", "observed", "predicted", "residual", "abs_error", "sq_error") %in% names(pooled)))
+  expect_equal(
+    pooled$predicted,
+    (predtab1$predicted + predtab2$predicted) / 2,
+    tolerance = 1e-10
+  )
+})
+
+test_that("run_regional can return pooled mean and stacked predictions", {
+  dset <- gen_sample_dataset(
+    c(10, 10, 4),
+    nobs = 120,
+    nlevels = 2,
+    data_mode = "image",
+    response_type = "categorical"
+  )
+  cval <- blocked_cross_validation(dset$design$block_var)
+
+  region_mask <- NeuroVol(
+    sample(1:4, size = length(dset$dataset$mask), replace = TRUE),
+    space(dset$dataset$mask)
+  )
+  model <- load_model("sda_notune")
+  mspec <- mvpa_model(
+    model,
+    dset$dataset,
+    dset$design,
+    model_type = "classification",
+    crossval = cval,
+    return_predictions = TRUE
+  )
+
+  res_mean <- run_regional(mspec, region_mask, pool_predictions = "mean")
+  expect_true(is.data.frame(res_mean$pooled_prediction_table))
+  expect_true(is.numeric(res_mean$pooled_performance))
+  expect_true("Accuracy" %in% names(res_mean$pooled_performance))
+  expect_equal(
+    nrow(res_mean$pooled_prediction_table),
+    dplyr::n_distinct(res_mean$prediction_table$.rownum)
+  )
+
+  res_stack <- run_regional(mspec, region_mask, pool_predictions = "stack", stack_folds = 4, stack_seed = 123)
+  expect_true(is.data.frame(res_stack$pooled_prediction_table))
+  expect_true(is.numeric(res_stack$pooled_performance))
+  expect_true("Accuracy" %in% names(res_stack$pooled_performance))
+  expect_equal(
+    nrow(res_stack$pooled_prediction_table),
+    dplyr::n_distinct(res_stack$prediction_table$.rownum)
+  )
+})
+
 test_that("surface_based mvpa_regional with 5 ROIS runs without error", {
   
   dset <- gen_sample_dataset(c(10,10,4), nobs=100, nlevels=3, data_mode="surface", response_type="categorical")
@@ -322,6 +392,5 @@ test_that("standard mvpa_regional and custom cross-validation and splitting var 
   res <- run_regional(mspec,regionMask)
   expect_true(!is.null(res))
 })
-
 
 

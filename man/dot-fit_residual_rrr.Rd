@@ -6,6 +6,9 @@
 \usage{
 .fit_residual_rrr(Xw, Yw, rank = "auto", max_rank = 20, ridge_lambda = NULL)
 }
+\value{
+A list with fitted residual RRR components.
+}
 \description{
 Residual reduced-rank regression: (Yw - Xw) ~ Xw
 }

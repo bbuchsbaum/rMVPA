@@ -27,3 +27,11 @@ A list with elements:
 Construct a design object for representational mediation, with predictor (X)
 and outcome (Y) RDMs over items and optional confound RDMs.
 }
+\examples{
+\dontrun{
+  items <- letters[1:10]
+  X_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
+  Y_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
+  des <- repmed_design(items, X_rdm, Y_rdm)
+}
+}

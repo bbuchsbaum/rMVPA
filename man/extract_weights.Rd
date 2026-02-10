@@ -27,3 +27,14 @@ A numeric matrix of dimension P x D.
 Extract the raw weight matrix from a fitted model object. Returns a
 P x D numeric matrix (features x discriminant directions).
 }
+\examples{
+\donttest{
+  ds <- gen_sample_dataset(c(5,5,5), 20, nlevels=2)
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification")
+  vox <- which(ds$dataset$mask > 0)
+  X <- neuroim2::series(ds$dataset$train_data, vox)
+  fit <- train_model(mspec, X, ds$design$y_train, indices=vox)
+  w <- extract_weights(fit)
+}
+}

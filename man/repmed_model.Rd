@@ -35,3 +35,9 @@ For each ROI/searchlight, tests whether the ROI RDM mediates the relationship
 between a predictor RDM (X) and an outcome RDM (Y), optionally including
 confound RDMs.
 }
+\examples{
+\dontrun{
+  # Requires repmed_design with X_rdm and Y_rdm
+  # model <- repmed_model(dataset, design, repmed_des, key_var=~ImageID)
+}
+}

@@ -105,6 +105,7 @@ Collate:
     'feature_sets.R'
     'feature_sets_design.R'
     'banded_ridge_da_model.R'
+    'feature_rsa_da_model.R'
 RoxygenNote: 7.3.3
 Suggests:
     covr,

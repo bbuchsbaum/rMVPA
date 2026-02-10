@@ -104,6 +104,11 @@ feature_sets_design <- function(X_train,
 #'
 #' @param x A feature_sets_design object
 #' @param ... ignored
+#' @return Invisibly returns the input object \code{x} (called for side effects).
+#' @examples
+#' \dontrun{
+#'   # print method called on feature_sets_design object
+#' }
 #' @export
 print.feature_sets_design <- function(x, ...) {
   cat("feature_sets_design\n")

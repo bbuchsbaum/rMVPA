@@ -159,3 +159,8 @@ and \code{run_searchlight()}:
 }
 }
 
+\examples{
+\dontrun{
+  # See vignette for complete ERA-RSA workflow
+}
+}

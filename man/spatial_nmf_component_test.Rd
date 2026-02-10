@@ -83,3 +83,11 @@ differences in expression, rather than testing individual voxels.
   \item \code{p_global} tests whether any component is significant.
 }
 }
+\examples{
+\dontrun{
+  # Requires completed spatial NMF fit
+  W <- matrix(rnorm(20*5), 20, 5)
+  groups <- factor(rep(c("A","B"), each=10))
+  result <- spatial_nmf_component_test(W=W, groups=groups, nperm=100)
+}
+}
