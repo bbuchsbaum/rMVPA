@@ -512,29 +512,16 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
     chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
   }
 
-  do_fun <- if (is.null(processor)) {
-    function(obj, roi, rnum, center_global_id = NA) {
-      process_roi(obj, roi, rnum, center_global_id = center_global_id)
-    }
-  } else {
-    processor
-  }
-
-  invoke_processor <- function(fun, obj, roi, rnum, center_global_id) {
-    fmls <- tryCatch(names(formals(fun)), error = function(...) character(0))
-    supports_center <- "center_global_id" %in% fmls || "..." %in% fmls
-    if (supports_center) {
-      fun(obj, roi, rnum, center_global_id = center_global_id)
-    } else {
-      fun(obj, roi, rnum)
-    }
-  }
-
   min_voxels <- if (analysis_type == "searchlight") 1L else 2L
 
-  # ---- parallel map: workers extract ROIs from shared memory -------------
-  run_map <- function(progress_tick = NULL) {
-    frame %>% furrr::future_pmap(function(.id, rnum, sample, size) {
+  # Build a worker function with a minimal captured environment so futures
+  # do not accidentally inherit large objects from the calling frame.
+  make_worker_fun <- function(progress_tick = NULL) {
+    worker_impl <- function(.id, rnum, sample, size,
+                            progress_tick, analysis_type, min_voxels,
+                            shard_data, fail_fast, drop_probs, obj,
+                            processor, shard_extract_roi, process_roi,
+                            prob_observed) {
       if (!is.null(progress_tick)) {
         on.exit(progress_tick(), add = TRUE)
       }
@@ -560,7 +547,18 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
         }
 
         center_id <- if (analysis_type == "searchlight") rnum else NA
-        result <- invoke_processor(do_fun, obj, roi, rnum, center_id)
+        if (is.null(processor)) {
+          result <- process_roi(obj, roi, rnum, center_global_id = center_id)
+        } else {
+          fmls <- tryCatch(names(formals(processor)),
+                            error = function(...) character(0))
+          supports_center <- "center_global_id" %in% fmls || "..." %in% fmls
+          if (supports_center) {
+            result <- processor(obj, roi, rnum, center_global_id = center_id)
+          } else {
+            result <- processor(obj, roi, rnum)
+          }
+        }
 
         if (!obj$return_predictions) {
           result <- result %>% dplyr::mutate(result = list(NULL))
@@ -612,8 +610,85 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
           warning_message = paste("Error processing ROI:", e$message)
         )
       })
-    }, .options = furrr::furrr_options(seed = TRUE, conditions = "condition",
-                                       chunk_size = chunk_size))
+    }
+
+    if (requireNamespace("carrier", quietly = TRUE)) {
+      return(carrier::crate(
+        function(.id, rnum, sample, size) {
+          worker_impl(
+            .id, rnum, sample, size,
+            progress_tick = NULL,
+            analysis_type = analysis_type,
+            min_voxels = min_voxels,
+            shard_data = shard_data,
+            fail_fast = fail_fast,
+            drop_probs = drop_probs,
+            obj = obj,
+            processor = processor,
+            shard_extract_roi = shard_extract_roi,
+            process_roi = process_roi,
+            prob_observed = prob_observed
+          )
+        },
+        worker_impl = worker_impl,
+        analysis_type = analysis_type,
+        min_voxels = min_voxels,
+        shard_data = shard_data,
+        fail_fast = fail_fast,
+        drop_probs = drop_probs,
+        obj = obj,
+        processor = processor,
+        shard_extract_roi = shard_extract_roi,
+        process_roi = process_roi,
+        prob_observed = prob_observed
+      ))
+    }
+
+    worker_body <- function(.id, rnum, sample, size) {
+      worker_impl(
+        .id, rnum, sample, size,
+        progress_tick = progress_tick,
+        analysis_type = analysis_type,
+        min_voxels = min_voxels,
+        shard_data = shard_data,
+        fail_fast = fail_fast,
+        drop_probs = drop_probs,
+        obj = obj,
+        processor = processor,
+        shard_extract_roi = shard_extract_roi,
+        process_roi = process_roi,
+        prob_observed = prob_observed
+      )
+    }
+
+    env <- new.env(parent = baseenv())
+    env$worker_impl <- worker_impl
+    env$progress_tick <- progress_tick
+    env$analysis_type <- analysis_type
+    env$min_voxels <- min_voxels
+    env$shard_data <- shard_data
+    env$fail_fast <- fail_fast
+    env$drop_probs <- drop_probs
+    env$obj <- obj
+    env$processor <- processor
+    env$shard_extract_roi <- shard_extract_roi
+    env$process_roi <- process_roi
+    env$prob_observed <- prob_observed
+    environment(worker_body) <- env
+
+    worker_body
+  }
+
+  # ---- parallel map: workers extract ROIs from shared memory -------------
+  run_map <- function(progress_tick = NULL) {
+    worker_fun <- make_worker_fun(progress_tick = progress_tick)
+    frame %>% furrr::future_pmap(worker_fun,
+                                 .options = furrr::furrr_options(
+                                   seed = TRUE,
+                                   conditions = "condition",
+                                   chunk_size = chunk_size,
+                                   globals = FALSE
+                                 ))
   }
 
   use_progressr <- total_items > 0 &&

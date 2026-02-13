@@ -109,6 +109,7 @@ Collate:
     'feature_rsa_da_model.R'
 RoxygenNote: 7.3.3
 Suggests:
+    carrier,
     covr,
     doParallel,
     e1071,

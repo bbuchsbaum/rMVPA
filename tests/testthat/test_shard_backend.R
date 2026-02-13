@@ -396,3 +396,60 @@ test_that("backend='auto' runs and remains backward compatible", {
     expect_true(inherits(res, "searchlight_result"))
   })
 })
+
+test_that("shard workers do not inherit large caller globals", {
+  skip_on_cran()
+  skip_if_not_installed("future")
+
+  # Keep globals budget small enough that accidental large exports fail fast.
+  withr::local_options(list(future.globals.maxSize = 8 * 1024^2))
+  huge_caller_object <- rnorm(2 * 1024^2) # ~16 MB
+
+  ds <- gen_sample_dataset(c(5, 5, 5), 20, blocks = 2, nlevels = 2)
+  cval <- blocked_cross_validation(ds$design$block_var)
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+                      "classification", crossval = cval)
+  mspec <- use_shard(mspec)
+
+  sl <- get_searchlight(ds$dataset, radius = 3)
+  vox_iter <- lapply(sl, function(x) x)
+  vox_iter <- vox_iter[1:min(3, length(vox_iter))]
+
+  old_plan <- future::plan(future::multisession, workers = 2)
+  on.exit(future::plan(old_plan), add = TRUE)
+
+  expect_no_error(
+    mvpa_iterate(mspec, vox_iter, ids = seq_along(vox_iter))
+  )
+
+  expect_gt(length(huge_caller_object), 0L)
+})
+
+test_that("shard backend uses carrier::crate when carrier is installed", {
+  skip_on_cran()
+  skip_if_not_installed("carrier")
+
+  withr::local_options(list(rMVPA.test.used_carrier_crate = FALSE))
+  trace("crate",
+        where = asNamespace("carrier"),
+        tracer = quote(options(rMVPA.test.used_carrier_crate = TRUE)),
+        print = FALSE)
+  on.exit(untrace("crate", where = asNamespace("carrier")), add = TRUE)
+
+  ds <- gen_sample_dataset(c(5, 5, 5), 20, blocks = 2, nlevels = 2)
+  cval <- blocked_cross_validation(ds$design$block_var)
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+                      "classification", crossval = cval)
+  mspec <- use_shard(mspec)
+
+  sl <- get_searchlight(ds$dataset, radius = 3)
+  vox_iter <- lapply(sl, function(x) x)
+  vox_iter <- vox_iter[1:min(2, length(vox_iter))]
+
+  expect_no_error(
+    mvpa_iterate(mspec, vox_iter, ids = seq_along(vox_iter))
+  )
+  expect_true(isTRUE(getOption("rMVPA.test.used_carrier_crate")))
+})
