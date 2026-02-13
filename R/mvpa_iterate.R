@@ -420,6 +420,12 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     rnums <- split(ids, batch_group)
     
     dset <- mod_spec$dataset
+    use_shard_backend <- inherits(mod_spec, "shard_model_spec")
+
+    if (use_shard_backend) {
+      on.exit(shard_cleanup(mod_spec$shard_data), add = TRUE)
+    }
+
     # Precompute nonzero mask indices once per invocation to avoid repeated O(#voxels) scans in as_roi.
     if (!is.null(dset$mask) && is.null(dset$mask_indices)) {
       dset$mask_indices <- compute_mask_indices(dset$mask)
@@ -457,22 +463,29 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
         futile.logger::flog.debug("Sample frame has %d rows after filtering", nrow(sf))
         
         if (nrow(sf) > 0) {
-          # ---- ROI extraction (serial) ----
-          t_extract_roi <- proc.time()[3]
-        # For searchlight, pass center_global_id to preserve center during filtering
-        if (analysis_type == "searchlight") {
-          sf <- sf %>%
-            rowwise() %>%
-            mutate(roi=list(extract_roi(sample, dset, center_global_id = rnum, min_voxels = min_voxels_required))) %>%
-            select(-sample)
+        if (use_shard_backend) {
+          # ---- shard path: skip serial ROI extraction ----
+          # Workers will extract ROIs from shared memory in run_future.shard_model_spec.
+          # Keep the 'sample' column (data_sample with $vox indices).
+          futile.logger::flog.debug("Batch %d: shard backend active, skipping serial ROI extraction", i)
         } else {
-          sf <- sf %>%
-            rowwise() %>%
-            mutate(roi=list(extract_roi(sample, dset, min_voxels = min_voxels_required))) %>%
-            select(-sample)
-        }
+          # ---- default path: ROI extraction (serial) ----
+          t_extract_roi <- proc.time()[3]
+          # For searchlight, pass center_global_id to preserve center during filtering
+          if (analysis_type == "searchlight") {
+            sf <- sf %>%
+              rowwise() %>%
+              mutate(roi=list(extract_roi(sample, dset, center_global_id = rnum, min_voxels = min_voxels_required))) %>%
+              select(-sample)
+          } else {
+            sf <- sf %>%
+              rowwise() %>%
+              mutate(roi=list(extract_roi(sample, dset, min_voxels = min_voxels_required))) %>%
+              select(-sample)
+          }
           futile.logger::flog.debug("Batch %d: ROI extraction (extract_roi) took %.3f sec",
                                     i, proc.time()[3] - t_extract_roi)
+        }
 
           n_sf <- nrow(sf)
           # ---- parallel processing via run_future ----

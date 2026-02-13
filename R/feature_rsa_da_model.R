@@ -506,6 +506,7 @@ run_regional.feature_rsa_da_model <- function(model_spec,
                                               coalesce_design_vars = FALSE,
                                               processor = NULL,
                                               verbose = FALSE,
+                                              backend = c("default", "shard", "auto"),
                                               ...) {
   run_regional_base(
     model_spec,
@@ -516,6 +517,7 @@ run_regional.feature_rsa_da_model <- function(model_spec,
     compute_performance = compute_performance,
     return_predictions = FALSE,
     return_fits = return_fits,
+    backend = backend,
     ...
   )
 }

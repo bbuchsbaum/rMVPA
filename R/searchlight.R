@@ -915,7 +915,13 @@ do_randomized <- function(model_spec, radius, niter,
                          chunk_size = NULL,
                          return_pobserved = TRUE,
                          drop_probs = FALSE,
-                         fail_fast = FALSE) {
+                         fail_fast = FALSE,
+                         backend = c("default", "shard", "auto")) {
+  backend <- match.arg(backend)
+  model_spec <- configure_runtime_backend(
+    model_spec, backend = backend, context = "do_randomized"
+  )
+
   error=NULL
   total_models <- 0
   total_errors <- 0
@@ -1087,7 +1093,13 @@ do_resampled <- function(model_spec, radius, niter,
                         ...,
                         drop_probs = FALSE,
                         return_pobserved = FALSE,
-                        fail_fast = FALSE) {
+                        fail_fast = FALSE,
+                        backend = c("default", "shard", "auto")) {
+  backend <- match.arg(backend)
+  model_spec <- configure_runtime_backend(
+    model_spec, backend = backend, context = "do_resampled"
+  )
+
   futile.logger::flog.info("Starting resampled searchlight analysis:")
   futile.logger::flog.info("- Radius: %s", crayon::blue(paste(radius, collapse = ", ")))
   futile.logger::flog.info("- Samples: %s", crayon::blue(niter))
@@ -1186,7 +1198,14 @@ do_resampled <- function(model_spec, radius, niter,
 #' @param combiner The function to be used to combine results (default is \code{combine_standard}).
 #' @param ... Additional arguments to be passed to the MVPA function.
 #' @return A searchlight_result object containing spatial maps for each metric.
-do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ..., k = NULL, drop_probs = FALSE, fail_fast = FALSE) {
+do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ...,
+                        k = NULL, drop_probs = FALSE, fail_fast = FALSE,
+                        backend = c("default", "shard", "auto")) {
+  backend <- match.arg(backend)
+  model_spec <- configure_runtime_backend(
+    model_spec, backend = backend, context = "do_standard"
+  )
+
   error=NULL
   flog.info("creating standard searchlight")
   t_sl_create <- proc.time()[3]
@@ -1273,9 +1292,12 @@ run_searchlight_base <- function(model_spec,
                                  drop_probs = FALSE,
                                  fail_fast = FALSE,
                                  k = NULL,
+                                 backend = c("default", "shard", "auto"),
                                  ...) {
 
   
+  backend <- match.arg(backend)
+
   # 1) Check radius (allow vectors for resampled)
   if (length(radius) == 1L) {
     if (radius < 1 || radius > 100) {
@@ -1355,15 +1377,15 @@ run_searchlight_base <- function(model_spec,
   res <- if (method == "standard") {
     flog.info("Running standard searchlight with radius = %s", radius)
     do_standard(model_spec, radius, combiner = chosen_combiner, k = k,
-                drop_probs = drop_probs, fail_fast = fail_fast, ...)
+                drop_probs = drop_probs, fail_fast = fail_fast, backend = backend, ...)
   } else if (method == "randomized") {
     flog.info("Running randomized searchlight with radius = %s and niter = %s", radius, niter)
     do_randomized(model_spec, radius, niter = niter, combiner = chosen_combiner,
-                  drop_probs = drop_probs, fail_fast = fail_fast, ...)
+                  drop_probs = drop_probs, fail_fast = fail_fast, backend = backend, ...)
   } else { # resampled
     flog.info("Running resampled searchlight with radius = %s and samples = %s", radius, niter)
     do_resampled(model_spec, radius, niter = niter, combiner = chosen_combiner,
-                 drop_probs = drop_probs, fail_fast = fail_fast, ...)
+                 drop_probs = drop_probs, fail_fast = fail_fast, backend = backend, ...)
   }
   
   res
@@ -1385,7 +1407,8 @@ run_searchlight_base <- function(model_spec,
 #' @export
 run_searchlight.default <- function(model_spec, radius = 8, method = c("standard","randomized","resampled"),
                                     niter = 4, combiner = "average", drop_probs = FALSE,
-                                    fail_fast = FALSE, k = NULL, ...) {
+                                    fail_fast = FALSE, k = NULL,
+                                    backend = c("default", "shard", "auto"), ...) {
   run_searchlight_base(
     model_spec    = model_spec,
     radius        = radius,
@@ -1395,6 +1418,7 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
     drop_probs    = drop_probs,
     fail_fast     = fail_fast,
     k             = k,
+    backend       = backend,
     ...
   )
 }
@@ -1418,21 +1442,25 @@ run_searchlight.vector_rsa <- function(model_spec,
                                        niter = 4,
                                        drop_probs = FALSE,
                                        fail_fast = FALSE,
+                                       backend = c("default", "shard", "auto"),
                                        ...) {
   method <- match.arg(method)
+  backend <- match.arg(backend)
   
   if (method == "standard") {
     flog.info("Running standard vector RSA searchlight (radius = %s)", radius)
     do_standard(model_spec, radius, mvpa_fun = vector_rsa_iterate, combiner = combine_vector_rsa_standard,
-                drop_probs = drop_probs, fail_fast = fail_fast, ...)
+                drop_probs = drop_probs, fail_fast = fail_fast, backend = backend, ...)
   } else if (method == "randomized") {
     flog.info("Running randomized vector RSA searchlight (radius = %s, niter = %s)", radius, niter)
     do_randomized(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate,
-                  combiner = combine_randomized, drop_probs = drop_probs, fail_fast = fail_fast, ...)
+                  combiner = combine_randomized, drop_probs = drop_probs, fail_fast = fail_fast,
+                  backend = backend, ...)
   } else {
     flog.info("Running resampled vector RSA searchlight (radius = %s, samples = %s)", radius, niter)
     do_resampled(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate,
-                 combiner = combine_randomized, drop_probs = drop_probs, fail_fast = fail_fast, ...)
+                 combiner = combine_randomized, drop_probs = drop_probs, fail_fast = fail_fast,
+                 backend = backend, ...)
   }
 }
 

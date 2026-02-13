@@ -24,14 +24,17 @@ run_searchlight.remap_rrr_model <- function(model_spec,
                                             drop_probs = TRUE,
                                             return_pobserved = FALSE,
                                             fail_fast = FALSE,
+                                            backend = c("default", "shard", "auto"),
                                             ...) {
   method <- match.arg(method)
+  backend <- match.arg(backend)
 
   if (method == "standard") {
     do_standard(model_spec, radius,
                 combiner = combine_standard,
                 drop_probs = drop_probs,
                 fail_fast = fail_fast,
+                backend = backend,
                 ...)
   } else if (method == "randomized") {
     # Force lean defaults
@@ -41,6 +44,7 @@ run_searchlight.remap_rrr_model <- function(model_spec,
                   drop_probs   = drop_probs,
                   return_pobserved = return_pobserved,
                   fail_fast    = fail_fast,
+                  backend      = backend,
                   ...)
   } else { # resampled
     do_resampled(model_spec, radius,
@@ -49,6 +53,7 @@ run_searchlight.remap_rrr_model <- function(model_spec,
                  drop_probs   = drop_probs,
                  return_pobserved = return_pobserved,
                  fail_fast    = fail_fast,
+                 backend      = backend,
                  ...)
   }
 }

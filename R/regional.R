@@ -807,7 +807,12 @@ run_regional_base <- function(model_spec,
                               stack_folds = NULL,
                               stack_seed = NULL,
                               stack_lambda = 1e-3,
+                              backend = c("default", "shard", "auto"),
                               ...) {
+  backend <- match.arg(backend)
+  model_spec <- configure_runtime_backend(
+    model_spec, backend = backend, context = "run_regional_base"
+  )
 
   pool_predictions <- match.arg(pool_predictions)
  
@@ -892,8 +897,9 @@ run_regional_base <- function(model_spec,
 #' @rdname run_regional-methods
 #' @details This is the fallback method called when no specialized `run_regional` method is found for the class of `model_spec`. It typically calls `run_regional_base`.
 #' @export
-run_regional.default <- function(model_spec, region_mask, ...) {
-  run_regional_base(model_spec, region_mask, ...)
+run_regional.default <- function(model_spec, region_mask,
+                                 backend = c("default", "shard", "auto"), ...) {
+  run_regional_base(model_spec, region_mask, backend = backend, ...)
 }
 
 
@@ -906,6 +912,7 @@ run_regional.mvpa_model <- function(model_spec, region_mask,
                                     coalesce_design_vars = FALSE,
                                     processor = NULL,
                                     verbose = FALSE,
+                                    backend = c("default", "shard", "auto"),
                                     ...) {
   
   run_regional_base(
@@ -914,6 +921,7 @@ run_regional.mvpa_model <- function(model_spec, region_mask,
     coalesce_design_vars = coalesce_design_vars,
     processor = processor,
     verbose = verbose,
+    backend = backend,
     ...
   )
 }
@@ -930,6 +938,7 @@ run_regional.rsa_model <- function(model_spec, region_mask,
                                    return_fits = FALSE,
                                    compute_performance = TRUE,
                                    coalesce_design_vars = FALSE,
+                                   backend = c("default", "shard", "auto"),
                                    ...) {
   
   run_regional_base(
@@ -939,6 +948,7 @@ run_regional.rsa_model <- function(model_spec, region_mask,
     compute_performance   = compute_performance,
     return_fits           = return_fits,
     return_predictions    = FALSE,  # Override default for RSA
+    backend               = backend,
     ...
   )
 }
@@ -959,7 +969,12 @@ run_regional.vector_rsa_model <- function(model_spec, region_mask,
                                          coalesce_design_vars = FALSE, # Usually FALSE for RSA
                                          processor = NULL,
                                          verbose = FALSE,
+                                         backend = c("default", "shard", "auto"),
                                          ...) {
+  backend <- match.arg(backend)
+  model_spec <- configure_runtime_backend(
+    model_spec, backend = backend, context = "run_regional.vector_rsa_model"
+  )
   
   # 1) Prepare regions (using base helper)
   prepped <- prep_regional(model_spec, region_mask)
@@ -1062,6 +1077,7 @@ run_regional.feature_rsa_model <- function(model_spec, region_mask,
                                            coalesce_design_vars = FALSE,
                                            processor = NULL,
                                            verbose = FALSE,
+                                           backend = c("default", "shard", "auto"),
                                            ...) {
   run_regional_base(
     model_spec,
@@ -1069,6 +1085,7 @@ run_regional.feature_rsa_model <- function(model_spec, region_mask,
     coalesce_design_vars = coalesce_design_vars,
     processor = processor,
     verbose = verbose,
+    backend = backend,
     ...
   )
 }

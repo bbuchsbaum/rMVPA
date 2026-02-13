@@ -904,6 +904,7 @@ run_regional.banded_ridge_da_model <- function(model_spec,
                                                coalesce_design_vars = FALSE,
                                                processor = NULL,
                                                verbose = FALSE,
+                                               backend = c("default", "shard", "auto"),
                                                ...) {
   # Keep per-ROI results for optional fits, but do not attempt to build a prediction table.
   run_regional_base(
@@ -915,6 +916,7 @@ run_regional.banded_ridge_da_model <- function(model_spec,
     compute_performance = compute_performance,
     return_predictions = FALSE,
     return_fits = return_fits,
+    backend = backend,
     ...
   )
 }

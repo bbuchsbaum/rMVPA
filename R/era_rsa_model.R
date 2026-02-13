@@ -455,8 +455,10 @@ run_searchlight.era_rsa_model <- function(model_spec,
                                           niter = 4,
                                           drop_probs = FALSE,
                                           fail_fast = FALSE,
+                                          backend = c("default", "shard", "auto"),
                                           ...) {
   method <- match.arg(method)
+  backend <- match.arg(backend)
 
   if (method == "standard") {
     do_standard(model_spec, radius,
@@ -465,6 +467,7 @@ run_searchlight.era_rsa_model <- function(model_spec,
                 processor = process_roi.era_rsa_model,
                 drop_probs = drop_probs,
                 fail_fast = fail_fast,
+                backend = backend,
                 ...)
   } else {
     do_randomized(model_spec, radius,
@@ -474,6 +477,7 @@ run_searchlight.era_rsa_model <- function(model_spec,
                   processor = process_roi.era_rsa_model,
                   drop_probs = drop_probs,
                   fail_fast = fail_fast,
+                  backend = backend,
                   ...)
   }
 }
@@ -496,8 +500,11 @@ run_searchlight.era_rsa_model <- function(model_spec,
 #' @export
 run_regional.era_rsa_model <- function(model_spec,
                                        region_mask,
+                                       backend = c("default", "shard", "auto"),
                                        ...) {
+  backend <- match.arg(backend)
   run_regional_base(model_spec, region_mask,
                     processor = process_roi.era_rsa_model,
+                    backend = backend,
                     ...)
 }

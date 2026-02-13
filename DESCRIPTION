@@ -70,6 +70,7 @@ Collate:
     'regional.R'
     'register_mvpa_model.R'
     'resample.R'
+    'shard_backend.R'
     'resampling_utils.R'
     'rsa_model.R'
     'roisplit.R'
@@ -124,6 +125,7 @@ Suggests:
     robustcov,
     rmarkdown,
     roxygen2,
+    shard,
     sparsediscrim,
     spls,
     testthat,
@@ -133,7 +135,8 @@ Suggests:
     yaml
 Remotes:
     bbuchsbaum/neuroim2,
-    bbuchsbaum/neurosurf
+    bbuchsbaum/neurosurf,
+    bbuchsbaum/shard
 VignetteBuilder: knitr
 Encoding: UTF-8
 URL: http://bbuchsbaum.github.io/rMVPA/

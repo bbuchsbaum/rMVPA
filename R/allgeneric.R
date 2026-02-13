@@ -824,6 +824,9 @@ predict_model <- function(object, fit, newdata, ...) {
 #' @param radius The searchlight radius in millimeters
 #' @param method The type of searchlight, either 'randomized' or 'standard'
 #' @param niter The number of searchlight iterations (used only for 'randomized' method)
+#' @param backend Execution backend: \code{"default"} (standard pipeline),
+#'   \code{"shard"} (shared-memory backend), or \code{"auto"} (try shard and
+#'   fall back to default).
 #' @param ... Extra arguments passed to specific searchlight methods. Currently supported:
 #'   \itemize{
 #'     \item \code{batch_size}: Integer specifying how many searchlights (ROIs) are grouped
@@ -886,7 +889,8 @@ predict_model <- function(object, fit, newdata, ...) {
 #' }
 #'
 #' @export
-run_searchlight <- function(model_spec, radius, method = c("standard", "randomized", "resampled"), niter = NULL, ...) {
+run_searchlight <- function(model_spec, radius, method = c("standard", "randomized", "resampled"),
+                            niter = NULL, backend = c("default", "shard", "auto"), ...) {
   UseMethod("run_searchlight")
 }
 
@@ -899,6 +903,9 @@ run_searchlight <- function(model_spec, radius, method = c("standard", "randomiz
 #' @param coalesce_design_vars If \code{TRUE}, merges design variables into the prediction table (if present and generated). Default is \code{FALSE}.
 #' @param processor An optional custom processor function for each region (ROI). If NULL (default), behavior depends on the \code{model_spec} class.
 #' @param verbose If \code{TRUE}, print progress messages during iteration (default is \code{FALSE}).
+#' @param backend Execution backend: \code{"default"} (standard pipeline),
+#'   \code{"shard"} (shared-memory backend), or \code{"auto"} (try shard and
+#'   fall back to default).
 #' @param ... Extra arguments passed to specific regional analysis methods (e.g., `return_fits`, `compute_performance`).
 #'
 #' @return A \code{regional_mvpa_result} object (list) containing:
@@ -955,7 +962,7 @@ run_searchlight <- function(model_spec, radius, method = c("standard", "randomiz
 #'
 #' @rdname run_regional-methods
 #' @export
-run_regional <- function(model_spec, region_mask, ...) {
+run_regional <- function(model_spec, region_mask, backend = c("default", "shard", "auto"), ...) {
   UseMethod("run_regional")
 }
 
