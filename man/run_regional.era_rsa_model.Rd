@@ -4,7 +4,12 @@
 \alias{run_regional.era_rsa_model}
 \title{Regional method for era_rsa_model}
 \usage{
-\method{run_regional}{era_rsa_model}(model_spec, region_mask, ...)
+\method{run_regional}{era_rsa_model}(
+  model_spec,
+  region_mask,
+  backend = c("default", "shard", "auto"),
+  ...
+)
 }
 \arguments{
 \item{model_spec}{An era_rsa_model object}

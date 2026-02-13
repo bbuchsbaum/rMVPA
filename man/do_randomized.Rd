@@ -14,7 +14,8 @@ do_randomized(
   chunk_size = NULL,
   return_pobserved = TRUE,
   drop_probs = FALSE,
-  fail_fast = FALSE
+  fail_fast = FALSE,
+  backend = c("default", "shard", "auto")
 )
 }
 \arguments{

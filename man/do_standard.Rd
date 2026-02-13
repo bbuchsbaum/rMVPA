@@ -12,7 +12,8 @@ do_standard(
   ...,
   k = NULL,
   drop_probs = FALSE,
-  fail_fast = FALSE
+  fail_fast = FALSE,
+  backend = c("default", "shard", "auto")
 )
 }
 \arguments{

@@ -13,7 +13,12 @@
 \alias{run_regional.feature_rsa_da_model}
 \title{Region of Interest Based MVPA Analysis}
 \usage{
-run_regional(model_spec, region_mask, ...)
+run_regional(
+  model_spec,
+  region_mask,
+  backend = c("default", "shard", "auto"),
+  ...
+)
 
 run_regional_base(
   model_spec,
@@ -29,10 +34,16 @@ run_regional_base(
   stack_folds = NULL,
   stack_seed = NULL,
   stack_lambda = 0.001,
+  backend = c("default", "shard", "auto"),
   ...
 )
 
-\method{run_regional}{default}(model_spec, region_mask, ...)
+\method{run_regional}{default}(
+  model_spec,
+  region_mask,
+  backend = c("default", "shard", "auto"),
+  ...
+)
 
 \method{run_regional}{mvpa_model}(
   model_spec,
@@ -40,6 +51,7 @@ run_regional_base(
   coalesce_design_vars = FALSE,
   processor = NULL,
   verbose = FALSE,
+  backend = c("default", "shard", "auto"),
   ...
 )
 
@@ -49,6 +61,7 @@ run_regional_base(
   return_fits = FALSE,
   compute_performance = TRUE,
   coalesce_design_vars = FALSE,
+  backend = c("default", "shard", "auto"),
   ...
 )
 
@@ -60,6 +73,7 @@ run_regional_base(
   coalesce_design_vars = FALSE,
   processor = NULL,
   verbose = FALSE,
+  backend = c("default", "shard", "auto"),
   ...
 )
 
@@ -69,6 +83,7 @@ run_regional_base(
   coalesce_design_vars = FALSE,
   processor = NULL,
   verbose = FALSE,
+  backend = c("default", "shard", "auto"),
   ...
 )
 
@@ -80,6 +95,7 @@ run_regional_base(
   coalesce_design_vars = FALSE,
   processor = NULL,
   verbose = FALSE,
+  backend = c("default", "shard", "auto"),
   ...
 )
 
@@ -91,6 +107,7 @@ run_regional_base(
   coalesce_design_vars = FALSE,
   processor = NULL,
   verbose = FALSE,
+  backend = c("default", "shard", "auto"),
   ...
 )
 }
@@ -98,6 +115,10 @@ run_regional_base(
 \item{model_spec}{A \code{mvpa_model} instance containing the model specifications}
 
 \item{region_mask}{A \code{NeuroVol} or \code{NeuroSurface} object where each region is identified by a unique integer}
+
+\item{backend}{Execution backend: \code{"default"} (standard pipeline),
+\code{"shard"} (shared-memory backend), or \code{"auto"} (try shard and
+fall back to default).}
 
 \item{...}{Extra arguments passed to specific regional analysis methods (e.g., `return_fits`, `compute_performance`).}
 

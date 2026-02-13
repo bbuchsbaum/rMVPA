@@ -13,7 +13,8 @@ do_resampled(
   ...,
   drop_probs = FALSE,
   return_pobserved = FALSE,
-  fail_fast = FALSE
+  fail_fast = FALSE,
+  backend = c("default", "shard", "auto")
 )
 }
 \arguments{

@@ -9,6 +9,7 @@ run_searchlight(
   radius,
   method = c("standard", "randomized", "resampled"),
   niter = NULL,
+  backend = c("default", "shard", "auto"),
   ...
 )
 }
@@ -20,6 +21,10 @@ run_searchlight(
 \item{method}{The type of searchlight, either 'randomized' or 'standard'}
 
 \item{niter}{The number of searchlight iterations (used only for 'randomized' method)}
+
+\item{backend}{Execution backend: \code{"default"} (standard pipeline),
+\code{"shard"} (shared-memory backend), or \code{"auto"} (try shard and
+fall back to default).}
 
 \item{...}{Extra arguments passed to specific searchlight methods. Currently supported:
 \itemize{

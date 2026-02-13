@@ -13,6 +13,7 @@
   drop_probs = FALSE,
   fail_fast = FALSE,
   k = NULL,
+  backend = c("default", "shard", "auto"),
   ...
 )
 }

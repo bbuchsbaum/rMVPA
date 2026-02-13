@@ -11,6 +11,7 @@
   niter = 4,
   drop_probs = FALSE,
   fail_fast = FALSE,
+  backend = c("default", "shard", "auto"),
   ...
 )
 }

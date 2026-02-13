@@ -19,6 +19,15 @@ This eliminates the two main memory bottlenecks of the default pipeline:
   \item Serialisation of large ROI matrices to workers via \pkg{furrr}.
 }
 }
+\section{Supported dataset types}{
+
+\itemize{
+  \item \code{mvpa_image_dataset} (volumetric)
+  \item \code{mvpa_surface_dataset} (cortical surface)
+  \item \code{mvpa_clustered_dataset} (parcellated)
+}
+}
+
 \section{Cleanup}{
 
 Shared-memory segments are released automatically at the end of
