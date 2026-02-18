@@ -41,6 +41,11 @@ Train a single classifier on ALL features (parcels or voxels) with
 cross-validation, and compute per-feature importance via Haufe et al.
 (2014) activation patterns.
 }
+\section{Architecture TODO}{
+\code{run_global} currently uses a dedicated global CV/training pipeline
+rather than dispatching through \code{\link{fit_roi}}. This is intentional
+for now; future cleanup may unify global and ROI fitting interfaces.
+}
 \examples{
 \donttest{
   ds <- gen_sample_dataset(c(5,5,5), 40, nlevels=2, blocks=3)

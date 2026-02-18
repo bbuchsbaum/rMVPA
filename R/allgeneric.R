@@ -212,6 +212,12 @@ run_future <- function(obj, frame, processor, ...) {
 #' @seealso \code{\link{roi_result}}, \code{\link{output_schema}},
 #'   \code{\link{process_roi}}
 #'
+#' @section Architecture TODO:
+#' \code{fit_roi} is currently scoped to ROI/searchlight iteration.
+#' Whole-brain global analysis uses \code{\link{run_global}} via a separate
+#' \code{cv_run_global -> train_model} path. A future refactor may unify these
+#' flows under a single fit contract.
+#'
 #' @examples
 #' \donttest{
 #'   # fit_roi is typically called internally by process_roi.default.
@@ -1381,6 +1387,11 @@ model_importance <- function(object, X_train, ...) UseMethod("model_importance")
 #' Train a single classifier on ALL features (parcels or voxels) with
 #' cross-validation, and compute per-feature importance via Haufe et al.
 #' (2014) activation patterns.
+#'
+#' @section Architecture TODO:
+#' \code{run_global} currently uses a dedicated global CV/training pipeline
+#' rather than dispatching through \code{\link{fit_roi}}. This is intentional
+#' for now; future cleanup may unify global and ROI fitting interfaces.
 #'
 #' @param model_spec An \code{mvpa_model} specification.
 #' @param ... Additional arguments passed to methods.

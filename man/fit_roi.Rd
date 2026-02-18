@@ -86,6 +86,12 @@ Models that implement \code{fit_roi} are automatically preferred by
 \code{\link{process_roi.default}} over the legacy dispatch chain
 (\code{internal_crossval} / \code{external_crossval} / \code{train_model}).
 }
+\section{Architecture TODO}{
+\code{fit_roi} is currently scoped to ROI/searchlight iteration.
+Whole-brain global analysis uses \code{\link{run_global}} via a separate
+\code{cv_run_global -> train_model} path. A future refactor may unify these
+flows under a single fit contract.
+}
 \examples{
 \donttest{
   # fit_roi is typically called internally by process_roi.default.
