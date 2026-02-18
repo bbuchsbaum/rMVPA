@@ -81,45 +81,49 @@ compute_performance.naive_xdec_model <- function(obj, result) {
   obj$performance(result)
 }
 
-#' Naive cross-decoding per ROI
-#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
-#' @examples
-#' \dontrun{
-#'   # Internal method called by run_searchlight/run_regional
-#'   # See naive_xdec_model examples for usage
-#' }
-#' @keywords internal
+#' @rdname fit_roi
+#' @method fit_roi naive_xdec_model
 #' @export
-process_roi.naive_xdec_model <- function(mod_spec, roi, rnum, ...) {
-  if (!has_test_set(mod_spec)) {
-    return(tibble::tibble(
-      result = list(NULL), indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL), id = rnum,
-      error = TRUE, error_message = "naive_xdec_model requires external test set"
+fit_roi.naive_xdec_model <- function(model, roi_data, context, ...) {
+  if (!has_test_set(model)) {
+    return(roi_result(
+      metrics = NULL,
+      indices = roi_data$indices,
+      id = context$id,
+      error = TRUE,
+      error_message = "naive_xdec_model requires external test set"
     ))
   }
 
-  Xtr <- as.matrix(neuroim2::values(roi$train_roi))
-  Xte <- as.matrix(neuroim2::values(roi$test_roi))
-  des <- mod_spec$design
+  Xtr <- roi_data$train_data
+  Xte <- roi_data$test_data
+  des <- model$design
+
+  if (is.null(Xte) || nrow(Xtr) < 2 || ncol(Xtr) < 1 || nrow(Xte) < 1) {
+    return(roi_result(
+      metrics = NULL,
+      indices = roi_data$indices,
+      id = context$id,
+      error = TRUE,
+      error_message = "naive_xdec_model: insufficient data"
+    ))
+  }
 
   # Keys for prototypes and observed labels
-  if (!is.null(mod_spec$link_by) && mod_spec$link_by %in% colnames(des$train_design) && mod_spec$link_by %in% colnames(des$test_design)) {
-    key_tr <- factor(des$train_design[[mod_spec$link_by]])
-    key_te <- factor(des$test_design[[mod_spec$link_by]])
+  if (!is.null(model$link_by) && model$link_by %in% colnames(des$train_design) && model$link_by %in% colnames(des$test_design)) {
+    key_tr <- factor(des$train_design[[model$link_by]])
+    key_te <- factor(des$test_design[[model$link_by]])
   } else {
     key_tr <- factor(des$y_train)
     key_te <- factor(des$y_test)
   }
 
   # Align on common keys and build prototypes
-  Xp <- .nx_rowsum_mean(Xtr, key_tr)   # prototypes per key
+  Xp <- .nx_rowsum_mean(Xtr, key_tr)
   levs <- rownames(Xp)
-  # Ensure observed uses same level set
   obs <- factor(as.character(key_te), levels = levs)
 
-  # Correlate each test row to prototypes (columns = levs)
-  # Use base cor for correctness; speed is adequate at ROI scale
+  # Correlate each test row to prototypes
   scores <- cor(t(Xte), t(Xp))
   if (is.null(colnames(scores))) colnames(scores) <- levs
   probs <- .nx_softmax(scores)
@@ -131,13 +135,20 @@ process_roi.naive_xdec_model <- function(mod_spec, roi, rnum, ...) {
                                 test_design = des$test_design,
                                 predictor = NULL)
 
-  perf <- compute_performance(mod_spec, cres)
-  tibble::tibble(
-    result = list(cres),
-    indices = list(neuroim2::indices(roi$train_roi)),
-    performance = list(perf),
-    id = rnum,
-    error = FALSE,
-    error_message = "~"
+  perf <- compute_performance(model, cres)
+
+  roi_result(
+    metrics = perf,
+    indices = roi_data$indices,
+    id = context$id,
+    result = cres
   )
 }
+
+#' @rdname output_schema
+#' @method output_schema naive_xdec_model
+#' @export
+output_schema.naive_xdec_model <- function(model) {
+  NULL
+}
+

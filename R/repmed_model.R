@@ -57,56 +57,41 @@ repmed_model <- function(dataset,
 }
 
 
-#' Per-ROI processing for repmed_model
+#' fit_roi method for repmed_model
 #'
 #' Computes mediation paths a, b, c' and the indirect effect in RDM space for
 #' a single ROI/searchlight.
 #'
-#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
-#' @examples
-#' \dontrun{
-#'   # Internal method called by run_searchlight/run_regional
-#'   # See repmed_model examples for usage
-#' }
-#' @keywords internal
+#' @rdname fit_roi
+#' @method fit_roi repmed_model
 #' @export
-process_roi.repmed_model <- function(mod_spec,
-                                     roi,
-                                     rnum,
-                                     center_global_id = NA,
-                                     ...) {
+fit_roi.repmed_model <- function(model, roi_data, context, ...) {
 
-  Xmat <- as.matrix(neuroim2::values(roi$train_roi))
-  ind  <- neuroim2::indices(roi$train_roi)
+  Xmat  <- roi_data$train_data
+  ind   <- roi_data$indices
   n_obs <- nrow(Xmat)
   n_vox <- ncol(Xmat)
 
   if (n_obs < 2L || n_vox < 1L) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repmed_model: insufficient observations or voxels.",
-      warning         = TRUE,
-      warning_message = "repmed_model: insufficient observations or voxels."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repmed_model: insufficient observations or voxels."
     ))
   }
 
-  key   <- mod_spec$key
-  items <- mod_spec$items
+  key   <- model$key
+  items <- model$items
 
   if (length(key) != n_obs) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repmed_model: key length mismatch with ROI data.",
-      warning         = TRUE,
-      warning_message = "repmed_model: key length mismatch with ROI data."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repmed_model: key length mismatch with ROI data."
     ))
   }
 
@@ -115,8 +100,8 @@ process_roi.repmed_model <- function(mod_spec,
   items_roi <- rownames(M_full)
 
   # Align items across X, M, Y
-  items_X <- rownames(mod_spec$X_rdm)
-  items_Y <- rownames(mod_spec$Y_rdm)
+  items_X <- rownames(model$X_rdm)
+  items_Y <- rownames(model$Y_rdm)
   common_items <- Reduce(intersect, list(items, items_roi, items_X, items_Y))
   K <- length(common_items)
   futile.logger::flog.debug(
@@ -125,55 +110,49 @@ process_roi.repmed_model <- function(mod_spec,
   )
 
   if (K < 3L) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repmed_model: need at least 3 common items for mediation.",
-      warning         = TRUE,
-      warning_message = "repmed_model: too few common items."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repmed_model: need at least 3 common items for mediation."
     ))
   }
 
   common_items <- sort(common_items)
   M  <- M_full[common_items, , drop = FALSE]
-  Xr <- mod_spec$X_rdm[common_items, common_items, drop = FALSE]
-  Yr <- mod_spec$Y_rdm[common_items, common_items, drop = FALSE]
+  Xr <- model$X_rdm[common_items, common_items, drop = FALSE]
+  Yr <- model$Y_rdm[common_items, common_items, drop = FALSE]
 
   # Drop constant voxels
   sd_M <- apply(M, 2L, stats::sd, na.rm = TRUE)
   keep_vox <- sd_M > 0
   if (!any(keep_vox)) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repmed_model: all voxels have zero variance.",
-      warning         = TRUE,
-      warning_message = "repmed_model: all voxels have zero variance."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repmed_model: all voxels have zero variance."
     ))
   }
   M <- M[, keep_vox, drop = FALSE]
 
   # RDMs in lower-tri vector form
-  D_M <- pairwise_dist(mod_spec$distfun, M)
+  D_M <- pairwise_dist(model$distfun, M)
   x <- as.numeric(Xr[lower.tri(Xr)])
   y <- as.numeric(Yr[lower.tri(Yr)])
   m <- as.numeric(D_M[lower.tri(D_M)])
 
   # Confounds: each as vector over lower tri
   conf_mat <- NULL
-  if (!is.null(mod_spec$confound_rdms) && length(mod_spec$confound_rdms) > 0L) {
-    conf_vecs <- lapply(mod_spec$confound_rdms, function(Cr) {
+  if (!is.null(model$confound_rdms) && length(model$confound_rdms) > 0L) {
+    conf_vecs <- lapply(model$confound_rdms, function(Cr) {
       Csub <- Cr[common_items, common_items, drop = FALSE]
       as.numeric(Csub[lower.tri(Csub)])
     })
     conf_mat <- do.call(cbind, conf_vecs)
-    colnames(conf_mat) <- names(mod_spec$confound_rdms)
+    colnames(conf_mat) <- names(model$confound_rdms)
   }
 
   # Build data frames for mediation paths
@@ -264,18 +243,21 @@ process_roi.repmed_model <- function(mod_spec,
     med_sobel_p  = sobel_p
   )
 
-  # Flag small-K settings as potentially unstable
-  warn_flag <- K < 5L
-  warn_msg  <- if (warn_flag) "repmed_model: small item count (K < 5); mediation estimates may be unstable." else "~"
-
-  tibble::tibble(
-    result          = list(NULL),
-    indices         = list(ind),
-    performance     = list(perf),
-    id              = rnum,
-    error           = FALSE,
-    error_message   = "~",
-    warning         = warn_flag,
-    warning_message = warn_msg
+  roi_result(
+    metrics = perf,
+    indices = ind,
+    id      = context$id
   )
+}
+
+
+#' @rdname output_schema
+#' @method output_schema repmed_model
+#' @export
+output_schema.repmed_model <- function(model) {
+  nms <- c("n_items", "n_pairs", "med_a", "med_b", "med_cprime",
+           "med_c", "med_indirect", "med_sobel_z", "med_sobel_p")
+  schema <- as.list(rep("scalar", length(nms)))
+  names(schema) <- nms
+  schema
 }

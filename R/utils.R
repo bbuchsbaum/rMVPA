@@ -253,8 +253,7 @@ utils::globalVariables(c(
   "res_naive",
   "res_remap",
   "rnum",
-  "scores_list",
-  "vector_rsa_iterate"
+  "scores_list"
 ))
 
 #' Report System and Package Information for rMVPA

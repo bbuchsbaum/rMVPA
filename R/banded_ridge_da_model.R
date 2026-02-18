@@ -635,52 +635,47 @@ grouped_ridge_da <- function(dataset,
 # ---- per-ROI processing ----------------------------------------------------
 
 #' @export
-compute_performance.banded_ridge_da_model <- function(obj, result) {
-  # This model typically computes performance inside process_roi and returns it
-  # directly. Provide a safe fallback for callers that invoke compute_performance().
-  if (is.numeric(result) && !is.null(names(result))) {
-    return(result)
+output_schema.banded_ridge_da_model <- function(model) {
+  nms <- c("recall_r2_full", "recall_mse_full", "target_r2_full", "target_mse_full")
+
+  if (as.integer(model$target_nperm %||% 0L) > 0L) {
+    nms <- c(nms, "target_perm_p_r2_full", "target_perm_z_r2_full",
+             "target_perm_p_mse_full", "target_perm_z_mse_full",
+             "target_perm_nvalid_r2", "target_perm_nvalid_mse")
   }
-  if (is.list(result) && !is.null(result$performance) &&
-      is.numeric(result$performance) && !is.null(names(result$performance))) {
-    return(result$performance)
+
+  if (isTRUE(model$compute_delta_r2)) {
+    delta_sets <- model$delta_sets
+    if (!is.null(delta_sets)) {
+      nms <- c(nms, paste0("delta_r2_", delta_sets))
+    }
   }
-  if (is.list(result) && !is.null(result$predictor) && is.null(result$observed)) {
-    return(NULL)
-  }
-  obj$performance(result)
+
+  setNames(rep("scalar", length(nms)), nms)
 }
 
-#' @keywords internal
 #' @export
-process_roi.banded_ridge_da_model <- function(mod_spec,
-                                              roi,
-                                              rnum,
-                                              center_global_id = NA,
-                                              ...) {
-  if (!has_test_set(mod_spec)) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL),
-      id = rnum,
+fit_roi.banded_ridge_da_model <- function(model, roi_data, context, ...) {
+  ind <- roi_data$indices
+  id <- context$id
+
+  if (is.null(roi_data$test_data)) {
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "banded_ridge_da_model requires external test set"
     ))
   }
 
-  Xtrain_fs <- mod_spec$design$X_train
-  Xtest_fs <- mod_spec$design$X_test
+  Xtrain_fs <- model$design$X_train
+  Xtest_fs <- model$design$X_test
 
-  Ye <- as.matrix(neuroim2::values(roi$train_roi))
-  Yr <- as.matrix(neuroim2::values(roi$test_roi))
+  Ye <- roi_data$train_data
+  Yr <- roi_data$test_data
 
   if (nrow(Ye) < 2L || nrow(Yr) < 2L || ncol(Ye) < 1L) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL),
-      id = rnum,
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "banded_ridge_da_model: insufficient observations or voxels"
     ))
@@ -689,39 +684,30 @@ process_roi.banded_ridge_da_model <- function(mod_spec,
   Xe <- Xtrain_fs$X
   Xr <- Xtest_fs$X
   if (nrow(Xe) != nrow(Ye)) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL),
-      id = rnum,
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "banded_ridge_da_model: nrow(X_train) must match nrow(Y_enc) for this subject"
     ))
   }
   if (nrow(Xr) != nrow(Yr)) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL),
-      id = rnum,
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "banded_ridge_da_model: nrow(X_test) must match nrow(Y_rec) for this subject"
     ))
   }
 
-  pen_full <- .br_penalty_vec(Xtrain_fs, mod_spec$lambdas)
+  pen_full <- .br_penalty_vec(Xtrain_fs, model$lambdas)
   if (any(!is.finite(pen_full)) || any(pen_full < 0)) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL),
-      id = rnum,
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "banded_ridge_da_model: invalid lambdas (must be finite and non-negative)"
     ))
   }
 
-  folds <- mod_spec$recall_folds
+  folds <- model$recall_folds
   w_rec <- Xtest_fs$row_weights
   if (is.null(w_rec)) {
     w_rec <- rep(1, nrow(Xr))
@@ -730,18 +716,10 @@ process_roi.banded_ridge_da_model <- function(mod_spec,
                  length(w_rec), nrow(Xr)), call. = FALSE)
   }
 
-  mode <- mod_spec$mode
-  alpha <- mod_spec$alpha_recall
-  rho <- mod_spec$rho
+  mode <- model$mode
+  alpha <- model$alpha_recall
+  rho <- model$rho
 
-  # Full model fold scores
-  r2_full <- numeric(0)
-  mse_full <- numeric(0)
-  per_fold_diag <- list()
-
-  # NOTE: Encoding cross-products cannot be cached across folds because
-  # centering/scaling statistics are recomputed per fold (they depend on
-  # the fold-specific recall training subset).
   fit_fold <- function(keep_cols, lambdas_pen, Yr_use = Yr) {
     Xe_k <- Xe[, keep_cols, drop = FALSE]
     Xr_k <- Xr[, keep_cols, drop = FALSE]
@@ -791,11 +769,11 @@ process_roi.banded_ridge_da_model <- function(mod_spec,
             target_mse_full = mse_full_mean)
 
   # Optional single-run target permutation null (preserving temporal structure)
-  perm_n <- as.integer(mod_spec$target_nperm %||% 0L)
+  perm_n <- as.integer(model$target_nperm %||% 0L)
   if (perm_n > 0L) {
     T_rec <- nrow(Yr)
-    perm_strategy <- mod_spec$target_perm_strategy %||% "circular_shift"
-    perm_block <- mod_spec$target_perm_block %||% NULL
+    perm_strategy <- model$target_perm_strategy %||% "circular_shift"
+    perm_block <- model$target_perm_block %||% NULL
     null_r2 <- rep(NA_real_, perm_n)
     null_mse <- rep(NA_real_, perm_n)
 
@@ -850,8 +828,8 @@ process_roi.banded_ridge_da_model <- function(mod_spec,
   }
 
   # Leave-one-set-out unique contribution on recall
-  if (isTRUE(mod_spec$compute_delta_r2)) {
-    delta_sets <- mod_spec$delta_sets
+  if (isTRUE(model$compute_delta_r2)) {
+    delta_sets <- model$delta_sets
     delta_sets <- intersect(delta_sets, names(Xtrain_fs$indices))
     for (set_name in delta_sets) {
       drop_cols <- Xtrain_fs$indices[[set_name]]
@@ -861,62 +839,51 @@ process_roi.banded_ridge_da_model <- function(mod_spec,
         next
       }
       drop_fit_res <- fit_fold(keep_cols, pen_full)
-      # Compute delta per-fold to keep fold pairing consistent
       delta_fold <- r2_full_folds - drop_fit_res$r2_folds
       perf[paste0("delta_r2_", set_name)] <- mean(delta_fold, na.rm = TRUE)
     }
   }
 
   diag_obj <- NULL
-  if (isTRUE(mod_spec$return_diagnostics)) {
+  if (isTRUE(model$return_diagnostics)) {
     diag_obj <- list(
       folds = folds,
       r2_full_folds = r2_full_folds,
       mse_full_folds = full_fit_res$mse_folds,
-      lambdas = mod_spec$lambdas,
+      lambdas = model$lambdas,
       alpha_recall = alpha,
       alpha_target = alpha,
-      target_gap = mod_spec$target_gap %||% 0L,
+      target_gap = model$target_gap %||% 0L,
       target_nperm = perm_n,
-      target_perm_strategy = mod_spec$target_perm_strategy %||% "circular_shift",
-      target_perm_block = mod_spec$target_perm_block %||% NA_integer_,
+      target_perm_strategy = model$target_perm_strategy %||% "circular_shift",
+      target_perm_block = model$target_perm_block %||% NA_integer_,
       rho = if (mode == "coupled") rho else NA_real_,
       mode = mode
     )
   }
 
-  tibble::tibble(
-    result = list(list(predictor = diag_obj)),
-    indices = list(neuroim2::indices(roi$train_roi)),
-    performance = list(perf),
-    id = rnum,
-    error = FALSE,
-    error_message = "~"
+  roi_result(
+    metrics = perf,
+    indices = ind,
+    id = id,
+    result = if (isTRUE(model$return_diagnostics)) list(predictor = diag_obj) else NULL
   )
 }
 
-#' @rdname run_regional-methods
 #' @export
-run_regional.banded_ridge_da_model <- function(model_spec,
-                                               region_mask,
-                                               return_fits = model_spec$return_fits,
-                                               compute_performance = TRUE,
-                                               coalesce_design_vars = FALSE,
-                                               processor = NULL,
-                                               verbose = FALSE,
-                                               backend = c("default", "shard", "auto"),
-                                               ...) {
-  # Keep per-ROI results for optional fits, but do not attempt to build a prediction table.
-  run_regional_base(
-    model_spec,
-    region_mask,
-    coalesce_design_vars = coalesce_design_vars,
-    processor = processor,
-    verbose = verbose,
-    compute_performance = compute_performance,
-    return_predictions = FALSE,
-    return_fits = return_fits,
-    backend = backend,
-    ...
-  )
+compute_performance.banded_ridge_da_model <- function(obj, result) {
+  # This model typically computes performance inside process_roi and returns it
+  # directly. Provide a safe fallback for callers that invoke compute_performance().
+  if (is.numeric(result) && !is.null(names(result))) {
+    return(result)
+  }
+  if (is.list(result) && !is.null(result$performance) &&
+      is.numeric(result$performance) && !is.null(names(result$performance))) {
+    return(result$performance)
+  }
+  if (is.list(result) && !is.null(result$predictor) && is.null(result$observed)) {
+    return(NULL)
+  }
+  obj$performance(result)
 }
+

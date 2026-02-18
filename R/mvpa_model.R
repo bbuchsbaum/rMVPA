@@ -136,6 +136,33 @@ compute_performance.mvpa_model <- function(obj, result) {
   obj$performance(result)
 }
 
+#' @rdname output_schema
+#' @method output_schema mvpa_model
+#' @keywords internal
+#' @export
+output_schema.mvpa_model <- function(model) {
+  des <- model$design
+  y <- des$cv_labels
+
+  if (is.numeric(y)) {
+    nms <- c("R2", "RMSE", "spearcor")
+  } else if (is.factor(y) && length(levels(y)) == 2) {
+    nms <- c("Accuracy", "AUC")
+  } else if (is.factor(y) && length(levels(y)) > 2) {
+    nms <- c("Accuracy", "AUC")
+  } else {
+    # custom perf or unknown type — fall back to combine_standard
+    return(NULL)
+  }
+
+  if (!is.null(des$split_groups) && length(des$split_groups) > 0) {
+    split_nms <- names(des$split_groups)
+    nms <- c(nms, unlist(lapply(split_nms, function(s) paste0(nms, "_", s))))
+  }
+
+  stats::setNames(as.list(rep("scalar", length(nms))), nms)
+}
+
 #' @export
 tune_grid.mvpa_model <- function(obj, x,y,len=1) {
   if (is.null(obj$tune_grid)) {
@@ -372,6 +399,41 @@ print.mvpa_model <- function(x,...) {
   print(x$design)
 }
   
+
+#' @rdname fit_roi
+#' @method fit_roi mvpa_model
+#' @export
+fit_roi.mvpa_model <- function(model, roi_data, context, ...) {
+  roi <- list(train_roi = roi_data$train_roi, test_roi = roi_data$test_roi)
+  id <- context$id
+  center_global_id <- context$center_global_id %||% NA
+
+  result_tbl <- if (has_test_set(model)) {
+    external_crossval(model, roi, id, center_global_id = center_global_id)
+  } else {
+    internal_crossval(model, roi, id, center_global_id = center_global_id)
+  }
+
+  # Convert the tibble output to roi_result
+  if (isTRUE(result_tbl$error[1])) {
+    roi_result(
+      metrics = NULL,
+      indices = roi_data$indices,
+      id = id,
+      result = result_tbl$result[[1]],
+      error = TRUE,
+      error_message = result_tbl$error_message[1]
+    )
+  } else {
+    roi_result(
+      metrics = result_tbl$performance[[1]],
+      indices = roi_data$indices,
+      id = id,
+      result = result_tbl$result[[1]]
+    )
+  }
+}
+
 
 #' @rdname strip_dataset-methods
 #' @export

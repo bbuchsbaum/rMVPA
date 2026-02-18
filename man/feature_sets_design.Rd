@@ -41,12 +41,13 @@ while the \emph{actual} predictors are carried explicitly as `feature_sets` obje
   \item Responses live on the dataset: `dataset$train_data` and `dataset$test_data` (TRxvoxel matrices per ROI).
 }
 
-\strong{Why `y_train` is a dummy.}
-The returned object includes a dummy `y_train = 1:T_enc` (and `y_test = 1:T_rec` when
-`X_test` is present). This is only to satisfy length checks and indexing in the
-generic rMVPA iterators. Models built for this design (e.g. `grouped_ridge_da_model()` /
-`banded_ridge_da_model()`)
-should ignore `y_train` and use `design$X_train` / `design$X_test` instead.
+\strong{cv_labels semantics.}
+The returned object passes `cv_labels = 1:T_enc` to `mvpa_design()`. These integer
+indices are used only for length validation and fold-construction bookkeeping in the
+generic rMVPA iterators; they are not meaningful training targets. The actual
+predictors are carried as `design$X_train` / `design$X_test`, and models built for
+this design (e.g. `grouped_ridge_da_model()` / `banded_ridge_da_model()`) retrieve
+them from those fields rather than from `cv_labels`.
 
 \strong{Recall blocks.}
 `block_var_test` is stored for convenience as `design$block_var_test`. Models can use it

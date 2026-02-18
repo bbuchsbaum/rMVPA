@@ -492,6 +492,34 @@ merge_results.rsa_model <- function(obj, result_set, indices, id, ...) {
 }
 
 
+#' @rdname fit_roi
+#' @method fit_roi rsa_model
+#' @export
+fit_roi.rsa_model <- function(model, roi_data, context, ...) {
+  train_dat <- roi_data$train_data
+
+  result <- tryCatch(
+    train_model(model, train_dat, y = NULL, indices = roi_data$indices),
+    error = function(e) NULL
+  )
+
+  if (is.null(result) || !is.numeric(result) || length(result) == 0) {
+    return(roi_result(
+      metrics = NULL,
+      indices = roi_data$indices,
+      id = context$id,
+      error = TRUE,
+      error_message = sprintf("rsa_model: train_model failed for ROI %s", context$id)
+    ))
+  }
+
+  roi_result(
+    metrics = result,
+    indices = roi_data$indices,
+    id = context$id
+  )
+}
+
 ################################################################################
 # PRINT METHODS
 ################################################################################
@@ -746,4 +774,14 @@ rsa_model <- function(dataset,
     pattern_center = pattern_center
   )
   obj
+}
+
+#' @rdname output_schema
+#' @method output_schema rsa_model
+#' @export
+output_schema.rsa_model <- function(model) {
+  predictor_names <- names(model$design$model_mat)
+  schema <- as.list(rep("scalar", length(predictor_names)))
+  names(schema) <- predictor_names
+  schema
 }

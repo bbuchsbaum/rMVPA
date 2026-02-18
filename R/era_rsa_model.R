@@ -205,71 +205,91 @@ era_rsa_model <- function(dataset,
 }
 
 
-#' ERA-RSA per-ROI processor
+#' Output schema for era_rsa_model
 #'
-#' Computes first-order ERA metrics and second-order encoding-retrieval geometry
-#' for a single ROI/searchlight sphere. Designed to be passed as the `processor`
-#' argument to `mvpa_iterate()` (used by run_regional/run_searchlight methods).
+#' Declares all scalar metrics emitted by \code{fit_roi.era_rsa_model} so that
+#' \code{combine_schema_standard} can pre-allocate output maps with consistent
+#' length across ROIs.
 #'
-#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
-#' @examples
-#' \dontrun{
-#'   # Internal method called by run_searchlight/run_regional
-#'   # See era_rsa_model examples for usage
-#' }
+#' @param model An era_rsa_model object.
+#' @return A named character vector mapping metric names to \code{"scalar"}.
 #' @keywords internal
 #' @export
-process_roi.era_rsa_model <- function(mod_spec,
-                                      roi,
-                                      rnum,
-                                      center_global_id = NA,
-                                      ...) {
+output_schema.era_rsa_model <- function(model) {
+  base_names <- c("n_items", "era_top1_acc", "era_diag_mean", "era_diag_minus_off",
+                  "geom_cor", "era_diag_minus_off_same_block",
+                  "era_diag_minus_off_diff_block", "era_lag_cor",
+                  "geom_cor_run_partial", "geom_cor_xrun")
 
-  # Pull ROI matrices directly from ROI container
-  Xenc <- as.matrix(neuroim2::values(roi$train_roi))
-  ind  <- neuroim2::indices(roi$train_roi)
+  if (!is.null(model$confound_rdms)) {
+    conf_names <- names(model$confound_rdms)
+    beta_names <- paste0("beta_", c("enc_geom", conf_names))
+    sp_names   <- paste0("sp_",   c("enc_geom", conf_names))
+    base_names <- c(base_names, beta_names, sp_names)
+  }
+
+  setNames(rep("scalar", length(base_names)), base_names)
+}
+
+
+#' fit_roi method for era_rsa_model
+#'
+#' Computes first-order ERA metrics and second-order encoding-retrieval geometry
+#' for a single ROI/searchlight sphere.
+#'
+#' @param model An era_rsa_model object.
+#' @param roi_data List with train_data, test_data, indices, train_roi, test_roi.
+#' @param context List with design, cv_spec, id, center_global_id.
+#' @param ... Additional arguments (unused).
+#' @return An \code{roi_result} object.
+#' @keywords internal
+#' @export
+fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
+  Xenc <- roi_data$train_data
+  ind  <- roi_data$indices
+  id   <- context$id
 
   # Require external test set for retrieval
-  if (!has_test_set(mod_spec)) {
-    return(tibble::tibble(
-      result = list(NULL), indices = list(ind), performance = list(NULL), id = rnum,
-      error = TRUE, error_message = "era_rsa_model requires dataset$test_data + design$y_test (external retrieval set)",
-      warning = FALSE, warning_message = "~"
+  if (is.null(roi_data$test_data)) {
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
+      error = TRUE,
+      error_message = "era_rsa_model requires dataset$test_data + design$y_test (external retrieval set)"
     ))
   }
 
-  Xret <- as.matrix(neuroim2::values(roi$test_roi))
-  des  <- mod_spec$design
+  Xret <- roi_data$test_data
+  des  <- model$design
 
-  # Guard: ensure non-degenerate ROI
+  # Guard: non-degenerate ROI
   if (ncol(Xenc) < 1L || ncol(Xret) < 1L || nrow(Xenc) < 2L || nrow(Xret) < 2L) {
-    return(tibble::tibble(
-      result = list(NULL), indices = list(ind), performance = list(NULL), id = rnum,
-      error = TRUE, error_message = "ERA-RSA: ROI too small (need >=2 trials and >=1 voxel per phase)",
-      warning = FALSE, warning_message = "~"
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
+      error = TRUE,
+      error_message = "ERA-RSA: ROI too small (need >=2 trials and >=1 voxel per phase)"
     ))
   }
 
-  # Extract keys for encoding/retrieval from design (use stored key_var to parse)
-  key_tr_full <- parse_variable(mod_spec$key_var, des$train_design)
-  key_te_full <- parse_variable(mod_spec$key_var, des$test_design)
-  key_tr_full <- factor(key_tr_full, levels = levels(mod_spec$key))
-  key_te_full <- factor(key_te_full, levels = levels(mod_spec$key))
+  # Extract keys for encoding/retrieval from design
+  key_tr_full <- parse_variable(model$key_var, des$train_design)
+  key_te_full <- parse_variable(model$key_var, des$test_design)
+  key_tr_full <- factor(key_tr_full, levels = levels(model$key))
+  key_te_full <- factor(key_te_full, levels = levels(model$key))
 
   # Build item-level prototypes via group means
   E_full <- group_means(Xenc, margin = 1, group = key_tr_full)
   R_full <- group_means(Xret, margin = 1, group = key_te_full)
 
-  keys_enc <- rownames(E_full)
-  keys_ret <- rownames(R_full)
+  keys_enc    <- rownames(E_full)
+  keys_ret    <- rownames(R_full)
   common_keys <- sort(intersect(keys_enc, keys_ret))
-  K <- length(common_keys)
+  K           <- length(common_keys)
 
   if (K < 2L) {
-    return(tibble::tibble(
-      result = list(NULL), indices = list(ind), performance = list(NULL), id = rnum,
-      error = TRUE, error_message = sprintf("ERA-RSA: need >=2 items with both encoding and retrieval (found %d)", K),
-      warning = FALSE, warning_message = "~"
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
+      error = TRUE,
+      error_message = sprintf("ERA-RSA: need >=2 items with both encoding and retrieval (found %d)", K)
     ))
   }
 
@@ -277,43 +297,42 @@ process_roi.era_rsa_model <- function(mod_spec,
   R <- R_full[common_keys, , drop = FALSE]
 
   # Drop voxels constant across both phases
-  sd_E <- apply(E, 2, stats::sd, na.rm = TRUE)
-  sd_R <- apply(R, 2, stats::sd, na.rm = TRUE)
+  sd_E     <- apply(E, 2, stats::sd, na.rm = TRUE)
+  sd_R     <- apply(R, 2, stats::sd, na.rm = TRUE)
   keep_vox <- (sd_E > 0) | (sd_R > 0)
   if (!any(keep_vox)) {
-    return(tibble::tibble(
-      result = list(NULL), indices = list(ind), performance = list(NULL), id = rnum,
-      error = TRUE, error_message = "ERA-RSA: all voxels zero-variance",
-      warning = FALSE, warning_message = "~"
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
+      error = TRUE,
+      error_message = "ERA-RSA: all voxels zero-variance"
     ))
   }
   E <- E[, keep_vox, drop = FALSE]
   R <- R[, keep_vox, drop = FALSE]
 
   # First-order ERA: similarity and diagnostics
-  S <- suppressWarnings(stats::cor(t(E), t(R), use = "pairwise.complete.obs"))
-  diag_sim <- diag(S)
+  S             <- suppressWarnings(stats::cor(t(E), t(R), use = "pairwise.complete.obs"))
+  diag_sim      <- diag(S)
   era_diag_mean <- mean(diag_sim, na.rm = TRUE)
-  off <- S; diag(off) <- NA_real_
-  era_off_mean <- mean(off, na.rm = TRUE)
+  off           <- S; diag(off) <- NA_real_
+  era_off_mean  <- mean(off, na.rm = TRUE)
   era_diag_minus_off <- era_diag_mean - era_off_mean
-  # Column-wise argmax over encoding rows for each retrieval column
-  max_enc_idx <- apply(S, 2, function(col) if (all(is.na(col))) NA_integer_ else which.max(col))
-  era_top1_acc <- mean((!is.na(max_enc_idx)) & (max_enc_idx == seq_len(K)))
+  max_enc_idx   <- apply(S, 2, function(col) if (all(is.na(col))) NA_integer_ else which.max(col))
+  era_top1_acc  <- mean((!is.na(max_enc_idx)) & (max_enc_idx == seq_len(K)))
 
   # Second-order ER geometry
-  D_enc <- pairwise_dist(mod_spec$distfun, E)
-  D_ret <- pairwise_dist(mod_spec$distfun, R)
-  dE <- as.numeric(D_enc[lower.tri(D_enc)])
-  dR <- as.numeric(D_ret[lower.tri(D_ret)])
-  geom_cor <- suppressWarnings(stats::cor(dE, dR, method = mod_spec$rsa_simfun, use = "complete.obs"))
+  D_enc    <- pairwise_dist(model$distfun, E)
+  D_ret    <- pairwise_dist(model$distfun, R)
+  dE       <- as.numeric(D_enc[lower.tri(D_enc)])
+  dR       <- as.numeric(D_ret[lower.tri(D_ret)])
+  geom_cor <- suppressWarnings(stats::cor(dE, dR, method = model$rsa_simfun, use = "complete.obs"))
 
   # Optional geometry regression with confounds
   beta_vec <- c(); sp_vec <- c()
-  if (!is.null(mod_spec$confound_rdms) && K >= 3L) {
+  if (!is.null(model$confound_rdms) && K >= 3L) {
     mm <- list(enc_geom = dE)
-    for (nm in names(mod_spec$confound_rdms)) {
-      M <- as.matrix(mod_spec$confound_rdms[[nm]])
+    for (nm in names(model$confound_rdms)) {
+      M <- as.matrix(model$confound_rdms[[nm]])
       if (!is.null(rownames(M)) && all(common_keys %in% rownames(M))) {
         M <- M[common_keys, common_keys, drop = FALSE]
       } else {
@@ -321,18 +340,18 @@ process_roi.era_rsa_model <- function(mod_spec,
       }
       mm[[nm]] <- as.numeric(M[lower.tri(M)])
     }
-    df <- as.data.frame(mm)
+    df  <- as.data.frame(mm)
     fit <- try(stats::lm(dR ~ ., data = df), silent = TRUE)
     if (!inherits(fit, "try-error")) {
       cf <- stats::coef(summary(fit))
       if (nrow(cf) > 1L) {
-        keep <- rownames(cf) != "(Intercept)"
+        keep     <- rownames(cf) != "(Intercept)"
         beta_vec <- cf[keep, "Estimate"]
         names(beta_vec) <- paste0("beta_", rownames(cf)[keep])
       }
       if (exists("run_lm_semipartial", mode = "function")) {
         tmp <- list(design = list(model_mat = mm))
-        sr <- try(run_lm_semipartial(dvec = dR, obj = tmp), silent = TRUE)
+        sr  <- try(run_lm_semipartial(dvec = dR, obj = tmp), silent = TRUE)
         if (!inherits(sr, "try-error") && is.numeric(sr)) {
           names(sr) <- paste0("sp_", names(mm))
           sp_vec <- sr
@@ -344,8 +363,8 @@ process_roi.era_rsa_model <- function(mod_spec,
   # Block-limited ERA if item_block available
   era_diag_minus_off_same_block <- NA_real_
   era_diag_minus_off_diff_block <- NA_real_
-  if (!is.null(mod_spec$item_block)) {
-    ib <- mod_spec$item_block
+  if (!is.null(model$item_block)) {
+    ib <- model$item_block
     if (!is.null(names(ib))) ib <- ib[match(common_keys, names(ib))] else ib <- ib[seq_along(common_keys)]
     same_vals <- c(); diff_vals <- c()
     for (i in seq_len(K)) {
@@ -360,8 +379,8 @@ process_roi.era_rsa_model <- function(mod_spec,
 
   # Lag-specific ERA if item_lag available
   era_lag_cor <- NA_real_
-  if (!is.null(mod_spec$item_lag)) {
-    lag <- mod_spec$item_lag
+  if (!is.null(model$item_lag)) {
+    lag <- model$item_lag
     if (!is.null(names(lag))) lag <- lag[match(common_keys, names(lag))] else lag <- lag[seq_along(common_keys)]
     if (length(lag) == length(diag_sim) && any(!is.na(lag))) {
       era_lag_cor <- suppressWarnings(stats::cor(diag_sim, lag, method = "spearman", use = "complete.obs"))
@@ -371,140 +390,63 @@ process_roi.era_rsa_model <- function(mod_spec,
   # Run-partial ER geometry and cross-run-only geometry if run info available
   geom_cor_run_partial <- NA_real_
   geom_cor_xrun        <- NA_real_
-  if (!is.null(mod_spec$confound_rdms$run_enc) && !is.null(mod_spec$confound_rdms$run_ret)) {
-    Renc <- as.numeric(as.matrix(mod_spec$confound_rdms$run_enc)[common_keys, common_keys][lower.tri(D_enc)])
-    Rret <- as.numeric(as.matrix(mod_spec$confound_rdms$run_ret)[common_keys, common_keys][lower.tri(D_ret)])
+  if (!is.null(model$confound_rdms$run_enc) && !is.null(model$confound_rdms$run_ret)) {
+    Renc    <- as.numeric(as.matrix(model$confound_rdms$run_enc)[common_keys, common_keys][lower.tri(D_enc)])
+    Rret    <- as.numeric(as.matrix(model$confound_rdms$run_ret)[common_keys, common_keys][lower.tri(D_ret)])
     conf_df <- data.frame(enc_run = Renc, ret_run = Rret)
-    dE_res <- stats::resid(stats::lm(dE ~ ., data = conf_df))
-    dR_res <- stats::resid(stats::lm(dR ~ ., data = conf_df))
-    geom_cor_run_partial <- suppressWarnings(stats::cor(dE_res, dR_res, method = mod_spec$rsa_simfun, use = "complete.obs"))
+    dE_res  <- stats::resid(stats::lm(dE ~ ., data = conf_df))
+    dR_res  <- stats::resid(stats::lm(dR ~ ., data = conf_df))
+    geom_cor_run_partial <- suppressWarnings(stats::cor(dE_res, dR_res, method = model$rsa_simfun, use = "complete.obs"))
   }
-  if (!is.null(mod_spec$item_run_enc) && !is.null(mod_spec$item_run_ret)) {
-    ire <- mod_spec$item_run_enc
-    irr <- mod_spec$item_run_ret
+  if (!is.null(model$item_run_enc) && !is.null(model$item_run_ret)) {
+    ire <- model$item_run_enc
+    irr <- model$item_run_ret
     if (!is.null(names(ire))) ire <- ire[match(common_keys, names(ire))] else ire <- ire[seq_along(common_keys)]
     if (!is.null(names(irr))) irr <- irr[match(common_keys, names(irr))] else irr <- irr[seq_along(common_keys)]
     same_enc <- outer(ire, ire, "==")
     same_ret <- outer(irr, irr, "==")
-    mask <- lower.tri(D_enc) & !(same_enc | same_ret)
+    mask     <- lower.tri(D_enc) & !(same_enc | same_ret)
     if (any(mask)) {
-      geom_cor_xrun <- suppressWarnings(stats::cor(D_enc[mask], D_ret[mask], method = mod_spec$rsa_simfun, use = "complete.obs"))
+      geom_cor_xrun <- suppressWarnings(stats::cor(D_enc[mask], D_ret[mask], method = model$rsa_simfun, use = "complete.obs"))
     }
   }
 
+  # Assemble base perf vector
   perf <- c(
-    n_items                   = K,
-    era_top1_acc              = era_top1_acc,
-    era_diag_mean             = era_diag_mean,
-    era_diag_minus_off        = era_diag_minus_off,
-    geom_cor                  = geom_cor,
+    n_items                       = K,
+    era_top1_acc                  = era_top1_acc,
+    era_diag_mean                 = era_diag_mean,
+    era_diag_minus_off            = era_diag_minus_off,
+    geom_cor                      = geom_cor,
     era_diag_minus_off_same_block = era_diag_minus_off_same_block,
     era_diag_minus_off_diff_block = era_diag_minus_off_diff_block,
-    era_lag_cor               = era_lag_cor,
-    geom_cor_run_partial      = geom_cor_run_partial,
-    geom_cor_xrun             = geom_cor_xrun
+    era_lag_cor                   = era_lag_cor,
+    geom_cor_run_partial          = geom_cor_run_partial,
+    geom_cor_xrun                 = geom_cor_xrun
   )
-  if (length(beta_vec)) perf <- c(perf, beta_vec)
-  if (length(sp_vec))   perf <- c(perf, sp_vec)
 
-  soft_warn <- (K < 4L) || all(is.na(perf))
+  # Always include confound-derived metrics if schema declares them
+  if (!is.null(model$confound_rdms)) {
+    conf_names          <- names(model$confound_rdms)
+    expected_beta_names <- paste0("beta_", c("enc_geom", conf_names))
+    expected_sp_names   <- paste0("sp_",   c("enc_geom", conf_names))
 
-  tibble::tibble(
-    result          = list(NULL),
-    indices         = list(ind),
-    performance     = list(perf),
-    id              = rnum,
-    error           = FALSE,
-    error_message   = "~",
-    warning         = soft_warn,
-    warning_message = if (soft_warn) sprintf("ERA-RSA: ROI %s has only %d items; geometry may be unstable.", rnum, K) else "~"
-  )
-}
+    full_beta <- setNames(rep(NA_real_, length(expected_beta_names)), expected_beta_names)
+    full_sp   <- setNames(rep(NA_real_, length(expected_sp_names)),   expected_sp_names)
 
+    if (length(beta_vec)) {
+      matched <- intersect(names(beta_vec), names(full_beta))
+      full_beta[matched] <- beta_vec[matched]
+    }
+    if (length(sp_vec)) {
+      matched <- intersect(names(sp_vec), names(full_sp))
+      full_sp[matched] <- sp_vec[matched]
+    }
 
-#' Searchlight method for era_rsa_model
-#'
-#' Uses \code{mvpa_iterate} with the ERA-RSA ROI processor to create metric
-#' maps per sphere center. Both standard and randomized searchlight are
-#' supported:
-#' \itemize{
-#'   \item \code{method = "standard"}: deterministic coverage, combined via
-#'     \code{combine_standard}.
-#'   \item \code{method = "randomized"}: randomized centers with multiple
-#'     iterations, combined via \code{combine_randomized} (averaging metrics
-#'     over coverage).
-#' }
-#'
-#' @param model_spec An era_rsa_model object.
-#' @param radius Searchlight radius in voxels (default: 8).
-#' @param method Searchlight method: "standard" or "randomized" (default: "standard").
-#' @param niter Number of iterations for randomized searchlight (default: 4).
-#' @param ... Additional arguments passed to underlying methods (e.g., \code{batch_size}).
-#' @param drop_probs Logical; if TRUE, drop per-ROI probability matrices after metrics. Default FALSE.
-#' @param fail_fast Logical; if TRUE, stop on first ROI error. Default FALSE.
-#' @return A searchlight_result object containing spatial maps for each metric.
-#' @examples
-#' \dontrun{
-#'   # See era_rsa_model examples for complete workflow
-#'   # results <- run_searchlight(model_spec, radius = 8)
-#' }
-#' @export
-run_searchlight.era_rsa_model <- function(model_spec,
-                                          radius = 8,
-                                          method = c("standard", "randomized"),
-                                          niter = 4,
-                                          drop_probs = FALSE,
-                                          fail_fast = FALSE,
-                                          backend = c("default", "shard", "auto"),
-                                          ...) {
-  method <- match.arg(method)
-  backend <- match.arg(backend)
-
-  if (method == "standard") {
-    do_standard(model_spec, radius,
-                mvpa_fun  = mvpa_iterate,
-                combiner  = combine_standard,
-                processor = process_roi.era_rsa_model,
-                drop_probs = drop_probs,
-                fail_fast = fail_fast,
-                backend = backend,
-                ...)
-  } else {
-    do_randomized(model_spec, radius,
-                  niter     = niter,
-                  mvpa_fun  = mvpa_iterate,
-                  combiner  = combine_randomized,
-                  processor = process_roi.era_rsa_model,
-                  drop_probs = drop_probs,
-                  fail_fast = fail_fast,
-                  backend = backend,
-                  ...)
+    perf <- c(perf, full_beta, full_sp)
   }
+
+  roi_result(metrics = perf, indices = ind, id = id)
 }
 
 
-#' Regional method for era_rsa_model
-#'
-#' Runs regional analysis using mvpa_iterate with the ERA-RSA ROI processor.
-#'
-#' @param model_spec An era_rsa_model object
-#' @param region_mask A brain mask defining the region(s) of interest
-#' @param ... Additional arguments passed to underlying methods
-#' @return A regional_mvpa_result object containing results for each region.
-#'
-#' @examples
-#' \dontrun{
-#'   # Internal S3 method called by run_regional generic
-#'   # result <- run_regional(era_model, region_mask)
-#' }
-#' @export
-run_regional.era_rsa_model <- function(model_spec,
-                                       region_mask,
-                                       backend = c("default", "shard", "auto"),
-                                       ...) {
-  backend <- match.arg(backend)
-  run_regional_base(model_spec, region_mask,
-                    processor = process_roi.era_rsa_model,
-                    backend = backend,
-                    ...)
-}

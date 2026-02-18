@@ -59,54 +59,39 @@ repnet_model <- function(dataset,
 }
 
 
-#' Per-ROI processing for repnet_model
+#' fit_roi method for repnet_model
 #'
 #' Computes representational connectivity metrics for a single ROI/searchlight.
 #'
-#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
-#' @examples
-#' \dontrun{
-#'   # Internal method called by run_searchlight/run_regional
-#'   # See repnet_model examples for usage
-#' }
-#' @keywords internal
+#' @rdname fit_roi
+#' @method fit_roi repnet_model
 #' @export
-process_roi.repnet_model <- function(mod_spec,
-                                     roi,
-                                     rnum,
-                                     center_global_id = NA,
-                                     ...) {
+fit_roi.repnet_model <- function(model, roi_data, context, ...) {
 
-  X   <- as.matrix(neuroim2::values(roi$train_roi))
-  ind <- neuroim2::indices(roi$train_roi)
+  X   <- roi_data$train_data
+  ind <- roi_data$indices
 
   n_obs <- nrow(X)
   n_vox <- ncol(X)
 
   if (n_obs < 2L || n_vox < 1L) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repnet_model: insufficient observations or voxels.",
-      warning         = TRUE,
-      warning_message = "repnet_model: insufficient observations or voxels."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repnet_model: insufficient observations or voxels."
     ))
   }
 
-  key <- mod_spec$key
+  key <- model$key
   if (length(key) != n_obs) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repnet_model: key length mismatch with ROI data.",
-      warning         = TRUE,
-      warning_message = "repnet_model: key length mismatch with ROI data."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repnet_model: key length mismatch with ROI data."
     ))
   }
 
@@ -115,7 +100,7 @@ process_roi.repnet_model <- function(mod_spec,
   items_roi <- rownames(E_full)
 
   # Align with seed RDM
-  seed_mat <- mod_spec$seed_rdm
+  seed_mat <- model$seed_rdm
   items_seed <- rownames(seed_mat)
   common_items <- intersect(items_roi, items_seed)
   K <- length(common_items)
@@ -125,15 +110,12 @@ process_roi.repnet_model <- function(mod_spec,
   )
 
   if (K < 3L) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repnet_model: need at least 3 common items to define RDM connectivity.",
-      warning         = TRUE,
-      warning_message = "repnet_model: too few common items."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repnet_model: need at least 3 common items to define RDM connectivity."
     ))
   }
 
@@ -145,48 +127,42 @@ process_roi.repnet_model <- function(mod_spec,
   sd_E <- apply(E, 2L, stats::sd, na.rm = TRUE)
   keep_vox <- sd_E > 0
   if (!any(keep_vox)) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repnet_model: all voxels have zero variance in this ROI.",
-      warning         = TRUE,
-      warning_message = "repnet_model: all voxels have zero variance."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repnet_model: all voxels have zero variance in this ROI."
     ))
   }
   E <- E[, keep_vox, drop = FALSE]
 
   # ROI RDM and seed vector
-  D_roi <- pairwise_dist(mod_spec$distfun, E)
+  D_roi <- pairwise_dist(model$distfun, E)
   d_roi  <- as.numeric(D_roi[lower.tri(D_roi)])
   d_seed <- as.numeric(seed_sub[lower.tri(seed_sub)])
 
   # Raw connectivity (simple RSA-style similarity)
   conn_raw <- suppressWarnings(
-    stats::cor(d_roi, d_seed, method = mod_spec$simfun, use = "complete.obs")
+    stats::cor(d_roi, d_seed, method = model$simfun, use = "complete.obs")
   )
   conn_na <- is.na(conn_raw)
 
   # Build regression predictors (seed + confounds)
   mm <- list(seed = d_seed)
-  if (!is.null(mod_spec$confound_rdms) && length(mod_spec$confound_rdms) > 0L) {
-    for (nm in names(mod_spec$confound_rdms)) {
-      M <- mod_spec$confound_rdms[[nm]]
+  if (!is.null(model$confound_rdms) && length(model$confound_rdms) > 0L) {
+    for (nm in names(model$confound_rdms)) {
+      M <- model$confound_rdms[[nm]]
       # Require labeled RDMs that include all common_items to avoid silent misalignment
       if (is.null(rownames(M)) || is.null(colnames(M)) ||
           !all(common_items %in% rownames(M)) || !all(common_items %in% colnames(M))) {
         msg <- sprintf("repnet_model: confound RDM '%s' lacks required item labels for current ROI.", nm)
-        return(tibble::tibble(
-          result          = list(NULL),
-          indices         = list(ind),
-          performance     = list(NULL),
-          id              = rnum,
-          error           = TRUE,
-          error_message   = msg,
-          warning         = TRUE,
-          warning_message = msg
+        return(roi_result(
+          metrics       = NULL,
+          indices       = ind,
+          id            = context$id,
+          error         = TRUE,
+          error_message = msg
         ))
       }
       M_sub <- M[common_items, common_items, drop = FALSE]
@@ -213,7 +189,7 @@ process_roi.repnet_model <- function(mod_spec,
         resid_seed <- try(stats::lm(mm$seed ~ ., data = conf_df)$residuals, silent = TRUE)
         if (!inherits(resid_seed, "try-error")) {
           pc <- suppressWarnings(stats::cor(resid_seed, d_roi,
-                                            method = mod_spec$simfun,
+                                            method = model$simfun,
                                             use = "complete.obs"))
           if (is.finite(pc)) {
             beta["seed"] <- pc
@@ -248,22 +224,17 @@ process_roi.repnet_model <- function(mod_spec,
     perf <- c(perf, sp_vec)
   }
 
-  # Flag small-K settings and NA connectivity
-  warn_flag <- (K < 5L) || conn_na
-  warn_msg <- if (conn_na) {
-    "repnet_model: conn_raw is NA; check for zero-variance or all-NA distances."
-  } else if (K < 5L) {
-    "repnet_model: small item count (K < 5); connectivity estimates may be unstable."
-  } else "~"
-
-  tibble::tibble(
-    result          = list(NULL),
-    indices         = list(ind),
-    performance     = list(perf),
-    id              = rnum,
-    error           = FALSE,
-    error_message   = "~",
-    warning         = warn_flag,
-    warning_message = warn_msg
+  roi_result(
+    metrics = perf,
+    indices = ind,
+    id      = context$id
   )
+}
+
+
+#' @rdname output_schema
+#' @method output_schema repnet_model
+#' @export
+output_schema.repnet_model <- function(model) {
+  NULL
 }

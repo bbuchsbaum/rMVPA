@@ -691,7 +691,8 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
                                  ))
   }
 
-  use_progressr <- total_items > 0 &&
+  use_progressr <- isTRUE(verbose) &&
+    total_items > 0 &&
     requireNamespace("progressr", quietly = TRUE)
 
   if (isTRUE(verbose) && total_items > 0 && !use_progressr) {

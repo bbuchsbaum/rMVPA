@@ -109,6 +109,34 @@ train_model.manova_model <- function(obj, train_dat, y, indices, ...) {
 
 
 
+#' @rdname fit_roi
+#' @method fit_roi manova_model
+#' @export
+fit_roi.manova_model <- function(model, roi_data, context, ...) {
+  train_dat <- roi_data$train_data
+
+  result <- tryCatch(
+    train_model(model, train_dat, y = NULL, indices = roi_data$indices),
+    error = function(e) NULL
+  )
+
+  if (is.null(result) || !is.numeric(result) || length(result) == 0) {
+    return(roi_result(
+      metrics = NULL,
+      indices = roi_data$indices,
+      id = context$id,
+      error = TRUE,
+      error_message = sprintf("manova_model: train_model failed for ROI %s", context$id)
+    ))
+  }
+
+  roi_result(
+    metrics = result,
+    indices = roi_data$indices,
+    id = context$id
+  )
+}
+
 #' @export
 #' @method print manova_model
 print.manova_model <- function(x, ...) {
@@ -252,7 +280,17 @@ merge_results.manova_model <- function(obj, result_set, indices, id, ...) {
     performance = list(perf_mat),
     id          = id,
     error       = FALSE,
-    error_message = "~" 
+    error_message = "~"
   )
+}
+
+#' @rdname output_schema
+#' @method output_schema manova_model
+#' @export
+output_schema.manova_model <- function(model) {
+  term_names <- sanitize(labels(terms(model$design$formula)))
+  schema <- as.list(rep("scalar", length(term_names)))
+  names(schema) <- term_names
+  schema
 }
 

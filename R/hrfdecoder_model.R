@@ -189,24 +189,6 @@ hrfdecoder_model <- function(dataset, design,
 }
 
 
-#' Provide a dummy y_train for fold construction (length = #TRs)
-#'
-#' internal_crossval() uses y_train only to create CV folds; the actual decoder
-#' ignores it. We return a simple sequence matching the number of rows (TRs).
-#'
-#' @param obj hrfdecoder_model specification object
-#' @return Integer vector of length equal to number of TRs (observations) in the dataset
-#' @examples
-#' \dontrun{
-#'   # Requires hrfdecoder package
-#'   # See vignette("Continuous_Decoding") for full workflow
-#' }
-#' @export
-y_train.hrfdecoder_model <- function(obj) {
-  seq_len(nobs(obj$dataset))
-}
-
-
 #' Train per ROI/fold using hrfdecoder
 #'
 #' This method trains the continuous-time decoder on TR-level data from the
@@ -483,6 +465,64 @@ merge_results.hrfdecoder_model <- function(obj, result_set, indices, id, ...) {
     error = FALSE,
     error_message = "~"
   )
+}
+
+
+#' @rdname fit_roi
+#' @method fit_roi hrfdecoder_model
+#' @export
+fit_roi.hrfdecoder_model <- function(model, roi_data, context, ...) {
+  roi <- list(train_roi = roi_data$train_roi, test_roi = roi_data$test_roi)
+  id <- context$id
+  center_global_id <- context$center_global_id %||% NA
+
+  result_tbl <- internal_crossval(model, roi, id,
+                                  center_global_id = center_global_id)
+
+  if (isTRUE(result_tbl$error[1])) {
+    roi_result(
+      metrics = NULL,
+      indices = roi_data$indices,
+      id = id,
+      result = result_tbl$result[[1]],
+      error = TRUE,
+      error_message = result_tbl$error_message[1]
+    )
+  } else {
+    roi_result(
+      metrics = result_tbl$performance[[1]],
+      indices = roi_data$indices,
+      id = id,
+      result = result_tbl$result[[1]]
+    )
+  }
+}
+
+
+#' @rdname output_schema
+#' @method output_schema hrfdecoder_model
+#' @keywords internal
+#' @export
+output_schema.hrfdecoder_model <- function(model) {
+  # hrfdecoder_model defaults to multiclass perf (Accuracy, AUC).
+  # If a custom performance function is provided, fall back to combine_standard.
+  des <- model$design
+  if (!is.null(model$performance) && !is.null(des)) {
+    # Check if a custom performance function was supplied at construction time.
+    # The stored $performance is already wrapped (get_multiclass_perf or get_custom_perf).
+    # We cannot distinguish custom from default after wrapping, so check the design.
+    y <- des$cv_labels
+    if (!is.factor(y)) {
+      return(NULL)
+    }
+    nms <- c("Accuracy", "AUC")
+    if (!is.null(des$split_groups) && length(des$split_groups) > 0) {
+      split_nms <- names(des$split_groups)
+      nms <- c(nms, unlist(lapply(split_nms, function(s) paste0(nms, "_", s))))
+    }
+    return(setNames(rep("scalar", length(nms)), nms))
+  }
+  NULL
 }
 
 

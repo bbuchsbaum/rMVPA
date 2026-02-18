@@ -7,12 +7,12 @@
 #' returning an object with class `c("hrfdecoder_design", "mvpa_design", "list")`.
 #'
 #' The hrfdecoder approach operates on continuous TR-level data rather than
-#' trial-level beta estimates. The `y_train` field is a dummy variable (TR indices
-#' 1:T) used only for length validation and subsetting in the cross-validation
-#' machinery. Critically, fold assignment is determined by `block_var` (run IDs),
-#' NOT by `y_train` values. The actual decoding targets come from the `event_model`
-#' and `events` fields, and `train_model.hrfdecoder_model()` ignores the `y`
-#' parameter entirely.
+#' trial-level beta estimates. `cv_labels` is set to TR indices (1:T) and is used
+#' only for fold construction in the cross-validation machinery. Critically, fold
+#' assignment is determined by `block_var` (run IDs), NOT by `cv_labels` values.
+#' The actual decoding targets come from the `event_model` and `events` fields
+#' (passed as `targets`), and `train_model.hrfdecoder_model()` ignores the
+#' `cv_labels` parameter entirely.
 #'
 #' @param event_model An event model object (e.g., from fmridesign::event_model).
 #'   This must include a sampling_frame attribute defining the TR structure.
@@ -97,31 +97,27 @@ hrfdecoder_design <- function(event_model, events, block_var, split_by = NULL) {
 
   # Build a minimal training design for fold construction.
   #
-  # IMPORTANT: y is a DUMMY variable (TR sequence 1:T) that serves THREE purposes:
-  # 1. Length validation: crossval_samples() checks length(y) == nrow(data)
-  # 2. Subsetting: Creates ytrain/ytest by indexing into y (e.g., y[train_indices])
-  # 3. Passed to train_model: But train_model.hrfdecoder_model() explicitly IGNORES it
-  #
-  # The ACTUAL decoding targets come from $event_model and $events (event-level labels).
-  # Fold assignment is determined SOLELY by block_var (run IDs), NOT by y values.
+  # cv_labels is set to TR indices (1:T) for the sole purpose of length
+  # validation and subsetting in the cross-validation machinery.
+  # Fold assignment is determined SOLELY by block_var (run IDs), NOT by cv_labels.
   # In blocked_cross_validation, entire runs are held out based on block_var only.
   #
-  # Why use 1:T instead of NULL or constants?
-  # - Explicit: Shows there are T observations (TRs)
-  # - Safe: Guaranteed to pass length validation
-  # - Informative: seq_len(Tlen) makes TR-level granularity clear
+  # The ACTUAL decoding targets come from $event_model and $events (event-level labels),
+  # passed as the `targets` argument so they are stored on the design object.
+  # train_model.hrfdecoder_model() ignores cv_labels entirely and reads from targets.
   Tlen <- length(block_var)
-  train_df <- data.frame(y = seq_len(Tlen), block = block_var)
+  train_df <- data.frame(block = block_var)
 
   mvdes <- mvpa_design(
     train_design = train_df,
-    y_train = ~ y,           # Dummy TR indices (1:T)
-    block_var = ~ block,     # Run IDs - determines fold assignment
+    cv_labels = seq_len(Tlen),                              # TR indices for fold construction
+    targets = list(event_model = event_model, events = events),  # Real decoding targets
+    block_var = ~ block,                                    # Run IDs - determines fold assignment
     split_by = split_by
   )
 
-  # Attach explicit fields for the decoder adapter.
-  # These contain the REAL decoding targets and temporal structure.
+  # Also attach as top-level fields for convenient direct access by the decoder
+  # adapter and print method (mirrors what is stored in $targets above).
   mvdes$event_model <- event_model  # HRF-convolved event design from fmridesign
   mvdes$events <- events            # Event-level labels and timing
 

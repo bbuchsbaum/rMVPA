@@ -7,10 +7,12 @@
 mvpa_design(
   train_design,
   test_design = NULL,
-  y_train,
+  y_train = NULL,
   y_test = NULL,
   block_var = NULL,
   split_by = NULL,
+  cv_labels = NULL,
+  targets = NULL,
   ...
 )
 }
@@ -19,13 +21,21 @@ mvpa_design(
 
 \item{test_design}{Optional data frame containing the test design matrix (default: NULL)}
 
-\item{y_train}{Formula or vector specifying the training response variable}
+\item{y_train}{Formula or vector specifying the training response variable (old path;
+mutually exclusive with \code{cv_labels})}
 
 \item{y_test}{Optional formula or vector specifying the test response variable (default: NULL)}
 
 \item{block_var}{Optional formula or vector specifying the blocking variable for cross-validation}
 
 \item{split_by}{Optional formula or vector for splitting analyses}
+
+\item{cv_labels}{Optional vector of labels used for cross-validation fold construction
+(new path; mutually exclusive with \code{y_train}). If provided without \code{targets},
+\code{targets} defaults to \code{cv_labels}.}
+
+\item{targets}{Optional vector of model-specific training targets. Defaults to \code{cv_labels}
+when \code{cv_labels} is supplied, or to the parsed \code{y_train} when the old path is used.}
 
 \item{...}{Additional arguments (currently unused)}
 }
@@ -34,7 +44,9 @@ An \code{mvpa_design} object (S3 class) containing:
   \describe{
     \item{train_design}{Data frame of training design}
     \item{test_design}{Data frame of test design (if provided)}
-    \item{y_train}{Training response variable}
+    \item{cv_labels}{Labels used for cross-validation fold construction}
+    \item{targets}{Model-specific training targets}
+    \item{y_train}{Alias for \code{cv_labels} (for backward compatibility)}
     \item{y_test}{Test response variable (if provided)}
     \item{block_var}{Blocking variable for cross-validation (if provided)}
     \item{split_by}{Splitting factor (if provided)}
@@ -45,11 +57,15 @@ Creates a design object for MVPA analysis that encapsulates training and testing
 response variables, and optional blocking and splitting factors.
 }
 \details{
-The \code{y_train} and \code{y_test} can be specified either as formulas (e.g., ~ condition) 
+The \code{y_train} and \code{y_test} can be specified either as formulas (e.g., ~ condition)
 or as vectors. If formulas are used, they are evaluated within the respective design matrices.
 
-The \code{block_var} and \code{split_by} can also be specified as formulas or vectors. 
+The \code{block_var} and \code{split_by} can also be specified as formulas or vectors.
 If formulas, they are evaluated within the training design matrix.
+
+The new \code{cv_labels} and \code{targets} parameters allow separating the labels used
+for fold construction from the actual training targets. When using the old \code{y_train}
+path, both \code{cv_labels} and \code{targets} are set to the parsed \code{y_train} value.
 }
 \examples{
 # Basic design with only training data
@@ -61,16 +77,16 @@ design <- mvpa_design(train_df, y_train = ~ condition)
 # Design with test data and blocking variable
 test_df <- data.frame(condition = rep(c("A", "B"), each = 25))
 design_with_test <- mvpa_design(
-  train_df, 
-  test_df, 
-  y_train = ~ condition, 
+  train_df,
+  test_df,
+  y_train = ~ condition,
   y_test = ~ condition,
   block_var = ~ block
 )
 
 # Design with split_by factor
 design_split <- mvpa_design(
-  train_df, 
+  train_df,
   y_train = ~ condition,
   split_by = ~ group
 )

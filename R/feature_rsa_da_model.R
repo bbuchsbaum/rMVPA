@@ -262,6 +262,36 @@ feature_rsa_da_model <- function(dataset,
   out
 }
 
+#' @keywords internal
+output_schema.feature_rsa_da_model <- function(model) {
+  nms <- c(
+    "target_pattern_correlation",
+    "target_pattern_discrimination",
+    "target_pattern_rank_percentile",
+    "target_rdm_correlation",
+    "target_voxel_correlation",
+    "target_mean_voxelwise_temporal_cor",
+    "target_mse_full",
+    "target_r2_full"
+  )
+
+  if (as.integer(model$target_nperm %||% 0L) > 0L) {
+    base_suffixes <- c(
+      "pattern_correlation", "pattern_discrimination", "pattern_rank_percentile",
+      "rdm_correlation", "voxel_correlation", "mean_voxelwise_temporal_cor",
+      "mse_full", "r2_full"
+    )
+    perm_nms <- c(
+      paste0("target_perm_p_", base_suffixes),
+      paste0("target_perm_z_", base_suffixes),
+      "target_perm_n"
+    )
+    nms <- c(nms, perm_nms)
+  }
+
+  setNames(rep("scalar", length(nms)), nms)
+}
+
 #' @export
 compute_performance.feature_rsa_da_model <- function(obj, result) {
   if (is.numeric(result) && !is.null(names(result))) {
@@ -277,35 +307,29 @@ compute_performance.feature_rsa_da_model <- function(obj, result) {
   obj$performance(result)
 }
 
+#' @rdname fit_roi
 #' @export
-process_roi.feature_rsa_da_model <- function(mod_spec,
-                                             roi,
-                                             rnum,
-                                             center_global_id = NA,
-                                             ...) {
-  if (!has_test_set(mod_spec)) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL),
-      id = rnum,
+fit_roi.feature_rsa_da_model <- function(model, roi_data, context, ...) {
+  ind <- roi_data$indices
+  id <- context$id
+
+  if (is.null(roi_data$test_data)) {
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "feature_rsa_da_model requires external test set"
     ))
   }
 
-  Xtrain_fs <- mod_spec$design$X_train
-  Xtest_fs <- mod_spec$design$X_test
+  Xtrain_fs <- model$design$X_train
+  Xtest_fs <- model$design$X_test
 
-  Ye <- as.matrix(neuroim2::values(roi$train_roi))
-  Yr <- as.matrix(neuroim2::values(roi$test_roi))
+  Ye <- roi_data$train_data
+  Yr <- roi_data$test_data
 
   if (nrow(Ye) < 2L || nrow(Yr) < 2L || ncol(Ye) < 1L) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL),
-      id = rnum,
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "feature_rsa_da_model: insufficient observations or voxels"
     ))
@@ -314,39 +338,30 @@ process_roi.feature_rsa_da_model <- function(mod_spec,
   Xe <- Xtrain_fs$X
   Xr <- Xtest_fs$X
   if (nrow(Xe) != nrow(Ye)) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL),
-      id = rnum,
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "feature_rsa_da_model: nrow(X_train) must match nrow(Y_train)"
     ))
   }
   if (nrow(Xr) != nrow(Yr)) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL),
-      id = rnum,
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "feature_rsa_da_model: nrow(X_test) must match nrow(Y_test)"
     ))
   }
 
-  pen_full <- .br_penalty_vec(Xtrain_fs, mod_spec$lambdas)
+  pen_full <- .br_penalty_vec(Xtrain_fs, model$lambdas)
   if (any(!is.finite(pen_full)) || any(pen_full < 0)) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(neuroim2::indices(roi$train_roi)),
-      performance = list(NULL),
-      id = rnum,
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "feature_rsa_da_model: invalid lambdas (must be finite and non-negative)"
     ))
   }
 
-  folds <- mod_spec$target_folds
+  folds <- model$target_folds
   w_rec <- Xtest_fs$row_weights
   if (is.null(w_rec)) {
     w_rec <- rep(1, nrow(Xr))
@@ -355,9 +370,9 @@ process_roi.feature_rsa_da_model <- function(mod_spec,
                  length(w_rec), nrow(Xr)), call. = FALSE)
   }
 
-  mode <- mod_spec$mode
-  alpha <- mod_spec$alpha_target
-  rho <- mod_spec$rho
+  mode <- model$mode
+  alpha <- model$alpha_target
+  rho <- model$rho
 
   fit_fold <- function(keep_cols, lambdas_pen, Yr_use = Yr) {
     Xe_k <- Xe[, keep_cols, drop = FALSE]
@@ -393,7 +408,7 @@ process_roi.feature_rsa_da_model <- function(mod_spec,
       }
 
       Yhat <- .br_predict(Xr_te, fit, mode = mode)
-      geom <- .frda_geometry_metrics(Yr_te, Yhat, rsa_simfun = mod_spec$rsa_simfun)
+      geom <- .frda_geometry_metrics(Yr_te, Yhat, rsa_simfun = model$rsa_simfun)
       c(
         target_pattern_correlation = unname(geom["pattern_correlation"]),
         target_pattern_discrimination = unname(geom["pattern_discrimination"]),
@@ -417,12 +432,12 @@ process_roi.feature_rsa_da_model <- function(mod_spec,
   full_fit <- fit_fold(full_cols, pen_full)
   perf <- full_fit$mean
 
-  perm_n <- as.integer(mod_spec$target_nperm %||% 0L)
+  perm_n <- as.integer(model$target_nperm %||% 0L)
   perm_diag <- NULL
   if (perm_n > 0L) {
     T_rec <- nrow(Yr)
-    perm_strategy <- mod_spec$target_perm_strategy %||% "circular_shift"
-    perm_block <- mod_spec$target_perm_block %||% NULL
+    perm_strategy <- model$target_perm_strategy %||% "circular_shift"
+    perm_block <- model$target_perm_block %||% NULL
 
     null_mat <- matrix(NA_real_, nrow = perm_n, ncol = length(perf))
     colnames(null_mat) <- names(perf)
@@ -470,54 +485,27 @@ process_roi.feature_rsa_da_model <- function(mod_spec,
   }
 
   diag_obj <- NULL
-  if (isTRUE(mod_spec$return_diagnostics)) {
+  if (isTRUE(model$return_diagnostics)) {
     diag_obj <- list(
       folds = folds,
       full_metrics_by_fold = full_fit$by_fold,
-      lambdas = mod_spec$lambdas,
+      lambdas = model$lambdas,
       alpha_target = alpha,
-      target_gap = mod_spec$target_gap %||% 0L,
+      target_gap = model$target_gap %||% 0L,
       target_nperm = perm_n,
-      target_perm_strategy = mod_spec$target_perm_strategy %||% "circular_shift",
-      target_perm_block = mod_spec$target_perm_block %||% NA_integer_,
-      rsa_simfun = mod_spec$rsa_simfun,
+      target_perm_strategy = model$target_perm_strategy %||% "circular_shift",
+      target_perm_block = model$target_perm_block %||% NA_integer_,
+      rsa_simfun = model$rsa_simfun,
       rho = if (mode == "coupled") rho else NA_real_,
       mode = mode,
       perm = perm_diag
     )
   }
 
-  tibble::tibble(
-    result = list(list(predictor = diag_obj)),
-    indices = list(neuroim2::indices(roi$train_roi)),
-    performance = list(perf),
-    id = rnum,
-    error = FALSE,
-    error_message = "~"
-  )
-}
-
-#' @rdname run_regional-methods
-#' @export
-run_regional.feature_rsa_da_model <- function(model_spec,
-                                              region_mask,
-                                              return_fits = model_spec$return_fits,
-                                              compute_performance = TRUE,
-                                              coalesce_design_vars = FALSE,
-                                              processor = NULL,
-                                              verbose = FALSE,
-                                              backend = c("default", "shard", "auto"),
-                                              ...) {
-  run_regional_base(
-    model_spec,
-    region_mask,
-    coalesce_design_vars = coalesce_design_vars,
-    processor = processor,
-    verbose = verbose,
-    compute_performance = compute_performance,
-    return_predictions = FALSE,
-    return_fits = return_fits,
-    backend = backend,
-    ...
+  roi_result(
+    metrics = perf,
+    indices = ind,
+    id = id,
+    result = list(predictor = diag_obj)
   )
 }

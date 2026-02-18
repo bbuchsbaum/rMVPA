@@ -470,6 +470,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
 #' @param bad_results A data frame containing the unsuccessful classifier results.
 #' @return A list containing the combined performance matrix along with other information from the dataset.
 combine_rsa_standard <- function(model_spec, good_results, bad_results) {
+  .Deprecated("combine_schema_standard")
   # Enhanced error handling with detailed diagnostics
   if (nrow(good_results) == 0) {
     futile.logger::flog.error("No successful results for RSA searchlight. Examining errors from bad results:")
@@ -540,24 +541,6 @@ combine_rsa_standard <- function(model_spec, good_results, bad_results) {
     
     stop(paste("Failed to combine RSA results:", e$message))
   })
-}
-
-#' Combine Vector RSA standard classifier results
-#'
-#' This function combines the Vector RSA standard classifier results from a good results data frame
-#' by binding the performance rows together.
-#'
-#' @keywords internal
-#' @param model_spec A list containing the model specification.
-#' @param good_results A data frame containing the successful classifier results.
-#' @param bad_results A data frame containing the unsuccessful classifier results.
-#' @return A list containing the combined performance matrix along with other information from the dataset.
-combine_vector_rsa_standard <- function(model_spec, good_results, bad_results) {
-  ind <- unlist(good_results$id)
-  perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
-  score_mat <- data.frame(sim=rowMeans(perf_mat))
-  ret <- wrap_out(score_mat, model_spec$dataset, ind)
-  ret
 }
 
 #' Combine randomized classifier results
@@ -1241,10 +1224,14 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   }
   
   t_combine <- proc.time()[3]
-  out <- combiner(model_spec, good_results, bad_results)
-  flog.debug("Combiner '%s' took %.3f sec",
-             deparse(substitute(combiner)),
-             proc.time()[3] - t_combine)
+  schema <- output_schema(model_spec)
+  if (!is.null(schema)) {
+    flog.debug("output_schema found (%d entries); using schema combiner", length(schema))
+    out <- combine_schema_standard(model_spec, good_results, bad_results)
+  } else {
+    out <- combiner(model_spec, good_results, bad_results)
+  }
+  flog.debug("Combiner took %.3f sec", proc.time()[3] - t_combine)
   attr(out, "bad_results") <- bad_results
   out
 }
@@ -1293,6 +1280,7 @@ run_searchlight_base <- function(model_spec,
                                  fail_fast = FALSE,
                                  k = NULL,
                                  backend = c("default", "shard", "auto"),
+                                 verbose = FALSE,
                                  ...) {
 
   
@@ -1329,15 +1317,6 @@ run_searchlight_base <- function(model_spec,
       } else if (combiner == "standard") { # Allow explicit string name
         chosen_combiner <- combine_standard
         attr(chosen_combiner, "name") <- "combine_standard"
-      } else if (combiner == "rsa_standard") { # if other models need specific string refs
-        chosen_combiner <- combine_rsa_standard
-        attr(chosen_combiner, "name") <- "combine_rsa_standard"
-      } else if (combiner == "vector_rsa_standard") {
-        chosen_combiner <- combine_vector_rsa_standard
-        attr(chosen_combiner, "name") <- "combine_vector_rsa_standard"
-      } else if (combiner == "msreve_standard") {
-        chosen_combiner <- combine_msreve_standard
-        attr(chosen_combiner, "name") <- "combine_msreve_standard"
       } else {
         stop(paste0("Unknown string combiner '", combiner, "' for method 'standard'."))
       }
@@ -1377,15 +1356,18 @@ run_searchlight_base <- function(model_spec,
   res <- if (method == "standard") {
     flog.info("Running standard searchlight with radius = %s", radius)
     do_standard(model_spec, radius, combiner = chosen_combiner, k = k,
-                drop_probs = drop_probs, fail_fast = fail_fast, backend = backend, ...)
+                drop_probs = drop_probs, fail_fast = fail_fast, backend = backend,
+                verbose = verbose, ...)
   } else if (method == "randomized") {
     flog.info("Running randomized searchlight with radius = %s and niter = %s", radius, niter)
     do_randomized(model_spec, radius, niter = niter, combiner = chosen_combiner,
-                  drop_probs = drop_probs, fail_fast = fail_fast, backend = backend, ...)
+                  drop_probs = drop_probs, fail_fast = fail_fast, backend = backend,
+                  verbose = verbose, ...)
   } else { # resampled
     flog.info("Running resampled searchlight with radius = %s and samples = %s", radius, niter)
     do_resampled(model_spec, radius, niter = niter, combiner = chosen_combiner,
-                 drop_probs = drop_probs, fail_fast = fail_fast, backend = backend, ...)
+                 drop_probs = drop_probs, fail_fast = fail_fast, backend = backend,
+                 verbose = verbose, ...)
   }
   
   res
@@ -1408,7 +1390,8 @@ run_searchlight_base <- function(model_spec,
 run_searchlight.default <- function(model_spec, radius = 8, method = c("standard","randomized","resampled"),
                                     niter = 4, combiner = "average", drop_probs = FALSE,
                                     fail_fast = FALSE, k = NULL,
-                                    backend = c("default", "shard", "auto"), ...) {
+                                    backend = c("default", "shard", "auto"),
+                                    verbose = FALSE, ...) {
   run_searchlight_base(
     model_spec    = model_spec,
     radius        = radius,
@@ -1419,52 +1402,10 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
     fail_fast     = fail_fast,
     k             = k,
     backend       = backend,
+    verbose       = verbose,
     ...
   )
 }
-
-#' run_searchlight method for vector_rsa_model
-#'
-#' This sets a custom \code{mvpa_fun} (e.g., \code{vector_rsa_iterate}) or
-#' different combiners for standard vs. randomized, etc.
-#'
-#' @param model_spec A \code{vector_rsa_model} object.
-#' @inheritParams run_searchlight_base
-#' @return A `searchlight_result` object containing spatial maps for each metric.
-#' @examples
-#' \dontrun{
-#'   # See vector_rsa_model examples for complete workflow
-#' }
-#' @export
-run_searchlight.vector_rsa <- function(model_spec,
-                                       radius = 8,
-                                       method = c("randomized","standard","resampled"),
-                                       niter = 4,
-                                       drop_probs = FALSE,
-                                       fail_fast = FALSE,
-                                       backend = c("default", "shard", "auto"),
-                                       ...) {
-  method <- match.arg(method)
-  backend <- match.arg(backend)
-  
-  if (method == "standard") {
-    flog.info("Running standard vector RSA searchlight (radius = %s)", radius)
-    do_standard(model_spec, radius, mvpa_fun = vector_rsa_iterate, combiner = combine_vector_rsa_standard,
-                drop_probs = drop_probs, fail_fast = fail_fast, backend = backend, ...)
-  } else if (method == "randomized") {
-    flog.info("Running randomized vector RSA searchlight (radius = %s, niter = %s)", radius, niter)
-    do_randomized(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate,
-                  combiner = combine_randomized, drop_probs = drop_probs, fail_fast = fail_fast,
-                  backend = backend, ...)
-  } else {
-    flog.info("Running resampled vector RSA searchlight (radius = %s, samples = %s)", radius, niter)
-    do_resampled(model_spec, radius, niter = niter, mvpa_fun = vector_rsa_iterate,
-                 combiner = combine_randomized, drop_probs = drop_probs, fail_fast = fail_fast,
-                 backend = backend, ...)
-  }
-}
-
-
 
 #' Combine MS-ReVE (Contrast RSA) Searchlight Results
 #'
@@ -1493,6 +1434,7 @@ run_searchlight.vector_rsa <- function(model_spec,
 #' @importFrom dplyr bind_cols select pull
 #' @export
 combine_msreve_standard <- function(model_spec, good_results, bad_results) {
+  .Deprecated("combine_schema_standard")
   output_metric <- model_spec$output_metric
   dataset <- model_spec$dataset
   output_maps <- list()

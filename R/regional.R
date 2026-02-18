@@ -1066,26 +1066,3 @@ run_regional.vector_rsa_model <- function(model_spec, region_mask,
   )
 }
 
-#' Regional MVPA for `feature_rsa_model` Objects
-#'
-#' @rdname run_regional-methods
-#' @details For `feature_rsa_model` objects, `return_predictions` defaults to `FALSE`
-#'   (set at model creation via `create_model_spec`). This method delegates to
-#'   `run_regional_base`.
-#' @export
-run_regional.feature_rsa_model <- function(model_spec, region_mask,
-                                           coalesce_design_vars = FALSE,
-                                           processor = NULL,
-                                           verbose = FALSE,
-                                           backend = c("default", "shard", "auto"),
-                                           ...) {
-  run_regional_base(
-    model_spec,
-    region_mask,
-    coalesce_design_vars = coalesce_design_vars,
-    processor = processor,
-    verbose = verbose,
-    backend = backend,
-    ...
-  )
-}

@@ -901,3 +901,22 @@ train_indices.custom_cross_validation <- function(obj, fold_num, ...) {
   }
   obj$sample_set[[fold_num]]$train
 }
+
+
+#' Generate Cross-Validation Folds
+#'
+#' Convenience wrapper around \code{\link{crossval_samples}} for use inside
+#' \code{\link{fit_roi}} methods.  Separates fold generation from the
+#' iteration engine so that models can generate folds directly.
+#'
+#' @param cv_spec A cross-validation specification object (e.g.,
+#'   \code{blocked_cross_validation}).
+#' @param data A data.frame or tibble of training data.
+#' @param y Response variable (factor, numeric vector, or matrix).
+#' @return A tibble with columns \code{ytrain}, \code{ytest}, \code{train},
+#'   \code{test}, and \code{.id}.
+#' @seealso \code{\link{crossval_samples}}, \code{\link{fit_roi}}
+#' @export
+generate_folds <- function(cv_spec, data, y) {
+  crossval_samples(cv_spec, data, y)
+}

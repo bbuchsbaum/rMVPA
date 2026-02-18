@@ -5,10 +5,17 @@ library(neuroim2) # Use neuroim2 based on DESCRIPTION file
 
 context("Comprehensive tests for RSA regional analysis and design/model functionality")
 
+RSA_DIMS <- c(4, 4, 4)
+RSA_NOBS <- 48
+
+make_rsa_dmat <- function(n = RSA_NOBS) {
+  dist(matrix(rnorm(n * n), n, n))
+}
+
 test_that("mvpa_regional with 5 ROIS runs without error", {
-  dset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
+  dset <- gen_sample_dataset(RSA_DIMS, RSA_NOBS, blocks=3)
   
-  Dmat <- dist(matrix(rnorm(100*100), 100, 100))
+  Dmat <- make_rsa_dmat()
   rdes <- rsa_design(~ Dmat, list(Dmat=Dmat, block=dset$design$block_var), block_var="block")
   mspec <- rsa_model(dset$dataset, design=rdes)
   region_mask <- NeuroVol(sample(1:5, size=length(dset$dataset$mask), replace=TRUE), space(dset$dataset$mask))
@@ -20,10 +27,10 @@ test_that("mvpa_regional with 5 ROIS runs without error", {
 
 test_that("mvpa_regional with 5 ROIS and multiple distance matrices runs without error", {
   
-  dset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
+  dset <- gen_sample_dataset(RSA_DIMS, RSA_NOBS, blocks=3)
   
-  Dmat1 <- dist(matrix(rnorm(100*100), 100, 100))
-  Dmat2 <- dist(matrix(rnorm(100*100), 100, 100))
+  Dmat1 <- make_rsa_dmat()
+  Dmat2 <- make_rsa_dmat()
   rdes <- rsa_design(~ Dmat1 + Dmat2, list(Dmat1=Dmat1, Dmat2=Dmat2, block=dset$design$block_var), block_var="block")
   
   mspec <- rsa_model(dset$dataset, design=rdes)
@@ -38,8 +45,8 @@ test_that("mvpa_regional with 5 ROIS and multiple distance matrices runs without
 ## --- rsa_design and rsa_model_mat ---
 test_that("rsa_design creates a valid RSA design object", {
   # Create a dummy distance matrix and a dummy block variable
-  Dmat <- dist(matrix(rnorm(100 * 100), 100, 100))
-  data_list <- list(Dmat = Dmat, block = rep(1:5, each = 20))
+  Dmat <- make_rsa_dmat(n = 60)
+  data_list <- list(Dmat = Dmat, block = rep(1:5, each = 12))
   rdes <- rsa_design(~ Dmat, data_list, block_var = "block")
   
   expect_true(is.list(rdes))
@@ -64,8 +71,8 @@ test_that("rsa_model_mat returns vectors of correct length and sanitized names",
 ## --- Training and Print Methods ---
 test_that("train_model.rsa_model with 'lm' regtype returns coefficients with proper names", {
   set.seed(123)
-  n_obs <- 100
-  n_vox <- 100 # Make number of features/voxels match mask size
+  n_obs <- 60
+  n_vox <- 60 # Keep this small for faster unit tests
   # Create dummy training data
   train_mat <- matrix(rnorm(n_obs * n_vox), n_obs, n_vox) # obs x voxels
   # Create a block variable and a distance matrix for the design
@@ -75,7 +82,7 @@ test_that("train_model.rsa_model with 'lm' regtype returns coefficients with pro
   rdes <- rsa_design(~ Dmat, data_list, block_var = "block")
   
   # Create a dummy mvpa_dataset 
-  mask_vol <- NeuroVol(rep(1, n_vox), space=NeuroSpace(dim=c(10,10,1))) # 3D mask
+  mask_vol <- NeuroVol(rep(1, n_vox), space=NeuroSpace(dim=c(6,10,1))) # 3D mask
   
   # Create a 4D space for the NeuroVec, matching voxels (from 3D space) and timepoints
   space_3d_dim <- dim(mask_vol@space) 
@@ -89,7 +96,7 @@ test_that("train_model.rsa_model with 'lm' regtype returns coefficients with pro
 
   mspec <- rsa_model(dset, rdes, regtype = "lm")
   # Pass the original obs x voxels matrix to train_model.rsa_model, as it transposes internally
-  coeffs <- train_model.rsa_model(mspec, train_mat, y = NULL, indices = NULL)
+  coeffs <- rMVPA:::train_model.rsa_model(mspec, train_mat, y = NULL, indices = NULL)
   
   expect_true(is.numeric(coeffs))
   expect_true(!is.null(names(coeffs)))
@@ -118,9 +125,9 @@ test_that("Print methods for rsa_model and rsa_design produce non-empty output",
 
 test_that("mvpa_regional with 5 ROIs runs without error and returns structured result", {
   # Use your provided helper to generate a sample dataset
-  dset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
+  dset <- gen_sample_dataset(RSA_DIMS, RSA_NOBS, blocks = 3)
   
-  Dmat <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat <- make_rsa_dmat()
   rdes <- rsa_design(~ Dmat, list(Dmat = Dmat, block = dset$design$block_var), block_var = "block")
   mspec <- rsa_model(dset$dataset, design = rdes)
   
@@ -138,10 +145,10 @@ test_that("mvpa_regional with 5 ROIs runs without error and returns structured r
 })
 
 test_that("mvpa_regional with multiple distance matrices runs without error and returns valid performance metrics", {
-  dset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
+  dset <- gen_sample_dataset(RSA_DIMS, RSA_NOBS, blocks = 3)
   
-  Dmat1 <- dist(matrix(rnorm(100 * 100), 100, 100))
-  Dmat2 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat1 <- make_rsa_dmat()
+  Dmat2 <- make_rsa_dmat()
   rdes <- rsa_design(~ Dmat1 + Dmat2, list(Dmat1 = Dmat1, Dmat2 = Dmat2, block = dset$design$block_var), block_var = "block")
   mspec <- rsa_model(dset$dataset, design = rdes)
   
@@ -158,11 +165,11 @@ test_that("mvpa_regional with multiple distance matrices runs without error and 
 })
 
 test_that("mvpa_regional with multiple distance matrices runs without error and returns valid performance metrics", {
-  dset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
+  dset <- gen_sample_dataset(RSA_DIMS, RSA_NOBS, blocks = 3)
   
-  Dmat1 <- dist(matrix(rnorm(100 * 100), 100, 100))
-  Dmat2 <- dist(matrix(rnorm(100 * 100), 100, 100))
-  Dmat3 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat1 <- make_rsa_dmat()
+  Dmat2 <- make_rsa_dmat()
+  Dmat3 <- make_rsa_dmat()
   rdes <- rsa_design(~ Dmat1 + Dmat2 + Dmat3, list(Dmat1 = Dmat1, Dmat2 = Dmat2, Dmat3=Dmat3, block = dset$design$block_var), block_var = "block")
   mspec <- rsa_model(dset$dataset, design = rdes, distmethod="spearman", regtype="lm")
   
@@ -179,10 +186,10 @@ test_that("mvpa_regional with multiple distance matrices runs without error and 
 })
 
 test_that("mvpa_regional with semipartial correlations runs without error", {
-  dset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
+  dset <- gen_sample_dataset(RSA_DIMS, RSA_NOBS, blocks = 3)
   
-  Dmat1 <- dist(matrix(rnorm(100 * 100), 100, 100))
-  Dmat2 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat1 <- make_rsa_dmat()
+  Dmat2 <- make_rsa_dmat()
   rdes <- rsa_design(~ Dmat1 + Dmat2, list(Dmat1 = Dmat1, Dmat2 = Dmat2, block = dset$design$block_var), block_var = "block")
   
   # Create model with semipartial option set to TRUE
@@ -207,10 +214,10 @@ test_that("mvpa_regional with semipartial correlations runs without error", {
 })
 
 test_that("mvpa_regional with non-negative constraints runs without error", {
-  dset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
+  dset <- gen_sample_dataset(RSA_DIMS, RSA_NOBS, blocks = 3)
   
-  Dmat1 <- dist(matrix(rnorm(100 * 100), 100, 100))
-  Dmat2 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat1 <- make_rsa_dmat()
+  Dmat2 <- make_rsa_dmat()
   rdes <- rsa_design(~ Dmat1 + Dmat2, list(Dmat1 = Dmat1, Dmat2 = Dmat2, block = dset$design$block_var), block_var = "block")
   
   # Create model with non-negative constraints on Dmat2
@@ -229,10 +236,10 @@ test_that("mvpa_regional with non-negative constraints runs without error", {
 })
 
 test_that("mvpa_regional with both semipartial and non-negative constraints handles precedence correctly", {
-  dset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
+  dset <- gen_sample_dataset(RSA_DIMS, RSA_NOBS, blocks = 3)
   
-  Dmat1 <- dist(matrix(rnorm(100 * 100), 100, 100))
-  Dmat2 <- dist(matrix(rnorm(100 * 100), 100, 100))
+  Dmat1 <- make_rsa_dmat()
+  Dmat2 <- make_rsa_dmat()
   rdes <- rsa_design(~ Dmat1 + Dmat2, list(Dmat1 = Dmat1, Dmat2 = Dmat2, block = dset$design$block_var), block_var = "block")
   
   # Create model with both options - non-negative should take precedence
@@ -250,5 +257,3 @@ test_that("mvpa_regional with both semipartial and non-negative constraints hand
   # The model should use non-negative constraints and ignore semipartial
   # This is handled in train_model.rsa_model function, which prioritizes nneg over semipartial
 })
-
-

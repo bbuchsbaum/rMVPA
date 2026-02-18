@@ -566,7 +566,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
 #' with a lightweight proxy holding a file path or \pkg{neuroim2} connection
 #' (e.g. \code{H5NeuroVec}).
 #' Workers that truly need dataset access (such as
-#' \code{y_train.hrfdecoder_model}, which calls \code{nobs(obj$dataset)})
+#' the design's \code{cv_labels} field, set during design construction)
 #' could then lazily materialise only the metadata they need, eliminating
 #' the serial extraction bottleneck entirely.
 #'
@@ -718,7 +718,9 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
                                        chunk_size = chunk_size))
   }
 
-  use_progressr <- total_items > 0 && requireNamespace("progressr", quietly = TRUE)
+  use_progressr <- isTRUE(verbose) &&
+    total_items > 0 &&
+    requireNamespace("progressr", quietly = TRUE)
 
   if (isTRUE(verbose) && total_items > 0 && !use_progressr) {
     futile.logger::flog.debug("progressr unavailable; using batch-level progress logs only.")

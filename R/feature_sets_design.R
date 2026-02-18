@@ -15,12 +15,13 @@
 #'   \item Responses live on the dataset: `dataset$train_data` and `dataset$test_data` (TRxvoxel matrices per ROI).
 #' }
 #'
-#' \strong{Why `y_train` is a dummy.}
-#' The returned object includes a dummy `y_train = 1:T_enc` (and `y_test = 1:T_rec` when
-#' `X_test` is present). This is only to satisfy length checks and indexing in the
-#' generic rMVPA iterators. Models built for this design (e.g. `grouped_ridge_da_model()` /
-#' `banded_ridge_da_model()`)
-#' should ignore `y_train` and use `design$X_train` / `design$X_test` instead.
+#' \strong{cv_labels semantics.}
+#' The returned object passes `cv_labels = 1:T_enc` to `mvpa_design()`. These integer
+#' indices are used only for length validation and fold-construction bookkeeping in the
+#' generic rMVPA iterators; they are not meaningful training targets. The actual
+#' predictors are carried as `design$X_train` / `design$X_test`, and models built for
+#' this design (e.g. `grouped_ridge_da_model()` / `banded_ridge_da_model()`) retrieve
+#' them from those fields rather than from `cv_labels`.
 #'
 #' \strong{Recall blocks.}
 #' `block_var_test` is stored for convenience as `design$block_var_test`. Models can use it
@@ -68,13 +69,13 @@ feature_sets_design <- function(X_train,
   }
 
   T_enc <- nrow(X_train$X)
-  train_df <- data.frame(.y = seq_len(T_enc))
+  train_df <- data.frame(.dummy = rep(1L, T_enc))
 
   test_df <- NULL
   y_test <- NULL
   if (!is.null(X_test)) {
     T_rec <- nrow(X_test$X)
-    test_df <- data.frame(.y = seq_len(T_rec))
+    test_df <- data.frame(.dummy = rep(1L, T_rec))
     y_test <- seq_len(T_rec)
     if (!is.null(block_var_test)) {
       if (length(block_var_test) != T_rec) {
@@ -87,8 +88,9 @@ feature_sets_design <- function(X_train,
   mvdes <- mvpa_design(
     train_design = train_df,
     test_design = test_df,
-    y_train = seq_len(T_enc),
+    cv_labels = seq_len(T_enc),
     y_test = y_test,
+    targets = list(X_train = X_train, X_test = X_test),
     split_by = split_by
   )
 

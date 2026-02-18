@@ -308,71 +308,74 @@ compute_performance.remap_rrr_model <- function(obj, result) {
 }
 
 
-#' Per-ROI REMAP processing
+#' @export
+output_schema.remap_rrr_model <- function(model) {
+  NULL
+}
+
+
+#' Per-ROI REMAP fit
 #'
 #' Implements the end-to-end REMAP flow for one ROI/searchlight: build paired
 #' prototypes, whiten, fit reduced-rank mapping, transform source trials, train
 #' base classifier in the target domain, and classify target-domain trials.
 #' Emits a standard classification_result plus ROI-level performance.
 #'
-#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
-#' @examples
-#' \dontrun{
-#'   # Internal method called by run_searchlight/run_regional
-#'   # See remap_rrr_model examples for usage
-#' }
+#' @return An \code{roi_result} object.
 #' @keywords internal
 #' @export
-process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
-  # Pull ROI matrices directly from the ROI container (dataset is stripped in workers)
-  Xtrain <- as.matrix(neuroim2::values(roi$train_roi))  # n_train x p
-  ind    <- neuroim2::indices(roi$train_roi)
-  futile.logger::flog.debug("REMAP ROI %s: start (train_dim=%s x %s, test_dim=%s x %s)",
-                            rnum, nrow(Xtrain), ncol(Xtrain),
-                            nrow(neuroim2::values(roi$test_roi)), ncol(neuroim2::values(roi$test_roi)))
+fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
+  Xtrain <- roi_data$train_data  # n_train x p
+  ind    <- roi_data$indices
+  id     <- context$id
 
   # We need test data for forward transfer
-  if (!has_test_set(mod_spec)) {
-    return(tibble::tibble(
-      result = list(NULL), indices = list(ind), performance = list(NULL), id = rnum,
-      error = TRUE, error_message = "remap_rrr_model requires an external test set (dataset$test_data + design$y_test)"
+  if (is.null(roi_data$test_data)) {
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
+      error = TRUE,
+      error_message = "remap_rrr_model requires an external test set (dataset$test_data + design$y_test)"
     ))
   }
 
-  Xtest <- as.matrix(neuroim2::values(roi$test_roi))   # n_test  x q (q==p typically)
-  des   <- mod_spec$design
+  Xtest <- roi_data$test_data   # n_test x q (q==p typically)
+  des   <- model$design
   ytr   <- y_train(des)
   yte   <- y_test(des)
 
   # Guard: ensure non-degenerate ROI
   if (ncol(Xtrain) < 1L || ncol(Xtest) < 1L) {
-    return(tibble::tibble(
-      result = list(NULL), indices = list(ind), performance = list(NULL), id = rnum,
-      error = TRUE, error_message = "ROI has fewer than 1 feature"
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
+      error = TRUE,
+      error_message = "ROI has fewer than 1 feature"
     ))
   }
+
+  futile.logger::flog.debug("REMAP ROI %s: start (train_dim=%s x %s, test_dim=%s x %s)",
+                            id, nrow(Xtrain), ncol(Xtrain), nrow(Xtest), ncol(Xtest))
 
   # Build paired prototypes and key factors
   pairs <- .remap_paired(Xtrain, Xtest, des$train_design, des$test_design,
-                         mod_spec$link_by, ytr, yte)
+                         model$link_by, ytr, yte)
   Xp <- pairs$Xp; Ym <- pairs$Ym
   n_pairs <- nrow(Xp)
-  futile.logger::flog.debug("REMAP ROI %s: paired prototypes = %s", rnum, n_pairs)
+  futile.logger::flog.debug("REMAP ROI %s: paired prototypes = %s", id, n_pairs)
   # Hard error if fewer than 2 paired items
   if (n_pairs < 2L || nrow(Ym) < 2L) {
-    return(tibble::tibble(
-      result = list(NULL), indices = list(ind), performance = list(NULL), id = rnum,
-      warning = FALSE, warning_message = "~",
-      error = TRUE, error_message = "REMAP: Need at least 2 paired items (prototypes) to fit adapter"
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
+      error = TRUE,
+      error_message = "REMAP: Need at least 2 paired items (prototypes) to fit adapter"
     ))
   }
   # Soft warning if below recommended minimum
-  soft_warn <- n_pairs < (mod_spec$min_pairs %||% 5L)
+  soft_warn <- n_pairs < (model$min_pairs %||% 5L)
 
   # Determine keys for prototypes and observed labels
-  if (!is.null(mod_spec$link_by) && mod_spec$link_by %in% colnames(des$train_design) && mod_spec$link_by %in% colnames(des$test_design)) {
-    key_tr_full <- factor(des$train_design[[mod_spec$link_by]])
-    key_te_full <- factor(des$test_design[[mod_spec$link_by]])
+  if (!is.null(model$link_by) && model$link_by %in% colnames(des$train_design) && model$link_by %in% colnames(des$test_design)) {
+    key_tr_full <- factor(des$train_design[[model$link_by]])
+    key_te_full <- factor(des$test_design[[model$link_by]])
   } else {
     key_tr_full <- factor(ytr)
     key_te_full <- factor(yte)
@@ -383,7 +386,7 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
   levs <- unique_keys
   prob_all <- matrix(0, nrow(Xtest), length(levs), dimnames = list(NULL, levs))
   pred_all <- rep(NA_character_, nrow(Xtest))
-  use_naive <- isTRUE(mod_spec$compute_naive_baseline)
+  use_naive <- isTRUE(model$compute_naive_baseline)
   if (use_naive) {
     prob_naive <- matrix(0, nrow(Xtest), length(levs), dimnames = list(NULL, levs))
     pred_naive <- rep(NA_character_, nrow(Xtest))
@@ -393,8 +396,8 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
   sse_vox <- rep(0, ncol(Xtrain))
   ss_vox  <- rep(0, ncol(Xtrain))
 
-  use_loko <- isTRUE(mod_spec$leave_one_key_out) && length(unique_keys) >= 3L
-  futile.logger::flog.debug("REMAP ROI %s: use_loko=%s, unique_keys=%s", rnum, use_loko, length(unique_keys))
+  use_loko <- isTRUE(model$leave_one_key_out) && length(unique_keys) >= 3L
+  futile.logger::flog.debug("REMAP ROI %s: use_loko=%s, unique_keys=%s", id, use_loko, length(unique_keys))
 
   adapter_svals <- c()
   adapter_ranks <- c()
@@ -410,7 +413,7 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
     resid_by_item <- setNames(numeric(0), character(0))
     rank_by_item  <- setNames(numeric(0), character(0))
     sv1_by_item   <- setNames(numeric(0), character(0))
-    sv_spectra_by_item <- if (isTRUE(mod_spec$save_fold_singulars)) vector("list", length(unique_keys)) else NULL
+    sv_spectra_by_item <- if (isTRUE(model$save_fold_singulars)) vector("list", length(unique_keys)) else NULL
     jj_map <- list()
 
     for (k in unique_keys) {
@@ -420,18 +423,18 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
       Ym_k <- Ym[keep, , drop = FALSE]
 
       # Joint whitening and residual RRR on training keys
-      JW <- .joint_whiten(Xp_k, Ym_k, do_shrink = mod_spec$shrink_whiten, center = mod_spec$center)
-      rf <- .fit_residual_rrr(JW$Xw_fit, JW$Yw_fit, rank = mod_spec$rank,
-                              max_rank = mod_spec$max_rank,
-                              ridge_lambda = mod_spec$ridge_rrr_lambda)
+      JW <- .joint_whiten(Xp_k, Ym_k, do_shrink = model$shrink_whiten, center = model$center)
+      rf <- .fit_residual_rrr(JW$Xw_fit, JW$Yw_fit, rank = model$rank,
+                              max_rank = model$max_rank,
+                              ridge_lambda = model$ridge_rrr_lambda)
       Delta <- rf$Delta
-      futile.logger::flog.debug("REMAP ROI %s LOKO heldout=%s: fit rank=%s", rnum, k,
+      futile.logger::flog.debug("REMAP ROI %s LOKO heldout=%s: fit rank=%s", id, k,
                                 tryCatch(rf$rank, error = function(...) NA))
 
       # Lambda selection on training keys
-      lam_res <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, mod_spec$lambda_grid)
+      lam_res <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, model$lambda_grid)
       lam_opt <- lam_res$lambda
-      futile.logger::flog.debug("REMAP ROI %s LOKO heldout=%s: lambda_opt=%.3f", rnum, k, lam_opt)
+      futile.logger::flog.debug("REMAP ROI %s LOKO heldout=%s: lambda_opt=%.3f", id, k, lam_opt)
 
       # ---- diagnostics in whitened space ----
       R_naive <- JW$Yw_fit - JW$Xw_fit
@@ -498,14 +501,14 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
       if (!is.null(sv) && length(sv)) adapter_svals <- c(adapter_svals, sv[1])
       rank_by_item[k] <- rk
       sv1_by_item[k]  <- if (!is.null(sv) && length(sv)) sv[1] else NA_real_
-      if (isTRUE(mod_spec$save_fold_singulars)) {
+      if (isTRUE(model$save_fold_singulars)) {
         if (is.null(jj_map[[k]])) jj_map[[k]] <- length(jj_map) + 1L
         sv_spectra_by_item[[jj_map[[k]]]] <- sv
         names(sv_spectra_by_item)[jj_map[[k]]] <- k
       }
 
       # Optional per-fold diagnostics package (only if return_adapter)
-      if (isTRUE(mod_spec$return_adapter)) {
+      if (isTRUE(model$return_adapter)) {
         # create list-once
         if (!exists("remap_diag_by_fold", inherits = FALSE)) remap_diag_by_fold <- list()
         remap_diag_by_fold[[length(remap_diag_by_fold) + 1L]] <- list(
@@ -524,12 +527,12 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
     # Handle any test rows whose key not in unique_keys: fit on all keys
     leftover <- which(!(as.character(key_te_full) %in% unique_keys))
     if (length(leftover) > 0L) {
-      JW <- .joint_whiten(Xp, Ym, do_shrink = mod_spec$shrink_whiten, center = mod_spec$center)
-      rf <- .fit_residual_rrr(JW$Xw_fit, JW$Yw_fit, rank = mod_spec$rank,
-                              max_rank = mod_spec$max_rank,
-                              ridge_lambda = mod_spec$ridge_rrr_lambda)
+      JW <- .joint_whiten(Xp, Ym, do_shrink = model$shrink_whiten, center = model$center)
+      rf <- .fit_residual_rrr(JW$Xw_fit, JW$Yw_fit, rank = model$rank,
+                              max_rank = model$max_rank,
+                              ridge_lambda = model$ridge_rrr_lambda)
       Delta <- rf$Delta
-      lam_opt <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, mod_spec$lambda_grid)$lambda
+      lam_opt <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, model$lambda_grid)$lambda
       Xw_all <- (sweep(Xp[unique_keys, , drop = FALSE], 2, JW$mu, "-")) %*% JW$W
       Yhat_all <- Xw_all + lam_opt * (Xw_all %*% Delta)
       for (rr in leftover) {
@@ -573,14 +576,14 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
     obs <- factor(as.character(key_te_full), levels = levs)
 
     predictor_obj <- NULL
-    if (isTRUE(mod_spec$return_adapter)) {
+    if (isTRUE(model$return_adapter)) {
       predictor_obj <- list(r2_per_voxel = r2_cv_vox,
                             resid_by_item = resid_by_item,
                             rank_by_item  = rank_by_item,
                             sv1_by_item   = sv1_by_item,
                             keys_scored   = keys_scored,
                             skipped_keys  = skipped_keys)
-      if (isTRUE(mod_spec$save_fold_singulars)) predictor_obj$sv_spectra_by_item <- sv_spectra_by_item
+      if (isTRUE(model$save_fold_singulars)) predictor_obj$sv_spectra_by_item <- sv_spectra_by_item
       if (exists("remap_diag_by_fold", inherits = FALSE)) predictor_obj$diag_by_fold <- remap_diag_by_fold
     }
     # filter out test rows whose observed key not in training/common set
@@ -589,7 +592,7 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
                                   testind = keep_rows,
                                   test_design = des$test_design[keep_rows, , drop = FALSE],
                                   predictor = predictor_obj)
-    base_perf <- compute_performance(mod_spec, cres)
+    base_perf <- compute_performance(model, cres)
     base_perf_naive <- NULL
     if (use_naive) {
       cres_naive <- classification_result(obs[keep_rows], pred_naive_fac[keep_rows],
@@ -597,7 +600,7 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
                                           testind = keep_rows,
                                           test_design = des$test_design[keep_rows, , drop = FALSE],
                                           predictor = NULL)
-      base_perf_naive <- compute_performance(mod_spec, cres_naive)
+      base_perf_naive <- compute_performance(model, cres_naive)
       base_perf_naive <- setNames(base_perf_naive, paste0("naive_", names(base_perf_naive)))
     }
     extra <- c(adapter_rank    = suppressWarnings(mean(adapter_ranks, na.rm = TRUE)),
@@ -608,28 +611,22 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
                lambda_mean     = suppressWarnings(mean(lambda_vals, na.rm = TRUE)))
     perf_vec <- if (use_naive) c(base_perf, base_perf_naive, extra) else c(base_perf, extra)
 
-    return(tibble::tibble(
-      result = list(cres),
-      indices = list(ind),
-      performance = list(c(perf_vec,
-                           n_pairs_used = n_pairs,
-                           n_skipped_keys = length(skipped_keys))),
-      id = rnum,
-      error = FALSE,
-      error_message = "~",
-      warning = soft_warn || length(skipped_keys) > 0,
-      warning_message = if (soft_warn) sprintf("REMAP: only %d paired items (<%d).", n_pairs, mod_spec$min_pairs) else if (length(skipped_keys) > 0) sprintf("REMAP LOKO skipped %d keys due to insufficient training pairs or fit issues.", length(skipped_keys)) else "~"
+    return(roi_result(
+      metrics = c(perf_vec, n_pairs_used = n_pairs, n_skipped_keys = length(skipped_keys)),
+      indices = ind,
+      id = id,
+      result = cres
     ))
   }
 
   # Non-LOKO single-fit path using joint whitening + residual RRR
-  JW <- .joint_whiten(Xp, Ym, do_shrink = mod_spec$shrink_whiten, center = mod_spec$center)
-  rf <- .fit_residual_rrr(JW$Xw_fit, JW$Yw_fit, rank = mod_spec$rank,
-                          max_rank = mod_spec$max_rank,
-                          ridge_lambda = mod_spec$ridge_rrr_lambda)
+  JW <- .joint_whiten(Xp, Ym, do_shrink = model$shrink_whiten, center = model$center)
+  rf <- .fit_residual_rrr(JW$Xw_fit, JW$Yw_fit, rank = model$rank,
+                          max_rank = model$max_rank,
+                          ridge_lambda = model$ridge_rrr_lambda)
   Delta <- rf$Delta
-  lam_opt <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, mod_spec$lambda_grid)$lambda
-  futile.logger::flog.debug("REMAP ROI %s: non-LOKO rank=%s, lambda_opt=%.3f", rnum,
+  lam_opt <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, model$lambda_grid)$lambda
+  futile.logger::flog.debug("REMAP ROI %s: non-LOKO rank=%s, lambda_opt=%.3f", id,
                             tryCatch(rf$rank, error = function(...) NA), lam_opt)
 
   # Residual diagnostics (global fit)
@@ -640,7 +637,7 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
   ss_remap <- sum(R_remap^2)
   roi_improv <- if (ss_naive > .Machine$double.eps) 1 - (ss_remap / ss_naive) else NA_real_
   delta_frob <- sqrt(sum((lam_opt * Delta)^2))
-  futile.logger::flog.debug("REMAP ROI %s: roi_improv=%.3f, delta_frob=%.3f", rnum, roi_improv, delta_frob)
+  futile.logger::flog.debug("REMAP ROI %s: roi_improv=%.3f, delta_frob=%.3f", id, roi_improv, delta_frob)
 
   # Templates for all keys and correlation-based classification
   Xw_all <- (sweep(Xp[unique_keys, , drop = FALSE], 2, JW$mu, "-")) %*% JW$W
@@ -691,15 +688,15 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
   cres <- classification_result(obs[keep_rows], pred[keep_rows], prob[keep_rows, , drop = FALSE],
                                 testind = keep_rows,
                                 test_design = des$test_design[keep_rows, , drop = FALSE],
-                                predictor = if (isTRUE(mod_spec$return_adapter)) list(rank = rnk, singvals = svals, r2_per_voxel = r2) else NULL)
-  base_perf <- compute_performance(mod_spec, cres)
+                                predictor = if (isTRUE(model$return_adapter)) list(rank = rnk, singvals = svals, r2_per_voxel = r2) else NULL)
+  base_perf <- compute_performance(model, cres)
   base_perf_naive <- NULL
   if (use_naive) {
     cres_naive <- classification_result(obs[keep_rows], pred_naive[keep_rows], prob_naive[keep_rows, , drop = FALSE],
                                         testind = keep_rows,
                                         test_design = des$test_design[keep_rows, , drop = FALSE],
                                         predictor = NULL)
-    base_perf_naive <- compute_performance(mod_spec, cres_naive)
+    base_perf_naive <- compute_performance(model, cres_naive)
     base_perf_naive <- setNames(base_perf_naive, paste0("naive_", names(base_perf_naive)))
   }
   extra <- c(adapter_rank    = as.numeric(rnk %||% NA_real_),
@@ -710,14 +707,12 @@ process_roi.remap_rrr_model <- function(mod_spec, roi, rnum, ...) {
              lambda_mean     = lam_opt)
   perf_vec <- if (use_naive) c(base_perf, base_perf_naive, extra) else c(base_perf, extra)
 
-  tibble::tibble(
-    result = list(cres),
-    indices = list(ind),
-    performance = list(c(perf_vec, n_pairs_used = n_pairs, n_skipped_keys = 0L)),
-    id = rnum,
-    error = FALSE,
-    error_message = "~",
-    warning = soft_warn,
-    warning_message = if (soft_warn) sprintf("REMAP: only %d paired items (<%d).", n_pairs, mod_spec$min_pairs) else "~"
+  roi_result(
+    metrics = c(perf_vec, n_pairs_used = n_pairs, n_skipped_keys = 0L),
+    indices = ind,
+    id = id,
+    result = cres
   )
 }
+
+

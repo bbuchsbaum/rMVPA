@@ -45,6 +45,7 @@ Imports:
     yardstick
 Collate:
     'allgeneric.R'
+    'data_roi_result.R'
     'custom.R'
     'balance.R'
     'classifiers.R'
@@ -55,12 +56,14 @@ Collate:
     'dataset.R'
     'clustered_dataset.R'
     'design.R'
+    'item_design.R'
     'feature_selection.R'
     'globals.R'
     'manual_debug_helpers.R'
     'manova_model.R'
     'mvpa_iterate.R'
     'mvpa_model.R'
+    'item_model.R'
     'model_fit.R'
     'importance.R'
     'global_analysis.R'
@@ -75,6 +78,7 @@ Collate:
     'rsa_model.R'
     'roisplit.R'
     'searchlight.R'
+    'spatial_output.R'
     'spatial_nmf.R'
     'spatial_nmf_inference.R'
     'save_results.R'
@@ -113,6 +117,7 @@ Suggests:
     covr,
     doParallel,
     e1071,
+    fmrilss,
     progressr,
     fmrihrf,
     foreach,

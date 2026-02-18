@@ -180,6 +180,101 @@ run_future <- function(obj, frame, processor, ...) {
   UseMethod("run_future")
 }
 
+#' Fit a Model on a Single ROI
+#'
+#' The primary dispatch point for per-ROI analysis in the new architecture.
+#' Each model type implements this method to encapsulate its complete analysis
+#' pipeline (including any internal cross-validation).
+#'
+#' Models that implement \code{fit_roi} are automatically preferred by
+#' \code{\link{process_roi.default}} over the legacy dispatch chain
+#' (\code{internal_crossval} / \code{external_crossval} / \code{train_model}).
+#'
+#' @param model The model specification object.
+#' @param roi_data A list with components:
+#'   \describe{
+#'     \item{train_data}{Numeric matrix (observations x features)}
+#'     \item{test_data}{Numeric matrix or NULL}
+#'     \item{indices}{Integer vector of voxel/vertex indices}
+#'     \item{train_roi}{The raw ROI object (for models needing spatial info)}
+#'     \item{test_roi}{The raw test ROI object or NULL}
+#'   }
+#' @param context A list with components:
+#'   \describe{
+#'     \item{design}{The design object}
+#'     \item{cv_spec}{Cross-validation specification or NULL}
+#'     \item{id}{ROI identifier (center voxel ID or region number)}
+#'     \item{center_global_id}{Global index of center voxel or NA}
+#'   }
+#' @param ... Additional model-specific arguments.
+#' @return A \code{\link{roi_result}} object.
+#'
+#' @seealso \code{\link{roi_result}}, \code{\link{output_schema}},
+#'   \code{\link{process_roi}}
+#'
+#' @examples
+#' \donttest{
+#'   # fit_roi is typically called internally by process_roi.default.
+#'   # To implement for a new model class:
+#'   # fit_roi.my_model <- function(model, roi_data, context, ...) {
+#'   #   metrics <- c(accuracy = 0.85)
+#'   #   roi_result(metrics, roi_data$indices, context$id)
+#'   # }
+#' }
+#' @export
+fit_roi <- function(model, roi_data, context, ...) {
+  UseMethod("fit_roi")
+}
+
+#' Declare the Output Metric Schema for a Model
+#'
+#' Returns a named list describing the metrics that \code{\link{fit_roi}}
+#' produces for this model type. Used by the generic combiner (Phase 2) to
+#' build the correct number of output maps without model-specific
+#' \code{combine_*} functions.
+#'
+#' @param model A model specification object.
+#' @return A named list where names are metric names and values describe
+#'   the type: \code{"scalar"} (one value per ROI) or \code{"vector[N]"}
+#'   (N values per ROI). Returns \code{NULL} for models using the legacy
+#'   combiner path.
+#'
+#' @examples
+#' \donttest{
+#'   # Default returns NULL (legacy path)
+#'   ds <- gen_sample_dataset(c(4,4,4), 20)
+#'   mdl <- load_model("sda_notune")
+#'   mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification")
+#'   output_schema(mspec)  # NULL
+#' }
+#' @export
+output_schema <- function(model) {
+  UseMethod("output_schema")
+}
+
+#' @export
+output_schema.default <- function(model) {
+  NULL
+}
+
+#' Check if a specific fit_roi method exists for a model object
+#'
+#' Walks the S3 class chain looking for a registered \code{fit_roi} method.
+#' Returns \code{FALSE} if only the implicit default dispatch would apply.
+#'
+#' @param obj A model specification object.
+#' @return Logical.
+#' @keywords internal
+#' @noRd
+.has_fit_roi <- function(obj) {
+  for (cls in class(obj)) {
+    if (!is.null(utils::getS3method("fit_roi", cls, optional = TRUE))) {
+      return(TRUE)
+    }
+  }
+  FALSE
+}
+
 #' Process ROI
 #'
 #' Process a region of interest (ROI) and return the formatted results.
@@ -222,12 +317,49 @@ process_roi <- function(mod_spec, roi, rnum, ...) {
 #' @rdname process_roi-methods
 #' @export
 process_roi.default <- function(mod_spec, roi, rnum, center_global_id = NA, ...) {
+  # --- fit_roi shim (Phase 1) ---
+  # If the model class provides a fit_roi method, prefer it over the
+
+  # legacy 3-way dispatch. The roi_result is converted to the tibble
+  # format that existing combiners expect.
+  if (.has_fit_roi(mod_spec)) {
+    roi_data <- list(
+      train_data = as.matrix(neuroim2::values(roi$train_roi)),
+      test_data = if (!is.null(roi$test_roi)) as.matrix(neuroim2::values(roi$test_roi)) else NULL,
+      indices = neuroim2::indices(roi$train_roi),
+      train_roi = roi$train_roi,
+      test_roi = roi$test_roi
+    )
+    context <- list(
+      design = mod_spec$design,
+      cv_spec = if (!is.null(mod_spec$crossval)) mod_spec$crossval else mod_spec$cv_spec,
+      id = rnum,
+      center_global_id = center_global_id
+    )
+    res <- tryCatch(
+      fit_roi(mod_spec, roi_data, context, ...),
+      error = function(e) {
+        roi_result(
+          metrics = NULL,
+          indices = neuroim2::indices(roi$train_roi),
+          id = rnum,
+          error = TRUE,
+          error_message = conditionMessage(e)
+        )
+      }
+    )
+    return(roi_result_to_tibble(res))
+  }
+
+  # --- Legacy dispatch ---
+  warning("process_roi legacy dispatch is deprecated. Implement a fit_roi.* method for your model class.",
+          call. = FALSE)
   # Capture additional arguments to pass down
   dots <- list(...)
   if (!is.null(mod_spec$process_roi)) {
     # Pass center_global_id and dots to user's custom processor
     do.call(mod_spec$process_roi, c(list(mod_spec, roi, rnum, center_global_id = center_global_id), dots))
-  } else if (has_test_set(mod_spec)) { # Changed from mod_spec to mod_spec$dataset
+  } else if (has_test_set(mod_spec)) {
     # Pass center_global_id and dots to external_crossval
     do.call(external_crossval, c(list(mod_spec, roi, rnum, center_global_id = center_global_id), dots))
   } else if (has_crossval(mod_spec)) {

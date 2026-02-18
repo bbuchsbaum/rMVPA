@@ -1188,238 +1188,104 @@ merge_results.contrast_rsa_model <- function(obj, result_set, indices, id, ...) 
   )
 }
 
-#' Process ROI for contrast_rsa_model
+#' Output schema for contrast_rsa_model
 #'
-#' Runs the MS-ReVE training pipeline for a single ROI/searchlight, ensuring the
-#' necessary searchlight metadata (center voxel IDs) and cross-validation spec
-#' are forwarded to \code{train_model.contrast_rsa_model}. This avoids the
-#' classification/regression dispatch used in \code{process_roi.default}.
+#' Returns a named list describing the output metrics and their lengths.
+#' Each metric is either "scalar" or "vector[N]" where N is the number of contrasts.
 #'
-#' @param mod_spec A \code{contrast_rsa_model} object.
-#' @param roi ROI object containing \code{train_roi}.
-#' @param rnum Identifier for the ROI/searchlight (typically the center voxel's global index).
-#' @param center_global_id Optional global ID of the center voxel.
-#' @param ... Additional arguments forwarded to \code{train_model.contrast_rsa_model} (e.g., \code{cv_spec}).
-#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
-#' @examples
-#' \dontrun{
-#'   # Internal method called by run_searchlight/run_regional
-#'   # See contrast_rsa_model examples for usage
-#' }
+#' @param model A \code{contrast_rsa_model} object.
+#' @return A named list where values are "scalar" or "vector[N]".
 #' @export
-#' @method process_roi contrast_rsa_model
-process_roi.contrast_rsa_model <- function(mod_spec,
-                                           roi,
-                                           rnum,
-                                           center_global_id = NA,
-                                           ...) {
+output_schema.contrast_rsa_model <- function(model) {
+  Q <- ncol(model$design$contrast_matrix)
+  scalar_metrics <- c("recon_score", "composite")
 
-  sl_data <- as.matrix(neuroim2::values(roi$train_roi))
-  ind     <- neuroim2::indices(roi$train_roi)
+  schema <- list()
+  for (metric in model$output_metric) {
+    if (metric %in% scalar_metrics) {
+      schema[[metric]] <- "scalar"
+    } else {
+      schema[[metric]] <- paste0("vector[", Q, "]")
+    }
+  }
+  schema
+}
 
-  # Basic sanity checks
+#' Fit ROI for contrast_rsa_model
+#'
+#' Implements the \code{fit_roi} contract for MS-ReVE / contrast RSA models.
+#' Called automatically by \code{process_roi.default} when a \code{fit_roi}
+#' method is detected.
+#'
+#' @param model A \code{contrast_rsa_model} object.
+#' @param roi_data Named list with \code{train_data}, \code{indices}, \code{train_roi}, \code{test_roi}.
+#' @param context Named list with \code{design}, \code{cv_spec}, \code{id}, \code{center_global_id}.
+#' @param ... Additional arguments forwarded to \code{train_model}.
+#' @return A \code{roi_result} object.
+#' @export
+fit_roi.contrast_rsa_model <- function(model, roi_data, context, ...) {
+  sl_data         <- roi_data$train_data
+  ind             <- roi_data$indices
+  id              <- context$id
+  center_global_id <- context$center_global_id
+
+  # Validate ROI size
   if (nrow(sl_data) < 2L || ncol(sl_data) < 1L) {
-    return(tibble::tibble(
-      result = list(NULL),
-      indices = list(ind),
-      performance = list(NULL),
-      id = rnum,
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
       error = TRUE,
       error_message = "contrast_rsa_model: ROI too small (need >=2 rows and >=1 column)."
     ))
   }
 
-  # Map center_global_id to local column index if provided
+  # Map center_global_id to local column index
   center_local_id <- NA
   if (!is.na(center_global_id)) {
     center_local_id <- match(center_global_id, ind)
     if (is.na(center_local_id)) {
-      return(tibble::tibble(
-        result = list(NULL),
-        indices = list(ind),
-        performance = list(NULL),
-        id = rnum,
+      return(roi_result(
+        metrics = NULL, indices = ind, id = id,
         error = TRUE,
-        error_message = sprintf("Center voxel %s not present in ROI %s after filtering.", center_global_id, rnum)
+        error_message = sprintf("Center voxel %s not present in ROI %s after filtering.",
+                                center_global_id, id)
       ))
     }
   }
 
   sl_info <- list(
-    center_local_id = center_local_id,
+    center_local_id  = center_local_id,
     center_global_id = center_global_id,
-    basis_count = roi$basis_count %||% 1L
+    basis_count      = 1L
   )
 
-  dots <- list(...)
-  train_args <- c(list(mod_spec, sl_data, sl_info = sl_info), dots)
+  # Get cv_spec from context, then model fallback
+  cv_spec <- context$cv_spec
+  if (is.null(cv_spec)) cv_spec <- model$cv_spec %||% model$crossval
 
-  # Provide cv_spec if not injected via dots
-  if (is.null(train_args$cv_spec)) {
-    if (!is.null(mod_spec$cv_spec)) {
-      train_args$cv_spec <- mod_spec$cv_spec
-    } else if (!is.null(mod_spec$crossval)) {
-      train_args$cv_spec <- mod_spec$crossval
+  train_result <- tryCatch(
+    train_model(model, sl_data, sl_info = sl_info, cv_spec = cv_spec, ...),
+    error = function(e) {
+      roi_result(
+        metrics = NULL, indices = ind, id = id,
+        error = TRUE, error_message = conditionMessage(e)
+      )
     }
+  )
+
+  # If tryCatch returned an roi_result (from the error handler), pass it through
+  if (inherits(train_result, "roi_result")) return(train_result)
+
+  if (is.null(train_result)) {
+    return(roi_result(
+      metrics = NULL, indices = ind, id = id,
+      error = TRUE, error_message = "train_model returned NULL"
+    ))
   }
 
-  train_result_obj <- try(do.call(train_model, train_args), silent = TRUE)
+  # Flatten the named results list into a numeric vector matching schema order
+  perf <- unlist(train_result)
 
-  if (inherits(train_result_obj, "try-error")) {
-    error_msg <- attr(train_result_obj, "condition")$message
-    result_set <- tibble::tibble(
-      result = list(NULL),
-      error = TRUE,
-      error_message = ifelse(is.null(error_msg), "Unknown training error", error_msg)
-    )
-  } else {
-    result_set <- tibble::tibble(
-      result = list(train_result_obj),
-      error = FALSE,
-      error_message = "~"
-    )
-  }
-
-  merge_results(mod_spec, result_set, indices = ind, id = rnum)
+  roi_result(metrics = perf, indices = ind, id = id, result = train_result)
 }
 
-#' Run Searchlight Analysis for Contrast RSA Model
-#'
-#' This is the S3 method for running a searchlight analysis specifically for a
-#' \code{contrast_rsa_model} object. It performs the Multi-Dimensional Signed
-#' Representational Voxel Encoding (MS-ReVE) style analysis across the brain
-#' volume or surface.
-#'
-#' @param model_spec A \code{contrast_rsa_model} object created by
-#'   \code{\\link{contrast_rsa_model}}.
-#' @param radius The radius of the searchlight sphere (in mm for volume data, or
-#'   geodesic distance/vertex count for surface data - interpretation depends
-#'   on the \code{distance_metric} used in \code{neuroim2::searchlight} or
-#'   \code{neurosurf::SurfaceSearchlight}).
-#' @param method The type of searchlight procedure. Currently, only \code{"standard"}
-#'   is fully supported and recommended for contrast RSA. The "standard" method
-#'   iterates through all voxels/vertices in the mask, treating each as the center
-#'   and calculating its specific contribution metric (e.g., beta_delta). The results
-#'   are combined directly into Q output maps using \code{combine_msreve_standard}.
-#'   \cr
-#'   Using \code{"randomized"} is **not recommended** for this model. While the code
-#'   will run, the default combiner (\code{combine_msreve_standard}) will produce sparse
-#'   maps with values only at the random center locations. A proper interpretation of
-#'   randomized searchlight (averaging results based on voxel coverage) would require a
-#'   different, model-specific combiner (e.g., \code{combine_msreve_randomized}), which
-#'   is not currently implemented due to conceptual challenges in averaging the center-voxel
-#'   specific MS-ReVE metric.
-#' @param niter The number of iterations if \code{method = "randomized"} is used (but see note above).
-#' @param ... Additional arguments passed down to the underlying searchlight
-#'   machinery (e.g., \code{mvpa_iterate}).
-#'
-#' @return A \code{searchlight_result} object (specifically with class
-#'   \code{c("msreve_searchlight_result", "searchlight_result", "list")}), containing:
-#'   \item{results}{A named list where each element is a \code{SparseNeuroVec} or
-#'     \code{NeuroSurfaceVector} representing the map for one contrast.}
-#'   \item{metrics}{A character vector of the contrast names.}
-#'   \item{n_voxels}{Total number of voxels/vertices in the original mask space.}
-#'   \item{active_voxels}{Number of voxels/vertices for which results were computed.}
-#'
-#' @examples
-#' # Assuming 'spec' is a valid contrast_rsa_model object
-#' # Standard (recommended) method:
-#' # results <- run_searchlight(spec, radius = 8, method = "standard")
-#' # plot(results$results[[1]]) # Plot the map for the first contrast
-#'
-#' @examples
-#' # Assuming contrast_rsa_model examples have run and objects like
-#' # 'mvpa_dat', 'msreve_des', 'model_basic', 'model_recon' are available.
-#' # This requires the setup from contrast_rsa_model examples.
-#' 
-#' if (requireNamespace("neuroim2", quietly = TRUE) && 
-#'     requireNamespace("rMVPA", quietly = TRUE) &&
-#'     exists("model_basic") && inherits(model_basic, "contrast_rsa_model") &&
-#'     exists("model_recon") && inherits(model_recon, "contrast_rsa_model")) {
-#'
-#'   # --- Example 1: Run searchlight with basic model ---
-#'   # Use a very small radius for quick example run.
-#'   # Actual searchlight analyses would use a more appropriate radius (e.g., 3-4 voxels).
-#'   # With dummy data, results won't be meaningful; focus is on execution.
-#'
-#'   message("Running searchlight example 1 (basic model, radius=1)... May take a moment.")
-#'   sl_results_basic <- tryCatch({
-#'     run_searchlight(model_basic, radius = 1, method = "standard")
-#'   }, error = function(e) {
-#'     message("Searchlight (basic model) example failed: ", e$message)
-#'     NULL
-#'   })
-#'   if (!is.null(sl_results_basic)) {
-#'     print(sl_results_basic)
-#'   }
-#'
-#'   # --- Example 2: Run searchlight with recon_score output ---
-#'   message("Running searchlight example 2 (recon_score model, radius=1)... May take a moment.")
-#'   sl_results_recon <- tryCatch({
-#'     run_searchlight(model_recon, radius = 1, method = "standard")
-#'   }, error = function(e) {
-#'     message("Searchlight (recon_score model) example failed: ", e$message)
-#'     NULL
-#'   })
-#'   if (!is.null(sl_results_recon)) {
-#'     print(sl_results_recon)
-#'   }
-#'
-#'   # Note on Crossnobis with searchlight:
-#'   # To run a searchlight with 'estimation_method = "crossnobis"' from 'model_crossnobis',
-#'   # the 'whitening_matrix_W' needs to be passed through the searchlight machinery
-#'   # to 'compute_crossvalidated_means_sl'. This typically involves passing it via
-#'   # the `...` argument of `run_searchlight` and ensuring `mvpa_iterate` and
-#'   # `train_model` propagate it. This advanced usage is not shown here as it
-#'   # requires modification to the general `mvpa_iterate` or a custom processor.
-#'
-#' } else {
-#'  message("Skipping run_searchlight.contrast_rsa_model example execution here.")
-#'  message("It can be time-consuming and depends on prior setup.")
-#' }
-#'
-#' @param radius Numeric searchlight radius (default: NULL uses dataset default).
-#' @param method Character: "standard" or "randomized".
-#' @param niter Number of iterations for randomized searchlight.
-#' @param drop_probs Logical; if TRUE, drop per-ROI probability matrices after metrics. Default FALSE.
-#' @param fail_fast Logical; if TRUE, stop on first ROI error. Default FALSE.
-#' @param ... Additional arguments passed to underlying methods.
-#' @export
-#' @importFrom futile.logger flog.info
-run_searchlight.contrast_rsa_model <- function(model_spec,
-                                                radius = NULL,
-                                                method = c("standard", "randomized"),
-                                                niter = NULL, # niter only relevant for randomized
-                                                drop_probs = FALSE,
-                                                fail_fast = FALSE,
-                                                backend = c("default", "shard", "auto"),
-                                                ...) {
-  method <- match.arg(method)
-  backend <- match.arg(backend)
 
-  # Currently, only standard method is fully recommended with the specific combiner
-  if (method == "randomized") {
-      # Warning strengthened based on discussion
-      warning("Using 'randomized' method with contrast_rsa_model. This is NOT the recommended approach. The default combiner will produce sparse maps with values only at random centers, not averaged maps reflecting voxel coverage. Interpretation requires caution. See documentation for details.")
-      if (is.null(niter) || niter < 1) {
-          stop("'niter' must be provided and >= 1 for the 'randomized' method.")
-      }
-  }
-
-  # The core processing function is train_model.contrast_rsa_model
-  # The combiner function MUST be combine_msreve_standard for this model type
-  the_combiner <- combine_msreve_standard 
-
-  # Call the appropriate backend searchlight function
-  if (method == "standard") {
-    futile.logger::flog.info("Running standard MS-ReVE/Contrast RSA searchlight (radius = %s)", radius)
-    # Pass the specific combiner for contrast RSA
-    do_standard(model_spec, radius, combiner = the_combiner,
-                drop_probs = drop_probs, fail_fast = fail_fast, backend = backend, ...)
-  } else { # method == "randomized"
-    futile.logger::flog.info("Running randomized MS-ReVE/Contrast RSA searchlight (radius = %s, niter = %s)", radius, niter)
-    # Pass the specific combiner for contrast RSA - Note: Applicability might need review
-    do_randomized(model_spec, radius, niter = niter, combiner = the_combiner,
-                  drop_probs = drop_probs, fail_fast = fail_fast, backend = backend, ...)
-  }
-} 

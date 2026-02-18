@@ -31,12 +31,12 @@ This constructor avoids adding ad-hoc members to a plain `mvpa_design` by
 returning an object with class `c("hrfdecoder_design", "mvpa_design", "list")`.
 
 The hrfdecoder approach operates on continuous TR-level data rather than
-trial-level beta estimates. The `y_train` field is a dummy variable (TR indices
-1:T) used only for length validation and subsetting in the cross-validation
-machinery. Critically, fold assignment is determined by `block_var` (run IDs),
-NOT by `y_train` values. The actual decoding targets come from the `event_model`
-and `events` fields, and `train_model.hrfdecoder_model()` ignores the `y`
-parameter entirely.
+trial-level beta estimates. `cv_labels` is set to TR indices (1:T) and is used
+only for fold construction in the cross-validation machinery. Critically, fold
+assignment is determined by `block_var` (run IDs), NOT by `cv_labels` values.
+The actual decoding targets come from the `event_model` and `events` fields
+(passed as `targets`), and `train_model.hrfdecoder_model()` ignores the
+`cv_labels` parameter entirely.
 }
 \examples{
 \dontrun{

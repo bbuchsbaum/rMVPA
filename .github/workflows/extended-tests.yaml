@@ -1,0 +1,40 @@
+name: extended-tests
+
+on:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+jobs:
+  extended-tests:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      RMVPA_RUN_EXTENDED_TESTS: "true"
+      R_PROGRESSR_ENABLE: "false"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+          extra-packages: any::testthat
+
+      - name: Run extended searchlight/regional tests
+        run: |
+          files <- c(
+            "tests/testthat/test_mvpa_searchlight.R",
+            "tests/testthat/test_mvpa_regional.R"
+          )
+          for (f in files) {
+            message("Running: ", f)
+            testthat::test_file(f, reporter = "summary", stop_on_failure = TRUE)
+          }
+        shell: Rscript {0}

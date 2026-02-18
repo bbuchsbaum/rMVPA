@@ -62,6 +62,8 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
       max_comps=max_comps,
       block_var=block_var
     )
+    ret$cv_labels <- labels
+    ret$targets <- ret$F
   } else {
     assertthat::assert_that(!is.null(S))
     assertthat::assert_that(is.matrix(S))
@@ -90,8 +92,10 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
       max_comps=max_comps,
       block_var=block_var
     )
+    ret$cv_labels <- labels
+    ret$targets <- ret$F
   }
-  
+
   class(ret) <- "feature_rsa_design"
   ret
 }
@@ -1219,13 +1223,13 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
 #' @rdname y_train-methods
 #' @export
 y_train.feature_rsa_model <- function(obj) {
-  obj$design$F  # Features are used as predictors (y in training function)
+  obj$design$targets  # Feature matrix for cross-validation data splitting
 }
 
 #' @rdname y_train-methods
 #' @export
 y_train.feature_rsa_design <- function(obj) {
-  obj$F  # Features are used as predictors
+  obj$targets  # Feature matrix for cross-validation data splitting
 }
 
 #' @export
@@ -1424,6 +1428,55 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
     error_message = "~"
   )
 }
+
+#' @rdname fit_roi
+#' @method fit_roi feature_rsa_model
+#' @export
+fit_roi.feature_rsa_model <- function(model, roi_data, context, ...) {
+  roi <- list(train_roi = roi_data$train_roi, test_roi = roi_data$test_roi)
+  id <- context$id
+  center_global_id <- context$center_global_id %||% NA
+
+  result_tbl <- internal_crossval(model, roi, id,
+                                  center_global_id = center_global_id)
+
+  if (isTRUE(result_tbl$error[1])) {
+    roi_result(
+      metrics = NULL,
+      indices = roi_data$indices,
+      id = id,
+      result = result_tbl$result[[1]],
+      error = TRUE,
+      error_message = result_tbl$error_message[1]
+    )
+  } else {
+    roi_result(
+      metrics = result_tbl$performance[[1]],
+      indices = roi_data$indices,
+      id = id,
+      result = result_tbl$result[[1]]
+    )
+  }
+}
+
+
+#' @rdname output_schema
+#' @method output_schema feature_rsa_model
+#' @keywords internal
+#' @export
+output_schema.feature_rsa_model <- function(model) {
+  # When nperm > 0, permutation metrics are added dynamically; fall back to combine_standard.
+  if (!is.null(model$nperm) && model$nperm > 0) {
+    return(NULL)
+  }
+  nms <- c(
+    "pattern_correlation", "pattern_discrimination", "pattern_rank_percentile",
+    "rdm_correlation", "voxel_correlation", "mse", "r_squared",
+    "mean_voxelwise_temporal_cor", "ncomp"
+  )
+  setNames(rep("scalar", length(nms)), nms)
+}
+
 
 #' Summary Method for Feature RSA Model
 #'

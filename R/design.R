@@ -2,17 +2,21 @@
 
 #' @export
 nobs.mvpa_design <- function(x) {
-  length(x$y_train)
+  if (is.matrix(x$cv_labels)) {
+    nrow(x$cv_labels)
+  } else {
+    length(x$cv_labels)
+  }
 }
 
 #' @export
 nresponses.mvpa_design <- function(x) {
-  if (is.factor(x$y_train)) {
-    length(levels(x$y_train))
-  } else if (is.vector(x$y_train)) {
-    length(x$y_train)
-  } else if (is.matrix(x$y_train)) {
-    ncol(x$y_train)
+  if (is.factor(x$cv_labels)) {
+    length(levels(x$cv_labels))
+  } else if (is.vector(x$cv_labels)) {
+    length(x$cv_labels)
+  } else if (is.matrix(x$cv_labels)) {
+    ncol(x$cv_labels)
   } else {
     stop()
   }
@@ -27,7 +31,7 @@ has_test_set.mvpa_design <- function(obj) {
 
 #' @rdname y_train-methods
 #' @export
-y_train.mvpa_design <- function(obj) obj$y_train
+y_train.mvpa_design <- function(obj) obj$cv_labels
 
 
 #' @rdname y_test-methods
@@ -88,28 +92,40 @@ parse_variable <- function(var, design) {
 #'
 #' @param train_design A data frame containing the training design matrix
 #' @param test_design Optional data frame containing the test design matrix (default: NULL)
-#' @param y_train Formula or vector specifying the training response variable
+#' @param y_train Formula or vector specifying the training response variable (old path;
+#'   mutually exclusive with \code{cv_labels})
 #' @param y_test Optional formula or vector specifying the test response variable (default: NULL)
 #' @param block_var Optional formula or vector specifying the blocking variable for cross-validation
 #' @param split_by Optional formula or vector for splitting analyses
+#' @param cv_labels Optional vector of labels used for cross-validation fold construction
+#'   (new path; mutually exclusive with \code{y_train}). If provided without \code{targets},
+#'   \code{targets} defaults to \code{cv_labels}.
+#' @param targets Optional vector of model-specific training targets. Defaults to \code{cv_labels}
+#'   when \code{cv_labels} is supplied, or to the parsed \code{y_train} when the old path is used.
 #' @param ... Additional arguments (currently unused)
 #'
 #' @return An \code{mvpa_design} object (S3 class) containing:
 #'   \describe{
 #'     \item{train_design}{Data frame of training design}
 #'     \item{test_design}{Data frame of test design (if provided)}
-#'     \item{y_train}{Training response variable}
+#'     \item{cv_labels}{Labels used for cross-validation fold construction}
+#'     \item{targets}{Model-specific training targets}
+#'     \item{y_train}{Alias for \code{cv_labels} (for backward compatibility)}
 #'     \item{y_test}{Test response variable (if provided)}
 #'     \item{block_var}{Blocking variable for cross-validation (if provided)}
 #'     \item{split_by}{Splitting factor (if provided)}
 #'   }
 #'
 #' @details
-#' The \code{y_train} and \code{y_test} can be specified either as formulas (e.g., ~ condition) 
+#' The \code{y_train} and \code{y_test} can be specified either as formulas (e.g., ~ condition)
 #' or as vectors. If formulas are used, they are evaluated within the respective design matrices.
-#' 
-#' The \code{block_var} and \code{split_by} can also be specified as formulas or vectors. 
+#'
+#' The \code{block_var} and \code{split_by} can also be specified as formulas or vectors.
 #' If formulas, they are evaluated within the training design matrix.
+#'
+#' The new \code{cv_labels} and \code{targets} parameters allow separating the labels used
+#' for fold construction from the actual training targets. When using the old \code{y_train}
+#' path, both \code{cv_labels} and \code{targets} are set to the parsed \code{y_train} value.
 #'
 #' @examples
 #' # Basic design with only training data
@@ -121,57 +137,99 @@ parse_variable <- function(var, design) {
 #' # Design with test data and blocking variable
 #' test_df <- data.frame(condition = rep(c("A", "B"), each = 25))
 #' design_with_test <- mvpa_design(
-#'   train_df, 
-#'   test_df, 
-#'   y_train = ~ condition, 
+#'   train_df,
+#'   test_df,
+#'   y_train = ~ condition,
 #'   y_test = ~ condition,
 #'   block_var = ~ block
 #' )
 #'
 #' # Design with split_by factor
 #' design_split <- mvpa_design(
-#'   train_df, 
+#'   train_df,
 #'   y_train = ~ condition,
 #'   split_by = ~ group
 #' )
 #'
-#' @seealso 
+#' @seealso
 #' \code{\link{mvpa_dataset}} for creating the corresponding dataset object
 #'
 #' @importFrom stats as.formula
 #' @export
-mvpa_design <- function(train_design, test_design=NULL, y_train, y_test=NULL, block_var=NULL, split_by=NULL, ...) {
- 
-  y_train <- if (!purrr::is_formula(y_train) && length(y_train) > 1) {
-    y_train
+mvpa_design <- function(train_design, test_design=NULL, y_train=NULL, y_test=NULL,
+                         block_var=NULL, split_by=NULL, cv_labels=NULL, targets=NULL, ...) {
+
+  ## Validate mutual exclusion of y_train and cv_labels
+  if (!is.null(y_train) && !is.null(cv_labels)) {
+    stop("'y_train' and 'cv_labels' are mutually exclusive. Use one or the other.")
+  }
+
+  if (!is.null(y_train)) {
+    ## Old path: parse y_train, then set cv_labels and targets from it
+    y_train_parsed <- if (!purrr::is_formula(y_train) && length(y_train) > 1) {
+      y_train
+    } else {
+      parse_variable(y_train, train_design)
+    }
+
+    if (is.factor(y_train_parsed) || is.character(y_train_parsed)) {
+      y_train_parsed <- as.factor(y_train_parsed)
+
+      if (any(table(y_train_parsed) == 0)) {
+        futile.logger::flog.warn("y_train: ", table(y_train_parsed), capture=TRUE)
+        futile.logger::flog.warn("y_train factor has at least one level with zero training instances: dropping unused levels.")
+        y_train_parsed <- droplevels(y_train_parsed)
+      }
+
+      if (length(table(y_train_parsed)) <= 1) {
+        stop(paste("error: y_train factor must have at least 2 levels with one or more training instances"))
+      }
+
+      ytab <- table(levels(y_train_parsed))
+
+      if (any(ytab == 0)) {
+        futile.logger::flog.info("y_train: ", table(y_train_parsed), capture=TRUE)
+        stop(paste("error: y_train factor must have at least 1 training instance for every factor level"))
+      }
+    }
+
+    cv_labels <- y_train_parsed
+    if (is.null(targets)) {
+      targets <- y_train_parsed
+    }
+
+  } else if (!is.null(cv_labels)) {
+    ## New path: cv_labels provided directly
+    if (is.factor(cv_labels) || is.character(cv_labels)) {
+      cv_labels <- as.factor(cv_labels)
+
+      if (any(table(cv_labels) == 0)) {
+        futile.logger::flog.warn("cv_labels: ", table(cv_labels), capture=TRUE)
+        futile.logger::flog.warn("cv_labels factor has at least one level with zero instances: dropping unused levels.")
+        cv_labels <- droplevels(cv_labels)
+      }
+
+      if (length(table(cv_labels)) <= 1) {
+        stop(paste("error: cv_labels factor must have at least 2 levels with one or more instances"))
+      }
+
+      ytab <- table(levels(cv_labels))
+
+      if (any(ytab == 0)) {
+        futile.logger::flog.info("cv_labels: ", table(cv_labels), capture=TRUE)
+        stop(paste("error: cv_labels factor must have at least 1 instance for every factor level"))
+      }
+    }
+
+    if (is.null(targets)) {
+      targets <- cv_labels
+    }
+
   } else {
-    parse_variable(y_train, train_design)
+    stop("Either 'y_train' or 'cv_labels' must be provided.")
   }
-  
-  if (is.factor(y_train) || is.character(y_train)) {
-    y_train <- as.factor(y_train)
-   
-    if (any(table(y_train) == 0)) {
-      futile.logger::flog.warn("y_train: ", table(y_train), capture=TRUE)
-      futile.logger::flog.warn("y_train factor has at least one level with zero training instances: dropping unused levels.")
-      y_train <- droplevels(y_train)
-    }
-    
-    if (length(table(y_train)) <= 1) {
-      #futile.logger::flog.error("y_train: ", table(y_train), capture=TRUE)
-      stop(paste("error: y_train factor must have at least 2 levels with one or more training instances"))
-    }
-    
-    ytab <- table(levels(y_train))
-    
-    if (any(ytab == 0)) {
-      futile.logger::flog.info("y_train: ", table(y_train), capture=TRUE)
-      stop(paste("error: y_train factor must have at least 1 training instance for every factor level"))
-    }
-  }
-  
+
   if (!is.null(y_test)) {
-    
     ## must have a test_design
     assert_that(!is.null(test_design))
     y_test <- if (!purrr::is_formula(y_test) && length(y_test) > 1) {
@@ -180,14 +238,14 @@ mvpa_design <- function(train_design, test_design=NULL, y_train, y_test=NULL, bl
       parse_variable(y_test, test_design)
     }
   }
-  
+
   check_split <- function(split_var) {
     minSplits <- min(table(split_var))
     if (minSplits < 3) {
       stop(paste("error: splitting condition results in fewer than 3 observations in at least one set"))
     }
   }
-  
+
   if (!is.null(split_by)) {
     des <- if (!is.null(test_design) && nrow(test_design) > 0) test_design else train_design
     split_var <- parse_variable(split_by, des)
@@ -195,28 +253,30 @@ mvpa_design <- function(train_design, test_design=NULL, y_train, y_test=NULL, bl
   } else {
     split_groups=NULL
   }
-  
+
   if (!is.null(block_var)) {
     block_var <- parse_variable(block_var, train_design)
     assertthat::assert_that(!is.null(block_var))
   }
- 
+
   test_design <- if (!is.null(test_design)) {
-    tibble::as_tibble(test_design, .name_repair = .name_repair) %>% mutate(.rownum=1:n()) 
+    tibble::as_tibble(test_design, .name_repair = .name_repair) %>% mutate(.rownum=1:n())
   }
-  
-  train_design <- tibble::as_tibble(train_design,.name_repair = .name_repair) %>% mutate(.rownum=1:n())
-  
+
+  train_design <- tibble::as_tibble(train_design, .name_repair = .name_repair) %>% mutate(.rownum=1:n())
+
   des <- list(
     train_design=tibble::as_tibble(train_design, .name_repair = .name_repair),
-    y_train=y_train,
+    cv_labels=cv_labels,
+    targets=targets,
+    y_train=cv_labels,
     test_design=if (!is.null(test_design)) tibble::as_tibble(test_design, .name_repair = .name_repair) else NULL,
     y_test=y_test,
     split_by=split_by,
     split_groups=split_groups,
     block_var=block_var
   )
-  
+
   class(des) <- c("mvpa_design", "list")
   des
 }

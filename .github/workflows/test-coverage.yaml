@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      RMVPA_RUN_EXTENDED_TESTS: "false"
 
     steps:
       - uses: actions/checkout@v3

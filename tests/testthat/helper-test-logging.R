@@ -31,6 +31,9 @@ if (log_level_env != "") {
 # Suppress package version warnings during library() calls
 # These are harmless but create visual noise
 options(warn = -1)  # Temporarily suppress warnings
+options(progress_enabled = FALSE)
+options(cli.progress_show_after = Inf)
+Sys.setenv(R_PROGRESSR_ENABLE = "false")
 
 # Load commonly used packages with suppressed warnings
 suppressWarnings({

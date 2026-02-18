@@ -483,6 +483,110 @@ evaluate_model.vector_rsa_model <- function(object,
   )
 }
 
+#' @rdname fit_roi
+#' @method fit_roi vector_rsa_model
+#' @export
+fit_roi.vector_rsa_model <- function(model, roi_data, context, ...) {
+  train_dat <- roi_data$train_data
+
+  # Compute trial scores
+  scores <- tryCatch(
+    compute_trial_scores(model, train_dat),
+    error = function(e) NULL
+  )
+
+  if (is.null(scores) || !is.numeric(scores)) {
+    return(roi_result(
+      metrics       = NULL,
+      indices       = roi_data$indices,
+      id            = context$id,
+      error         = TRUE,
+      error_message = sprintf("vector_rsa_model: compute_trial_scores failed for ROI %s", context$id)
+    ))
+  }
+
+  # Check for all-NA scores (too few observations)
+  if (length(scores) < 2 || all(is.na(scores))) {
+    return(roi_result(
+      metrics = c(rsa_score = NA_real_),
+      indices = roi_data$indices,
+      id      = context$id
+    ))
+  }
+
+  # ROI data for permutations
+  roi_train_data_for_perm <- if (!is.null(model$nperm) && model$nperm > 0) {
+    as.matrix(train_dat)
+  } else {
+    NULL
+  }
+
+  # Evaluate (with optional permutation testing)
+  perf <- tryCatch(
+    evaluate_model.vector_rsa_model(
+      object             = model,
+      predicted          = NULL,
+      observed           = scores,
+      roi_data_for_perm  = roi_train_data_for_perm,
+      nperm              = model$nperm,
+      save_distributions = model$save_distributions
+    ),
+    error = function(e) NULL
+  )
+
+  if (is.null(perf)) {
+    return(roi_result(
+      metrics       = NULL,
+      indices       = roi_data$indices,
+      id            = context$id,
+      error         = TRUE,
+      error_message = sprintf("vector_rsa_model: evaluate_model failed for ROI %s", context$id)
+    ))
+  }
+
+  # Build metrics vector (same logic as merge_results.vector_rsa_model)
+  base_metrics <- c(rsa_score = perf$rsa_score)
+
+  if (!is.null(perf$permutation_results)) {
+    perm_p  <- perf$permutation_results$p_values
+    perm_z  <- perf$permutation_results$z_scores
+    p_names <- paste0("p_", names(perm_p))
+    z_names <- paste0("z_", names(perm_z))
+    metrics <- c(base_metrics, setNames(perm_p, p_names), setNames(perm_z, z_names))
+  } else {
+    metrics <- base_metrics
+  }
+
+  # Build result data for return_predictions
+  result_data <- if (isTRUE(model$return_predictions)) {
+    list(rsa_scores = scores)
+  } else {
+    NULL
+  }
+
+  roi_result(
+    metrics = metrics,
+    indices = roi_data$indices,
+    id      = context$id,
+    result  = result_data
+  )
+}
+
+
+#' @rdname output_schema
+#' @method output_schema vector_rsa_model
+#' @export
+output_schema.vector_rsa_model <- function(model) {
+  nms <- "rsa_score"
+  if (!is.null(model$nperm) && model$nperm > 0) {
+    nms <- c(nms, "p_rsa_score", "z_rsa_score")
+  }
+  schema <- as.list(rep("scalar", length(nms)))
+  names(schema) <- nms
+  schema
+}
+
+
 #' Merge results for vector RSA model
 #'
 #' Aggregates results (scores) and calls evaluate_model.

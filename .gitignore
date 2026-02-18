@@ -10,5 +10,10 @@ rMVPA_cheatsheet.md
 00check.log
 check.log
 *.Rcheck/
+..Rcheck/
+rMVPA.Rcheck/
+rMVPA_*.tar.gz
+tests/testthat/_problems/
+.planning/
 .omc/
 ..pdf

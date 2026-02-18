@@ -131,65 +131,44 @@ repmap_model <- function(dataset,
 }
 
 
-#' Per-ROI processing for repmap_model
-#'
-#' Fits a reduced-rank mapping from seed features to ROI patterns and computes
-#' summary metrics (rank, R2, Frobenius norm, singular values).
-#'
-#' @return A tibble row with columns \code{result}, \code{indices}, \code{performance}, and \code{id}.
-#' @examples
-#' \dontrun{
-#'   # Internal method called by run_searchlight/run_regional
-#'   # See repmap_model examples for usage
-#' }
-#' @keywords internal
+#' @rdname fit_roi
+#' @method fit_roi repmap_model
 #' @export
-process_roi.repmap_model <- function(mod_spec,
-                                     roi,
-                                     rnum,
-                                     center_global_id = NA,
-                                     ...) {
-
-  Ymat <- as.matrix(neuroim2::values(roi$train_roi))
-  ind  <- neuroim2::indices(roi$train_roi)
+fit_roi.repmap_model <- function(model, roi_data, context, ...) {
+  Ymat  <- roi_data$train_data
+  ind   <- roi_data$indices
   n_obs <- nrow(Ymat)
   n_vox <- ncol(Ymat)
 
   if (n_obs < 2L || n_vox < 1L) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repmap_model: insufficient observations or voxels.",
-      warning         = TRUE,
-      warning_message = "repmap_model: insufficient observations or voxels."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repmap_model: insufficient observations or voxels."
     ))
   }
 
-  key   <- mod_spec$key
-  items <- mod_spec$items
+  key   <- model$key
+  items <- model$items
 
   if (length(key) != n_obs) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repmap_model: key length mismatch with ROI data.",
-      warning         = TRUE,
-      warning_message = "repmap_model: key length mismatch with ROI data."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repmap_model: key length mismatch with ROI data."
     ))
   }
 
   # Item-level ROI patterns
-  Y_full <- group_means(Ymat, margin = 1, group = key)
-  items_roi <- rownames(Y_full)
+  Y_full     <- group_means(Ymat, margin = 1, group = key)
+  items_roi  <- rownames(Y_full)
 
   # Align with seed feature items
-  items_seed <- rownames(mod_spec$seed_features)
+  items_seed   <- rownames(model$seed_features)
   common_items <- Reduce(intersect, list(items, items_roi, items_seed))
   K <- length(common_items)
   futile.logger::flog.debug(
@@ -198,52 +177,43 @@ process_roi.repmap_model <- function(mod_spec,
   )
 
   if (K < 3L) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repmap_model: need at least 3 common items to fit mapping.",
-      warning         = TRUE,
-      warning_message = "repmap_model: too few common items."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repmap_model: need at least 3 common items to fit mapping."
     ))
   }
 
   common_items <- sort(common_items)
-  X <- mod_spec$seed_features[common_items, , drop = FALSE]
+  X <- model$seed_features[common_items, , drop = FALSE]
   Y <- Y_full[common_items, , drop = FALSE]
 
   # Drop constant voxels in Y
-  sd_Y <- apply(Y, 2L, stats::sd, na.rm = TRUE)
+  sd_Y     <- apply(Y, 2L, stats::sd, na.rm = TRUE)
   keep_vox <- sd_Y > 0
   if (!any(keep_vox)) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repmap_model: all voxels have zero variance.",
-      warning         = TRUE,
-      warning_message = "repmap_model: all voxels have zero variance."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repmap_model: all voxels have zero variance."
     ))
   }
   Y <- Y[, keep_vox, drop = FALSE]
 
   # Drop constant columns in X
-  sd_X <- apply(X, 2L, stats::sd, na.rm = TRUE)
+  sd_X      <- apply(X, 2L, stats::sd, na.rm = TRUE)
   keep_feat <- sd_X > 0
   if (!any(keep_feat)) {
-    return(tibble::tibble(
-      result          = list(NULL),
-      indices         = list(ind),
-      performance     = list(NULL),
-      id              = rnum,
-      error           = TRUE,
-      error_message   = "repmap_model: all seed features have zero variance.",
-      warning         = TRUE,
-      warning_message = "repmap_model: all seed features have zero variance."
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = "repmap_model: all seed features have zero variance."
     ))
   }
   X <- X[, keep_feat, drop = FALSE]
@@ -255,18 +225,18 @@ process_roi.repmap_model <- function(mod_spec,
   fit <- .repmap_fit_rrr(
     Xc,
     Yc,
-    rank         = mod_spec$rank,
-    max_rank     = mod_spec$max_rank,
-    ridge_lambda = mod_spec$ridge_lambda
+    rank         = model$rank,
+    max_rank     = model$max_rank,
+    ridge_lambda = model$ridge_lambda
   )
 
-  C_hat <- fit$C
+  C_hat  <- fit$C
   r_used <- fit$rank
   svals  <- fit$singvals
 
   # In-sample mapping fit (variance explained) per voxel
-  Y_hat <- Xc %*% C_hat
-  resid <- Yc - Y_hat
+  Y_hat  <- Xc %*% C_hat
+  resid  <- Yc - Y_hat
 
   ss_tot <- colSums(Yc^2)
   ss_res <- colSums(resid^2)
@@ -289,18 +259,23 @@ process_roi.repmap_model <- function(mod_spec,
     map_frob_norm = frob_norm
   )
 
-  # Flag small-K settings as potentially unstable
-  warn_flag <- K < 5L
-  warn_msg  <- if (warn_flag) "repmap_model: small item count (K < 5); mapping metrics may be unstable." else "~"
-
-  tibble::tibble(
-    result          = list(NULL),
-    indices         = list(ind),
-    performance     = list(perf),
-    id              = rnum,
-    error           = FALSE,
-    error_message   = "~",
-    warning         = warn_flag,
-    warning_message = warn_msg
+  roi_result(
+    metrics = perf,
+    indices = ind,
+    id      = context$id
   )
 }
+
+
+#' @rdname output_schema
+#' @method output_schema repmap_model
+#' @export
+output_schema.repmap_model <- function(model) {
+  nms <- c("n_items", "n_seed_feats", "n_vox", "map_rank", "map_sv1",
+           "map_sv_mean", "map_r2_mean", "map_r2_median", "map_frob_norm")
+  schema <- as.list(rep("scalar", length(nms)))
+  names(schema) <- nms
+  schema
+}
+
+
