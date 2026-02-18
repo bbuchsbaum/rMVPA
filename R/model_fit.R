@@ -556,7 +556,22 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
     }
     
     futile.logger::flog.debug("Fitting model of type: %s", mtype)
-    fit <- fit_model(obj, train_dat, y, wts=wts, param=best_param, classProbs=TRUE)
+    selected_feature_ids <- indices[feature_mask]
+    spatial_mask <- if (!is.null(obj$dataset) &&
+                        inherits(obj$dataset, c("mvpa_image_dataset", "mvpa_multibasis_image_dataset"))) {
+      obj$dataset$mask
+    } else {
+      NULL
+    }
+
+    fit <- if (identical(obj$model$label, "spacenet_tvl1")) {
+      fit_model(
+        obj, train_dat, y, wts = wts, param = best_param, classProbs = TRUE,
+        feature_ids = selected_feature_ids, spatial_mask = spatial_mask
+      )
+    } else {
+      fit_model(obj, train_dat, y, wts = wts, param = best_param, classProbs = TRUE)
+    }
     model_fit(obj$model, y, fit, mtype, best_param, indices, feature_mask)
     
   }, error = function(e) {

@@ -33,10 +33,19 @@ colHuber <- function(x, k=1.5, tol=1e-04) {
 #'   \item{mgsda}{Multi-Group Sparse Discriminant Analysis}
 #'   \item{lda_thomaz}{Modified LDA classifier for high-dimensional data}
 #'   \item{hdrda}{High-Dimensional Regularized Discriminant Analysis}
+#'   \item{spacenet_tvl1}{Spatially-regularized sparse linear model with TV-L1 penalty for global whole-brain analysis}
 #' }
 #'
 #' @details
 #' Models are accessed via \code{load_model(name)}. Each model specification includes \code{fit}, \code{predict}, and \code{prob} methods.
+#'
+#' The \code{spacenet_tvl1} model follows the SpaceNet formulation used in Nilearn.
+#'
+#' @references
+#' Gramfort, A., Thirion, B., & Varoquaux, G. (2013).
+#' \emph{Identifying predictive regions from fMRI with TV-L1 prior}.
+#' Pattern Recognition in Neuroimaging (PRNI), IEEE.
+#' https://inria.hal.science/hal-00839984
 #'
 #' @return An environment containing registered MVPA model specifications.
 #'
@@ -786,3 +795,829 @@ calculate_log_posteriors <- function(modelFit, newdata) {
 
   log_posts
 }
+
+
+# -----------------------------------------------------------------------------
+# SpaceNet (TV-L1 via single-loop PDHG)
+# -----------------------------------------------------------------------------
+
+#' @keywords internal
+#' @noRd
+.spacenet_soft_threshold <- function(x, thresh) {
+  sign(x) * pmax(abs(x) - thresh, 0)
+}
+
+#' @keywords internal
+#' @noRd
+.spacenet_sigmoid <- function(z) {
+  out <- numeric(length(z))
+  pos <- z >= 0
+  out[pos] <- 1 / (1 + exp(-z[pos]))
+  ez <- exp(z[!pos])
+  out[!pos] <- ez / (1 + ez)
+  out
+}
+
+#' @keywords internal
+#' @noRd
+.spacenet_softmax <- function(eta) {
+  eta <- as.matrix(eta)
+  row_max <- apply(eta, 1L, max)
+  ex <- exp(sweep(eta, 1L, row_max, "-"))
+  rs <- rowSums(ex)
+  rs[!is.finite(rs) | rs <= 0] <- 1
+  ex / rs
+}
+
+#' @keywords internal
+#' @noRd
+.spacenet_y01 <- function(y, positive = NULL) {
+  if (is.factor(y)) {
+    lev <- levels(y)
+    if (length(lev) < 2L) {
+      return(rep(0, length(y)))
+    }
+    pos <- if (is.null(positive)) lev[2L] else as.character(positive)
+    return(as.numeric(as.character(y) == pos))
+  }
+
+  y_num <- as.numeric(y)
+  vals <- sort(unique(y_num[is.finite(y_num)]))
+  if (length(vals) == 0L) return(rep(0, length(y_num)))
+  if (length(vals) == 1L) return(as.numeric(y_num == vals[1L]))
+  if (length(vals) == 2L) return(as.numeric(y_num == vals[2L]))
+  as.numeric(y_num > mean(vals))
+}
+
+#' @keywords internal
+#' @noRd
+.spacenet_spectral_norm_squared <- function(X, n_iter = 20L) {
+  X <- as.matrix(X)
+  n <- ncol(X)
+  if (n == 0L) return(0)
+  v <- rnorm(n)
+  v <- v / max(sqrt(sum(v * v)), .Machine$double.eps)
+  for (i in seq_len(n_iter)) {
+    v <- as.vector(crossprod(X, X %*% v))
+    nv <- sqrt(sum(v * v))
+    if (!is.finite(nv) || nv <= .Machine$double.eps) break
+    v <- v / nv
+  }
+  w <- as.vector(X %*% v)
+  sum(w * w)
+}
+
+#' @keywords internal
+#' @noRd
+.spacenet_screen_support <- function(X, y, screening_percentile = 100,
+                                     min_features = 20L,
+                                     feature_ids = NULL) {
+  p <- ncol(X)
+  if (p == 0L || is.null(p)) return(integer(0))
+  if (screening_percentile >= 100 || p <= 100) return(seq_len(p))
+
+  keep_k <- max(min_features, ceiling((screening_percentile / 100) * p))
+  keep_k <- min(keep_k, p)
+
+  y_num <- if (is.factor(y)) .spacenet_y01(y) else as.numeric(y)
+
+  yc <- y_num - mean(y_num)
+  xc <- sweep(X, 2L, colMeans(X), "-")
+  scores <- abs(as.vector(crossprod(xc, yc)))
+  scores[!is.finite(scores)] <- 0
+
+  if (!is.null(feature_ids) && anyDuplicated(feature_ids) > 0L) {
+    feature_ids <- as.integer(feature_ids)
+    fid <- as.character(feature_ids)
+    agg <- tapply(scores, fid, function(v) {
+      vv <- v[is.finite(v)]
+      if (length(vv) == 0L) 0 else max(vv)
+    })
+    agg[!is.finite(agg)] <- 0
+
+    group_sizes <- table(fid)
+    basis_count <- max(as.integer(group_sizes), 1L)
+    min_groups <- max(1L, ceiling(min_features / basis_count))
+
+    keep_groups <- max(min_groups, ceiling((screening_percentile / 100) * length(agg)))
+    keep_groups <- min(keep_groups, length(agg))
+
+    keep_ids <- names(sort(agg, decreasing = TRUE))[seq_len(keep_groups)]
+    return(which(fid %in% keep_ids))
+  }
+
+  ord <- order(scores, decreasing = TRUE)
+  ord[seq_len(keep_k)]
+}
+
+#' @keywords internal
+#' @noRd
+.spacenet_make_alpha_grid <- function(X, y, l1_ratio,
+                                      n_alphas = 12L,
+                                      alpha_min_ratio = 1e-3,
+                                      is_classif = FALSE) {
+  X <- as.matrix(X)
+  n <- nrow(X)
+  if (n <= 1L || ncol(X) == 0L) {
+    return(rep(1e-2, n_alphas))
+  }
+
+  Xc <- sweep(X, 2L, colMeans(X), "-")
+  if (is_classif) {
+    y01 <- .spacenet_y01(y)
+    g0 <- as.vector(crossprod(Xc, 0.5 - y01)) / n
+  } else {
+    yc <- as.numeric(y) - mean(as.numeric(y))
+    g0 <- -as.vector(crossprod(Xc, yc)) / n
+  }
+
+  denom <- max(as.numeric(l1_ratio), 1e-3)
+  alpha_max <- max(abs(g0)) / denom
+  if (!is.finite(alpha_max) || alpha_max <= 0) {
+    alpha_max <- 1e-2
+  }
+  alpha_min <- max(alpha_max * alpha_min_ratio, 1e-8)
+  exp(seq(log(alpha_max), log(alpha_min), length.out = n_alphas))
+}
+
+#' @keywords internal
+#' @noRd
+.spacenet_edges_from_feature_ids <- function(feature_ids, spatial_mask = NULL) {
+  feature_ids <- as.integer(feature_ids)
+  p <- length(feature_ids)
+  empty <- list(edges = matrix(integer(0), nrow = 0L, ncol = 2L), d_norm2 = 0)
+
+  if (p <= 1L || is.null(spatial_mask) || !inherits(spatial_mask, "NeuroVol")) {
+    return(empty)
+  }
+  dims <- dim(spatial_mask)[1:3]
+  if (length(dims) < 3L || any(!is.finite(dims))) {
+    return(empty)
+  }
+  full_len <- prod(dims)
+  valid <- feature_ids >= 1L & feature_ids <= full_len
+  if (!all(valid)) {
+    feature_ids <- feature_ids[valid]
+    p <- length(feature_ids)
+    if (p <= 1L) return(empty)
+  }
+
+  uniq_ids <- sort(unique(feature_ids))
+  n_unique <- length(uniq_ids)
+  if (n_unique <= 1L) return(empty)
+
+  idx_map <- integer(full_len)
+  idx_map[uniq_ids] <- seq_len(n_unique)
+
+  coords <- arrayInd(uniq_ids, .dim = dims)
+  offsets <- rbind(
+    c(1L, 0L, 0L),
+    c(0L, 1L, 0L),
+    c(0L, 0L, 1L)
+  )
+
+  all_edges <- vector("list", nrow(offsets))
+  edge_count <- 0L
+
+  for (k in seq_len(nrow(offsets))) {
+    nbr <- sweep(coords, 2L, offsets[k, ], "+")
+    in_bounds <-
+      nbr[, 1L] >= 1L & nbr[, 1L] <= dims[1L] &
+      nbr[, 2L] >= 1L & nbr[, 2L] <= dims[2L] &
+      nbr[, 3L] >= 1L & nbr[, 3L] <= dims[3L]
+
+    if (!any(in_bounds)) next
+
+    src_u <- which(in_bounds)
+    nbr_lin <- (nbr[in_bounds, 1L] - 1L) +
+      dims[1L] * (nbr[in_bounds, 2L] - 1L) +
+      dims[1L] * dims[2L] * (nbr[in_bounds, 3L] - 1L) + 1L
+
+    dst_u <- idx_map[nbr_lin]
+    ok <- dst_u > 0L
+    if (!any(ok)) next
+
+    e <- cbind(src_u[ok], dst_u[ok])
+    keep <- e[, 1L] < e[, 2L]
+    if (!any(keep)) next
+
+    edge_count <- edge_count + 1L
+    all_edges[[edge_count]] <- e[keep, , drop = FALSE]
+  }
+
+  if (edge_count == 0L) {
+    return(empty)
+  }
+
+  base_edges <- do.call(rbind, all_edges[seq_len(edge_count)])
+  if (is.null(base_edges) || nrow(base_edges) == 0L) {
+    return(empty)
+  }
+
+  id_groups <- split(seq_len(p), factor(feature_ids, levels = uniq_ids))
+  max_copies <- max(lengths(id_groups), 1L)
+
+  if (max_copies <= 1L) {
+    col_map <- vapply(id_groups, function(ix) ix[1L], integer(1))
+    edges <- cbind(col_map[base_edges[, 1L]], col_map[base_edges[, 2L]])
+  } else {
+    idx_mat <- matrix(NA_integer_, nrow = n_unique, ncol = max_copies)
+    for (i in seq_len(n_unique)) {
+      ix <- sort(id_groups[[i]])
+      idx_mat[i, seq_along(ix)] <- ix
+    }
+
+    edge_list <- vector("list", max_copies)
+    edge_count <- 0L
+    for (b in seq_len(max_copies)) {
+      src <- idx_mat[base_edges[, 1L], b]
+      dst <- idx_mat[base_edges[, 2L], b]
+      ok <- !is.na(src) & !is.na(dst)
+      if (!any(ok)) next
+      e <- cbind(src[ok], dst[ok])
+      keep <- e[, 1L] < e[, 2L]
+      if (!any(keep)) next
+      edge_count <- edge_count + 1L
+      edge_list[[edge_count]] <- e[keep, , drop = FALSE]
+    }
+
+    if (edge_count == 0L) return(empty)
+    edges <- do.call(rbind, edge_list[seq_len(edge_count)])
+  }
+
+  if (is.null(edges) || nrow(edges) == 0L) return(empty)
+  edges <- unique(edges)
+
+  deg <- tabulate(c(edges[, 1L], edges[, 2L]), nbins = p)
+  d_norm2 <- 2 * max(deg, 1L)
+
+  list(edges = edges, d_norm2 = d_norm2)
+}
+
+#' @keywords internal
+#' @noRd
+.spacenet_pdhg_solver <- function(X, y, alpha, l1_ratio,
+                                  edges,
+                                  d_norm2,
+                                  loss = c("mse", "logistic"),
+                                  max_iter = 300L,
+                                  tol = 1e-4,
+                                  data_lipschitz = NULL,
+                                  init = NULL,
+                                  sigma = 1.0,
+                                  theta = 1.0) {
+  loss <- match.arg(loss)
+  X <- as.matrix(X)
+  n <- nrow(X)
+  p <- ncol(X)
+
+  lambda1 <- alpha * l1_ratio
+  lambda_tv <- alpha * (1 - l1_ratio)
+
+  if (is.null(data_lipschitz)) {
+    spec2 <- .spacenet_spectral_norm_squared(X)
+    data_lipschitz <- if (loss == "logistic") {
+      0.25 * (spec2 / max(n, 1L)) + 0.25
+    } else {
+      spec2 / max(n, 1L)
+    }
+  }
+  data_lipschitz <- as.numeric(data_lipschitz)[1L]
+  if (!is.finite(data_lipschitz) || data_lipschitz < 0) {
+    data_lipschitz <- 0
+  }
+
+  tau <- 0.99 / (data_lipschitz + sigma * d_norm2 + 1e-12)
+
+  w <- if (!is.null(init$w) && length(init$w) == p) {
+    as.numeric(init$w)
+  } else {
+    numeric(p)
+  }
+  wbar <- if (!is.null(init$wbar) && length(init$wbar) == p) {
+    as.numeric(init$wbar)
+  } else {
+    w
+  }
+  b <- if (loss == "logistic") {
+    if (!is.null(init$b)) as.numeric(init$b) else 0
+  } else {
+    0
+  }
+  bbar <- if (loss == "logistic") {
+    if (!is.null(init$bbar)) as.numeric(init$bbar) else b
+  } else {
+    0
+  }
+  p_dual <- if (!is.null(edges) && nrow(edges) > 0L) {
+    if (!is.null(init$p_dual) && length(init$p_dual) == nrow(edges)) {
+      as.numeric(init$p_dual)
+    } else {
+      numeric(nrow(edges))
+    }
+  } else {
+    numeric(0)
+  }
+
+  rel_hist <- numeric(max_iter)
+
+  for (it in seq_len(max_iter)) {
+    w_old <- w
+    b_old <- b
+
+    btp <- numeric(p)
+    if (length(p_dual) > 0L && lambda_tv > 0) {
+      diff_bar <- wbar[edges[, 2L]] - wbar[edges[, 1L]]
+      p_dual <- p_dual + sigma * diff_bar
+      p_dual <- pmax(-lambda_tv, pmin(lambda_tv, p_dual))
+
+      btp[edges[, 1L]] <- btp[edges[, 1L]] - p_dual
+      btp[edges[, 2L]] <- btp[edges[, 2L]] + p_dual
+    } else if (length(p_dual) > 0L) {
+      p_dual[] <- 0
+    }
+
+    if (loss == "logistic") {
+      eta <- as.vector(X %*% w + b)
+      prob <- .spacenet_sigmoid(eta)
+      diff <- prob - y
+      grad_w <- as.vector(crossprod(X, diff)) / max(n, 1L)
+      grad_b <- mean(diff)
+      w <- w - tau * (grad_w + btp)
+      if (lambda1 > 0) {
+        w <- .spacenet_soft_threshold(w, tau * lambda1)
+      }
+      b <- b - tau * grad_b
+    } else {
+      resid <- as.vector(X %*% w - y)
+      grad_w <- as.vector(crossprod(X, resid)) / max(n, 1L)
+      w <- w - tau * (grad_w + btp)
+      if (lambda1 > 0) {
+        w <- .spacenet_soft_threshold(w, tau * lambda1)
+      }
+      b <- 0
+    }
+
+    wbar <- w + theta * (w - w_old)
+    if (loss == "logistic") {
+      bbar <- b + theta * (b - b_old)
+    }
+
+    delta <- c(w - w_old, b - b_old)
+    denom <- max(1, sqrt(sum(c(w_old, b_old)^2)))
+    rel <- sqrt(sum(delta * delta)) / denom
+    rel_hist[it] <- rel
+    if (is.finite(rel) && rel < tol) {
+      rel_hist <- rel_hist[seq_len(it)]
+      break
+    }
+  }
+
+  list(
+    w = w,
+    b = b,
+    init = list(
+      w = w,
+      wbar = wbar,
+      b = b,
+      bbar = bbar,
+      p_dual = p_dual,
+      tau = tau,
+      sigma = sigma,
+      theta = theta,
+      lipschitz = data_lipschitz
+    ),
+    rel_history = rel_hist
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.spacenet_cv_path <- function(X,
+                              y,
+                              feature_ids,
+                              spatial_mask,
+                              l1_ratio,
+                              n_alphas,
+                              alpha_min_ratio,
+                              screening_percentile,
+                              max_iter,
+                              tol,
+                              inner_folds,
+                              is_classif) {
+  n <- nrow(X)
+  p <- ncol(X)
+
+  alpha_grid <- .spacenet_make_alpha_grid(
+    X, y,
+    l1_ratio = l1_ratio,
+    n_alphas = n_alphas,
+    alpha_min_ratio = alpha_min_ratio,
+    is_classif = is_classif
+  )
+
+  if (inner_folds < 2L || n < 6L) {
+    return(list(alpha_grid = alpha_grid, cv_loss = rep(NA_real_, length(alpha_grid)), best_alpha = alpha_grid[1L]))
+  }
+
+  k <- min(inner_folds, n)
+  fold_y <- if (is_classif) {
+    factor(ifelse(.spacenet_y01(y) > 0, "pos", "neg"))
+  } else {
+    y
+  }
+  fold_tests <- create_mvpa_folds(fold_y, k = k, list = TRUE, seed = 1234)
+
+  fold_loss <- matrix(NA_real_, nrow = length(alpha_grid), ncol = length(fold_tests))
+
+  for (fi in seq_along(fold_tests)) {
+    test_idx <- as.integer(fold_tests[[fi]])
+    train_idx <- setdiff(seq_len(n), test_idx)
+    if (length(train_idx) < 2L || length(test_idx) < 1L) next
+
+    X_train <- X[train_idx, , drop = FALSE]
+    X_test <- X[test_idx, , drop = FALSE]
+    y_train <- y[train_idx]
+    y_test <- y[test_idx]
+
+    support <- .spacenet_screen_support(
+      X_train, y_train,
+      screening_percentile = screening_percentile,
+      feature_ids = feature_ids
+    )
+    if (length(support) == 0L) support <- seq_len(p)
+
+    X_train <- X_train[, support, drop = FALSE]
+    X_test <- X_test[, support, drop = FALSE]
+    fids_fold <- feature_ids[support]
+
+    x_mean <- colMeans(X_train)
+    X_train <- sweep(X_train, 2L, x_mean, "-")
+    X_test <- sweep(X_test, 2L, x_mean, "-")
+
+    if (is_classif) {
+      y_train_proc <- .spacenet_y01(y_train)
+      y_test_proc <- .spacenet_y01(y_test)
+      loss_name <- "logistic"
+    } else {
+      y_mean <- mean(as.numeric(y_train))
+      y_train_proc <- as.numeric(y_train) - y_mean
+      y_test_proc <- as.numeric(y_test)
+      loss_name <- "mse"
+    }
+
+    edge_info <- .spacenet_edges_from_feature_ids(fids_fold, spatial_mask)
+    spec2 <- .spacenet_spectral_norm_squared(X_train)
+    data_L <- if (is_classif) {
+      0.25 * (spec2 / max(nrow(X_train), 1L)) + 0.25
+    } else {
+      spec2 / max(nrow(X_train), 1L)
+    }
+
+    init <- NULL
+    for (ai in seq_along(alpha_grid)) {
+      alpha <- alpha_grid[ai]
+      fit <- .spacenet_pdhg_solver(
+        X = X_train,
+        y = y_train_proc,
+        alpha = alpha,
+        l1_ratio = l1_ratio,
+        edges = edge_info$edges,
+        d_norm2 = edge_info$d_norm2,
+        loss = loss_name,
+        max_iter = max(40L, as.integer(max_iter)),
+        tol = 2 * tol,
+        data_lipschitz = data_L,
+        init = init
+      )
+      init <- fit$init
+
+      if (is_classif) {
+        eta <- as.vector(X_test %*% fit$w + fit$b)
+        pr <- .spacenet_sigmoid(eta)
+        pr <- pmin(pmax(pr, 1e-8), 1 - 1e-8)
+        fold_loss[ai, fi] <- -mean(y_test_proc * log(pr) + (1 - y_test_proc) * log(1 - pr))
+      } else {
+        pred <- as.vector(X_test %*% fit$w + y_mean)
+        fold_loss[ai, fi] <- mean((pred - y_test_proc)^2)
+      }
+    }
+  }
+
+  mean_loss <- rowMeans(fold_loss, na.rm = TRUE)
+  if (all(!is.finite(mean_loss))) {
+    best_idx <- 1L
+  } else {
+    mean_loss[!is.finite(mean_loss)] <- Inf
+    best_idx <- which.min(mean_loss)
+  }
+
+  list(alpha_grid = alpha_grid, cv_loss = mean_loss, best_alpha = alpha_grid[best_idx])
+}
+
+#' @keywords internal
+#' @noRd
+.spacenet_fit_binary <- function(X, y01, feature_ids, spatial_mask,
+                                 l1_ratio, n_alphas, alpha_min_ratio,
+                                 screening_percentile, max_iter, tol,
+                                 inner_folds) {
+  X <- as.matrix(X)
+  p <- ncol(X)
+  y01 <- as.numeric(y01)
+
+  cv_path <- .spacenet_cv_path(
+    X = X,
+    y = y01,
+    feature_ids = feature_ids,
+    spatial_mask = spatial_mask,
+    l1_ratio = l1_ratio,
+    n_alphas = n_alphas,
+    alpha_min_ratio = alpha_min_ratio,
+    screening_percentile = screening_percentile,
+    max_iter = max_iter,
+    tol = tol,
+    inner_folds = inner_folds,
+    is_classif = TRUE
+  )
+
+  alpha_opt <- as.numeric(cv_path$best_alpha)
+  support <- .spacenet_screen_support(
+    X, y01,
+    screening_percentile = screening_percentile,
+    feature_ids = feature_ids
+  )
+  if (length(support) == 0L) support <- seq_len(p)
+
+  X_fit <- X[, support, drop = FALSE]
+  fids_fit <- feature_ids[support]
+
+  x_mean <- colMeans(X_fit)
+  X_centered <- sweep(X_fit, 2L, x_mean, "-")
+
+  edge_info <- .spacenet_edges_from_feature_ids(fids_fit, spatial_mask)
+  spec2 <- .spacenet_spectral_norm_squared(X_centered)
+  data_L <- 0.25 * (spec2 / max(nrow(X_centered), 1L)) + 0.25
+
+  final_fit <- .spacenet_pdhg_solver(
+    X = X_centered,
+    y = y01,
+    alpha = alpha_opt,
+    l1_ratio = l1_ratio,
+    edges = edge_info$edges,
+    d_norm2 = edge_info$d_norm2,
+    loss = "logistic",
+    max_iter = max_iter,
+    tol = tol,
+    data_lipschitz = data_L,
+    init = NULL
+  )
+
+  beta <- numeric(p)
+  beta[support] <- final_fit$w
+  intercept <- as.numeric(final_fit$b - sum(x_mean * final_fit$w))
+
+  list(
+    beta = beta,
+    intercept = intercept,
+    support = support,
+    alpha_opt = alpha_opt,
+    alpha_grid = cv_path$alpha_grid,
+    cv_loss = cv_path$cv_loss
+  )
+}
+
+#' @keywords internal
+#' @noRd
+MVPAModels$spacenet_tvl1 <- list(
+  type = c("Regression", "Classification"),
+  library = "rMVPA",
+  label = "spacenet_tvl1",
+  loop = NULL,
+  parameters = data.frame(
+    parameters = c("l1_ratio", "n_alphas", "alpha_min_ratio", "screening_percentile", "max_iter", "tol", "inner_folds"),
+    class = c("numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"),
+    label = c("L1 Ratio", "# Alphas", "Alpha Min Ratio", "Screening Percentile", "Max Iter", "Tolerance", "Inner CV Folds")
+  ),
+  grid = function(x, y, len = NULL) {
+    data.frame(
+      l1_ratio = 0.5,
+      n_alphas = if (is.null(len) || len <= 1) 10 else max(6, as.integer(len)),
+      alpha_min_ratio = 1e-3,
+      screening_percentile = 20,
+      max_iter = 150,
+      tol = 1e-4,
+      inner_folds = 3
+    )
+  },
+  fit = function(x, y, wts, param, lev, last, weights, classProbs,
+                 feature_ids = NULL, spatial_mask = NULL, ...) {
+    X <- as.matrix(x)
+    n <- nrow(X)
+    p <- ncol(X)
+
+    if (p < 2L || n < 4L) {
+      stop("spacenet_tvl1: requires at least 4 samples and 2 features.")
+    }
+
+    is_classif <- is.factor(y)
+
+    feature_ids <- if (is.null(feature_ids)) seq_len(p) else as.integer(feature_ids)
+    if (length(feature_ids) != p) {
+      feature_ids <- seq_len(p)
+    }
+
+    l1_ratio <- as.numeric(param$l1_ratio)
+    l1_ratio <- max(0, min(1, ifelse(length(l1_ratio) == 0L || is.na(l1_ratio), 0.5, l1_ratio[1L])))
+    n_alphas <- max(4L, as.integer(param$n_alphas[1L]))
+    alpha_min_ratio <- as.numeric(param$alpha_min_ratio[1L])
+    if (!is.finite(alpha_min_ratio) || alpha_min_ratio <= 0 || alpha_min_ratio >= 1) {
+      alpha_min_ratio <- 1e-3
+    }
+    screening_percentile <- as.numeric(param$screening_percentile[1L])
+    if (!is.finite(screening_percentile)) screening_percentile <- 100
+    screening_percentile <- max(1, min(100, screening_percentile))
+    max_iter <- max(50L, as.integer(param$max_iter[1L]))
+    tol <- as.numeric(param$tol[1L])
+    if (!is.finite(tol) || tol <= 0) tol <- 1e-4
+    inner_folds <- max(2L, as.integer(param$inner_folds[1L]))
+
+    if (is_classif) {
+      n_classes <- length(lev)
+      loss_name <- "logistic"
+
+      if (n_classes <= 1L) {
+        stop("spacenet_tvl1: classification requires at least 2 classes.")
+      }
+
+      if (n_classes == 2L) {
+        bin_fit <- .spacenet_fit_binary(
+          X = X,
+          y01 = .spacenet_y01(y, positive = lev[2L]),
+          feature_ids = feature_ids,
+          spatial_mask = spatial_mask,
+          l1_ratio = l1_ratio,
+          n_alphas = n_alphas,
+          alpha_min_ratio = alpha_min_ratio,
+          screening_percentile = screening_percentile,
+          max_iter = max_iter,
+          tol = tol,
+          inner_folds = inner_folds
+        )
+
+        beta <- bin_fit$beta
+        intercept <- bin_fit$intercept
+        support <- bin_fit$support
+        alpha_opt <- bin_fit$alpha_opt
+        alpha_grid <- bin_fit$alpha_grid
+        cv_loss <- bin_fit$cv_loss
+      } else {
+        beta <- matrix(0, nrow = p, ncol = n_classes, dimnames = list(NULL, lev))
+        intercept <- numeric(n_classes)
+        names(intercept) <- lev
+        support <- vector("list", n_classes)
+        alpha_opt <- numeric(n_classes)
+        names(alpha_opt) <- lev
+        alpha_grid <- vector("list", n_classes)
+        names(alpha_grid) <- lev
+        cv_loss <- vector("list", n_classes)
+        names(cv_loss) <- lev
+
+        for (ci in seq_len(n_classes)) {
+          cls <- lev[ci]
+          bin_fit <- .spacenet_fit_binary(
+            X = X,
+            y01 = .spacenet_y01(y, positive = cls),
+            feature_ids = feature_ids,
+            spatial_mask = spatial_mask,
+            l1_ratio = l1_ratio,
+            n_alphas = n_alphas,
+            alpha_min_ratio = alpha_min_ratio,
+            screening_percentile = screening_percentile,
+            max_iter = max_iter,
+            tol = tol,
+            inner_folds = inner_folds
+          )
+          beta[, ci] <- bin_fit$beta
+          intercept[ci] <- bin_fit$intercept
+          support[[ci]] <- bin_fit$support
+          alpha_opt[ci] <- bin_fit$alpha_opt
+          alpha_grid[[ci]] <- bin_fit$alpha_grid
+          cv_loss[[ci]] <- bin_fit$cv_loss
+        }
+      }
+    } else {
+      cv_path <- .spacenet_cv_path(
+        X = X,
+        y = y,
+        feature_ids = feature_ids,
+        spatial_mask = spatial_mask,
+        l1_ratio = l1_ratio,
+        n_alphas = n_alphas,
+        alpha_min_ratio = alpha_min_ratio,
+        screening_percentile = screening_percentile,
+        max_iter = max_iter,
+        tol = tol,
+        inner_folds = inner_folds,
+        is_classif = FALSE
+      )
+
+      alpha_opt <- as.numeric(cv_path$best_alpha)
+      alpha_grid <- cv_path$alpha_grid
+      cv_loss <- cv_path$cv_loss
+
+      support <- .spacenet_screen_support(
+        X, y,
+        screening_percentile = screening_percentile,
+        feature_ids = feature_ids
+      )
+      if (length(support) == 0L) support <- seq_len(p)
+
+      X_fit <- X[, support, drop = FALSE]
+      fids_fit <- feature_ids[support]
+
+      x_mean <- colMeans(X_fit)
+      X_centered <- sweep(X_fit, 2L, x_mean, "-")
+
+      y_offset <- mean(as.numeric(y))
+      y_proc <- as.numeric(y) - y_offset
+      loss_name <- "mse"
+
+      edge_info <- .spacenet_edges_from_feature_ids(fids_fit, spatial_mask)
+      spec2 <- .spacenet_spectral_norm_squared(X_centered)
+      data_L <- spec2 / max(nrow(X_centered), 1L)
+
+      final_fit <- .spacenet_pdhg_solver(
+        X = X_centered,
+        y = y_proc,
+        alpha = alpha_opt,
+        l1_ratio = l1_ratio,
+        edges = edge_info$edges,
+        d_norm2 = edge_info$d_norm2,
+        loss = loss_name,
+        max_iter = max_iter,
+        tol = tol,
+        data_lipschitz = data_L,
+        init = NULL
+      )
+
+      beta <- numeric(p)
+      beta[support] <- final_fit$w
+      intercept <- as.numeric(y_offset - sum(x_mean * final_fit$w))
+    }
+
+    out <- list(
+      beta = beta,
+      intercept = intercept,
+      support = support,
+      alpha_opt = alpha_opt,
+      alpha_grid = alpha_grid,
+      cv_loss = cv_loss,
+      l1_ratio = l1_ratio,
+      screening_percentile = screening_percentile,
+      loss = loss_name,
+      obsLevels = if (is_classif) lev else NULL
+    )
+    class(out) <- c("spacenet_fit", "list")
+    out
+  },
+  predict = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    X <- as.matrix(newdata)
+    beta <- modelFit$beta
+    intercept <- modelFit$intercept
+
+    if (!is.null(modelFit$obsLevels)) {
+      if (is.matrix(beta) && ncol(beta) > 1L) {
+        eta <- sweep(X %*% beta, 2L, intercept, "+")
+        pred <- colnames(eta)[max.col(eta)]
+        factor(pred, levels = modelFit$obsLevels)
+      } else {
+        eta <- as.vector(X %*% as.numeric(beta) + as.numeric(intercept))
+        pred <- ifelse(eta >= 0, modelFit$obsLevels[2L], modelFit$obsLevels[1L])
+        factor(pred, levels = modelFit$obsLevels)
+      }
+    } else {
+      as.vector(X %*% as.numeric(beta) + as.numeric(intercept))
+    }
+  },
+  prob = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    if (is.null(modelFit$obsLevels)) {
+      stop("spacenet_tvl1 probabilities are only available for classification.")
+    }
+    X <- as.matrix(newdata)
+    beta <- modelFit$beta
+    intercept <- modelFit$intercept
+
+    if (is.matrix(beta) && ncol(beta) > 1L) {
+      eta <- sweep(X %*% beta, 2L, intercept, "+")
+      probs <- .spacenet_softmax(eta)
+      colnames(probs) <- modelFit$obsLevels
+      probs
+    } else {
+      eta <- as.vector(X %*% as.numeric(beta) + as.numeric(intercept))
+      p2 <- .spacenet_sigmoid(eta)
+      probs <- cbind(1 - p2, p2)
+      colnames(probs) <- modelFit$obsLevels
+      probs
+    }
+  }
+)

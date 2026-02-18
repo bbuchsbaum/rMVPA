@@ -18,6 +18,7 @@ load_model(name)
   \item{mgsda}{Multi-Group Sparse Discriminant Analysis}
   \item{lda_thomaz}{Modified LDA for high-dimensional data}
   \item{hdrda}{High-Dimensional Regularized Discriminant Analysis}
+  \item{spacenet_tvl1}{Spatially-regularized sparse linear model with TV-L1 prior (SpaceNet-style)}
 }}
 }
 \value{
@@ -49,4 +50,10 @@ print(corr_model$parameters)  # View tunable parameters
 \code{\link{MVPAModels}} for the complete list of available custom MVPA models
 
 \code{\link{mvpa_model}} for using these models in MVPA analyses
+}
+\references{
+Gramfort, A., Thirion, B., \& Varoquaux, G. (2013).
+\emph{Identifying predictive regions from fMRI with TV-L1 prior}.
+Pattern Recognition in Neuroimaging (PRNI), IEEE.
+\url{https://inria.hal.science/hal-00839984}
 }

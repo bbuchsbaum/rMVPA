@@ -17,6 +17,7 @@ An environment with the following models:
   \item{mgsda}{Multi-Group Sparse Discriminant Analysis}
   \item{lda_thomaz}{Modified LDA classifier for high-dimensional data}
   \item{hdrda}{High-Dimensional Regularized Discriminant Analysis}
+  \item{spacenet_tvl1}{Spatially-regularized sparse linear model with TV-L1 penalty for global whole-brain analysis}
 }
 }
 \usage{
@@ -30,6 +31,14 @@ An environment containing custom classification models for MVPA analysis.
 }
 \details{
 Models are accessed via \code{load_model(name)}. Each model specification includes \code{fit}, \code{predict}, and \code{prob} methods.
+
+The \code{spacenet_tvl1} model follows the SpaceNet formulation used in Nilearn.
+}
+\references{
+Gramfort, A., Thirion, B., \& Varoquaux, G. (2013).
+\emph{Identifying predictive regions from fMRI with TV-L1 prior}.
+Pattern Recognition in Neuroimaging (PRNI), IEEE.
+\url{https://inria.hal.science/hal-00839984}
 }
 \examples{
 # Load simple SDA classifier

@@ -37,6 +37,17 @@ extract_weights.glmnet <- function(object, ...) {
 
 #' @rdname extract_weights
 #' @export
+extract_weights.spacenet_fit <- function(object, ...) {
+  beta <- object$beta
+  if (is.matrix(beta)) {
+    beta
+  } else {
+    matrix(as.numeric(beta), ncol = 1)
+  }
+}
+
+#' @rdname extract_weights
+#' @export
 extract_weights.default <- function(object, ...) {
   stop("extract_weights: no method for class '", paste(class(object), collapse = "/"),
        "'. Implement an extract_weights method for this model type.")
@@ -117,6 +128,20 @@ model_importance.sda <- function(object, X_train, summary_fun = NULL, ...) {
 #' @param summary_fun Optional function to summarize the activation pattern matrix rows. Default NULL uses L2 norm.
 #' @export
 model_importance.glmnet <- function(object, X_train, summary_fun = NULL, ...) {
+  W <- extract_weights(object)
+  Sigma_x <- cov(X_train)
+  haufe_args <- list(W = W, Sigma_x = Sigma_x)
+  if (!is.null(summary_fun)) {
+    haufe_args$summary_fun <- summary_fun
+  }
+  res <- do.call(haufe_importance, haufe_args)
+  res$importance
+}
+
+#' @rdname model_importance
+#' @param summary_fun Optional function to summarize the activation pattern matrix rows. Default NULL uses L2 norm.
+#' @export
+model_importance.spacenet_fit <- function(object, X_train, summary_fun = NULL, ...) {
   W <- extract_weights(object)
   Sigma_x <- cov(X_train)
   haufe_args <- list(W = W, Sigma_x = Sigma_x)
