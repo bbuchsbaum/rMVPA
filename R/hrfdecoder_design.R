@@ -71,12 +71,31 @@ hrfdecoder_design <- function(event_model, events, block_var, split_by = NULL) {
 
   # Validate event_model has sampling_frame and check TR count
   sframe <- attr(event_model, "sampling_frame")
+  if (is.null(sframe) && !is.null(event_model$sampling_frame)) {
+    sframe <- event_model$sampling_frame
+  }
   if (is.null(sframe)) {
     warning("event_model has no sampling_frame attribute; cannot validate TR count")
   } else {
+    blocklens <- attr(sframe, "blocklens")
+    if (is.null(blocklens) && !is.null(sframe$blocklens)) {
+      blocklens <- sframe$blocklens
+    }
+    if (is.null(blocklens) && requireNamespace("fmridesign", quietly = TRUE)) {
+      blocklens <- tryCatch(fmridesign::blocklens(sframe), error = function(...) NULL)
+    }
+
+    TR <- attr(sframe, "TR")
+    if (is.null(TR) && !is.null(sframe$TR)) {
+      TR <- sframe$TR
+    }
+    if (is.null(TR) && requireNamespace("fmridesign", quietly = TRUE)) {
+      TR <- tryCatch(fmridesign::TR(sframe), error = function(...) NULL)
+    }
+
     # Check that block_var length matches expected TR count
-    expected_TRs <- sum(attr(sframe, "blocklens"))
-    if (length(block_var) != expected_TRs) {
+    expected_TRs <- if (is.null(blocklens)) NA_real_ else sum(as.numeric(blocklens))
+    if (is.finite(expected_TRs) && length(block_var) != expected_TRs) {
       warning(sprintf(
         "block_var length (%d) does not match sampling_frame total TRs (%d)",
         length(block_var), expected_TRs
@@ -84,14 +103,22 @@ hrfdecoder_design <- function(event_model, events, block_var, split_by = NULL) {
     }
 
     # Check if any events fall outside TR range
-    TR <- attr(sframe, "TR")
-    total_time <- length(block_var) * TR
-    events_outside <- events$onset > total_time
-    if (any(events_outside)) {
-      warning(sprintf(
-        "%d event(s) have onsets beyond total acquisition time (%.1f seconds)",
-        sum(events_outside), total_time
-      ))
+    tr_vec <- as.numeric(TR)
+    if (length(tr_vec) > 0L && all(is.finite(tr_vec))) {
+      if (length(tr_vec) == 1L) {
+        total_time <- length(block_var) * tr_vec
+      } else if (!is.null(blocklens) && length(blocklens) == length(tr_vec)) {
+        total_time <- sum(as.numeric(blocklens) * tr_vec)
+      } else {
+        total_time <- length(block_var) * tr_vec[1L]
+      }
+      events_outside <- events$onset > total_time
+      if (any(events_outside)) {
+        warning(sprintf(
+          "%d event(s) have onsets beyond total acquisition time (%.1f seconds)",
+          sum(events_outside), total_time
+        ))
+      }
     }
   }
 
@@ -159,11 +186,38 @@ print.hrfdecoder_design <- function(x, ...) {
 
   # Sampling frame info (if available)
   sframe <- attr(x$event_model, "sampling_frame")
+  if (is.null(sframe) && !is.null(x$event_model$sampling_frame)) {
+    sframe <- x$event_model$sampling_frame
+  }
   if (!is.null(sframe)) {
     TR <- attr(sframe, "TR")
+    if (is.null(TR) && !is.null(sframe$TR)) {
+      TR <- sframe$TR
+    }
+    if (is.null(TR) && requireNamespace("fmridesign", quietly = TRUE)) {
+      TR <- tryCatch(fmridesign::TR(sframe), error = function(...) NULL)
+    }
+
     blocklens <- attr(sframe, "blocklens")
-    cat(sprintf("TR: %.2f seconds\n", TR))
-    cat(sprintf("Block lengths: %s TRs\n", paste(blocklens, collapse = ", ")))
+    if (is.null(blocklens) && !is.null(sframe$blocklens)) {
+      blocklens <- sframe$blocklens
+    }
+    if (is.null(blocklens) && requireNamespace("fmridesign", quietly = TRUE)) {
+      blocklens <- tryCatch(fmridesign::blocklens(sframe), error = function(...) NULL)
+    }
+
+    tr_vec <- as.numeric(TR)
+    if (length(tr_vec) > 0L && all(is.finite(tr_vec))) {
+      tr_show <- if (length(unique(tr_vec)) == 1L) tr_vec[1L] else tr_vec
+      if (length(tr_show) == 1L) {
+        cat(sprintf("TR: %.2f seconds\n", tr_show))
+      } else {
+        cat(sprintf("TR: %s seconds\n", paste(sprintf("%.2f", tr_show), collapse = ", ")))
+      }
+    }
+    if (!is.null(blocklens)) {
+      cat(sprintf("Block lengths: %s TRs\n", paste(blocklens, collapse = ", ")))
+    }
   }
 
   # Split groups
@@ -173,4 +227,3 @@ print.hrfdecoder_design <- function(x, ...) {
 
   invisible(x)
 }
-

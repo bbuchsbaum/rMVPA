@@ -1,5 +1,4 @@
 library(testthat)
-library(tibble)
 
 context("hrfdecoder merge_results zero-probability filtering")
 
@@ -26,7 +25,7 @@ test_that("merge_results filters zero-probability duplicate events across folds"
   y_true2 <- factor(c("A", "B", "B"), levels = classes)
   class2 <- factor(c("A", "B", "B"), levels = classes)
 
-  result_set <- tibble(
+  result_set <- tibble::tibble(
     probs = list(probs1, probs2),
     y_true = list(y_true1, y_true2),
     class = list(class1, class2),
@@ -42,4 +41,3 @@ test_that("merge_results filters zero-probability duplicate events across folds"
   expect_equal(nrow(cres$probs), 3L)
   expect_identical(colnames(cres$probs), classes)
 })
-

@@ -84,11 +84,17 @@ an alternating least squares optimization that incorporates temporal smoothness
 and HRF conformity penalties.
 
 Usage notes:
-- Requires the 'hrfdecoder' package at runtime; we check via requireNamespace.
+- Requires the 'hrfdecoder' package at runtime (or legacy package name
+  'hrfdecode'); we check via requireNamespace.
 - Use the explicit `hrfdecoder_design()` constructor (subclasses `mvpa_design`).
   This keeps event metadata explicit without adding ad-hoc members to a plain design.
 - Cross-validation operates at the TR level (typically blocked by run), but
   performance metrics are computed on event-level predictions after aggregation.
+
+Relationship to ITEM:
+- `hrfdecoder_model` fits directly in TR space and then aggregates to events.
+- `item_model()` estimates trial-wise responses first and decodes those trial
+  estimates (LS-A/ITEM path).
 }
 \examples{
 \dontrun{

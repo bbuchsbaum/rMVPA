@@ -21,6 +21,9 @@ on neuroimaging data.
 
 Documentation and vignettes: <https://bbuchsbaum.github.io/rMVPA/>
 
+Method note: ITEM vs continuous-time hrfdecoder paths:
+`inst/notes/item_vs_hrfdecoder.md`
+
 ### Installation
 
 ### Using devtools

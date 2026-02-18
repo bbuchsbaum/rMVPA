@@ -3,6 +3,16 @@
 #' Integrates ITEM-style trial-wise decoding into the `fit_roi` architecture by
 #' delegating trial-level estimation and covariance-aware decoding to `fmrilss`.
 #'
+#' Conceptually, ITEM differs from `hrfdecoder_model()` in where the decoder is
+#' fit:
+#' - ITEM (`item_model`) first estimates trial-wise responses (`Gamma`) via LS-A
+#'   and then performs covariance-aware decoding on those trial estimates.
+#' - `hrfdecoder_model` fits a continuous-time decoder directly on TR-level data
+#'   and aggregates TR predictions to events afterward.
+#'
+#' Use ITEM when you want an explicit trial-estimation stage and direct control
+#' over trial covariance handling (`U`), especially for trial-level diagnostics.
+#'
 #' @param dataset An `mvpa_dataset`.
 #' @param design An `item_design` object.
 #' @param mode Decoding mode: `"classification"` or `"regression"`.

@@ -352,7 +352,10 @@ shard_extract_roi <- function(vox, shard_data,
 #' @noRd
 sanitize_shard_indices <- function(vox, max_idx) {
   vox <- as.integer(vox)
-  vox[!is.na(vox) & vox > 0L & vox <= max_idx]
+  keep <- !is.na(vox) & vox > 0L & vox <= max_idx
+  out <- vox[keep]
+  attr(out, "had_invalid") <- any(!keep)
+  out
 }
 
 
@@ -362,12 +365,20 @@ shard_extract_roi_volumetric <- function(vox, shard_data,
                                           center_global_id = NULL,
                                           min_voxels = 2) {
   vox <- sanitize_shard_indices(vox, length(shard_data$idx_to_col))
+  had_invalid <- isTRUE(attr(vox, "had_invalid"))
   if (length(vox) < 1L) return(NULL)
 
   col_idx <- shard_data$idx_to_col[vox]
-  valid   <- !is.na(col_idx) & col_idx > 0L
-  vox     <- vox[valid]
-  col_idx <- col_idx[valid]
+  keep <- !is.na(col_idx) & col_idx > 0L
+  if (had_invalid || any(!keep)) {
+    # Match default extract_roi() behavior: if any invalid indices are present,
+    # retain valid indices but drop duplicates via set semantics.
+    vox <- unique(vox[keep])
+    col_idx <- shard_data$idx_to_col[vox]
+  } else {
+    vox <- vox[keep]
+    col_idx <- col_idx[keep]
+  }
 
   if (length(vox) < 1L) return(NULL)
 
@@ -404,12 +415,18 @@ shard_extract_roi_surface <- function(vox, shard_data,
                                        center_global_id = NULL,
                                        min_voxels = 2) {
   vox <- sanitize_shard_indices(vox, length(shard_data$idx_to_col))
+  had_invalid <- isTRUE(attr(vox, "had_invalid"))
   if (length(vox) < 1L) return(NULL)
 
   col_idx <- shard_data$idx_to_col[vox]
-  valid   <- !is.na(col_idx) & col_idx > 0L
-  vox     <- vox[valid]
-  col_idx <- col_idx[valid]
+  keep <- !is.na(col_idx) & col_idx > 0L
+  if (had_invalid || any(!keep)) {
+    vox <- unique(vox[keep])
+    col_idx <- shard_data$idx_to_col[vox]
+  } else {
+    vox <- vox[keep]
+    col_idx <- col_idx[keep]
+  }
 
   if (length(vox) < 1L) return(NULL)
 
@@ -446,14 +463,20 @@ shard_extract_roi_clustered <- function(vox, shard_data,
                                          center_global_id = NULL,
                                          min_voxels = 2) {
   vox <- sanitize_shard_indices(vox, length(shard_data$idx_to_col))
+  had_invalid <- isTRUE(attr(vox, "had_invalid"))
   if (length(vox) < 1L) return(NULL)
 
   # For clustered data, vox = cluster IDs (neighbors).
   # idx_to_col is identity (1:K -> 1:K columns).
   col_idx <- shard_data$idx_to_col[vox]
-  valid   <- !is.na(col_idx) & col_idx > 0L
-  vox     <- vox[valid]
-  col_idx <- col_idx[valid]
+  keep <- !is.na(col_idx) & col_idx > 0L
+  if (had_invalid || any(!keep)) {
+    vox <- unique(vox[keep])
+    col_idx <- shard_data$idx_to_col[vox]
+  } else {
+    vox <- vox[keep]
+    col_idx <- col_idx[keep]
+  }
 
   if (length(vox) < 1L) return(NULL)
 

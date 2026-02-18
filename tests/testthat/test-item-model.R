@@ -117,3 +117,79 @@ test_that("item_model integrates with run_searchlight via schema combiner", {
   expect_s3_class(out, "searchlight_result")
   expect_equal(sort(names(out$results)), sort(names(schema)))
 })
+
+test_that("item_model fit_roi guards against TR/trial row mismatch", {
+  set.seed(9004)
+
+  n_time <- 36
+  n_trials <- 9
+  ds <- gen_sample_dataset(c(3, 3, 3), nobs = n_time, blocks = 3, nlevels = 2)
+
+  X_t <- matrix(rnorm(n_time * n_trials), nrow = n_time, ncol = n_trials)
+  run_id <- rep(1:3, each = 3)
+  T_target <- as.numeric(scale(rnorm(n_trials)))
+
+  des <- item_design(
+    train_design = ds$design$train_design,
+    X_t = X_t,
+    T_target = T_target,
+    run_id = run_id
+  )
+
+  mspec <- item_model(
+    dataset = ds$dataset,
+    design = des,
+    mode = "regression",
+    metric = "correlation",
+    solver = "svd"
+  )
+
+  roi_data <- list(
+    train_data = matrix(rnorm((n_time - 1L) * 5L), nrow = n_time - 1L, ncol = 5L),
+    test_data = NULL,
+    indices = seq_len(5L),
+    train_roi = NULL,
+    test_roi = NULL
+  )
+  context <- list(id = 1L)
+
+  out <- fit_roi(mspec, roi_data, context)
+  expect_true(out$error)
+  expect_match(out$error_message, "ROI rows .* must match nrow\\(X_t\\)")
+})
+
+test_that("item_model omits prediction payloads when return_predictions is FALSE", {
+  set.seed(9005)
+
+  n_time <- 48
+  n_trials <- 12
+  ds <- gen_sample_dataset(c(4, 4, 4), nobs = n_time, blocks = 3, nlevels = 2)
+
+  X_t <- matrix(rnorm(n_time * n_trials), nrow = n_time, ncol = n_trials)
+  run_id <- rep(1:3, each = 4)
+  T_target <- as.numeric(scale(rnorm(n_trials)))
+
+  des <- item_design(
+    train_design = ds$design$train_design,
+    X_t = X_t,
+    T_target = T_target,
+    run_id = run_id
+  )
+
+  mspec <- item_model(
+    dataset = ds$dataset,
+    design = des,
+    mode = "regression",
+    metric = "correlation",
+    solver = "svd",
+    u_storage = "matrix",
+    return_predictions = FALSE
+  )
+
+  vox <- sample(which(ds$dataset$mask > 0), 14)
+  roi <- as_roi(data_sample(ds$dataset, vox), ds$dataset)
+
+  res <- process_roi(mspec, roi, 1)
+  expect_false(res$error)
+  expect_true(is.null(res$result[[1]]$predictions))
+})

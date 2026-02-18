@@ -121,6 +121,7 @@ Suggests:
     progressr,
     fmrihrf,
     foreach,
+    hrfdecode,
     hrfdecoder,
     iterators,
     itertools,

@@ -12,11 +12,17 @@
 #' and HRF conformity penalties.
 #'
 #' Usage notes:
-#' - Requires the 'hrfdecoder' package at runtime; we check via requireNamespace.
+#' - Requires the 'hrfdecoder' package at runtime (or legacy package name
+#'   'hrfdecode'); we check via requireNamespace.
 #' - Use the explicit `hrfdecoder_design()` constructor (subclasses `mvpa_design`).
 #'   This keeps event metadata explicit without adding ad-hoc members to a plain design.
 #' - Cross-validation operates at the TR level (typically blocked by run), but
 #'   performance metrics are computed on event-level predictions after aggregation.
+#'
+#' Relationship to ITEM:
+#' - `hrfdecoder_model` fits directly in TR space and then aggregates to events.
+#' - `item_model()` estimates trial-wise responses first and decodes those trial
+#'   estimates (LS-A/ITEM path).
 #'
 #' @param dataset An `mvpa_dataset` with continuous TR x V data and mask.
 #' @param design An `hrfdecoder_design` (subclass of `mvpa_design`) created by
@@ -188,6 +194,37 @@ hrfdecoder_model <- function(dataset, design,
   )
 }
 
+#' @keywords internal
+#' @noRd
+.hrfdecoder_backend_package <- function() {
+  if (requireNamespace("hrfdecoder", quietly = TRUE)) return("hrfdecoder")
+  if (requireNamespace("hrfdecode", quietly = TRUE)) return("hrfdecode")
+  NULL
+}
+
+#' @keywords internal
+#' @noRd
+.hrfdecoder_require_backend <- function(caller = "hrfdecoder_model") {
+  pkg <- .hrfdecoder_backend_package()
+  if (is.null(pkg)) {
+    stop(
+      sprintf(
+        "%s: The 'hrfdecoder' package (or legacy 'hrfdecode') is required at runtime. Please install one of them.",
+        caller
+      ),
+      call. = FALSE
+    )
+  }
+  pkg
+}
+
+#' @keywords internal
+#' @noRd
+.hrfdecoder_call <- function(fun, ..., pkg = NULL) {
+  pkg <- pkg %||% .hrfdecoder_require_backend("hrfdecoder_model")
+  do.call(getExportedValue(pkg, fun), list(...))
+}
+
 
 #' Train per ROI/fold using hrfdecoder
 #'
@@ -213,9 +250,7 @@ hrfdecoder_model <- function(dataset, design,
 #' }
 #' @export
 train_model.hrfdecoder_model <- function(obj, train_dat, y, sl_info, cv_spec, indices, ...) {
-  if (!requireNamespace("hrfdecoder", quietly = TRUE)) {
-    stop("hrfdecoder_model: The 'hrfdecoder' package is required at runtime. Please install it.")
-  }
+  pkg <- .hrfdecoder_require_backend("hrfdecoder_model")
 
   X <- as.matrix(train_dat)
 
@@ -235,7 +270,8 @@ train_model.hrfdecoder_model <- function(obj, train_dat, y, sl_info, cv_spec, in
   if (is.null(baseline) && !is.null(evm$baseline)) baseline <- evm$baseline
 
   fit <- tryCatch({
-    hrfdecoder::fit_hrfdecoder(
+    .hrfdecoder_call(
+      "fit_hrfdecoder",
       Y = X,
       ev_model = evm,
       base_model = baseline,
@@ -245,7 +281,8 @@ train_model.hrfdecoder_model <- function(obj, train_dat, y, sl_info, cv_spec, in
       lambda_smooth = obj$lambda_smooth,
       nonneg = obj$nonneg,
       max_iter = obj$max_iter,
-      tol = obj$tol
+      tol = obj$tol,
+      pkg = pkg
     )
   }, error = function(e) {
     stop(paste0("fit_hrfdecoder failed: ", e$message))
@@ -287,21 +324,24 @@ format_result.hrfdecoder_model <- function(obj, result, error_message = NULL, co
     ))
   }
 
-  if (!requireNamespace("hrfdecoder", quietly = TRUE)) {
+  pkg <- .hrfdecoder_backend_package()
+  if (is.null(pkg)) {
     return(tibble::tibble(
       class = list(NULL), probs = list(NULL), y_true = list(context$ytest),
       fit = list(NULL), error = TRUE,
-      error_message = "Missing required package 'hrfdecoder'"
+      error_message = "Missing required package 'hrfdecoder' (or legacy 'hrfdecode')"
     ))
   }
 
   # Predict on this fold's TEST rows
   Xtest <- as.matrix(tibble::as_tibble(context$test, .name_repair = .name_repair))
   Ptest <- tryCatch({
-    hrfdecoder::predict_hrfdecoder(
+    .hrfdecoder_call(
+      "predict_hrfdecoder",
       object = result$fit,
       Y_test = Xtest,
-      mode = "tr"
+      mode = "tr",
+      pkg = pkg
     )
   }, error = function(e) {
     attr(e, "message") <- paste0("predict_hrfdecoder failed: ", e$message)
@@ -326,14 +366,16 @@ format_result.hrfdecoder_model <- function(obj, result, error_message = NULL, co
     }
   }
   agg <- tryCatch({
-    hrfdecoder::aggregate_events(
+    .hrfdecoder_call(
+      "aggregate_events",
       P = Ptest,
       events = events,
       TR = result$fit$settings$TR,
       conditions = if (!is.null(conditions)) conditions else colnames(Ptest),
       window = obj$window,
       hrf = tryCatch(result$fit$hrf, error = function(...) NULL),
-      normalize = TRUE
+      normalize = TRUE,
+      pkg = pkg
     )
   }, error = function(e) {
     attr(e, "message") <- paste0("aggregate_events failed: ", e$message)
@@ -436,11 +478,12 @@ merge_results.hrfdecoder_model <- function(obj, result_set, indices, id, ...) {
 
   # Optional fast metrics via hrfdecoder (kept separate to avoid breaking callers)
   metrics_tbl <- NULL
-  if (requireNamespace("hrfdecoder", quietly = TRUE)) {
+  pkg <- .hrfdecoder_backend_package()
+  if (!is.null(pkg)) {
     # Select metrics requested or use defaults
     req_metrics <- obj$metrics %||% c("auc_ovo", "accuracy")
     metrics_tbl <- tryCatch(
-      hrfdecoder::hrf_metrics(probs, y_true, metrics = req_metrics),
+      .hrfdecoder_call("hrf_metrics", probs, y_true, metrics = req_metrics, pkg = pkg),
       error = function(...) NULL
     )
   }
@@ -542,4 +585,11 @@ output_schema.hrfdecoder_model <- function(model) {
 #' @export
 compute_performance.hrfdecoder_model <- function(obj, result) {
   obj$performance(result)
+}
+
+
+#' @rdname y_train-methods
+#' @export
+y_train.hrfdecoder_model <- function(obj) {
+  y_train(obj$design)
 }

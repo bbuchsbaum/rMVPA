@@ -3,8 +3,8 @@ library(rMVPA)
 
 context("hrfdecoder integration")
 
-# Skip all tests if hrfdecoder not available
-skip_if_not_installed("hrfdecoder")
+# Skip all tests if hrfdecoder backend is not available
+skip_if_no_hrfdecoder_backend()
 skip_if_not_installed("fmridesign")
 skip_if_not_installed("fmrihrf")
 
@@ -173,7 +173,7 @@ test_that("hrfdecoder_model requires hrfdecoder_design", {
 })
 
 test_that("hrfdecoder_model creates proper model spec", {
-  skip_if_not(requireNamespace("hrfdecoder", quietly = TRUE))
+  skip_if_no_hrfdecoder_backend()
 
   # Mock dataset
   train_mat <- matrix(rnorm(120 * 20), 120, 20)
@@ -219,7 +219,7 @@ test_that("hrfdecoder_model creates proper model spec", {
 })
 
 test_that("y_train.hrfdecoder_model returns TR sequence", {
-  skip_if_not(requireNamespace("hrfdecoder", quietly = TRUE))
+  skip_if_no_hrfdecoder_backend()
 
   # Mock dataset with 120 TRs
   train_mat <- matrix(rnorm(120 * 20), 120, 20)
@@ -254,4 +254,59 @@ test_that("y_train.hrfdecoder_model returns TR sequence", {
 
   expect_equal(length(ytrain), 120)  # Number of TRs
   expect_equal(ytrain, 1:120)        # Sequence 1:T
+})
+
+test_that("train_model runs with available backend on small synthetic data", {
+  skip_if_no_hrfdecoder_backend()
+
+  set.seed(1001)
+  Tlen <- 40L
+  V <- 6L
+
+  ymat <- matrix(rnorm(Tlen * V), Tlen, V)
+  yvec <- ymat
+  class(yvec) <- "NeuroVec"
+  mask <- array(1, dim = c(V, 1, 1))
+  class(mask) <- "NeuroVol"
+  dset <- mvpa_dataset(yvec, mask = mask)
+
+  events <- data.frame(
+    onset = c(4, 12, 20, 28),
+    condition = factor(c("A", "B", "A", "B")),
+    run = c(1, 1, 2, 2)
+  )
+  sframe <- fmridesign::sampling_frame(blocklens = c(20, 20), TR = 1)
+  evmod <- fmridesign::event_model(
+    onset ~ fmridesign::hrf(condition, basis = "spmg1"),
+    data = events,
+    block = ~run,
+    sampling_frame = sframe
+  )
+
+  design <- hrfdecoder_design(evmod, events, rep(1:2, each = 20))
+  mspec <- hrfdecoder_model(
+    dataset = dset,
+    design = design,
+    lambda_W = 1,
+    lambda_HRF = 1,
+    lambda_smooth = 1,
+    max_iter = 2,
+    window = c(2, 4)
+  )
+
+  fit <- NULL
+  expect_no_error({
+    fit <- suppressWarnings(
+      train_model(
+        mspec,
+        train_dat = ymat,
+        y = seq_len(Tlen),
+        sl_info = NULL,
+        cv_spec = NULL,
+        indices = seq_len(V)
+      )
+    )
+  })
+  expect_true(inherits(fit, "hrfdecoder_fit_wrap"))
+  expect_false(is.null(fit$fit))
 })
