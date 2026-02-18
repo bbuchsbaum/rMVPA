@@ -2,7 +2,7 @@ test_that("spacenet PDHG has bounded iteration growth on structured data", {
   set.seed(901)
   n <- 200L
   p <- 60L
-  x_raw <- qr.Q(qr(matrix(rnorm(n * p), nrow = n, ncol = p))
+  x_raw <- qr.Q(qr(matrix(rnorm(n * p), nrow = n, ncol = p)))
 
   w_true <- numeric(p)
   w_true[1:6] <- c(1.2, -0.9, 0.7, -0.6, 0.4, 0.3)
@@ -12,7 +12,7 @@ test_that("spacenet PDHG has bounded iteration growth on structured data", {
   fit <- rMVPA:::.spacenet_pdhg_solver(
     X = x_raw,
     y = y,
-    alpha = 0.01,
+    alpha = 0.005,
     l1_ratio = 0.8,
     edges = matrix(integer(0), nrow = 0L, ncol = 2L),
     d_norm2 = 0L,

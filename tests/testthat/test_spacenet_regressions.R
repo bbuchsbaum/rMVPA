@@ -1,7 +1,7 @@
 test_that("Regression: grouped feature screening preserves duplicate feature_id groups", {
   set.seed(811)
   n_obs <- 90L
-  n_groups <- 20L
+  n_groups <- 30L
   group_size <- 5L
   p <- n_groups * group_size
 
