@@ -1167,7 +1167,6 @@ do_resampled <- function(model_spec, radius, niter,
 }
 
 
-
 #' Perform standard searchlight analysis
 #'
 #' This function performs standard searchlight analysis using a specified model and radius.
@@ -1184,6 +1183,7 @@ do_resampled <- function(model_spec, radius, niter,
 do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=combine_standard, ...,
                         k = NULL, drop_probs = FALSE, fail_fast = FALSE,
                         backend = c("default", "shard", "auto")) {
+  profile_enabled <- isTRUE(getOption("rMVPA.profile_searchlight", FALSE))
   backend <- match.arg(backend)
   model_spec <- configure_runtime_backend(
     model_spec, backend = backend, context = "do_standard"
@@ -1193,7 +1193,8 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   flog.info("creating standard searchlight")
   t_sl_create <- proc.time()[3]
   slight <- get_searchlight(model_spec$dataset, "standard", radius, k = k)
-  flog.debug("get_searchlight (standard) took %.3f sec", proc.time()[3] - t_sl_create)
+  setup_elapsed <- proc.time()[3] - t_sl_create
+  flog.debug("get_searchlight (standard) took %.3f sec", setup_elapsed)
 
   t_iterate <- proc.time()[3]
   cind <- get_center_ids(model_spec$dataset)
@@ -1201,8 +1202,10 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   flog.info("running standard searchlight iterator")
   ret <- mvpa_fun(model_spec, slight, cind, analysis_type=atype,
                   drop_probs = drop_probs, fail_fast = fail_fast, ...)
+  iterate_elapsed <- proc.time()[3] - t_iterate
+  iterate_timing <- attr(ret, "timing")
   flog.debug("mvpa_iterate (standard searchlight) took %.3f sec",
-             proc.time()[3] - t_iterate)
+             iterate_elapsed)
   good_results <- ret %>% dplyr::filter(!error)
   bad_results <- ret %>% dplyr::filter(error == TRUE)
   
@@ -1231,8 +1234,20 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   } else {
     out <- combiner(model_spec, good_results, bad_results)
   }
-  flog.debug("Combiner took %.3f sec", proc.time()[3] - t_combine)
+  combine_elapsed <- proc.time()[3] - t_combine
+  flog.debug("Combiner took %.3f sec", combine_elapsed)
   attr(out, "bad_results") <- bad_results
+  if (profile_enabled) {
+    attr(out, "timing") <- list(
+      setup_seconds = as.numeric(setup_elapsed),
+      iterate_seconds = as.numeric(iterate_elapsed),
+      combine_seconds = as.numeric(combine_elapsed),
+      n_centers = length(cind),
+      n_good_results = nrow(good_results),
+      n_bad_results = nrow(bad_results),
+      iterate = iterate_timing
+    )
+  }
   out
 }
 
@@ -1278,10 +1293,24 @@ run_searchlight_base <- function(model_spec,
                                  combiner = "average",
                                  drop_probs = FALSE,
                                  fail_fast = FALSE,
+                                 engine = NULL,
                                  k = NULL,
                                  backend = c("default", "shard", "auto"),
                                  verbose = FALSE,
                                  ...) {
+
+  if (!is.null(engine)) {
+    requested_engine <- .match_searchlight_engine(engine)
+    if (!identical(requested_engine, "legacy")) {
+      stop(
+        sprintf(
+          "run_searchlight_base() executes the legacy iterator only. Use run_searchlight(..., engine='%s') for explicit engine dispatch.",
+          requested_engine
+        ),
+        call. = FALSE
+      )
+    }
+  }
 
   
   backend <- match.arg(backend)
@@ -1369,8 +1398,30 @@ run_searchlight_base <- function(model_spec,
                  drop_probs = drop_probs, fail_fast = fail_fast, backend = backend,
                  verbose = verbose, ...)
   }
-  
+
+  if (is.null(attr(res, "searchlight_engine", exact = TRUE))) {
+    attr(res, "searchlight_engine") <- "legacy"
+  }
+
   res
+}
+
+#' @keywords internal
+#' @noRd
+.resolve_searchlight_backend <- function(backend = c("default", "shard", "auto"),
+                                         missing_backend = FALSE,
+                                         option_name = "rMVPA.searchlight_backend_default") {
+  allowed <- c("default", "shard", "auto")
+
+  if (!isTRUE(missing_backend)) {
+    return(match.arg(backend, allowed))
+  }
+
+  opt <- .resolve_searchlight_backend_default_option(option_name = option_name)
+  if (!is.character(opt) || length(opt) != 1L || !(opt %in% allowed)) {
+    return("auto")
+  }
+  opt
 }
 
 #' Default method for run_searchlight
@@ -1392,18 +1443,58 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
                                     fail_fast = FALSE, k = NULL,
                                     backend = c("default", "shard", "auto"),
                                     verbose = FALSE, ...) {
-  run_searchlight_base(
-    model_spec    = model_spec,
-    radius        = radius,
-    method        = method,
-    niter         = niter,
-    combiner      = combiner,
-    drop_probs    = drop_probs,
-    fail_fast     = fail_fast,
-    k             = k,
-    backend       = backend,
-    verbose       = verbose,
-    ...
+  backend <- .resolve_searchlight_backend(backend = backend, missing_backend = missing(backend))
+  method <- match.arg(method)
+  dots <- list(...)
+
+  incremental <- if ("incremental" %in% names(dots)) isTRUE(dots$incremental) else TRUE
+  gamma <- if ("gamma" %in% names(dots)) as.numeric(dots$gamma)[1] else NULL
+  engine <- if ("engine" %in% names(dots)) dots$engine else "auto"
+  dots$incremental <- NULL
+  dots$gamma <- NULL
+  dots$engine <- NULL
+
+  engine_ret <- do.call(
+    .run_searchlight_engine,
+    c(
+      list(
+        model_spec = model_spec,
+        radius = radius,
+        method = method,
+        engine = engine,
+        niter = niter,
+        combiner = combiner,
+        drop_probs = drop_probs,
+        fail_fast = fail_fast,
+        backend = backend,
+        incremental = incremental,
+        gamma = gamma,
+        verbose = verbose
+      ),
+      dots
+    )
+  )
+  if (is.list(engine_ret) && isTRUE(engine_ret$handled)) {
+    return(engine_ret$result)
+  }
+
+  do.call(
+    run_searchlight_base,
+    c(
+      list(
+        model_spec = model_spec,
+        radius = radius,
+        method = method,
+        niter = niter,
+        combiner = combiner,
+        drop_probs = drop_probs,
+        fail_fast = fail_fast,
+        k = k,
+        backend = backend,
+        verbose = verbose
+      ),
+      dots
+    )
   )
 }
 
