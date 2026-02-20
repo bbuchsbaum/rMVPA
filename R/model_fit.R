@@ -470,6 +470,8 @@ predict.list_model <- function(object, newdata=NULL,...) {
 #' @method train_model mvpa_model
 #' @export
 train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
+  dots <- list(...)
+  quiet_error <- isTRUE(dots$quiet_error)
   
   tryCatch({
     futile.logger::flog.debug("Starting train_model with data dimensions: %s", 
@@ -575,7 +577,11 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
     model_fit(obj$model, y, fit, mtype, best_param, indices, feature_mask)
     
   }, error = function(e) {
-    futile.logger::flog.error("train_model failed: %s", e$message)
+    if (quiet_error) {
+      futile.logger::flog.debug("train_model failed: %s", e$message)
+    } else {
+      futile.logger::flog.error("train_model failed: %s", e$message)
+    }
     futile.logger::flog.debug("Data dimensions: %s", paste(dim(train_dat), collapse=" x "))
     futile.logger::flog.debug("Response levels: %s", paste(levels(y), collapse=", "))
     stop(e$message)  # Re-throw the error after logging

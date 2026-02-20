@@ -395,7 +395,12 @@ process_roi_default <- function(mod_spec, roi, rnum, center_global_id = NA, ...)
   # It runs train_model and then passes the result to merge_results
   # for final performance computation and formatting.
 
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair=.name_repair)
+  xtrain_mat <- as.matrix(neuroim2::values(roi$train_roi))
+  xtrain <- if (.matrix_first_roi_enabled()) {
+    xtrain_mat
+  } else {
+    tibble::as_tibble(xtrain_mat, .name_repair=.name_repair)
+  }
   ind <- indices(roi$train_roi)
   
   # Determine center_local_id based on center_global_id
@@ -423,7 +428,8 @@ process_roi_default <- function(mod_spec, roi, rnum, center_global_id = NA, ...)
       train_args$cv_spec <- mod_spec$crossval
     }
   }
-  train_result_obj <- try(do.call(train_model, train_args))
+  train_args$quiet_error <- TRUE
+  train_result_obj <- try(do.call(train_model, train_args), silent = TRUE)
   
   # Prepare a result set structure for merge_results
   if (inherits(train_result_obj, "try-error")) {
@@ -953,6 +959,12 @@ predict_model <- function(object, fit, newdata, ...) {
 #' @keywords internal
 #' @noRd
 .name_repair = ~ vctrs::vec_as_names(..., repair = "unique", quiet = TRUE)
+
+#' @keywords internal
+#' @noRd
+.matrix_first_roi_enabled <- function() {
+  TRUE
+}
 
 #' Run Searchlight Analysis
 #'

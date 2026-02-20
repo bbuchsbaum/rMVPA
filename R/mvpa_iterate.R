@@ -44,6 +44,90 @@ generate_crossval_samples <- function(mspec, roi) {
   crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="minimal"), y_train(mspec))
 }
 
+#' @keywords internal
+#' @noRd
+.fold_cache_enabled <- function() {
+  TRUE
+}
+
+#' @keywords internal
+#' @noRd
+.fold_cache_supported_cv <- function(cv_spec) {
+  inherits(cv_spec, c(
+    "blocked_cross_validation",
+    "kfold_cross_validation",
+    "custom_cross_validation"
+  ))
+}
+
+#' @keywords internal
+#' @noRd
+.build_cv_fold_cache <- function(mspec) {
+  if (is.null(mspec$crossval) || !.fold_cache_supported_cv(mspec$crossval)) {
+    return(NULL)
+  }
+  if (!.fold_cache_enabled()) {
+    return(NULL)
+  }
+
+  y <- y_train(mspec)
+  if (is.null(y)) {
+    return(NULL)
+  }
+  n_obs <- if (is.matrix(y)) nrow(y) else length(y)
+  if (is.null(n_obs) || n_obs < 2L) {
+    return(NULL)
+  }
+
+  index_frame <- tibble::tibble(.row = seq_len(n_obs))
+  folds <- crossval_samples(mspec$crossval, index_frame, y)
+  if (nrow(folds) == 0L) {
+    return(NULL)
+  }
+
+  train_idx <- lapply(folds$train, function(x) as.integer(x$idx))
+  test_idx <- lapply(folds$test, function(x) as.integer(x$idx))
+  fold_id <- if (".id" %in% names(folds)) as.character(folds$.id) else as.character(seq_len(nrow(folds)))
+
+  list(
+    cv_class = class(mspec$crossval),
+    y = y,
+    n_obs = as.integer(n_obs),
+    train_idx = train_idx,
+    test_idx = test_idx,
+    ytrain = lapply(train_idx, function(idx) subset_y(y, idx)),
+    ytest = lapply(test_idx, function(idx) subset_y(y, idx)),
+    fold_id = fold_id
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.resolve_cv_fold_cache <- function(mspec, n_obs) {
+  if (!.fold_cache_enabled()) {
+    return(NULL)
+  }
+  cache <- mspec$.cv_fold_cache
+  if (is.null(cache) || !is.list(cache)) {
+    return(NULL)
+  }
+  if (is.null(mspec$crossval) || !identical(cache$cv_class, class(mspec$crossval))) {
+    return(NULL)
+  }
+  if (!identical(as.integer(cache$n_obs), as.integer(n_obs))) {
+    return(NULL)
+  }
+  y <- y_train(mspec)
+  if (!identical(cache$y, y)) {
+    return(NULL)
+  }
+  if (is.null(cache$train_idx) || is.null(cache$test_idx) || is.null(cache$fold_id)) {
+    return(NULL)
+  }
+
+  cache
+}
+
 #' @noRd
 #' @keywords internal
 handle_model_training_error <- function(result, id, ytest) {
@@ -71,6 +155,21 @@ create_result_tibble <- function(cres, ind, mspec, id, result, compute_performan
 }
 
 
+#' @keywords internal
+#' @noRd
+.extract_sample_indices <- function(x) {
+  if (is.null(x)) {
+    return(integer())
+  }
+  if (inherits(x, "resample") && !is.null(x$idx)) {
+    return(as.integer(x$idx))
+  }
+  if (is.list(x) && !is.null(x$idx)) {
+    return(as.integer(x$idx))
+  }
+  as.integer(x)
+}
+
 
 #' External Cross-Validation
 #'
@@ -86,9 +185,21 @@ create_result_tibble <- function(cres, ind, mspec, id, result, compute_performan
 #' @noRd
 #' @keywords internal
 #' @importFrom stats predict
-external_crossval <- function(mspec, roi, id, center_global_id = NA, ...) {
+external_crossval <- function(mspec, roi, id, center_global_id = NA,
+                              xtrain_mat = NULL, xtest_mat = NULL, ind = NULL, ...) {
+  matrix_first <- .matrix_first_roi_enabled()
+
   # Prepare the training data
-  xtrain <- tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="minimal")
+  xtrain_mat <- if (is.null(xtrain_mat)) {
+    as.matrix(neuroim2::values(roi$train_roi))
+  } else {
+    xtrain_mat
+  }
+  xtrain <- if (matrix_first) {
+    xtrain_mat
+  } else {
+    tibble::as_tibble(xtrain_mat, .name_repair="minimal")
+  }
 
   ytrain <- y_train(mspec)
  
@@ -96,7 +207,9 @@ external_crossval <- function(mspec, roi, id, center_global_id = NA, ...) {
   ytest <- y_test(mspec)
 
   # Get the ROI indices
-  ind <- neuroim2::indices(roi$train_roi)
+  if (is.null(ind)) {
+    ind <- neuroim2::indices(roi$train_roi)
+  }
 
   # Determine center_local_id based on center_global_id
   center_local_id <- NA
@@ -128,7 +241,8 @@ external_crossval <- function(mspec, roi, id, center_global_id = NA, ...) {
   # Pass sl_info and other dots
   dots <- list(...)
   result <- try(do.call(train_model, c(list(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, 
-                                          tune_reps=mspec$tune_reps, sl_info = sl_info), dots)))
+                                          tune_reps=mspec$tune_reps, sl_info = sl_info, quiet_error = TRUE), dots)),
+                silent = TRUE)
   
  
 
@@ -141,7 +255,17 @@ external_crossval <- function(mspec, roi, id, center_global_id = NA, ...) {
                    fit=list(NULL), error=TRUE, error_message=emessage)
   } else {
     # Make predictions using the trained model
-    pred <- predict(result, tibble::as_tibble(neuroim2::values(roi$test_roi), .name_repair="minimal"), NULL)
+    xtest_mat <- if (is.null(xtest_mat)) {
+      as.matrix(neuroim2::values(roi$test_roi))
+    } else {
+      xtest_mat
+    }
+    xtest <- if (matrix_first) {
+      xtest_mat
+    } else {
+      tibble::as_tibble(xtest_mat, .name_repair="minimal")
+    }
+    pred <- predict(result, xtest, NULL)
     # Convert predictions to a list
     plist <- lapply(pred, list)
     plist$y_true <- list(ytest)
@@ -221,15 +345,32 @@ external_crossval <- function(mspec, roi, id, center_global_id = NA, ...) {
 #'
 #' @keywords internal
 #' @noRd
-internal_crossval <- function(mspec, roi, id, center_global_id = NA) {
-  
-  # Generate cross-validation samples
-  # Note: This step could potentially be moved outside the function
-  samples <- crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), 
-                                                                .name_repair=.name_repair), y_train(mspec))
+internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NULL, ind = NULL, ...) {
+  matrix_first <- .matrix_first_roi_enabled()
+  x_all <- if (is.null(x_all)) as.matrix(neuroim2::values(roi$train_roi)) else x_all
+  cv_cache <- .resolve_cv_fold_cache(mspec, n_obs = nrow(x_all))
+
+  # Generate cross-validation samples when no compatible cache is available.
+  samples <- if (is.null(cv_cache)) {
+    crossval_samples(
+      mspec$crossval,
+      tibble::as_tibble(x_all, .name_repair = .name_repair),
+      y_train(mspec)
+    )
+  } else {
+    tibble::tibble(
+      ytrain = cv_cache$ytrain,
+      ytest = cv_cache$ytest,
+      train = cv_cache$train_idx,
+      test = cv_cache$test_idx,
+      .id = cv_cache$fold_id
+    )
+  }
 
   # Get ROI indices (all global indices in this searchlight/region)
-  ind <- neuroim2::indices(roi$train_roi)
+  if (is.null(ind)) {
+    ind <- neuroim2::indices(roi$train_roi)
+  }
   
   # Determine the LOCAL index corresponding to the GLOBAL center ID, if provided
   center_local_id <- NA # Default to NA
@@ -261,22 +402,55 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA) {
 
   # Iterate through the samples and fit the model
   ret <- samples %>% pmap(function(ytrain, ytest, train, test, .id) {
+    train_ind <- .extract_sample_indices(train)
+    test_ind <- .extract_sample_indices(test)
+
+    use_matrix_path <- matrix_first && length(train_ind) > 0L && length(test_ind) > 0L
+    if (isTRUE(use_matrix_path) || !is.null(cv_cache)) {
+      train_mat <- x_all[train_ind, , drop = FALSE]
+      test_mat <- x_all[test_ind, , drop = FALSE]
+    }
+
+    train_input <- if (isTRUE(use_matrix_path)) {
+      train_mat
+    } else if (!is.null(cv_cache)) {
+      tibble::as_tibble(train_mat, .name_repair=.name_repair)
+    } else {
+      tibble::as_tibble(train, .name_repair=.name_repair)
+    }
+
+    test_input <- if (isTRUE(use_matrix_path)) {
+      test_mat
+    } else if (!is.null(cv_cache)) {
+      tibble::as_tibble(test_mat, .name_repair=.name_repair)
+    } else {
+      test
+    }
+
+    if (length(test_ind) == 0L) {
+      test_ind <- as.integer(seq_len(length(ytest)))
+    }
+
     # Check if the number of features is less than 2
-    if (ncol(train) < 2) {
+    if (ncol(train_input) < 2) {
       # Return an error message
       return(
-        format_result(mspec, NULL, error_message="error: less than 2 features", context=list(roi=roi, ytrain=ytrain, ytest=ytest, train=train, test=test, .id=.id))
+        format_result(mspec, NULL, error_message="error: less than 2 features",
+                      context=list(roi=roi, ytrain=ytrain, ytest=ytest,
+                                   train=train_input, test=test_input, test_ind=test_ind, .id=.id))
       )
     }
 
    
     # Train the model - NOW PASSING sl_info
     result <- try(train_model(mspec, 
-                              tibble::as_tibble(train, .name_repair=.name_repair), 
+                              train_input, 
                               ytrain,
                               sl_info = sl_info, # Pass sl_info here
                               cv_spec = mspec$crossval, # Pass cv_spec if needed by the train method
-                              indices=ind)) # indices might still be useful for some models
+                              indices=ind,
+                              quiet_error = TRUE), # indices might still be useful for some models
+                  silent = TRUE)
    
 
     # Check if there was an error during model fitting
@@ -284,10 +458,14 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA) {
       flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
       # Store error messages
       emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
-      format_result(mspec, result=NULL, error_message=emessage, context=list(roi=roi, ytrain=ytrain, ytest=ytest, train=train, test=test, .id=.id))
+      format_result(mspec, result=NULL, error_message=emessage,
+                    context=list(roi=roi, ytrain=ytrain, ytest=ytest,
+                                 train=train_input, test=test_input, test_ind=test_ind, .id=.id))
     } else {
       # Predict on test data
-      format_result(mspec, result, error_message=NULL, context=list(roi=roi, ytrain=ytrain, ytest=ytest, train=train, test=test, .id=.id))
+      format_result(mspec, result, error_message=NULL,
+                    context=list(roi=roi, ytrain=ytrain, ytest=ytest,
+                                 train=train_input, test=test_input, test_ind=test_ind, .id=.id))
     }
   }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
   
@@ -320,6 +498,87 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
   }
 
   r
+}
+
+#' @keywords internal
+#' @noRd
+.batch_bounds <- function(n_items, batch_size) {
+  start <- seq.int(1L, n_items, by = batch_size)
+  end <- pmin.int(start + batch_size - 1L, n_items)
+  list(start = start, end = end)
+}
+
+#' @keywords internal
+#' @noRd
+.prepare_batch_frame <- function(mod_spec, dset, vox_batch, batch_positions,
+                                 batch_rnums, analysis_type, use_shard_backend,
+                                 min_voxels_required) {
+  size <- as.integer(vapply(vox_batch, length, integer(1)))
+  keep_idx <- which(size >= min_voxels_required)
+  n_after_size_filter <- length(keep_idx)
+
+  if (n_after_size_filter == 0L) {
+    return(list(
+      frame = tibble::tibble(),
+      n_after_size_filter = 0L,
+      get_samples_seconds = 0,
+      roi_extract_seconds = 0
+    ))
+  }
+
+  kept_positions <- as.integer(batch_positions[keep_idx])
+  kept_rnums <- batch_rnums[keep_idx]
+  kept_sizes <- size[keep_idx]
+
+  t_get_samples <- proc.time()[3]
+  sf_samples <- get_samples(mod_spec$dataset, vox_batch[keep_idx])
+  get_samples_elapsed <- proc.time()[3] - t_get_samples
+
+  extract_elapsed <- 0
+  if (use_shard_backend) {
+    sf <- tibble::tibble(
+      .id = kept_positions,
+      rnum = kept_rnums,
+      sample = sf_samples$sample,
+      size = kept_sizes
+    )
+  } else {
+    sample_list <- sf_samples$sample
+    roi_list <- vector("list", n_after_size_filter)
+    t_extract_roi <- proc.time()[3]
+    if (analysis_type == "searchlight") {
+      for (k in seq_len(n_after_size_filter)) {
+        roi_list[[k]] <- extract_roi(
+          sample_list[[k]],
+          dset,
+          center_global_id = kept_rnums[[k]],
+          min_voxels = min_voxels_required
+        )
+      }
+    } else {
+      for (k in seq_len(n_after_size_filter)) {
+        roi_list[[k]] <- extract_roi(
+          sample_list[[k]],
+          dset,
+          min_voxels = min_voxels_required
+        )
+      }
+    }
+    extract_elapsed <- proc.time()[3] - t_extract_roi
+    sf <- tibble::tibble(
+      .id = kept_positions,
+      rnum = kept_rnums,
+      roi = roi_list,
+      size = kept_sizes
+    )
+  }
+
+  list(
+    frame = sf,
+    n_after_size_filter = as.integer(n_after_size_filter),
+    get_samples_seconds = as.numeric(get_samples_elapsed),
+    roi_extract_seconds = as.numeric(extract_elapsed)
+  )
 }
   
 #' Iterate MVPA Analysis Over Multiple ROIs
@@ -386,6 +645,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                          drop_probs = FALSE,
                          fail_fast = FALSE) {
   setup_mvpa_logger()
+  profile_enabled <- isTRUE(getOption("rMVPA.profile_searchlight", FALSE))
 
   if (length(vox_list) == 0) {
     futile.logger::flog.warn("Empty voxel list provided. No analysis to perform.")
@@ -414,13 +674,14 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
       }
     }
     batch_size <- max(1L, min(as.integer(batch_size), length(ids)))
-    nbatches <- ceiling(length(ids) / batch_size)
-    batch_group <- sort(rep(1:nbatches, length.out = length(ids)))
-    batch_ids <- split(1:length(ids), batch_group)
-    rnums <- split(ids, batch_group)
+    batch_bounds <- .batch_bounds(length(ids), batch_size)
+    nbatches <- length(batch_bounds$start)
     
     dset <- mod_spec$dataset
     use_shard_backend <- inherits(mod_spec, "shard_model_spec")
+    if (!has_test_set(mod_spec)) {
+      mod_spec$.cv_fold_cache <- .build_cv_fold_cache(mod_spec)
+    }
 
     if (use_shard_backend) {
       on.exit(shard_cleanup(mod_spec$shard_data), add = TRUE)
@@ -432,15 +693,36 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     }
     tot <- length(ids)
     
-    results <- vector("list", length(batch_ids))
+    results <- vector("list", nbatches)
     skipped_rois <- 0
     processed_rois <- 0
+    timing <- if (profile_enabled) {
+      list(
+        analysis_type = analysis_type,
+        backend = if (use_shard_backend) "shard" else "default",
+        n_workers = nworkers,
+        n_batches = nbatches,
+        total_rois = tot,
+        batch = vector("list", nbatches),
+        totals = list(
+          get_samples_seconds = 0,
+          roi_extract_seconds = 0,
+          run_future_seconds = 0,
+          batch_seconds = 0
+        )
+      )
+    } else {
+      NULL
+    }
     
-    for (i in seq_along(batch_ids)) {
+    for (i in seq_len(nbatches)) {
       tryCatch({
         batch_t0 <- proc.time()[3]
+        batch_positions <- seq.int(batch_bounds$start[[i]], batch_bounds$end[[i]])
+        batch_rnums <- ids[batch_positions]
+        vlist <- vox_list[batch_positions]
         if (verbose) {
-          batch_size_current <- length(batch_ids[[i]])
+          batch_size_current <- length(batch_positions)
           futile.logger::flog.info("Processing batch %s/%s (%s ROIs in this batch)", 
                                   crayon::blue(i), 
                                   crayon::blue(nbatches),
@@ -448,44 +730,41 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
         }
 
         # ---- build sample frame (serial) ----
-        t_get_samples <- proc.time()[3]
-        vlist <- vox_list[batch_ids[[i]]]
-        size <- sapply(vlist, function(v) length(v))
         futile.logger::flog.debug("Processing batch %d with %d voxels", i, length(vlist))
         # Minimum features allowed (relaxed to 1 for searchlight to keep edge spheres)
         min_voxels_required <- if (analysis_type == "searchlight") 1L else 2L
-        sf <- get_samples(mod_spec$dataset, vox_list[batch_ids[[i]]]) %>% 
-          mutate(.id=batch_ids[[i]], rnum=rnums[[i]], size=size) %>% 
-          filter(size >= min_voxels_required)
+        batch_prepared <- .prepare_batch_frame(
+          mod_spec = mod_spec,
+          dset = dset,
+          vox_batch = vlist,
+          batch_positions = batch_positions,
+          batch_rnums = batch_rnums,
+          analysis_type = analysis_type,
+          use_shard_backend = use_shard_backend,
+          min_voxels_required = min_voxels_required
+        )
+        sf <- batch_prepared$frame
+        n_sf_after_size_filter <- batch_prepared$n_after_size_filter
+        get_samples_elapsed <- batch_prepared$get_samples_seconds
+        extract_elapsed <- batch_prepared$roi_extract_seconds
+
         futile.logger::flog.debug("Batch %d: get_samples + filter(size>=%d) took %.3f sec",
-                                  i, min_voxels_required, proc.time()[3] - t_get_samples)
+                                  i, min_voxels_required, get_samples_elapsed)
         
-        futile.logger::flog.debug("Sample frame has %d rows after filtering", nrow(sf))
+        futile.logger::flog.debug("Sample frame has %d rows after filtering", n_sf_after_size_filter)
+        n_sf <- 0L
+        run_future_elapsed <- 0
         
-        if (nrow(sf) > 0) {
-        if (use_shard_backend) {
-          # ---- shard path: skip serial ROI extraction ----
-          # Workers will extract ROIs from shared memory in run_future.shard_model_spec.
-          # Keep the 'sample' column (data_sample with $vox indices).
-          futile.logger::flog.debug("Batch %d: shard backend active, skipping serial ROI extraction", i)
-        } else {
-          # ---- default path: ROI extraction (serial) ----
-          t_extract_roi <- proc.time()[3]
-          # For searchlight, pass center_global_id to preserve center during filtering
-          if (analysis_type == "searchlight") {
-            sf <- sf %>%
-              rowwise() %>%
-              mutate(roi=list(extract_roi(sample, dset, center_global_id = rnum, min_voxels = min_voxels_required))) %>%
-              select(-sample)
+        if (n_sf_after_size_filter > 0) {
+          if (use_shard_backend) {
+            # ---- shard path: skip serial ROI extraction ----
+            # Workers will extract ROIs from shared memory in run_future.shard_model_spec.
+            # Keep the 'sample' column (data_sample with $vox indices).
+            futile.logger::flog.debug("Batch %d: shard backend active, skipping serial ROI extraction", i)
           } else {
-            sf <- sf %>%
-              rowwise() %>%
-              mutate(roi=list(extract_roi(sample, dset, min_voxels = min_voxels_required))) %>%
-              select(-sample)
+            futile.logger::flog.debug("Batch %d: ROI extraction (extract_roi) took %.3f sec",
+                                      i, extract_elapsed)
           }
-          futile.logger::flog.debug("Batch %d: ROI extraction (extract_roi) took %.3f sec",
-                                    i, proc.time()[3] - t_extract_roi)
-        }
 
           n_sf <- nrow(sf)
           # ---- parallel processing via run_future ----
@@ -494,8 +773,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                                      analysis_type = analysis_type,
                                      drop_probs = drop_probs,
                                      fail_fast = fail_fast)
+          run_future_elapsed <- proc.time()[3] - t_run_future
           futile.logger::flog.debug("Batch %d: run_future (parallel section) took %.3f sec",
-                                    i, proc.time()[3] - t_run_future)
+                                    i, run_future_elapsed)
           processed_rois <- processed_rois + n_sf
           
           futile.logger::flog.debug("Batch %d produced %d results", i, nrow(results[[i]]))
@@ -503,10 +783,12 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           # Free batch-local ROI data so it doesn't linger until the next
           # iteration reassigns sf.  run_future already freed its copy of
           # the frame; this drops the main-process reference.
-          rm(sf, vlist)
+          sf <- NULL
+          batch_prepared <- NULL
+          vlist <- NULL
           gc(FALSE)
         } else {
-          skipped_rois <- skipped_rois + length(batch_ids[[i]])
+          skipped_rois <- skipped_rois + length(batch_positions)
           futile.logger::flog.warn("%s Batch %s: All ROIs filtered out (size < 2 voxels)", 
                                   crayon::yellow("!"),
                                   crayon::blue(i))
@@ -514,11 +796,28 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
             result = list(NULL),
             indices = list(NULL),
             performance = list(NULL),
-            id = rnums[[i]],
+            id = batch_rnums,
             error = TRUE,
             error_message = "ROI filtered out (size < 2 voxels)",
             warning = TRUE,
             warning_message = "ROI filtered out (size < 2 voxels)"
+          )
+        }
+        batch_elapsed <- proc.time()[3] - batch_t0
+        if (profile_enabled) {
+          timing$totals$get_samples_seconds <- timing$totals$get_samples_seconds + get_samples_elapsed
+          timing$totals$roi_extract_seconds <- timing$totals$roi_extract_seconds + extract_elapsed
+          timing$totals$run_future_seconds <- timing$totals$run_future_seconds + run_future_elapsed
+          timing$totals$batch_seconds <- timing$totals$batch_seconds + batch_elapsed
+          timing$batch[[i]] <- list(
+            batch_index = i,
+            n_rois_requested = length(batch_positions),
+            n_rois_after_size_filter = as.integer(n_sf_after_size_filter),
+            n_rois_processed = as.integer(n_sf),
+            get_samples_seconds = as.numeric(get_samples_elapsed),
+            roi_extract_seconds = as.numeric(extract_elapsed),
+            run_future_seconds = as.numeric(run_future_elapsed),
+            batch_seconds = as.numeric(batch_elapsed)
           )
         }
         
@@ -537,6 +836,11 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
   final_results <- dplyr::bind_rows(results)
   rm(results)
   gc()
+  if (profile_enabled) {
+    timing$processed_rois <- processed_rois
+    timing$skipped_rois <- skipped_rois
+    attr(final_results, "timing") <- timing
+  }
   return(final_results)
   }, error = function(e) {
     futile.logger::flog.error("mvpa_iterate failed: %s", e$message)
@@ -600,30 +904,27 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
   # Each chunk becomes one future; items within a chunk run serially
   # on a single worker.  We target ~4 chunks per worker for good load
   # balancing while keeping scheduling overhead reasonable.
-  # Set options(rMVPA.chunk_size = N) to override:
-  #   1   = maximum parallelism, one future per ROI (high overhead)
-  #   Inf = original furrr behaviour (fewest futures, highest memory)
-  chunk_size <- getOption("rMVPA.chunk_size", NULL)
-  if (is.null(chunk_size)) {
-    nworkers <- future::nbrOfWorkers()
-    chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
-  }
+  nworkers <- future::nbrOfWorkers()
+  chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
 
-  do_fun <- if (is.null(processor)) {
-    function(obj, roi, rnum, center_global_id = NA) {
+  if (is.null(processor)) {
+    do_fun <- function(obj, roi, rnum, center_global_id = NA) {
       process_roi(obj, roi, rnum, center_global_id = center_global_id)
     }
+    supports_center <- TRUE
   } else {
-    processor
+    do_fun <- processor
+    fmls <- tryCatch(names(formals(do_fun)), error = function(...) character(0))
+    supports_center <- "center_global_id" %in% fmls || "..." %in% fmls
   }
 
-  invoke_processor <- function(fun, obj, roi, rnum, center_global_id) {
-    fmls <- tryCatch(names(formals(fun)), error = function(...) character(0))
-    supports_center <- "center_global_id" %in% fmls || "..." %in% fmls
-    if (supports_center) {
-      fun(obj, roi, rnum, center_global_id = center_global_id)
-    } else {
-      fun(obj, roi, rnum)
+  if (supports_center) {
+    invoke_processor <- function(obj, roi, rnum, center_global_id) {
+      do_fun(obj, roi, rnum, center_global_id = center_global_id)
+    }
+  } else {
+    invoke_processor <- function(obj, roi, rnum, center_global_id) {
+      do_fun(obj, roi, rnum)
     }
   }
 
@@ -658,32 +959,28 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
         center_global_id_to_pass <- if (analysis_type == "searchlight") rnum else NA
 
         # Pass center_global_id when the processor supports it.
-        result <- invoke_processor(do_fun, obj, roi, rnum, center_global_id_to_pass)
+        result <- invoke_processor(obj, roi, rnum, center_global_id_to_pass)
 
         if (!obj$return_predictions) {
-          result <- result %>% mutate(result = list(NULL))
+          result$result <- list(NULL)
         }
         # Optionally drop dense per-ROI probability matrices after performance
         # has been computed, keeping only prob_observed (one number per trial).
         if (drop_probs) {
-          result <- result %>%
-            dplyr::mutate(
-              prob_observed = purrr::map(result, function(res) {
-                if (is.null(res)) return(NULL)
-                if (!is.null(res$probs)) {
-                  tryCatch(prob_observed(res), error = function(e) NULL)
-                } else {
-                  NULL
-                }
-              }),
-              result = purrr::map(result, function(res) {
-                if (is.null(res)) return(NULL)
-                if (!is.null(res$probs)) {
-                  res$probs <- NULL
-                }
-                res
-              })
-            )
+          res_list <- result$result
+          prob_vals <- vector("list", length(res_list))
+          for (j in seq_along(res_list)) {
+            res_j <- res_list[[j]]
+            if (is.null(res_j) || is.null(res_j$probs)) {
+              prob_vals[[j]] <- NULL
+              next
+            }
+            prob_vals[[j]] <- tryCatch(prob_observed(res_j), error = function(e) NULL)
+            res_j$probs <- NULL
+            res_list[[j]] <- res_j
+          }
+          result$prob_observed <- prob_vals
+          result$result <- res_list
         }
 
         result
