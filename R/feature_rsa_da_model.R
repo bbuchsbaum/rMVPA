@@ -189,13 +189,14 @@ feature_rsa_da_model <- function(dataset,
 
   out["voxel_correlation"] <- tryCatch(
     stats::cor(as.vector(predicted[, valid_col, drop = FALSE]),
-               as.vector(observed[, valid_col, drop = FALSE])),
+               as.vector(observed[, valid_col, drop = FALSE]),
+               use = "pairwise.complete.obs"),
     error = function(e) NA_real_
   )
 
   if (nrow(observed) > 1L) {
     vt <- vapply(valid_col, function(j) {
-      tryCatch(stats::cor(observed[, j], predicted[, j]), error = function(e) NA_real_)
+      tryCatch(stats::cor(observed[, j], predicted[, j], use = "pairwise.complete.obs"), error = function(e) NA_real_)
     }, numeric(1))
     out["mean_voxelwise_temporal_cor"] <- mean(vt, na.rm = TRUE)
     if (is.nan(out["mean_voxelwise_temporal_cor"])) {
@@ -210,7 +211,7 @@ feature_rsa_da_model <- function(dataset,
   if (length(valid_row) >= 2L) {
     pmat <- predicted[valid_row, valid_col, drop = FALSE]
     omat <- observed[valid_row, valid_col, drop = FALSE]
-    cormat_cond <- tryCatch(stats::cor(t(pmat), t(omat)), error = function(e) NULL)
+    cormat_cond <- tryCatch(stats::cor(t(pmat), t(omat), use = "pairwise.complete.obs"), error = function(e) NULL)
     if (!is.null(cormat_cond)) {
       diag_cors <- diag(cormat_cond)
       out["pattern_correlation"] <- mean(diag_cors, na.rm = TRUE)
@@ -243,8 +244,8 @@ feature_rsa_da_model <- function(dataset,
   if (length(valid_row) >= 3L) {
     pmat <- predicted[valid_row, valid_col, drop = FALSE]
     omat <- observed[valid_row, valid_col, drop = FALSE]
-    pc <- tryCatch(stats::cor(t(pmat)), error = function(e) NULL)
-    oc <- tryCatch(stats::cor(t(omat)), error = function(e) NULL)
+    pc <- tryCatch(stats::cor(t(pmat), use = "pairwise.complete.obs"), error = function(e) NULL)
+    oc <- tryCatch(stats::cor(t(omat), use = "pairwise.complete.obs"), error = function(e) NULL)
     if (!is.null(pc) && !is.null(oc)) {
       prdm <- 1 - pc
       ordm <- 1 - oc

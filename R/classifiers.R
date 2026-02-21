@@ -188,7 +188,7 @@ MVPAModels$pca_lda <- list(
 #' @keywords internal
 #' @noRd
 .dual_lda_row_softmax <- function(scores) {
-  row_max <- apply(scores, 1, max)
+  row_max <- matrixStats::rowMaxs(scores)
   exp_scores <- exp(sweep(scores, 1, row_max, "-"))
   exp_scores / rowSums(exp_scores)
 }
@@ -927,7 +927,7 @@ calculate_log_posteriors <- function(modelFit, newdata) {
 #' @noRd
 .spacenet_softmax <- function(eta) {
   eta <- as.matrix(eta)
-  row_max <- apply(eta, 1L, max)
+  row_max <- matrixStats::rowMaxs(eta)
   ex <- exp(sweep(eta, 1L, row_max, "-"))
   rs <- rowSums(ex)
   rs[!is.finite(rs) | rs <= 0] <- 1

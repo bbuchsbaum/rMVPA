@@ -580,7 +580,8 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
     vr <- which(obs_row_sd > sd_thresh & pred_row_sd > sd_thresh)
     if (length(vr) >= 2) {
       cm <- tryCatch(stats::cor(t(perm_pred[vr, valid_col, drop = FALSE]),
-                                t(observed[vr, valid_col, drop = FALSE])),
+                                t(observed[vr, valid_col, drop = FALSE]),
+                                use = "pairwise.complete.obs"),
                      error = function(e) NULL)
       if (!is.null(cm)) {
         dc  <- diag(cm)
@@ -610,9 +611,11 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 
     ## -- Representational geometry (RDM correlation) --
     if (length(vr) >= 3) {
-      pc <- tryCatch(stats::cor(t(perm_pred[vr, valid_col, drop = FALSE])),
+      pc <- tryCatch(stats::cor(t(perm_pred[vr, valid_col, drop = FALSE]),
+                                use = "pairwise.complete.obs"),
                      error = function(e) NULL)
-      oc <- tryCatch(stats::cor(t(observed[vr, valid_col, drop = FALSE])),
+      oc <- tryCatch(stats::cor(t(observed[vr, valid_col, drop = FALSE]),
+                                use = "pairwise.complete.obs"),
                      error = function(e) NULL)
       if (!is.null(pc) && !is.null(oc)) {
         pd <- 1 - pc
@@ -628,7 +631,8 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 
     ## -- Global reconstruction --
     pvc  <- tryCatch(stats::cor(as.vector(perm_pred[, valid_col, drop = FALSE]),
-                                as.vector(observed[, valid_col, drop = FALSE])),
+                                as.vector(observed[, valid_col, drop = FALSE]),
+                                use = "pairwise.complete.obs"),
                      error = function(e) NA_real_)
     pmse <- mean((perm_pred - observed)^2, na.rm = TRUE)
     prsq <- if (tss > 0) 1 - sum((observed - perm_pred)^2, na.rm = TRUE) / tss else NA_real_
@@ -637,7 +641,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
     pmvtc <- NA_real_
     if (n_rows > 1 && length(valid_col) > 0) {
       pmvtc <- mean(vapply(valid_col, function(j) {
-        tryCatch(stats::cor(observed[, j], perm_pred[, j]), error = function(e) NA_real_)
+        tryCatch(stats::cor(observed[, j], perm_pred[, j], use = "pairwise.complete.obs"), error = function(e) NA_real_)
       }, numeric(1)), na.rm = TRUE)
     }
 
@@ -806,7 +810,7 @@ evaluate_model.feature_rsa_model <- function(object,
   if (length(valid_row) >= 2) {
     pmat <- predicted[valid_row, valid_col, drop = FALSE]
     omat <- observed[valid_row,  valid_col, drop = FALSE]
-    cormat_cond <- stats::cor(t(pmat), t(omat))
+    cormat_cond <- stats::cor(t(pmat), t(omat), use = "pairwise.complete.obs")
 
     diag_cors   <- diag(cormat_cond)
     pattern_cor <- mean(diag_cors, na.rm = TRUE)
@@ -847,8 +851,8 @@ evaluate_model.feature_rsa_model <- function(object,
   if (length(valid_row) >= 3) {
     pmat <- predicted[valid_row, valid_col, drop = FALSE]
     omat <- observed[valid_row,  valid_col, drop = FALSE]
-    pc <- tryCatch(stats::cor(t(pmat)), error = function(e) NULL)
-    oc <- tryCatch(stats::cor(t(omat)), error = function(e) NULL)
+    pc <- tryCatch(stats::cor(t(pmat), use = "pairwise.complete.obs"), error = function(e) NULL)
+    oc <- tryCatch(stats::cor(t(omat), use = "pairwise.complete.obs"), error = function(e) NULL)
     if (!is.null(pc) && !is.null(oc)) {
       prdm <- 1 - pc
       ordm <- 1 - oc
@@ -868,7 +872,7 @@ evaluate_model.feature_rsa_model <- function(object,
   pred_vec <- as.vector(predicted[, valid_col, drop = FALSE])
   obs_vec  <- as.vector(observed[,  valid_col, drop = FALSE])
   voxel_cor <- if (stats::sd(pred_vec) > sd_thresh && stats::sd(obs_vec) > sd_thresh) {
-    stats::cor(pred_vec, obs_vec)
+    stats::cor(pred_vec, obs_vec, use = "pairwise.complete.obs")
   } else {
     NA_real_
   }
@@ -885,7 +889,7 @@ evaluate_model.feature_rsa_model <- function(object,
   if (n_obs > 1 && length(valid_col) > 0) {
     vcors <- vapply(valid_col, function(j) {
       if (stats::sd(observed[, j]) > sd_thresh && stats::sd(predicted[, j]) > sd_thresh) {
-        tryCatch(stats::cor(observed[, j], predicted[, j]), error = function(e) NA_real_)
+        tryCatch(stats::cor(observed[, j], predicted[, j], use = "pairwise.complete.obs"), error = function(e) NA_real_)
       } else {
         NA_real_
       }

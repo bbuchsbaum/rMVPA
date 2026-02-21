@@ -304,7 +304,10 @@ pairwise_dist.robustmahadist <- function(obj, X,...) {
     warning("'robustbase' not installed; falling back to stats::cov.")
     robust_cov <- stats::cov(X)
   }
-  inv_cov <- corpcor::invcov.shrink(robust_cov)
+  inv_cov <- tryCatch(
+    solve(robust_cov + diag(1e-6, ncol(X))),
+    error = function(e) MASS::ginv(robust_cov)
+  )
   
   n <- nrow(X)
   dist_matrix <- matrix(0, n, n)

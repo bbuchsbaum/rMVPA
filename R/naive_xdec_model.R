@@ -259,7 +259,7 @@ print.naive_xdec_model <- function(x, ...) {
 #' @keywords internal
 .nx_softmax <- function(scores) {
   # numerically-stable row-wise softmax
-  m <- apply(scores, 1, max)
+  m <- matrixStats::rowMaxs(scores)
   z <- exp(sweep(scores, 1, m, "-"))
   sweep(z, 1, rowSums(z), "/")
 }
