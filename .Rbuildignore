@@ -32,3 +32,5 @@ test2
 ^tmp_test_vec\.nii$
 ^\.omc$
 ^check\.log$
+^\.\.pdf$
+^\.rcmdcheck_result\.rds$

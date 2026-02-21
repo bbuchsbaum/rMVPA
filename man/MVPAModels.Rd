@@ -34,12 +34,6 @@ Models are accessed via \code{load_model(name)}. Each model specification includ
 
 The \code{spacenet_tvl1} model follows the SpaceNet formulation used in Nilearn.
 }
-\references{
-Gramfort, A., Thirion, B., \& Varoquaux, G. (2013).
-\emph{Identifying predictive regions from fMRI with TV-L1 prior}.
-Pattern Recognition in Neuroimaging (PRNI), IEEE.
-\url{https://inria.hal.science/hal-00839984}
-}
 \examples{
 # Load simple SDA classifier
 model <- load_model("sda_notune")
@@ -47,5 +41,11 @@ model <- load_model("sda_notune")
 # Load correlation classifier
 model <- load_model("corclass")
 
+}
+\references{
+Gramfort, A., Thirion, B., & Varoquaux, G. (2013).
+\emph{Identifying predictive regions from fMRI with TV-L1 prior}.
+Pattern Recognition in Neuroimaging (PRNI), IEEE.
+https://inria.hal.science/hal-00839984
 }
 \keyword{datasets}

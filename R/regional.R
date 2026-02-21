@@ -909,21 +909,24 @@ run_regional.default <- function(model_spec, region_mask,
 #' @details This method provides the standard regional analysis pipeline for objects of class `mvpa_model` by calling `run_regional_base`.
 #' @export
 run_regional.mvpa_model <- function(model_spec, region_mask,
-                                    coalesce_design_vars = FALSE,
-                                    processor = NULL,
-                                    verbose = FALSE,
                                     backend = c("default", "shard", "auto"),
                                     ...) {
-  
-  run_regional_base(
-    model_spec,
-    region_mask,
-    coalesce_design_vars = coalesce_design_vars,
-    processor = processor,
-    verbose = verbose,
-    backend = backend,
-    ...
-  )
+  dots <- list(...)
+  coalesce_design_vars <- dots$coalesce_design_vars %||% FALSE; dots$coalesce_design_vars <- NULL
+  processor <- dots$processor; dots$processor <- NULL
+  verbose <- dots$verbose %||% FALSE; dots$verbose <- NULL
+
+  do.call(run_regional_base, c(
+    list(
+      model_spec,
+      region_mask,
+      coalesce_design_vars = coalesce_design_vars,
+      processor = processor,
+      verbose = verbose,
+      backend = backend
+    ),
+    dots
+  ))
 }
 
 
@@ -935,22 +938,25 @@ run_regional.mvpa_model <- function(model_spec, region_mask,
 #' @details For `rsa_model` objects, `return_predictions` defaults to `FALSE` as standard RSA typically doesn't produce a prediction table in the same way as classification/regression models.
 #' @export
 run_regional.rsa_model <- function(model_spec, region_mask,
-                                   return_fits = FALSE,
-                                   compute_performance = TRUE,
-                                   coalesce_design_vars = FALSE,
                                    backend = c("default", "shard", "auto"),
                                    ...) {
-  
-  run_regional_base(
-    model_spec,
-    region_mask,
-    coalesce_design_vars  = coalesce_design_vars,
-    compute_performance   = compute_performance,
-    return_fits           = return_fits,
-    return_predictions    = FALSE,  # Override default for RSA
-    backend               = backend,
-    ...
-  )
+  dots <- list(...)
+  return_fits <- dots$return_fits %||% FALSE; dots$return_fits <- NULL
+  compute_performance <- dots$compute_performance %||% TRUE; dots$compute_performance <- NULL
+  coalesce_design_vars <- dots$coalesce_design_vars %||% FALSE; dots$coalesce_design_vars <- NULL
+
+  do.call(run_regional_base, c(
+    list(
+      model_spec,
+      region_mask,
+      coalesce_design_vars  = coalesce_design_vars,
+      compute_performance   = compute_performance,
+      return_fits           = return_fits,
+      return_predictions    = FALSE,
+      backend               = backend
+    ),
+    dots
+  ))
 }
 
 #' Regional MVPA for `vector_rsa_model` Objects
@@ -964,13 +970,14 @@ run_regional.rsa_model <- function(model_spec, region_mask,
 #' @importFrom tidyr unnest
 #' @export
 run_regional.vector_rsa_model <- function(model_spec, region_mask,
-                                         return_fits = FALSE,
-                                         compute_performance = TRUE,
-                                         coalesce_design_vars = FALSE, # Usually FALSE for RSA
-                                         processor = NULL,
-                                         verbose = FALSE,
                                          backend = c("default", "shard", "auto"),
                                          ...) {
+  dots <- list(...)
+  return_fits <- dots$return_fits %||% FALSE; dots$return_fits <- NULL
+  compute_performance <- dots$compute_performance %||% TRUE; dots$compute_performance <- NULL
+  coalesce_design_vars <- dots$coalesce_design_vars %||% FALSE; dots$coalesce_design_vars <- NULL
+  processor <- dots$processor; dots$processor <- NULL
+  verbose <- dots$verbose %||% FALSE; dots$verbose <- NULL
   backend <- match.arg(backend)
   model_spec <- configure_runtime_backend(
     model_spec, backend = backend, context = "run_regional.vector_rsa_model"

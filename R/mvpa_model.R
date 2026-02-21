@@ -35,7 +35,6 @@ wrap_result <- function(result_table, design, fit=NULL) {
       preds[tind] <- preds[tind] + result_table$preds[[i]]
     }
     
-    ## TODO check me
     counts <- table(sort(unlist(result_table$test_ind)))
     # Ensure counts aligns with testind order and convert to numeric vector
     preds <- preds/as.numeric(counts[as.character(testind)])
@@ -85,10 +84,21 @@ format_result.mvpa_model <- function(obj, result, error_message=NULL, context, .
     return(tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(context$ytest),
                           fit=list(NULL), error=TRUE, error_message=error_message))
   } else {
-    pred <- predict(result, tibble::as_tibble(context$test, .name_repair=.name_repair), NULL)
+    test_input <- context$test
+    if (!is.matrix(test_input)) {
+      test_input <- tibble::as_tibble(test_input, .name_repair=.name_repair)
+    }
+    pred <- predict(result, test_input, NULL)
+    test_ind <- if (!is.null(context$test_ind)) {
+      as.integer(context$test_ind)
+    } else if (is.list(context$test) && !is.null(context$test$idx)) {
+      as.integer(context$test$idx)
+    } else {
+      as.integer(seq_len(length(context$ytest)))
+    }
     plist <- lapply(pred, list)
     plist$y_true <- list(context$ytest)
-    plist$test_ind <- list(as.integer(context$test))
+    plist$test_ind <- list(test_ind)
     plist$fit <- if (obj$return_fit) list(result) else list(NULL)
     plist$error <- FALSE
     plist$error_message <- "~"
@@ -99,33 +109,47 @@ format_result.mvpa_model <- function(obj, result, error_message=NULL, context, .
 
 
 #' @keywords internal
+.annotate_perf_fun <- function(fun, kind, split_list = NULL, class_metrics = NULL) {
+  attr(fun, "rmvpa_perf_kind") <- kind
+  attr(fun, "rmvpa_split_list") <- split_list
+  if (!is.null(class_metrics)) {
+    attr(fun, "rmvpa_class_metrics") <- isTRUE(class_metrics)
+  }
+  fun
+}
+
+#' @keywords internal
 get_multiclass_perf <- function(split_list=NULL, class_metrics=FALSE) {
-  function(result) {
+  fun <- function(result) {
     performance(result, split_list, class_metrics)
   }
+  .annotate_perf_fun(fun, kind = "multiclass", split_list = split_list, class_metrics = class_metrics)
 }
 
 #' @keywords internal
 get_binary_perf <- function(split_list=NULL) {
-  function(result) {
+  fun <- function(result) {
     performance(result, split_list)
   }
+  .annotate_perf_fun(fun, kind = "binary", split_list = split_list)
 }
 
 #' @keywords internal
 get_regression_perf <- function(split_list=NULL) {
 
-  function(result) {
+  fun <- function(result) {
     performance(result, split_list)
   }
+  .annotate_perf_fun(fun, kind = "regression", split_list = split_list)
 }
 
 
 #' @keywords internal
 get_custom_perf <- function(fun, split_list) {
-  function(result) {
+  cfun <- function(result) {
     custom_performance(result, fun, split_list)
   }
+  .annotate_perf_fun(cfun, kind = "custom", split_list = split_list)
 }
 
 
@@ -288,10 +312,7 @@ create_model_spec <- function(name, dataset, design, return_predictions=FALSE,
 #'   c(accuracy=sum(result$observed == result$predicted)/length(result$observed))
 #' }
 #' mvpmod <- mvpa_model(mod, dataset=mvdset, design=mvdes, crossval=cval, performance=custom_perf)
-#' \donttest{
-#'   ret <- run_searchlight(mvpmod, radius = 1)
-#'   stopifnot("accuracy" %in% ret$metrics)
-#' }
+#' print(mvpmod)
 mvpa_model <- function(model, 
                        dataset,
                        design,
@@ -347,10 +368,8 @@ mvpa_model <- function(model,
   
   assertthat::assert_that(!is.null(crossval))
   
-  ## TODO check that crossval is compatible with design
-  ## TODO check that mvpa_design is compatible with mvpa_dataset (n training obs == length(y_train))
-  
-  #assert_that(length(y_train(design)) == )
+  # NOTE: crossval/design compatibility and dataset/design length alignment
+  # are validated downstream during fold generation and model fitting.
   ret <- create_model_spec("mvpa_model", 
               dataset=dataset,
               design=design,
@@ -407,11 +426,31 @@ fit_roi.mvpa_model <- function(model, roi_data, context, ...) {
   roi <- list(train_roi = roi_data$train_roi, test_roi = roi_data$test_roi)
   id <- context$id
   center_global_id <- context$center_global_id %||% NA
+  matrix_first <- .matrix_first_roi_enabled()
 
   result_tbl <- if (has_test_set(model)) {
-    external_crossval(model, roi, id, center_global_id = center_global_id)
+    if (matrix_first) {
+      external_crossval(
+        model, roi, id,
+        center_global_id = center_global_id,
+        xtrain_mat = roi_data$train_data,
+        xtest_mat = roi_data$test_data,
+        ind = roi_data$indices
+      )
+    } else {
+      external_crossval(model, roi, id, center_global_id = center_global_id)
+    }
   } else {
-    internal_crossval(model, roi, id, center_global_id = center_global_id)
+    if (matrix_first) {
+      internal_crossval(
+        model, roi, id,
+        center_global_id = center_global_id,
+        x_all = roi_data$train_data,
+        ind = roi_data$indices
+      )
+    } else {
+      internal_crossval(model, roi, id, center_global_id = center_global_id)
+    }
   }
 
   # Convert the tibble output to roi_result

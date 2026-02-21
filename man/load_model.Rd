@@ -46,14 +46,14 @@ corr_model <- load_model("corclass")
 print(corr_model$parameters)  # View tunable parameters
 
 }
+\references{
+Gramfort, A., Thirion, B., & Varoquaux, G. (2013).
+\emph{Identifying predictive regions from fMRI with TV-L1 prior}.
+Pattern Recognition in Neuroimaging (PRNI), IEEE.
+https://inria.hal.science/hal-00839984
+}
 \seealso{
 \code{\link{MVPAModels}} for the complete list of available custom MVPA models
 
 \code{\link{mvpa_model}} for using these models in MVPA analyses
-}
-\references{
-Gramfort, A., Thirion, B., \& Varoquaux, G. (2013).
-\emph{Identifying predictive regions from fMRI with TV-L1 prior}.
-Pattern Recognition in Neuroimaging (PRNI), IEEE.
-\url{https://inria.hal.science/hal-00839984}
 }

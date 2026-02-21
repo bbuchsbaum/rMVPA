@@ -262,7 +262,8 @@ feature_rsa_da_model <- function(dataset,
   out
 }
 
-#' @keywords internal
+#' @method output_schema feature_rsa_da_model
+#' @export
 output_schema.feature_rsa_da_model <- function(model) {
   nms <- c(
     "target_pattern_correlation",

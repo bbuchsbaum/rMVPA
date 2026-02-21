@@ -28,16 +28,16 @@ Combine predictions from multiple models on the same test set.
 }
 \examples{
 \donttest{
-cres1 <- binary_classification_result(
-  observed = factor(c("a","b")),
-  predicted = factor(c("a","b")),
-  probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))
+p1 <- structure(
+  list(class = c("a","b"),
+       probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))),
+  class = c("classification_prediction", "prediction", "list")
 )
-cres2 <- binary_classification_result(
-  observed = factor(c("a","b")),
-  predicted = factor(c("b","a")),
-  probs = matrix(c(.4,.6,.6,.4), ncol=2, dimnames=list(NULL,c("a","b")))
+p2 <- structure(
+  list(class = c("b","a"),
+       probs = matrix(c(.4,.6,.6,.4), ncol=2, dimnames=list(NULL,c("a","b")))),
+  class = c("classification_prediction", "prediction", "list")
 )
-merge_predictions(cres1, list(cres2))
+merge_predictions(p1, list(p2))
 }
 }

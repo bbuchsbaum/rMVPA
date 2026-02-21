@@ -2,9 +2,9 @@ Package: rMVPA
 Type: Package
 Title: Multivoxel Pattern Analysis in R
 Version: 0.1.2
-Date: 2019-03-08
+Date: 2026-02-20
 Authors@R: person("Bradley", "Buchsbaum",, "brad.buchsbaum@gmail.com", c("aut", "cre"))
-Maintainer: Bradley R. Buchsbaum <brad.buchsbaum@gmail.com>
+Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
 Description: An R package to facilitate multivoxel pattern analysis of
     neuroimaging data in R.
 License: GPL (>= 2)
@@ -51,7 +51,7 @@ Collate:
     'balance.R'
     'classifiers.R'
     'caret_models.R'
-     crossnobis_helpers.R
+    'crossnobis_helpers.R'
     'common.R'
     'crossval.R'
     'dataset.R'
@@ -78,6 +78,10 @@ Collate:
     'resampling_utils.R'
     'rsa_model.R'
     'roisplit.R'
+    'searchlight_engine_utils.R'
+    'dual_lda_searchlight.R'
+    'searchlight_engine.R'
+    'swift_searchlight.R'
     'searchlight.R'
     'spatial_output.R'
     'spatial_nmf.R'
@@ -118,18 +122,19 @@ Suggests:
     covr,
     doParallel,
     e1071,
+    fmridesign,
     progressr,
     fmrihrf,
     foreach,
+    future.callr,
     hrfdecode,
     hrfdecoder,
     iterators,
-    itertools,
     jsonlite,
     knitr,
     parallel,
+    RANN,
     randomForest,
-    robustcov,
     rmarkdown,
     roxygen2,
     shard,
@@ -144,7 +149,7 @@ Remotes:
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf,
     bbuchsbaum/shard
-VignetteBuilder: knitr
 Encoding: UTF-8
+NeedsCompilation: yes
 URL: http://bbuchsbaum.github.io/rMVPA/
 Config/Needs/website: albersdown

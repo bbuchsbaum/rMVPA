@@ -126,6 +126,223 @@ length.clustered_roi_spec <- function(x) {
   length(x$neighbors)
 }
 
+#' @keywords internal
+#' @noRd
+.clustered_nn_fastpath_enabled <- function() {
+  TRUE
+}
+
+#' @keywords internal
+#' @noRd
+.clustered_neighbor_specs_dense <- function(cents, radius = NULL, k = 6) {
+  K <- nrow(cents)
+  dmat <- as.matrix(stats::dist(cents))
+
+  specs <- vector("list", K)
+  for (i in seq_len(K)) {
+    if (!is.null(radius) && !is.null(k)) {
+      ord <- order(dmat[i, ])
+      top_k <- ord[seq_len(min(k + 1L, K))]
+      neighbors <- top_k[dmat[i, top_k] <= radius]
+    } else if (!is.null(radius)) {
+      neighbors <- which(dmat[i, ] <= radius)
+    } else {
+      ord <- order(dmat[i, ])
+      neighbors <- ord[seq_len(min(k + 1L, K))]
+    }
+    specs[[i]] <- clustered_roi_spec(seed = i, neighbors = as.integer(neighbors))
+  }
+
+  specs
+}
+
+#' @keywords internal
+#' @noRd
+.clustered_neighbors_blockwise <- function(cents, radius = NULL, k = 6, block_size = 256L) {
+  cents <- as.matrix(cents)
+  storage.mode(cents) <- "double"
+
+  K <- nrow(cents)
+  if (K == 0L) {
+    return(vector("list", 0L))
+  }
+
+  if (!is.null(k)) {
+    k <- as.integer(k)
+    if (is.na(k) || k < 0L) {
+      stop("`k` must be NULL or a non-negative integer.", call. = FALSE)
+    }
+    k_keep <- min(K, k + 1L)
+  } else {
+    k_keep <- NULL
+  }
+
+  if (!is.null(radius)) {
+    radius <- as.numeric(radius)
+    if (!is.finite(radius) || radius < 0) {
+      stop("`radius` must be NULL or a non-negative finite number.", call. = FALSE)
+    }
+    radius_sq <- radius * radius
+    radius_tol <- max(1e-12, radius_sq * 1e-12)
+  } else {
+    radius_sq <- NULL
+    radius_tol <- NULL
+  }
+
+  block_size <- suppressWarnings(as.integer(block_size))
+  if (!is.finite(block_size) || is.na(block_size) || block_size < 16L) {
+    block_size <- 256L
+  }
+
+  norms <- rowSums(cents * cents)
+  neighbors <- vector("list", K)
+
+  for (start in seq.int(1L, K, by = block_size)) {
+    stop_idx <- min(K, start + block_size - 1L)
+    q <- cents[start:stop_idx, , drop = FALSE]
+    q_norms <- rowSums(q * q)
+
+    cross <- tcrossprod(q, cents)
+    dist_sq <- outer(q_norms, norms, "+") - 2 * cross
+    dist_sq[dist_sq < 0] <- 0
+
+    for (ii in seq_len(nrow(q))) {
+      idx <- start + ii - 1L
+      row_dist_sq <- dist_sq[ii, ]
+
+      keep <- if (!is.null(radius_sq)) {
+        which(row_dist_sq <= radius_sq + radius_tol)
+      } else {
+        ord <- order(row_dist_sq, seq_len(K))
+        ord[seq_len(k_keep)]
+      }
+
+      if (!is.null(k_keep) && length(keep) > k_keep) {
+        ord <- order(row_dist_sq[keep], keep)
+        keep <- keep[ord[seq_len(k_keep)]]
+      } else if (!is.null(k_keep) && length(keep) > 1L) {
+        ord <- order(row_dist_sq[keep], keep)
+        keep <- keep[ord]
+      }
+
+      if (!(idx %in% keep)) {
+        keep <- c(idx, keep)
+        if (!is.null(k_keep) && length(keep) > k_keep) {
+          ord <- order(row_dist_sq[keep], keep)
+          keep <- keep[ord[seq_len(k_keep)]]
+        }
+      }
+
+      neighbors[[idx]] <- as.integer(unique(keep))
+    }
+  }
+
+  neighbors
+}
+
+#' @keywords internal
+#' @noRd
+.clustered_neighbors_rann <- function(cents, radius = NULL, k = 6) {
+  if (!requireNamespace("RANN", quietly = TRUE)) {
+    return(NULL)
+  }
+
+  cents <- as.matrix(cents)
+  K <- nrow(cents)
+  if (K == 0L) {
+    return(vector("list", 0L))
+  }
+
+  k <- as.integer(k)
+  if (is.na(k) || k < 0L) {
+    stop("`k` must be a non-negative integer when using RANN path.", call. = FALSE)
+  }
+  k_keep <- min(K, k + 1L)
+
+  if (is.null(radius)) {
+    nn <- RANN::nn2(data = cents, query = cents, k = k_keep, searchtype = "standard")
+  } else {
+    radius <- as.numeric(radius)
+    if (!is.finite(radius) || radius < 0) {
+      stop("`radius` must be a non-negative finite number.", call. = FALSE)
+    }
+    nn <- RANN::nn2(
+      data = cents,
+      query = cents,
+      k = k_keep,
+      searchtype = "radius",
+      radius = radius
+    )
+  }
+
+  idx <- nn$nn.idx
+  dists <- nn$nn.dists
+  neighbors <- vector("list", K)
+
+  radius_tol <- if (is.null(radius)) NULL else max(1e-12, radius * 1e-12)
+
+  for (i in seq_len(K)) {
+    row_idx <- as.integer(idx[i, ])
+    row_dist <- as.numeric(dists[i, ])
+
+    valid <- row_idx > 0L & is.finite(row_dist)
+    if (!is.null(radius)) {
+      valid <- valid & (row_dist <= radius + radius_tol)
+    }
+
+    keep <- row_idx[valid]
+    if (length(keep) > 0L) {
+      ord <- order(row_dist[valid], keep)
+      keep <- keep[ord]
+    }
+
+    if (length(keep) > k_keep) {
+      keep <- keep[seq_len(k_keep)]
+    }
+
+    if (!(i %in% keep)) {
+      if (length(keep) < k_keep) {
+        keep <- c(i, keep)
+      } else if (length(keep) > 0L) {
+        keep[length(keep)] <- i
+      } else {
+        keep <- i
+      }
+    }
+
+    if (length(keep) > 1L) {
+      keep <- unique(keep)
+      if (length(keep) > k_keep) {
+        keep <- keep[seq_len(k_keep)]
+      }
+    }
+
+    neighbors[[i]] <- as.integer(keep)
+  }
+
+  neighbors
+}
+
+#' @keywords internal
+#' @noRd
+.clustered_neighbor_specs_fast <- function(cents, radius = NULL, k = 6) {
+  neighbors <- if (is.null(k)) {
+    .clustered_neighbors_blockwise(cents, radius = radius, k = NULL)
+  } else if (is.null(radius)) {
+    .clustered_neighbors_rann(cents, radius = NULL, k = k)
+  } else {
+    .clustered_neighbors_rann(cents, radius = radius, k = k)
+  }
+
+  if (is.null(neighbors)) {
+    neighbors <- .clustered_neighbors_blockwise(cents, radius = radius, k = k)
+  }
+
+  lapply(seq_len(length(neighbors)), function(i) {
+    clustered_roi_spec(seed = i, neighbors = as.integer(neighbors[[i]]))
+  })
+}
+
 #' @export
 #' @method get_searchlight mvpa_clustered_dataset
 get_searchlight.mvpa_clustered_dataset <- function(obj,
@@ -136,28 +353,13 @@ get_searchlight.mvpa_clustered_dataset <- function(obj,
   type <- match.arg(type)
 
   cvol <- obj$cvol
-  K <- neuroim2::num_clusters(cvol)
   cents <- neuroim2::centroids(cvol)
-  dmat <- as.matrix(stats::dist(cents))
 
-  specs <- vector("list", K)
-  for (i in seq_len(K)) {
-    if (!is.null(radius) && !is.null(k)) {
-      # Both supplied: use k-nearest but cap at radius
-      ord <- order(dmat[i, ])
-      top_k <- ord[seq_len(min(k + 1L, K))]
-      neighbors <- top_k[dmat[i, top_k] <= radius]
-    } else if (!is.null(radius)) {
-      neighbors <- which(dmat[i, ] <= radius)
-    } else {
-      # k-nearest (including self)
-      ord <- order(dmat[i, ])
-      neighbors <- ord[seq_len(min(k + 1L, K))]
-    }
-    specs[[i]] <- clustered_roi_spec(seed = i, neighbors = as.integer(neighbors))
+  if (.clustered_nn_fastpath_enabled()) {
+    .clustered_neighbor_specs_fast(cents = cents, radius = radius, k = k)
+  } else {
+    .clustered_neighbor_specs_dense(cents = cents, radius = radius, k = k)
   }
-
-  specs
 }
 
 

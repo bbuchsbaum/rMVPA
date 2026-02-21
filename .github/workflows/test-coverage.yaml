@@ -14,6 +14,7 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       RMVPA_RUN_EXTENDED_TESTS: "false"
+      RGL_USE_NULL: "TRUE"
 
     steps:
       - uses: actions/checkout@v3

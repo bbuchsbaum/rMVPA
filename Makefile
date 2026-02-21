@@ -8,7 +8,7 @@
 #   make install    - Install package locally
 #   make clean      - Clean build artifacts
 
-.PHONY: all check test coverage document install build clean help
+.PHONY: all check test test-perf coverage document install build clean help
 
 # Default target
 all: document check
@@ -21,7 +21,12 @@ check:
 # Run tests only (faster than full check)
 test:
 	@echo "Running tests..."
-	Rscript -e "devtools::test()"
+	RGL_USE_NULL=TRUE Rscript -e "devtools::test()"
+
+# Run performance guardrail tests
+test-perf:
+	@echo "Running performance guardrail tests..."
+	RGL_USE_NULL=TRUE RMVPA_RUN_PERF_TESTS=true Rscript scripts/run_perf_guardrails.R
 
 # Generate test coverage report
 coverage:
@@ -89,6 +94,7 @@ help:
 	@echo ""
 	@echo "  make check            - Run R CMD check"
 	@echo "  make test             - Run all tests"
+	@echo "  make test-perf        - Run performance guardrail tests"
 	@echo "  make coverage         - Generate HTML coverage report (slow)"
 	@echo "  make coverage-summary - Quick test file count summary (fast)"
 	@echo "  make coverage-full    - Full line-by-line coverage analysis (very slow)"

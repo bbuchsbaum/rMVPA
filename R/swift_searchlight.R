@@ -1,11 +1,7 @@
 #' @keywords internal
 #' @noRd
 .swift_searchlight_enabled <- function() {
-  .resolve_searchlight_bool_option(
-    option_name = "rMVPA.swift_searchlight",
-    optimized_default = TRUE,
-    legacy_default = FALSE
-  )
+  TRUE
 }
 
 #' @keywords internal
@@ -16,19 +12,7 @@
   if (!is.null(mode)) {
     return(match.arg(as.character(mode)[1], allowed))
   }
-
-  opt <- getOption("rMVPA.swift_whitening", "zscore")
-  if (!is.character(opt) || length(opt) != 1L || !(opt %in% allowed)) {
-    warning(
-      sprintf(
-        "Option 'rMVPA.swift_whitening' has invalid value '%s'; using 'zscore'.",
-        paste(opt, collapse = ",")
-      ),
-      call. = FALSE
-    )
-    return("zscore")
-  }
-  opt
+  "zscore"
 }
 
 #' @keywords internal
@@ -240,12 +224,7 @@
 #' @keywords internal
 #' @noRd
 .swift_metric_block_size <- function() {
-  opt <- suppressWarnings(as.integer(getOption("rMVPA.swift_metric_block_size", 256L))[1])
-  if (is.na(opt) || !is.finite(opt) || opt < 1L) {
-    256L
-  } else {
-    opt
-  }
+  256L
 }
 
 #' @keywords internal
@@ -696,57 +675,16 @@ run_searchlight_swift_fast <- function(model_spec, radius, whitening = NULL, ver
 #' @keywords internal
 #' @noRd
 .swift_sampled_combiner <- function(combiner) {
-  if (is.function(combiner)) {
-    if (identical(combiner, combine_randomized)) {
-      return(combine_randomized)
-    }
-    stop(
-      "SWIFT randomized/resampled fast path currently supports combiner='average' only.",
-      call. = FALSE
-    )
-  }
-
-  if (!is.character(combiner) || length(combiner) == 0L) {
-    stop("Invalid randomized/resampled combiner for SWIFT fast path.", call. = FALSE)
-  }
-  choice <- as.character(combiner)[1]
-  if (identical(choice, "average") || identical(choice, "combine_randomized")) {
-    return(combine_randomized)
-  }
-  stop(
-    "SWIFT randomized/resampled fast path currently supports combiner='average' only.",
-    call. = FALSE
-  )
+  .engine_sampled_combiner(combiner, "SWIFT")
 }
 
 #' @keywords internal
 #' @noRd
-.swift_extract_roi_indices <- function(slight) {
-  lapply(slight, function(roi) {
-    ids <- suppressWarnings(as.integer(roi))
-    ids <- ids[is.finite(ids)]
-    ids <- ids[ids > 0L]
-    unique(as.integer(ids))
-  })
-}
+.swift_extract_roi_indices <- .engine_extract_roi_indices
 
 #' @keywords internal
 #' @noRd
-.swift_extract_roi_ids <- function(slight) {
-  if (length(slight) == 0L) {
-    return(integer(0))
-  }
-
-  if (is.integer(slight[[1]])) {
-    ids <- vapply(slight, function(x) {
-      val <- attr(x, "center.index")
-      if (is.null(val)) NA_integer_ else as.integer(val)[1]
-    }, integer(1))
-  } else {
-    ids <- vapply(slight, function(x) as.integer(x@parent_index), integer(1))
-  }
-  as.integer(ids)
-}
+.swift_extract_roi_ids <- .engine_extract_roi_ids
 
 #' @keywords internal
 #' @noRd
@@ -889,7 +827,9 @@ run_searchlight_swift_sampled_fast <- function(model_spec,
     return(empty_searchlight_result(ds))
   }
 
-  n_space <- length(ds$mask)
+  space_obj <- resolve_volume_space(ds)
+  dims <- spatial_dim_shape(space_obj)
+  n_space <- prod(dims)
   col_lookup <- integer(n_space)
   col_lookup[mask_indices] <- seq_along(mask_indices)
 

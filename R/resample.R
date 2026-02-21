@@ -5,6 +5,66 @@ gen_id <- function(n) {
 }
 
 #' @keywords internal
+#' @noRd
+.fast_filter_roi_enabled <- function() {
+  TRUE
+}
+
+#' @keywords internal
+#' @noRd
+.filter_roi_stats_slow <- function(trdat) {
+  nas <- apply(trdat, 2, function(v) any(is.na(v)))
+  sdnonzero <- apply(trdat, 2, sd, na.rm = TRUE) > 0
+  list(nas = as.logical(nas), sdnonzero = as.logical(sdnonzero))
+}
+
+#' @keywords internal
+#' @noRd
+.filter_roi_stats_fast <- function(trdat) {
+  p <- ncol(trdat)
+  if (is.null(p) || p == 0L) {
+    return(list(nas = logical(0), sdnonzero = logical(0)))
+  }
+
+  if (!is.numeric(trdat) && !is.integer(trdat)) {
+    return(.filter_roi_stats_slow(trdat))
+  }
+
+  nas <- colSums(is.na(trdat)) > 0L
+  sdnonzero <- rep(FALSE, p)
+  valid_cols <- which(!nas)
+
+  if (length(valid_cols) > 0L && nrow(trdat) >= 2L) {
+    x <- trdat[, valid_cols, drop = FALSE]
+    mins <- x[1, , drop = TRUE]
+    maxs <- mins
+
+    if (nrow(x) > 1L) {
+      for (i in 2:nrow(x)) {
+        row_i <- x[i, , drop = TRUE]
+        mins <- pmin(mins, row_i)
+        maxs <- pmax(maxs, row_i)
+      }
+    }
+
+    span <- maxs - mins
+    sdnonzero[valid_cols] <- is.finite(span) & (span > 0)
+  }
+
+  list(nas = nas, sdnonzero = sdnonzero)
+}
+
+#' @keywords internal
+#' @noRd
+.filter_roi_stats <- function(trdat) {
+  if (.fast_filter_roi_enabled()) {
+    .filter_roi_stats_fast(trdat)
+  } else {
+    .filter_roi_stats_slow(trdat)
+  }
+}
+
+#' @keywords internal
 .get_samples <- function(obj, voxlist) {
   ret <- lapply(voxlist, function(vox) {
     # Expand searchlight windows to full voxel indices when possible (duck-typed)
@@ -85,6 +145,9 @@ filter_roi.default <- function(roi, preserve = NULL, ...) {
 filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Extract the train data values
   trdat <- values(roi$train_roi)
+  stats <- .filter_roi_stats(trdat)
+  nas <- stats$nas
+  sdnonzero <- stats$sdnonzero
 
   # Read basis_count: NULL for standard datasets, integer for multibasis
 
@@ -101,8 +164,6 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
     group_idx <- make_group_idx(V_phys, basis_count)
 
     # Per-column checks (same criteria as standard path)
-    nas <- apply(trdat, 2, function(v) any(is.na(v)))
-    sdnonzero <- apply(trdat, 2, sd, na.rm = TRUE) > 0
     col_bad <- nas | !sdnonzero
 
     # A physical voxel group is bad if ANY of its k columns fails
@@ -156,12 +217,6 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
 
   } else {
     # --- Standard (non-multibasis) path: unchanged ---
-
-    # Find columns with missing values (NA)
-    nas <- apply(trdat, 2, function(v) any(is.na(v)))
-
-    # Find columns with non-zero standard deviation
-    sdnonzero <- apply(trdat, 2, sd, na.rm=TRUE) > 0
 
     # Determine columns to keep
     keep <- !nas & sdnonzero
@@ -243,6 +298,8 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
          kp <- match(keep_idx, orig_idx)
          # Guard against mismatch
          if (any(is.na(kp))) {
+           warning("filter_roi.list: index mismatch between filtered train and original train ROI; ",
+                   "returning unfiltered test ROI.", call. = FALSE)
            roi$test_roi
          } else {
            neuroim2::ROIVec(neuroim2::space(roi$test_roi),
@@ -260,12 +317,9 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
 filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Extract the train data values
   trdat <- roi$train_roi@data
-  
-  # Find columns with missing values (NA)
-  nas <- apply(trdat, 2, function(v) any(is.na(v)))
-  
-  # Find columns with non-zero standard deviation
-  sdnonzero <- apply(trdat, 2, sd, na.rm=TRUE) > 0
+  stats <- .filter_roi_stats(trdat)
+  nas <- stats$nas
+  sdnonzero <- stats$sdnonzero
   
   # Determine columns to keep
   keep <- !nas & sdnonzero

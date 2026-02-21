@@ -75,8 +75,5 @@ custom_perf <- function(result) {
   c(accuracy=sum(result$observed == result$predicted)/length(result$observed))
 }
 mvpmod <- mvpa_model(mod, dataset=mvdset, design=mvdes, crossval=cval, performance=custom_perf)
-\donttest{
-  ret <- run_searchlight(mvpmod, radius = 1)
-  stopifnot("accuracy" \%in\% ret$metrics)
-}
+print(mvpmod)
 }

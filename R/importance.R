@@ -48,6 +48,16 @@ extract_weights.spacenet_fit <- function(object, ...) {
 
 #' @rdname extract_weights
 #' @export
+extract_weights.model_fit <- function(object, ...) {
+  fit <- object$fit
+  if (is.null(fit)) {
+    stop("extract_weights.model_fit: object has no underlying $fit component.")
+  }
+  extract_weights(fit, ...)
+}
+
+#' @rdname extract_weights
+#' @export
 extract_weights.default <- function(object, ...) {
   stop("extract_weights: no method for class '", paste(class(object), collapse = "/"),
        "'. Implement an extract_weights method for this model type.")
@@ -349,6 +359,8 @@ region_importance.mvpa_model <- function(model_spec, n_iter = 200,
       error = function(e) NA_real_
     )
 
+    # Approximate CI: quantiles of per-ROI importance scores within region k
+    # (not a formal bootstrap CI for mean_in - mean_out)
     diffs <- in_perfs - mean_out
     ci_lower[k] <- stats::quantile(diffs, 0.025, na.rm = TRUE)
     ci_upper[k] <- stats::quantile(diffs, 0.975, na.rm = TRUE)

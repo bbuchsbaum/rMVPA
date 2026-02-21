@@ -185,6 +185,111 @@ MVPAModels$pca_lda <- list(
   }
 )
 
+#' @keywords internal
+#' @noRd
+.dual_lda_row_softmax <- function(scores) {
+  row_max <- apply(scores, 1, max)
+  exp_scores <- exp(sweep(scores, 1, row_max, "-"))
+  exp_scores / rowSums(exp_scores)
+}
+
+#' @keywords internal
+#' @noRd
+.dual_lda_fit_core <- function(x, y, gamma) {
+  x <- as.matrix(x)
+  y <- as.factor(y)
+
+  if (length(levels(y)) < 2L) {
+    stop("dual_lda requires at least two classes.")
+  }
+  if (!is.finite(gamma) || gamma <= 0) {
+    stop("dual_lda: `gamma` must be a positive finite scalar.")
+  }
+
+  classes <- levels(y)
+  n <- nrow(x)
+  p <- ncol(x)
+  k <- length(classes)
+
+  class_counts <- as.numeric(table(y)[classes])
+  priors <- class_counts / sum(class_counts)
+
+  means <- matrix(0, nrow = k, ncol = p, dimnames = list(classes, NULL))
+  for (i in seq_len(k)) {
+    idx <- which(y == classes[i])
+    means[i, ] <- colMeans(x[idx, , drop = FALSE])
+  }
+
+  class_id <- match(y, classes)
+  centered <- x - means[class_id, , drop = FALSE]
+  sigma <- crossprod(centered) + diag(gamma, p)
+  chol_sigma <- chol(sigma)
+
+  means_t <- t(means)
+  inv_sigma_means <- backsolve(chol_sigma, forwardsolve(t(chol_sigma), means_t))
+  lin_const <- -0.5 * colSums(means_t * inv_sigma_means) + log(pmax(priors, .Machine$double.eps))
+
+  list(
+    classes = classes,
+    means = means,
+    inv_sigma_means = inv_sigma_means,
+    lin_const = lin_const,
+    priors = priors,
+    gamma = gamma,
+    obsLevels = classes
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.dual_lda_prob_core <- function(modelFit, newdata) {
+  x <- as.matrix(newdata)
+  scores <- x %*% modelFit$inv_sigma_means
+  scores <- sweep(scores, 2, modelFit$lin_const, "+")
+  probs <- .dual_lda_row_softmax(scores)
+  colnames(probs) <- modelFit$classes
+  probs
+}
+
+#' @keywords internal
+#' @noRd
+.dual_lda_predict_core <- function(modelFit, newdata) {
+  probs <- .dual_lda_prob_core(modelFit, newdata)
+  factor(modelFit$classes[max.col(probs)], levels = modelFit$classes)
+}
+
+#' @keywords internal
+#' @noRd
+MVPAModels$dual_lda <- list(
+  type = "Classification",
+  library = "rMVPA",
+  loop = NULL,
+  label = "dual_lda",
+  parameters = data.frame(parameters = "gamma", class = "numeric", labels = "gamma"),
+
+  grid = function(x, y, len = NULL) {
+    if (is.null(len) || len <= 1L) {
+      data.frame(gamma = 1e-2)
+    } else {
+      data.frame(gamma = 10 ^ seq(-4, 1, length.out = len))
+    }
+  },
+
+  fit = function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    fit <- .dual_lda_fit_core(x, y, gamma = as.numeric(param$gamma))
+    fit$obsLevels <- if (!is.null(lev)) lev else fit$classes
+    fit
+  },
+
+  predict = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    .dual_lda_predict_core(modelFit, newdata)
+  },
+
+  prob = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    .dual_lda_prob_core(modelFit, newdata)
+  }
+)
+
 # corclass and corsim
 # Ensure lev is known from fit if needed. corsimFit stores lev internally.
 #' @keywords internal

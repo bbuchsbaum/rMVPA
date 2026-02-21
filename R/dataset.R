@@ -689,6 +689,229 @@ print.mvpa_surface_dataset <- function(x, ...) {
 }
 
 
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_cache_enabled <- function() {
+  TRUE
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_cache_max_entries <- function() {
+  8L
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_cache_env <- local({
+  new.env(hash = TRUE, parent = emptyenv())
+})
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_cache_state <- local({
+  state <- new.env(parent = emptyenv())
+  state$order <- character(0)
+  state
+})
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_cache_clear <- function() {
+  keys <- ls(envir = .searchlight_geometry_cache_env, all.names = TRUE)
+  if (length(keys) > 0L) {
+    rm(list = keys, envir = .searchlight_geometry_cache_env)
+  }
+  .searchlight_geometry_cache_state$order <- character(0)
+  invisible(NULL)
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_cache_size <- function() {
+  length(.searchlight_geometry_cache_state$order)
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_cache_get <- function(key) {
+  if (!exists(key, envir = .searchlight_geometry_cache_env, inherits = FALSE)) {
+    return(NULL)
+  }
+  order <- .searchlight_geometry_cache_state$order
+  .searchlight_geometry_cache_state$order <- c(order[order != key], key)
+  get(key, envir = .searchlight_geometry_cache_env, inherits = FALSE)
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_cache_set <- function(key, value) {
+  assign(key, value, envir = .searchlight_geometry_cache_env)
+  order <- .searchlight_geometry_cache_state$order
+  order <- c(order[order != key], key)
+  max_entries <- .searchlight_geometry_cache_max_entries()
+  if (length(order) > max_entries) {
+    drop_n <- length(order) - max_entries
+    drop_keys <- order[seq_len(drop_n)]
+    for (drop_key in drop_keys) {
+      if (exists(drop_key, envir = .searchlight_geometry_cache_env, inherits = FALSE)) {
+        rm(list = drop_key, envir = .searchlight_geometry_cache_env)
+      }
+    }
+    order <- order[-seq_len(drop_n)]
+  }
+  .searchlight_geometry_cache_state$order <- order
+  invisible(value)
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_raw_signature <- function(raw) {
+  x <- as.numeric(as.integer(raw))
+  n <- length(x)
+  if (n == 0L) {
+    return("r0")
+  }
+  pos <- seq_len(n)
+  s1 <- sum(x * ((pos %% 251L) + 1L))
+  s2 <- sum(x * ((pos %% 65521L) + 1L))
+  paste0(
+    "r", n, "_",
+    formatC(round(s1 %% 1e12), format = "f", digits = 0), "_",
+    formatC(round(s2 %% 1e12), format = "f", digits = 0)
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_numeric_signature <- function(x) {
+  vals <- as.numeric(x)
+  n <- length(vals)
+  if (n == 0L) {
+    return("n0")
+  }
+  pos <- seq_len(n)
+  s1 <- sum(vals * ((pos %% 8191L) + 1L))
+  s2 <- sum(vals * ((pos %% 131071L) + 3L))
+  paste0(
+    "n", n, "_",
+    formatC(round(s1 %% 1e12), format = "f", digits = 0), "_",
+    formatC(round(s2 %% 1e12), format = "f", digits = 0)
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_dots_signature <- function(...) {
+  dots <- list(...)
+  if (length(dots) == 0L) {
+    return("none")
+  }
+  raw <- serialize(dots, NULL, ascii = FALSE, version = 2)
+  .searchlight_geometry_raw_signature(raw)
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_image_signature <- function(obj) {
+  mask <- obj$mask
+  sp <- neuroim2::space(mask)
+  dims <- dim(sp)
+  if (length(dims) > 3L) {
+    dims <- dims[seq_len(3L)]
+  }
+  spacing <- neuroim2::spacing(sp)[seq_len(length(dims))]
+  origin <- neuroim2::origin(sp)[seq_len(length(dims))]
+
+  idx <- if (!is.null(obj$mask_indices)) {
+    as.integer(obj$mask_indices)
+  } else {
+    vals <- neuroim2::values(mask)
+    if (is.matrix(vals)) {
+      vals <- vals[, 1, drop = TRUE]
+    }
+    which(vals != 0)
+  }
+
+  paste(
+    "img",
+    paste(dims, collapse = ","),
+    paste(formatC(spacing, digits = 8, format = "fg"), collapse = ","),
+    paste(formatC(origin, digits = 8, format = "fg"), collapse = ","),
+    .searchlight_geometry_numeric_signature(idx),
+    sep = "::"
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_surface_signature <- function(obj) {
+  geom <- geometry(obj$train_data)
+  active_nodes <- which(obj$mask > 0)
+  paste(
+    "surf",
+    length(neurosurf::nodes(geom)),
+    .searchlight_geometry_numeric_signature(active_nodes),
+    sep = "::"
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_key <- function(dataset_class,
+                                      type,
+                                      radius,
+                                      iter,
+                                      nonzero,
+                                      k,
+                                      signature,
+                                      dots_signature) {
+  paste(
+    dataset_class,
+    type,
+    paste(radius, collapse = ","),
+    if (is.null(iter)) "null" else paste(iter, collapse = ","),
+    if (is.null(nonzero)) "null" else as.character(nonzero),
+    if (is.null(k)) "null" else paste(k, collapse = ","),
+    signature,
+    dots_signature,
+    sep = "||"
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.compute_image_searchlight <- function(obj,
+                                       type,
+                                       radius,
+                                       iter,
+                                       nonzero,
+                                       ...) {
+  if (type == "standard") {
+    neuroim2::searchlight(obj$mask, radius = radius, nonzero = nonzero, ...)
+  } else if (type == "randomized") {
+    neuroim2::random_searchlight(obj$mask, radius = radius, ...)
+  } else { # resampled
+    if (is.null(iter)) iter <- 1L
+    neuroim2::resampled_searchlight(obj$mask, radius = radius, iter = iter, ...)
+  }
+}
+
+#' @keywords internal
+#' @noRd
+.compute_surface_searchlight <- function(obj,
+                                         type,
+                                         radius,
+                                         ...) {
+  active_nodes <- which(obj$mask > 0)
+  if (type == "standard") {
+    neurosurf::SurfaceSearchlight(geometry(obj$train_data), radius, nodeset = active_nodes, as_deflist = TRUE)
+  } else {
+    # No direct analogue of resampled searchlight for surfaces; fall back to randomized sampling.
+    neurosurf::RandomSurfaceSearchlight(geometry(obj$train_data), radius, nodeset = active_nodes, as_deflist = TRUE)
+  }
+}
+
 #' @export
 #' @method get_searchlight mvpa_image_dataset
 #' @importFrom neuroim2 searchlight random_searchlight resampled_searchlight
@@ -700,31 +923,84 @@ get_searchlight.mvpa_image_dataset <- function(obj,
                                                k = NULL,
                                                ...) {
   type <- match.arg(type)
-  if (type == "standard") {
-    neuroim2::searchlight(obj$mask, radius = radius, nonzero = nonzero, ...)
-  } else if (type == "randomized") {
-    neuroim2::random_searchlight(obj$mask, radius = radius, ...)
-  } else { # resampled
-    if (is.null(iter)) iter <- 1L
-    neuroim2::resampled_searchlight(obj$mask, radius = radius, iter = iter, ...)
+  if (!.searchlight_geometry_cache_enabled() || type != "standard") {
+    return(.compute_image_searchlight(
+      obj = obj,
+      type = type,
+      radius = radius,
+      iter = iter,
+      nonzero = nonzero,
+      ...
+    ))
   }
+
+  dots_signature <- .searchlight_geometry_dots_signature(...)
+  key <- .searchlight_geometry_key(
+    dataset_class = "mvpa_image_dataset",
+    type = type,
+    radius = radius,
+    iter = iter,
+    nonzero = nonzero,
+    k = k,
+    signature = .searchlight_geometry_image_signature(obj),
+    dots_signature = dots_signature
+  )
+  cached <- .searchlight_geometry_cache_get(key)
+  if (!is.null(cached)) {
+    futile.logger::flog.debug("searchlight geometry cache hit [image]: radius=%s", paste(radius, collapse = ","))
+    return(cached)
+  }
+
+  slight <- .compute_image_searchlight(
+    obj = obj,
+    type = type,
+    radius = radius,
+    iter = iter,
+    nonzero = nonzero,
+    ...
+  )
+  .searchlight_geometry_cache_set(key, slight)
+  slight
 }
 
 #' @export
 #' @method get_searchlight mvpa_surface_dataset
-get_searchlight.mvpa_surface_dataset <- function(obj, type=c("standard", "randomized", "resampled"), radius=8, iter=NULL, k=NULL, ...) {
+get_searchlight.mvpa_surface_dataset <- function(obj, type = c("standard", "randomized", "resampled"),
+                                                 radius = 8, iter = NULL, k = NULL, ...) {
   type <- match.arg(type)
-  #browser()
-  # Create the iterator once
-  slight <- if (type == "standard") {
-    neurosurf::SurfaceSearchlight(geometry(obj$train_data), radius, nodeset=which(obj$mask>0), as_deflist=TRUE)
-  } else if (type == "randomized") {
-    neurosurf::RandomSurfaceSearchlight(geometry(obj$train_data), radius, nodeset=which(obj$mask>0), as_deflist=TRUE)
-  } else {
-    # No direct analogue of resampled searchlight for surfaces; fall back to randomized sampling.
-    neurosurf::RandomSurfaceSearchlight(geometry(obj$train_data), radius, nodeset=which(obj$mask>0), as_deflist=TRUE)
+  if (!.searchlight_geometry_cache_enabled() || type != "standard") {
+    return(.compute_surface_searchlight(
+      obj = obj,
+      type = type,
+      radius = radius,
+      ...
+    ))
   }
-  
+
+  dots_signature <- .searchlight_geometry_dots_signature(...)
+  key <- .searchlight_geometry_key(
+    dataset_class = "mvpa_surface_dataset",
+    type = type,
+    radius = radius,
+    iter = iter,
+    nonzero = NULL,
+    k = k,
+    signature = .searchlight_geometry_surface_signature(obj),
+    dots_signature = dots_signature
+  )
+  cached <- .searchlight_geometry_cache_get(key)
+  if (!is.null(cached)) {
+    futile.logger::flog.debug("searchlight geometry cache hit [surface]: radius=%s", paste(radius, collapse = ","))
+    return(cached)
+  }
+
+  slight <- .compute_surface_searchlight(
+    obj = obj,
+    type = type,
+    radius = radius,
+    ...
+  )
+  .searchlight_geometry_cache_set(key, slight)
   slight
 }
 

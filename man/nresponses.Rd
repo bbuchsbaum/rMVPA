@@ -16,10 +16,10 @@ The number of response categories.
 Get the number of response categories or levels.
 }
 \examples{
-cres <- binary_classification_result(
-  observed = factor(c("a","b")),
-  predicted = factor(c("a","b")),
-  probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))
+des <- mvpa_design(
+  train_design = data.frame(y = factor(c("a","b","a","b"))),
+  y_train = factor(c("a","b","a","b")),
+  block_var = factor(c("1","1","2","2"))
 )
-nresponses(cres)
+nresponses(des)
 }

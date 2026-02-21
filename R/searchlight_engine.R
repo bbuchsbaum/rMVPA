@@ -1,14 +1,7 @@
 #' @keywords internal
 #' @noRd
 .searchlight_fail_open_enabled <- function() {
-  opt <- getOption("rMVPA.searchlight_fail_open", NULL)
-  if (!is.null(opt)) {
-    val <- suppressWarnings(as.logical(opt)[1])
-    if (!is.na(val)) {
-      return(isTRUE(val))
-    }
-  }
-  TRUE
+  isTRUE(getOption("rMVPA.searchlight_fail_open", TRUE))
 }
 
 #' @keywords internal
@@ -47,7 +40,13 @@
                                             gamma = NULL,
                                             verbose = FALSE,
                                             ...) {
-  list(handled = FALSE, result = NULL, engine = "legacy")
+  list(
+    handled = FALSE,
+    result = NULL,
+    engine = "legacy",
+    requested = .match_searchlight_engine(engine),
+    reason = "not_mvpa_model"
+  )
 }
 
 #' @keywords internal
@@ -189,7 +188,14 @@
   }
 
   if (identical(engine, "legacy")) {
-    return(list(handled = FALSE, result = NULL, engine = "legacy"))
+    reason <- if (identical(requested, "legacy")) "explicit_legacy" else "auto_ineligible"
+    return(list(
+      handled = FALSE,
+      result = NULL,
+      engine = "legacy",
+      requested = requested,
+      reason = reason
+    ))
   }
 
   fast_res <- try(
@@ -212,7 +218,18 @@
   )
 
   if (!inherits(fast_res, "try-error")) {
-    return(list(handled = TRUE, result = fast_res, engine = engine))
+    reason <- if (identical(requested, "auto")) {
+      sprintf("auto_%s", engine)
+    } else {
+      sprintf("explicit_%s", engine)
+    }
+    return(list(
+      handled = TRUE,
+      result = fast_res,
+      engine = engine,
+      requested = requested,
+      reason = reason
+    ))
   }
 
   err_msg <- tryCatch(
@@ -248,5 +265,13 @@
     err_msg
   )
 
-  list(handled = FALSE, result = NULL, engine = "legacy")
+  list(
+    handled = FALSE,
+    result = NULL,
+    engine = "legacy",
+    requested = requested,
+    reason = "fast_failed_fallback",
+    failed_engine = engine,
+    fallback_error = err_msg
+  )
 }

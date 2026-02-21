@@ -529,11 +529,8 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
   total_items <- nrow(frame)
 
   # Chunk-size heuristic (same as run_future.default)
-  chunk_size <- getOption("rMVPA.chunk_size", NULL)
-  if (is.null(chunk_size)) {
-    nworkers <- future::nbrOfWorkers()
-    chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
-  }
+  nworkers <- future::nbrOfWorkers()
+  chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
 
   min_voxels <- if (analysis_type == "searchlight") 1L else 2L
 
@@ -584,26 +581,24 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
         }
 
         if (!obj$return_predictions) {
-          result <- result %>% dplyr::mutate(result = list(NULL))
+          result$result <- list(NULL)
         }
 
         if (drop_probs) {
-          result <- result %>%
-            dplyr::mutate(
-              prob_observed = purrr::map(result, function(res) {
-                if (is.null(res)) return(NULL)
-                if (!is.null(res$probs)) {
-                  tryCatch(prob_observed(res), error = function(e) NULL)
-                } else {
-                  NULL
-                }
-              }),
-              result = purrr::map(result, function(res) {
-                if (is.null(res)) return(NULL)
-                if (!is.null(res$probs)) res$probs <- NULL
-                res
-              })
-            )
+          res_list <- result$result
+          prob_vals <- vector("list", length(res_list))
+          for (j in seq_along(res_list)) {
+            res_j <- res_list[[j]]
+            if (is.null(res_j) || is.null(res_j$probs)) {
+              prob_vals[[j]] <- NULL
+              next
+            }
+            prob_vals[[j]] <- tryCatch(prob_observed(res_j), error = function(e) NULL)
+            res_j$probs <- NULL
+            res_list[[j]] <- res_j
+          }
+          result$prob_observed <- prob_vals
+          result$result <- res_list
         }
 
         result
@@ -640,6 +635,9 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
         function(.id, rnum, sample, size) {
           worker_impl(
             .id, rnum, sample, size,
+            # progress_tick intentionally NULL: carrier::crate() serializes
+            # the function for remote workers, and progress_tick is a closure
+            # over local state (progression_index) that cannot be serialized.
             progress_tick = NULL,
             analysis_type = analysis_type,
             min_voxels = min_voxels,
@@ -705,13 +703,16 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
   # ---- parallel map: workers extract ROIs from shared memory -------------
   run_map <- function(progress_tick = NULL) {
     worker_fun <- make_worker_fun(progress_tick = progress_tick)
-    frame %>% furrr::future_pmap(worker_fun,
-                                 .options = furrr::furrr_options(
-                                   seed = TRUE,
-                                   conditions = "condition",
-                                   chunk_size = chunk_size,
-                                   globals = FALSE
-                                 ))
+    furrr::future_pmap(
+      frame,
+      worker_fun,
+      .options = furrr::furrr_options(
+        seed = TRUE,
+        conditions = "condition",
+        chunk_size = chunk_size,
+        globals = FALSE
+      )
+    )
   }
 
   use_progressr <- isTRUE(verbose) &&

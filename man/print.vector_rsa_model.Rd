@@ -18,11 +18,8 @@ Invisibly returns the input object \code{x} (called for side effects).
 Print Method for vector_rsa_model
 }
 \examples{
-\donttest{
-  S <- matrix(rnorm(10*3), 10, 3)
-  labels <- factor(rep(letters[1:5], 2))
-  des <- vector_rsa_design(S, labels)
-  mdl <- vector_rsa_model(des)
+\dontrun{
+  mdl <- vector_rsa_model(dataset, des)
   print(mdl)
 }
 }

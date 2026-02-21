@@ -96,6 +96,37 @@ test_that("extract_weights.default errors informatively", {
   expect_error(extract_weights(obj), "no method for class")
 })
 
+test_that("extract_weights.model_fit delegates to underlying fit object", {
+  inner <- list(beta = c(1, 2, 3))
+  class(inner) <- "spacenet_fit"
+  wrapped <- list(fit = inner)
+  class(wrapped) <- c("class_model_fit", "model_fit")
+
+  W <- extract_weights(wrapped)
+  expect_true(is.matrix(W))
+  expect_equal(dim(W), c(3, 1))
+  expect_equal(as.numeric(W[, 1]), c(1, 2, 3))
+})
+
+test_that("merge_classif_results merges binary classification results", {
+  cres1 <- binary_classification_result(
+    observed = factor(c("a", "b"), levels = c("a", "b")),
+    predicted = factor(c("a", "b"), levels = c("a", "b")),
+    probs = matrix(c(0.8, 0.2, 0.3, 0.7), ncol = 2, byrow = TRUE,
+                   dimnames = list(NULL, c("a", "b")))
+  )
+  cres2 <- binary_classification_result(
+    observed = factor(c("a", "b"), levels = c("a", "b")),
+    predicted = factor(c("a", "b"), levels = c("a", "b")),
+    probs = matrix(c(0.6, 0.4, 0.2, 0.8), ncol = 2, byrow = TRUE,
+                   dimnames = list(NULL, c("a", "b")))
+  )
+
+  merged <- merge_classif_results(cres1, cres2)
+  expect_s3_class(merged, "binary_classification_result")
+  expect_equal(merged$probs, (cres1$probs + cres2$probs) / 2)
+})
+
 test_that("get_feature_matrix.matrix is identity", {
   M <- matrix(1:12, 3, 4)
   expect_identical(get_feature_matrix(M), M)

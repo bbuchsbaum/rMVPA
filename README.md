@@ -24,6 +24,52 @@ Documentation and vignettes: <https://bbuchsbaum.github.io/rMVPA/>
 Method note: ITEM vs continuous-time hrfdecoder paths:
 `inst/notes/item_vs_hrfdecoder.md`
 
+### Searchlight Performance Defaults
+
+Searchlight execution now uses a deterministic optimized runtime policy by
+default (no ambient option/profile/env switches):
+
+- fold-cache reuse
+- geometry cache reuse
+- clustered-neighbor fastpath
+- matrix-first ROI processing
+- fast ROI filtering
+- RSA fast kernel
+- naive cross-decoding fast kernel
+- backend policy default = `auto`
+- SWIFT multiclass searchlight engine (eligible multiclass, standard CV paths; outputs `Accuracy`, `AUC`, and `SWIFT_Info`)
+
+To force a specific backend for a call, pass `backend=` explicitly:
+
+```r
+run_searchlight(mspec, radius = 8, method = "standard", backend = "default")
+```
+
+To force a specific searchlight engine for a call, pass `engine=` explicitly:
+
+```r
+run_searchlight(mspec, radius = 8, method = "standard", engine = "legacy")
+```
+
+Engine selection is recorded on results for auditability:
+
+- `attr(res, "searchlight_engine")`
+- `attr(res, "searchlight_engine_requested")`
+- `attr(res, "searchlight_engine_resolved")`
+- `attr(res, "searchlight_engine_reason")`
+- `attr(res, "searchlight_engine_fallback_error")` (only when fallback occurred)
+
+Operational rollback and release checklist:
+`docs/searchlight_performance_rollbacks.md`
+
+Perf guardrail harness (`scripts/run_perf_guardrails.R`) now enforces a
+singleton lock by default to prevent concurrent local runs from polluting
+timings. Override controls:
+
+- `RMVPA_PERF_SINGLETON=true|false` (default `true`)
+- `RMVPA_PERF_LOCK_DIR=/path/to/lock` (default `./.tmp/perf_guardrails.lock`)
+- `RMVPA_PERF_LOCK_STALE_SECONDS=<seconds>` (default `21600`)
+
 ### Installation
 
 ### Using devtools

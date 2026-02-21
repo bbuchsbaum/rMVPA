@@ -12,8 +12,10 @@ run_searchlight_base(
   combiner = "average",
   drop_probs = FALSE,
   fail_fast = FALSE,
+  engine = NULL,
   k = NULL,
   backend = c("default", "shard", "auto"),
+  verbose = FALSE,
   ...
 )
 }

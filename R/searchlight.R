@@ -1430,8 +1430,19 @@ run_searchlight_base <- function(model_spec,
 #' \code{run_searchlight.<class>} method, this fallback will call
 #' \code{run_searchlight_base}.
 #'
-#' @param model_spec The generic model specification object.
-#' @inheritParams run_searchlight_base
+#' @inheritParams run_searchlight
+#' @param ... Additional arguments passed through:
+#'   \describe{
+#'     \item{engine}{Searchlight engine: \code{"auto"} (default), \code{"legacy"},
+#'       \code{"swift"}, or \code{"dual_lda_fast"}.}
+#'     \item{combiner}{Combiner function or name for randomized/resampled methods
+#'       (default \code{"average"}).}
+#'     \item{drop_probs}{If \code{TRUE}, drop probability predictions (default \code{FALSE}).}
+#'     \item{fail_fast}{If \code{TRUE}, stop on first ROI error (default \code{FALSE}).}
+#'     \item{k}{Number of neighbors for searchlight construction (default \code{NULL}).}
+#'     \item{verbose}{If \code{TRUE}, print progress messages (default \code{FALSE}).}
+#'     \item{incremental, gamma}{Engine-specific arguments for dual LDA engine.}
+#'   }
 #' @return A `searchlight_result` object containing spatial maps for each metric.
 #' @examples
 #' \dontrun{
@@ -1439,20 +1450,23 @@ run_searchlight_base <- function(model_spec,
 #' }
 #' @export
 run_searchlight.default <- function(model_spec, radius = 8, method = c("standard","randomized","resampled"),
-                                    niter = 4, combiner = "average", drop_probs = FALSE,
-                                    fail_fast = FALSE, k = NULL,
-                                    backend = c("default", "shard", "auto"),
-                                    verbose = FALSE, ...) {
+                                    niter = 4,
+                                    backend = c("default", "shard", "auto"), ...) {
   backend <- .resolve_searchlight_backend(backend = backend, missing_backend = missing(backend))
   method <- match.arg(method)
   dots <- list(...)
+  engine <- dots$engine %||% "auto"
+  combiner <- dots$combiner %||% "average"
+  drop_probs <- dots$drop_probs %||% FALSE
+  fail_fast <- dots$fail_fast %||% FALSE
+  k <- dots$k
+  verbose <- dots$verbose %||% FALSE
 
+  # incremental and gamma remain in ... as engine-specific params
   incremental <- if ("incremental" %in% names(dots)) isTRUE(dots$incremental) else TRUE
   gamma <- if ("gamma" %in% names(dots)) as.numeric(dots$gamma)[1] else NULL
-  engine <- if ("engine" %in% names(dots)) dots$engine else "auto"
   dots$incremental <- NULL
   dots$gamma <- NULL
-  dots$engine <- NULL
 
   engine_ret <- do.call(
     .run_searchlight_engine,
@@ -1475,10 +1489,28 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
     )
   )
   if (is.list(engine_ret) && isTRUE(engine_ret$handled)) {
-    return(engine_ret$result)
+    res <- engine_ret$result
+    if (is.list(res)) {
+      requested_engine <- if (!is.null(engine_ret$requested)) {
+        engine_ret$requested
+      } else {
+        .match_searchlight_engine(engine)
+      }
+      resolved_engine <- attr(res, "searchlight_engine", exact = TRUE)
+      if (is.null(resolved_engine)) {
+        resolved_engine <- as.character(engine_ret$engine)
+        attr(res, "searchlight_engine") <- resolved_engine
+      }
+      attr(res, "searchlight_engine_requested") <- as.character(requested_engine)
+      attr(res, "searchlight_engine_resolved") <- as.character(resolved_engine)
+      if (!is.null(engine_ret$reason)) {
+        attr(res, "searchlight_engine_reason") <- as.character(engine_ret$reason)
+      }
+    }
+    return(res)
   }
 
-  do.call(
+  res <- do.call(
     run_searchlight_base,
     c(
       list(
@@ -1496,6 +1528,27 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
       dots
     )
   )
+  if (is.list(res)) {
+    requested_engine <- if (is.list(engine_ret) && !is.null(engine_ret$requested)) {
+      engine_ret$requested
+    } else {
+      .match_searchlight_engine(engine)
+    }
+    if (is.null(attr(res, "searchlight_engine", exact = TRUE))) {
+      attr(res, "searchlight_engine") <- "legacy"
+    }
+    attr(res, "searchlight_engine_requested") <- as.character(requested_engine)
+    attr(res, "searchlight_engine_resolved") <- "legacy"
+    if (is.list(engine_ret) && !is.null(engine_ret$reason)) {
+      attr(res, "searchlight_engine_reason") <- as.character(engine_ret$reason)
+    } else {
+      attr(res, "searchlight_engine_reason") <- "legacy"
+    }
+    if (is.list(engine_ret) && !is.null(engine_ret$fallback_error)) {
+      attr(res, "searchlight_engine_fallback_error") <- as.character(engine_ret$fallback_error)
+    }
+  }
+  res
 }
 
 #' Combine MS-ReVE (Contrast RSA) Searchlight Results

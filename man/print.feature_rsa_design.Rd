@@ -19,9 +19,9 @@ Print Method for Feature RSA Design
 }
 \examples{
 \donttest{
-  D <- dist(matrix(rnorm(5*3), 5, 3))
+  S <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
   labels <- factor(letters[1:5])
-  des <- feature_rsa_design(D, labels)
+  des <- feature_rsa_design(S = S, labels = labels)
   print(des)
 }
 }

@@ -4,6 +4,7 @@
 \alias{model_importance}
 \alias{model_importance.sda}
 \alias{model_importance.glmnet}
+\alias{model_importance.spacenet_fit}
 \alias{model_importance.randomForest}
 \alias{model_importance.default}
 \title{Per-Feature Model Importance}
@@ -13,6 +14,8 @@ model_importance(object, X_train, ...)
 \method{model_importance}{sda}(object, X_train, summary_fun = NULL, ...)
 
 \method{model_importance}{glmnet}(object, X_train, summary_fun = NULL, ...)
+
+\method{model_importance}{spacenet_fit}(object, X_train, summary_fun = NULL, ...)
 
 \method{model_importance}{randomForest}(object, X_train, ...)
 

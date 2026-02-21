@@ -4,6 +4,8 @@
 \alias{extract_weights}
 \alias{extract_weights.sda}
 \alias{extract_weights.glmnet}
+\alias{extract_weights.spacenet_fit}
+\alias{extract_weights.model_fit}
 \alias{extract_weights.default}
 \title{Extract Raw Model Weights}
 \usage{
@@ -12,6 +14,10 @@ extract_weights(object, ...)
 \method{extract_weights}{sda}(object, ...)
 
 \method{extract_weights}{glmnet}(object, ...)
+
+\method{extract_weights}{spacenet_fit}(object, ...)
+
+\method{extract_weights}{model_fit}(object, ...)
 
 \method{extract_weights}{default}(object, ...)
 }

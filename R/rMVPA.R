@@ -14,6 +14,7 @@
 #'   \item Tools for constructing and managing MVPA datasets and designs.
 #' }
 #' 
+#' @useDynLib rMVPA, .registration = TRUE
 #' @name rMVPA
 #' @keywords internal
 #' @seealso 

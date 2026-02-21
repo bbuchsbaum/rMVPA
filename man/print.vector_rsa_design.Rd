@@ -19,9 +19,11 @@ Print Method for vector_rsa_design
 }
 \examples{
 \donttest{
-  S <- matrix(rnorm(10*3), 10, 3)
+  D <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
+  rownames(D) <- colnames(D) <- letters[1:5]
   labels <- factor(rep(letters[1:5], 2))
-  des <- vector_rsa_design(S, labels)
+  block_var <- rep(1:2, each=5)
+  des <- vector_rsa_design(D, labels, block_var)
   print(des)
 }
 }

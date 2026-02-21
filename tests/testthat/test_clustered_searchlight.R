@@ -1,6 +1,16 @@
 testthat::skip_if_not_installed("neuroim2")
 library(neuroim2)
 
+test_that("clustered fastpath is enabled by default in fast mode", {
+  old_opt <- options(
+    rMVPA.searchlight_mode = "fast",
+    rMVPA.clustered_nn_fastpath = NULL
+  )
+  on.exit(options(old_opt), add = TRUE)
+
+  expect_true(rMVPA:::.clustered_nn_fastpath_enabled())
+})
+
 test_that("mvpa_clustered_dataset constructor works", {
   ds <- gen_clustered_sample_dataset(D = c(10, 10, 10), nobs = 20, K = 5)
   dset <- ds$dataset
@@ -195,4 +205,112 @@ test_that("print method works for mvpa_clustered_dataset", {
 test_that("length.clustered_roi_spec returns neighbor count", {
   spec <- rMVPA:::clustered_roi_spec(seed = 1L, neighbors = c(1L, 2L, 3L))
   expect_equal(length(spec), 3)
+})
+
+expect_clustered_neighbor_set_parity <- function(reference, candidate) {
+  expect_equal(length(reference), length(candidate))
+  for (i in seq_along(reference)) {
+    expect_identical(reference[[i]]$seed, candidate[[i]]$seed)
+    expect_setequal(reference[[i]]$neighbors, candidate[[i]]$neighbors)
+  }
+}
+
+test_that("clustered searchlight uses fastpath regardless ambient mode options", {
+  ds <- gen_clustered_sample_dataset(D = c(12, 12, 12), nobs = 16, K = 8)
+  base_dense <- rMVPA:::.clustered_neighbor_specs_dense
+  base_fast <- rMVPA:::.clustered_neighbor_specs_fast
+
+  old_opt <- options(
+    rMVPA.searchlight_mode = "legacy",
+    rMVPA.clustered_nn_fastpath = NULL
+  )
+  on.exit(options(old_opt), add = TRUE)
+
+  dense_calls <- 0L
+  fast_calls <- 0L
+  testthat::with_mocked_bindings(
+    {
+      get_searchlight(ds$dataset, type = "standard", k = 3)
+    },
+    .clustered_neighbor_specs_dense = function(...) {
+      dense_calls <<- dense_calls + 1L
+      base_dense(...)
+    },
+    .clustered_neighbor_specs_fast = function(...) {
+      fast_calls <<- fast_calls + 1L
+      base_fast(...)
+    },
+    .package = "rMVPA"
+  )
+  expect_identical(dense_calls, 0L)
+  expect_identical(fast_calls, 1L)
+})
+
+test_that("clustered fastpath preserves k-nearest memberships", {
+  ds <- gen_clustered_sample_dataset(D = c(15, 15, 15), nobs = 20, K = 18)
+
+  old_opt <- options(
+    rMVPA.searchlight_mode = "legacy",
+    rMVPA.clustered_nn_fastpath = NULL
+  )
+  on.exit(options(old_opt), add = TRUE)
+  sl_base <- get_searchlight(ds$dataset, type = "standard", radius = NULL, k = 4)
+
+  options(rMVPA.searchlight_mode = "fast", rMVPA.clustered_nn_fastpath = NULL)
+  sl_fast <- get_searchlight(ds$dataset, type = "standard", radius = NULL, k = 4)
+
+  expect_clustered_neighbor_set_parity(sl_base, sl_fast)
+})
+
+test_that("clustered fastpath preserves radius memberships", {
+  ds <- gen_clustered_sample_dataset(D = c(15, 15, 15), nobs = 20, K = 18)
+
+  old_opt <- options(
+    rMVPA.searchlight_mode = "legacy",
+    rMVPA.clustered_nn_fastpath = NULL
+  )
+  on.exit(options(old_opt), add = TRUE)
+  sl_base <- get_searchlight(ds$dataset, type = "standard", radius = 7, k = NULL)
+
+  options(rMVPA.searchlight_mode = "fast", rMVPA.clustered_nn_fastpath = NULL)
+  sl_fast <- get_searchlight(ds$dataset, type = "standard", radius = 7, k = NULL)
+
+  expect_clustered_neighbor_set_parity(sl_base, sl_fast)
+})
+
+test_that("clustered fastpath preserves combined radius+k memberships", {
+  ds <- gen_clustered_sample_dataset(D = c(15, 15, 15), nobs = 20, K = 18)
+
+  old_opt <- options(
+    rMVPA.searchlight_mode = "legacy",
+    rMVPA.clustered_nn_fastpath = NULL
+  )
+  on.exit(options(old_opt), add = TRUE)
+  sl_base <- get_searchlight(ds$dataset, type = "standard", radius = 7, k = 4)
+
+  options(rMVPA.searchlight_mode = "fast", rMVPA.clustered_nn_fastpath = NULL)
+  sl_fast <- get_searchlight(ds$dataset, type = "standard", radius = 7, k = 4)
+
+  expect_clustered_neighbor_set_parity(sl_base, sl_fast)
+})
+
+test_that("clustered fastpath falls back to blockwise exact neighbors", {
+  cents <- matrix(stats::runif(120), ncol = 3)
+  block_calls <- 0L
+  base_block <- rMVPA:::.clustered_neighbors_blockwise
+
+  testthat::with_mocked_bindings(
+    {
+      specs <- rMVPA:::.clustered_neighbor_specs_fast(cents, radius = NULL, k = 5)
+      expect_equal(length(specs), nrow(cents))
+    },
+    .clustered_neighbors_rann = function(...) NULL,
+    .clustered_neighbors_blockwise = function(...) {
+      block_calls <<- block_calls + 1L
+      base_block(...)
+    },
+    .package = "rMVPA"
+  )
+
+  expect_identical(block_calls, 1L)
 })

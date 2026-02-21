@@ -40,9 +40,9 @@
 #'
 #' @examples
 #' \donttest{
-#'   D <- dist(matrix(rnorm(5*3), 5, 3))
+#'   S <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
 #'   labels <- factor(letters[1:5])
-#'   des <- feature_rsa_design(D, labels)
+#'   des <- feature_rsa_design(S = S, labels = labels)
 #' }
 #' @export
 feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_var=NULL) {
@@ -151,9 +151,9 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'
 #' @examples
 #' \donttest{
-#'   D <- dist(matrix(rnorm(5*3), 5, 3))
-#'   labels <- factor(rep(letters[1:5], 2))
-#'   des <- feature_rsa_design(D, labels)
+#'   S <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
+#'   labels <- factor(letters[1:5])
+#'   des <- feature_rsa_design(S = S, labels = labels)
 #'   # mdl <- feature_rsa_model(dataset, des, method="pls")
 #' }
 #' @details
@@ -1484,11 +1484,8 @@ output_schema.feature_rsa_model <- function(model) {
 #' @param ... Additional args
 #' @return A list of summary statistics for the feature RSA model (printed as side effect).
 #' @examples
-#' \donttest{
-#'   D <- dist(matrix(rnorm(5*3), 5, 3))
-#'   labels <- factor(letters[1:5])
-#'   des <- feature_rsa_design(D, labels)
-#'   mdl <- feature_rsa_model(des)
+#' \dontrun{
+#'   mdl <- feature_rsa_model(dataset, des)
 #'   summary(mdl)
 #' }
 #' @export
@@ -1509,9 +1506,9 @@ summary.feature_rsa_model <- function(object, ...) {
 #' @return Invisibly returns the input object \code{x} (called for side effects).
 #' @examples
 #' \donttest{
-#'   D <- dist(matrix(rnorm(5*3), 5, 3))
+#'   S <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
 #'   labels <- factor(letters[1:5])
-#'   des <- feature_rsa_design(D, labels)
+#'   des <- feature_rsa_design(S = S, labels = labels)
 #'   print(des)
 #' }
 #' @export
@@ -1572,11 +1569,8 @@ print.feature_rsa_design <- function(x, ...) {
 #' @param ... Additional arguments (ignored).
 #' @return Invisibly returns the input object \code{x} (called for side effects).
 #' @examples
-#' \donttest{
-#'   D <- dist(matrix(rnorm(5*3), 5, 3))
-#'   labels <- factor(letters[1:5])
-#'   des <- feature_rsa_design(D, labels)
-#'   mdl <- feature_rsa_model(des)
+#' \dontrun{
+#'   mdl <- feature_rsa_model(dataset, des)
 #'   print(mdl)
 #' }
 #' @export

@@ -1,5 +1,111 @@
 #' @import stringr
 #' @importFrom io qread
+.searchlight_mode_allowed <- c("fast")
+
+#' @keywords internal
+#' @noRd
+.normalize_searchlight_mode <- function(raw, option_name, fallback = "fast") {
+  if (is.null(raw)) {
+    return("fast")
+  }
+
+  if (is.character(raw) && length(raw) == 1L) {
+    value <- tolower(raw)
+    if (value %in% .searchlight_mode_allowed) {
+      return(value)
+    }
+    if (value %in% c("optimized", "legacy")) {
+      return("fast")
+    }
+  }
+  fallback
+}
+
+#' Resolve Searchlight Mode
+#'
+#' Searchlight mode now resolves to a single deterministic runtime policy:
+#' \code{"fast"}. Legacy ambient options are ignored.
+#'
+#' @param mode_option Option name for the new mode switch.
+#' @param profile_option Option name for the legacy profile switch.
+#'
+#' @return \code{"fast"}.
+#' @keywords internal
+#' @noRd
+.resolve_searchlight_mode <- function(mode_option = "rMVPA.searchlight_mode",
+                                      profile_option = "rMVPA.searchlight_profile") {
+  "fast"
+}
+
+#' @keywords internal
+#' @noRd
+.resolve_searchlight_profile <- function(option_name = "rMVPA.searchlight_profile") {
+  .resolve_searchlight_mode(
+    mode_option = "rMVPA.searchlight_mode",
+    profile_option = option_name
+  )
+  "optimized"
+}
+
+#' @keywords internal
+#' @noRd
+.searchlight_profile_bool_default <- function(optimized_default, legacy_default) {
+  isTRUE(optimized_default)
+}
+
+#' @keywords internal
+#' @noRd
+.warn_searchlight_legacy_override <- function(option_name,
+                                              replacement = "rMVPA.searchlight_mode") {
+  invisible(FALSE)
+}
+
+#' @keywords internal
+#' @noRd
+.warn_searchlight_legacy_ignored <- function(option_name,
+                                             replacement = NULL) {
+  invisible(FALSE)
+}
+
+#' @keywords internal
+#' @noRd
+.resolve_searchlight_bool_option <- function(option_name,
+                                             optimized_default,
+                                             legacy_default) {
+  isTRUE(optimized_default)
+}
+
+#' @keywords internal
+#' @noRd
+.resolve_searchlight_backend_default_option <- function(
+    option_name = "rMVPA.searchlight_backend_default") {
+  "auto"
+}
+
+#' Get Or Set Searchlight Mode
+#'
+#' Simplified high-level runtime switch for searchlight performance behavior.
+#'
+#' \itemize{
+#'   \item \code{"fast"} (default): optimized fast-path defaults.
+#' }
+#'
+#' @param mode Optional mode value. If \code{NULL}, returns current effective
+#'   mode.
+#'
+#' @return If \code{mode} is \code{NULL}, returns current mode as character.
+#'   Otherwise, validates the requested mode and returns \code{"fast"}
+#'   invisibly.
+#' @export
+searchlight_mode <- function(mode = NULL) {
+  .Deprecated("engine parameter in run_searchlight()")
+  if (is.null(mode)) {
+    return("fast")
+  }
+  .normalize_searchlight_mode(mode, option_name = "mode", fallback = "fast")
+  invisible("fast")
+}
+
 initialize_configuration <- function(args) {
   if (!is.null(args$config)) {
     if (!file.exists(args$config)) {
@@ -98,11 +204,12 @@ normalize_surface_samples <- function(bvec, mask) {
 #' @noRd
 #' @keywords internal
 initialize_surface_data <- function(config) {
+  indices <- NULL
   if (!is.null(config$train_subset)) {
     indices <- which(config$train_subset)
     flog.info("length of training subset %s", length(indices))
   }
-  
+
   train_surfaces <- load_surface_data(config, "train_data", colind=indices) 
   
   if (!is.null(config$test_data)) {
@@ -174,11 +281,12 @@ initialize_feature_selection <- function(config) {
 #' @importFrom methods as
 #' @keywords internal
 initialize_image_data <- function(config, mask) {
+  indices <- NULL
   if (!is.null(config$train_subset)) {
     indices <- which(config$train_subset)
     flog.info("length of training subset %s", length(indices))
   }
-  
+
   mask_volume <- as(mask, "LogicalNeuroVol")
   train_datavec <- load_image_data(config, "train_data", mask_volume=mask_volume, indices=indices)    
 
@@ -215,11 +323,11 @@ initialize_image_data <- function(config, mask) {
 #' @importFrom utils read.table
 initialize_design <- function(config) {
   if (is.character(config$train_subset)) {
-    config$train_subset <- eval(parse(text=config$train_subset))
+    config$train_subset <- str2lang(config$train_subset)
   }
-  
+
   if (is.character(config$test_subset)) {
-    config$test_subset <- eval(parse(text=config$test_subset))
+    config$test_subset <- str2lang(config$test_subset)
   }
   
   if (is.data.frame(config$train_design)) {
@@ -322,9 +430,24 @@ initialize_design <- function(config) {
 
 #' @noRd
 #' @keywords internal
+.safe_eval_grid <- function(expr_str) {
+  safe_env <- new.env(parent = baseenv())
+  safe_env$c <- base::c
+  safe_env$seq <- base::seq
+  safe_env$list <- base::list
+  safe_env$seq_len <- base::seq_len
+  safe_env$numeric <- base::numeric
+  safe_env$integer <- base::integer
+  safe_env[["TRUE"]] <- TRUE
+  safe_env[["FALSE"]] <- FALSE
+  eval(str2lang(expr_str), envir = safe_env)
+}
+
+#' @noRd
+#' @keywords internal
 initialize_tune_grid <- function(args, config) {
   if (!is.null(args$tune_grid) && !args$tune_grid == "NULL") {
-    params <- try(expand.grid(eval(parse(text=args$tune_grid))))
+    params <- try(expand.grid(.safe_eval_grid(args$tune_grid)))
     
     if (inherits(params, "try-error")) {
       stop("could not parse tune_grid expresson: ", args$tune_grid)
@@ -334,7 +457,7 @@ initialize_tune_grid <- function(args, config) {
     params
     
   } else if (!is.null(config$tune_grid) && !is.data.frame(config$tune_grid)) {
-    params <- try(lapply(config$tune_grid, function(x) eval(parse(text=x))))
+    params <- try(lapply(config$tune_grid, function(x) .safe_eval_grid(x)))
     if (inherits(params, "try-error")) {
       stop("could not parse tune_grid expresson: ", config$tune_grid)
     }
@@ -374,14 +497,15 @@ set_arg <- function(name, config, args, default) {
 
 #' @noRd
 #' @keywords internal
-make_output_dir <- function(dirname) {
-  if (!file.exists(dirname)) {
-    system(paste("mkdir", dirname))
-    dirname
-  } else {
-    dirname <- paste(dirname, "+", sep="")
-    Recall(dirname)
+make_output_dir <- function(dirname, .max_attempts = 100L) {
+  for (i in seq_len(.max_attempts)) {
+    candidate <- if (i == 1L) dirname else paste0(dirname, strrep("+", i - 1L))
+    if (!dir.exists(candidate)) {
+      dir.create(candidate, recursive = FALSE, showWarnings = FALSE)
+      return(candidate)
+    }
   }
+  stop("Could not create output directory after ", .max_attempts, " attempts: ", dirname)
 }
 
 #' @noRd
@@ -558,13 +682,13 @@ load_subset <- function(full_design, subset) {
   if (is.character(subset)) {
     if (substr(subset, 1,1) != "~") {
       subset <- paste0("~", subset)
-    }   
-    subset <- eval(parse(text=subset))
-  } 
-  
-  keep <- if(is.null(subset)) rep(TRUE, nrow(full_design)) else {  
-    subexpr <- subset[[2]]   
-    keep <- eval(subexpr, full_design)
+    }
+    subset <- str2lang(subset)
+  }
+
+  keep <- if(is.null(subset)) rep(TRUE, nrow(full_design)) else {
+    subexpr <- subset[[2]]
+    keep <- eval(subexpr, envir = as.list(full_design), enclos = baseenv())
     if (sum(keep) == nrow(full_design)) {
       warning(paste("subset has same number of rows as full table"))
     }
@@ -590,18 +714,6 @@ load_image_data_series <- function(fnames, config, indices, mask_volume) {
   }
   
   
-  ### TODO make more efficient. This loads in all data then subsets.
-  #vecmat <- do.call(rbind, lapply(seq_along(fnames), function(i) {
-  #  fname <- fnames[i]
-  #  flog.info("loading data file %s", fname)
-  #  ## TODO does as.matrix do the right thing? must return nonzero subset...
-  #  mat <- neuroim2::as.matrix(read_vec(fname, mask=mask_volume))
-  #  flog.info("data file %s has %s voxels and %s samples", fname, nrow(mat), ncol(mat))
-  #  mat
-  #}))
-  
-  
-  ## TODO use indices in read_vec
   vec <- read_vec(fnames, mask=mask_volume)
   
   if (!is.null(indices)) {
@@ -654,7 +766,6 @@ load_surface_data <- function(config, name, nodeind=NULL, colind=NULL) {
   flog.info("surface sections: ", sections, capture=TRUE)
   
   surfaces <- lapply(sections, function(section) {
-    ## TODO check me
     neurosurf::read_surf_data(tdat[[section]]$geometry, tdat[[section]]$data, nodeind=nodeind, colind=colind)
   })
   

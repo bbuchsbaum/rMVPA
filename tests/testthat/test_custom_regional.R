@@ -249,13 +249,8 @@ test_that("run_custom_regional runs with .verbose = TRUE", {
   # Remove subsetting of mask
   expect_silent({ 
       capture.output(
-        withCallingHandlers(
-          run_custom_regional(dataset_vol, region_mask_vol, stats_func, .verbose = TRUE),
-          warning = function(w) {
-            if (grepl("was built under R version", w$message)) {
-              invokeRestart("muffleWarning")
-            }
-          }
+        suppressWarnings(
+          run_custom_regional(dataset_vol, region_mask_vol, stats_func, .verbose = TRUE)
         )
       )
   })

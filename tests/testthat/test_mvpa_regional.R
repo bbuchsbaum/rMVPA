@@ -232,7 +232,7 @@ test_that("mvpa_regional with 5 ROIS runs and sda without error", {
   
   mspec <- mvpa_model(model, dataset$dataset, dataset$design, model_type="classification", crossval=cval, tune_grid=tuneGrid, tune_reps=3)
   regionMask <- NeuroVol(sample(1:5, size=length(dataset$dataset$mask), replace=TRUE), space(dataset$dataset$mask))
-  res <- run_regional(mspec, regionMask, TRUE)
+  res <- run_regional(mspec, regionMask, coalesce_design_vars = TRUE)
   expect_true(!is.null(res))
 })
 

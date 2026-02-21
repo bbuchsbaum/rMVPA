@@ -8,7 +8,7 @@ run_searchlight(
   model_spec,
   radius,
   method = c("standard", "randomized", "resampled"),
-  niter = NULL,
+  niter = 4,
   backend = c("default", "shard", "auto"),
   ...
 )

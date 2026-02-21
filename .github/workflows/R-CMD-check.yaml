@@ -28,6 +28,7 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
       RMVPA_RUN_EXTENDED_TESTS: "false"
+      RGL_USE_NULL: "TRUE"
 
     steps:
       - uses: actions/checkout@v3

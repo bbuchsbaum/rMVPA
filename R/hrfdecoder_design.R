@@ -89,9 +89,6 @@ hrfdecoder_design <- function(event_model, events, block_var, split_by = NULL) {
     if (is.null(TR) && !is.null(sframe$TR)) {
       TR <- sframe$TR
     }
-    if (is.null(TR) && requireNamespace("fmridesign", quietly = TRUE)) {
-      TR <- tryCatch(fmridesign::TR(sframe), error = function(...) NULL)
-    }
 
     # Check that block_var length matches expected TR count
     expected_TRs <- if (is.null(blocklens)) NA_real_ else sum(as.numeric(blocklens))
@@ -193,9 +190,6 @@ print.hrfdecoder_design <- function(x, ...) {
     TR <- attr(sframe, "TR")
     if (is.null(TR) && !is.null(sframe$TR)) {
       TR <- sframe$TR
-    }
-    if (is.null(TR) && requireNamespace("fmridesign", quietly = TRUE)) {
-      TR <- tryCatch(fmridesign::TR(sframe), error = function(...) NULL)
     }
 
     blocklens <- attr(sframe, "blocklens")

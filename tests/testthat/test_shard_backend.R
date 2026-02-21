@@ -404,6 +404,14 @@ test_that("shard surface searchlight parity with default backend", {
   expect_equal(nrow(res_default), nrow(res_shard))
   expect_equal(sort(res_default$id), sort(res_shard$id))
   expect_equal(res_default$error, res_shard$error)
+
+  # Performance parity (matching volumetric and clustered test patterns)
+  if ("performance" %in% names(res_default) && "performance" %in% names(res_shard)) {
+    joined <- merge(res_default[, c("id", "performance")],
+                    res_shard[, c("id", "performance")],
+                    by = "id", suffixes = c("_default", "_shard"))
+    expect_equal(joined$performance_default, joined$performance_shard, tolerance = 1e-8)
+  }
 })
 
 test_that("shard clustered regional parity with default backend", {
@@ -726,6 +734,32 @@ test_that("backend='auto' runs and remains backward compatible", {
       batch_size = 5
     )
     expect_true(inherits(res, "searchlight_result"))
+  })
+})
+
+test_that("shard backend works when return_predictions is FALSE", {
+  skip_on_cran()
+
+  ds <- gen_sample_dataset(c(5, 5, 5), 20, blocks = 2, nlevels = 2)
+  cval <- blocked_cross_validation(ds$design$block_var)
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(
+    mdl, ds$dataset, ds$design,
+    "classification",
+    crossval = cval,
+    return_predictions = FALSE
+  )
+
+  expect_no_error({
+    res <- run_searchlight(
+      mspec,
+      radius = 3,
+      method = "standard",
+      backend = "shard",
+      batch_size = 5
+    )
+    expect_true(inherits(res, "searchlight_result"))
+    expect_true(length(res$results) > 0)
   })
 })
 

@@ -270,11 +270,8 @@ second_order_similarity <- function(distfun, X, Dref, block_var, method=c("pears
 #' @param ... Additional arguments (ignored).
 #' @return Invisibly returns the input object \code{x} (called for side effects).
 #' @examples
-#' \donttest{
-#'   S <- matrix(rnorm(10*3), 10, 3)
-#'   labels <- factor(rep(letters[1:5], 2))
-#'   des <- vector_rsa_design(S, labels)
-#'   mdl <- vector_rsa_model(des)
+#' \dontrun{
+#'   mdl <- vector_rsa_model(dataset, des)
 #'   print(mdl)
 #' }
 #' @export
@@ -332,9 +329,11 @@ print.vector_rsa_model <- function(x, ...) {
 #' @return Invisibly returns the input object \code{x} (called for side effects).
 #' @examples
 #' \donttest{
-#'   S <- matrix(rnorm(10*3), 10, 3)
+#'   D <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
+#'   rownames(D) <- colnames(D) <- letters[1:5]
 #'   labels <- factor(rep(letters[1:5], 2))
-#'   des <- vector_rsa_design(S, labels)
+#'   block_var <- rep(1:2, each=5)
+#'   des <- vector_rsa_design(D, labels, block_var)
 #'   print(des)
 #' }
 #' @importFrom utils head

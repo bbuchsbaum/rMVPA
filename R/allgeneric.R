@@ -841,17 +841,17 @@ wrap_output <- function(obj, vals, ...) {
 #' @return A combined object with merged predictions.
 #' @examples
 #' \donttest{
-#' cres1 <- binary_classification_result(
-#'   observed = factor(c("a","b")),
-#'   predicted = factor(c("a","b")),
-#'   probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))
+#' p1 <- structure(
+#'   list(class = c("a","b"),
+#'        probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))),
+#'   class = c("classification_prediction", "prediction", "list")
 #' )
-#' cres2 <- binary_classification_result(
-#'   observed = factor(c("a","b")),
-#'   predicted = factor(c("b","a")),
-#'   probs = matrix(c(.4,.6,.6,.4), ncol=2, dimnames=list(NULL,c("a","b")))
+#' p2 <- structure(
+#'   list(class = c("b","a"),
+#'        probs = matrix(c(.4,.6,.6,.4), ncol=2, dimnames=list(NULL,c("a","b")))),
+#'   class = c("classification_prediction", "prediction", "list")
 #' )
-#' merge_predictions(cres1, list(cres2))
+#' merge_predictions(p1, list(p2))
 #' }
 #' @export
 merge_predictions <- function(obj1, rest, ...) {
@@ -917,12 +917,12 @@ prob_observed <- function(x) {
 #' @param x The object from which to extract the number of categories.
 #' @return The number of response categories.
 #' @examples
-#' cres <- binary_classification_result(
-#'   observed = factor(c("a","b")),
-#'   predicted = factor(c("a","b")),
-#'   probs = matrix(c(.8,.2,.3,.7), ncol=2, dimnames=list(NULL,c("a","b")))
+#' des <- mvpa_design(
+#'   train_design = data.frame(y = factor(c("a","b","a","b"))),
+#'   y_train = factor(c("a","b","a","b")),
+#'   block_var = factor(c("1","1","2","2"))
 #' )
-#' nresponses(cres)
+#' nresponses(des)
 #' @export
 nresponses <- function(x) {
   UseMethod("nresponses")
@@ -942,14 +942,8 @@ nresponses <- function(x) {
 #' @return Predictions whose structure depends on the specific method (e.g., a vector,
 #'   matrix, or data frame).
 #' @examples
-#' \donttest{
-#'   ds <- gen_sample_dataset(c(5,5,5), 20, nlevels=2)
-#'   mdl <- load_model("sda_notune")
-#'   mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification")
-#'   vox <- which(ds$dataset$mask > 0)
-#'   X <- neuroim2::series(ds$dataset$train_data, vox)
-#'   fit <- train_model(mspec, X, ds$design$y_train, indices=vox)
-#'   preds <- predict_model(mspec, fit, X)
+#' \dontrun{
+#'   preds <- predict_model(model_spec, fitted_model, new_data)
 #' }
 #' @export
 predict_model <- function(object, fit, newdata, ...) {
@@ -1040,7 +1034,7 @@ predict_model <- function(object, fit, newdata, ...) {
 #'
 #' @export
 run_searchlight <- function(model_spec, radius, method = c("standard", "randomized", "resampled"),
-                            niter = NULL, backend = c("default", "shard", "auto"), ...) {
+                            niter = 4, backend = c("default", "shard", "auto"), ...) {
   UseMethod("run_searchlight")
 }
 

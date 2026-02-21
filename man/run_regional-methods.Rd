@@ -44,9 +44,6 @@ run_regional_base(
 \method{run_regional}{mvpa_model}(
   model_spec,
   region_mask,
-  coalesce_design_vars = FALSE,
-  processor = NULL,
-  verbose = FALSE,
   backend = c("default", "shard", "auto"),
   ...
 )
@@ -54,9 +51,6 @@ run_regional_base(
 \method{run_regional}{rsa_model}(
   model_spec,
   region_mask,
-  return_fits = FALSE,
-  compute_performance = TRUE,
-  coalesce_design_vars = FALSE,
   backend = c("default", "shard", "auto"),
   ...
 )
@@ -64,11 +58,6 @@ run_regional_base(
 \method{run_regional}{vector_rsa_model}(
   model_spec,
   region_mask,
-  return_fits = FALSE,
-  compute_performance = TRUE,
-  coalesce_design_vars = FALSE,
-  processor = NULL,
-  verbose = FALSE,
   backend = c("default", "shard", "auto"),
   ...
 )

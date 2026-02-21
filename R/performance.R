@@ -217,6 +217,12 @@ merge_results.binary_classification_result <- function(obj, ...) {
                                predictor = obj$predictor)
 }
 
+#' @method merge_classif_results binary_classification_result
+#' @export
+merge_classif_results.binary_classification_result <- function(x, ...) {
+  merge_results.binary_classification_result(x, ...)
+}
+
 #' @rdname merge_results-methods
 #' @method merge_results regression_result
 #' @export
@@ -228,6 +234,12 @@ merge_results.regression_result <- function(obj, ...) {
                     testind = obj$testind,
                     test_design = obj$test_design,
                     predictor = obj$predictor)
+}
+
+#' @method merge_classif_results regression_result
+#' @export
+merge_classif_results.regression_result <- function(x, ...) {
+  merge_results.regression_result(x, ...)
 }
 
 
@@ -267,6 +279,12 @@ merge_results.multiway_classification_result <- function(obj, ...) {
                                  testind = obj$testind,
                                  test_design = obj$test_design,
                                  predictor = obj$predictor)
+}
+
+#' @method merge_classif_results multiway_classification_result
+#' @export
+merge_classif_results.multiway_classification_result <- function(x, ...) {
+  merge_results.multiway_classification_result(x, ...)
 }
 
 #' @export

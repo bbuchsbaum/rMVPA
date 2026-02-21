@@ -9,33 +9,35 @@
   radius = 8,
   method = c("standard", "randomized", "resampled"),
   niter = 4,
-  combiner = "average",
-  drop_probs = FALSE,
-  fail_fast = FALSE,
-  k = NULL,
   backend = c("default", "shard", "auto"),
   ...
 )
 }
 \arguments{
-\item{model_spec}{The generic model specification object.}
+\item{model_spec}{A \code{mvpa_model} instance containing the model specifications}
 
-\item{radius}{Numeric searchlight radius (1 to 100).}
+\item{radius}{The searchlight radius in millimeters}
 
-\item{method}{Character: "standard" or "randomized".}
+\item{method}{The type of searchlight, either 'randomized' or 'standard'}
 
-\item{niter}{Number of iterations if \code{method="randomized"}.}
+\item{niter}{The number of searchlight iterations (used only for 'randomized' method)}
 
-\item{combiner}{Either a function that combines partial results or a string
-("pool", "average") that selects a built-in combiner.}
+\item{backend}{Execution backend: \code{"default"} (standard pipeline),
+\code{"shard"} (shared-memory backend), or \code{"auto"} (try shard and
+fall back to default).}
 
-\item{drop_probs}{Logical; if TRUE, drop per-ROI probability matrices after computing metrics to save memory. Default FALSE.}
-
-\item{fail_fast}{Logical; if TRUE, stop immediately on first ROI error instead of continuing. Default FALSE.}
-
-\item{k}{Optional integer; number of cross-validation folds. Default NULL (use model default).}
-
-\item{...}{Additional arguments passed on to \code{do_standard} or \code{do_randomized}.}
+\item{...}{Additional arguments passed through:
+\describe{
+  \item{engine}{Searchlight engine: \code{"auto"} (default), \code{"legacy"},
+    \code{"swift"}, or \code{"dual_lda_fast"}.}
+  \item{combiner}{Combiner function or name for randomized/resampled methods
+    (default \code{"average"}).}
+  \item{drop_probs}{If \code{TRUE}, drop probability predictions (default \code{FALSE}).}
+  \item{fail_fast}{If \code{TRUE}, stop on first ROI error (default \code{FALSE}).}
+  \item{k}{Number of neighbors for searchlight construction (default \code{NULL}).}
+  \item{verbose}{If \code{TRUE}, print progress messages (default \code{FALSE}).}
+  \item{incremental, gamma}{Engine-specific arguments for dual LDA engine.}
+}}
 }
 \value{
 A `searchlight_result` object containing spatial maps for each metric.

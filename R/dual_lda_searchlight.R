@@ -25,20 +25,7 @@
 #' @keywords internal
 #' @noRd
 .dual_lda_rank_update_preference <- function() {
-  opt <- getOption("rMVPA.dual_lda_rank_update", NULL)
-  if (!is.null(opt)) {
-    val <- suppressWarnings(as.logical(opt)[1])
-    if (!is.na(val)) {
-      return(val)
-    }
-  }
-
-  flag <- Sys.getenv("RMVPA_DUAL_LDA_RANK_UPDATE", unset = "")
-  if (!nzchar(flag)) {
-    return(NULL)
-  }
-
-  tolower(flag) %in% c("1", "true", "yes", "on")
+  NULL
 }
 
 #' @keywords internal
@@ -50,23 +37,7 @@
 #' @keywords internal
 #' @noRd
 .dual_lda_rank_chunk_size <- function() {
-  opt <- getOption("rMVPA.dual_lda_rank_chunk_size", NULL)
-  if (!is.null(opt)) {
-    val <- suppressWarnings(as.integer(opt)[1])
-    return(if (is.na(val) || val < 1L) 4L else val)
-  }
-
-  flag <- Sys.getenv("RMVPA_DUAL_LDA_RANK_CHUNK_SIZE", unset = "")
-  if (!nzchar(flag)) {
-    return(4L)
-  }
-
-  val <- suppressWarnings(as.integer(flag))
-  if (is.na(val) || val < 1L) {
-    4L
-  } else {
-    val
-  }
+  4L
 }
 
 #' @keywords internal
@@ -190,17 +161,7 @@
     return(isTRUE(cache_val))
   }
 
-  has_native <- tryCatch(
-    exists("rmvpa_dual_lda_step_update", envir = asNamespace("rMVPA"), inherits = FALSE),
-    error = function(...) FALSE
-  )
-  if (!isTRUE(has_native)) {
-    return(FALSE)
-  }
-  has_chunk_native <- tryCatch(
-    exists("rmvpa_dual_lda_chunk_update_predict", envir = asNamespace("rMVPA"), inherits = FALSE),
-    error = function(...) FALSE
-  )
+  has_chunk_native <- .dual_lda_native_symbol_loaded("rmvpa_dual_lda_chunk_update_predict")
   can_chunk <- isTRUE(has_chunk_native) && chunk_size > 1L
 
   bench_mode <- function(mode) {
@@ -421,7 +382,18 @@
 #' @keywords internal
 #' @noRd
 .dual_lda_call_native <- function(symbol, ...) {
-  .Call(symbol, ..., PACKAGE = "rMVPA")
+  ccall <- .Call
+  ccall(symbol, ..., PACKAGE = "rMVPA")
+}
+
+#' @keywords internal
+#' @noRd
+.dual_lda_native_symbol_loaded <- function(symbol) {
+  symbol <- as.character(symbol)[1]
+  isTRUE(tryCatch(
+    is.loaded(symbol, PACKAGE = "rMVPA"),
+    error = function(...) FALSE
+  ))
 }
 
 #' @keywords internal
@@ -440,18 +412,20 @@
     return(list(R = R, ok = FALSE))
   }
 
-  native_out <- try(
-    .dual_lda_call_native(
-      "rmvpa_chol_rankk_update",
-      R,
-      X,
-      as.logical(downdate),
-      as.numeric(scale)
-    ),
-    silent = TRUE
-  )
-  if (!inherits(native_out, "try-error") && !is.null(native_out)) {
-    return(list(R = native_out, ok = TRUE))
+  if (.dual_lda_native_symbol_loaded("rmvpa_chol_rankk_update")) {
+    native_out <- try(
+      .dual_lda_call_native(
+        "rmvpa_chol_rankk_update",
+        R,
+        X,
+        as.logical(downdate),
+        as.numeric(scale)
+      ),
+      silent = TRUE
+    )
+    if (!inherits(native_out, "try-error") && !is.null(native_out)) {
+      return(list(R = native_out, ok = TRUE))
+    }
   }
 
   # Fallback for environments where native symbols are unavailable.
@@ -514,6 +488,9 @@
 .dual_lda_step_update_native <- function(state, fold, out_cols, in_cols) {
   if (length(out_cols) == 0L && length(in_cols) == 0L) {
     return(state)
+  }
+  if (!.dual_lda_native_symbol_loaded("rmvpa_dual_lda_step_update")) {
+    return(NULL)
   }
 
   out <- try(
@@ -602,6 +579,9 @@
 .dual_lda_chunk_update_predict_native <- function(state, fold, step_cols_seq) {
   if (length(step_cols_seq) == 0L) {
     return(list(state = state, probs = list()))
+  }
+  if (!.dual_lda_native_symbol_loaded("rmvpa_dual_lda_chunk_update_predict")) {
+    return(NULL)
   }
 
   packed <- .dual_lda_pack_boundary_steps(step_cols_seq)
@@ -1116,8 +1096,7 @@
 
 #' @keywords internal
 #' @noRd
-run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE, gamma = NULL,
-                                          verbose = FALSE, scan_chunk = NULL) {
+.validate_dual_lda_inputs <- function(model_spec, gamma) {
   ds <- model_spec$dataset
   if (!inherits(ds, "mvpa_image_dataset")) {
     stop("dual_lda fast path currently supports mvpa_image_dataset only.")
@@ -1139,6 +1118,19 @@ run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE
   if (!is.finite(gamma) || gamma <= 0) {
     stop("dual_lda fast path requires `gamma > 0`.")
   }
+
+  list(ds = ds, y_all = y_all, classes = classes, gamma = gamma)
+}
+
+#' @keywords internal
+#' @noRd
+run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE, gamma = NULL,
+                                          verbose = FALSE, scan_chunk = NULL) {
+  validated <- .validate_dual_lda_inputs(model_spec, gamma)
+  ds <- validated$ds
+  y_all <- validated$y_all
+  classes <- validated$classes
+  gamma <- validated$gamma
 
   space_obj <- resolve_volume_space(ds)
   dims <- spatial_dim_shape(space_obj)
@@ -1213,10 +1205,7 @@ run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE
   if (!is.finite(rank_chunk) || rank_chunk < 1L) {
     rank_chunk <- 1L
   }
-  has_chunk_native <- tryCatch(
-    exists("rmvpa_dual_lda_chunk_update_predict", envir = asNamespace("rMVPA"), inherits = FALSE),
-    error = function(...) FALSE
-  )
+  has_chunk_native <- .dual_lda_native_symbol_loaded("rmvpa_dual_lda_chunk_update_predict")
 
   rank_pref <- .dual_lda_rank_update_preference()
   if (!is.null(rank_pref)) {
@@ -1294,16 +1283,17 @@ run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE
     }, silent = TRUE)
 
     if (inherits(perf, "try-error")) {
-      bad_rows[[length(bad_rows) + 1L]] <<- tibble::tibble(
-        id = center_id,
-        error = TRUE,
-        error_message = conditionMessage(attr(perf, "condition"))
-      )
-      return(invisible(FALSE))
+      return(list(
+        success = FALSE,
+        bad_row = tibble::tibble(
+          id = center_id,
+          error = TRUE,
+          error_message = conditionMessage(attr(perf, "condition"))
+        )
+      ))
     }
 
-    perf_rows[[out_idx]] <<- perf
-    invisible(TRUE)
+    list(success = TRUE, out_idx = out_idx, perf = perf)
   }
 
   n_ord <- length(ord_ids)
@@ -1317,7 +1307,12 @@ run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE
       fold_preds <- lapply(seq_along(fold_list), function(f) {
         .predict_dual_lda_state(states[[f]], fold_list[[f]])
       })
-      score_center(pos, fold_preds)
+      sc <- score_center(pos, fold_preds)
+      if (sc$success) {
+        perf_rows[[sc$out_idx]] <- sc$perf
+      } else {
+        bad_rows[[length(bad_rows) + 1L]] <- sc$bad_row
+      }
       pos <- pos + 1L
       next
     }
@@ -1384,7 +1379,12 @@ run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE
                 probs = chunk_prob[[f]][[s]]
               )
             })
-            score_center(pidx, fold_preds)
+            sc <- score_center(pidx, fold_preds)
+            if (sc$success) {
+              perf_rows[[sc$out_idx]] <- sc$perf
+            } else {
+              bad_rows[[length(bad_rows) + 1L]] <- sc$bad_row
+            }
           }
           pos <- step_positions[length(step_positions)] + 1L
           chunk_done <- TRUE
@@ -1441,7 +1441,12 @@ run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE
     fold_preds <- lapply(seq_along(fold_list), function(f) {
       .predict_dual_lda_state(states[[f]], fold_list[[f]])
     })
-    score_center(pos, fold_preds)
+    sc <- score_center(pos, fold_preds)
+    if (sc$success) {
+      perf_rows[[sc$out_idx]] <- sc$perf
+    } else {
+      bad_rows[[length(bad_rows) + 1L]] <- sc$bad_row
+    }
     pos <- pos + 1L
   }
 
@@ -1473,57 +1478,16 @@ run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE
 #' @keywords internal
 #' @noRd
 .dual_lda_sampled_combiner <- function(combiner) {
-  if (is.function(combiner)) {
-    if (identical(combiner, combine_randomized)) {
-      return(combine_randomized)
-    }
-    stop(
-      "dual_lda_fast randomized/resampled currently supports combiner='average' only.",
-      call. = FALSE
-    )
-  }
-
-  if (!is.character(combiner) || length(combiner) == 0L) {
-    stop("Invalid randomized/resampled combiner for dual_lda_fast.", call. = FALSE)
-  }
-  choice <- as.character(combiner)[1]
-  if (identical(choice, "average") || identical(choice, "combine_randomized")) {
-    return(combine_randomized)
-  }
-  stop(
-    "dual_lda_fast randomized/resampled currently supports combiner='average' only.",
-    call. = FALSE
-  )
+  .engine_sampled_combiner(combiner, "dual_lda_fast")
 }
 
 #' @keywords internal
 #' @noRd
-.dual_lda_extract_roi_indices <- function(slight) {
-  lapply(slight, function(roi) {
-    ids <- suppressWarnings(as.integer(roi))
-    ids <- ids[is.finite(ids)]
-    ids <- ids[ids > 0L]
-    unique(as.integer(ids))
-  })
-}
+.dual_lda_extract_roi_indices <- .engine_extract_roi_indices
 
 #' @keywords internal
 #' @noRd
-.dual_lda_extract_roi_ids <- function(slight) {
-  if (length(slight) == 0L) {
-    return(integer(0))
-  }
-
-  if (is.integer(slight[[1]])) {
-    ids <- vapply(slight, function(x) {
-      val <- attr(x, "center.index")
-      if (is.null(val)) NA_integer_ else as.integer(val)[1]
-    }, integer(1))
-  } else {
-    ids <- vapply(slight, function(x) as.integer(x@parent_index), integer(1))
-  }
-  as.integer(ids)
-}
+.dual_lda_extract_roi_ids <- .engine_extract_roi_ids
 
 #' @keywords internal
 #' @noRd
@@ -1589,34 +1553,19 @@ run_searchlight_dual_lda_sampled_fast <- function(model_spec,
   if (!is.finite(niter) || is.na(niter) || niter < 1L) {
     stop("dual_lda sampled fast path requires niter >= 1.", call. = FALSE)
   }
-  if (isTRUE(drop_probs) || isTRUE(fail_fast)) {
-    # Kept for API compatibility; no-op in this fast sampled path.
-    invisible(NULL)
+  if (isTRUE(drop_probs)) {
+    warning("drop_probs is ignored in dual_lda sampled fast path.", call. = FALSE)
+  }
+  if (isTRUE(fail_fast)) {
+    warning("fail_fast is ignored in dual_lda sampled fast path.", call. = FALSE)
   }
   backend <- match.arg(backend)
-  invisible(backend)
 
-  ds <- model_spec$dataset
-  if (!inherits(ds, "mvpa_image_dataset")) {
-    stop("dual_lda fast path currently supports mvpa_image_dataset only.")
-  }
-  if (inherits(ds, "mvpa_multibasis_image_dataset")) {
-    stop("dual_lda fast path does not currently support multibasis datasets.")
-  }
-
-  y_all <- y_train(model_spec)
-  if (!is.factor(y_all)) {
-    stop("dual_lda fast path requires factor responses.")
-  }
-  classes <- levels(y_all)
-  if (length(classes) < 2L) {
-    stop("dual_lda fast path requires at least two classes.")
-  }
-
-  gamma <- .dual_lda_gamma(model_spec, gamma = gamma)
-  if (!is.finite(gamma) || gamma <= 0) {
-    stop("dual_lda fast path requires `gamma > 0`.")
-  }
+  validated <- .validate_dual_lda_inputs(model_spec, gamma)
+  ds <- validated$ds
+  y_all <- validated$y_all
+  classes <- validated$classes
+  gamma <- validated$gamma
 
   mask_indices <- ds$mask_indices
   if (is.null(mask_indices)) {
@@ -1626,7 +1575,9 @@ run_searchlight_dual_lda_sampled_fast <- function(model_spec,
     return(empty_searchlight_result(ds))
   }
 
-  n_space <- length(ds$mask)
+  space_obj <- resolve_volume_space(ds)
+  dims <- spatial_dim_shape(space_obj)
+  n_space <- prod(dims)
   col_lookup <- integer(n_space)
   col_lookup[mask_indices] <- seq_along(mask_indices)
 

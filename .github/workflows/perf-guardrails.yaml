@@ -1,0 +1,65 @@
+name: perf-guardrails
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+  schedule:
+    - cron: "30 7 * * *"
+
+jobs:
+  perf-smoke:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      RMVPA_RUN_PERF_TESTS: "true"
+      RMVPA_PERF_REP: "1"
+      RMVPA_PERF_FILTER: "benchmark_searchlight_framework_smoke"
+      RMVPA_RUN_NIGHTLY_PERF_TESTS: "false"
+      R_PROGRESSR_ENABLE: "false"
+      RGL_USE_NULL: "TRUE"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+          extra-packages: any::devtools
+
+      - name: Run perf smoke guardrail
+        run: Rscript scripts/run_perf_guardrails.R
+
+  perf-guardrails-nightly:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      RMVPA_RUN_PERF_TESTS: "true"
+      RMVPA_PERF_REP: "1"
+      RMVPA_RUN_NIGHTLY_PERF_TESTS: "true"
+      RMVPA_NIGHTLY_PERF_REP: "2"
+      R_PROGRESSR_ENABLE: "false"
+      RGL_USE_NULL: "TRUE"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+          extra-packages: any::devtools
+
+      - name: Run searchlight framework performance guardrails
+        run: Rscript scripts/run_perf_guardrails.R

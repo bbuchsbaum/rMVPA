@@ -37,11 +37,17 @@ naive_xdec_model <- function(dataset, design, link_by = NULL, return_predictions
     get_binary_perf(design$split_groups)
   }
 
+  fast_kernel <- NULL
+  if (.naive_xdec_fast_kernel_enabled()) {
+    fast_kernel <- .naive_xdec_prepare_fast_kernel(design = design, link_by = link_by)
+  }
+
   create_model_spec(
     "naive_xdec_model",
     dataset = dataset,
     design  = design,
     link_by = link_by,
+    .fast_kernel = fast_kernel,
     performance = perf_fun,
     compute_performance = TRUE,
     return_predictions = return_predictions,
@@ -66,6 +72,188 @@ print.naive_xdec_model <- function(x, ...) {
 .nx_rowsum_mean <- function(X, f) {
   f <- factor(f)
   rowsum(X, f, reorder = TRUE) / as.vector(table(f))
+}
+
+#' @keywords internal
+.naive_xdec_fast_kernel_enabled <- function() {
+  TRUE
+}
+
+#' @keywords internal
+.naive_xdec_fast_metric_mode <- function(model, classes) {
+  perf_fun <- model$performance
+  perf_kind <- attr(perf_fun, "rmvpa_perf_kind", exact = TRUE)
+
+  if (is.null(perf_kind)) {
+    return(list(enabled = FALSE))
+  }
+
+  if (identical(perf_kind, "binary") && length(classes) == 2L) {
+    return(list(
+      enabled = TRUE,
+      kind = "binary",
+      class_metrics = FALSE,
+      split_groups = model$design$split_groups
+    ))
+  }
+
+  if (identical(perf_kind, "multiclass") && length(classes) > 2L) {
+    return(list(
+      enabled = TRUE,
+      kind = "multiclass",
+      class_metrics = isTRUE(attr(perf_fun, "rmvpa_class_metrics", exact = TRUE)),
+      split_groups = model$design$split_groups
+    ))
+  }
+
+  list(enabled = FALSE)
+}
+
+#' @keywords internal
+.naive_xdec_fast_metrics <- function(model, core, test_idx) {
+  if (anyNA(core$obs) || anyNA(core$probs) || any(!is.finite(core$probs))) {
+    return(NULL)
+  }
+
+  classes <- levels(core$obs)
+  metric_mode <- .naive_xdec_fast_metric_mode(model, classes = classes)
+  if (!isTRUE(metric_mode$enabled)) {
+    return(NULL)
+  }
+
+  if (!exists(".dual_lda_metric_with_splits", mode = "function", inherits = TRUE)) {
+    return(NULL)
+  }
+  metric_fun <- get(".dual_lda_metric_with_splits", mode = "function", inherits = TRUE)
+
+  metric_fun(
+    observed = core$obs,
+    probs = core$probs,
+    test_idx = test_idx,
+    classes = classes,
+    kind = metric_mode$kind,
+    split_groups = metric_mode$split_groups,
+    class_metrics = metric_mode$class_metrics
+  )
+}
+
+#' @keywords internal
+.nx_resolve_keys <- function(design, link_by = NULL) {
+  if (!is.null(link_by) &&
+      link_by %in% colnames(design$train_design) &&
+      link_by %in% colnames(design$test_design)) {
+    key_tr <- factor(design$train_design[[link_by]])
+    key_te <- factor(design$test_design[[link_by]])
+  } else {
+    key_tr <- factor(design$y_train)
+    key_te <- factor(design$y_test)
+  }
+  list(key_tr = key_tr, key_te = key_te)
+}
+
+#' @keywords internal
+.naive_xdec_prepare_fast_kernel <- function(design, link_by = NULL) {
+  keys <- .nx_resolve_keys(design = design, link_by = link_by)
+  key_tr <- keys$key_tr
+  key_te <- keys$key_te
+  levs <- levels(key_tr)
+
+  if (length(levs) < 1L) {
+    return(NULL)
+  }
+
+  group_mat <- model.matrix(~ key_tr - 1)
+  if (!is.matrix(group_mat) || nrow(group_mat) != length(key_tr) || ncol(group_mat) != length(levs)) {
+    return(NULL)
+  }
+  storage.mode(group_mat) <- "double"
+  colnames(group_mat) <- levs
+
+  counts <- as.numeric(table(key_tr))
+  if (length(counts) != length(levs) || any(counts <= 0)) {
+    return(NULL)
+  }
+
+  list(
+    levels = levs,
+    key_tr = key_tr,
+    obs = factor(as.character(key_te), levels = levs),
+    group_mat = group_mat,
+    counts = counts,
+    n_train = length(key_tr),
+    n_test = length(key_te)
+  )
+}
+
+#' @keywords internal
+.nx_row_cor <- function(Xa, Xb) {
+  Xa <- as.matrix(Xa)
+  Xb <- as.matrix(Xb)
+
+  if (ncol(Xa) != ncol(Xb)) {
+    stop("Row correlation requires matching feature dimensions.")
+  }
+
+  p <- ncol(Xa)
+  out <- matrix(NA_real_, nrow = nrow(Xa), ncol = nrow(Xb))
+  if (p < 2L || nrow(Xa) < 1L || nrow(Xb) < 1L) {
+    return(out)
+  }
+
+  if (anyNA(Xa) || anyNA(Xb) || any(!is.finite(Xa)) || any(!is.finite(Xb))) {
+    return(cor(t(Xa), t(Xb)))
+  }
+
+  ma <- rowMeans(Xa)
+  mb <- rowMeans(Xb)
+  Ac <- sweep(Xa, 1, ma, "-")
+  Bc <- sweep(Xb, 1, mb, "-")
+
+  sa <- sqrt(rowSums(Ac * Ac) / (p - 1))
+  sb <- sqrt(rowSums(Bc * Bc) / (p - 1))
+  cov <- tcrossprod(Ac, Bc) / (p - 1)
+  denom <- tcrossprod(sa, sb)
+
+  out <- cov / denom
+  out[!is.finite(out)] <- NA_real_
+  out
+}
+
+#' @keywords internal
+.naive_xdec_fit_core <- function(Xtr, Xte, kernel = NULL, key_tr = NULL, key_te = NULL) {
+  if (!is.null(kernel)) {
+    if (nrow(Xtr) == kernel$n_train && nrow(Xte) == kernel$n_test) {
+      Xp <- crossprod(kernel$group_mat, Xtr)
+      Xp <- sweep(Xp, 1, kernel$counts, "/")
+      storage.mode(Xp) <- "double"
+      levs <- kernel$levels
+      rownames(Xp) <- levs
+      obs <- kernel$obs
+      scores <- .nx_row_cor(Xte, Xp)
+    } else {
+      # Defensive fallback if design/test rows differ from cached metadata.
+      key_tr <- kernel$key_tr
+      key_te <- kernel$obs
+      Xp <- .nx_rowsum_mean(Xtr, key_tr)
+      levs <- rownames(Xp)
+      obs <- factor(as.character(key_te), levels = levs)
+      scores <- cor(t(Xte), t(Xp))
+    }
+  } else {
+    Xp <- .nx_rowsum_mean(Xtr, key_tr)
+    levs <- rownames(Xp)
+    obs <- factor(as.character(key_te), levels = levs)
+    scores <- cor(t(Xte), t(Xp))
+  }
+
+  if (is.null(colnames(scores))) {
+    colnames(scores) <- levs
+  }
+  probs <- .nx_softmax(scores)
+  colnames(probs) <- levs
+  pred <- factor(levs[max.col(scores)], levels = levs)
+
+  list(obs = obs, pred = pred, probs = probs)
 }
 
 #' @keywords internal
@@ -109,39 +297,45 @@ fit_roi.naive_xdec_model <- function(model, roi_data, context, ...) {
     ))
   }
 
-  # Keys for prototypes and observed labels
-  if (!is.null(model$link_by) && model$link_by %in% colnames(des$train_design) && model$link_by %in% colnames(des$test_design)) {
-    key_tr <- factor(des$train_design[[model$link_by]])
-    key_te <- factor(des$test_design[[model$link_by]])
-  } else {
-    key_tr <- factor(des$y_train)
-    key_te <- factor(des$y_test)
+  key_tr <- NULL
+  key_te <- NULL
+  if (is.null(model$.fast_kernel)) {
+    keys <- .nx_resolve_keys(design = des, link_by = model$link_by)
+    key_tr <- keys$key_tr
+    key_te <- keys$key_te
   }
 
-  # Align on common keys and build prototypes
-  Xp <- .nx_rowsum_mean(Xtr, key_tr)
-  levs <- rownames(Xp)
-  obs <- factor(as.character(key_te), levels = levs)
+  core <- .naive_xdec_fit_core(
+    Xtr = Xtr,
+    Xte = Xte,
+    kernel = model$.fast_kernel,
+    key_tr = key_tr,
+    key_te = key_te
+  )
 
-  # Correlate each test row to prototypes
-  scores <- cor(t(Xte), t(Xp))
-  if (is.null(colnames(scores))) colnames(scores) <- levs
-  probs <- .nx_softmax(scores)
-  colnames(probs) <- levs
-  pred <- factor(levs[max.col(scores)], levels = levs)
+  test_ind <- seq_len(nrow(Xte))
+  fast_perf <- .naive_xdec_fast_metrics(model, core, test_idx = test_ind)
 
-  cres <- classification_result(obs, pred, probs,
-                                testind = seq_len(nrow(Xte)),
-                                test_design = des$test_design,
-                                predictor = NULL)
+  need_result_object <- isTRUE(model$return_predictions) || is.null(fast_perf)
+  cres <- NULL
+  if (need_result_object) {
+    cres <- classification_result(core$obs, core$pred, core$probs,
+                                  testind = test_ind,
+                                  test_design = des$test_design,
+                                  predictor = NULL)
+  }
 
-  perf <- compute_performance(model, cres)
+  perf <- if (is.null(fast_perf)) {
+    compute_performance(model, cres)
+  } else {
+    fast_perf
+  }
 
   roi_result(
     metrics = perf,
     indices = roi_data$indices,
     id = context$id,
-    result = cres
+    result = if (isTRUE(model$return_predictions)) cres else NULL
   )
 }
 
@@ -151,4 +345,3 @@ fit_roi.naive_xdec_model <- function(model, roi_data, context, ...) {
 output_schema.naive_xdec_model <- function(model) {
   NULL
 }
-

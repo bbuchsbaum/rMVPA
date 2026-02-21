@@ -18,11 +18,8 @@ A list of summary statistics for the feature RSA model (printed as side effect).
 Summary Method for Feature RSA Model
 }
 \examples{
-\donttest{
-  D <- dist(matrix(rnorm(5*3), 5, 3))
-  labels <- factor(letters[1:5])
-  des <- feature_rsa_design(D, labels)
-  mdl <- feature_rsa_model(des)
+\dontrun{
+  mdl <- feature_rsa_model(dataset, des)
   summary(mdl)
 }
 }

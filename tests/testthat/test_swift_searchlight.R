@@ -64,7 +64,7 @@ with_swift_options <- function(code) {
   force(code)
 }
 
-test_that("swift gate follows mode defaults", {
+test_that("swift gate remains enabled regardless ambient mode options", {
   with_swift_options({
     options(rMVPA.searchlight_mode = "fast")
     options(rMVPA.swift_searchlight = NULL)
@@ -72,7 +72,7 @@ test_that("swift gate follows mode defaults", {
 
     options(rMVPA.searchlight_mode = "legacy")
     options(rMVPA.swift_searchlight = NULL)
-    expect_false(rMVPA:::.swift_searchlight_enabled())
+    expect_true(rMVPA:::.swift_searchlight_enabled())
   })
 })
 
@@ -144,7 +144,7 @@ test_that("swift searchlight returns multiclass metrics and SWIFT_Info map when 
   })
 })
 
-test_that("swift-disabled path falls back to legacy iterator", {
+test_that("swift option disable request is ignored by deterministic runtime policy", {
   skip_if_not_installed("neuroim2")
 
   with_swift_options({
@@ -161,8 +161,8 @@ test_that("swift-disabled path falls back to legacy iterator", {
     )
 
     expect_s3_class(res, "searchlight_result")
-    expect_false("SWIFT_Info" %in% names(res$results))
-    expect_identical(attr(res, "searchlight_engine"), "legacy")
+    expect_true("SWIFT_Info" %in% names(res$results))
+    expect_identical(attr(res, "searchlight_engine"), "swift")
   })
 })
 
