@@ -17,3 +17,7 @@ tests/testthat/_problems/
 .planning/
 .omc/
 ..pdf
+
+# Local planning/PRD docs
+searchlight_performance_execution_plan.md
+searchlight_performance_prd.md

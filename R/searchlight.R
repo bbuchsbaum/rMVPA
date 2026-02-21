@@ -1462,6 +1462,14 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
   k <- dots$k
   verbose <- dots$verbose %||% FALSE
 
+  # Remove control args consumed here so they are not forwarded twice via do.call().
+  dots$engine <- NULL
+  dots$combiner <- NULL
+  dots$drop_probs <- NULL
+  dots$fail_fast <- NULL
+  dots$k <- NULL
+  dots$verbose <- NULL
+
   # incremental and gamma remain in ... as engine-specific params
   incremental <- if ("incremental" %in% names(dots)) isTRUE(dots$incremental) else TRUE
   gamma <- if ("gamma" %in% names(dots)) as.numeric(dots$gamma)[1] else NULL

@@ -34,3 +34,6 @@ test2
 ^check\.log$
 ^\.\.pdf$
 ^\.rcmdcheck_result\.rds$
+
+^searchlight_performance_execution_plan\.md$
+^searchlight_performance_prd\.md$
