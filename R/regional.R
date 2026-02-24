@@ -759,8 +759,20 @@ comp_perf <- function(results, region_mask) {
   
   # Check if perf_mat is NULL or has 0 columns
   if (is.null(perf_mat) || !is.data.frame(perf_mat) || ncol(perf_mat) == 0) {
-    message("Warning: Performance matrix is empty or invalid. Returning empty results.")
     id_vec <- if ("id" %in% names(results)) unlist(results$id) else integer(0)
+    n_err <- if ("error" %in% names(results)) sum(results$error, na.rm = TRUE) else 0L
+    futile.logger::flog.warn(
+      paste0("comp_perf: performance matrix is empty (%d ROIs returned, %d had errors). ",
+             "This usually means every ROI failed silently during model fitting."),
+      length(id_vec), n_err)
+    if (n_err > 0 && "error_message" %in% names(results)) {
+      bad <- results[results$error, , drop = FALSE]
+      err_tab <- sort(table(bad$error_message), decreasing = TRUE)
+      for (i in seq_len(min(length(err_tab), 5L))) {
+        futile.logger::flog.warn("  comp_perf: [%d ROIs] %s",
+                                 err_tab[i], names(err_tab)[i])
+      }
+    }
     return(list(vols = list(), perf_mat = tibble::tibble(roinum = id_vec)))
   }
   
@@ -830,6 +842,31 @@ run_regional_base <- function(model_spec,
     ...
   )
   
+  # 2b) Surface errors (mirrors searchlight diagnostics)
+  if (is.data.frame(results) && "error" %in% names(results)) {
+    n_total  <- nrow(results)
+    n_errors <- sum(results$error, na.rm = TRUE)
+    n_success <- n_total - n_errors
+
+    futile.logger::flog.info("run_regional: %d ROIs processed (success=%d, errors=%d)",
+                             n_total, n_success, n_errors)
+
+    if (n_errors > 0) {
+      futile.logger::flog.warn(
+        "run_regional: %d of %d ROIs failed (%.1f%%)",
+        n_errors, n_total, 100 * n_errors / max(n_total, 1L))
+
+      bad <- results[results$error, , drop = FALSE]
+      if ("error_message" %in% names(bad)) {
+        err_tab <- sort(table(bad$error_message), decreasing = TRUE)
+        for (i in seq_len(min(length(err_tab), 5L))) {
+          futile.logger::flog.warn("  - [%d ROIs] %s",
+                                   err_tab[i], names(err_tab)[i])
+        }
+      }
+    }
+  }
+
   # 3) Performance computation
   perf <- if (isTRUE(compute_performance)) {
     comp_perf(results, region_mask)

@@ -617,7 +617,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
             raw
           }
         }, error = function(...) NA_character_)
-        futile.logger::flog.debug("ROI %d: Processing error (%s)", rnum, e$message)
+        futile.logger::flog.warn("ROI %d: Processing error (%s)", rnum, e$message)
         tibble::tibble(
           result = list(NULL), indices = list(NULL),
           performance = list(NULL), id = rnum,

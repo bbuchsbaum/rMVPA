@@ -345,6 +345,8 @@ process_roi.default <- function(mod_spec, roi, rnum, center_global_id = NA, ...)
     res <- tryCatch(
       fit_roi(mod_spec, roi_data, context, ...),
       error = function(e) {
+        futile.logger::flog.warn(
+          "process_roi: fit_roi failed for ROI %s: %s", rnum, conditionMessage(e))
         roi_result(
           metrics = NULL,
           indices = neuroim2::indices(roi$train_roi),
