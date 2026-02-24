@@ -651,17 +651,12 @@ combine_custom_standard <- function(dataset, iteration_results) {
     stop("No results to combine for standard custom searchlight.")
   }
   
-  good_results <- iteration_results %>% dplyr::filter(!error)
-  bad_results <- iteration_results %>% dplyr::filter(error)
+  split <- split_results(iteration_results)
+  good_results <- split$good
+  bad_results  <- split$bad
+  summarize_errors(iteration_results, "combine_custom_standard")
 
   if (nrow(good_results) == 0) {
-    flog.error("No successful results for standard custom searchlight. Examining errors:")
-    if (nrow(bad_results) > 0) {
-      error_summary <- table(bad_results$error_message)
-      for (i in seq_along(error_summary)) {
-        flog.error("  - %s: %d occurrences", names(error_summary)[i], error_summary[i])
-      }
-    }
     stop("No valid results for standard custom searchlight: all spheres failed.")
   }
 
@@ -738,17 +733,12 @@ combine_custom_standard <- function(dataset, iteration_results) {
 #' @return A `searchlight_result` object.
 #' @keywords internal
 combine_custom_randomized <- function(dataset, iteration_results) {
-   good_results <- iteration_results %>% dplyr::filter(!error)
-   bad_results <- iteration_results %>% dplyr::filter(error)
+   split <- split_results(iteration_results)
+   good_results <- split$good
+   bad_results  <- split$bad
+   summarize_errors(iteration_results, "combine_custom_randomized")
 
    if (nrow(good_results) == 0) {
-      flog.error("No successful results for randomized custom searchlight. Examining errors:")
-      if (nrow(bad_results) > 0) {
-          error_summary <- table(bad_results$error_message)
-          for (i in seq_along(error_summary)) {
-              flog.error("  - %s: %d occurrences", names(error_summary)[i], error_summary[i])
-          }
-      }
       stop("No valid results for randomized custom searchlight: all spheres failed.")
    }
 

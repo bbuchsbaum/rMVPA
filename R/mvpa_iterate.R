@@ -443,30 +443,25 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
 
    
     # Train the model - NOW PASSING sl_info
-    result <- try(train_model(mspec, 
-                              train_input, 
-                              ytrain,
-                              sl_info = sl_info, # Pass sl_info here
-                              cv_spec = mspec$crossval, # Pass cv_spec if needed by the train method
-                              indices=ind,
-                              quiet_error = TRUE), # indices might still be useful for some models
-                  silent = TRUE)
-   
-
-    # Check if there was an error during model fitting
-    if (inherits(result, "try-error")) {
-      flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
-      # Store error messages
-      emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
-      format_result(mspec, result=NULL, error_message=emessage,
-                    context=list(roi=roi, ytrain=ytrain, ytest=ytest,
-                                 train=train_input, test=test_input, test_ind=test_ind, .id=.id))
-    } else {
-      # Predict on test data
-      format_result(mspec, result, error_message=NULL,
-                    context=list(roi=roi, ytrain=ytrain, ytest=ytest,
-                                 train=train_input, test=test_input, test_ind=test_ind, .id=.id))
-    }
+    tryCatch({
+      result <- train_model(mspec,
+                            train_input,
+                            ytrain,
+                            sl_info = sl_info,
+                            cv_spec = mspec$crossval,
+                            indices = ind,
+                            quiet_error = TRUE)
+      format_result(mspec, result, error_message = NULL,
+                    context = list(roi = roi, ytrain = ytrain, ytest = ytest,
+                                   train = train_input, test = test_input,
+                                   test_ind = test_ind, .id = .id))
+    }, error = function(e) {
+      flog.warn("error fitting model %s : %s", id, conditionMessage(e))
+      format_result(mspec, result = NULL, error_message = conditionMessage(e),
+                    context = list(roi = roi, ytrain = ytrain, ytest = ytest,
+                                   train = train_input, test = test_input,
+                                   test_ind = test_ind, .id = .id))
+    })
   }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
   
 

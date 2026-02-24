@@ -316,34 +316,8 @@ print.searchlight_result <- function(x, ...) {
 #' @param bad_results A data frame containing the unsuccessful classifier results
 #' @return A list containing the combined performance matrix and other information
 combine_standard <- function(model_spec, good_results, bad_results) {
-  # Add improved error handling with diagnostics
   if (nrow(good_results) == 0) {
-    futile.logger::flog.error("No successful results to combine. Examining errors from bad results:")
-    
-    # Analyze bad results to provide better diagnostics
-    if (nrow(bad_results) > 0) {
-      # Group error messages and count occurrences
-      error_summary <- table(bad_results$error_message)
-      futile.logger::flog.error("Error summary from %d failed ROIs:", nrow(bad_results))
-      
-      for (i in seq_along(error_summary)) {
-        error_msg <- names(error_summary)[i]
-        count <- error_summary[i]
-        futile.logger::flog.error("  - %s: %d occurrences", error_msg, count)
-      }
-      
-      # Show a sample of the first few errors
-      sample_size <- min(5, nrow(bad_results))
-      futile.logger::flog.error("Sample of first %d errors:", sample_size)
-      for (i in 1:sample_size) {
-        futile.logger::flog.error("  ROI %s: %s", 
-                                 bad_results$id[i], 
-                                 bad_results$error_message[i])
-      }
-    } else {
-      futile.logger::flog.error("No error information available.")
-    }
-    
+    summarize_errors(bad_results, "combine_standard")
     stop("No valid results for standard searchlight: all ROIs failed to process")
   }
   
@@ -471,42 +445,8 @@ combine_standard <- function(model_spec, good_results, bad_results) {
 #' @return A list containing the combined performance matrix along with other information from the dataset.
 combine_rsa_standard <- function(model_spec, good_results, bad_results) {
   .Deprecated("combine_schema_standard")
-  # Enhanced error handling with detailed diagnostics
   if (nrow(good_results) == 0) {
-    futile.logger::flog.error("No successful results for RSA searchlight. Examining errors from bad results:")
-    
-    # Analyze bad results to provide better diagnostics
-    if (nrow(bad_results) > 0) {
-      # Group error messages and count occurrences
-      error_summary <- table(bad_results$error_message)
-      futile.logger::flog.error("Error summary from %d failed ROIs:", nrow(bad_results))
-      
-      for (i in seq_along(error_summary)) {
-        error_msg <- names(error_summary)[i]
-        count <- error_summary[i]
-        futile.logger::flog.error("  - %s: %d occurrences", error_msg, count)
-      }
-      
-      # Show a sample of the first few errors
-      sample_size <- min(5, nrow(bad_results))
-      futile.logger::flog.error("Sample of first %d errors:", sample_size)
-      for (i in 1:sample_size) {
-        futile.logger::flog.error("  ROI %s: %s", 
-                                 bad_results$id[i], 
-                                 bad_results$error_message[i])
-      }
-      
-      # Check if there are any common issues
-      if (any(grepl("unable to find an inherited method for function 'values'", bad_results$error_message))) {
-        futile.logger::flog.error("  - Many errors involve NULL ROIs. This may be caused by insufficient voxels in searchlight regions.")
-      }
-      if (any(grepl("insufficient data dimensions", bad_results$error_message))) {
-        futile.logger::flog.error("  - Many errors involve insufficient data dimensions. Your feature data may be too high-dimensional for small searchlight regions.")
-      }
-    } else {
-      futile.logger::flog.error("No error information available.")
-    }
-    
+    summarize_errors(bad_results, "combine_rsa_standard")
     stop("No valid results for RSA searchlight: all ROIs failed to process")
   }
   
@@ -993,30 +933,13 @@ do_randomized <- function(model_spec, radius, niter,
   futile.logger::flog.debug("do_randomized: Combining %d iteration results", length(ret))
   results <- dplyr::bind_rows(ret)
   futile.logger::flog.debug("do_randomized: Combined into %d total results", nrow(results))
-  good_results <- results %>% dplyr::filter(error == FALSE)
-  bad_results <- results %>% dplyr::filter(error == TRUE)
+  split <- split_results(results)
+  good_results <- split$good
+  bad_results  <- split$bad
   futile.logger::flog.debug("do_randomized: Split into %d good, %d bad results", nrow(good_results), nrow(bad_results))
 
-  # Final summary with improved formatting
-  futile.logger::flog.info("\nSearchlight analysis complete")
-  futile.logger::flog.info("- Total Models Fit: %s", crayon::green(total_models))
-  if (total_errors > 0) {
-    futile.logger::flog.info("- Failed ROIs: %s (%s%%)", 
-                            crayon::yellow(total_errors),
-                            crayon::yellow(sprintf("%.1f", total_errors/(total_models + total_errors)*100)))
-    # Surface the most common failure reasons
-    top_errs <- sort(table(bad_results$error_message), decreasing = TRUE)
-    if (length(top_errs) > 0) {
-      top_errs <- head(top_errs, 3L)
-      futile.logger::flog.info("- Top failure causes:")
-      for (msg in names(top_errs)) {
-        futile.logger::flog.info("    - %s (n=%s)", msg, top_errs[[msg]])
-      }
-    }
-  } else {
-    futile.logger::flog.info("- All ROIs processed successfully!")
-  }
-  
+  summarize_errors(results, "searchlight (randomized)")
+
   if (nrow(good_results) == 0) {
     futile.logger::flog.warn(
       "do_randomized: all randomized ROIs failed across %d iteration(s); returning NA maps sized to mask.",
@@ -1136,23 +1059,10 @@ do_resampled <- function(model_spec, radius, niter,
     )
   }
 
-  n_success <- sum(!result$error, na.rm = TRUE)
-  n_errors  <- sum(result$error, na.rm = TRUE)
-  futile.logger::flog.debug("do_resampled: mvpa_fun returned %d results (success=%d, errors=%d)",
-                            nrow(result), n_success, n_errors)
-
-  good_results <- result %>% dplyr::filter(error == FALSE)
-  bad_results  <- result %>% dplyr::filter(error == TRUE)
-
-  futile.logger::flog.info("\nSearchlight analysis complete")
-  futile.logger::flog.info("- Total Models Fit: %s", crayon::green(n_success))
-  if (n_errors > 0) {
-    futile.logger::flog.info("- Failed ROIs: %s (%s%%)",
-                             crayon::yellow(n_errors),
-                             crayon::yellow(sprintf("%.1f", n_errors/(n_success + n_errors)*100)))
-  } else {
-    futile.logger::flog.info("- All ROIs processed successfully!")
-  }
+  split <- split_results(result)
+  good_results <- split$good
+  bad_results  <- split$bad
+  summarize_errors(result, "searchlight (resampled)")
 
   if (nrow(good_results) == 0) {
     futile.logger::flog.error("No valid results for resampled searchlight")
@@ -1206,24 +1116,14 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   iterate_timing <- attr(ret, "timing")
   flog.debug("mvpa_iterate (standard searchlight) took %.3f sec",
              iterate_elapsed)
-  good_results <- ret %>% dplyr::filter(!error)
-  bad_results <- ret %>% dplyr::filter(error == TRUE)
-  
-  if (nrow(bad_results) > 0) {
-    flog.info(bad_results$error_message)
-  }
-  
+  split <- split_results(ret)
+  good_results <- split$good
+  bad_results  <- split$bad
+  summarize_errors(ret, "searchlight (standard)")
+
   if (nrow(good_results) == 0) {
-    failed <- nrow(bad_results)
-    flog.error(
-      "no valid results for standard searchlight: %s ROIs failed.",
-      failed
-    )
-    if (failed > 0) {
-      unique_errors <- unique(bad_results$error_message)
-      msg_sample <- paste(head(unique_errors, 3), collapse = " | ")
-      flog.debug("sample error messages: %s", msg_sample)
-    }
+    flog.error("no valid results for standard searchlight: %s ROIs failed.",
+               nrow(bad_results))
   }
   
   t_combine <- proc.time()[3]

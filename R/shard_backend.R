@@ -558,12 +558,11 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
         if (is.null(roi)) {
           msg <- sprintf("ROI %s failed validation (shard extract)", rnum)
           if (fail_fast) rlang::abort(msg)
-          return(tibble::tibble(
-            result = list(NULL), indices = list(NULL),
-            performance = list(NULL), id = rnum,
+          return(roi_result_to_tibble(roi_result(
+            metrics = NULL, indices = integer(), id = rnum,
             error = TRUE, error_message = msg,
             warning = TRUE, warning_message = msg
-          ))
+          )))
         }
 
         center_id <- if (analysis_type == "searchlight") rnum else NA
@@ -618,15 +617,13 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
           }
         }, error = function(...) NA_character_)
         futile.logger::flog.warn("ROI %d: Processing error (%s)", rnum, e$message)
-        tibble::tibble(
-          result = list(NULL), indices = list(NULL),
-          performance = list(NULL), id = rnum,
-          error = TRUE,
-          error_message = paste0("Error processing ROI: ", e$message,
-                                  if (!is.na(tb)) paste0("\ntrace:\n", tb) else ""),
-          warning = TRUE,
-          warning_message = paste("Error processing ROI:", e$message)
-        )
+        err_msg <- paste0("Error processing ROI: ", e$message,
+                          if (!is.na(tb)) paste0("\ntrace:\n", tb) else "")
+        roi_result_to_tibble(roi_result(
+          metrics = NULL, indices = integer(), id = rnum,
+          error = TRUE, error_message = err_msg,
+          warning = TRUE, warning_message = paste("Error processing ROI:", e$message)
+        ))
       })
     }
 
