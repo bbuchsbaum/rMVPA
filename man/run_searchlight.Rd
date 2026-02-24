@@ -45,6 +45,19 @@ A named list of \code{NeuroVol} objects containing performance metrics (e.g., AU
 \description{
 Execute a searchlight analysis using multivariate pattern analysis.
 }
+\section{Progress reporting}{
+
+When \code{verbose = TRUE} is passed via \code{...} and the
+\pkg{progressr} package is installed, real-time per-ROI progress updates
+are emitted from parallel workers. To enable a progress bar:
+\preformatted{
+  library(progressr)
+  handlers(global = TRUE)               # once per session
+  result <- run_searchlight(mspec, radius = 8, verbose = TRUE)
+}
+Without \pkg{progressr}, only coarse batch-level log messages are shown.
+}
+
 \examples{
 \donttest{
   # Generate sample dataset with categorical response

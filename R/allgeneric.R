@@ -986,6 +986,17 @@ predict_model <- function(object, fit, newdata, ...) {
 #'           many ROIs, ample RAM, and see low CPU utilization.
 #'   }
 #'
+#' @section Progress reporting:
+#' When \code{verbose = TRUE} is passed via \code{...} and the
+#' \pkg{progressr} package is installed, real-time per-ROI progress updates
+#' are emitted from parallel workers. To enable a progress bar:
+#' \preformatted{
+#'   library(progressr)
+#'   handlers(global = TRUE)               # once per session
+#'   result <- run_searchlight(mspec, radius = 8, verbose = TRUE)
+#' }
+#' Without \pkg{progressr}, only coarse batch-level log messages are shown.
+#'
 #' @return A named list of \code{NeuroVol} objects containing performance metrics (e.g., AUC) at each voxel location
 #'
 #' @examples
@@ -1053,6 +1064,17 @@ run_searchlight <- function(model_spec, radius, method = c("standard", "randomiz
 #'   \code{"shard"} (shared-memory backend), or \code{"auto"} (try shard and
 #'   fall back to default).
 #' @param ... Extra arguments passed to specific regional analysis methods (e.g., `return_fits`, `compute_performance`).
+#'
+#' @section Progress reporting:
+#' When \code{verbose = TRUE} is passed via \code{...} and the
+#' \pkg{progressr} package is installed, real-time per-ROI progress updates
+#' are emitted from parallel workers. To enable a progress bar:
+#' \preformatted{
+#'   library(progressr)
+#'   handlers(global = TRUE)               # once per session
+#'   result <- run_regional(mspec, region_mask, verbose = TRUE)
+#' }
+#' Without \pkg{progressr}, only coarse batch-level log messages are shown.
 #'
 #' @return A \code{regional_mvpa_result} object (list) containing:
 #'   \item{performance_table}{A tibble of performance metrics for each region (if computed).}

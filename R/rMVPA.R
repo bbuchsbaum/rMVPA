@@ -34,3 +34,15 @@
 ##
 
 if(getRversion() >= "2.15.1")  utils::globalVariables(c("."))
+
+.onAttach <- function(libname, pkgname) {
+  if (!requireNamespace("progressr", quietly = TRUE)) {
+    packageStartupMessage(
+      "Tip: install the 'progressr' package for real-time progress bars ",
+      "during parallel searchlight/regional analyses:\n",
+      "  install.packages(\"progressr\")\n",
+      "Then before your analysis run:\n",
+      "  progressr::handlers(global = TRUE)"
+    )
+  }
+}

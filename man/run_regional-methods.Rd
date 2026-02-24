@@ -124,6 +124,19 @@ For `rsa_model` objects, `return_predictions` defaults to `FALSE` as standard RS
 For `vector_rsa_model` objects, `return_predictions` defaults to `FALSE` in `run_regional_base`.
 If `model_spec$return_predictions` is TRUE, this method will assemble an `observation_scores_table`.
 }
+\section{Progress reporting}{
+
+When \code{verbose = TRUE} is passed via \code{...} and the
+\pkg{progressr} package is installed, real-time per-ROI progress updates
+are emitted from parallel workers. To enable a progress bar:
+\preformatted{
+  library(progressr)
+  handlers(global = TRUE)               # once per session
+  result <- run_regional(mspec, region_mask, verbose = TRUE)
+}
+Without \pkg{progressr}, only coarse batch-level log messages are shown.
+}
+
 \examples{
 \donttest{
   # Generate sample dataset (3D volume with categorical response)

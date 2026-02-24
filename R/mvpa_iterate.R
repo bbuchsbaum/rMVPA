@@ -588,8 +588,18 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
 #' @param vox_list A list of voxel indices or coordinates defining each ROI to analyze.
 #' @param ids Vector of identifiers for each ROI analysis. Defaults to 1:length(vox_list).
 #' @param batch_size Integer specifying number of ROIs to process per batch.
-#'        Defaults to 10\% of total ROIs.
+#'        For searchlight analyses the default is 10\% of total ROIs.
+#'        For regional analyses the default is all ROIs in one batch, unless
+#'        the estimated extraction memory would exceed the budget set by
+#'        \code{options(rMVPA.regional_mem_budget)} (default 2 GB), in which
+#'        case batches are automatically sized to stay within the budget.
 #' @param verbose Logical indicating whether to print progress messages. Defaults to TRUE.
+#'        When \code{TRUE} and the \pkg{progressr} package is installed, a real-time
+#'        progress bar is shown that updates as each ROI completes -- even when running
+#'        on parallel \pkg{future} workers. Without \pkg{progressr}, only coarse
+#'        batch-level log messages are printed. Install with
+#'        \code{install.packages("progressr")} and activate once per session with
+#'        \code{progressr::handlers(global = TRUE)}.
 #' @param processor Optional custom processing function. If NULL, uses default processor.
 #'        Must accept parameters (obj, roi, rnum) and return a tibble.
 #' @param analysis_type Character indicating the type of analysis. Defaults to "searchlight".
@@ -660,8 +670,23 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     nworkers <- future::nbrOfWorkers()
     if (is.null(batch_size)) {
       if (analysis_type == "regional") {
-        # Regional: few large ROIs. One batch maximises parallelism.
-        batch_size <- length(ids)
+        # Regional: one batch maximises parallelism, but cap by memory.
+        # All ROI matrices are extracted serially into the frame before
+        # any parallel work starts, so we estimate peak extraction memory
+        # and split into multiple batches if it would exceed the budget.
+        n_obs <- nobs(mod_spec$dataset)
+        med_voxels <- as.double(median(vapply(vox_list, length, integer(1))))
+        bytes_per_roi <- med_voxels * n_obs * 8  # 8 bytes per double
+        mem_budget <- getOption("rMVPA.regional_mem_budget", 2e9)  # default 2 GB
+        max_by_mem <- max(nworkers, as.integer(floor(mem_budget / bytes_per_roi)))
+        batch_size <- min(length(ids), max_by_mem)
+        if (batch_size < length(ids)) {
+          futile.logger::flog.info(
+            "Splitting %d ROIs into batches of %d (estimated %.1f GB per batch; budget %.1f GB). Override with options(rMVPA.regional_mem_budget = <bytes>).",
+            length(ids), batch_size,
+            (batch_size * bytes_per_roi) / 1e9,
+            mem_budget / 1e9)
+        }
       } else {
         # Searchlight: many small ROIs. Batch for memory, but keep
         # batches large enough to fill all workers several times over.
@@ -897,10 +922,19 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
 
   # --- chunk_size controls parallelism and per-worker memory ---
   # Each chunk becomes one future; items within a chunk run serially
-  # on a single worker.  We target ~4 chunks per worker for good load
-  # balancing while keeping scheduling overhead reasonable.
+  # on a single worker.  Progressr signals are only relayed when a
+  # chunk completes, so chunk_size also controls progress granularity.
   nworkers <- future::nbrOfWorkers()
-  chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
+  if (analysis_type == "regional") {
+    # Regional: few expensive ROIs (seconds-minutes each). Use chunk_size=1
+    # so each ROI is its own future, giving per-ROI progress updates and
+    # optimal load balancing for heterogeneous ROI sizes.
+    chunk_size <- 1L
+  } else {
+    # Searchlight: many cheap ROIs (milliseconds each). Target ~4 chunks
+    # per worker for good load balancing with low scheduling overhead.
+    chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
+  }
 
   if (is.null(processor)) {
     do_fun <- function(obj, roi, rnum, center_global_id = NA) {
@@ -1015,7 +1049,8 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
     requireNamespace("progressr", quietly = TRUE)
 
   if (isTRUE(verbose) && total_items > 0 && !use_progressr) {
-    futile.logger::flog.debug("progressr unavailable; using batch-level progress logs only.")
+    futile.logger::flog.info(
+      "Install the 'progressr' package for real-time progress bars during parallel execution: install.packages(\"progressr\")")
   }
 
   results <- if (use_progressr) {

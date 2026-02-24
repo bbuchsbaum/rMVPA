@@ -26,9 +26,19 @@ and return_predictions (logical indicating whether to return predictions).}
 \item{ids}{Vector of identifiers for each ROI analysis. Defaults to 1:length(vox_list).}
 
 \item{batch_size}{Integer specifying number of ROIs to process per batch.
-Defaults to 10\% of total ROIs.}
+For searchlight analyses the default is 10\% of total ROIs.
+For regional analyses the default is all ROIs in one batch, unless
+the estimated extraction memory would exceed the budget set by
+\code{options(rMVPA.regional_mem_budget)} (default 2 GB), in which
+case batches are automatically sized to stay within the budget.}
 
-\item{verbose}{Logical indicating whether to print progress messages. Defaults to TRUE.}
+\item{verbose}{Logical indicating whether to print progress messages. Defaults to TRUE.
+When \code{TRUE} and the \pkg{progressr} package is installed, a real-time
+progress bar is shown that updates as each ROI completes -- even when running
+on parallel \pkg{future} workers. Without \pkg{progressr}, only coarse
+batch-level log messages are printed. Install with
+\code{install.packages("progressr")} and activate once per session with
+\code{progressr::handlers(global = TRUE)}.}
 
 \item{processor}{Optional custom processing function. If NULL, uses default processor.
 Must accept parameters (obj, roi, rnum) and return a tibble.}

@@ -10,7 +10,9 @@ roi_result(
   id,
   result = NULL,
   error = FALSE,
-  error_message = "~"
+  error_message = "~",
+  warning = FALSE,
+  warning_message = "~"
 )
 }
 \arguments{
@@ -26,6 +28,10 @@ roi_result(
 \item{error}{Logical; \code{TRUE} if this ROI failed.}
 
 \item{error_message}{Character error description, or \code{"~"} if no error.}
+
+\item{warning}{Logical; \code{TRUE} if a warning was raised.}
+
+\item{warning_message}{Character warning description, or \code{"~"} if none.}
 }
 \value{
 A list of class \code{"roi_result"}.

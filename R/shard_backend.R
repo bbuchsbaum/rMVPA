@@ -530,7 +530,11 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
 
   # Chunk-size heuristic (same as run_future.default)
   nworkers <- future::nbrOfWorkers()
-  chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
+  if (analysis_type == "regional") {
+    chunk_size <- 1L
+  } else {
+    chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
+  }
 
   min_voxels <- if (analysis_type == "searchlight") 1L else 2L
 
@@ -717,8 +721,8 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
     requireNamespace("progressr", quietly = TRUE)
 
   if (isTRUE(verbose) && total_items > 0 && !use_progressr) {
-    futile.logger::flog.debug(
-      "progressr unavailable; using batch-level progress logs only.")
+    futile.logger::flog.info(
+      "Install the 'progressr' package for real-time progress bars during parallel execution: install.packages(\"progressr\")")
   }
 
   results <- if (use_progressr) {
