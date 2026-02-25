@@ -318,17 +318,40 @@ feature_rsa_model <- function(dataset,
 #' This helper averages CV-MSEP across all response columns and
 #' applies the same onesigma rule: pick the fewest components whose
 #' mean MSEP is within one SE of the minimum.
+#'
+#' It computes CV-MSEP directly from \code{model$validation$PRESS}
+#' rather than calling \code{pls::MSEP()}, avoiding fragile internal
+#' namespace lookups in \pkg{pls} during parallel worker execution.
 #' @noRd
 .selectNcomp_mv <- function(model, method = "onesigma") {
-  msep_obj  <- pls::MSEP(model, estimate = "CV")
-  msep_vals <- msep_obj$val                        # [estimate, response, ncomp+1]
+  press <- model$validation$PRESS
+  press0 <- model$validation$PRESS0
+  nobj <- tryCatch(nrow(stats::model.frame(model)), error = function(...) NA_integer_)
 
-  nresp     <- dim(msep_vals)[2]
-  ncomp_max <- dim(msep_vals)[3] - 1L              # first slot = intercept-only
+  if (is.null(press) || is.null(press0) || is.na(nobj) || nobj <= 0) {
+    return(NA_integer_)
+  }
+
+  # Coerce PRESS to [response, ncomp]
+  press_mat <- if (is.null(dim(press))) {
+    matrix(press, nrow = length(press0))
+  } else {
+    as.matrix(press)
+  }
+  if (nrow(press_mat) != length(press0) && ncol(press_mat) == length(press0)) {
+    press_mat <- t(press_mat)
+  }
+  if (nrow(press_mat) != length(press0)) {
+    return(NA_integer_)
+  }
+
+  msep_comp <- press_mat / nobj                    # [response, ncomp]
+  nresp     <- nrow(msep_comp)
+  ncomp_max <- ncol(msep_comp)
   if (ncomp_max < 1L) return(1L)
 
-  # Average MSEP across responses for each ncomp (drop intercept slot)
-  avg_msep <- drop(apply(msep_vals[1, , -1, drop = FALSE], 3, mean))
+  # Average MSEP across responses for each ncomp
+  avg_msep <- colMeans(msep_comp, na.rm = TRUE)
 
   # Guard against all-NaN MSEP (degenerate model)
   if (all(is.na(avg_msep) | !is.finite(avg_msep))) return(NA_integer_)
@@ -339,8 +362,12 @@ feature_rsa_model <- function(dataset,
 
   if (method == "onesigma" && nresp > 1L) {
     # SE of mean MSEP across responses at the optimum
-    per_resp <- msep_vals[1, , min_idx + 1L]
-    se       <- sd(per_resp) / sqrt(nresp)
+    per_resp <- msep_comp[, min_idx]
+    n_finite <- sum(is.finite(per_resp))
+    if (n_finite < 2L) {
+      return(as.integer(min_idx))
+    }
+    se       <- stats::sd(per_resp, na.rm = TRUE) / sqrt(n_finite)
     thresh   <- min_val + se
     selected <- which(avg_msep <= thresh)[1]
     if (is.na(selected)) return(as.integer(min_idx))
@@ -364,7 +391,6 @@ feature_rsa_model <- function(dataset,
 
 
 
-#' @importFrom glmnet cv.glmnet glmnet
 #' @noRd
 .predict_glmnet <- function(model, F_new) {
   # F_new is test features (subset for that fold)
@@ -962,6 +988,7 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
   
   # ---- PLS / PCA (unified via pls package) ----
   if (obj$method %in% c("pls", "pca")) {
+    require_package("pls", "for PLS/PCA regression in feature RSA")
     fit_func <- if (obj$method == "pls") pls::plsr else pls::pcr
     method_label <- toupper(obj$method)
     ncomp_sel <- obj$ncomp_selection %||% "max"
@@ -1087,6 +1114,7 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
              })
              
              if (run_cv) { # Check again if foldid creation failed
+                require_package("glmnet", "for regularized regression in feature RSA")
                 cv_fit <- tryCatch({
                     glmnet::cv.glmnet(
                       x = sf$X_sc, 

@@ -465,6 +465,25 @@ test_that(".selectNcomp_mv returns NA or valid integer for near-degenerate model
   expect_true(is.na(result) || (is.integer(result) && result >= 1L))
 })
 
+test_that(".selectNcomp_mv works when pls is namespace-loaded only", {
+  was_attached <- "package:pls" %in% search()
+  if (was_attached) {
+    detach("package:pls", unload = TRUE, character.only = TRUE)
+    on.exit(suppressPackageStartupMessages(library(pls)), add = TRUE)
+  }
+
+  set.seed(123)
+  n <- 40
+  X <- matrix(rnorm(n * 6), n, 6)
+  Y <- matrix(rnorm(n * 3), n, 3)
+  fit <- pls::pcr(Y ~ X, ncomp = 4, scale = FALSE, validation = "LOO")
+
+  nc <- rMVPA:::.selectNcomp_mv(fit, method = "onesigma")
+  expect_true(is.integer(nc))
+  expect_true(nc >= 1L)
+  expect_true(nc <= 4L)
+})
+
 test_that("PLS LOO selection does not collapse to NA ncomp", {
   set.seed(77)
   dset <- gen_sample_dataset(c(4,4,4), 60, blocks = 3)

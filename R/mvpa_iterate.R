@@ -736,10 +736,11 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     }
     
     for (i in seq_len(nbatches)) {
-      tryCatch({
+      batch_positions <- seq.int(batch_bounds$start[[i]], batch_bounds$end[[i]])
+      batch_rnums <- ids[batch_positions]
+
+      batch_error_result <- tryCatch({
         batch_t0 <- proc.time()[3]
-        batch_positions <- seq.int(batch_bounds$start[[i]], batch_bounds$end[[i]])
-        batch_rnums <- ids[batch_positions]
         vlist <- vox_list[batch_positions]
         if (verbose) {
           batch_size_current <- length(batch_positions)
@@ -840,11 +841,26 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
             batch_seconds = as.numeric(batch_elapsed)
           )
         }
-        
+        NULL
       }, error = function(e) {
         futile.logger::flog.error("Batch %d failed: %s", i, e$message)
-        NULL
+        skipped_rois <<- skipped_rois + length(batch_positions)
+        err_msg <- paste("Error processing ROI:", e$message)
+        tibble::tibble(
+          result = list(NULL),
+          indices = list(NULL),
+          performance = list(NULL),
+          id = batch_rnums,
+          error = TRUE,
+          error_message = err_msg,
+          warning = TRUE,
+          warning_message = err_msg
+        )
       })
+
+      if (!is.null(batch_error_result)) {
+        results[[i]] <- batch_error_result
+      }
     }
     
     # Final summary log
