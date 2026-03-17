@@ -91,6 +91,7 @@ Collate:
     'distcalc.R'
     'utils.R'
     'feature_rsa_model.R'
+    'feature_rsa_connectivity.R'
     'new_analysis_overview.R'
     'contrasts.R'
     'compute_cv_means.R'

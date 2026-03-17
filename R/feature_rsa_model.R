@@ -144,6 +144,10 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' @param permute_by DEPRECATED. Permutation is always done by shuffling rows of the predicted matrix.
 #' @param save_distributions Logical, if TRUE and nperm > 0, save the full null distributions
 #'   from the permutation test. Defaults to FALSE.
+#' @param return_rdm_vectors Logical; if TRUE, retain each ROI's predicted
+#'   lower-triangle RDM vector in the regional result's `fits` slot. This is
+#'   off by default because it can add substantial memory use for long time
+#'   series or many ROIs.
 #' @param ... Additional arguments (currently unused). Passing deprecated
 #'   arguments such as \code{cache_pca} now results in an error.
 #'
@@ -218,6 +222,7 @@ feature_rsa_model <- function(dataset,
                                nperm = 0,
                                permute_by = c("features", "observations"),
                                save_distributions = FALSE,
+                               return_rdm_vectors = FALSE,
                                ...) {
   
   method <- match.arg(method)
@@ -234,6 +239,10 @@ feature_rsa_model <- function(dataset,
     assertthat::assert_that(is.numeric(pve_threshold) && pve_threshold > 0 && pve_threshold <= 1,
                            msg = "pve_threshold must be in (0, 1]")
   }
+  assertthat::assert_that(
+    is.logical(return_rdm_vectors) && length(return_rdm_vectors) == 1L && !is.na(return_rdm_vectors),
+    msg = "return_rdm_vectors must be TRUE or FALSE"
+  )
   
   # Additional validation for dataset dimensions
   mask_dims <- dim(dataset$mask)[1:3]
@@ -287,7 +296,7 @@ feature_rsa_model <- function(dataset,
     method  = method, 
     crossval= crossval, 
     compute_performance = TRUE, 
-    return_fits = FALSE
+    return_fits = isTRUE(return_rdm_vectors)
   )
   
   # Single "max_comps" in use
@@ -307,6 +316,7 @@ feature_rsa_model <- function(dataset,
   model_spec$nperm <- nperm
   model_spec$permute_by <- permute_by
   model_spec$save_distributions <- save_distributions
+  model_spec$return_rdm_vectors <- isTRUE(return_rdm_vectors)
   
   model_spec
 }
@@ -959,6 +969,37 @@ evaluate_model.feature_rsa_model <- function(object,
   )
 }
 
+.feature_rsa_predicted_rdm_vector <- function(predicted) {
+  predicted <- as.matrix(predicted)
+  n_obs <- nrow(predicted)
+  n_pairs <- n_obs * (n_obs - 1L) / 2L
+
+  if (n_pairs < 1L) {
+    return(numeric(0))
+  }
+
+  sd_thresh <- 1e-12
+  pred_sd <- apply(predicted, 2, stats::sd)
+  valid_col <- which(pred_sd > sd_thresh)
+
+  if (length(valid_col) < 1L) {
+    return(rep(NA_real_, n_pairs))
+  }
+
+  pmat <- predicted[, valid_col, drop = FALSE]
+  pc <- tryCatch(
+    suppressWarnings(stats::cor(t(pmat), use = "pairwise.complete.obs")),
+    error = function(e) NULL
+  )
+
+  if (is.null(pc) || !is.matrix(pc) || !all(dim(pc) == c(n_obs, n_obs))) {
+    return(rep(NA_real_, n_pairs))
+  }
+
+  prdm <- 1 - pc
+  as.numeric(prdm[lower.tri(prdm)])
+}
+
 
 #' @rdname train_model
 #' @param obj An object of class \code{feature_rsa_model}.
@@ -1272,6 +1313,7 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
     return(tibble::tibble(
       observed      = list(NULL), 
       predicted     = list(NULL),
+      test_index    = list(NULL),
       result        = list(NULL),
       performance   = list(NULL),
       error         = TRUE, 
@@ -1301,6 +1343,7 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
     return(tibble::tibble(
       observed      = list(NULL), 
       predicted     = list(NULL),
+      test_index    = list(NULL),
       result        = list(NULL),
       performance   = list(NULL),
       error         = TRUE, 
@@ -1313,6 +1356,7 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
      return(tibble::tibble(
       observed      = list(NULL), 
       predicted     = list(NULL),
+      test_index    = list(NULL),
       result        = list(NULL),
       performance   = list(NULL),
       error         = TRUE, 
@@ -1353,6 +1397,7 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
   tibble::tibble(
     observed    = list(Xobs),
     predicted   = list(Xpred),
+    test_index  = list(context$test_ind),
     result      = list(result),
     performance = list(perf_mat),
     error       = FALSE,
@@ -1380,6 +1425,7 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   
   observed_list  <- result_set$observed
   predicted_list <- result_set$predicted
+  test_index_list <- result_set$test_index
 
   
   
@@ -1388,6 +1434,15 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   
   combined_observed  <- do.call(rbind, observed_list)
   combined_predicted <- do.call(rbind, predicted_list)
+  combined_test_index <- NULL
+  if (!is.null(test_index_list) && length(test_index_list) == length(observed_list) &&
+      all(vapply(test_index_list, Negate(is.null), logical(1)))) {
+    combined_test_index <- unlist(test_index_list, use.names = FALSE)
+    ord <- order(combined_test_index)
+    combined_test_index <- combined_test_index[ord]
+    combined_observed <- combined_observed[ord, , drop = FALSE]
+    combined_predicted <- combined_predicted[ord, , drop = FALSE]
+  }
   
   # Extract ncomp from the first fold's result 
   # (result_set$result is a list, first element is result from fold 1)
@@ -1450,9 +1505,18 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
       ncol = length(perf_values),
       dimnames = list(NULL, perf_names)
   )
+
+  predictor_obj <- NULL
+  if (isTRUE(obj$return_rdm_vectors)) {
+    predictor_obj <- list(
+      predicted_rdm_vec = .feature_rsa_predicted_rdm_vector(combined_predicted),
+      observation_index = combined_test_index,
+      n_obs = nrow(combined_predicted)
+    )
+  }
   
   tibble::tibble(
-    result      = list(NULL),
+    result      = list(list(predictor = predictor_obj)),
     indices     = list(indices),
     performance = list(perf_mat),
     id          = id,
@@ -1482,8 +1546,12 @@ fit_roi.feature_rsa_model <- function(model, roi_data, context, ...) {
       error_message = result_tbl$error_message[1]
     )
   } else {
+    perf <- result_tbl$performance[[1]]
+    if (is.matrix(perf)) {
+      perf <- setNames(as.numeric(perf[1, ]), colnames(perf))
+    }
     roi_result(
-      metrics = result_tbl$performance[[1]],
+      metrics = perf,
       indices = roi_data$indices,
       id = id,
       result = result_tbl$result[[1]]

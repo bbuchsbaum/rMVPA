@@ -1006,7 +1006,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
         # Pass center_global_id when the processor supports it.
         result <- invoke_processor(obj, roi, rnum, center_global_id_to_pass)
 
-        if (!obj$return_predictions) {
+        if (!obj$return_predictions && !isTRUE(obj$return_fits)) {
           result$result <- list(NULL)
         }
         # Optionally drop dense per-ROI probability matrices after performance

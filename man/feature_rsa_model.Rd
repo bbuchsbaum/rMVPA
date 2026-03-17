@@ -17,6 +17,7 @@ feature_rsa_model(
   nperm = 0,
   permute_by = c("features", "observations"),
   save_distributions = FALSE,
+  return_rdm_vectors = FALSE,
   ...
 )
 }
@@ -70,6 +71,11 @@ metrics after merging cross-validation folds. Default 0 (no permutation testing)
 
 \item{save_distributions}{Logical, if TRUE and nperm > 0, save the full null distributions
 from the permutation test. Defaults to FALSE.}
+
+\item{return_rdm_vectors}{Logical; if TRUE, retain each ROI's predicted
+lower-triangle RDM vector in the regional result's `fits` slot. This is
+off by default because it can add substantial memory use for long time
+series or many ROIs.}
 
 \item{...}{Additional arguments (currently unused). Passing deprecated
 arguments such as \code{cache_pca} now results in an error.}

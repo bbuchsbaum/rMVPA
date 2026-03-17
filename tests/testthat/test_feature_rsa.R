@@ -539,3 +539,127 @@ test_that("PCA LOO selection does not collapse to NA ncomp", {
   ncomps <- res$performance_table$ncomp
   expect_true(all(!is.na(ncomps) & ncomps >= 1))
 })
+
+test_that("feature_rsa_model retains ROI predicted RDM vectors only when requested", {
+  set.seed(901)
+  dset <- gen_sample_dataset(c(3,3,3), 24, blocks = 3)
+  Fmat <- matrix(rnorm(24 * 6), 24, 6)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("o", 1:24), max_comps = 3)
+  region_mask <- NeuroVol(sample(1:3, length(dset$dataset$mask), replace = TRUE),
+                          space(dset$dataset$mask))
+
+  mspec_off <- feature_rsa_model(
+    dset$dataset, fdes, method = "pls",
+    crossval = blocked_cross_validation(dset$design$block_var),
+    return_rdm_vectors = FALSE
+  )
+  res_off <- run_regional(mspec_off, region_mask)
+  expect_true(is.null(res_off$fits))
+  expect_error(feature_rsa_rdm_vectors(res_off), "return_rdm_vectors=TRUE")
+
+  mspec_on <- feature_rsa_model(
+    dset$dataset, fdes, method = "pls",
+    crossval = blocked_cross_validation(dset$design$block_var),
+    return_rdm_vectors = TRUE
+  )
+  res_on <- run_regional(mspec_on, region_mask)
+  expect_true(!is.null(res_on$fits))
+
+  vecs <- feature_rsa_rdm_vectors(res_on)
+  expect_equal(nrow(vecs), nrow(res_on$performance_table))
+  expect_true(all(vapply(vecs$rdm_vec, is.numeric, logical(1))))
+  expect_true(all(vapply(vecs$rdm_vec, length, integer(1)) == 24L * 23L / 2L))
+  expect_true(all(vapply(vecs$observation_index, identical, logical(1), y = seq_len(24))))
+})
+
+test_that("feature_rsa_connectivity returns a symmetric ROI x ROI matrix and sparsifies only the final graph", {
+  set.seed(902)
+  dset <- gen_sample_dataset(c(4,4,4), 30, blocks = 3)
+  Fmat <- matrix(rnorm(30 * 8), 30, 8)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("o", 1:30), max_comps = 4)
+  region_mask <- NeuroVol(sample(1:4, length(dset$dataset$mask), replace = TRUE),
+                          space(dset$dataset$mask))
+
+  mspec <- feature_rsa_model(
+    dset$dataset, fdes, method = "pca",
+    crossval = blocked_cross_validation(dset$design$block_var),
+    return_rdm_vectors = TRUE
+  )
+  res <- run_regional(mspec, region_mask)
+
+  conn_dense <- feature_rsa_connectivity(res, method = "spearman")
+  expect_true(is.matrix(conn_dense))
+  expect_equal(dim(conn_dense), c(nrow(res$performance_table), nrow(res$performance_table)))
+  expect_equal(conn_dense, t(conn_dense))
+  expect_equal(unname(diag(conn_dense)), rep(1, nrow(conn_dense)))
+
+  conn_sparse <- feature_rsa_connectivity(res, method = "spearman", keep = 0.25)
+  expect_equal(dim(conn_sparse), dim(conn_dense))
+  expect_equal(conn_sparse, t(conn_sparse))
+  expect_equal(unname(diag(conn_sparse)), rep(1, nrow(conn_sparse)))
+  expect_true(sum(conn_sparse[upper.tri(conn_sparse)] == 0, na.rm = TRUE) >= 1L)
+})
+
+test_that("feature_rsa_connectivity matches direct correlation on synthetic ROI RDM vectors", {
+  vec_tbl <- tibble::tibble(
+    roinum = c(10L, 20L, 30L),
+    n_obs = c(4L, 4L, 4L),
+    observation_index = list(1:4, 1:4, 1:4),
+    rdm_vec = list(
+      c(1, 2, 3, 4),
+      c(2, 4, 6, 8),
+      c(4, 3, 2, 1)
+    )
+  )
+
+  expected <- stats::cor(do.call(cbind, vec_tbl$rdm_vec), method = "pearson")
+  dimnames(expected) <- list(as.character(vec_tbl$roinum), as.character(vec_tbl$roinum))
+  diag(expected) <- 1
+
+  got <- feature_rsa_connectivity(vec_tbl, method = "pearson")
+  expect_equal(got, expected, tolerance = 1e-12)
+})
+
+test_that("feature_rsa_connectivity is invariant to per-ROI affine rescaling of RDM vectors", {
+  vec_tbl <- tibble::tibble(
+    roinum = c(1L, 2L, 3L),
+    n_obs = c(4L, 4L, 4L),
+    observation_index = list(1:4, 1:4, 1:4),
+    rdm_vec = list(
+      c(1, 2, 3, 4),
+      c(2, 4, 6, 8),
+      c(4, 3, 2, 1)
+    )
+  )
+
+  aff_tbl <- vec_tbl
+  aff_tbl$rdm_vec <- list(
+    5 * vec_tbl$rdm_vec[[1]] + 7,
+    0.5 * vec_tbl$rdm_vec[[2]] - 3,
+    2 * vec_tbl$rdm_vec[[3]] + 10
+  )
+
+  base_conn <- feature_rsa_connectivity(vec_tbl, method = "pearson")
+  aff_conn <- feature_rsa_connectivity(aff_tbl, method = "pearson")
+  expect_equal(aff_conn, base_conn, tolerance = 1e-12)
+})
+
+test_that("feature_rsa_connectivity validates observation ordering and vector length contracts", {
+  vec_tbl <- tibble::tibble(
+    roinum = c(1L, 2L),
+    n_obs = c(4L, 4L),
+    observation_index = list(1:4, 1:4),
+    rdm_vec = list(
+      c(1, 2, 3, 4),
+      c(4, 3, 2, 1)
+    )
+  )
+
+  bad_order <- vec_tbl
+  bad_order$observation_index[[2]] <- c(2L, 1L, 3L, 4L)
+  expect_error(feature_rsa_connectivity(bad_order), "observation ordering")
+
+  bad_len <- vec_tbl
+  bad_len$rdm_vec[[2]] <- bad_len$rdm_vec[[2]][-1]
+  expect_error(feature_rsa_connectivity(bad_len), "same length")
+})
