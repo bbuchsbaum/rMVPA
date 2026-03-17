@@ -114,6 +114,7 @@ fit_roi.subspace_alignment_model <- function(model, roi_data, context, ...) {
   # PCA
   pca_safe <- function(mat, ncomp) {
     tryCatch({
+      require_package("irlba", "for truncated PCA in subspace alignment")
       irlba::prcomp_irlba(mat, n = ncomp, center = FALSE, scale. = FALSE)
     }, error = function(e) {
       stats::prcomp(mat, center = FALSE, scale. = FALSE, rank. = ncomp)

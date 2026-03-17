@@ -1,5 +1,5 @@
 #' @import stringr
-#' @importFrom io qread
+#' @noRd
 .searchlight_mode_allowed <- c("fast")
 
 #' @keywords internal
@@ -112,7 +112,8 @@ initialize_configuration <- function(args) {
       flog.error("cannot find configuration file: %s", args$config)
       stop()
     } else if (str_detect(args$config, "\\.yaml$")) {
-      confyaml <- qread(args$config)
+      require_package("io", "to read YAML configuration files")
+      confyaml <- io::qread(args$config)
       config <- as.environment(confyaml)
     } else if (str_detect(args$config, "\\.[rR]")) {
       config <- new.env()
@@ -595,17 +596,42 @@ initialize_crossval <- function(config, des=NULL) {
 #' @export
 load_model <- function(name) {
   registry <- MVPAModels # Existing environment
-  
+
   ret <- if (!is.null(registry[[name]])) {
-    registry[[name]]   
+    registry[[name]]
   } else {
     # Removed caret fallback
     stop(paste0("Model '", name, "' not found in MVPAModels. ",
                 "Register custom models using `register_mvpa_model()` if needed."))
   }
-  
+
+  # Check that required packages are installed (lazy dependency check)
+  .check_model_packages(ret, name)
+
   ret$label <- name # Existing logic
   ret
+}
+
+#' @keywords internal
+#' @noRd
+.check_model_packages <- function(model_spec, model_name) {
+  libs <- model_spec$library
+  if (is.null(libs) || length(libs) == 0) return(invisible(NULL))
+
+  missing <- libs[!vapply(libs, requireNamespace, logical(1), quietly = TRUE)]
+  if (length(missing) > 0) {
+    install_cmd <- if (length(missing) == 1) {
+      sprintf("install.packages(\"%s\")", missing)
+    } else {
+      sprintf("install.packages(c(%s))",
+              paste0("\"", missing, "\"", collapse = ", "))
+    }
+    warning(sprintf(
+      "Model '%s' requires package(s) not installed: %s\nInstall with: %s",
+      model_name, paste(missing, collapse = ", "), install_cmd
+    ), call. = FALSE)
+  }
+  invisible(NULL)
 }
 
 #' @noRd

@@ -412,6 +412,8 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
     stop(".crossfit_stack_predictions: need at least 2 folds for cross-fitted stacking.")
   }
 
+  require_package("glmnet", "for cross-fitted stacking in regional analysis")
+
   if (is.factor(y)) {
     lvls <- levels(y)
     k <- length(lvls)
@@ -738,7 +740,7 @@ prep_regional <- function(model_spec, region_mask) {
 #' @importFrom neuroim2 map_values
 #' @keywords internal
 #' @noRd
-comp_perf <- function(results, region_mask) {
+comp_perf <- function(results, region_mask, model_spec = NULL) {
   region_mask <- .ensure_dense_vol(region_mask)
   roinum <- NULL
 
@@ -746,39 +748,82 @@ comp_perf <- function(results, region_mask) {
   if (!is.data.frame(results) || !all(c("performance", "id") %in% names(results))) {
     return(list(vols = list(), perf_mat = tibble::tibble(roinum = integer(0))))
   }
+
+  valid_rows <- !vapply(results$performance, is.null, logical(1))
+  if (!any(valid_rows)) {
+    id_vec <- if ("id" %in% names(results)) as.integer(unlist(results$id)) else integer(0)
+    futile.logger::flog.warn(
+      "comp_perf: no non-NULL performance rows (%d ROIs returned).",
+      length(id_vec)
+    )
+    summarize_errors(results, "comp_perf")
+    return(list(vols = list(), perf_mat = tibble::tibble(roinum = id_vec)))
+  }
+
+  perf_rows <- results[valid_rows, , drop = FALSE]
+  id_vec <- as.integer(unlist(perf_rows$id))
+
   ## compile performance results
-  perf_mat <- tryCatch({
-    do.call(rbind, results$performance)
-  }, error = function(e) {
-    message("Warning: Error creating performance matrix: ", e$message)
-    return(NULL)
-  })
-  
-  # Ensure we keep original names, make unique if duplicates exist
-  perf_mat <- as_tibble(perf_mat, .name_repair = "unique")
-  
-  # Check if perf_mat is NULL or has 0 columns
-  if (is.null(perf_mat) || !is.data.frame(perf_mat) || ncol(perf_mat) == 0) {
-    id_vec <- if ("id" %in% names(results)) unlist(results$id) else integer(0)
+  perf_mat <- coerce_performance_matrix(perf_rows$performance)
+
+  # Check if perf_mat has 0 columns
+  if (is.null(perf_mat) || ncol(perf_mat) == 0) {
     futile.logger::flog.warn(
       "comp_perf: performance matrix is empty (%d ROIs returned). "
     , length(id_vec))
     summarize_errors(results, "comp_perf")
     return(list(vols = list(), perf_mat = tibble::tibble(roinum = id_vec)))
   }
+
+  schema <- if (!is.null(model_spec)) output_schema(model_spec) else NULL
+  if (!is.null(schema)) {
+    expected_names <- schema_metric_names(schema)
+    if (ncol(perf_mat) != length(expected_names)) {
+      stop(
+        sprintf(
+          "Schema/performance width mismatch: schema declares %d metric columns but regional ROI results produced %d.",
+          length(expected_names), ncol(perf_mat)
+        ),
+        call. = FALSE
+      )
+    }
+
+    perf_names <- colnames(perf_mat)
+    if (!is.null(perf_names) && !identical(perf_names, expected_names)) {
+      stop(
+        sprintf(
+          paste(
+            "Schema/performance metric name mismatch.",
+            "Schema expects: %s.",
+            "Regional ROI metrics are: %s."
+          ),
+          paste(expected_names, collapse = ", "),
+          paste(perf_names, collapse = ", ")
+        ),
+        call. = FALSE
+      )
+    }
+
+    if (is.null(perf_names)) {
+      colnames(perf_mat) <- expected_names
+    }
+  }
+
+  perf_tbl <- tibble::as_tibble(perf_mat, .name_repair = "unique")
   
   ## generate volumetric results
   ## TODO fails when region_mask is an logical vol
-  id_vec <- if ("id" %in% names(results)) as.integer(unlist(results$id)) else integer(0)
-  vols <- lapply(seq_len(ncol(perf_mat)), function(i) {
+  vols <- lapply(seq_len(ncol(perf_tbl)), function(i) {
     if (length(id_vec) == 0L) {
       return(NULL)
     }
-    map_values(region_mask, cbind(id_vec, perf_mat[[i]]))
+    map_values(region_mask, cbind(id_vec, perf_tbl[[i]]))
   })
-  names(vols) <- names(perf_mat)
+  names(vols) <- names(perf_tbl)
   
-  perfmat <- tibble::as_tibble(perf_mat,.name_repair=.name_repair) %>% dplyr::mutate(roinum = unlist(results$id)) %>% dplyr::select(roinum, dplyr::everything())
+  perfmat <- perf_tbl %>%
+    dplyr::mutate(roinum = id_vec) %>%
+    dplyr::select(roinum, dplyr::everything())
   list(vols=vols, perf_mat=perfmat)
 }
 
@@ -816,6 +861,7 @@ run_regional_base <- function(model_spec,
   model_spec <- configure_runtime_backend(
     model_spec, backend = backend, context = "run_regional_base"
   )
+  .plugin_preflight(model_spec, context = "run_regional")
 
   pool_predictions <- match.arg(pool_predictions)
  
@@ -838,7 +884,7 @@ run_regional_base <- function(model_spec,
 
   # 3) Performance computation
   perf <- if (isTRUE(compute_performance)) {
-    comp_perf(results, region_mask)
+    comp_perf(results, region_mask, model_spec = model_spec)
   } else {
     list(vols = list(), perf_mat = tibble::tibble())
   }
@@ -1009,7 +1055,7 @@ run_regional.vector_rsa_model <- function(model_spec, region_mask,
   # 3) Performance computation (using base helper)
   # This extracts the 'performance' column from iteration_results
   perf <- if (isTRUE(compute_performance)) {
-    comp_perf(iteration_results, region_mask)
+    comp_perf(iteration_results, region_mask, model_spec = model_spec)
   } else {
     list(vols = list(), perf_mat = tibble::tibble())
   }
@@ -1078,4 +1124,3 @@ run_regional.vector_rsa_model <- function(model_spec, region_mask,
     fits             = fits
   )
 }
-

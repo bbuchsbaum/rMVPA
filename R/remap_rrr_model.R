@@ -136,7 +136,7 @@ remap_rrr_model <- function(dataset,
       cov(X)
     } else {
       # Suppress verbose console output from corpcor during shrinkage
-      corpcor::cov.shrink(X, verbose = FALSE)
+      {require_package("corpcor", "for shrinkage covariance in REMAP-RRR"); corpcor::cov.shrink(X, verbose = FALSE)}
     }
   }, silent = TRUE)
   if (inherits(S, "try-error")) S <- cov(X)
@@ -192,7 +192,7 @@ remap_rrr_model <- function(dataset,
     Zc <- Z
   }
   S <- try({
-    if (!isTRUE(do_shrink)) stats::cov(Zc) else corpcor::cov.shrink(Zc)
+    if (!isTRUE(do_shrink)) stats::cov(Zc) else {require_package("corpcor", "for shrinkage covariance"); corpcor::cov.shrink(Zc)}
   }, silent = TRUE)
   if (inherits(S, "try-error")) S <- stats::cov(Zc)
   ee <- eigen(S, symmetric = TRUE)

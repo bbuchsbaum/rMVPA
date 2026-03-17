@@ -281,6 +281,62 @@ output_schema.default <- function(model) {
   FALSE
 }
 
+#' @keywords internal
+#' @noRd
+.validate_fit_roi_schema <- function(mod_spec, res, rnum) {
+  if (!inherits(res, "roi_result") || isTRUE(res$error)) {
+    return(invisible(NULL))
+  }
+
+  schema <- output_schema(mod_spec)
+  if (is.null(schema)) {
+    return(invisible(NULL))
+  }
+
+  expected_names <- schema_metric_names(schema)
+  metrics <- unlist(res$metrics, recursive = TRUE, use.names = TRUE)
+
+  if (!is.numeric(metrics)) {
+    stop(sprintf(
+      "process_roi: fit_roi for ROI %s returned non-numeric metrics with a non-NULL output_schema.",
+      rnum
+    ), call. = FALSE)
+  }
+
+  metric_names <- names(metrics)
+  if (is.null(metric_names) || any(!nzchar(metric_names))) {
+    stop(sprintf(
+      "process_roi: fit_roi for ROI %s returned unnamed metrics with a non-NULL output_schema.",
+      rnum
+    ), call. = FALSE)
+  }
+
+  if (length(metrics) != length(expected_names)) {
+    stop(sprintf(
+      paste(
+        "process_roi: output_schema/fit_roi width mismatch for ROI %s.",
+        "Schema declares %d metric columns; fit_roi returned %d."
+      ),
+      rnum, length(expected_names), length(metrics)
+    ), call. = FALSE)
+  }
+
+  if (!identical(metric_names, expected_names)) {
+    stop(sprintf(
+      paste(
+        "process_roi: output_schema/fit_roi metric name mismatch for ROI %s.",
+        "Schema expects: %s.",
+        "fit_roi returned: %s."
+      ),
+      rnum,
+      paste(expected_names, collapse = ", "),
+      paste(metric_names, collapse = ", ")
+    ), call. = FALSE)
+  }
+
+  invisible(NULL)
+}
+
 #' Process ROI
 #'
 #' Process a region of interest (ROI) and return the formatted results.
@@ -356,6 +412,36 @@ process_roi.default <- function(mod_spec, roi, rnum, center_global_id = NA, ...)
         )
       }
     )
+    if (!inherits(res, "roi_result")) {
+      res <- roi_result(
+        metrics = NULL,
+        indices = neuroim2::indices(roi$train_roi),
+        id = rnum,
+        error = TRUE,
+        error_message = sprintf(
+          "process_roi: fit_roi.%s must return an roi_result.",
+          class(mod_spec)[1]
+        )
+      )
+    } else if (!isTRUE(res$error)) {
+      schema_err <- tryCatch(
+        {
+          .validate_fit_roi_schema(mod_spec, res, rnum)
+          NULL
+        },
+        error = function(e) e
+      )
+      if (!is.null(schema_err)) {
+        res <- roi_result(
+          metrics = NULL,
+          indices = res$indices %||% neuroim2::indices(roi$train_roi),
+          id = rnum,
+          result = res$result,
+          error = TRUE,
+          error_message = conditionMessage(schema_err)
+        )
+      }
+    }
     return(roi_result_to_tibble(res))
   }
 

@@ -153,7 +153,12 @@ test_that("process_roi.default prefers fit_roi when method exists", {
       id = context$id
     )
   }
+  output_schema.test_shim_model <- function(model) {
+    list(shim_test = "scalar")
+  }
   registerS3method("fit_roi", "test_shim_model", fit_roi.test_shim_model,
+                   envir = asNamespace("rMVPA"))
+  registerS3method("output_schema", "test_shim_model", output_schema.test_shim_model,
                    envir = asNamespace("rMVPA"))
 
   vox <- sample(which(ds$dataset$mask > 0), 15)
@@ -190,6 +195,38 @@ test_that("process_roi.default handles fit_roi errors gracefully", {
   expect_s3_class(result, "tbl_df")
   expect_true(result$error)
   expect_match(result$error_message, "intentional test error")
+})
+
+test_that("process_roi.default flags output_schema/fit_roi mismatches early", {
+  ds <- gen_sample_dataset(c(4, 4, 4), 20, blocks = 2)
+  cval <- blocked_cross_validation(ds$design$block_var)
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification",
+                      crossval = cval)
+
+  class(mspec) <- c("test_schema_mismatch_model", class(mspec))
+
+  fit_roi.test_schema_mismatch_model <- function(model, roi_data, context, ...) {
+    roi_result(
+      metrics = c(other_name = 1),
+      indices = roi_data$indices,
+      id = context$id
+    )
+  }
+  output_schema.test_schema_mismatch_model <- function(model) {
+    list(expected_name = "scalar")
+  }
+  registerS3method("fit_roi", "test_schema_mismatch_model",
+                   fit_roi.test_schema_mismatch_model, envir = asNamespace("rMVPA"))
+  registerS3method("output_schema", "test_schema_mismatch_model",
+                   output_schema.test_schema_mismatch_model, envir = asNamespace("rMVPA"))
+
+  vox <- sample(which(ds$dataset$mask > 0), 15)
+  roi <- as_roi(data_sample(ds$dataset, vox), ds$dataset)
+
+  result <- process_roi(mspec, roi, 1)
+  expect_true(result$error)
+  expect_match(result$error_message, "metric name mismatch")
 })
 
 # ---- Phase 4 Tests ----

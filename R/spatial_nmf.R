@@ -264,8 +264,9 @@ spatial_nmf_project <- function(X,
   if (k >= min_dim || min_dim <= 5L || (k / min_dim) > 0.5) {
     svd_res <- base::svd(X)
   } else {
-    svd_res <- tryCatch(
-      irlba::irlba(X, nv = k, nu = k),
+    svd_res <- tryCatch({
+      require_package("irlba", "for truncated SVD in spatial NMF")
+      irlba::irlba(X, nv = k, nu = k)},
       error = function(e) base::svd(X)
     )
   }

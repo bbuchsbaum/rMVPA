@@ -102,6 +102,7 @@ item_model <- function(dataset,
     class_levels <- NULL
   }
 
+  require_package("fmrilss", "for item-level analysis")
   u_obj <- fmrilss::item_compute_u(
     X_t = bundle$X_t,
     V = design$V,

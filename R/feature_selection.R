@@ -80,8 +80,8 @@ feature_selector <- function(method, cutoff_type, cutoff_value) {
 #' @rdname select_features-methods
 #' @param ranking.score The feature score to use. Supported scores are "entropy", "avg", or "max". Default is "entropy".
 #' @export
-#' @importFrom sda sda.ranking
 select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg", "max"),...) {
+  require_package("sda", "for catscore feature selection")
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   ranking.score <- match.arg(ranking.score)
   message("selecting features via catscore")
@@ -167,6 +167,16 @@ select_features.FTest <- function(obj, X, Y,...) {
 
 
 
+#' Validate Feature-Selection Cutoff
+#'
+#' Shared helper for converting \code{top_k}/\code{top_p}-style cutoffs to an
+#' integer feature count.
+#'
+#' @param type Cutoff type (\code{top_k}, \code{topk}, \code{top_p}, \code{topp}).
+#' @param value Cutoff value.
+#' @param ncol Number of features available.
+#' @return Integer number of features to retain.
+#' @export
 # Common validation function
 validate_cutoff <- function(type, value, ncol) {
   type <- tolower(type)

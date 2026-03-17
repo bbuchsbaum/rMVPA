@@ -4,6 +4,7 @@
 \alias{y_test}
 \alias{y_test.mvpa_design}
 \alias{y_test.mvpa_model}
+\alias{y_test.model_spec}
 \title{Test Labels/Response Extraction}
 \usage{
 y_test(obj)
@@ -11,6 +12,8 @@ y_test(obj)
 \method{y_test}{mvpa_design}(obj)
 
 \method{y_test}{mvpa_model}(obj)
+
+\method{y_test}{model_spec}(obj)
 }
 \arguments{
 \item{obj}{The object from which to extract the test response variable.}

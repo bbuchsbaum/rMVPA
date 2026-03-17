@@ -283,11 +283,14 @@ output_schema.feature_rsa_da_model <- function(model) {
       "rdm_correlation", "voxel_correlation", "mean_voxelwise_temporal_cor",
       "mse_full", "r2_full"
     )
-    perm_nms <- c(
-      paste0("target_perm_p_", base_suffixes),
-      paste0("target_perm_z_", base_suffixes),
-      "target_perm_n"
-    )
+    ## Interleave p/z per metric to match fit_roi output order
+    perm_nms <- character()
+    for (s in base_suffixes) {
+      perm_nms <- c(perm_nms,
+                    paste0("target_perm_p_", s),
+                    paste0("target_perm_z_", s))
+    }
+    perm_nms <- c(perm_nms, "target_perm_n")
     nms <- c(nms, perm_nms)
   }
 

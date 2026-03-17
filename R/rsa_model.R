@@ -157,9 +157,9 @@ rsa_model_mat <- function(rsa_des) {
 
 
 #' @keywords internal
-#' @importFrom Rfit rfit
 #' @noRd
 run_rfit <- function(dvec, obj) {
+  require_package("Rfit", "for robust regression in RSA")
   form <- paste("dvec", "~", paste(names(obj$design$model_mat), collapse = " + "))
   obj$design$model_mat$dvec <- dvec
   res <- Rfit::rfit(form, data=obj$design$model_mat)
@@ -368,14 +368,10 @@ run_lm_fast <- function(dvec, obj) {
 # NEW: Constrained LM with glmnet
 ################################################################################
 #' @keywords internal
-#' @importFrom glmnet glmnet
 #' @importFrom stats predict
 #' @noRd
 run_lm_constrained <- function(dvec, obj) {
-  # Check if glmnet is available and install if needed
-  if (!requireNamespace("glmnet", quietly = TRUE)) {
-    stop("Package 'glmnet' is required for non-negative constraints. Please install it with: install.packages('glmnet')")
-  }
+  require_package("glmnet", "for non-negative constrained regression in RSA")
   
   # Convert list of vectors (predictors) into a matrix
   var_names <- names(obj$design$model_mat)

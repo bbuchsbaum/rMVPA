@@ -515,30 +515,14 @@ merge_results.hrfdecoder_model <- function(obj, result_set, indices, id, ...) {
 #' @method fit_roi hrfdecoder_model
 #' @export
 fit_roi.hrfdecoder_model <- function(model, roi_data, context, ...) {
-  roi <- list(train_roi = roi_data$train_roi, test_roi = roi_data$test_roi)
-  id <- context$id
-  center_global_id <- context$center_global_id %||% NA
-
-  result_tbl <- internal_crossval(model, roi, id,
-                                  center_global_id = center_global_id)
-
-  if (isTRUE(result_tbl$error[1])) {
-    roi_result(
-      metrics = NULL,
-      indices = roi_data$indices,
-      id = id,
-      result = result_tbl$result[[1]],
-      error = TRUE,
-      error_message = result_tbl$error_message[1]
-    )
-  } else {
-    roi_result(
-      metrics = result_tbl$performance[[1]],
-      indices = roi_data$indices,
-      id = id,
-      result = result_tbl$result[[1]]
-    )
-  }
+  cv_evaluate_roi(
+    model_spec = model,
+    roi_data = roi_data,
+    context = context,
+    mode = "auto",
+    return = "roi_result",
+    ...
+  )
 }
 
 

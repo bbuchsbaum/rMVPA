@@ -51,7 +51,12 @@ test_that("output_schema.manova_model names match sanitized formula terms", {
   mspec <- manova_model(ds$dataset, des)
 
   schema        <- output_schema(mspec)
-  expected_names <- rMVPA:::sanitize(labels(terms(des$formula)))
+  tt <- terms(des$formula)
+  expected_terms <- labels(tt)
+  if (isTRUE(attr(tt, "intercept") == 1L)) {
+    expected_terms <- c(".Intercept", expected_terms)
+  }
+  expected_names <- rMVPA:::sanitize(expected_terms)
   expect_equal(names(schema), expected_names)
 })
 
@@ -61,8 +66,15 @@ test_that("output_schema.manova_model handles single-term formula", {
   mspec <- manova_model(ds$dataset, des)
 
   schema <- output_schema(mspec)
-  expect_equal(length(schema), 1L)
-  expect_equal(names(schema), rMVPA:::sanitize(labels(terms(des$formula))))
+  tt <- terms(des$formula)
+  expected_terms <- labels(tt)
+  if (isTRUE(attr(tt, "intercept") == 1L)) {
+    expected_terms <- c(".Intercept", expected_terms)
+  }
+  expected_names <- rMVPA:::sanitize(expected_terms)
+
+  expect_equal(length(schema), length(expected_names))
+  expect_equal(names(schema), expected_names)
   expect_equal(schema[[1]], "scalar")
 })
 
@@ -313,4 +325,118 @@ test_that("standard mvpa_model searchlight works via schema path", {
 
   expect_s3_class(res, "searchlight_result")
   expect_equal(sort(names(res$results)), sort(names(schema)))
+})
+
+# ---------------------------------------------------------------------------
+# Group 7: schema/metric validation in combiner
+# ---------------------------------------------------------------------------
+
+test_that("schema_metric_names supports typed schema entries", {
+  exports <- getNamespaceExports("rMVPA")
+  expect_true("schema_scalar" %in% exports)
+  expect_true("schema_vector" %in% exports)
+
+  schema <- list(
+    metric_a = schema_scalar(),
+    metric_b = schema_vector(3)
+  )
+
+  expect_equal(
+    rMVPA:::schema_metric_names(schema),
+    c("metric_a", "metric_b.1", "metric_b.2", "metric_b.3")
+  )
+})
+
+test_that("schema_metric_names rejects invalid typed schema entries", {
+  bad_schema <- list(
+    metric_a = structure(list(type = "vector", size = 0L), class = "rmvpa_metric_spec")
+  )
+  expect_error(
+    rMVPA:::schema_metric_names(bad_schema),
+    "vector size must be >= 1"
+  )
+})
+
+test_that("combine_schema_standard errors on schema/performance width mismatch", {
+  ds <- gen_sample_dataset(c(4, 4, 4), 20, nlevels = 2)
+  model_spec <- structure(
+    list(dataset = ds$dataset),
+    class = c("toy_schema_width_model", "model_spec", "list")
+  )
+
+  output_schema.toy_schema_width_model <- function(model) {
+    list(metric_a = "scalar", metric_b = "scalar")
+  }
+  registerS3method(
+    "output_schema",
+    "toy_schema_width_model",
+    output_schema.toy_schema_width_model,
+    envir = asNamespace("rMVPA")
+  )
+
+  good_results <- tibble::tibble(
+    id = c(1L, 2L),
+    performance = list(c(metric_a = 0.1), c(metric_a = 0.2))
+  )
+
+  expect_error(
+    rMVPA:::combine_schema_standard(model_spec, good_results, tibble::tibble()),
+    "width mismatch"
+  )
+})
+
+test_that("combine_schema_standard errors on schema/performance name mismatch", {
+  ds <- gen_sample_dataset(c(4, 4, 4), 20, nlevels = 2)
+  model_spec <- structure(
+    list(dataset = ds$dataset),
+    class = c("toy_schema_name_model", "model_spec", "list")
+  )
+
+  output_schema.toy_schema_name_model <- function(model) {
+    list(metric_a = "scalar")
+  }
+  registerS3method(
+    "output_schema",
+    "toy_schema_name_model",
+    output_schema.toy_schema_name_model,
+    envir = asNamespace("rMVPA")
+  )
+
+  good_results <- tibble::tibble(
+    id = c(1L, 2L),
+    performance = list(c(other_name = 0.1), c(other_name = 0.2))
+  )
+
+  expect_error(
+    rMVPA:::combine_schema_standard(model_spec, good_results, tibble::tibble()),
+    "metric name mismatch"
+  )
+})
+
+test_that("combine_schema_standard errors on invalid schema entry type", {
+  ds <- gen_sample_dataset(c(4, 4, 4), 20, nlevels = 2)
+  model_spec <- structure(
+    list(dataset = ds$dataset),
+    class = c("toy_schema_type_model", "model_spec", "list")
+  )
+
+  output_schema.toy_schema_type_model <- function(model) {
+    list(metric_a = numeric(1))
+  }
+  registerS3method(
+    "output_schema",
+    "toy_schema_type_model",
+    output_schema.toy_schema_type_model,
+    envir = asNamespace("rMVPA")
+  )
+
+  good_results <- tibble::tibble(
+    id = c(1L, 2L),
+    performance = list(c(metric_a = 0.1), c(metric_a = 0.2))
+  )
+
+  expect_error(
+    rMVPA:::combine_schema_standard(model_spec, good_results, tibble::tibble()),
+    "Unknown schema type"
+  )
 })

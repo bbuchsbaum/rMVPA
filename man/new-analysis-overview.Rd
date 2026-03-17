@@ -2,105 +2,93 @@
 % Please edit documentation in R/new_analysis_overview.R
 \name{new-analysis-overview}
 \alias{new-analysis-overview}
-\title{Extending the MVPA Framework: Creating a New Analysis Type}
+\title{Extending rMVPA: Plugin Analysis Models}
 \description{
-This documentation describes how to implement a **new MVPA analysis type** within the package. 
-The MVPA framework here is designed to be extensible via S3 generics. By providing the necessary 
-methods and classes, you can integrate custom analyses (beyond standard classification, regression, or RSA).
+rMVPA can be extended from external packages by defining S3 model classes
+that inherit from \code{model_spec}. The preferred extension path is the
+modern \code{fit_roi}/\code{output_schema} contract.
 }
-\section{Overview}{
+\section{Recommended Contract}{
 
-1. **Define a Model Specification**  
-   - Create an S3 class inheriting from \code{model_spec}, e.g. \code{"myanalysis_model"}.
-   - This class should hold all the **parameters** or **configuration** needed for your analysis 
-     (e.g., hyperparameters, references, design objects).
-   - Construct it using a function like \code{create_model_spec("myanalysis_model", ...)}.
+1. **Constructor**  
+   Build a model object with \code{\link{create_model_spec}}, assigning
+   your model class name (for example \code{"my_model"}).
 
-2. **Implement Required Generics**  
-   - \strong{\code{train_model.myanalysis_model(obj, train_dat, ...)}:}  
-     Defines how to \emph{"train"} or \emph{execute} your analysis on a subset of data 
-     (e.g., ROI voxel intensities).  
-     - This might involve fitting a specialized model, computing a metric, or doing an 
-       unsupervised transform.  
-     - Return a structured object (often a named list or model fit) that can be further 
-       handled by the framework.
-   - \strong{\code{process_roi.myanalysis_model(mod_spec, roi, rnum, ...)} (Optional):}  
-     If you need custom \emph{per-ROI} logic beyond the default pipeline, implement a 
-     \code{process_roi} method for your class. This method is called automatically by
-     \code{run_regional(...)} for each region.  
-     - By default, the framework calls \code{train_model} on the ROI's data, but if you 
-       want to skip or alter that flow, provide a custom \code{process_roi} method.
-   - (Optional) \strong{\code{predict_model.myanalysis_model(...)}} or \strong{\code{evaluate_model.myanalysis_model(...)}}:  
-     If your analysis involves a separate test step or specialized evaluation, you can 
-     define these S3 methods.  
-   - (Optional) \strong{\code{run_future.myanalysis_model(...)}}, \strong{\code{merge_results.myanalysis_model(...)}}, etc.:  
-     If you need custom behavior for parallelization or merging partial results, override 
-     these generics as well.
+2. **\code{fit_roi.my_model} (required)**  
+   Implement per-ROI work and return \code{\link{roi_result}}.
 
-3. **Use `run_regional()` or `run_searchlight()`**  
-   - Once your new model class is defined, you can pass an object of that class to 
-     \code{run_regional(...)} or \code{run_searchlight(...)} just like a built-in analysis.  
-   - The framework automatically dispatches calls to your \code{train_model.myanalysis_model} 
-     (and optionally your \code{process_roi.myanalysis_model}), returning a result object 
-     consistent with other MVPA analyses.
+3. **\code{output_schema.my_model} (recommended)**  
+   Return a named list with values \code{"scalar"} or \code{"vector[N]"}.
+   This enables schema-driven map construction in searchlight analyses.
+
+4. **Optional overrides**  
+   - \code{y_train.my_model} / \code{y_test.my_model} if labels are not
+     available from the attached design object.  
+   - \code{strip_dataset.my_model} for advanced parallel memory control.
 }
 
-\section{Why These Pieces Are Needed}{
+\section{Plugin Test Helpers}{
 
-- **Model Specification**: Provides the blueprint for how the pipeline should handle your analysis 
-  (what data you need, how you store intermediate results, etc.).
-- **Train Model Generic**: Tells the pipeline what to \emph{do} with each chunk of data 
-  (ROI subset, searchlight voxel set, cross-validation fold). 
-  This is the core of your analysis.
-- **\code{process_roi}**: If your analysis requires more complex per-region logic than the default 
-  pipeline (e.g., skipping certain steps, altering the data structure), implementing 
-  \code{process_roi.myanalysis_model} gives you full control.
+- \code{\link{mock_roi_data}} builds lightweight ROI payloads for
+  unit tests.
+- \code{\link{mock_context}} builds the standard \code{fit_roi}
+  context list.
+- \code{\link{validate_plugin_model}} runs a contract check on one ROI
+  and validates schema/metric agreement.
+- \code{\link{validate_model_spec}} performs a plugin-readiness lint with
+  optional dry-run execution.
 }
 
-\section{Example Code Skeleton}{
+\section{Two Registry Types}{
+
+rMVPA exposes two different extension registries:
+\describe{
+  \item{Classifier registry}{Use \code{\link{register_mvpa_model}} to add
+  a new low-level estimator (fit/predict/prob) that plugs into the
+  built-in \code{mvpa_model} analysis type.}
+  \item{Analysis-type registry}{Define a new S3 model class (via
+  \code{\link{create_model_spec}} + \code{fit_roi.<class>}) when you need
+  a new per-ROI analysis workflow, not just a new estimator backend.}
+}
+}
+
+\section{Notes}{
+
+- \code{\link{process_roi.default}} automatically prefers \code{fit_roi}
+  when a method exists for your class.
+- Legacy \code{train_model}/\code{process_roi} extension paths are still
+  available for backward compatibility, but new plugins should use
+  \code{fit_roi}.
+}
+
+\section{Minimal Example}{
 
 \preformatted{
-# Minimal template for a new analysis model
-
-myanalysis_model <- function(dataset, design, param1=NULL, param2=5, ...) {
-  # Create an object of class "myanalysis_model"
+my_model <- function(dataset, design, alpha = 0.1, ...) {
   create_model_spec(
-    "myanalysis_model",
-    dataset  = dataset,
-    design   = design,
-    param1   = param1,
-    param2   = param2,
+    "my_model",
+    dataset = dataset,
+    design = design,
+    alpha = alpha,
     ...
   )
 }
 
-# S3 method to "train" your analysis
-train_model.myanalysis_model <- function(obj, train_dat, y, indices, ...) {
-  # train_dat = subset of voxel intensities or features
-  # y = optional labels/response if relevant
-  # indices = location info
-
-  # 1) Do your computations (model fitting, metrics, transforms, etc.)
-  fit_object <- your_method(train_dat, some_params=obj$param1)
-
-  # 2) Return a structure. The pipeline may store or evaluate it further.
-  list(
-    fit = fit_object,
-    # any other stuff you want to keep
+fit_roi.my_model <- function(model, roi_data, context, ...) {
+  score <- mean(roi_data$train_data)
+  roi_result(
+    metrics = c(score = score),
+    indices = roi_data$indices,
+    id = context$id
   )
 }
 
-# Optional custom ROI processor
-process_roi.myanalysis_model <- function(mod_spec, roi, rnum, ...) {
-  # If you want to skip or augment the default cross-validation / train_model approach
-  # in run_regional, define your logic here. 
-  # Otherwise, the default calls train_model(...) on the region's data.
+output_schema.my_model <- function(model) {
+  list(score = "scalar")
 }
 
-# You can now call:
-# new_model <- myanalysis_model(dataset, design, param1="xyz")
-# results_regional <- run_regional(new_model, region_mask)
-# results_searchlight <- run_searchlight(new_model, radius=8, method="standard")
+# optional only when you do not rely on design defaults:
+# y_train.my_model <- function(obj) y_train(obj$design)
 }
 }
 

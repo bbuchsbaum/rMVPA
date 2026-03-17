@@ -1,4 +1,24 @@
 
+#' Check That a Package Is Installed (Soft Dependency)
+#'
+#' Stops with a helpful install message if \code{pkg} is not available.
+#'
+#' @param pkg Package name (string).
+#' @param reason Optional string appended to the error message describing
+#'   why the package is needed (e.g. \code{"for the pls regression method"}).
+#' @keywords internal
+#' @noRd
+require_package <- function(pkg, reason = NULL) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    msg <- sprintf("Package '%s' is required", pkg)
+    if (!is.null(reason)) msg <- paste0(msg, " ", reason)
+    msg <- paste0(msg, " but is not installed.\n",
+                  sprintf("Install with: install.packages(\"%s\")", pkg))
+    stop(msg, call. = FALSE)
+  }
+}
+
+
 #' Compute Group Means of a Matrix
 #'
 #' This function calculates the average vector for each level of a grouping variable in a given matrix.

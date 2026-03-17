@@ -203,10 +203,10 @@ pairwise_dist.euclidean <- function(obj, X,...) {
 #' dist_matrix <- pairwise_dist(dist_obj, X)
 #'
 #' @export
-#' @importFrom corpcor invcov.shrink
 #' @importFrom stats mahalanobis
 #' @noRd
 pairwise_dist.mahalanobis <- function(obj, X,...) {
+  require_package("corpcor", "for shrinkage-based Mahalanobis distance")
   X <- center_patterns(X, method = obj$center %||% "none")
   inv_cov <- corpcor::invcov.shrink(X)
   n <- nrow(X)
@@ -266,6 +266,7 @@ pairwise_dist.pcadist <- function(obj, X,...) {
     as.matrix(dist(pc_space, method = obj$dist_method))
   } else if (obj$dist_method == "cosine") {
     # proxy::dist for 'cosine' distance
+    require_package("proxy", "for cosine distance computation")
     as.matrix(proxy::dist(pc_space, method = "cosine"))
   }
 }

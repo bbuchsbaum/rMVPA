@@ -34,6 +34,6 @@ test2
 ^check\.log$
 ^\.\.pdf$
 ^\.rcmdcheck_result\.rds$
-
+^src/Makevars$
 ^searchlight_performance_execution_plan\.md$
 ^searchlight_performance_prd\.md$

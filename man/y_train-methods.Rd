@@ -6,6 +6,7 @@
 \alias{y_train.mvpa_design}
 \alias{y_train.item_design}
 \alias{y_train.mvpa_model}
+\alias{y_train.model_spec}
 \alias{y_train.feature_rsa_model}
 \alias{y_train.feature_rsa_design}
 \alias{y_train.hrfdecoder_model}
@@ -18,6 +19,8 @@ y_train(obj)
 \method{y_train}{item_design}(obj)
 
 \method{y_train}{mvpa_model}(obj)
+
+\method{y_train}{model_spec}(obj)
 
 \method{y_train}{feature_rsa_model}(obj)
 

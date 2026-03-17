@@ -1376,6 +1376,8 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
   dots$incremental <- NULL
   dots$gamma <- NULL
 
+  .plugin_preflight(model_spec, context = "run_searchlight")
+
   engine_ret <- do.call(
     .run_searchlight_engine,
     c(
@@ -1398,22 +1400,8 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
   )
   if (is.list(engine_ret) && isTRUE(engine_ret$handled)) {
     res <- engine_ret$result
-    if (is.list(res)) {
-      requested_engine <- if (!is.null(engine_ret$requested)) {
-        engine_ret$requested
-      } else {
-        .match_searchlight_engine(engine)
-      }
-      resolved_engine <- attr(res, "searchlight_engine", exact = TRUE)
-      if (is.null(resolved_engine)) {
-        resolved_engine <- as.character(engine_ret$engine)
-        attr(res, "searchlight_engine") <- resolved_engine
-      }
-      attr(res, "searchlight_engine_requested") <- as.character(requested_engine)
-      attr(res, "searchlight_engine_resolved") <- as.character(resolved_engine)
-      if (!is.null(engine_ret$reason)) {
-        attr(res, "searchlight_engine_reason") <- as.character(engine_ret$reason)
-      }
+    if (is.list(res) && is.null(attr(res, "searchlight_engine", exact = TRUE))) {
+      attr(res, "searchlight_engine") <- as.character(engine_ret$engine)
     }
     return(res)
   }
@@ -1436,25 +1424,8 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
       dots
     )
   )
-  if (is.list(res)) {
-    requested_engine <- if (is.list(engine_ret) && !is.null(engine_ret$requested)) {
-      engine_ret$requested
-    } else {
-      .match_searchlight_engine(engine)
-    }
-    if (is.null(attr(res, "searchlight_engine", exact = TRUE))) {
-      attr(res, "searchlight_engine") <- "legacy"
-    }
-    attr(res, "searchlight_engine_requested") <- as.character(requested_engine)
-    attr(res, "searchlight_engine_resolved") <- "legacy"
-    if (is.list(engine_ret) && !is.null(engine_ret$reason)) {
-      attr(res, "searchlight_engine_reason") <- as.character(engine_ret$reason)
-    } else {
-      attr(res, "searchlight_engine_reason") <- "legacy"
-    }
-    if (is.list(engine_ret) && !is.null(engine_ret$fallback_error)) {
-      attr(res, "searchlight_engine_fallback_error") <- as.character(engine_ret$fallback_error)
-    }
+  if (is.list(res) && is.null(attr(res, "searchlight_engine", exact = TRUE))) {
+    attr(res, "searchlight_engine") <- "legacy"
   }
   res
 }

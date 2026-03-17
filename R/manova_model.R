@@ -11,7 +11,6 @@
 #' This object can be further used for MANOVA analysis or other related multivariate statistical methods.
 #' @importFrom assertthat assert_that
 #' @importFrom purrr is_formula
-#' @importFrom ffmanova ffmanova
 #' @examples
 #' # Create simple dissimilarity matrices
 #' dissimilarity_matrix_y  <- matrix(rnorm(9), nrow = 3)
@@ -99,7 +98,8 @@ train_model.manova_model <- function(obj, train_dat, y, indices, ...) {
   dframe$response <- as.matrix(train_dat)
   form <- stats::as.formula(paste("response", paste(as.character(obj$design$formula), collapse='')))
   
-  fres=ffmanova(form, data=dframe)
+  require_package("ffmanova", "for MANOVA analysis")
+  fres=ffmanova::ffmanova(form, data=dframe)
   pvals=fres$pValues
   names(pvals) <- sanitize(names(pvals))   
   lpvals <- -log(pvals)
@@ -288,9 +288,13 @@ merge_results.manova_model <- function(obj, result_set, indices, id, ...) {
 #' @method output_schema manova_model
 #' @export
 output_schema.manova_model <- function(model) {
-  term_names <- sanitize(labels(terms(model$design$formula)))
+  tt <- terms(model$design$formula)
+  term_names <- labels(tt)
+  if (isTRUE(attr(tt, "intercept") == 1L)) {
+    term_names <- c(".Intercept", term_names)
+  }
+  term_names <- sanitize(term_names)
   schema <- as.list(rep("scalar", length(term_names)))
   names(schema) <- term_names
   schema
 }
-

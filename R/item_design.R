@@ -68,6 +68,7 @@ item_design <- function(train_design = NULL,
   Z <- .item_as_nuisance_optional(Z, n_time, "Z")
   Nuisance <- .item_as_nuisance_optional(Nuisance, n_time, "Nuisance")
 
+  require_package("fmrilss", "for item-level design construction")
   bundle <- fmrilss::item_build_design(
     X_t = X_t,
     T_target = T_target,

@@ -1,11 +1,5 @@
 #' @keywords internal
 #' @noRd
-.searchlight_fail_open_enabled <- function() {
-  isTRUE(getOption("rMVPA.searchlight_fail_open", TRUE))
-}
-
-#' @keywords internal
-#' @noRd
 .match_searchlight_engine <- function(engine = "auto") {
   allowed <- c("auto", "legacy", "swift", "dual_lda_fast")
   match.arg(as.character(engine)[1], allowed)
@@ -43,9 +37,7 @@
   list(
     handled = FALSE,
     result = NULL,
-    engine = "legacy",
-    requested = .match_searchlight_engine(engine),
-    reason = "not_mvpa_model"
+    engine = "legacy"
   )
 }
 
@@ -188,13 +180,13 @@
   }
 
   if (identical(engine, "legacy")) {
-    reason <- if (identical(requested, "legacy")) "explicit_legacy" else "auto_ineligible"
+    if (!identical(requested, "legacy")) {
+      futile.logger::flog.info("searchlight engine: legacy (no eligible fast path)")
+    }
     return(list(
       handled = FALSE,
       result = NULL,
-      engine = "legacy",
-      requested = requested,
-      reason = reason
+      engine = "legacy"
     ))
   }
 
@@ -218,17 +210,11 @@
   )
 
   if (!inherits(fast_res, "try-error")) {
-    reason <- if (identical(requested, "auto")) {
-      sprintf("auto_%s", engine)
-    } else {
-      sprintf("explicit_%s", engine)
-    }
+    futile.logger::flog.info("searchlight engine: %s", engine)
     return(list(
       handled = TRUE,
       result = fast_res,
-      engine = engine,
-      requested = requested,
-      reason = reason
+      engine = engine
     ))
   }
 
@@ -248,30 +234,18 @@
     )
   }
 
-  if (!.searchlight_fail_open_enabled()) {
-    stop(
-      sprintf(
-        "Searchlight engine '%s' failed and fail-open is disabled: %s",
-        engine,
-        err_msg
-      ),
-      call. = FALSE
-    )
-  }
-
-  futile.logger::flog.warn(
-    "searchlight engine '%s' failed; falling back to legacy iterator: %s",
-    engine,
-    err_msg
+  warning(
+    sprintf(
+      "searchlight engine '%s' failed, falling back to legacy: %s",
+      engine,
+      err_msg
+    ),
+    call. = FALSE
   )
 
   list(
     handled = FALSE,
     result = NULL,
-    engine = "legacy",
-    requested = requested,
-    reason = "fast_failed_fallback",
-    failed_engine = engine,
-    fallback_error = err_msg
+    engine = "legacy"
   )
 }

@@ -18,12 +18,10 @@ build_maps_from_schema(schema, perf_mat, dataset, ids)
 \code{perf_mat}.}
 }
 \value{
-A named list of spatial map objects (one per schema entry for
-  scalar, N per entry for vector types).
+A named list of spatial map objects.
 }
 \description{
 Uses a named schema list to select columns from a performance matrix
-and create one spatial map per metric.  Each schema entry is either
-\code{"scalar"} (one column) or \code{"vector[N]"} (N consecutive columns).
+and create one spatial map per metric.
 }
 \keyword{internal}

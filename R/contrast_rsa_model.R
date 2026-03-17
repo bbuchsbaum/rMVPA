@@ -1197,7 +1197,7 @@ merge_results.contrast_rsa_model <- function(obj, result_set, indices, id, ...) 
 #' @return A named list where values are "scalar" or "vector[N]".
 #' @export
 output_schema.contrast_rsa_model <- function(model) {
-  Q <- ncol(model$design$contrast_matrix)
+  cnames <- colnames(model$design$contrast_matrix)
   scalar_metrics <- c("recon_score", "composite")
 
   schema <- list()
@@ -1205,7 +1205,9 @@ output_schema.contrast_rsa_model <- function(model) {
     if (metric %in% scalar_metrics) {
       schema[[metric]] <- "scalar"
     } else {
-      schema[[metric]] <- paste0("vector[", Q, "]")
+      for (cn in cnames) {
+        schema[[paste0(metric, ".", cn)]] <- "scalar"
+      }
     }
   }
   schema

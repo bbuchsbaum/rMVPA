@@ -70,6 +70,7 @@ quiet_sda <- function(...) {
 #' @keywords internal
 #' @noRd
 quiet_sda_ranking <- function(...) {
+  require_package("sda", "for shrinkage discriminant analysis")
   res <- NULL
   invisible(capture.output(res <- sda::sda.ranking(...)))
   res
@@ -529,7 +530,6 @@ MVPAModels$lda_thomaz_boot <- list(
 
 # memoized ranking for sda methods
 #' @importFrom memoise memoise
-#' @importFrom sda sda.ranking
 #' @noRd
 memo_rank <- memoise::memoise(function(X, L, fdr) {
   quiet_sda_ranking(X,L,fdr=fdr,verbose=FALSE)
@@ -567,7 +567,7 @@ MVPAModels$glmnet_opt <- list(
                  foldid=foldid,
                  type.measure="mse")
     sfit <- summary(fit, verbose=FALSE)
-    modelFit <- glmnet(x,y,family=fam,alpha=sfit$opt.alpha, nlambda=20)
+    modelFit <- glmnet::glmnet(x, y, family = fam, alpha = sfit$opt.alpha, nlambda = 20)
     modelFit$opt_lambda <- sfit$opt.lambda
     modelFit$opt_alpha <- sfit$opt.alpha
     modelFit$obsLevels <- lev

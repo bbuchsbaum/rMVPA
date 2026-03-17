@@ -165,6 +165,10 @@ compute_performance.mvpa_model <- function(obj, result) {
 #' @keywords internal
 #' @export
 output_schema.mvpa_model <- function(model) {
+  if (identical(attr(model$performance, "rmvpa_perf_kind"), "custom")) {
+    return(NULL)
+  }
+
   des <- model$design
   y <- des$cv_labels
 
@@ -233,23 +237,76 @@ has_test_set.model_spec <- function(obj) {
 #' @export
 y_train.mvpa_model <- function(obj) y_train(obj$design)
 
+#' @rdname y_train-methods
+#' @export
+y_train.model_spec <- function(obj) y_train(obj$design)
+
 
 #' @rdname y_test-methods
 #' @export
 y_test.mvpa_model <- function(obj) y_test(obj$design)
 
+#' @rdname y_test-methods
+#' @export
+y_test.model_spec <- function(obj) y_test(obj$design)
 
+
+#' Create a Generic Model Specification
+#'
+#' Canonical constructor for custom analysis/model specifications used by
+#' rMVPA's S3 dispatch.
+#'
 #' @param name A character string indicating the name of the model.
 #' @param dataset An `mvpa_dataset` instance.
-#' @param design An `mvpa_design` instance.
+#' @param design A design object, typically `mvpa_design` or a specialized
+#'   `*_design` class.
 #' @param return_predictions A \code{logical} indicating whether to return row-wise predictions for each voxel set (defaults to TRUE).
+#' @param compute_performance A \code{logical} indicating whether to compute and store performance measures.
 #' @param tune_reps The number of replications used during parameter tuning. Only relevant if `tune_grid` is supplied.
 #' @param ... Additional arguments to be passed to the model, including `has_test_set` flag.
-#' @noRd
+#' @return A model specification list of class \code{c(name, "model_spec", "list")}.
+#' @details
+#' This is the canonical constructor for custom analysis/model specifications.
+#' It is used by built-in rMVPA models and is safe for extension packages.
+#'
+#' The returned object stores \code{dataset} and \code{design} references, core
+#' runtime flags, and any additional named fields supplied via \code{...}.
+#'
+#' If \code{has_test_set} is not supplied in \code{...}, it is inferred from
+#' \code{dataset$test_data} and \code{design$y_test}.
+#' @export
 create_model_spec <- function(name, dataset, design, return_predictions=FALSE, 
                               compute_performance=FALSE, tune_reps=FALSE, ...) {
+  if (!is.character(name) || length(name) != 1L || !nzchar(name)) {
+    stop("create_model_spec: `name` must be a non-empty character scalar.", call. = FALSE)
+  }
+  if (!inherits(dataset, "mvpa_dataset")) {
+    stop("create_model_spec: `dataset` must inherit from 'mvpa_dataset'.", call. = FALSE)
+  }
+  design_classes <- class(design)
+  has_design_class <- is.list(design) &&
+    !is.null(design_classes) &&
+    length(design_classes) >= 1L &&
+    ("mvpa_design" %in% design_classes || any(grepl("_design$", design_classes)))
+  if (!has_design_class) {
+    stop(
+      "create_model_spec: `design` must be an mvpa design object (class 'mvpa_design' or '*_design').",
+      call. = FALSE
+    )
+  }
+  if (!is.logical(return_predictions) || length(return_predictions) != 1L || is.na(return_predictions)) {
+    stop("create_model_spec: `return_predictions` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (!is.logical(compute_performance) || length(compute_performance) != 1L || is.na(compute_performance)) {
+    stop("create_model_spec: `compute_performance` must be TRUE or FALSE.", call. = FALSE)
+  }
+
   # Automatically detect test set presence from dataset and design if not passed as parameter
   args <- list(...)
+  if (!is.null(args$has_test_set) &&
+      (!is.logical(args$has_test_set) || length(args$has_test_set) != 1L || is.na(args$has_test_set))) {
+    stop("create_model_spec: `has_test_set` (if supplied) must be TRUE or FALSE.", call. = FALSE)
+  }
   if (is.null(args$has_test_set)) {
     args$has_test_set <- !is.null(dataset$test_data) && !is.null(design$y_test)
   }
