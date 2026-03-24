@@ -663,3 +663,79 @@ test_that("feature_rsa_connectivity validates observation ordering and vector le
   bad_len$rdm_vec[[2]] <- bad_len$rdm_vec[[2]][-1]
   expect_error(feature_rsa_connectivity(bad_len), "same length")
 })
+
+test_that("feature_rsa_rdm_vectors also extracts observed_rdm_vec when available", {
+  set.seed(903)
+  dset <- gen_sample_dataset(c(3,3,3), 24, blocks = 3)
+  Fmat <- matrix(rnorm(24 * 6), 24, 6)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("o", 1:24), max_comps = 3)
+  region_mask <- NeuroVol(sample(1:3, length(dset$dataset$mask), replace = TRUE),
+                          space(dset$dataset$mask))
+
+  mspec <- feature_rsa_model(
+    dset$dataset, fdes, method = "pls",
+    crossval = blocked_cross_validation(dset$design$block_var),
+    return_rdm_vectors = TRUE
+  )
+  res <- run_regional(mspec, region_mask)
+  vecs <- feature_rsa_rdm_vectors(res)
+
+  expect_true("observed_rdm_vec" %in% names(vecs))
+  expect_true(all(vapply(vecs$observed_rdm_vec, is.numeric, logical(1))))
+  expect_true(all(vapply(vecs$observed_rdm_vec, length, integer(1)) == 24L * 23L / 2L))
+})
+
+test_that("feature_rsa_cross_connectivity returns asymmetric ROI x ROI matrix from real data", {
+  set.seed(904)
+  dset <- gen_sample_dataset(c(4,4,4), 30, blocks = 3)
+  Fmat <- matrix(rnorm(30 * 8), 30, 8)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("o", 1:30), max_comps = 4)
+  region_mask <- NeuroVol(sample(1:4, length(dset$dataset$mask), replace = TRUE),
+                          space(dset$dataset$mask))
+
+  mspec <- feature_rsa_model(
+    dset$dataset, fdes, method = "pca",
+    crossval = blocked_cross_validation(dset$design$block_var),
+    return_rdm_vectors = TRUE
+  )
+  res <- run_regional(mspec, region_mask)
+
+  cross <- feature_rsa_cross_connectivity(res, method = "spearman")
+  n_roi <- nrow(res$performance_table)
+  expect_true(is.matrix(cross))
+  expect_equal(dim(cross), c(n_roi, n_roi))
+  expect_equal(names(dimnames(cross)), c("predicted", "observed"))
+})
+
+test_that("feature_rsa_cross_connectivity matches manual cross-correlation on synthetic data", {
+  pred_vecs <- list(c(1, 2, 3, 4), c(2, 4, 6, 8), c(4, 3, 2, 1))
+  obs_vecs  <- list(c(4, 3, 2, 1), c(1, 1, 2, 2), c(3, 1, 4, 2))
+
+  vec_tbl <- tibble::tibble(
+    roinum = c(10L, 20L, 30L),
+    n_obs = c(4L, 4L, 4L),
+    observation_index = list(1:4, 1:4, 1:4),
+    rdm_vec = pred_vecs,
+    observed_rdm_vec = obs_vecs
+  )
+
+  pred_mat <- do.call(cbind, pred_vecs)
+  obs_mat  <- do.call(cbind, obs_vecs)
+  expected <- stats::cor(pred_mat, obs_mat, method = "pearson")
+  dimnames(expected) <- list(predicted = as.character(vec_tbl$roinum),
+                             observed  = as.character(vec_tbl$roinum))
+
+  got <- feature_rsa_cross_connectivity(vec_tbl, method = "pearson")
+  expect_equal(got, expected, tolerance = 1e-12)
+})
+
+test_that("feature_rsa_cross_connectivity errors when observed vectors are missing", {
+  vec_tbl <- tibble::tibble(
+    roinum = c(1L, 2L),
+    n_obs = c(4L, 4L),
+    observation_index = list(1:4, 1:4),
+    rdm_vec = list(c(1, 2, 3, 4), c(4, 3, 2, 1)),
+    observed_rdm_vec = list(NULL, NULL)
+  )
+  expect_error(feature_rsa_cross_connectivity(vec_tbl), "no observed RDM vectors")
+})

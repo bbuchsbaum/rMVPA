@@ -2,7 +2,7 @@
 % Please edit documentation in R/feature_rsa_connectivity.R
 \name{feature_rsa_rdm_vectors}
 \alias{feature_rsa_rdm_vectors}
-\title{Extract Per-ROI Predicted RDM Vectors from Feature RSA Results}
+\title{Extract Per-ROI Predicted and Observed RDM Vectors from Feature RSA Results}
 \usage{
 feature_rsa_rdm_vectors(x)
 }
@@ -20,11 +20,14 @@ A tibble with one row per ROI and columns:
       predicted RDM.}
     \item{rdm_vec}{List-column containing the lower-triangle predicted RDM
       vector for that ROI.}
+    \item{observed_rdm_vec}{List-column containing the lower-triangle
+      observed RDM vector for that ROI (if available).}
   }
 }
 \description{
-Convenience helper to pull the compact lower-triangle predicted RDM vectors
-stored by \code{feature_rsa_model(..., return_rdm_vectors = TRUE)} from a
+Convenience helper to pull the compact lower-triangle predicted (and
+optionally observed) RDM vectors stored by
+\code{feature_rsa_model(..., return_rdm_vectors = TRUE)} from a
 \code{regional_mvpa_result}.
 }
 \examples{

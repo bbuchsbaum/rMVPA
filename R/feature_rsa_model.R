@@ -1510,6 +1510,7 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   if (isTRUE(obj$return_rdm_vectors)) {
     predictor_obj <- list(
       predicted_rdm_vec = .feature_rsa_predicted_rdm_vector(combined_predicted),
+      observed_rdm_vec  = .feature_rsa_predicted_rdm_vector(combined_observed),
       observation_index = combined_test_index,
       n_obs = nrow(combined_predicted)
     )
