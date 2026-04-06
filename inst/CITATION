@@ -1,0 +1,11 @@
+bibentry(
+  bibtype  = "Manual",
+  title    = "rMVPA: Multivoxel Pattern Analysis in R",
+  author   = person("Bradley", "Buchsbaum", email = "brad.buchsbaum@gmail.com",
+                    role = c("aut", "cre"),
+                    comment = c(ORCID = "0000-0002-1108-4866")),
+  year     = "2026",
+  note     = "R package version 0.1.2",
+  url      = "https://github.com/bbuchsbaum/rMVPA",
+  header   = "To cite rMVPA in publications use:"
+)

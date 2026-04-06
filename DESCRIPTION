@@ -3,11 +3,12 @@ Type: Package
 Title: Multivoxel Pattern Analysis in R
 Version: 0.1.2
 Date: 2026-02-20
-Authors@R: person("Bradley", "Buchsbaum",, "brad.buchsbaum@gmail.com", c("aut", "cre"))
-Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
+Authors@R: person("Bradley", "Buchsbaum", email = "brad.buchsbaum@gmail.com",
+    role = c("aut", "cre"),
+    comment = c(ORCID = "0000-0002-1108-4866"))
 Description: An R package to facilitate multivoxel pattern analysis of
     neuroimaging data in R.
-License: GPL (>= 2)
+License: MIT + file LICENSE
 Depends: R (>= 4.1.0)
 Imports:
     assertthat,
@@ -24,7 +25,6 @@ Imports:
     methods,
     modelr,
     neuroim2,
-    neurosurf,
     purrr,
     rlang,
     stringr,
@@ -129,7 +129,6 @@ Suggests:
     foreach,
     future.callr,
     hrfdecode,
-    hrfdecoder,
     iterators,
     jsonlite,
     knitr,
@@ -145,6 +144,7 @@ Suggests:
     sparsediscrim,
     spls,
     testthat,
+    neurosurf,
     rrpack,
     withr,
     xgboost,
@@ -155,5 +155,6 @@ Remotes:
     bbuchsbaum/shard
 Encoding: UTF-8
 NeedsCompilation: yes
-URL: http://bbuchsbaum.github.io/rMVPA/
+URL: https://github.com/bbuchsbaum/rMVPA, https://bbuchsbaum.github.io/rMVPA/
+BugReports: https://github.com/bbuchsbaum/rMVPA/issues
 Config/Needs/website: albersdown
