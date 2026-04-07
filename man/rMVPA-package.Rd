@@ -10,12 +10,14 @@ An R package to facilitate multivoxel pattern analysis of neuroimaging data in R
 \seealso{
 Useful links:
 \itemize{
-  \item \url{http://bbuchsbaum.github.io/rMVPA/}
+  \item \url{https://github.com/bbuchsbaum/rMVPA}
+  \item \url{https://bbuchsbaum.github.io/rMVPA/}
+  \item Report bugs at \url{https://github.com/bbuchsbaum/rMVPA/issues}
 }
 
 }
 \author{
-\strong{Maintainer}: Bradley Buchsbaum \email{brad.buchsbaum@gmail.com}
+\strong{Maintainer}: Bradley Buchsbaum \email{brad.buchsbaum@gmail.com} (\href{https://orcid.org/0000-0002-1108-4866}{ORCID})
 
 }
 \keyword{internal}

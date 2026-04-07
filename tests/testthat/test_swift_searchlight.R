@@ -1,4 +1,5 @@
 testthat::skip_if_not_installed("neuroim2")
+testthat::skip_if_not_installed("sda")
 
 build_swift_mspec <- function(D = c(4, 4, 4), nobs = 54, blocks = 6) {
   ds <- gen_sample_dataset(D = D, nobs = nobs, nlevels = 3, blocks = blocks)

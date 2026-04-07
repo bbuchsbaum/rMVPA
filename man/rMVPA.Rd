@@ -33,7 +33,7 @@ For a detailed introduction and examples, see the package vignette:
 (You may need to build vignettes first if installing from source).
 }
 \author{
-\strong{Maintainer}: Bradley Buchsbaum \email{brad.buchsbaum@gmail.com}
+\strong{Maintainer}: Bradley Buchsbaum \email{brad.buchsbaum@gmail.com} (\href{https://orcid.org/0000-0002-1108-4866}{ORCID})
 
 }
 \keyword{internal}

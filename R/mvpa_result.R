@@ -162,6 +162,7 @@ sub_result.binary_classification_result <- function(x, indices) {
 #' @param predictor The predictor used in the multiway classification model (optional).
 #' @return A list with class attributes "multiway_classification_result", "classification_result", and "list" containing the observed and predicted values, class probabilities, test design, test indices, and predictor.
 #' @family classification_result
+#' @export
 multiway_classification_result <- function(observed, predicted, probs,testind=NULL, test_design=NULL, predictor=NULL) {
   assertthat::assert_that(length(observed) == length(predicted))
   ret <- list(

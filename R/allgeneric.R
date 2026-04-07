@@ -670,21 +670,23 @@ test_design <- function(obj) {
 #'
 #' @examples
 #' \donttest{
-#'   ds <- gen_sample_dataset(
-#'     D = c(6, 6, 6), nobs = 20,
-#'     response_type = "categorical",
-#'     data_mode = "image", nlevels = 2
-#'   )
-#'   mdl <- load_model("sda_notune")
-#'   mspec <- mvpa_model(
-#'     model = mdl,
-#'     dataset = ds$dataset,
-#'     design  = ds$design,
-#'     model_type = "classification"
-#'   )
-#'   grid <- tune_grid(mspec, ds$dataset$train_data, ds$design$y_train, len = 1)
-#'   fit  <- fit_model(mspec, ds$dataset$train_data,
-#'                    ds$design$y_train, wts = NULL, param = grid)
+#'   if (requireNamespace("sda", quietly = TRUE)) {
+#'     ds <- gen_sample_dataset(
+#'       D = c(6, 6, 6), nobs = 20,
+#'       response_type = "categorical",
+#'       data_mode = "image", nlevels = 2
+#'     )
+#'     mdl <- load_model("sda_notune")
+#'     mspec <- mvpa_model(
+#'       model = mdl,
+#'       dataset = ds$dataset,
+#'       design  = ds$design,
+#'       model_type = "classification"
+#'     )
+#'     grid <- tune_grid(mspec, ds$dataset$train_data, ds$design$y_train, len = 1)
+#'     fit  <- fit_model(mspec, ds$dataset$train_data,
+#'                      ds$design$y_train, wts = NULL, param = grid)
+#'   }
 #' }
 #'
 #' @rdname fit_model-methods
@@ -1373,13 +1375,15 @@ searchlight_scope <- function(dataset, ...) UseMethod("searchlight_scope")
 #' @return A numeric matrix of dimension P x D.
 #' @examples
 #' \donttest{
-#'   ds <- gen_sample_dataset(c(5,5,5), 20, nlevels=2)
-#'   mdl <- load_model("sda_notune")
-#'   mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification")
-#'   vox <- which(ds$dataset$mask > 0)
-#'   X <- neuroim2::series(ds$dataset$train_data, vox)
-#'   fit <- train_model(mspec, X, ds$design$y_train, indices=vox)
-#'   w <- extract_weights(fit)
+#'   if (requireNamespace("sda", quietly = TRUE)) {
+#'     ds <- gen_sample_dataset(c(5,5,5), 20, nlevels=2)
+#'     mdl <- load_model("sda_notune")
+#'     mspec <- mvpa_model(mdl, ds$dataset, ds$design, "classification")
+#'     vox <- which(ds$dataset$mask > 0)
+#'     X <- neuroim2::series(ds$dataset$train_data, vox)
+#'     fit <- train_model(mspec, X, ds$design$y_train, indices=vox)
+#'     w <- extract_weights(fit)
+#'   }
 #' }
 #' @export
 extract_weights <- function(object, ...) UseMethod("extract_weights")
