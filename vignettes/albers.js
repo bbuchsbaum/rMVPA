@@ -1,4 +1,13 @@
 document.addEventListener('DOMContentLoaded', function () {
+  // Default to minimal structural intensity unless a style class is already set.
+  if (
+    document.body &&
+    !document.body.classList.contains('style-minimal') &&
+    !document.body.classList.contains('style-assertive')
+  ) {
+    document.body.classList.add('style-minimal');
+  }
+
   // Add copy buttons for standalone R Markdown vignettes (CRAN/offline).
   // Skip if pkgdown has already injected its own clipboard buttons.
   var hasPkgdownCopy =
@@ -42,14 +51,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // Add visible anchors to h2/h3 (avoid duplicates)
+  // Add visible dash anchors to h2/h3 (avoid duplicates)
   Array.from(document.querySelectorAll('h2, h3')).forEach(function (h) {
     if (!h.id) return;
     if (h.querySelector('a.anchor')) return;
     var a = document.createElement('a');
     a.href = '#' + h.id;
     a.className = 'anchor';
-    a.textContent = '▣';
+    a.textContent = '—';
     a.setAttribute('aria-label', 'Link to this section');
     a.setAttribute('title', 'Link to this section');
     h.appendChild(a);

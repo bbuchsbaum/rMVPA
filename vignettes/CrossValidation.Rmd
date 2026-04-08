@@ -6,10 +6,13 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 3
-vignette: '%\VignetteIndexEntry{Cross-Validation Strategies in rMVPA} %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}'
+vignette: |
+  %\VignetteIndexEntry{Cross-Validation Strategies in rMVPA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 params:
   family: red
+  preset: homage
 css: albers.css
 resource_files:
 - albers.css
@@ -17,7 +20,7 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-teal');});</script>
 
 ---
 
@@ -330,7 +333,6 @@ print(all_performance)
 This integration demonstrates how different cross-validation strategies can be easily incorporated into the broader MVPA analysis framework, allowing researchers to choose the most appropriate validation approach for their specific analysis needs.
 
 For more details, see `vignette("Regional_Analysis")` and `vignette("Searchlight_Analysis")`.
-
 
 
 

@@ -4,10 +4,13 @@ author: Bradley Buchsbaum
 output:
   rmarkdown::html_vignette:
     toc: yes
-vignette: '%\VignetteIndexEntry{Temporal Confounds in RSA} %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}'
+vignette: |
+  %\VignetteIndexEntry{Temporal Confounds in RSA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 params:
   family: red
+  preset: homage
 css: albers.css
 resource_files:
 - albers.css
@@ -15,7 +18,7 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-teal');});</script>
 
 ---
 
@@ -72,8 +75,9 @@ Using in rsa_design
 
 ```{r rsa_design_temporal}
 task_rdm <- as.dist(matrix(stats::runif(n*n), n, n))
-rdes <- rsa_design(~ task_rdm + temporal(onsets, block = runs, kernel = "exp"),
-                   data=list(task_rdm=task_rdm, onsets=onsets, runs=runs),
+rtemp <- temporal(onsets, block = runs, kernel = "exp")
+rdes <- rsa_design(~ task_rdm + rtemp,
+                   data=list(task_rdm=task_rdm, rtemp=rtemp, onsets=onsets, runs=runs),
                    block_var=~ runs, keep_intra_run=TRUE)
 print(rdes)
 ```

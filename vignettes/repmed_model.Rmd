@@ -1,10 +1,13 @@
 ---
 title: 'Representational Mediation (ReNA-RM): repmed_model'
 output: rmarkdown::html_vignette
-vignette: '%\VignetteIndexEntry{Representational Mediation (ReNA-RM): repmed_model}
-  %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}'
+vignette: |
+  %\VignetteIndexEntry{Representational Mediation (ReNA-RM): repmed_model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 params:
   family: red
+  preset: homage
 css: albers.css
 resource_files:
 - albers.css
@@ -12,7 +15,7 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-teal');});</script>
 
 ---
 
@@ -139,4 +142,3 @@ Session info
 ```{r repmed_session_info, eval=FALSE}
 sessionInfo()
 ```
-

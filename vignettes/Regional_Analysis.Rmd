@@ -5,10 +5,13 @@ date: '`r Sys.Date()`'
 output:
   rmarkdown::html_vignette:
     toc: yes
-vignette: '%\VignetteIndexEntry{Advanced Regional MVPA Analysis in rMVPA} %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}'
+vignette: |
+  %\VignetteIndexEntry{Advanced Regional MVPA Analysis in rMVPA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 params:
   family: red
+  preset: homage
 css: albers.css
 resource_files:
 - albers.css
@@ -16,7 +19,7 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-teal');});</script>
 
 ---
 
@@ -129,4 +132,3 @@ This modular design ensures that:
 This vignette showed you how to generate synthetic neuroimaging data, define ROIs with region masks, set up MVPA models with cross-validation, run analyses across ROIs, and interpret the performance metrics. You now have the tools to conduct regional MVPA analyses on your own neuroimaging data.
 
 For further details, see `vignette("Searchlight_Analysis")` for the searchlight counterpart and `vignette("CrossValidation")` for cross-validation strategies.
-

@@ -3,10 +3,13 @@ title: Contrast RSA with contrast_rsa_model
 author: Bradley Buchsbaum
 date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
-vignette: '%\VignetteIndexEntry{Contrast RSA with contrast_rsa_model} %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}'
+vignette: |
+  %\VignetteIndexEntry{Contrast RSA with contrast_rsa_model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 params:
   family: red
+  preset: homage
 css: albers.css
 resource_files:
 - albers.css
@@ -14,7 +17,7 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-teal');});</script>
 
 ---
 
@@ -94,16 +97,31 @@ center_indices <- which(model_spec$dataset$mask > 0)
 iter_res <- mvpa_iterate(model_spec, slight, center_indices, analysis_type = "searchlight")
 
 # Inspect the beta_delta metric for the first few centers
-preview_ids <- seq_len(min(5, nrow(iter_res)))
-preview_tbl <- do.call(rbind, lapply(preview_ids, function(idx) {
-  vals <- iter_res$performance[[idx]]$beta_delta
+preview_ids <- seq_len(min(5, length(iter_res$performance)))
+preview_rows <- lapply(preview_ids, function(idx) {
+  perf_i <- iter_res$performance[[idx]]
+  vals <- if (is.list(perf_i) && !is.null(perf_i$beta_delta)) {
+    perf_i$beta_delta
+  } else {
+    perf_i
+  }
+
+  if (is.null(vals)) {
+    return(NULL)
+  }
+  if (is.null(names(vals)) || !any(nzchar(names(vals)))) {
+    names(vals) <- paste0("contrast_", seq_along(vals))
+  }
+
   data.frame(
     center_id = iter_res$id[idx],
     contrast = names(vals),
     beta_delta = as.numeric(vals),
     row.names = NULL
   )
-}))
+})
+preview_rows <- Filter(Negate(is.null), preview_rows)
+preview_tbl <- if (length(preview_rows) == 0) data.frame() else do.call(rbind, preview_rows)
 preview_tbl
 ```
 

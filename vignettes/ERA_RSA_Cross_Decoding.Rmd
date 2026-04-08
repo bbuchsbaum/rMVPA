@@ -7,6 +7,7 @@ vignette: |
   %\VignetteIndexEntry{ERA-RSA: Cross-Decoding Between Encoding and Retrieval} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
 params:
   family: violet
+  preset: homage
 css: albers.css
 resource_files:
 - albers.css
@@ -14,7 +15,7 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-red');});</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-teal');});</script>
 
 ---
 
