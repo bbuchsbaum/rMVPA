@@ -107,6 +107,7 @@ searchlight_mode <- function(mode = NULL) {
 }
 
 initialize_configuration <- function(args) {
+  config <- new.env(parent = baseenv())
   if (!is.null(args$config)) {
     if (!file.exists(args$config)) {
       flog.error("cannot find configuration file: %s", args$config)
@@ -196,10 +197,10 @@ standardize_vars <- function(bvec, mask, blockvar) {
 normalize_surface_samples <- function(bvec, mask) {
   mat <- scale(bvec@data[neuroim2::indices(bvec), ,drop=FALSE])
   
-  m2 <- matrix(0, length(nodes(bvec)), ncol(bvec@data))
+  m2 <- matrix(0, length(neurosurf::nodes(bvec)), ncol(bvec@data))
   m2[indices(bvec),] <- mat
   
-  neurosurf::NeuroSurfaceVector(geometry(bvec), indices=indices(bvec), m2)
+  neurosurf::NeuroSurfaceVector(neurosurf::geometry(bvec), indices=indices(bvec), m2)
 }
 
 #' @noRd

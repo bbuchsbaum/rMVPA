@@ -7,6 +7,93 @@
 
 #' @keywords internal
 #' @noRd
+.searchlight_engine_registry <- function() {
+  list(
+    legacy = list(
+      label = "Legacy iterator",
+      eligible = function(model_spec, method) TRUE
+    ),
+    swift = list(
+      label = "SWIFT multiclass fast path",
+      eligible = function(model_spec, method) {
+        .swift_searchlight_enabled() && .is_swift_fast_path(model_spec, method)
+      }
+    ),
+    dual_lda_fast = list(
+      label = "Dual-LDA incremental fast path",
+      eligible = function(model_spec, method) {
+        .is_dual_lda_fast_path(model_spec, method)
+      }
+    )
+  )
+}
+
+#' Summarize Available Searchlight Engines
+#'
+#' Returns a compact table of registered searchlight engines. When a
+#' \code{model_spec} is supplied, the output also includes whether each engine
+#' is currently eligible for that analysis.
+#'
+#' @param model_spec Optional model specification.
+#' @param method Searchlight method to audit.
+#'
+#' @return A data frame.
+#' @export
+searchlight_engines <- function(model_spec = NULL,
+                                method = c("standard", "randomized", "resampled")) {
+  method <- match.arg(method)
+  registry <- .searchlight_engine_registry()
+  nms <- names(registry)
+
+  eligible <- if (is.null(model_spec)) {
+    rep(NA, length(nms))
+  } else {
+    vapply(
+      nms,
+      function(nm) isTRUE(registry[[nm]]$eligible(model_spec, method)),
+      logical(1)
+    )
+  }
+
+  data.frame(
+    engine = nms,
+    label = vapply(registry, function(x) x$label, character(1)),
+    eligible = eligible,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Explain Searchlight Engine Selection
+#'
+#' Reports which searchlight engine would be selected for a given model and
+#' method, along with the eligibility status of each registered engine.
+#'
+#' @param model_spec A model specification.
+#' @param method Searchlight method to audit.
+#' @param engine Requested engine policy: \code{"auto"}, \code{"legacy"},
+#'   \code{"swift"}, or \code{"dual_lda_fast"}.
+#'
+#' @return A data frame with selection metadata.
+#' @export
+explain_searchlight_engine <- function(model_spec,
+                                       method = c("standard", "randomized", "resampled"),
+                                       engine = c("auto", "legacy", "swift", "dual_lda_fast")) {
+  method <- match.arg(method)
+  requested <- .match_searchlight_engine(match.arg(engine))
+  registry_tbl <- searchlight_engines(model_spec = model_spec, method = method)
+  selected <- if (inherits(model_spec, "mvpa_model")) {
+    .resolve_searchlight_engine.mvpa_model(model_spec, method = method, engine = requested)
+  } else {
+    "legacy"
+  }
+
+  registry_tbl$requested <- requested
+  registry_tbl$selected <- registry_tbl$engine == selected
+  registry_tbl
+}
+
+#' @keywords internal
+#' @noRd
 .run_searchlight_engine <- function(model_spec, radius, method,
                                     engine = "auto",
                                     niter = 4L,
@@ -45,30 +132,24 @@
 #' @noRd
 .resolve_searchlight_engine.mvpa_model <- function(model_spec, method, engine = "auto") {
   requested <- .match_searchlight_engine(engine)
+  registry <- .searchlight_engine_registry()
 
   if (identical(requested, "legacy")) {
     return("legacy")
   }
 
-  if (identical(requested, "swift")) {
-    if (.is_swift_fast_path(model_spec, method)) {
-      return("swift")
+  if (!identical(requested, "auto")) {
+    if (isTRUE(registry[[requested]]$eligible(model_spec, method))) {
+      return(requested)
     }
     return("legacy")
   }
 
-  if (identical(requested, "dual_lda_fast")) {
-    if (.is_dual_lda_fast_path(model_spec, method)) {
-      return("dual_lda_fast")
-    }
-    return("legacy")
-  }
-
-  if (.is_dual_lda_fast_path(model_spec, method)) {
+  if (isTRUE(registry$dual_lda_fast$eligible(model_spec, method))) {
     return("dual_lda_fast")
   }
 
-  if (.swift_searchlight_enabled() && .is_swift_fast_path(model_spec, method)) {
+  if (isTRUE(registry$swift$eligible(model_spec, method))) {
     return("swift")
   }
 

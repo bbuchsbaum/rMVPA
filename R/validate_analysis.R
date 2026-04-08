@@ -148,6 +148,103 @@ validate_analysis.mvpa_design <- function(x, crossval = NULL,
   invisible(result)
 }
 
+#' @keywords internal
+#' @noRd
+.validation_result_payload <- function(x) {
+  if (is.null(x) || !inherits(x, "validation_result")) {
+    return(NULL)
+  }
+
+  list(
+    n_pass = x$n_pass,
+    n_warn = x$n_warn,
+    n_fail = x$n_fail,
+    checks = lapply(x$checks, function(ch) {
+      list(
+        name = ch$name,
+        status = ch$status,
+        message = ch$message
+      )
+    })
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.format_preflight_message <- function(x, context = "analysis preflight") {
+  payload <- .validation_result_payload(x)
+  if (is.null(payload)) {
+    return(sprintf("%s failed for an unknown reason.", context))
+  }
+
+  flagged <- Filter(function(ch) ch$status %in% c("fail", "warn"), payload$checks)
+  head_flagged <- flagged[seq_len(min(3L, length(flagged)))]
+
+  detail <- if (length(head_flagged) == 0L) {
+    "No failing or warning checks were recorded."
+  } else {
+    paste(
+      vapply(
+        head_flagged,
+        function(ch) sprintf("%s: %s", ch$name, ch$message),
+        character(1)
+      ),
+      collapse = "\n"
+    )
+  }
+
+  sprintf(
+    "%s reported %d failure(s) and %d warning(s).\n%s",
+    context,
+    payload$n_fail,
+    payload$n_warn,
+    detail
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.preflight_supported <- function(model_spec) {
+  inherits(model_spec, "model_spec") &&
+    !is.null(model_spec$design) &&
+    !is.null(model_spec$crossval)
+}
+
+#' @keywords internal
+#' @noRd
+.apply_analysis_preflight <- function(model_spec,
+                                      preflight = c("warn", "error", "off"),
+                                      context = "analysis") {
+  preflight <- match.arg(preflight)
+  if (identical(preflight, "off") || !.preflight_supported(model_spec)) {
+    return(NULL)
+  }
+
+  vres <- tryCatch(
+    validate_analysis(model_spec, verbose = FALSE),
+    error = function(e) e
+  )
+
+  if (inherits(vres, "error")) {
+    msg <- sprintf("%s preflight could not be completed: %s", context, conditionMessage(vres))
+    if (identical(preflight, "error")) {
+      stop(msg, call. = FALSE)
+    }
+    warning(msg, call. = FALSE)
+    return(NULL)
+  }
+
+  if (identical(preflight, "error") && vres$n_fail > 0L) {
+    stop(.format_preflight_message(vres, context = paste(context, "preflight")), call. = FALSE)
+  }
+
+  if (identical(preflight, "warn") && (vres$n_fail > 0L || vres$n_warn > 0L)) {
+    warning(.format_preflight_message(vres, context = paste(context, "preflight")), call. = FALSE)
+  }
+
+  vres
+}
+
 # ---------------------------------------------------------------------------
 # Individual check functions
 # ---------------------------------------------------------------------------

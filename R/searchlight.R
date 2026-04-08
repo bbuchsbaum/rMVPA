@@ -1193,11 +1193,18 @@ run_searchlight_base <- function(model_spec,
                                  combiner = "average",
                                  drop_probs = FALSE,
                                  fail_fast = FALSE,
+                                 preflight = c("warn", "error", "off"),
                                  engine = NULL,
                                  k = NULL,
                                  backend = c("default", "shard", "auto"),
                                  verbose = FALSE,
                                  ...) {
+  preflight <- match.arg(preflight)
+  preflight_result <- .apply_analysis_preflight(
+    model_spec,
+    preflight = preflight,
+    context = "run_searchlight_base"
+  )
 
   if (!is.null(engine)) {
     requested_engine <- .match_searchlight_engine(engine)
@@ -1302,6 +1309,9 @@ run_searchlight_base <- function(model_spec,
   if (is.null(attr(res, "searchlight_engine", exact = TRUE))) {
     attr(res, "searchlight_engine") <- "legacy"
   }
+  if (!is.null(preflight_result)) {
+    attr(res, "preflight") <- preflight_result
+  }
 
   res
 }
@@ -1355,6 +1365,11 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
   backend <- .resolve_searchlight_backend(backend = backend, missing_backend = missing(backend))
   method <- match.arg(method)
   dots <- list(...)
+  preflight <- if (!is.null(dots$preflight)) {
+    match.arg(as.character(dots$preflight)[1], c("warn", "error", "off"))
+  } else {
+    "warn"
+  }
   engine <- dots$engine %||% "auto"
   combiner <- dots$combiner %||% "average"
   drop_probs <- dots$drop_probs %||% FALSE
@@ -1369,6 +1384,7 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
   dots$fail_fast <- NULL
   dots$k <- NULL
   dots$verbose <- NULL
+  dots$preflight <- NULL
 
   # incremental and gamma remain in ... as engine-specific params
   incremental <- if ("incremental" %in% names(dots)) isTRUE(dots$incremental) else TRUE
@@ -1377,6 +1393,11 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
   dots$gamma <- NULL
 
   .plugin_preflight(model_spec, context = "run_searchlight")
+  preflight_result <- .apply_analysis_preflight(
+    model_spec,
+    preflight = preflight,
+    context = "run_searchlight"
+  )
 
   engine_ret <- do.call(
     .run_searchlight_engine,
@@ -1403,6 +1424,9 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
     if (is.list(res) && is.null(attr(res, "searchlight_engine", exact = TRUE))) {
       attr(res, "searchlight_engine") <- as.character(engine_ret$engine)
     }
+    if (!is.null(preflight_result)) {
+      attr(res, "preflight") <- preflight_result
+    }
     return(res)
   }
 
@@ -1417,6 +1441,7 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
         combiner = combiner,
         drop_probs = drop_probs,
         fail_fast = fail_fast,
+        preflight = "off",
         k = k,
         backend = backend,
         verbose = verbose
@@ -1426,6 +1451,9 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
   )
   if (is.list(res) && is.null(attr(res, "searchlight_engine", exact = TRUE))) {
     attr(res, "searchlight_engine") <- "legacy"
+  }
+  if (!is.null(preflight_result)) {
+    attr(res, "preflight") <- preflight_result
   }
   res
 }
@@ -1452,7 +1480,6 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
 #' }
 #' @keywords internal
 #' @importFrom neuroim2 SparseNeuroVec space add_dim
-#' @importFrom neurosurf NeuroSurfaceVector geometry
 #' @importFrom purrr map
 #' @importFrom dplyr bind_cols select pull
 #' @export

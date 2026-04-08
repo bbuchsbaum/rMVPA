@@ -116,22 +116,59 @@ save_results <- function(x, dir,
 .write_manifest <- function(manifest, dir, quiet) {
   f_yaml <- file.path(dir, "manifest.yaml")
   f_json <- file.path(dir, "manifest.json")
-  ok <- FALSE
   if (requireNamespace("yaml", quietly = TRUE)) {
-    yaml::write_yaml(manifest, f_yaml); ok <- TRUE
-    if (!quiet) message("Wrote manifest: ", f_yaml)
-    return(f_yaml)
+    ok <- tryCatch({
+      yaml::write_yaml(manifest, f_yaml)
+      TRUE
+    }, error = function(e) FALSE)
+    if (isTRUE(ok)) {
+      if (!quiet) message("Wrote manifest: ", f_yaml)
+      return(f_yaml)
+    }
   }
   if (requireNamespace("jsonlite", quietly = TRUE)) {
-    jsonlite::write_json(manifest, f_json, pretty = TRUE, auto_unbox = TRUE); ok <- TRUE
-    if (!quiet) message("Wrote manifest: ", f_json)
-    return(f_json)
+    ok <- tryCatch({
+      jsonlite::write_json(manifest, f_json, pretty = TRUE, auto_unbox = TRUE)
+      TRUE
+    }, error = function(e) FALSE)
+    if (isTRUE(ok)) {
+      if (!quiet) message("Wrote manifest: ", f_json)
+      return(f_json)
+    }
   }
   # fallback
   f_rds <- file.path(dir, "manifest.rds")
   saveRDS(manifest, f_rds)
   if (!quiet) message("Wrote manifest: ", f_rds)
   f_rds
+}
+
+.git_head_sha <- function() {
+  sha <- Sys.getenv("GITHUB_SHA", unset = "")
+  if (nzchar(sha)) {
+    return(sha)
+  }
+
+  out <- tryCatch(
+    system2("git", c("rev-parse", "HEAD"), stdout = TRUE, stderr = FALSE),
+    error = function(e) character(0)
+  )
+  if (length(out) == 0L) {
+    NA_character_
+  } else {
+    trimws(out[[1]])
+  }
+}
+
+.manifest_runtime_context <- function(x) {
+  list(
+    analysis_context = attr(x, "analysis_context", exact = TRUE),
+    searchlight_engine = attr(x, "searchlight_engine", exact = TRUE),
+    preflight = .validation_result_payload(attr(x, "preflight", exact = TRUE)),
+    timing = attr(x, "timing", exact = TRUE),
+    session_info = capture.output(utils::sessionInfo()),
+    git_sha = .git_head_sha()
+  )
 }
 
 # heuristics from level
@@ -323,6 +360,13 @@ save_results.searchlight_result <- function(x, dir,
       }
       names(paths$aux) <- heavy
     }
+    runtime_ctx <- attr(x, "analysis_context", exact = TRUE)
+    if (!is.null(runtime_ctx)) {
+      .ensure_dir(aux_dir)
+      f <- .unique_path(file.path(aux_dir, "analysis_context.rds"), overwrite)
+      saveRDS(runtime_ctx, f)
+      paths$aux <- c(paths$aux %||% character(), f)
+    }
   }
 
   # ---- manifest ----
@@ -335,6 +379,7 @@ save_results.searchlight_result <- function(x, dir,
         as.character(utils::packageVersion("neurosurf")) else NA_character_,
       class = class(x),
       metrics = names_all,
+      runtime = .manifest_runtime_context(x),
       files = paths
     )
     mfile <- .write_manifest(man, dir, quiet)
@@ -445,10 +490,96 @@ save_results.regional_mvpa_result <- function(x, dir,
       class = class(x),
       n_rois = if (!is.null(x$performance_table)) nrow(x$performance_table) else NA_integer_,
       has_fits = !is.null(x$fits) && length(x$fits) > 0,
+      runtime = .manifest_runtime_context(x),
       files = paths
     )
     mfile <- .write_manifest(man, dir, quiet)
     paths$manifest <- mfile
+  }
+
+  invisible(paths)
+}
+
+#' @export
+save_results.global_mvpa_result <- function(x, dir,
+                                            level = c("standard", "minimal", "complete"),
+                                            stack = c("none", "auto", "vec"),
+                                            fname = "global.nii.gz",
+                                            include = NULL,
+                                            dtype = NULL,
+                                            overwrite = FALSE,
+                                            quiet = FALSE) {
+  level <- match.arg(level)
+  stack <- match.arg(stack)
+  include <- .compute_includes(level, include)
+
+  .ensure_dir(dir)
+  paths <- list(root = dir)
+
+  if (!is.null(x$importance_map)) {
+    imp_res <- structure(
+      list(
+        results = list(importance = x$importance_map),
+        n_voxels = NA_integer_,
+        active_voxels = NA_integer_,
+        metrics = "importance"
+      ),
+      class = c("searchlight_result", "list")
+    )
+    imp_paths <- save_results.searchlight_result(
+      imp_res,
+      dir = dir,
+      level = "minimal",
+      stack = stack,
+      fname = fname,
+      include = NULL,
+      dtype = dtype,
+      overwrite = overwrite,
+      quiet = quiet
+    )
+    paths <- c(paths, imp_paths)
+  }
+
+  if (!is.null(x$performance_table)) {
+    perf_file <- .unique_path(file.path(dir, "performance_table.txt"), overwrite)
+    utils::write.table(x$performance_table, perf_file,
+                       row.names = FALSE, quote = FALSE, sep = "\t")
+    paths$performance_table <- perf_file
+  }
+
+  if ("aux" %in% include) {
+    aux_dir <- file.path(dir, "aux")
+    .ensure_dir(aux_dir)
+    aux_objects <- list(
+      result = x$result,
+      importance_vector = x$importance_vector,
+      activation_patterns = x$activation_patterns,
+      raw_weights = x$raw_weights,
+      fold_fits = x$fold_fits,
+      model_spec = x$model_spec
+    )
+    aux_objects <- aux_objects[!vapply(aux_objects, is.null, logical(1))]
+    if (length(aux_objects) > 0L) {
+      aux_files <- vapply(names(aux_objects), function(nm) {
+        f <- .unique_path(file.path(aux_dir, paste0(.slugify(nm), ".rds")), overwrite)
+        saveRDS(aux_objects[[nm]], f)
+        f
+      }, character(1))
+      paths$aux <- unname(aux_files)
+      names(paths$aux) <- names(aux_files)
+    }
+  }
+
+  if ("manifest" %in% include) {
+    man <- list(
+      created = as.character(Sys.time()),
+      rMVPA_version = tryCatch(as.character(utils::packageVersion("rMVPA")),
+                               error = function(e) NA_character_),
+      class = class(x),
+      runtime = .manifest_runtime_context(x),
+      files = paths
+    )
+    paths$manifest <- .write_manifest(man, dir, quiet)
   }
 
   invisible(paths)

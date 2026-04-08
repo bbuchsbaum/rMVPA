@@ -855,13 +855,20 @@ run_regional_base <- function(model_spec,
                               stack_folds = NULL,
                               stack_seed = NULL,
                               stack_lambda = 1e-3,
+                              preflight = c("warn", "error", "off"),
                               backend = c("default", "shard", "auto"),
                               ...) {
+  preflight <- match.arg(preflight)
   backend <- match.arg(backend)
   model_spec <- configure_runtime_backend(
     model_spec, backend = backend, context = "run_regional_base"
   )
   .plugin_preflight(model_spec, context = "run_regional")
+  preflight_result <- .apply_analysis_preflight(
+    model_spec,
+    preflight = preflight,
+    context = "run_regional"
+  )
 
   pool_predictions <- match.arg(pool_predictions)
  
@@ -940,7 +947,13 @@ run_regional_base <- function(model_spec,
     fits             = fits,
     pooled_prediction_table = pooled_prediction_table,
     pooled_performance = pooled_performance
-  )
+  ) -> out
+
+  if (!is.null(preflight_result)) {
+    attr(out, "preflight") <- preflight_result
+  }
+
+  out
 }
 
 

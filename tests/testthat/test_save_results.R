@@ -130,3 +130,53 @@ test_that("save_results handles mixed metric names appropriately", {
   # Clean up
   unlink(temp_dir, recursive = TRUE)
 })
+
+test_that("save_results manifests capture runtime metadata", {
+  library(neuroim2)
+
+  dim <- c(6, 6, 6)
+  space <- NeuroSpace(dim, c(1, 1, 1))
+  vol <- NeuroVol(array(runif(prod(dim)), dim), space)
+
+  result <- structure(
+    list(
+      results = list(accuracy = vol),
+      n_voxels = prod(dim),
+      active_voxels = prod(dim),
+      metrics = "accuracy"
+    ),
+    class = c("searchlight_result", "list")
+  )
+
+  fake_validation <- structure(
+    list(
+      checks = list(list(name = "check", status = "pass", message = "ok")),
+      n_pass = 1L,
+      n_warn = 0L,
+      n_fail = 0L
+    ),
+    class = "validation_result"
+  )
+
+  attr(result, "searchlight_engine") <- "swift"
+  attr(result, "preflight") <- fake_validation
+  attr(result, "analysis_context") <- list(mode = "searchlight", entry_name = "analysis")
+
+  temp_dir <- tempfile()
+  save_results(result, temp_dir, level = "standard", quiet = TRUE)
+
+  manifest_path <- list.files(temp_dir, pattern = "^manifest\\.", full.names = TRUE)[1]
+  ext <- tools::file_ext(manifest_path)
+  manifest <- switch(
+    ext,
+    yaml = yaml::read_yaml(manifest_path),
+    json = jsonlite::read_json(manifest_path, simplifyVector = TRUE),
+    rds = readRDS(manifest_path)
+  )
+
+  expect_equal(manifest$runtime$searchlight_engine, "swift")
+  expect_equal(manifest$runtime$analysis_context$mode, "searchlight")
+  expect_equal(manifest$runtime$preflight$n_fail, 0)
+
+  unlink(temp_dir, recursive = TRUE)
+})

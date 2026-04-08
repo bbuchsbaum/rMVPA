@@ -227,13 +227,24 @@ cv_run_global <- function(mspec, X, y, crossval, feature_ids,
 #'   into a scalar importance per feature. Default: L2 norm.
 #' @param return_fits Logical; if TRUE, store per-fold model fits.
 #' @param aggregation How to aggregate multi-basis feature importance (default "mean").
+#' @param preflight One of \code{"warn"} (default), \code{"error"}, or
+#'   \code{"off"}.
 #' @param ... Additional arguments (currently unused).
 #'
 #' @return A \code{global_mvpa_result} object.
 #' @export
 run_global.mvpa_model <- function(model_spec, X = NULL, summary_fun = NULL,
-                                   return_fits = FALSE, aggregation = c("mean", "sum", "maxabs"), ...) {
+                                   return_fits = FALSE,
+                                   aggregation = c("mean", "sum", "maxabs"),
+                                   preflight = c("warn", "error", "off"),
+                                   ...) {
   aggregation <- match.arg(aggregation)
+  preflight <- match.arg(preflight)
+  preflight_result <- .apply_analysis_preflight(
+    model_spec,
+    preflight = preflight,
+    context = "run_global"
+  )
 
   dataset <- model_spec$dataset
   design  <- model_spec$design
@@ -322,7 +333,7 @@ run_global.mvpa_model <- function(model_spec, X = NULL, summary_fun = NULL,
   }
 
   # --- 6. Build result ---
-  global_mvpa_result(
+  out <- global_mvpa_result(
     performance_table   = perf_table,
     result              = cres,
     importance_map      = importance_map,
@@ -332,6 +343,12 @@ run_global.mvpa_model <- function(model_spec, X = NULL, summary_fun = NULL,
     fold_fits           = if (return_fits) cv_out$fold_fits else NULL,
     model_spec          = model_spec
   )
+
+  if (!is.null(preflight_result)) {
+    attr(out, "preflight") <- preflight_result
+  }
+
+  out
 }
 
 
