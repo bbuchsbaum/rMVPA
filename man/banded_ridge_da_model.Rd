@@ -54,7 +54,8 @@ grouped_ridge_da_model(
 \arguments{
 \item{dataset}{An `mvpa_dataset` with `train_data` (train/source) and `test_data` (test/target).}
 
-\item{design}{A `feature_sets_design` created by `feature_sets_design()`.}
+\item{design}{A `feature_sets_design` created by `feature_sets_design()`, carrying
+either fixed `X_test` predictors or a fold-aware `target_builder`.}
 
 \item{mode}{`"stacked"` or `"coupled"`.}
 
@@ -138,7 +139,8 @@ For each ROI/searchlight, rMVPA provides:
 Predictors are stored on a `feature_sets_design`:
 \itemize{
   \item Train/source predictors \eqn{X_{train}} in `design$X_train$X`.
-  \item Test/target predictors \eqn{X_{test}} in `design$X_test$X`.
+  \item Test/target predictors either as fixed \eqn{X_{test}} in `design$X_test$X`, or
+        as fold-specific target predictors rebuilt from `design$target_builder`.
 }
 
 \strong{Grouped (banded) ridge.}

@@ -1,0 +1,292 @@
+---
+title: "Feature-RSA Advanced Workflows"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Feature-RSA Advanced Workflows}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE
+)
+
+library(rMVPA)
+library(neuroim2)
+future::plan(future::sequential)
+```
+
+```{r helpers, include = FALSE}
+build_base_feature_rsa <- function(seed = 5, dims = c(5, 5, 5), nobs = 36, nroi = 4) {
+  set.seed(seed)
+
+  toy <- gen_sample_dataset(D = dims, nobs = nobs, blocks = 3, nlevels = 2)
+
+  latent <- matrix(rnorm(nobs * 4), nobs, 4)
+  loadings <- matrix(rnorm(4 * 6), 4, 6)
+  feature_mat <- latent %*% loadings + 0.15 * matrix(rnorm(nobs * 6), nobs, 6)
+
+  design <- feature_rsa_design(
+    F = base::scale(feature_mat),
+    labels = paste0("trial_", seq_len(nobs)),
+    max_comps = 3
+  )
+
+  region_mask <- NeuroVol(
+    sample(seq_len(nroi), size = length(toy$dataset$mask), replace = TRUE),
+    space(toy$dataset$mask)
+  )
+
+  spec <- feature_rsa_model(
+    dataset = toy$dataset,
+    design = design,
+    method = "pca",
+    crossval = blocked_cross_validation(toy$design$block_var),
+    return_rdm_vectors = TRUE
+  )
+
+  res <- run_regional(spec, region_mask)
+  vecs <- feature_rsa_rdm_vectors(res)
+  cross_raw <- feature_rsa_cross_connectivity(vecs, method = "spearman")
+
+  list(
+    toy = toy,
+    region_mask = region_mask,
+    result = res,
+    vecs = vecs,
+    cross_raw = cross_raw
+  )
+}
+
+build_small_da_example <- function(seed = 11, Tenc = 30, Trec = 18, dims = c(2, 2, 2)) {
+  set.seed(seed)
+
+  Dfeat <- 6
+  X_enc <- base::scale(matrix(rnorm(Tenc * Dfeat), Tenc, Dfeat))
+  X_rec <- base::scale(matrix(rnorm(Trec * Dfeat), Trec, Dfeat))
+
+  B_enc <- matrix(rnorm(Dfeat * prod(dims), sd = 0.5), Dfeat, prod(dims))
+  B_shift <- matrix(0, Dfeat, prod(dims))
+  B_shift[4:6, ] <- matrix(rnorm(3 * prod(dims), sd = 0.45), 3, prod(dims))
+
+  Y_enc <- X_enc %*% B_enc + matrix(rnorm(Tenc * prod(dims), sd = 0.05), Tenc, prod(dims))
+  Y_rec <- X_rec %*% (B_enc + B_shift) + matrix(rnorm(Trec * prod(dims), sd = 0.05), Trec, prod(dims))
+
+  arr_enc <- array(0, dim = c(dims, Tenc))
+  arr_rec <- array(0, dim = c(dims, Trec))
+
+  for (t in seq_len(Tenc)) {
+    arr_enc[,,, t] <- array(Y_enc[t, ], dim = dims)
+  }
+  for (t in seq_len(Trec)) {
+    arr_rec[,,, t] <- array(Y_rec[t, ], dim = dims)
+  }
+
+  mask <- neuroim2::NeuroVol(array(1, dim = dims), neuroim2::NeuroSpace(dims))
+  train_vec <- neuroim2::NeuroVec(arr_enc, neuroim2::NeuroSpace(c(dims, Tenc)))
+  test_vec <- neuroim2::NeuroVec(arr_rec, neuroim2::NeuroSpace(c(dims, Trec)))
+  dataset <- mvpa_dataset(train_vec, test_vec, mask)
+
+  spec <- blocks(low = 3, semantic = 3)
+  fs_enc <- feature_sets(X_enc, spec)
+  fs_rec <- feature_sets(X_rec, spec, set_order = fs_enc$set_order)
+
+  design <- feature_sets_design(
+    X_train = fs_enc,
+    X_test = fs_rec,
+    block_var_test = rep(1:3, length.out = Trec)
+  )
+
+  source_only <- feature_rsa_da_model(
+    dataset = dataset,
+    design = design,
+    mode = "stacked",
+    lambdas = c(low = 0.1, semantic = 0.1),
+    alpha_target = 0,
+    rsa_simfun = "spearman"
+  )
+
+  coupled <- feature_rsa_da_model(
+    dataset = dataset,
+    design = design,
+    mode = "coupled",
+    lambdas = c(low = 0.1, semantic = 0.1),
+    alpha_target = 0.3,
+    rho = 3,
+    rsa_simfun = "spearman"
+  )
+
+  source_perf <- run_regional(source_only, mask)$performance_table[1, ]
+  coupled_perf <- run_regional(coupled, mask)$performance_table[1, ]
+
+  data.frame(
+    model = c("source_only", "coupled_da"),
+    target_rdm_correlation = c(
+      source_perf$target_rdm_correlation,
+      coupled_perf$target_rdm_correlation
+    ),
+    target_r2_full = c(
+      source_perf$target_r2_full,
+      coupled_perf$target_r2_full
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+build_offset_example <- function() {
+  common <- c(1, -1, 1, -1, 1, -1)
+  u1 <- c(1, 1, -1, -1, 0, 0)
+  u2 <- c(-1, 0, 1, 0, -1, 1)
+  u3 <- c(0, 1, 0, -1, 1, -1)
+  u4 <- c(1, 0, 0, -1, -1, 1)
+
+  pred <- list(
+    1.4 * common + 0.3 * u1,
+    1.1 * common + 0.5 * u2,
+    0.6 * common + 0.8 * u3,
+    0.2 * common + 1.0 * u4
+  )
+
+  obs <- list(
+    1.5 * common + 0.2 * u1,
+    1.2 * common + 0.4 * u2,
+    0.7 * common + 0.7 * u3,
+    0.1 * common + 1.0 * u4
+  )
+
+  vec_tbl <- tibble::tibble(
+    roinum = 1:4,
+    observation_index = replicate(4, 1:4, simplify = FALSE),
+    rdm_vec = pred,
+    observed_rdm_vec = obs
+  )
+
+  adjusted <- feature_rsa_cross_connectivity(
+    vec_tbl,
+    method = "pearson",
+    adjust = "double_center",
+    return_components = TRUE
+  )
+
+  data.frame(
+    roinum = 1:4,
+    source_offset = unname(adjusted$source_offset),
+    target_offset = unname(adjusted$target_offset)
+  )
+}
+
+build_advanced_summary <- function() {
+  base_fit <- build_base_feature_rsa()
+  da_perf <- build_small_da_example()
+  offset_table <- build_offset_example()
+
+  off_diag <- base_fit$cross_raw[row(base_fit$cross_raw) != col(base_fit$cross_raw)]
+
+  data.frame(
+    workflow = c(
+      "within_roi",
+      "cross_state_da",
+      "cross_roi_generalization",
+      "offset_diagnostics"
+    ),
+    core_function = c(
+      "feature_rsa_model()",
+      "feature_rsa_da_model()",
+      "feature_rsa_cross_connectivity()",
+      "feature_rsa_cross_connectivity(adjust = 'double_center')"
+    ),
+    summary_value = c(
+      mean(base_fit$result$performance_table$rdm_correlation),
+      diff(da_perf$target_rdm_correlation),
+      mean(diag(base_fit$cross_raw)) - mean(off_diag),
+      stats::sd(c(offset_table$source_offset, offset_table$target_offset))
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+```
+
+Once ordinary feature-RSA is working, the next problem is usually transfer. Sometimes you want to stay within one ROI and ask whether a feature space explains held-out data. Sometimes you want to move across cognitive states. Sometimes you want to ask whether geometry learned in one ROI appears in another.
+
+Those are different estimands. This vignette is a short guide to choosing the right one and interpreting the result without mixing them together.
+
+## What is the shortest map of the workflow space?
+
+```{r quick-win}
+advanced_summary <- build_advanced_summary()
+
+knitr::kable(advanced_summary, digits = 3)
+```
+
+```{r quick-win-checks, include = FALSE}
+stopifnot(all(is.finite(advanced_summary$summary_value)))
+```
+
+The table gives you four practical signals:
+
+- a within-ROI held-out geometry score
+- the gain from adapting across states instead of using source rows alone
+- the diagonal advantage in the ROI_i -> ROI_j matrix
+- the spread of source and target offsets that can create stripe patterns
+
+## When is standard feature-RSA enough?
+
+Stay with `feature_rsa_model()` when your question is local to one ROI and one state. You fit the model in the usual way, hold out data within that state, and read the ROI-wise geometry scores from `run_regional()`.
+
+```{r within-roi}
+base_fit <- build_base_feature_rsa()
+
+base_fit$result$performance_table[, c("roinum", "rdm_correlation")]
+```
+
+This is the right default when you want to know whether a feature space explains one parcel on its own terms.
+
+## When do you need domain adaptation?
+
+Switch to `feature_rsa_da_model()` when the feature space is shared but the state changes. The canonical example is encoding to recall: the rows still refer to the same latent content, but the source and target mappings need not be identical.
+
+```{r cross-state}
+da_perf <- build_small_da_example()
+
+knitr::kable(da_perf, digits = 3)
+```
+
+The important comparison is not just target prediction in the abstract. It is whether a model that can adapt on target-train rows recovers more held-out target geometry than a source-only baseline. When the target-side representation is itself estimated from target data, use a fold-aware `target_builder` as shown in `vignette("Feature_RSA_Domain_Adaptation")`.
+
+## When do you want ROI_i -> ROI_j transfer?
+
+Use `feature_rsa_cross_connectivity()` when you want a full asymmetric ROI x ROI matrix. The rows are source ROIs, the columns are target ROIs, and the off-diagonals tell you whether geometry learned in one parcel matches held-out observed geometry in another.
+
+```{r cross-roi}
+knitr::kable(round(base_fit$cross_raw, 2))
+```
+
+This is the right analysis when ROI size differs and voxel-space weight transfer would be ill-posed, but you still want to ask whether representational geometry generalizes across parcels.
+
+## What do you do about source-dominant and target-dominant ROIs?
+
+If the ROI x ROI matrix shows vertical or horizontal striping, some ROIs are globally easy targets or globally strong sources. That can be a real feature of the data, but it can also swamp the pair-specific structure you actually care about.
+
+```{r offsets}
+offset_table <- build_offset_example()
+
+knitr::kable(offset_table, digits = 2)
+```
+
+Use `adjust = "double_center"` when you want to remove additive source and target main effects from the ROI x ROI matrix itself. Use `adjust = "residualize_mean"` when you think the stripes are driven by one dominant common geometry that should be removed before the cross-correlation is computed.
+
+## Decision rules
+
+- Use `feature_rsa_model()` for one ROI, one state, held-out evaluation in the same domain.
+- Use `feature_rsa_da_model()` when the feature space is shared across states and the target mapping may shift.
+- Use `feature_rsa_cross_connectivity()` when you want ROI-to-ROI generalization at the level of predicted versus observed geometry.
+- Use `feature_rsa_connectivity()` when you want a symmetric similarity matrix of predicted geometries themselves.
+- Use `adjust = "double_center"` or `adjust = "residualize_mean"` only after you are clear about which nuisance pattern you are trying to remove.
+
+## Next steps
+
+For the full cross-state workflow, including fold-aware target rebuilding, see `vignette("Feature_RSA_Domain_Adaptation")`. For the full ROI-to-ROI workflow and stripe-mitigation examples, see `vignette("Feature_RSA_Connectivity")`.

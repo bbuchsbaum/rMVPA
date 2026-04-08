@@ -208,6 +208,51 @@ test_that("feature_rsa_da_model recovers exact mapping in stacked mode", {
   expect_gt(perf$target_pattern_correlation, 0.90)
 })
 
+test_that("feature_rsa_da_model supports fold-aware target_builder", {
+  dat <- .make_frda_linear_dataset(seed = 307, Tenc = 28, Trec = 20)
+  target_rows <- nrow(dat$design$X_test$X)
+  call_log <- new.env(parent = emptyenv())
+  call_log$train <- list()
+  call_log$test <- list()
+
+  builder <- function(train_idx, test_idx, fold_id, builder_data) {
+    call_log$train[[fold_id]] <- train_idx
+    call_log$test[[fold_id]] <- test_idx
+    builder_data$X_rec
+  }
+
+  des <- feature_sets_design(
+    X_train = dat$design$X_train,
+    X_test = NULL,
+    block_var_test = rep(1, target_rows),
+    target_builder = builder,
+    target_builder_data = list(X_rec = dat$design$X_test$X),
+    n_test = target_rows
+  )
+
+  ms <- feature_rsa_da_model(
+    dataset = dat$dataset,
+    design = des,
+    mode = "stacked",
+    lambdas = c(a = 0, b = 0),
+    alpha_target = 0,
+    recall_nfolds = 4,
+    return_diagnostics = TRUE
+  )
+
+  expect_equal(length(ms$target_fold_features), length(ms$target_folds))
+  for (i in seq_along(ms$target_folds)) {
+    expect_equal(call_log$train[[i]], ms$target_folds[[i]]$train)
+    expect_equal(call_log$test[[i]], ms$target_folds[[i]]$test)
+  }
+
+  res <- run_regional(ms, dat$mask)
+  perf <- res$performance_table[1, ]
+  expect_gt(perf$target_r2_full, 0.99)
+  expect_gt(perf$target_rdm_correlation, 0.95)
+  expect_gt(perf$target_pattern_correlation, 0.90)
+})
+
 test_that("feature_rsa_da_model coupled mode remains stable for extreme rho", {
   dat <- .make_frda_linear_dataset(seed = 305, Tenc = 20, Trec = 14, dims = c(2, 2, 2), set_sizes = c(a = 3, b = 3))
   rhos <- c(0, 1e-4, 1, 1e3, 1e6)

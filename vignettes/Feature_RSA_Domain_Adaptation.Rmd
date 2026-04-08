@@ -1,0 +1,308 @@
+---
+title: "Feature-RSA Across States: Domain Adaptation from Encoding to Recall"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Feature-RSA Across States: Domain Adaptation from Encoding to Recall}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE
+)
+
+library(rMVPA)
+library(neuroim2)
+future::plan(future::sequential)
+```
+
+```{r helpers, include = FALSE}
+build_da_example <- function(seed = 11, Tenc = 36, Trec = 24, dims = c(2, 2, 2)) {
+  set.seed(seed)
+
+  Dfeat <- 6
+  X_enc <- base::scale(matrix(rnorm(Tenc * Dfeat), Tenc, Dfeat))
+  X_rec <- base::scale(matrix(rnorm(Trec * Dfeat), Trec, Dfeat))
+
+  B_enc <- matrix(rnorm(Dfeat * prod(dims), sd = 0.5), Dfeat, prod(dims))
+  B_shift <- matrix(0, Dfeat, prod(dims))
+  B_shift[4:6, ] <- matrix(rnorm(3 * prod(dims), sd = 0.45), 3, prod(dims))
+
+  Y_enc <- X_enc %*% B_enc + matrix(rnorm(Tenc * prod(dims), sd = 0.05), Tenc, prod(dims))
+  Y_rec <- X_rec %*% (B_enc + B_shift) + matrix(rnorm(Trec * prod(dims), sd = 0.05), Trec, prod(dims))
+
+  arr_enc <- array(0, dim = c(dims, Tenc))
+  for (t in seq_len(Tenc)) {
+    arr_enc[,,, t] <- array(Y_enc[t, ], dim = dims)
+  }
+
+  arr_rec <- array(0, dim = c(dims, Trec))
+  for (t in seq_len(Trec)) {
+    arr_rec[,,, t] <- array(Y_rec[t, ], dim = dims)
+  }
+
+  mask <- neuroim2::NeuroVol(array(1, dim = dims), neuroim2::NeuroSpace(dims))
+  train_vec <- neuroim2::NeuroVec(arr_enc, neuroim2::NeuroSpace(c(dims, Tenc)))
+  test_vec <- neuroim2::NeuroVec(arr_rec, neuroim2::NeuroSpace(c(dims, Trec)))
+  dataset <- mvpa_dataset(train_vec, test_vec, mask)
+
+  spec <- blocks(low = 3, semantic = 3)
+  fs_enc <- feature_sets(X_enc, spec)
+  fs_rec <- feature_sets(X_rec, spec, set_order = fs_enc$set_order)
+
+  block_var_test <- rep(1:3, length.out = Trec)
+  design_fixed <- feature_sets_design(
+    X_train = fs_enc,
+    X_test = fs_rec,
+    block_var_test = block_var_test
+  )
+
+  X_rec_noisy <- X_rec + matrix(rnorm(Trec * Dfeat, sd = 0.15), Trec, Dfeat)
+
+  target_builder <- function(X_train, train_idx, builder_data) {
+    X_target <- builder_data$X_target
+    train_center <- colMeans(X_target[train_idx, , drop = FALSE])
+    source_center <- colMeans(X_train$X)
+    centered <- sweep(X_target, 2, train_center, "-")
+    sweep(0.85 * centered, 2, source_center, "+")
+  }
+
+  design_builder <- feature_sets_design(
+    X_train = fs_enc,
+    X_test = NULL,
+    block_var_test = block_var_test,
+    target_builder = target_builder,
+    target_builder_data = list(X_target = X_rec_noisy),
+    n_test = Trec
+  )
+
+  list(
+    dataset = dataset,
+    region_mask = mask,
+    design_fixed = design_fixed,
+    design_builder = design_builder,
+    target_builder = target_builder,
+    X_enc = X_enc,
+    X_rec = X_rec,
+    X_rec_noisy = X_rec_noisy,
+    block_var_test = block_var_test
+  )
+}
+
+fit_da_models <- function(example) {
+  specs <- list(
+    source_only = feature_rsa_da_model(
+      dataset = example$dataset,
+      design = example$design_fixed,
+      mode = "stacked",
+      lambdas = c(low = 0.1, semantic = 0.1),
+      alpha_target = 0,
+      rsa_simfun = "spearman"
+    ),
+    stacked_da = feature_rsa_da_model(
+      dataset = example$dataset,
+      design = example$design_fixed,
+      mode = "stacked",
+      lambdas = c(low = 0.1, semantic = 0.1),
+      alpha_target = 0.3,
+      rsa_simfun = "spearman"
+    ),
+    coupled_da = feature_rsa_da_model(
+      dataset = example$dataset,
+      design = example$design_fixed,
+      mode = "coupled",
+      lambdas = c(low = 0.1, semantic = 0.1),
+      alpha_target = 0.3,
+      rho = 3,
+      rsa_simfun = "spearman"
+    ),
+    builder_da = feature_rsa_da_model(
+      dataset = example$dataset,
+      design = example$design_builder,
+      mode = "coupled",
+      lambdas = c(low = 0.1, semantic = 0.1),
+      alpha_target = 0.3,
+      rho = 3,
+      rsa_simfun = "spearman"
+    )
+  )
+
+  perf_list <- lapply(specs, function(spec) {
+    run_regional(spec, example$region_mask)$performance_table[1, ]
+  })
+
+  out <- data.frame(
+    model = names(perf_list),
+    target_pattern_correlation = vapply(perf_list, function(x) x$target_pattern_correlation, numeric(1)),
+    target_rdm_correlation = vapply(perf_list, function(x) x$target_rdm_correlation, numeric(1)),
+    target_r2_full = vapply(perf_list, function(x) x$target_r2_full, numeric(1)),
+    stringsAsFactors = FALSE
+  )
+
+  out[order(out$target_rdm_correlation, decreasing = TRUE), ]
+}
+```
+
+Feature-RSA is usually demonstrated within one state: you fit a mapping from a feature space to one ROI, then evaluate that mapping on held-out data from the same state. Many memory experiments are harder than that. The feature space is the same across phases, but the brain state changes. People watch a movie, then recall it. They see an image, then imagine it. They listen to a story, then retell it.
+
+`feature_rsa_da_model()` exists for that setting. It lets you keep the feature space fixed, borrow strength from the source state, and evaluate representational geometry on held-out target-state folds.
+
+## What does this buy you?
+
+The synthetic example below has the structure you usually want in an encoding-to-recall analysis:
+
+- domain 1 has clean source-state rows (`X_train`)
+- domain 2 has the same feature blocks but a shifted brain mapping
+- the target metric is still feature-RSA style geometry on held-out target rows
+
+```{r quick-win}
+da_example <- build_da_example()
+da_compare <- fit_da_models(da_example)
+
+knitr::kable(da_compare, digits = 3)
+```
+
+```{r quick-win-checks, include = FALSE}
+stopifnot(all(is.finite(da_compare$target_rdm_correlation)))
+stopifnot(all(is.finite(da_compare$target_r2_full)))
+stopifnot(
+  da_compare$target_rdm_correlation[da_compare$model == "coupled_da"] >
+    da_compare$target_rdm_correlation[da_compare$model == "source_only"]
+)
+```
+
+In this toy problem, the source-only model already knows something useful about the feature space, but it misses the state shift. The adapted models recover more of the target geometry, and the coupled model does best because it allows the source and target mappings to differ while still sharing information.
+
+## What lives in each domain?
+
+In a real encoding-to-recall analysis you usually have:
+
+- source rows: the encoding state, often with higher signal or better timing
+- target rows: the recall state, often noisier and sometimes shorter
+- shared feature blocks: the same low-level, semantic, or model-derived features in both domains
+
+The design object stores that separation explicitly.
+
+```{r design-summary}
+data.frame(
+  source_rows = nrow(da_example$design_fixed$X_train$X),
+  target_rows = nrow(da_example$design_fixed$X_test$X),
+  feature_columns = ncol(da_example$design_fixed$X_train$X),
+  feature_sets = paste(names(da_example$design_fixed$X_train$indices), collapse = ", "),
+  target_runs = length(unique(da_example$block_var_test)),
+  stringsAsFactors = FALSE
+)
+```
+
+`feature_sets_design()` keeps the source and target predictors separate, and `feature_rsa_da_model()` uses held-out target folds for evaluation. If your recall data already have an externally defined target representation, you can pass it as a fixed `X_test`.
+
+## How do you fit the adapted model?
+
+The most direct workflow uses a fixed target representation and lets the model adapt the mapping on target-train rows only.
+
+```{r coupled-model}
+coupled_spec <- feature_rsa_da_model(
+  dataset = da_example$dataset,
+  design = da_example$design_fixed,
+  mode = "coupled",
+  lambdas = c(low = 0.1, semantic = 0.1),
+  alpha_target = 0.3,
+  rho = 3,
+  rsa_simfun = "spearman"
+)
+
+coupled_res <- run_regional(coupled_spec, da_example$region_mask)
+
+coupled_res$performance_table[, c(
+  "target_pattern_correlation",
+  "target_rdm_correlation",
+  "target_r2_full"
+)]
+```
+
+Use `mode = "stacked"` when you want one shared mapping estimated from source rows plus target-train rows. Use `mode = "coupled"` when you expect a real state shift and want separate source and target weights tied together by `rho`.
+
+## How do you keep the matching step unbiased?
+
+The important new piece is `target_builder`. Use it when the target-side representation is not fixed ahead of time, but is itself estimated from the recall data.
+
+The callback is fold-aware. It receives `train_idx` and `test_idx` from the outer target fold, and it must return the target predictors in the original target row order.
+
+```{r target-builder}
+target_builder <- function(X_train, train_idx, builder_data) {
+  X_target <- builder_data$X_target
+  train_center <- colMeans(X_target[train_idx, , drop = FALSE])
+  source_center <- colMeans(X_train$X)
+  centered <- sweep(X_target, 2, train_center, "-")
+  sweep(0.85 * centered, 2, source_center, "+")
+}
+```
+
+In this vignette the builder does a simple train-fold-only recentering step. In a real watch-to-recall pipeline, this is where you would plug in your row-matching or alignment routine.
+
+```{r builder-design}
+builder_design <- feature_sets_design(
+  X_train = da_example$design_fixed$X_train,
+  X_test = NULL,
+  block_var_test = da_example$block_var_test,
+  target_builder = target_builder,
+  target_builder_data = list(X_target = da_example$X_rec_noisy),
+  n_test = nrow(da_example$X_rec_noisy)
+)
+
+builder_spec <- feature_rsa_da_model(
+  dataset = da_example$dataset,
+  design = builder_design,
+  mode = "coupled",
+  lambdas = c(low = 0.1, semantic = 0.1),
+  alpha_target = 0.3,
+  rho = 3,
+  rsa_simfun = "spearman"
+)
+
+builder_res <- run_regional(builder_spec, da_example$region_mask)
+
+builder_res$performance_table[, c("target_rdm_correlation", "target_r2_full")]
+```
+
+```{r builder-checks, include = FALSE}
+builder_metrics <- builder_res$performance_table[1, c("target_rdm_correlation", "target_r2_full")]
+stopifnot(all(is.finite(unlist(builder_metrics))))
+```
+
+That is the right pattern whenever the target-side alignment would otherwise leak held-out recall rows into the analysis. The model still evaluates on held-out target rows, but now the target feature construction is also fold-aware.
+
+## What changes when recall is a single run?
+
+If the target domain is one continuous run, you still do not have to abandon the DA workflow. The model will fall back to contiguous target folds, and you can add a purge gap to reduce temporal leakage.
+
+```{r single-run-template, eval = FALSE}
+single_run_spec <- feature_rsa_da_model(
+  dataset = da_example$dataset,
+  design = builder_design,
+  mode = "coupled",
+  lambdas = c(low = 0.1, semantic = 0.1),
+  recall_nfolds = 4,
+  target_gap = 2,
+  target_nperm = 50
+)
+```
+
+Use that pattern when recall is a single stream rather than a multi-run design. The contiguous folds define target-train and target-test segments, `target_gap` removes the rows adjacent to the held-out segment, and `target_nperm` gives you a single-run null that preserves local temporal structure.
+
+## When should you use this workflow?
+
+- Use fixed `X_test` when the target representation is external and already aligned.
+- Use `target_builder` when the target representation is estimated from recall itself and must be rebuilt per fold.
+- Use `mode = "coupled"` when the source and target mappings should be similar but not identical.
+- Use `mode = "stacked"` when you want one shared mapping and only mild state shift.
+
+Typical use cases include encoding-to-recall transfer, perception-to-imagery transfer, story listening to retelling, and any setting where the same feature space survives a change in cognitive state.
+
+## Next steps
+
+The next question is often no longer about one ROI. If you want to ask whether feature-RSA geometry generalizes across ROIs, see `vignette("Feature_RSA_Connectivity")`. If you want the broader decision map for within-ROI fits, cross-state transfer, and cross-ROI transfer, see `vignette("Feature_RSA_Advanced_Workflows")`.

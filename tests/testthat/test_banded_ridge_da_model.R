@@ -78,6 +78,19 @@ test_that("feature_sets + expected_features build expected shapes", {
   expect_equal(ncol(fs_rec$X), 8)
 })
 
+test_that("feature_sets_design requires target row count for target_builder-only designs", {
+  Xenc <- matrix(rnorm(10 * 6), 10, 6)
+  fs_enc <- feature_sets(Xenc, blocks(a = 3, b = 3))
+
+  expect_error(
+    feature_sets_design(
+      X_train = fs_enc,
+      target_builder = function(X_train, train_idx, test_idx) X_train$X
+    ),
+    "supply X_test, n_test, or block_var_test"
+  )
+})
+
 
 test_that("banded_ridge_da_model runs regional pipeline (run-blocked recall CV)", {
   skip_on_cran()
@@ -151,6 +164,52 @@ test_that("banded_ridge_da_model falls back to contiguous recall folds when only
   expect_equal(length(res$fits[[1]]$folds), 3)
 })
 
+test_that("banded_ridge_da_model supports fold-aware target_builder", {
+  dat <- .make_linear_da_dataset(seed = 88, Tenc = 24, Trec = 18, dims = c(2, 2, 2))
+  target_rows <- nrow(dat$X_rec)
+  call_log <- new.env(parent = emptyenv())
+  call_log$train <- list()
+  call_log$test <- list()
+
+  builder <- function(X_train, train_idx, test_idx, fold_id, builder_data) {
+    call_log$train[[fold_id]] <- train_idx
+    call_log$test[[fold_id]] <- test_idx
+    builder_data$X_rec
+  }
+
+  des <- feature_sets_design(
+    X_train = dat$design$X_train,
+    X_test = NULL,
+    block_var_test = rep(1, target_rows),
+    target_builder = builder,
+    target_builder_data = list(X_rec = dat$X_rec),
+    n_test = target_rows
+  )
+
+  ms <- banded_ridge_da_model(
+    dataset = dat$dataset,
+    design = des,
+    mode = "stacked",
+    lambdas = c(a = 0, b = 0),
+    recall_nfolds = 3,
+    compute_delta_r2 = FALSE,
+    return_diagnostics = TRUE
+  )
+
+  expect_equal(length(ms$target_fold_features), length(ms$target_folds))
+  expect_equal(length(call_log$train), length(ms$target_folds))
+  for (i in seq_along(ms$target_folds)) {
+    expect_equal(call_log$train[[i]], ms$target_folds[[i]]$train)
+    expect_equal(call_log$test[[i]], ms$target_folds[[i]]$test)
+    expect_equal(ms$target_fold_features[[i]]$X, dat$X_rec)
+  }
+
+  res <- run_regional(ms, dat$mask)
+  perf <- res$performance_table[1, ]
+  expect_gt(perf$target_r2_full, 0.99)
+  expect_lt(perf$target_mse_full, 1e-8)
+})
+
 test_that("banded_ridge_da_model supports purged contiguous folds for single-run target", {
   skip_on_cran()
   set.seed(457)
@@ -191,6 +250,66 @@ test_that("banded_ridge_da_model supports purged contiguous folds for single-run
     purged <- seq.int(purge_lo, purge_hi)
     expect_false(any(f$train %in% purged))
   }
+})
+
+test_that("banded_ridge_da_model target_builder can materialize gamma outputs", {
+  dat <- .make_linear_da_dataset(seed = 89, Tenc = 12, Trec = 8, dims = c(2, 2, 2))
+  G <- matrix(runif(8 * 12), 8, 12)
+
+  builder <- function(builder_data) {
+    list(
+      gamma = builder_data$gamma,
+      drop_null = FALSE,
+      renormalize = FALSE
+    )
+  }
+
+  des <- feature_sets_design(
+    X_train = dat$design$X_train,
+    X_test = NULL,
+    block_var_test = rep(1, 8),
+    target_builder = builder,
+    target_builder_data = list(gamma = G),
+    n_test = 8
+  )
+
+  ms <- banded_ridge_da_model(
+    dataset = dat$dataset,
+    design = des,
+    mode = "stacked",
+    lambdas = c(a = 1, b = 1),
+    recall_nfolds = 2,
+    compute_delta_r2 = FALSE
+  )
+
+  expect_equal(length(ms$target_fold_features), 2)
+  expect_equal(ms$target_fold_features[[1]]$X, G %*% dat$design$X_train$X, tolerance = 1e-10)
+  expect_equal(ms$target_fold_features[[1]]$row_weights, rowSums(G), tolerance = 1e-10)
+})
+
+test_that("banded_ridge_da convenience wrapper forwards target_builder arguments", {
+  dat <- .make_linear_da_dataset(seed = 90, Tenc = 12, Trec = 8, dims = c(2, 2, 2))
+
+  builder <- function(builder_data) builder_data$X_rec
+
+  ms <- banded_ridge_da(
+    dataset = dat$dataset,
+    X_train = dat$X_enc,
+    spec = do.call(blocks, as.list(dat$set_sizes)),
+    target_builder = builder,
+    target_builder_data = list(X_rec = dat$X_rec),
+    n_test = nrow(dat$X_rec),
+    block_var_test = rep(1, nrow(dat$X_rec)),
+    mode = "stacked",
+    lambdas = c(a = 1, b = 1),
+    recall_nfolds = 2,
+    compute_delta_r2 = FALSE
+  )
+
+  expect_s3_class(ms$design, "feature_sets_design")
+  expect_true(is.function(ms$design$target_builder))
+  expect_equal(ms$design$n_test, nrow(dat$X_rec))
+  expect_equal(length(ms$target_fold_features), 2)
 })
 
 test_that("banded_ridge_da_model target_gap overrides recall_gap", {

@@ -29,6 +29,9 @@ articles:
   - Contrast_RSA
   - Temporal_Confounds_in_RSA
   - Advanced_RSA
+  - Feature_RSA_Domain_Adaptation
+  - Feature_RSA_Connectivity
+  - Feature_RSA_Advanced_Workflows
 - title: Continuous Decoding
   desc: |
     TR-level continuous-time decoding methods

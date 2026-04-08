@@ -18,7 +18,8 @@
 #' Predictors are stored on a `feature_sets_design`:
 #' \itemize{
 #'   \item Train/source predictors \eqn{X_{train}} in `design$X_train$X`.
-#'   \item Test/target predictors \eqn{X_{test}} in `design$X_test$X`.
+#'   \item Test/target predictors either as fixed \eqn{X_{test}} in `design$X_test$X`, or
+#'         as fold-specific target predictors rebuilt from `design$target_builder`.
 #' }
 #'
 #' \strong{Grouped (banded) ridge.}
@@ -48,7 +49,8 @@
 #' where \eqn{R^2_{-g}} is obtained by refitting the model without feature set \eqn{g}.
 #'
 #' @param dataset An `mvpa_dataset` with `train_data` (train/source) and `test_data` (test/target).
-#' @param design A `feature_sets_design` created by `feature_sets_design()`.
+#' @param design A `feature_sets_design` created by `feature_sets_design()`, carrying
+#'   either fixed `X_test` predictors or a fold-aware `target_builder`.
 #' @param mode `"stacked"` or `"coupled"`.
 #' @param lambdas Named numeric vector of ridge penalties per feature set.
 #'   Names must match `names(design$X_train$indices)`.
@@ -142,8 +144,9 @@ banded_ridge_da_model <- function(dataset,
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "feature_sets_design"))
 
-  if (!has_test_set(dataset) || is.null(dataset$test_data) || is.null(design$X_test)) {
-    stop("banded_ridge_da_model requires an external test set (dataset$test_data + design$X_test).", call. = FALSE)
+  if (!has_test_set(dataset) || is.null(dataset$test_data) ||
+      (is.null(design$X_test) && is.null(design$target_builder))) {
+    stop("banded_ridge_da_model requires an external test set plus fixed X_test or design$target_builder.", call. = FALSE)
   }
 
   if (!is.numeric(alpha_recall) || length(alpha_recall) != 1L || !is.finite(alpha_recall) || alpha_recall < 0) {
@@ -225,11 +228,22 @@ banded_ridge_da_model <- function(dataset,
   }
 
   # Precompute test/target folds once at spec construction time
+  n_target <- if (!is.null(design$X_test)) {
+    nrow(design$X_test$X)
+  } else {
+    design$n_test
+  }
+  if (is.null(n_target) || !is.numeric(n_target) || length(n_target) != 1L || n_target < 2L) {
+    stop("banded_ridge_da_model: unable to determine the number of target rows.", call. = FALSE)
+  }
+  n_target <- as.integer(n_target)
+
   folds <- if (!is.null(folds_input)) {
     folds_input
   } else {
-    .br_make_recall_folds(design$block_var_test, nrow(design$X_test$X), nfolds_input, gap = gap_input)
+    .br_make_recall_folds(design$block_var_test, n_target, nfolds_input, gap = gap_input)
   }
+  target_fold_features <- .feature_sets_precompute_fold_targets(design, folds)
 
   # Default regression-style "performance" fields for rMVPA maps
   perf_fun <- get_regression_perf(design$split_groups)
@@ -250,6 +264,7 @@ banded_ridge_da_model <- function(dataset,
     target_nperm = target_nperm,
     target_perm_strategy = target_perm_strategy,
     target_perm_block = target_perm_block,
+    target_fold_features = target_fold_features,
     compute_delta_r2 = compute_delta_r2,
     delta_sets = delta_sets,
     return_diagnostics = return_diagnostics,
@@ -334,6 +349,14 @@ grouped_ridge_da_model <- function(dataset,
 #'   Ignored if `X_train` is already a `feature_sets`.
 #' @param X_test Optional test predictor matrix (T_test x D) or a `feature_sets` object.
 #' @param gamma Optional alignment matrix used when `X_test` is NULL. See `expected_features()`.
+#' @param target_builder Optional fold-aware callback passed through to
+#'   `feature_sets_design()`. It can rebuild target predictors separately for
+#'   each outer target fold and may return a `feature_sets` object, numeric
+#'   matrix, or a list containing `gamma`, `X`, or `X_test`.
+#' @param target_builder_data Optional object passed through to `target_builder`
+#'   as `builder_data`.
+#' @param n_test Optional target row count used when `target_builder` is
+#'   provided without a fixed `X_test`.
 #' @param drop_null,renormalize Passed to `expected_features()` when using `gamma`.
 #' @param block_var_test Optional test run/block vector (length T_test).
 #' @param ... Passed through to `banded_ridge_da_model()`.
@@ -360,6 +383,9 @@ banded_ridge_da <- function(dataset,
                             spec = NULL,
                             X_test = NULL,
                             gamma = NULL,
+                            target_builder = NULL,
+                            target_builder_data = NULL,
+                            n_test = NULL,
                             drop_null = TRUE,
                             renormalize = FALSE,
                             block_var_test = NULL,
@@ -393,7 +419,10 @@ banded_ridge_da <- function(dataset,
   des <- feature_sets_design(
     X_train = fs_train,
     X_test = fs_test,
-    block_var_test = block_var_test
+    block_var_test = block_var_test,
+    target_builder = target_builder,
+    target_builder_data = target_builder_data,
+    n_test = n_test
   )
 
   banded_ridge_da_model(dataset = dataset, design = des, ...)
@@ -411,6 +440,9 @@ grouped_ridge_da <- function(dataset,
                              spec = NULL,
                              X_test = NULL,
                              gamma = NULL,
+                             target_builder = NULL,
+                             target_builder_data = NULL,
+                             n_test = NULL,
                              drop_null = TRUE,
                              renormalize = FALSE,
                              block_var_test = NULL,
@@ -421,6 +453,9 @@ grouped_ridge_da <- function(dataset,
     spec = spec,
     X_test = X_test,
     gamma = gamma,
+    target_builder = target_builder,
+    target_builder_data = target_builder_data,
+    n_test = n_test,
     drop_null = drop_null,
     renormalize = renormalize,
     block_var_test = block_var_test,
@@ -482,6 +517,32 @@ grouped_ridge_da <- function(dataset,
     )
   }
   folds
+}
+
+.da_target_features_for_fold <- function(model, fold_id, n_target, caller) {
+  fs <- NULL
+
+  if (!is.null(model$target_fold_features)) {
+    if (fold_id > length(model$target_fold_features)) {
+      stop(caller, ": fold-specific target features are missing for fold ", fold_id, ".", call. = FALSE)
+    }
+    fs <- model$target_fold_features[[fold_id]]
+  } else {
+    fs <- model$design$X_test
+  }
+
+  if (is.null(fs)) {
+    stop(caller, ": no target feature representation is available.", call. = FALSE)
+  }
+
+  fs <- .feature_sets_validate_target_fs(
+    model$design$X_train,
+    fs,
+    n_test = n_target,
+    context = paste0(caller, ": target features")
+  )
+
+  list(fs = fs, w = fs$row_weights)
 }
 
 .br_center_scale_fit <- function(X) {
@@ -668,8 +729,6 @@ fit_roi.banded_ridge_da_model <- function(model, roi_data, context, ...) {
   }
 
   Xtrain_fs <- model$design$X_train
-  Xtest_fs <- model$design$X_test
-
   Ye <- roi_data$train_data
   Yr <- roi_data$test_data
 
@@ -682,7 +741,6 @@ fit_roi.banded_ridge_da_model <- function(model, roi_data, context, ...) {
   }
 
   Xe <- Xtrain_fs$X
-  Xr <- Xtest_fs$X
   if (nrow(Xe) != nrow(Ye)) {
     return(roi_result(
       metrics = NULL, indices = ind, id = id,
@@ -690,11 +748,11 @@ fit_roi.banded_ridge_da_model <- function(model, roi_data, context, ...) {
       error_message = "banded_ridge_da_model: nrow(X_train) must match nrow(Y_enc) for this subject"
     ))
   }
-  if (nrow(Xr) != nrow(Yr)) {
+  if (is.null(model$design$X_test) && is.null(model$target_fold_features)) {
     return(roi_result(
       metrics = NULL, indices = ind, id = id,
       error = TRUE,
-      error_message = "banded_ridge_da_model: nrow(X_test) must match nrow(Y_rec) for this subject"
+      error_message = "banded_ridge_da_model: no target features available for this subject"
     ))
   }
 
@@ -708,21 +766,12 @@ fit_roi.banded_ridge_da_model <- function(model, roi_data, context, ...) {
   }
 
   folds <- model$recall_folds
-  w_rec <- Xtest_fs$row_weights
-  if (is.null(w_rec)) {
-    w_rec <- rep(1, nrow(Xr))
-  } else if (length(w_rec) != nrow(Xr)) {
-    stop(sprintf("banded_ridge_da_model: row_weights length (%d) != nrow(X_test) (%d)",
-                 length(w_rec), nrow(Xr)), call. = FALSE)
-  }
-
   mode <- model$mode
   alpha <- model$alpha_recall
   rho <- model$rho
 
   fit_fold <- function(keep_cols, lambdas_pen, Yr_use = Yr) {
     Xe_k <- Xe[, keep_cols, drop = FALSE]
-    Xr_k <- Xr[, keep_cols, drop = FALSE]
     pen_k <- lambdas_pen[keep_cols]
 
     fold_scores <- lapply(seq_along(folds), function(fi) {
@@ -732,9 +781,18 @@ fit_roi.banded_ridge_da_model <- function(model, roi_data, context, ...) {
         return(list(r2 = NA_real_, mse = NA_real_))
       }
 
-      Xr_tr <- Xr_k[tr, , drop = FALSE]
+      target_fold <- .da_target_features_for_fold(
+        model,
+        fold_id = fi,
+        n_target = nrow(Yr),
+        caller = "banded_ridge_da_model"
+      )
+      Xr <- target_fold$fs$X[, keep_cols, drop = FALSE]
+      w_rec <- target_fold$w
+
+      Xr_tr <- Xr[tr, , drop = FALSE]
       Yr_tr <- Yr_use[tr, , drop = FALSE]
-      Xr_te <- Xr_k[te, , drop = FALSE]
+      Xr_te <- Xr[te, , drop = FALSE]
       Yr_te <- Yr_use[te, , drop = FALSE]
       w_tr <- w_rec[tr]
 
@@ -886,4 +944,3 @@ compute_performance.banded_ridge_da_model <- function(obj, result) {
   }
   obj$performance(result)
 }
-

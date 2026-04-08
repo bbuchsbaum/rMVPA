@@ -29,7 +29,8 @@ feature_rsa_da_model(
 \arguments{
 \item{dataset}{An `mvpa_dataset` with external `test_data`.}
 
-\item{design}{A `feature_sets_design` carrying `X_train` and `X_test`.}
+\item{design}{A `feature_sets_design` carrying `X_train` plus either fixed
+`X_test` predictors or a fold-aware `target_builder`.}
 
 \item{mode}{`"stacked"` or `"coupled"`.}
 

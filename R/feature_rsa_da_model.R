@@ -6,7 +6,8 @@
 #' target rows are the analysis domain of interest.
 #'
 #' @param dataset An `mvpa_dataset` with external `test_data`.
-#' @param design A `feature_sets_design` carrying `X_train` and `X_test`.
+#' @param design A `feature_sets_design` carrying `X_train` plus either fixed
+#'   `X_test` predictors or a fold-aware `target_builder`.
 #' @param mode `"stacked"` or `"coupled"`.
 #' @param lambdas Named ridge penalties per feature set.
 #' @param alpha_recall Non-negative scalar weighting target-domain rows.
@@ -53,8 +54,9 @@ feature_rsa_da_model <- function(dataset,
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "feature_sets_design"))
 
-  if (!has_test_set(dataset) || is.null(dataset$test_data) || is.null(design$X_test)) {
-    stop("feature_rsa_da_model requires an external test set (dataset$test_data + design$X_test).", call. = FALSE)
+  if (!has_test_set(dataset) || is.null(dataset$test_data) ||
+      (is.null(design$X_test) && is.null(design$target_builder))) {
+    stop("feature_rsa_da_model requires an external test set plus fixed X_test or design$target_builder.", call. = FALSE)
   }
 
   if (!is.numeric(alpha_recall) || length(alpha_recall) != 1L || !is.finite(alpha_recall) || alpha_recall < 0) {
@@ -132,11 +134,22 @@ feature_rsa_da_model <- function(dataset,
     target_nperm <- 0L
   }
 
+  n_target <- if (!is.null(design$X_test)) {
+    nrow(design$X_test$X)
+  } else {
+    design$n_test
+  }
+  if (is.null(n_target) || !is.numeric(n_target) || length(n_target) != 1L || n_target < 2L) {
+    stop("feature_rsa_da_model: unable to determine the number of target rows.", call. = FALSE)
+  }
+  n_target <- as.integer(n_target)
+
   folds <- if (!is.null(folds_input)) {
     folds_input
   } else {
-    .br_make_recall_folds(design$block_var_test, nrow(design$X_test$X), nfolds_input, gap = gap_input)
+    .br_make_recall_folds(design$block_var_test, n_target, nfolds_input, gap = gap_input)
   }
+  target_fold_features <- .feature_sets_precompute_fold_targets(design, folds)
 
   create_model_spec(
     "feature_rsa_da_model",
@@ -154,6 +167,7 @@ feature_rsa_da_model <- function(dataset,
     target_nperm = target_nperm,
     target_perm_strategy = target_perm_strategy,
     target_perm_block = target_perm_block,
+    target_fold_features = target_fold_features,
     rsa_simfun = rsa_simfun,
     compute_performance = TRUE,
     performance = get_regression_perf(design$split_groups),
@@ -327,8 +341,6 @@ fit_roi.feature_rsa_da_model <- function(model, roi_data, context, ...) {
   }
 
   Xtrain_fs <- model$design$X_train
-  Xtest_fs <- model$design$X_test
-
   Ye <- roi_data$train_data
   Yr <- roi_data$test_data
 
@@ -341,7 +353,6 @@ fit_roi.feature_rsa_da_model <- function(model, roi_data, context, ...) {
   }
 
   Xe <- Xtrain_fs$X
-  Xr <- Xtest_fs$X
   if (nrow(Xe) != nrow(Ye)) {
     return(roi_result(
       metrics = NULL, indices = ind, id = id,
@@ -349,11 +360,11 @@ fit_roi.feature_rsa_da_model <- function(model, roi_data, context, ...) {
       error_message = "feature_rsa_da_model: nrow(X_train) must match nrow(Y_train)"
     ))
   }
-  if (nrow(Xr) != nrow(Yr)) {
+  if (is.null(model$design$X_test) && is.null(model$target_fold_features)) {
     return(roi_result(
       metrics = NULL, indices = ind, id = id,
       error = TRUE,
-      error_message = "feature_rsa_da_model: nrow(X_test) must match nrow(Y_test)"
+      error_message = "feature_rsa_da_model: no target features available for this subject"
     ))
   }
 
@@ -367,21 +378,12 @@ fit_roi.feature_rsa_da_model <- function(model, roi_data, context, ...) {
   }
 
   folds <- model$target_folds
-  w_rec <- Xtest_fs$row_weights
-  if (is.null(w_rec)) {
-    w_rec <- rep(1, nrow(Xr))
-  } else if (length(w_rec) != nrow(Xr)) {
-    stop(sprintf("feature_rsa_da_model: row_weights length (%d) != nrow(X_test) (%d)",
-                 length(w_rec), nrow(Xr)), call. = FALSE)
-  }
-
   mode <- model$mode
   alpha <- model$alpha_target
   rho <- model$rho
 
   fit_fold <- function(keep_cols, lambdas_pen, Yr_use = Yr) {
     Xe_k <- Xe[, keep_cols, drop = FALSE]
-    Xr_k <- Xr[, keep_cols, drop = FALSE]
     pen_k <- lambdas_pen[keep_cols]
 
     fold_scores <- lapply(seq_along(folds), function(fi) {
@@ -400,9 +402,18 @@ fit_roi.feature_rsa_da_model <- function(model, roi_data, context, ...) {
         ))
       }
 
-      Xr_tr <- Xr_k[tr, , drop = FALSE]
+      target_fold <- .da_target_features_for_fold(
+        model,
+        fold_id = fi,
+        n_target = nrow(Yr),
+        caller = "feature_rsa_da_model"
+      )
+      Xr <- target_fold$fs$X[, keep_cols, drop = FALSE]
+      w_rec <- target_fold$w
+
+      Xr_tr <- Xr[tr, , drop = FALSE]
       Yr_tr <- Yr_use[tr, , drop = FALSE]
-      Xr_te <- Xr_k[te, , drop = FALSE]
+      Xr_te <- Xr[te, , drop = FALSE]
       Yr_te <- Yr_use[te, , drop = FALSE]
       w_tr <- w_rec[tr]
 

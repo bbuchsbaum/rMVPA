@@ -7,6 +7,8 @@
 feature_rsa_cross_connectivity(
   x,
   method = c("spearman", "pearson"),
+  adjust = c("none", "double_center", "residualize_mean"),
+  return_components = FALSE,
   use = "pairwise.complete.obs"
 )
 }
@@ -18,12 +20,27 @@ returned by \code{feature_rsa_rdm_vectors()}.}
 \item{method}{Correlation method, one of \code{"spearman"} or
 \code{"pearson"}.}
 
+\item{adjust}{Optional adjustment for ROI-level source/target offsets. Use
+\code{"none"} (default) to return the raw ROI x ROI correlation matrix,
+\code{"double_center"} to subtract additive source and target main effects
+from that matrix, or \code{"residualize_mean"} to remove the grand-mean
+RDM component from predicted and observed ROI vectors before computing the
+cross-correlation.}
+
+\item{return_components}{Logical; if \code{TRUE}, return a list containing
+the requested matrix, the raw matrix, the adjusted matrix, and the source
+and target offset terms estimated from the raw matrix.}
+
 \item{use}{Missing-value handling passed to \code{\link[stats]{cor}}.}
 }
 \value{
-A numeric matrix of dimension n_ROI x n_ROI.  Rows correspond to
-  predicted RDM vectors and columns to observed RDM vectors.  The matrix is
-  \emph{not} necessarily symmetric.
+By default, a numeric matrix of dimension n_ROI x n_ROI. Rows
+correspond to predicted RDM vectors and columns to observed RDM vectors.
+The matrix is \emph{not} necessarily symmetric. If
+\code{return_components = TRUE}, a list is returned with elements
+\code{matrix}, \code{raw_matrix}, \code{adjusted_matrix},
+\code{source_offset}, \code{target_offset}, \code{grand_mean},
+\code{method}, and \code{adjust}.
 }
 \description{
 Builds an asymmetric ROI x ROI matrix where entry (i, j) is the correlation
@@ -38,5 +55,10 @@ res <- run_regional(
   region_mask
 )
 cross_conn <- feature_rsa_cross_connectivity(res, method = "spearman")
+cross_dc <- feature_rsa_cross_connectivity(
+  res,
+  method = "spearman",
+  adjust = "double_center"
+)
 }
 }

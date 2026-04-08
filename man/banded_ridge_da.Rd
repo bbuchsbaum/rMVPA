@@ -11,6 +11,9 @@ banded_ridge_da(
   spec = NULL,
   X_test = NULL,
   gamma = NULL,
+  target_builder = NULL,
+  target_builder_data = NULL,
+  n_test = NULL,
   drop_null = TRUE,
   renormalize = FALSE,
   block_var_test = NULL,
@@ -23,6 +26,9 @@ grouped_ridge_da(
   spec = NULL,
   X_test = NULL,
   gamma = NULL,
+  target_builder = NULL,
+  target_builder_data = NULL,
+  n_test = NULL,
   drop_null = TRUE,
   renormalize = FALSE,
   block_var_test = NULL,
@@ -40,6 +46,17 @@ Ignored if `X_train` is already a `feature_sets`.}
 \item{X_test}{Optional test predictor matrix (T_test x D) or a `feature_sets` object.}
 
 \item{gamma}{Optional alignment matrix used when `X_test` is NULL. See `expected_features()`.}
+
+\item{target_builder}{Optional fold-aware callback passed through to
+`feature_sets_design()`. It can rebuild target predictors separately for
+each outer target fold and may return a `feature_sets` object, numeric
+matrix, or a list containing `gamma`, `X`, or `X_test`.}
+
+\item{target_builder_data}{Optional object passed through to `target_builder`
+as `builder_data`.}
+
+\item{n_test}{Optional target row count used when `target_builder` is
+provided without a fixed `X_test`.}
 
 \item{drop_null, renormalize}{Passed to `expected_features()` when using `gamma`.}
 
