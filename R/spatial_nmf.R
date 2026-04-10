@@ -16,6 +16,7 @@ spatial_nmf_fit <- function(X,
                             normalize = c("none", "H"),
                             seed = NULL,
                             verbose = FALSE) {
+  min_iter_missing <- missing(min_iter)
   if (isTRUE(fast)) {
     if (missing(init)) init <- "random"
     if (missing(max_iter)) max_iter <- 100
@@ -23,6 +24,7 @@ spatial_nmf_fit <- function(X,
     if (missing(tol)) tol <- 1e-3
     if (missing(check_every)) check_every <- 5
   }
+  if (min_iter_missing) min_iter <- min(min_iter, max_iter)
 
   X <- as.matrix(X)
   if (any(!is.finite(X))) stop("X contains non-finite values.")
@@ -147,6 +149,8 @@ spatial_nmf_project <- function(X,
                                 eps = 1e-8,
                                 seed = NULL,
                                 verbose = FALSE) {
+  if (missing(min_iter)) min_iter <- min(min_iter, max_iter)
+
   X <- as.matrix(X)
   if (any(!is.finite(X))) stop("X contains non-finite values.")
   if (any(X < 0)) stop("X must be non-negative.")
@@ -541,6 +545,499 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
       (coords[, 2] - 1L) * dims[1] +
       (coords[, 3] - 1L) * dims[1] * dims[2]
   }
+}
+
+#' Spatial Non-negative Matrix Factorization
+#'
+#' A single high-level interface for spatial NMF. Use `spatial_nmf()` with a
+#' non-negative subject-by-voxel matrix, or with a list of NeuroVol/NeuroSurface
+#' maps. Optional preprocessing can make signed maps or matrices non-negative
+#' before factorization.
+#'
+#' @param x A numeric subject-by-voxel matrix/data frame, a single map, or a
+#'   list of NeuroVol/NeuroSurface maps for group A.
+#' @param group_B Optional list of NeuroVol/NeuroSurface maps for group B. Use
+#'   this only when `x` is map input.
+#' @param groups Optional group labels for matrix input. Required for
+#'   `component_test = TRUE` or `global_test = TRUE` with matrix input.
+#' @param k Number of components.
+#' @param mask Mask object for volumetric/surface maps, or optional spatial
+#'   metadata for matrix input when `return_maps = TRUE` or `lambda > 0`.
+#' @param dims Optional spatial dimensions for volumetric masks.
+#' @param transform Input transformation before NMF: "none" requires
+#'   non-negative input; other values use the same semantics as
+#'   \code{\link{nmf_preprocess_maps}}.
+#' @param min_val Minimum value after transformation.
+#' @param floor Lower floor used by the "auc" and "auc_raw" transformations.
+#' @param lambda Spatial regularization strength (0 = none).
+#' @param fast Logical; use faster, lower-iteration defaults in the NMF fit.
+#' @param graph Optional graph Laplacian list from `build_graph_laplacian`.
+#' @param neighbors Neighborhood size for volumetric adjacency (6/18/26).
+#' @param na_action How to handle NA values: "zero" or "error".
+#' @param return_maps Logical; return component maps when spatial metadata is
+#'   available.
+#' @param return_data Logical; include the subject-by-voxel data matrix.
+#' @param component_test NULL to skip, TRUE for defaults, or a list of arguments
+#'   passed to \code{\link{spatial_nmf_component_test}}.
+#' @param global_test NULL to skip, TRUE for defaults, or a list of arguments
+#'   passed to \code{\link{spatial_nmf_global_test}}.
+#' @param stability NULL to skip, TRUE for defaults, or a list of arguments
+#'   passed to \code{\link{spatial_nmf_stability}}.
+#' @param voxelwise_stats Optional voxelwise statistics. Use "stability_zp" to
+#'   return bootstrap z- and p-value maps derived from stability.
+#' @param parallel Logical; enable parallel processing for inference functions.
+#' @param progress Logical; report progress via progressr package.
+#' @param ... Additional arguments passed to the NMF optimizer.
+#'
+#' @return A `spatial_nmf_result` object with `fit`, optional `components`,
+#'   optional `data`, and requested inference results.
+#'
+#' @examples
+#' set.seed(1)
+#' W <- matrix(runif(12 * 2), nrow = 12)
+#' H <- matrix(runif(2 * 20), nrow = 2)
+#' X <- W %*% H
+#' result <- spatial_nmf(X, k = 2, max_iter = 20)
+#'
+#' \dontrun{
+#' result <- spatial_nmf(group_A_vols, group_B = group_B_vols, mask = mask, k = 5)
+#' }
+#' @export
+spatial_nmf <- function(x,
+                        group_B = NULL,
+                        groups = NULL,
+                        k,
+                        mask = NULL,
+                        dims = NULL,
+                        transform = c("none", "shift", "auc", "auc_raw", "zscore", "relu", "abs"),
+                        min_val = 0,
+                        floor = -0.5,
+                        lambda = 0,
+                        fast = FALSE,
+                        graph = NULL,
+                        neighbors = 6,
+                        na_action = c("zero", "error"),
+                        return_maps = .is_map_input(x),
+                        return_data = FALSE,
+                        component_test = NULL,
+                        global_test = NULL,
+                        stability = NULL,
+                        voxelwise_stats = c("none", "stability_zp"),
+                        parallel = NULL,
+                        progress = FALSE,
+                        ...) {
+  transform <- match.arg(transform)
+  na_action <- match.arg(na_action)
+  voxelwise_stats <- match.arg(voxelwise_stats)
+
+  if (.is_map_input(x)) {
+    group_A <- .ensure_map_list(x, "x")
+    group_B <- .ensure_map_list(group_B, "group_B")
+    preprocess <- NULL
+
+    if (transform != "none") {
+      all_maps <- c(group_A, group_B)
+      preprocess <- nmf_preprocess_maps(
+        all_maps,
+        method = transform,
+        min_val = min_val,
+        floor = floor,
+        mask = mask
+      )
+      n_A <- length(group_A)
+      group_A <- preprocess$maps[seq_len(n_A)]
+      if (!is.null(group_B)) {
+        group_B <- preprocess$maps[(n_A + 1L):length(preprocess$maps)]
+      }
+    }
+
+    res <- spatial_nmf_maps(
+      group_A = group_A,
+      group_B = group_B,
+      mask = mask,
+      dims = dims,
+      k = k,
+      lambda = lambda,
+      fast = fast,
+      graph = graph,
+      neighbors = neighbors,
+      na_action = na_action,
+      return_maps = return_maps,
+      return_data = return_data,
+      component_test = component_test,
+      global_test = global_test,
+      stability = stability,
+      voxelwise_stats = voxelwise_stats,
+      parallel = parallel,
+      progress = progress,
+      ...
+    )
+    res$preprocess <- preprocess
+    return(.as_spatial_nmf_result(res, input = "maps", call = match.call()))
+  }
+
+  if (!is.null(group_B)) {
+    stop("group_B is only valid when x is a map or list of maps.")
+  }
+
+  X <- .coerce_nmf_matrix(x)
+  if (anyNA(X)) {
+    if (na_action == "error") stop("X contains NA values.")
+    X[is.na(X)] <- 0
+  }
+
+  preprocess <- .nmf_preprocess_matrix(
+    X,
+    method = transform,
+    min_val = min_val,
+    floor = floor
+  )
+  X <- preprocess$data
+  if (transform == "none") preprocess <- NULL
+
+  matrix_meta <- .matrix_spatial_metadata(
+    X = X,
+    mask = mask,
+    dims = dims,
+    return_maps = return_maps,
+    lambda = lambda
+  )
+
+  if (lambda > 0 && is.null(graph)) {
+    if (identical(matrix_meta$map_type, "surface")) {
+      stop("lambda > 0 for surface matrix input requires graph.")
+    }
+    if (is.null(matrix_meta$mask_vec)) {
+      stop("lambda > 0 for matrix input requires graph, or mask/dims for volumetric adjacency.")
+    }
+    A <- build_voxel_adjacency(matrix_meta$mask_vec, dims = matrix_meta$dims, neighbors = neighbors)
+    graph <- build_graph_laplacian(A)
+  }
+
+  fit <- spatial_nmf_fit(
+    X = X,
+    k = k,
+    graph = graph,
+    lambda = lambda,
+    fast = fast,
+    ...
+  )
+
+  components <- NULL
+  if (isTRUE(return_maps)) {
+    if (is.null(matrix_meta$map_type)) {
+      stop("return_maps=TRUE for matrix input requires mask/dims spatial metadata.")
+    }
+    components <- .components_to_maps(
+      fit$H,
+      mask_idx = matrix_meta$mask_idx,
+      map_type = matrix_meta$map_type,
+      mask = mask,
+      dims = matrix_meta$dims,
+      full_length = matrix_meta$full_length,
+      ref_map = matrix_meta$ref_map
+    )
+  }
+
+  groups_factor <- NULL
+  if (!is.null(groups)) {
+    if (length(groups) != nrow(X)) stop("groups must have length nrow(x).")
+    groups_factor <- factor(groups)
+  }
+
+  use_parallel <- if (!is.null(parallel)) parallel else .auto_parallel()
+
+  component_res <- NULL
+  component_args <- .as_arg_list(component_test, "component_test")
+  if (!is.null(component_args)) {
+    if (is.null(component_args$parallel)) component_args$parallel <- use_parallel
+    if (is.null(component_args$progress)) component_args$progress <- progress
+    if (is.null(component_args$fit) && is.null(component_args$W)) component_args$fit <- fit
+    if (is.null(component_args$groups) && !is.null(groups_factor)) component_args$groups <- groups_factor
+    if (is.null(component_args$test)) {
+      component_args$test <- if (!is.null(groups_factor)) "two_group" else "one_group"
+    }
+    if (component_args$test == "two_group" && is.null(component_args$groups)) {
+      stop("component_test requires groups for two_group inference.")
+    }
+    if (component_args$test == "one_group" && is.null(component_args$null_W)) {
+      stop("component_test requires null_W for one_group inference.")
+    }
+    component_res <- do.call(spatial_nmf_component_test, component_args)
+  }
+
+  global_res <- NULL
+  global_args <- .as_arg_list(global_test, "global_test")
+  if (!is.null(global_args)) {
+    if (is.null(groups_factor)) stop("global_test requires groups for matrix input.")
+    if (isTRUE(fast) && is.null(global_args$fast)) global_args$fast <- TRUE
+    if (is.null(global_args$parallel)) global_args$parallel <- use_parallel
+    if (is.null(global_args$progress)) global_args$progress <- progress
+    if (is.null(global_args$X)) global_args$X <- X
+    if (is.null(global_args$groups)) global_args$groups <- groups_factor
+    if (is.null(global_args$k)) global_args$k <- k
+    if (is.null(global_args$lambda)) global_args$lambda <- lambda
+    if (is.null(global_args$graph)) global_args$graph <- graph
+    if (is.null(global_args$neighbors)) global_args$neighbors <- neighbors
+    global_res <- do.call(spatial_nmf_global_test, global_args)
+  }
+
+  stability_res <- NULL
+  stability_args <- .as_arg_list(stability, "stability")
+  if (voxelwise_stats != "none" && is.null(stability_args)) {
+    stability_args <- list()
+  }
+  if (voxelwise_stats != "none" && is.null(stability_args$return_maps)) {
+    stability_args$return_maps <- TRUE
+  }
+  if (!is.null(stability_args)) {
+    if (isTRUE(fast) && is.null(stability_args$fast)) stability_args$fast <- TRUE
+    if (is.null(stability_args$parallel)) stability_args$parallel <- use_parallel
+    if (is.null(stability_args$progress)) stability_args$progress <- progress
+    if (isTRUE(stability_args$return_maps) && is.null(matrix_meta$map_type)) {
+      stop("stability$return_maps=TRUE requires mask/dims spatial metadata.")
+    }
+    if (isTRUE(stability_args$return_maps) && is.null(stability_args$x)) {
+      stability_args$x <- structure(
+        list(
+          fit = fit,
+          data = X,
+          mask_indices = matrix_meta$mask_idx,
+          map_type = matrix_meta$map_type,
+          mask = mask,
+          dims = matrix_meta$dims,
+          full_length = matrix_meta$full_length,
+          ref_map = matrix_meta$ref_map
+        ),
+        class = "spatial_nmf_maps_result"
+      )
+      stability_args$fit <- NULL
+      stability_args$X <- NULL
+    } else {
+      if (is.null(stability_args$fit)) stability_args$fit <- fit
+      if (is.null(stability_args$X)) stability_args$X <- X
+    }
+    if (is.null(stability_args$graph)) stability_args$graph <- graph
+    if (is.null(stability_args$lambda)) stability_args$lambda <- lambda
+    stability_res <- do.call(spatial_nmf_stability, stability_args)
+  }
+
+  voxelwise_res <- NULL
+  if (voxelwise_stats != "none") {
+    if (is.null(matrix_meta$map_type)) {
+      stop("voxelwise_stats requires mask/dims spatial metadata for matrix input.")
+    }
+    voxelwise_res <- spatial_nmf_voxelwise_stats(
+      stability = stability_res,
+      map_type = matrix_meta$map_type,
+      mask = mask,
+      dims = matrix_meta$dims,
+      mask_indices = matrix_meta$mask_idx,
+      full_length = matrix_meta$full_length,
+      ref_map = matrix_meta$ref_map
+    )
+  }
+
+  res <- list(
+    fit = fit,
+    components = components,
+    groups = groups_factor,
+    mask_indices = matrix_meta$mask_idx,
+    map_type = matrix_meta$map_type,
+    mask = mask,
+    dims = matrix_meta$dims,
+    full_length = matrix_meta$full_length,
+    ref_map = matrix_meta$ref_map,
+    preprocess = preprocess
+  )
+  if (return_data) res$data <- X
+  if (!is.null(component_res)) res$component_test <- component_res
+  if (!is.null(global_res)) res$global_test <- global_res
+  if (!is.null(stability_res)) res$stability <- stability_res
+  if (!is.null(voxelwise_res)) res$voxelwise <- voxelwise_res
+
+  .as_spatial_nmf_result(res, input = "matrix", call = match.call())
+}
+
+.is_map_input <- function(x) {
+  if (inherits(x, c("NeuroVol", "NeuroVec", "NeuroSurface", "NeuroSurfaceVector"))) {
+    return(TRUE)
+  }
+  is.list(x) && length(x) > 0L &&
+    inherits(x[[1]], c("NeuroVol", "NeuroVec", "NeuroSurface", "NeuroSurfaceVector"))
+}
+
+.coerce_nmf_matrix <- function(x) {
+  if (is.data.frame(x)) x <- as.matrix(x)
+  if (!is.matrix(x) || !is.numeric(x)) {
+    stop("x must be a numeric matrix/data frame or a map/list of maps.")
+  }
+  if (any(!is.finite(x) & !is.na(x))) stop("x contains non-finite values.")
+  storage.mode(x) <- "double"
+  x
+}
+
+.nmf_preprocess_matrix <- function(X,
+                                   method = c("none", "shift", "auc", "auc_raw", "zscore", "relu", "abs"),
+                                   min_val = 0,
+                                   floor = -0.5) {
+  method <- match.arg(method)
+  vals <- X[is.finite(X)]
+  if (!length(vals)) stop("No finite values found in x.")
+  original_range <- range(vals)
+  offset <- 0
+
+  transform_fn <- switch(method,
+    none = {
+      function(v) v
+    },
+    shift = {
+      offset <- -min(vals) + min_val
+      function(v) v + offset
+    },
+    auc = {
+      offset <- -floor + min_val
+      function(v) {
+        v[v < floor] <- floor
+        v + offset
+      }
+    },
+    auc_raw = {
+      offset <- -floor + min_val
+      function(v) {
+        v <- v - 0.5
+        v[v < floor] <- floor
+        v + offset
+      }
+    },
+    zscore = {
+      offset <- -min(vals) + min_val
+      function(v) v + offset
+    },
+    relu = {
+      function(v) pmax(v, min_val)
+    },
+    abs = {
+      function(v) abs(v) + min_val
+    }
+  )
+
+  X_out <- transform_fn(X)
+  if (any(X_out < 0, na.rm = TRUE)) {
+    stop("transformed x contains negative values; use transform='shift' or another non-negative transform.")
+  }
+
+  list(
+    data = X_out,
+    offset = offset,
+    method = method,
+    original_range = original_range,
+    min_val = min_val
+  )
+}
+
+.matrix_spatial_metadata <- function(X, mask, dims, return_maps, lambda) {
+  if (is.null(mask) && is.null(dims)) {
+    return(list(
+      map_type = NULL,
+      mask_vec = NULL,
+      mask_idx = NULL,
+      dims = NULL,
+      full_length = ncol(X),
+      ref_map = NULL
+    ))
+  }
+
+  if (inherits(mask, c("NeuroVol", "NeuroVec"))) {
+    dims <- .infer_spatial_dims(mask, dims)
+    mask_vec <- .resolve_mask_vec(mask, prod(dims))
+    mask_idx <- which(mask_vec)
+    if (length(mask_idx) != ncol(X)) {
+      stop("ncol(x) must match the number of active voxels in mask.")
+    }
+    return(list(
+      map_type = "volume",
+      mask_vec = mask_vec,
+      mask_idx = mask_idx,
+      dims = dims,
+      full_length = length(mask_vec),
+      ref_map = mask
+    ))
+  }
+
+  if (inherits(mask, "NeuroSurface")) {
+    full_length <- .infer_surface_length(mask, mask)
+    mask_vec <- .resolve_surface_mask(mask, full_length)
+    mask_idx <- which(mask_vec)
+    if (length(mask_idx) != ncol(X)) {
+      stop("ncol(x) must match the number of active vertices in mask.")
+    }
+    return(list(
+      map_type = "surface",
+      mask_vec = mask_vec,
+      mask_idx = mask_idx,
+      dims = dims,
+      full_length = full_length,
+      ref_map = mask
+    ))
+  }
+
+  if (!is.null(dims)) {
+    dims <- as.integer(dims)
+    mask_vec <- if (is.null(mask)) {
+      rep(TRUE, prod(dims))
+    } else {
+      .resolve_mask_vec(mask, prod(dims))
+    }
+    mask_idx <- which(mask_vec)
+    if (length(mask_idx) != ncol(X)) {
+      stop("ncol(x) must match the number of active voxels in mask/dims.")
+    }
+    return(list(
+      map_type = "volume",
+      mask_vec = mask_vec,
+      mask_idx = mask_idx,
+      dims = dims,
+      full_length = length(mask_vec),
+      ref_map = NULL
+    ))
+  }
+
+  if (isTRUE(return_maps) || lambda > 0) {
+    stop("mask/dims spatial metadata are incomplete for matrix input.")
+  }
+
+  list(
+    map_type = NULL,
+    mask_vec = NULL,
+    mask_idx = NULL,
+    dims = NULL,
+    full_length = ncol(X),
+    ref_map = NULL
+  )
+}
+
+.as_spatial_nmf_result <- function(res, input, call) {
+  res$input <- input
+  res$call <- call
+  class(res) <- unique(c("spatial_nmf_result", class(res)))
+  res
+}
+
+#' @export
+print.spatial_nmf_result <- function(x, ...) {
+  fit <- x$fit
+  cat("Spatial NMF result\n")
+  cat(sprintf("  input: %s\n", x$input %||% "unknown"))
+  cat(sprintf("  components: %d\n", fit$k))
+  cat(sprintf("  observations x features: %d x %d\n", fit$n, fit$p))
+  cat(sprintf("  lambda: %.4g\n", fit$lambda))
+  cat(sprintf("  iterations: %d%s\n", fit$iter, if (isTRUE(fit$converged)) " (converged)" else ""))
+  if (!is.null(x$components)) cat("  component maps: yes\n")
+  if (!is.null(x$component_test)) cat("  component test: yes\n")
+  if (!is.null(x$global_test)) cat("  global test: yes\n")
+  if (!is.null(x$stability)) cat("  stability: yes\n")
+  invisible(x)
 }
 
 #' Spatial NMF on Map Lists

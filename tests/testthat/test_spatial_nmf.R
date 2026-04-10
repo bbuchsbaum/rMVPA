@@ -4,6 +4,150 @@ testthat::skip_if_not_installed("neurosurf")
 library(neuroim2)
 library(neurosurf)
 
+test_that("spatial_nmf provides a clean matrix interface for exact factorization", {
+  W_true <- matrix(
+    c(1.2, 0.2,
+      1.0, 0.3,
+      0.9, 0.4,
+      0.2, 1.1,
+      0.3, 1.0,
+      0.4, 0.9),
+    nrow = 6,
+    byrow = TRUE
+  )
+  H_true <- rbind(
+    c(2, 1.5, 1, 0, 0, 0),
+    c(0, 0, 0, 1, 1.5, 2)
+  )
+  X <- W_true %*% H_true
+
+  res <- spatial_nmf(
+    X,
+    k = 2,
+    W_init = W_true,
+    H_init = H_true,
+    max_iter = 1,
+    min_iter = 0,
+    check_every = 1,
+    normalize = "none",
+    return_data = TRUE
+  )
+
+  expect_s3_class(res, "spatial_nmf_result")
+  expect_equal(res$input, "matrix")
+  expect_equal(dim(res$fit$W), c(6, 2))
+  expect_equal(dim(res$fit$H), c(2, 6))
+  expect_true(isTRUE(all.equal(res$fit$W %*% res$fit$H, X, tolerance = 1e-12)))
+  expect_equal(res$data, X)
+})
+
+test_that("spatial_nmf matrix preprocessing makes signed input valid", {
+  X <- matrix(c(-2, -1, 0, 1, 2, 3), nrow = 2, byrow = TRUE)
+
+  res <- spatial_nmf(
+    X,
+    k = 1,
+    transform = "shift",
+    min_val = 0.01,
+    max_iter = 5,
+    return_data = TRUE
+  )
+
+  expect_s3_class(res, "spatial_nmf_result")
+  expect_equal(min(res$data), 0.01, tolerance = 1e-12)
+  expect_equal(res$preprocess$method, "shift")
+  expect_equal(res$preprocess$offset, 2.01, tolerance = 1e-12)
+  expect_true(all(res$fit$W >= 0))
+  expect_true(all(res$fit$H >= 0))
+})
+
+test_that("spatial_nmf allows short exploratory fits without min_iter boilerplate", {
+  set.seed(16)
+  X <- matrix(rexp(6 * 4), nrow = 6, ncol = 4)
+
+  res <- spatial_nmf(X, k = 2, max_iter = 3)
+
+  expect_s3_class(res, "spatial_nmf_result")
+  expect_lte(res$fit$iter, 3)
+  expect_true(all(is.finite(res$fit$objective)))
+})
+
+test_that("spatial_nmf matrix input can return maps from mask metadata", {
+  mask <- neuroim2::NeuroVol(array(1, dim = c(2, 2, 1)), neuroim2::NeuroSpace(c(2, 2, 1)))
+  X <- matrix(c(1, 2, 3, 4,
+                4, 3, 2, 1,
+                1, 3, 2, 4), nrow = 3, byrow = TRUE)
+
+  res <- spatial_nmf(
+    X,
+    k = 2,
+    mask = mask,
+    return_maps = TRUE,
+    max_iter = 5
+  )
+
+  expect_s3_class(res, "spatial_nmf_result")
+  expect_equal(res$map_type, "volume")
+  expect_length(res$components, 2)
+  expect_s4_class(res$components[[1]], "SparseNeuroVol")
+  expect_equal(as.integer(res$mask_indices), 1:4)
+})
+
+test_that("spatial_nmf map interface preprocesses groups in one call", {
+  mask <- neuroim2::NeuroVol(array(1, dim = c(2, 2, 1)), neuroim2::NeuroSpace(c(2, 2, 1)))
+  space_obj <- neuroim2::space(mask)
+  maps_A <- list(
+    neuroim2::NeuroVol(array(c(-1, 0, 1, 2), dim = c(2, 2, 1)), space_obj),
+    neuroim2::NeuroVol(array(c(-0.5, 0.5, 1.5, 2.5), dim = c(2, 2, 1)), space_obj)
+  )
+  maps_B <- list(
+    neuroim2::NeuroVol(array(c(2, 1, 0, -1), dim = c(2, 2, 1)), space_obj),
+    neuroim2::NeuroVol(array(c(2.5, 1.5, 0.5, -0.5), dim = c(2, 2, 1)), space_obj)
+  )
+
+  res <- spatial_nmf(
+    maps_A,
+    group_B = maps_B,
+    mask = mask,
+    k = 2,
+    transform = "shift",
+    return_data = TRUE,
+    max_iter = 5
+  )
+
+  expect_s3_class(res, "spatial_nmf_result")
+  expect_s3_class(res, "spatial_nmf_maps_result")
+  expect_equal(as.character(res$groups), c("A", "A", "B", "B"))
+  expect_equal(min(res$data), 0, tolerance = 1e-12)
+  expect_equal(res$preprocess$method, "shift")
+})
+
+test_that("spatial_nmf public wrapper applies graph regularization through dims", {
+  set.seed(15)
+  base <- runif(6, 0.3, 1)
+  X <- base %*% t(rep(1, 10))
+  W_init <- matrix(runif(6 * 2), nrow = 6, ncol = 2)
+  H_init <- matrix(runif(2 * 10), nrow = 2, ncol = 10)
+
+  A <- rMVPA:::build_voxel_adjacency(rep(TRUE, 10), dims = c(10, 1, 1), neighbors = 6)
+  graph <- rMVPA:::build_graph_laplacian(A)
+  smooth_init <- sum(H_init * (H_init * graph$degree - H_init %*% graph$A))
+
+  res <- spatial_nmf(
+    X,
+    k = 2,
+    dims = c(10, 1, 1),
+    lambda = 10,
+    W_init = W_init,
+    H_init = H_init,
+    max_iter = 100,
+    check_every = 20
+  )
+
+  smooth_final <- sum(res$fit$H * (res$fit$H * graph$degree - res$fit$H %*% graph$A))
+  expect_lte(smooth_final, smooth_init)
+})
+
 test_that("spatial_nmf_fit returns nonnegative factors with correct dimensions", {
   set.seed(1)
   X <- matrix(rexp(50 * 30), nrow = 50, ncol = 30)
@@ -343,6 +487,18 @@ test_that("spatial_nmf_project recovers W for exact factorization", {
 
   rel_err <- sqrt(sum((X - proj$W %*% H_true)^2) / sum(X^2))
   expect_lt(rel_err, 1e-8)
+})
+
+test_that("spatial_nmf_project allows short exploratory projections", {
+  set.seed(17)
+  X <- matrix(rexp(5 * 4), nrow = 5, ncol = 4)
+  H <- matrix(runif(2 * 4, 0.1, 1), nrow = 2, ncol = 4)
+
+  proj <- rMVPA:::spatial_nmf_project(X, H, max_iter = 2)
+
+  expect_equal(proj$iter, 2)
+  expect_true(all(is.finite(proj$objective)))
+  expect_true(all(proj$W >= 0))
 })
 
 test_that("spatial_nmf_fit errors on invalid inputs", {
