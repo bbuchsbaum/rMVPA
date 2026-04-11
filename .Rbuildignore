@@ -39,9 +39,11 @@
 ^LICENSE\.md$
 ^\.\.pdf$
 ^\.rcmdcheck_result\.rds$
+^archive($|/)
 ^src/Makevars$
 ^src/.*\.(o|so|dll|dylib)$
 ^searchlight_performance_execution_plan\.md$
 ^searchlight_performance_prd\.md$
 ^vignettes/.*\.html$
 ^vignettes/.*_files($|/)
+^codemeta\.json$
