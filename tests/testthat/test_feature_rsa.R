@@ -1,6 +1,212 @@
 library(rMVPA)
 library(neuroim2)
 
+manual_feature_rsa_rdm_vec <- function(x) {
+  cm <- suppressWarnings(stats::cor(t(x), use = "pairwise.complete.obs"))
+  rdm <- 1 - cm
+  as.numeric(rdm[lower.tri(rdm)])
+}
+
+feature_rsa_perm_oracle <- function(observed,
+                                    predicted,
+                                    nperm,
+                                    save_distributions,
+                                    pattern_cor,
+                                    pattern_discrim,
+                                    pattern_rank,
+                                    rdm_cor,
+                                    voxel_cor,
+                                    mse,
+                                    r_squared,
+                                    mean_voxelwise_temporal_cor,
+                                    valid_col) {
+  observed <- as.matrix(observed)
+  predicted <- as.matrix(predicted)
+
+  metric_names <- c(
+    "pattern_correlation",
+    "pattern_discrimination",
+    "pattern_rank_percentile",
+    "rdm_correlation",
+    "voxel_correlation",
+    "mse",
+    "r_squared",
+    "mean_voxelwise_temporal_cor"
+  )
+  obs_vals <- c(
+    pattern_cor,
+    pattern_discrim,
+    pattern_rank,
+    rdm_cor,
+    voxel_cor,
+    mse,
+    r_squared,
+    mean_voxelwise_temporal_cor
+  )
+  names(obs_vals) <- metric_names
+
+  n_rows <- nrow(predicted)
+  sd_thresh <- 1e-12
+  tss <- sum((observed - mean(observed, na.rm = TRUE))^2, na.rm = TRUE)
+  observed_valid <- observed[, valid_col, drop = FALSE]
+  obs_row_sd <- apply(observed_valid, 1L, stats::sd)
+
+  count_better <- setNames(integer(length(metric_names)), metric_names)
+  sum_perm <- setNames(numeric(length(metric_names)), metric_names)
+  sum_sq_perm <- setNames(numeric(length(metric_names)), metric_names)
+  n_valid_perm <- setNames(integer(length(metric_names)), metric_names)
+
+  if (isTRUE(save_distributions)) {
+    dist_mat <- matrix(
+      NA_real_,
+      nrow = nperm,
+      ncol = length(metric_names),
+      dimnames = list(NULL, metric_names)
+    )
+  }
+
+  for (i in seq_len(nperm)) {
+    perm_idx <- sample(n_rows)
+    perm_pred <- predicted[perm_idx, , drop = FALSE]
+    perm_pred_valid <- perm_pred[, valid_col, drop = FALSE]
+
+    ppc <- ppd <- ppr <- prdm <- pvc <- pmse <- prsq <- pmvtc <- NA_real_
+
+    pred_row_sd <- apply(perm_pred_valid, 1L, stats::sd)
+    vr <- which(obs_row_sd > sd_thresh & pred_row_sd > sd_thresh)
+
+    if (length(vr) >= 2L) {
+      cm <- tryCatch(
+        stats::cor(
+          t(perm_pred_valid[vr, , drop = FALSE]),
+          t(observed_valid[vr, , drop = FALSE]),
+          use = "pairwise.complete.obs"
+        ),
+        error = function(e) NULL
+      )
+      if (!is.null(cm)) {
+        dc <- diag(cm)
+        ppc <- mean(dc, na.rm = TRUE)
+        ppd <- ppc - mean(cm[row(cm) != col(cm)], na.rm = TRUE)
+
+        ranks <- numeric(length(vr))
+        for (j in seq_along(vr)) {
+          row_cors <- cm[j, ]
+          denom <- sum(!is.na(row_cors)) - 1L
+          ranks[j] <- if (denom > 0L && is.finite(row_cors[j])) {
+            (sum(row_cors <= row_cors[j], na.rm = TRUE) - 1L) / denom
+          } else {
+            NA_real_
+          }
+        }
+        ppr <- mean(ranks, na.rm = TRUE)
+      }
+    }
+
+    if (length(vr) >= 3L) {
+      pc <- tryCatch(
+        stats::cor(t(perm_pred_valid[vr, , drop = FALSE]), use = "pairwise.complete.obs"),
+        error = function(e) NULL
+      )
+      oc <- tryCatch(
+        stats::cor(t(observed_valid[vr, , drop = FALSE]), use = "pairwise.complete.obs"),
+        error = function(e) NULL
+      )
+      if (!is.null(pc) && !is.null(oc)) {
+        pv <- (1 - pc)[upper.tri(pc)]
+        ov <- (1 - oc)[upper.tri(oc)]
+        if (length(pv) >= 2L && length(pv) == length(ov)) {
+          prdm <- tryCatch(
+            stats::cor(pv, ov, method = "spearman", use = "complete.obs"),
+            error = function(e) NA_real_
+          )
+        }
+      }
+    }
+
+    pvc <- tryCatch(
+      stats::cor(
+        as.vector(perm_pred_valid),
+        as.vector(observed_valid),
+        use = "pairwise.complete.obs"
+      ),
+      error = function(e) NA_real_
+    )
+    pmse <- mean((perm_pred - observed)^2, na.rm = TRUE)
+    prsq <- if (tss > 0) {
+      1 - sum((observed - perm_pred)^2, na.rm = TRUE) / tss
+    } else {
+      NA_real_
+    }
+
+    if (n_rows > 1L && length(valid_col) > 0L) {
+      pmvtc <- mean(vapply(seq_len(length(valid_col)), function(j) {
+        tryCatch(
+          stats::cor(
+            observed_valid[, j],
+            perm_pred_valid[, j],
+            use = "pairwise.complete.obs"
+          ),
+          error = function(e) NA_real_
+        )
+      }, numeric(1)), na.rm = TRUE)
+    }
+
+    perm_vals <- c(ppc, ppd, ppr, prdm, pvc, pmse, prsq, pmvtc)
+    for (m in seq_along(metric_names)) {
+      perm_val <- perm_vals[m]
+      obs_val <- obs_vals[m]
+      if (!is.na(perm_val)) {
+        n_valid_perm[m] <- n_valid_perm[m] + 1L
+        sum_perm[m] <- sum_perm[m] + perm_val
+        sum_sq_perm[m] <- sum_sq_perm[m] + perm_val^2
+        if (!is.na(obs_val)) {
+          better <- if (metric_names[m] == "mse") perm_val <= obs_val else perm_val >= obs_val
+          if (isTRUE(better)) {
+            count_better[m] <- count_better[m] + 1L
+          }
+        }
+      }
+    }
+
+    if (isTRUE(save_distributions)) {
+      dist_mat[i, ] <- perm_vals
+    }
+  }
+
+  eps <- .Machine$double.eps
+  p_values <- vapply(seq_along(metric_names), function(m) {
+    if (n_valid_perm[m] > 0L) {
+      (count_better[m] + 1) / (n_valid_perm[m] + 1)
+    } else {
+      NA_real_
+    }
+  }, numeric(1))
+  names(p_values) <- metric_names
+
+  z_scores <- vapply(seq_along(metric_names), function(m) {
+    if (n_valid_perm[m] > 0L) {
+      mn <- sum_perm[m] / n_valid_perm[m]
+      sd_perm <- sqrt(max(0, sum_sq_perm[m] / n_valid_perm[m] - mn^2))
+      sd_use <- max(sd_perm, eps)
+      if (metric_names[m] == "mse") {
+        (mn - obs_vals[m]) / sd_use
+      } else {
+        (obs_vals[m] - mn) / sd_use
+      }
+    } else {
+      NA_real_
+    }
+  }, numeric(1))
+  names(z_scores) <- metric_names
+
+  out <- list(p_values = p_values, z_scores = z_scores)
+  if (isTRUE(save_distributions)) {
+    out$permutation_distributions <- as.list(as.data.frame(dist_mat))
+  }
+  out
+}
+
 test_that("regional feature_rsa_model with direct F matrix runs without error", {
   # Generate a sample dataset: small volume, say 5x5x5, with 100 observations
   dset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
@@ -373,6 +579,126 @@ test_that("evaluate_model.feature_rsa_model errors on row mismatch", {
     ),
     "Mismatch in rows"
   )
+})
+
+test_that("evaluate_model.feature_rsa_model returns full-length RDM vectors matching a direct oracle", {
+  observed <- rbind(
+    c(0, 1, 2, 3),
+    c(5, 5, 5, 5),
+    c(1, 3, 2, 4),
+    c(2, 4, 3, 5),
+    c(3, 5, 4, 6)
+  )
+  predicted <- observed + rbind(
+    c(0.1, -0.2, 0.2, -0.1),
+    c(0, 0, 0, 0),
+    c(-0.1, 0.2, -0.2, 0.1),
+    c(0.2, 0.1, -0.1, -0.2),
+    c(-0.2, -0.1, 0.1, 0.2)
+  )
+
+  perf_with_vecs <- evaluate_model.feature_rsa_model(
+    object = NULL,
+    predicted = predicted,
+    observed = observed,
+    nperm = 0,
+    compute_rdm_vectors = TRUE
+  )
+  perf_no_vecs <- evaluate_model.feature_rsa_model(
+    object = NULL,
+    predicted = predicted,
+    observed = observed,
+    nperm = 0,
+    compute_rdm_vectors = FALSE
+  )
+
+  expected_pred <- manual_feature_rsa_rdm_vec(predicted)
+  expected_obs <- manual_feature_rsa_rdm_vec(observed)
+
+  expect_equal(perf_with_vecs$predicted_rdm_vec, expected_pred, tolerance = 1e-12)
+  expect_equal(perf_with_vecs$observed_rdm_vec, expected_obs, tolerance = 1e-12)
+  expect_length(perf_with_vecs$predicted_rdm_vec, nrow(observed) * (nrow(observed) - 1L) / 2L)
+  expect_true(anyNA(perf_with_vecs$predicted_rdm_vec))
+  expect_true(anyNA(perf_with_vecs$observed_rdm_vec))
+  expect_null(perf_no_vecs$predicted_rdm_vec)
+  expect_null(perf_no_vecs$observed_rdm_vec)
+})
+
+test_that(".perm_test_feature_rsa matches a direct reference implementation", {
+  observed <- matrix(
+    c(
+      0, 1, 2, 3, 5,
+      1, 2, 0, 4, 5,
+      2, 3, 1, 5, 5,
+      3, 4, 2, 6, 5,
+      4, 5, 3, 7, 5,
+      5, 6, 4, 8, 5
+    ),
+    nrow = 6,
+    byrow = TRUE
+  )
+  predicted <- observed + matrix(
+    c(
+      0.2, -0.1, 0.1, -0.2, 0,
+      -0.1, 0.2, -0.2, 0.1, 0,
+      0.1, 0.1, -0.1, -0.1, 0,
+      -0.2, 0.1, 0.2, -0.1, 0,
+      0.1, -0.2, 0.1, 0.2, 0,
+      -0.1, 0.2, -0.1, 0.1, 0
+    ),
+    nrow = 6,
+    byrow = TRUE
+  )
+
+  perf <- evaluate_model.feature_rsa_model(
+    object = NULL,
+    predicted = predicted,
+    observed = observed,
+    nperm = 0,
+    compute_rdm_vectors = FALSE
+  )
+  valid_col <- which(
+    apply(observed, 2L, stats::sd) > 1e-12 &
+      apply(predicted, 2L, stats::sd) > 1e-12
+  )
+
+  set.seed(8123)
+  oracle <- feature_rsa_perm_oracle(
+    observed = observed,
+    predicted = predicted,
+    nperm = 12,
+    save_distributions = TRUE,
+    pattern_cor = perf$pattern_correlation,
+    pattern_discrim = perf$pattern_discrimination,
+    pattern_rank = perf$pattern_rank_percentile,
+    rdm_cor = perf$rdm_correlation,
+    voxel_cor = perf$voxel_correlation,
+    mse = perf$mse,
+    r_squared = perf$r_squared,
+    mean_voxelwise_temporal_cor = perf$mean_voxelwise_temporal_cor,
+    valid_col = valid_col
+  )
+
+  set.seed(8123)
+  got <- rMVPA:::.perm_test_feature_rsa(
+    observed = observed,
+    predicted = predicted,
+    nperm = 12,
+    save_distributions = TRUE,
+    pattern_cor = perf$pattern_correlation,
+    pattern_discrim = perf$pattern_discrimination,
+    pattern_rank = perf$pattern_rank_percentile,
+    rdm_cor = perf$rdm_correlation,
+    voxel_cor = perf$voxel_correlation,
+    mse = perf$mse,
+    r_squared = perf$r_squared,
+    mean_voxelwise_temporal_cor = perf$mean_voxelwise_temporal_cor,
+    valid_col = valid_col
+  )
+
+  expect_equal(got$p_values, oracle$p_values, tolerance = 1e-10)
+  expect_equal(got$z_scores, oracle$z_scores, tolerance = 1e-10)
+  expect_equal(got$permutation_distributions, oracle$permutation_distributions, tolerance = 1e-10)
 })
 
 # ---- ncomp_selection tests ----

@@ -34,11 +34,11 @@ options(warn = -1)  # Temporarily suppress warnings
 options(progress_enabled = FALSE)
 options(cli.progress_show_after = Inf)
 Sys.setenv(R_PROGRESSR_ENABLE = "false")
+Sys.setenv(RGL_USE_NULL = "TRUE")
 
 # Load commonly used packages with suppressed warnings
 suppressWarnings({
   library(neuroim2)
-  library(neurosurf)
   library(testthat)
   library(assertthat)
 })

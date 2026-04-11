@@ -1,12 +1,13 @@
 ---
 title: MVPA Regional Analysis Tutorial
-author: Your Name
+author: Bradley Buchsbaum
 date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
 vignette: '%\VignetteIndexEntry{MVPA Regional Analysis Tutorial} %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}'
 params:
   family: red
+  preset: homage
 css: albers.css
 resource_files:
 - albers.css
@@ -14,7 +15,7 @@ resource_files:
 includes:
   in_header: |-
     <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-lapis');});</script>
 
 ---
 
@@ -294,4 +295,3 @@ MVPA_Regional.R provides comprehensive regional MVPA analysis capabilities. It h
 - Evaluate both classification and regression scenarios.
 - Optimize processing using parallel computation.
 
-Happy regional analysis! 

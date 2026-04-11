@@ -1,0 +1,188 @@
+---
+title: Building Plugin Analyses for rMVPA
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 3
+vignette: |
+  %\VignetteIndexEntry{Building Plugin Analyses for rMVPA} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+params:
+  family: red
+  preset: homage
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-lapis');});</script>
+
+---
+
+```{r setup, include=FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+```{r libraries}
+library(rMVPA)
+library(neuroim2)
+future::plan(future::sequential)
+```
+
+# Why plugin analyses?
+
+`rMVPA` already provides execution harnesses for searchlight and regional analyses (ROI extraction, iteration, parallel orchestration, and spatial map assembly). Plugin analyses let you add new method families in a separate package while reusing that harness.
+
+The plugin contract is small:
+
+1. Constructor: returns a model specification via `create_model_spec()`.
+2. `output_schema.<your_class>()`: declares metric names and layout.
+3. `fit_roi.<your_class>()`: computes one ROI result.
+4. Optional `strip_dataset.<your_class>()`: trims large fields for workers.
+
+# Classifier Registry vs Analysis Plugins
+
+These are different extension paths:
+
+1. Classifier registry (`register_mvpa_model()`): add a new estimator backend (fit/predict/prob) to use inside the standard `mvpa_model` analysis.
+2. Analysis plugin contract (`create_model_spec()` + `fit_roi.<class>`): add a new per-ROI analysis type with custom logic.
+
+Use the classifier registry when your workflow is still standard classification/regression and only the estimator changes. Use analysis plugins when the ROI computation itself is novel.
+
+# Step 1: Define a constructor
+
+```{r constructor}
+toy_plugin_model <- function(dataset, design, center_stat = c("mean", "median")) {
+  center_stat <- match.arg(center_stat)
+  create_model_spec(
+    name = "toy_plugin_model",
+    dataset = dataset,
+    design = design,
+    center_stat = center_stat,
+    compute_performance = TRUE,
+    return_predictions = FALSE
+  )
+}
+```
+
+# Step 2: Declare the metric schema
+
+```{r schema}
+output_schema.toy_plugin_model <- function(model) {
+  list(
+    score = "scalar",
+    spread = "scalar"
+  )
+}
+```
+
+# Step 3: Implement `fit_roi`
+
+```{r fit-roi}
+fit_roi.toy_plugin_model <- function(model, roi_data, context, ...) {
+  x <- roi_data$train_data
+  score <- if (identical(model$center_stat, "median")) stats::median(x) else mean(x)
+  spread <- stats::sd(as.numeric(x))
+
+  roi_result(
+    metrics = c(score = score, spread = spread),
+    indices = roi_data$indices,
+    id = context$id
+  )
+}
+```
+
+For classification/regression-style plugins, you can delegate fold execution to `cv_evaluate_roi()` instead of reimplementing CV loops in each plugin:
+
+```{r fit-roi-cv-wrapper, eval=FALSE}
+fit_roi.my_classif_plugin <- function(model, roi_data, context, ...) {
+  cv_evaluate_roi(
+    model_spec = model,
+    roi_data = roi_data,
+    context = context,
+    mode = "auto"
+  )
+}
+```
+
+# Step 4: Register methods in-session
+
+For a package, these methods are discovered automatically when your package is loaded. In an interactive session, register them explicitly:
+
+```{r register}
+registerS3method(
+  "fit_roi",
+  "toy_plugin_model",
+  fit_roi.toy_plugin_model,
+  envir = asNamespace("rMVPA")
+)
+registerS3method(
+  "output_schema",
+  "toy_plugin_model",
+  output_schema.toy_plugin_model,
+  envir = asNamespace("rMVPA")
+)
+```
+
+# Fast plugin validation without full pipelines
+
+Use `mock_roi_data()`, `mock_context()`, and `validate_plugin_model()` to verify your contract before expensive runs.
+
+```{r validate-plugin}
+ds <- gen_sample_dataset(c(4, 4, 4), nobs = 20, nlevels = 2, blocks = 2)
+mspec <- toy_plugin_model(ds$dataset, ds$design)
+
+plugin_check <- validate_plugin_model(
+  mspec,
+  roi_data = mock_roi_data(n_train = 20, n_features = 8, n_test = 0, seed = 1),
+  context = mock_context(design = ds$design, id = 101L)
+)
+
+plugin_check
+```
+
+```{r validate-model-spec}
+validate_model_spec(mspec, require_schema = TRUE, dry_run = TRUE)
+```
+
+# Run on searchlight and regional harnesses
+
+```{r run-harness}
+sl_res <- run_searchlight(mspec, radius = 2, method = "standard")
+names(sl_res$results)
+
+region_mask <- NeuroVol(
+  sample(1:3, size = length(ds$dataset$mask), replace = TRUE),
+  space(ds$dataset$mask)
+)
+reg_res <- run_regional(mspec, region_mask)
+names(reg_res$vol_results)
+```
+
+# Optional: worker-safe object trimming
+
+If your model spec stores heavy transient objects, define a class method that strips them before distributed execution.
+
+```{r strip-dataset, eval=FALSE}
+strip_dataset.toy_plugin_model <- function(obj, ...) {
+  obj$dataset <- NULL
+  obj
+}
+```
+
+# Plugin package checklist
+
+1. Export your constructor.
+2. Provide `fit_roi.<class>` and `output_schema.<class>`.
+3. Keep metric names stable; schema and runtime metrics must match exactly.
+4. Add unit tests around `validate_plugin_model()`.
+5. Add one lightweight integration test for `run_searchlight()` and/or `run_regional()`.
