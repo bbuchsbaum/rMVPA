@@ -171,6 +171,31 @@ save_results <- function(x, dir,
   )
 }
 
+.flatten_metric_value <- function(x) {
+  if (is.null(x)) {
+    return(NA_character_)
+  }
+  if (is.atomic(x) && length(x) == 1L) {
+    return(as.character(x))
+  }
+  if (is.atomic(x)) {
+    return(paste(as.character(x), collapse = ","))
+  }
+  if (inherits(x, "formula")) {
+    return(Reduce(paste, deparse(x)))
+  }
+  if (requireNamespace("jsonlite", quietly = TRUE)) {
+    json <- tryCatch(
+      jsonlite::toJSON(x, auto_unbox = TRUE, null = "null"),
+      error = function(e) NULL
+    )
+    if (!is.null(json)) {
+      return(as.character(json))
+    }
+  }
+  paste(capture.output(str(x, give.attr = FALSE)), collapse = " ")
+}
+
 # heuristics from level
 .compute_includes <- function(level, include) {
   level <- match.arg(level, c("minimal", "standard", "complete"))
@@ -449,7 +474,12 @@ save_results.regional_mvpa_result <- function(x, dir,
   if (!is.null(x$pooled_performance)) {
     pooled_perf_file <- file.path(dir, "pooled_performance_table.txt")
     pooled_perf_file <- .unique_path(pooled_perf_file, overwrite)
-    pooled_perf_df <- tibble::enframe(as.list(x$pooled_performance), name = "metric", value = "value")
+    pooled_perf_vals <- as.list(x$pooled_performance)
+    pooled_perf_df <- data.frame(
+      metric = names(pooled_perf_vals),
+      value = vapply(pooled_perf_vals, .flatten_metric_value, character(1)),
+      stringsAsFactors = FALSE
+    )
     utils::write.table(pooled_perf_df, pooled_perf_file,
                        row.names = FALSE, quote = FALSE, sep = "\t")
     paths$pooled_performance_table <- pooled_perf_file

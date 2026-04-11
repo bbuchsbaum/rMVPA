@@ -78,21 +78,28 @@ test_that("cli parser accepts canonical and legacy option spellings", {
   expect_equal(parsed_old$options$train_data, "betas.nii.gz")
 })
 
-test_that("installed-style wrapper supports help and version", {
-  wrapper <- normalizePath(file.path("..", "..", "exec", "rmvpa-searchlight"), mustWork = TRUE)
+test_that("installed-style wrappers support help and version", {
+  wrappers <- c("rmvpa-searchlight", "rmvpa-regional")
   rscript <- file.path(R.home("bin"), "Rscript")
 
-  help <- system2(rscript, c(wrapper, "--help"), stdout = TRUE, stderr = TRUE)
-  help_status <- attr(help, "status")
-  if (is.null(help_status)) help_status <- 0L
-  expect_equal(help_status, 0L)
-  expect_true(any(grepl("Usage", help, fixed = TRUE)))
+  for (wrapper_name in wrappers) {
+    wrapper <- normalizePath(file.path("..", "..", "exec", wrapper_name), mustWork = TRUE)
 
-  version <- system2(rscript, c(wrapper, "--version"), stdout = TRUE, stderr = TRUE)
-  version_status <- attr(version, "status")
-  if (is.null(version_status)) version_status <- 0L
-  expect_equal(version_status, 0L)
-  expect_true(any(grepl(as.character(utils::packageVersion("rMVPA")), version, fixed = TRUE)))
+    help <- system2(rscript, c(wrapper, "--help"), stdout = TRUE, stderr = TRUE)
+    help_status <- attr(help, "status")
+    if (is.null(help_status)) help_status <- 0L
+    expect_equal(help_status, 0L, info = wrapper_name)
+    expect_true(any(grepl("Usage", help, fixed = TRUE)), info = wrapper_name)
+
+    version <- system2(rscript, c(wrapper, "--version"), stdout = TRUE, stderr = TRUE)
+    version_status <- attr(version, "status")
+    if (is.null(version_status)) version_status <- 0L
+    expect_equal(version_status, 0L, info = wrapper_name)
+    expect_true(
+      any(grepl(as.character(utils::packageVersion("rMVPA")), version, fixed = TRUE)),
+      info = wrapper_name
+    )
+  }
 })
 
 test_that("run_cli_command supports dry-run searchlight workflow", {
@@ -128,4 +135,149 @@ test_that("run_cli_command supports dry-run searchlight workflow", {
       )
     )
   )
+})
+
+test_that("run_cli_command supports dry-run regional workflow", {
+  skip_if_not_installed("neuroim2")
+
+  dset <- gen_sample_dataset(c(4, 4, 4), nobs = 18, blocks = 3, nlevels = 2)
+  train_path <- tempfile(fileext = ".nii.gz")
+  region_mask_path <- tempfile(fileext = ".nii.gz")
+  design_path <- tempfile(fileext = ".tsv")
+
+  region_mask <- neuroim2::NeuroVol(
+    sample(1:3, size = length(dset$dataset$mask), replace = TRUE),
+    neuroim2::space(dset$dataset$mask)
+  )
+
+  neuroim2::write_vec(dset$dataset$train_data, train_path)
+  neuroim2::write_vol(region_mask, region_mask_path)
+  utils::write.table(
+    dset$design$train_design,
+    file = design_path,
+    sep = "\t",
+    row.names = FALSE,
+    quote = FALSE
+  )
+
+  expect_no_error(
+    rMVPA:::run_cli_command(
+      "regional",
+      argv = c(
+        "--train-design", design_path,
+        "--train-data", train_path,
+        "--mask", region_mask_path,
+        "--label-column", "Y",
+        "--model", "sda_notune",
+        "--workers", "1",
+        "--save-predictors",
+        "--pool-predictions", "mean",
+        "--coalesce-design-vars",
+        "--dry-run"
+      )
+    )
+  )
+})
+
+test_that("installed-style regional wrapper supports dry-run workflow", {
+  skip_if_not_installed("neuroim2")
+
+  dset <- gen_sample_dataset(c(4, 4, 4), nobs = 18, blocks = 3, nlevels = 2)
+  train_path <- tempfile(fileext = ".nii.gz")
+  region_mask_path <- tempfile(fileext = ".nii.gz")
+  design_path <- tempfile(fileext = ".tsv")
+  wrapper <- normalizePath(file.path("..", "..", "exec", "rmvpa-regional"), mustWork = TRUE)
+  rscript <- file.path(R.home("bin"), "Rscript")
+
+  region_mask <- neuroim2::NeuroVol(
+    sample(1:3, size = length(dset$dataset$mask), replace = TRUE),
+    neuroim2::space(dset$dataset$mask)
+  )
+
+  neuroim2::write_vec(dset$dataset$train_data, train_path)
+  neuroim2::write_vol(region_mask, region_mask_path)
+  utils::write.table(
+    dset$design$train_design,
+    file = design_path,
+    sep = "\t",
+    row.names = FALSE,
+    quote = FALSE
+  )
+
+  out <- system2(
+    rscript,
+    c(
+      wrapper,
+      "--train-design", design_path,
+      "--train-data", train_path,
+      "--mask", region_mask_path,
+      "--label-column", "Y",
+      "--model", "sda_notune",
+      "--workers", "1",
+      "--preflight", "off",
+      "--dry-run"
+    ),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  status <- attr(out, "status")
+  if (is.null(status)) status <- 0L
+
+  expect_equal(status, 0L)
+  expect_true(any(grepl("Dry run summary", out, fixed = TRUE)))
+  expect_true(any(grepl("mode: regional", out, fixed = TRUE)))
+})
+
+test_that("run_cli_command executes a tiny regional workflow and writes results", {
+  skip_if_not_installed("neuroim2")
+
+  dset <- gen_sample_dataset(c(4, 4, 4), nobs = 18, blocks = 3, nlevels = 2)
+  train_path <- tempfile(fileext = ".nii.gz")
+  region_mask_path <- tempfile(fileext = ".nii.gz")
+  design_path <- tempfile(fileext = ".tsv")
+  output_dir <- tempfile("rmvpa-cli-regional-")
+
+  region_mask <- neuroim2::NeuroVol(
+    sample(1:3, size = length(dset$dataset$mask), replace = TRUE),
+    neuroim2::space(dset$dataset$mask)
+  )
+
+  neuroim2::write_vec(dset$dataset$train_data, train_path)
+  neuroim2::write_vol(region_mask, region_mask_path)
+  utils::write.table(
+    dset$design$train_design,
+    file = design_path,
+    sep = "\t",
+    row.names = FALSE,
+    quote = FALSE
+  )
+
+  result <- NULL
+  expect_no_error({
+    result <- rMVPA:::run_cli_command(
+      "regional",
+      argv = c(
+        "--train-design", design_path,
+        "--train-data", train_path,
+        "--mask", region_mask_path,
+        "--label-column", "Y",
+        "--model", "sda_notune",
+        "--workers", "1",
+        "--preflight", "off",
+        "--pool-predictions", "mean",
+        "--save-level", "minimal",
+        "--output", output_dir
+      )
+    )
+  })
+
+  expect_s3_class(result, "rmvpa_analysis_run")
+  expect_true(dir.exists(output_dir))
+  expect_true(file.exists(file.path(output_dir, "aux", "analysis_config.rds")))
+  expect_equal(length(list.files(output_dir, pattern = "^manifest\\.", full.names = TRUE)), 1L)
+  expect_true(file.exists(file.path(output_dir, "analysis", "performance_table.txt")))
+  expect_true(file.exists(file.path(output_dir, "analysis", "prediction_table.txt")))
+  expect_true(file.exists(file.path(output_dir, "analysis", "pooled_prediction_table.txt")))
+  expect_true(file.exists(file.path(output_dir, "analysis", "pooled_performance_table.txt")))
+  expect_false(dir.exists(file.path(output_dir, "analysis", "fits")))
 })

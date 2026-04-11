@@ -180,3 +180,40 @@ test_that("save_results manifests capture runtime metadata", {
 
   unlink(temp_dir, recursive = TRUE)
 })
+
+test_that("save_results writes pooled regional performance without list-column failures", {
+  library(neuroim2)
+
+  ds <- gen_sample_dataset(c(4, 4, 4), nobs = 18, blocks = 3, nlevels = 2)
+  cval <- twofold_blocked_cross_validation(ds$design$block_var)
+  region_mask <- NeuroVol(
+    sample(1:3, size = length(ds$dataset$mask), replace = TRUE),
+    space(ds$dataset$mask)
+  )
+
+  mspec <- mvpa_model(
+    load_model("sda_notune"),
+    ds$dataset,
+    ds$design,
+    model_type = "classification",
+    crossval = cval
+  )
+  reg <- run_regional(mspec, region_mask, pool_predictions = "mean", preflight = "off")
+
+  temp_dir <- tempfile()
+  expect_no_error(save_results(reg, temp_dir, level = "minimal", quiet = TRUE))
+
+  pooled_perf_path <- file.path(temp_dir, "pooled_performance_table.txt")
+  expect_true(file.exists(pooled_perf_path))
+
+  pooled_perf <- utils::read.table(
+    pooled_perf_path,
+    header = TRUE,
+    sep = "\t",
+    stringsAsFactors = FALSE
+  )
+  expect_equal(names(pooled_perf), c("metric", "value"))
+  expect_true(all(c("Accuracy", "AUC") %in% pooled_perf$metric))
+
+  unlink(temp_dir, recursive = TRUE)
+})
