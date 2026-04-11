@@ -18,6 +18,26 @@ require_package <- function(pkg, reason = NULL) {
   }
 }
 
+#' @keywords internal
+#' @noRd
+.use_crayon_styles <- function() {
+  if (!requireNamespace("crayon", quietly = TRUE)) {
+    return(FALSE)
+  }
+
+  if (!interactive()) {
+    return(FALSE)
+  }
+
+  if (isTRUE(getOption("knitr.in.progress")) ||
+      isTRUE(getOption("pkgdown.in_build")) ||
+      nzchar(Sys.getenv("NO_COLOR"))) {
+    return(FALSE)
+  }
+
+  isTRUE(getOption("crayon.enabled", TRUE))
+}
+
 
 #' Compute Group Means of a Matrix
 #'

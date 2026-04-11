@@ -21,6 +21,13 @@ includes:
 
 ```{r setup, include=FALSE}
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+if (isTRUE(getOption("knitr.in.progress"))) {
+  options(
+    crayon.enabled = FALSE,
+    cli.num_colors = 1,
+    cli.unicode = FALSE
+  )
+}
 knitr::opts_chunk$set(comment = NA, message = FALSE, warning = FALSE)
 suppressPackageStartupMessages({
   library(rMVPA)
@@ -117,6 +124,8 @@ era_ms <- era_rsa_model(
   distfun   = cordist("pearson"),
   rsa_simfun = "spearman"
 )
+
+era_ms
 
 era_res <- run_regional(era_ms, region_mask)
 era_res

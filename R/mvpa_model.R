@@ -459,6 +459,88 @@ has_crossval.model_spec <- function(obj) {
 }
 
 #' @export
+#' @method print model_spec
+print.model_spec <- function(x, ...) {
+  use_style <- .use_crayon_styles()
+
+  header_style <- if (use_style) crayon::bold$cyan else identity
+  section_style <- if (use_style) crayon::yellow else identity
+  info_style <- if (use_style) crayon::white else identity
+  number_style <- if (use_style) crayon::green else identity
+  class_style <- if (use_style) crayon::blue else identity
+  field_style <- if (use_style) crayon::magenta else identity
+
+  primary_class <- setdiff(class(x), c("model_spec", "list"))[1] %||% class(x)[1]
+
+  format_field <- function(value) {
+    if (is.null(value)) {
+      return(NULL)
+    }
+
+    if (inherits(value, "formula")) {
+      return(paste(deparse(value), collapse = " "))
+    }
+
+    if (is.language(value)) {
+      return(paste(deparse(value), collapse = " "))
+    }
+
+    if (inherits(value, "distfun")) {
+      dist_name <- value$name %||% class(value)[1]
+      dist_label <- value$method %||% value$labels %||% NULL
+      return(paste(c(dist_name, dist_label), collapse = " / "))
+    }
+
+    if (is.atomic(value) && length(value) == 1L) {
+      return(as.character(value))
+    }
+
+    if (is.atomic(value) && length(value) <= 6L) {
+      return(paste(as.character(value), collapse = ", "))
+    }
+
+    NULL
+  }
+
+  excluded <- c(
+    "name", "dataset", "design", "return_predictions", "compute_performance",
+    "tune_reps", "basis_count", "has_test_set"
+  )
+  extra_fields <- setdiff(names(x), excluded)
+  extra_vals <- lapply(extra_fields, function(nm) format_field(x[[nm]]))
+  keep_extra <- !vapply(extra_vals, is.null, logical(1))
+
+  cat("\n", header_style("Model Specification"), "\n\n")
+
+  cat(section_style("- Summary"), "\n")
+  cat(info_style("  - Name: "), field_style(x$name %||% primary_class), "\n")
+  cat(info_style("  - Primary Class: "), class_style(primary_class), "\n")
+  cat(info_style("  - Class Chain: "), class_style(paste(class(x), collapse = ", ")), "\n")
+  cat(info_style("  - Return Predictions: "), number_style(as.character(isTRUE(x$return_predictions))), "\n")
+  cat(info_style("  - Compute Performance: "), number_style(as.character(isTRUE(x$compute_performance))), "\n")
+  cat(info_style("  - Has Test Set: "), number_style(as.character(isTRUE(has_test_set(x)))), "\n")
+  cat(info_style("  - Basis Count: "), number_style(as.character(x$basis_count %||% 1L)), "\n")
+
+  if (any(keep_extra)) {
+    cat(section_style("- Parameters"), "\n")
+    for (i in which(keep_extra)) {
+      cat(info_style("  - "), field_style(extra_fields[[i]]), info_style(": "),
+          number_style(extra_vals[[i]]), "\n", sep = "")
+    }
+  }
+
+  if (!is.null(x$dataset)) {
+    print(x$dataset)
+  }
+
+  if (!is.null(x$design)) {
+    print(x$design)
+  }
+
+  invisible(x)
+}
+
+#' @export
 #' @method print mvpa_model
 print.mvpa_model <- function(x,...) {
   cat("mvpa_model object. \n")

@@ -642,6 +642,64 @@ regional_mvpa_result <- function(model_spec, performance_table, prediction_table
   
 }
 
+#' @export
+#' @method print regional_mvpa_result
+print.regional_mvpa_result <- function(x, ...) {
+  use_style <- .use_crayon_styles()
+
+  header_style <- if (use_style) crayon::bold$cyan else identity
+  section_style <- if (use_style) crayon::yellow else identity
+  info_style <- if (use_style) crayon::white else identity
+  value_style <- if (use_style) crayon::green else identity
+  metric_style <- if (use_style) crayon::magenta else identity
+
+  model_class <- if (!is.null(x$model_spec)) {
+    setdiff(class(x$model_spec), c("model_spec", "list"))[1] %||% class(x$model_spec)[1]
+  } else {
+    "<unknown>"
+  }
+
+  n_regions <- if (is.data.frame(x$performance_table)) nrow(x$performance_table) else 0L
+  perf_names <- if (is.data.frame(x$performance_table)) {
+    setdiff(names(x$performance_table), "roinum")
+  } else {
+    character(0)
+  }
+
+  cat("\n", header_style("Regional Analysis Results"), "\n\n")
+  cat(section_style("- Summary"), "\n")
+  cat(info_style("  - Model: "), value_style(model_class), "\n")
+  cat(info_style("  - Regions with Results: "), value_style(format(n_regions, big.mark = ",")), "\n")
+
+  if (length(perf_names) > 0) {
+    shown <- perf_names[seq_len(min(6L, length(perf_names)))]
+    suffix <- if (length(perf_names) > length(shown)) " ..." else ""
+    cat(info_style("  - Metrics: "), metric_style(paste0(paste(shown, collapse = ", "), suffix)), "\n")
+  }
+
+  if (is.data.frame(x$prediction_table) && nrow(x$prediction_table) > 0) {
+    cat(info_style("  - Prediction Rows: "), value_style(format(nrow(x$prediction_table), big.mark = ",")), "\n")
+  }
+
+  if (length(x$vol_results) > 0) {
+    map_names <- names(x$vol_results)
+    shown <- map_names[seq_len(min(6L, length(map_names)))]
+    suffix <- if (length(map_names) > length(shown)) " ..." else ""
+    cat(info_style("  - Output Maps: "), metric_style(paste0(paste(shown, collapse = ", "), suffix)), "\n")
+  }
+
+  if (!is.null(x$pooled_performance) && length(x$pooled_performance) > 0) {
+    cat(section_style("- Pooled Performance"), "\n")
+    for (nm in names(x$pooled_performance)) {
+      cat(info_style("  - "), metric_style(nm), info_style(": "),
+          value_style(format(signif(x$pooled_performance[[nm]], 4))), "\n", sep = "")
+    }
+  }
+
+  cat("\n")
+  invisible(x)
+}
+
 #' Prepare regional data for MVPA analysis
 #'
 #' This function processes the input data and prepares the regions for MVPA analysis by extracting

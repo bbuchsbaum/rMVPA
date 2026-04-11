@@ -553,17 +553,14 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="")
 #' @export
 #' @method print mvpa_dataset
 print.mvpa_dataset <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
-  
-  # Define color scheme
-  header_style <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style <- crayon::white
-  number_style <- crayon::green
-  dim_style <- crayon::italic$blue
+  use_style <- .use_crayon_styles()
+
+  header_style <- if (use_style) crayon::bold$cyan else identity
+  section_style <- if (use_style) crayon::yellow else identity
+  info_style <- if (use_style) crayon::white else identity
+  number_style <- if (use_style) crayon::green else identity
+  dim_style <- if (use_style) crayon::italic$blue else identity
+  none_style <- if (use_style) crayon::red else identity
   
   # Print header
   cat("\n", header_style("MVPA Dataset"), "\n\n")
@@ -579,7 +576,7 @@ print.mvpa_dataset <- function(x, ...) {
   # Test data section
   cat(section_style("- Test Data"), "\n")
   if (is.null(x$test_data)) {
-    cat(info_style("  - "), crayon::red("None"), "\n")
+    cat(info_style("  - "), none_style("None"), "\n")
   } else {
     dims <- dim(x$test_data)
     dim_str <- paste0(paste(dims[-length(dims)], collapse=" x "), 
@@ -602,14 +599,13 @@ print.mvpa_dataset <- function(x, ...) {
 #' @export
 #' @method print mvpa_multibasis_image_dataset
 print.mvpa_multibasis_image_dataset <- function(x, ...) {
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
+  use_style <- .use_crayon_styles()
 
-  header_style <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style <- crayon::white
-  number_style <- crayon::green
+  header_style <- if (use_style) crayon::bold$cyan else identity
+  section_style <- if (use_style) crayon::yellow else identity
+  info_style <- if (use_style) crayon::white else identity
+  number_style <- if (use_style) crayon::green else identity
+  none_style <- if (use_style) crayon::red else identity
 
   cat("\n", header_style("Multibasis MVPA Dataset"), "\n\n")
   cat(section_style("- Basis Functions"), "\n")
@@ -625,7 +621,7 @@ print.mvpa_multibasis_image_dataset <- function(x, ...) {
 
   cat(section_style("- Test Data"), "\n")
   if (is.null(x$test_data)) {
-    cat(info_style("  - "), crayon::red("None"), "\n")
+    cat(info_style("  - "), none_style("None"), "\n")
   } else {
     test_dims <- dim(x$test_data[[1]])
     cat(info_style("  - Event observations: "), number_style(test_dims[length(test_dims)]), "\n")
@@ -643,18 +639,15 @@ print.mvpa_multibasis_image_dataset <- function(x, ...) {
 #' @export
 #' @method print mvpa_surface_dataset
 print.mvpa_surface_dataset <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
-  
-  # Define color scheme
-  header_style <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style <- crayon::white
-  number_style <- crayon::green
-  dim_style <- crayon::italic$blue
-  name_style <- crayon::magenta
+  use_style <- .use_crayon_styles()
+
+  header_style <- if (use_style) crayon::bold$cyan else identity
+  section_style <- if (use_style) crayon::yellow else identity
+  info_style <- if (use_style) crayon::white else identity
+  number_style <- if (use_style) crayon::green else identity
+  dim_style <- if (use_style) crayon::italic$blue else identity
+  name_style <- if (use_style) crayon::magenta else identity
+  none_style <- if (use_style) crayon::red else identity
   
   # Print header
   cat("\n", header_style("Surface MVPA Dataset"), "\n\n")
@@ -675,7 +668,7 @@ print.mvpa_surface_dataset <- function(x, ...) {
   # Test data section
   cat(section_style("- Test Data"), "\n")
   if (is.null(x$test_data)) {
-    cat(info_style("  - "), crayon::red("None"), "\n")
+    cat(info_style("  - "), none_style("None"), "\n")
   } else {
     dims <- dim(x$test_data)
     cat(info_style("  - Observations: "), number_style(dims[length(dims)]), "\n")

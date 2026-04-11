@@ -284,17 +284,15 @@ mvpa_design <- function(train_design, test_design=NULL, y_train=NULL, y_test=NUL
 #' @export
 #' @method print rsa_design
 print.rsa_design <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
-  
-  # Define color scheme
-  header_style <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style <- crayon::white
-  formula_style <- crayon::italic$green
-  var_style <- crayon::blue
+  use_style <- .use_crayon_styles()
+
+  header_style <- if (use_style) crayon::bold$cyan else identity
+  section_style <- if (use_style) crayon::yellow else identity
+  info_style <- if (use_style) crayon::white else identity
+  formula_style <- if (use_style) crayon::italic$green else identity
+  var_style <- if (use_style) crayon::blue else identity
+  number_style <- if (use_style) crayon::green else identity
+  none_style <- if (use_style) crayon::red else identity
   
   # Print header
   cat("\n", header_style("RSA Design"), "\n\n")
@@ -312,11 +310,11 @@ print.rsa_design <- function(x, ...) {
   if (!is.null(x$block_var)) {
     blocks <- table(x$block_var)
     cat(info_style("  - Blocking: "), "Present\n")
-    cat(info_style("  - Number of Blocks: "), crayon::green(length(blocks)), "\n")
+    cat(info_style("  - Number of Blocks: "), number_style(length(blocks)), "\n")
     cat(info_style("  - Block Sizes: "), 
-        crayon::green(paste0(names(blocks), ": ", blocks, collapse=", ")), "\n")
+        number_style(paste0(names(blocks), ": ", blocks, collapse=", ")), "\n")
   } else {
-    cat(info_style("  - Blocking: "), crayon::red("None"), "\n")
+    cat(info_style("  - Blocking: "), none_style("None"), "\n")
   }
   cat("\n")
 }
@@ -324,18 +322,15 @@ print.rsa_design <- function(x, ...) {
 #' @export
 #' @method print mvpa_design
 print.mvpa_design <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty printing. Please install it.")
-  }
-  
-  # Define color scheme
-  header_style <- crayon::bold$cyan
-  section_style <- crayon::yellow
-  info_style <- crayon::white
-  number_style <- crayon::green
-  level_style <- crayon::blue
-  stat_style <- crayon::italic$white
+  use_style <- .use_crayon_styles()
+
+  header_style <- if (use_style) crayon::bold$cyan else identity
+  section_style <- if (use_style) crayon::yellow else identity
+  info_style <- if (use_style) crayon::white else identity
+  number_style <- if (use_style) crayon::green else identity
+  level_style <- if (use_style) crayon::blue else identity
+  stat_style <- if (use_style) crayon::italic$white else identity
+  none_style <- if (use_style) crayon::red else identity
   
   # Print header
   cat("\n", header_style("MVPA Design"), "\n\n")
@@ -369,7 +364,7 @@ print.mvpa_design <- function(x, ...) {
         number_style(sprintf("[%.2f, %.2f]", min(x$y_test), max(x$y_test))), "\n")
   }
   } else {
-    cat(info_style("  - "), crayon::red("None"), "\n")
+    cat(info_style("  - "), none_style("None"), "\n")
   }
   
   # Structure section
@@ -386,7 +381,7 @@ print.mvpa_design <- function(x, ...) {
         number_style(format(sd(blocks), digits=2)),
         stat_style(")"), "\n")
   } else {
-    cat(info_style("  - Blocking: "), crayon::red("None"), "\n")
+    cat(info_style("  - Blocking: "), none_style("None"), "\n")
   }
   
   # Split information
@@ -395,7 +390,7 @@ print.mvpa_design <- function(x, ...) {
     cat(info_style("  - Split Groups: "), 
         number_style(paste0(names(split_info), ": ", split_info, collapse=", ")), "\n")
   } else {
-    cat(info_style("  - Split Groups: "), crayon::red("None"), "\n")
+    cat(info_style("  - Split Groups: "), none_style("None"), "\n")
   }
   cat("\n")
 }

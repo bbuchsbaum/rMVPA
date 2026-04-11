@@ -238,22 +238,15 @@ count_active_voxels <- function(dataset, ids, perf_mat) {
 #' @export
 #' @method print searchlight_result
 print.searchlight_result <- function(x, ...) {
-  # Ensure crayon is available
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    # stop("Package 'crayon' is required for pretty printing. Please install it.")
-    # Fallback to basic print if crayon is not there, to avoid breaking R CMD check
-    has_crayon <- FALSE
-  } else {
-    has_crayon <- TRUE
-  }
+  use_style <- .use_crayon_styles()
   
   # Define color scheme
-  header_style <- if (has_crayon) crayon::bold$cyan else function(txt) txt
-  section_style <- if (has_crayon) crayon::yellow else function(txt) txt
-  info_style <- if (has_crayon) crayon::white else function(txt) txt
-  number_style <- if (has_crayon) crayon::green else function(txt) txt
-  metric_style <- if (has_crayon) crayon::magenta else function(txt) txt
-  type_style <- if (has_crayon) crayon::blue else function(txt) txt # For object types
+  header_style <- if (use_style) crayon::bold$cyan else identity
+  section_style <- if (use_style) crayon::yellow else identity
+  info_style <- if (use_style) crayon::white else identity
+  number_style <- if (use_style) crayon::green else identity
+  metric_style <- if (use_style) crayon::magenta else identity
+  type_style <- if (use_style) crayon::blue else identity # For object types
   
   # Print header
   cat("\n", header_style("Searchlight Analysis Results"), "\n\n")
