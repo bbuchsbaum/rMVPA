@@ -1,3 +1,15 @@
+cli_wrapper_path <- function(command) {
+  wrapper_name <- unname(c(
+    searchlight = "rmvpa-searchlight",
+    regional = "rmvpa-regional"
+  )[[command]])
+  path <- system.file("exec", wrapper_name, package = "rMVPA")
+  if (!nzchar(path)) {
+    stop("Could not locate packaged CLI wrapper for ", command, call. = FALSE)
+  }
+  normalizePath(path, mustWork = TRUE)
+}
+
 test_that("cli_finalize_config applies stable defaults and legacy aliases", {
   cfg <- structure(
     list(
@@ -48,7 +60,7 @@ test_that("install_cli copies packaged wrappers", {
   dest_dir <- tempfile("rmvpa-cli-bin-")
   dir.create(dest_dir)
 
-  paths <- install_cli(dest_dir = dest_dir, overwrite = TRUE)
+  paths <- rMVPA::install_cli(dest_dir = dest_dir, overwrite = TRUE)
 
   expect_setequal(names(paths), c("searchlight", "regional"))
   expect_true(all(file.exists(paths)))
@@ -79,11 +91,11 @@ test_that("cli parser accepts canonical and legacy option spellings", {
 })
 
 test_that("installed-style wrappers support help and version", {
-  wrappers <- c("rmvpa-searchlight", "rmvpa-regional")
+  wrappers <- c(searchlight = "searchlight", regional = "regional")
   rscript <- file.path(R.home("bin"), "Rscript")
 
-  for (wrapper_name in wrappers) {
-    wrapper <- normalizePath(file.path("..", "..", "exec", wrapper_name), mustWork = TRUE)
+  for (wrapper_name in names(wrappers)) {
+    wrapper <- cli_wrapper_path(wrappers[[wrapper_name]])
 
     help <- system2(rscript, c(wrapper, "--help"), stdout = TRUE, stderr = TRUE)
     help_status <- attr(help, "status")
@@ -186,7 +198,7 @@ test_that("installed-style regional wrapper supports dry-run workflow", {
   train_path <- tempfile(fileext = ".nii.gz")
   region_mask_path <- tempfile(fileext = ".nii.gz")
   design_path <- tempfile(fileext = ".tsv")
-  wrapper <- normalizePath(file.path("..", "..", "exec", "rmvpa-regional"), mustWork = TRUE)
+  wrapper <- cli_wrapper_path("regional")
   rscript <- file.path(R.home("bin"), "Rscript")
 
   region_mask <- neuroim2::NeuroVol(

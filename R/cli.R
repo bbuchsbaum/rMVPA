@@ -20,7 +20,10 @@ install_cli <- function(dest_dir = "~/.local/bin",
 
   exec_dir <- system.file("exec", package = "rMVPA")
   if (!nzchar(exec_dir) && requireNamespace("pkgload", quietly = TRUE)) {
-    exec_dir <- tryCatch(pkgload::inst_path("exec"), error = function(e) "")
+    exec_dir <- tryCatch({
+      candidate <- pkgload::pkg_path("exec")
+      if (dir.exists(candidate)) candidate else ""
+    }, error = function(e) "")
   }
   if (!nzchar(exec_dir)) {
     stop(
