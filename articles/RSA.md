@@ -1,0 +1,276 @@
+# Representational Similarity Analysis (RSA) in rMVPA
+
+## Introduction to Representational Similarity Analysis
+
+Representational Similarity Analysis (RSA) compares neural activity
+patterns with computational models by measuring pattern similarities,
+matching them against model predictions, and quantifying how well models
+explain the neural data. The `rMVPA` package implements this technique
+for neuroimaging analysis.
+
+## Basic concepts
+
+### Dissimilarity matrices
+
+A dissimilarity matrix represents pairwise differences between
+conditions or stimuli. Each cell (i, j) quantifies how different two
+conditions are, and the matrix can be derived from either neural data or
+theoretical models. Common measures include correlation distance (1 −
+correlation) and Euclidean distance.
+
+### RSA workflow in rMVPA
+
+In practice you (i) create an MVPA dataset, (ii) define one or more
+model dissimilarity matrices, (iii) build an RSA design, and (iv) fit
+and evaluate the RSA model.
+
+## Step-by-Step Example
+
+### 1. Creating Sample Data
+
+Let’s create a simple example dataset with known structure:
+
+``` r
+# Generate a sample dataset (20x20x8 volume, 80 observations, 4 blocks)
+dataset <- rMVPA::gen_sample_dataset(D=c(20,20,8), nobs = 80, blocks=4)
+```
+
+### 2. Creating Model Dissimilarity Matrices
+
+You can use different types of dissimilarity matrices:
+
+``` r
+# Method 1: Using dist() on feature vectors
+model_features <- matrix(rnorm(80*10), 80, 10)  # 80 trials, 10 features
+model_rdm <- dist(model_features)  # Default is Euclidean distance
+
+# Method 2: Direct correlation distance matrix
+model_matrix <- 1 - cor(t(model_features))  # Correlation distance
+```
+
+### 3. Creating an RSA Design
+
+The RSA design specifies how to compare neural and model dissimilarity
+patterns:
+
+``` r
+# Basic design with one model RDM
+basic_design <- rsa_design(
+  formula = ~ model_rdm,
+  data = list(model_rdm = model_rdm),
+  block_var = factor(dataset$design$block_var)
+)
+
+# Design with multiple model RDMs
+model_rdm2 <- dist(matrix(rnorm(80*10), 80, 10))
+complex_design <- rsa_design(
+  formula = ~ model_rdm + model_rdm2,
+  data = list(
+    model_rdm = model_rdm,
+    model_rdm2 = model_rdm2
+  ),
+  block_var = factor(dataset$design$block_var),
+  keep_intra_run = FALSE  # Exclude within-run comparisons
+)
+```
+
+### 4. Creating and Running an RSA Model
+
+The
+[`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+function supports different methods for computing neural dissimilarities
+and analyzing relationships:
+
+``` r
+# Create MVPA dataset
+dset <- mvpa_dataset(dataset$dataset$train_data, mask=dataset$dataset$mask)
+
+# Create RSA model with different options
+rsa_spearman <- rsa_model(
+  dataset = dset,
+  design = basic_design,
+  distmethod = "spearman",  # Method for computing neural dissimilarities
+  regtype = "spearman"      # Method for comparing neural and model RDMs
+)
+
+# Run searchlight analysis
+results <- run_searchlight(
+  rsa_spearman,
+  radius = 4,
+  method = "standard"
+)
+```
+
+## Advanced Features
+
+### Multiple Comparison Methods
+
+`rMVPA` supports several methods for comparing neural and model RDMs:
+
+``` r
+# Pearson correlation
+rsa_pearson <- rsa_model(dset, basic_design, 
+                        distmethod = "pearson", 
+                        regtype = "pearson")
+
+# Linear regression
+rsa_lm <- rsa_model(dset, basic_design, 
+                    distmethod = "spearman", 
+                    regtype = "lm")
+
+# Rank-based regression
+rsa_rfit <- rsa_model(dset, basic_design, 
+                      distmethod = "spearman", 
+                      regtype = "rfit")
+```
+
+### Handling Run Structure
+
+RSA can account for the run/block structure of fMRI data. A critical
+consideration in fMRI analysis is whether to include comparisons between
+patterns from the same run.
+
+#### Understanding keep_intra_run
+
+The `keep_intra_run = FALSE` parameter tells RSA to exclude comparisons
+between patterns within the same run/block. This is important because:
+
+1.  **Temporal Autocorrelation**: BOLD responses within the same run are
+    temporally autocorrelated
+2.  **Scanner Drift**: Within-run patterns may share scanner drift
+    effects
+3.  **Physiological Noise**: Within-run patterns may share structured
+    noise from breathing, heart rate, etc.
+
+Here’s a visualization of what `keep_intra_run = FALSE` does:
+
+``` r
+# Create a small example with 2 runs, 4 trials each
+mini_data <- matrix(1:8, ncol=1)  # Trial numbers 1-8
+run_labels <- c(1,1,1,1, 2,2,2,2)  # Two runs with 4 trials each
+
+# Create distance matrix
+d <- dist(mini_data)
+d_mat <- as.matrix(d)
+
+# Show which comparisons are kept (TRUE) or excluded (FALSE)
+comparison_matrix <- outer(run_labels, run_labels, "!=")
+# Only show lower triangle to match distance matrix structure
+comparison_matrix[upper.tri(comparison_matrix)] <- NA
+
+# Display the matrices
+cat("Trial numbers:\n")
+```
+
+    ## Trial numbers:
+
+``` r
+print(matrix(1:8, nrow=8, ncol=8)[lower.tri(matrix(1:8, 8, 8))])
+```
+
+    ##  [1] 2 3 4 5 6 7 8 3 4 5 6 7 8 4 5 6 7 8 5 6 7 8 6 7 8 7 8 8
+
+``` r
+cat("\nRun comparisons (TRUE = across-run, FALSE = within-run):\n")
+```
+
+    ## 
+    ## Run comparisons (TRUE = across-run, FALSE = within-run):
+
+``` r
+print(comparison_matrix[lower.tri(comparison_matrix)])
+```
+
+    ##  [1] FALSE FALSE FALSE  TRUE  TRUE  TRUE  TRUE FALSE FALSE  TRUE  TRUE  TRUE
+    ## [13]  TRUE FALSE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE FALSE FALSE
+    ## [25] FALSE FALSE FALSE FALSE
+
+When we create an RSA design with `keep_intra_run = FALSE`:
+
+``` r
+# Create design excluding within-run comparisons
+blocked_design <- rsa_design(
+  formula = ~ model_rdm,
+  data = list(model_rdm = model_rdm),
+  block_var = factor(dataset$design$block_var),
+  keep_intra_run = FALSE  # Exclude within-run comparisons
+)
+```
+
+This creates an RSA design that includes only between‑run comparisons,
+excludes within‑run pairs, and focuses the analysis on more reliable
+across‑run similarities.
+
+#### When to use keep_intra_run = FALSE
+
+Set `keep_intra_run = FALSE` when your design includes multiple runs and
+you want to control for temporal autocorrelation and run‑specific noise;
+this is the conservative choice for most confirmatory analyses. Keeping
+within‑run comparisons (`keep_intra_run = TRUE`, the default) can be
+reasonable in short‑run designs, when sample size is limited, or for
+exploratory work where maximizing comparisons is more important than
+strict control of temporal structure.
+
+### Visualizing Results
+
+You can examine and visualize the RSA results:
+
+``` r
+# Extract the searchlight map
+rsa_map <- results$results$model_rdm
+
+# Compute range of correlation values
+rsa_values <- neuroim2::values(rsa_map)
+range(rsa_values, na.rm = TRUE)
+```
+
+    ## [1] -0.05816891  0.05730699
+
+``` r
+# Basic summary of the searchlight result
+print(results)
+```
+
+    ## 
+    ##  Searchlight Analysis Results 
+    ## 
+    ## - Coverage 
+    ##   - Voxels/Vertices in Mask:  3,200 
+    ##   - Voxels/Vertices with Results:  3,200 
+    ## - Output Maps (Metrics) 
+    ##   -  model_rdm  (Type:  DenseNeuroVol )
+
+``` r
+# Save results (commented out)
+# neuroim2::write_vol(rsa_map, "RSA_results.nii.gz")
+```
+
+## Summary
+
+The rMVPA package provides a comprehensive RSA implementation with
+flexible model specification, multiple dissimilarity computation
+methods, and support for complex experimental designs with run/block
+structures. It integrates seamlessly with searchlight analysis and
+offers various statistical approaches including correlation, regression,
+and rank-based methods.
+
+When using RSA in rMVPA, carefully consider your experimental design
+when setting block variables and intra-run parameters, choose distance
+methods that match your theoretical framework, and select statistical
+approaches appropriate for your analysis goals.
+
+## Further reading
+
+- [`vignette("Advanced_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Advanced_RSA.md)
+  – Feature-Based and Vector-Based RSA methods
+- [`vignette("Contrast_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md)
+  – MS-ReVE: contrast-based decomposition of representational geometry
+- [`vignette("Temporal_Confounds_in_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md)
+  – controlling for temporal proximity confounds
+
+## References
+
+- Kriegeskorte et al. (2008). Representational similarity analysis -
+  connecting the branches of systems neuroscience. Front Syst Neurosci.
+- Nili et al. (2014). A toolbox for representational similarity
+  analysis. PLoS Comput Biol.

@@ -1,0 +1,199 @@
+# REMAP‑RRR — Domain‑Adaptive Cross‑Decoding
+
+## Motivation
+
+Classic cross‑decoding trains on patterns from one context (e.g.,
+perception) and tests on another (e.g., memory). The two domains rarely
+match exactly: recall patterns can be systematically shifted relative to
+perception. REMAP‑RRR now models memory as “perception + low‑rank
+correction” in a jointly whitened space:
+
+Y_w ≈ X_w + λ X_w Δ, with rank(Δ) ≪ p.
+
+Key points - Joint shrinkage whitening of perception and memory
+prototypes (stable in small‑n, large‑p). - Residual reduced‑rank
+regression (RRR) learns Δ on R_w = Y_w − X_w. - Automatic λ selection on
+training items shrinks toward the naïve cross‑decoder when data are
+weak. - Optional leave‑one‑key‑out (LOKO) so each item’s adaptor
+diagnostics (e.g., R², improvement over naïve) are estimated in an
+item‑wise cross‑validated fashion. - Correlation classification against
+predicted templates in the whitened space.
+
+> **LOKO vs single‑fit**  
+> LOKO (`leave_one_key_out = TRUE`) is primarily about unbiased adaptor
+> **diagnostics** at the item level. Test‑set classification metrics
+> (accuracy/AUC on the external test set) are always computed on trials
+> that were not used to fit the adaptor, regardless of the LOKO setting.
+> For large searchlight runs where adaptor diagnostics are secondary and
+> speed is critical, it is often reasonable to set
+> `leave_one_key_out = FALSE` and use a fixed rank, trading slightly
+> more optimistic adaptor diagnostics for much faster single‑fit
+> adapters per ROI.
+
+> **Note**: For a complete introduction to naive cross-decoding (the
+> baseline method), see
+> [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md).
+> That vignette explains the algorithm, use cases, and when domain
+> adaptation is needed.
+
+## Minimal example (regional)
+
+We simulate a dataset with an external test set (perception→memory) and
+run both a naive cross‑decoding baseline and REMAP‑RRR over a small ROI
+mask.
+
+``` r
+set.seed(1)
+toy <- gen_sample_dataset(D = c(6,6,6), nobs = 120, nlevels = 4, blocks = 3, external_test = TRUE)
+
+# Simple region mask: three ROIs with random voxel assignments
+regionMask <- NeuroVol(sample(1:3, size = length(toy$dataset$mask), replace = TRUE),
+                       space(toy$dataset$mask))
+
+# 1) Naive baseline: correlate target trials vs. source prototypes
+ms_naive <- naive_xdec_model(toy$dataset, toy$design, link_by = NULL)
+res_naive <- run_regional(ms_naive, regionMask)
+
+# 2) REMAP‑RRR: domain‑adaptive mapping into target space
+ms_remap <- remap_rrr_model(
+  dataset  = toy$dataset,
+  design   = toy$design,
+  link_by  = NULL,       # pair by class labels; provide an item ID column if available
+  rank     = "auto",     # requires rrpack; set 0 for identity (no adapter)
+  max_rank = 6,
+  leave_one_key_out = TRUE,
+  min_pairs = 5
+)
+res_remap <- run_regional(ms_remap, regionMask)
+
+cat("Naive regional metrics (first rows):\n"); peek(res_naive$performance_table)
+cat("\nREMAP regional metrics (first rows):\n"); peek(res_remap$performance_table)
+```
+
+Notes - If `rrpack` is not installed, set `rank = 0` (identity adapter)
+to recover naïve cross‑decoding. - Provide `link_by` if you have
+per‑item pairing (e.g., `"ImageID"` in both train and test design
+tables). When `NULL`, pairing falls back to class means.
+
+## Interpreting outputs and new diagnostics
+
+The regional result includes a per‑ROI `performance_table` with the
+usual MVPA metrics and new REMAP diagnostics:
+
+- Standard metrics (classification): `Accuracy`, `AUC` (centered by
+  −0.5).
+- REMAP diagnostics (added):
+  - `remap_improv`: fraction of perception→memory mismatch explained vs
+    naïve (0=no gain, 1=perfect).
+  - `lambda_mean`: average λ selected on training items (shrink toward
+    naïve).
+  - `delta_frob_mean`: Frobenius norm of λ·Δ (size of the learned
+    correction).
+  - `adapter_rank`, `adapter_sv1`, `adapter_mean_r2` remain for
+    completeness.
+
+When `return_adapter = TRUE` (default), each ROI row also carries a rich
+`predictor` object inside the `classification_result` containing
+diagnostic vectors. The easiest way to inspect it is to call
+[`process_roi()`](http://bbuchsbaum.github.io/rMVPA/reference/process_roi-methods.md)
+on a single ROI and examine the `result$predictor` field.
+
+``` r
+# Inspect diagnostics for a single ROI
+vox <- which(toy$dataset$mask > 0)[1:40]
+one_roi <- extract_roi(vox, toy$dataset)
+one_row <- process_roi(ms_remap, one_roi, rnum = 1)
+pred <- one_row$result[[1]]$predictor
+str(pred, max.level = 1)
+```
+
+Key fields - `r2_per_voxel`: predictability of target prototypes from
+source (per voxel). - `resid_by_item`: LOKO residual (MSE) for each
+held‑out key. - `rank_by_item`, `sv1_by_item`: RRR rank and leading
+singular per held‑out key. - `keys_scored`, `skipped_keys`: transparency
+for LOKO fits. - `sv_spectra_by_item`: full singular spectra (optional;
+enable with `save_fold_singulars = TRUE`).
+
+## Summaries: ROI‑ and item‑level helpers
+
+Two convenience helpers make it easy to quantify “how transformed is
+memory?” and “which items are closer/farther from perception?”
+
+``` r
+# ROI‑level summary (works from performance_table; no fits required)
+roi_tab <- summarize_remap_roi(res_remap)
+head(roi_tab)
+
+# Item‑level summary for a specific ROI (needs return_fits = TRUE)
+res_fit <- run_regional(ms_remap, regionMask, return_fits = TRUE)
+items_r1 <- summarize_remap_items(res_fit, roi = roi_tab$roinum[1])
+head(items_r1)
+```
+
+Interpretation - `mean_roi_improv`: higher means the adapter explains
+more of the P→M mismatch. - `mean_delta_frob`: larger means a stronger
+correction; near 0 indicates “memory ≈ perception”. - `res_ratio`
+(item‑level): \< 1 means REMAP brings memory closer to perception for
+that item.
+
+## Writing maps: visualize REMAP diagnostics
+
+The ROI metrics in `performance_table` are also available as volumetric
+maps in `res_remap$vol_results`. You can write them with
+[`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md):
+
+``` r
+maps_to_write <- res_remap$vol_results[c("remap_improv", "delta_frob_mean", "lambda_mean")]
+save_results(maps_to_write, dir = "remap_maps", level = "minimal")
+```
+
+## Parameter guide
+
+- `link_by` (character or NULL)
+  - Pairing key present in both designs. Use item IDs when you want
+    exemplar‑level pairing.
+- `rank` (integer or “auto”)
+  - Mapping rank. `"auto"` uses
+    [`rrpack::cv.rrr`](https://rdrr.io/pkg/rrpack/man/cv.rrr.html); a
+    small fixed rank is faster.
+  - Use `0` to disable adaptation (identity mapping).
+- `min_pairs` (default 5)
+  - Soft warning when fewer than `min_pairs` paired items; hard error
+    when \< 2.
+- `leave_one_key_out` (default TRUE)
+  - Enables strict per‑item adapter CV to avoid leakage; recommended
+    when target trials are sparse.
+- `save_fold_singulars` (default FALSE)
+  - Store full per‑fold singular spectra (for a few ROIs of interest).
+    Off by default to keep memory light in searchlights.
+- `base_classifier` (default “corclass”)
+  - Any registry classifier works; `corclass` is fast and robust in
+    small‑n, large‑p.
+
+## Searchlight usage
+
+The same spec works in a searchlight. For brevity we show the call;
+running it on large volumes may be time‑consuming. Use a small radius
+and/or fixed rank for quick checks.
+
+``` r
+sl_res <- run_searchlight(ms_remap, radius = 6, method = "randomized", niter = 2)
+sl_res
+# Maps include standard metrics and adapter_* summaries. Use names(sl_res$results).
+```
+
+## Troubleshooting
+
+- “Need at least 2 paired items”: the adapter requires ≥ 2 paired keys.
+  Reduce `min_pairs` only if you understand the stability trade‑off.
+- Warnings like “only N paired items (\<min_pairs)” are informational.
+  Consider fixed small `rank` or `rank = 0` for a baseline in very small
+  ROIs.
+- LOKO skipped keys are reported; check `skipped_keys` and consider
+  pooling more items per class or using non‑LOKO when appropriate.
+
+## References
+
+- Reduced‑rank regression (RRR): implemented via the `rrpack` package.
+- Shrinkage covariance/whitening:
+  [`corpcor::cov.shrink`](https://rdrr.io/pkg/corpcor/man/cov.shrink.html).

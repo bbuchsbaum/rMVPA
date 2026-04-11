@@ -1,0 +1,198 @@
+# REMAP-RRR: Residual low-rank, domain-adaptive cross-decoding
+
+Domain-adaptive cross-decoding that models memory as "perception +
+low-rank correction" in a jointly whitened space. Given paired
+item/class prototypes from a source domain (e.g., perception) and a
+target domain (e.g., memory), REMAP learns a reduced-rank residual map
+\\\Delta\\ by regressing the residuals \\R_w = Y_w - X_w\\ on the
+whitened source prototypes \\X_w\\. Predicted target templates are then
+\$\$\hat Y_w = X_w + \lambda X_w \Delta,\$\$ where \\\lambda \in
+\[0,1\]\\ is chosen on the training items (prototype self-retrieval).
+Classification of held-out target trials is performed by correlating
+their whitened patterns with \\\hat Y_w\\. When the data do not support
+a reliable residual, the method automatically shrinks to the naive
+cross-decoder (\\\lambda = 0\\).
+
+## Usage
+
+``` r
+remap_rrr_model(
+  dataset,
+  design,
+  base_classifier = "corclass",
+  link_by = NULL,
+  center = TRUE,
+  shrink_whiten = TRUE,
+  rank = "auto",
+  max_rank = 20,
+  ridge_rrr_lambda = NULL,
+  leave_one_key_out = FALSE,
+  min_pairs = 5,
+  save_fold_singulars = FALSE,
+  return_adapter = FALSE,
+  lambda_grid = c(0, 0.25, 0.5, 0.75, 1),
+  compute_naive_baseline = FALSE,
+  ...
+)
+```
+
+## Arguments
+
+- dataset:
+
+  mvpa_dataset with \`train_data\`, optional \`test_data\`, and
+  \`mask\`.
+
+- design:
+
+  mvpa_design with \`y_train\`, optional \`y_test\`, and design tables.
+
+- base_classifier:
+
+  Name in the rMVPA model registry (kept for compatibility; ignored by
+  REMAP which uses correlation to templates internally).
+
+- link_by:
+
+  Optional column present in both \`train_design\` and \`test_design\`
+  used to pair source and target trials (e.g., "ImageID"). If \`NULL\`,
+  pairs by class labels (\`y\`).
+
+- center:
+
+  logical; center prototypes before whitening (default TRUE).
+
+- shrink_whiten:
+
+  logical; use \`corpcor::cov.shrink\` for joint whitening (default
+  TRUE).
+
+- rank:
+
+  "auto" for \`rrpack::cv.rrr\` rank selection, integer for fixed rank,
+  or \`0\` for identity/no adaptation fallback.
+
+- max_rank:
+
+  Upper bound on rank search (default 20).
+
+- ridge_rrr_lambda:
+
+  Optional numeric lambda for \`rrpack::rrs.fit\` (ridge RRR) on the
+  residuals.
+
+- leave_one_key_out:
+
+  logical; if TRUE, use leave-one-key-out (LOKO) over items for adaptor
+  learning (default TRUE).
+
+- min_pairs:
+
+  Minimum number of paired prototypes required for adaptor fitting
+  (default 5).
+
+- save_fold_singulars:
+
+  logical; if TRUE, save singular values from each fold's adaptor
+  (default FALSE).
+
+- return_adapter:
+
+  logical; if TRUE, store diagnostics (e.g., per-voxel R2, per-fold
+  stats) in \`result\$predictor\`.
+
+- lambda_grid:
+
+  Numeric vector of candidate \\\lambda\\ values for shrinkage toward
+  naive; defaults to \`c(0, .25, .5, .75, 1)\`.
+
+- compute_naive_baseline:
+
+  logical; if TRUE, also compute performance with \\\lambda = 0\\ (no
+  adaptor) to provide baseline metrics (default FALSE).
+
+- ...:
+
+  Additional arguments passed to \`create_model_spec\`.
+
+## Value
+
+A model spec of class \`remap_rrr_model\` compatible with
+\`run_regional()\` / \`run_searchlight()\`.
+
+## Performance metrics (added to base metrics)
+
+- Base metrics: whatever \`compute_performance()\` returns for the
+  response type (e.g., accuracy/AUC for classification or regression
+  metrics).
+
+- Naive baseline metrics (if \`compute_naive_baseline = TRUE\`): base
+  metrics recomputed with \\\lambda = 0\\ (no adaptor), prefixed
+  \`naive\_\` (e.g., \`naive_Accuracy\`, \`naive_AUC\`).
+
+- \`adapter_rank\`: Mean adaptor rank used (LOKO folds or single fit).
+
+- \`adapter_sv1\`: Mean leading singular value of the adaptor across
+  folds.
+
+- \`adapter_mean_r2\`: Mean per-voxel cross-validated R\\^2\\ (LOKO
+  only).
+
+- \`remap_improv\`: Mean relative reduction in residual sum of squares
+  vs. naive (`Y_w - X_w`).
+
+- \`delta_frob_mean\`: Mean Frobenius norm of \\\lambda \Delta\\
+  (magnitude of the learned correction).
+
+- \`lambda_mean\`: Mean selected \\\lambda\\ across folds or the single
+  fit.
+
+- \`n_pairs_used\`: Number of paired prototypes used.
+
+- \`n_skipped_keys\`: Keys skipped during LOKO due to insufficient pairs
+  or fit issues.
+
+If \`return_adapter = TRUE\`, the result also includes ROI-level
+diagnostics (e.g., per-voxel R\\^2\\, per-item residuals, ranks,
+singular spectra) in \`result\$predictor\`.
+
+## Key ideas
+
+- Joint whitening (shared covariance) puts perception and memory in the
+  same coordinates.
+
+- Residual RRR learns a low-rank correction \\\Delta\\ on \\R_w = Y_w -
+  X_w\\.
+
+- Automatic shrinkage to naive via \\\lambda\\ selection on training
+  items.
+
+- Prediction/classification by correlation to \\\hat Y_w\\ in the
+  whitened space.
+
+- Fallback to naive cross-decoding when \`rank = 0\` or \`rrpack\` is
+  unavailable.
+
+## LOKO vs. single-fit adapters
+
+When \`leave_one_key_out = TRUE\`, REMAP performs a leave-one-key-out
+(LOKO) loop over items to estimate adaptor diagnostics (e.g. per-voxel
+R2 and improvement over naive) in an item-wise cross-validated fashion.
+This is computationally heavy but yields less optimistic adaptor-level
+summaries. Test-set classification performance (accuracy/AUC on
+\`dataset\$test_data\`) is always evaluated on trials that were not used
+to fit the adaptor, so standard train-\>test performance remains
+out-of-sample regardless of the LOKO setting. For large searchlight
+analyses where adaptor diagnostics are secondary, it is often practical
+to set \`leave_one_key_out = FALSE\` and use a fixed rank to obtain much
+faster single-fit adapters per ROI.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+  # Requires dataset with paired train/test data
+  ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
+  model <- remap_rrr_model(ds$dataset, ds$design, rank=5)
+} # }
+```

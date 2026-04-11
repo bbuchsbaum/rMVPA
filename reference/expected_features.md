@@ -1,0 +1,79 @@
+# Build expected-domain features from a soft alignment matrix
+
+Given encoding-domain predictors and a recall-\>encoding alignment
+posterior, compute expected recall-domain predictors: \$\$X\_{rec} =
+\Gamma X\_{enc}.\$\$
+
+## Usage
+
+``` r
+expected_features(
+  train,
+  gamma,
+  drop_null = TRUE,
+  renormalize = FALSE,
+  eps = 1e-12
+)
+```
+
+## Arguments
+
+- train:
+
+  feature_sets object for encoding-domain predictors.
+
+- gamma:
+
+  Numeric matrix of shape (T_rec x T_enc) or (T_rec x (T_enc+1)) if null
+  column present.
+
+- drop_null:
+
+  Logical; if TRUE and gamma has T_enc+1 columns, drop the first column.
+
+- renormalize:
+
+  Logical; if TRUE, renormalize rows to sum to 1 after dropping null.
+
+- eps:
+
+  Small constant to avoid division by zero in renormalization.
+
+## Value
+
+A feature_sets object for recall-domain predictors with the same set
+layout.
+
+## Details
+
+This is the core "soft label" trick for bringing recall into regression
+when recall TRs do not have a known one-to-one correspondence with
+encoding TRs.
+
+**Gamma shapes.** \`gamma\` should be a numeric matrix where rows index
+recall TRs and columns index encoding TRs:
+
+- without a NULL state: `(T_rec x T_enc)`
+
+- with a NULL state in the first column: `(T_rec x (T_enc+1))`
+
+When a NULL column is present and \`drop_null = TRUE\`, the NULL column
+is dropped. If \`renormalize = FALSE\` (default), the remaining row mass
+is stored as `row_weights` (so uncertain TRs with high NULL probability
+can be down-weighted by downstream models). If \`renormalize = TRUE\`,
+rows are renormalized to sum to 1 and \`row_weights\` is set to 1.
+
+## See also
+
+[`feature_sets`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets.md),
+[`feature_sets_design`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md)
+
+## Examples
+
+``` r
+X <- matrix(rnorm(10 * 5), 10, 5)
+fs_enc <- feature_sets(X, blocks(a = 2, b = 3))
+gamma <- matrix(runif(6 * 10), 6, 10)
+gamma <- gamma / rowSums(gamma)
+fs_rec <- expected_features(fs_enc, gamma, drop_null = FALSE, renormalize = TRUE)
+```

@@ -10,13 +10,14 @@
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Feature Selection in rMVPA">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<script src="../extra.js"></script><meta property="og:title" content="Feature Selection in rMVPA">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -29,13 +30,16 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/rMVPA.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/bbuchsbaum/rMVPA/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -53,9 +57,9 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-09-28</h4>
+            <h4 data-toc-skip class="date">2026-04-11</h4>
       
-
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/FeatureSelection.Rmd" class="external-link"><code>vignettes/FeatureSelection.Rmd</code></a></small>
       <div class="d-none name"><code>FeatureSelection.Rmd</code></div>
     </div>
 
@@ -64,6 +68,12 @@ Buchsbaum</h4>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
+<p>Your searchlight has 200 voxels but only 40 trials – far more
+features than observations. Without feature selection, classifiers may
+overfit to noise, producing inflated accuracy inside the training set
+that fails to generalize. Feature selection identifies the most
+discriminative voxels <em>within each cross-validation fold</em>,
+keeping only those that carry genuine signal.</p>
 <p>Neuroimaging datasets often contain far more features than
 informative signal. Feature selection reduces dimensionality, improves
 interpretability, and can boost predictive performance—provided it is
@@ -83,19 +93,19 @@ to rank features, together with simple cutoffs: keep the top
 feature selector using the FTest method with a top_k cutoff (selecting
 the top 10 features):</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">suppressPackageStartupMessages</a></span><span class="op">(</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://bbuchsbaum.github.io/rMVPA/">rMVPA</a></span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">suppressPackageStartupMessages</a></span><span class="op">(</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/rMVPA" class="external-link">rMVPA</a></span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># Create a feature selector using FTest with top_k cutoff (select top 10 features)</span></span>
 <span><span class="va">fsel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_selector.html">feature_selector</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"FTest"</span>, cutoff_type <span class="op">=</span> <span class="st">"top_k"</span>, cutoff_value <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
-<span><span class="va">fsel</span></span></code></pre></div>
-<pre><code><span><span class="co">## Feature Selector Object\n-----------------------\nMethod:         FTest \nCutoff Type:    top_k \nCutoff Value:   10 \n</span></span></code></pre>
+<span><span class="va">fsel</span></span>
+<span><span class="co">#&gt; Feature Selector Object\n-----------------------\nMethod:         FTest \nCutoff Type:    top_k \nCutoff Value:   10 \n</span></span></code></pre></div>
 <p>Similarly, you can create a feature selector that selects a
 proportion of features using the top_p option. In the example below, we
 select the top 10% of features based on the FTest ranking:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a feature selector using FTest with top_p cutoff (select top 10% of features)</span></span>
 <span><span class="va">fsel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_selector.html">feature_selector</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"FTest"</span>, cutoff_type <span class="op">=</span> <span class="st">"top_p"</span>, cutoff_value <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span></span>
-<span><span class="va">fsel</span></span></code></pre></div>
-<pre><code><span><span class="co">## Feature Selector Object\n-----------------------\nMethod:         FTest \nCutoff Type:    top_p \nCutoff Value:   0.1 \n</span></span></code></pre>
+<span><span class="va">fsel</span></span>
+<span><span class="co">#&gt; Feature Selector Object\n-----------------------\nMethod:         FTest \nCutoff Type:    top_p \nCutoff Value:   0.1 \n</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="applying-feature-selection-to-data">Applying Feature Selection to Data<a class="anchor" aria-label="anchor" href="#applying-feature-selection-to-data"></a>
@@ -106,7 +116,7 @@ response variable <code>Y</code>. The function returns a logical vector
 with <code>TRUE</code> for selected features and <code>FALSE</code>
 otherwise.</p>
 <p>Below is an example using simulated data:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simulate a response variable (categorical)</span></span>
 <span><span class="va">Y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span>, each <span class="op">=</span> <span class="fl">25</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -118,20 +128,20 @@ otherwise.</p>
 <span><span class="va">selected_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_features-methods.html">select_features</a></span><span class="op">(</span><span class="va">fsel</span>, <span class="va">X</span>, <span class="va">Y</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># The number of selected features should be equal to the cutoff value (10)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Number of selected features (top_k):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">selected_features</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Number of selected features (top_k): 10</span></span></code></pre>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Number of selected features (top_k):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">selected_features</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Number of selected features (top_k): 10</span></span></code></pre></div>
 <p>Now, let’s use the top_p option. This will select a proportion of the
 features. For example, with a cutoff value of 0.1, the top 10% of
 features will be selected:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Apply feature selection using the FTest method with top_p cutoff (select top 10% of features)</span></span>
 <span><span class="va">fsel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_selector.html">feature_selector</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"FTest"</span>, cutoff_type <span class="op">=</span> <span class="st">"top_p"</span>, cutoff_value <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span></span>
 <span><span class="va">selected_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_features-methods.html">select_features</a></span><span class="op">(</span><span class="va">fsel</span>, <span class="va">X</span>, <span class="va">Y</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Calculate the proportion of features selected</span></span>
 <span><span class="va">the_proportion</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">selected_features</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Proportion of features selected (top_p):"</span>, <span class="va">the_proportion</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Proportion of features selected (top_p): 0.1</span></span></code></pre>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Proportion of features selected (top_p):"</span>, <span class="va">the_proportion</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Proportion of features selected (top_p): 0.1</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="using-the-catscore-method">Using the catscore Method<a class="anchor" aria-label="anchor" href="#using-the-catscore-method"></a>
@@ -139,7 +149,7 @@ features will be selected:</p>
 <p>Alternatively, you can use the <code>catscore</code> method to
 perform feature selection. The <code>catscore</code> method computes a
 correlation-adjusted t-score for each feature. Here’s an example:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a feature selector using catscore with top_k cutoff (select top 10 features)</span></span>
 <span><span class="va">fsel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_selector.html">feature_selector</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"catscore"</span>, cutoff_type <span class="op">=</span> <span class="st">"top_k"</span>, cutoff_value <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
 <span></span>
@@ -150,8 +160,8 @@ correlation-adjusted t-score for each feature. Here’s an example:</p>
 <span><span class="co"># Apply feature selection using catscore</span></span>
 <span><span class="va">selected_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/select_features-methods.html">select_features</a></span><span class="op">(</span><span class="va">fsel</span>, <span class="va">X</span>, <span class="va">Y</span>, ranking.score <span class="op">=</span> <span class="st">"entropy"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Number of features selected using catscore (top_k):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">selected_features</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Number of features selected using catscore (top_k): 10</span></span></code></pre>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Number of features selected using catscore (top_k):"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">selected_features</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Number of features selected using catscore (top_k): 10</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
@@ -175,7 +185,7 @@ on your specific analysis needs.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

@@ -1,0 +1,419 @@
+# Command-Line MVPA Interfaces
+
+## Introduction
+
+`rMVPA` ships two native command-line interfaces:
+
+- `rmvpa-searchlight` for voxelwise or surface-neighbourhood analyses
+- `rmvpa-regional` for ROI/parcellation-based analyses
+
+Both commands resolve into the same workflow API used inside R. They
+share the same core flags for data input, subsetting, model selection,
+cross-validation, parallel execution, output handling, and configuration
+files. CLI flags always override values loaded from YAML or R config
+files. The CLI prefers kebab-case flags such as `--train-design`; legacy
+underscore spellings are still accepted for compatibility.
+
+## Install the CLI
+
+Install the package:
+
+``` r
+pak::pak("bbuchsbaum/rMVPA")
+```
+
+Then copy the packaged wrappers into a directory on your `PATH`:
+
+``` r
+rMVPA::install_cli("~/.local/bin", overwrite = TRUE)
+```
+
+If needed, add that directory to `PATH`:
+
+``` bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Confirm that the wrappers are available:
+
+``` bash
+rmvpa-searchlight --help
+rmvpa-regional --help
+rmvpa-searchlight --version
+```
+
+If you are working from a source checkout, compatibility shims remain
+available:
+
+``` bash
+Rscript scripts/MVPA_Searchlight.R --help
+Rscript scripts/MVPA_Regional.R --help
+```
+
+Treat the packaged commands above as the supported public interface. The
+source checkout shims are mainly useful while developing inside the
+repository.
+
+### Migrating from legacy scripts
+
+If you used the older repository-local entry points, switch to the
+packaged wrappers as follows:
+
+``` text
+Rscript scripts/MVPA_Searchlight.R  ->  rmvpa-searchlight
+Rscript scripts/MVPA_Regional.R     ->  rmvpa-regional
+```
+
+The wrapper commands call the same workflow API, but they are the
+supported interface for installed-package use, documentation, and
+long-term CLI compatibility.
+
+## Discover the Interface from the Terminal
+
+The new CLI is designed so you can discover most behaviour without
+leaving the shell:
+
+``` bash
+rmvpa-searchlight --help
+rmvpa-searchlight --list-models
+rmvpa-searchlight --example-config
+rmvpa-searchlight --config analysis.yaml --dry-run
+
+rmvpa-regional --help
+rmvpa-regional --list-models
+rmvpa-regional --example-config
+```
+
+- `--help` shows shared and command-specific options with examples.
+- `--list-models` prints the built-in model registry. Common choices
+  include `corclass` (alias `corsim`), `sda_notune`, `glmnet_opt`, and
+  `hdrda`.
+- `--example-config` prints a minimal YAML config for the selected
+  command.
+- `--dry-run` validates paths, resolves defaults, builds the analysis
+  object, and exits before any computation. For searchlight analyses it
+  also reports engine eligibility.
+- `--version` prints the installed `rMVPA` version.
+
+You can also register custom models in R via
+[`register_mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/register_mvpa_model.md)
+and then invoke them from the CLI by name. Domain-adaptive
+cross-decoding is available via `--model remap_rrr`.
+
+## Shared Workflow
+
+### Required inputs
+
+Both commands require:
+
+- `--train-design`
+- `--train-data`
+- `--mask`
+
+Optional held-out evaluation uses `--test-design` and `--test-data`;
+supply them together. For surface analyses, `--train-data`,
+`--test-data`, and `--mask` can each take comma-separated file lists,
+one entry per surface section or hemisphere.
+
+### Design tables
+
+Design files are tab- or space-delimited tables with one row per trial.
+Use `--label-column` to name the target column. For evaluation against a
+held-out design with a different target field, use
+`--test-label-column`.
+
+    trial  condition  subject  session  run
+    1      Face       S01      1        1
+    2      House      S01      1        1
+    3      Face       S01      1        2
+    4      House      S01      1        2
+
+Pass `--model-type=regression` when the label column is numeric.
+
+Use `--block-column=session` (or `run`) to keep cross-validation splits
+aligned with acquisition structure. `--train-subset` and `--test-subset`
+accept R expressions evaluated against the design tables before data
+loading, and `--split-by` requests grouped summaries in the output
+tables.
+
+### Config files and precedence
+
+You can put most settings in YAML or an R config file and override
+specific values at the command line:
+
+``` bash
+rmvpa-searchlight \
+  --config searchlight.yaml \
+  --workers 8 \
+  --output sl_run_01 \
+  --dry-run
+```
+
+CLI flags override config values for that invocation only. The CLI uses
+kebab-case flag names, while config files continue to use the underlying
+config fields such as `pthreads`, `normalize_samples`, `class_metrics`,
+`type`, `niter`, `return_fits`, and `pool_predictions`.
+
+### Safe execution and reruns
+
+The new runtime refuses to write into an existing non-empty output
+directory unless you opt in explicitly:
+
+``` bash
+rmvpa-searchlight --config searchlight.yaml --output results
+rmvpa-searchlight --config searchlight.yaml --output results --overwrite
+rmvpa-searchlight --config searchlight.yaml --output results --skip-if-exists
+```
+
+This makes batch jobs and reruns much safer:
+
+- `--overwrite` allows an existing non-empty output directory
+- `--skip-if-exists` exits successfully without recomputing
+- `--dry-run` validates inputs and prints the resolved configuration
+- `--print-config` prints the final configuration before execution
+- `--preflight=warn|error|off` controls analysis preflight handling
+- `--save-level=minimal|standard|complete` controls how much is written
+  to disk
+
+At the default `standard` save level,
+[`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md)
+writes the main outputs plus a manifest. `complete` also writes summary
+tables and auxiliary objects.
+
+### Parallelism, logging, and reproducibility
+
+`--workers` now configures a temporary `future` plan for the current
+process instead of being treated as a passive config field. Use
+`--future-plan=auto|sequential|multisession|multicore` to control
+strategy explicitly. `--verbose` enables runner logs, `--seed` sets the
+RNG seed before the analysis is built, and `--backend` remains available
+for advanced backend selection when you need to override the command
+default.
+
+### Feature selection and advanced cross-validation
+
+Feature selection and more specialized cross-validation schemes are
+still best expressed in the config file:
+
+``` yaml
+feature_selector:
+  method: anova
+  cutoff_type: percentile
+  cutoff_value: 0.1
+
+cross_validation:
+  name: bootstrap
+  nreps: 10
+```
+
+See
+[`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+and
+[`vignette("CrossValidation")`](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
+for the full option surface.
+
+## Searchlight Analysis (`rmvpa-searchlight`)
+
+### Basic usage
+
+``` bash
+rmvpa-searchlight \
+  --train-design train_design.tsv \
+  --train-data train_betas.nii.gz \
+  --mask brain_mask.nii.gz \
+  --label-column condition \
+  --block-column run \
+  --model sda_notune \
+  --radius 6 \
+  --workers 4 \
+  --output searchlight_results
+```
+
+### Searchlight-specific controls
+
+`rmvpa-searchlight` adds the flags that shape the local neighbourhood
+analysis:
+
+- `--radius` sets the searchlight radius in millimetres
+- `--searchlight-type=standard|randomized|resampled` chooses the
+  neighbourhood strategy
+- `--iterations` sets the number of passes for randomized or resampled
+  searchlights
+- `--engine=auto|legacy|swift|dual_lda_fast` selects the searchlight
+  engine
+- `--batch-size` controls how many searchlights are processed per batch
+
+For fast validation while tuning the engine or neighbourhood mode, use:
+
+``` bash
+rmvpa-searchlight \
+  --config searchlight.yaml \
+  --searchlight-type randomized \
+  --iterations 16 \
+  --dry-run
+```
+
+### Example YAML config
+
+``` yaml
+train_design: train_design.tsv
+train_data: train_betas.nii.gz
+mask: brain_mask.nii.gz
+label_column: condition
+block_column: run
+model: sda_notune
+model_type: classification
+data_mode: image
+pthreads: 4
+radius: 6
+type: standard
+niter: 4
+backend: auto
+normalize_samples: true
+class_metrics: true
+output: searchlight_results
+```
+
+In config files, `type` and `niter` are the underlying fields that
+correspond to the CLI flags `--searchlight-type` and `--iterations`.
+
+### Typical outputs
+
+A searchlight run usually writes metric maps such as `accuracy.nii.gz`,
+`auc.nii.gz`, and, when available, `prob_observed.nii.gz` and
+`prob_predicted.nii.gz`. If `class_metrics: true`, per-class maps such
+as `auc_class1.nii.gz` are also written. At `standard` or `complete`
+save levels, the output directory also includes a manifest describing
+the run; `complete` adds auxiliary objects under `aux/`.
+
+For regression analyses, expect metrics such as `r2.nii.gz`,
+`rmse.nii.gz`, and `spearcor.nii.gz`.
+
+## Regional Analysis (`rmvpa-regional`)
+
+### Basic usage
+
+``` bash
+rmvpa-regional \
+  --train-design train_design.tsv \
+  --train-data train_betas.nii.gz \
+  --mask roi_labels.nii.gz \
+  --label-column condition \
+  --block-column run \
+  --model sda_notune \
+  --workers 4 \
+  --output regional_results
+```
+
+### What should the mask look like?
+
+For regional analysis, `--mask` should be a label map or parcellation
+where each non-zero integer value defines one ROI. In image mode this is
+typically a 3D NIfTI atlas in the same space as the training data. In
+surface mode, pass a labeled mask for each section or hemisphere;
+non-zero labels are again treated as ROI IDs.
+
+Two practical rules matter:
+
+- set background and excluded regions to `0`
+- keep ROI labels stable across reruns so region-level tables remain
+  comparable
+
+### Regional-specific controls
+
+`rmvpa-regional` adds options for ROI-level outputs and pooling:
+
+- `--save-predictors` stores fitted ROI predictors alongside the result
+  bundle
+- `--pool-predictions=none|mean|stack` computes pooled ROI-level
+  predictions
+- `--stack-folds`, `--stack-seed`, and `--stack-lambda` tune stacked
+  pooling
+- `--coalesce-design-vars` merges design columns into the prediction
+  table
+
+This makes it straightforward to move from independent ROI scores to
+pooled regional prediction summaries:
+
+``` bash
+rmvpa-regional \
+  --config regional.yaml \
+  --pool-predictions stack \
+  --stack-folds 5 \
+  --stack-seed 123
+```
+
+### Example YAML config
+
+``` yaml
+train_design: train_design.tsv
+train_data: train_betas.nii.gz
+mask: roi_labels.nii.gz
+label_column: condition
+block_column: run
+model: sda_notune
+model_type: classification
+data_mode: image
+pthreads: 4
+backend: default
+normalize_samples: true
+class_metrics: true
+return_fits: true
+pool_predictions: mean
+output: regional_results
+```
+
+In configs, `return_fits: true` is the field that corresponds most
+directly to the CLI flag `--save-predictors`.
+
+### Typical outputs
+
+A regional run writes tabular summaries such as `performance_table.txt`
+and `prediction_table.txt`. When pooling is enabled, you also get
+`pooled_prediction_table.txt` and `pooled_performance_table.txt`. If
+predictor fits are requested, they are written under `fits/` as one
+`.rds` per ROI. When the result includes volumetric summaries, map
+outputs are written alongside the tables, and `standard` or `complete`
+save levels add a manifest.
+
+### Domain-adaptive cross-decoding (REMAP-RRR)
+
+To run REMAP-RRR from the command line, set `--model=remap_rrr` and
+provide both training and test datasets:
+
+``` bash
+rmvpa-regional \
+  --train-design perception_design.tsv \
+  --test-design memory_design.tsv \
+  --train-data perception_betas.nii.gz \
+  --test-data memory_betas.nii.gz \
+  --mask roi_labels.nii.gz \
+  --model remap_rrr \
+  --link-by image_id \
+  --label-column condition \
+  --output remap_roi
+```
+
+Useful REMAP config fields include:
+
+``` yaml
+link_by: image_id
+remap_rank: auto
+remap_lambda_grid: [0, 0.25, 0.5, 0.75, 1]
+remap_leave_one_key_out: true
+remap_min_pairs: 5
+```
+
+Outputs include the standard regional summaries plus REMAP diagnostics
+such as `remap_improv`, `delta_frob_mean`, and `lambda_mean`. See
+[`vignette("REMAP_RRR")`](http://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)
+for the model-level details.
+
+## Backward Compatibility
+
+The preferred interface is now `rmvpa-searchlight` and `rmvpa-regional`,
+but existing shell pipelines do not need to be rewritten immediately.
+The wrappers still accept older underscore flag spellings such as
+`--train_design`, `--label_column`, `--type`, `--niter`, `--ncores`, and
+`--skip_if_folder_exists`. For new scripts, prefer the native command
+names and kebab-case flags shown in this vignette.

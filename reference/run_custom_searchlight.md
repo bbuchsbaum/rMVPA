@@ -1,0 +1,151 @@
+# Run a Custom Analysis Function in a Searchlight
+
+Applies a user-defined function to the data within each searchlight
+sphere and returns the results, typically as \`NeuroVol\` or
+\`NeuroSurface\` objects within a \`searchlight_result\` structure.
+
+## Usage
+
+``` r
+run_custom_searchlight(
+  dataset,
+  custom_func,
+  radius,
+  method = c("standard", "randomized"),
+  niter = 100,
+  ...,
+  .cores = 1,
+  .verbose = FALSE
+)
+```
+
+## Arguments
+
+- dataset:
+
+  An \`mvpa_dataset\` or \`mvpa_surface_dataset\` object.
+
+- custom_func:
+
+  A function to apply within each searchlight sphere. It should accept
+  two arguments:
+
+  - \`sl_data\`: A matrix or tibble containing the data (samples x
+    features_in_sphere) for the current sphere.
+
+  - \`sl_info\`: A list containing information about the sphere,
+    including \`center_index\` (the index of the center voxel/vertex),
+    \`indices\` (the indices of all features within the sphere), and
+    potentially \`coords\` (coordinates of the center).
+
+  The function \*must\* return a named list or a single-row data frame
+  (or tibble) containing scalar metric values. All spheres must return
+  the same named metrics.
+
+- radius:
+
+  The radius of the searchlight sphere (in mm for volumes, or vertex
+  connections for surfaces - see \`neuroim2::spherical_roi\`).
+
+- method:
+
+  The type of searchlight: "standard" (systematically covers all center
+  voxels) or "randomized" (samples spheres randomly, useful for large
+  datasets). Defaults to "standard".
+
+- niter:
+
+  The number of iterations for a "randomized" searchlight. Ignored if
+  \`method = "standard"\`. Defaults to 100.
+
+- ...:
+
+  Optional arguments passed to \`mvpa_iterate\` (e.g., \`batch_size\`).
+
+- .cores:
+
+  Number of cores to use for parallel processing via the \`future\`
+  framework. Defaults to 1 (sequential). Set using \`future::plan()\`
+  beforehand for more control.
+
+- .verbose:
+
+  Logical. If \`TRUE\`, prints progress messages during iteration.
+  Defaults to \`FALSE\`.
+
+## Value
+
+A \`searchlight_result\` object (see \`rMVPA::wrap_out\`). This is a
+list containing:
+
+- \`results\`: A named list where each element corresponds to a metric
+  returned by \`custom_func\`. Each element is itself a
+  \`searchlight_performance\` object containing a \`NeuroVol\` or
+  \`NeuroSurface\` (\`\$data\`) with the metric values mapped back to
+  the brain space, along with summary statistics (\`\$summary_stats\`).
+
+- \`metrics\`: A character vector of the metric names.
+
+- \`n_voxels\`, \`active_voxels\`: Information about the dataset mask.
+
+If \`method = "randomized"\`, the values in the output maps represent
+the average metric value for each voxel across all spheres it
+participated in.
+
+## Details
+
+This function provides a flexible way to perform custom analyses across
+the brain using a searchlight approach, without defining a full
+\`mvpa_model\`. It handles iterating over searchlight spheres,
+extracting data, running the custom function (potentially in parallel),
+handling errors, and combining the results back into brain-space maps.
+
+The \`custom_func\` performs the core calculation for each sphere. The
+framework manages the iteration, data handling, parallelization, error
+catching, and result aggregation.
+
+For \`method = "standard"\`, the function iterates through every active
+voxel/vertex in the dataset mask as a potential sphere center. For
+\`method = "randomized"\`, it randomly selects sphere centers for
+\`niter\` iterations. The final map represents an average of the results
+from spheres covering each voxel. This requires the custom function's
+results to be meaningfully averageable.
+
+\*\*Important\*\*: The \`custom_func\` must consistently return the same
+set of named scalar metrics for every sphere it successfully processes.
+
+## See also
+
+[`run_custom_regional`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md),
+[`run_searchlight_base`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight_base.md),
+[`get_searchlight`](http://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.md),
+[`mvpa_iterate`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# Generate sample dataset
+dset_info <- gen_sample_dataset(D = c(10, 10, 10), nobs = 30, nlevels = 2)
+dataset_obj <- dset_info$dataset
+
+# Define a custom function: calculate mean and sd within the sphere
+my_sl_stats <- function(sl_data, sl_info) {
+  mean_signal <- mean(sl_data, na.rm = TRUE)
+  sd_signal <- sd(sl_data, na.rm = TRUE)
+  list(mean_signal = mean_signal, sd_signal = sd_signal,
+       n_vox_in_sphere = ncol(sl_data))
+}
+
+# Run the custom searchlight (standard method)
+custom_sl_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
+                                            radius = 3, method = "standard")
+print(custom_sl_results)
+
+# Run randomized searchlight
+custom_sl_rand <- run_custom_searchlight(dataset_obj, my_sl_stats,
+                                         radius = 3, method = "randomized",
+                                         niter = 50)
+print(custom_sl_rand)
+} # }
+```

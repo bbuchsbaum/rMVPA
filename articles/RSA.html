@@ -10,13 +10,14 @@
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Representational Similarity Analysis (RSA) in rMVPA">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<script src="../extra.js"></script><meta property="og:title" content="Representational Similarity Analysis (RSA) in rMVPA">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -29,13 +30,16 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/rMVPA.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/bbuchsbaum/rMVPA/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -53,9 +57,9 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-09-28</h4>
+            <h4 data-toc-skip class="date">2026-04-11</h4>
       
-
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/RSA.Rmd" class="external-link"><code>vignettes/RSA.Rmd</code></a></small>
       <div class="d-none name"><code>RSA.Rmd</code></div>
     </div>
 
@@ -161,25 +165,6 @@ computing neural dissimilarities and analyzing relationships:</p>
 <span>  radius <span class="op">=</span> <span class="fl">4</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"standard"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-28 22:05:10] Running standard searchlight with radius = 4</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:10] creating standard searchlight</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:10] running standard searchlight iterator</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:10] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">24</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:11] Processing batch <span style="color: #0000BB;">2</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">24</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:13] Processing batch <span style="color: #0000BB;">3</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">24</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:14] Processing batch <span style="color: #0000BB;">4</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:15] Processing batch <span style="color: #0000BB;">5</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:17] Processing batch <span style="color: #0000BB;">6</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:18] Processing batch <span style="color: #0000BB;">7</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:19] Processing batch <span style="color: #0000BB;">8</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:21] Processing batch <span style="color: #0000BB;">9</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:22] Processing batch <span style="color: #0000BB;">10</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:23] Processing batch <span style="color: #0000BB;">11</span>/<span style="color: #0000BB;">11</span> (<span style="color: #00BB00;">23</span> ROIs in this batch)</span></span>
-<span><span class="co">## INFO [2025-09-28 22:05:24] </span></span>
-<span><span class="co">## MVPA Iteration Complete</span></span>
-<span><span class="co">## - Total ROIs: <span style="color: #0000BB;">256</span></span></span>
-<span><span class="co">## - Processed: <span style="color: #0000BB;">256</span></span></span>
-<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
@@ -190,7 +175,7 @@ computing neural dissimilarities and analyzing relationships:</p>
 </h3>
 <p><code>rMVPA</code> supports several methods for comparing neural and
 model RDMs:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Pearson correlation</span></span>
 <span><span class="va">rsa_pearson</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_model.html">rsa_model</a></span><span class="op">(</span><span class="va">dset</span>, <span class="va">basic_design</span>, </span>
 <span>                        distmethod <span class="op">=</span> <span class="st">"pearson"</span>, </span>
@@ -231,7 +216,7 @@ structured noise from breathing, heart rate, etc.</li>
 </ol>
 <p>Here’s a visualization of what <code>keep_intra_run = FALSE</code>
 does:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a small example with 2 runs, 4 trials each</span></span>
 <span><span class="va">mini_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">8</span>, ncol<span class="op">=</span><span class="fl">1</span><span class="op">)</span>  <span class="co"># Trial numbers 1-8</span></span>
 <span><span class="va">run_labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span>, <span class="fl">2</span>,<span class="fl">2</span>,<span class="fl">2</span>,<span class="fl">2</span><span class="op">)</span>  <span class="co"># Two runs with 4 trials each</span></span>
@@ -248,21 +233,21 @@ does:</p>
 <span><span class="co"># Display the matrices</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Trial numbers:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Trial numbers:</span></span></code></pre>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">8</span>, nrow<span class="op">=</span><span class="fl">8</span>, ncol<span class="op">=</span><span class="fl">8</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/lower.tri.html" class="external-link">lower.tri</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">8</span>, <span class="fl">8</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##  [1] 2 3 4 5 6 7 8 3 4 5 6 7 8 4 5 6 7 8 5 6 7 8 6 7 8 7 8 8</span></span></code></pre>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nRun comparisons (TRUE = across-run, FALSE = within-run):\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Run comparisons (TRUE = across-run, FALSE = within-run):</span></span></code></pre>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">comparison_matrix</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/lower.tri.html" class="external-link">lower.tri</a></span><span class="op">(</span><span class="va">comparison_matrix</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##  [1] FALSE FALSE FALSE  TRUE  TRUE  TRUE  TRUE FALSE FALSE  TRUE  TRUE  TRUE</span></span>
 <span><span class="co">## [13]  TRUE FALSE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE FALSE FALSE</span></span>
 <span><span class="co">## [25] FALSE FALSE FALSE FALSE</span></span></code></pre>
 <p>When we create an RSA design with
 <code>keep_intra_run = FALSE</code>:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create design excluding within-run comparisons</span></span>
 <span><span class="va">blocked_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_design.html">rsa_design</a></span><span class="op">(</span></span>
 <span>  formula <span class="op">=</span> <span class="op">~</span> <span class="va">model_rdm</span>,</span>
@@ -291,15 +276,15 @@ temporal structure.</p>
 <h3 id="visualizing-results">Visualizing Results<a class="anchor" aria-label="anchor" href="#visualizing-results"></a>
 </h3>
 <p>You can examine and visualize the RSA results:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Extract the searchlight map</span></span>
 <span><span class="va">rsa_map</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">model_rdm</span></span>
 <span></span>
 <span><span class="co"># Compute range of correlation values</span></span>
 <span><span class="va">rsa_values</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/values-methods.html" class="external-link">values</a></span><span class="op">(</span><span class="va">rsa_map</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">rsa_values</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] -0.03370494  0.03541486</span></span></code></pre>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<pre><code><span><span class="co">## [1] -0.05816891  0.05730699</span></span></code></pre>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Basic summary of the searchlight result</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
@@ -307,10 +292,10 @@ temporal structure.</p>
 <span><span class="co">## </span></span>
 <span><span class="co">## <span style="color: #BBBB00;">- Coverage</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">  - Voxels/Vertices in Mask: </span> <span style="color: #00BB00;">3,200</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Voxels/Vertices with Results: </span> <span style="color: #00BB00;">256</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Voxels/Vertices with Results: </span> <span style="color: #00BB00;">3,200</span> </span></span>
 <span><span class="co">## <span style="color: #BBBB00;">- Output Maps (Metrics)</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB00BB;">model_rdm</span> <span style="color: #BBBBBB;"> (Type: </span> <span style="color: #0000BB;">DenseNeuroVol</span> <span style="color: #BBBBBB;">)</span></span></span></code></pre>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Save results (commented out)</span></span>
 <span><span class="co"># neuroim2::write_vol(rsa_map, "RSA_results.nii.gz")</span></span></code></pre></div>
 </div>
@@ -330,12 +315,30 @@ methods that match your theoretical framework, and select statistical
 approaches appropriate for your analysis goals.</p>
 </div>
 <div class="section level2">
+<h2 id="further-reading">Further reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/Advanced_RSA.html">vignette("Advanced_RSA")</a></code> – Feature-Based and
+Vector-Based RSA methods</li>
+<li>
+<code><a href="../articles/Contrast_RSA.html">vignette("Contrast_RSA")</a></code> – MS-ReVE: contrast-based
+decomposition of representational geometry</li>
+<li>
+<code><a href="../articles/Temporal_Confounds_in_RSA.html">vignette("Temporal_Confounds_in_RSA")</a></code> – controlling for
+temporal proximity confounds</li>
+</ul>
+</div>
+<div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
-<p>For more information on RSA: - Kriegeskorte et al. (2008).
-Representational similarity analysis - connecting the branches of
-systems neuroscience. Front Syst Neurosci. - Nili et al. (2014). A
-toolbox for representational similarity analysis. PLoS Comput Biol.</p>
+<ul>
+<li>Kriegeskorte et al. (2008). Representational similarity analysis -
+connecting the branches of systems neuroscience. Front Syst
+Neurosci.</li>
+<li>Nili et al. (2014). A toolbox for representational similarity
+analysis. PLoS Comput Biol.</li>
+</ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -348,7 +351,7 @@ toolbox for representational similarity analysis. PLoS Comput Biol.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

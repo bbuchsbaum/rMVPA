@@ -10,13 +10,14 @@
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Running Custom Analyses with rMVPA">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<script src="../extra.js"></script><meta property="og:title" content="Running Custom Analyses with rMVPA">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -29,13 +30,16 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/rMVPA.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/bbuchsbaum/rMVPA/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -50,12 +54,12 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Running Custom Analyses with rMVPA</h1>
-                        <h4 data-toc-skip class="author">Your Name
-Here</h4>
+                        <h4 data-toc-skip class="author">Bradley
+Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-09-28</h4>
+            <h4 data-toc-skip class="date">2026-04-11</h4>
       
-
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/CustomAnalyses.Rmd" class="external-link"><code>vignettes/CustomAnalyses.Rmd</code></a></small>
       <div class="d-none name"><code>CustomAnalyses.Rmd</code></div>
     </div>
 
@@ -243,25 +247,25 @@ function.</p>
 <span>  .cores <span class="op">=</span> <span class="fl">1</span>, </span>
 <span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-28 22:03:57] Starting custom regional analysis...</span></span>
-<span><span class="co">## INFO [2025-09-28 22:04:00] </span></span>
+<pre><code><span><span class="co">## INFO [2026-04-11 11:01:55] Starting custom regional analysis...</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 11:01:56] </span></span>
 <span><span class="co">## MVPA Iteration Complete</span></span>
 <span><span class="co">## - Total ROIs: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## - Processed: <span style="color: #0000BB;">4</span></span></span>
-<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-28 22:04:01] Custom regional analysis iteration complete.</span></span>
-<span><span class="co">## INFO [2025-09-28 22:04:01] Finished formatting custom regional results.</span></span></code></pre>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 11:01:56] Custom regional analysis iteration complete.</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 11:01:56] Finished formatting custom regional results.</span></span></code></pre>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Print the results table</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_regional_results</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 4 × 6</span></span></span>
 <span><span class="co">##      id mean_signal sd_signal n_features error error_message</span></span>
 <span><span class="co">##   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>     1    -<span style="color: #BB0000;">0.016</span><span style="color: #BB0000; text-decoration: underline;">9</span>      0.988        188 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>     2    -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">01</span>     1.00         158 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>     3    -<span style="color: #BB0000;">0.012</span><span style="color: #BB0000; text-decoration: underline;">1</span>      0.997        153 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">4</span>     4    -<span style="color: #BB0000;">0.015</span><span style="color: #BB0000; text-decoration: underline;">1</span>      0.948         13 FALSE ~</span></span></code></pre>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>     1    -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">38</span>     1.00         339 FALSE ~            </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>     2    -<span style="color: #BB0000;">0.012</span><span style="color: #BB0000; text-decoration: underline;">3</span>      0.993        314 FALSE ~            </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>     3    -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">93</span>     0.998        323 FALSE ~            </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">4</span>     4     0.023<span style="text-decoration: underline;">2</span>      1.02          24 FALSE ~</span></span></code></pre>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example with error handling (using the robust function and potential small ROI 4)</span></span>
 <span><span class="co"># Suppress expected warnings from the logger about the error</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="op">{</span></span>
@@ -273,27 +277,27 @@ function.</p>
 <span>      .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>    <span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-28 22:04:01] Starting custom regional analysis...</span></span>
-<span><span class="co">## INFO [2025-09-28 22:04:04] </span></span>
+<pre><code><span><span class="co">## INFO [2026-04-11 11:01:56] Starting custom regional analysis...</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 11:01:57] </span></span>
 <span><span class="co">## MVPA Iteration Complete</span></span>
 <span><span class="co">## - Total ROIs: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## - Processed: <span style="color: #0000BB;">4</span></span></span>
-<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-28 22:04:05] Custom regional analysis iteration complete.</span></span>
-<span><span class="co">## INFO [2025-09-28 22:04:05] Finished formatting custom regional results.</span></span></code></pre>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 11:01:57] Custom regional analysis iteration complete.</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 11:01:57] Finished formatting custom regional results.</span></span></code></pre>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nResults with potential errors:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Results with potential errors:</span></span></code></pre>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_regional_error_results</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 4 × 6</span></span></span>
 <span><span class="co">##      id mean_signal sd_signal n_features error error_message</span></span>
 <span><span class="co">##   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>     1    -<span style="color: #BB0000;">0.016</span><span style="color: #BB0000; text-decoration: underline;">9</span>      0.988        188 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>     2    -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">01</span>     1.00         158 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>     3    -<span style="color: #BB0000;">0.012</span><span style="color: #BB0000; text-decoration: underline;">1</span>      0.997        153 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">4</span>     4    -<span style="color: #BB0000;">0.015</span><span style="color: #BB0000; text-decoration: underline;">1</span>      0.948         13 FALSE ~</span></span></code></pre>
+<span><span class="co">## <span style="color: #BCBCBC;">1</span>     1    -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">38</span>     1.00         339 FALSE ~            </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">2</span>     2    -<span style="color: #BB0000;">0.012</span><span style="color: #BB0000; text-decoration: underline;">3</span>      0.993        314 FALSE ~            </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span>     3    -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">93</span>     0.998        323 FALSE ~            </span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">4</span>     4     0.023<span style="text-decoration: underline;">2</span>      1.02          24 FALSE ~</span></span></code></pre>
 <p><strong>Explanation:</strong></p>
 <p>The output of <code>run_custom_regional</code> is a tibble. Each row
 corresponds to an ROI defined in <code>region_mask_vol</code>. The
@@ -314,7 +318,7 @@ error message, and <code>NA</code> values for the metrics.</p>
 </h3>
 <p>Next, we run a searchlight analysis using the same custom
 function.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Run the custom searchlight analysis (standard method)</span></span>
 <span><span class="co"># Use a moderate radius; set cores &gt; 1 for parallel execution if available</span></span>
 <span><span class="co"># Note: Running in parallel might print messages about the future plan setting.</span></span>
@@ -325,30 +329,21 @@ function.</p>
 <span>  method <span class="op">=</span> <span class="st">"standard"</span>,</span>
 <span>  .cores <span class="op">=</span> <span class="fl">2</span>, <span class="co"># Use 2 cores if available</span></span>
 <span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2025-09-28 22:04:06] Starting custom searchlight analysis (method: standard, radius: 4 mm)...</span></span>
-<span><span class="co">## INFO [2025-09-28 22:04:06] Preparing 512 standard searchlight spheres...</span></span>
-<span><span class="co">## INFO [2025-09-28 22:04:51] </span></span>
-<span><span class="co">## MVPA Iteration Complete</span></span>
-<span><span class="co">## - Total ROIs: <span style="color: #0000BB;">512</span></span></span>
-<span><span class="co">## - Processed: <span style="color: #0000BB;">512</span></span></span>
-<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span>
-<span><span class="co">## INFO [2025-09-28 22:04:52] Combining results from standard searchlight...</span></span>
-<span><span class="co">## INFO [2025-09-28 22:04:52] Finished custom searchlight analysis.</span></span></code></pre>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Print the results object summary</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Print the results object summary</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_searchlight_results</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">Searchlight Analysis Results</span> </span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## <span style="color: #BBBB00;">- Coverage</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">  - Voxels/Vertices in Mask: </span> <span style="color: #00BB00;">1,000</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Voxels/Vertices with Results: </span> <span style="color: #00BB00;">512</span> </span></span>
+<span><span class="co">## <span style="color: #BBBBBB;">  - Voxels/Vertices with Results: </span> <span style="color: #00BB00;">1,000</span> </span></span>
 <span><span class="co">## <span style="color: #BBBB00;">- Output Maps (Metrics)</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB00BB;">mean_signal</span> <span style="color: #BBBBBB;"> (Type: </span> <span style="color: #0000BB;">searchlight_performance</span> <span style="color: #BBBBBB;">)</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB00BB;">sd_signal</span> <span style="color: #BBBBBB;"> (Type: </span> <span style="color: #0000BB;">searchlight_performance</span> <span style="color: #BBBBBB;">)</span> </span></span>
 <span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB00BB;">n_features</span> <span style="color: #BBBBBB;"> (Type: </span> <span style="color: #0000BB;">searchlight_performance</span> <span style="color: #BBBBBB;">)</span></span></span></code></pre>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Access the results for a specific metric (e.g., mean_signal)</span></span>
 <span><span class="va">mean_signal_map_obj</span> <span class="op">&lt;-</span> <span class="va">custom_searchlight_results</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">mean_signal</span></span>
 <span></span>
@@ -357,24 +352,24 @@ function.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nClass of the mean_signal map:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">mean_signal_map_vol</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Class of the mean_signal map: DenseNeuroVol</span></span></code></pre>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Dimensions of the map:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">mean_signal_map_vol</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Dimensions of the map: 10 10 10</span></span></code></pre>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Print summary stats for the map</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mean_signal_map_obj</span><span class="op">$</span><span class="va">summary_stats</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## $mean</span></span>
-<span><span class="co">## [1] -0.00275647</span></span>
+<span><span class="co">## [1] -0.007061025</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## $sd</span></span>
-<span><span class="co">## [1] 0.008462561</span></span>
+<span><span class="co">## [1] 0.0096284</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## $min</span></span>
-<span><span class="co">## [1] -0.03412619</span></span>
+<span><span class="co">## [1] -0.03503245</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## $max</span></span>
 <span><span class="co">## [1] 0.03016657</span></span></code></pre>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># You can plot the map using neuroim2's plotting functions (example commented out)</span></span>
 <span><span class="co"># plot(mean_signal_map_vol) </span></span></code></pre></div>
 <p><strong>Explanation:</strong></p>
@@ -436,18 +431,112 @@ spheres.</li>
 </ul>
 </div>
 <div class="section level2">
-<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
+<h2 id="custom-performance-metrics-for-mvpa_model">Custom performance metrics for mvpa_model<a class="anchor" aria-label="anchor" href="#custom-performance-metrics-for-mvpa_model"></a>
 </h2>
+<p>In addition to fully custom ROI/sphere functions, you can plug your
+own performance metrics into the standard <code>mvpa_model</code> /
+<code>run_regional</code> / <code>run_searchlight</code> pipeline.</p>
+<div class="section level3">
+<h3 id="basic-custom-metric">Basic custom metric<a class="anchor" aria-label="anchor" href="#basic-custom-metric"></a>
+</h3>
+<p>A custom performance function always receives a single
+<em>result</em> object – typically a <code>classification_result</code>
+– and must return a <strong>numeric vector</strong> of scalar metrics
+(named if you return more than one):</p>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">my_perf</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="co"># classification_result: result$observed, result$predicted, result$probs</span></span>
+<span>  <span class="va">acc</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">observed</span> <span class="op">==</span> <span class="va">result</span><span class="op">$</span><span class="va">predicted</span><span class="op">)</span></span>
+<span>  <span class="va">pobs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/prob_observed.html">prob_observed</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span>  <span class="co"># prob. of the true class for each trial</span></span>
+<span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    accuracy    <span class="op">=</span> <span class="va">acc</span>,</span>
+<span>    mean_pobs   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">pobs</span><span class="op">)</span>,</span>
+<span>    max_pobs    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">pobs</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+<p>You pass this function to <code><a href="../reference/mvpa_model.html">mvpa_model()</a></code> via the
+<code>performance</code> argument:</p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span></span>
+<span>  D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">6</span>, <span class="fl">6</span><span class="op">)</span>,</span>
+<span>  nobs <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  response_type <span class="op">=</span> <span class="st">"categorical"</span>,</span>
+<span>  data_mode <span class="op">=</span> <span class="st">"image"</span>,</span>
+<span>  blocks <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  nlevels <span class="op">=</span> <span class="fl">2</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">cval</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span>
+<span><span class="va">mvdes</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">$</span><span class="va">design</span></span>
+<span><span class="va">mod</span>   <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span></span>
+<span>  model      <span class="op">=</span> <span class="va">mod</span>,</span>
+<span>  dataset    <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">dataset</span>,</span>
+<span>  design     <span class="op">=</span> <span class="va">mvdes</span>,</span>
+<span>  crossval   <span class="op">=</span> <span class="va">cval</span>,</span>
+<span>  performance <span class="op">=</span> <span class="va">my_perf</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">res_sl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">mspec</span>, radius <span class="op">=</span> <span class="fl">4</span>, method <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_sl</span><span class="op">$</span><span class="va">results</span><span class="op">)</span></span></code></pre></div>
+<p>Each named entry from <code>my_perf()</code> (<code>accuracy</code>,
+<code>mean_pobs</code>, <code>max_pobs</code>) becomes one volumetric
+map in the searchlight or regional result.</p>
+</div>
+<div class="section level3">
+<h3 id="using-split_by-with-custom-performance">Using split_by with custom performance<a class="anchor" aria-label="anchor" href="#using-split_by-with-custom-performance"></a>
+</h3>
+<p>If your design specifies <code>split_by</code>,
+<code>mvpa_design</code> stores the grouping in
+<code>split_groups</code>, and <code><a href="../reference/mvpa_model.html">mvpa_model()</a></code> automatically
+applies your metric both globally and within each group:</p>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">design_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  Y   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span>, <span class="fl">50</span><span class="op">)</span>,</span>
+<span>  run <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, length.out <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">mvdes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_design.html">mvpa_design</a></span><span class="op">(</span></span>
+<span>  train_design <span class="op">=</span> <span class="va">design_df</span>,</span>
+<span>  y_train      <span class="op">=</span> <span class="op">~</span> <span class="va">Y</span>,</span>
+<span>  block_var    <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
+<span>  split_by     <span class="op">=</span> <span class="op">~</span> <span class="va">run</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span></span>
+<span>  model      <span class="op">=</span> <span class="va">mod</span>,</span>
+<span>  dataset    <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">dataset</span>,</span>
+<span>  design     <span class="op">=</span> <span class="va">mvdes</span>,</span>
+<span>  crossval   <span class="op">=</span> <span class="va">cval</span>,</span>
+<span>  performance <span class="op">=</span> <span class="va">my_perf</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">res_reg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mspec</span>, region_mask <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res_reg</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span></code></pre></div>
+<p>Internally, <code>rMVPA</code> computes <code>my_perf(result)</code>
+on the full result and then again for each split group in
+<code>mvdes$split_groups</code>. Metrics for group <code>run=1</code>
+are suffixed with <code>"_run1"</code>, those for <code>run=2</code>
+with <code>"_run2"</code>, and so on. When a test set is present, the
+grouping indices are interpreted in the design space and mapped to the
+appropriate rows of the result via <code>testind</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
+</h3>
 <p>The <code>run_custom_regional</code> and
 <code>run_custom_searchlight</code> functions provide a powerful
-mechanism to extend <code>rMVPA</code>’s capabilities. They allow
-researchers to apply bespoke analyses within ROIs or searchlight spheres
-while benefiting from the package’s iteration, parallelization, and
-error-handling infrastructure. By defining a custom function that meets
-the specified input and output requirements, you can easily integrate
-diverse analytical approaches into your neuroimaging workflow.</p>
-<p>For implementation details, refer to the source code in
-<code>R/custom.R</code>.</p>
+mechanism to extend <code>rMVPA</code>’s capabilities at the
+ROI/searchlight level, while the <code>performance</code> hook in
+<code><a href="../reference/mvpa_model.html">mvpa_model()</a></code> lets you swap in custom scalar metrics for
+standard MVPA workflows. Together, these tools allow you to integrate
+bespoke analyses into <code>rMVPA</code> with minimal boilerplate.</p>
+<p>For implementation details, see <code><a href="../reference/run_custom_regional.html">run_custom_regional()</a></code>,
+<code><a href="../reference/run_custom_searchlight.html">run_custom_searchlight()</a></code>, and
+<code><a href="../reference/mvpa_model.html">mvpa_model()</a></code>.</p>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -460,7 +549,7 @@ diverse analytical approaches into your neuroimaging workflow.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

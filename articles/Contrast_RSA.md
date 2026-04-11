@@ -1,0 +1,249 @@
+# Contrast RSA with contrast_rsa_model
+
+## Introduction
+
+Standard Representational Similarity Analysis (RSA) asks whether a brain
+region’s representational geometry matches a predicted similarity
+structure, typically returning a single correlation value. While
+powerful, this approach cannot tell you *which aspects* of the
+representational structure drive the effect, or *which individual
+voxels* contribute most to specific theoretical dimensions.
+
+[`contrast_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md)
+implements the Multi‑Dimensional Signed Representational Voxel Encoding
+(MS‑ReVE) approach to address these limitations. MS‑ReVE decomposes the
+local representational geometry into user-defined contrasts—linear
+combinations of experimental conditions that capture theoretically
+meaningful dimensions. For example, in a study with four object
+categories, you might define contrasts for “animate vs. inanimate” and
+“biological vs. mechanical” to test whether these conceptual dimensions
+are spatially dissociable.
+
+The method produces **signed** voxel-wise maps showing how strongly each
+voxel supports or opposes each contrast. Positive values indicate a
+voxel’s pattern aligns with the predicted contrast direction; negative
+values indicate opposition. This signed, contrast-specific information
+enables more mechanistic interpretations than standard RSA’s omnibus
+similarity measure.
+
+This vignette walks through a compact example and explains the output
+metrics.
+
+## Example setup
+
+We start by generating a small dataset and defining two contrasts.
+Contrasts should be column‑centered: positive values indicate conditions
+that pull voxel patterns in one direction, negatives in the opposite
+direction.
+
+``` r
+# Generate dummy dataset (small 6x6x6 volume, 32 samples)
+set.seed(42)
+data_info <- gen_sample_dataset(D = c(6,6,6), nobs = 32, blocks = 4)
+
+# mvpa_dataset object
+mvpa_dat <- data_info$dataset
+
+# Define two contrasts across four conditions
+# Each row = condition, each column = contrast
+K <- nresponses(data_info$design)
+condition_labels <- levels(data_info$design$y_train)
+
+C_mat <- matrix(0, nrow = K, ncol = 2)
+rownames(C_mat) <- condition_labels
+
+# Contrast 1: conditions {1,2} vs {3,4}
+C_mat[1:2, 1] <- 1
+C_mat[3:4, 1] <- -1
+
+# Contrast 2: condition 1 vs condition 2
+C_mat[1, 2] <- 1
+C_mat[2, 2] <- -1
+
+# Center each contrast (required for proper interpretation)
+C_mat <- base::scale(C_mat, center = TRUE, scale = FALSE)
+colnames(C_mat) <- c("AB_vs_CD", "A_vs_B")
+
+# Visualize the contrast matrix
+print("Contrast Matrix (centered):")
+```
+
+    ## [1] "Contrast Matrix (centered):"
+
+``` r
+print(round(C_mat, 2))
+```
+
+    ##   AB_vs_CD A_vs_B
+    ## a        1      1
+    ## b        1     -1
+    ## c       -1      0
+    ## d       -1      0
+    ## e        0      0
+    ## attr(,"scaled:center")
+    ## [1] 0 0
+
+``` r
+ms_des <- msreve_design(data_info$design, contrast_matrix = C_mat)
+```
+
+Next we create the model specification and run a tiny searchlight over
+the volume, requesting the default `"beta_delta"` metric.
+
+``` r
+cv_spec <- blocked_cross_validation(data_info$design$block_var)
+
+model_spec <- contrast_rsa_model(
+  dataset = mvpa_dat,
+  design = ms_des,
+  output_metric = "beta_delta",
+  check_collinearity = FALSE,
+  cv_spec = cv_spec
+)
+
+# Run a very small searchlight iterator
+slight <- get_searchlight(model_spec$dataset, type = "standard", radius = 2)
+center_indices <- which(model_spec$dataset$mask > 0)
+iter_res <- mvpa_iterate(model_spec, slight, center_indices, analysis_type = "searchlight")
+
+# Inspect the beta_delta metric for the first few centers
+preview_ids <- seq_len(min(5, length(iter_res$performance)))
+preview_rows <- lapply(preview_ids, function(idx) {
+  perf_i <- iter_res$performance[[idx]]
+  vals <- if (is.list(perf_i) && !is.null(perf_i$beta_delta)) {
+    perf_i$beta_delta
+  } else {
+    perf_i
+  }
+
+  if (is.null(vals)) {
+    return(NULL)
+  }
+  if (is.null(names(vals)) || !any(nzchar(names(vals)))) {
+    names(vals) <- paste0("contrast_", seq_along(vals))
+  }
+
+  data.frame(
+    center_id = iter_res$id[idx],
+    contrast = names(vals),
+    beta_delta = as.numeric(vals),
+    row.names = NULL
+  )
+})
+preview_rows <- Filter(Negate(is.null), preview_rows)
+preview_tbl <- if (length(preview_rows) == 0) data.frame() else do.call(rbind, preview_rows)
+preview_tbl
+```
+
+    ##    center_id            contrast   beta_delta
+    ## 1          1 beta_delta.AB_vs_CD -0.024391747
+    ## 2          1   beta_delta.A_vs_B -0.026302164
+    ## 3          2 beta_delta.AB_vs_CD -0.261628397
+    ## 4          2   beta_delta.A_vs_B -0.006443043
+    ## 5          3 beta_delta.AB_vs_CD -0.258305514
+    ## 6          3   beta_delta.A_vs_B  0.206626529
+    ## 7          4 beta_delta.AB_vs_CD -0.091095103
+    ## 8          4   beta_delta.A_vs_B -0.090866802
+    ## 9          5 beta_delta.AB_vs_CD -0.039160407
+    ## 10         5   beta_delta.A_vs_B -0.336847744
+
+## Understanding the metrics
+
+`contrast_rsa_model` can return several metrics. Multiple metrics can be
+requested at once and are returned in a named list for each searchlight
+location.
+
+Each metric combines two key quantities in different ways:
+
+- **β_q**: The RSA regression coefficient showing how much contrast *q*
+  explains the local representational dissimilarity matrix (RDM)
+- **Δ\_{q,v}**: The projection of voxel *v*’s pattern onto contrast *q*,
+  indicating directional alignment
+
+The main output options are:
+
+### `beta_delta`
+
+The product of the RSA regression coefficient ($\beta_{q}$) and the
+voxel’s projection onto each contrast ($\Delta_{q,v}$). This signed
+quantity indicates how strongly the voxel supports the representational
+difference captured by each contrast. Positive values mean the voxel
+pattern aligns with the predicted direction; negative values indicate
+the opposite.
+
+### `beta_only`
+
+Only the regression coefficients $\beta_{q}$. Useful when you want a map
+of how much each contrast explains the local RDM independent of the
+voxel projections.
+
+### `delta_only`
+
+The projection values $\Delta_{q,v}$ by themselves. These show the raw
+contribution of each voxel to the contrast space before weighting by
+$\beta_{q}$.
+
+### `recon_score`
+
+A single value (per voxel) measuring how well the voxel’s beta-weighted
+pattern reconstructs the empirical RDM of the searchlight. Higher values
+indicate the voxel is individually informative about the multi-contrast
+representational structure.
+
+### `beta_delta_norm`
+
+Like `beta_delta` but using an L2-normalized contribution vector. This
+emphasizes the direction of the contribution rather than its magnitude
+and requires `normalize_delta = TRUE` when constructing the model.
+
+### `beta_delta_reliable`
+
+Reliability-weighted contributions $\rho_{q,v}\beta_{q}\Delta_{q,v}$.
+The weights $\rho_{q,v}$ reflect how stable each voxel’s contributions
+are across cross-validation folds, highlighting consistent effects.
+
+### `composite`
+
+The sum of beta-weighted, normalized contributions across contrasts
+($\sum_{q}\beta_{q}{\widetilde{\Delta}}_{q,v}$). This “net pull”
+summarizes whether a voxel overall favors the positive or negative side
+of the contrast space. Interpretation is easiest when the contrast
+matrix is orthonormal.
+
+Together these metrics support flexible interrogation of how each voxel
+or region participates in the specified representational contrasts.
+
+## Conclusion
+
+`contrast_rsa_model` extends standard RSA by decomposing voxel
+contributions along user-defined contrasts. By selecting appropriate
+output metrics you can visualize beta weights, raw contributions,
+reliability-weighted effects, or overall reconstruction quality. The
+combination of metrics provides a rich picture of the representational
+landscape revealed by the analysis.
+
+### When to use MS-ReVE
+
+Use MS-ReVE when you have:
+
+- **Theory-driven predictions** about which representational dimensions
+  matter (e.g., semantic features, perceptual attributes)
+- **Multiple contrasts** you want to test simultaneously and spatially
+  dissociate
+- **Interest in signed contributions**: not just whether a region
+  represents a distinction, but which voxels favor which direction
+
+Use standard RSA when you have a full predicted RDM but no specific
+contrast structure, or when you want an omnibus test of representational
+similarity.
+
+### Important considerations
+
+- **Contrast centering**: Contrasts must be column-centered (zero mean)
+  for proper interpretation
+- **Cross-validation**: Required to obtain unbiased condition estimates;
+  bootstrap resampling is not supported
+- **Orthogonality**: The `composite` metric requires orthonormal
+  contrasts; otherwise interpretation is ambiguous
+- **Block structure**: Use `keep_intra_run = FALSE` to exclude
+  within-run comparisons if temporal autocorrelation is a concern

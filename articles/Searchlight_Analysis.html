@@ -10,13 +10,14 @@
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Searchlight Analysis">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<script src="../extra.js"></script><meta property="og:title" content="Searchlight Analysis">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
@@ -29,13 +30,16 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/rMVPA.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/bbuchsbaum/rMVPA/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -53,9 +57,9 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-09-28</h4>
+            <h4 data-toc-skip class="date">2026-04-11</h4>
       
-
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Searchlight_Analysis.Rmd" class="external-link"><code>vignettes/Searchlight_Analysis.Rmd</code></a></small>
       <div class="d-none name"><code>Searchlight_Analysis.Rmd</code></div>
     </div>
 
@@ -64,9 +68,6 @@ Buchsbaum</h4>
 <div class="section level2">
 <h2 id="searchlight-analysis">Searchlight Analysis<a class="anchor" aria-label="anchor" href="#searchlight-analysis"></a>
 </h2>
-<pre><code><span><span class="co">## Warning in rgl.init(initValue, onlyNULL): RGL: unable to open X11 display</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: 'rgl.init' failed, will use the null device.</span></span>
-<span><span class="co">## See '?rgl.useNULL' for ways to avoid this warning.</span></span></code></pre>
 <div class="section level3">
 <h3 id="simulated-data">Simulated data<a class="anchor" aria-label="anchor" href="#simulated-data"></a>
 </h3>
@@ -77,39 +78,40 @@ blocks (20 trials each), and the response factor <code>y</code> has two
 levels. The return value contains both the data
 (<code>mvpa_dataset</code>) and the design
 (<code>mvpa_design</code>).</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>,<span class="fl">6</span>,<span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">80</span>, blocks<span class="op">=</span><span class="fl">4</span>, nlevels<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## $dataset</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">MVPA Dataset</span> </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Training Data</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Dimensions: </span> <span style="color: #00BB00;">6 x 6 x 6 x </span><span style="color: #0000BB; font-style: italic;">80</span><span style="color: #00BB00;"> observations</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Type: </span> DenseNeuroVec </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Test Data</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Mask Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Areas: </span> 1 : <span style="color: #00BB00;">120</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Active voxels/vertices: </span> <span style="color: #00BB00;">120</span> </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## $design</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">MVPA Design</span> </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Training Data</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">80</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Response Type: </span> Factor</span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Levels: </span> <span style="color: #0000BB;">a, b</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Class Distribution: </span> <span style="color: #00BB00;">a: 40, b: 40</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Test Data</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Structure</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Blocking: </span> Present</span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Number of Blocks: </span> <span style="color: #00BB00;">4</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #BBBBBB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #BBBBBB; font-style: italic;">)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Split Groups: </span> <span style="color: #BB0000;">None</span></span></span></code></pre>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>,<span class="fl">6</span>,<span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">80</span>, blocks<span class="op">=</span><span class="fl">4</span>, nlevels<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $dataset</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  <span style="color: #00BBBB; font-weight: bold;">MVPA Dataset</span> </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Training Data</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Dimensions: </span> <span style="color: #00BB00;">6 x 6 x 6 x </span><span style="color: #0000BB; font-style: italic;">80</span><span style="color: #00BB00;"> observations</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Type: </span> DenseNeuroVec </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Test Data</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Mask Information</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Areas: </span> TRUE : <span style="color: #00BB00;">216</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Active voxels/vertices: </span> <span style="color: #00BB00;">216</span> </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $design</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  <span style="color: #00BBBB; font-weight: bold;">MVPA Design</span> </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Training Data</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">80</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Response Type: </span> Factor</span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Levels: </span> <span style="color: #0000BB;">a, b</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Class Distribution: </span> <span style="color: #00BB00;">a: 40, b: 40</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Test Data</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Structure</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Blocking: </span> Present</span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Number of Blocks: </span> <span style="color: #00BB00;">4</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #BBBBBB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #BBBBBB; font-style: italic;">)</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Split Groups: </span> <span style="color: #BB0000;">None</span></span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="crossvalidation">Cross‑validation<a class="anchor" aria-label="anchor" href="#crossvalidation"></a>
@@ -119,20 +121,20 @@ cross‑validation scheme: train on <code>k−1</code> blocks and test on
 the held‑out block. This leave‑one‑group‑out strategy respects temporal
 correlations within runs and yields a more realistic estimate of
 generalization.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">block</span> <span class="op">&lt;-</span> <span class="va">dataset</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span></span>
 <span><span class="va">crossval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">block</span><span class="op">)</span></span>
-<span><span class="va">crossval</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">Blocked Cross-Validation</span> </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Dataset Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">80</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Number of Folds: </span> <span style="color: #00BB00;">4</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Block Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Total Blocks: </span> <span style="color: #00BB00;">4</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20</span></span></span></code></pre>
+<span><span class="va">crossval</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  <span style="color: #00BBBB; font-weight: bold;">Blocked Cross-Validation</span> </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Dataset Information</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">80</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Number of Folds: </span> <span style="color: #00BB00;">4</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Block Information</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Total Blocks: </span> <span style="color: #00BB00;">4</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20</span></span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="model-specification">Model specification<a class="anchor" aria-label="anchor" href="#model-specification"></a>
@@ -141,51 +143,51 @@ generalization.</p>
 (<code>sda_notune</code>), which estimates its shrinkage parameter from
 the training folds. See the <a href="https://cran.r-project.org/web/packages/sda/index.html" class="external-link">sda
 package</a> for details.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sda_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span> </span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model<span class="op">=</span><span class="va">sda_model</span>, dataset<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span>, crossval<span class="op">=</span><span class="va">crossval</span><span class="op">)</span></span>
-<span><span class="va">model</span></span></code></pre></div>
-<pre><code><span><span class="co">## mvpa_model object. </span></span>
-<span><span class="co">## model:  sda_notune </span></span>
-<span><span class="co">## model type:  classification </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">Blocked Cross-Validation</span> </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Dataset Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">80</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Number of Folds: </span> <span style="color: #00BB00;">4</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Block Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Total Blocks: </span> <span style="color: #00BB00;">4</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20</span> </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">MVPA Dataset</span> </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Training Data</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Dimensions: </span> <span style="color: #00BB00;">6 x 6 x 6 x </span><span style="color: #0000BB; font-style: italic;">80</span><span style="color: #00BB00;"> observations</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Type: </span> DenseNeuroVec </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Test Data</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Mask Information</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Areas: </span> 1 : <span style="color: #00BB00;">120</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Active voxels/vertices: </span> <span style="color: #00BB00;">120</span> </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">MVPA Design</span> </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Training Data</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">80</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Response Type: </span> Factor</span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Levels: </span> <span style="color: #0000BB;">a, b</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Class Distribution: </span> <span style="color: #00BB00;">a: 40, b: 40</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Test Data</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Structure</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Blocking: </span> Present</span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Number of Blocks: </span> <span style="color: #00BB00;">4</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #BBBBBB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #BBBBBB; font-style: italic;">)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Split Groups: </span> <span style="color: #BB0000;">None</span></span></span></code></pre>
+<span><span class="va">model</span></span>
+<span><span class="co">#&gt; mvpa_model object. </span></span>
+<span><span class="co">#&gt; model:  sda_notune </span></span>
+<span><span class="co">#&gt; model type:  classification </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  <span style="color: #00BBBB; font-weight: bold;">Blocked Cross-Validation</span> </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Dataset Information</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">80</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Number of Folds: </span> <span style="color: #00BB00;">4</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Block Information</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Total Blocks: </span> <span style="color: #00BB00;">4</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #0000BB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #0000BB; font-style: italic;">)</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Block Sizes: </span> <span style="color: #00BB00;">1: 20, 2: 20, 3: 20, 4: 20</span> </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  <span style="color: #00BBBB; font-weight: bold;">MVPA Dataset</span> </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Training Data</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Dimensions: </span> <span style="color: #00BB00;">6 x 6 x 6 x </span><span style="color: #0000BB; font-style: italic;">80</span><span style="color: #00BB00;"> observations</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Type: </span> DenseNeuroVec </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Test Data</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Mask Information</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Areas: </span> TRUE : <span style="color: #00BB00;">216</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Active voxels/vertices: </span> <span style="color: #00BB00;">216</span> </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  <span style="color: #00BBBB; font-weight: bold;">MVPA Design</span> </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Training Data</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">80</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Response Type: </span> Factor</span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Levels: </span> <span style="color: #0000BB;">a, b</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Class Distribution: </span> <span style="color: #00BB00;">a: 40, b: 40</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Test Data</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">- Structure</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Blocking: </span> Present</span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Number of Blocks: </span> <span style="color: #00BB00;">4</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #BBBBBB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #BBBBBB; font-style: italic;">)</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Split Groups: </span> <span style="color: #BB0000;">None</span></span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="standard-searchlight">Standard searchlight<a class="anchor" aria-label="anchor" href="#standard-searchlight"></a>
@@ -195,7 +197,7 @@ metrics at each sphere center. For two‑class problems we report
 cross‑validated accuracy and AUC (centered at 0 by subtracting 0.5). The
 <code>radius</code> is in millimeters; <code>method = "standard"</code>
 evaluates one model per sphere centered on each voxel.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"standard"</span><span class="op">)</span></span>
 <span><span class="va">result</span></span></code></pre></div>
 </div>
@@ -210,67 +212,76 @@ performance across the spheres that included it. This can improve
 spatial localization and often reduces computation, since the number of
 models scales with <code>nvoxels / radius × niter</code> rather than the
 total number of voxels.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"randomized"</span>, niter<span class="op">=</span><span class="fl">8</span><span class="op">)</span></span>
 <span><span class="va">result</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="using-different-classifiers">Using different classifiers<a class="anchor" aria-label="anchor" href="#using-different-classifiers"></a>
 </h2>
-<p>Any classifier in the model registry can be used in a searchlight.
+<p>Any classifier in the rMVPA registry can be used in a searchlight.
 You can also register your own with <code><a href="../reference/register_mvpa_model.html">register_mvpa_model()</a></code>.
-For example, to run a linear SVM:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">svm_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"svmLinear"</span><span class="op">)</span> </span>
-<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model<span class="op">=</span><span class="va">svm_model</span>, dataset<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span>, crossval<span class="op">=</span><span class="va">crossval</span><span class="op">)</span></span>
-<span><span class="va">result_svm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius<span class="op">=</span><span class="fl">4</span>, method<span class="op">=</span><span class="st">"randomized"</span>, niter<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
-<p>For random forests, you can either fix <code>mtry</code> or tune it
-over a small grid. Tuning quickly becomes expensive in whole‑brain
-analyses, so <code>sda_notune</code> is often a good default when
-compute is limited.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"randomForest"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">rf_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"rf"</span><span class="op">)</span></span>
-<span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model <span class="op">=</span> <span class="va">rf_model</span>, dataset <span class="op">=</span> <span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design <span class="op">=</span> <span class="va">dataset</span><span class="op">$</span><span class="va">design</span>,</span>
-<span>                      crossval <span class="op">=</span> <span class="va">crossval</span>, tune_grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>mtry <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="va">result_rf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius <span class="op">=</span> <span class="fl">4</span>, method <span class="op">=</span> <span class="st">"randomized"</span>, niter <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span>  <span class="va">result_rf</span></span>
-<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"Package 'randomForest' not installed; skipping RF example."</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"randomForest"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>mtry <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">4</span>, <span class="fl">6</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="va">model2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model <span class="op">=</span> <span class="va">rf_model</span>, dataset <span class="op">=</span> <span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design <span class="op">=</span> <span class="va">dataset</span><span class="op">$</span><span class="va">design</span>,</span>
-<span>                       crossval <span class="op">=</span> <span class="va">crossval</span>, tune_grid <span class="op">=</span> <span class="va">grid</span>, tune_reps <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span>  <span class="va">result_rf_tuned</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model2</span>, radius <span class="op">=</span> <span class="fl">6</span>, method <span class="op">=</span> <span class="st">"randomized"</span>, niter <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span>  <span class="va">result_rf_tuned</span></span>
-<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"Package 'randomForest' not installed; skipping tuned RF example."</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<!-- ## External Cross-Validation Example -->
-<!-- Instead of using internal cross-validation, as we used in the above examples, sometimes one might have a held-out test data that can be used as a validation set. Here we show how to  -->
-<!-- ```{r} -->
-<!-- # Create training data -->
-<!-- train_design <- data.frame(y = rep(letters[1:4], 5), x1 = rnorm(20), x2 = rnorm(20), block = rep(1:4, each = 5)) -->
-<!-- # Create test data -->
-<!-- test_design <- data.frame(y = sample(letters[1:4], 10, replace=TRUE)) -->
-<!-- # Create an MVPA design object with external cross-validation -->
-<!-- design <- mvpa_design(train_design, ~ y, block_var = ~ block, test_design = test_design, y_test = ~ y) -->
-<!-- # Display the MVPA design object -->
-<!-- print(design) -->
-<!-- # Create a new dataset for external cross-validation -->
-<!-- dataset_ext <- list(dataset = dataset$dataset, design = design) -->
-<!-- # Construct an `mvpa_model` object with a Shrinkage Discriminant Analysis classifier (`sda_notune`) -->
-<!-- sda_model_ext <- load_model("sda_notune") -->
-<!-- model_ext <- mvpa_model(model = sda_model_ext, dataset = dataset_ext$dataset, design = dataset_ext$design) -->
-<!-- # Run a randomized searchlight analysis using external cross-validation -->
-<!-- result_ext <- run_searchlight(model_ext, radius = 4, method = "randomized", niter = 8) -->
-<!-- # Display the results -->
-<!-- print(result_ext) -->
-<!-- # Plot a histogram of AUC values -->
-<!-- hist(result_ext$AUC) -->
-<!-- ``` -->
+Two robust options that ship with rMVPA are <code>hdrda</code> and
+<code>pca_lda</code>:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># High‑Dimensional Regularized Discriminant Analysis</span></span>
+<span><span class="va">hdrda</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"hdrda"</span><span class="op">)</span></span>
+<span><span class="va">model_hdrda</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model <span class="op">=</span> <span class="va">hdrda</span>, dataset <span class="op">=</span> <span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design <span class="op">=</span> <span class="va">dataset</span><span class="op">$</span><span class="va">design</span>,</span>
+<span>                          crossval <span class="op">=</span> <span class="va">crossval</span><span class="op">)</span></span>
+<span><span class="va">res_hdrda</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model_hdrda</span>, radius <span class="op">=</span> <span class="fl">4</span>, method <span class="op">=</span> <span class="st">"randomized"</span>, niter <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">res_hdrda</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># PCA + LDA pipeline</span></span>
+<span><span class="va">pca_lda</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"pca_lda"</span><span class="op">)</span></span>
+<span><span class="va">model_pca_lda</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model <span class="op">=</span> <span class="va">pca_lda</span>, dataset <span class="op">=</span> <span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design <span class="op">=</span> <span class="va">dataset</span><span class="op">$</span><span class="va">design</span>,</span>
+<span>                            crossval <span class="op">=</span> <span class="va">crossval</span><span class="op">)</span></span>
+<span><span class="va">res_pca_lda</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model_pca_lda</span>, radius <span class="op">=</span> <span class="fl">4</span>, method <span class="op">=</span> <span class="st">"randomized"</span>, niter <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">res_pca_lda</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="domainadaptive-crossdecoding-remaprrr">Domain‑adaptive cross‑decoding (REMAP‑RRR)<a class="anchor" aria-label="anchor" href="#domainadaptive-crossdecoding-remaprrr"></a>
+</h2>
+<p>REMAP‑RRR models memory as perception plus a low‑rank correction in a
+jointly whitened space. It learns a residual map Δ on the prototype
+residuals (Y_w − X_w) ≈ X_w Δ, builds predicted memory templates Ŷ_w =
+X_w + λ X_w Δ (with λ tuned on training items), and classifies held‑out
+memory trials by correlation to Ŷ_w. Provide an external test set in
+your dataset/design (same pattern as localizer→WM), and optionally a
+<code>link_by</code> column shared by train/test designs to pair items
+across domains.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Synthetic source→target setup</span></span>
+<span><span class="va">toy</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>,<span class="fl">6</span>,<span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">120</span>, nlevels <span class="op">=</span> <span class="fl">4</span>, blocks <span class="op">=</span> <span class="fl">3</span>, external_test <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">regionMask</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, size <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>                                 <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/remap_rrr_model.html">remap_rrr_model</a></span><span class="op">(</span></span>
+<span>  dataset <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
+<span>  design  <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
+<span>  link_by <span class="op">=</span> <span class="cn">NULL</span>,            <span class="co"># defaults to class-wise pairing</span></span>
+<span>  rank    <span class="op">=</span> <span class="fl">0</span>,               <span class="co"># identity fallback (no rrpack required)</span></span>
+<span>  leave_one_key_out <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">remap_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mspec</span>, <span class="va">regionMask</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">remap_res</span><span class="op">$</span><span class="va">vol_results</span><span class="op">)</span>  <span class="co"># includes remap_improv, delta_frob_mean, lambda_mean</span></span></code></pre></div>
+<p>Set <code>rank = "auto"</code> or a positive integer to enable
+reduced‑rank mapping via <code>rrpack</code>.</p>
+</div>
+<div class="section level2">
+<h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/Regional_Analysis.html">vignette("Regional_Analysis")</a></code> – the ROI-based
+counterpart to searchlight analysis</li>
+<li>
+<code><a href="../articles/CrossValidation.html">vignette("CrossValidation")</a></code> – cross-validation
+strategies for fMRI</li>
+<li>
+<code><a href="../articles/CustomAnalyses.html">vignette("CustomAnalyses")</a></code> – plug in your own analysis
+functions</li>
+</ul>
+<!-- ## External Cross-Validation Example --><!-- Instead of using internal cross-validation, as we used in the above examples, sometimes one might have a held-out test data that can be used as a validation set. Here we show how to  --><!-- ```{r} --><!-- # Create training data --><!-- train_design <- data.frame(y = rep(letters[1:4], 5), x1 = rnorm(20), x2 = rnorm(20), block = rep(1:4, each = 5)) --><!-- # Create test data --><!-- test_design <- data.frame(y = sample(letters[1:4], 10, replace=TRUE)) --><!-- # Create an MVPA design object with external cross-validation --><!-- design <- mvpa_design(train_design, ~ y, block_var = ~ block, test_design = test_design, y_test = ~ y) --><!-- # Display the MVPA design object --><!-- print(design) --><!-- # Create a new dataset for external cross-validation --><!-- dataset_ext <- list(dataset = dataset$dataset, design = design) --><!-- # Construct an `mvpa_model` object with a Shrinkage Discriminant Analysis classifier (`sda_notune`) --><!-- sda_model_ext <- load_model("sda_notune") --><!-- model_ext <- mvpa_model(model = sda_model_ext, dataset = dataset_ext$dataset, design = dataset_ext$design) --><!-- # Run a randomized searchlight analysis using external cross-validation --><!-- result_ext <- run_searchlight(model_ext, radius = 4, method = "randomized", niter = 8) --><!-- # Display the results --><!-- print(result_ext) --><!-- # Plot a histogram of AUC values --><!-- hist(result_ext$AUC) --><!-- ``` -->
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -283,7 +294,7 @@ compute is limited.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>
