@@ -77,6 +77,20 @@ Rscript scripts/MVPA_Regional.R --help
 Treat the packaged commands above as the supported public interface. The source
 checkout shims are mainly useful while developing inside the repository.
 
+## Migrating from legacy scripts
+
+If you used the older repository-local entry points, switch to the packaged
+wrappers as follows:
+
+```text
+Rscript scripts/MVPA_Searchlight.R  ->  rmvpa-searchlight
+Rscript scripts/MVPA_Regional.R     ->  rmvpa-regional
+```
+
+The wrapper commands call the same workflow API, but they are the supported
+interface for installed-package use, documentation, and long-term CLI
+compatibility.
+
 # Discover the Interface from the Terminal
 
 The new CLI is designed so you can discover most behaviour without leaving the

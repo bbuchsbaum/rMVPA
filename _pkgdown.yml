@@ -19,6 +19,8 @@ articles:
   - Searchlight_Analysis
   - Regional_Analysis
   - CommandLine
+  - CommandLineScripts
+  - MVPA_RegionalCmdline
 - title: Representational Similarity Analysis
   desc: |
     RSA methods from basic to specialized approaches
