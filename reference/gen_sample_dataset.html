@@ -135,16 +135,14 @@
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Generate continuous surface dataset</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="va">surf_data</span> <span class="op">&lt;-</span> <span class="fu">gen_sample_dataset</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  D <span class="op">=</span> <span class="fl">1000</span>,  <span class="co"># number of vertices</span></span></span>
 <span class="r-in"><span>  nobs <span class="op">=</span> <span class="fl">50</span>,</span></span>
 <span class="r-in"><span>  response_type <span class="op">=</span> <span class="st">"continuous"</span>,</span></span>
 <span class="r-in"><span>  data_mode <span class="op">=</span> <span class="st">"surface"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>RGL: unable to open X11 display</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>'rgl.init' failed, will use the null device.</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> See '?rgl.useNULL' for ways to avoid this warning.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> loading /home/runner/work/_temp/Library/neurosurf/extdata/std.8_lh.inflated.asc</span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Generate dataset with external test set</span></span></span>
 <span class="r-in"><span><span class="va">test_dataset</span> <span class="op">&lt;-</span> <span class="fu">gen_sample_dataset</span><span class="op">(</span></span></span>

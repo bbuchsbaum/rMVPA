@@ -62,6 +62,7 @@
 <span>  stack_folds <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  stack_seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  stack_lambda <span class="op">=</span> <span class="fl">0.001</span>,</span>
+<span>  preflight <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"error"</span>, <span class="st">"off"</span><span class="op">)</span>,</span>
 <span>  backend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"default"</span>, <span class="st">"shard"</span>, <span class="st">"auto"</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
@@ -168,6 +169,12 @@ an integer number of folds, a fold-id vector, or a list of fold indices.</p></dd
 <dt id="arg-stack-lambda">stack_lambda<a class="anchor" aria-label="anchor" href="#arg-stack-lambda"></a></dt>
 <dd><p>Ridge penalty used by <span class="pkg">glmnet</span> in stacking.</p></dd>
 
+
+<dt id="arg-preflight">preflight<a class="anchor" aria-label="anchor" href="#arg-preflight"></a></dt>
+<dd><p>One of <code>"warn"</code> (default), <code>"error"</code>, or
+<code>"off"</code> controlling whether analysis preflight findings emit warnings,
+stop the run, or are skipped.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -252,34 +259,34 @@ are emitted from parallel workers. To enable a progress bar:</p><div class="sour
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="co"># Run regional analysis</span></span></span>
 <span class="r-in"><span>  <span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">run_regional</span><span class="op">(</span><span class="va">mspec</span>, <span class="va">region_mask</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-11 10:59:13] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-11 19:49:50] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">5</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">5</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-11 10:59:13] run_regional: 5 ROIs processed (success=5, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-11 19:49:50] run_regional: 5 ROIs processed (success=5, errors=0)</span>
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="co"># Access results</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span>     <span class="co"># Performance metrics</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 5 × 3</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   roinum Accuracy     AUC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      1     0.39  0.063<span style="text-decoration: underline;">4</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>      2     0.31 -<span style="color: #BB0000;">0.055</span><span style="color: #BB0000; text-decoration: underline;">5</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>      3     0.25 -<span style="color: #BB0000;">0.135</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>      4     0.31 -<span style="color: #BB0000;">0.066</span><span style="color: #BB0000; text-decoration: underline;">2</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>      5     0.29 -<span style="color: #BB0000;">0.086</span><span style="color: #BB0000; text-decoration: underline;">4</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      1     0.19 -<span style="color: #BB0000;">0.268</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>      2     0.37  0.088<span style="text-decoration: underline;">9</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>      3     0.29 -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">8</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>      4     0.26 -<span style="color: #BB0000;">0.188</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>      5     0.35  0.159 </span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">prediction_table</span><span class="op">)</span>      <span class="co"># Predictions</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 9</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Rowwise: </span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   .rownum roinum observed pobserved predicted correct prob_a  prob_b  prob_c</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>       1      1 b          0.259   c         FALSE   0.111  0.259   0.630  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>       2      1 b          0.890   b         TRUE    0.089<span style="text-decoration: underline;">2</span> 0.890   0.021<span style="text-decoration: underline;">1</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>       3      1 b          0.526   b         TRUE    0.014<span style="text-decoration: underline;">6</span> 0.526   0.460  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>       4      1 c          0.985   c         TRUE    0.013<span style="text-decoration: underline;">0</span> 0.001<span style="text-decoration: underline;">93</span> 0.985  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>       5      1 b          0.124   a         FALSE   0.460  0.124   0.416  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>       6      1 c          0.007<span style="text-decoration: underline;">47</span> a         FALSE   0.954  0.038<span style="text-decoration: underline;">6</span>  0.007<span style="text-decoration: underline;">47</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   .rownum roinum observed pobserved predicted correct prob_a   prob_b    prob_c</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>       1      1 a        0.038<span style="text-decoration: underline;">0</span>    c         FALSE   0.038<span style="text-decoration: underline;">0</span> 0.000<span style="text-decoration: underline;">710</span> 0.961    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>       2      1 b        0.516     b         TRUE    0.318  0.516    0.165    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>       3      1 b        0.066<span style="text-decoration: underline;">6</span>    a         FALSE   0.610  0.066<span style="text-decoration: underline;">6</span>   0.324    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>       4      1 b        0.374     a         FALSE   0.499  0.374    0.128    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>       5      1 c        0.000<span style="text-decoration: underline;">065</span>4 a         FALSE   0.986  0.013<span style="text-decoration: underline;">6</span>   0.000<span style="text-decoration: underline;">065</span>4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>       6      1 a        0.944     a         TRUE    0.944  0.005<span style="text-decoration: underline;">66</span>  0.050<span style="text-decoration: underline;">1</span>   </span>
 <span class="r-in"><span>  <span class="va">first_roi_fit</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="va">fits</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>  <span class="co"># First ROI's fitted model</span></span></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>

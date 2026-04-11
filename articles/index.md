@@ -46,13 +46,6 @@ RSA methods from basic to specialized approaches
 - [Feature-RSA Advanced
   Workflows](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md):
 
-### Continuous Decoding
-
-TR-level continuous-time decoding methods
-
-- [Continuous Decoding with
-  hrfdecoder](http://bbuchsbaum.github.io/rMVPA/articles/Continuous_Decoding.md):
-
 ### Representation Mapping (REMAP) Models
 
 Models for learning transformations between perception and memory

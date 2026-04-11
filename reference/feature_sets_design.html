@@ -101,10 +101,11 @@ supplied. If omitted, it is inferred from `X_test` or `block_var_test`.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>This mirrors the pattern in `hrfdecoder_design()`: rMVPA's core infrastructure
-expects `mvpa_design` fields like `train_design`, `y_train`, etc. For continuous
-regression with external test domains, those fields are largely bookkeeping,
-while the <em>actual</em> predictors are carried explicitly as `feature_sets` objects.</p>
+    <p>This mirrors the pattern used by the archived `hrfdecoder` design API:
+rMVPA's core infrastructure expects `mvpa_design` fields like `train_design`,
+`y_train`, etc. For continuous regression with external test domains, those
+fields are largely bookkeeping, while the <em>actual</em> predictors are carried
+explicitly as `feature_sets` objects.</p>
 
 <p><strong>Where the data live.</strong></p><ul><li><p>Predictors live on the design: `design$X_train` and `design$X_test` (both `feature_sets`).</p></li>
 <li><p>Responses live on the dataset: `dataset$train_data` and `dataset$test_data` (TRxvoxel matrices per ROI).</p></li>

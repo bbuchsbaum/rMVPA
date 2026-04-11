@@ -247,14 +247,14 @@ function.</p>
 <span>  .cores <span class="op">=</span> <span class="fl">1</span>, </span>
 <span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2026-04-11 11:01:55] Starting custom regional analysis...</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-11 11:01:56] </span></span>
+<pre><code><span><span class="co">## INFO [2026-04-11 19:52:28] Starting custom regional analysis...</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 19:52:28] </span></span>
 <span><span class="co">## MVPA Iteration Complete</span></span>
 <span><span class="co">## - Total ROIs: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## - Processed: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-11 11:01:56] Custom regional analysis iteration complete.</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-11 11:01:56] Finished formatting custom regional results.</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 19:52:29] Custom regional analysis iteration complete.</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 19:52:29] Finished formatting custom regional results.</span></span></code></pre>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Print the results table</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_regional_results</span><span class="op">)</span></span></code></pre></div>
@@ -277,14 +277,14 @@ function.</p>
 <span>      .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>    <span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2026-04-11 11:01:56] Starting custom regional analysis...</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-11 11:01:57] </span></span>
+<pre><code><span><span class="co">## INFO [2026-04-11 19:52:29] Starting custom regional analysis...</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 19:52:29] </span></span>
 <span><span class="co">## MVPA Iteration Complete</span></span>
 <span><span class="co">## - Total ROIs: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## - Processed: <span style="color: #0000BB;">4</span></span></span>
 <span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-11 11:01:57] Custom regional analysis iteration complete.</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-11 11:01:57] Finished formatting custom regional results.</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 19:52:29] Custom regional analysis iteration complete.</span></span></code></pre>
+<pre><code><span><span class="co">## INFO [2026-04-11 19:52:29] Finished formatting custom regional results.</span></span></code></pre>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nResults with potential errors:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
@@ -334,15 +334,15 @@ function.</p>
 <span><span class="co"># Print the results object summary</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_searchlight_results</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
-<span><span class="co">##  <span style="color: #00BBBB; font-weight: bold;">Searchlight Analysis Results</span> </span></span>
+<span><span class="co">##  Searchlight Analysis Results </span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Coverage</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Voxels/Vertices in Mask: </span> <span style="color: #00BB00;">1,000</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - Voxels/Vertices with Results: </span> <span style="color: #00BB00;">1,000</span> </span></span>
-<span><span class="co">## <span style="color: #BBBB00;">- Output Maps (Metrics)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB00BB;">mean_signal</span> <span style="color: #BBBBBB;"> (Type: </span> <span style="color: #0000BB;">searchlight_performance</span> <span style="color: #BBBBBB;">)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB00BB;">sd_signal</span> <span style="color: #BBBBBB;"> (Type: </span> <span style="color: #0000BB;">searchlight_performance</span> <span style="color: #BBBBBB;">)</span> </span></span>
-<span><span class="co">## <span style="color: #BBBBBB;">  - </span> <span style="color: #BB00BB;">n_features</span> <span style="color: #BBBBBB;"> (Type: </span> <span style="color: #0000BB;">searchlight_performance</span> <span style="color: #BBBBBB;">)</span></span></span></code></pre>
+<span><span class="co">## - Coverage </span></span>
+<span><span class="co">##   - Voxels/Vertices in Mask:  1,000 </span></span>
+<span><span class="co">##   - Voxels/Vertices with Results:  1,000 </span></span>
+<span><span class="co">## - Output Maps (Metrics) </span></span>
+<span><span class="co">##   -  mean_signal  (Type:  searchlight_performance ) </span></span>
+<span><span class="co">##   -  sd_signal  (Type:  searchlight_performance ) </span></span>
+<span><span class="co">##   -  n_features  (Type:  searchlight_performance )</span></span></code></pre>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Access the results for a specific metric (e.g., mean_signal)</span></span>
 <span><span class="va">mean_signal_map_obj</span> <span class="op">&lt;-</span> <span class="va">custom_searchlight_results</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">mean_signal</span></span>

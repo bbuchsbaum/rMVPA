@@ -113,7 +113,7 @@ as <strong>retrieval</strong>.</p>
 <span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">test_design</span><span class="op">$</span><span class="va">item</span>  <span class="op">&lt;-</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">test_design</span><span class="op">$</span><span class="va">Ytest</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">train_design</span><span class="op">[</span>item <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">6</span>, <span class="op">]</span><span class="op">)</span></span></code></pre></div>
-<pre><code>tibble [48 × 4] (S3: tbl_df/tbl/data.frame)
+<pre><code>tibble [48 x 4] (S3: tbl_df/tbl/data.frame)
  $ Y        : Factor w/ 3 levels "a","b","c": 1 3 1 3 3 1 2 3 1 3 ...
  $ block_var: int [1:48] 1 1 1 1 1 1 1 1 1 1 ...
  $ .rownum  : int [1:48] 1 2 3 4 5 6 7 8 9 10 ...
@@ -174,263 +174,79 @@ analysis with a small number of regions.</p>
 <span>  rsa_simfun <span class="op">=</span> <span class="st">"spearman"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">era_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">era_ms</span>, <span class="va">region_mask</span><span class="op">)</span></span>
+<span><span class="va">era_ms</span></span></code></pre></div>
+<pre><code>
+ Model Specification 
+
+- Summary 
+  - Name:  era_rsa_model 
+  - Primary Class:  era_rsa_model 
+  - Class Chain:  era_rsa_model, model_spec, list 
+  - Return Predictions:  FALSE 
+  - Compute Performance:  TRUE 
+  - Has Test Set:  TRUE 
+  - Basis Count:  1 
+- Parameters 
+  - key_var: ~item
+  - phase_var: ~block_var
+  - encoding_level: 1
+  - retrieval_level: 2
+  - distfun: cordist / pearson
+  - rsa_simfun: spearman
+  - include_diag: TRUE
+
+ MVPA Dataset 
+
+- Training Data 
+  - Dimensions:  6 x 6 x 6 x 48 observations 
+  - Type:  DenseNeuroVec 
+- Test Data 
+  - Dimensions:  6 x 6 x 6 x 48 observations 
+  - Type:  DenseNeuroVec 
+- Mask Information 
+  - Areas:  TRUE : 216 
+  - Active voxels/vertices:  216 
+
+
+ MVPA Design 
+
+- Training Data 
+  - Observations:  48 
+  - Response Type:  Factor
+  - Levels:  a, b, c 
+  - Class Distribution:  a: 16, b: 16, c: 16 
+- Test Data 
+  - Observations:  48 
+  - Class Distribution:  a: 16, b: 16, c: 16 
+- Structure 
+  - Blocking:  Present
+  - Number of Blocks:  3 
+  - Mean Block Size:  16  (SD:  0 ) 
+  - Split Groups:  None </code></pre>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">era_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">era_ms</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="va">era_res</span></span></code></pre></div>
-<pre><code>$model_spec
-$name
-[1] "era_rsa_model"
+<pre><code>
+ Regional Analysis Results 
 
-$dataset
-
-  [1m [36mMVPA Dataset [39m [22m 
-
- [33m- Training Data [39m 
- [37m  - Dimensions:  [39m  [32m6 x 6 x 6 x  [3m [34m48 [32m [23m observations [39m 
- [37m  - Type:  [39m DenseNeuroVec 
- [33m- Test Data [39m 
- [37m  - Dimensions:  [39m  [32m6 x 6 x 6 x  [3m [34m48 [32m [23m observations [39m 
- [37m  - Type:  [39m DenseNeuroVec 
- [33m- Mask Information [39m 
- [37m  - Areas:  [39m TRUE :  [32m216 [39m 
- [37m  - Active voxels/vertices:  [39m  [32m216 [39m 
-
-
-$design
-
-  [1m [36mMVPA Design [39m [22m 
-
- [33m- Training Data [39m 
- [37m  - Observations:  [39m  [32m48 [39m 
- [37m  - Response Type:  [39m Factor
- [37m  - Levels:  [39m  [34ma, b, c [39m 
- [37m  - Class Distribution:  [39m  [32ma: 16, b: 16, c: 16 [39m 
- [33m- Test Data [39m 
- [37m  - Observations:  [39m  [32m48 [39m 
- [37m  - Class Distribution:  [39m  [32ma: 16, b: 16, c: 16 [39m 
- [33m- Structure [39m 
- [37m  - Blocking:  [39m Present
- [37m  - Number of Blocks:  [39m  [32m3 [39m 
- [37m  - Mean Block Size:  [39m  [32m16 [39m  [3m [37m (SD:  [39m [23m  [32m0 [39m  [3m [37m) [39m [23m 
- [37m  - Split Groups:  [39m  [31mNone [39m 
-
-
-$return_predictions
-[1] FALSE
-
-$compute_performance
-[1] TRUE
-
-$tune_reps
-[1] FALSE
-
-$basis_count
-[1] 1
-
-$key
- [1] a c a c c a b c a c c a b b b b a a a a c b a b b b b b c b a c a c b c b c
-[39] b a c c b c a a a c
-Levels: a b c
-
-$phase
- [1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3
-[39] 3 3 3 3 3 3 3 3 3 3
-Levels: 1 2 3
-
-$key_var
-~item
-
-$phase_var
-~block_var
-
-$encoding_level
-[1] "1"
-
-$retrieval_level
-[1] "2"
-
-$distfun
-$name
-[1] "cordist"
-
-$labels
-[1] "pearson"
-
-$center
-[1] "none"
-
-$method
-[1] "pearson"
-
-attr(,"class")
-[1] "cordist" "distfun"
-
-$rsa_simfun
-[1] "spearman"
-
-$confound_rdms
-NULL
-
-$include_diag
-[1] TRUE
-
-$item_block
-NULL
-
-$item_lag
-NULL
-
-$item_run_enc
-NULL
-
-$item_run_ret
-NULL
-
-$has_test_set
-[1] TRUE
-
-attr(,"class")
-[1] "era_rsa_model" "model_spec"    "list"         
-
-$performance_table
- [38;5;246m# A tibble: 3 × 11 [39m
-  roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor
-    [3m [38;5;246m&lt;int&gt; [39m [23m    [3m [38;5;246m&lt;dbl&gt; [39m [23m         [3m [38;5;246m&lt;dbl&gt; [39m [23m          [3m [38;5;246m&lt;dbl&gt; [39m [23m               [3m [38;5;246m&lt;dbl&gt; [39m [23m     [3m [38;5;246m&lt;dbl&gt; [39m [23m
- [38;5;250m1 [39m      1       3        0.333       0.055 [4m5 [24m              0.074 [4m8 [24m     - [31m1 [39m  
- [38;5;250m2 [39m      2       3        0.667       0.009 [4m4 [24m [4m4 [24m             0.042 [4m8 [24m      0.5
- [38;5;250m3 [39m      3       3        0.333       0.047 [4m3 [24m              0.081 [4m3 [24m     - [31m0 [39m [31m. [39m [31m5 [39m
- [38;5;246m# ℹ 5 more variables: era_diag_minus_off_same_block &lt;dbl&gt;, [39m
- [38;5;246m#   era_diag_minus_off_diff_block &lt;dbl&gt;, era_lag_cor &lt;dbl&gt;, [39m
- [38;5;246m#   geom_cor_run_partial &lt;dbl&gt;, geom_cor_xrun &lt;dbl&gt; [39m
-
-$prediction_table
-NULL
-
-$vol_results
-$vol_results$n_items
- [34m&lt;DenseNeuroVol&gt; [39m [8.3 Kb] 
-── Spatial ───────────────────────────────────────────────────────────────────── 
-  Dimensions    : 6 x 6 x 6
-  Spacing       : 1 x 1 x 1 mm
-  Origin        : 0, 0, 0
-  Orientation   : RAS
-── Data ──────────────────────────────────────────────────────────────────────── 
-  Range         : [3.000, 3.000]
-
-$vol_results$era_top1_acc
- [34m&lt;DenseNeuroVol&gt; [39m [8.3 Kb] 
-── Spatial ───────────────────────────────────────────────────────────────────── 
-  Dimensions    : 6 x 6 x 6
-  Spacing       : 1 x 1 x 1 mm
-  Origin        : 0, 0, 0
-  Orientation   : RAS
-── Data ──────────────────────────────────────────────────────────────────────── 
-  Range         : [0.333, 0.667]
-
-$vol_results$era_diag_mean
- [34m&lt;DenseNeuroVol&gt; [39m [8.3 Kb] 
-── Spatial ───────────────────────────────────────────────────────────────────── 
-  Dimensions    : 6 x 6 x 6
-  Spacing       : 1 x 1 x 1 mm
-  Origin        : 0, 0, 0
-  Orientation   : RAS
-── Data ──────────────────────────────────────────────────────────────────────── 
-  Range         : [0.009, 0.056]
-
-$vol_results$era_diag_minus_off
- [34m&lt;DenseNeuroVol&gt; [39m [8.3 Kb] 
-── Spatial ───────────────────────────────────────────────────────────────────── 
-  Dimensions    : 6 x 6 x 6
-  Spacing       : 1 x 1 x 1 mm
-  Origin        : 0, 0, 0
-  Orientation   : RAS
-── Data ──────────────────────────────────────────────────────────────────────── 
-  Range         : [0.043, 0.081]
-
-$vol_results$geom_cor
- [34m&lt;DenseNeuroVol&gt; [39m [8.3 Kb] 
-── Spatial ───────────────────────────────────────────────────────────────────── 
-  Dimensions    : 6 x 6 x 6
-  Spacing       : 1 x 1 x 1 mm
-  Origin        : 0, 0, 0
-  Orientation   : RAS
-── Data ──────────────────────────────────────────────────────────────────────── 
-  Range         : [-1.000, 0.500]
-
-$vol_results$era_diag_minus_off_same_block
- [34m&lt;DenseNeuroVol&gt; [39m [8.3 Kb] 
-── Spatial ───────────────────────────────────────────────────────────────────── 
-  Dimensions    : 6 x 6 x 6
-  Spacing       : 1 x 1 x 1 mm
-  Origin        : 0, 0, 0
-  Orientation   : RAS
-── Data ──────────────────────────────────────────────────────────────────────── 
-  Range         : [0.000, 0.000]
-
-$vol_results$era_diag_minus_off_diff_block
- [34m&lt;DenseNeuroVol&gt; [39m [8.3 Kb] 
-── Spatial ───────────────────────────────────────────────────────────────────── 
-  Dimensions    : 6 x 6 x 6
-  Spacing       : 1 x 1 x 1 mm
-  Origin        : 0, 0, 0
-  Orientation   : RAS
-── Data ──────────────────────────────────────────────────────────────────────── 
-  Range         : [0.000, 0.000]
-
-$vol_results$era_lag_cor
- [34m&lt;DenseNeuroVol&gt; [39m [8.3 Kb] 
-── Spatial ───────────────────────────────────────────────────────────────────── 
-  Dimensions    : 6 x 6 x 6
-  Spacing       : 1 x 1 x 1 mm
-  Origin        : 0, 0, 0
-  Orientation   : RAS
-── Data ──────────────────────────────────────────────────────────────────────── 
-  Range         : [0.000, 0.000]
-
-$vol_results$geom_cor_run_partial
- [34m&lt;DenseNeuroVol&gt; [39m [8.3 Kb] 
-── Spatial ───────────────────────────────────────────────────────────────────── 
-  Dimensions    : 6 x 6 x 6
-  Spacing       : 1 x 1 x 1 mm
-  Origin        : 0, 0, 0
-  Orientation   : RAS
-── Data ──────────────────────────────────────────────────────────────────────── 
-  Range         : [0.000, 0.000]
-
-$vol_results$geom_cor_xrun
- [34m&lt;DenseNeuroVol&gt; [39m [8.3 Kb] 
-── Spatial ───────────────────────────────────────────────────────────────────── 
-  Dimensions    : 6 x 6 x 6
-  Spacing       : 1 x 1 x 1 mm
-  Origin        : 0, 0, 0
-  Orientation   : RAS
-── Data ──────────────────────────────────────────────────────────────────────── 
-  Range         : [0.000, 0.000]
-
-
-$fits
-NULL
-
-$pooled_prediction_table
-NULL
-
-$pooled_performance
-NULL
-
-attr(,"class")
-[1] "regional_mvpa_result" "list"                </code></pre>
+- Summary 
+  - Model:  era_rsa_model 
+  - Regions with Results:  3 
+  - Metrics:  n_items, era_top1_acc, era_diag_mean, era_diag_minus_off, geom_cor, era_diag_minus_off_same_block ... 
+  - Output Maps:  n_items, era_top1_acc, era_diag_mean, era_diag_minus_off, geom_cor, era_diag_minus_off_same_block ... </code></pre>
 <p>The <code>performance_table</code> contains one row per region and
 several ERA-RSA metrics.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">era_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span></code></pre></div>
-<pre><code> [38;5;246m# A tibble: 3 × 11 [39m
+<pre><code># A tibble: 3 x 11
   roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor
-    [3m [38;5;246m&lt;int&gt; [39m [23m    [3m [38;5;246m&lt;dbl&gt; [39m [23m         [3m [38;5;246m&lt;dbl&gt; [39m [23m          [3m [38;5;246m&lt;dbl&gt; [39m [23m               [3m [38;5;246m&lt;dbl&gt; [39m [23m     [3m [38;5;246m&lt;dbl&gt; [39m [23m
- [38;5;250m1 [39m      1       3        0.333       0.055 [4m5 [24m              0.074 [4m8 [24m     - [31m1 [39m  
- [38;5;250m2 [39m      2       3        0.667       0.009 [4m4 [24m [4m4 [24m             0.042 [4m8 [24m      0.5
- [38;5;250m3 [39m      3       3        0.333       0.047 [4m3 [24m              0.081 [4m3 [24m     - [31m0 [39m [31m. [39m [31m5 [39m
- [38;5;246m# ℹ 5 more variables: era_diag_minus_off_same_block &lt;dbl&gt;, [39m
- [38;5;246m#   era_diag_minus_off_diff_block &lt;dbl&gt;, era_lag_cor &lt;dbl&gt;, [39m
- [38;5;246m#   geom_cor_run_partial &lt;dbl&gt;, geom_cor_xrun &lt;dbl&gt; [39m</code></pre>
+   &lt;int&gt;   &lt;dbl&gt;        &lt;dbl&gt;         &lt;dbl&gt;              &lt;dbl&gt;    &lt;dbl&gt;
+1      1       3        0.333       0.0555              0.0748     -1  
+2      2       3        0.667       0.00944             0.0428      0.5
+3      3       3        0.333       0.0473              0.0813     -0.5
+# i 5 more variables: era_diag_minus_off_same_block &lt;dbl&gt;,
+#   era_diag_minus_off_diff_block &lt;dbl&gt;, era_lag_cor &lt;dbl&gt;,
+#   geom_cor_run_partial &lt;dbl&gt;, geom_cor_xrun &lt;dbl&gt;</code></pre>
 <p>Key metrics include:</p>
 <ul>
 <li>
@@ -454,7 +270,7 @@ geometry alignment between phases.</p>
 </h2>
 <p>We can also run ERA-RSA in a searchlight mode to obtain whole-brain
 maps of the same metrics.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">456</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_sl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span></span>
@@ -465,22 +281,22 @@ maps of the same metrics.</p>
 <span></span>
 <span><span class="va">era_sl</span></span></code></pre></div>
 <pre><code>
-  [1m [36mSearchlight Analysis Results [39m [22m 
+ Searchlight Analysis Results 
 
- [33m- Coverage [39m 
- [37m  - Voxels/Vertices in Mask:  [39m  [32m216 [39m 
- [37m  - Voxels/Vertices with Results:  [39m  [32m216 [39m 
- [33m- Output Maps (Metrics) [39m 
- [37m  -  [39m  [35mn_items [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
- [37m  -  [39m  [35mera_top1_acc [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
- [37m  -  [39m  [35mera_diag_mean [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
- [37m  -  [39m  [35mera_diag_minus_off [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
- [37m  -  [39m  [35mgeom_cor [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
- [37m  -  [39m  [35mera_diag_minus_off_same_block [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
- [37m  -  [39m  [35mera_diag_minus_off_diff_block [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
- [37m  -  [39m  [35mera_lag_cor [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
- [37m  -  [39m  [35mgeom_cor_run_partial [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
- [37m  -  [39m  [35mgeom_cor_xrun [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m </code></pre>
+- Coverage 
+  - Voxels/Vertices in Mask:  216 
+  - Voxels/Vertices with Results:  216 
+- Output Maps (Metrics) 
+  -  n_items  (Type:  DenseNeuroVol ) 
+  -  era_top1_acc  (Type:  DenseNeuroVol ) 
+  -  era_diag_mean  (Type:  DenseNeuroVol ) 
+  -  era_diag_minus_off  (Type:  DenseNeuroVol ) 
+  -  geom_cor  (Type:  DenseNeuroVol ) 
+  -  era_diag_minus_off_same_block  (Type:  DenseNeuroVol ) 
+  -  era_diag_minus_off_diff_block  (Type:  DenseNeuroVol ) 
+  -  era_lag_cor  (Type:  DenseNeuroVol ) 
+  -  geom_cor_run_partial  (Type:  DenseNeuroVol ) 
+  -  geom_cor_xrun  (Type:  DenseNeuroVol ) </code></pre>
 <p>The <code>searchlight_result</code> contains:</p>
 <ul>
 <li>
@@ -490,7 +306,7 @@ maps of the same metrics.</p>
 <code>results</code>: a list of <code>NeuroVol</code> maps, one per
 metric.</li>
 </ul>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_sl</span><span class="op">$</span><span class="va">metrics</span></span></code></pre></div>
 <pre><code> [1] "n_items"                       "era_top1_acc"                 
  [3] "era_diag_mean"                 "era_diag_minus_off"           
@@ -499,7 +315,7 @@ metric.</li>
  [9] "geom_cor_run_partial"          "geom_cor_xrun"                </code></pre>
 <p>We can save the searchlight maps using
 <code><a href="../reference/save_results.html">save_results()</a></code>:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"era_rsa_sl_"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">out_dir</span>, showWarnings <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
@@ -523,7 +339,7 @@ the trial level, and must align with the levels of
 <code>"dist"</code> objects describing item-by-item nuisance structure
 (e.g., block/run/time), where rows/columns correspond to item keys.</p>
 <p>A common pattern is to build run-based confounds:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">items</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">train_design</span><span class="op">$</span><span class="va">item</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Example: per-item encoding run (modal run for each item)</span></span>
@@ -567,7 +383,7 @@ retrieval run.</li>
 </h3>
 <p><code>item_block</code> encodes a per-item block/condition, typically
 derived from <code>design$train_design$block_var</code>:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">item_block</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">item_run_enc</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">item_run_enc</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_ms_block</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_rsa_model.html">era_rsa_model</a></span><span class="op">(</span></span>

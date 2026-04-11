@@ -137,8 +137,8 @@ print(mvpmod)
 #> - Test Data 
 #>   -  None 
 #> - Mask Information 
-#>   - Areas:  TRUE : 136 
-#>   - Active voxels/vertices:  136 
+#>   - Areas:  TRUE : 118 
+#>   - Active voxels/vertices:  118 
 #> 
 #> 
 #>  MVPA Design 

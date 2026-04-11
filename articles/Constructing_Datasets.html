@@ -84,32 +84,32 @@ design in one call:</p>
 <span><span class="co"># The result contains a dataset and a design</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  <span style="color: #00BBBB; font-weight: bold;">MVPA Dataset</span> </span></span>
+<span><span class="co">#&gt;  MVPA Dataset </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">- Training Data</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Dimensions: </span> <span style="color: #00BB00;">6 x 6 x 6 x </span><span style="color: #0000BB; font-style: italic;">80</span><span style="color: #00BB00;"> observations</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Type: </span> DenseNeuroVec </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">- Test Data</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">- Mask Information</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Areas: </span> TRUE : <span style="color: #00BB00;">216</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Active voxels/vertices: </span> <span style="color: #00BB00;">216</span></span></span>
+<span><span class="co">#&gt; - Training Data </span></span>
+<span><span class="co">#&gt;   - Dimensions:  6 x 6 x 6 x 80 observations </span></span>
+<span><span class="co">#&gt;   - Type:  DenseNeuroVec </span></span>
+<span><span class="co">#&gt; - Test Data </span></span>
+<span><span class="co">#&gt;   -  None </span></span>
+<span><span class="co">#&gt; - Mask Information </span></span>
+<span><span class="co">#&gt;   - Areas:  TRUE : 216 </span></span>
+<span><span class="co">#&gt;   - Active voxels/vertices:  216</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">design</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  <span style="color: #00BBBB; font-weight: bold;">MVPA Design</span> </span></span>
+<span><span class="co">#&gt;  MVPA Design </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">- Training Data</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">80</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Response Type: </span> Factor</span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Levels: </span> <span style="color: #0000BB;">a, b</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Class Distribution: </span> <span style="color: #00BB00;">a: 40, b: 40</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">- Test Data</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">- Structure</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Blocking: </span> Present</span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Number of Blocks: </span> <span style="color: #00BB00;">4</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #BBBBBB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #BBBBBB; font-style: italic;">)</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Split Groups: </span> <span style="color: #BB0000;">None</span></span></span>
+<span><span class="co">#&gt; - Training Data </span></span>
+<span><span class="co">#&gt;   - Observations:  80 </span></span>
+<span><span class="co">#&gt;   - Response Type:  Factor</span></span>
+<span><span class="co">#&gt;   - Levels:  a, b </span></span>
+<span><span class="co">#&gt;   - Class Distribution:  a: 40, b: 40 </span></span>
+<span><span class="co">#&gt; - Test Data </span></span>
+<span><span class="co">#&gt;   -  None </span></span>
+<span><span class="co">#&gt; - Structure </span></span>
+<span><span class="co">#&gt;   - Blocking:  Present</span></span>
+<span><span class="co">#&gt;   - Number of Blocks:  4 </span></span>
+<span><span class="co">#&gt;   - Mean Block Size:  20  (SD:  0 ) </span></span>
+<span><span class="co">#&gt;   - Split Groups:  None</span></span>
 <span></span>
 <span><span class="co"># You can also construct each piece manually:</span></span>
 <span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
@@ -121,20 +121,20 @@ design in one call:</p>
 <span><span class="va">mvdes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_design.html">mvpa_design</a></span><span class="op">(</span><span class="va">design_df</span>, y_train <span class="op">=</span> <span class="op">~</span> <span class="va">Y</span>, block_var <span class="op">=</span> <span class="op">~</span> <span class="va">block</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mvdes</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  <span style="color: #00BBBB; font-weight: bold;">MVPA Design</span> </span></span>
+<span><span class="co">#&gt;  MVPA Design </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">- Training Data</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Observations: </span> <span style="color: #00BB00;">80</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Response Type: </span> Factor</span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Levels: </span> <span style="color: #0000BB;">a, b</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Class Distribution: </span> <span style="color: #00BB00;">a: 40, b: 40</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">- Test Data</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - </span> <span style="color: #BB0000;">None</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">- Structure</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Blocking: </span> Present</span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Number of Blocks: </span> <span style="color: #00BB00;">4</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Mean Block Size: </span> <span style="color: #00BB00;">20</span> <span style="color: #BBBBBB; font-style: italic;"> (SD: </span> <span style="color: #00BB00;">0</span> <span style="color: #BBBBBB; font-style: italic;">)</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Split Groups: </span> <span style="color: #BB0000;">None</span></span></span></code></pre></div>
+<span><span class="co">#&gt; - Training Data </span></span>
+<span><span class="co">#&gt;   - Observations:  80 </span></span>
+<span><span class="co">#&gt;   - Response Type:  Factor</span></span>
+<span><span class="co">#&gt;   - Levels:  a, b </span></span>
+<span><span class="co">#&gt;   - Class Distribution:  a: 40, b: 40 </span></span>
+<span><span class="co">#&gt; - Test Data </span></span>
+<span><span class="co">#&gt;   -  None </span></span>
+<span><span class="co">#&gt; - Structure </span></span>
+<span><span class="co">#&gt;   - Blocking:  Present</span></span>
+<span><span class="co">#&gt;   - Number of Blocks:  4 </span></span>
+<span><span class="co">#&gt;   - Mean Block Size:  20  (SD:  0 ) </span></span>
+<span><span class="co">#&gt;   - Split Groups:  None</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="creating-a-real-volumetric-image-based-dataset">Creating a Real Volumetric (Image-Based) Dataset<a class="anchor" aria-label="anchor" href="#creating-a-real-volumetric-image-based-dataset"></a>

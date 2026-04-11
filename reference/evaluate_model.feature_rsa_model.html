@@ -53,6 +53,7 @@ and optionally performs permutation tests.</p>
 <span>  <span class="va">observed</span>,</span>
 <span>  nperm <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  save_distributions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  compute_rdm_vectors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">object</span><span class="op">$</span><span class="va">return_rdm_vectors</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -79,6 +80,11 @@ and optionally performs permutation tests.</p>
 
 <dt id="arg-save-distributions">save_distributions<a class="anchor" aria-label="anchor" href="#arg-save-distributions"></a></dt>
 <dd><p>Logical indicating whether to save full permutation distributions</p></dd>
+
+
+<dt id="arg-compute-rdm-vectors">compute_rdm_vectors<a class="anchor" aria-label="anchor" href="#arg-compute-rdm-vectors"></a></dt>
+<dd><p>Logical; when TRUE, also return compact predicted
+and observed RDM vectors for reuse by downstream code.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

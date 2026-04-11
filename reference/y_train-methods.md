@@ -24,9 +24,6 @@ y_train(obj)
 
 # S3 method for class 'feature_rsa_design'
 y_train(obj)
-
-# S3 method for class 'hrfdecoder_model'
-y_train(obj)
 ```
 
 ## Arguments

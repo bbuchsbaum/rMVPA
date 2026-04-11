@@ -182,17 +182,17 @@ custom_regional_results <- run_custom_regional(
 )
 ```
 
-    ## INFO [2026-04-11 11:01:55] Starting custom regional analysis...
+    ## INFO [2026-04-11 19:52:28] Starting custom regional analysis...
 
-    ## INFO [2026-04-11 11:01:56] 
+    ## INFO [2026-04-11 19:52:28] 
     ## MVPA Iteration Complete
     ## - Total ROIs: 4
     ## - Processed: 4
     ## - Skipped: 0
 
-    ## INFO [2026-04-11 11:01:56] Custom regional analysis iteration complete.
+    ## INFO [2026-04-11 19:52:29] Custom regional analysis iteration complete.
 
-    ## INFO [2026-04-11 11:01:56] Finished formatting custom regional results.
+    ## INFO [2026-04-11 19:52:29] Finished formatting custom regional results.
 
 ``` r
 # Print the results table
@@ -221,17 +221,17 @@ suppressWarnings({
 })
 ```
 
-    ## INFO [2026-04-11 11:01:56] Starting custom regional analysis...
+    ## INFO [2026-04-11 19:52:29] Starting custom regional analysis...
 
-    ## INFO [2026-04-11 11:01:57] 
+    ## INFO [2026-04-11 19:52:29] 
     ## MVPA Iteration Complete
     ## - Total ROIs: 4
     ## - Processed: 4
     ## - Skipped: 0
 
-    ## INFO [2026-04-11 11:01:57] Custom regional analysis iteration complete.
+    ## INFO [2026-04-11 19:52:29] Custom regional analysis iteration complete.
 
-    ## INFO [2026-04-11 11:01:57] Finished formatting custom regional results.
+    ## INFO [2026-04-11 19:52:29] Finished formatting custom regional results.
 
 ``` r
 cat("\nResults with potential errors:\n")

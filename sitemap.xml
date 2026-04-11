@@ -6,7 +6,6 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/CommandLine.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/CommandLineScripts.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Continuous_Decoding.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html</loc></url>
@@ -49,6 +48,7 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/blocks.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/build_adjusted_null.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/build_analysis.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/build_maps_from_schema.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/build_output_map.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/by_set.html</loc></url>
@@ -68,7 +68,6 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/compute_crossvalidated_means_sl.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/compute_local_redundancy.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/compute_performance-methods.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/compute_performance.hrfdecoder_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/contrasts.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/create_dist.html</loc></url>
@@ -94,11 +93,13 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/dot-repmap_fit_rrr.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/dot-row_cor.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/dot-select_lambda.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_design.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/evaluate_model.feature_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/evaluate_model.vector_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/expected_features.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/explain_searchlight_engine.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/extract_weights.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.html</loc></url>
@@ -116,7 +117,6 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.era_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.remap_rrr_model.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/format_result.hrfdecoder_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/format_result.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/gen_clustered_sample_dataset.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.html</loc></url>
@@ -132,9 +132,8 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/has_crossval-methods.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/has_test_set-methods.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/hrfdecoder_design.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/hrfdecoder_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/index.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/install_cli.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/item_design.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/item_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/kfold_cross_validation.html</loc></url>
@@ -145,7 +144,6 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_classif_results.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_predictions.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results.hrfdecoder_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/merge_results.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mock_context.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mock_roi_data.html</loc></url>
@@ -154,6 +152,7 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/msreve_temporal_confounds.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_clustered_dataset.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_config.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.html</loc></url>
@@ -184,7 +183,6 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.feature_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.feature_sets.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.feature_sets_design.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.hrfdecoder_design.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.mvpa_sysinfo.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.vector_rsa_design.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/print.vector_rsa_model.html</loc></url>
@@ -204,9 +202,12 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/repmed_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/repnet_design.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/repnet_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/roi_result.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_analysis.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_future-methods.html</loc></url>
@@ -218,8 +219,10 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight_base.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/run_single_roi.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/save_results.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/save_results.rmvpa_analysis_run.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/schema_metric_spec.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/score_observed.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/searchlight_engines.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/searchlight_mode.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/searchlight_scope.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/second_order_similarity.html</loc></url>
@@ -250,7 +253,6 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/test_design-methods.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/train_indices.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.hrfdecoder_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/train_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/transform_contrasts.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/tune_grid-methods.html</loc></url>

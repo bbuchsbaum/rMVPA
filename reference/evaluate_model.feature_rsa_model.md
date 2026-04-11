@@ -13,6 +13,7 @@ evaluate_model.feature_rsa_model(
   observed,
   nperm = 0,
   save_distributions = FALSE,
+  compute_rdm_vectors = isTRUE(object$return_rdm_vectors),
   ...
 )
 ```
@@ -38,6 +39,11 @@ evaluate_model.feature_rsa_model(
 - save_distributions:
 
   Logical indicating whether to save full permutation distributions
+
+- compute_rdm_vectors:
+
+  Logical; when TRUE, also return compact predicted and observed RDM
+  vectors for reuse by downstream code.
 
 - ...:
 

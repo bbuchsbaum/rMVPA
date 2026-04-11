@@ -29,10 +29,10 @@ output_schema(model)
 # S3 method for class 'feature_rsa_model'
 output_schema(model)
 
-# S3 method for class 'hrfdecoder_model'
+# S3 method for class 'naive_xdec_model'
 output_schema(model)
 
-# S3 method for class 'naive_xdec_model'
+# S3 method for class 'era_partition_model'
 output_schema(model)
 
 # S3 method for class 'repmap_model'

@@ -109,16 +109,14 @@ dataset <- gen_sample_dataset(
 )
 
 # Generate continuous surface dataset
+if (FALSE) { # \dontrun{
 surf_data <- gen_sample_dataset(
   D = 1000,  # number of vertices
   nobs = 50,
   response_type = "continuous",
   data_mode = "surface"
 )
-#> Warning: RGL: unable to open X11 display
-#> Warning: 'rgl.init' failed, will use the null device.
-#> See '?rgl.useNULL' for ways to avoid this warning.
-#> loading /home/runner/work/_temp/Library/neurosurf/extdata/std.8_lh.inflated.asc
+} # }
 
 # Generate dataset with external test set
 test_dataset <- gen_sample_dataset(

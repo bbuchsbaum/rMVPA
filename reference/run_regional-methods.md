@@ -26,6 +26,7 @@ run_regional_base(
   stack_folds = NULL,
   stack_seed = NULL,
   stack_lambda = 0.001,
+  preflight = c("warn", "error", "off"),
   backend = c("default", "shard", "auto"),
   ...
 )
@@ -139,6 +140,12 @@ run_regional(
 
   Ridge penalty used by glmnet in stacking.
 
+- preflight:
+
+  One of `"warn"` (default), `"error"`, or `"off"` controlling whether
+  analysis preflight findings emit warnings, stop the run, or are
+  skipped.
+
 ## Value
 
 A `regional_mvpa_result` object (list) containing:
@@ -251,34 +258,34 @@ Without progressr, only coarse batch-level log messages are shown.
   
   # Run regional analysis
   results <- run_regional(mspec, region_mask)
-#> INFO [2026-04-11 10:59:13] 
+#> INFO [2026-04-11 19:49:50] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 5
 #> - Processed: 5
 #> - Skipped: 0
-#> INFO [2026-04-11 10:59:13] run_regional: 5 ROIs processed (success=5, errors=0)
+#> INFO [2026-04-11 19:49:50] run_regional: 5 ROIs processed (success=5, errors=0)
   
   # Access results
   head(results$performance_table)     # Performance metrics
 #> # A tibble: 5 × 3
 #>   roinum Accuracy     AUC
 #>    <int>    <dbl>   <dbl>
-#> 1      1     0.39  0.0634
-#> 2      2     0.31 -0.0555
-#> 3      3     0.25 -0.135 
-#> 4      4     0.31 -0.0662
-#> 5      5     0.29 -0.0864
+#> 1      1     0.19 -0.268 
+#> 2      2     0.37  0.0889
+#> 3      3     0.29 -0.0658
+#> 4      4     0.26 -0.188 
+#> 5      5     0.35  0.159 
   head(results$prediction_table)      # Predictions
 #> # A tibble: 6 × 9
 #> # Rowwise: 
-#>   .rownum roinum observed pobserved predicted correct prob_a  prob_b  prob_c
-#>     <int>  <int> <fct>        <dbl> <chr>     <lgl>    <dbl>   <dbl>   <dbl>
-#> 1       1      1 b          0.259   c         FALSE   0.111  0.259   0.630  
-#> 2       2      1 b          0.890   b         TRUE    0.0892 0.890   0.0211 
-#> 3       3      1 b          0.526   b         TRUE    0.0146 0.526   0.460  
-#> 4       4      1 c          0.985   c         TRUE    0.0130 0.00193 0.985  
-#> 5       5      1 b          0.124   a         FALSE   0.460  0.124   0.416  
-#> 6       6      1 c          0.00747 a         FALSE   0.954  0.0386  0.00747
+#>   .rownum roinum observed pobserved predicted correct prob_a   prob_b    prob_c
+#>     <int>  <int> <fct>        <dbl> <chr>     <lgl>    <dbl>    <dbl>     <dbl>
+#> 1       1      1 a        0.0380    c         FALSE   0.0380 0.000710 0.961    
+#> 2       2      1 b        0.516     b         TRUE    0.318  0.516    0.165    
+#> 3       3      1 b        0.0666    a         FALSE   0.610  0.0666   0.324    
+#> 4       4      1 b        0.374     a         FALSE   0.499  0.374    0.128    
+#> 5       5      1 c        0.0000654 a         FALSE   0.986  0.0136   0.0000654
+#> 6       6      1 a        0.944     a         TRUE    0.944  0.00566  0.0501   
   first_roi_fit <- results$fits[[1]]  # First ROI's fitted model
 # }
 ```

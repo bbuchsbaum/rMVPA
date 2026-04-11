@@ -63,11 +63,11 @@ An object inheriting from \`mvpa_design\` with class
 
 ## Details
 
-This mirrors the pattern in \`hrfdecoder_design()\`: rMVPA's core
-infrastructure expects \`mvpa_design\` fields like \`train_design\`,
-\`y_train\`, etc. For continuous regression with external test domains,
-those fields are largely bookkeeping, while the *actual* predictors are
-carried explicitly as \`feature_sets\` objects.
+This mirrors the pattern used by the archived \`hrfdecoder\` design API:
+rMVPA's core infrastructure expects \`mvpa_design\` fields like
+\`train_design\`, \`y_train\`, etc. For continuous regression with
+external test domains, those fields are largely bookkeeping, while the
+*actual* predictors are carried explicitly as \`feature_sets\` objects.
 
 **Where the data live.**
 

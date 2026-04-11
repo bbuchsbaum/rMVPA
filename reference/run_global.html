@@ -56,6 +56,7 @@ cross-validation, and compute per-feature importance via Haufe et al.
 <span>  summary_fun <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  return_fits <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  aggregation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mean"</span>, <span class="st">"sum"</span>, <span class="st">"maxabs"</span><span class="op">)</span>,</span>
+<span>  preflight <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"error"</span>, <span class="st">"off"</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -88,6 +89,11 @@ into a scalar importance per feature. Default: L2 norm.</p></dd>
 
 <dt id="arg-aggregation">aggregation<a class="anchor" aria-label="anchor" href="#arg-aggregation"></a></dt>
 <dd><p>How to aggregate multi-basis feature importance (default "mean").</p></dd>
+
+
+<dt id="arg-preflight">preflight<a class="anchor" aria-label="anchor" href="#arg-preflight"></a></dt>
+<dd><p>One of <code>"warn"</code> (default), <code>"error"</code>, or
+<code>"off"</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

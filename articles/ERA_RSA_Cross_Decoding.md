@@ -46,7 +46,7 @@ toy$design$test_design$item  <- toy$design$test_design$Ytest
 str(toy$design$train_design[item = 1:6, ])
 ```
 
-    tibble [48 × 4] (S3: tbl_df/tbl/data.frame)
+    tibble [48 x 4] (S3: tbl_df/tbl/data.frame)
      $ Y        : Factor w/ 3 levels "a","b","c": 1 3 1 3 3 1 2 3 1 3 ...
      $ block_var: int [1:48] 1 1 1 1 1 1 1 1 1 1 ...
      $ .rownum  : int [1:48] 1 2 3 4 5 6 7 8 9 10 ...
@@ -99,252 +99,69 @@ era_ms <- era_rsa_model(
   rsa_simfun = "spearman"
 )
 
+era_ms
+```
+
+     Model Specification 
+
+    - Summary 
+      - Name:  era_rsa_model 
+      - Primary Class:  era_rsa_model 
+      - Class Chain:  era_rsa_model, model_spec, list 
+      - Return Predictions:  FALSE 
+      - Compute Performance:  TRUE 
+      - Has Test Set:  TRUE 
+      - Basis Count:  1 
+    - Parameters 
+      - key_var: ~item
+      - phase_var: ~block_var
+      - encoding_level: 1
+      - retrieval_level: 2
+      - distfun: cordist / pearson
+      - rsa_simfun: spearman
+      - include_diag: TRUE
+
+     MVPA Dataset 
+
+    - Training Data 
+      - Dimensions:  6 x 6 x 6 x 48 observations 
+      - Type:  DenseNeuroVec 
+    - Test Data 
+      - Dimensions:  6 x 6 x 6 x 48 observations 
+      - Type:  DenseNeuroVec 
+    - Mask Information 
+      - Areas:  TRUE : 216 
+      - Active voxels/vertices:  216 
+
+
+     MVPA Design 
+
+    - Training Data 
+      - Observations:  48 
+      - Response Type:  Factor
+      - Levels:  a, b, c 
+      - Class Distribution:  a: 16, b: 16, c: 16 
+    - Test Data 
+      - Observations:  48 
+      - Class Distribution:  a: 16, b: 16, c: 16 
+    - Structure 
+      - Blocking:  Present
+      - Number of Blocks:  3 
+      - Mean Block Size:  16  (SD:  0 ) 
+      - Split Groups:  None 
+
+``` r
 era_res <- run_regional(era_ms, region_mask)
 era_res
 ```
 
-    $model_spec
-    $name
-    [1] "era_rsa_model"
+     Regional Analysis Results 
 
-    $dataset
-
-      [1m [36mMVPA Dataset [39m [22m 
-
-     [33m- Training Data [39m 
-     [37m  - Dimensions:  [39m  [32m6 x 6 x 6 x  [3m [34m48 [32m [23m observations [39m 
-     [37m  - Type:  [39m DenseNeuroVec 
-     [33m- Test Data [39m 
-     [37m  - Dimensions:  [39m  [32m6 x 6 x 6 x  [3m [34m48 [32m [23m observations [39m 
-     [37m  - Type:  [39m DenseNeuroVec 
-     [33m- Mask Information [39m 
-     [37m  - Areas:  [39m TRUE :  [32m216 [39m 
-     [37m  - Active voxels/vertices:  [39m  [32m216 [39m 
-
-
-    $design
-
-      [1m [36mMVPA Design [39m [22m 
-
-     [33m- Training Data [39m 
-     [37m  - Observations:  [39m  [32m48 [39m 
-     [37m  - Response Type:  [39m Factor
-     [37m  - Levels:  [39m  [34ma, b, c [39m 
-     [37m  - Class Distribution:  [39m  [32ma: 16, b: 16, c: 16 [39m 
-     [33m- Test Data [39m 
-     [37m  - Observations:  [39m  [32m48 [39m 
-     [37m  - Class Distribution:  [39m  [32ma: 16, b: 16, c: 16 [39m 
-     [33m- Structure [39m 
-     [37m  - Blocking:  [39m Present
-     [37m  - Number of Blocks:  [39m  [32m3 [39m 
-     [37m  - Mean Block Size:  [39m  [32m16 [39m  [3m [37m (SD:  [39m [23m  [32m0 [39m  [3m [37m) [39m [23m 
-     [37m  - Split Groups:  [39m  [31mNone [39m 
-
-
-    $return_predictions
-    [1] FALSE
-
-    $compute_performance
-    [1] TRUE
-
-    $tune_reps
-    [1] FALSE
-
-    $basis_count
-    [1] 1
-
-    $key
-     [1] a c a c c a b c a c c a b b b b a a a a c b a b b b b b c b a c a c b c b c
-    [39] b a c c b c a a a c
-    Levels: a b c
-
-    $phase
-     [1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3
-    [39] 3 3 3 3 3 3 3 3 3 3
-    Levels: 1 2 3
-
-    $key_var
-    ~item
-
-    $phase_var
-    ~block_var
-
-    $encoding_level
-    [1] "1"
-
-    $retrieval_level
-    [1] "2"
-
-    $distfun
-    $name
-    [1] "cordist"
-
-    $labels
-    [1] "pearson"
-
-    $center
-    [1] "none"
-
-    $method
-    [1] "pearson"
-
-    attr(,"class")
-    [1] "cordist" "distfun"
-
-    $rsa_simfun
-    [1] "spearman"
-
-    $confound_rdms
-    NULL
-
-    $include_diag
-    [1] TRUE
-
-    $item_block
-    NULL
-
-    $item_lag
-    NULL
-
-    $item_run_enc
-    NULL
-
-    $item_run_ret
-    NULL
-
-    $has_test_set
-    [1] TRUE
-
-    attr(,"class")
-    [1] "era_rsa_model" "model_spec"    "list"         
-
-    $performance_table
-     [38;5;246m# A tibble: 3 × 11 [39m
-      roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor
-        [3m [38;5;246m<int> [39m [23m    [3m [38;5;246m<dbl> [39m [23m         [3m [38;5;246m<dbl> [39m [23m          [3m [38;5;246m<dbl> [39m [23m               [3m [38;5;246m<dbl> [39m [23m     [3m [38;5;246m<dbl> [39m [23m
-     [38;5;250m1 [39m      1       3        0.333       0.055 [4m5 [24m              0.074 [4m8 [24m     - [31m1 [39m  
-     [38;5;250m2 [39m      2       3        0.667       0.009 [4m4 [24m [4m4 [24m             0.042 [4m8 [24m      0.5
-     [38;5;250m3 [39m      3       3        0.333       0.047 [4m3 [24m              0.081 [4m3 [24m     - [31m0 [39m [31m. [39m [31m5 [39m
-     [38;5;246m# ℹ 5 more variables: era_diag_minus_off_same_block <dbl>, [39m
-     [38;5;246m#   era_diag_minus_off_diff_block <dbl>, era_lag_cor <dbl>, [39m
-     [38;5;246m#   geom_cor_run_partial <dbl>, geom_cor_xrun <dbl> [39m
-
-    $prediction_table
-    NULL
-
-    $vol_results
-    $vol_results$n_items
-     [34m<DenseNeuroVol> [39m [8.3 Kb] 
-    ── Spatial ───────────────────────────────────────────────────────────────────── 
-      Dimensions    : 6 x 6 x 6
-      Spacing       : 1 x 1 x 1 mm
-      Origin        : 0, 0, 0
-      Orientation   : RAS
-    ── Data ──────────────────────────────────────────────────────────────────────── 
-      Range         : [3.000, 3.000]
-
-    $vol_results$era_top1_acc
-     [34m<DenseNeuroVol> [39m [8.3 Kb] 
-    ── Spatial ───────────────────────────────────────────────────────────────────── 
-      Dimensions    : 6 x 6 x 6
-      Spacing       : 1 x 1 x 1 mm
-      Origin        : 0, 0, 0
-      Orientation   : RAS
-    ── Data ──────────────────────────────────────────────────────────────────────── 
-      Range         : [0.333, 0.667]
-
-    $vol_results$era_diag_mean
-     [34m<DenseNeuroVol> [39m [8.3 Kb] 
-    ── Spatial ───────────────────────────────────────────────────────────────────── 
-      Dimensions    : 6 x 6 x 6
-      Spacing       : 1 x 1 x 1 mm
-      Origin        : 0, 0, 0
-      Orientation   : RAS
-    ── Data ──────────────────────────────────────────────────────────────────────── 
-      Range         : [0.009, 0.056]
-
-    $vol_results$era_diag_minus_off
-     [34m<DenseNeuroVol> [39m [8.3 Kb] 
-    ── Spatial ───────────────────────────────────────────────────────────────────── 
-      Dimensions    : 6 x 6 x 6
-      Spacing       : 1 x 1 x 1 mm
-      Origin        : 0, 0, 0
-      Orientation   : RAS
-    ── Data ──────────────────────────────────────────────────────────────────────── 
-      Range         : [0.043, 0.081]
-
-    $vol_results$geom_cor
-     [34m<DenseNeuroVol> [39m [8.3 Kb] 
-    ── Spatial ───────────────────────────────────────────────────────────────────── 
-      Dimensions    : 6 x 6 x 6
-      Spacing       : 1 x 1 x 1 mm
-      Origin        : 0, 0, 0
-      Orientation   : RAS
-    ── Data ──────────────────────────────────────────────────────────────────────── 
-      Range         : [-1.000, 0.500]
-
-    $vol_results$era_diag_minus_off_same_block
-     [34m<DenseNeuroVol> [39m [8.3 Kb] 
-    ── Spatial ───────────────────────────────────────────────────────────────────── 
-      Dimensions    : 6 x 6 x 6
-      Spacing       : 1 x 1 x 1 mm
-      Origin        : 0, 0, 0
-      Orientation   : RAS
-    ── Data ──────────────────────────────────────────────────────────────────────── 
-      Range         : [0.000, 0.000]
-
-    $vol_results$era_diag_minus_off_diff_block
-     [34m<DenseNeuroVol> [39m [8.3 Kb] 
-    ── Spatial ───────────────────────────────────────────────────────────────────── 
-      Dimensions    : 6 x 6 x 6
-      Spacing       : 1 x 1 x 1 mm
-      Origin        : 0, 0, 0
-      Orientation   : RAS
-    ── Data ──────────────────────────────────────────────────────────────────────── 
-      Range         : [0.000, 0.000]
-
-    $vol_results$era_lag_cor
-     [34m<DenseNeuroVol> [39m [8.3 Kb] 
-    ── Spatial ───────────────────────────────────────────────────────────────────── 
-      Dimensions    : 6 x 6 x 6
-      Spacing       : 1 x 1 x 1 mm
-      Origin        : 0, 0, 0
-      Orientation   : RAS
-    ── Data ──────────────────────────────────────────────────────────────────────── 
-      Range         : [0.000, 0.000]
-
-    $vol_results$geom_cor_run_partial
-     [34m<DenseNeuroVol> [39m [8.3 Kb] 
-    ── Spatial ───────────────────────────────────────────────────────────────────── 
-      Dimensions    : 6 x 6 x 6
-      Spacing       : 1 x 1 x 1 mm
-      Origin        : 0, 0, 0
-      Orientation   : RAS
-    ── Data ──────────────────────────────────────────────────────────────────────── 
-      Range         : [0.000, 0.000]
-
-    $vol_results$geom_cor_xrun
-     [34m<DenseNeuroVol> [39m [8.3 Kb] 
-    ── Spatial ───────────────────────────────────────────────────────────────────── 
-      Dimensions    : 6 x 6 x 6
-      Spacing       : 1 x 1 x 1 mm
-      Origin        : 0, 0, 0
-      Orientation   : RAS
-    ── Data ──────────────────────────────────────────────────────────────────────── 
-      Range         : [0.000, 0.000]
-
-
-    $fits
-    NULL
-
-    $pooled_prediction_table
-    NULL
-
-    $pooled_performance
-    NULL
-
-    attr(,"class")
-    [1] "regional_mvpa_result" "list"                
+    - Summary 
+      - Model:  era_rsa_model 
+      - Regions with Results:  3 
+      - Metrics:  n_items, era_top1_acc, era_diag_mean, era_diag_minus_off, geom_cor, era_diag_minus_off_same_block ... 
+      - Output Maps:  n_items, era_top1_acc, era_diag_mean, era_diag_minus_off, geom_cor, era_diag_minus_off_same_block ... 
 
 The `performance_table` contains one row per region and several ERA-RSA
 metrics.
@@ -353,15 +170,15 @@ metrics.
 head(era_res$performance_table)
 ```
 
-     [38;5;246m# A tibble: 3 × 11 [39m
+    # A tibble: 3 x 11
       roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor
-        [3m [38;5;246m<int> [39m [23m    [3m [38;5;246m<dbl> [39m [23m         [3m [38;5;246m<dbl> [39m [23m          [3m [38;5;246m<dbl> [39m [23m               [3m [38;5;246m<dbl> [39m [23m     [3m [38;5;246m<dbl> [39m [23m
-     [38;5;250m1 [39m      1       3        0.333       0.055 [4m5 [24m              0.074 [4m8 [24m     - [31m1 [39m  
-     [38;5;250m2 [39m      2       3        0.667       0.009 [4m4 [24m [4m4 [24m             0.042 [4m8 [24m      0.5
-     [38;5;250m3 [39m      3       3        0.333       0.047 [4m3 [24m              0.081 [4m3 [24m     - [31m0 [39m [31m. [39m [31m5 [39m
-     [38;5;246m# ℹ 5 more variables: era_diag_minus_off_same_block <dbl>, [39m
-     [38;5;246m#   era_diag_minus_off_diff_block <dbl>, era_lag_cor <dbl>, [39m
-     [38;5;246m#   geom_cor_run_partial <dbl>, geom_cor_xrun <dbl> [39m
+       <int>   <dbl>        <dbl>         <dbl>              <dbl>    <dbl>
+    1      1       3        0.333       0.0555              0.0748     -1  
+    2      2       3        0.667       0.00944             0.0428      0.5
+    3      3       3        0.333       0.0473              0.0813     -0.5
+    # i 5 more variables: era_diag_minus_off_same_block <dbl>,
+    #   era_diag_minus_off_diff_block <dbl>, era_lag_cor <dbl>,
+    #   geom_cor_run_partial <dbl>, geom_cor_xrun <dbl>
 
 Key metrics include:
 
@@ -390,22 +207,22 @@ era_sl <- run_searchlight(
 era_sl
 ```
 
-      [1m [36mSearchlight Analysis Results [39m [22m 
+     Searchlight Analysis Results 
 
-     [33m- Coverage [39m 
-     [37m  - Voxels/Vertices in Mask:  [39m  [32m216 [39m 
-     [37m  - Voxels/Vertices with Results:  [39m  [32m216 [39m 
-     [33m- Output Maps (Metrics) [39m 
-     [37m  -  [39m  [35mn_items [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
-     [37m  -  [39m  [35mera_top1_acc [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
-     [37m  -  [39m  [35mera_diag_mean [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
-     [37m  -  [39m  [35mera_diag_minus_off [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
-     [37m  -  [39m  [35mgeom_cor [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
-     [37m  -  [39m  [35mera_diag_minus_off_same_block [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
-     [37m  -  [39m  [35mera_diag_minus_off_diff_block [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
-     [37m  -  [39m  [35mera_lag_cor [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
-     [37m  -  [39m  [35mgeom_cor_run_partial [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
-     [37m  -  [39m  [35mgeom_cor_xrun [39m  [37m (Type:  [39m  [34mDenseNeuroVol [39m  [37m) [39m 
+    - Coverage 
+      - Voxels/Vertices in Mask:  216 
+      - Voxels/Vertices with Results:  216 
+    - Output Maps (Metrics) 
+      -  n_items  (Type:  DenseNeuroVol ) 
+      -  era_top1_acc  (Type:  DenseNeuroVol ) 
+      -  era_diag_mean  (Type:  DenseNeuroVol ) 
+      -  era_diag_minus_off  (Type:  DenseNeuroVol ) 
+      -  geom_cor  (Type:  DenseNeuroVol ) 
+      -  era_diag_minus_off_same_block  (Type:  DenseNeuroVol ) 
+      -  era_diag_minus_off_diff_block  (Type:  DenseNeuroVol ) 
+      -  era_lag_cor  (Type:  DenseNeuroVol ) 
+      -  geom_cor_run_partial  (Type:  DenseNeuroVol ) 
+      -  geom_cor_xrun  (Type:  DenseNeuroVol ) 
 
 The `searchlight_result` contains:
 

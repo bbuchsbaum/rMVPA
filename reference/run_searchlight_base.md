@@ -21,6 +21,7 @@ run_searchlight_base(
   combiner = "average",
   drop_probs = FALSE,
   fail_fast = FALSE,
+  preflight = c("warn", "error", "off"),
   engine = NULL,
   k = NULL,
   backend = c("default", "shard", "auto"),

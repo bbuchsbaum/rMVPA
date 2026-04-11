@@ -17,9 +17,12 @@ Documentation and vignettes: <https://bbuchsbaum.github.io/rMVPA/>
 ### API lifecycle
 
 The supported public workflow/API surface is now intentionally smaller
-and explicit. Use `rmvpa_api_lifecycle()` to inspect lifecycle tiers and
-`rmvpa_stable_api()` to list the stable entry points intended for
-scripts, extensions, and downstream packages.
+and explicit. Use
+[`rmvpa_api_lifecycle()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.md)
+to inspect lifecycle tiers and
+[`rmvpa_stable_api()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.md)
+to list the stable entry points intended for scripts, extensions, and
+downstream packages.
 
 ### Installation
 
@@ -136,6 +139,9 @@ All functions exported by rMVPA
 - [`blocks()`](http://bbuchsbaum.github.io/rMVPA/reference/blocks.md) :
   Define consecutive column blocks as feature sets
 
+- [`build_analysis()`](http://bbuchsbaum.github.io/rMVPA/reference/build_analysis.md)
+  : Build an Analysis Object
+
 - [`by_set()`](http://bbuchsbaum.github.io/rMVPA/reference/by_set.md) :
   Define feature sets by a per-column set label
 
@@ -152,9 +158,6 @@ All functions exported by rMVPA
 
 - [`compute_local_redundancy()`](http://bbuchsbaum.github.io/rMVPA/reference/compute_local_redundancy.md)
   : Compute Local Redundancy for Each Searchlight Center
-
-- [`compute_performance(`*`<hrfdecoder_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/compute_performance.hrfdecoder_model.md)
-  : Compute performance for hrfdecoder_model
 
 - [`contrast_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md)
   : Constructor for contrast_rsa_model
@@ -200,6 +203,9 @@ All functions exported by rMVPA
   [`pcadist()`](http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
   : Distance Function Constructors
 
+- [`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+  : ERA Variance-Partition Model
+
 - [`era_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_design.md)
   : Build item-level ERA-RSA confounds and summaries from mvpa_design
 
@@ -214,6 +220,9 @@ All functions exported by rMVPA
 
 - [`expected_features()`](http://bbuchsbaum.github.io/rMVPA/reference/expected_features.md)
   : Build expected-domain features from a soft alignment matrix
+
+- [`explain_searchlight_engine()`](http://bbuchsbaum.github.io/rMVPA/reference/explain_searchlight_engine.md)
+  : Explain Searchlight Engine Selection
 
 - [`extract_weights()`](http://bbuchsbaum.github.io/rMVPA/reference/extract_weights.md)
   : Extract Raw Model Weights
@@ -263,10 +272,6 @@ All functions exported by rMVPA
 - [`format_result()`](http://bbuchsbaum.github.io/rMVPA/reference/format_result.md)
   : Format Result Object
 
-- [`format_result(`*`<hrfdecoder_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/format_result.hrfdecoder_model.md)
-  : Format per-fold results: predict TR-level soft labels, aggregate to
-  events
-
 - [`gen_clustered_sample_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/gen_clustered_sample_dataset.md)
   : Generate a Synthetic Clustered MVPA Dataset
 
@@ -306,11 +311,8 @@ All functions exported by rMVPA
 - [`haufe_importance()`](http://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.md)
   : Haufe Feature Importance (Activation Patterns)
 
-- [`hrfdecoder_design()`](http://bbuchsbaum.github.io/rMVPA/reference/hrfdecoder_design.md)
-  : Construct an hrfdecoder design (explicit mvpa_design extension)
-
-- [`hrfdecoder_model()`](http://bbuchsbaum.github.io/rMVPA/reference/hrfdecoder_model.md)
-  : hrfdecoder Model (continuous-time MVPA)
+- [`install_cli()`](http://bbuchsbaum.github.io/rMVPA/reference/install_cli.md)
+  : Install rMVPA Command-Line Wrappers
 
 - [`item_design()`](http://bbuchsbaum.github.io/rMVPA/reference/item_design.md)
   : Construct an ITEM design for trial-wise decoding
@@ -353,10 +355,6 @@ All functions exported by rMVPA
 - [`merge_results()`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results.md)
   : Merge Multiple Results
 
-- [`merge_results(`*`<hrfdecoder_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results.hrfdecoder_model.md)
-  : Merge fold results within an ROI to a classification_result and
-  compute performance
-
 - [`mock_context()`](http://bbuchsbaum.github.io/rMVPA/reference/mock_context.md)
   : Build a Mock fit_roi Context
 
@@ -377,6 +375,9 @@ All functions exported by rMVPA
 
 - [`mvpa_clustered_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_clustered_dataset.md)
   : Create an MVPA Dataset for Clustered/Parcellated Data
+
+- [`mvpa_config()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_config.md)
+  : Build a Public Analysis Configuration
 
 - [`mvpa_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
   : Create an MVPA Dataset Object
@@ -458,9 +459,6 @@ All functions exported by rMVPA
 - [`print(`*`<feature_sets_design>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/print.feature_sets_design.md)
   : Print method for feature_sets_design
 
-- [`print(`*`<hrfdecoder_design>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/print.hrfdecoder_design.md)
-  : Print method for hrfdecoder_design
-
 - [`print(`*`<vector_rsa_design>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/print.vector_rsa_design.md)
   : Print Method for vector_rsa_design
 
@@ -511,6 +509,12 @@ All functions exported by rMVPA
 - [`repnet_model()`](http://bbuchsbaum.github.io/rMVPA/reference/repnet_model.md)
   : Representational connectivity model (ReNA-RC)
 
+- [`rmvpa_api_lifecycle()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.md)
+  : List the rMVPA API Lifecycle Registry
+
+- [`rmvpa_stable_api()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.md)
+  : Return the Stable rMVPA API Surface
+
 - [`roi_result()`](http://bbuchsbaum.github.io/rMVPA/reference/roi_result.md)
   : Construct a Standardized ROI Result
 
@@ -520,6 +524,9 @@ All functions exported by rMVPA
 
 - [`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
   : Construct an RSA (Representational Similarity Analysis) model
+
+- [`run_analysis()`](http://bbuchsbaum.github.io/rMVPA/reference/run_analysis.md)
+  : Run a Built Analysis
 
 - [`run_custom_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md)
   : Run a Custom Analysis Function Regionally
@@ -546,9 +553,15 @@ All functions exported by rMVPA
 - [`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md)
   : Save MVPA Results to Disk
 
+- [`save_results(`*`<rmvpa_analysis_run>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.rmvpa_analysis_run.md)
+  : Save a High-Level Analysis Run
+
 - [`schema_scalar()`](http://bbuchsbaum.github.io/rMVPA/reference/schema_metric_spec.md)
   [`schema_vector()`](http://bbuchsbaum.github.io/rMVPA/reference/schema_metric_spec.md)
   : Metric Schema Constructors
+
+- [`searchlight_engines()`](http://bbuchsbaum.github.io/rMVPA/reference/searchlight_engines.md)
+  : Summarize Available Searchlight Engines
 
 - [`searchlight_mode()`](http://bbuchsbaum.github.io/rMVPA/reference/searchlight_mode.md)
   : Get Or Set Searchlight Mode
@@ -638,9 +651,6 @@ All functions exported by rMVPA
 - [`train_indices()`](http://bbuchsbaum.github.io/rMVPA/reference/train_indices.md)
   : Get Training Indices for a Fold
 
-- [`train_model(`*`<hrfdecoder_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/train_model.hrfdecoder_model.md)
-  : Train per ROI/fold using hrfdecoder
-
 - [`transform_contrasts()`](http://bbuchsbaum.github.io/rMVPA/reference/transform_contrasts.md)
   : Apply Transformations to an Existing Contrast Matrix
 
@@ -726,13 +736,6 @@ RSA methods from basic to specialized approaches
   Control](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md):
 - [Feature-RSA Advanced
   Workflows](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md):
-
-### Continuous Decoding
-
-TR-level continuous-time decoding methods
-
-- [Continuous Decoding with
-  hrfdecoder](http://bbuchsbaum.github.io/rMVPA/articles/Continuous_Decoding.md):
 
 ### Representation Mapping (REMAP) Models
 

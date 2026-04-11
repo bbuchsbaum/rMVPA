@@ -17,9 +17,12 @@ Documentation and vignettes: <https://bbuchsbaum.github.io/rMVPA/>
 ### API lifecycle
 
 The supported public workflow/API surface is now intentionally smaller
-and explicit. Use `rmvpa_api_lifecycle()` to inspect lifecycle tiers and
-`rmvpa_stable_api()` to list the stable entry points intended for
-scripts, extensions, and downstream packages.
+and explicit. Use
+[`rmvpa_api_lifecycle()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.md)
+to inspect lifecycle tiers and
+[`rmvpa_stable_api()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.md)
+to list the stable entry points intended for scripts, extensions, and
+downstream packages.
 
 ### Installation
 

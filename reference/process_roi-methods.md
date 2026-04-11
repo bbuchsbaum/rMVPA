@@ -58,10 +58,11 @@ A tibble row containing the performance metrics for the ROI.
   samp <- data_sample(ds$dataset, vox)
   roi_obj <- as_roi(samp, ds$dataset)
   process_roi(spec, roi_obj, 1)
+#> ERROR [2026-04-11 19:47:52] Class model prediction failed: length of 'dimnames' [2] not equal to array extent
+#> WARN [2026-04-11 19:47:52] error fitting model 1 : Prediction failed: length of 'dimnames' [2] not equal to array extent
 #> # A tibble: 1 × 8
-#>   result         indices    performance    id error error_message warning
-#>   <list>         <list>     <list>      <dbl> <lgl> <chr>         <lgl>  
-#> 1 <mltwy_c_ [6]> <dbl [30]> <dbl [2]>       1 FALSE ~             FALSE  
-#> # ℹ 1 more variable: warning_message <chr>
+#>   result indices performance    id error error_message   warning warning_message
+#>   <list> <list>  <list>      <dbl> <lgl> <chr>           <lgl>   <chr>          
+#> 1 <NULL> <dbl>   <NULL>          1 TRUE  Prediction fai… FALSE   ~              
 # }
 ```

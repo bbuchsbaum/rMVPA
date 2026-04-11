@@ -16,6 +16,7 @@ run_global(
   summary_fun = NULL,
   return_fits = FALSE,
   aggregation = c("mean", "sum", "maxabs"),
+  preflight = c("warn", "error", "off"),
   ...
 )
 ```
@@ -47,6 +48,10 @@ run_global(
 - aggregation:
 
   How to aggregate multi-basis feature importance (default "mean").
+
+- preflight:
+
+  One of `"warn"` (default), `"error"`, or `"off"`.
 
 ## Value
 
