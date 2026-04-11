@@ -898,6 +898,9 @@ comp_perf <- function(results, region_mask, model_spec = NULL) {
 #'   an integer number of folds, a fold-id vector, or a list of fold indices.
 #' @param stack_seed Optional seed used when auto-generating stacking folds.
 #' @param stack_lambda Ridge penalty used by \pkg{glmnet} in stacking.
+#' @param preflight One of \code{"warn"} (default), \code{"error"}, or
+#'   \code{"off"} controlling whether analysis preflight findings emit warnings,
+#'   stop the run, or are skipped.
 #' @details This function serves as the base implementation for regional analyses, orchestrating data preparation, iteration over regions, performance computation, and result aggregation. Specific `run_regional` methods for different model classes may call this function or provide specialized behavior.
 #' @export
 run_regional_base <- function(model_spec,

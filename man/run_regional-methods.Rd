@@ -30,6 +30,7 @@ run_regional_base(
   stack_folds = NULL,
   stack_seed = NULL,
   stack_lambda = 0.001,
+  preflight = c("warn", "error", "off"),
   backend = c("default", "shard", "auto"),
   ...
 )
@@ -98,6 +99,10 @@ an integer number of folds, a fold-id vector, or a list of fold indices.}
 \item{stack_seed}{Optional seed used when auto-generating stacking folds.}
 
 \item{stack_lambda}{Ridge penalty used by \pkg{glmnet} in stacking.}
+
+\item{preflight}{One of \code{"warn"} (default), \code{"error"}, or
+\code{"off"} controlling whether analysis preflight findings emit warnings,
+stop the run, or are skipped.}
 }
 \value{
 A \code{regional_mvpa_result} object (list) containing:

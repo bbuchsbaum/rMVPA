@@ -13,6 +13,7 @@ run_global(model_spec, ...)
   summary_fun = NULL,
   return_fits = FALSE,
   aggregation = c("mean", "sum", "maxabs"),
+  preflight = c("warn", "error", "off"),
   ...
 )
 }
@@ -30,6 +31,9 @@ into a scalar importance per feature. Default: L2 norm.}
 \item{return_fits}{Logical; if TRUE, store per-fold model fits.}
 
 \item{aggregation}{How to aggregate multi-basis feature importance (default "mean").}
+
+\item{preflight}{One of \code{"warn"} (default), \code{"error"}, or
+\code{"off"}.}
 }
 \value{
 A \code{global_mvpa_result} object.

@@ -246,7 +246,6 @@ static int rmvpa_predict_probs_from_state(
   const double gamma_inv2 = gamma_inv * gamma_inv;
   const double alpha_one = 1.0;
   const double beta_zero = 0.0;
-  const double beta_one = 1.0;
 
   memcpy(z_work, tmat, (size_t) n * (size_t) k * sizeof(double));
 

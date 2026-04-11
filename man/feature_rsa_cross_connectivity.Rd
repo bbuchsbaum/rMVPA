@@ -35,12 +35,12 @@ and target offset terms estimated from the raw matrix.}
 }
 \value{
 By default, a numeric matrix of dimension n_ROI x n_ROI. Rows
-correspond to predicted RDM vectors and columns to observed RDM vectors.
-The matrix is \emph{not} necessarily symmetric. If
-\code{return_components = TRUE}, a list is returned with elements
-\code{matrix}, \code{raw_matrix}, \code{adjusted_matrix},
-\code{source_offset}, \code{target_offset}, \code{grand_mean},
-\code{method}, and \code{adjust}.
+  correspond to predicted RDM vectors and columns to observed RDM vectors.
+  The matrix is \emph{not} necessarily symmetric. If
+  \code{return_components = TRUE}, a list is returned with elements
+  \code{matrix}, \code{raw_matrix}, \code{adjusted_matrix},
+  \code{source_offset}, \code{target_offset}, \code{grand_mean},
+  \code{method}, and \code{adjust}.
 }
 \description{
 Builds an asymmetric ROI x ROI matrix where entry (i, j) is the correlation

@@ -193,7 +193,7 @@ save_results <- function(x, dir,
       return(as.character(json))
     }
   }
-  paste(capture.output(str(x, give.attr = FALSE)), collapse = " ")
+  paste(capture.output(utils::str(x, give.attr = FALSE)), collapse = " ")
 }
 
 # heuristics from level

@@ -76,12 +76,14 @@ dataset <- gen_sample_dataset(
 )
 
 # Generate continuous surface dataset
+\dontrun{
 surf_data <- gen_sample_dataset(
   D = 1000,  # number of vertices
   nobs = 50,
   response_type = "continuous",
   data_mode = "surface"
 )
+}
 
 # Generate dataset with external test set
 test_dataset <- gen_sample_dataset(

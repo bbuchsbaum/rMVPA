@@ -39,6 +39,7 @@
 ^LICENSE\.md$
 ^\.\.pdf$
 ^\.rcmdcheck_result\.rds$
+^.*\.Rcheck$
 ^archive($|/)
 ^src/Makevars$
 ^src/.*\.(o|so|dll|dylib)$
