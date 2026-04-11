@@ -153,6 +153,8 @@ Suggests:
     xgboost,
     yaml
 Remotes:
+    bbuchsbaum/fmridesign,
+    bbuchsbaum/fmrilss,
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf,
     bbuchsbaum/shard
