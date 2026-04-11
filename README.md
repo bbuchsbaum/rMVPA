@@ -23,6 +23,13 @@ on neuroimaging data.
 
 Documentation and vignettes: <https://bbuchsbaum.github.io/rMVPA/>
 
+### API lifecycle
+
+The supported public workflow/API surface is now intentionally smaller and
+explicit. Use `rmvpa_api_lifecycle()` to inspect lifecycle tiers and
+`rmvpa_stable_api()` to list the stable entry points intended for scripts,
+extensions, and downstream packages.
+
 ### Installation
 
 #### Using devtools
@@ -44,15 +51,40 @@ From within R:
 
 ### Command line scripts
 
-Optionally install command line scripts for "coding-free" MVPA analysis:
+`rMVPA` now ships packaged CLI wrappers with native command names:
 
-```bash
-wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Searchlight.R
-wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Regional.R
-chmod +x MVPA_Searchlight.R MVPA_Regional.R
+- `rmvpa-searchlight`
+- `rmvpa-regional`
+
+Install the package:
+
+```r
+pak::pak("bbuchsbaum/rMVPA")
 ```
 
-Then move these files to a folder on your `PATH`.
+Then copy the wrappers into a directory on your `PATH`:
+
+```r
+rMVPA::install_cli("~/.local/bin", overwrite = TRUE)
+```
+
+If needed, add that directory to `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+On macOS/Linux, you can then run:
+
+```bash
+rmvpa-searchlight --help
+rmvpa-regional --help
+rmvpa-searchlight --version
+```
+
+The unified CLI vignette is `vignette("CommandLine")`. The legacy source-tree
+entrypoints remain available as compatibility shims, but the packaged commands
+above are the supported interface.
 
 ## Citation
 

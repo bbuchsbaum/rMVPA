@@ -389,9 +389,154 @@ feature_rsa_model <- function(dataset,
 
 
 #' @noRd
+.feature_rsa_col_sds <- function(X) {
+  X <- as.matrix(X)
+  n <- nrow(X)
+  p <- ncol(X)
+
+  if (p == 0L) {
+    return(numeric(0))
+  }
+  if (n < 2L) {
+    return(rep(NA_real_, p))
+  }
+  if (anyNA(X)) {
+    return(apply(X, 2L, stats::sd))
+  }
+
+  cm <- colMeans(X)
+  ss <- colSums(X * X) - n * cm * cm
+  sqrt(pmax(ss / (n - 1L), 0))
+}
+
+#' @noRd
+.feature_rsa_row_sds <- function(X) {
+  X <- as.matrix(X)
+  n <- nrow(X)
+  p <- ncol(X)
+
+  if (n == 0L) {
+    return(numeric(0))
+  }
+  if (p < 2L) {
+    return(rep(NA_real_, n))
+  }
+  if (anyNA(X)) {
+    return(apply(X, 1L, stats::sd))
+  }
+
+  rm <- rowMeans(X)
+  ss <- rowSums(X * X) - p * rm * rm
+  sqrt(pmax(ss / (p - 1L), 0))
+}
+
+#' @noRd
+.feature_rsa_offdiag_mean <- function(mat, diag_vals = NULL) {
+  if (!is.matrix(mat) || nrow(mat) < 2L) {
+    return(NA_real_)
+  }
+
+  if (is.null(diag_vals)) {
+    diag_vals <- diag(mat)
+  }
+
+  finite_total <- is.finite(mat)
+  finite_diag <- is.finite(diag_vals)
+  n_off <- sum(finite_total) - sum(finite_diag)
+
+  if (n_off <= 0L) {
+    return(NA_real_)
+  }
+
+  (sum(mat[finite_total], na.rm = TRUE) - sum(diag_vals[finite_diag], na.rm = TRUE)) / n_off
+}
+
+#' @noRd
+.feature_rsa_diag_col_cor <- function(X, Y) {
+  X <- as.matrix(X)
+  Y <- as.matrix(Y)
+
+  if (!identical(dim(X), dim(Y))) {
+    stop(".feature_rsa_diag_col_cor: matrices must have identical dimensions.", call. = FALSE)
+  }
+  if (ncol(X) == 0L) {
+    return(numeric(0))
+  }
+  if (nrow(X) < 2L) {
+    return(rep(NA_real_, ncol(X)))
+  }
+
+  if (anyNA(X) || anyNA(Y)) {
+    return(vapply(seq_len(ncol(X)), function(j) {
+      tryCatch(
+        stats::cor(X[, j], Y[, j], use = "pairwise.complete.obs"),
+        error = function(e) NA_real_
+      )
+    }, numeric(1)))
+  }
+
+  x_mean <- colMeans(X)
+  y_mean <- colMeans(Y)
+  x_ctr <- sweep(X, 2L, x_mean, "-")
+  y_ctr <- sweep(Y, 2L, y_mean, "-")
+  denom <- sqrt(colSums(x_ctr * x_ctr) * colSums(y_ctr * y_ctr))
+
+  out <- rep(NA_real_, ncol(X))
+  ok <- is.finite(denom) & denom > 0
+  if (any(ok)) {
+    out[ok] <- colSums(x_ctr[, ok, drop = FALSE] * y_ctr[, ok, drop = FALSE]) / denom[ok]
+  }
+  out
+}
+
+#' @noRd
+.feature_rsa_global_cor <- function(X, Y) {
+  X <- as.matrix(X)
+  Y <- as.matrix(Y)
+
+  if (!identical(dim(X), dim(Y))) {
+    stop(".feature_rsa_global_cor: matrices must have identical dimensions.", call. = FALSE)
+  }
+  if (length(X) < 2L) {
+    return(NA_real_)
+  }
+
+  if (anyNA(X) || anyNA(Y)) {
+    return(tryCatch(
+      stats::cor(as.vector(X), as.vector(Y), use = "pairwise.complete.obs"),
+      error = function(e) NA_real_
+    ))
+  }
+
+  x_ctr <- X - mean(X)
+  y_ctr <- Y - mean(Y)
+  denom <- sqrt(sum(x_ctr * x_ctr) * sum(y_ctr * y_ctr))
+
+  if (!is.finite(denom) || denom <= 0) {
+    return(NA_real_)
+  }
+
+  sum(x_ctr * y_ctr) / denom
+}
+
+#' @noRd
+.feature_rsa_rdm_vector_from_cor <- function(cor_mat, n_obs) {
+  n_pairs <- n_obs * (n_obs - 1L) / 2L
+
+  if (n_pairs < 1L) {
+    return(numeric(0))
+  }
+  if (is.null(cor_mat) || !is.matrix(cor_mat) || !all(dim(cor_mat) == c(n_obs, n_obs))) {
+    return(rep(NA_real_, n_pairs))
+  }
+
+  as.numeric((1 - cor_mat)[lower.tri(cor_mat)])
+}
+
+#' @noRd
 .standardize <- function(X) {
   cm <- colMeans(X)
-  csd <- apply(X, 2, sd)
+  csd <- .feature_rsa_col_sds(X)
   csd[csd == 0] <- 1
   X_sc <- scale(X, center=cm, scale=csd)
   list(X_sc = X_sc, mean = cm, sd = csd)
@@ -533,7 +678,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 
   # Early diagnostic: warn if predictions are constant across trials
   if (nrow(predictions) > 1) {
-    pred_sds <- apply(predictions, 2, stats::sd)
+    pred_sds <- .feature_rsa_col_sds(predictions)
     if (all(pred_sds < 1e-12, na.rm = TRUE)) {
       futile.logger::flog.debug(
         "predict_model (%s): all %d voxel predictions are constant across %d trials (max sd=%.2e). Model has no predictive power for this ROI.",
@@ -578,11 +723,54 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
                                    mean_voxelwise_temporal_cor,
                                    valid_col)
 {
-  message("Performing permutation tests with ", nperm, " permutations... (feature_rsa_model)")
+  futile.logger::flog.info(
+    "Performing permutation tests with %d permutations... (feature_rsa_model)",
+    nperm
+  )
 
   n_rows <- nrow(predicted)
   sd_thresh <- 1e-12
   tss <- sum((observed - mean(observed, na.rm = TRUE))^2, na.rm = TRUE)
+  observed_valid <- observed[, valid_col, drop = FALSE]
+  predicted_valid <- predicted[, valid_col, drop = FALSE]
+  obs_row_sd <- .feature_rsa_row_sds(observed_valid)
+  obs_row_ok <- obs_row_sd > sd_thresh
+
+  observed_trial_cor <- NULL
+  if (nrow(observed_valid) >= 3L) {
+    observed_trial_cor <- tryCatch(
+      stats::cor(t(observed_valid), use = "pairwise.complete.obs"),
+      error = function(e) NULL
+    )
+  }
+
+  no_na_fast_path <- n_rows > 1L &&
+    length(valid_col) > 0L &&
+    !anyNA(observed_valid) &&
+    !anyNA(predicted_valid)
+
+  if (no_na_fast_path) {
+    obs_centered_global <- observed_valid - mean(observed_valid)
+    pred_centered_global <- predicted_valid - mean(predicted_valid)
+    global_denom <- sqrt(
+      sum(obs_centered_global * obs_centered_global) *
+        sum(pred_centered_global * pred_centered_global)
+    )
+
+    obs_centered_cols <- sweep(observed_valid, 2L, colMeans(observed_valid), "-")
+    pred_centered_cols <- sweep(predicted_valid, 2L, colMeans(predicted_valid), "-")
+    col_denom <- sqrt(
+      colSums(obs_centered_cols * obs_centered_cols) *
+        colSums(pred_centered_cols * pred_centered_cols)
+    )
+  } else {
+    global_denom <- NA_real_
+    obs_centered_global <- NULL
+    pred_centered_global <- NULL
+    obs_centered_cols <- NULL
+    pred_centered_cols <- NULL
+    col_denom <- NULL
+  }
 
   ## Metric names and observed values (order matters)
   metric_names <- c("pattern_correlation", "pattern_discrimination",
@@ -608,29 +796,23 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   for (i in seq_len(nperm)) {
     perm_idx  <- sample(n_rows)
     perm_pred <- predicted[perm_idx, , drop = FALSE]
+    perm_pred_valid <- perm_pred[, valid_col, drop = FALSE]
 
     ## -- Condition-pattern metrics (trial x trial) --
     ppc <- ppd <- ppr <- prdm <- NA_real_
-    obs_row_sd  <- apply(observed[, valid_col, drop = FALSE], 1, stats::sd)
-    pred_row_sd <- apply(perm_pred[, valid_col, drop = FALSE], 1, stats::sd)
-    vr <- which(obs_row_sd > sd_thresh & pred_row_sd > sd_thresh)
+    pred_row_sd <- .feature_rsa_row_sds(perm_pred_valid)
+    vr <- which(obs_row_ok & pred_row_sd > sd_thresh)
     if (length(vr) >= 2) {
-      cm <- tryCatch(stats::cor(t(perm_pred[vr, valid_col, drop = FALSE]),
-                                t(observed[vr, valid_col, drop = FALSE]),
+      cm <- tryCatch(stats::cor(t(perm_pred_valid[vr, , drop = FALSE]),
+                                t(observed_valid[vr, , drop = FALSE]),
                                 use = "pairwise.complete.obs"),
                      error = function(e) NULL)
       if (!is.null(cm)) {
         dc  <- diag(cm)
         ppc <- mean(dc, na.rm = TRUE)
-        nc  <- nrow(cm)
-        if (nc > 1) {
-          off_vals <- cm[row(cm) != col(cm)]
-          off_vals <- off_vals[!is.na(off_vals)]
-          od <- if (length(off_vals) > 0) mean(off_vals) else NA_real_
-        } else {
-          od <- NA_real_
-        }
+        od <- .feature_rsa_offdiag_mean(cm, diag_vals = dc)
         ppd <- if (is.finite(ppc) && is.finite(od)) ppc - od else NA_real_
+        nc <- nrow(cm)
         rnk <- numeric(nc)
         for (j in seq_len(nc)) {
           rc <- cm[j, ]
@@ -647,12 +829,16 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 
     ## -- Representational geometry (RDM correlation) --
     if (length(vr) >= 3) {
-      pc <- tryCatch(stats::cor(t(perm_pred[vr, valid_col, drop = FALSE]),
+      pc <- tryCatch(stats::cor(t(perm_pred_valid[vr, , drop = FALSE]),
                                 use = "pairwise.complete.obs"),
                      error = function(e) NULL)
-      oc <- tryCatch(stats::cor(t(observed[vr, valid_col, drop = FALSE]),
-                                use = "pairwise.complete.obs"),
-                     error = function(e) NULL)
+      oc <- if (!is.null(observed_trial_cor)) {
+        observed_trial_cor[vr, vr, drop = FALSE]
+      } else {
+        tryCatch(stats::cor(t(observed_valid[vr, , drop = FALSE]),
+                            use = "pairwise.complete.obs"),
+                 error = function(e) NULL)
+      }
       if (!is.null(pc) && !is.null(oc)) {
         pd <- 1 - pc
         od <- 1 - oc
@@ -666,19 +852,38 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
     }
 
     ## -- Global reconstruction --
-    pvc  <- tryCatch(stats::cor(as.vector(perm_pred[, valid_col, drop = FALSE]),
-                                as.vector(observed[, valid_col, drop = FALSE]),
-                                use = "pairwise.complete.obs"),
-                     error = function(e) NA_real_)
+    pvc <- if (no_na_fast_path && is.finite(global_denom) && global_denom > 0) {
+      sum(obs_centered_global * pred_centered_global[perm_idx, , drop = FALSE]) / global_denom
+    } else {
+      tryCatch(stats::cor(as.vector(perm_pred_valid),
+                          as.vector(observed_valid),
+                          use = "pairwise.complete.obs"),
+               error = function(e) NA_real_)
+    }
     pmse <- mean((perm_pred - observed)^2, na.rm = TRUE)
     prsq <- if (tss > 0) 1 - sum((observed - perm_pred)^2, na.rm = TRUE) / tss else NA_real_
 
     ## -- Voxel encoding --
     pmvtc <- NA_real_
     if (n_rows > 1 && length(valid_col) > 0) {
-      pmvtc <- mean(vapply(valid_col, function(j) {
-        tryCatch(stats::cor(observed[, j], perm_pred[, j], use = "pairwise.complete.obs"), error = function(e) NA_real_)
-      }, numeric(1)), na.rm = TRUE)
+      if (no_na_fast_path) {
+        vcors <- rep(NA_real_, length(valid_col))
+        ok <- is.finite(col_denom) & col_denom > 0
+        if (any(ok)) {
+          vcors[ok] <- colSums(
+            obs_centered_cols[, ok, drop = FALSE] *
+              pred_centered_cols[perm_idx, ok, drop = FALSE]
+          ) / col_denom[ok]
+        }
+        pmvtc <- mean(vcors, na.rm = TRUE)
+      } else {
+        pmvtc <- mean(vapply(seq_len(length(valid_col)), function(j) {
+          tryCatch(
+            stats::cor(observed_valid[, j], perm_pred_valid[, j], use = "pairwise.complete.obs"),
+            error = function(e) NA_real_
+          )
+        }, numeric(1)), na.rm = TRUE)
+      }
     }
 
     pvals <- c(ppc, ppd, ppr, prdm, pvc, pmse, prsq, pmvtc)
@@ -740,6 +945,8 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #' @param observed Matrix of observed values (observations x voxels)
 #' @param nperm Number of permutations for statistical testing (default: 0)
 #' @param save_distributions Logical indicating whether to save full permutation distributions
+#' @param compute_rdm_vectors Logical; when TRUE, also return compact predicted
+#'   and observed RDM vectors for reuse by downstream code.
 #' @param ... Additional arguments
 #'
 #' @return A list containing:
@@ -772,6 +979,7 @@ evaluate_model.feature_rsa_model <- function(object,
                                              observed,
                                              nperm = 0,
                                              save_distributions = FALSE,
+                                             compute_rdm_vectors = isTRUE(object$return_rdm_vectors),
                                              ...)
 {
   observed  <- as.matrix(observed)
@@ -790,15 +998,18 @@ evaluate_model.feature_rsa_model <- function(object,
   sd_thresh <- 1e-12
   n_obs  <- nrow(observed)
   n_vox  <- ncol(observed)
+  n_pairs <- n_obs * (n_obs - 1L) / 2L
 
   ## -- helpers to avoid repeating variance checks --
-  obs_sd  <- apply(observed, 2, stats::sd)
-  pred_sd <- apply(predicted, 2, stats::sd)
+  obs_sd  <- .feature_rsa_col_sds(observed)
+  pred_sd <- .feature_rsa_col_sds(predicted)
   valid_col <- which(obs_sd > sd_thresh & pred_sd > sd_thresh)
+  observed_valid <- observed[, valid_col, drop = FALSE]
+  predicted_valid <- predicted[, valid_col, drop = FALSE]
 
   ## -- check rows (trials) have variance across voxels --
-  obs_row_sd  <- apply(observed[, valid_col, drop = FALSE], 1, stats::sd)
-  pred_row_sd <- apply(predicted[, valid_col, drop = FALSE], 1, stats::sd)
+  obs_row_sd  <- .feature_rsa_row_sds(observed_valid)
+  pred_row_sd <- .feature_rsa_row_sds(predicted_valid)
   valid_row   <- which(obs_row_sd > sd_thresh & pred_row_sd > sd_thresh)
 
   na_result <- list(
@@ -810,6 +1021,8 @@ evaluate_model.feature_rsa_model <- function(object,
     mse                        = mean((predicted - observed)^2, na.rm = TRUE),
     r_squared                  = NA_real_,
     mean_voxelwise_temporal_cor = NA_real_,
+    predicted_rdm_vec          = if (isTRUE(compute_rdm_vectors)) rep(NA_real_, n_pairs) else NULL,
+    observed_rdm_vec           = if (isTRUE(compute_rdm_vectors)) rep(NA_real_, n_pairs) else NULL,
     permutation_results        = NULL
   )
 
@@ -842,23 +1055,18 @@ evaluate_model.feature_rsa_model <- function(object,
   pattern_discrim <- NA_real_
   pattern_rank    <- NA_real_
   rdm_cor         <- NA_real_
+  pc_subset <- NULL
+  oc_subset <- NULL
 
   if (length(valid_row) >= 2) {
-    pmat <- predicted[valid_row, valid_col, drop = FALSE]
-    omat <- observed[valid_row,  valid_col, drop = FALSE]
+    pmat <- predicted_valid[valid_row, , drop = FALSE]
+    omat <- observed_valid[valid_row,  , drop = FALSE]
     cormat_cond <- stats::cor(t(pmat), t(omat), use = "pairwise.complete.obs")
 
     diag_cors   <- diag(cormat_cond)
     pattern_cor <- mean(diag_cors, na.rm = TRUE)
-
+    off_diag <- .feature_rsa_offdiag_mean(cormat_cond, diag_vals = diag_cors)
     nc <- nrow(cormat_cond)
-    if (nc > 1) {
-      off_vals <- cormat_cond[row(cormat_cond) != col(cormat_cond)]
-      off_vals <- off_vals[!is.na(off_vals)]
-      off_diag <- if (length(off_vals) > 0) mean(off_vals) else NA_real_
-    } else {
-      off_diag <- NA_real_
-    }
     pattern_discrim <- if (is.finite(pattern_cor) && is.finite(off_diag)) {
       pattern_cor - off_diag
     } else {
@@ -885,13 +1093,13 @@ evaluate_model.feature_rsa_model <- function(object,
   ## Compute within-space RDMs (1 - trial-by-trial correlation) and correlate
   ## upper triangles between predicted and observed.
   if (length(valid_row) >= 3) {
-    pmat <- predicted[valid_row, valid_col, drop = FALSE]
-    omat <- observed[valid_row,  valid_col, drop = FALSE]
-    pc <- tryCatch(stats::cor(t(pmat), use = "pairwise.complete.obs"), error = function(e) NULL)
-    oc <- tryCatch(stats::cor(t(omat), use = "pairwise.complete.obs"), error = function(e) NULL)
-    if (!is.null(pc) && !is.null(oc)) {
-      prdm <- 1 - pc
-      ordm <- 1 - oc
+    pmat <- predicted_valid[valid_row, , drop = FALSE]
+    omat <- observed_valid[valid_row,  , drop = FALSE]
+    pc_subset <- tryCatch(stats::cor(t(pmat), use = "pairwise.complete.obs"), error = function(e) NULL)
+    oc_subset <- tryCatch(stats::cor(t(omat), use = "pairwise.complete.obs"), error = function(e) NULL)
+    if (!is.null(pc_subset) && !is.null(oc_subset)) {
+      prdm <- 1 - pc_subset
+      ordm <- 1 - oc_subset
       pv <- prdm[upper.tri(prdm)]
       ov <- ordm[upper.tri(ordm)]
       if (length(pv) >= 2 && length(pv) == length(ov)) {
@@ -905,13 +1113,7 @@ evaluate_model.feature_rsa_model <- function(object,
   ## ================================================================
   ## 2. Global reconstruction metrics
   ## ================================================================
-  pred_vec <- as.vector(predicted[, valid_col, drop = FALSE])
-  obs_vec  <- as.vector(observed[,  valid_col, drop = FALSE])
-  voxel_cor <- if (stats::sd(pred_vec) > sd_thresh && stats::sd(obs_vec) > sd_thresh) {
-    stats::cor(pred_vec, obs_vec, use = "pairwise.complete.obs")
-  } else {
-    NA_real_
-  }
+  voxel_cor <- .feature_rsa_global_cor(predicted_valid, observed_valid)
 
   mse <- mean((predicted - observed)^2, na.rm = TRUE)
   rss <- sum((observed - predicted)^2, na.rm = TRUE)
@@ -923,16 +1125,42 @@ evaluate_model.feature_rsa_model <- function(object,
   ## ================================================================
   mean_voxelwise_temporal_cor <- NA_real_
   if (n_obs > 1 && length(valid_col) > 0) {
-    vcors <- vapply(valid_col, function(j) {
-      if (stats::sd(observed[, j]) > sd_thresh && stats::sd(predicted[, j]) > sd_thresh) {
-        tryCatch(stats::cor(observed[, j], predicted[, j], use = "pairwise.complete.obs"), error = function(e) NA_real_)
-      } else {
-        NA_real_
-      }
-    }, numeric(1))
+    vcors <- .feature_rsa_diag_col_cor(observed_valid, predicted_valid)
     mean_voxelwise_temporal_cor <- mean(vcors, na.rm = TRUE)
   }
   if (!is.finite(mean_voxelwise_temporal_cor)) mean_voxelwise_temporal_cor <- NA_real_
+
+  predicted_rdm_vec <- observed_rdm_vec <- NULL
+  if (isTRUE(compute_rdm_vectors)) {
+    if (n_pairs < 1L) {
+      predicted_rdm_vec <- numeric(0)
+      observed_rdm_vec <- numeric(0)
+    } else if (length(valid_col) < 1L) {
+      predicted_rdm_vec <- rep(NA_real_, n_pairs)
+      observed_rdm_vec <- rep(NA_real_, n_pairs)
+    } else {
+      use_subset_cache <- !is.null(pc_subset) &&
+        !is.null(oc_subset) &&
+        length(valid_row) == n_obs &&
+        identical(valid_row, seq_len(n_obs))
+
+      if (use_subset_cache) {
+        predicted_rdm_vec <- .feature_rsa_rdm_vector_from_cor(pc_subset, n_obs)
+        observed_rdm_vec <- .feature_rsa_rdm_vector_from_cor(oc_subset, n_obs)
+      } else {
+        pc_full <- tryCatch(
+          suppressWarnings(stats::cor(t(predicted_valid), use = "pairwise.complete.obs")),
+          error = function(e) NULL
+        )
+        oc_full <- tryCatch(
+          suppressWarnings(stats::cor(t(observed_valid), use = "pairwise.complete.obs")),
+          error = function(e) NULL
+        )
+        predicted_rdm_vec <- .feature_rsa_rdm_vector_from_cor(pc_full, n_obs)
+        observed_rdm_vec <- .feature_rsa_rdm_vector_from_cor(oc_full, n_obs)
+      }
+    }
+  }
 
   ## ================================================================
   ## 4. Permutation testing
@@ -965,6 +1193,8 @@ evaluate_model.feature_rsa_model <- function(object,
     mse                         = mse,
     r_squared                   = r_squared,
     mean_voxelwise_temporal_cor = mean_voxelwise_temporal_cor,
+    predicted_rdm_vec           = predicted_rdm_vec,
+    observed_rdm_vec            = observed_rdm_vec,
     permutation_results         = perm_results
   )
 }
@@ -979,7 +1209,7 @@ evaluate_model.feature_rsa_model <- function(object,
   }
 
   sd_thresh <- 1e-12
-  pred_sd <- apply(predicted, 2, stats::sd)
+  pred_sd <- .feature_rsa_col_sds(predicted)
   valid_col <- which(pred_sd > sd_thresh)
 
   if (length(valid_col) < 1L) {
@@ -1369,7 +1599,8 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
     object = obj,
     predicted = Xpred,
     observed  = Xobs,
-    nperm = 0  # no permutation here
+    nperm = 0,  # no permutation here
+    compute_rdm_vectors = FALSE
   )
   
   # Get ncomp from the first fold's result (assuming it's consistent)
@@ -1460,7 +1691,8 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
     predicted = combined_predicted,
     observed  = combined_observed,
     nperm     = obj$nperm,
-    save_distributions = obj$save_distributions
+    save_distributions = obj$save_distributions,
+    compute_rdm_vectors = isTRUE(obj$return_rdm_vectors)
   )
   
   # Collate results
@@ -1509,8 +1741,8 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   predictor_obj <- NULL
   if (isTRUE(obj$return_rdm_vectors)) {
     predictor_obj <- list(
-      predicted_rdm_vec = .feature_rsa_predicted_rdm_vector(combined_predicted),
-      observed_rdm_vec  = .feature_rsa_predicted_rdm_vector(combined_observed),
+      predicted_rdm_vec = perf$predicted_rdm_vec,
+      observed_rdm_vec  = perf$observed_rdm_vec,
       observation_index = combined_test_index,
       n_obs = nrow(combined_predicted)
     )

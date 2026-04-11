@@ -313,7 +313,6 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
 
 #' @keywords internal
 #' @export
-#' @importFrom neurosurf ROISurfaceVector geometry nodes
 filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   # Extract the train data values
   trdat <- roi$train_roi@data
@@ -342,21 +341,27 @@ filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, min_voxels = 2, ..
   
   # If there's no test ROI data, return filtered train ROI data only
   if (is.null(roi$test_roi)) {
-    troi <- ROISurfaceVector(geometry=roi$train_roi@geometry,
-                            indices=roi$train_roi@indices[keep],
-                            data=trdat[,keep,drop=FALSE])
+    troi <- neurosurf::ROISurfaceVector(
+      geometry = roi$train_roi@geometry,
+      indices = roi$train_roi@indices[keep],
+      data = trdat[, keep, drop = FALSE]
+    )
     list(train_roi=troi, test_roi=NULL)
   } else {
     # Filter train ROI data
-    troi <- ROISurfaceVector(geometry=roi$train_roi@geometry,
-                            indices=roi$train_roi@indices[keep],
-                            data=trdat[,keep,drop=FALSE])
+    troi <- neurosurf::ROISurfaceVector(
+      geometry = roi$train_roi@geometry,
+      indices = roi$train_roi@indices[keep],
+      data = trdat[, keep, drop = FALSE]
+    )
     
     # Filter test ROI data
     tedat <- roi$test_roi@data
-    teroi <- ROISurfaceVector(geometry=roi$test_roi@geometry,
-                             indices=roi$test_roi@indices[keep],
-                             data=tedat[,keep,drop=FALSE])
+    teroi <- neurosurf::ROISurfaceVector(
+      geometry = roi$test_roi@geometry,
+      indices = roi$test_roi@indices[keep],
+      data = tedat[, keep, drop = FALSE]
+    )
     
     list(train_roi=troi, test_roi=teroi)
   }

@@ -54,17 +54,40 @@ git clone git@github.com:bbuchsbaum/rMVPA.git
 R CMD install rMVPA
 ```
 
-### Optionally install command line scripts for "coding-free" MVPA analysis:
+### Command line scripts
 
-`wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Searchlight.R`
+`rMVPA` now ships packaged CLI wrappers with native command names:
 
-`wget https://raw.githubusercontent.com/bbuchsbaum/rMVPA/master/scripts/MVPA_Regional.R`
+- `rmvpa-searchlight`
+- `rmvpa-regional`
 
-Then, move these files to a folder on your `PATH` and make them executable:
+Install the package:
 
-`chmod +x MVPA_Searchlight.R`
+```r
+pak::pak("bbuchsbaum/rMVPA")
+```
 
-`chmod +x MVPA_Regional.R`
+Then copy the wrappers into a directory on your `PATH`:
 
+```r
+rMVPA::install_cli("~/.local/bin", overwrite = TRUE)
+```
 
+If needed, add that directory to `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+On macOS/Linux, you can then run:
+
+```bash
+rmvpa-searchlight --help
+rmvpa-regional --help
+rmvpa-searchlight --version
+```
+
+The unified CLI vignette is `vignette("CommandLine")`. The legacy source-tree
+entrypoints remain available as compatibility shims, but the packaged commands
+above are the supported interface.
 

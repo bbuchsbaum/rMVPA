@@ -32,6 +32,7 @@ Imports:
     tidyr,
     tidyselect,
     rsample,
+    optparse,
     yardstick
 Collate:
     'allgeneric.R'
@@ -79,6 +80,7 @@ Collate:
     'vector_rsa_model.R'
     'distcalc.R'
     'utils.R'
+    'cli.R'
     'feature_rsa_model.R'
     'feature_rsa_connectivity.R'
     'new_analysis_overview.R'
@@ -90,13 +92,12 @@ Collate:
     'contrast_rsa_model.R'
     'average_labels.R'
     'table_to_rdm.R'
-    'hrfdecoder_design.R'
-    'hrfdecoder_model.R'
     'naive_xdec_model.R'
     'remap_rrr_model.R'
     'run_searchlight_remap_rrr.R'
     'era_rsa_design.R'
     'era_rsa_model.R'
+    'era_partition_model.R'
     'remap_utils.R'
     'rena_design.R'
     'repmap_model.R'
@@ -109,6 +110,8 @@ Collate:
     'feature_rsa_da_model.R'
     'validate_analysis.R'
     'permutation_searchlight.R'
+    'api_lifecycle.R'
+    'workflow_api.R'
 RoxygenNote: 7.3.3
 Suggests:
     carrier,
@@ -128,12 +131,11 @@ Suggests:
     fmrihrf,
     foreach,
     future.callr,
-    hrfdecoder,
-    hrfdecode,
     iterators,
     jsonlite,
     knitr,
     parallel,
+    pkgload,
     RANN,
     randomForest,
     Rfit,

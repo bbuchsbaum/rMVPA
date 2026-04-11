@@ -45,12 +45,14 @@
 #' )
 #'
 #' # Generate continuous surface dataset
+#' \dontrun{
 #' surf_data <- gen_sample_dataset(
 #'   D = 1000,  # number of vertices
 #'   nobs = 50,
 #'   response_type = "continuous",
 #'   data_mode = "surface"
 #' )
+#' }
 #'
 #' # Generate dataset with external test set
 #' test_dataset <- gen_sample_dataset(
@@ -102,6 +104,9 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
       dset <- mvpa_dataset(train_data=bvec,mask=mask)
     }
   } else {
+    if (!requireNamespace("neurosurf", quietly = TRUE)) {
+      stop("data_mode = 'surface' requires the 'neurosurf' package.", call. = FALSE)
+    }
     fname <- system.file("extdata/std.8_lh.inflated.asc", package="neurosurf")
     geom <- neurosurf::read_surf_geometry(fname)
     nvert <- nrow(neurosurf::vertices(geom))
@@ -526,7 +531,7 @@ mvpa_surface_dataset <- function(train_data, test_data=NULL, mask=NULL, name="")
   }
   
   if (is.null(mask)) {
-    mask <- numeric(length(nodes(train_data@geometry)))
+    mask <- numeric(length(neurosurf::nodes(train_data@geometry)))
     mask[indices(train_data)] <- 1
   }
   
@@ -662,7 +667,7 @@ print.mvpa_surface_dataset <- function(x, ...) {
   # Training data section
   cat(section_style("- Training Data"), "\n")
   dims <- dim(x$train_data)
-  vertices <- length(nodes(geometry(x$train_data)))
+  vertices <- length(neurosurf::nodes(neurosurf::geometry(x$train_data)))
   cat(info_style("  - Vertices: "), number_style(format(vertices, big.mark=",")), "\n")
   cat(info_style("  - Observations: "), number_style(dims[length(dims)]), "\n")
   cat(info_style("  - Type: "), class(x$train_data)[1], "\n")
@@ -846,7 +851,7 @@ print.mvpa_surface_dataset <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 .searchlight_geometry_surface_signature <- function(obj) {
-  geom <- geometry(obj$train_data)
+  geom <- neurosurf::geometry(obj$train_data)
   active_nodes <- which(obj$mask > 0)
   paste(
     "surf",
@@ -905,10 +910,10 @@ print.mvpa_surface_dataset <- function(x, ...) {
                                          ...) {
   active_nodes <- which(obj$mask > 0)
   if (type == "standard") {
-    neurosurf::SurfaceSearchlight(geometry(obj$train_data), radius, nodeset = active_nodes, as_deflist = TRUE)
+    neurosurf::SurfaceSearchlight(neurosurf::geometry(obj$train_data), radius, nodeset = active_nodes, as_deflist = TRUE)
   } else {
     # No direct analogue of resampled searchlight for surfaces; fall back to randomized sampling.
-    neurosurf::RandomSurfaceSearchlight(geometry(obj$train_data), radius, nodeset = active_nodes, as_deflist = TRUE)
+    neurosurf::RandomSurfaceSearchlight(neurosurf::geometry(obj$train_data), radius, nodeset = active_nodes, as_deflist = TRUE)
   }
 }
 
@@ -1020,11 +1025,10 @@ wrap_output.mvpa_dataset <- function(obj, vals, indices = NULL, ...) {
 
 #' @keywords internal
 #' @noRd
-#' @importFrom neurosurf nodes geometry NeuroSurface
 wrap_output.mvpa_surface_dataset <- function(obj, vals, indices, ...) {
   #browser()
   
-  dvals <- numeric(length(nodes(geometry(obj$train_data))))
+  dvals <- numeric(length(neurosurf::nodes(neurosurf::geometry(obj$train_data))))
   
   #if (length(indices) != length(vals)) {
   #  browser()
@@ -1033,8 +1037,12 @@ wrap_output.mvpa_surface_dataset <- function(obj, vals, indices, ...) {
   dvals[indices] <- vals[indices]
   ## bit of a hack
   ## we fill in with non-zero rather than allow indices to be missing
-  #NeuroSurface(geometry=geometry(obj$train_data), indices=indices, data=dvals)
-  NeuroSurface(geometry=geometry(obj$train_data), indices=seq_len(length(dvals)), data=dvals)
+  #neurosurf::NeuroSurface(geometry = neurosurf::geometry(obj$train_data), indices = indices, data = dvals)
+  neurosurf::NeuroSurface(
+    geometry = neurosurf::geometry(obj$train_data),
+    indices = seq_len(length(dvals)),
+    data = dvals
+  )
 }
 
 #' @export

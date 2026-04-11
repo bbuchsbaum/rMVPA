@@ -1,6 +1,6 @@
 url: http://bbuchsbaum.github.io/rMVPA/
 code:
-  run_dont_test: false
+  run_dont_test: no
 template:
   bootstrap: 5
   package: albersdown
@@ -19,8 +19,6 @@ articles:
   - Searchlight_Analysis
   - Regional_Analysis
   - CommandLine
-  - CommandLineScripts
-  - MVPA_RegionalCmdline
 - title: Representational Similarity Analysis
   desc: |
     RSA methods from basic to specialized approaches
@@ -49,7 +47,9 @@ articles:
 - title: Extensibility
   desc: |
     Customizing and extending rMVPA functionality
-  contents: CustomAnalyses
+  contents:
+  - CustomAnalyses
+  - Plugin_Development
 reference:
 - title: REMAP Diagnostics
   desc: |

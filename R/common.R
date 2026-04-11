@@ -688,6 +688,24 @@ load_mvpa_model <- function(config, dataset, design, crossval, feature_selector)
     return(naive_xdec_model(dataset = dataset, design = design, link_by = link_by_opt, return_predictions = TRUE))
   }
 
+  if (model_name %in% c("era_partition", "era_partition_model", "state_transform")) {
+    key_opt <- config$key_var %||% config$link_by
+    if (is.null(key_opt)) {
+      stop("era_partition_model requires `key_var` (or `link_by`) in the analysis config.", call. = FALSE)
+    }
+    key_formula <- if (inherits(key_opt, "formula")) {
+      key_opt
+    } else {
+      key_chr <- as.character(key_opt)[1L]
+      stats::as.formula(if (startsWith(key_chr, "~")) key_chr else paste0("~", key_chr))
+    }
+    return(era_partition_model(
+      dataset = dataset,
+      design = design,
+      key_var = key_formula
+    ))
+  }
+
   # Default path: MVPAModels registry
   mod <- load_model(config$model)
   mvpa_model(

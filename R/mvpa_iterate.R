@@ -400,8 +400,17 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
       center_global_id = center_global_id 
   )
 
-  # Iterate through the samples and fit the model
-  ret <- samples %>% pmap(function(ytrain, ytest, train, test, .id) {
+  # Iterate through the samples and fit the model.
+  n_folds <- nrow(samples)
+  ret_list <- vector("list", n_folds)
+
+  for (i in seq_len(n_folds)) {
+    ytrain <- samples$ytrain[[i]]
+    ytest <- samples$ytest[[i]]
+    train <- samples$train[[i]]
+    test <- samples$test[[i]]
+    .id <- samples$.id[[i]]
+
     train_ind <- .extract_sample_indices(train)
     test_ind <- .extract_sample_indices(test)
 
@@ -414,15 +423,15 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
     train_input <- if (isTRUE(use_matrix_path)) {
       train_mat
     } else if (!is.null(cv_cache)) {
-      tibble::as_tibble(train_mat, .name_repair=.name_repair)
+      tibble::as_tibble(train_mat, .name_repair = .name_repair)
     } else {
-      tibble::as_tibble(train, .name_repair=.name_repair)
+      tibble::as_tibble(train, .name_repair = .name_repair)
     }
 
     test_input <- if (isTRUE(use_matrix_path)) {
       test_mat
     } else if (!is.null(cv_cache)) {
-      tibble::as_tibble(test_mat, .name_repair=.name_repair)
+      tibble::as_tibble(test_mat, .name_repair = .name_repair)
     } else {
       test
     }
@@ -431,38 +440,68 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
       test_ind <- as.integer(seq_len(length(ytest)))
     }
 
-    # Check if the number of features is less than 2
     if (ncol(train_input) < 2) {
-      # Return an error message
-      return(
-        format_result(mspec, NULL, error_message="error: less than 2 features",
-                      context=list(roi=roi, ytrain=ytrain, ytest=ytest,
-                                   train=train_input, test=test_input, test_ind=test_ind, .id=.id))
+      ret_list[[i]] <- format_result(
+        mspec,
+        NULL,
+        error_message = "error: less than 2 features",
+        context = list(
+          roi = roi,
+          ytrain = ytrain,
+          ytest = ytest,
+          train = train_input,
+          test = test_input,
+          test_ind = test_ind,
+          .id = .id
+        )
       )
+      next
     }
 
-   
-    # Train the model - NOW PASSING sl_info
-    tryCatch({
-      result <- train_model(mspec,
-                            train_input,
-                            ytrain,
-                            sl_info = sl_info,
-                            cv_spec = mspec$crossval,
-                            indices = ind,
-                            quiet_error = TRUE)
-      format_result(mspec, result, error_message = NULL,
-                    context = list(roi = roi, ytrain = ytrain, ytest = ytest,
-                                   train = train_input, test = test_input,
-                                   test_ind = test_ind, .id = .id))
+    ret_list[[i]] <- tryCatch({
+      result <- train_model(
+        mspec,
+        train_input,
+        ytrain,
+        sl_info = sl_info,
+        cv_spec = mspec$crossval,
+        indices = ind,
+        quiet_error = TRUE
+      )
+      format_result(
+        mspec,
+        result,
+        error_message = NULL,
+        context = list(
+          roi = roi,
+          ytrain = ytrain,
+          ytest = ytest,
+          train = train_input,
+          test = test_input,
+          test_ind = test_ind,
+          .id = .id
+        )
+      )
     }, error = function(e) {
       flog.warn("error fitting model %s : %s", id, conditionMessage(e))
-      format_result(mspec, result = NULL, error_message = conditionMessage(e),
-                    context = list(roi = roi, ytrain = ytrain, ytest = ytest,
-                                   train = train_input, test = test_input,
-                                   test_ind = test_ind, .id = .id))
+      format_result(
+        mspec,
+        result = NULL,
+        error_message = conditionMessage(e),
+        context = list(
+          roi = roi,
+          ytrain = ytrain,
+          ytest = ytest,
+          train = train_input,
+          test = test_input,
+          test_ind = test_ind,
+          .id = .id
+        )
+      )
     })
-  }) %>% purrr::discard(is.null) %>% dplyr::bind_rows()
+  }
+
+  ret <- ret_list %>% purrr::discard(is.null) %>% dplyr::bind_rows()
   
 
   merge_results(mspec, ret, indices=ind, id=id)
@@ -973,89 +1012,100 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
     }
   }
 
-  run_map <- function(progress_tick = NULL) {
-    frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
-      if (!is.null(progress_tick)) {
-        on.exit(progress_tick(), add = TRUE)
-      }
+  process_item <- function(.id, rnum, roi, size, progress_tick = NULL) {
+    if (!is.null(progress_tick)) {
+      on.exit(progress_tick(), add = TRUE)
+    }
 
-      tryCatch({
-        if (is.null(roi)) {
-          # ROI failed validation (e.g. from extract_roi returning NULL due to <2 voxels after filter_roi)
-          futile.logger::flog.debug("ROI ID %s: Skipped (failed initial validation in extract_roi, e.g. <2 voxels).", rnum)
-          msg <- sprintf("ROI %s failed validation (e.g., <2 voxels after filtering or other extract_roi issue)", rnum)
-          if (fail_fast) {
-            rlang::abort(message = sprintf("ROI %s failed validation: <2 voxels or invalid after filtering.", rnum))
-          }
-          return(tibble::tibble(
-            result = list(NULL),
-            indices = list(NULL),
-            performance = list(NULL),
-            id = rnum,
-            error = TRUE,
-            error_message = msg,
-            warning = TRUE,
-            warning_message = msg
-          ))
-
-        }
-
-        # Determine the center_global_id based on analysis type
-        center_global_id_to_pass <- if (analysis_type == "searchlight") rnum else NA
-
-        # Pass center_global_id when the processor supports it.
-        result <- invoke_processor(obj, roi, rnum, center_global_id_to_pass)
-
-        if (!obj$return_predictions && !isTRUE(obj$return_fits)) {
-          result$result <- list(NULL)
-        }
-        # Optionally drop dense per-ROI probability matrices after performance
-        # has been computed, keeping only prob_observed (one number per trial).
-        if (drop_probs) {
-          res_list <- result$result
-          prob_vals <- vector("list", length(res_list))
-          for (j in seq_along(res_list)) {
-            res_j <- res_list[[j]]
-            if (is.null(res_j) || is.null(res_j$probs)) {
-              prob_vals[[j]] <- NULL
-              next
-            }
-            prob_vals[[j]] <- tryCatch(prob_observed(res_j), error = function(e) NULL)
-            res_j$probs <- NULL
-            res_list[[j]] <- res_j
-          }
-          result$prob_observed <- prob_vals
-          result$result <- res_list
-        }
-
-        result
-      }, error = function(e) {
-        # If fail_fast, bubble the error immediately with context + traceback
+    tryCatch({
+      if (is.null(roi)) {
+        # ROI failed validation (e.g. from extract_roi returning NULL due to <2 voxels after filter_roi)
+        futile.logger::flog.debug("ROI ID %s: Skipped (failed initial validation in extract_roi, e.g. <2 voxels).", rnum)
+        msg <- sprintf("ROI %s failed validation (e.g., <2 voxels after filtering or other extract_roi issue)", rnum)
         if (fail_fast) {
-          rlang::abort(
-            message = sprintf("ROI %s processing error: %s", rnum, e$message),
-            parent = e
-          )
+          rlang::abort(message = sprintf("ROI %s failed validation: <2 voxels or invalid after filtering.", rnum))
         }
-        # Capture a short traceback (truncated to avoid memory bloat from
-        # thousands of failed edge-of-brain ROIs).
-        tb <- tryCatch({
-          raw <- paste(utils::capture.output(rlang::trace_back()), collapse = "\n")
-          if (nchar(raw) > 500L) paste0(substr(raw, 1L, 500L), "\n... [truncated]") else raw
-        }, error = function(...) NA_character_)
-        futile.logger::flog.debug("ROI %d: Processing error (%s)", rnum, e$message)
-        tibble::tibble(
+        return(tibble::tibble(
           result = list(NULL),
           indices = list(NULL),
           performance = list(NULL),
           id = rnum,
           error = TRUE,
-          error_message = paste0("Error processing ROI: ", e$message,
-                                 if (!is.na(tb)) paste0("\ntrace:\n", tb) else ""),
+          error_message = msg,
           warning = TRUE,
-          warning_message = paste("Error processing ROI:", e$message)
+          warning_message = msg
+        ))
+      }
+
+      center_global_id_to_pass <- if (analysis_type == "searchlight") rnum else NA
+      result <- invoke_processor(obj, roi, rnum, center_global_id_to_pass)
+
+      if (!obj$return_predictions && !isTRUE(obj$return_fits)) {
+        result$result <- list(NULL)
+      }
+
+      if (drop_probs) {
+        res_list <- result$result
+        prob_vals <- vector("list", length(res_list))
+        for (j in seq_along(res_list)) {
+          res_j <- res_list[[j]]
+          if (is.null(res_j) || is.null(res_j$probs)) {
+            prob_vals[[j]] <- NULL
+            next
+          }
+          prob_vals[[j]] <- tryCatch(prob_observed(res_j), error = function(e) NULL)
+          res_j$probs <- NULL
+          res_list[[j]] <- res_j
+        }
+        result$prob_observed <- prob_vals
+        result$result <- res_list
+      }
+
+      result
+    }, error = function(e) {
+      if (fail_fast) {
+        rlang::abort(
+          message = sprintf("ROI %s processing error: %s", rnum, e$message),
+          parent = e
         )
-      })
+      }
+
+      tb <- tryCatch({
+        raw <- paste(utils::capture.output(rlang::trace_back()), collapse = "\n")
+        if (nchar(raw) > 500L) paste0(substr(raw, 1L, 500L), "\n... [truncated]") else raw
+      }, error = function(...) NA_character_)
+      futile.logger::flog.debug("ROI %d: Processing error (%s)", rnum, e$message)
+      tibble::tibble(
+        result = list(NULL),
+        indices = list(NULL),
+        performance = list(NULL),
+        id = rnum,
+        error = TRUE,
+        error_message = paste0("Error processing ROI: ", e$message,
+                               if (!is.na(tb)) paste0("\ntrace:\n", tb) else ""),
+        warning = TRUE,
+        warning_message = paste("Error processing ROI:", e$message)
+      )
+    })
+  }
+
+  run_map <- function(progress_tick = NULL) {
+    if (nworkers <= 1L) {
+      out <- vector("list", total_items)
+      for (i in seq_len(total_items)) {
+        out[[i]] <- process_item(
+          .id = frame$.id[[i]],
+          rnum = frame$rnum[[i]],
+          roi = frame$roi[[i]],
+          size = frame$size[[i]],
+          progress_tick = progress_tick
+        )
+      }
+      return(out)
+    }
+
+    frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
+      process_item(.id, rnum, roi, size, progress_tick = progress_tick)
     }, .options = furrr::furrr_options(seed = TRUE, conditions = "condition",
                                        chunk_size = chunk_size))
   }
