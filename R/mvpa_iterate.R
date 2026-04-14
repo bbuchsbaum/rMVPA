@@ -745,7 +745,10 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
   )
   saveRDS(manifest, manifest_file)
 
-  invisible(batch_file)
+  list(
+    batch_file = batch_file,
+    n_rows = nrow(batch_tbl)
+  )
 }
 
 .mvpa_strip_batch_result_payload <- function(batch_results) {
@@ -914,7 +917,15 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           if (!is.null(save_rdm_vectors_dir) &&
               inherits(mod_spec, "feature_rsa_model") &&
               isTRUE(mod_spec$return_rdm_vectors)) {
-            .mvpa_write_feature_rsa_rdm_batch(results[[i]], i, save_rdm_vectors_dir)
+            batch_write <- .mvpa_write_feature_rsa_rdm_batch(results[[i]], i, save_rdm_vectors_dir)
+            if (isTRUE(verbose) && !is.null(batch_write)) {
+              futile.logger::flog.info(
+                "Batch %d: wrote %d feature-RSA RDM vector(s) to %s",
+                i,
+                batch_write$n_rows,
+                batch_write$batch_file
+              )
+            }
             results[[i]] <- .mvpa_strip_batch_result_payload(results[[i]])
             wrote_rdm_batches <- TRUE
           }

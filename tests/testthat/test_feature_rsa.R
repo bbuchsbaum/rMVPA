@@ -1219,6 +1219,67 @@ test_that("feature_rsa_connectivity blockwise path matches dense correlation", {
   expect_equal(got, expected, tolerance = 1e-12)
 })
 
+test_that("feature_rsa_connectivity blockwise spearman path matches dense correlation", {
+  old_target <- getOption("rMVPA.feature_rsa_block_target_bytes")
+  old_max <- getOption("rMVPA.feature_rsa_block_max_cols")
+  on.exit({
+    options(rMVPA.feature_rsa_block_target_bytes = old_target)
+    options(rMVPA.feature_rsa_block_max_cols = old_max)
+  }, add = TRUE)
+
+  options(
+    rMVPA.feature_rsa_block_target_bytes = 8,
+    rMVPA.feature_rsa_block_max_cols = 1L
+  )
+
+  vec_tbl <- tibble::tibble(
+    roinum = c(10L, 20L, 30L),
+    n_obs = c(5L, 5L, 5L),
+    observation_index = list(1:5, 1:5, 1:5),
+    rdm_vec = list(
+      c(1, 2, 2, 4, 5),
+      c(2, 1, 3, 4, 5),
+      c(5, 4, 3, 2, 1)
+    )
+  )
+
+  expected <- stats::cor(do.call(cbind, vec_tbl$rdm_vec), method = "spearman")
+  dimnames(expected) <- list(as.character(vec_tbl$roinum), as.character(vec_tbl$roinum))
+
+  got <- feature_rsa_connectivity(vec_tbl, method = "spearman")
+  expect_equal(got, expected, tolerance = 1e-12)
+})
+
+test_that("feature_rsa_connectivity emits progress messages when verbose", {
+  old_target <- getOption("rMVPA.feature_rsa_block_target_bytes")
+  old_max <- getOption("rMVPA.feature_rsa_block_max_cols")
+  on.exit({
+    options(rMVPA.feature_rsa_block_target_bytes = old_target)
+    options(rMVPA.feature_rsa_block_max_cols = old_max)
+  }, add = TRUE)
+
+  options(
+    rMVPA.feature_rsa_block_target_bytes = 8,
+    rMVPA.feature_rsa_block_max_cols = 1L
+  )
+
+  vec_tbl <- tibble::tibble(
+    roinum = c(10L, 20L, 30L),
+    n_obs = c(4L, 4L, 4L),
+    observation_index = list(1:4, 1:4, 1:4),
+    rdm_vec = list(
+      c(1, 2, 3, 4),
+      c(2, 4, 6, 8),
+      c(4, 3, 2, 1)
+    )
+  )
+
+  expect_message(
+    feature_rsa_connectivity(vec_tbl, method = "spearman", verbose = TRUE),
+    "feature_rsa_connectivity: starting spearman correlation"
+  )
+})
+
 test_that("feature_rsa_cross_connectivity double_center removes additive source and target offsets", {
   pred_vecs <- list(c(1, 2, 3, 4), c(2, 4, 6, 8), c(4, 3, 2, 1))
   obs_vecs  <- list(c(4, 3, 2, 1), c(1, 1, 2, 2), c(3, 1, 4, 2))
@@ -1400,6 +1461,49 @@ test_that("feature_rsa_cross_connectivity residualize_mean blockwise path matche
     adjust = "residualize_mean"
   )
 
+  expect_equal(got, expected, tolerance = 1e-12)
+})
+
+test_that("feature_rsa_cross_connectivity blockwise spearman path matches dense correlation", {
+  old_target <- getOption("rMVPA.feature_rsa_block_target_bytes")
+  old_max <- getOption("rMVPA.feature_rsa_block_max_cols")
+  on.exit({
+    options(rMVPA.feature_rsa_block_target_bytes = old_target)
+    options(rMVPA.feature_rsa_block_max_cols = old_max)
+  }, add = TRUE)
+
+  options(
+    rMVPA.feature_rsa_block_target_bytes = 8,
+    rMVPA.feature_rsa_block_max_cols = 1L
+  )
+
+  vec_tbl <- tibble::tibble(
+    roinum = c(11L, 22L, 33L),
+    n_obs = c(5L, 5L, 5L),
+    observation_index = list(1:5, 1:5, 1:5),
+    rdm_vec = list(
+      c(1, 2, 2, 4, 5),
+      c(2, 1, 3, 4, 5),
+      c(5, 4, 3, 2, 1)
+    ),
+    observed_rdm_vec = list(
+      c(5, 4, 4, 2, 1),
+      c(1, 3, 2, 5, 4),
+      c(2, 2, 3, 1, 5)
+    )
+  )
+
+  expected <- stats::cor(
+    do.call(cbind, vec_tbl$rdm_vec),
+    do.call(cbind, vec_tbl$observed_rdm_vec),
+    method = "spearman"
+  )
+  dimnames(expected) <- list(
+    predicted = as.character(vec_tbl$roinum),
+    observed = as.character(vec_tbl$roinum)
+  )
+
+  got <- feature_rsa_cross_connectivity(vec_tbl, method = "spearman")
   expect_equal(got, expected, tolerance = 1e-12)
 })
 
