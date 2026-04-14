@@ -101,6 +101,25 @@ test_that("validate_analysis works with mvpa_model object", {
   expect_equal(result$n_fail, 0)
 })
 
+test_that("validate_analysis works with model_spec subclasses like feature_rsa_model", {
+  dat <- gen_sample_dataset(c(4,4,4), 60, blocks = 3)
+  Fmat <- matrix(rnorm(60 * 8), 60, 8)
+  des <- feature_rsa_design(
+    F = Fmat,
+    labels = paste0("obs", 1:60),
+    block_var = dat$design$block_var
+  )
+  model <- feature_rsa_model(
+    dataset = dat$dataset,
+    design = des,
+    method = "pls"
+  )
+
+  result <- validate_analysis(model, verbose = FALSE)
+  expect_s3_class(result, "validation_result")
+  expect_equal(result$n_fail, 0)
+})
+
 
 test_that("validate_analysis print method works", {
   des_df <- data.frame(

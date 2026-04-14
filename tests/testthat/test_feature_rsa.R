@@ -810,6 +810,38 @@ test_that(".selectNcomp_mv works when pls is namespace-loaded only", {
   expect_true(nc <= 4L)
 })
 
+test_that(".selectNcomp_mv matches segment-wise onesigma selection", {
+  set.seed(321)
+  n <- 30
+  X <- matrix(rnorm(n * 5), n, 5)
+  Y <- matrix(rnorm(n * 4), n, 4)
+  fit <- pls::pcr(Y ~ X, ncomp = 4, scale = FALSE, validation = "LOO")
+
+  pred <- fit$validation$pred
+  segments <- fit$validation$segments
+  seg_mse <- vapply(seq_len(dim(pred)[3]), function(k) {
+    mean(vapply(segments, function(idx) {
+      mean((Y[idx, , drop = FALSE] - pred[idx, , k, drop = FALSE][, , 1L])^2)
+    }, numeric(1)))
+  }, numeric(1))
+
+  mse_at_k <- vapply(segments, function(idx) {
+    k <- which.min(seg_mse)
+    mean((Y[idx, , drop = FALSE] - pred[idx, , k, drop = FALSE][, , 1L])^2)
+  }, numeric(1))
+  k_min <- which.min(seg_mse)
+  thresh <- seg_mse[k_min] + stats::sd(mse_at_k) / sqrt(length(mse_at_k))
+  manual <- which(seg_mse <= thresh)[1]
+
+  expect_equal(rMVPA:::.selectNcomp_mv(fit, method = "onesigma"), manual)
+})
+
+test_that("feature_rsa_design weights S-derived basis by sqrt eigenvalues", {
+  S <- diag(c(9, 4, 1))
+  des <- feature_rsa_design(S = S, labels = paste0("o", 1:3), k = 3)
+  expect_equal(unname(des$F), diag(c(3, 2, 1)), tolerance = 1e-12)
+})
+
 test_that("PLS LOO selection does not collapse to NA ncomp", {
   set.seed(77)
   dset <- gen_sample_dataset(c(4,4,4), 60, blocks = 3)

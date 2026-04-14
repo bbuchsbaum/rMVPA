@@ -81,7 +81,9 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
     } else {
       assertthat::assert_that(k > 0 && k <= nrow(S))
     }
-    F <- vecs[, seq_len(k), drop=FALSE]
+    kept_vals <- vals[seq_len(k)]
+    kept_scales <- sqrt(pmax(kept_vals, 0))
+    F <- sweep(vecs[, seq_len(k), drop = FALSE], 2L, kept_scales, "*")
     max_comps <- min(max_comps, k)
     
     ret <- list(
@@ -325,66 +327,88 @@ feature_rsa_model <- function(dataset,
 #' Onesigma component selection for multivariate responses
 #'
 #' \code{pls::selectNcomp} only supports univariate responses.
-#' This helper averages CV-MSEP across all response columns and
-#' applies the same onesigma rule: pick the fewest components whose
-#' mean MSEP is within one SE of the minimum.
+#' This helper reconstructs segment-wise CV MSE from the stored validation
+#' predictions and applies the standard onesigma rule across CV segments:
+#' pick the fewest components whose mean segment MSE is within one SE of the
+#' minimum. This avoids the earlier response-wise approximation, which could
+#' be overly conservative when the response matrix has many columns.
 #'
-#' It computes CV-MSEP directly from \code{model$validation$PRESS}
-#' rather than calling \code{pls::MSEP()}, avoiding fragile internal
-#' namespace lookups in \pkg{pls} during parallel worker execution.
+#' It computes CV errors directly from \code{model$validation$pred} and
+#' \code{model$validation$segments}, avoiding fragile internal namespace
+#' lookups in \pkg{pls} during parallel worker execution.
 #' @noRd
 .selectNcomp_mv <- function(model, method = "onesigma") {
-  press <- model$validation$PRESS
-  press0 <- model$validation$PRESS0
-  nobj <- tryCatch(nrow(stats::model.frame(model)), error = function(...) NA_integer_)
+  pred <- model$validation$pred
+  segments <- model$validation$segments
+  y_true <- tryCatch(stats::model.response(stats::model.frame(model)), error = function(...) NULL)
 
-  if (is.null(press) || is.null(press0) || is.na(nobj) || nobj <= 0) {
+  if (is.null(pred) || is.null(segments) || is.null(y_true)) {
     return(NA_integer_)
   }
 
-  # Coerce PRESS to [response, ncomp]
-  press_mat <- if (is.null(dim(press))) {
-    matrix(press, nrow = length(press0))
-  } else {
-    as.matrix(press)
+  y_true <- as.matrix(y_true)
+
+  pred_dims <- dim(pred)
+  if (is.null(pred_dims)) {
+    return(NA_integer_)
   }
-  if (nrow(press_mat) != length(press0) && ncol(press_mat) == length(press0)) {
-    press_mat <- t(press_mat)
+  if (length(pred_dims) == 2L) {
+    pred <- array(pred, dim = c(pred_dims[1], 1L, pred_dims[2]))
+    pred_dims <- dim(pred)
   }
-  if (nrow(press_mat) != length(press0)) {
+  if (length(pred_dims) != 3L) {
     return(NA_integer_)
   }
 
-  msep_comp <- press_mat / nobj                    # [response, ncomp]
-  nresp     <- nrow(msep_comp)
-  ncomp_max <- ncol(msep_comp)
-  if (ncomp_max < 1L) return(1L)
+  nobj <- pred_dims[1]
+  nresp <- pred_dims[2]
+  ncomp_max <- pred_dims[3]
+  if (nobj != nrow(y_true) || nresp != ncol(y_true) || ncomp_max < 1L) {
+    return(NA_integer_)
+  }
 
-  # Average MSEP across responses for each ncomp
-  avg_msep <- colMeans(msep_comp, na.rm = TRUE)
-
-  # Guard against all-NaN MSEP (degenerate model)
-  if (all(is.na(avg_msep) | !is.finite(avg_msep))) return(NA_integer_)
-
-  min_idx <- which.min(avg_msep)
-  if (length(min_idx) == 0L) return(NA_integer_)
-  min_val <- avg_msep[min_idx]
-
-  if (method == "onesigma" && nresp > 1L) {
-    # SE of mean MSEP across responses at the optimum
-    per_resp <- msep_comp[, min_idx]
-    n_finite <- sum(is.finite(per_resp))
-    if (n_finite < 2L) {
-      return(as.integer(min_idx))
+  seg_mse <- matrix(NA_real_, nrow = length(segments), ncol = ncomp_max)
+  for (s in seq_along(segments)) {
+    idx <- as.integer(segments[[s]])
+    idx <- idx[is.finite(idx) & idx >= 1L & idx <= nobj]
+    if (!length(idx)) {
+      next
     }
-    se       <- stats::sd(per_resp, na.rm = TRUE) / sqrt(n_finite)
-    thresh   <- min_val + se
-    selected <- which(avg_msep <= thresh)[1]
-    if (is.na(selected)) return(as.integer(min_idx))
-    return(as.integer(selected))
+
+    y_seg <- y_true[idx, , drop = FALSE]
+    for (k in seq_len(ncomp_max)) {
+      pred_seg <- pred[idx, , k, drop = FALSE]
+      seg_mse[s, k] <- mean((y_seg - pred_seg[, , 1L])^2, na.rm = TRUE)
+    }
   }
 
-  as.integer(min_idx)
+  mean_mse <- colMeans(seg_mse, na.rm = TRUE)
+  if (all(is.na(mean_mse) | !is.finite(mean_mse))) {
+    return(NA_integer_)
+  }
+
+  min_idx <- which.min(mean_mse)
+  if (length(min_idx) == 0L) {
+    return(NA_integer_)
+  }
+  if (method != "onesigma") {
+    return(as.integer(min_idx))
+  }
+
+  mse_at_min <- seg_mse[, min_idx]
+  n_finite <- sum(is.finite(mse_at_min))
+  if (n_finite < 2L) {
+    return(as.integer(min_idx))
+  }
+
+  se <- stats::sd(mse_at_min, na.rm = TRUE) / sqrt(n_finite)
+  thresh <- mean_mse[min_idx] + se
+  selected <- which(mean_mse <= thresh)[1]
+  if (is.na(selected)) {
+    return(as.integer(min_idx))
+  }
+
+  as.integer(selected)
 }
 
 
@@ -1427,8 +1451,27 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
         lambda_used_for_pred <- if (run_cv && !is.null(cv_results)) {
            lambda_to_use # lambda.min from successful CV
         } else if (!is.null(lambda_to_use)) {
-           # User supplied an explicit lambda
-           if (length(final_fit$lambda) > 0) final_fit$lambda[1] else lambda_to_use
+           # User supplied lambda explicitly. If a sequence was supplied,
+           # predict at the weakest penalty rather than the strongest one
+           # to avoid the degenerate all-zero solution at lambda_max.
+           if (length(lambda_to_use) == 1L) {
+             lambda_to_use
+           } else if (length(final_fit$lambda) > 0) {
+             chosen_lambda <- final_fit$lambda[length(final_fit$lambda)]
+             futile.logger::flog.warn(
+               paste0(
+                 "train_model (GLMNet): lambda supplied as a sequence of length %d ",
+                 "with cv_glmnet=FALSE; using the smallest fitted lambda (%.4e) ",
+                 "for prediction. Supply a scalar lambda or set cv_glmnet=TRUE ",
+                 "for automatic selection."
+               ),
+               length(final_fit$lambda),
+               chosen_lambda
+             )
+             chosen_lambda
+           } else {
+             min(lambda_to_use)
+           }
         } else if (!is.null(final_fit$lambda) && length(final_fit$lambda) > 1) {
            # No lambda specified and no CV: glmnet auto-generated a sequence
            # (descending from lambda_max). Picking lambda[1] = lambda_max would

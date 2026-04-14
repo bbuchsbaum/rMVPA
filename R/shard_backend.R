@@ -143,6 +143,13 @@ configure_runtime_backend <- function(model_spec,
   )
 }
 
+#' @keywords internal
+#' @noRd
+validate_analysis.shard_model_spec <- function(x, verbose = TRUE, ...) {
+  class(x) <- setdiff(class(x), "shard_model_spec")
+  validate_analysis(x, verbose = verbose, ...)
+}
+
 
 # ---- shard_prepare_dataset: S3 generic -----------------------------------
 
@@ -583,7 +590,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
           }
         }
 
-        if (!obj$return_predictions) {
+        if (!obj$return_predictions && !isTRUE(obj$return_fits)) {
           result$result <- list(NULL)
         }
 
