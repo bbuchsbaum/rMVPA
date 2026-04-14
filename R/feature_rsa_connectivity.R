@@ -52,6 +52,11 @@ feature_rsa_rdm_vectors <- function(x) {
     if (!length(rows)) {
       stop("feature_rsa_rdm_vectors: no predicted RDM vectors found in `rdm_batch_dir`.")
     }
+    rows <- lapply(rows, function(tbl) {
+      tbl$rdm_vec <- lapply(tbl$rdm_vec, .feature_rsa_decode_rdm_storage)
+      tbl$observed_rdm_vec <- lapply(tbl$observed_rdm_vec, .feature_rsa_decode_rdm_storage)
+      tbl
+    })
     return(dplyr::bind_rows(rows))
   }
 
@@ -232,6 +237,26 @@ feature_rsa_rdm_vectors <- function(x) {
   mat
 }
 
+.feature_rsa_decode_rdm_storage <- function(value) {
+  if (is.null(value)) {
+    return(NULL)
+  }
+  if (is.raw(value)) {
+    return(readBin(value, what = "numeric", n = length(value) %/% 4L, size = 4L, endian = "little"))
+  }
+  as.numeric(value)
+}
+
+.feature_rsa_storage_length <- function(value) {
+  if (is.null(value)) {
+    return(NA_integer_)
+  }
+  if (is.raw(value)) {
+    return(as.integer(length(value) %/% 4L))
+  }
+  as.integer(length(value))
+}
+
 .feature_rsa_batch_manifest <- function(dir) {
   manifest_file <- file.path(dir, "manifest.rds")
   if (!file.exists(manifest_file)) {
@@ -275,8 +300,8 @@ feature_rsa_rdm_vectors <- function(x) {
       list(
         n_rows = nrow(tbl),
         roi_ids = as.character(tbl$roinum),
-        pred_lengths = vapply(tbl$rdm_vec, length, integer(1)),
-        obs_lengths = vapply(tbl$observed_rdm_vec, function(v) if (is.null(v)) NA_integer_ else length(v), integer(1)),
+        pred_lengths = vapply(tbl$rdm_vec, .feature_rsa_storage_length, integer(1)),
+        obs_lengths = vapply(tbl$observed_rdm_vec, .feature_rsa_storage_length, integer(1)),
         has_obs = vapply(tbl$observed_rdm_vec, function(v) !is.null(v), logical(1)),
         observation_index = tbl$observation_index
       )
@@ -338,7 +363,7 @@ feature_rsa_rdm_vectors <- function(x) {
       if (is.null(value) && isTRUE(fill_missing)) {
         value <- rep(NA_real_, vec_length)
       }
-      out[[i]] <- if (is.null(value)) NULL else as.numeric(value)
+      out[[i]] <- if (is.null(value)) NULL else .feature_rsa_decode_rdm_storage(value)
     }
 
     .feature_rsa_bind_numeric_columns(out)
@@ -569,7 +594,7 @@ feature_rsa_rdm_vectors <- function(x) {
       vec_length = unique_pred_lengths[[1]],
       has_obs = vapply(vec_tbl$observed_rdm_vec, function(v) !is.null(v), logical(1)),
       get_pred_block = function(idx) {
-        .feature_rsa_bind_numeric_columns(lapply(vec_tbl$rdm_vec[idx], as.numeric))
+        .feature_rsa_bind_numeric_columns(lapply(vec_tbl$rdm_vec[idx], .feature_rsa_decode_rdm_storage))
       },
       get_obs_block = function(idx, fill_missing = TRUE) {
         vecs <- lapply(vec_tbl$observed_rdm_vec[idx], function(v) {
@@ -580,7 +605,7 @@ feature_rsa_rdm_vectors <- function(x) {
               NULL
             }
           } else {
-            as.numeric(v)
+            .feature_rsa_decode_rdm_storage(v)
           }
         })
         .feature_rsa_bind_numeric_columns(vecs)
@@ -686,7 +711,7 @@ feature_rsa_rdm_vectors <- function(x) {
     has_obs = vapply(kept_fits, function(pred) !is.null(.feature_rsa_get_obs_vec(pred)), logical(1)),
     get_pred_block = function(idx) {
       fit_idx <- keep[idx]
-      vecs <- lapply(fit_idx, function(i) as.numeric(.feature_rsa_get_pred_vec(fits[[i]])))
+      vecs <- lapply(fit_idx, function(i) .feature_rsa_decode_rdm_storage(.feature_rsa_get_pred_vec(fits[[i]])))
       .feature_rsa_bind_numeric_columns(vecs)
     },
     get_obs_block = function(idx, fill_missing = TRUE) {
@@ -696,7 +721,7 @@ feature_rsa_rdm_vectors <- function(x) {
         if (is.null(obs_vec)) {
           if (isTRUE(fill_missing)) rep(NA_real_, unique_pred_lengths[[1]]) else NULL
         } else {
-          as.numeric(obs_vec)
+          .feature_rsa_decode_rdm_storage(obs_vec)
         }
       })
       .feature_rsa_bind_numeric_columns(vecs)
@@ -720,13 +745,25 @@ feature_rsa_rdm_vectors <- function(x) {
 #' @param keep Proportion of ROI-ROI edges to retain after optional
 #'   sparsification. \code{keep = 1} disables sparsification. For example,
 #'   \code{keep = 0.1} retains the top 10\% of finite off-diagonal edges.
+#' @param adjust Optional adjustment for ROI-level offsets. Use
+#'   \code{"none"} (default) to return the raw ROI x ROI correlation matrix,
+#'   \code{"double_center"} to subtract additive row and column main effects
+#'   from that matrix, or \code{"residualize_mean"} to remove the grand-mean
+#'   RDM component from ROI vectors before computing the correlation matrix.
 #' @param absolute Logical; when \code{TRUE}, rank edges by absolute magnitude
 #'   during sparsification. Defaults to \code{FALSE}.
+#' @param return_components Logical; if \code{TRUE}, return a list containing
+#'   the requested matrix, the raw matrix, the adjusted matrix, and the
+#'   row/column offset terms estimated from the raw matrix.
 #' @param use Missing-value handling passed to \code{\link[stats]{cor}}.
 #' @param verbose Logical; if \code{TRUE}, emit block-level progress messages
 #'   while connectivity is being computed.
 #'
-#' @return A symmetric numeric matrix with ROIs in rows/columns.
+#' @return By default, a symmetric numeric matrix with ROIs in rows/columns.
+#'   If \code{return_components = TRUE}, a list is returned with elements
+#'   \code{matrix}, \code{raw_matrix}, \code{adjusted_matrix},
+#'   \code{source_offset}, \code{target_offset}, \code{grand_mean},
+#'   \code{method}, and \code{adjust}.
 #'
 #' @examples
 #' \dontrun{
@@ -737,10 +774,13 @@ feature_rsa_rdm_vectors <- function(x) {
 feature_rsa_connectivity <- function(x,
                                      method = c("spearman", "pearson"),
                                      keep = 1,
+                                     adjust = c("none", "double_center", "residualize_mean"),
                                      absolute = FALSE,
+                                     return_components = FALSE,
                                      use = "pairwise.complete.obs",
                                      verbose = FALSE) {
   method <- match.arg(method)
+  adjust <- match.arg(adjust)
   vec_info <- .feature_rsa_prepare_vectors(x, fn_label = "feature_rsa_connectivity")
 
   .feature_rsa_validate_obs_order(
@@ -749,7 +789,7 @@ feature_rsa_connectivity <- function(x,
   )
 
   n_roi <- length(vec_info$roi_labels)
-  conn <- .feature_rsa_block_cor(
+  raw_conn <- .feature_rsa_block_cor(
     x_loader = vec_info$get_pred_block,
     n_x = n_roi,
     vec_length = vec_info$vec_length,
@@ -760,10 +800,65 @@ feature_rsa_connectivity <- function(x,
     label = "feature_rsa_connectivity"
   )
 
-  dimnames(conn) <- list(vec_info$roi_labels, vec_info$roi_labels)
-  diag(conn) <- 1
+  dimnames(raw_conn) <- list(vec_info$roi_labels, vec_info$roi_labels)
+  diag(raw_conn) <- 1
 
-  .feature_rsa_sparsify_connectivity(conn, keep = keep, absolute = absolute)
+  adjusted_conn <- switch(
+    adjust,
+    none = raw_conn,
+    double_center = {
+      centered <- .feature_rsa_double_center(raw_conn)
+      mat <- centered$matrix
+      dimnames(mat) <- dimnames(raw_conn)
+      diag(mat) <- 1
+      mat
+    },
+    residualize_mean = {
+      pred_ref <- .feature_rsa_row_means(
+        loader = vec_info$get_pred_block,
+        n_cols = n_roi,
+        vec_length = vec_info$vec_length,
+        verbose = verbose,
+        label = "feature_rsa_connectivity [pred_ref]"
+      )
+      pred_ref[!is.finite(pred_ref)] <- NA_real_
+
+      mat <- .feature_rsa_block_cor(
+        x_loader = function(idx) {
+          .feature_rsa_residualize_columns(vec_info$get_pred_block(idx), pred_ref)
+        },
+        n_x = n_roi,
+        vec_length = vec_info$vec_length,
+        method = method,
+        use = use,
+        symmetric = TRUE,
+        verbose = verbose,
+        label = "feature_rsa_connectivity [residualized]"
+      )
+      dimnames(mat) <- dimnames(raw_conn)
+      diag(mat) <- 1
+      mat
+    }
+  )
+
+  result_mat <- .feature_rsa_sparsify_connectivity(adjusted_conn, keep = keep, absolute = absolute)
+
+  if (!isTRUE(return_components)) {
+    return(result_mat)
+  }
+
+  raw_components <- .feature_rsa_double_center(raw_conn)
+
+  list(
+    matrix = result_mat,
+    raw_matrix = raw_conn,
+    adjusted_matrix = adjusted_conn,
+    source_offset = stats::setNames(raw_components$source_offset, vec_info$roi_labels),
+    target_offset = stats::setNames(raw_components$target_offset, vec_info$roi_labels),
+    grand_mean = raw_components$grand_mean,
+    method = method,
+    adjust = adjust
+  )
 }
 
 #' Compute Cross-Connectivity: Predicted-Observed ROI x ROI Matrix

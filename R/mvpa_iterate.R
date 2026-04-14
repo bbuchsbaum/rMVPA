@@ -681,6 +681,17 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
 #' @importFrom furrr future_pmap
 #' @importFrom purrr map pmap
 #' @export
+.mvpa_encode_float32 <- function(x) {
+  if (is.null(x)) {
+    return(NULL)
+  }
+
+  con <- rawConnection(raw(), open = "wb")
+  on.exit(close(con), add = TRUE)
+  writeBin(as.numeric(x), con, size = 4L, endian = "little")
+  rawConnectionValue(con)
+}
+
 .mvpa_extract_feature_rsa_rdm_batch <- function(batch_results) {
   if (!is.data.frame(batch_results) || !"result" %in% names(batch_results) || nrow(batch_results) == 0L) {
     return(tibble::tibble())
@@ -718,6 +729,16 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
     return(invisible(NULL))
   }
 
+  pred_lengths <- vapply(batch_tbl$rdm_vec, length, integer(1))
+  obs_lengths <- vapply(
+    batch_tbl$observed_rdm_vec,
+    function(v) if (is.null(v)) NA_integer_ else length(v),
+    integer(1)
+  )
+
+  batch_tbl$rdm_vec <- lapply(batch_tbl$rdm_vec, .mvpa_encode_float32)
+  batch_tbl$observed_rdm_vec <- lapply(batch_tbl$observed_rdm_vec, .mvpa_encode_float32)
+
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   batch_file <- file.path(dir, sprintf("batch_%03d.rds", as.integer(batch_index)))
   saveRDS(batch_tbl, batch_file)
@@ -726,7 +747,7 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
   manifest <- if (file.exists(manifest_file)) {
     readRDS(manifest_file)
   } else {
-    list(version = 1L, batches = list())
+    list(version = 2L, vector_storage = "float32", batches = list())
   }
 
   manifest$batches[[length(manifest$batches) + 1L]] <- list(
@@ -734,12 +755,8 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
     file = basename(batch_file),
     n_rows = nrow(batch_tbl),
     roi_ids = as.integer(batch_tbl$roinum),
-    pred_lengths = vapply(batch_tbl$rdm_vec, length, integer(1)),
-    obs_lengths = vapply(
-      batch_tbl$observed_rdm_vec,
-      function(v) if (is.null(v)) NA_integer_ else length(v),
-      integer(1)
-    ),
+    pred_lengths = pred_lengths,
+    obs_lengths = obs_lengths,
     has_obs = vapply(batch_tbl$observed_rdm_vec, function(v) !is.null(v), logical(1)),
     observation_index = batch_tbl$observation_index
   )

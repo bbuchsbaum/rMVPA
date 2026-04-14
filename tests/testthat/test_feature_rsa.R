@@ -1076,20 +1076,30 @@ test_that("feature_rsa connectivity supports file-backed rdm_batches output", {
   expect_equal(res_disk$rdm_batch_dir, rdm_dir)
   expect_true(file.exists(file.path(rdm_dir, "manifest.rds")))
   expect_true(length(list.files(rdm_dir, pattern = "^batch_[0-9]+[.]rds$")) > 0L)
+  batch_tbl <- readRDS(list.files(rdm_dir, pattern = "^batch_[0-9]+[.]rds$", full.names = TRUE)[1])
+  expect_true(is.raw(batch_tbl$rdm_vec[[1]]))
 
   vecs_mem <- feature_rsa_rdm_vectors(res_mem)
   vecs_disk <- feature_rsa_rdm_vectors(res_disk)
   expect_equal(vecs_disk$roinum, vecs_mem$roinum)
-  expect_equal(vecs_disk$rdm_vec, vecs_mem$rdm_vec)
-  expect_equal(vecs_disk$observed_rdm_vec, vecs_mem$observed_rdm_vec)
+  expect_true(all(vapply(
+    seq_along(vecs_mem$rdm_vec),
+    function(i) isTRUE(all.equal(vecs_disk$rdm_vec[[i]], vecs_mem$rdm_vec[[i]], tolerance = 1e-6)),
+    logical(1)
+  )))
+  expect_true(all(vapply(
+    seq_along(vecs_mem$observed_rdm_vec),
+    function(i) isTRUE(all.equal(vecs_disk$observed_rdm_vec[[i]], vecs_mem$observed_rdm_vec[[i]], tolerance = 1e-6)),
+    logical(1)
+  )))
 
   conn_mem <- feature_rsa_connectivity(res_mem, method = "pearson")
   conn_disk <- feature_rsa_connectivity(res_disk, method = "pearson")
-  expect_equal(conn_disk, conn_mem, tolerance = 1e-12)
+  expect_equal(conn_disk, conn_mem, tolerance = 1e-6)
 
   cross_mem <- feature_rsa_cross_connectivity(res_mem, method = "pearson")
   cross_disk <- feature_rsa_cross_connectivity(res_disk, method = "pearson")
-  expect_equal(cross_disk, cross_mem, tolerance = 1e-12)
+  expect_equal(cross_disk, cross_mem, tolerance = 1e-6)
 })
 
 test_that("run_regional validates save_rdm_vectors_dir usage", {
@@ -1278,6 +1288,99 @@ test_that("feature_rsa_connectivity emits progress messages when verbose", {
     feature_rsa_connectivity(vec_tbl, method = "spearman", verbose = TRUE),
     "feature_rsa_connectivity: starting spearman correlation"
   )
+})
+
+test_that("feature_rsa_connectivity double_center removes additive row and column offsets", {
+  vec_tbl <- tibble::tibble(
+    roinum = c(10L, 20L, 30L),
+    n_obs = c(4L, 4L, 4L),
+    observation_index = list(1:4, 1:4, 1:4),
+    rdm_vec = list(
+      c(1, 2, 3, 4),
+      c(2, 4, 6, 8),
+      c(4, 3, 2, 1)
+    )
+  )
+
+  raw <- feature_rsa_connectivity(vec_tbl, method = "pearson")
+  grand <- mean(raw)
+  row_mean <- rowMeans(raw)
+  col_mean <- colMeans(raw)
+  expected <- sweep(sweep(raw, 1L, row_mean, "-"), 2L, col_mean, "-") + grand
+  diag(expected) <- 1
+
+  got <- feature_rsa_connectivity(
+    vec_tbl,
+    method = "pearson",
+    adjust = "double_center",
+    return_components = TRUE
+  )
+
+  expect_equal(got$raw_matrix, raw, tolerance = 1e-12)
+  expect_equal(got$matrix, expected, tolerance = 1e-12)
+  expect_equal(got$adjusted_matrix, expected, tolerance = 1e-12)
+  expect_equal(unname(got$source_offset), unname(row_mean - grand), tolerance = 1e-12)
+  expect_equal(unname(got$target_offset), unname(col_mean - grand), tolerance = 1e-12)
+})
+
+test_that("feature_rsa_connectivity residualize_mean matches manual nuisance residualization", {
+  residualize_vector <- function(y, x) {
+    out <- rep(NA_real_, length(y))
+    ok <- is.finite(y) & is.finite(x)
+    if (sum(ok) < 2L) {
+      return(out)
+    }
+
+    x_ok <- x[ok]
+    y_ok <- y[ok]
+    if (stats::sd(x_ok) <= 1e-12) {
+      out[ok] <- y_ok - mean(y_ok)
+      return(out)
+    }
+
+    fit <- stats::lm.fit(x = cbind(1, x_ok), y = y_ok)
+    out[ok] <- fit$residuals
+    out
+  }
+
+  residualize_columns <- function(mat) {
+    ref_vec <- rowMeans(mat)
+    out <- vapply(
+      seq_len(ncol(mat)),
+      function(i) residualize_vector(mat[, i], ref_vec),
+      numeric(nrow(mat))
+    )
+    dimnames(out) <- dimnames(mat)
+    out
+  }
+
+  common <- c(6, -3, 2, 5, -1, 4)
+  pred_vecs <- list(
+    c(1, 3, 2, 5, 4, 6) + 3 * common,
+    c(2, 1, 4, 3, 6, 5) + 3 * common,
+    c(6, 5, 3, 2, 1, 4) + 3 * common
+  )
+
+  vec_tbl <- tibble::tibble(
+    roinum = c(11L, 22L, 33L),
+    n_obs = c(4L, 4L, 4L),
+    observation_index = list(1:4, 1:4, 1:4),
+    rdm_vec = pred_vecs
+  )
+
+  pred_mat <- do.call(cbind, pred_vecs)
+  pred_resid <- residualize_columns(pred_mat)
+  expected <- stats::cor(pred_resid, method = "pearson")
+  dimnames(expected) <- list(as.character(vec_tbl$roinum), as.character(vec_tbl$roinum))
+  diag(expected) <- 1
+
+  got <- feature_rsa_connectivity(
+    vec_tbl,
+    method = "pearson",
+    adjust = "residualize_mean"
+  )
+
+  expect_equal(got, expected, tolerance = 1e-12)
 })
 
 test_that("feature_rsa_cross_connectivity double_center removes additive source and target offsets", {
