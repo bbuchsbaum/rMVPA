@@ -170,6 +170,40 @@ test_that("feature_rsa_model with permutation testing works under shard backend"
   expect_true("z_pattern_correlation" %in% perf_cols)
 })
 
+test_that("feature_rsa_model preserves ROI RDM vectors under shard backend", {
+  skip_on_cran()
+  set.seed(1234)
+
+  dset <- gen_sample_dataset(c(4, 4, 4), 40, blocks = 2)
+  Fmat <- matrix(rnorm(40 * 6), 40, 6)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("obs", 1:40), max_comps = 4)
+  mspec <- feature_rsa_model(
+    dset$dataset,
+    fdes,
+    method = "pls",
+    crossval = blocked_cross_validation(dset$design$block_var),
+    return_rdm_vectors = TRUE
+  )
+
+  region_mask <- neuroim2::NeuroVol(
+    sample(1:3, length(dset$dataset$mask), replace = TRUE),
+    neuroim2::space(dset$dataset$mask)
+  )
+
+  res <- muffle_worker_version_warnings(
+    run_regional(mspec, region_mask, backend = "shard")
+  )
+
+  expect_s3_class(res, "regional_mvpa_result")
+  expect_true(length(res$fits) > 0)
+  expect_true(all(vapply(res$fits, Negate(is.null), logical(1))))
+
+  vecs <- feature_rsa_rdm_vectors(res)
+  expect_true(nrow(vecs) > 0)
+  expect_true(all(vapply(vecs$rdm_vec, is.numeric, logical(1))))
+  expect_true(all(vapply(vecs$rdm_vec, length, integer(1)) == 40L * 39L / 2L))
+})
+
 # ---- Regional: shard with ncomp_selection variants ----
 
 test_that("feature_rsa_model ncomp_selection='loo' works with shard backend", {

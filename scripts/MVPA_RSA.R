@@ -150,7 +150,7 @@ model_spec <- switch(rsa_type,
       NULL
     }
     feature_rsa_model(dataset = dataset, design = fdes, method = config$feature_rsa_method,
-                      crossval = crossval, max_comps = config$max_comps)
+                      crossval = crossval)
   },
   # Vector RSA
   vector = {
@@ -202,4 +202,3 @@ cfg_out <- file.path(output_dir, "config.yaml")
 io::qwrite(as.list(config), cfg_out)
 
 cat("\nRSA analysis complete. Results saved to:\n", output_dir, "\n")
-
