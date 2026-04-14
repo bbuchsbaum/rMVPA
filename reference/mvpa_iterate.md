@@ -136,8 +136,8 @@ batch:
   vox_iter <- lapply(sl, function(x) x)
   results <- mvpa_iterate(mspec, vox_iter[1:5],
     ids=seq_along(vox_iter[1:5]))
-#> INFO [2026-04-14 00:35:31] Processing batch 1/1 (5 ROIs in this batch)
-#> INFO [2026-04-14 00:35:32] 
+#> INFO [2026-04-14 02:17:56] Processing batch 1/1 (5 ROIs in this batch)
+#> INFO [2026-04-14 02:17:57] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 5
 #> - Processed: 5
