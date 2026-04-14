@@ -367,6 +367,32 @@ feature_rsa_rdm_vectors <- function(x) {
   split(seq_len(n_items), ceiling(seq_len(n_items) / block_size))
 }
 
+.feature_rsa_rank_columns <- function(mat) {
+  if (!length(mat)) {
+    return(mat)
+  }
+
+  ranked <- apply(mat, 2L, rank, ties.method = "average", na.last = "keep")
+  if (!is.matrix(ranked)) {
+    ranked <- matrix(ranked, nrow = nrow(mat), ncol = ncol(mat))
+  }
+  storage.mode(ranked) <- "double"
+  ranked
+}
+
+.feature_rsa_log_message <- function(verbose, label, ..., .append_elapsed = NULL) {
+  if (!isTRUE(verbose)) {
+    return(invisible(NULL))
+  }
+
+  msg <- sprintf(...)
+  if (!is.null(.append_elapsed)) {
+    msg <- sprintf("%s [%0.1fs]", msg, .append_elapsed)
+  }
+  message(label, ": ", msg)
+  invisible(NULL)
+}
+
 .feature_rsa_block_cor <- function(x_loader,
                                    y_loader = x_loader,
                                    n_x,
@@ -374,22 +400,58 @@ feature_rsa_rdm_vectors <- function(x) {
                                    vec_length,
                                    method,
                                    use,
-                                   symmetric = FALSE) {
+                                   symmetric = FALSE,
+                                   verbose = FALSE,
+                                   label = "feature_rsa_block_cor") {
   block_size <- .feature_rsa_default_block_size(vec_length = vec_length, n_roi = max(n_x, n_y))
   x_slices <- .feature_rsa_block_slices(n_x, block_size)
   y_slices <- .feature_rsa_block_slices(n_y, block_size)
   out <- matrix(NA_real_, nrow = n_x, ncol = n_y)
+  cor_method <- if (identical(method, "spearman")) "pearson" else method
+  x_cache <- new.env(parent = emptyenv())
+  y_cache <- new.env(parent = emptyenv())
+  started <- proc.time()[3]
+  total_pairs <- if (isTRUE(symmetric)) {
+    length(x_slices) * (length(x_slices) + 1L) / 2L
+  } else {
+    length(x_slices) * length(y_slices)
+  }
+  progress_every <- max(1L, as.integer(ceiling(total_pairs / 10L)))
+  completed_pairs <- 0L
+
+  .feature_rsa_log_message(
+    verbose,
+    label,
+    "starting %s correlation across %d ROI(s) with %d block pair(s) (block_size=%d, vec_length=%d)",
+    method,
+    max(n_x, n_y),
+    total_pairs,
+    block_size,
+    vec_length
+  )
+
+  load_block <- function(loader, idx, cache_env) {
+    cache_key <- sprintf("%d:%d", idx[[1]], idx[[length(idx)]])
+    if (!exists(cache_key, envir = cache_env, inherits = FALSE)) {
+      block <- loader(idx)
+      if (identical(method, "spearman")) {
+        block <- .feature_rsa_rank_columns(block)
+      }
+      assign(cache_key, block, envir = cache_env)
+    }
+    get(cache_key, envir = cache_env, inherits = FALSE)
+  }
 
   for (i in seq_along(x_slices)) {
     idx_i <- x_slices[[i]]
-    x_block <- x_loader(idx_i)
+    x_block <- load_block(x_loader, idx_i, x_cache)
 
     j_seq <- if (isTRUE(symmetric)) seq.int(i, length(y_slices)) else seq_along(y_slices)
     for (j in j_seq) {
       idx_j <- y_slices[[j]]
-      y_block <- y_loader(idx_j)
+      y_block <- load_block(y_loader, idx_j, y_cache)
 
-      block_cor <- suppressWarnings(stats::cor(x_block, y_block, method = method, use = use))
+      block_cor <- suppressWarnings(stats::cor(x_block, y_block, method = cor_method, use = use))
       if (!is.matrix(block_cor)) {
         block_cor <- matrix(block_cor, nrow = length(idx_i), ncol = length(idx_j))
       }
@@ -398,27 +460,82 @@ feature_rsa_rdm_vectors <- function(x) {
       if (isTRUE(symmetric) && i != j) {
         out[idx_j, idx_i] <- t(block_cor)
       }
+
+       completed_pairs <- completed_pairs + 1L
+       if (isTRUE(verbose) &&
+           (completed_pairs == 1L ||
+            completed_pairs %% progress_every == 0L ||
+            completed_pairs == total_pairs)) {
+         .feature_rsa_log_message(
+           TRUE,
+           label,
+           "completed %d/%d block pair(s) (%0.1f%%)",
+           completed_pairs,
+           total_pairs,
+           100 * completed_pairs / total_pairs,
+           .append_elapsed = proc.time()[3] - started
+         )
+       }
     }
   }
+
+  .feature_rsa_log_message(
+    verbose,
+    label,
+    "finished %s correlation across %d ROI(s)",
+    method,
+    max(n_x, n_y),
+    .append_elapsed = proc.time()[3] - started
+  )
 
   out
 }
 
-.feature_rsa_row_means <- function(loader, n_cols, vec_length) {
+.feature_rsa_row_means <- function(loader,
+                                   n_cols,
+                                   vec_length,
+                                   verbose = FALSE,
+                                   label = "feature_rsa_row_means") {
   block_size <- .feature_rsa_default_block_size(vec_length = vec_length, n_roi = n_cols)
   sums <- numeric(vec_length)
   counts <- integer(vec_length)
+  slices <- .feature_rsa_block_slices(n_cols, block_size)
+  started <- proc.time()[3]
 
-  for (idx in .feature_rsa_block_slices(n_cols, block_size)) {
+  .feature_rsa_log_message(
+    verbose,
+    label,
+    "starting row-mean accumulation across %d ROI block(s) (block_size=%d, vec_length=%d)",
+    length(slices),
+    block_size,
+    vec_length
+  )
+
+  for (i in seq_along(slices)) {
+    idx <- slices[[i]]
     block <- loader(idx)
     ok <- is.finite(block)
     block[!ok] <- 0
     sums <- sums + rowSums(block)
     counts <- counts + rowSums(ok)
+
+    if (isTRUE(verbose) &&
+        (i == 1L || i %% max(1L, ceiling(length(slices) / 4L)) == 0L || i == length(slices))) {
+      .feature_rsa_log_message(
+        TRUE,
+        label,
+        "processed %d/%d ROI block(s) (%0.1f%%)",
+        i,
+        length(slices),
+        100 * i / length(slices),
+        .append_elapsed = proc.time()[3] - started
+      )
+    }
   }
 
   out <- sums / counts
   out[counts == 0L] <- NA_real_
+  .feature_rsa_log_message(verbose, label, "finished row-mean accumulation", .append_elapsed = proc.time()[3] - started)
   out
 }
 
@@ -606,6 +723,8 @@ feature_rsa_rdm_vectors <- function(x) {
 #' @param absolute Logical; when \code{TRUE}, rank edges by absolute magnitude
 #'   during sparsification. Defaults to \code{FALSE}.
 #' @param use Missing-value handling passed to \code{\link[stats]{cor}}.
+#' @param verbose Logical; if \code{TRUE}, emit block-level progress messages
+#'   while connectivity is being computed.
 #'
 #' @return A symmetric numeric matrix with ROIs in rows/columns.
 #'
@@ -619,7 +738,8 @@ feature_rsa_connectivity <- function(x,
                                      method = c("spearman", "pearson"),
                                      keep = 1,
                                      absolute = FALSE,
-                                     use = "pairwise.complete.obs") {
+                                     use = "pairwise.complete.obs",
+                                     verbose = FALSE) {
   method <- match.arg(method)
   vec_info <- .feature_rsa_prepare_vectors(x, fn_label = "feature_rsa_connectivity")
 
@@ -635,7 +755,9 @@ feature_rsa_connectivity <- function(x,
     vec_length = vec_info$vec_length,
     method = method,
     use = use,
-    symmetric = TRUE
+    symmetric = TRUE,
+    verbose = verbose,
+    label = "feature_rsa_connectivity"
   )
 
   dimnames(conn) <- list(vec_info$roi_labels, vec_info$roi_labels)
@@ -668,6 +790,8 @@ feature_rsa_connectivity <- function(x,
 #'   the requested matrix, the raw matrix, the adjusted matrix, and the source
 #'   and target offset terms estimated from the raw matrix.
 #' @param use Missing-value handling passed to \code{\link[stats]{cor}}.
+#' @param verbose Logical; if \code{TRUE}, emit block-level progress messages
+#'   while cross-connectivity is being computed.
 #'
 #' @return By default, a numeric matrix of dimension n_ROI x n_ROI. Rows
 #'   correspond to predicted RDM vectors and columns to observed RDM vectors.
@@ -695,7 +819,8 @@ feature_rsa_cross_connectivity <- function(x,
                                            method = c("spearman", "pearson"),
                                            adjust = c("none", "double_center", "residualize_mean"),
                                            return_components = FALSE,
-                                           use = "pairwise.complete.obs") {
+                                           use = "pairwise.complete.obs",
+                                           verbose = FALSE) {
   method <- match.arg(method)
   adjust <- match.arg(adjust)
   vec_info <- .feature_rsa_prepare_vectors(x, fn_label = "feature_rsa_cross_connectivity")
@@ -738,7 +863,9 @@ feature_rsa_cross_connectivity <- function(x,
     vec_length = vec_info$vec_length,
     method = method,
     use = use,
-    symmetric = FALSE
+    symmetric = FALSE,
+    verbose = verbose,
+    label = "feature_rsa_cross_connectivity [raw]"
   )
 
   roi_labels <- vec_info$roi_labels
@@ -757,12 +884,16 @@ feature_rsa_cross_connectivity <- function(x,
       pred_ref <- .feature_rsa_row_means(
         loader = vec_info$get_pred_block,
         n_cols = n_roi,
-        vec_length = vec_info$vec_length
+        vec_length = vec_info$vec_length,
+        verbose = verbose,
+        label = "feature_rsa_cross_connectivity [pred_ref]"
       )
       obs_ref <- .feature_rsa_row_means(
         loader = function(idx) vec_info$get_obs_block(idx, fill_missing = TRUE),
         n_cols = n_roi,
-        vec_length = vec_info$vec_length
+        vec_length = vec_info$vec_length,
+        verbose = verbose,
+        label = "feature_rsa_cross_connectivity [obs_ref]"
       )
       pred_ref[!is.finite(pred_ref)] <- NA_real_
       obs_ref[!is.finite(obs_ref)] <- NA_real_
@@ -782,7 +913,9 @@ feature_rsa_cross_connectivity <- function(x,
         vec_length = vec_info$vec_length,
         method = method,
         use = use,
-        symmetric = FALSE
+        symmetric = FALSE,
+        verbose = verbose,
+        label = "feature_rsa_cross_connectivity [residualized]"
       )
       dimnames(mat) <- dimnames(raw_cross)
       mat

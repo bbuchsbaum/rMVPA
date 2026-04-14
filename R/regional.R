@@ -964,6 +964,12 @@ run_regional_base <- function(model_spec,
     if (length(old_files) > 0L) {
       unlink(old_files, recursive = TRUE, force = TRUE)
     }
+    if (isTRUE(verbose)) {
+      futile.logger::flog.info(
+        "run_regional: writing feature-RSA RDM batches to %s",
+        save_rdm_vectors_dir
+      )
+    }
   }
  
   # 1) Prepare regions
