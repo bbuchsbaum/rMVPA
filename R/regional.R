@@ -610,6 +610,8 @@ merge_results.regional_mvpa_result <- function(obj, ...) {
 #' @param prediction_table A data frame with prediction results.
 #' @param vol_results A list of voxel-level results.
 #' @param fits Optional model fits.
+#' @param rdm_batch_dir Optional directory containing file-backed feature-RSA
+#'   RDM-vector batches written during `run_regional()`.
 #' @param pooled_prediction_table Optional pooled prediction table (e.g., ROI-averaged or stacked).
 #' @param pooled_performance Optional named numeric vector of pooled performance metrics.
 #'
@@ -628,12 +630,14 @@ merge_results.regional_mvpa_result <- function(obj, ...) {
 #'                                         prediction_table, vol_results, fits = fits)
 #' @export
 regional_mvpa_result <- function(model_spec, performance_table, prediction_table, vol_results, fits=fits,
+                                 rdm_batch_dir = NULL,
                                  pooled_prediction_table = NULL, pooled_performance = NULL) {
   ret <- list(model_spec=model_spec, 
               performance_table=performance_table,
               prediction_table=prediction_table,
               vol_results=vol_results,
               fits=fits,
+              rdm_batch_dir = rdm_batch_dir,
               pooled_prediction_table = pooled_prediction_table,
               pooled_performance = pooled_performance)
   
@@ -679,6 +683,10 @@ print.regional_mvpa_result <- function(x, ...) {
 
   if (is.data.frame(x$prediction_table) && nrow(x$prediction_table) > 0) {
     cat(info_style("  - Prediction Rows: "), value_style(format(nrow(x$prediction_table), big.mark = ",")), "\n")
+  }
+
+  if (!is.null(x$rdm_batch_dir)) {
+    cat(info_style("  - RDM Batch Dir: "), value_style(x$rdm_batch_dir), "\n")
   }
 
   if (length(x$vol_results) > 0) {
@@ -898,6 +906,12 @@ comp_perf <- function(results, region_mask, model_spec = NULL) {
 #'   an integer number of folds, a fold-id vector, or a list of fold indices.
 #' @param stack_seed Optional seed used when auto-generating stacking folds.
 #' @param stack_lambda Ridge penalty used by \pkg{glmnet} in stacking.
+#' @param save_rdm_vectors_dir Optional directory where feature-RSA predicted and
+#'   observed RDM vectors should be written batch-by-batch. When supplied for
+#'   `feature_rsa_model(..., return_rdm_vectors = TRUE)`, `run_regional()`
+#'   writes compact `rdm_batches/batch_*.rds` files in that directory and
+#'   returns `rdm_batch_dir` in the result instead of retaining all ROI RDM
+#'   vectors in memory.
 #' @param preflight One of \code{"warn"} (default), \code{"error"}, or
 #'   \code{"off"} controlling whether analysis preflight findings emit warnings,
 #'   stop the run, or are skipped.
@@ -916,6 +930,7 @@ run_regional_base <- function(model_spec,
                               stack_folds = NULL,
                               stack_seed = NULL,
                               stack_lambda = 1e-3,
+                              save_rdm_vectors_dir = NULL,
                               preflight = c("warn", "error", "off"),
                               backend = c("default", "shard", "auto"),
                               ...) {
@@ -932,6 +947,24 @@ run_regional_base <- function(model_spec,
   )
 
   pool_predictions <- match.arg(pool_predictions)
+
+  if (!is.null(save_rdm_vectors_dir)) {
+    if (!inherits(model_spec, "feature_rsa_model")) {
+      stop("save_rdm_vectors_dir is currently supported only for feature_rsa_model.", call. = FALSE)
+    }
+    if (!isTRUE(model_spec$return_rdm_vectors)) {
+      stop("save_rdm_vectors_dir requires feature_rsa_model(..., return_rdm_vectors = TRUE).", call. = FALSE)
+    }
+    if (isTRUE(return_predictions)) {
+      stop("save_rdm_vectors_dir is not compatible with return_predictions = TRUE.", call. = FALSE)
+    }
+
+    dir.create(save_rdm_vectors_dir, recursive = TRUE, showWarnings = FALSE)
+    old_files <- list.files(save_rdm_vectors_dir, full.names = TRUE, all.files = FALSE, no.. = TRUE)
+    if (length(old_files) > 0L) {
+      unlink(old_files, recursive = TRUE, force = TRUE)
+    }
+  }
  
   # 1) Prepare regions
   prepped <- prep_regional(model_spec, region_mask)
@@ -944,6 +977,7 @@ run_regional_base <- function(model_spec,
     processor = processor,
     verbose = verbose,
     analysis_type = "regional",
+    save_rdm_vectors_dir = save_rdm_vectors_dir,
     ...
   )
   
@@ -995,7 +1029,7 @@ run_regional_base <- function(model_spec,
   
   # 5) Fits
   fits <- NULL
-  if (isTRUE(return_fits)) {
+  if (isTRUE(return_fits) && is.null(save_rdm_vectors_dir)) {
     fits <- lapply(results$result, "[[", "predictor")
   }
   
@@ -1006,6 +1040,7 @@ run_regional_base <- function(model_spec,
     prediction_table  = prediction_table,
     vol_results       = perf$vols,
     fits             = fits,
+    rdm_batch_dir    = attr(results, "rdm_batch_dir", exact = TRUE) %||% save_rdm_vectors_dir,
     pooled_prediction_table = pooled_prediction_table,
     pooled_performance = pooled_performance
   ) -> out

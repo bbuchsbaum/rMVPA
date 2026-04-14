@@ -681,13 +681,90 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
 #' @importFrom furrr future_pmap
 #' @importFrom purrr map pmap
 #' @export
+.mvpa_extract_feature_rsa_rdm_batch <- function(batch_results) {
+  if (!is.data.frame(batch_results) || !"result" %in% names(batch_results) || nrow(batch_results) == 0L) {
+    return(tibble::tibble())
+  }
+
+  rows <- lapply(seq_len(nrow(batch_results)), function(i) {
+    res <- batch_results$result[[i]]
+    predictor <- tryCatch(res$predictor, error = function(...) NULL)
+    pred_vec <- tryCatch(predictor$predicted_rdm_vec, error = function(...) NULL)
+    if (is.null(pred_vec)) {
+      return(NULL)
+    }
+
+    obs_vec <- tryCatch(predictor$observed_rdm_vec, error = function(...) NULL)
+    tibble::tibble(
+      roinum = as.integer(batch_results$id[[i]]),
+      n_obs = as.integer(if (is.null(predictor$n_obs)) NA_integer_ else predictor$n_obs),
+      observation_index = list(tryCatch(predictor$observation_index, error = function(...) NULL)),
+      rdm_vec = list(as.numeric(pred_vec)),
+      observed_rdm_vec = list(if (!is.null(obs_vec)) as.numeric(obs_vec) else NULL)
+    )
+  })
+
+  rows <- Filter(Negate(is.null), rows)
+  if (!length(rows)) {
+    return(tibble::tibble())
+  }
+
+  dplyr::bind_rows(rows)
+}
+
+.mvpa_write_feature_rsa_rdm_batch <- function(batch_results, batch_index, dir) {
+  batch_tbl <- .mvpa_extract_feature_rsa_rdm_batch(batch_results)
+  if (nrow(batch_tbl) == 0L) {
+    return(invisible(NULL))
+  }
+
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  batch_file <- file.path(dir, sprintf("batch_%03d.rds", as.integer(batch_index)))
+  saveRDS(batch_tbl, batch_file)
+
+  manifest_file <- file.path(dir, "manifest.rds")
+  manifest <- if (file.exists(manifest_file)) {
+    readRDS(manifest_file)
+  } else {
+    list(version = 1L, batches = list())
+  }
+
+  manifest$batches[[length(manifest$batches) + 1L]] <- list(
+    batch_index = as.integer(batch_index),
+    file = basename(batch_file),
+    n_rows = nrow(batch_tbl),
+    roi_ids = as.integer(batch_tbl$roinum),
+    pred_lengths = vapply(batch_tbl$rdm_vec, length, integer(1)),
+    obs_lengths = vapply(
+      batch_tbl$observed_rdm_vec,
+      function(v) if (is.null(v)) NA_integer_ else length(v),
+      integer(1)
+    ),
+    has_obs = vapply(batch_tbl$observed_rdm_vec, function(v) !is.null(v), logical(1)),
+    observation_index = batch_tbl$observation_index
+  )
+  saveRDS(manifest, manifest_file)
+
+  invisible(batch_file)
+}
+
+.mvpa_strip_batch_result_payload <- function(batch_results) {
+  if (!is.data.frame(batch_results) || !"result" %in% names(batch_results)) {
+    return(batch_results)
+  }
+
+  batch_results$result <- vector("list", nrow(batch_results))
+  batch_results
+}
+
 mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                          batch_size = NULL,
                          verbose = TRUE,
                          processor = NULL,
                          analysis_type = c("searchlight", "regional"),
                          drop_probs = FALSE,
-                         fail_fast = FALSE) {
+                         fail_fast = FALSE,
+                         save_rdm_vectors_dir = NULL) {
   setup_mvpa_logger()
   profile_enabled <- isTRUE(getOption("rMVPA.profile_searchlight", FALSE))
 
@@ -773,6 +850,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     } else {
       NULL
     }
+    wrote_rdm_batches <- FALSE
     
     for (i in seq_len(nbatches)) {
       batch_positions <- seq.int(batch_bounds$start[[i]], batch_bounds$end[[i]])
@@ -833,6 +911,13 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                                      analysis_type = analysis_type,
                                      drop_probs = drop_probs,
                                      fail_fast = fail_fast)
+          if (!is.null(save_rdm_vectors_dir) &&
+              inherits(mod_spec, "feature_rsa_model") &&
+              isTRUE(mod_spec$return_rdm_vectors)) {
+            .mvpa_write_feature_rsa_rdm_batch(results[[i]], i, save_rdm_vectors_dir)
+            results[[i]] <- .mvpa_strip_batch_result_payload(results[[i]])
+            wrote_rdm_batches <- TRUE
+          }
           run_future_elapsed <- proc.time()[3] - t_run_future
           futile.logger::flog.debug("Batch %d: run_future (parallel section) took %.3f sec",
                                     i, run_future_elapsed)
@@ -915,6 +1000,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     timing$processed_rois <- processed_rois
     timing$skipped_rois <- skipped_rois
     attr(final_results, "timing") <- timing
+  }
+  if (isTRUE(wrote_rdm_batches)) {
+    attr(final_results, "rdm_batch_dir") <- save_rdm_vectors_dir
   }
   return(final_results)
   }, error = function(e) {

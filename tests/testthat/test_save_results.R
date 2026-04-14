@@ -217,3 +217,61 @@ test_that("save_results writes pooled regional performance without list-column f
 
   unlink(temp_dir, recursive = TRUE)
 })
+
+test_that("save_results.regional_mvpa_result records file-backed rdm_batches in paths and manifest", {
+  temp_dir <- tempfile("save-results-rdm-")
+  rdm_dir <- file.path(temp_dir, "rdm_batches")
+  dir.create(rdm_dir, recursive = TRUE, showWarnings = FALSE)
+  saveRDS(
+    tibble::tibble(
+      roinum = 1L,
+      n_obs = 4L,
+      observation_index = list(1:4),
+      rdm_vec = list(c(1, 2, 3)),
+      observed_rdm_vec = list(c(3, 2, 1))
+    ),
+    file.path(rdm_dir, "batch_001.rds")
+  )
+  saveRDS(
+    list(
+      version = 1L,
+      batches = list(list(
+        batch_index = 1L,
+        file = "batch_001.rds",
+        n_rows = 1L,
+        roi_ids = 1L
+      ))
+    ),
+    file.path(rdm_dir, "manifest.rds")
+  )
+
+  reg <- regional_mvpa_result(
+    model_spec = list(),
+    performance_table = data.frame(roinum = 1L, accuracy = 0.9),
+    prediction_table = NULL,
+    vol_results = list(),
+    fits = NULL,
+    rdm_batch_dir = rdm_dir
+  )
+
+  out_dir <- tempfile("save-results-out-")
+  paths <- save_results(reg, out_dir, level = "standard", quiet = TRUE)
+
+  expect_equal(paths$rdm_batch_dir, rdm_dir)
+
+  manifest_path <- list.files(out_dir, pattern = "^manifest\\.", full.names = TRUE)[1]
+  ext <- tools::file_ext(manifest_path)
+  if (ext == "rds") {
+    manifest <- readRDS(manifest_path)
+    expect_true(isTRUE(manifest$has_rdm_batches))
+    expect_equal(manifest$files$rdm_batch_dir, rdm_dir)
+  } else {
+    manifest_txt <- paste(readLines(manifest_path, warn = FALSE), collapse = "\n")
+    expect_match(manifest_txt, "has_rdm_batches")
+    expect_match(manifest_txt, "rdm_batch_dir")
+    expect_match(manifest_txt, gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", rdm_dir))
+  }
+
+  unlink(temp_dir, recursive = TRUE)
+  unlink(out_dir, recursive = TRUE)
+})

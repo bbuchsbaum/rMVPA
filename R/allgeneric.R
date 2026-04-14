@@ -1171,6 +1171,8 @@ run_searchlight <- function(model_spec, radius, method = c("standard", "randomiz
 #'   \item{pooled_performance}{Optional pooled performance metrics when pooling is requested.}
 #'   \item{vol_results}{A list of volumetric maps representing performance metrics across space (if computed).}
 #'   \item{fits}{A list of fitted model objects for each region (if requested via `return_fits=TRUE`).}
+#'   \item{rdm_batch_dir}{Optional directory of file-backed feature-RSA RDM-vector
+#'   batches when `save_rdm_vectors_dir` is used.}
 #'   \item{model_spec}{The original model specification object provided.} # Note: Original documentation said 'performance', clarified here.
 #'
 #' @examples

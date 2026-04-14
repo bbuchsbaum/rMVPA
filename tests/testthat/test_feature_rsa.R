@@ -1043,6 +1043,107 @@ test_that("feature_rsa_rdm_vectors also extracts observed_rdm_vec when available
   expect_true(all(vapply(vecs$observed_rdm_vec, length, integer(1)) == 24L * 23L / 2L))
 })
 
+test_that("feature_rsa connectivity supports file-backed rdm_batches output", {
+  set.seed(905)
+  old_plan <- future::plan()
+  on.exit(future::plan(old_plan), add = TRUE)
+  future::plan(future::sequential)
+
+  dset <- gen_sample_dataset(c(4,4,4), 24, blocks = 3)
+  Fmat <- matrix(rnorm(24 * 6), 24, 6)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("o", 1:24), max_comps = 4)
+  region_mask <- NeuroVol(sample(1:4, length(dset$dataset$mask), replace = TRUE),
+                          space(dset$dataset$mask))
+
+  mspec <- feature_rsa_model(
+    dset$dataset, fdes, method = "pca",
+    crossval = blocked_cross_validation(dset$design$block_var),
+    return_rdm_vectors = TRUE
+  )
+
+  rdm_dir <- file.path(tempfile("rdm-batches-"), "rdm_batches")
+  dir.create(dirname(rdm_dir), recursive = TRUE, showWarnings = FALSE)
+
+  res_mem <- run_regional(mspec, region_mask, batch_size = 1)
+  res_disk <- run_regional(
+    mspec,
+    region_mask,
+    batch_size = 1,
+    save_rdm_vectors_dir = rdm_dir
+  )
+
+  expect_null(res_disk$fits)
+  expect_equal(res_disk$rdm_batch_dir, rdm_dir)
+  expect_true(file.exists(file.path(rdm_dir, "manifest.rds")))
+  expect_true(length(list.files(rdm_dir, pattern = "^batch_[0-9]+[.]rds$")) > 0L)
+
+  vecs_mem <- feature_rsa_rdm_vectors(res_mem)
+  vecs_disk <- feature_rsa_rdm_vectors(res_disk)
+  expect_equal(vecs_disk$roinum, vecs_mem$roinum)
+  expect_equal(vecs_disk$rdm_vec, vecs_mem$rdm_vec)
+  expect_equal(vecs_disk$observed_rdm_vec, vecs_mem$observed_rdm_vec)
+
+  conn_mem <- feature_rsa_connectivity(res_mem, method = "pearson")
+  conn_disk <- feature_rsa_connectivity(res_disk, method = "pearson")
+  expect_equal(conn_disk, conn_mem, tolerance = 1e-12)
+
+  cross_mem <- feature_rsa_cross_connectivity(res_mem, method = "pearson")
+  cross_disk <- feature_rsa_cross_connectivity(res_disk, method = "pearson")
+  expect_equal(cross_disk, cross_mem, tolerance = 1e-12)
+})
+
+test_that("run_regional validates save_rdm_vectors_dir usage", {
+  set.seed(906)
+  old_plan <- future::plan()
+  on.exit(future::plan(old_plan), add = TRUE)
+  future::plan(future::sequential)
+
+  dset <- gen_sample_dataset(c(4,4,4), 18, blocks = 3, nlevels = 2)
+  region_mask <- NeuroVol(sample(1:3, length(dset$dataset$mask), replace = TRUE),
+                          space(dset$dataset$mask))
+
+  cls_spec <- mvpa_model(
+    load_model("sda_notune"),
+    dset$dataset,
+    dset$design,
+    model_type = "classification",
+    crossval = blocked_cross_validation(dset$design$block_var)
+  )
+
+  expect_error(
+    run_regional(cls_spec, region_mask, save_rdm_vectors_dir = tempfile("rdm-batches-")),
+    "currently supported only for feature_rsa_model"
+  )
+
+  Fmat <- matrix(rnorm(18 * 5), 18, 5)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("o", 1:18), max_comps = 3)
+
+  frsa_no_vecs <- feature_rsa_model(
+    dset$dataset,
+    fdes,
+    method = "pca",
+    crossval = blocked_cross_validation(dset$design$block_var),
+    return_rdm_vectors = FALSE
+  )
+  expect_error(
+    run_regional(frsa_no_vecs, region_mask, save_rdm_vectors_dir = tempfile("rdm-batches-")),
+    "return_rdm_vectors = TRUE"
+  )
+
+  frsa_with_preds <- feature_rsa_model(
+    dset$dataset,
+    fdes,
+    method = "pca",
+    crossval = blocked_cross_validation(dset$design$block_var),
+    return_rdm_vectors = TRUE
+  )
+  frsa_with_preds$return_predictions <- TRUE
+  expect_error(
+    run_regional(frsa_with_preds, region_mask, save_rdm_vectors_dir = tempfile("rdm-batches-")),
+    "not compatible with return_predictions = TRUE"
+  )
+})
+
 test_that("feature_rsa_cross_connectivity returns asymmetric ROI x ROI matrix from real data", {
   set.seed(904)
   dset <- gen_sample_dataset(c(4,4,4), 30, blocks = 3)
@@ -1084,6 +1185,37 @@ test_that("feature_rsa_cross_connectivity matches manual cross-correlation on sy
                              observed  = as.character(vec_tbl$roinum))
 
   got <- feature_rsa_cross_connectivity(vec_tbl, method = "pearson")
+  expect_equal(got, expected, tolerance = 1e-12)
+})
+
+test_that("feature_rsa_connectivity blockwise path matches dense correlation", {
+  old_target <- getOption("rMVPA.feature_rsa_block_target_bytes")
+  old_max <- getOption("rMVPA.feature_rsa_block_max_cols")
+  on.exit({
+    options(rMVPA.feature_rsa_block_target_bytes = old_target)
+    options(rMVPA.feature_rsa_block_max_cols = old_max)
+  }, add = TRUE)
+
+  options(
+    rMVPA.feature_rsa_block_target_bytes = 8,
+    rMVPA.feature_rsa_block_max_cols = 1L
+  )
+
+  vec_tbl <- tibble::tibble(
+    roinum = c(10L, 20L, 30L),
+    n_obs = c(4L, 4L, 4L),
+    observation_index = list(1:4, 1:4, 1:4),
+    rdm_vec = list(
+      c(1, 2, 3, 4),
+      c(2, 4, 6, 8),
+      c(4, 3, 2, 1)
+    )
+  )
+
+  expected <- stats::cor(do.call(cbind, vec_tbl$rdm_vec), method = "pearson")
+  dimnames(expected) <- list(as.character(vec_tbl$roinum), as.character(vec_tbl$roinum))
+
+  got <- feature_rsa_connectivity(vec_tbl, method = "pearson")
   expect_equal(got, expected, tolerance = 1e-12)
 })
 
@@ -1177,6 +1309,88 @@ test_that("feature_rsa_cross_connectivity residualize_mean matches manual nuisan
   pred_resid <- residualize_columns(pred_mat)
   obs_resid  <- residualize_columns(obs_mat)
   expected <- stats::cor(pred_resid, obs_resid, method = "pearson")
+  dimnames(expected) <- list(predicted = as.character(vec_tbl$roinum),
+                             observed  = as.character(vec_tbl$roinum))
+
+  got <- feature_rsa_cross_connectivity(
+    vec_tbl,
+    method = "pearson",
+    adjust = "residualize_mean"
+  )
+
+  expect_equal(got, expected, tolerance = 1e-12)
+})
+
+test_that("feature_rsa_cross_connectivity residualize_mean blockwise path matches manual result", {
+  old_target <- getOption("rMVPA.feature_rsa_block_target_bytes")
+  old_max <- getOption("rMVPA.feature_rsa_block_max_cols")
+  on.exit({
+    options(rMVPA.feature_rsa_block_target_bytes = old_target)
+    options(rMVPA.feature_rsa_block_max_cols = old_max)
+  }, add = TRUE)
+
+  options(
+    rMVPA.feature_rsa_block_target_bytes = 8,
+    rMVPA.feature_rsa_block_max_cols = 1L
+  )
+
+  residualize_vector <- function(y, x) {
+    out <- rep(NA_real_, length(y))
+    ok <- is.finite(y) & is.finite(x)
+    if (sum(ok) < 2L) {
+      return(out)
+    }
+
+    x_ok <- x[ok]
+    y_ok <- y[ok]
+    if (stats::sd(x_ok) <= 1e-12) {
+      out[ok] <- y_ok - mean(y_ok)
+      return(out)
+    }
+
+    fit <- stats::lm.fit(x = cbind(1, x_ok), y = y_ok)
+    out[ok] <- fit$residuals
+    out
+  }
+
+  residualize_columns <- function(mat) {
+    ref_vec <- rowMeans(mat)
+    out <- vapply(
+      seq_len(ncol(mat)),
+      function(i) residualize_vector(mat[, i], ref_vec),
+      numeric(nrow(mat))
+    )
+    dimnames(out) <- dimnames(mat)
+    out
+  }
+
+  common <- c(6, -3, 2, 5, -1, 4)
+  pred_vecs <- list(
+    c(1, 3, 2, 5, 4, 6) + 3 * common,
+    c(2, 1, 4, 3, 6, 5) + 3 * common,
+    c(6, 5, 3, 2, 1, 4) + 3 * common
+  )
+  obs_vecs <- list(
+    c(2, 4, 1, 5, 3, 6) + 2 * common,
+    c(5, 2, 4, 1, 3, 6) + 2 * common,
+    c(4, 6, 2, 5, 1, 3) + 2 * common
+  )
+
+  vec_tbl <- tibble::tibble(
+    roinum = c(11L, 22L, 33L),
+    n_obs = c(4L, 4L, 4L),
+    observation_index = list(1:4, 1:4, 1:4),
+    rdm_vec = pred_vecs,
+    observed_rdm_vec = obs_vecs
+  )
+
+  pred_mat <- do.call(cbind, pred_vecs)
+  obs_mat  <- do.call(cbind, obs_vecs)
+  expected <- stats::cor(
+    residualize_columns(pred_mat),
+    residualize_columns(obs_mat),
+    method = "pearson"
+  )
   dimnames(expected) <- list(predicted = as.character(vec_tbl$roinum),
                              observed  = as.character(vec_tbl$roinum))
 
