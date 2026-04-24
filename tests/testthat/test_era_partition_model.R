@@ -49,6 +49,30 @@ context("era_partition_model")
   )
 }
 
+.era_partition_xdec_fixture <- function(K = 12, p = 6, seed = 100) {
+  set.seed(seed)
+  toy <- gen_sample_dataset(
+    D = c(3, 3, 3),
+    nobs = K,
+    nlevels = 3,
+    blocks = 3,
+    external_test = TRUE,
+    ntest_obs = K
+  )
+  keys <- paste0("item", seq_len(K))
+  toy$design$train_design$item <- factor(keys, levels = keys)
+  toy$design$test_design$item <- factor(keys, levels = keys)
+  toy$design$train_design$category <- toy$design$y_train
+  toy$design$test_design$category <- toy$design$y_test
+
+  list(
+    toy = toy,
+    E = matrix(rnorm(K * p), K, p),
+    R = matrix(rnorm(K * p), K, p),
+    context = list(id = 1L)
+  )
+}
+
 test_that("delta R2 matches an explicit nested-lm oracle", {
   y <- c(1, 2, 1.5, 4, 3.5, 3, 5, 5.5)
   signal <- c(0, 0.2, 0.3, 1, 1.1, 0.9, 1.8, 2)
@@ -124,6 +148,192 @@ test_that("era_partition_model returns matched first- and second-order metrics",
   expect_gt(out$metrics[["first_order_delta_r2"]], 0.75)
   expect_gt(out$metrics[["second_order_delta_r2"]], 0.9)
   expect_equal(out$metrics[["naive_top1_acc"]], 1)
+})
+
+test_that("era_partition_model direct xdec metrics match naive_xdec_model", {
+  fix <- .era_partition_xdec_fixture(K = 36, p = 27, seed = 10)
+  toy <- fix$toy
+
+  roi_data <- list(
+    train_data = t(as.matrix(toy$dataset$train_data)),
+    test_data = t(as.matrix(toy$dataset$test_data)),
+    indices = seq_len(nrow(as.matrix(toy$dataset$train_data)))
+  )
+  context <- fix$context
+
+  era_model <- era_partition_model(
+    dataset = toy$dataset,
+    design = toy$design,
+    key_var = ~ item,
+    distfun = eucdist(),
+    xdec_link_by = "category",
+    include_procrustes = FALSE
+  )
+  naive_model <- naive_xdec_model(
+    dataset = toy$dataset,
+    design = toy$design,
+    link_by = "category",
+    return_predictions = FALSE
+  )
+
+  era_out <- fit_roi(era_model, roi_data, context)
+  naive_out <- fit_roi(naive_model, roi_data, context)
+
+  expect_false(era_out$error)
+  expect_false(naive_out$error)
+  expect_equal(
+    era_out$metrics[c("xdec_Accuracy", "xdec_AUC")],
+    setNames(naive_out$metrics[c("Accuracy", "AUC")], c("xdec_Accuracy", "xdec_AUC")),
+    tolerance = 1e-12
+  )
+})
+
+test_that("era_partition_model xdec schema follows compute flag", {
+  fix <- .era_partition_xdec_fixture()
+
+  with_xdec <- era_partition_model(
+    dataset = fix$toy$dataset,
+    design = fix$toy$design,
+    key_var = ~ item,
+    xdec_link_by = "category",
+    include_procrustes = FALSE
+  )
+  without_xdec <- era_partition_model(
+    dataset = fix$toy$dataset,
+    design = fix$toy$design,
+    key_var = ~ item,
+    compute_xdec_performance = FALSE,
+    include_procrustes = FALSE
+  )
+
+  expect_true(all(c("xdec_Accuracy", "xdec_AUC") %in% names(output_schema(with_xdec))))
+  expect_false(any(grepl("^xdec_", names(output_schema(without_xdec)))))
+
+  out <- .era_partition_fit_direct(without_xdec, fix$E, fix$R)
+  expect_false(out$error)
+  expect_false(any(grepl("^xdec_", names(out$metrics))))
+})
+
+test_that("era_partition_model stores diagnostic matrices and xdec predictions on request", {
+  fix <- .era_partition_xdec_fixture(K = 15, p = 8, seed = 101)
+  model <- era_partition_model(
+    dataset = fix$toy$dataset,
+    design = fix$toy$design,
+    key_var = ~ item,
+    distfun = eucdist(),
+    xdec_link_by = "category",
+    include_procrustes = FALSE,
+    return_matrices = TRUE,
+    return_xdec_predictions = TRUE
+  )
+
+  out <- .era_partition_fit_direct(model, fix$E, fix$R)
+
+  expect_false(out$error)
+  expect_true(all(c(
+    "keys",
+    "source_prototypes",
+    "target_prototypes",
+    "cross_similarity",
+    "source_rdm",
+    "target_rdm",
+    "procrustes_similarity",
+    "xdec_result"
+  ) %in% names(out$result)))
+  expect_equal(length(out$result$keys), 15)
+  expect_equal(dim(out$result$cross_similarity), c(15L, 15L))
+  expect_equal(rownames(out$result$cross_similarity), out$result$keys)
+  expect_equal(colnames(out$result$cross_similarity), out$result$keys)
+  expect_true(all(is.finite(diag(out$result$source_rdm))))
+  expect_equal(unname(diag(out$result$source_rdm)), rep(0, 15), tolerance = 1e-12)
+  expect_equal(unname(diag(out$result$target_rdm)), rep(0, 15), tolerance = 1e-12)
+
+  probs <- out$result$xdec_result$probs
+  expect_true(all(is.finite(unname(probs))))
+  expect_equal(rowSums(probs), rep(1, nrow(probs)), tolerance = 1e-12)
+  expect_equal(nrow(probs), nrow(fix$R))
+  expect_true(all(c("xdec_Accuracy", "xdec_AUC") %in% names(out$metrics)))
+})
+
+test_that("era_partition_model falls back to key_var when requested xdec link is incomplete", {
+  fix <- .era_partition_xdec_fixture(K = 10, p = 5, seed = 102)
+  fix$toy$design$train_design$train_only <- fix$toy$design$train_design$category
+
+  model <- era_partition_model(
+    dataset = fix$toy$dataset,
+    design = fix$toy$design,
+    key_var = ~ item,
+    xdec_link_by = "train_only",
+    include_procrustes = FALSE,
+    return_xdec_predictions = TRUE
+  )
+
+  out <- .era_partition_fit_direct(model, fix$E, fix$R)
+
+  expect_null(model$xdec_link_by)
+  expect_equal(model$xdec_link_by_requested, "train_only")
+  expect_false(out$error)
+  expect_equal(ncol(out$result$xdec_result$probs), 10)
+  expect_equal(colnames(out$result$xdec_result$probs), levels(fix$toy$design$train_design$item))
+  expect_true(all(is.finite(out$metrics[c("xdec_Accuracy", "xdec_AUC")])))
+})
+
+test_that("era_partition_model reports NA xdec metrics for degenerate xdec labels only", {
+  fix <- .era_partition_xdec_fixture(K = 8, p = 5, seed = 103)
+  fix$toy$design$train_design$single_class <- "same"
+  fix$toy$design$test_design$single_class <- "same"
+
+  model <- era_partition_model(
+    dataset = fix$toy$dataset,
+    design = fix$toy$design,
+    key_var = ~ item,
+    xdec_link_by = "single_class",
+    include_procrustes = FALSE
+  )
+
+  out <- .era_partition_fit_direct(model, fix$E, fix$R)
+
+  expect_false(out$error)
+  expect_true(all(c("xdec_Accuracy", "xdec_AUC") %in% names(out$metrics)))
+  expect_true(all(is.na(out$metrics[c("xdec_Accuracy", "xdec_AUC")])))
+  expect_true(is.finite(out$metrics[["naive_top1_acc"]]))
+  expect_true(is.finite(out$metrics[["geom_cor"]]))
+})
+
+test_that("era_partition_model direct xdec is invariant to paired row order", {
+  fix <- .era_partition_xdec_fixture(K = 18, p = 7, seed = 104)
+  model <- era_partition_model(
+    dataset = fix$toy$dataset,
+    design = fix$toy$design,
+    key_var = ~ item,
+    xdec_link_by = "category",
+    include_procrustes = FALSE
+  )
+  ref <- .era_partition_fit_direct(model, fix$E, fix$R)
+
+  perm <- sample(seq_len(nrow(fix$E)))
+  model_perm <- model
+  model_perm$design$train_design <- model$design$train_design[perm, , drop = FALSE]
+  model_perm$design$test_design <- model$design$test_design[perm, , drop = FALSE]
+  model_perm$design$y_train <- model$design$y_train[perm]
+  model_perm$design$y_test <- model$design$y_test[perm]
+  permuted <- .era_partition_fit_direct(
+    model_perm,
+    fix$E[perm, , drop = FALSE],
+    fix$R[perm, , drop = FALSE]
+  )
+
+  invariant <- c(
+    "xdec_Accuracy",
+    "xdec_AUC",
+    "naive_top1_acc",
+    "first_order_delta_r2",
+    "second_order_delta_r2",
+    "geom_cor"
+  )
+  expect_false(ref$error)
+  expect_false(permuted$error)
+  expect_equal(permuted$metrics[invariant], ref$metrics[invariant], tolerance = 1e-10)
 })
 
 test_that("era_partition_model is invariant to paired item row permutations", {
@@ -252,6 +462,34 @@ test_that("Procrustes scores return NA when leakage-free training set is too sma
 
   expect_true(all(is.na(got$scores)))
   expect_equal(got$train_n, rep(4, 5))
+})
+
+test_that("era_partition_model representative ROI fit stays within perf budget", {
+  skip_on_cran()
+  skip_if_not_perf_tests()
+
+  fix <- .era_partition_xdec_fixture(K = 60, p = 48, seed = 105)
+  model <- era_partition_model(
+    dataset = fix$toy$dataset,
+    design = fix$toy$design,
+    key_var = ~ item,
+    distfun = eucdist(),
+    xdec_link_by = "category",
+    include_procrustes = TRUE,
+    min_procrustes_train_items = 5L
+  )
+
+  elapsed <- as.numeric(system.time({
+    out <- .era_partition_fit_direct(model, fix$E, fix$R)
+  })["elapsed"])
+  budget <- as.numeric(Sys.getenv("RMVPA_ERA_PARTITION_MAX_SECONDS", "2.5"))
+
+  message(sprintf(
+    "era_partition perf guardrail: elapsed=%.3fs budget=%.3fs K=%d p=%d",
+    elapsed, budget, nrow(fix$E), ncol(fix$E)
+  ))
+  expect_false(out$error)
+  expect_lte(elapsed, budget)
 })
 
 test_that("era_partition_model can run through regional iterator", {

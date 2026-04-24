@@ -28,7 +28,12 @@ if (isTRUE(getOption("knitr.in.progress"))) {
     cli.unicode = FALSE
   )
 }
-knitr::opts_chunk$set(comment = NA, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE
+)
 suppressPackageStartupMessages({
   library(rMVPA)
   library(neuroim2)
@@ -63,23 +68,28 @@ We start from `gen_sample_dataset()` and treat its training split as
 set.seed(123)
 
 toy <- gen_sample_dataset(
-  D            = c(6, 6, 6),  # modest volume for speed
-  nobs         = 48,
+  D            = c(4, 4, 4),  # modest volume for speed
+  nobs         = 24,
   nlevels      = 3,           # 3 item categories
   blocks       = 3,           # 3 runs
-  external_test = TRUE        # required for encoding → retrieval
+  external_test = TRUE,       # required for encoding → retrieval
+  ntest_obs     = 24
 )
 
 # Add an item key column to both train and test designs
-toy$design$train_design$item <- toy$design$train_design$Y
-toy$design$test_design$item  <- toy$design$test_design$Ytest
+item_keys <- sprintf("item_%02d", seq_len(nrow(toy$design$train_design)))
+toy$design$train_design$item <- factor(item_keys, levels = item_keys)
+toy$design$test_design$item  <- factor(item_keys, levels = item_keys)
 
-str(toy$design$train_design[item = 1:6, ])
+head(toy$design$train_design)
 ```
 
 Each row in `train_design` and `test_design` corresponds to a trial.
 The `item` column links encoding and retrieval presentations of the
-same stimulus.
+same stimulus. The toy data use paired row IDs as item keys so the example has
+one encoding and one retrieval observation per item; in an applied analysis,
+this column would usually be a stimulus, image, word, or event identifier from
+your design table.
 
 ### `key_var` vs `y_train` / `y_test` and `phase_var`
 
@@ -138,6 +148,17 @@ metrics.
 head(era_res$performance_table)
 ```
 
+```{r check-era-rsa-results, include=FALSE}
+stopifnot(
+  is.data.frame(era_res$performance_table),
+  nrow(era_res$performance_table) == 3,
+  all(era_res$performance_table$n_items == length(item_keys)),
+  all(is.finite(era_res$performance_table$era_top1_acc)),
+  all(era_res$performance_table$era_top1_acc >= 0),
+  all(era_res$performance_table$era_top1_acc <= 1)
+)
+```
+
 Key metrics include:
 
 - `era_top1_acc` — top-1 encoding→retrieval accuracy for the item key.
@@ -148,7 +169,86 @@ Key metrics include:
 These quantify both cross-decoding performance and representational
 geometry alignment between phases.
 
-## 3. Searchlight ERA-RSA
+## 3. When do you need ERA partitioning?
+
+The ERA-RSA summary above gives you direct item matching and a raw geometry
+correlation. `era_partition_model()` asks a sharper follow-up question: how
+much of the encoding-retrieval relationship is uniquely explained by
+same-item transfer, and how much is uniquely explained by preserved
+representational geometry after nuisance structure is accounted for?
+
+This makes it useful when a single cross-decoding accuracy is too compressed.
+For example, two regions could have similar top-1 accuracy, but one may carry
+item-specific diagonal similarity while another mainly preserves the relative
+geometry among items.
+
+```{r era-partition-model}
+partition_ms <- era_partition_model(
+  dataset = toy$dataset,
+  design  = toy$design,
+  key_var = ~ item,
+  distfun = cordist("pearson"),
+  rsa_simfun = "spearman",
+  xdec_link_by = "item",
+  include_procrustes = FALSE
+)
+
+partition_res <- run_regional(partition_ms, region_mask)
+```
+
+```{r era-partition-summary}
+partition_cols <- c(
+  "roinum",
+  "n_items",
+  "naive_top1_acc",
+  "xdec_Accuracy",
+  "first_order_delta_r2",
+  "second_order_delta_r2",
+  "geom_cor"
+)
+partition_res$performance_table[, partition_cols]
+```
+
+```{r check-era-partition-results, include=FALSE}
+partition_metrics <- partition_res$performance_table
+stopifnot(
+  is.data.frame(partition_metrics),
+  nrow(partition_metrics) == 3,
+  all(partition_metrics$n_items == length(item_keys)),
+  all(is.finite(partition_metrics$naive_top1_acc)),
+  all(partition_metrics$naive_top1_acc >= 0),
+  all(partition_metrics$naive_top1_acc <= 1),
+  any(is.finite(partition_metrics$first_order_delta_r2)),
+  any(is.finite(partition_metrics$second_order_delta_r2))
+)
+```
+
+Read these metrics in layers:
+
+- `naive_top1_acc` is the item-level direct-transfer score computed from the
+  encoding-by-retrieval similarity matrix.
+- `xdec_Accuracy` is the trial-level direct cross-decoding metric, matched to
+  the same prototype scorer used by `naive_xdec_model()`.
+- `first_order_delta_r2` is the unique variance explained by same-item
+  transfer in the cross-state similarity matrix.
+- `second_order_delta_r2` and `geom_cor` summarize whether the encoding
+  item geometry is preserved at retrieval.
+
+For this random toy dataset, the values should be near chance or near zero.
+In real data, a region with high `first_order_delta_r2` and weak
+`second_order_delta_r2` supports item-specific reinstatement without much
+global geometry preservation. The reverse pattern suggests that the relative
+arrangement of items is preserved even when direct item identification is
+weak.
+
+`era_partition_model()` can also include block, category, temporal, and custom
+nuisance regressors through `item_block_enc`, `item_block_ret`,
+`item_time_enc`, `item_time_ret`, `item_category`, `first_order_nuisance`, and
+`second_order_nuisance`. If you have enough paired items, set
+`include_procrustes = TRUE` to add a leakage-free orthogonal alignment
+decoder.
+
+## 4. Searchlight ERA-RSA
 
 We can also run ERA-RSA in a searchlight mode to obtain whole-brain
 maps of the same metrics.
@@ -158,7 +258,7 @@ set.seed(456)
 
 era_sl <- run_searchlight(
   era_ms,
-  radius = 3,         # searchlight radius in voxels
+  radius = 2,         # searchlight radius in voxels
   method = "standard" # ERA-RSA currently uses standard searchlight
 )
 
@@ -188,7 +288,7 @@ This will create one NIfTI file per metric (e.g., `geom_cor.nii.gz`,
 `era_top1_acc.nii.gz`) that can be viewed in your favorite neuroimaging
 software.
 
-## 4. Adding Confounds and Lag Information
+## 5. Adding Confounds and Lag Information
 
 ERA-RSA can optionally incorporate item-level confounds and lag
 variables. These are all defined at the **item** level, not the
@@ -278,11 +378,14 @@ In applied analyses, you would construct `item_block`, `item_lag`,
 experiment’s design tables following the patterns above, then pass
 them into `era_rsa_model()`.
 
-## 5. Summary
+## 6. Summary
 
 - `era_rsa_model()` provides a unified framework for:
   - cross-decoding between encoding and retrieval, and
   - comparing encoding and retrieval representational geometries.
+- `era_partition_model()` separates direct item transfer, variance uniquely
+  explained by same-item similarity, and variance explained by preserved
+  second-order geometry.
 - It integrates naturally with:
   - `run_regional()` for ROI-based analyses, and
   - `run_searchlight()` for whole-brain mapping.

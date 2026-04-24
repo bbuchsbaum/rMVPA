@@ -24,6 +24,12 @@
 #'   source and target states. Named vectors are matched to item keys.
 #' @param item_category Optional item-level category labels used to add a
 #'   same-category nuisance model to both first- and second-order regressions.
+#' @param compute_xdec_performance Logical; compute trial-level naive
+#'   cross-decoding performance using the same prototype scorer as
+#'   \code{\link{naive_xdec_model}}.
+#' @param xdec_link_by Optional column name used to define source/target labels
+#'   for the trial-level cross-decoding metrics. If \code{NULL}, \code{key_var}
+#'   is used.
 #' @param include_procrustes Logical; compute leave-one-item-out orthogonal
 #'   Procrustes cross-decoding metrics.
 #' @param procrustes_center Logical; center source and target prototypes using
@@ -32,6 +38,9 @@
 #'   each leave-one-item-out Procrustes alignment.
 #' @param return_matrices Logical; store prototype/similarity matrices in each
 #'   ROI result for diagnostics.
+#' @param return_xdec_predictions Logical; store the trial-level
+#'   \code{classification_result} produced by the direct cross-decoder in each
+#'   ROI result.
 #' @param ... Additional fields stored on the model spec.
 #'
 #' @return A model spec of class `era_partition_model` for `run_regional()` or
@@ -49,10 +58,13 @@ era_partition_model <- function(dataset,
                                 item_time_enc = NULL,
                                 item_time_ret = NULL,
                                 item_category = NULL,
+                                compute_xdec_performance = TRUE,
+                                xdec_link_by = NULL,
                                 include_procrustes = TRUE,
                                 procrustes_center = TRUE,
                                 min_procrustes_train_items = 3L,
                                 return_matrices = FALSE,
+                                return_xdec_predictions = FALSE,
                                 ...) {
 
   rsa_simfun <- match.arg(rsa_simfun)
@@ -75,6 +87,21 @@ era_partition_model <- function(dataset,
   }
 
   key_vec <- factor(parse_variable(key_var, design$train_design))
+  xdec_link_by_eff <- .era_partition_effective_xdec_link(
+    design = design,
+    link_by = xdec_link_by
+  )
+  xdec_key_train <- .era_partition_resolve_xdec_key(
+    key_var = substitute(key_var),
+    design_table = design$train_design,
+    link_by = xdec_link_by_eff
+  )
+  xdec_levels <- levels(factor(xdec_key_train))
+  xdec_performance <- if (length(xdec_levels) > 2L) {
+    get_multiclass_perf(design$split_groups, class_metrics = FALSE)
+  } else {
+    get_binary_perf(design$split_groups)
+  }
 
   create_model_spec(
     "era_partition_model",
@@ -91,10 +118,15 @@ era_partition_model <- function(dataset,
     item_time_enc = item_time_enc,
     item_time_ret = item_time_ret,
     item_category = item_category,
+    compute_xdec_performance = isTRUE(compute_xdec_performance),
+    xdec_link_by = xdec_link_by_eff,
+    xdec_link_by_requested = xdec_link_by,
+    xdec_performance = xdec_performance,
     include_procrustes = isTRUE(include_procrustes),
     procrustes_center = isTRUE(procrustes_center),
     min_procrustes_train_items = as.integer(min_procrustes_train_items),
     return_matrices = isTRUE(return_matrices),
+    return_xdec_predictions = isTRUE(return_xdec_predictions),
     compute_performance = TRUE,
     return_predictions = FALSE,
     ...
@@ -105,6 +137,8 @@ era_partition_model <- function(dataset,
 print.era_partition_model <- function(x, ...) {
   cat("ERA Partition Model\n")
   cat("  key_var:                 ", deparse(x$key_var), "\n")
+  cat("  direct xdec:             ", if (isTRUE(x$compute_xdec_performance)) "yes" else "no", "\n")
+  cat("  xdec_link_by:            ", x$xdec_link_by %||% "(key_var)", "\n")
   cat("  second-order similarity: ", x$rsa_simfun, "\n")
   cat("  Procrustes decoder:      ", if (isTRUE(x$include_procrustes)) "yes" else "no", "\n")
   cat("  min Procrustes items:    ", x$min_procrustes_train_items, "\n")
@@ -197,6 +231,21 @@ fit_roi.era_partition_model <- function(model, roi_data, context, ...) {
     nuisance = first_nuis
   )
 
+  xdec_perf <- .era_partition_empty_xdec_metrics(model)
+  xdec_result <- NULL
+  if (isTRUE(model$compute_xdec_performance)) {
+    xdec_fit <- try(.era_partition_direct_xdec(model, Xenc, Xret), silent = TRUE)
+    if (!inherits(xdec_fit, "try-error") && !is.null(xdec_fit)) {
+      xdec_result <- xdec_fit$result
+      xdec_vals <- try(model$xdec_performance(xdec_result), silent = TRUE)
+      if (!inherits(xdec_vals, "try-error") && is.numeric(xdec_vals)) {
+        names(xdec_vals) <- paste0("xdec_", names(xdec_vals))
+        matched <- intersect(names(xdec_perf), names(xdec_vals))
+        xdec_perf[matched] <- xdec_vals[matched]
+      }
+    }
+  }
+
   # Second-order geometry preservation.
   D_enc <- pairwise_dist(model$distfun, E)
   D_ret <- pairwise_dist(model$distfun, R)
@@ -259,6 +308,7 @@ fit_roi.era_partition_model <- function(model, roi_data, context, ...) {
     naive_top1_acc = naive_top1_acc,
     naive_diag_mean = naive_diag_mean,
     naive_diag_minus_off = naive_diag_minus_off,
+    xdec_perf,
     geom_cor = geom_cor,
     procrustes_top1_acc = procrustes_top1_acc,
     procrustes_diag_mean = pro_diag_mean,
@@ -268,9 +318,9 @@ fit_roi.era_partition_model <- function(model, roi_data, context, ...) {
     nuisance_second_order_n = length(second_nuis)
   )
 
-  diag_result <- NULL
+  diag_result <- list()
   if (isTRUE(model$return_matrices)) {
-    diag_result <- list(
+    diag_result <- c(diag_result, list(
       keys = common_keys,
       source_prototypes = E,
       target_prototypes = R,
@@ -278,7 +328,13 @@ fit_roi.era_partition_model <- function(model, roi_data, context, ...) {
       source_rdm = D_enc,
       target_rdm = D_ret,
       procrustes_similarity = pro_scores
-    )
+    ))
+  }
+  if (isTRUE(model$return_xdec_predictions)) {
+    diag_result$xdec_result <- xdec_result
+  }
+  if (!length(diag_result)) {
+    diag_result <- NULL
   }
 
   roi_result(metrics = perf, indices = ind, id = id, result = diag_result)
@@ -305,6 +361,7 @@ output_schema.era_partition_model <- function(model) {
     "naive_top1_acc",
     "naive_diag_mean",
     "naive_diag_minus_off",
+    .era_partition_xdec_metric_names(model),
     "geom_cor",
     "procrustes_top1_acc",
     "procrustes_diag_mean",
@@ -314,6 +371,93 @@ output_schema.era_partition_model <- function(model) {
     "nuisance_second_order_n"
   )
   setNames(rep("scalar", length(nms)), nms)
+}
+
+#' @keywords internal
+.era_partition_effective_xdec_link <- function(design, link_by = NULL) {
+  if (!is.null(link_by) && length(link_by) == 1L &&
+      link_by %in% colnames(design$train_design) &&
+      link_by %in% colnames(design$test_design)) {
+    return(link_by)
+  }
+  NULL
+}
+
+#' @keywords internal
+.era_partition_resolve_xdec_key <- function(key_var, design_table, link_by = NULL) {
+  if (!is.null(link_by) && length(link_by) == 1L && link_by %in% colnames(design_table)) {
+    design_table[[link_by]]
+  } else {
+    parse_variable(key_var, design_table)
+  }
+}
+
+#' @keywords internal
+.era_partition_xdec_keys <- function(model) {
+  des <- model$design
+  key_tr <- factor(.era_partition_resolve_xdec_key(
+    key_var = model$key_var,
+    design_table = des$train_design,
+    link_by = model$xdec_link_by
+  ))
+  key_te <- factor(.era_partition_resolve_xdec_key(
+    key_var = model$key_var,
+    design_table = des$test_design,
+    link_by = model$xdec_link_by
+  ), levels = levels(key_tr))
+
+  list(key_tr = key_tr, key_te = key_te)
+}
+
+#' @keywords internal
+.era_partition_direct_xdec <- function(model, Xenc, Xret) {
+  keys <- .era_partition_xdec_keys(model)
+  if (length(levels(keys$key_tr)) < 2L) {
+    return(NULL)
+  }
+
+  core <- .naive_xdec_fit_core(
+    Xtr = Xenc,
+    Xte = Xret,
+    kernel = NULL,
+    key_tr = keys$key_tr,
+    key_te = keys$key_te
+  )
+
+  list(
+    result = classification_result(
+      core$obs,
+      core$pred,
+      core$probs,
+      testind = seq_len(nrow(Xret)),
+      test_design = model$design$test_design,
+      predictor = NULL
+    )
+  )
+}
+
+#' @keywords internal
+.era_partition_xdec_metric_names <- function(model) {
+  if (!isTRUE(model$compute_xdec_performance)) {
+    return(character())
+  }
+
+  base <- c("Accuracy", "AUC")
+  split_groups <- model$design$split_groups
+  if (!is.null(split_groups) && length(split_groups) > 0L) {
+    split_names <- unlist(lapply(names(split_groups), function(tag) {
+      paste0(base, "_", tag)
+    }), use.names = FALSE)
+    base <- c(base, split_names)
+  }
+
+  paste0("xdec_", base)
+}
+
+#' @keywords internal
+.era_partition_empty_xdec_metrics <- function(model) {
+  nms <- .era_partition_xdec_metric_names(model)
+  setNames(rep(NA_real_, length(nms)), nms)
 }
 
 #' @keywords internal

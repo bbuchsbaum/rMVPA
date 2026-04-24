@@ -17,10 +17,13 @@ era_partition_model(
   item_time_enc = NULL,
   item_time_ret = NULL,
   item_category = NULL,
+  compute_xdec_performance = TRUE,
+  xdec_link_by = NULL,
   include_procrustes = TRUE,
   procrustes_center = TRUE,
   min_procrustes_train_items = 3L,
   return_matrices = FALSE,
+  return_xdec_predictions = FALSE,
   ...
 )
 }
@@ -52,6 +55,14 @@ source and target states. Named vectors are matched to item keys.}
 \item{item_category}{Optional item-level category labels used to add a
 same-category nuisance model to both first- and second-order regressions.}
 
+\item{compute_xdec_performance}{Logical; compute trial-level naive
+cross-decoding performance using the same prototype scorer as
+\code{\link{naive_xdec_model}}.}
+
+\item{xdec_link_by}{Optional column name used to define source/target labels
+for the trial-level cross-decoding metrics. If \code{NULL}, \code{key_var}
+is used.}
+
 \item{include_procrustes}{Logical; compute leave-one-item-out orthogonal
 Procrustes cross-decoding metrics.}
 
@@ -63,6 +74,10 @@ each leave-one-item-out Procrustes alignment.}
 
 \item{return_matrices}{Logical; store prototype/similarity matrices in each
 ROI result for diagnostics.}
+
+\item{return_xdec_predictions}{Logical; store the trial-level
+\code{classification_result} produced by the direct cross-decoder in each
+ROI result.}
 
 \item{...}{Additional fields stored on the model spec.}
 }
