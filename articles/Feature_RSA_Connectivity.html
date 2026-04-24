@@ -194,12 +194,132 @@ representational geometry itself. It is useful for asking which ROIs sit
 near each other in model-predicted representational space.</p>
 </div>
 <div class="section level2">
+<h2 id="what-if-the-model-rdms-are-correlated">What if the model RDMs are correlated?<a class="anchor" aria-label="anchor" href="#what-if-the-model-rdms-are-correlated"></a>
+</h2>
+<p>Sometimes the question is not whether two ROI RDMs are similar in
+full, but whether they are similar in the part of their geometry
+explained by a family of model RDMs. If the models are correlated, treat
+them as one model space rather than four separate targets.</p>
+<p><code><a href="../reference/rdm_model_space_connectivity.html">rdm_model_space_connectivity()</a></code> projects each ROI RDM
+into the subspace spanned by the model RDMs, gives each ROI a
+decorrelated model-space fingerprint, and then compares those
+fingerprints.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">model_space</span> <span class="op">&lt;-</span> <span class="fu">build_model_space_example</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">model_space</span><span class="op">$</span><span class="va">conn</span><span class="op">$</span><span class="va">profile_similarity</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="left"></th>
+<th align="right">ROI1</th>
+<th align="right">ROI2</th>
+<th align="right">ROI3</th>
+<th align="right">ROI4</th>
+<th align="right">ROI5</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">ROI1</td>
+<td align="right">1.00</td>
+<td align="right">0.99</td>
+<td align="right">0.92</td>
+<td align="right">0.23</td>
+<td align="right">-0.04</td>
+</tr>
+<tr class="even">
+<td align="left">ROI2</td>
+<td align="right">0.99</td>
+<td align="right">1.00</td>
+<td align="right">0.95</td>
+<td align="right">0.39</td>
+<td align="right">-0.20</td>
+</tr>
+<tr class="odd">
+<td align="left">ROI3</td>
+<td align="right">0.92</td>
+<td align="right">0.95</td>
+<td align="right">1.00</td>
+<td align="right">0.50</td>
+<td align="right">-0.29</td>
+</tr>
+<tr class="even">
+<td align="left">ROI4</td>
+<td align="right">0.23</td>
+<td align="right">0.39</td>
+<td align="right">0.50</td>
+<td align="right">1.00</td>
+<td align="right">-0.95</td>
+</tr>
+<tr class="odd">
+<td align="left">ROI5</td>
+<td align="right">-0.04</td>
+<td align="right">-0.20</td>
+<td align="right">-0.29</td>
+<td align="right">-0.95</td>
+<td align="right">1.00</td>
+</tr>
+</tbody>
+</table>
+<p>The profile matrix asks whether ROIs express the same relative
+pattern across the model-space axes, ignoring overall strength. The
+strength-sensitive version is stored in
+<code>model_space$conn$similarity</code>.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">model_space</span><span class="op">$</span><span class="va">conn</span><span class="op">$</span><span class="va">model_axis_cor</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="left"></th>
+<th align="right">A1</th>
+<th align="right">A2</th>
+<th align="right">A3</th>
+<th align="right">A4</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">PC1</td>
+<td align="right">-0.93</td>
+<td align="right">-0.95</td>
+<td align="right">-0.90</td>
+<td align="right">-0.88</td>
+</tr>
+<tr class="even">
+<td align="left">PC2</td>
+<td align="right">-0.11</td>
+<td align="right">0.13</td>
+<td align="right">0.42</td>
+<td align="right">-0.46</td>
+</tr>
+<tr class="odd">
+<td align="left">PC3</td>
+<td align="right">0.35</td>
+<td align="right">-0.27</td>
+<td align="right">0.04</td>
+<td align="right">-0.12</td>
+</tr>
+<tr class="even">
+<td align="left">PC4</td>
+<td align="right">0.07</td>
+<td align="right">0.12</td>
+<td align="right">-0.11</td>
+<td align="right">-0.09</td>
+</tr>
+</tbody>
+</table>
+<p>The axis table is the interpretation key. With
+<code>basis = "pca"</code>, <code>PC1</code> usually captures what the
+correlated model RDMs share, while later axes capture ways the models
+differ. The object also stores <code>common_similarity</code>,
+<code>difference_similarity</code>, <code>raw_similarity</code>, and
+<code>residual_similarity</code> so you can separate the model-mediated
+part of ROI similarity from the part outside the model space.</p>
+</div>
+<div class="section level2">
 <h2 id="when-do-you-want-the-asymmetric-matrix">When do you want the asymmetric matrix?<a class="anchor" aria-label="anchor" href="#when-do-you-want-the-asymmetric-matrix"></a>
 </h2>
 <p><code><a href="../reference/feature_rsa_cross_connectivity.html">feature_rsa_cross_connectivity()</a></code> answers the transfer
 question directly: does the geometry predicted from ROI i match the
 held-out observed geometry in ROI j?</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cross_connectivity</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_rsa_cross_connectivity.html">feature_rsa_cross_connectivity</a></span><span class="op">(</span></span>
 <span>  <span class="va">conn_example</span><span class="op">$</span><span class="va">vecs</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"spearman"</span></span>
@@ -257,7 +377,7 @@ large common geometry with many sources</li>
 <p>The synthetic example below creates that second pattern on purpose by
 making some ROIs carry more of a shared representational backbone than
 others.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">stripe_example</span> <span class="op">&lt;-</span> <span class="fu">build_striping_example</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">stripe_example</span><span class="op">$</span><span class="va">raw</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
@@ -306,7 +426,7 @@ pattern you often see when a common geometry dominates the matrix.</p>
 main effects from the ROI x ROI matrix itself. It is the clean default
 when you want pair-specific transfer after discounting globally strong
 sources and globally easy targets.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">stripe_example</span><span class="op">$</span><span class="va">double_centered</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
@@ -342,7 +462,7 @@ sources and globally easy targets.</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">stripe_example</span><span class="op">$</span><span class="va">offsets</span>, digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
@@ -381,7 +501,7 @@ easy to predict from many sources.</p>
 It removes the grand-mean RDM component before the cross-correlation is
 computed, which is better when the stripe pattern reflects one dominant
 shared geometry present in nearly every ROI.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">stripe_example</span><span class="op">$</span><span class="va">residualized</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">

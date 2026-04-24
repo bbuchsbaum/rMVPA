@@ -258,34 +258,34 @@ Without progressr, only coarse batch-level log messages are shown.
   
   # Run regional analysis
   results <- run_regional(mspec, region_mask)
-#> INFO [2026-04-24 15:10:18] 
+#> INFO [2026-04-24 16:43:34] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 5
 #> - Processed: 5
 #> - Skipped: 0
-#> INFO [2026-04-24 15:10:18] run_regional: 5 ROIs processed (success=5, errors=0)
+#> INFO [2026-04-24 16:43:35] run_regional: 5 ROIs processed (success=5, errors=0)
   
   # Access results
   head(results$performance_table)     # Performance metrics
 #> # A tibble: 5 × 3
 #>   roinum Accuracy     AUC
 #>    <int>    <dbl>   <dbl>
-#> 1      1     0.19 -0.268 
-#> 2      2     0.37  0.0889
-#> 3      3     0.29 -0.0658
-#> 4      4     0.26 -0.188 
-#> 5      5     0.35  0.159 
+#> 1      1     0.32 -0.0887
+#> 2      2     0.39  0.0772
+#> 3      3     0.36  0.0554
+#> 4      4     0.31 -0.0872
+#> 5      5     0.31 -0.105 
   head(results$prediction_table)      # Predictions
 #> # A tibble: 6 × 9
 #> # Rowwise: 
-#>   .rownum roinum observed pobserved predicted correct prob_a   prob_b    prob_c
-#>     <int>  <int> <fct>        <dbl> <chr>     <lgl>    <dbl>    <dbl>     <dbl>
-#> 1       1      1 a        0.0380    c         FALSE   0.0380 0.000710 0.961    
-#> 2       2      1 b        0.516     b         TRUE    0.318  0.516    0.165    
-#> 3       3      1 b        0.0666    a         FALSE   0.610  0.0666   0.324    
-#> 4       4      1 b        0.374     a         FALSE   0.499  0.374    0.128    
-#> 5       5      1 c        0.0000654 a         FALSE   0.986  0.0136   0.0000654
-#> 6       6      1 a        0.944     a         TRUE    0.944  0.00566  0.0501   
+#>   .rownum roinum observed pobserved predicted correct   prob_a prob_b  prob_c
+#>     <int>  <int> <fct>        <dbl> <chr>     <lgl>      <dbl>  <dbl>   <dbl>
+#> 1       1      1 c         0.169    b         FALSE   0.0458    0.785 0.169  
+#> 2       2      1 c         0.0669   a         FALSE   0.482     0.451 0.0669 
+#> 3       3      1 a         0.000284 b         FALSE   0.000284  0.995 0.00455
+#> 4       4      1 b         0.168    a         FALSE   0.790     0.168 0.0422 
+#> 5       5      1 c         0.0639   a         FALSE   0.507     0.429 0.0639 
+#> 6       6      1 b         0.442    b         TRUE    0.245     0.442 0.313  
   first_roi_fit <- results$fits[[1]]  # First ROI's fitted model
 # }
 ```

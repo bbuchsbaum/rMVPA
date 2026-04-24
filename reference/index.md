@@ -377,6 +377,12 @@ All functions exported by rMVPA
 - [`process_roi()`](http://bbuchsbaum.github.io/rMVPA/reference/process_roi-methods.md)
   : Process ROI
 
+- [`rdm_decorrelate()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_decorrelate.md)
+  : Decorrelation of correlated model RDMs
+
+- [`rdm_model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
+  : ROI-by-ROI similarity through a correlated model-RDM space
+
 - [`region_importance()`](http://bbuchsbaum.github.io/rMVPA/reference/region_importance.md)
   : Region Importance via Random Subset Comparison
 

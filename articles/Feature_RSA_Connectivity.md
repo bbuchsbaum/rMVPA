@@ -88,6 +88,54 @@ Use this matrix when you want a network summary of learned
 representational geometry itself. It is useful for asking which ROIs sit
 near each other in model-predicted representational space.
 
+## What if the model RDMs are correlated?
+
+Sometimes the question is not whether two ROI RDMs are similar in full,
+but whether they are similar in the part of their geometry explained by
+a family of model RDMs. If the models are correlated, treat them as one
+model space rather than four separate targets.
+
+[`rdm_model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
+projects each ROI RDM into the subspace spanned by the model RDMs, gives
+each ROI a decorrelated model-space fingerprint, and then compares those
+fingerprints.
+
+``` r
+model_space <- build_model_space_example()
+
+knitr::kable(round(model_space$conn$profile_similarity, 2))
+```
+
+|      |  ROI1 |  ROI2 |  ROI3 |  ROI4 |  ROI5 |
+|:-----|------:|------:|------:|------:|------:|
+| ROI1 |  1.00 |  0.99 |  0.92 |  0.23 | -0.04 |
+| ROI2 |  0.99 |  1.00 |  0.95 |  0.39 | -0.20 |
+| ROI3 |  0.92 |  0.95 |  1.00 |  0.50 | -0.29 |
+| ROI4 |  0.23 |  0.39 |  0.50 |  1.00 | -0.95 |
+| ROI5 | -0.04 | -0.20 | -0.29 | -0.95 |  1.00 |
+
+The profile matrix asks whether ROIs express the same relative pattern
+across the model-space axes, ignoring overall strength. The
+strength-sensitive version is stored in `model_space$conn$similarity`.
+
+``` r
+knitr::kable(round(model_space$conn$model_axis_cor, 2))
+```
+
+|     |    A1 |    A2 |    A3 |    A4 |
+|:----|------:|------:|------:|------:|
+| PC1 | -0.93 | -0.95 | -0.90 | -0.88 |
+| PC2 | -0.11 |  0.13 |  0.42 | -0.46 |
+| PC3 |  0.35 | -0.27 |  0.04 | -0.12 |
+| PC4 |  0.07 |  0.12 | -0.11 | -0.09 |
+
+The axis table is the interpretation key. With `basis = "pca"`, `PC1`
+usually captures what the correlated model RDMs share, while later axes
+capture ways the models differ. The object also stores
+`common_similarity`, `difference_similarity`, `raw_similarity`, and
+`residual_similarity` so you can separate the model-mediated part of ROI
+similarity from the part outside the model space.
+
 ## When do you want the asymmetric matrix?
 
 [`feature_rsa_cross_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)

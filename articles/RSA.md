@@ -74,6 +74,96 @@ complex_design <- rsa_design(
 )
 ```
 
+### Decorrelating correlated model RDMs
+
+Sometimes your model RDMs are not independent hypotheses. CNN layer RDMs
+are a common example: layers such as VGG-16 layer 4, 7, 11, and 16 are
+ordered and often share substantial representational structure. If you
+enter these RDMs directly into a multiple-RDM RSA model, shared geometry
+can make the individual layer effects hard to interpret.
+
+[`rdm_decorrelate()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_decorrelate.md)
+is a preprocessing helper for this situation. It works on the
+lower-triangular RDM vectors, estimates layer-specific innovation RDMs,
+and returns adjusted RDMs that can be passed directly to
+[`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md).
+
+``` r
+set.seed(12)
+
+shared_visual <- matrix(rnorm(80 * 4), 80, 4)
+layer_noise <- lapply(c(0.9, 0.7, 0.5, 0.35), function(sd) {
+  matrix(rnorm(80 * 4, sd = sd), 80, 4)
+})
+
+cnn_features <- Map(function(noise, weight) {
+  base::scale(weight * shared_visual + noise)
+}, layer_noise, c(0.45, 0.60, 0.75, 0.90))
+names(cnn_features) <- c("vgg4", "vgg7", "vgg11", "vgg16")
+
+cnn_rdms <- lapply(cnn_features, dist)
+
+raw_rdm_vectors <- vapply(cnn_rdms, as.vector, numeric(length(cnn_rdms[[1]])))
+round(cor(raw_rdm_vectors, method = "spearman"), 2)
+```
+
+    ##        vgg4  vgg7 vgg11 vgg16
+    ## vgg4   1.00 -0.01  0.08  0.09
+    ## vgg7  -0.01  1.00  0.32  0.30
+    ## vgg11  0.08  0.32  1.00  0.56
+    ## vgg16  0.09  0.30  0.56  1.00
+
+The raw RDM correlations show how much representational geometry is
+shared across the model layers. The ordered innovation method treats the
+supplied order as meaningful: later-layer RDMs are decomposed into the
+part predicted by earlier layer innovations and the residual
+layer-specific component.
+
+``` r
+decorrelated <- rdm_decorrelate(
+  cnn_rdms,
+  method = "ordered_innovation",
+  similarity = "spearman",
+  epsilon = 0.05,
+  gamma_grid = seq(0, 1, by = 0.05)
+)
+
+decorrelated$mean_abs_cor_before
+```
+
+    ## [1] 0.2258285
+
+``` r
+decorrelated$mean_abs_cor_after
+```
+
+    ## [1] 0.04841876
+
+``` r
+decorrelated$preservation
+```
+
+    ##      vgg4      vgg7     vgg11     vgg16 
+    ## 1.0000000 1.0000000 0.9479340 0.9067018
+
+The result records both the decorrelation achieved and how much each
+adjusted RDM still resembles the original. The adjusted RDMs are
+ordinary `dist` objects, so they can be used in a standard RSA design.
+
+``` r
+cnn_design <- rsa_design(
+  formula = ~ vgg4 + vgg7 + vgg11 + vgg16,
+  data = decorrelated$rdms,
+  block_var = factor(dataset$design$block_var),
+  keep_intra_run = FALSE
+)
+```
+
+Use this when you want to test ordered, related model geometries while
+reducing shared RSA structure among them. The adjusted RDMs should be
+interpreted as layer-specific representational innovations, not as
+ordinary covariance shrinkage estimates.
+
 ### 4. Creating and Running an RSA Model
 
 The

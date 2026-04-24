@@ -259,34 +259,34 @@ are emitted from parallel workers. To enable a progress bar:</p><div class="sour
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="co"># Run regional analysis</span></span></span>
 <span class="r-in"><span>  <span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">run_regional</span><span class="op">(</span><span class="va">mspec</span>, <span class="va">region_mask</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 15:10:18] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:34] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">5</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">5</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 15:10:18] run_regional: 5 ROIs processed (success=5, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:35] run_regional: 5 ROIs processed (success=5, errors=0)</span>
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="co"># Access results</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span>     <span class="co"># Performance metrics</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 5 × 3</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   roinum Accuracy     AUC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      1     0.19 -<span style="color: #BB0000;">0.268</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>      2     0.37  0.088<span style="text-decoration: underline;">9</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>      3     0.29 -<span style="color: #BB0000;">0.065</span><span style="color: #BB0000; text-decoration: underline;">8</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>      4     0.26 -<span style="color: #BB0000;">0.188</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>      5     0.35  0.159 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      1     0.32 -<span style="color: #BB0000;">0.088</span><span style="color: #BB0000; text-decoration: underline;">7</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>      2     0.39  0.077<span style="text-decoration: underline;">2</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>      3     0.36  0.055<span style="text-decoration: underline;">4</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>      4     0.31 -<span style="color: #BB0000;">0.087</span><span style="color: #BB0000; text-decoration: underline;">2</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>      5     0.31 -<span style="color: #BB0000;">0.105</span> </span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">prediction_table</span><span class="op">)</span>      <span class="co"># Predictions</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 9</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Rowwise: </span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   .rownum roinum observed pobserved predicted correct prob_a   prob_b    prob_c</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>       1      1 a        0.038<span style="text-decoration: underline;">0</span>    c         FALSE   0.038<span style="text-decoration: underline;">0</span> 0.000<span style="text-decoration: underline;">710</span> 0.961    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>       2      1 b        0.516     b         TRUE    0.318  0.516    0.165    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>       3      1 b        0.066<span style="text-decoration: underline;">6</span>    a         FALSE   0.610  0.066<span style="text-decoration: underline;">6</span>   0.324    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>       4      1 b        0.374     a         FALSE   0.499  0.374    0.128    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>       5      1 c        0.000<span style="text-decoration: underline;">065</span>4 a         FALSE   0.986  0.013<span style="text-decoration: underline;">6</span>   0.000<span style="text-decoration: underline;">065</span>4</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>       6      1 a        0.944     a         TRUE    0.944  0.005<span style="text-decoration: underline;">66</span>  0.050<span style="text-decoration: underline;">1</span>   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   .rownum roinum observed pobserved predicted correct   prob_a prob_b  prob_c</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>       1      1 c         0.169    b         FALSE   0.045<span style="text-decoration: underline;">8</span>    0.785 0.169  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>       2      1 c         0.066<span style="text-decoration: underline;">9</span>   a         FALSE   0.482     0.451 0.066<span style="text-decoration: underline;">9</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>       3      1 a         0.000<span style="text-decoration: underline;">284</span> b         FALSE   0.000<span style="text-decoration: underline;">284</span>  0.995 0.004<span style="text-decoration: underline;">55</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>       4      1 b         0.168    a         FALSE   0.790     0.168 0.042<span style="text-decoration: underline;">2</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>       5      1 c         0.063<span style="text-decoration: underline;">9</span>   a         FALSE   0.507     0.429 0.063<span style="text-decoration: underline;">9</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>       6      1 b         0.442    b         TRUE    0.245     0.442 0.313  </span>
 <span class="r-in"><span>  <span class="va">first_roi_fit</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="va">fits</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>  <span class="co"># First ROI's fitted model</span></span></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>

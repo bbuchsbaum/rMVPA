@@ -91,6 +91,22 @@ similarity and geometry.
 We build an `era_rsa_model` and run a simple regional analysis with a
 small number of regions.
 
+The two similarity arguments operate at different levels:
+
+- `distfun = cordist("pearson")` says how to build each within-phase
+  RDM. Within a region, ERA-RSA first averages trials by `key_var`, then
+  computes one encoding RDM and one retrieval RDM from those item-level
+  patterns.
+- `rsa_simfun = "spearman"` says how to compare those two RDMs. This is
+  the second-order RSA step: the lower triangle of the encoding RDM is
+  correlated with the lower triangle of the retrieval RDM. The resulting
+  regional metric is `geom_cor`.
+
+There is no external model RDM in this example. The “model” for the
+second-order comparison is the encoding geometry itself: we ask whether
+the relative distances among encoded items are preserved during
+retrieval.
+
 ``` r
 # Simple 3-region mask for demonstration
 region_mask <- NeuroVol(
@@ -102,9 +118,9 @@ era_ms <- era_rsa_model(
   dataset   = toy$dataset,
   design    = toy$design,
   key_var   = ~ item,          # item key linking encoding ↔ retrieval
-  phase_var = ~ block_var,     # phase label (not critical in external-test path)
-  distfun   = cordist("pearson"),
-  rsa_simfun = "spearman"
+  phase_var = ~ block_var,     # parsed for interface; train/test define phases here
+  distfun   = cordist("pearson"), # builds encoding and retrieval RDMs
+  rsa_simfun = "spearman"         # compares those RDMs; output is geom_cor
 )
 
 era_ms
@@ -190,10 +206,25 @@ Key metrics include:
 - `era_top1_acc` — top-1 encoding→retrieval accuracy for the item key.
 - `era_diag_mean` — mean encoding–retrieval similarity on the diagonal.
 - `era_diag_minus_off` — diagonal minus off-diagonal similarity.
-- `geom_cor` — correlation between encoding and retrieval RDMs.
+- `geom_cor` — the second-order correlation between the encoding and
+  retrieval RDMs. With `rsa_simfun = "spearman"`, this is a rank
+  correlation over item-pair dissimilarities.
 
 These quantify both cross-decoding performance and representational
 geometry alignment between phases.
+
+``` r
+era_res$performance_table[
+  ,
+  c("roinum", "era_top1_acc", "era_diag_minus_off", "geom_cor")
+]
+#> # A tibble: 3 x 4
+#>   roinum era_top1_acc era_diag_minus_off geom_cor
+#>    <int>        <dbl>              <dbl>    <dbl>
+#> 1      1       0.0417            -0.0172  -0.0539
+#> 2      2       0.0833            -0.0481   0.0179
+#> 3      3       0.0417             0.0387   0.0304
+```
 
 ## 3. When do you need ERA partitioning?
 
@@ -270,6 +301,19 @@ regressors through `item_block_enc`, `item_block_ret`, `item_time_enc`,
 `second_order_nuisance`. If you have enough paired items, set
 `include_procrustes = TRUE` to add a leakage-free orthogonal alignment
 decoder.
+
+`include_procrustes` controls an optional decoder that first learns an
+orthogonal Procrustes map from encoding prototypes into retrieval
+prototype space. The fit is leave-one-item-out: when scoring item *i*,
+the rotation is estimated from all other paired items, then the held-out
+retrieval item is matched against the aligned encoding prototypes. This
+gives Procrustes metrics such as `procrustes_top1_acc`,
+`procrustes_diag_mean`, and `procrustes_diag_minus_off`. Use it when you
+want to ask whether encoding and retrieval occupy the same
+representational space up to a global rotation or reflection. Leave it
+off for small toy examples or when there are too few paired items for
+stable held-out alignment; `min_procrustes_train_items` sets that
+minimum.
 
 ## 4. Searchlight ERA-RSA
 

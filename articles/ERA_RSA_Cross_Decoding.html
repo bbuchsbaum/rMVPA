@@ -168,6 +168,23 @@ geometry.</p>
 </h2>
 <p>We build an <code>era_rsa_model</code> and run a simple regional
 analysis with a small number of regions.</p>
+<p>The two similarity arguments operate at different levels:</p>
+<ul>
+<li>
+<code>distfun = cordist("pearson")</code> says how to build each
+within-phase RDM. Within a region, ERA-RSA first averages trials by
+<code>key_var</code>, then computes one encoding RDM and one retrieval
+RDM from those item-level patterns.</li>
+<li>
+<code>rsa_simfun = "spearman"</code> says how to compare those two
+RDMs. This is the second-order RSA step: the lower triangle of the
+encoding RDM is correlated with the lower triangle of the retrieval RDM.
+The resulting regional metric is <code>geom_cor</code>.</li>
+</ul>
+<p>There is no external model RDM in this example. The “model” for the
+second-order comparison is the encoding geometry itself: we ask whether
+the relative distances among encoded items are preserved during
+retrieval.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simple 3-region mask for demonstration</span></span>
 <span><span class="va">region_mask</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span></span>
@@ -179,9 +196,9 @@ analysis with a small number of regions.</p>
 <span>  dataset   <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
 <span>  design    <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
 <span>  key_var   <span class="op">=</span> <span class="op">~</span> <span class="va">item</span>,          <span class="co"># item key linking encoding ↔ retrieval</span></span>
-<span>  phase_var <span class="op">=</span> <span class="op">~</span> <span class="va">block_var</span>,     <span class="co"># phase label (not critical in external-test path)</span></span>
-<span>  distfun   <span class="op">=</span> <span class="fu"><a href="../reference/distance-constructors.html">cordist</a></span><span class="op">(</span><span class="st">"pearson"</span><span class="op">)</span>,</span>
-<span>  rsa_simfun <span class="op">=</span> <span class="st">"spearman"</span></span>
+<span>  phase_var <span class="op">=</span> <span class="op">~</span> <span class="va">block_var</span>,     <span class="co"># parsed for interface; train/test define phases here</span></span>
+<span>  distfun   <span class="op">=</span> <span class="fu"><a href="../reference/distance-constructors.html">cordist</a></span><span class="op">(</span><span class="st">"pearson"</span><span class="op">)</span>, <span class="co"># builds encoding and retrieval RDMs</span></span>
+<span>  rsa_simfun <span class="op">=</span> <span class="st">"spearman"</span>         <span class="co"># compares those RDMs; output is geom_cor</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_ms</span></span>
@@ -269,11 +286,23 @@ the diagonal.</li>
 <code>era_diag_minus_off</code> — diagonal minus off-diagonal
 similarity.</li>
 <li>
-<code>geom_cor</code> — correlation between encoding and retrieval
-RDMs.</li>
+<code>geom_cor</code> — the second-order correlation between the
+encoding and retrieval RDMs. With <code>rsa_simfun = "spearman"</code>,
+this is a rank correlation over item-pair dissimilarities.</li>
 </ul>
 <p>These quantify both cross-decoding performance and representational
 geometry alignment between phases.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">era_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
+<span>  ,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"era_top1_acc"</span>, <span class="st">"era_diag_minus_off"</span>, <span class="st">"geom_cor"</span><span class="op">)</span></span>
+<span><span class="op">]</span></span>
+<span><span class="co">#&gt; # A tibble: 3 x 4</span></span>
+<span><span class="co">#&gt;   roinum era_top1_acc era_diag_minus_off geom_cor</span></span>
+<span><span class="co">#&gt;    &lt;int&gt;        &lt;dbl&gt;              &lt;dbl&gt;    &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt; 1      1       0.0417            -0.0172  -0.0539</span></span>
+<span><span class="co">#&gt; 2      2       0.0833            -0.0481   0.0179</span></span>
+<span><span class="co">#&gt; 3      3       0.0417             0.0387   0.0304</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="when-do-you-need-era-partitioning">3. When do you need ERA partitioning?<a class="anchor" aria-label="anchor" href="#when-do-you-need-era-partitioning"></a>
@@ -288,7 +317,7 @@ structure is accounted for?</p>
 compressed. For example, two regions could have similar top-1 accuracy,
 but one may carry item-specific diagonal similarity while another mainly
 preserves the relative geometry among items.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_partition_model.html">era_partition_model</a></span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
 <span>  design  <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
@@ -300,7 +329,7 @@ preserves the relative geometry among items.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">partition_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">partition_ms</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="st">"roinum"</span>,</span>
 <span>  <span class="st">"n_items"</span>,</span>
@@ -349,13 +378,25 @@ temporal, and custom nuisance regressors through
 <code>second_order_nuisance</code>. If you have enough paired items, set
 <code>include_procrustes = TRUE</code> to add a leakage-free orthogonal
 alignment decoder.</p>
+<p><code>include_procrustes</code> controls an optional decoder that
+first learns an orthogonal Procrustes map from encoding prototypes into
+retrieval prototype space. The fit is leave-one-item-out: when scoring
+item <em>i</em>, the rotation is estimated from all other paired items,
+then the held-out retrieval item is matched against the aligned encoding
+prototypes. This gives Procrustes metrics such as
+<code>procrustes_top1_acc</code>, <code>procrustes_diag_mean</code>, and
+<code>procrustes_diag_minus_off</code>. Use it when you want to ask
+whether encoding and retrieval occupy the same representational space up
+to a global rotation or reflection. Leave it off for small toy examples
+or when there are too few paired items for stable held-out alignment;
+<code>min_procrustes_train_items</code> sets that minimum.</p>
 </div>
 <div class="section level2">
 <h2 id="searchlight-era-rsa">4. Searchlight ERA-RSA<a class="anchor" aria-label="anchor" href="#searchlight-era-rsa"></a>
 </h2>
 <p>We can also run ERA-RSA in a searchlight mode to obtain whole-brain
 maps of the same metrics.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">456</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_sl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span></span>
@@ -391,7 +432,7 @@ maps of the same metrics.</p>
 <code>results</code>: a list of <code>NeuroVol</code> maps, one per
 metric.</li>
 </ul>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_sl</span><span class="op">$</span><span class="va">metrics</span></span>
 <span><span class="co">#&gt;  [1] "n_items"                       "era_top1_acc"                 </span></span>
 <span><span class="co">#&gt;  [3] "era_diag_mean"                 "era_diag_minus_off"           </span></span>
@@ -400,7 +441,7 @@ metric.</li>
 <span><span class="co">#&gt;  [9] "geom_cor_run_partial"          "geom_cor_xrun"</span></span></code></pre></div>
 <p>We can save the searchlight maps using
 <code><a href="../reference/save_results.html">save_results()</a></code>:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"era_rsa_sl_"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">out_dir</span>, showWarnings <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
@@ -424,7 +465,7 @@ the trial level, and must align with the levels of
 <code>"dist"</code> objects describing item-by-item nuisance structure
 (e.g., block/run/time), where rows/columns correspond to item keys.</p>
 <p>A common pattern is to build run-based confounds:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">items</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">train_design</span><span class="op">$</span><span class="va">item</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Example: per-item encoding run (modal run for each item)</span></span>
@@ -468,7 +509,7 @@ retrieval run.</li>
 </h3>
 <p><code>item_block</code> encodes a per-item block/condition, typically
 derived from <code>design$train_design$block_var</code>:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">item_block</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">item_run_enc</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">item_run_enc</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_ms_block</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_rsa_model.html">era_rsa_model</a></span><span class="op">(</span></span>
