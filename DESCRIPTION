@@ -92,6 +92,7 @@ Collate:
     'contrast_rsa_model.R'
     'average_labels.R'
     'table_to_rdm.R'
+    'rdm_decorrelation.R'
     'naive_xdec_model.R'
     'remap_rrr_model.R'
     'run_searchlight_remap_rrr.R'

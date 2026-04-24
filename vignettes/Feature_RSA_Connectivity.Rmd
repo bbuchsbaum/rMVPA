@@ -109,6 +109,39 @@ build_striping_example <- function() {
     )
   )
 }
+
+build_model_space_example <- function(seed = 17, n_items = 8, nroi = 5) {
+  set.seed(seed)
+  n_pairs <- n_items * (n_items - 1L) / 2L
+
+  common <- rnorm(n_pairs)
+  change_1 <- rnorm(n_pairs)
+  change_2 <- rnorm(n_pairs)
+
+  model_vecs <- cbind(
+    A1 = common + 0.25 * change_1 + rnorm(n_pairs, sd = 0.15),
+    A2 = common - 0.15 * change_1 + rnorm(n_pairs, sd = 0.15),
+    A3 = common + 0.30 * change_2 + rnorm(n_pairs, sd = 0.15),
+    A4 = common - 0.25 * change_2 + rnorm(n_pairs, sd = 0.15)
+  )
+
+  roi_weights <- matrix(c(
+    1.0,  0.4,  0.1,  0.0,
+    0.8,  0.3,  0.2,  0.1,
+    0.3, -0.6,  0.7,  0.2,
+    0.2, -0.7,  0.6, -0.1,
+    0.1,  0.2, -0.8,  0.7
+  ), nrow = 4)
+
+  roi_vecs <- model_vecs %*% roi_weights +
+    matrix(rnorm(n_pairs * nroi, sd = 0.35), n_pairs, nroi)
+  colnames(roi_vecs) <- paste0("ROI", seq_len(nroi))
+
+  list(
+    conn = rdm_model_space_connectivity(roi_vecs, model_vecs, method = "pearson"),
+    model_cor = stats::cor(model_vecs)
+  )
+}
 ```
 
 Feature-RSA normally stops at one ROI at a time: does the learned geometry explain held-out data in that ROI? Sometimes the next question is larger. If ROI 3 learns a useful geometry, does that geometry show up in ROI 7 as well? If one target ROI is easy for every source ROI, how do you separate that global effect from pair-specific transfer?
@@ -163,6 +196,42 @@ knitr::kable(round(predicted_connectivity, 2))
 ```
 
 Use this matrix when you want a network summary of learned representational geometry itself. It is useful for asking which ROIs sit near each other in model-predicted representational space.
+
+## What if the model RDMs are correlated?
+
+Sometimes the question is not whether two ROI RDMs are similar in full, but whether they are similar in the part of their geometry explained by a family of model RDMs. If the models are correlated, treat them as one model space rather than four separate targets.
+
+`rdm_model_space_connectivity()` projects each ROI RDM into the subspace spanned by the model RDMs, gives each ROI a decorrelated model-space fingerprint, and then compares those fingerprints.
+
+```{r model-space-connectivity}
+model_space <- build_model_space_example()
+
+knitr::kable(round(model_space$conn$profile_similarity, 2))
+```
+
+The profile matrix asks whether ROIs express the same relative pattern across the model-space axes, ignoring overall strength. The strength-sensitive version is stored in `model_space$conn$similarity`.
+
+```{r model-space-loadings}
+knitr::kable(round(model_space$conn$model_axis_cor, 2))
+```
+
+The axis table is the interpretation key. With `basis = "pca"`, `PC1` usually captures what the correlated model RDMs share, while later axes capture ways the models differ. The object also stores `common_similarity`, `difference_similarity`, `raw_similarity`, and `residual_similarity` so you can separate the model-mediated part of ROI similarity from the part outside the model space.
+
+```{r model-space-checks, include = FALSE}
+stopifnot(is.matrix(model_space$conn$profile_similarity))
+stopifnot(is.matrix(model_space$conn$similarity))
+stopifnot(all(is.finite(model_space$conn$similarity)))
+stopifnot(isTRUE(all.equal(
+  model_space$conn$raw_similarity,
+  model_space$conn$similarity + model_space$conn$residual_similarity,
+  tolerance = 1e-8
+)))
+stopifnot(isTRUE(all.equal(
+  Reduce(`+`, model_space$conn$component_similarity),
+  model_space$conn$similarity,
+  tolerance = 1e-8
+)))
+```
 
 ## When do you want the asymmetric matrix?
 
