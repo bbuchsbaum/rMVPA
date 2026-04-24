@@ -2,11 +2,19 @@
 
 ## Overview
 
-Naive cross-decoding classifies test-domain patterns by correlating them
-with training-domain prototypes (class-mean patterns) — no domain
-adaptation, no learned transformation. It is the natural baseline for
-any cross-domain analysis: if it works, your representations generalise
-across contexts without correction.
+You use cross-decoding when the data come from two related domains, such
+as perception and memory, and you want to know whether a pattern learned
+in the source domain transfers to the target domain. Naive
+cross-decoding is the direct-transfer baseline: it classifies
+target-domain patterns by correlating them with source-domain
+prototypes, with no learned correction between the two domains.
+
+This makes the analysis deliberately conservative. If it works, the
+representations are already aligned well enough to transfer directly. If
+it does not, the result is still useful because it tells you how much
+work a domain-adaptive model such as
+[`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md)
+or an encoding-retrieval partition analysis has to explain.
 
 **Algorithm:**
 
@@ -49,7 +57,11 @@ print(model)
 
 ``` r
 results <- run_regional(model, roi_mask)
-results$performance_table
+metric_cols <- intersect(
+  c("roinum", "Accuracy", "AUC"),
+  names(results$performance_table)
+)
+results$performance_table[, metric_cols, drop = FALSE]
 #> # A tibble: 3 × 3
 #>   roinum Accuracy     AUC
 #>    <int>    <dbl>   <dbl>
@@ -88,6 +100,33 @@ model <- naive_xdec_model(
 
 This creates one prototype per item rather than per category, giving
 finer-grained matching when item identity is meaningful.
+
+## How does this relate to ERA partitioning?
+
+Naive cross-decoding answers a first-order question: does each target
+pattern look most like the correct source prototype? That is often the
+first result to check because it maps directly onto classification
+accuracy.
+
+The
+[`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+analysis uses the same direct-transfer idea as one component of a
+broader encoding-retrieval analysis. It builds matched source and target
+prototypes for the item key, then reports:
+
+- direct transfer metrics such as `naive_top1_acc` and `xdec_Accuracy`,
+- first-order variance partitioning via `first_order_delta_r2`,
+- second-order geometry preservation via `second_order_delta_r2` and
+  `geom_cor`, and
+- optional leakage-free Procrustes alignment metrics.
+
+Use
+[`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
+when you need a clean baseline map or ROI table for direct transfer. Use
+[`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+when your scientific question is whether encoding-retrieval transfer
+reflects item-specific similarity, preserved representational geometry,
+or nuisance structure such as block, category, or temporal lag.
 
 ## Searchlight analysis
 
@@ -128,6 +167,6 @@ models such as
 - [`vignette("REMAP_RRR")`](http://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)
   — domain-adaptive cross-decoding with low-rank corrections
 - [`vignette("ERA_RSA_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.md)
-  — encoding–retrieval RSA
+  — encoding-retrieval RSA and ERA partitioning
 - [`?naive_xdec_model`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
   — full parameter documentation

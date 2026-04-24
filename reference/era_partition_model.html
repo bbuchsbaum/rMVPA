@@ -69,10 +69,13 @@ nuisance pair models.</p>
 <span>  item_time_enc <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  item_time_ret <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  item_category <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  compute_xdec_performance <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  xdec_link_by <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  include_procrustes <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  procrustes_center <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  min_procrustes_train_items <span class="op">=</span> <span class="fl">3L</span>,</span>
 <span>  return_matrices <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  return_xdec_predictions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -128,6 +131,18 @@ source and target states. Named vectors are matched to item keys.</p></dd>
 same-category nuisance model to both first- and second-order regressions.</p></dd>
 
 
+<dt id="arg-compute-xdec-performance">compute_xdec_performance<a class="anchor" aria-label="anchor" href="#arg-compute-xdec-performance"></a></dt>
+<dd><p>Logical; compute trial-level naive
+cross-decoding performance using the same prototype scorer as
+<code><a href="naive_xdec_model.html">naive_xdec_model</a></code>.</p></dd>
+
+
+<dt id="arg-xdec-link-by">xdec_link_by<a class="anchor" aria-label="anchor" href="#arg-xdec-link-by"></a></dt>
+<dd><p>Optional column name used to define source/target labels
+for the trial-level cross-decoding metrics. If <code>NULL</code>, <code>key_var</code>
+is used.</p></dd>
+
+
 <dt id="arg-include-procrustes">include_procrustes<a class="anchor" aria-label="anchor" href="#arg-include-procrustes"></a></dt>
 <dd><p>Logical; compute leave-one-item-out orthogonal
 Procrustes cross-decoding metrics.</p></dd>
@@ -146,6 +161,12 @@ each leave-one-item-out Procrustes alignment.</p></dd>
 <dt id="arg-return-matrices">return_matrices<a class="anchor" aria-label="anchor" href="#arg-return-matrices"></a></dt>
 <dd><p>Logical; store prototype/similarity matrices in each
 ROI result for diagnostics.</p></dd>
+
+
+<dt id="arg-return-xdec-predictions">return_xdec_predictions<a class="anchor" aria-label="anchor" href="#arg-return-xdec-predictions"></a></dt>
+<dd><p>Logical; store the trial-level
+<code>classification_result</code> produced by the direct cross-decoder in each
+ROI result.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

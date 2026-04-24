@@ -23,10 +23,13 @@ era_partition_model(
   item_time_enc = NULL,
   item_time_ret = NULL,
   item_category = NULL,
+  compute_xdec_performance = TRUE,
+  xdec_link_by = NULL,
   include_procrustes = TRUE,
   procrustes_center = TRUE,
   min_procrustes_train_items = 3L,
   return_matrices = FALSE,
+  return_xdec_predictions = FALSE,
   ...
 )
 ```
@@ -80,6 +83,17 @@ era_partition_model(
   Optional item-level category labels used to add a same-category
   nuisance model to both first- and second-order regressions.
 
+- compute_xdec_performance:
+
+  Logical; compute trial-level naive cross-decoding performance using
+  the same prototype scorer as
+  [`naive_xdec_model`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
+
+- xdec_link_by:
+
+  Optional column name used to define source/target labels for the
+  trial-level cross-decoding metrics. If `NULL`, `key_var` is used.
+
 - include_procrustes:
 
   Logical; compute leave-one-item-out orthogonal Procrustes
@@ -99,6 +113,11 @@ era_partition_model(
 
   Logical; store prototype/similarity matrices in each ROI result for
   diagnostics.
+
+- return_xdec_predictions:
+
+  Logical; store the trial-level `classification_result` produced by the
+  direct cross-decoder in each ROI result.
 
 - ...:
 

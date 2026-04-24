@@ -32,29 +32,37 @@ as **retrieval**.
 set.seed(123)
 
 toy <- gen_sample_dataset(
-  D            = c(6, 6, 6),  # modest volume for speed
-  nobs         = 48,
+  D            = c(4, 4, 4),  # modest volume for speed
+  nobs         = 24,
   nlevels      = 3,           # 3 item categories
   blocks       = 3,           # 3 runs
-  external_test = TRUE        # required for encoding → retrieval
+  external_test = TRUE,       # required for encoding → retrieval
+  ntest_obs     = 24
 )
 
 # Add an item key column to both train and test designs
-toy$design$train_design$item <- toy$design$train_design$Y
-toy$design$test_design$item  <- toy$design$test_design$Ytest
+item_keys <- sprintf("item_%02d", seq_len(nrow(toy$design$train_design)))
+toy$design$train_design$item <- factor(item_keys, levels = item_keys)
+toy$design$test_design$item  <- factor(item_keys, levels = item_keys)
 
-str(toy$design$train_design[item = 1:6, ])
+head(toy$design$train_design)
+#> # A tibble: 6 x 4
+#>   Y     block_var .rownum item   
+#>   <fct>     <int>   <int> <fct>  
+#> 1 b             1       1 item_01
+#> 2 a             1       2 item_02
+#> 3 a             1       3 item_03
+#> 4 a             1       4 item_04
+#> 5 c             1       5 item_05
+#> 6 b             1       6 item_06
 ```
-
-    tibble [48 x 4] (S3: tbl_df/tbl/data.frame)
-     $ Y        : Factor w/ 3 levels "a","b","c": 1 3 1 3 3 1 2 3 1 3 ...
-     $ block_var: int [1:48] 1 1 1 1 1 1 1 1 1 1 ...
-     $ .rownum  : int [1:48] 1 2 3 4 5 6 7 8 9 10 ...
-     $ item     : Factor w/ 3 levels "a","b","c": 1 3 1 3 3 1 2 3 1 3 ...
 
 Each row in `train_design` and `test_design` corresponds to a trial. The
 `item` column links encoding and retrieval presentations of the same
-stimulus.
+stimulus. The toy data use paired row IDs as item keys so the example
+has one encoding and one retrieval observation per item; in an applied
+analysis, this column would usually be a stimulus, image, word, or event
+identifier from your design table.
 
 ### `key_var` vs `y_train` / `y_test` and `phase_var`
 
@@ -100,85 +108,82 @@ era_ms <- era_rsa_model(
 )
 
 era_ms
-```
+#> 
+#>  Model Specification 
+#> 
+#> - Summary 
+#>   - Name:  era_rsa_model 
+#>   - Primary Class:  era_rsa_model 
+#>   - Class Chain:  era_rsa_model, model_spec, list 
+#>   - Return Predictions:  FALSE 
+#>   - Compute Performance:  TRUE 
+#>   - Has Test Set:  TRUE 
+#>   - Basis Count:  1 
+#> - Parameters 
+#>   - key_var: ~item
+#>   - phase_var: ~block_var
+#>   - encoding_level: 1
+#>   - retrieval_level: 2
+#>   - distfun: cordist / pearson
+#>   - rsa_simfun: spearman
+#>   - include_diag: TRUE
+#> 
+#>  MVPA Dataset 
+#> 
+#> - Training Data 
+#>   - Dimensions:  4 x 4 x 4 x 24 observations 
+#>   - Type:  DenseNeuroVec 
+#> - Test Data 
+#>   - Dimensions:  4 x 4 x 4 x 24 observations 
+#>   - Type:  DenseNeuroVec 
+#> - Mask Information 
+#>   - Areas:  TRUE : 64 
+#>   - Active voxels/vertices:  64 
+#> 
+#> 
+#>  MVPA Design 
+#> 
+#> - Training Data 
+#>   - Observations:  24 
+#>   - Response Type:  Factor
+#>   - Levels:  a, b, c 
+#>   - Class Distribution:  a: 8, b: 8, c: 8 
+#> - Test Data 
+#>   - Observations:  24 
+#>   - Class Distribution:  a: 8, b: 8, c: 8 
+#> - Structure 
+#>   - Blocking:  Present
+#>   - Number of Blocks:  3 
+#>   - Mean Block Size:  8  (SD:  0 ) 
+#>   - Split Groups:  None
 
-     Model Specification 
-
-    - Summary 
-      - Name:  era_rsa_model 
-      - Primary Class:  era_rsa_model 
-      - Class Chain:  era_rsa_model, model_spec, list 
-      - Return Predictions:  FALSE 
-      - Compute Performance:  TRUE 
-      - Has Test Set:  TRUE 
-      - Basis Count:  1 
-    - Parameters 
-      - key_var: ~item
-      - phase_var: ~block_var
-      - encoding_level: 1
-      - retrieval_level: 2
-      - distfun: cordist / pearson
-      - rsa_simfun: spearman
-      - include_diag: TRUE
-
-     MVPA Dataset 
-
-    - Training Data 
-      - Dimensions:  6 x 6 x 6 x 48 observations 
-      - Type:  DenseNeuroVec 
-    - Test Data 
-      - Dimensions:  6 x 6 x 6 x 48 observations 
-      - Type:  DenseNeuroVec 
-    - Mask Information 
-      - Areas:  TRUE : 216 
-      - Active voxels/vertices:  216 
-
-
-     MVPA Design 
-
-    - Training Data 
-      - Observations:  48 
-      - Response Type:  Factor
-      - Levels:  a, b, c 
-      - Class Distribution:  a: 16, b: 16, c: 16 
-    - Test Data 
-      - Observations:  48 
-      - Class Distribution:  a: 16, b: 16, c: 16 
-    - Structure 
-      - Blocking:  Present
-      - Number of Blocks:  3 
-      - Mean Block Size:  16  (SD:  0 ) 
-      - Split Groups:  None 
-
-``` r
 era_res <- run_regional(era_ms, region_mask)
 era_res
+#> 
+#>  Regional Analysis Results 
+#> 
+#> - Summary 
+#>   - Model:  era_rsa_model 
+#>   - Regions with Results:  3 
+#>   - Metrics:  n_items, era_top1_acc, era_diag_mean, era_diag_minus_off, geom_cor, era_diag_minus_off_same_block ... 
+#>   - Output Maps:  n_items, era_top1_acc, era_diag_mean, era_diag_minus_off, geom_cor, era_diag_minus_off_same_block ...
 ```
-
-     Regional Analysis Results 
-
-    - Summary 
-      - Model:  era_rsa_model 
-      - Regions with Results:  3 
-      - Metrics:  n_items, era_top1_acc, era_diag_mean, era_diag_minus_off, geom_cor, era_diag_minus_off_same_block ... 
-      - Output Maps:  n_items, era_top1_acc, era_diag_mean, era_diag_minus_off, geom_cor, era_diag_minus_off_same_block ... 
 
 The `performance_table` contains one row per region and several ERA-RSA
 metrics.
 
 ``` r
 head(era_res$performance_table)
+#> # A tibble: 3 x 11
+#>   roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor
+#>    <int>   <dbl>        <dbl>         <dbl>              <dbl>    <dbl>
+#> 1      1      24       0.0417       -0.0153            -0.0172  -0.0539
+#> 2      2      24       0.0833       -0.0437            -0.0481   0.0179
+#> 3      3      24       0.0417        0.0509             0.0387   0.0304
+#> # i 5 more variables: era_diag_minus_off_same_block <dbl>,
+#> #   era_diag_minus_off_diff_block <dbl>, era_lag_cor <dbl>,
+#> #   geom_cor_run_partial <dbl>, geom_cor_xrun <dbl>
 ```
-
-    # A tibble: 3 x 11
-      roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor
-       <int>   <dbl>        <dbl>         <dbl>              <dbl>    <dbl>
-    1      1       3        0.333       0.0555              0.0748     -1  
-    2      2       3        0.667       0.00944             0.0428      0.5
-    3      3       3        0.333       0.0473              0.0813     -0.5
-    # i 5 more variables: era_diag_minus_off_same_block <dbl>,
-    #   era_diag_minus_off_diff_block <dbl>, era_lag_cor <dbl>,
-    #   geom_cor_run_partial <dbl>, geom_cor_xrun <dbl>
 
 Key metrics include:
 
@@ -190,7 +195,83 @@ Key metrics include:
 These quantify both cross-decoding performance and representational
 geometry alignment between phases.
 
-## 3. Searchlight ERA-RSA
+## 3. When do you need ERA partitioning?
+
+The ERA-RSA summary above gives you direct item matching and a raw
+geometry correlation.
+[`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+asks a sharper follow-up question: how much of the encoding-retrieval
+relationship is uniquely explained by same-item transfer, and how much
+is uniquely explained by preserved representational geometry after
+nuisance structure is accounted for?
+
+This makes it useful when a single cross-decoding accuracy is too
+compressed. For example, two regions could have similar top-1 accuracy,
+but one may carry item-specific diagonal similarity while another mainly
+preserves the relative geometry among items.
+
+``` r
+partition_ms <- era_partition_model(
+  dataset = toy$dataset,
+  design  = toy$design,
+  key_var = ~ item,
+  distfun = cordist("pearson"),
+  rsa_simfun = "spearman",
+  xdec_link_by = "item",
+  include_procrustes = FALSE
+)
+
+partition_res <- run_regional(partition_ms, region_mask)
+```
+
+``` r
+partition_cols <- c(
+  "roinum",
+  "n_items",
+  "naive_top1_acc",
+  "xdec_Accuracy",
+  "first_order_delta_r2",
+  "second_order_delta_r2",
+  "geom_cor"
+)
+partition_res$performance_table[, partition_cols]
+#> # A tibble: 3 x 7
+#>   roinum n_items naive_top1_acc xdec_Accuracy first_order_delta_r2
+#>    <int>   <dbl>          <dbl>         <dbl>                <dbl>
+#> 1      1      24         0.0417        0.0417             0.000244
+#> 2      2      24         0.0833        0.0833             0.00198 
+#> 3      3      24         0.0417        0.0417             0.00123 
+#> # i 2 more variables: second_order_delta_r2 <dbl>, geom_cor <dbl>
+```
+
+Read these metrics in layers:
+
+- `naive_top1_acc` is the item-level direct-transfer score computed from
+  the encoding-by-retrieval similarity matrix.
+- `xdec_Accuracy` is the trial-level direct cross-decoding metric,
+  matched to the same prototype scorer used by
+  [`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
+- `first_order_delta_r2` is the unique variance explained by same-item
+  transfer in the cross-state similarity matrix.
+- `second_order_delta_r2` and `geom_cor` summarize whether the encoding
+  item geometry is preserved at retrieval.
+
+For this random toy dataset, the values should be near chance or near
+zero. In real data, a region with high `first_order_delta_r2` and weak
+`second_order_delta_r2` supports item-specific reinstatement without
+much global geometry preservation. The reverse pattern suggests that the
+relative arrangement of items is preserved even when direct item
+identification is weak.
+
+[`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+can also include block, category, temporal, and custom nuisance
+regressors through `item_block_enc`, `item_block_ret`, `item_time_enc`,
+`item_time_ret`, `item_category`, `first_order_nuisance`, and
+`second_order_nuisance`. If you have enough paired items, set
+`include_procrustes = TRUE` to add a leakage-free orthogonal alignment
+decoder.
+
+## 4. Searchlight ERA-RSA
 
 We can also run ERA-RSA in a searchlight mode to obtain whole-brain maps
 of the same metrics.
@@ -200,29 +281,29 @@ set.seed(456)
 
 era_sl <- run_searchlight(
   era_ms,
-  radius = 3,         # searchlight radius in voxels
+  radius = 2,         # searchlight radius in voxels
   method = "standard" # ERA-RSA currently uses standard searchlight
 )
 
 era_sl
+#> 
+#>  Searchlight Analysis Results 
+#> 
+#> - Coverage 
+#>   - Voxels/Vertices in Mask:  64 
+#>   - Voxels/Vertices with Results:  64 
+#> - Output Maps (Metrics) 
+#>   -  n_items  (Type:  DenseNeuroVol ) 
+#>   -  era_top1_acc  (Type:  DenseNeuroVol ) 
+#>   -  era_diag_mean  (Type:  DenseNeuroVol ) 
+#>   -  era_diag_minus_off  (Type:  DenseNeuroVol ) 
+#>   -  geom_cor  (Type:  DenseNeuroVol ) 
+#>   -  era_diag_minus_off_same_block  (Type:  DenseNeuroVol ) 
+#>   -  era_diag_minus_off_diff_block  (Type:  DenseNeuroVol ) 
+#>   -  era_lag_cor  (Type:  DenseNeuroVol ) 
+#>   -  geom_cor_run_partial  (Type:  DenseNeuroVol ) 
+#>   -  geom_cor_xrun  (Type:  DenseNeuroVol )
 ```
-
-     Searchlight Analysis Results 
-
-    - Coverage 
-      - Voxels/Vertices in Mask:  216 
-      - Voxels/Vertices with Results:  216 
-    - Output Maps (Metrics) 
-      -  n_items  (Type:  DenseNeuroVol ) 
-      -  era_top1_acc  (Type:  DenseNeuroVol ) 
-      -  era_diag_mean  (Type:  DenseNeuroVol ) 
-      -  era_diag_minus_off  (Type:  DenseNeuroVol ) 
-      -  geom_cor  (Type:  DenseNeuroVol ) 
-      -  era_diag_minus_off_same_block  (Type:  DenseNeuroVol ) 
-      -  era_diag_minus_off_diff_block  (Type:  DenseNeuroVol ) 
-      -  era_lag_cor  (Type:  DenseNeuroVol ) 
-      -  geom_cor_run_partial  (Type:  DenseNeuroVol ) 
-      -  geom_cor_xrun  (Type:  DenseNeuroVol ) 
 
 The `searchlight_result` contains:
 
@@ -232,13 +313,12 @@ The `searchlight_result` contains:
 
 ``` r
 era_sl$metrics
+#>  [1] "n_items"                       "era_top1_acc"                 
+#>  [3] "era_diag_mean"                 "era_diag_minus_off"           
+#>  [5] "geom_cor"                      "era_diag_minus_off_same_block"
+#>  [7] "era_diag_minus_off_diff_block" "era_lag_cor"                  
+#>  [9] "geom_cor_run_partial"          "geom_cor_xrun"
 ```
-
-     [1] "n_items"                       "era_top1_acc"                 
-     [3] "era_diag_mean"                 "era_diag_minus_off"           
-     [5] "geom_cor"                      "era_diag_minus_off_same_block"
-     [7] "era_diag_minus_off_diff_block" "era_lag_cor"                  
-     [9] "geom_cor_run_partial"          "geom_cor_xrun"                
 
 We can save the searchlight maps using
 [`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md):
@@ -255,7 +335,7 @@ This will create one NIfTI file per metric (e.g., `geom_cor.nii.gz`,
 `era_top1_acc.nii.gz`) that can be viewed in your favorite neuroimaging
 software.
 
-## 4. Adding Confounds and Lag Information
+## 5. Adding Confounds and Lag Information
 
 ERA-RSA can optionally incorporate item-level confounds and lag
 variables. These are all defined at the **item** level, not the trial
@@ -346,12 +426,16 @@ experiment’s design tables following the patterns above, then pass them
 into
 [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md).
 
-## 5. Summary
+## 6. Summary
 
 - [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
   provides a unified framework for:
   - cross-decoding between encoding and retrieval, and
   - comparing encoding and retrieval representational geometries.
+- [`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+  separates direct item transfer, variance uniquely explained by
+  same-item similarity, and variance explained by preserved second-order
+  geometry.
 - It integrates naturally with:
   - [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
     for ROI-based analyses, and

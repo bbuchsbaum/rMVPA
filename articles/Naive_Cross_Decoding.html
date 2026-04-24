@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">rMVPA
 authors</h4>
             
-            <h4 data-toc-skip class="date">2026-04-14</h4>
+            <h4 data-toc-skip class="date">2026-04-24</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Naive_Cross_Decoding.Rmd" class="external-link"><code>vignettes/Naive_Cross_Decoding.Rmd</code></a></small>
       <div class="d-none name"><code>Naive_Cross_Decoding.Rmd</code></div>
@@ -68,11 +68,17 @@ authors</h4>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>Naive cross-decoding classifies test-domain patterns by correlating
-them with training-domain prototypes (class-mean patterns) — no domain
-adaptation, no learned transformation. It is the natural baseline for
-any cross-domain analysis: if it works, your representations generalise
-across contexts without correction.</p>
+<p>You use cross-decoding when the data come from two related domains,
+such as perception and memory, and you want to know whether a pattern
+learned in the source domain transfers to the target domain. Naive
+cross-decoding is the direct-transfer baseline: it classifies
+target-domain patterns by correlating them with source-domain
+prototypes, with no learned correction between the two domains.</p>
+<p>This makes the analysis deliberately conservative. If it works, the
+representations are already aligned well enough to transfer directly. If
+it does not, the result is still useful because it tells you how much
+work a domain-adaptive model such as <code><a href="../reference/remap_rrr_model.html">remap_rrr_model()</a></code> or
+an encoding-retrieval partition analysis has to explain.</p>
 <p><strong>Algorithm:</strong></p>
 <ol style="list-style-type: decimal">
 <li>Compute a prototype (mean pattern) for each category in the training
@@ -115,7 +121,11 @@ pseudo-probabilities.</p>
 <span><span class="co">#&gt;   return_predictions:  TRUE</span></span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">roi_mask</span><span class="op">)</span></span>
-<span><span class="va">results</span><span class="op">$</span><span class="va">performance_table</span></span>
+<span><span class="va">metric_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">intersect</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"Accuracy"</span>, <span class="st">"AUC"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span>, <span class="va">metric_cols</span>, drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
 <span><span class="co">#&gt;   roinum Accuracy     AUC</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
@@ -148,6 +158,33 @@ prototypes</strong> instead:</p>
 <span><span class="op">)</span></span></code></pre></div>
 <p>This creates one prototype per item rather than per category, giving
 finer-grained matching when item identity is meaningful.</p>
+</div>
+<div class="section level2">
+<h2 id="how-does-this-relate-to-era-partitioning">How does this relate to ERA partitioning?<a class="anchor" aria-label="anchor" href="#how-does-this-relate-to-era-partitioning"></a>
+</h2>
+<p>Naive cross-decoding answers a first-order question: does each target
+pattern look most like the correct source prototype? That is often the
+first result to check because it maps directly onto classification
+accuracy.</p>
+<p>The <code><a href="../reference/era_partition_model.html">era_partition_model()</a></code> analysis uses the same
+direct-transfer idea as one component of a broader encoding-retrieval
+analysis. It builds matched source and target prototypes for the item
+key, then reports:</p>
+<ul>
+<li>direct transfer metrics such as <code>naive_top1_acc</code> and
+<code>xdec_Accuracy</code>,</li>
+<li>first-order variance partitioning via
+<code>first_order_delta_r2</code>,</li>
+<li>second-order geometry preservation via
+<code>second_order_delta_r2</code> and <code>geom_cor</code>, and</li>
+<li>optional leakage-free Procrustes alignment metrics.</li>
+</ul>
+<p>Use <code><a href="../reference/naive_xdec_model.html">naive_xdec_model()</a></code> when you need a clean baseline
+map or ROI table for direct transfer. Use
+<code><a href="../reference/era_partition_model.html">era_partition_model()</a></code> when your scientific question is
+whether encoding-retrieval transfer reflects item-specific similarity,
+preserved representational geometry, or nuisance structure such as
+block, category, or temporal lag.</p>
 </div>
 <div class="section level2">
 <h2 id="searchlight-analysis">Searchlight analysis<a class="anchor" aria-label="anchor" href="#searchlight-analysis"></a>
@@ -185,8 +222,8 @@ domain-adaptive models such as <code><a href="../reference/remap_rrr_model.html"
 <code><a href="../articles/REMAP_RRR.html">vignette("REMAP_RRR")</a></code> — domain-adaptive cross-decoding
 with low-rank corrections</li>
 <li>
-<code><a href="../articles/ERA_RSA_Cross_Decoding.html">vignette("ERA_RSA_Cross_Decoding")</a></code> — encoding–retrieval
-RSA</li>
+<code><a href="../articles/ERA_RSA_Cross_Decoding.html">vignette("ERA_RSA_Cross_Decoding")</a></code> — encoding-retrieval
+RSA and ERA partitioning</li>
 <li>
 <code><a href="../reference/naive_xdec_model.html">?naive_xdec_model</a></code> — full parameter documentation</li>
 </ul>

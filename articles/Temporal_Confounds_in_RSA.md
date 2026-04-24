@@ -210,7 +210,7 @@ str(tc)
       ..- attr(*, "Size")= int 30
       ..- attr(*, "call")= language temporal_rdm(index = onsets, block = run, kernel = item$kernel %||% "exp",      width = item$width %||% 1L, power| __truncated__ ...
       ..- attr(*, "method")= chr "temporal:exp:distance"
-     $ hrf : 'dist' num [1:435] 27 50.5 72 90 104 115 124 131 135 0 ...
+     $ hrf : 'dist' num [1:435] 27 50.5 72 90 104.5 ...
       ..- attr(*, "Size")= int 30
       ..- attr(*, "call")= language temporal_hrf_overlap(onsets = onsets, durations = item$durations %||% NULL,      run = run, TR = item$TR %||% TR,| __truncated__ ...
       ..- attr(*, "method")= chr "temporal_hrf:spm:overlap:distance"
@@ -284,7 +284,7 @@ resid_roi <- stats::lm(v_roi ~ v_temp)$residuals
 cat(sprintf("After residualization:  cor(resid ROI, temporal) = %.2f\n", stats::cor(resid_roi, v_temp)))
 ```
 
-    After residualization:  cor(resid ROI, temporal) = -0.00
+    After residualization:  cor(resid ROI, temporal) = 0.00
 
 ``` r
 # Visualize effect
