@@ -1,9 +1,19 @@
 # Haxby 2001 — subject 1 ventral-temporal patterns
 
-`patterns.rds` is a small derivative of the Haxby et al. (2001) Subject 1
-dataset, restricted to the published ventral-temporal (VT) mask.
+This directory ships two derivatives of the Haxby et al. (2001) Subject 1
+dataset, both restricted to the published ventral-temporal (VT) mask:
 
-## Contents
+- **`patterns.rds`** (≈100 KB) — per-(category, run) **block-mean** patterns.
+  Use this for the standard `mvpa_model()` / `rsa_model()` workflow.
+- **`trials.rds`** (≈462 KB) — **trial-level** per-TR patterns. Use this
+  when you need within-block residuals (the prerequisite for multivariate
+  noise normalisation / MVNN), or for any analysis that benefits from the
+  unaveraged trial-level structure.
+
+Both are derived from the same upstream archive (PyMVPA's curated Subject 1
+tutorial bundle) and carry identical voxel ordering and mask metadata.
+
+## Contents of `patterns.rds`
 
 - **`patterns`** — `[n_obs × n_voxels]` numeric matrix of per-(category, run)
   mean BOLD signals over the VT voxels. `n_obs = 8 × 12 = 96` (8 non-rest
@@ -16,6 +26,21 @@ dataset, restricted to the published ventral-temporal (VT) mask.
   to back-project the 577 voxel columns into the original 40 × 64 × 64
   scanner space.
 - **`source`** — citation of the original dataset.
+
+## Contents of `trials.rds`
+
+Same structure as `patterns.rds`, but each row is one *task* TR rather than
+a block-mean:
+
+- **`patterns`** — `[864 × 577]` numeric matrix.
+- **`category`** — `factor` of length 864.
+- **`run`** — `integer` of length 864 (12 unique values).
+- **`block`** — `integer` of length 864. A "block" is a maximal run of
+  consecutive same-category TRs within one run; there are 96 blocks total
+  (8 per run × 12 runs). Use this as the unit for MVNN residual-covariance
+  estimation: per block, subtract the block's mean pattern from each TR to
+  obtain trial-level noise residuals.
+- Same `mask_dim` / `mask_idx` / `mask_space` / `source` metadata as above.
 
 ## Source and license
 
@@ -33,9 +58,13 @@ mean-pattern matrix (≈100 KB) rather than the raw 4D BOLD (≈300 MB) so the
 package payload stays small. The original data is freely available for
 non-commercial research; cite Haxby et al. (2001) when publishing.
 
-## Regenerating the bundle
+## Regenerating the bundles
 
-`data-raw/haxby2001_subj1.R` is a one-shot R script that re-downloads the
-upstream archive, applies the VT mask, computes per-(category, run) mean
-patterns, and rebuilds `patterns.rds`. Run it from the package root if the
-upstream layout changes.
+Two one-shot R scripts in `data-raw/`:
+
+- `haxby2001_subj1.R` rebuilds `patterns.rds` (block-mean patterns) from the
+  upstream archive.
+- `haxby2001_subj1_trials.R` rebuilds `trials.rds` (per-TR patterns + block
+  indices) from the same archive.
+
+Both run from the package root and write directly under `inst/extdata/`.
