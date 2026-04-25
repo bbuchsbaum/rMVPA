@@ -1,0 +1,200 @@
+---
+title: "Reproducing Haxby (2001) classification with rMVPA"
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: |
+  %\VignetteIndexEntry{Reproducing Haxby (2001) classification with rMVPA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  message  = FALSE,
+  warning  = FALSE,
+  fig.width = 6, fig.height = 4
+)
+library(rMVPA)
+library(neuroim2)
+
+resolve_haxby_path <- function() {
+  installed <- system.file("extdata", "haxby2001_subj1", "patterns.rds",
+                           package = "rMVPA")
+  if (nzchar(installed) && file.exists(installed)) return(installed)
+  src_candidates <- c(
+    file.path("..", "inst", "extdata", "haxby2001_subj1", "patterns.rds"),
+    file.path("inst", "extdata", "haxby2001_subj1", "patterns.rds")
+  )
+  for (p in src_candidates) if (file.exists(p)) return(normalizePath(p))
+  ""
+}
+```
+
+## What this vignette is for
+
+The Haxby et al. (2001) study showed that distinct categories of visual stimuli (faces, houses, cats, scissors, ...) can be decoded from spatial activity patterns in the ventral temporal (VT) cortex. It's one of the founding empirical results of MVPA. This vignette reproduces the basic decoding result on Subject 1 of the original dataset using `rMVPA`'s standard classification workflow.
+
+By the end you will have:
+
+- A working `mvpa_model()` pipeline against real fMRI data,
+- Cross-validated 8-way category accuracy in VT cortex that's clearly above the chance level of 12.5%,
+- The canonical confusion structure (faces and houses lead, low-level objects lag) that anyone reading the original paper will recognise.
+
+## The bundled data
+
+`inst/extdata/haxby2001_subj1/patterns.rds` is a small derivative of Subject 1 from the PyMVPA-curated Haxby tutorial archive (see `inst/extdata/haxby2001_subj1/README.md`). Rather than redistributing the 300 MB raw 4D BOLD, we ship a `~100 KB` matrix of per-(category, run) **mean BOLD patterns** restricted to the published VT mask:
+
+- 96 observations: 8 non-rest categories (bottle, cat, chair, face, house, scissors, scrambledpix, shoe) × 12 runs.
+- 577 voxels (the published `mask4_vt.nii.gz`).
+- Run labels for blocked cross-validation.
+
+This is the natural input shape for `rMVPA` once you've gone from raw 4D BOLD to per-trial / per-condition patterns — exactly what an applied workflow produces after first-level GLM extraction or condition averaging.
+
+```{r load-bundle}
+bundle <- readRDS(resolve_haxby_path())
+
+dim(bundle$patterns)
+table(bundle$category)
+table(bundle$run)
+```
+
+## Wrap the patterns as an `mvpa_dataset`
+
+`rMVPA` expects an `mvpa_dataset` containing a 4-D `NeuroVec` (voxels × observations) and a 3-D mask. We rebuild both from the bundle's metadata and the VT mask indices.
+
+```{r build-dataset}
+# Reconstruct the binary VT mask in scanner space.
+mask_arr <- array(0L, bundle$mask_dim)
+mask_arr[bundle$mask_idx] <- 1L
+mask <- LogicalNeuroVol(mask_arr, bundle$mask_space)
+
+# Reconstruct the (voxels x observations) data as a SparseNeuroVec.
+vec_data <- t(bundle$patterns)             # 577 voxels x 96 observations
+storage.mode(vec_data) <- "double"
+vec_space <- neuroim2::add_dim(bundle$mask_space, ncol(vec_data))
+bold_vec <- neuroim2::SparseNeuroVec(
+  vec_data, space = vec_space, mask = as.logical(mask_arr)
+)
+
+ds <- mvpa_dataset(bold_vec, mask = mask)
+ds
+```
+
+## Build the design and the model spec
+
+The design has one response variable (the 8-way category) and a blocking variable (the run index). `blocked_cross_validation()` then produces 12 leave-one-run-out folds.
+
+```{r design}
+design_df <- data.frame(
+  category = bundle$category,
+  run      = bundle$run
+)
+mvdes <- mvpa_design(design_df, y_train = ~ category, block_var = ~ run)
+cval  <- blocked_cross_validation(bundle$run)
+```
+
+`sda_notune` is rMVPA's pre-registered shrinkage discriminant model — a strong default for high-dimensional, low-sample-size patterns like this one.
+
+```{r model-spec}
+sda_mod <- load_model("sda_notune")
+mspec <- mvpa_model(
+  model    = sda_mod,
+  dataset  = ds,
+  design   = mvdes,
+  crossval = cval,
+  return_predictions = TRUE
+)
+mspec
+```
+
+## Run the analysis
+
+For a single-ROI analysis, build a region mask whose only non-zero label is the VT mask, then call `run_regional()`.
+
+```{r run-regional}
+region_mask <- NeuroVol(mask_arr, bundle$mask_space)
+res <- run_regional(mspec, region_mask, verbose = FALSE)
+res$performance_table
+```
+
+## Cross-validated accuracy
+
+```{r accuracy}
+acc <- res$performance_table$Accuracy
+cat(sprintf("8-way accuracy in VT cortex: %.1f%%  (chance = %.1f%%)\n",
+            100 * acc, 100 / 8))
+```
+
+That's well above the chance level for an 8-way problem, on a single subject's mean-pattern data with no fancy preprocessing — the basic Haxby finding.
+
+## The classic per-category pattern
+
+`run_regional()` collected trial-level predictions in `res$prediction_table`. Tabulating predicted vs observed gives the confusion matrix and per-category accuracy.
+
+```{r confusion}
+pred <- res$prediction_table
+conf <- table(observed = pred$observed, predicted = pred$predicted)
+round(prop.table(conf, margin = 1), 2)
+```
+
+```{r confusion-plot, echo = FALSE, fig.cap = "8-way confusion matrix in VT cortex (rows: observed category, columns: predicted). The diagonal shows that face and house come out cleanly while cat / shoe / bottle confuse with one another -- the canonical Haxby 2001 pattern.", fig.width = 5.6, fig.height = 5, out.width = "70%"}
+M <- prop.table(as.matrix(conf), margin = 1)
+op <- par(mar = c(7, 7, 1.5, 0.5))
+image(seq_len(nrow(M)), seq_len(ncol(M)), M,
+      col = hcl.colors(48, "YlOrBr", rev = TRUE),
+      axes = FALSE, xlab = "", ylab = "", zlim = c(0, 1))
+axis(1, at = seq_len(ncol(M)), labels = colnames(M), las = 2, cex.axis = 0.85)
+axis(2, at = seq_len(nrow(M)), labels = rownames(M), las = 1, cex.axis = 0.85)
+box()
+par(op)
+```
+
+```{r per-cat}
+per_cat <- diag(prop.table(as.matrix(conf), margin = 1))
+round(sort(per_cat, decreasing = TRUE), 2)
+```
+
+Faces and houses lead — exactly as in Figure 2 of the original paper.
+
+## Where the raw data lives
+
+The `patterns.rds` bundle in this package is one subject already collapsed to per-(category, run) mean patterns over the VT mask. If you want to start from raw BOLD and do your own preprocessing / first-level GLM, two routes:
+
+**A. The PyMVPA tutorial archive (≈300 MB)** is the easiest source for the canonical preprocessed Subject 1 data with the published VT mask:
+
+```r
+download.file(
+  "http://data.pymvpa.org/datasets/haxby2001/subj1-2010.01.14.tar.gz",
+  destfile = "subj1.tar.gz", mode = "wb"
+)
+untar("subj1.tar.gz")
+# subj1/{bold.nii.gz, mask4_vt.nii.gz, labels.txt, anat.nii.gz, ...}
+```
+
+**B. OpenNeuro `ds000105` via the `openneuro` package** for the raw BIDS layout (no preprocessing, no VT mask — bring your own pipeline):
+
+```r
+library(openneuro)
+res <- on_download(id = "ds000105", subjects = "sub-1")
+# files are cached under on_cache_info()$path
+```
+
+The package's `data-raw/haxby2001_subj1.R` script reproduces the bundled `patterns.rds` end-to-end from the PyMVPA archive.
+
+## Where to go next
+
+- For a searchlight version of this analysis, see `vignette("Searchlight_Analysis")`. The same `mspec` plus `run_searchlight()` produces a per-voxel decoding map.
+- For RSA-style geometry (rather than category labels), `vignette("Kriegeskorte_92_Images")` walks through the matched real-data RSA workflow.
+- For rMVPA's classification ergonomics in general, see `vignette("Regional_Analysis")` and `vignette("CrossValidation")`.
+
+## Citation
+
+> Haxby JV, Gobbini MI, Furey ML, Ishai A, Schouten JL, Pietrini P (2001).
+> *Distributed and overlapping representations of faces and objects in
+> ventral temporal cortex.* **Science 293**: 2425–2430.
+> <https://doi.org/10.1126/science.1063736>
+
+Subject 1 data are redistributed by the [PyMVPA project](http://www.pymvpa.org/datadb/haxby2001.html) and on [OpenNeuro ds000105](https://openneuro.org/datasets/ds000105). Cite Haxby et al. (2001) and the data redistribution source you used.
