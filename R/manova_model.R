@@ -141,66 +141,66 @@ fit_roi.manova_model <- function(model, roi_data, context, ...) {
 #' @method print manova_model
 print.manova_model <- function(x, ...) {
   # Print header
-  cat("\\n", "MANOVA Model", "\\n")
-  cat(rep("-", 20), "\\n\\n")
+  cat("\n", "MANOVA Model", "\n")
+  cat(rep("-", 20), "\n\n")
 
   # Formula section
-  cat("Model Specification:\\n")
-  cat("  |- Formula: ", deparse(x$design$formula), "\\n\\n")
+  cat("Model Specification:\n")
+  cat("  |- Formula: ", deparse(x$design$formula), "\n\n")
 
   # Dataset information
-  cat("Dataset:\\n")
+  cat("Dataset:\n")
   dims <- dim(x$dataset$train_data)
   dim_str <- paste0(paste(dims[-length(dims)], collapse=" x "),
                    " x ", dims[length(dims)], " observations")
-  cat("  |- Dimensions: ", dim_str, "\\n")
-  cat("  |- Type: ", class(x$dataset$train_data)[1], "\\n\\n")
+  cat("  |- Dimensions: ", dim_str, "\n")
+  cat("  |- Type: ", class(x$dataset$train_data)[1], "\n\n")
 
   # Variables section
-  cat("Variables:\\n")
+  cat("Variables:\n")
   predictors <- all.vars(x$design$formula[[3]])  # Get predictor names from RHS of formula
   response <- all.vars(x$design$formula[[2]])    # Get response name from LHS of formula
-  cat("  |- Response: ", response, "\\n")
-  cat("  |- Predictors: ", paste(predictors, collapse=", "), "\\n\\n")
+  cat("  |- Response: ", response, "\n")
+  cat("  |- Predictors: ", paste(predictors, collapse=", "), "\n\n")
 
   # Data structure
-  cat("Data Structure:\\n")
+  cat("Data Structure:\n")
 
   # Check if there's a test set
   has_test <- !is.null(x$dataset$test_data)
   cat("  |- Test Set: ",
-      if(has_test) "Present" else "None", "\\n")
+      if(has_test) "Present" else "None", "\n")
 
   # Check if there's a mask
   if (!is.null(x$dataset$mask)) {
     mask_sum <- sum(x$dataset$mask > 0)
     cat("  |- Active Voxels/Vertices: ",
-        format(mask_sum, big.mark=","), "\\n")
+        format(mask_sum, big.mark=","), "\n")
   } else {
-    cat("  |- Mask: None\\n")
+    cat("  |- Mask: None\n")
   }
 
-  cat("\\n")
+  cat("\n")
 }
 
 #' @export
 #' @method print manova_design
 print.manova_design <- function(x, ...) {
   # Print header
-  cat("\\n", "MANOVA Design", "\\n")
-  cat(rep("-", 20), "\\n\\n")
+  cat("\n", "MANOVA Design", "\n")
+  cat(rep("-", 20), "\n\n")
 
   # Formula section
-  cat("Formula:\\n")
-  cat("  |- ", deparse(x$formula), "\\n\\n")
+  cat("Formula:\n")
+  cat("  |- ", deparse(x$formula), "\n\n")
 
   # Data section
-  cat("Variables:\\n")
+  cat("Variables:\n")
   var_names <- names(x$data)
-  cat("  |- Total Variables: ", length(var_names), "\\n")
-  cat("  |- Names: ", paste(var_names, collapse=", "), "\\n")
+  cat("  |- Total Variables: ", length(var_names), "\n")
+  cat("  |- Names: ", paste(var_names, collapse=", "), "\n")
 
-  cat("\\n")
+  cat("\n")
 }
 
 #' Merge Results for MANOVA Model

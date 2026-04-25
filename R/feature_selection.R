@@ -198,10 +198,14 @@ validate_cutoff <- function(type, value, ncol) {
 #' @export
 #' @method print feature_selector
 print.feature_selector <- function(x, ...) {
-  cat("Feature Selector Object\\n")
-  cat("-----------------------\\n")
-  cat("Method:        ", class(x)[1], "\\n")
-  cat("Cutoff Type:   ", x$cutoff_type, "\\n")
-  cat("Cutoff Value:  ", x$cutoff_value, "\\n")
+  use_style <- requireNamespace("crayon", quietly = TRUE)
+  header_style <- if (use_style) crayon::bold$cyan else identity
+  info_style   <- if (use_style) crayon::white else identity
+  value_style  <- if (use_style) crayon::green else identity
+
+  cat("\n", header_style("Feature Selector"), "\n\n", sep = "")
+  cat(info_style("  - Method:       "), value_style(class(x)[1]), "\n", sep = "")
+  cat(info_style("  - Cutoff Type:  "), value_style(x$cutoff_type), "\n", sep = "")
+  cat(info_style("  - Cutoff Value: "), value_style(format(x$cutoff_value)), "\n\n", sep = "")
   invisible(x)
 }

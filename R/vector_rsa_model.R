@@ -277,22 +277,22 @@ second_order_similarity <- function(distfun, X, Dref, block_var, method=c("pears
 #' @export
 print.vector_rsa_model <- function(x, ...) {
   # Header
-  cat(rep("=", 50), "\\n")
-  cat("          Vectorized RSA Model          \\n")
-  cat(rep("=", 50), "\\n\\n")
+  cat(rep("=", 50), "\n")
+  cat("          Vectorized RSA Model          \n")
+  cat(rep("=", 50), "\n\n")
 
   # Dataset information
   if (!is.null(x$dataset)) {
     dims <- dim(x$dataset$train_data)
     dims_str <- if (!is.null(dims)) paste(dims, collapse = " x ") else "Unknown"
-    cat("Dataset:\\n")
-    cat("  |- Data Dimensions: ", dims_str, "\\n")
+    cat("Dataset:\n")
+    cat("  |- Data Dimensions: ", dims_str, "\n")
     if (!is.null(x$dataset$mask)) {
-      cat("  |- Mask Length:     ", length(x$dataset$mask), "\\n")
+      cat("  |- Mask Length:     ", length(x$dataset$mask), "\n")
     } else {
-      cat("  |- Mask:            None\\n")
+      cat("  |- Mask:            None\n")
     }
-    cat("\\n")
+    cat("\n")
   }
 
   # Design information
@@ -300,14 +300,14 @@ print.vector_rsa_model <- function(x, ...) {
     n_labels <- length(x$design$labels)
     n_blocks <- length(unique(x$design$block))
     Ddim <- dim(x$design$model_mat$Dexpanded)
-    cat("Design:\\n")
-    cat("  |- Number of Labels:    ", n_labels, "\\n")
-    cat("  |- Number of Blocks:    ", n_blocks, "\\n")
-    cat("  |- Dissimilarity Matrix:", paste0(Ddim[1], " x ", Ddim[2]), "\\n\\n")
+    cat("Design:\n")
+    cat("  |- Number of Labels:    ", n_labels, "\n")
+    cat("  |- Number of Blocks:    ", n_blocks, "\n")
+    cat("  |- Dissimilarity Matrix:", paste0(Ddim[1], " x ", Ddim[2]), "\n\n")
   }
 
   # Model Specification
-  cat("Model Specification:\\n")
+  cat("Model Specification:\n")
   dist_name <- tryCatch({
     if (!is.null(x$distfun$name)) {
       x$distfun$name
@@ -315,11 +315,11 @@ print.vector_rsa_model <- function(x, ...) {
       class(x$distfun)[1]
     }
   }, error = function(e) class(x$distfun)[1])
-  cat("  |- Distance Function:   ", dist_name, "\\n")
-  cat("  |- RSA Similarity Func: ", x$rsa_simfun, "\\n\\n")
+  cat("  |- Distance Function:   ", dist_name, "\n")
+  cat("  |- RSA Similarity Func: ", x$rsa_simfun, "\n\n")
 
   # Footer
-  cat(rep("=", 50), "\\n")
+  cat(rep("=", 50), "\n")
 }
 
 #' Print Method for vector_rsa_design
@@ -343,46 +343,46 @@ print.vector_rsa_design <- function(x, ...) {
   border <- paste(rep("=", 50), collapse="")
 
   # Header
-  cat(border, "\\n")
-  cat("         Vectorized RSA Design          \\n")
-  cat(border, "\\n\\n")
+  cat(border, "\n")
+  cat("         Vectorized RSA Design          \n")
+  cat(border, "\n\n")
 
   # Distance Matrix Information
   if (!is.null(x$D)) {
     Ddim <- dim(x$D)
-    cat("Distance Matrix:\\n")
-    cat("  |- Original Dimensions: ", paste0(Ddim[1], " x ", Ddim[2]), "\\n")
+    cat("Distance Matrix:\n")
+    cat("  |- Original Dimensions: ", paste0(Ddim[1], " x ", Ddim[2]), "\n")
   }
 
   # Labels Information
   if (!is.null(x$labels)) {
     n_labels <- length(x$labels)
-    cat("Labels:\\n")
-    cat("  |- Total Labels: ", n_labels, "\\n")
+    cat("Labels:\n")
+    cat("  |- Total Labels: ", n_labels, "\n")
     # Display the first few labels as a sample
     sample_labels <- paste(head(x$labels, 5), collapse = ", ")
     if(n_labels > 5) sample_labels <- paste0(sample_labels, ", ...")
-    cat("  |- Sample:         ", sample_labels, "\\n")
+    cat("  |- Sample:         ", sample_labels, "\n")
   }
 
   # Block Information
   if (!is.null(x$block)) {
     unique_blocks <- sort(unique(x$block))
     n_blocks <- length(unique_blocks)
-    cat("Blocks:\\n")
-    cat("  |- Number of Blocks: ", n_blocks, "\\n")
-    cat("  |- Block Labels:     ", paste(unique_blocks, collapse = ", "), "\\n")
+    cat("Blocks:\n")
+    cat("  |- Number of Blocks: ", n_blocks, "\n")
+    cat("  |- Block Labels:     ", paste(unique_blocks, collapse = ", "), "\n")
   }
 
   # Expanded D Matrix Information
   if (!is.null(x$model_mat) && !is.null(x$model_mat$Dexpanded)) {
     Dexp_dim <- dim(x$model_mat$Dexpanded)
-    cat("Expanded D Matrix:\\n")
-    cat("  |- Dimensions:       ", paste0(Dexp_dim[1], " x ", Dexp_dim[2]), "\\n")
+    cat("Expanded D Matrix:\n")
+    cat("  |- Dimensions:       ", paste0(Dexp_dim[1], " x ", Dexp_dim[2]), "\n")
   }
 
   # Footer
-  cat("\\n", border, "\\n")
+  cat("\n", border, "\n")
 }
 
 #' Evaluate model performance for vector RSA

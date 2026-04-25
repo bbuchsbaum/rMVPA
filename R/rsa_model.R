@@ -699,70 +699,70 @@ fit_roi.rsa_model <- function(model, roi_data, context, ...) {
 #' @method print rsa_model
 print.rsa_model <- function(x, ...) {
   # Print header
-  cat("\\n", "RSA Model", "\\n")
-  cat(rep("-", 20), "\\n\\n")
+  cat("\n", "RSA Model", "\n")
+  cat(rep("-", 20), "\n\n")
 
   # Model configuration
-  cat("Configuration:\\n")
-  cat("  |- Distance Method: ", x$distmethod, "\\n")
-  cat("  |- Regression Type: ", x$regtype, "\\n")
+  cat("Configuration:\n")
+  cat("  |- Distance Method: ", x$distmethod, "\n")
+  cat("  |- Regression Type: ", x$regtype, "\n")
 
   # If nonneg constraints are present
   if (!is.null(x$nneg) && length(x$nneg) > 0) {
-    cat("  |- Non-negativity on: ", paste(names(x$nneg), collapse=", "), "\\n")
+    cat("  |- Non-negativity on: ", paste(names(x$nneg), collapse=", "), "\n")
   }
 
   # If semipartial
   if (isTRUE(x$semipartial) && (is.null(x$nneg) || length(x$nneg) == 0)) {
-    cat("  |- Semi-partial: TRUE\\n")
+    cat("  |- Semi-partial: TRUE\n")
   }
-  cat("\\n")
+  cat("\n")
 
   # Dataset info
-  cat("Dataset:\\n")
+  cat("Dataset:\n")
   dims <- dim(x$dataset$train_data)
   dim_str <- paste0(
     paste(dims[-length(dims)], collapse=" x "),
     " x ", dims[length(dims)], " observations"
   )
-  cat("  |- Dimensions: ", dim_str, "\\n")
-  cat("  |- Type: ", class(x$dataset$train_data)[1], "\\n")
-  cat("\\n")
+  cat("  |- Dimensions: ", dim_str, "\n")
+  cat("  |- Type: ", class(x$dataset$train_data)[1], "\n")
+  cat("\n")
 
   # Design info
-  cat("Design:\\n")
-  cat("  |- Formula: ", deparse(x$design$formula), "\\n")
+  cat("Design:\n")
+  cat("  |- Formula: ", deparse(x$design$formula), "\n")
 
   var_names <- names(x$design$model_mat)
-  cat("  |- Predictors: ", paste(var_names, collapse=", "), "\\n")
-  cat("\\n")
+  cat("  |- Predictors: ", paste(var_names, collapse=", "), "\n")
+  cat("\n")
 
   # Structure info
-  cat("Structure:\\n")
+  cat("Structure:\n")
 
   # Block info
   if (!is.null(x$design$block_var)) {
     blocks <- table(x$design$block_var)
-    cat("  |- Blocking: Present\\n")
-    cat("  |- Number of Blocks: ", length(blocks), "\\n")
+    cat("  |- Blocking: Present\n")
+    cat("  |- Number of Blocks: ", length(blocks), "\n")
     cat("  |- Mean Block Size: ",
         format(mean(blocks), digits=2),
         " (SD: ",
         format(sd(blocks), digits=2),
-        ")\\n")
+        ")\n")
   } else {
-    cat("  |- Blocking: None\\n")
+    cat("  |- Blocking: None\n")
   }
 
   # Split info
   if (!is.null(x$design$split_by)) {
     split_info <- length(x$design$split_groups)
-    cat("  |- Split Groups: ", split_info, "\\n")
+    cat("  |- Split Groups: ", split_info, "\n")
   } else {
-    cat("  |- Split Groups: None\\n")
+    cat("  |- Split Groups: None\n")
   }
 
-  cat("\\n")
+  cat("\n")
 }
 
 
@@ -770,15 +770,15 @@ print.rsa_model <- function(x, ...) {
 #' @method print rsa_design
 print.rsa_design <- function(x, ...) {
   # Print header
-  cat("\\n", "RSA Design", "\\n")
-  cat(rep("-", 20), "\\n\\n")
+  cat("\n", "RSA Design", "\n")
+  cat(rep("-", 20), "\n\n")
 
   # Formula
-  cat("Formula:\\n")
-  cat("  |- ", deparse(x$formula), "\\n\\n")
+  cat("Formula:\n")
+  cat("  |- ", deparse(x$formula), "\n\n")
 
   # Variables
-  cat("Variables:\\n")
+  cat("Variables:\n")
   var_types <- sapply(x$data, function(v) {
     if (inherits(v, "dist")) "distance matrix"
     else if (is.matrix(v)) "matrix"
@@ -786,25 +786,25 @@ print.rsa_design <- function(x, ...) {
     else "other"
   })
 
-  cat("  |- Total Variables: ", length(x$data), "\\n")
+  cat("  |- Total Variables: ", length(x$data), "\n")
   for (i in seq_along(x$data)) {
     prefix <- if (i == length(x$data)) "  |-" else "  |-"
-    cat(sprintf("%s %s: %s\\n", prefix, names(x$data)[i], var_types[i]))
+    cat(sprintf("%s %s: %s\n", prefix, names(x$data)[i], var_types[i]))
   }
-  cat("\\n")
+  cat("\n")
 
   # Structure
-  cat("Structure:\\n")
+  cat("Structure:\n")
 
   # Block info
   if (!is.null(x$block_var)) {
     blocks <- table(x$block_var)
-    cat("  |- Blocking: Present\\n")
-    cat("  |- Number of Blocks: ", length(blocks), "\\n")
+    cat("  |- Blocking: Present\n")
+    cat("  |- Number of Blocks: ", length(blocks), "\n")
     cat("  |- Block Sizes: ",
-        paste0(names(blocks), ": ", blocks, collapse=", "), "\\n")
+        paste0(names(blocks), ": ", blocks, collapse=", "), "\n")
   } else {
-    cat("  |- Blocking: None\\n")
+    cat("  |- Blocking: None\n")
   }
 
   # Include/exclude info
@@ -815,12 +815,12 @@ print.rsa_design <- function(x, ...) {
         n_included,
         " of ",
         n_comparisons,
-        sprintf(" (%.1f%%)", 100*n_included/n_comparisons), "\\n")
+        sprintf(" (%.1f%%)", 100*n_included/n_comparisons), "\n")
   } else {
-    cat("  |- Comparisons: All included\\n")
+    cat("  |- Comparisons: All included\n")
   }
 
-  cat("\\n")
+  cat("\n")
 }
 
 
