@@ -17,50 +17,50 @@ rdm_model_space_connectivity(
 \arguments{
 \item{roi_rdms}{ROI RDM vectors. Accepted forms are a matrix with RDM cells
 in rows and ROIs in columns, a named list of numeric vectors, a tibble/data
-frame with columns \code{roinum} and \code{rdm_vec} as returned by
-\code{\link{feature_rsa_rdm_vectors}}, or a \code{regional_mvpa_result}
+frame with columns `roinum` and `rdm_vec` as returned by
+\code{\link{feature_rsa_rdm_vectors}}, or a `regional_mvpa_result`
 containing stored feature-RSA RDM vectors.}
 
 \item{model_rdms}{Named list of square symmetric model RDM matrices or
-\code{dist} objects, or a numeric matrix with RDM cells in rows and model RDMs
+`dist` objects, or a numeric matrix with RDM cells in rows and model RDMs
 in columns.}
 
-\item{method}{Similarity scale used before projection. \code{"pearson"} centers
-and scales numeric RDM values. \code{"spearman"} rank-transforms each RDM vector
+\item{method}{Similarity scale used before projection. `"pearson"` centers
+and scales numeric RDM values. `"spearman"` rank-transforms each RDM vector
 before centering and scaling.}
 
-\item{basis}{Basis for the model subspace. \code{"pca"} orders orthogonal axes by
-variance in the model-RDM correlation matrix. \code{"qr"} uses a QR basis tied
+\item{basis}{Basis for the model subspace. `"pca"` orders orthogonal axes by
+variance in the model-RDM correlation matrix. `"qr"` uses a QR basis tied
 to the supplied model order.}
 
-\item{use}{Missing-value policy. \code{"complete.obs"} removes RDM cells with any
-non-finite model or ROI value before fitting the subspace. \code{"everything"}
+\item{use}{Missing-value policy. `"complete.obs"` removes RDM cells with any
+non-finite model or ROI value before fitting the subspace. `"everything"`
 requires all model and ROI vectors to be finite.}
 
 \item{tol}{Numerical tolerance for dropping near-zero model-space dimensions
 and detecting zero-norm ROI fingerprints.}
 
-\item{return_projected}{Logical; if \code{TRUE}, include the projected ROI RDM
+\item{return_projected}{Logical; if `TRUE`, include the projected ROI RDM
 vectors and residual ROI RDM vectors in the returned object.}
 }
 \value{
-An object of class \code{rdm_model_space_connectivity}, a list with:
+An object of class `rdm_model_space_connectivity`, a list with:
 \describe{
-\item{similarity}{Strength-sensitive ROI-by-ROI similarity through the
-full model-RDM subspace.}
-\item{profile_similarity}{Cosine similarity between ROI model-space
-fingerprints, ignoring overall model-alignment strength.}
-\item{component_similarity}{Named list of rank-1 ROI-by-ROI matrices, one
-per orthogonal model-space axis.}
-\item{common_similarity}{The first component matrix, useful for the shared
-model axis under \code{basis = "pca"}.}
-\item{difference_similarity}{Sum of all components after the first.}
-\item{raw_similarity}{Second-order ROI similarity before model projection.}
-\item{residual_similarity}{ROI similarity outside the model-RDM subspace.}
-\item{scores}{ROI-by-axis fingerprint matrix \code{F}.}
-\item{raw_model_scores}{ROI-by-original-model correlation matrix.}
-\item{model_axis_cor}{Correlation of orthogonal model axes with original
-model RDMs, used to interpret the axes.}
+  \item{similarity}{Strength-sensitive ROI-by-ROI similarity through the
+    full model-RDM subspace.}
+  \item{profile_similarity}{Cosine similarity between ROI model-space
+    fingerprints, ignoring overall model-alignment strength.}
+  \item{component_similarity}{Named list of rank-1 ROI-by-ROI matrices, one
+    per orthogonal model-space axis.}
+  \item{common_similarity}{The first component matrix, useful for the shared
+    model axis under `basis = "pca"`.}
+  \item{difference_similarity}{Sum of all components after the first.}
+  \item{raw_similarity}{Second-order ROI similarity before model projection.}
+  \item{residual_similarity}{ROI similarity outside the model-RDM subspace.}
+  \item{scores}{ROI-by-axis fingerprint matrix `F`.}
+  \item{raw_model_scores}{ROI-by-original-model correlation matrix.}
+  \item{model_axis_cor}{Correlation of orthogonal model axes with original
+    model RDMs, used to interpret the axes.}
 }
 }
 \description{
@@ -70,25 +70,25 @@ fingerprints.
 }
 \details{
 This helper implements a projection-based second-order RSA summary for the
-common situation where several model RDMs are correlated. Let \code{Y} be the
+common situation where several model RDMs are correlated. Let `Y` be the
 lower-triangle ROI RDM matrix, with RDM cells in rows and ROIs in columns,
-and let \code{X} be the corresponding matrix of model RDM vectors. After optional
+and let `X` be the corresponding matrix of model RDM vectors. After optional
 rank transformation and column standardization, the function builds an
-orthonormal basis \code{Q} for the column space of \code{X} and computes
+orthonormal basis `Q` for the column space of `X` and computes
 
 \deqn{F = Y' Q / \sqrt{p - 1}}
 
-where \code{p} is the number of retained RDM cells. Rows of \code{F} are decorrelated
+where `p` is the number of retained RDM cells. Rows of `F` are decorrelated
 ROI model-space fingerprints. The strength-sensitive ROI-by-ROI similarity is
 
 \deqn{S_{model} = F F'}
 
 which is equivalent to \eqn{Y' P_X Y / (p - 1)}. The profile-only similarity
-is the cosine similarity between rows of \code{F}.
+is the cosine similarity between rows of `F`.
 
-With \code{basis = "pca"}, the first component is often the common model axis
+With `basis = "pca"`, the first component is often the common model axis
 when all model RDMs are positively correlated, and later components describe
-differentiating model contrasts. With \code{basis = "qr"}, the axes are an
+differentiating model contrasts. With `basis = "qr"`, the axes are an
 orthonormal basis generated by QR decomposition of the supplied model order.
 }
 \examples{

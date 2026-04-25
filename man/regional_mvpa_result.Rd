@@ -10,6 +10,7 @@ regional_mvpa_result(
   prediction_table,
   vol_results,
   fits = fits,
+  rdm_batch_dir = NULL,
   pooled_prediction_table = NULL,
   pooled_performance = NULL
 )
@@ -24,6 +25,9 @@ regional_mvpa_result(
 \item{vol_results}{A list of voxel-level results.}
 
 \item{fits}{Optional model fits.}
+
+\item{rdm_batch_dir}{Optional directory containing file-backed feature-RSA
+RDM-vector batches written during `run_regional()`.}
 
 \item{pooled_prediction_table}{Optional pooled prediction table (e.g., ROI-averaged or stacked).}
 

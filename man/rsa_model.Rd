@@ -12,7 +12,10 @@ rsa_model(
   check_collinearity = TRUE,
   nneg = NULL,
   semipartial = FALSE,
-  pattern_center = c("none", "stimulus_mean")
+  pattern_center = c("none", "stimulus_mean"),
+  return_fingerprint = FALSE,
+  fingerprint_method = c("pearson", "spearman"),
+  fingerprint_basis = c("pca", "qr")
 )
 }
 \arguments{
@@ -38,6 +41,21 @@ Only applies when \code{regtype="lm"}. Default is TRUE.}
 \item{pattern_center}{Optional pattern-centering method applied to the stimulus-by-voxel matrix
 before distances are computed. Use \code{"stimulus_mean"} to subtract the across-stimulus
 mean pattern (Hanson-style). Default is \code{"none"}.}
+
+\item{return_fingerprint}{Logical; if \code{TRUE}, project the per-unit
+neural pair-dissimilarity vector onto an orthonormal basis of the signal
+model RDM subspace and return the standardized model-space score vector
+alongside the standard outputs. For \code{\link{pair_rsa_design}} objects,
+predictors supplied through \code{nuisance} are excluded from this
+fingerprint basis. The basis is cached on the model spec and reused
+across ROIs/searchlight units. Default \code{FALSE}.}
+
+\item{fingerprint_method}{Standardization method used when
+\code{return_fingerprint = TRUE}. One of \code{"pearson"} (centered/scaled)
+or \code{"spearman"} (rank-then-standardize). Default \code{"pearson"}.}
+
+\item{fingerprint_basis}{Basis used to span the model RDM subspace when
+\code{return_fingerprint = TRUE}: \code{"pca"} (default) or \code{"qr"}.}
 }
 \value{
 An object of class \code{"rsa_model"} (and \code{"list"}), containing:

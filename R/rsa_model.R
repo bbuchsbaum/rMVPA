@@ -494,27 +494,55 @@ run_lm_semipartial <- function(dvec, obj) {
 train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
   use_fast_kernel <- !is.null(obj$.fast_kernel)
 
-  # 1) correlation-based distance
+  pair_kind <- if (!is.null(obj$design$pair_kind)) obj$design$pair_kind else "within"
+
+  # 1) correlation-based distance, branched on pair geometry
   train_dat <- center_patterns(train_dat, method = obj$pattern_center %||% "none")
-  dtrain <- 1 - cor(t(train_dat), method=obj$distmethod)
-  dvec   <- dtrain[lower.tri(dtrain)]
-  
+
+  if (identical(pair_kind, "between")) {
+    ia <- obj$design$row_idx_a
+    ib <- obj$design$row_idx_b
+    if (is.null(ia) || is.null(ib)) {
+      stop("pair_kind='between' requires `row_idx_a` and `row_idx_b` in the design.",
+           call. = FALSE)
+    }
+    if (max(c(ia, ib)) > nrow(train_dat) || min(c(ia, ib)) < 1L) {
+      stop("`row_idx_a`/`row_idx_b` reference rows outside the training data.",
+           call. = FALSE)
+    }
+    M <- 1 - stats::cor(t(train_dat[ia, , drop = FALSE]),
+                         t(train_dat[ib, , drop = FALSE]),
+                         method = obj$distmethod)
+    dvec <- as.vector(M)
+  } else {
+    ia <- obj$design$row_idx_a
+    if (!is.null(ia)) {
+      if (max(ia) > nrow(train_dat) || min(ia) < 1L) {
+        stop("`row_idx_a` references rows outside the training data.",
+             call. = FALSE)
+      }
+      train_dat <- train_dat[ia, , drop = FALSE]
+    }
+    dtrain <- 1 - cor(t(train_dat), method = obj$distmethod)
+    dvec   <- dtrain[lower.tri(dtrain)]
+  }
+
   # 2) Exclude certain comparisons if needed
   if (!is.null(obj$design$include)) {
     dvec <- dvec[obj$design$include]
   }
-  
+
   # 3) Switch on regtype + constraints + semipartial
   out <- switch(
     obj$regtype,
-    
+
     # robust regression
     rfit = run_rfit(dvec, obj),
-    
+
     # linear model
     lm = {
       has_nneg <- (!is.null(obj$nneg) && length(obj$nneg) > 0)
-      
+
       if (has_nneg) {
         # Use constrained approach
         run_lm_constrained(dvec, obj)
@@ -528,12 +556,16 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
         run_lm(dvec, obj)
       }
     },
-    
+
     # correlation-based
     pearson  = if (use_fast_kernel && !is.null(obj$.fast_kernel$cor)) run_cor_fast(dvec, obj) else run_cor(dvec, obj),
     spearman = if (use_fast_kernel && !is.null(obj$.fast_kernel$cor)) run_cor_fast(dvec, obj) else run_cor(dvec, obj)
   )
-  
+
+  if (isTRUE(obj$return_fingerprint) && !is.null(obj$.fingerprint_basis)) {
+    out <- .rsa_attach_fingerprint(out, dvec, obj$.fingerprint_basis)
+  }
+
   out
 }
 
@@ -565,12 +597,13 @@ merge_results.rsa_model <- function(obj, result_set, indices, id, ...) {
     # Return standard error tibble structure
     return(
       tibble::tibble(
-        result       = list(NULL), 
+        result       = list(NULL),
         indices      = list(indices),
-        performance  = list(NULL), 
+        performance  = list(NULL),
         id           = id,
         error        = TRUE,
-        error_message= emessage
+        error_message= emessage,
+        fingerprint  = list(NULL)
       )
     )
   }
@@ -585,33 +618,39 @@ merge_results.rsa_model <- function(obj, result_set, indices, id, ...) {
      perf_mat <- matrix(NA_real_, nrow=1, ncol=length(expected_names), dimnames=list(NULL, expected_names))
      if (length(expected_names) == 0) perf_mat <- NULL 
      
-     return(tibble::tibble(result=list(NULL), indices=list(indices), performance=list(perf_mat), 
-                           id=id, error=TRUE, error_message=error_msg))
+     return(tibble::tibble(result=list(NULL), indices=list(indices), performance=list(perf_mat),
+                           id=id, error=TRUE, error_message=error_msg,
+                           fingerprint=list(NULL)))
   }
   
   model_outputs <- result_set$result[[1]]
-  
+  fingerprint   <- attr(model_outputs, "fingerprint", exact = TRUE)
+
   # Validate the extracted results
   if (!is.numeric(model_outputs) || is.null(names(model_outputs)) || length(model_outputs) == 0) {
       error_msg <- sprintf("merge_results (rsa_model): Extracted model outputs are not a named non-empty numeric vector for ROI/ID %s.", id)
       futile.logger::flog.error(error_msg)
-      
+
       # Attempt to use names from model_outputs if partially valid, otherwise from design
       current_names <- names(model_outputs)
       if (is.null(current_names) || length(current_names) == 0) {
         current_names <- names(obj$design$model_mat)
       }
-      
+
       perf_mat <- matrix(NA_real_, nrow=1, ncol=length(current_names), dimnames=list(NULL, current_names))
       if (length(current_names) == 0) perf_mat <- NULL
-      
-      return(tibble::tibble(result=list(NULL), indices=list(indices), performance=list(perf_mat), 
-                            id=id, error=TRUE, error_message=error_msg))
+
+      return(tibble::tibble(result=list(NULL), indices=list(indices), performance=list(perf_mat),
+                            id=id, error=TRUE, error_message=error_msg,
+                            fingerprint=list(NULL)))
   }
-  
+
+  # Strip the fingerprint attribute before forming the performance matrix
+  attributes(model_outputs)[["fingerprint"]] <- NULL
+
   # Format the results into a 1-row matrix (performance matrix)
   perf_mat <- matrix(model_outputs, nrow = 1, dimnames = list(NULL, names(model_outputs)))
-  
+
   # Return the standard tibble structure
   tibble::tibble(
     result      = list(NULL), # Model outputs are now in 'performance'
@@ -619,7 +658,8 @@ merge_results.rsa_model <- function(obj, result_set, indices, id, ...) {
     performance = list(perf_mat),
     id          = id,
     error       = FALSE,
-    error_message = "~" 
+    error_message = "~",
+    fingerprint = list(fingerprint)
   )
 }
 
@@ -803,6 +843,18 @@ print.rsa_design <- function(x, ...) {
 #' @param pattern_center Optional pattern-centering method applied to the stimulus-by-voxel matrix
 #'   before distances are computed. Use \code{"stimulus_mean"} to subtract the across-stimulus
 #'   mean pattern (Hanson-style). Default is \code{"none"}.
+#' @param return_fingerprint Logical; if \code{TRUE}, project the per-unit
+#'   neural pair-dissimilarity vector onto an orthonormal basis of the signal
+#'   model RDM subspace and return the standardized model-space score vector
+#'   alongside the standard outputs. For \code{\link{pair_rsa_design}} objects,
+#'   predictors supplied through \code{nuisance} are excluded from this
+#'   fingerprint basis. The basis is cached on the model spec and reused
+#'   across ROIs/searchlight units. Default \code{FALSE}.
+#' @param fingerprint_method Standardization method used when
+#'   \code{return_fingerprint = TRUE}. One of \code{"pearson"} (centered/scaled)
+#'   or \code{"spearman"} (rank-then-standardize). Default \code{"pearson"}.
+#' @param fingerprint_basis Basis used to span the model RDM subspace when
+#'   \code{return_fingerprint = TRUE}: \code{"pca"} (default) or \code{"qr"}.
 #'
 #' @return An object of class \code{"rsa_model"} (and \code{"list"}), containing:
 #' \itemize{
@@ -845,21 +897,26 @@ print.rsa_design <- function(x, ...) {
 #' # 'fit_params' = named vector of semi-partial correlations for each predictor
 #'
 #' @export
-rsa_model <- function(dataset, 
-                      design, 
-                      distmethod = "spearman", 
-                      regtype = "pearson", 
+rsa_model <- function(dataset,
+                      design,
+                      distmethod = "spearman",
+                      regtype = "pearson",
                       check_collinearity = TRUE,
                       nneg = NULL,
                       semipartial = FALSE,
-                      pattern_center = c("none", "stimulus_mean")) {
-  
+                      pattern_center = c("none", "stimulus_mean"),
+                      return_fingerprint = FALSE,
+                      fingerprint_method = c("pearson", "spearman"),
+                      fingerprint_basis = c("pca", "qr")) {
+
   assert_that(inherits(dataset, "mvpa_dataset"))
   assert_that(inherits(design, "rsa_design"))
-  
+
   distmethod <- match.arg(distmethod, c("pearson", "spearman"))
   regtype    <- match.arg(regtype, c("pearson", "spearman", "lm", "rfit"))
   pattern_center <- match.arg(pattern_center)
+  fingerprint_method <- match.arg(fingerprint_method)
+  fingerprint_basis  <- match.arg(fingerprint_basis)
   
   # Check for glmnet if nneg constraints are provided
   if (!is.null(nneg) && length(nneg) > 0 && regtype == "lm") {
@@ -882,10 +939,45 @@ rsa_model <- function(dataset,
     dims <- dim(dataset$train_data)
     if (is.null(dims)) length(dataset$train_data) else dims[length(dims)]
   }
-  expected_len <- choose(nobs_dataset, 2)
-  if (!is.null(design$include)) {
-    expected_len <- sum(design$include)
+
+  if (inherits(design, "pair_rsa_design")) {
+    pair_kind_chk <- design$pair_kind %||% "within"
+    raw_len <- if (identical(pair_kind_chk, "between")) {
+      design$n_a * design$n_b
+    } else {
+      choose(design$n_a, 2)
+    }
+    if (identical(pair_kind_chk, "between")) {
+      max_row <- max(c(design$row_idx_a, design$row_idx_b))
+      if (max_row > nobs_dataset) {
+        stop(sprintf(
+          "row_idx_a/row_idx_b reference row %d but dataset has %d observations.",
+          max_row, nobs_dataset
+        ), call. = FALSE)
+      }
+    } else if (!is.null(design$row_idx_a)) {
+      max_row <- max(design$row_idx_a)
+      min_row <- min(design$row_idx_a)
+      if (max_row > nobs_dataset || min_row < 1L) {
+        stop(sprintf(
+          "row_idx_a references rows outside the dataset observations [1, %d].",
+          nobs_dataset
+        ), call. = FALSE)
+      }
+    } else if (design$n_a != nobs_dataset) {
+      stop(sprintf(
+        "Mismatch between dataset observations (%d) and pair_rsa_design n_a (%d). Use `row_idx_a` for within-mode subset/reordered designs.",
+        nobs_dataset, design$n_a
+      ), call. = FALSE)
+    }
+    expected_len <- if (!is.null(design$include)) sum(design$include) else raw_len
+  } else {
+    expected_len <- choose(nobs_dataset, 2)
+    if (!is.null(design$include)) {
+      expected_len <- sum(design$include)
+    }
   }
+
   model_vec_len <- length(design$model_mat[[1]])
   if (model_vec_len != expected_len) {
     stop(sprintf(
@@ -904,20 +996,99 @@ rsa_model <- function(dataset,
       nneg = nneg
     )
   }
-  
+
+  fingerprint_basis_obj <- NULL
+  if (isTRUE(return_fingerprint)) {
+    fingerprint_basis_obj <- .rsa_build_fingerprint_basis(
+      design = design,
+      method = fingerprint_method,
+      basis  = fingerprint_basis
+    )
+  }
+
   # Create the RSA model object
   obj <- create_model_spec(
-    "rsa_model", 
-    dataset, 
-    design, 
-    distmethod = distmethod, 
+    "rsa_model",
+    dataset,
+    design,
+    distmethod = distmethod,
     regtype    = regtype,
     nneg       = nneg,
     semipartial = semipartial,
     pattern_center = pattern_center,
-    .fast_kernel = fast_kernel
+    return_fingerprint = isTRUE(return_fingerprint),
+    fingerprint_method = fingerprint_method,
+    fingerprint_basis  = fingerprint_basis,
+    .fast_kernel = fast_kernel,
+    .fingerprint_basis = fingerprint_basis_obj
   )
   obj
+}
+
+
+#' @keywords internal
+#' @noRd
+.rsa_build_fingerprint_basis <- function(design, method, basis, tol = 1e-8) {
+  predictor_names <- names(design$model_mat)
+  model_predictors <- design$model_predictors
+  if (is.null(model_predictors)) {
+    model_predictors <- predictor_names
+  }
+  model_predictors <- intersect(model_predictors, predictor_names)
+  if (length(model_predictors) == 0L) {
+    stop("`return_fingerprint = TRUE` requires at least one signal model predictor; nuisance-only designs do not define a model-space fingerprint.",
+         call. = FALSE)
+  }
+  mat <- do.call(cbind, design$model_mat[model_predictors])
+  if (!is.matrix(mat) || ncol(mat) == 0L || nrow(mat) < 2L) {
+    return(NULL)
+  }
+  storage.mode(mat) <- "double"
+  X <- .rdm_model_space_standardize_matrix(mat, method = method, tol = tol,
+                                           label = "model_mat")
+  bf <- .rdm_model_space_basis(X, basis = basis, tol = tol)
+  list(
+    Q          = bf$Q,
+    axis_names = bf$axis_names,
+    method     = method,
+    basis      = basis,
+    p          = nrow(X),
+    tol        = tol
+  )
+}
+
+
+#' @keywords internal
+#' @noRd
+.rsa_project_fingerprint <- function(dvec, fp) {
+  if (is.null(fp) || is.null(fp$Q)) return(NULL)
+  if (length(dvec) != fp$p) return(NULL)
+
+  v <- as.numeric(dvec)
+  if (identical(fp$method, "spearman")) {
+    v <- rank(v, ties.method = "average")
+  }
+  v <- v - mean(v)
+  s <- stats::sd(v)
+  if (!is.finite(s) || s <= fp$tol) {
+    out <- rep(NA_real_, ncol(fp$Q))
+    names(out) <- fp$axis_names
+    return(out)
+  }
+  v <- v / s
+  scores <- drop(crossprod(fp$Q, v)) / sqrt(fp$p - 1L)
+  names(scores) <- fp$axis_names
+  scores
+}
+
+
+#' @keywords internal
+#' @noRd
+.rsa_attach_fingerprint <- function(out, dvec, fp) {
+  scores <- .rsa_project_fingerprint(dvec, fp)
+  if (is.null(scores)) return(out)
+  attr(out, "fingerprint") <- scores
+  out
 }
 
 #' @rdname output_schema

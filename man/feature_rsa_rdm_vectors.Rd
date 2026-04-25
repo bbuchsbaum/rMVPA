@@ -9,7 +9,8 @@ feature_rsa_rdm_vectors(x)
 \arguments{
 \item{x}{A \code{regional_mvpa_result} returned by \code{run_regional()} for a
 \code{feature_rsa_model}, or a tibble/data frame with columns
-\code{roinum} and \code{rdm_vec}.}
+\code{roinum} and \code{rdm_vec}. A \code{regional_mvpa_result} may store
+vectors either in-memory or on disk in \code{$rdm_batch_dir}.}
 }
 \value{
 A tibble with one row per ROI and columns:
@@ -28,7 +29,9 @@ A tibble with one row per ROI and columns:
 Convenience helper to pull the compact lower-triangle predicted (and
 optionally observed) RDM vectors stored by
 \code{feature_rsa_model(..., return_rdm_vectors = TRUE)} from a
-\code{regional_mvpa_result}.
+\code{regional_mvpa_result}. Results can come either from in-memory
+\code{$fits} or from file-backed batches written via
+\code{run_regional(..., save_rdm_vectors_dir = ...)}.
 }
 \examples{
 \dontrun{

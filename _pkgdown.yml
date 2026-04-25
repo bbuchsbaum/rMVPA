@@ -31,6 +31,7 @@ articles:
   - Advanced_RSA
   - Feature_RSA_Domain_Adaptation
   - Feature_RSA_Connectivity
+  - Model_Space_Connectivity
   - Feature_RSA_Advanced_Workflows
 - title: Representation Mapping (REMAP) Models
   desc: |

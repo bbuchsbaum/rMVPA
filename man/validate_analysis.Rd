@@ -3,12 +3,15 @@
 \name{validate_analysis}
 \alias{validate_analysis}
 \alias{validate_analysis.mvpa_model}
+\alias{validate_analysis.model_spec}
 \alias{validate_analysis.mvpa_design}
 \title{Validate an MVPA Analysis for Common Methodological Issues}
 \usage{
 validate_analysis(x, ...)
 
 \method{validate_analysis}{mvpa_model}(x, verbose = TRUE, ...)
+
+\method{validate_analysis}{model_spec}(x, verbose = TRUE, ...)
 
 \method{validate_analysis}{mvpa_design}(x, crossval = NULL, dataset = NULL, verbose = TRUE, ...)
 }

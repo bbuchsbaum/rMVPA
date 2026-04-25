@@ -323,7 +323,7 @@ combine_schema_standard <- function(model_spec, good_results, bad_results) {
 
   metric_names <- names(output_maps)
 
-  structure(
+  out <- structure(
     list(
       results = output_maps,
       n_voxels = estimate_mask_size(model_spec$dataset),
@@ -332,4 +332,12 @@ combine_schema_standard <- function(model_spec, good_results, bad_results) {
     ),
     class = c("searchlight_result", "list")
   )
+
+  fp_table <- .collect_fingerprint_table(good_results)
+  if (!is.null(fp_table)) {
+    fp_table$dataset <- model_spec$dataset
+    attr(out, "fingerprints") <- fp_table
+  }
+
+  out
 }

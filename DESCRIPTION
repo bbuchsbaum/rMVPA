@@ -93,6 +93,8 @@ Collate:
     'average_labels.R'
     'table_to_rdm.R'
     'rdm_decorrelation.R'
+    'pair_rsa_design.R'
+    'model_space_connectivity.R'
     'naive_xdec_model.R'
     'remap_rrr_model.R'
     'run_searchlight_remap_rrr.R'

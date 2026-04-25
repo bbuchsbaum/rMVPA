@@ -322,9 +322,15 @@ combine_standard <- function(model_spec, good_results, bad_results) {
   tryCatch({
     ind <- unlist(good_results$id)
     perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
-    
+
     ret <- wrap_out(perf_mat, model_spec$dataset, ind)
-    
+
+    fp_table <- .collect_fingerprint_table(good_results)
+    if (!is.null(fp_table)) {
+      fp_table$dataset <- model_spec$dataset
+      attr(ret, "fingerprints") <- fp_table
+    }
+
     # Optionally construct a 4D (space x trial) map of
     # prob_observed for classification results, when available.
     has_results <- any(unlist(purrr::map(good_results$result, function(x) !is.null(x))))

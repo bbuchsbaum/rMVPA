@@ -30,6 +30,7 @@ run_regional_base(
   stack_folds = NULL,
   stack_seed = NULL,
   stack_lambda = 0.001,
+  save_rdm_vectors_dir = NULL,
   preflight = c("warn", "error", "off"),
   backend = c("default", "shard", "auto"),
   ...
@@ -100,6 +101,13 @@ an integer number of folds, a fold-id vector, or a list of fold indices.}
 
 \item{stack_lambda}{Ridge penalty used by \pkg{glmnet} in stacking.}
 
+\item{save_rdm_vectors_dir}{Optional directory where feature-RSA predicted and
+observed RDM vectors should be written batch-by-batch. When supplied for
+`feature_rsa_model(..., return_rdm_vectors = TRUE)`, `run_regional()`
+writes compact `rdm_batches/batch_*.rds` files in that directory and
+returns `rdm_batch_dir` in the result instead of retaining all ROI RDM
+vectors in memory.}
+
 \item{preflight}{One of \code{"warn"} (default), \code{"error"}, or
 \code{"off"} controlling whether analysis preflight findings emit warnings,
 stop the run, or are skipped.}
@@ -112,6 +120,8 @@ A \code{regional_mvpa_result} object (list) containing:
   \item{pooled_performance}{Optional pooled performance metrics when pooling is requested.}
   \item{vol_results}{A list of volumetric maps representing performance metrics across space (if computed).}
   \item{fits}{A list of fitted model objects for each region (if requested via `return_fits=TRUE`).}
+  \item{rdm_batch_dir}{Optional directory of file-backed feature-RSA RDM-vector
+  batches when `save_rdm_vectors_dir` is used.}
   \item{model_spec}{The original model specification object provided.} # Note: Original documentation said 'performance', clarified here.
 }
 \description{

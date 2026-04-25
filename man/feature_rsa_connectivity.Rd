@@ -9,13 +9,16 @@ feature_rsa_connectivity(
   method = c("spearman", "pearson"),
   keep = 1,
   absolute = FALSE,
-  use = "pairwise.complete.obs"
+  use = "pairwise.complete.obs",
+  verbose = FALSE
 )
 }
 \arguments{
 \item{x}{Either a \code{regional_mvpa_result} produced by
 \code{feature_rsa_model(..., return_rdm_vectors=TRUE)} or the tibble
-returned by \code{feature_rsa_rdm_vectors()}.}
+returned by \code{feature_rsa_rdm_vectors()}. Regional results may store
+RDM vectors either in-memory or in file-backed batches written by
+\code{run_regional(..., save_rdm_vectors_dir = ...)}.}
 
 \item{method}{Correlation method used across ROI RDM vectors, one of
 \code{"spearman"} or \code{"pearson"}.}
@@ -28,6 +31,9 @@ sparsification. \code{keep = 1} disables sparsification. For example,
 during sparsification. Defaults to \code{FALSE}.}
 
 \item{use}{Missing-value handling passed to \code{\link[stats]{cor}}.}
+
+\item{verbose}{Logical; if \code{TRUE}, emit block-level progress messages
+while connectivity is being computed.}
 }
 \value{
 A symmetric numeric matrix with ROIs in rows/columns.

@@ -78,8 +78,10 @@ simple lists of maps) to a directory on disk in a reproducible layout.
     \code{searchlight_result} method to write volumetric maps in \code{vol_results},
     then saves regional tables such as \code{performance_table} and
     \code{prediction_table} as tab-delimited text. For \code{level != "minimal"},
-    ROI-wise fits (if present) are saved under \code{<dir>/fits}. A manifest can
-    be written summarizing ROI counts, presence of fits, and all file paths.
+    ROI-wise fits (if present) are saved under \code{<dir>/fits}. File-backed
+    feature-RSA RDM batches remain in \code{$rdm_batch_dir} and are referenced
+    in the manifest. A manifest can be written summarizing ROI counts, presence
+    of fits, and all file paths.
   \item \strong{\code{save_results.default}}: if \code{x} is a named list of
     \code{NeuroVol}/\code{NeuroVec} (and/or surface) objects, it is treated as a
     lightweight searchlight-style result and handled as above. Otherwise a

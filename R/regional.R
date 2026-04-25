@@ -1055,7 +1055,47 @@ run_regional_base <- function(model_spec,
     attr(out, "preflight") <- preflight_result
   }
 
+  if (is.data.frame(results)) {
+    fp_table <- .collect_fingerprint_table(results)
+    if (!is.null(fp_table)) {
+      attr(out, "fingerprints") <- fp_table
+    }
+  }
+
   out
+}
+
+
+#' @keywords internal
+#' @noRd
+.collect_fingerprint_table <- function(results) {
+  fp <- if ("fingerprint" %in% names(results)) results[["fingerprint"]] else NULL
+
+  # Fallback: when fit_roi is the active path the fingerprint attribute rides
+  # on the per-ROI performance vector instead of an explicit list-column.
+  if (is.null(fp) && "performance" %in% names(results)) {
+    fp <- lapply(results[["performance"]], function(p) {
+      if (is.null(p)) return(NULL)
+      if (is.list(p) && !is.data.frame(p) && length(p) == 1L) p <- p[[1]]
+      attr(p, "fingerprint", exact = TRUE)
+    })
+  }
+
+  if (is.null(fp)) return(NULL)
+  keep <- !vapply(fp, is.null, logical(1))
+  if (!any(keep)) return(NULL)
+  ids  <- if ("id" %in% names(results)) as.integer(unlist(results$id[keep])) else seq_along(fp)[keep]
+  vecs <- fp[keep]
+  lens <- vapply(vecs, length, integer(1))
+  if (length(unique(lens)) != 1L) return(NULL)
+  mat <- do.call(rbind, vecs)
+  rownames(mat) <- as.character(ids)
+  if (!is.null(names(vecs[[1]]))) colnames(mat) <- names(vecs[[1]])
+  list(
+    ids      = ids,
+    scores   = mat,
+    rdms     = NULL
+  )
 }
 
 

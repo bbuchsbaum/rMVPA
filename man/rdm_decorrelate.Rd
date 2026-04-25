@@ -21,54 +21,54 @@ rdm_decorrelate(
 )
 }
 \arguments{
-\item{rdms}{Named list of square symmetric matrices or \code{dist} objects. All
+\item{rdms}{Named list of square symmetric matrices or `dist` objects. All
 RDMs must have the same size and contain finite lower-triangular values.}
 
-\item{method}{Character string, either \code{"ordered_innovation"} or \code{"zca"}.}
+\item{method}{Character string, either `"ordered_innovation"` or `"zca"`.}
 
-\item{similarity}{Character string. \code{"spearman"} rank-standardizes each RDM
-vector before decorrelation. \code{"pearson"} uses centered/scaled numeric RDM
+\item{similarity}{Character string. `"spearman"` rank-standardizes each RDM
+vector before decorrelation. `"pearson"` uses centered/scaled numeric RDM
 values directly.}
 
-\item{objective}{Character string. \code{"constraint"} maximizes preservation
+\item{objective}{Character string. `"constraint"` maximizes preservation
 subject to the requested decorrelation tolerance when feasible.
-\code{"penalty"} minimizes preservation loss plus \code{mu} times the decorrelation
-penalty. \code{"full_residual"} uses the fully residualized ordered innovations
-and ignores \code{epsilon}.}
+`"penalty"` minimizes preservation loss plus `mu` times the decorrelation
+penalty. `"full_residual"` uses the fully residualized ordered innovations
+and ignores `epsilon`.}
 
 \item{epsilon}{Non-negative tolerance for the mean pairwise adjusted-RDM
-association under \code{objective = "constraint"}.}
+association under `objective = "constraint"`.}
 
-\item{gamma_grid}{Numeric vector in \code{[0, 1]} used for ordered innovation
-shrinkage. The first RDM is fixed at \code{gamma = 1}.}
+\item{gamma_grid}{Numeric vector in `[0, 1]` used for ordered innovation
+shrinkage. The first RDM is fixed at `gamma = 1`.}
 
-\item{mu}{Non-negative penalty multiplier used when \code{objective = "penalty"}.}
+\item{mu}{Non-negative penalty multiplier used when `objective = "penalty"`.}
 
-\item{target}{Character string. \code{"mean_abs"} penalizes mean absolute
-pairwise correlation; \code{"mean_squared"} penalizes mean squared pairwise
+\item{target}{Character string. `"mean_abs"` penalizes mean absolute
+pairwise correlation; `"mean_squared"` penalizes mean squared pairwise
 correlation.}
 
-\item{return}{Character string. \code{"dist"} returns adjusted RDMs as \code{dist}
-objects, \code{"matrix"} returns symmetric matrices, and \code{"vector"} returns
+\item{return}{Character string. `"dist"` returns adjusted RDMs as `dist`
+objects, `"matrix"` returns symmetric matrices, and `"vector"` returns
 lower-triangular vectors.}
 
-\item{project_correlation}{Logical. If \code{TRUE}, each adjusted RDM-score matrix
-is interpreted as \code{1 - correlation}, projected to the nearest positive
-semidefinite correlation matrix with unit diagonal using \code{Matrix::nearPD},
+\item{project_correlation}{Logical. If `TRUE`, each adjusted RDM-score matrix
+is interpreted as `1 - correlation`, projected to the nearest positive
+semidefinite correlation matrix with unit diagonal using `Matrix::nearPD`,
 and converted back to an RDM. This is off by default because projection can
 reintroduce RDM correlations.}
 
 \item{zca_ridge}{Numeric ridge added only when the RDM-vector covariance is
-rank deficient under \code{method = "zca"}.}
+rank deficient under `method = "zca"`.}
 
-\item{max_combinations}{Maximum number of exhaustive \code{gamma_grid}
+\item{max_combinations}{Maximum number of exhaustive `gamma_grid`
 combinations for ordered innovation. Larger problems use coordinate search.}
 
 \item{tol}{Numerical tolerance for degeneracy and rank checks.}
 }
 \value{
-An object of class \code{rdm_decorrelation_result} with adjusted RDMs,
-lower-triangular vectors, selected shrinkage parameters, and diagnostics.
+An object of class `rdm_decorrelation_result` with adjusted RDMs,
+  lower-triangular vectors, selected shrinkage parameters, and diagnostics.
 }
 \description{
 Estimates layer- or model-specific RDM score vectors by removing shared
@@ -78,16 +78,16 @@ and the goal is to evaluate their more distinct representational components.
 }
 \details{
 This function works in lower-triangular RDM-vector space. With
-\code{method = "ordered_innovation"}, RDMs are processed in the order supplied:
+`method = "ordered_innovation"`, RDMs are processed in the order supplied:
 each RDM vector is decomposed into the component predicted by earlier
 innovation vectors and a residual innovation. A shrinkage parameter
-\code{gamma} controls how much of the predicted/shared component is retained.
+`gamma` controls how much of the predicted/shared component is retained.
 
 The default objective is constrained preservation: preserve as much of each
 original standardized RDM vector as possible while forcing the mean pairwise
-association among adjusted RDM vectors below \code{epsilon} when feasible.
+association among adjusted RDM vectors below `epsilon` when feasible.
 
-With \code{method = "zca"}, the standardized RDM vectors are symmetrically
+With `method = "zca"`, the standardized RDM vectors are symmetrically
 whitened. This gives exact joint decorrelation in the Pearson sense when the
 RDM-vector covariance matrix is full rank, but each output RDM is a linear
 mixture of the original RDMs.

@@ -9,13 +9,16 @@ feature_rsa_cross_connectivity(
   method = c("spearman", "pearson"),
   adjust = c("none", "double_center", "residualize_mean"),
   return_components = FALSE,
-  use = "pairwise.complete.obs"
+  use = "pairwise.complete.obs",
+  verbose = FALSE
 )
 }
 \arguments{
 \item{x}{Either a \code{regional_mvpa_result} produced by
 \code{feature_rsa_model(..., return_rdm_vectors=TRUE)} or the tibble
-returned by \code{feature_rsa_rdm_vectors()}.}
+returned by \code{feature_rsa_rdm_vectors()}. Regional results may store
+RDM vectors either in-memory or in file-backed batches written by
+\code{run_regional(..., save_rdm_vectors_dir = ...)}.}
 
 \item{method}{Correlation method, one of \code{"spearman"} or
 \code{"pearson"}.}
@@ -32,6 +35,9 @@ the requested matrix, the raw matrix, the adjusted matrix, and the source
 and target offset terms estimated from the raw matrix.}
 
 \item{use}{Missing-value handling passed to \code{\link[stats]{cor}}.}
+
+\item{verbose}{Logical; if \code{TRUE}, emit block-level progress messages
+while cross-connectivity is being computed.}
 }
 \value{
 By default, a numeric matrix of dimension n_ROI x n_ROI. Rows

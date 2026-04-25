@@ -13,7 +13,8 @@ mvpa_iterate(
   processor = NULL,
   analysis_type = c("searchlight", "regional"),
   drop_probs = FALSE,
-  fail_fast = FALSE
+  fail_fast = FALSE,
+  save_rdm_vectors_dir = NULL
 )
 }
 \arguments{
@@ -48,6 +49,9 @@ Must accept parameters (obj, roi, rnum) and return a tibble.}
 \item{drop_probs}{Logical; if TRUE, drop per-ROI probability matrices after computing metrics. Default FALSE.}
 
 \item{fail_fast}{Logical; if TRUE, stop immediately on first ROI error. Default FALSE.}
+
+\item{save_rdm_vectors_dir}{Optional directory for writing file-backed
+feature-RSA RDM vector batches instead of retaining all vectors in memory.}
 }
 \value{
 A tibble containing results for each ROI with columns:
