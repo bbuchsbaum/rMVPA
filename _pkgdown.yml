@@ -52,6 +52,12 @@ articles:
   contents:
   - CustomAnalyses
   - Plugin_Development
+- title: internal
+  desc: |
+    Superseded vignettes retained as redirects. New work should use `vignette("CommandLine")`.
+  contents:
+  - CommandLineScripts
+  - MVPA_RegionalCmdline
 reference:
 - title: REMAP Diagnostics
   desc: |
