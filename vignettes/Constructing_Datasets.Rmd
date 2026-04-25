@@ -50,14 +50,18 @@ print(ds$dataset)
 print(ds$design)
 ```
 
-The dataset bundles a 4-D `NeuroVec` (voxels × time) and a binary `NeuroVol` mask. Two pictures make the shape concrete: a mid-axial slice of the mask, and the trial × run grid of the design.
+The dataset bundles a 4-D `NeuroVec` (voxels × time) and a binary `NeuroVol` mask. Two pictures make the shape concrete: a mid-axial slice of one trial's voxel pattern, and the trial × run grid of the design.
 
-```{r synthetic-visual, echo = FALSE, fig.cap = "Left: a mid-axial slice of the binary mask (active voxels in dark blue). Right: each trial coloured by run; runs split into equal-length blocks of trials.", fig.width = 7, fig.height = 3.4}
+```{r synthetic-visual, echo = FALSE, fig.cap = "Left: a mid-axial slice of one trial's voxel pattern (signed activation, blue↔red). The synthetic mask covers the full 6x6x6 volume here; in real data the mask would be a brain envelope. Right: each trial coloured by run; runs split into equal-length blocks of trials.", fig.width = 7, fig.height = 3.4}
 op <- par(mfrow = c(1, 2), mar = c(2.5, 2.5, 1.5, 0.5))
-mask_arr <- as.array(ds$dataset$mask)
-mid_z <- ceiling(dim(mask_arr)[3] / 2)
-image(mask_arr[, , mid_z], col = c("white", "#3a5b97"),
-      axes = FALSE, main = "mask slice")
+trial_vol <- as.array(neuroim2::vols(ds$dataset$train_data)[[1]])
+mid_z <- ceiling(dim(trial_vol)[3] / 2)
+sl <- trial_vol[, , mid_z]
+zr <- max(abs(sl), na.rm = TRUE)
+image(seq_len(nrow(sl)), seq_len(ncol(sl)), sl,
+      col = hcl.colors(48, "Blue-Red 3"),
+      zlim = c(-zr, zr),
+      axes = FALSE, xlab = "", ylab = "", main = "trial 1, mid slice")
 box()
 plot(seq_along(ds$design$block_var), ds$design$block_var,
      pch = 16, cex = 0.7,
