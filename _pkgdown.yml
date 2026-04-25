@@ -36,6 +36,7 @@ articles:
   - Feature_RSA_Connectivity
   - Model_Space_Connectivity
   - Feature_RSA_Domain_Adaptation
+  - Kriegeskorte_92_Images
 - title: Representation Mapping (REMAP) Models
   desc: |
     Models for learning transformations between perception and memory representations

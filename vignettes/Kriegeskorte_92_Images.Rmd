@@ -1,0 +1,189 @@
+---
+title: "Reproducing Kriegeskorte (2008) with rMVPA"
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: |
+  %\VignetteIndexEntry{Reproducing Kriegeskorte (2008) with rMVPA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  message  = FALSE,
+  warning  = FALSE,
+  fig.width = 6,
+  fig.height = 4.4,
+  dpi = 110
+)
+library(rMVPA)
+
+resolve_kriegeskorte_path <- function() {
+  installed <- system.file("extdata", "kriegeskorte92", "rdms.rds",
+                           package = "rMVPA")
+  if (nzchar(installed) && file.exists(installed)) return(installed)
+  # Fallback when the vignette is rendered from a source checkout that has
+  # not been installed (e.g. devtools::build_vignettes()).
+  src_candidates <- c(
+    file.path("..", "inst", "extdata", "kriegeskorte92", "rdms.rds"),
+    file.path("inst", "extdata", "kriegeskorte92", "rdms.rds")
+  )
+  for (p in src_candidates) if (file.exists(p)) return(normalizePath(p))
+  ""
+}
+```
+
+## What this vignette is for
+
+Every other vignette in the catalogue uses synthetic data. That is fine for teaching the API but it leaves the reader wondering whether the methods *actually work on real data*. This vignette reproduces a canonical RSA finding — Kriegeskorte, Mur et al. (2008, *Neuron*) on the 92-image stimulus set — using the published human-IT representational dissimilarity matrices (RDMs) bundled with the package. By the end you will see rMVPA recover, from public data, the same model-RDM ranking reported in the original paper.
+
+## The dataset
+
+The package bundle `inst/extdata/kriegeskorte92/rdms.rds` contains:
+
+- 8 human-IT RDMs from 4 subjects (`BE`, `KO`, `SN`, `TI`) measured in 2 sessions each. Each is a 92 × 92 dissimilarity matrix in correlation-distance units.
+- 8 model RDMs at the same 92-stimulus grid: `animacy`, `FaceBodyManmadeNatobj`, `monkeyIT`, `EVA`, `HMAX`, `V1`, `Silhouette`, `RADON`.
+
+The matrices were re-derived from the supplemental MATLAB files redistributed by the rsatoolbox project (see `inst/extdata/kriegeskorte92/README.md` for citation details).
+
+```{r load-bundle}
+data_path <- resolve_kriegeskorte_path()
+bundle <- readRDS(data_path)
+
+length(bundle$brain)
+length(bundle$model)
+names(bundle$model)
+```
+
+## The famous animate / inanimate structure
+
+The most reproduced finding from this dataset is that human inferior temporal cortex (hIT) encodes a strong animate / inanimate division. The animacy model RDM is a block-structured matrix: 0 within the same animacy class, 1 between classes. When you plot it next to one subject's hIT RDM you see the same coarse 2 × 2 block structure — small dissimilarities within each animacy group, large dissimilarities across.
+
+```{r animacy-vs-it}
+hit_subj1 <- bundle$brain[["hIT_BE_Session_1"]]
+animacy   <- bundle$model[["animacy"]]
+```
+
+```{r animacy-plot, echo = FALSE, fig.cap = "Left: animacy model RDM (block structure: animate vs inanimate). Right: subject BE's session-1 human-IT RDM. The same diagonal-block pattern is visible in both: items within the same animacy class are more similar than items across classes.", fig.width = 7.5, fig.height = 3.6, out.width = "92%"}
+op <- par(mfrow = c(1, 2), mar = c(2.5, 2.5, 1.6, 0.5))
+image(seq_len(92), seq_len(92), animacy,
+      col = hcl.colors(48, "YlOrBr", rev = TRUE), axes = FALSE,
+      xlab = "", ylab = "", main = "Model: animacy")
+abline(h = 48.5, v = 48.5, lty = 2, col = "grey60"); box()
+image(seq_len(92), seq_len(92), hit_subj1,
+      col = hcl.colors(48, "YlOrBr", rev = TRUE), axes = FALSE,
+      xlab = "", ylab = "", main = "Human IT (subject BE, session 1)")
+abline(h = 48.5, v = 48.5, lty = 2, col = "grey60"); box()
+par(op)
+```
+
+The first 48 stimuli are animate, the rest inanimate; the dashed lines mark that boundary. The same coarse blocking is visible in the brain RDM.
+
+## RSA across all subjects and models
+
+The classical question is: which of these candidate models best explains the hIT geometry, and how stable is that ranking across subjects? In rMVPA, comparing per-subject RDMs against multiple model RDMs is one call to `rdm_model_space_connectivity()` — but for a clean Spearman-correlation table we'll do it directly so the numbers are visibly familiar.
+
+```{r rsa-table}
+spearman_rdm <- function(A, B) {
+  cor(A[lower.tri(A)], B[lower.tri(B)], method = "spearman")
+}
+
+scores <- sapply(bundle$model, function(M) {
+  vapply(bundle$brain, function(R) spearman_rdm(R, M), numeric(1))
+})
+round(scores, 3)
+```
+
+Each cell is the Spearman correlation between one (subject, session) human-IT RDM and one model RDM. The rows are 4 subjects × 2 sessions; the columns are the 8 model RDMs.
+
+```{r rsa-summary}
+mean_score <- colMeans(scores)
+round(sort(mean_score, decreasing = TRUE), 3)
+```
+
+The ranking is the canonical Kriegeskorte 2008 pattern: monkey IT and animacy explain the most variance in human IT, the FaceBodyManmadeNatobj category model close behind, and the low-level vision models (V1, HMAX, Silhouette, RADON) clearly weaker. EVA sits between the categorical and the low-level groups.
+
+```{r rsa-bars, echo = FALSE, fig.cap = "Mean Spearman correlation between each model RDM and human-IT RDMs (averaged across the 8 (subject, session) RDMs). Error bars are between-RDM SEM.", fig.width = 7, fig.height = 4, out.width = "85%"}
+sem <- apply(scores, 2, function(x) sd(x) / sqrt(length(x)))
+ord <- order(mean_score, decreasing = TRUE)
+
+op <- par(mar = c(7, 4, 1.5, 0.5))
+bp <- barplot(mean_score[ord], col = "#3a5b97", border = NA,
+              ylim = c(0, max(mean_score + sem) * 1.15),
+              names.arg = names(mean_score)[ord], las = 2,
+              ylab = "Spearman rho with hIT")
+arrows(bp, mean_score[ord] - sem[ord], bp, mean_score[ord] + sem[ord],
+       angle = 90, code = 3, length = 0.04, col = "grey30")
+abline(h = 0, col = "grey80")
+par(op)
+```
+
+This is the result that appears (in slightly different form) as Figure 6 in the original paper.
+
+## Same data, two views: model-space connectivity
+
+The 8 hIT RDMs are not just samples of a single human-IT representation. Two sessions from the same subject ought to look more like each other than two sessions from different subjects, and the package exposes that question directly. Treat each of the 8 RDMs as a "unit" (the analogue of an ROI), project onto the model-RDM subspace via `rdm_model_space_connectivity()`, and compare unit fingerprints.
+
+```{r connectivity-call}
+roi_mat <- vapply(bundle$brain, function(R) R[lower.tri(R)],
+                  numeric(92 * 91 / 2))
+mod_mat <- vapply(bundle$model, function(M) M[lower.tri(M)],
+                  numeric(92 * 91 / 2))
+
+conn <- rdm_model_space_connectivity(
+  roi_rdms   = roi_mat,
+  model_rdms = mod_mat,
+  method     = "spearman",
+  basis      = "pca"
+)
+
+round(conn$similarity, 2)
+```
+
+`conn$similarity` is the 8 × 8 unit-by-unit similarity through the model-RDM subspace. Reading the off-diagonal pattern: same-subject pairs (e.g. `hIT_BE_Session_1` × `hIT_BE_Session_2`) sit higher than cross-subject pairs, but cross-subject pairs are still strongly positive — exactly what you'd expect if every subject's hIT expresses the same shared categorical model space, with subject-specific noise.
+
+```{r connectivity-heatmap, echo = FALSE, fig.cap = "Unit-by-unit (subject x session) representational connectivity through the 8-model subspace. Diagonal blocks (within-subject) sit higher than off-diagonal blocks (between-subject); all entries are positive because the model space is shared across subjects.", fig.width = 5.6, fig.height = 5, out.width = "70%"}
+S <- conn$similarity
+op <- par(mar = c(8, 8, 1.5, 0.5))
+image(seq_len(nrow(S)), seq_len(ncol(S)), S,
+      col = hcl.colors(48, "Blue-Red 3"),
+      axes = FALSE, xlab = "", ylab = "")
+axis(1, at = seq_len(nrow(S)), labels = rownames(S), las = 2, cex.axis = 0.8)
+axis(2, at = seq_len(ncol(S)), labels = colnames(S), las = 1, cex.axis = 0.8)
+box()
+par(op)
+```
+
+`conn$component_similarity` decomposes the 8 × 8 matrix into rank-1 contributions from each orthogonal axis of the model space. The first axis captures most of the shared geometry; the rest distinguish *which* models a given (subject, session) leans on more than the others. See `vignette("Model_Space_Connectivity")` for that workflow on synthetic data.
+
+## Verifying against the published table
+
+The published numbers in Kriegeskorte, Mur et al. (2008) are reported per-subject and use slightly different statistical processing (between-subject inferential test, fixed-effects bar charts, etc.). For a quick face-validity check we report the cross-subject mean and the SEM:
+
+```{r rank-check}
+ranking <- data.frame(
+  model       = names(bundle$model),
+  mean_rho    = round(mean_score, 3),
+  sem_rho     = round(apply(scores, 2, function(x) sd(x) / sqrt(length(x))), 3)
+)
+ranking[order(ranking$mean_rho, decreasing = TRUE), ]
+```
+
+The ordering is the same as in the paper: the categorical models (monkey IT, animacy, FaceBodyManmadeNatobj) lead, low-level vision lags. If you re-do this analysis with raw (pearson, not spearman) correlations or with the `corDist`-style metric used in the paper you'll see slightly different absolute numbers but the same ranking.
+
+## Where to go next
+
+- For a synthetic-data walkthrough of the same connectivity machinery, see `vignette("Model_Space_Connectivity")`.
+- For pair-design generalisations (cross-domain RDMs, function-valued model entries), see the same vignette.
+- For Feature-RSA's complementary "predict the RDM through a learned feature space" workflow, see `vignette("Feature_RSA_Connectivity")`.
+
+## Citation
+
+The original dataset and findings are due to:
+
+> Kriegeskorte, Mur, Ruff, Kiani, Bodurka, Esteky, Tanaka, Bandettini (2008). *Matching categorical object representations in inferior temporal cortex of man and monkey.* **Neuron 60**: 1126–1141. <https://doi.org/10.1016/j.neuron.2008.10.043>
+
+The matrices used here were rebuilt from the supplemental MATLAB files redistributed by the [rsatoolbox project](https://github.com/rsagroup/rsatoolbox/tree/main/demos/92imageData). When publishing analyses based on this bundle, cite Kriegeskorte et al. (2008) and the rsatoolbox group.
