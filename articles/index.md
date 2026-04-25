@@ -28,6 +28,8 @@ approaches
   Analysis](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md):
 - [Advanced Regional MVPA Analysis in
   rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md):
+- [Reproducing Haxby (2001) classification with
+  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.md):
 - [Command-Line MVPA
   Interfaces](http://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md):
 

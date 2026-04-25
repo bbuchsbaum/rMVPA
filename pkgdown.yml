@@ -14,6 +14,7 @@ articles:
   Feature_RSA_Connectivity: Feature_RSA_Connectivity.html
   Feature_RSA_Domain_Adaptation: Feature_RSA_Domain_Adaptation.html
   FeatureSelection: FeatureSelection.html
+  Haxby_2001: Haxby_2001.html
   Kriegeskorte_92_Images: Kriegeskorte_92_Images.html
   Model_Space_Connectivity: Model_Space_Connectivity.html
   MVPA_RegionalCmdline: MVPA_RegionalCmdline.html
@@ -28,7 +29,7 @@ articles:
   RSA: RSA.html
   Searchlight_Analysis: Searchlight_Analysis.html
   Temporal_Confounds_in_RSA: Temporal_Confounds_in_RSA.html
-last_built: 2026-04-25T16:46Z
+last_built: 2026-04-25T17:25Z
 urls:
   reference: http://bbuchsbaum.github.io/rMVPA/reference
   article: http://bbuchsbaum.github.io/rMVPA/articles
