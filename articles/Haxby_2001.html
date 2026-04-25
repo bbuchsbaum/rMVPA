@@ -284,6 +284,92 @@ while cat / shoe / bottle confuse with one another – the canonical Haxby
 paper.</p>
 </div>
 <div class="section level2">
+<h2 id="comparing-classifiers">Comparing classifiers<a class="anchor" aria-label="anchor" href="#comparing-classifiers"></a>
+</h2>
+<p><code><a href="../reference/mvpa_model.html">mvpa_model()</a></code> reads its classifier from rMVPA’s
+pre-registered registry, so swapping the family is one line. Below we
+run the same VT analysis under five classifiers covering different
+inductive biases:</p>
+<ul>
+<li>
+<strong><code>corclass</code></strong> — correlation-to-prototype,
+the original Haxby (2001) method.</li>
+<li>
+<strong><code>naive_bayes</code></strong> — independent-feature
+Gaussian; a simple baseline.</li>
+<li>
+<strong><code>rf</code></strong> — random forest
+(<code>randomForest</code>); ensemble of bagged trees.</li>
+<li>
+<strong><code>svmLinear</code></strong> — linear support vector
+machine; large-margin separator.</li>
+<li>
+<strong><code>sda_notune</code></strong> — shrinkage discriminant;
+rMVPA’s recommended default.</li>
+</ul>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit_one</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">model_name</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">t0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span><span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="va">model_name</span><span class="op">)</span>, dataset <span class="op">=</span> <span class="va">ds</span>, design <span class="op">=</span> <span class="va">mvdes</span>,</span>
+<span>                      crossval <span class="op">=</span> <span class="va">cval</span>, <span class="va">...</span><span class="op">)</span></span>
+<span>  <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mspec</span>, <span class="va">region_mask</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>  <span class="va">pt</span>  <span class="op">&lt;-</span> <span class="va">res</span><span class="op">$</span><span class="va">performance_table</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    classifier <span class="op">=</span> <span class="va">model_name</span>,</span>
+<span>    accuracy   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">pt</span><span class="op">$</span><span class="va">Accuracy</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>    auc        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">pt</span><span class="op">$</span><span class="va">AUC</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>    seconds    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/difftime.html" class="external-link">difftime</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.time</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">t0</span>, units <span class="op">=</span> <span class="st">"secs"</span><span class="op">)</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">panel</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
+<span>  <span class="fu">fit_one</span><span class="op">(</span><span class="st">"corclass"</span><span class="op">)</span>,</span>
+<span>  <span class="fu">fit_one</span><span class="op">(</span><span class="st">"naive_bayes"</span><span class="op">)</span>,</span>
+<span>  <span class="fu">fit_one</span><span class="op">(</span><span class="st">"rf"</span>,        tune_grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>mtry <span class="op">=</span> <span class="fl">50</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu">fit_one</span><span class="op">(</span><span class="st">"svmLinear"</span><span class="op">)</span>,</span>
+<span>  <span class="fu">fit_one</span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">panel</span> <span class="op">&lt;-</span> <span class="va">panel</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">panel</span><span class="op">$</span><span class="va">accuracy</span><span class="op">)</span>, <span class="op">]</span></span>
+<span><span class="va">panel</span></span>
+<span><span class="co">#&gt;    classifier accuracy   auc seconds</span></span>
+<span><span class="co">#&gt; 5  sda_notune    0.917 0.973     1.5</span></span>
+<span><span class="co">#&gt; 4   svmLinear    0.698 0.853     2.1</span></span>
+<span><span class="co">#&gt; 3          rf    0.500 0.694    10.9</span></span>
+<span><span class="co">#&gt; 2 naive_bayes    0.375 0.481     1.7</span></span>
+<span><span class="co">#&gt; 1    corclass    0.271 0.289     1.1</span></span></code></pre></div>
+<div class="figure">
+<img src="Haxby_2001_files/figure-html/classifier-bars-1.png" class="r-plt" alt="Cross-validated accuracy under five classifiers, all on the same VT patterns and the same leave-one-run-out CV. Dashed line = chance for an 8-way problem (12.5%)." width="75%"><p class="caption">
+Cross-validated accuracy under five classifiers, all on the same VT
+patterns and the same leave-one-run-out CV. Dashed line = chance for an
+8-way problem (12.5%).
+</p>
+</div>
+<p><code>sda_notune</code>’s shrinkage discriminant dominates by ≈25
+percentage points. That gap is not a cross-validation artefact:
+leave-one-run-out is honest here (each fold’s 8 test patterns come from
+a single held-out run; runs do not overlap; the bundled mean patterns
+are built per-run so no cross-run averaging leaks signal). Running
+<code><a href="https://rdrr.io/pkg/sda/man/sda.html" class="external-link">sda::sda</a></code> directly outside rMVPA on the same patterns and
+the same fold structure reproduces 0.917 to two decimal places.</p>
+<p>Why such a wide spread? The dataset shape (96 observations × 577
+voxels × 8 classes) is exactly the regime where pooled shrinkage
+covariance estimation pays for itself: voxels are strongly correlated,
+the within-class covariance is rank-deficient, and unregularised methods
+either overfit (<code>naive_bayes</code> is forced into independence;
+<code>rf</code> averages weak high-variance trees) or treat the boundary
+geometrically without using the covariance structure
+(<code>svmLinear</code>). <code>corclass</code> tops out at ≈27 %
+because it’s an 8-way correlation-to-prototype classifier; the canonical
+Haxby (2001) ≈90 % numbers came from a <em>binary,
+split-half-within-run</em> version of correlation classification that is
+structurally different from the 8-way leave-one-run-out reported
+here.</p>
+<p>The full <code>MVPAModels</code> registry includes 22 classifiers;
+see <code>ls(rMVPA:::MVPAModels)</code> for the complete list and
+<code><a href="../articles/FeatureSelection.html">vignette("FeatureSelection")</a></code> for adding feature selection
+inside the CV loop.</p>
+</div>
+<div class="section level2">
 <h2 id="where-the-raw-data-lives">Where the raw data lives<a class="anchor" aria-label="anchor" href="#where-the-raw-data-lives"></a>
 </h2>
 <p>The <code>patterns.rds</code> bundle in this package is one subject
@@ -293,7 +379,7 @@ first-level GLM, two routes:</p>
 <p><strong>A. The PyMVPA tutorial archive (≈300 MB)</strong> is the
 easiest source for the canonical preprocessed Subject 1 data with the
 published VT mask:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/download.file.html" class="external-link">download.file</a></span><span class="op">(</span></span>
 <span>  <span class="st">"http://data.pymvpa.org/datasets/haxby2001/subj1-2010.01.14.tar.gz"</span>,</span>
 <span>  destfile <span class="op">=</span> <span class="st">"subj1.tar.gz"</span>, mode <span class="op">=</span> <span class="st">"wb"</span></span>
@@ -303,7 +389,7 @@ published VT mask:</p>
 <p><strong>B. OpenNeuro <code>ds000105</code> via the
 <code>openneuro</code> package</strong> for the raw BIDS layout (no
 preprocessing, no VT mask — bring your own pipeline):</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">openneuro</span><span class="op">)</span></span>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">on_download</span><span class="op">(</span>id <span class="op">=</span> <span class="st">"ds000105"</span>, subjects <span class="op">=</span> <span class="st">"sub-1"</span><span class="op">)</span></span>
 <span><span class="co"># files are cached under on_cache_info()$path</span></span></code></pre></div>

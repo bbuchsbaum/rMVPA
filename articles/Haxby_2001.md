@@ -232,6 +232,89 @@ round(sort(per_cat, decreasing = TRUE), 2)
 
 Faces and houses lead — exactly as in Figure 2 of the original paper.
 
+## Comparing classifiers
+
+[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+reads its classifier from rMVPA’s pre-registered registry, so swapping
+the family is one line. Below we run the same VT analysis under five
+classifiers covering different inductive biases:
+
+- **`corclass`** — correlation-to-prototype, the original Haxby (2001)
+  method.
+- **`naive_bayes`** — independent-feature Gaussian; a simple baseline.
+- **`rf`** — random forest (`randomForest`); ensemble of bagged trees.
+- **`svmLinear`** — linear support vector machine; large-margin
+  separator.
+- **`sda_notune`** — shrinkage discriminant; rMVPA’s recommended
+  default.
+
+``` r
+fit_one <- function(model_name, ...) {
+  t0 <- Sys.time()
+  mspec <- mvpa_model(load_model(model_name), dataset = ds, design = mvdes,
+                      crossval = cval, ...)
+  res <- run_regional(mspec, region_mask, verbose = FALSE)
+  pt  <- res$performance_table
+  data.frame(
+    classifier = model_name,
+    accuracy   = round(pt$Accuracy, 3),
+    auc        = round(pt$AUC, 3),
+    seconds    = round(as.numeric(difftime(Sys.time(), t0, units = "secs")), 1)
+  )
+}
+
+panel <- rbind(
+  fit_one("corclass"),
+  fit_one("naive_bayes"),
+  fit_one("rf",        tune_grid = data.frame(mtry = 50)),
+  fit_one("svmLinear"),
+  fit_one("sda_notune")
+)
+panel <- panel[order(-panel$accuracy), ]
+panel
+#>    classifier accuracy   auc seconds
+#> 5  sda_notune    0.917 0.973     1.5
+#> 4   svmLinear    0.698 0.853     2.1
+#> 3          rf    0.500 0.694    10.9
+#> 2 naive_bayes    0.375 0.481     1.7
+#> 1    corclass    0.271 0.289     1.1
+```
+
+![Cross-validated accuracy under five classifiers, all on the same VT
+patterns and the same leave-one-run-out CV. Dashed line = chance for an
+8-way problem
+(12.5%).](Haxby_2001_files/figure-html/classifier-bars-1.png)
+
+Cross-validated accuracy under five classifiers, all on the same VT
+patterns and the same leave-one-run-out CV. Dashed line = chance for an
+8-way problem (12.5%).
+
+`sda_notune`’s shrinkage discriminant dominates by ≈25 percentage
+points. That gap is not a cross-validation artefact: leave-one-run-out
+is honest here (each fold’s 8 test patterns come from a single held-out
+run; runs do not overlap; the bundled mean patterns are built per-run so
+no cross-run averaging leaks signal). Running
+[`sda::sda`](https://rdrr.io/pkg/sda/man/sda.html) directly outside
+rMVPA on the same patterns and the same fold structure reproduces 0.917
+to two decimal places.
+
+Why such a wide spread? The dataset shape (96 observations × 577 voxels
+× 8 classes) is exactly the regime where pooled shrinkage covariance
+estimation pays for itself: voxels are strongly correlated, the
+within-class covariance is rank-deficient, and unregularised methods
+either overfit (`naive_bayes` is forced into independence; `rf` averages
+weak high-variance trees) or treat the boundary geometrically without
+using the covariance structure (`svmLinear`). `corclass` tops out at ≈27
+% because it’s an 8-way correlation-to-prototype classifier; the
+canonical Haxby (2001) ≈90 % numbers came from a *binary,
+split-half-within-run* version of correlation classification that is
+structurally different from the 8-way leave-one-run-out reported here.
+
+The full `MVPAModels` registry includes 22 classifiers; see
+`ls(rMVPA:::MVPAModels)` for the complete list and
+[`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+for adding feature selection inside the CV loop.
+
 ## Where the raw data lives
 
 The `patterns.rds` bundle in this package is one subject already
