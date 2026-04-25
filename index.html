@@ -51,71 +51,154 @@
 <div class="row">
   <main id="main" class="col-md-9">
 <!-- badges: end -->
+<div class="section level1">
+<div class="page-header"><h1 id="rmvpa--multivoxel-pattern-analysis-in-r">rMVPA — multivoxel pattern analysis in R<a class="anchor" aria-label="anchor" href="#rmvpa--multivoxel-pattern-analysis-in-r"></a>
+</h1></div>
+<p>A methodologically rigorous toolbox for decoding and representational analysis of neuroimaging data. One model spec runs <em>regionally</em> or via <em>searchlight</em>. Cross-validation respects fMRI run structure. RSA, MS-ReVE contrast decomposition, model-space connectivity, ERA cross-decoding, and domain-adaptive REMAP-RRR are all first-class — no one-off scripts in a graveyard of unmaintained lab repos.</p>
+<p>📖 <strong>Documentation:</strong> <a href="https://bbuchsbaum.github.io/rMVPA/" class="external-link uri">https://bbuchsbaum.github.io/rMVPA/</a></p>
 <div class="section level2">
-<h2 id="multivoxel-pattern-analysis-in-r">Multivoxel Pattern Analysis in R<a class="anchor" aria-label="anchor" href="#multivoxel-pattern-analysis-in-r"></a>
+<h2 id="the-mental-model">The mental model<a class="anchor" aria-label="anchor" href="#the-mental-model"></a>
 </h2>
-<div class="section level3">
-<h3 id="this-package-is-under-development">This package is under development.<a class="anchor" aria-label="anchor" href="#this-package-is-under-development"></a>
-</h3>
+<pre><code>mvpa_dataset  ──►   mvpa_design   ──►   model_spec   ──►   engine     ──►   result
+(voxels x time      (response,         (rsa_model,        (run_regional      (regional_mvpa_result
+ + mask)             block_var,         mvpa_model,        run_searchlight)   searchlight_result)
+                     splits)            feature_rsa, …)</code></pre>
+<p>Three S3 layers — <strong>dataset → design → model_spec</strong> — and two engines (<code>run_regional</code> / <code>run_searchlight</code>). The same <code>model_spec</code> works in both. Cross-validation, parallelism (via <code>future</code>), error handling, and per-ROI diagnostics come for free.</p>
 </div>
-<div class="section level3">
-<h3 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
-</h3>
-<p><code>rMVPA</code> is an R library for multivariate pattern analysis of neuroimaging data. The goal of this library is to make MVPA analyses easy. It can be used both programmatically from within R or using a command line interface. <code>rMVPA</code> provides a lightweight model registry and efficient resampling methods for machine learning. What <code>rMVPA</code> provides is the infrastructure for conducting machine learning analyses on neuroimaging data.</p>
-<p>Documentation and vignettes: <a href="https://bbuchsbaum.github.io/rMVPA/" class="external-link uri">https://bbuchsbaum.github.io/rMVPA/</a></p>
+<div class="section level2">
+<h2 id="what-you-can-build-with-it">What you can build with it<a class="anchor" aria-label="anchor" href="#what-you-can-build-with-it"></a>
+</h2>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">You want to …</th>
+<th align="left">Reach for</th>
+<th align="left">Vignette</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Decode condition labels from local activity (8-way category, condition pair, etc.)</td>
+<td align="left">
+<code><a href="reference/mvpa_model.html">mvpa_model()</a></code> + <code><a href="reference/run_searchlight.html">run_searchlight()</a></code> / <code><a href="reference/run_regional-methods.html">run_regional()</a></code>
+</td>
+<td align="left">
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html" class="external-link"><code>Searchlight_Analysis</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html" class="external-link"><code>Regional_Analysis</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html" class="external-link"><code>Haxby_2001</code></a> ⓡ</td>
+</tr>
+<tr class="even">
+<td align="left">Test whether a region’s pattern geometry matches a model RDM</td>
+<td align="left">
+<code><a href="reference/rsa_model.html">rsa_model()</a></code> + <code><a href="reference/rsa_design.html">rsa_design()</a></code> (or <code><a href="reference/pair_rsa_design.html">pair_rsa_design()</a></code>)</td>
+<td align="left">
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/RSA.html" class="external-link"><code>RSA</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html" class="external-link"><code>Kriegeskorte_92_Images</code></a> ⓡ</td>
+</tr>
+<tr class="odd">
+<td align="left">Ask which regions share representational geometry through your models</td>
+<td align="left">
+<code><a href="reference/model_space_connectivity.html">model_space_connectivity()</a></code> on <code>rsa_model(..., return_fingerprint = TRUE)</code>
+</td>
+<td align="left"><a href="https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html" class="external-link"><code>Model_Space_Connectivity</code></a></td>
+</tr>
+<tr class="even">
+<td align="left">Decompose representational structure by signed contrasts (MS-ReVE)</td>
+<td align="left"><code><a href="reference/contrast_rsa_model.html">contrast_rsa_model()</a></code></td>
+<td align="left"><a href="https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html" class="external-link"><code>Contrast_RSA</code></a></td>
+</tr>
+<tr class="odd">
+<td align="left">Cross-decode between encoding &amp; retrieval (ERA), or perception &amp; memory</td>
+<td align="left">
+<code><a href="reference/era_rsa_model.html">era_rsa_model()</a></code>, <code><a href="reference/naive_xdec_model.html">naive_xdec_model()</a></code>, <code><a href="reference/remap_rrr_model.html">remap_rrr_model()</a></code>, the ReNA family</td>
+<td align="left">
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html" class="external-link"><code>ERA_RSA_Cross_Decoding</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html" class="external-link"><code>REMAP_RRR</code></a>, and the <code>Naive_Cross_Decoding</code> glossary</td>
+</tr>
+<tr class="even">
+<td align="left">Plug in a custom per-ROI / per-sphere function</td>
+<td align="left">
+<code><a href="reference/run_custom_regional.html">run_custom_regional()</a></code> / <code><a href="reference/run_custom_searchlight.html">run_custom_searchlight()</a></code>
+</td>
+<td align="left">
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html" class="external-link"><code>CustomAnalyses</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html" class="external-link"><code>Plugin_Development</code></a>
+</td>
+</tr>
+</tbody>
+</table>
+<p>ⓡ = real public data, not synthetic.</p>
 </div>
-<div class="section level3">
-<h3 id="api-lifecycle">API lifecycle<a class="anchor" aria-label="anchor" href="#api-lifecycle"></a>
-</h3>
-<p>The supported public workflow/API surface is now intentionally smaller and explicit. Use <code><a href="reference/rmvpa_api_lifecycle.html">rmvpa_api_lifecycle()</a></code> to inspect lifecycle tiers and <code><a href="reference/rmvpa_stable_api.html">rmvpa_stable_api()</a></code> to list the stable entry points intended for scripts, extensions, and downstream packages.</p>
+<div class="section level2">
+<h2 id="a-30-second-taste">A 30-second taste<a class="anchor" aria-label="anchor" href="#a-30-second-taste"></a>
+</h2>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/rMVPA" class="external-link">rMVPA</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Synthetic 6 x 6 x 6, 80 trials, 4 runs, 2 categories</span></span>
+<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">6</span>, <span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">80</span>, blocks <span class="op">=</span> <span class="fl">4</span>, nlevels <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
+<span><span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span>
+<span><span class="va">mod</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span><span class="va">mod</span>, dataset <span class="op">=</span> <span class="va">dset</span>, design <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">design</span>,</span>
+<span>                    crossval <span class="op">=</span> <span class="va">cval</span>,</span>
+<span>                    tune_grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>lambda <span class="op">=</span> <span class="fl">0.01</span>, diagonal <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Per-voxel decoding map</span></span>
+<span><span class="va">sl</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">mspec</span>, radius <span class="op">=</span> <span class="fl">4</span>, method <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">sl</span><span class="op">$</span><span class="va">results</span><span class="op">)</span>   <span class="co"># "Accuracy", "AUC"</span></span></code></pre></div>
+<p>The <code>Get Started</code> vignette walks the same example, then routes you to classification, RSA, and cross-domain workflows.</p>
 </div>
-<div class="section level3">
-<h3 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
-</h3>
-<div class="section level4">
-<h4 id="using-devtools">Using devtools<a class="anchor" aria-label="anchor" href="#using-devtools"></a>
-</h4>
-<p>To install <code>rMVPA</code> from within R, use the <code>devtools</code> function <code>install_github</code>. You will need the development version of <code>neuroim2</code> as well.</p>
-<p>From within R:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(devtools)</span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">install_github</span>(<span class="st">"bbuchsbaum/neuroim2"</span>)</span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">install_github</span>(<span class="st">"bbuchsbaum/rMVPA"</span>)</span></code></pre></div>
-</div>
-<div class="section level4">
-<h4 id="using-git-from-the-command-line">Using git from the command line<a class="anchor" aria-label="anchor" href="#using-git-from-the-command-line"></a>
-</h4>
-<div class="sourceCode" id="cb2"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>git clone git<span class="sc">@</span>github.com<span class="sc">:</span>bbuchsbaum<span class="sc">/</span>rMVPA.git</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>R CMD install rMVPA</span></code></pre></div>
-</div>
-</div>
-<div class="section level3">
-<h3 id="command-line-scripts">Command line scripts<a class="anchor" aria-label="anchor" href="#command-line-scripts"></a>
-</h3>
-<p><code>rMVPA</code> now ships packaged CLI wrappers with native command names:</p>
+<div class="section level2">
+<h2 id="real-data-demonstrations">Real-data demonstrations<a class="anchor" aria-label="anchor" href="#real-data-demonstrations"></a>
+</h2>
+<p>The catalogue includes two non-synthetic vignettes that reproduce canonical findings on public data, end-to-end:</p>
 <ul>
-<li><code>rmvpa-searchlight</code></li>
-<li><code>rmvpa-regional</code></li>
+<li>
+<strong>Kriegeskorte 2008</strong> (<a href="https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html" class="external-link">vignette</a>) — 92 object images, 4 subjects × 2 sessions of human-IT RDMs. Recovers the published model-RDM ranking (monkey-IT and animacy lead; low-level vision lags) and shows model-space connectivity across subjects.</li>
+<li>
+<strong>Haxby 2001</strong> (<a href="https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html" class="external-link">vignette</a>) — Subject 1 ventral-temporal patterns. Reaches <strong>91.7 %</strong> 8-way category accuracy at 12.5 % chance with <code>sda_notune</code>. Reproduces the canonical face / house / object confusion structure.</li>
 </ul>
-<p>Install the package:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"bbuchsbaum/rMVPA"</span><span class="op">)</span></span></code></pre></div>
-<p>Then copy the wrappers into a directory on your <code>PATH</code>:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="reference/install_cli.html">install_cli</a></span><span class="op">(</span><span class="st">"~/.local/bin"</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>If needed, add that directory to <code>PATH</code>:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="bu">export</span> <span class="va">PATH</span><span class="op">=</span><span class="st">"</span><span class="va">$HOME</span><span class="st">/.local/bin:</span><span class="va">$PATH</span><span class="st">"</span></span></code></pre></div>
-<p>On macOS/Linux, you can then run:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="ex">rmvpa-searchlight</span> <span class="at">--help</span></span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="ex">rmvpa-regional</span> <span class="at">--help</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="ex">rmvpa-searchlight</span> <span class="at">--version</span></span></code></pre></div>
-<p>The unified CLI vignette is <code><a href="articles/CommandLine.html">vignette("CommandLine")</a></code>. The legacy source-tree entrypoints remain available as compatibility shims, but the packaged commands above are the supported interface.</p>
+<p>The bundled data lives under <code>inst/extdata/</code>; the <code>data-raw/*.R</code> scripts regenerate it from upstream sources.</p>
 </div>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<p>From within R:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"bbuchsbaum/neuroim2"</span><span class="op">)</span>    <span class="co"># required, not on CRAN yet</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"bbuchsbaum/rMVPA"</span><span class="op">)</span></span></code></pre></div>
+<p>Or with devtools:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://devtools.r-lib.org/" class="external-link">devtools</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://devtools.r-lib.org/reference/install-deprecated.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"bbuchsbaum/neuroim2"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://devtools.r-lib.org/reference/install-deprecated.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"bbuchsbaum/rMVPA"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="command-line-interface">Command-line interface<a class="anchor" aria-label="anchor" href="#command-line-interface"></a>
+</h2>
+<p><code>rMVPA</code> ships packaged CLI wrappers for searchlight and regional analyses:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># After installing, copy the wrappers onto your PATH</span></span>
+<span><span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="reference/install_cli.html">install_cli</a></span><span class="op">(</span><span class="st">"~/.local/bin"</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="ex">rmvpa-searchlight</span> <span class="at">--help</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="ex">rmvpa-regional</span>   <span class="at">--help</span></span></code></pre></div>
+<p>See <a href="https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.html" class="external-link"><code>vignette("CommandLine")</code></a> for input formats, configuration files, and parallelisation.</p>
+</div>
+<div class="section level2">
+<h2 id="api-stability">API stability<a class="anchor" aria-label="anchor" href="#api-stability"></a>
+</h2>
+<p>Public-API surface is intentionally narrow and explicit. Use <code><a href="reference/rmvpa_api_lifecycle.html">rmvpa_api_lifecycle()</a></code> to inspect lifecycle tiers and <code><a href="reference/rmvpa_stable_api.html">rmvpa_stable_api()</a></code> to list the stable entry points intended for scripts, extensions, and downstream packages.</p>
 </div>
 <div class="section level2">
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
 <p>If you use rMVPA in your research, please cite:</p>
+<blockquote>
 <p>Buchsbaum, B. (2026). <em>rMVPA: Multivoxel Pattern Analysis in R</em>. R package version 0.1.2. <a href="https://github.com/bbuchsbaum/rMVPA" class="external-link uri">https://github.com/bbuchsbaum/rMVPA</a></p>
+</blockquote>
+</div>
 </div>
 
   </main><aside class="col-md-3"><div class="links">
