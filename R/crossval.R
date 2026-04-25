@@ -480,7 +480,47 @@ custom_cross_validation <- function(sample_set) {
   ret <- list(sample_set=sample_set, nfolds=length(sample_set))
   class(ret) <- c("custom_cross_validation", "cross_validation", "list")
   ret
-  
+
+}
+
+
+#' @export
+#' @method print custom_cross_validation
+print.custom_cross_validation <- function(x, ...) {
+  use_style <- requireNamespace("crayon", quietly = TRUE)
+
+  header_style  <- if (use_style) crayon::bold$cyan else identity
+  section_style <- if (use_style) crayon::yellow else identity
+  info_style    <- if (use_style) crayon::white else identity
+  number_style  <- if (use_style) crayon::green else identity
+  stat_style    <- if (use_style) crayon::italic$blue else identity
+
+  train_sizes <- vapply(x$sample_set, function(s) length(s$train), integer(1))
+  test_sizes  <- vapply(x$sample_set, function(s) length(s$test),  integer(1))
+  total_obs   <- max(unlist(
+    lapply(x$sample_set, function(s) c(s$train, s$test))
+  ), na.rm = TRUE)
+
+  cat("\n", header_style("Custom Cross-Validation"), "\n\n", sep = "")
+  cat(section_style("- Configuration"), "\n", sep = "")
+  cat(info_style("  - Observations:    "),
+      number_style(format(total_obs, big.mark = ",")), "\n", sep = "")
+  cat(info_style("  - Number of Folds: "),
+      number_style(x$nfolds), "\n\n", sep = "")
+
+  cat(section_style("- Folds"), "\n", sep = "")
+  cat(info_style(sprintf("  %-6s  %-7s  %-7s\n", "Fold", "Train", "Test")))
+  for (i in seq_len(x$nfolds)) {
+    cat(info_style(sprintf("  %-6d  ", i)),
+        number_style(sprintf("%-7d", train_sizes[i])),
+        info_style("  "),
+        number_style(sprintf("%-7d", test_sizes[i])),
+        "\n", sep = "")
+  }
+  cat("  ", stat_style(sprintf("(mean train = %.0f, mean test = %.0f)",
+                                mean(train_sizes), mean(test_sizes))),
+      "\n\n", sep = "")
+  invisible(x)
 }
   
   
