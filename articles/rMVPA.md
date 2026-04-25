@@ -107,19 +107,49 @@ head(rsa_result$performance_table)
 #> 1      1    0.0121
 ```
 
-## Next steps
+## Where to go next
 
-You now have the basic building blocks. Explore the full documentation:
+Pick the next vignette by what you want to do:
 
-- [`vignette("CrossValidation")`](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
-  – cross-validation strategies for fMRI
-- [`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
-  – in-depth searchlight workflows
-- [`vignette("Regional_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md)
-  – regional analysis details
-- [`vignette("RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/RSA.md)
-  – full RSA tutorial
-- [`vignette("CustomAnalyses")`](http://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.md)
-  – plug in your own analysis functions
-- [`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
-  – dimensionality reduction inside CV
+**Build a real classification analysis**
+
+- Cross-validation that respects fMRI run structure:
+  [`vignette("CrossValidation")`](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
+- Searchlight pipelines, randomized variants, and result handling:
+  [`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
+- ROI / parcellation analyses with pooled diagnostics:
+  [`vignette("Regional_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md)
+- Feature selection inside the CV loop (avoid leakage):
+  [`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+
+**Test representational hypotheses**
+
+- Standard RSA:
+  [`vignette("RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/RSA.md)
+- Decompose geometry by signed contrasts (MS-ReVE):
+  [`vignette("Contrast_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md)
+- ROI-to-ROI connectivity through model RDMs:
+  [`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
+- Specialized variants and the workflow decision map:
+  [`vignette("Advanced_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Advanced_RSA.md)
+  and
+  [`vignette("Feature_RSA_Advanced_Workflows")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md)
+
+**Cross-domain transfer (encoding ↔︎ retrieval, perception ↔︎ memory)**
+
+- The naive baseline first:
+  [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md)
+  — also defines the ReNA / REMAP terminology used by the rest of that
+  section.
+
+**Run from the command line, not R**
+
+- Installable wrappers and shared workflow flags:
+  [`vignette("CommandLine")`](http://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md)
+
+**Plug in your own analysis**
+
+- Wrap any per-ROI / per-sphere function:
+  [`vignette("CustomAnalyses")`](http://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.md)
+- Build a full S3 plugin with metric schemas:
+  [`vignette("Plugin_Development")`](http://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.md)

@@ -246,27 +246,19 @@ function.</p>
 <span>  custom_func <span class="op">=</span> <span class="va">calculate_roi_stats</span>,</span>
 <span>  .cores <span class="op">=</span> <span class="fl">1</span>, </span>
 <span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2026-04-25 14:34:06] Starting custom regional analysis...</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-25 14:34:06] </span></span>
-<span><span class="co">## MVPA Iteration Complete</span></span>
-<span><span class="co">## - Total ROIs: <span style="color: #0000BB;">4</span></span></span>
-<span><span class="co">## - Processed: <span style="color: #0000BB;">4</span></span></span>
-<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-25 14:34:07] Custom regional analysis iteration complete.</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-25 14:34:07] Finished formatting custom regional results.</span></span></code></pre>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Print the results table</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_regional_results</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 4 × 6</span></span></span>
-<span><span class="co">##      id mean_signal sd_signal n_features error error_message</span></span>
-<span><span class="co">##   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>     1    -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">38</span>     1.00         339 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>     2    -<span style="color: #BB0000;">0.012</span><span style="color: #BB0000; text-decoration: underline;">3</span>      0.993        314 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>     3    -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">93</span>     0.998        323 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">4</span>     4     0.023<span style="text-decoration: underline;">2</span>      1.02          24 FALSE ~</span></span></code></pre>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Example with error handling (using the robust function and potential small ROI 4)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Print the results table</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_regional_results</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 6</span></span></span>
+<span><span class="co">#&gt;      id mean_signal sd_signal n_features error error_message</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>     1    -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">38</span>     1.00         339 FALSE ~            </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>     2    -<span style="color: #BB0000;">0.012</span><span style="color: #BB0000; text-decoration: underline;">3</span>      0.993        314 FALSE ~            </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>     3    -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">93</span>     0.998        323 FALSE ~            </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>     4     0.023<span style="text-decoration: underline;">2</span>      1.02          24 FALSE ~</span></span>
+<span></span>
+<span><span class="co"># Example with error handling (using the robust function and potential small ROI 4)</span></span>
 <span><span class="co"># Suppress expected warnings from the logger about the error</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">custom_regional_error_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_custom_regional.html">run_custom_regional</a></span><span class="op">(</span></span>
@@ -276,28 +268,19 @@ function.</p>
 <span>      .cores <span class="op">=</span> <span class="fl">1</span>, </span>
 <span>      .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>    <span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## INFO [2026-04-25 14:34:07] Starting custom regional analysis...</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-25 14:34:07] </span></span>
-<span><span class="co">## MVPA Iteration Complete</span></span>
-<span><span class="co">## - Total ROIs: <span style="color: #0000BB;">4</span></span></span>
-<span><span class="co">## - Processed: <span style="color: #0000BB;">4</span></span></span>
-<span><span class="co">## - Skipped: <span style="color: #BBBB00;">0</span></span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-25 14:34:07] Custom regional analysis iteration complete.</span></span></code></pre>
-<pre><code><span><span class="co">## INFO [2026-04-25 14:34:07] Finished formatting custom regional results.</span></span></code></pre>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nResults with potential errors:\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Results with potential errors:</span></span></code></pre>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_regional_error_results</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 4 × 6</span></span></span>
-<span><span class="co">##      id mean_signal sd_signal n_features error error_message</span></span>
-<span><span class="co">##   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">1</span>     1    -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">38</span>     1.00         339 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">2</span>     2    -<span style="color: #BB0000;">0.012</span><span style="color: #BB0000; text-decoration: underline;">3</span>      0.993        314 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span>     3    -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">93</span>     0.998        323 FALSE ~            </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">4</span>     4     0.023<span style="text-decoration: underline;">2</span>      1.02          24 FALSE ~</span></span></code></pre>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nResults with potential errors:\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Results with potential errors:</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_regional_error_results</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 6</span></span></span>
+<span><span class="co">#&gt;      id mean_signal sd_signal n_features error error_message</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>     1    -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">38</span>     1.00         339 FALSE ~            </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>     2    -<span style="color: #BB0000;">0.012</span><span style="color: #BB0000; text-decoration: underline;">3</span>      0.993        314 FALSE ~            </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>     3    -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">93</span>     0.998        323 FALSE ~            </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>     4     0.023<span style="text-decoration: underline;">2</span>      1.02          24 FALSE ~</span></span></code></pre></div>
 <p><strong>Explanation:</strong></p>
 <p>The output of <code>run_custom_regional</code> is a tibble. Each row
 corresponds to an ROI defined in <code>region_mask_vol</code>. The
@@ -318,7 +301,7 @@ error message, and <code>NA</code> values for the metrics.</p>
 </h3>
 <p>Next, we run a searchlight analysis using the same custom
 function.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Run the custom searchlight analysis (standard method)</span></span>
 <span><span class="co"># Use a moderate radius; set cores &gt; 1 for parallel execution if available</span></span>
 <span><span class="co"># Note: Running in parallel might print messages about the future plan setting.</span></span>
@@ -332,45 +315,44 @@ function.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Print the results object summary</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_searchlight_results</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">##  Searchlight Analysis Results </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## - Coverage </span></span>
-<span><span class="co">##   - Voxels/Vertices in Mask:  1,000 </span></span>
-<span><span class="co">##   - Voxels/Vertices with Results:  1,000 </span></span>
-<span><span class="co">## - Output Maps (Metrics) </span></span>
-<span><span class="co">##   -  mean_signal  (Type:  searchlight_performance ) </span></span>
-<span><span class="co">##   -  sd_signal  (Type:  searchlight_performance ) </span></span>
-<span><span class="co">##   -  n_features  (Type:  searchlight_performance )</span></span></code></pre>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Access the results for a specific metric (e.g., mean_signal)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_searchlight_results</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  Searchlight Analysis Results </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - Coverage </span></span>
+<span><span class="co">#&gt;   - Voxels/Vertices in Mask:  1,000 </span></span>
+<span><span class="co">#&gt;   - Voxels/Vertices with Results:  1,000 </span></span>
+<span><span class="co">#&gt; - Output Maps (Metrics) </span></span>
+<span><span class="co">#&gt;   -  mean_signal  (Type:  searchlight_performance ) </span></span>
+<span><span class="co">#&gt;   -  sd_signal  (Type:  searchlight_performance ) </span></span>
+<span><span class="co">#&gt;   -  n_features  (Type:  searchlight_performance )</span></span>
+<span></span>
+<span><span class="co"># Access the results for a specific metric (e.g., mean_signal)</span></span>
 <span><span class="va">mean_signal_map_obj</span> <span class="op">&lt;-</span> <span class="va">custom_searchlight_results</span><span class="op">$</span><span class="va">results</span><span class="op">$</span><span class="va">mean_signal</span></span>
 <span></span>
 <span><span class="co"># The map itself is stored in the 'data' slot</span></span>
 <span><span class="va">mean_signal_map_vol</span> <span class="op">&lt;-</span> <span class="va">mean_signal_map_obj</span><span class="op">$</span><span class="va">data</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nClass of the mean_signal map:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">mean_signal_map_vol</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Class of the mean_signal map: DenseNeuroVol</span></span></code></pre>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Dimensions of the map:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">mean_signal_map_vol</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Dimensions of the map: 10 10 10</span></span></code></pre>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Print summary stats for the map</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mean_signal_map_obj</span><span class="op">$</span><span class="va">summary_stats</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## $mean</span></span>
-<span><span class="co">## [1] -0.007061025</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## $sd</span></span>
-<span><span class="co">## [1] 0.0096284</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## $min</span></span>
-<span><span class="co">## [1] -0.03503245</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## $max</span></span>
-<span><span class="co">## [1] 0.03016657</span></span></code></pre>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># You can plot the map using neuroim2's plotting functions (example commented out)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nClass of the mean_signal map:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">mean_signal_map_vol</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Class of the mean_signal map: DenseNeuroVol</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Dimensions of the map:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">mean_signal_map_vol</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Dimensions of the map: 10 10 10</span></span>
+<span></span>
+<span><span class="co"># Print summary stats for the map</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mean_signal_map_obj</span><span class="op">$</span><span class="va">summary_stats</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $mean</span></span>
+<span><span class="co">#&gt; [1] -0.007061025</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $sd</span></span>
+<span><span class="co">#&gt; [1] 0.0096284</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $min</span></span>
+<span><span class="co">#&gt; [1] -0.03503245</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $max</span></span>
+<span><span class="co">#&gt; [1] 0.03016657</span></span>
+<span></span>
+<span><span class="co"># You can plot the map using neuroim2's plotting functions (example commented out)</span></span>
 <span><span class="co"># plot(mean_signal_map_vol) </span></span></code></pre></div>
 <p><strong>Explanation:</strong></p>
 <p>The output of <code>run_custom_searchlight</code> is a
@@ -443,7 +425,7 @@ own performance metrics into the standard <code>mvpa_model</code> /
 <em>result</em> object – typically a <code>classification_result</code>
 – and must return a <strong>numeric vector</strong> of scalar metrics
 (named if you return more than one):</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">my_perf</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="co"># classification_result: result$observed, result$predicted, result$probs</span></span>
 <span>  <span class="va">acc</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">observed</span> <span class="op">==</span> <span class="va">result</span><span class="op">$</span><span class="va">predicted</span><span class="op">)</span></span>
@@ -457,7 +439,7 @@ own performance metrics into the standard <code>mvpa_model</code> /
 <span><span class="op">}</span></span></code></pre></div>
 <p>You pass this function to <code><a href="../reference/mvpa_model.html">mvpa_model()</a></code> via the
 <code>performance</code> argument:</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span></span>
 <span>  D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">6</span>, <span class="fl">6</span><span class="op">)</span>,</span>
 <span>  nobs <span class="op">=</span> <span class="fl">100</span>,</span>
@@ -492,7 +474,7 @@ map in the searchlight or regional result.</p>
 <code>mvpa_design</code> stores the grouping in
 <code>split_groups</code>, and <code><a href="../reference/mvpa_model.html">mvpa_model()</a></code> automatically
 applies your metric both globally and within each group:</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  Y   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span>, <span class="fl">50</span><span class="op">)</span>,</span>
 <span>  run <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, length.out <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span>

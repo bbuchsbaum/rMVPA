@@ -11,13 +11,7 @@ The easiest way to get started is with
 which creates a complete dataset and design in one call:
 
 ``` r
-library(rMVPA)
-library(neuroim2)
-
-# Create a synthetic 6x6x6 dataset with 80 observations in 4 runs, 2 conditions
 ds <- gen_sample_dataset(D = c(6, 6, 6), nobs = 80, blocks = 4, nlevels = 2)
-
-# The result contains a dataset and a design
 print(ds$dataset)
 #> 
 #>  MVPA Dataset 
@@ -46,8 +40,25 @@ print(ds$design)
 #>   - Number of Blocks:  4 
 #>   - Mean Block Size:  20  (SD:  0 ) 
 #>   - Split Groups:  None
+```
 
-# You can also construct each piece manually:
+The dataset bundles a 4-D `NeuroVec` (voxels × time) and a binary
+`NeuroVol` mask. Two pictures make the shape concrete: a mid-axial slice
+of the mask, and the trial × run grid of the design.
+
+![Left: a mid-axial slice of the binary mask (active voxels in dark
+blue). Right: each trial coloured by run; runs split into equal-length
+blocks of
+trials.](Constructing_Datasets_files/figure-html/synthetic-visual-1.png)
+
+Left: a mid-axial slice of the binary mask (active voxels in dark blue).
+Right: each trial coloured by run; runs split into equal-length blocks
+of trials.
+
+You can also assemble the pieces manually if you want explicit control
+over the design data frame:
+
+``` r
 dset <- mvpa_dataset(ds$dataset$train_data, mask = ds$dataset$mask)
 
 design_df <- data.frame(
@@ -55,7 +66,7 @@ design_df <- data.frame(
   block = ds$design$block_var
 )
 mvdes <- mvpa_design(design_df, y_train = ~ Y, block_var = ~ block)
-print(mvdes)
+mvdes
 #> 
 #>  MVPA Design 
 #> 

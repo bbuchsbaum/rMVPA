@@ -1,12 +1,61 @@
 # Representational Similarity Analysis (RSA) in rMVPA
 
-## Introduction to Representational Similarity Analysis
+## What problem does RSA solve?
 
-Representational Similarity Analysis (RSA) compares neural activity
-patterns with computational models by measuring pattern similarities,
-matching them against model predictions, and quantifying how well models
-explain the neural data. The `rMVPA` package implements this technique
-for neuroimaging analysis.
+You have a hypothesis about how stimuli relate to each other — by
+category, by visual similarity, by some embedding from a computational
+model. RSA tests whether the brain’s pattern of *similarities* across
+those stimuli matches your predicted pattern. The geometry of activity,
+not the activity itself, is the data.
+
+The whole workflow is four steps: (i) build an MVPA dataset, (ii) supply
+one or more model RDMs (representational dissimilarity matrices), (iii)
+wrap them in an
+[`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md),
+(iv) fit with
+[`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+and run regionally or via searchlight.
+
+## A first win
+
+Build a tiny dataset whose first half of trials shares one latent
+structure and the second half shares another, and a single model RDM
+that knows about it.
+
+``` r
+set.seed(2026)
+ds <- gen_sample_dataset(D = c(8, 8, 8), nobs = 40, blocks = 4, nlevels = 2)
+
+# A simple ordinal model RDM: nearby trial indices are predicted to be similar.
+model_rdm <- as.matrix(stats::dist(seq_len(40)))
+```
+
+![A model RDM. Dark cells = predicted small dissimilarity (similar
+items); bright cells = predicted large dissimilarity. Diagonal =
+0.](RSA_files/figure-html/quick-rdm-plot-1.png)
+
+A model RDM. Dark cells = predicted small dissimilarity (similar items);
+bright cells = predicted large dissimilarity. Diagonal = 0.
+
+Fit RSA in one regional pass:
+
+``` r
+des <- rsa_design(~ model_rdm, list(model_rdm = model_rdm),
+                  block_var = ds$design$block_var)
+mod <- rsa_model(ds$dataset, des, distmethod = "pearson", regtype = "pearson")
+res <- run_regional(mod, region_mask = ds$dataset$mask, verbose = FALSE)
+res$performance_table
+#> # A tibble: 1 × 2
+#>   roinum model_rdm
+#>    <int>     <dbl>
+#> 1      1  -0.00292
+```
+
+The `performance_table` row reports, per ROI, how well that ROI’s neural
+pair-dissimilarity vector tracks the model RDM. That’s the entire RSA
+core loop. The rest of this vignette covers the parts you’ll actually
+want to control: how to build model RDMs, how to combine multiple RDMs,
+how to handle correlated RDMs, and how to wire it into searchlight.
 
 ## Basic concepts
 
@@ -28,11 +77,10 @@ and evaluate the RSA model.
 
 ### 1. Creating Sample Data
 
-Let’s create a simple example dataset with known structure:
+A larger synthetic dataset for the rest of the walkthrough:
 
 ``` r
-# Generate a sample dataset (20x20x8 volume, 80 observations, 4 blocks)
-dataset <- rMVPA::gen_sample_dataset(D=c(20,20,8), nobs = 80, blocks=4)
+dataset <- rMVPA::gen_sample_dataset(D = c(20, 20, 8), nobs = 80, blocks = 4)
 ```
 
 ### 2. Creating Model Dissimilarity Matrices
@@ -105,13 +153,12 @@ cnn_rdms <- lapply(cnn_features, dist)
 
 raw_rdm_vectors <- vapply(cnn_rdms, as.vector, numeric(length(cnn_rdms[[1]])))
 round(cor(raw_rdm_vectors, method = "spearman"), 2)
+#>        vgg4  vgg7 vgg11 vgg16
+#> vgg4   1.00 -0.01  0.08  0.09
+#> vgg7  -0.01  1.00  0.32  0.30
+#> vgg11  0.08  0.32  1.00  0.56
+#> vgg16  0.09  0.30  0.56  1.00
 ```
-
-    ##        vgg4  vgg7 vgg11 vgg16
-    ## vgg4   1.00 -0.01  0.08  0.09
-    ## vgg7  -0.01  1.00  0.32  0.30
-    ## vgg11  0.08  0.32  1.00  0.56
-    ## vgg16  0.09  0.30  0.56  1.00
 
 The raw RDM correlations show how much representational geometry is
 shared across the model layers. The ordered innovation method treats the
@@ -129,22 +176,13 @@ decorrelated <- rdm_decorrelate(
 )
 
 decorrelated$mean_abs_cor_before
-```
-
-    ## [1] 0.2258285
-
-``` r
+#> [1] 0.2258285
 decorrelated$mean_abs_cor_after
-```
-
-    ## [1] 0.04841876
-
-``` r
+#> [1] 0.04841876
 decorrelated$preservation
+#>      vgg4      vgg7     vgg11     vgg16 
+#> 1.0000000 1.0000000 0.9479340 0.9067018
 ```
-
-    ##      vgg4      vgg7     vgg11     vgg16 
-    ## 1.0000000 1.0000000 0.9479340 0.9067018
 
 The result records both the decorrelation achieved and how much each
 adjusted RDM still resembles the original. The adjusted RDMs are
@@ -250,30 +288,17 @@ comparison_matrix[upper.tri(comparison_matrix)] <- NA
 
 # Display the matrices
 cat("Trial numbers:\n")
-```
-
-    ## Trial numbers:
-
-``` r
+#> Trial numbers:
 print(matrix(1:8, nrow=8, ncol=8)[lower.tri(matrix(1:8, 8, 8))])
-```
-
-    ##  [1] 2 3 4 5 6 7 8 3 4 5 6 7 8 4 5 6 7 8 5 6 7 8 6 7 8 7 8 8
-
-``` r
+#>  [1] 2 3 4 5 6 7 8 3 4 5 6 7 8 4 5 6 7 8 5 6 7 8 6 7 8 7 8 8
 cat("\nRun comparisons (TRUE = across-run, FALSE = within-run):\n")
-```
-
-    ## 
-    ## Run comparisons (TRUE = across-run, FALSE = within-run):
-
-``` r
+#> 
+#> Run comparisons (TRUE = across-run, FALSE = within-run):
 print(comparison_matrix[lower.tri(comparison_matrix)])
+#>  [1] FALSE FALSE FALSE  TRUE  TRUE  TRUE  TRUE FALSE FALSE  TRUE  TRUE  TRUE
+#> [13]  TRUE FALSE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE FALSE FALSE
+#> [25] FALSE FALSE FALSE FALSE
 ```
-
-    ##  [1] FALSE FALSE FALSE  TRUE  TRUE  TRUE  TRUE FALSE FALSE  TRUE  TRUE  TRUE
-    ## [13]  TRUE FALSE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE FALSE FALSE
-    ## [25] FALSE FALSE FALSE FALSE
 
 When we create an RSA design with `keep_intra_run = FALSE`:
 
@@ -312,25 +337,19 @@ rsa_map <- results$results$model_rdm
 # Compute range of correlation values
 rsa_values <- neuroim2::values(rsa_map)
 range(rsa_values, na.rm = TRUE)
-```
+#> [1] -0.06774093  0.06292384
 
-    ## [1] -0.05816891  0.05730699
-
-``` r
 # Basic summary of the searchlight result
 print(results)
-```
+#> 
+#>  Searchlight Analysis Results 
+#> 
+#> - Coverage 
+#>   - Voxels/Vertices in Mask:  3,200 
+#>   - Voxels/Vertices with Results:  3,200 
+#> - Output Maps (Metrics) 
+#>   -  model_rdm  (Type:  DenseNeuroVol )
 
-    ## 
-    ##  Searchlight Analysis Results 
-    ## 
-    ## - Coverage 
-    ##   - Voxels/Vertices in Mask:  3,200 
-    ##   - Voxels/Vertices with Results:  3,200 
-    ## - Output Maps (Metrics) 
-    ##   -  model_rdm  (Type:  DenseNeuroVol )
-
-``` r
 # Save results (commented out)
 # neuroim2::write_vol(rsa_map, "RSA_results.nii.gz")
 ```

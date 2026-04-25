@@ -1,5 +1,13 @@
 # Articles
 
+### Get Started
+
+Start here. One vignette, three small examples — searchlight
+classification, regional classification, RSA.
+
+- [Get Started with
+  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/rMVPA.md):
+
 ### Core Concepts
 
 Essential concepts and basic workflows
@@ -22,10 +30,6 @@ approaches
   rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md):
 - [Command-Line MVPA
   Interfaces](http://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md):
-- [MVPA Searchlight
-  Tutorial](http://bbuchsbaum.github.io/rMVPA/articles/CommandLineScripts.md):
-- [MVPA Regional Analysis
-  Tutorial](http://bbuchsbaum.github.io/rMVPA/articles/MVPA_RegionalCmdline.md):
 
 ### Representational Similarity Analysis
 
@@ -39,14 +43,14 @@ RSA methods from basic to specialized approaches
   RSA](http://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md):
 - [Advanced RSA Methods: Feature-Based and Vector-Based
   Approaches](http://bbuchsbaum.github.io/rMVPA/articles/Advanced_RSA.md):
-- [Feature-RSA Across States: Domain Adaptation from Encoding to
-  Recall](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md):
+- [Feature-RSA Advanced
+  Workflows](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md):
 - [Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset
   Control](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md):
 - [Model-Space Representational
   Connectivity](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md):
-- [Feature-RSA Advanced
-  Workflows](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md):
+- [Feature-RSA Across States: Domain Adaptation from Encoding to
+  Recall](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md):
 
 ### Representation Mapping (REMAP) Models
 

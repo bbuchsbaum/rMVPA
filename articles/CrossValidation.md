@@ -44,18 +44,17 @@ natural validation blocks.
 block_var <- rep(1:5, each = 20)
 cval <- blocked_cross_validation(block_var)
 print(cval)
+#> 
+#>  Blocked Cross-Validation 
+#> 
+#> - Dataset Information 
+#>   - Observations:  100 
+#>   - Number of Folds:  5 
+#> - Block Information 
+#>   - Total Blocks:  5 
+#>   - Mean Block Size:  20  (SD:  0 ) 
+#>   - Block Sizes:  1: 20, 2: 20, 3: 20, 4: 20, 5: 20
 ```
-
-    ## 
-    ##  Blocked Cross-Validation 
-    ## 
-    ## - Dataset Information 
-    ##   - Observations:  100 
-    ##   - Number of Folds:  5 
-    ## - Block Information 
-    ##   - Total Blocks:  5 
-    ##   - Mean Block Size:  20  (SD:  0 ) 
-    ##   - Block Sizes:  1: 20, 2: 20, 3: 20, 4: 20, 5: 20
 
 ### Implementation Example
 
@@ -72,16 +71,15 @@ y <- factor(rep(letters[1:5], length.out = 100))  # 5 conditions
 # Generate cross-validation samples
 samples <- crossval_samples(cval, dat, y)
 print(samples)
+#> # A tibble: 5 × 5
+#>   ytrain       ytest        train               test                .id  
+#>   <named list> <named list> <named list>        <named list>        <chr>
+#> 1 <fct [80]>   <fct [20]>   <resample [80 x 3]> <resample [20 x 3]> 01   
+#> 2 <fct [80]>   <fct [20]>   <resample [80 x 3]> <resample [20 x 3]> 02   
+#> 3 <fct [80]>   <fct [20]>   <resample [80 x 3]> <resample [20 x 3]> 03   
+#> 4 <fct [80]>   <fct [20]>   <resample [80 x 3]> <resample [20 x 3]> 04   
+#> 5 <fct [80]>   <fct [20]>   <resample [80 x 3]> <resample [20 x 3]> 05
 ```
-
-    ## # A tibble: 5 × 5
-    ##   ytrain       ytest        train               test                .id  
-    ##   <named list> <named list> <named list>        <named list>        <chr>
-    ## 1 <fct [80]>   <fct [20]>   <resample [80 x 3]> <resample [20 x 3]> 01   
-    ## 2 <fct [80]>   <fct [20]>   <resample [80 x 3]> <resample [20 x 3]> 02   
-    ## 3 <fct [80]>   <fct [20]>   <resample [80 x 3]> <resample [20 x 3]> 03   
-    ## 4 <fct [80]>   <fct [20]>   <resample [80 x 3]> <resample [20 x 3]> 04   
-    ## 5 <fct [80]>   <fct [20]>   <resample [80 x 3]> <resample [20 x 3]> 05
 
 ### Understanding the output
 
@@ -100,41 +98,37 @@ stable performance estimates while respecting the run structure.
 # Create bootstrap blocked CV with 20 repetitions
 boot_cval <- bootstrap_blocked_cross_validation(block_var, nreps = 20)
 print(boot_cval)
-```
+#> 
+#>  Bootstrap Blocked Cross-Validation 
+#> 
+#> - Configuration 
+#>   - Observations:  100 
+#>   - Bootstrap Repetitions:  20 
+#> - Block Information 
+#>   - Total Blocks:  5 
+#>   - Mean Block Size:  20  (SD:  0 ) 
+#>   - Block Sizes:  1: 20, 2: 20, 3: 20, 4: 20, 5: 20 
+#> - Sampling Weights 
+#>   - Status:  None  (uniform sampling)
 
-    ## 
-    ##  Bootstrap Blocked Cross-Validation 
-    ## 
-    ## - Configuration 
-    ##   - Observations:  100 
-    ##   - Bootstrap Repetitions:  20 
-    ## - Block Information 
-    ##   - Total Blocks:  5 
-    ##   - Mean Block Size:  20  (SD:  0 ) 
-    ##   - Block Sizes:  1: 20, 2: 20, 3: 20, 4: 20, 5: 20 
-    ## - Sampling Weights 
-    ##   - Status:  None  (uniform sampling)
-
-``` r
 # Generate samples
 boot_samples <- crossval_samples(boot_cval, dat, y)
 print(boot_samples)
+#> # A tibble: 100 × 5
+#>    ytrain     ytest      train               test                .id  
+#>    <list>     <list>     <list>              <list>              <chr>
+#>  1 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 001  
+#>  2 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 002  
+#>  3 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 003  
+#>  4 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 004  
+#>  5 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 005  
+#>  6 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 006  
+#>  7 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 007  
+#>  8 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 008  
+#>  9 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 009  
+#> 10 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 010  
+#> # ℹ 90 more rows
 ```
-
-    ## # A tibble: 100 × 5
-    ##    ytrain     ytest      train               test                .id  
-    ##    <list>     <list>     <list>              <list>              <chr>
-    ##  1 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 001  
-    ##  2 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 002  
-    ##  3 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 003  
-    ##  4 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 004  
-    ##  5 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 005  
-    ##  6 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 006  
-    ##  7 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 007  
-    ##  8 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 008  
-    ##  9 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 009  
-    ## 10 <fct [80]> <fct [20]> <resample [80 x 3]> <resample [20 x 3]> 010  
-    ## # ℹ 90 more rows
 
 ### Optional Weighted Sampling
 
@@ -149,22 +143,21 @@ weighted_boot_cval <- bootstrap_blocked_cross_validation(
   weights = weights
 )
 print(weighted_boot_cval)
+#> 
+#>  Bootstrap Blocked Cross-Validation 
+#> 
+#> - Configuration 
+#>   - Observations:  100 
+#>   - Bootstrap Repetitions:  20 
+#> - Block Information 
+#>   - Total Blocks:  5 
+#>   - Mean Block Size:  20  (SD:  0 ) 
+#>   - Block Sizes:  1: 20, 2: 20, 3: 20, 4: 20, 5: 20 
+#> - Sampling Weights 
+#>   - Status:  Present 
+#>   - Range:  [0.001, 0.020] 
+#>   - Non-zero Weights:  100  ( 100.0% )
 ```
-
-    ## 
-    ##  Bootstrap Blocked Cross-Validation 
-    ## 
-    ## - Configuration 
-    ##   - Observations:  100 
-    ##   - Bootstrap Repetitions:  20 
-    ## - Block Information 
-    ##   - Total Blocks:  5 
-    ##   - Mean Block Size:  20  (SD:  0 ) 
-    ##   - Block Sizes:  1: 20, 2: 20, 3: 20, 4: 20, 5: 20 
-    ## - Sampling Weights 
-    ##   - Status:  Present 
-    ##   - Range:  [0.001, 0.020] 
-    ##   - Non-zero Weights:  100  ( 100.0% )
 
 ## Sequential Blocked Cross-Validation
 
@@ -181,25 +174,24 @@ seq_cval <- sequential_blocked_cross_validation(
   nreps = 4
 )
 print(seq_cval)
+#> $block_var
+#>   [1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+#>  [38] 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4 4 4 4 4 4 4
+#>  [75] 4 4 4 4 4 4 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5
+#> 
+#> $nfolds
+#> [1] 2
+#> 
+#> $nreps
+#> [1] 4
+#> 
+#> $block_ind
+#> [1] 1 2 3 4 5
+#> 
+#> attr(,"class")
+#> [1] "sequential_blocked_cross_validation" "cross_validation"                   
+#> [3] "list"
 ```
-
-    ## $block_var
-    ##   [1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
-    ##  [38] 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4 4 4 4 4 4 4
-    ##  [75] 4 4 4 4 4 4 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5
-    ## 
-    ## $nfolds
-    ## [1] 2
-    ## 
-    ## $nreps
-    ## [1] 4
-    ## 
-    ## $block_ind
-    ## [1] 1 2 3 4 5
-    ## 
-    ## attr(,"class")
-    ## [1] "sequential_blocked_cross_validation" "cross_validation"                   
-    ## [3] "list"
 
 ## Two-Fold Blocked Cross-Validation
 
@@ -212,19 +204,18 @@ performance estimation.
 # Create two-fold blocked CV with 10 repetitions
 twofold_cval <- twofold_blocked_cross_validation(block_var, nreps = 10)
 print(twofold_cval)
+#> 
+#>  Two-Fold Blocked Cross-Validation 
+#> 
+#> - Configuration 
+#>   - Observations:  100 
+#>   - Number of Folds:  2 
+#>   - Repetitions:  10 
+#> - Block Information 
+#>   - Total Blocks:  5 
+#>   - Mean Block Size:  20  (SD:  0 ) 
+#>   - Block Sizes:  1: 20, 2: 20, 3: 20, 4: 20, 5: 20
 ```
-
-    ## 
-    ##  Two-Fold Blocked Cross-Validation 
-    ## 
-    ## - Configuration 
-    ##   - Observations:  100 
-    ##   - Number of Folds:  2 
-    ##   - Repetitions:  10 
-    ## - Block Information 
-    ##   - Total Blocks:  5 
-    ##   - Mean Block Size:  20  (SD:  0 ) 
-    ##   - Block Sizes:  1: 20, 2: 20, 3: 20, 4: 20, 5: 20
 
 ## Custom Cross-Validation
 
@@ -244,52 +235,51 @@ custom_splits <- list(
 # Create custom CV
 custom_cval <- custom_cross_validation(custom_splits)
 print(custom_cval)
+#> $sample_set
+#> $sample_set[[1]]
+#> $sample_set[[1]]$train
+#>  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+#> [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50
+#> [51] 51 52 53 54 55 56 57 58 59 60
+#> 
+#> $sample_set[[1]]$test
+#>  [1]  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79
+#> [20]  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98
+#> [39]  99 100
+#> 
+#> 
+#> $sample_set[[2]]
+#> $sample_set[[2]]$train
+#>  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+#> [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40
+#> 
+#> $sample_set[[2]]$test
+#>  [1]  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59
+#> [20]  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78
+#> [39]  79  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97
+#> [58]  98  99 100
+#> 
+#> 
+#> $sample_set[[3]]
+#> $sample_set[[3]]$train
+#>  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+#> [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50
+#> [51] 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75
+#> [76] 76 77 78 79 80
+#> 
+#> $sample_set[[3]]$test
+#>  [1]  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99
+#> [20] 100
+#> 
+#> 
+#> 
+#> $nfolds
+#> [1] 3
+#> 
+#> attr(,"class")
+#> [1] "custom_cross_validation" "cross_validation"       
+#> [3] "list"
 ```
-
-    ## $sample_set
-    ## $sample_set[[1]]
-    ## $sample_set[[1]]$train
-    ##  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
-    ## [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50
-    ## [51] 51 52 53 54 55 56 57 58 59 60
-    ## 
-    ## $sample_set[[1]]$test
-    ##  [1]  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79
-    ## [20]  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98
-    ## [39]  99 100
-    ## 
-    ## 
-    ## $sample_set[[2]]
-    ## $sample_set[[2]]$train
-    ##  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
-    ## [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40
-    ## 
-    ## $sample_set[[2]]$test
-    ##  [1]  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59
-    ## [20]  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78
-    ## [39]  79  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97
-    ## [58]  98  99 100
-    ## 
-    ## 
-    ## $sample_set[[3]]
-    ## $sample_set[[3]]$train
-    ##  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
-    ## [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50
-    ## [51] 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75
-    ## [76] 76 77 78 79 80
-    ## 
-    ## $sample_set[[3]]$test
-    ##  [1]  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99
-    ## [20] 100
-    ## 
-    ## 
-    ## 
-    ## $nfolds
-    ## [1] 3
-    ## 
-    ## attr(,"class")
-    ## [1] "custom_cross_validation" "cross_validation"       
-    ## [3] "list"
 
 ## Practical Example: Model Training
 
@@ -315,17 +305,16 @@ model_fits <- samples %>%
   mutate(fit = list(sda::sda(as.matrix(as.data.frame(train)), ytrain, verbose = FALSE)))
 
 print(model_fits)
+#> # A tibble: 5 × 6
+#> # Rowwise: 
+#>   ytrain       ytest       train                test                 .id   fit  
+#>   <named list> <named lis> <named list>         <named list>         <chr> <lis>
+#> 1 <fct [80]>   <fct [20]>  <resample [80 x 10]> <resample [20 x 10]> 01    <sda>
+#> 2 <fct [80]>   <fct [20]>  <resample [80 x 10]> <resample [20 x 10]> 02    <sda>
+#> 3 <fct [80]>   <fct [20]>  <resample [80 x 10]> <resample [20 x 10]> 03    <sda>
+#> 4 <fct [80]>   <fct [20]>  <resample [80 x 10]> <resample [20 x 10]> 04    <sda>
+#> 5 <fct [80]>   <fct [20]>  <resample [80 x 10]> <resample [20 x 10]> 05    <sda>
 ```
-
-    ## # A tibble: 5 × 6
-    ## # Rowwise: 
-    ##   ytrain       ytest       train                test                 .id   fit  
-    ##   <named list> <named lis> <named list>         <named list>         <chr> <lis>
-    ## 1 <fct [80]>   <fct [20]>  <resample [80 x 10]> <resample [20 x 10]> 01    <sda>
-    ## 2 <fct [80]>   <fct [20]>  <resample [80 x 10]> <resample [20 x 10]> 02    <sda>
-    ## 3 <fct [80]>   <fct [20]>  <resample [80 x 10]> <resample [20 x 10]> 03    <sda>
-    ## 4 <fct [80]>   <fct [20]>  <resample [80 x 10]> <resample [20 x 10]> 04    <sda>
-    ## 5 <fct [80]>   <fct [20]>  <resample [80 x 10]> <resample [20 x 10]> 05    <sda>
 
 ## Best practices
 
@@ -419,38 +408,25 @@ results_boot <- run_regional(mvpa_mod_boot, region_mask)
 
 # Compare performance between CV strategies
 cat("Blocked CV Performance:\n")
-```
-
-    ## Blocked CV Performance:
-
-``` r
+#> Blocked CV Performance:
 print(results_blocked$performance_table)
-```
-
-    ## # A tibble: 3 × 3
-    ##   roinum Accuracy    AUC
-    ##    <int>    <dbl>  <dbl>
-    ## 1      1    0.562  0.191
-    ## 2      2    0.6    0.305
-    ## 3      3    0.462 -0.135
-
-``` r
+#> # A tibble: 3 × 3
+#>   roinum Accuracy    AUC
+#>    <int>    <dbl>  <dbl>
+#> 1      1    0.562  0.191
+#> 2      2    0.6    0.305
+#> 3      3    0.462 -0.135
 cat("\nBootstrap CV Performance:\n")
-```
-
-    ## 
-    ## Bootstrap CV Performance:
-
-``` r
+#> 
+#> Bootstrap CV Performance:
 print(results_boot$performance_table)
+#> # A tibble: 3 × 3
+#>   roinum Accuracy     AUC
+#>    <int>    <dbl>   <dbl>
+#> 1      1    0.562  0.176 
+#> 2      2    0.575  0.281 
+#> 3      3    0.475 -0.0988
 ```
-
-    ## # A tibble: 3 × 3
-    ##   roinum Accuracy     AUC
-    ##    <int>    <dbl>   <dbl>
-    ## 1      1    0.562  0.176 
-    ## 2      2    0.575  0.281 
-    ## 3      3    0.475 -0.0988
 
 ### Searchlight Analysis Example
 
@@ -524,20 +500,19 @@ performance_comparison <- lapply(names(results), function(name) {
 # Combine results
 all_performance <- do.call(rbind, performance_comparison)
 print(all_performance)
+#> # A tibble: 9 × 4
+#>   roinum Accuracy     AUC cv_scheme
+#>    <int>    <dbl>   <dbl> <chr>    
+#> 1      1    0.562  0.191  blocked  
+#> 2      2    0.6    0.305  blocked  
+#> 3      3    0.462 -0.135  blocked  
+#> 4      1    0.562  0.231  bootstrap
+#> 5      2    0.55   0.206  bootstrap
+#> 6      3    0.538 -0.0400 bootstrap
+#> 7      1    0.562  0.114  twofold  
+#> 8      2    0.562  0.288  twofold  
+#> 9      3    0.462 -0.15   twofold
 ```
-
-    ## # A tibble: 9 × 4
-    ##   roinum Accuracy     AUC cv_scheme
-    ##    <int>    <dbl>   <dbl> <chr>    
-    ## 1      1    0.562  0.191  blocked  
-    ## 2      2    0.6    0.305  blocked  
-    ## 3      3    0.462 -0.135  blocked  
-    ## 4      1    0.562  0.231  bootstrap
-    ## 5      2    0.55   0.206  bootstrap
-    ## 6      3    0.538 -0.0400 bootstrap
-    ## 7      1    0.562  0.114  twofold  
-    ## 8      2    0.562  0.288  twofold  
-    ## 9      3    0.462 -0.15   twofold
 
 This integration demonstrates how different cross-validation strategies
 can be easily incorporated into the broader MVPA analysis framework,

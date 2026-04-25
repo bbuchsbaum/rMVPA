@@ -110,18 +110,18 @@ Without progressr, only coarse batch-level log messages are shown.
     radius = 8,            # 8mm radius
     method = "standard"    # Use standard searchlight
   )
-#> INFO [2026-04-25 14:31:33] searchlight engine: legacy (no eligible fast path)
-#> INFO [2026-04-25 14:31:33] Running standard searchlight with radius = 8
-#> INFO [2026-04-25 14:31:33] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-04-25 14:31:33] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
-#> INFO [2026-04-25 14:31:33] creating standard searchlight
-#> INFO [2026-04-25 14:31:33] running standard searchlight iterator
-#> INFO [2026-04-25 14:33:02] 
+#> INFO [2026-04-25 15:58:07] searchlight engine: legacy (no eligible fast path)
+#> INFO [2026-04-25 15:58:07] Running standard searchlight with radius = 8
+#> INFO [2026-04-25 15:58:07] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-04-25 15:58:07] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
+#> INFO [2026-04-25 15:58:07] creating standard searchlight
+#> INFO [2026-04-25 15:58:07] running standard searchlight iterator
+#> INFO [2026-04-25 15:59:34] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 512
 #> - Processed: 512
 #> - Skipped: 0
-#> INFO [2026-04-25 14:33:02] searchlight (standard): 512 ROIs processed (success=512, errors=0)
+#> INFO [2026-04-25 15:59:34] searchlight (standard): 512 ROIs processed (success=512, errors=0)
   
   # Run with custom batch size for memory management
   # results <- run_searchlight(

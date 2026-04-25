@@ -62,6 +62,13 @@
 
     
     
+<blockquote>
+<p><em>ReNA-Map</em> is one of four cross-domain representational models
+in rMVPA. For the section’s terminology and how to choose between
+<em>ReNA-RC</em>, <em>ReNA-Map</em>, <em>ReNA-RM</em>, and
+<em>REMAP-RRR</em>, see the glossary at the top of
+<code><a href="../articles/Naive_Cross_Decoding.html">vignette("Naive_Cross_Decoding")</a></code>.</p>
+</blockquote>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
@@ -134,11 +141,33 @@ design.</li>
 </ul>
 </div>
 <div class="section level2">
+<h2 id="what-does-a-seed-feature-space-look-like">What does a seed feature space look like?<a class="anchor" aria-label="anchor" href="#what-does-a-seed-feature-space-look-like"></a>
+</h2>
+<p>ReNA-Map needs a per-item feature matrix (rows = items, columns =
+features). Below is a toy 6-item, 8-feature seed and the implied
+item-by-item similarity it predicts:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">11</span><span class="op">)</span></span>
+<span><span class="va">K</span> <span class="op">&lt;-</span> <span class="fl">6</span>; <span class="va">P</span> <span class="op">&lt;-</span> <span class="fl">8</span></span>
+<span><span class="va">items</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"I"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">K</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">seedF</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">K</span> <span class="op">*</span> <span class="va">P</span><span class="op">)</span>, <span class="va">K</span>, <span class="va">P</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">seedF</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">items</span></span>
+<span><span class="va">seed_sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/Matrix/man/matmult-methods.html" class="external-link">tcrossprod</a></span><span class="op">(</span><span class="fu">base</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">seedF</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="figure">
+<img src="repmap_model_files/figure-html/repmap-seed-plot-1.png" class="r-plt" alt="Left: seed feature matrix (rows = items, columns = features). Right: implied item-by-item similarity (centered features dot product). ReNA-Map asks each ROI how many of these feature dimensions it can recover." width="85%"><p class="caption">
+Left: seed feature matrix (rows = items, columns = features). Right:
+implied item-by-item similarity (centered features dot product).
+ReNA-Map asks each ROI how many of these feature dimensions it can
+recover.
+</p>
+</div>
+</div>
+<div class="section level2">
 <h2 id="quick-start-single-roi">Quick start: single ROI<a class="anchor" aria-label="anchor" href="#quick-start-single-roi"></a>
 </h2>
 <p>The minimal path uses a small synthetic dataset and a single ROI
 built from a handful of voxels.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/rMVPA" class="external-link">rMVPA</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">## Synthetic dataset</span></span>
@@ -175,7 +204,7 @@ built from a handful of voxels.</p>
 <p>The same model can be applied across labeled regions. The example
 below builds a simple two-ROI mask for demonstration. This step can take
 longer; we keep it disabled by default.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">## Create a toy two-ROI mask by splitting the active mask indices</span></span>
 <span><span class="co">## (This is just to illustrate the API; use real ROI atlases in practice.)</span></span>
 <span><span class="va">region_vec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
@@ -236,7 +265,7 @@ baseline</li>
 <div class="section level2">
 <h2 id="session-info">Session info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

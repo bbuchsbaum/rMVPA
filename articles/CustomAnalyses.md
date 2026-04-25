@@ -180,34 +180,17 @@ custom_regional_results <- run_custom_regional(
   .cores = 1, 
   .verbose = FALSE
 )
-```
 
-    ## INFO [2026-04-25 14:34:06] Starting custom regional analysis...
-
-    ## INFO [2026-04-25 14:34:06] 
-    ## MVPA Iteration Complete
-    ## - Total ROIs: 4
-    ## - Processed: 4
-    ## - Skipped: 0
-
-    ## INFO [2026-04-25 14:34:07] Custom regional analysis iteration complete.
-
-    ## INFO [2026-04-25 14:34:07] Finished formatting custom regional results.
-
-``` r
 # Print the results table
 print(custom_regional_results)
-```
+#> # A tibble: 4 × 6
+#>      id mean_signal sd_signal n_features error error_message
+#>   <int>       <dbl>     <dbl>      <int> <lgl> <chr>        
+#> 1     1    -0.00838     1.00         339 FALSE ~            
+#> 2     2    -0.0123      0.993        314 FALSE ~            
+#> 3     3    -0.00193     0.998        323 FALSE ~            
+#> 4     4     0.0232      1.02          24 FALSE ~
 
-    ## # A tibble: 4 × 6
-    ##      id mean_signal sd_signal n_features error error_message
-    ##   <int>       <dbl>     <dbl>      <int> <lgl> <chr>        
-    ## 1     1    -0.00838     1.00         339 FALSE ~            
-    ## 2     2    -0.0123      0.993        314 FALSE ~            
-    ## 3     3    -0.00193     0.998        323 FALSE ~            
-    ## 4     4     0.0232      1.02          24 FALSE ~
-
-``` r
 # Example with error handling (using the robust function and potential small ROI 4)
 # Suppress expected warnings from the logger about the error
 suppressWarnings({
@@ -219,38 +202,19 @@ suppressWarnings({
       .verbose = FALSE
     )
 })
-```
 
-    ## INFO [2026-04-25 14:34:07] Starting custom regional analysis...
-
-    ## INFO [2026-04-25 14:34:07] 
-    ## MVPA Iteration Complete
-    ## - Total ROIs: 4
-    ## - Processed: 4
-    ## - Skipped: 0
-
-    ## INFO [2026-04-25 14:34:07] Custom regional analysis iteration complete.
-
-    ## INFO [2026-04-25 14:34:07] Finished formatting custom regional results.
-
-``` r
 cat("\nResults with potential errors:\n")
-```
-
-    ## 
-    ## Results with potential errors:
-
-``` r
+#> 
+#> Results with potential errors:
 print(custom_regional_error_results)
+#> # A tibble: 4 × 6
+#>      id mean_signal sd_signal n_features error error_message
+#>   <int>       <dbl>     <dbl>      <int> <lgl> <chr>        
+#> 1     1    -0.00838     1.00         339 FALSE ~            
+#> 2     2    -0.0123      0.993        314 FALSE ~            
+#> 3     3    -0.00193     0.998        323 FALSE ~            
+#> 4     4     0.0232      1.02          24 FALSE ~
 ```
-
-    ## # A tibble: 4 × 6
-    ##      id mean_signal sd_signal n_features error error_message
-    ##   <int>       <dbl>     <dbl>      <int> <lgl> <chr>        
-    ## 1     1    -0.00838     1.00         339 FALSE ~            
-    ## 2     2    -0.0123      0.993        314 FALSE ~            
-    ## 3     3    -0.00193     0.998        323 FALSE ~            
-    ## 4     4     0.0232      1.02          24 FALSE ~
 
 **Explanation:**
 
@@ -285,55 +249,42 @@ custom_searchlight_results <- run_custom_searchlight(
 
 # Print the results object summary
 print(custom_searchlight_results)
-```
+#> 
+#>  Searchlight Analysis Results 
+#> 
+#> - Coverage 
+#>   - Voxels/Vertices in Mask:  1,000 
+#>   - Voxels/Vertices with Results:  1,000 
+#> - Output Maps (Metrics) 
+#>   -  mean_signal  (Type:  searchlight_performance ) 
+#>   -  sd_signal  (Type:  searchlight_performance ) 
+#>   -  n_features  (Type:  searchlight_performance )
 
-    ## 
-    ##  Searchlight Analysis Results 
-    ## 
-    ## - Coverage 
-    ##   - Voxels/Vertices in Mask:  1,000 
-    ##   - Voxels/Vertices with Results:  1,000 
-    ## - Output Maps (Metrics) 
-    ##   -  mean_signal  (Type:  searchlight_performance ) 
-    ##   -  sd_signal  (Type:  searchlight_performance ) 
-    ##   -  n_features  (Type:  searchlight_performance )
-
-``` r
 # Access the results for a specific metric (e.g., mean_signal)
 mean_signal_map_obj <- custom_searchlight_results$results$mean_signal
 
 # The map itself is stored in the 'data' slot
 mean_signal_map_vol <- mean_signal_map_obj$data
 cat("\nClass of the mean_signal map:", class(mean_signal_map_vol), "\n")
-```
-
-    ## 
-    ## Class of the mean_signal map: DenseNeuroVol
-
-``` r
+#> 
+#> Class of the mean_signal map: DenseNeuroVol
 cat("Dimensions of the map:", dim(mean_signal_map_vol), "\n")
-```
+#> Dimensions of the map: 10 10 10
 
-    ## Dimensions of the map: 10 10 10
-
-``` r
 # Print summary stats for the map
 print(mean_signal_map_obj$summary_stats)
-```
+#> $mean
+#> [1] -0.007061025
+#> 
+#> $sd
+#> [1] 0.0096284
+#> 
+#> $min
+#> [1] -0.03503245
+#> 
+#> $max
+#> [1] 0.03016657
 
-    ## $mean
-    ## [1] -0.007061025
-    ## 
-    ## $sd
-    ## [1] 0.0096284
-    ## 
-    ## $min
-    ## [1] -0.03503245
-    ## 
-    ## $max
-    ## [1] 0.03016657
-
-``` r
 # You can plot the map using neuroim2's plotting functions (example commented out)
 # plot(mean_signal_map_vol) 
 ```

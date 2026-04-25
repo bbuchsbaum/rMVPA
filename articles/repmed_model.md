@@ -1,5 +1,11 @@
 # Representational Mediation (ReNA-RM): repmed_model
 
+> *ReNA-RM* is one of four cross-domain representational models in
+> rMVPA. For the section’s terminology and how to choose between
+> *ReNA-RC*, *ReNA-Map*, *ReNA-RM*, and *REMAP-RRR*, see the glossary at
+> the top of
+> [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md).
+
 ## Overview
 
 ReNA-RM tests whether an ROI’s representational geometry (mediator M)
@@ -49,6 +55,32 @@ across regions
 - Trial-level design with item key to average trials into mediator
   prototypes.
 - X/Y RDMs labeled by items; optional labeled confound RDMs.
+
+## What do the X and Y RDMs look like?
+
+ReNA-RM tests whether a region’s geometry mediates the predictor RDM
+`X`’s relationship to the outcome RDM `Y`. The toy below builds an
+ordinal X RDM and a noisy linear transformation of it as Y, so the two
+are related but not identical.
+
+``` r
+set.seed(31)
+K <- 6
+items <- paste0("I", seq_len(K))
+xi <- matrix(seq_len(K), K, 1)
+yi <- xi + rnorm(K, sd = 0.1)
+Xr <- as.matrix(stats::dist(xi)); rownames(Xr) <- colnames(Xr) <- items
+Yr <- as.matrix(stats::dist(yi)); rownames(Yr) <- colnames(Yr) <- items
+```
+
+![Left: predictor RDM X (clean ordinal). Right: outcome RDM Y (noisy
+version of X). ReNA-RM asks how much of the X -\> Y relationship passes
+through an ROI's representational
+geometry.](repmed_model_files/figure-html/repmed-xy-plot-1.png)
+
+Left: predictor RDM X (clean ordinal). Right: outcome RDM Y (noisy
+version of X). ReNA-RM asks how much of the X -\> Y relationship passes
+through an ROI’s representational geometry.
 
 ## Quick start: single ROI
 

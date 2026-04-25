@@ -32,6 +32,16 @@ knitr::kable(round(conn_example$cross_raw, 2))
 |   0 | 0.02 |  0.02 | -0.05 |
 |   0 | 0.03 | -0.01 | -0.01 |
 
+![Asymmetric ROI x ROI cross-connectivity. Rows are source ROIs (the
+geometry learned there), columns are target ROIs (the geometry observed
+there). Diagonal = within-ROI feature-RSA fit; off-diagonals = cross-ROI
+generalization.](Feature_RSA_Connectivity_files/figure-html/quick-win-heatmap-1.png)
+
+Asymmetric ROI x ROI cross-connectivity. Rows are source ROIs (the
+geometry learned there), columns are target ROIs (the geometry observed
+there). Diagonal = within-ROI feature-RSA fit; off-diagonals = cross-ROI
+generalization.
+
 Rows are source ROIs: the predicted geometry learned in that ROI.
 Columns are target ROIs: the observed geometry in held-out data from
 that ROI. The diagonal is the familiar within-ROI feature-RSA fit. The

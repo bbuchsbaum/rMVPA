@@ -243,16 +243,22 @@ brain).</p>
 <p>We can inspect the performance table to evaluate model accuracy in
 each region.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Display performance metrics for each region</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">regional_results</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">regional_results</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
 <span><span class="co">#&gt;   roinum Accuracy      AUC</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1    0.575  0.188  </span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2    0.488  0.001<span style="text-decoration: underline;">25</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3    0.488 -<span style="color: #BB0000;">0.157</span></span></span></code></pre></div>
-<p>For a more detailed view, the prediction table shows trial-by-trial
-predictions:</p>
+<div class="figure">
+<img src="Regional_Analysis_files/figure-html/regional-perf-bars-1.png" class="r-plt" alt="Cross-validated accuracy per region. The dashed line marks chance for a 2-class problem." width="70%"><p class="caption">
+Cross-validated accuracy per region. The dashed line marks chance for a
+2-class problem.
+</p>
+</div>
+<p>The bar plot makes between-region differences visible at a glance and
+shows where each region sits relative to chance. For a more detailed
+view, the prediction table shows trial-by-trial predictions:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Display the prediction table</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">regional_results</span><span class="op">$</span><span class="va">prediction_table</span><span class="op">)</span></span>

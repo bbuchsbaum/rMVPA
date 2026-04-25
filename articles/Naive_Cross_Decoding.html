@@ -66,6 +66,47 @@ authors</h4>
     
     
 <div class="section level2">
+<h2 id="rena-remap-terminology">ReNA / REMAP terminology<a class="anchor" aria-label="anchor" href="#rena-remap-terminology"></a>
+</h2>
+<p>This section of the documentation covers four related models for
+cross-domain representational analysis. They share a vocabulary that’s
+easier to keep straight if defined once:</p>
+<ul>
+<li>
+<strong>Naive cross-decoding</strong> <em>(this vignette)</em> — the
+no-learning baseline: classify target patterns against source prototypes
+via correlation. Lives in <code><a href="../reference/naive_xdec_model.html">naive_xdec_model()</a></code>.</li>
+<li>
+<strong>ERA-RSA</strong>
+<em>(<code><a href="../articles/ERA_RSA_Cross_Decoding.html">vignette("ERA_RSA_Cross_Decoding")</a></code>)</em> —
+encoding-retrieval analysis combining first-order item match and
+second-order RDM similarity. Lives in <code><a href="../reference/era_rsa_model.html">era_rsa_model()</a></code> and
+<code><a href="../reference/era_partition_model.html">era_partition_model()</a></code>.</li>
+<li>
+<strong>REMAP-RRR</strong>
+<em>(<code><a href="../articles/REMAP_RRR.html">vignette("REMAP_RRR")</a></code>)</em> — domain-adaptive
+cross-decoding via reduced-rank regression. Lives in
+<code><a href="../reference/remap_rrr_model.html">remap_rrr_model()</a></code>.</li>
+<li>
+<strong>ReNA-Map</strong>
+<em>(<code><a href="../articles/repmap_model.html">vignette("repmap_model")</a></code>,
+<code><a href="../reference/repmap_model.html">repmap_model()</a></code>)</em> — predicts an ROI’s pattern from a
+low-rank seed feature space.</li>
+<li>
+<strong>ReNA-RM</strong> <em>(<code><a href="../articles/repmed_model.html">vignette("repmed_model")</a></code>,
+<code><a href="../reference/repmed_model.html">repmed_model()</a></code>)</em> — tests whether one ROI’s geometry
+mediates another’s relationship to a seed.</li>
+<li>
+<strong>ReNA-RC</strong> <em>(<code><a href="../articles/repnet_model.html">vignette("repnet_model")</a></code>,
+<code><a href="../reference/repnet_model.html">repnet_model()</a></code>)</em> — representational connectivity:
+correlates an ROI’s RDM with a seed RDM, with optional confound
+RDMs.</li>
+</ul>
+<p>Reach for naive cross-decoding <em>first</em>: it’s the cheapest
+baseline. The other four answer different questions when naive transfer
+is insufficient.</p>
+</div>
+<div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
 <p>You use cross-decoding when the data come from two related domains,

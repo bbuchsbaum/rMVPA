@@ -39,40 +39,37 @@ Let’s walk through a complete example:
 # Synthetic dataset: 6x6x6, 50 observations (4 blocks)
 data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 50, blocks = 4, nlevels = 2)
 print(data_out)
-```
+#> $dataset
+#> 
+#>  MVPA Dataset 
+#> 
+#> - Training Data 
+#>   - Dimensions:  6 x 6 x 6 x 50 observations 
+#>   - Type:  DenseNeuroVec 
+#> - Test Data 
+#>   -  None 
+#> - Mask Information 
+#>   - Areas:  TRUE : 216 
+#>   - Active voxels/vertices:  216 
+#> 
+#> 
+#> $design
+#> 
+#>  MVPA Design 
+#> 
+#> - Training Data 
+#>   - Observations:  50 
+#>   - Response Type:  Factor
+#>   - Levels:  a, b 
+#>   - Class Distribution:  a: 25, b: 25 
+#> - Test Data 
+#>   -  None 
+#> - Structure 
+#>   - Blocking:  Present
+#>   - Number of Blocks:  4 
+#>   - Mean Block Size:  12  (SD:  0.58 ) 
+#>   - Split Groups:  None
 
-    ## $dataset
-    ## 
-    ##  MVPA Dataset 
-    ## 
-    ## - Training Data 
-    ##   - Dimensions:  6 x 6 x 6 x 50 observations 
-    ##   - Type:  DenseNeuroVec 
-    ## - Test Data 
-    ##   -  None 
-    ## - Mask Information 
-    ##   - Areas:  TRUE : 216 
-    ##   - Active voxels/vertices:  216 
-    ## 
-    ## 
-    ## $design
-    ## 
-    ##  MVPA Design 
-    ## 
-    ## - Training Data 
-    ##   - Observations:  50 
-    ##   - Response Type:  Factor
-    ##   - Levels:  a, b 
-    ##   - Class Distribution:  a: 25, b: 25 
-    ## - Test Data 
-    ##   -  None 
-    ## - Structure 
-    ##   - Blocking:  Present
-    ##   - Number of Blocks:  4 
-    ##   - Mean Block Size:  12  (SD:  0.58 ) 
-    ##   - Split Groups:  None
-
-``` r
 set.seed(123)
 n_stimuli  <- 50
 n_features <- 5
@@ -146,16 +143,15 @@ results <- suppressWarnings(suppressMessages(run_regional(feature_model, region_
 
 # Examine results
 print(results$performance_table)
+#> # A tibble: 3 × 10
+#>   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
+#>    <int>               <dbl>                  <dbl>                   <dbl>
+#> 1      1               0.403                  0.378                   0.798
+#> 2      2               0.385                  0.349                   0.786
+#> 3      3               0.368                  0.335                   0.766
+#> # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
+#> #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
 ```
-
-    ## # A tibble: 3 × 10
-    ##   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
-    ##    <int>               <dbl>                  <dbl>                   <dbl>
-    ## 1      1               0.403                  0.378                   0.798
-    ## 2      2               0.385                  0.349                   0.786
-    ## 3      3               0.368                  0.335                   0.766
-    ## # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
-    ## #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
 
 ### Available methods
 
@@ -184,38 +180,37 @@ for (i in seq_along(methods)) {
   cat("\nMethod:", methods[i], "\n")
   print(results_list[[i]]$performance_table)
 }
+#> 
+#> Method: pls 
+#> # A tibble: 3 × 10
+#>   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
+#>    <int>               <dbl>                  <dbl>                   <dbl>
+#> 1      1               0.403                  0.378                   0.798
+#> 2      2               0.385                  0.349                   0.786
+#> 3      3               0.368                  0.335                   0.766
+#> # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
+#> #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
+#> 
+#> Method: pca 
+#> # A tibble: 3 × 10
+#>   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
+#>    <int>               <dbl>                  <dbl>                   <dbl>
+#> 1      1               0.399                  0.374                   0.794
+#> 2      2               0.380                  0.344                   0.779
+#> 3      3               0.363                  0.330                   0.760
+#> # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
+#> #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
+#> 
+#> Method: glmnet 
+#> # A tibble: 3 × 10
+#>   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
+#>    <int>               <dbl>                  <dbl>                   <dbl>
+#> 1      1               0.379                  0.357                   0.803
+#> 2      2               0.367                  0.339                   0.787
+#> 3      3               0.377                  0.351                   0.793
+#> # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
+#> #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
 ```
-
-    ## 
-    ## Method: pls 
-    ## # A tibble: 3 × 10
-    ##   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
-    ##    <int>               <dbl>                  <dbl>                   <dbl>
-    ## 1      1               0.403                  0.378                   0.798
-    ## 2      2               0.385                  0.349                   0.786
-    ## 3      3               0.368                  0.335                   0.766
-    ## # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
-    ## #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
-    ## 
-    ## Method: pca 
-    ## # A tibble: 3 × 10
-    ##   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
-    ##    <int>               <dbl>                  <dbl>                   <dbl>
-    ## 1      1               0.399                  0.374                   0.794
-    ## 2      2               0.380                  0.344                   0.779
-    ## 3      3               0.363                  0.330                   0.760
-    ## # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
-    ## #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
-    ## 
-    ## Method: glmnet 
-    ## # A tibble: 3 × 10
-    ##   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
-    ##    <int>               <dbl>                  <dbl>                   <dbl>
-    ## 1      1               0.379                  0.357                   0.803
-    ## 2      2               0.367                  0.339                   0.787
-    ## 3      3               0.377                  0.351                   0.793
-    ## # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
-    ## #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
 
 ## Vector-Based RSA
 
@@ -265,14 +260,13 @@ results_vector <- suppressWarnings(suppressMessages(run_regional(vector_model, r
 
 # Examine results
 print(results_vector$performance_table)
+#> # A tibble: 3 × 2
+#>   roinum rsa_score
+#>    <int>     <dbl>
+#> 1      1     0.549
+#> 2      2     0.524
+#> 3      3     0.477
 ```
-
-    ## # A tibble: 3 × 2
-    ##   roinum rsa_score
-    ##    <int>     <dbl>
-    ## 1      1     0.549
-    ## 2      2     0.524
-    ## 3      3     0.477
 
 ### Efficient Block Handling
 
@@ -301,24 +295,23 @@ for (i in seq_along(block_sizes)) {
   cat("\nBlock size:", block_sizes[i], "\n")
   print(results_blocks[[i]]$performance_table)
 }
+#> 
+#> Block size: 5 
+#> # A tibble: 3 × 2
+#>   roinum rsa_score
+#>    <int>     <dbl>
+#> 1      1     0.552
+#> 2      2     0.522
+#> 3      3     0.478
+#> 
+#> Block size: 10 
+#> # A tibble: 3 × 2
+#>   roinum rsa_score
+#>    <int>     <dbl>
+#> 1      1     0.554
+#> 2      2     0.531
+#> 3      3     0.482
 ```
-
-    ## 
-    ## Block size: 5 
-    ## # A tibble: 3 × 2
-    ##   roinum rsa_score
-    ##    <int>     <dbl>
-    ## 1      1     0.552
-    ## 2      2     0.522
-    ## 3      3     0.478
-    ## 
-    ## Block size: 10 
-    ## # A tibble: 3 × 2
-    ##   roinum rsa_score
-    ##    <int>     <dbl>
-    ## 1      1     0.554
-    ## 2      2     0.531
-    ## 3      3     0.482
 
 ## When to Use Each Method
 

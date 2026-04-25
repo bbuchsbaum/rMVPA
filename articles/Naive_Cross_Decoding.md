@@ -1,5 +1,45 @@
 # Naive Cross-Decoding
 
+## ReNA / REMAP terminology
+
+This section of the documentation covers four related models for
+cross-domain representational analysis. They share a vocabulary that’s
+easier to keep straight if defined once:
+
+- **Naive cross-decoding** *(this vignette)* — the no-learning baseline:
+  classify target patterns against source prototypes via correlation.
+  Lives in
+  [`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
+- **ERA-RSA**
+  *([`vignette("ERA_RSA_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.md))*
+  — encoding-retrieval analysis combining first-order item match and
+  second-order RDM similarity. Lives in
+  [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
+  and
+  [`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md).
+- **REMAP-RRR**
+  *([`vignette("REMAP_RRR")`](http://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md))*
+  — domain-adaptive cross-decoding via reduced-rank regression. Lives in
+  [`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md).
+- **ReNA-Map**
+  *([`vignette("repmap_model")`](http://bbuchsbaum.github.io/rMVPA/articles/repmap_model.md),
+  [`repmap_model()`](http://bbuchsbaum.github.io/rMVPA/reference/repmap_model.md))*
+  — predicts an ROI’s pattern from a low-rank seed feature space.
+- **ReNA-RM**
+  *([`vignette("repmed_model")`](http://bbuchsbaum.github.io/rMVPA/articles/repmed_model.md),
+  [`repmed_model()`](http://bbuchsbaum.github.io/rMVPA/reference/repmed_model.md))*
+  — tests whether one ROI’s geometry mediates another’s relationship to
+  a seed.
+- **ReNA-RC**
+  *([`vignette("repnet_model")`](http://bbuchsbaum.github.io/rMVPA/articles/repnet_model.md),
+  [`repnet_model()`](http://bbuchsbaum.github.io/rMVPA/reference/repnet_model.md))*
+  — representational connectivity: correlates an ROI’s RDM with a seed
+  RDM, with optional confound RDMs.
+
+Reach for naive cross-decoding *first*: it’s the cheapest baseline. The
+other four answer different questions when naive transfer is
+insufficient.
+
 ## Overview
 
 You use cross-decoding when the data come from two related domains, such

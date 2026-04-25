@@ -1,5 +1,11 @@
 # Representational Connectivity (ReNA-RC): repnet_model
 
+> *ReNA-RC* is one of four cross-domain representational models in
+> rMVPA. For the section’s terminology and how to choose between
+> *ReNA-RC*, *ReNA-Map*, *ReNA-RM*, and *REMAP-RRR*, see the glossary at
+> the top of
+> [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md).
+
 ## Overview
 
 ReNA-RC quantifies the similarity between an ROI’s item-level
@@ -56,6 +62,35 @@ covariation - vs. **Searchlight RSA**: ReNA-RC uses a fixed seed
   prototypes.
 - Seed/Confound RDMs labeled by item IDs (rownames/colnames). Unlabeled
   confounds are rejected to avoid silent misalignment.
+
+## What does a seed RDM look like?
+
+A seed RDM is a `K x K` matrix of dissimilarities between items. ReNA-RC
+asks how strongly each ROI’s representational geometry resembles this
+seed (optionally controlling for confounds). The toy example below uses
+a six-item ordinal seed: items closer in index are predicted to be more
+similar.
+
+``` r
+K <- 6
+items <- paste0("I", seq_len(K))
+S <- as.matrix(stats::dist(seq_len(K)))
+rownames(S) <- colnames(S) <- items
+
+Adj <- (as.matrix(stats::dist(seq_len(K))) == 1) * 1
+rownames(Adj) <- colnames(Adj) <- items
+```
+
+![Left: seed RDM (an ordinal stack — small dissimilarity near the
+diagonal). Right: confound 'adjacent' RDM (1 for index-adjacent pairs, 0
+otherwise). ReNA-RC measures the seed's variance unique to each ROI's
+geometry, after partialling out the
+confound.](repnet_model_files/figure-html/repnet-seed-plot-1.png)
+
+Left: seed RDM (an ordinal stack — small dissimilarity near the
+diagonal). Right: confound ‘adjacent’ RDM (1 for index-adjacent pairs, 0
+otherwise). ReNA-RC measures the seed’s variance unique to each ROI’s
+geometry, after partialling out the confound.
 
 ## Quick start: single ROI
 

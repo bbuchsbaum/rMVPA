@@ -185,7 +185,6 @@ We can inspect the performance table to evaluate model accuracy in each
 region.
 
 ``` r
-# Display performance metrics for each region
 print(regional_results$performance_table)
 #> # A tibble: 3 × 3
 #>   roinum Accuracy      AUC
@@ -195,8 +194,16 @@ print(regional_results$performance_table)
 #> 3      3    0.488 -0.157
 ```
 
-For a more detailed view, the prediction table shows trial-by-trial
-predictions:
+![Cross-validated accuracy per region. The dashed line marks chance for
+a 2-class
+problem.](Regional_Analysis_files/figure-html/regional-perf-bars-1.png)
+
+Cross-validated accuracy per region. The dashed line marks chance for a
+2-class problem.
+
+The bar plot makes between-region differences visible at a glance and
+shows where each region sits relative to chance. For a more detailed
+view, the prediction table shows trial-by-trial predictions:
 
 ``` r
 # Display the prediction table

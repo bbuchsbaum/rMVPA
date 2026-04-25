@@ -1,5 +1,11 @@
 # Representational Mapping (ReNA-Map): repmap_model
 
+> *ReNA-Map* is one of four cross-domain representational models in
+> rMVPA. For the section’s terminology and how to choose between
+> *ReNA-RC*, *ReNA-Map*, *ReNA-RM*, and *REMAP-RRR*, see the glossary at
+> the top of
+> [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md).
+
 ## Overview
 
 ReNA-Map estimates a low-rank linear map from seed feature vectors (one
@@ -57,6 +63,31 @@ variable correlation
 - A design with a per-trial item key used to average trials into
   item-level prototypes.
 - A seed feature matrix whose rownames match item IDs in the design.
+
+## What does a seed feature space look like?
+
+ReNA-Map needs a per-item feature matrix (rows = items, columns =
+features). Below is a toy 6-item, 8-feature seed and the implied
+item-by-item similarity it predicts:
+
+``` r
+set.seed(11)
+K <- 6; P <- 8
+items <- paste0("I", seq_len(K))
+seedF <- matrix(rnorm(K * P), K, P)
+rownames(seedF) <- items
+seed_sim <- tcrossprod(base::scale(seedF))
+```
+
+![Left: seed feature matrix (rows = items, columns = features). Right:
+implied item-by-item similarity (centered features dot product).
+ReNA-Map asks each ROI how many of these feature dimensions it can
+recover.](repmap_model_files/figure-html/repmap-seed-plot-1.png)
+
+Left: seed feature matrix (rows = items, columns = features). Right:
+implied item-by-item similarity (centered features dot product).
+ReNA-Map asks each ROI how many of these feature dimensions it can
+recover.
 
 ## Quick start: single ROI
 

@@ -75,13 +75,7 @@ real volumetric and surface data.</p>
 <code><a href="../reference/gen_sample_dataset.html">gen_sample_dataset()</a></code>, which creates a complete dataset and
 design in one call:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/rMVPA" class="external-link">rMVPA</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/neuroim2" class="external-link">neuroim2</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Create a synthetic 6x6x6 dataset with 80 observations in 4 runs, 2 conditions</span></span>
-<span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">6</span>, <span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">80</span>, blocks <span class="op">=</span> <span class="fl">4</span>, nlevels <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># The result contains a dataset and a design</span></span>
+<code class="sourceCode R"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">6</span>, <span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">80</span>, blocks <span class="op">=</span> <span class="fl">4</span>, nlevels <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;  MVPA Dataset </span></span>
@@ -109,17 +103,29 @@ design in one call:</p>
 <span><span class="co">#&gt;   - Blocking:  Present</span></span>
 <span><span class="co">#&gt;   - Number of Blocks:  4 </span></span>
 <span><span class="co">#&gt;   - Mean Block Size:  20  (SD:  0 ) </span></span>
-<span><span class="co">#&gt;   - Split Groups:  None</span></span>
-<span></span>
-<span><span class="co"># You can also construct each piece manually:</span></span>
-<span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   - Split Groups:  None</span></span></code></pre></div>
+<p>The dataset bundles a 4-D <code>NeuroVec</code> (voxels × time) and a
+binary <code>NeuroVol</code> mask. Two pictures make the shape concrete:
+a mid-axial slice of the mask, and the trial × run grid of the
+design.</p>
+<div class="figure">
+<img src="Constructing_Datasets_files/figure-html/synthetic-visual-1.png" class="r-plt" alt="Left: a mid-axial slice of the binary mask (active voxels in dark blue). Right: each trial coloured by run; runs split into equal-length blocks of trials." width="672"><p class="caption">
+Left: a mid-axial slice of the binary mask (active voxels in dark blue).
+Right: each trial coloured by run; runs split into equal-length blocks
+of trials.
+</p>
+</div>
+<p>You can also assemble the pieces manually if you want explicit
+control over the design data frame:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">design_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  Y     <span class="op">=</span> <span class="va">ds</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">y_train</span>,</span>
 <span>  block <span class="op">=</span> <span class="va">ds</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">mvdes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_design.html">mvpa_design</a></span><span class="op">(</span><span class="va">design_df</span>, y_train <span class="op">=</span> <span class="op">~</span> <span class="va">Y</span>, block_var <span class="op">=</span> <span class="op">~</span> <span class="va">block</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mvdes</span><span class="op">)</span></span>
+<span><span class="va">mvdes</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;  MVPA Design </span></span>
 <span><span class="co">#&gt; </span></span>
@@ -143,7 +149,7 @@ design in one call:</p>
 reference file paths you should replace with your own data.</p>
 <p>This example assumes you have a 4D fMRI file (“bold.nii.gz”) and a
 corresponding 3D brain mask file (“mask.nii.gz”).</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/neuroim2" class="external-link">neuroim2</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Read the fMRI data as a NeuroVec object using neuroim2::read_vec</span></span>
@@ -167,7 +173,7 @@ corresponding 3D brain mask file (“mask.nii.gz”).</p>
 (“surface_data.csv”). The signal matrix should have dimensions
 corresponding to the number of vertices and the number of
 observations.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">## remotes::install_github("bbuchsbaum/neurosurf")</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/neurosurf" class="external-link">neurosurf</a></span><span class="op">)</span></span>
 <span></span>
