@@ -102,8 +102,10 @@ type such as `maps`, `surfaces`, `tables`, `aux`, and `manifest`).
   method to write volumetric maps in `vol_results`, then saves regional
   tables such as `performance_table` and `prediction_table` as
   tab-delimited text. For `level != "minimal"`, ROI-wise fits (if
-  present) are saved under `<dir>/fits`. A manifest can be written
-  summarizing ROI counts, presence of fits, and all file paths.
+  present) are saved under `<dir>/fits`. File-backed feature-RSA RDM
+  batches remain in `$rdm_batch_dir` and are referenced in the manifest.
+  A manifest can be written summarizing ROI counts, presence of fits,
+  and all file paths.
 
 - **`save_results.default`**: if `x` is a named list of
   `NeuroVol`/`NeuroVec` (and/or surface) objects, it is treated as a

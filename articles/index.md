@@ -43,6 +43,8 @@ RSA methods from basic to specialized approaches
   Recall](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md):
 - [Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset
   Control](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md):
+- [Model-Space Representational
+  Connectivity](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md):
 - [Feature-RSA Advanced
   Workflows](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md):
 

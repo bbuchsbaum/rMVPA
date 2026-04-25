@@ -13,6 +13,9 @@ validate_analysis(x, ...)
 # S3 method for class 'mvpa_model'
 validate_analysis(x, verbose = TRUE, ...)
 
+# S3 method for class 'model_spec'
+validate_analysis(x, verbose = TRUE, ...)
+
 # S3 method for class 'mvpa_design'
 validate_analysis(x, crossval = NULL, dataset = NULL, verbose = TRUE, ...)
 ```

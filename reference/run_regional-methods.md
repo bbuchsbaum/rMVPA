@@ -26,6 +26,7 @@ run_regional_base(
   stack_folds = NULL,
   stack_seed = NULL,
   stack_lambda = 0.001,
+  save_rdm_vectors_dir = NULL,
   preflight = c("warn", "error", "off"),
   backend = c("default", "shard", "auto"),
   ...
@@ -140,6 +141,15 @@ run_regional(
 
   Ridge penalty used by glmnet in stacking.
 
+- save_rdm_vectors_dir:
+
+  Optional directory where feature-RSA predicted and observed RDM
+  vectors should be written batch-by-batch. When supplied for
+  \`feature_rsa_model(..., return_rdm_vectors = TRUE)\`,
+  \`run_regional()\` writes compact \`rdm_batches/batch\_\*.rds\` files
+  in that directory and returns \`rdm_batch_dir\` in the result instead
+  of retaining all ROI RDM vectors in memory.
+
 - preflight:
 
   One of `"warn"` (default), `"error"`, or `"off"` controlling whether
@@ -177,6 +187,11 @@ A `regional_mvpa_result` object (list) containing:
 
   A list of fitted model objects for each region (if requested via
   \`return_fits=TRUE\`).
+
+- rdm_batch_dir:
+
+  Optional directory of file-backed feature-RSA RDM-vector batches when
+  \`save_rdm_vectors_dir\` is used.
 
 - model_spec:
 
@@ -258,12 +273,12 @@ Without progressr, only coarse batch-level log messages are shown.
   
   # Run regional analysis
   results <- run_regional(mspec, region_mask)
-#> INFO [2026-04-24 16:43:34] 
+#> INFO [2026-04-25 14:31:33] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 5
 #> - Processed: 5
 #> - Skipped: 0
-#> INFO [2026-04-24 16:43:35] run_regional: 5 ROIs processed (success=5, errors=0)
+#> INFO [2026-04-25 14:31:33] run_regional: 5 ROIs processed (success=5, errors=0)
   
   # Access results
   head(results$performance_table)     # Performance metrics

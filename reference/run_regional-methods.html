@@ -62,6 +62,7 @@
 <span>  stack_folds <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  stack_seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  stack_lambda <span class="op">=</span> <span class="fl">0.001</span>,</span>
+<span>  save_rdm_vectors_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  preflight <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"error"</span>, <span class="st">"off"</span><span class="op">)</span>,</span>
 <span>  backend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"default"</span>, <span class="st">"shard"</span>, <span class="st">"auto"</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -170,6 +171,15 @@ an integer number of folds, a fold-id vector, or a list of fold indices.</p></dd
 <dd><p>Ridge penalty used by <span class="pkg">glmnet</span> in stacking.</p></dd>
 
 
+<dt id="arg-save-rdm-vectors-dir">save_rdm_vectors_dir<a class="anchor" aria-label="anchor" href="#arg-save-rdm-vectors-dir"></a></dt>
+<dd><p>Optional directory where feature-RSA predicted and
+observed RDM vectors should be written batch-by-batch. When supplied for
+`feature_rsa_model(..., return_rdm_vectors = TRUE)`, `run_regional()`
+writes compact `rdm_batches/batch_*.rds` files in that directory and
+returns `rdm_batch_dir` in the result instead of retaining all ROI RDM
+vectors in memory.</p></dd>
+
+
 <dt id="arg-preflight">preflight<a class="anchor" aria-label="anchor" href="#arg-preflight"></a></dt>
 <dd><p>One of <code>"warn"</code> (default), <code>"error"</code>, or
 <code>"off"</code> controlling whether analysis preflight findings emit warnings,
@@ -196,6 +206,10 @@ stop the run, or are skipped.</p></dd>
 
   <dt>fits</dt>
 <dd><p>A list of fitted model objects for each region (if requested via `return_fits=TRUE`).</p></dd>
+
+  <dt>rdm_batch_dir</dt>
+<dd><p>Optional directory of file-backed feature-RSA RDM-vector
+  batches when `save_rdm_vectors_dir` is used.</p></dd>
 
   <dt>model_spec</dt>
 <dd><p>The original model specification object provided.</p></dd>
@@ -259,12 +273,12 @@ are emitted from parallel workers. To enable a progress bar:</p><div class="sour
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="co"># Run regional analysis</span></span></span>
 <span class="r-in"><span>  <span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">run_regional</span><span class="op">(</span><span class="va">mspec</span>, <span class="va">region_mask</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:34] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:33] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">5</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">5</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:35] run_regional: 5 ROIs processed (success=5, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:33] run_regional: 5 ROIs processed (success=5, errors=0)</span>
 <span class="r-in"><span>  </span></span>
 <span class="r-in"><span>  <span class="co"># Access results</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span>     <span class="co"># Performance metrics</span></span></span>

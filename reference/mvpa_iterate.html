@@ -53,7 +53,8 @@ using batch processing and parallel computation.</p>
 <span>  processor <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  analysis_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"searchlight"</span>, <span class="st">"regional"</span><span class="op">)</span>,</span>
 <span>  drop_probs <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  fail_fast <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  fail_fast <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  save_rdm_vectors_dir <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -110,6 +111,11 @@ Must accept parameters (obj, roi, rnum) and return a tibble.</p></dd>
 <dt id="arg-fail-fast">fail_fast<a class="anchor" aria-label="anchor" href="#arg-fail-fast"></a></dt>
 <dd><p>Logical; if TRUE, stop immediately on first ROI error. Default FALSE.</p></dd>
 
+
+<dt id="arg-save-rdm-vectors-dir">save_rdm_vectors_dir<a class="anchor" aria-label="anchor" href="#arg-save-rdm-vectors-dir"></a></dt>
+<dd><p>Optional directory for writing file-backed
+feature-RSA RDM vector batches instead of retaining all vectors in memory.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -159,8 +165,8 @@ Must accept parameters (obj, roi, rnum) and return a tibble.</p></dd>
 <span class="r-in"><span>  <span class="va">vox_iter</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">sl</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="va">x</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">mvpa_iterate</span><span class="op">(</span><span class="va">mspec</span>, <span class="va">vox_iter</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>    ids<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">vox_iter</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:07] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">1</span> (<span style="color: #00BB00;">5</span> ROIs in this batch)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:08] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:29:28] Processing batch <span style="color: #0000BB;">1</span>/<span style="color: #0000BB;">1</span> (<span style="color: #00BB00;">5</span> ROIs in this batch)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:29:29] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">5</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">5</span></span>

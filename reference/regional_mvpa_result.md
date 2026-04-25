@@ -12,6 +12,7 @@ regional_mvpa_result(
   prediction_table,
   vol_results,
   fits = fits,
+  rdm_batch_dir = NULL,
   pooled_prediction_table = NULL,
   pooled_performance = NULL
 )
@@ -38,6 +39,11 @@ regional_mvpa_result(
 - fits:
 
   Optional model fits.
+
+- rdm_batch_dir:
+
+  Optional directory containing file-backed feature-RSA RDM-vector
+  batches written during \`run_regional()\`.
 
 - pooled_prediction_table:
 

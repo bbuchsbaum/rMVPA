@@ -270,6 +270,9 @@ All functions exported by rMVPA
 - [`model_importance()`](http://bbuchsbaum.github.io/rMVPA/reference/model_importance.md)
   : Per-Feature Model Importance
 
+- [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
+  : Model-space representational connectivity from a fitted rMVPA result
+
 - [`msreve_design()`](http://bbuchsbaum.github.io/rMVPA/reference/msreve_design.md)
   : Constructor for msreve_design
 
@@ -331,6 +334,9 @@ All functions exported by rMVPA
 
 - [`output_schema(`*`<contrast_rsa_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/output_schema.contrast_rsa_model.md)
   : Output schema for contrast_rsa_model
+
+- [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
+  : Construct a pair-observation RSA design
 
 - [`performance()`](http://bbuchsbaum.github.io/rMVPA/reference/performance-methods.md)
   : Compute Performance Metrics

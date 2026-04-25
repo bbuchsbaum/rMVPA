@@ -3,7 +3,9 @@
 Convenience helper to pull the compact lower-triangle predicted (and
 optionally observed) RDM vectors stored by
 `feature_rsa_model(..., return_rdm_vectors = TRUE)` from a
-`regional_mvpa_result`.
+`regional_mvpa_result`. Results can come either from in-memory `$fits`
+or from file-backed batches written via
+`run_regional(..., save_rdm_vectors_dir = ...)`.
 
 ## Usage
 
@@ -18,7 +20,8 @@ feature_rsa_rdm_vectors(x)
   A `regional_mvpa_result` returned by
   [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
   for a `feature_rsa_model`, or a tibble/data frame with columns
-  `roinum` and `rdm_vec`.
+  `roinum` and `rdm_vec`. A `regional_mvpa_result` may store vectors
+  either in-memory or on disk in `$rdm_batch_dir`.
 
 ## Value
 

@@ -557,13 +557,100 @@ saving both the raw matrix and one adjusted matrix rather than choosing
 only one.</p>
 </div>
 <div class="section level2">
+<h2 id="feature-rsa-vs--model-space-connectivity">Feature-RSA vs. model-space connectivity<a class="anchor" aria-label="anchor" href="#feature-rsa-vs--model-space-connectivity"></a>
+</h2>
+<p>rMVPA exposes two ways to compute ROI-to-ROI representational
+connectivity. They are not redundant — they answer subtly different
+questions, and the right tool depends on whether you supply a
+<em>model</em> or a <em>feature space</em>:</p>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th align="left"></th>
+<th align="left">
+<strong>Feature-RSA connectivity</strong> <em>(this
+vignette)</em>
+</th>
+<th align="left">
+<strong>Model-space connectivity</strong>
+<em>(<code><a href="../articles/Model_Space_Connectivity.html">vignette("Model_Space_Connectivity")</a></code>)</em>
+</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left"><strong>What you supply</strong></td>
+<td align="left">A feature matrix <code>F</code> (or similarity matrix
+<code>S</code>)</td>
+<td align="left">One or more explicit model RDMs</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>Fitting</strong></td>
+<td align="left">CV-fitted PLS / PCA / glmnet maps neural patterns ↔︎
+feature space</td>
+<td align="left">No fitting — neural pair vectors are projected onto a
+fixed model-RDM basis</td>
+</tr>
+<tr class="odd">
+<td align="left"><strong>What gets compared across ROIs</strong></td>
+<td align="left">Predicted trial-by-trial RDM vectors (length
+<code>n_pairs</code>)</td>
+<td align="left">Whitened projections onto the model-RDM subspace
+(length K, the number of model RDMs after orthogonalisation)</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>Sensitive to</strong></td>
+<td align="left">All representational geometry the feature space can
+capture, including structure beyond the supplied features</td>
+<td align="left">Only structure within the declared model-RDM
+subspace</td>
+</tr>
+<tr class="odd">
+<td align="left"><strong>Memory per ROI</strong></td>
+<td align="left">O(n_pairs); often hundreds of thousands of numbers</td>
+<td align="left">O(K); typically 2–10 numbers</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>Best when</strong></td>
+<td align="left">You don’t have a clean theoretical RDM; you want a
+data-driven, model-free similarity measure</td>
+<td align="left">You have specific theoretical RDMs (semantic, visual,
+motor…) and want to ask which regions express each</td>
+</tr>
+<tr class="odd">
+<td align="left"><strong>Diagonal of the connectivity
+matrix</strong></td>
+<td align="left">ROI’s CV-predicted-vs-observed RDM alignment</td>
+<td align="left">ROI’s strength of model-RDM expression</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>Cross-domain pairs (set A vs set
+B)</strong></td>
+<td align="left">Implicit through cross-validated prediction</td>
+<td align="left">First-class via
+<code>pair_rsa_design(..., pairs = "between")</code>
+</td>
+</tr>
+</tbody>
+</table>
+<p>A useful rule of thumb: <strong>declared model → model-space
+connectivity; learned model → feature-RSA connectivity.</strong> When in
+doubt, run both: they make different statistical commitments, and where
+they disagree is often the most interesting result.</p>
+</div>
+<div class="section level2">
 <h2 id="next-steps">Next steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
 </h2>
 <p>If your transfer problem is across cognitive states rather than
 across ROIs, see <code><a href="../articles/Feature_RSA_Domain_Adaptation.html">vignette("Feature_RSA_Domain_Adaptation")</a></code>.
 If you want the broader decision map for within-ROI fits, cross-state
 transfer, and ROI-to-ROI generalization, see
-<code><a href="../articles/Feature_RSA_Advanced_Workflows.html">vignette("Feature_RSA_Advanced_Workflows")</a></code>.</p>
+<code><a href="../articles/Feature_RSA_Advanced_Workflows.html">vignette("Feature_RSA_Advanced_Workflows")</a></code>. For the
+model-RDM-driven counterpart of the connectivity workflow, see
+<code><a href="../articles/Model_Space_Connectivity.html">vignette("Model_Space_Connectivity")</a></code>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -52,7 +52,8 @@ the final ROI x ROI matrix and never to the per-ROI RDM vectors themselves.</p>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"spearman"</span>, <span class="st">"pearson"</span><span class="op">)</span>,</span>
 <span>  keep <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  absolute <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  use <span class="op">=</span> <span class="st">"pairwise.complete.obs"</span></span>
+<span>  use <span class="op">=</span> <span class="st">"pairwise.complete.obs"</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -63,7 +64,9 @@ the final ROI x ROI matrix and never to the per-ROI RDM vectors themselves.</p>
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>Either a <code>regional_mvpa_result</code> produced by
 <code>feature_rsa_model(..., return_rdm_vectors=TRUE)</code> or the tibble
-returned by <code><a href="feature_rsa_rdm_vectors.html">feature_rsa_rdm_vectors()</a></code>.</p></dd>
+returned by <code><a href="feature_rsa_rdm_vectors.html">feature_rsa_rdm_vectors()</a></code>. Regional results may store
+RDM vectors either in-memory or in file-backed batches written by
+<code>run_regional(..., save_rdm_vectors_dir = ...)</code>.</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
@@ -84,6 +87,11 @@ during sparsification. Defaults to <code>FALSE</code>.</p></dd>
 
 <dt id="arg-use">use<a class="anchor" aria-label="anchor" href="#arg-use"></a></dt>
 <dd><p>Missing-value handling passed to <code><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></code>.</p></dd>
+
+
+<dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
+<dd><p>Logical; if <code>TRUE</code>, emit block-level progress messages
+while connectivity is being computed.</p></dd>
 
 </dl></div>
     <div class="section level2">

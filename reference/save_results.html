@@ -132,8 +132,10 @@ a numeric suffix is appended instead of overwriting.</p></dd>
     <code>searchlight_result</code> method to write volumetric maps in <code>vol_results</code>,
     then saves regional tables such as <code>performance_table</code> and
     <code>prediction_table</code> as tab-delimited text. For <code>level != "minimal"</code>,
-    ROI-wise fits (if present) are saved under <code>&lt;dir&gt;/fits</code>. A manifest can
-    be written summarizing ROI counts, presence of fits, and all file paths.</p></li>
+    ROI-wise fits (if present) are saved under <code>&lt;dir&gt;/fits</code>. File-backed
+    feature-RSA RDM batches remain in <code>$rdm_batch_dir</code> and are referenced
+    in the manifest. A manifest can be written summarizing ROI counts, presence
+    of fits, and all file paths.</p></li>
 <li><p><strong><code>save_results.default</code></strong>: if <code>x</code> is a named list of
     <code>NeuroVol</code>/<code>NeuroVec</code> (and/or surface) objects, it is treated as a
     lightweight searchlight-style result and handled as above. Otherwise a

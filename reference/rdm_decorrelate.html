@@ -72,69 +72,69 @@ and the goal is to evaluate their more distinct representational components.</p>
 
 
 <dl><dt id="arg-rdms">rdms<a class="anchor" aria-label="anchor" href="#arg-rdms"></a></dt>
-<dd><p>Named list of square symmetric matrices or <code>dist</code> objects. All
+<dd><p>Named list of square symmetric matrices or `dist` objects. All
 RDMs must have the same size and contain finite lower-triangular values.</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
-<dd><p>Character string, either <code>"ordered_innovation"</code> or <code>"zca"</code>.</p></dd>
+<dd><p>Character string, either `"ordered_innovation"` or `"zca"`.</p></dd>
 
 
 <dt id="arg-similarity">similarity<a class="anchor" aria-label="anchor" href="#arg-similarity"></a></dt>
-<dd><p>Character string. <code>"spearman"</code> rank-standardizes each RDM
-vector before decorrelation. <code>"pearson"</code> uses centered/scaled numeric RDM
+<dd><p>Character string. `"spearman"` rank-standardizes each RDM
+vector before decorrelation. `"pearson"` uses centered/scaled numeric RDM
 values directly.</p></dd>
 
 
 <dt id="arg-objective">objective<a class="anchor" aria-label="anchor" href="#arg-objective"></a></dt>
-<dd><p>Character string. <code>"constraint"</code> maximizes preservation
+<dd><p>Character string. `"constraint"` maximizes preservation
 subject to the requested decorrelation tolerance when feasible.
-<code>"penalty"</code> minimizes preservation loss plus <code>mu</code> times the decorrelation
-penalty. <code>"full_residual"</code> uses the fully residualized ordered innovations
-and ignores <code>epsilon</code>.</p></dd>
+`"penalty"` minimizes preservation loss plus `mu` times the decorrelation
+penalty. `"full_residual"` uses the fully residualized ordered innovations
+and ignores `epsilon`.</p></dd>
 
 
 <dt id="arg-epsilon">epsilon<a class="anchor" aria-label="anchor" href="#arg-epsilon"></a></dt>
 <dd><p>Non-negative tolerance for the mean pairwise adjusted-RDM
-association under <code>objective = "constraint"</code>.</p></dd>
+association under `objective = "constraint"`.</p></dd>
 
 
 <dt id="arg-gamma-grid">gamma_grid<a class="anchor" aria-label="anchor" href="#arg-gamma-grid"></a></dt>
-<dd><p>Numeric vector in <code>[0, 1]</code> used for ordered innovation
-shrinkage. The first RDM is fixed at <code>gamma = 1</code>.</p></dd>
+<dd><p>Numeric vector in `[0, 1]` used for ordered innovation
+shrinkage. The first RDM is fixed at `gamma = 1`.</p></dd>
 
 
 <dt id="arg-mu">mu<a class="anchor" aria-label="anchor" href="#arg-mu"></a></dt>
-<dd><p>Non-negative penalty multiplier used when <code>objective = "penalty"</code>.</p></dd>
+<dd><p>Non-negative penalty multiplier used when `objective = "penalty"`.</p></dd>
 
 
 <dt id="arg-target">target<a class="anchor" aria-label="anchor" href="#arg-target"></a></dt>
-<dd><p>Character string. <code>"mean_abs"</code> penalizes mean absolute
-pairwise correlation; <code>"mean_squared"</code> penalizes mean squared pairwise
+<dd><p>Character string. `"mean_abs"` penalizes mean absolute
+pairwise correlation; `"mean_squared"` penalizes mean squared pairwise
 correlation.</p></dd>
 
 
 <dt id="arg-return">return<a class="anchor" aria-label="anchor" href="#arg-return"></a></dt>
-<dd><p>Character string. <code>"dist"</code> returns adjusted RDMs as <code>dist</code>
-objects, <code>"matrix"</code> returns symmetric matrices, and <code>"vector"</code> returns
+<dd><p>Character string. `"dist"` returns adjusted RDMs as `dist`
+objects, `"matrix"` returns symmetric matrices, and `"vector"` returns
 lower-triangular vectors.</p></dd>
 
 
 <dt id="arg-project-correlation">project_correlation<a class="anchor" aria-label="anchor" href="#arg-project-correlation"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, each adjusted RDM-score matrix
-is interpreted as <code>1 - correlation</code>, projected to the nearest positive
-semidefinite correlation matrix with unit diagonal using <code><a href="https://rdrr.io/pkg/Matrix/man/nearPD.html" class="external-link">Matrix::nearPD</a></code>,
+<dd><p>Logical. If `TRUE`, each adjusted RDM-score matrix
+is interpreted as `1 - correlation`, projected to the nearest positive
+semidefinite correlation matrix with unit diagonal using `Matrix::nearPD`,
 and converted back to an RDM. This is off by default because projection can
 reintroduce RDM correlations.</p></dd>
 
 
 <dt id="arg-zca-ridge">zca_ridge<a class="anchor" aria-label="anchor" href="#arg-zca-ridge"></a></dt>
 <dd><p>Numeric ridge added only when the RDM-vector covariance is
-rank deficient under <code>method = "zca"</code>.</p></dd>
+rank deficient under `method = "zca"`.</p></dd>
 
 
 <dt id="arg-max-combinations">max_combinations<a class="anchor" aria-label="anchor" href="#arg-max-combinations"></a></dt>
-<dd><p>Maximum number of exhaustive <code>gamma_grid</code>
+<dd><p>Maximum number of exhaustive `gamma_grid`
 combinations for ordered innovation. Larger problems use coordinate search.</p></dd>
 
 
@@ -144,20 +144,20 @@ combinations for ordered innovation. Larger problems use coordinate search.</p><
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An object of class <code>rdm_decorrelation_result</code> with adjusted RDMs,
-lower-triangular vectors, selected shrinkage parameters, and diagnostics.</p>
+    <p>An object of class `rdm_decorrelation_result` with adjusted RDMs,
+  lower-triangular vectors, selected shrinkage parameters, and diagnostics.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>This function works in lower-triangular RDM-vector space. With
-<code>method = "ordered_innovation"</code>, RDMs are processed in the order supplied:
+`method = "ordered_innovation"`, RDMs are processed in the order supplied:
 each RDM vector is decomposed into the component predicted by earlier
 innovation vectors and a residual innovation. A shrinkage parameter
-<code>gamma</code> controls how much of the predicted/shared component is retained.</p>
+`gamma` controls how much of the predicted/shared component is retained.</p>
 <p>The default objective is constrained preservation: preserve as much of each
 original standardized RDM vector as possible while forcing the mean pairwise
-association among adjusted RDM vectors below <code>epsilon</code> when feasible.</p>
-<p>With <code>method = "zca"</code>, the standardized RDM vectors are symmetrically
+association among adjusted RDM vectors below `epsilon` when feasible.</p>
+<p>With `method = "zca"`, the standardized RDM vectors are symmetrically
 whitened. This gives exact joint decorrelation in the Pearson sense when the
 RDM-vector covariance matrix is full rank, but each output RDM is a linear
 mixture of the original RDMs.</p>

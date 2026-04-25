@@ -187,203 +187,203 @@ produced.  Neither strategy contains any engine-specific branching.</p>
 <span class="r-in"><span>  <span class="co"># Strategy 1: subsampled iterator (default, universal)</span></span></span>
 <span class="r-in"><span>  <span class="va">pc1</span>   <span class="op">&lt;-</span> <span class="fu"><a href="permutation_control.html">permutation_control</a></span><span class="op">(</span>n_perm <span class="op">=</span> <span class="fl">10</span>, subsample <span class="op">=</span> <span class="fl">0.2</span>, seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">res1</span>  <span class="op">&lt;-</span> <span class="fu">run_permutation_searchlight</span><span class="op">(</span><span class="va">mspec</span>, radius <span class="op">=</span> <span class="fl">3</span>, perm_ctrl <span class="op">=</span> <span class="va">pc1</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:31] Running observed searchlight (radius = 3 mm) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:29:50] Running observed searchlight (radius = 3 mm) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:31] searchlight engine: legacy (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:31] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:31] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:31] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:31] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:31] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:44] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:29:50] searchlight engine: legacy (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:29:50] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:29:50] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:29:50] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:29:50] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:29:50] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:00] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:44] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:44] Building searchlight iterator ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:44] Subsampling searchlight centers ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:44] Using 25 / 125 centers for permutation runs.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:44] Permutation 1 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:47] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:01] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:01] Building searchlight iterator ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:01] Subsampling searchlight centers ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:01] Using 25 / 125 centers for permutation runs.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:01] Permutation 1 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:03] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:47] Permutation 2 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:50] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:03] Permutation 2 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:06] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:50] Permutation 3 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:53] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:06] Permutation 3 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:08] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:53] Permutation 4 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:56] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:08] Permutation 4 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:11] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:56] Permutation 5 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:59] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:11] Permutation 5 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:13] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:41:59] Permutation 6 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:02] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:13] Permutation 6 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:16] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:03] Permutation 7 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:05] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:16] Permutation 7 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:18] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:06] Permutation 8 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:08] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:18] Permutation 8 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:21] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:09] Permutation 9 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:11] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:21] Permutation 9 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:23] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:12] Permutation 10 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:14] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:23] Permutation 10 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] Running null diagnostics ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] Running null diagnostics ...</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Null Distribution Diagnostics (n_perm = 10 )</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------- </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   nfeatures            [OK]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     rho=-0.141  p=0.0253</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     No significant correlation with nfeatures.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------- </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] Building adjusted null distribution (adjusted, 5 bins) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] Computing p-values for 125 centers ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] Building p-value spatial maps ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] Done. 0 centers significant at FDR &lt; 0.05 (fdr).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] Building adjusted null distribution (adjusted, 5 bins) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] Computing p-values for 125 centers ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] Building p-value spatial maps ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] Done. 0 centers significant at FDR &lt; 0.05 (fdr).</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># Strategy 2: full-brain via run_searchlight (engine-aware)</span></span></span>
 <span class="r-in"><span>  <span class="va">pc2</span>   <span class="op">&lt;-</span> <span class="fu"><a href="permutation_control.html">permutation_control</a></span><span class="op">(</span>n_perm <span class="op">=</span> <span class="fl">5</span>, perm_strategy <span class="op">=</span> <span class="st">"searchlight"</span>,</span></span>
 <span class="r-in"><span>                               seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">res2</span>  <span class="op">&lt;-</span> <span class="fu">run_permutation_searchlight</span><span class="op">(</span><span class="va">mspec</span>, radius <span class="op">=</span> <span class="fl">3</span>, perm_ctrl <span class="op">=</span> <span class="va">pc2</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] Running observed searchlight (radius = 3 mm) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] Running observed searchlight (radius = 3 mm) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] searchlight engine: legacy (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:15] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] searchlight engine: legacy (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:26] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] Building searchlight iterator ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] Strategy = 'searchlight': full brain computed per permutation. 'subsample' parameter ignored; all 125 centers contribute to null.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] Permutation 1 / 5 (strategy: searchlight) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] Building searchlight iterator ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] Strategy = 'searchlight': full brain computed per permutation. 'subsample' parameter ignored; all 125 centers contribute to null.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] Permutation 1 / 5 (strategy: searchlight) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] searchlight engine: legacy (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:27] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:40] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] searchlight engine: legacy (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:37] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:47] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:40] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:40] Permutation 2 / 5 (strategy: searchlight) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:48] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:48] Permutation 2 / 5 (strategy: searchlight) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:40] searchlight engine: legacy (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:40] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:40] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:40] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:40] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:40] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:53] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:48] searchlight engine: legacy (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:48] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:48] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:48] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:48] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:48] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:58] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:53] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:53] Permutation 3 / 5 (strategy: searchlight) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:58] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:58] Permutation 3 / 5 (strategy: searchlight) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:53] searchlight engine: legacy (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:53] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:53] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:53] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:53] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:42:53] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:06] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:58] searchlight engine: legacy (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:58] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:58] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:58] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:58] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:30:58] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:09] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:06] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:06] Permutation 4 / 5 (strategy: searchlight) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:09] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:09] Permutation 4 / 5 (strategy: searchlight) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:07] searchlight engine: legacy (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:07] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:07] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:07] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:07] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:07] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:19] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:09] searchlight engine: legacy (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:09] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:09] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:09] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:09] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:09] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:20] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:20] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:20] Permutation 5 / 5 (strategy: searchlight) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:20] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:20] Permutation 5 / 5 (strategy: searchlight) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:20] searchlight engine: legacy (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:20] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:20] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:20] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:20] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:20] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:32] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:20] searchlight engine: legacy (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:20] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:20] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:20] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:20] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:20] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:31] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:33] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:33] Running null diagnostics ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:31] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:31] Running null diagnostics ...</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Null Distribution Diagnostics (n_perm = 5 )</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------- </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   nfeatures            [FLAGGED]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     rho=-0.173  p=0.0000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Null correlates with nfeatures (p &lt; 0.01); covariate adjustment recommended.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------- </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:33] Building adjusted null distribution (adjusted, 5 bins) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:33] Computing p-values for 125 centers ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:33] Building p-value spatial maps ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-24 16:43:33] Done. 0 centers significant at FDR &lt; 0.05 (fdr).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:31] Building adjusted null distribution (adjusted, 5 bins) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:31] Computing p-values for 125 centers ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:31] Building p-value spatial maps ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-04-25 14:31:31] Done. 0 centers significant at FDR &lt; 0.05 (fdr).</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

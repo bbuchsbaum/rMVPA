@@ -256,6 +256,29 @@ These adjustments answer different questions, so it is often worth
 saving both the raw matrix and one adjusted matrix rather than choosing
 only one.
 
+## Feature-RSA vs. model-space connectivity
+
+rMVPA exposes two ways to compute ROI-to-ROI representational
+connectivity. They are not redundant — they answer subtly different
+questions, and the right tool depends on whether you supply a *model* or
+a *feature space*:
+
+|                                         | **Feature-RSA connectivity** *(this vignette)*                                                                | **Model-space connectivity** *([`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md))* |
+|:----------------------------------------|:--------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------|
+| **What you supply**                     | A feature matrix `F` (or similarity matrix `S`)                                                               | One or more explicit model RDMs                                                                                                                   |
+| **Fitting**                             | CV-fitted PLS / PCA / glmnet maps neural patterns ↔︎ feature space                                             | No fitting — neural pair vectors are projected onto a fixed model-RDM basis                                                                       |
+| **What gets compared across ROIs**      | Predicted trial-by-trial RDM vectors (length `n_pairs`)                                                       | Whitened projections onto the model-RDM subspace (length K, the number of model RDMs after orthogonalisation)                                     |
+| **Sensitive to**                        | All representational geometry the feature space can capture, including structure beyond the supplied features | Only structure within the declared model-RDM subspace                                                                                             |
+| **Memory per ROI**                      | O(n_pairs); often hundreds of thousands of numbers                                                            | O(K); typically 2–10 numbers                                                                                                                      |
+| **Best when**                           | You don’t have a clean theoretical RDM; you want a data-driven, model-free similarity measure                 | You have specific theoretical RDMs (semantic, visual, motor…) and want to ask which regions express each                                          |
+| **Diagonal of the connectivity matrix** | ROI’s CV-predicted-vs-observed RDM alignment                                                                  | ROI’s strength of model-RDM expression                                                                                                            |
+| **Cross-domain pairs (set A vs set B)** | Implicit through cross-validated prediction                                                                   | First-class via `pair_rsa_design(..., pairs = "between")`                                                                                         |
+
+A useful rule of thumb: **declared model → model-space connectivity;
+learned model → feature-RSA connectivity.** When in doubt, run both:
+they make different statistical commitments, and where they disagree is
+often the most interesting result.
+
 ## Next steps
 
 If your transfer problem is across cognitive states rather than across
@@ -264,3 +287,5 @@ ROIs, see
 If you want the broader decision map for within-ROI fits, cross-state
 transfer, and ROI-to-ROI generalization, see
 [`vignette("Feature_RSA_Advanced_Workflows")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md).
+For the model-RDM-driven counterpart of the connectivity workflow, see
+[`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md).

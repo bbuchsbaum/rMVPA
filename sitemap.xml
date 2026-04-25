@@ -15,6 +15,7 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/MVPA_RegionalCmdline.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html</loc></url>
@@ -148,6 +149,7 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mock_context.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/mock_roi_data.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/model_importance.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/msreve_design.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/msreve_temporal_confounds.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.html</loc></url>
@@ -170,6 +172,7 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/output_schema.contrast_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/output_schema.era_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/output_schema.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/performance-methods.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/performance.regression_result.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/permutation_control.html</loc></url>

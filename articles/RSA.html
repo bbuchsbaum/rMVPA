@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-04-24</h4>
+            <h4 data-toc-skip class="date">2026-04-25</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/RSA.Rmd" class="external-link"><code>vignettes/RSA.Rmd</code></a></small>
       <div class="d-none name"><code>RSA.Rmd</code></div>
@@ -388,9 +388,28 @@ methods that match your theoretical framework, and select statistical
 approaches appropriate for your analysis goals.</p>
 </div>
 <div class="section level2">
+<h2 id="from-within-roi-scores-to-roi-to-roi-connectivity">From within-ROI scores to ROI-to-ROI connectivity<a class="anchor" aria-label="anchor" href="#from-within-roi-scores-to-roi-to-roi-connectivity"></a>
+</h2>
+<p>Once you have RSA scores per ROI, a natural follow-up is “where else
+does this geometry live?” <code><a href="../reference/rsa_model.html">rsa_model()</a></code> accepts
+<code>return_fingerprint = TRUE</code>, which stores a small per-ROI
+projection of the neural pair vector onto your model RDM subspace.
+<code><a href="../reference/model_space_connectivity.html">model_space_connectivity()</a></code> then turns those fingerprints
+into ROI-by-ROI representational connectivity in one call. The same flag
+also feeds k-means anchor maps for searchlight runs without
+materialising an <code>n_centers × n_centers</code> matrix. See
+<code><a href="../articles/Model_Space_Connectivity.html">vignette("Model_Space_Connectivity")</a></code> for the full workflow,
+including cross-domain pair designs
+(<code>pair_rsa_design(..., pairs = "between")</code>).</p>
+</div>
+<div class="section level2">
 <h2 id="further-reading">Further reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>
 </h2>
 <ul>
+<li>
+<code><a href="../articles/Model_Space_Connectivity.html">vignette("Model_Space_Connectivity")</a></code> – model-space
+fingerprints, ROI-to-ROI connectivity, pair_rsa_design, and searchlight
+anchor maps</li>
 <li>
 <code><a href="../articles/Advanced_RSA.html">vignette("Advanced_RSA")</a></code> – Feature-Based and
 Vector-Based RSA methods</li>

@@ -15,7 +15,8 @@ mvpa_iterate(
   processor = NULL,
   analysis_type = c("searchlight", "regional"),
   drop_probs = FALSE,
-  fail_fast = FALSE
+  fail_fast = FALSE,
+  save_rdm_vectors_dir = NULL
 )
 ```
 
@@ -73,6 +74,11 @@ mvpa_iterate(
 - fail_fast:
 
   Logical; if TRUE, stop immediately on first ROI error. Default FALSE.
+
+- save_rdm_vectors_dir:
+
+  Optional directory for writing file-backed feature-RSA RDM vector
+  batches instead of retaining all vectors in memory.
 
 ## Value
 
@@ -136,8 +142,8 @@ batch:
   vox_iter <- lapply(sl, function(x) x)
   results <- mvpa_iterate(mspec, vox_iter[1:5],
     ids=seq_along(vox_iter[1:5]))
-#> INFO [2026-04-24 16:41:07] Processing batch 1/1 (5 ROIs in this batch)
-#> INFO [2026-04-24 16:41:08] 
+#> INFO [2026-04-25 14:29:28] Processing batch 1/1 (5 ROIs in this batch)
+#> INFO [2026-04-25 14:29:29] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 5
 #> - Processed: 5

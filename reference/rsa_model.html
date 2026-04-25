@@ -49,7 +49,10 @@
 <span>  check_collinearity <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  nneg <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  semipartial <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  pattern_center <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"stimulus_mean"</span><span class="op">)</span></span>
+<span>  pattern_center <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"stimulus_mean"</span><span class="op">)</span>,</span>
+<span>  return_fingerprint <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  fingerprint_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pearson"</span>, <span class="st">"spearman"</span><span class="op">)</span>,</span>
+<span>  fingerprint_basis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pca"</span>, <span class="st">"qr"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -94,6 +97,27 @@ Only applies when <code>regtype="lm"</code>. Default is TRUE.</p></dd>
 <dd><p>Optional pattern-centering method applied to the stimulus-by-voxel matrix
 before distances are computed. Use <code>"stimulus_mean"</code> to subtract the across-stimulus
 mean pattern (Hanson-style). Default is <code>"none"</code>.</p></dd>
+
+
+<dt id="arg-return-fingerprint">return_fingerprint<a class="anchor" aria-label="anchor" href="#arg-return-fingerprint"></a></dt>
+<dd><p>Logical; if <code>TRUE</code>, project the per-unit
+neural pair-dissimilarity vector onto an orthonormal basis of the signal
+model RDM subspace and return the standardized model-space score vector
+alongside the standard outputs. For <code><a href="pair_rsa_design.html">pair_rsa_design</a></code> objects,
+predictors supplied through <code>nuisance</code> are excluded from this
+fingerprint basis. The basis is cached on the model spec and reused
+across ROIs/searchlight units. Default <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-fingerprint-method">fingerprint_method<a class="anchor" aria-label="anchor" href="#arg-fingerprint-method"></a></dt>
+<dd><p>Standardization method used when
+<code>return_fingerprint = TRUE</code>. One of <code>"pearson"</code> (centered/scaled)
+or <code>"spearman"</code> (rank-then-standardize). Default <code>"pearson"</code>.</p></dd>
+
+
+<dt id="arg-fingerprint-basis">fingerprint_basis<a class="anchor" aria-label="anchor" href="#arg-fingerprint-basis"></a></dt>
+<dd><p>Basis used to span the model RDM subspace when
+<code>return_fingerprint = TRUE</code>: <code>"pca"</code> (default) or <code>"qr"</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -13,7 +13,8 @@ feature_rsa_connectivity(
   method = c("spearman", "pearson"),
   keep = 1,
   absolute = FALSE,
-  use = "pairwise.complete.obs"
+  use = "pairwise.complete.obs",
+  verbose = FALSE
 )
 ```
 
@@ -25,6 +26,9 @@ feature_rsa_connectivity(
   `feature_rsa_model(..., return_rdm_vectors=TRUE)` or the tibble
   returned by
   [`feature_rsa_rdm_vectors()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md).
+  Regional results may store RDM vectors either in-memory or in
+  file-backed batches written by
+  `run_regional(..., save_rdm_vectors_dir = ...)`.
 
 - method:
 
@@ -46,6 +50,11 @@ feature_rsa_connectivity(
 
   Missing-value handling passed to
   [`cor`](https://rdrr.io/r/stats/cor.html).
+
+- verbose:
+
+  Logical; if `TRUE`, emit block-level progress messages while
+  connectivity is being computed.
 
 ## Value
 

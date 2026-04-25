@@ -14,7 +14,10 @@ rsa_model(
   check_collinearity = TRUE,
   nneg = NULL,
   semipartial = FALSE,
-  pattern_center = c("none", "stimulus_mean")
+  pattern_center = c("none", "stimulus_mean"),
+  return_fingerprint = FALSE,
+  fingerprint_method = c("pearson", "spearman"),
+  fingerprint_basis = c("pca", "qr")
 )
 ```
 
@@ -63,6 +66,28 @@ rsa_model(
   matrix before distances are computed. Use `"stimulus_mean"` to
   subtract the across-stimulus mean pattern (Hanson-style). Default is
   `"none"`.
+
+- return_fingerprint:
+
+  Logical; if `TRUE`, project the per-unit neural pair-dissimilarity
+  vector onto an orthonormal basis of the signal model RDM subspace and
+  return the standardized model-space score vector alongside the
+  standard outputs. For
+  [`pair_rsa_design`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
+  objects, predictors supplied through `nuisance` are excluded from this
+  fingerprint basis. The basis is cached on the model spec and reused
+  across ROIs/searchlight units. Default `FALSE`.
+
+- fingerprint_method:
+
+  Standardization method used when `return_fingerprint = TRUE`. One of
+  `"pearson"` (centered/scaled) or `"spearman"` (rank-then-standardize).
+  Default `"pearson"`.
+
+- fingerprint_basis:
+
+  Basis used to span the model RDM subspace when
+  `return_fingerprint = TRUE`: `"pca"` (default) or `"qr"`.
 
 ## Value
 

@@ -349,8 +349,27 @@ when setting block variables and intra-run parameters, choose distance
 methods that match your theoretical framework, and select statistical
 approaches appropriate for your analysis goals.
 
+## From within-ROI scores to ROI-to-ROI connectivity
+
+Once you have RSA scores per ROI, a natural follow-up is “where else
+does this geometry live?”
+[`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+accepts `return_fingerprint = TRUE`, which stores a small per-ROI
+projection of the neural pair vector onto your model RDM subspace.
+[`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
+then turns those fingerprints into ROI-by-ROI representational
+connectivity in one call. The same flag also feeds k-means anchor maps
+for searchlight runs without materialising an `n_centers × n_centers`
+matrix. See
+[`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
+for the full workflow, including cross-domain pair designs
+(`pair_rsa_design(..., pairs = "between")`).
+
 ## Further reading
 
+- [`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
+  – model-space fingerprints, ROI-to-ROI connectivity, pair_rsa_design,
+  and searchlight anchor maps
 - [`vignette("Advanced_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Advanced_RSA.md)
   – Feature-Based and Vector-Based RSA methods
 - [`vignette("Contrast_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md)
