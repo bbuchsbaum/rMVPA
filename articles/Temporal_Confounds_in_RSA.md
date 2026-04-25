@@ -146,7 +146,24 @@ rdes <- rsa_design(~ task_rdm + rtemp,
 print(rdes)
 ```
 
-    \n RSA Design \n- - - - - - - - - - - - - - - - - - - - \n\nFormula:\n  |-  ~task_rdm + rtemp \n\nVariables:\n  |- Total Variables:  4 \n  |- task_rdm: distance matrix\n  |- rtemp: distance matrix\n  |- onsets: vector\n  |- runs: vector\n\nStructure:\n  |- Blocking: Present\n  |- Number of Blocks:  3 \n  |- Block Sizes:  1: 10, 2: 10, 3: 10 \n  |- Comparisons: All included\n\n
+     RSA Design 
+    - - - - - - - - - - - - - - - - - - - - 
+
+    Formula:
+      |-  ~task_rdm + rtemp 
+
+    Variables:
+      |- Total Variables:  4 
+      |- task_rdm: distance matrix
+      |- rtemp: distance matrix
+      |- onsets: vector
+      |- runs: vector
+
+    Structure:
+      |- Blocking: Present
+      |- Number of Blocks:  3 
+      |- Block Sizes:  1: 10, 2: 10, 3: 10 
+      |- Comparisons: All included
 
 ## Assessing overlap with a task RDM
 

@@ -97,7 +97,12 @@ the top 10 features):</p>
 <span><span class="co"># Create a feature selector using FTest with top_k cutoff (select top 10 features)</span></span>
 <span><span class="va">fsel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_selector.html">feature_selector</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"FTest"</span>, cutoff_type <span class="op">=</span> <span class="st">"top_k"</span>, cutoff_value <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="va">fsel</span></span>
-<span><span class="co">#&gt; Feature Selector Object\n-----------------------\nMethod:         FTest \nCutoff Type:    top_k \nCutoff Value:   10 \n</span></span></code></pre></div>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB; font-weight: bold;">Feature Selector</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Method:       </span><span style="color: #00BB00;">FTest</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Cutoff Type:  </span><span style="color: #00BB00;">top_k</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Cutoff Value: </span><span style="color: #00BB00;">10</span></span></span></code></pre></div>
 <p>Similarly, you can create a feature selector that selects a
 proportion of features using the top_p option. In the example below, we
 select the top 10% of features based on the FTest ranking:</p>
@@ -105,7 +110,12 @@ select the top 10% of features based on the FTest ranking:</p>
 <code class="sourceCode R"><span><span class="co"># Create a feature selector using FTest with top_p cutoff (select top 10% of features)</span></span>
 <span><span class="va">fsel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_selector.html">feature_selector</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"FTest"</span>, cutoff_type <span class="op">=</span> <span class="st">"top_p"</span>, cutoff_value <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span></span>
 <span><span class="va">fsel</span></span>
-<span><span class="co">#&gt; Feature Selector Object\n-----------------------\nMethod:         FTest \nCutoff Type:    top_p \nCutoff Value:   0.1 \n</span></span></code></pre></div>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB; font-weight: bold;">Feature Selector</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Method:       </span><span style="color: #00BB00;">FTest</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Cutoff Type:  </span><span style="color: #00BB00;">top_p</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BBBBBB;">  - Cutoff Value: </span><span style="color: #00BB00;">0.1</span></span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="applying-feature-selection-to-data">Applying Feature Selection to Data<a class="anchor" aria-label="anchor" href="#applying-feature-selection-to-data"></a>

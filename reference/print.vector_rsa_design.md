@@ -33,6 +33,21 @@ Invisibly returns the input object `x` (called for side effects).
   block_var <- rep(1:2, each=5)
   des <- vector_rsa_design(D, labels, block_var)
   print(des)
-#> ================================================== \n         Vectorized RSA Design          \n================================================== \n\nDistance Matrix:\n  |- Original Dimensions:  5 x 5 \nLabels:\n  |- Total Labels:  10 \n  |- Sample:          a, b, c, d, e, ... \nBlocks:\n  |- Number of Blocks:  2 \n  |- Block Labels:      1, 2 \nExpanded D Matrix:\n  |- Dimensions:        10 x 10 \n\n ================================================== \n
+#> ================================================== 
+#>          Vectorized RSA Design          
+#> ================================================== 
+#> 
+#> Distance Matrix:
+#>   |- Original Dimensions:  5 x 5 
+#> Labels:
+#>   |- Total Labels:  10 
+#>   |- Sample:          a, b, c, d, e, ... 
+#> Blocks:
+#>   |- Number of Blocks:  2 
+#>   |- Block Labels:      1, 2 
+#> Expanded D Matrix:
+#>   |- Dimensions:        10 x 10 
+#> 
+#>  ================================================== 
 # }
 ```

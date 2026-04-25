@@ -120,68 +120,23 @@ print(table(des$y_train[unlist(crossval_samples(cval_unbalanced,
 # Balance using sub-sampling (default)
 cval_sub <- balance_partitions(cval_unbalanced, des, seed = 1)
 print(cval_sub)
-#> $sample_set
-#> $sample_set[[1]]
-#> $sample_set[[1]]$train
-#>  [1] 11 12 13 14 16 17 19 22 23 24 25 27 28 30 31 32 34 37 39 40 41 43 46 47 49
-#> [26] 50 52 55 56 58 59 60
 #> 
-#> $sample_set[[1]]$test
-#> [1]  1  3  4  6  7  8  9 10
+#> Custom Cross-Validation
 #> 
+#> - Configuration
+#>   - Observations:    60
+#>   - Number of Folds: 6
 #> 
-#> $sample_set[[2]]
-#> $sample_set[[2]]$train
-#>  [1]  1  2  4  6  7  9 10 21 22 23 25 27 28 29 31 32 34 36 37 38 39 40 43 44 45
-#> [26] 46 48 49 50 52 53 55 56 58
+#> - Folds
+#>   Fold    Train    Test   
+#>   1       32       8      
+#>   2       34       6      
+#>   3       34       6      
+#>   4       32       8      
+#>   5       34       6      
+#>   6       34       6      
+#>   (mean train = 33, mean test = 7)
 #> 
-#> $sample_set[[2]]$test
-#> [1] 11 13 15 16 18 19
-#> 
-#> 
-#> $sample_set[[3]]
-#> $sample_set[[3]]$train
-#>  [1]  1  2  3  4  7 10 11 12 13 15 16 17 18 19 31 33 34 35 37 39 40 42 43 46 49
-#> [26] 50 51 52 53 55 57 58 59 60
-#> 
-#> $sample_set[[3]]$test
-#> [1] 21 22 24 25 27 28
-#> 
-#> 
-#> $sample_set[[4]]
-#> $sample_set[[4]]$train
-#>  [1]  1  2  3  4  6  7 10 11 13 16 18 19 22 23 24 25 28 29 30 41 43 45 46 47 48
-#> [26] 49 50 51 52 55 58 59
-#> 
-#> $sample_set[[4]]$test
-#> [1] 31 32 33 34 35 37 39 40
-#> 
-#> 
-#> $sample_set[[5]]
-#> $sample_set[[5]]$train
-#>  [1]  1  2  3  4  5  7  8  9 10 13 14 16 18 19 21 22 23 24 25 26 28 30 31 34 37
-#> [26] 40 51 52 53 54 55 57 58 59
-#> 
-#> $sample_set[[5]]$test
-#> [1] 43 45 46 47 49 50
-#> 
-#> 
-#> $sample_set[[6]]
-#> $sample_set[[6]]$train
-#>  [1]  1  3  4  6  7  8 10 11 12 13 14 15 16 19 21 22 25 26 28 30 31 32 34 37 39
-#> [26] 40 41 42 43 44 45 46 48 49
-#> 
-#> $sample_set[[6]]$test
-#> [1] 51 52 55 56 58 59
-#> 
-#> 
-#> 
-#> $nfolds
-#> [1] 6
-#> 
-#> attr(,"class")
-#> [1] "custom_cross_validation" "cross_validation"       
-#> [3] "list"                   
 print("Subsample Balanced Counts (Example Fold 1 Train):")
 #> [1] "Subsample Balanced Counts (Example Fold 1 Train):"
 print(table(crossval_samples(cval_sub, design_df, des$y_train)$ytrain[[1]]))
@@ -193,74 +148,23 @@ print(table(crossval_samples(cval_sub, design_df, des$y_train)$ytrain[[1]]))
 cval_over <- balance_partitions(cval_unbalanced, des, method = "oversample", seed = 2)
 #> Warning: Oversampling the test set ('balance_test_set = TRUE', method = 'oversample') is generally not recommended and may lead to inflated performance metrics.
 print(cval_over)
-#> $sample_set
-#> $sample_set[[1]]
-#> $sample_set[[1]]$train
-#>  [1] 11 12 13 13 13 13 14 14 15 16 16 18 18 18 19 19 20 21 21 21 22 23 23 25 28
-#> [26] 28 28 28 28 29 29 29 31 31 32 32 33 33 34 34 36 36 37 37 37 38 39 41 43 43
-#> [51] 44 46 49 49 51 52 54 54 55 55 57 57 58 58 58 58 59 60
 #> 
-#> $sample_set[[1]]$test
-#>  [1] 1 1 1 1 2 2 4 4 6 8 8 9
+#> Custom Cross-Validation
 #> 
+#> - Configuration
+#>   - Observations:    60
+#>   - Number of Folds: 6
 #> 
-#> $sample_set[[2]]
-#> $sample_set[[2]]$train
-#>  [1]  1  1  1  3  4  5  6  7  7  7  8 10 22 22 22 22 23 23 23 25 25 28 28 29 29
-#> [26] 30 32 32 34 34 34 35 36 36 37 38 38 38 40 40 40 41 41 42 43 43 44 45 46 47
-#> [51] 49 49 49 50 51 52 52 54 54 55 56 56 56 58 59 60
+#> - Folds
+#>   Fold    Train    Test   
+#>   1       68       12     
+#>   2       66       14     
+#>   3       66       14     
+#>   4       68       12     
+#>   5       66       14     
+#>   6       66       14     
+#>   (mean train = 67, mean test = 13)
 #> 
-#> $sample_set[[2]]$test
-#>  [1] 11 13 14 16 16 16 18 18 18 19 19 19 20 20
-#> 
-#> 
-#> $sample_set[[3]]
-#> $sample_set[[3]]$train
-#>  [1]  1  2  3  5  5  6  7  7  7  7  9 10 10 11 11 15 16 16 18 19 20 31 31 31 32
-#> [26] 32 32 34 34 35 37 37 37 39 39 40 40 40 40 41 41 42 42 42 43 43 43 44 45 45
-#> [51] 46 46 46 47 48 48 49 50 50 51 52 54 55 58 58 59
-#> 
-#> $sample_set[[3]]$test
-#>  [1] 21 22 22 22 24 24 24 25 25 27 28 28 29 30
-#> 
-#> 
-#> $sample_set[[4]]
-#> $sample_set[[4]]$train
-#>  [1]  1  3  6  7  7  7  9 10 10 12 13 13 13 14 14 14 14 16 17 17 18 19 19 21 21
-#> [26] 23 24 25 25 25 25 27 27 27 28 28 28 42 42 43 43 43 45 45 45 45 46 46 46 46
-#> [51] 46 48 48 49 50 52 52 53 53 53 54 55 55 55 57 57 58 59
-#> 
-#> $sample_set[[4]]$test
-#>  [1] 31 32 33 33 34 35 37 37 37 38 39 40
-#> 
-#> 
-#> $sample_set[[5]]
-#> $sample_set[[5]]$train
-#>  [1]  1  1  1  1  1  3  4  4  4  7  8  9  9 10 11 12 12 12 13 13 13 15 17 20 20
-#> [26] 21 21 21 22 22 22 22 23 23 23 24 24 25 25 31 31 31 31 32 32 32 33 33 34 34
-#> [51] 35 37 37 37 38 38 39 39 40 40 51 52 52 57 58 59
-#> 
-#> $sample_set[[5]]$test
-#>  [1] 41 41 43 45 46 46 46 46 47 48 49 49 50 50
-#> 
-#> 
-#> $sample_set[[6]]
-#> $sample_set[[6]]$train
-#>  [1]  1  3  5  7  8  8  9 11 11 13 13 13 14 14 15 15 16 16 16 17 18 18 19 20 21
-#> [26] 21 22 24 25 25 25 26 26 27 28 28 28 28 30 30 31 31 32 33 34 34 34 39 39 40
-#> [51] 40 41 42 42 43 43 44 46 46 47 48 49 49 49 49 49
-#> 
-#> $sample_set[[6]]$test
-#>  [1] 52 52 53 54 54 54 55 55 57 57 58 58 58 59
-#> 
-#> 
-#> 
-#> $nfolds
-#> [1] 6
-#> 
-#> attr(,"class")
-#> [1] "custom_cross_validation" "cross_validation"       
-#> [3] "list"                   
 print("Oversample Balanced Counts (Example Fold 1 Train):")
 #> [1] "Oversample Balanced Counts (Example Fold 1 Train):"
 print(table(crossval_samples(cval_over, design_df, des$y_train)$ytrain[[1]]))

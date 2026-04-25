@@ -204,7 +204,25 @@ functions.</p>
 <span>                   data<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>task_rdm<span class="op">=</span><span class="va">task_rdm</span>, rtemp<span class="op">=</span><span class="va">rtemp</span>, onsets<span class="op">=</span><span class="va">onsets</span>, runs<span class="op">=</span><span class="va">runs</span><span class="op">)</span>,</span>
 <span>                   block_var<span class="op">=</span><span class="op">~</span> <span class="va">runs</span>, keep_intra_run<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">rdes</span><span class="op">)</span></span></code></pre></div>
-<pre><code>\n RSA Design \n- - - - - - - - - - - - - - - - - - - - \n\nFormula:\n  |-  ~task_rdm + rtemp \n\nVariables:\n  |- Total Variables:  4 \n  |- task_rdm: distance matrix\n  |- rtemp: distance matrix\n  |- onsets: vector\n  |- runs: vector\n\nStructure:\n  |- Blocking: Present\n  |- Number of Blocks:  3 \n  |- Block Sizes:  1: 10, 2: 10, 3: 10 \n  |- Comparisons: All included\n\n</code></pre>
+<pre><code>
+ RSA Design 
+- - - - - - - - - - - - - - - - - - - - 
+
+Formula:
+  |-  ~task_rdm + rtemp 
+
+Variables:
+  |- Total Variables:  4 
+  |- task_rdm: distance matrix
+  |- rtemp: distance matrix
+  |- onsets: vector
+  |- runs: vector
+
+Structure:
+  |- Blocking: Present
+  |- Number of Blocks:  3 
+  |- Block Sizes:  1: 10, 2: 10, 3: 10 
+  |- Comparisons: All included</code></pre>
 </div>
 <div class="section level2">
 <h2 id="assessing-overlap-with-a-task-rdm">Assessing overlap with a task RDM<a class="anchor" aria-label="anchor" href="#assessing-overlap-with-a-task-rdm"></a>

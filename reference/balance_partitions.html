@@ -162,68 +162,23 @@ k-fold structure.</p>
 <span class="r-in"><span><span class="co"># Balance using sub-sampling (default)</span></span></span>
 <span class="r-in"><span><span class="va">cval_sub</span> <span class="op">&lt;-</span> <span class="fu">balance_partitions</span><span class="op">(</span><span class="va">cval_unbalanced</span>, <span class="va">des</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">cval_sub</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[1]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 11 12 13 14 16 17 19 22 23 24 25 27 28 30 31 32 34 37 39 40 41 43 46 47 49</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 50 52 55 56 58 59 60</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[1]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1]  1  3  4  6  7  8  9 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB; font-weight: bold;">Custom Cross-Validation</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Configuration</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Observations:    </span><span style="color: #00BB00;">60</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Number of Folds: </span><span style="color: #00BB00;">6</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[2]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  2  4  6  7  9 10 21 22 23 25 27 28 29 31 32 34 36 37 38 39 40 43 44 45</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 46 48 49 50 52 53 55 56 58</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Folds</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  Fold    Train    Test   </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  1       </span><span style="color: #00BB00;">32     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">8      </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  2       </span><span style="color: #00BB00;">34     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">6      </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  3       </span><span style="color: #00BB00;">34     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">6      </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  4       </span><span style="color: #00BB00;">32     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">8      </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  5       </span><span style="color: #00BB00;">34     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">6      </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  6       </span><span style="color: #00BB00;">34     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">6      </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #0000BB; font-style: italic;">(mean train = 33, mean test = 7)</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[2]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 11 13 15 16 18 19</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[3]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[3]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  2  3  4  7 10 11 12 13 15 16 17 18 19 31 33 34 35 37 39 40 42 43 46 49</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 50 51 52 53 55 57 58 59 60</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[3]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 21 22 24 25 27 28</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[4]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[4]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  2  3  4  6  7 10 11 13 16 18 19 22 23 24 25 28 29 30 41 43 45 46 47 48</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 49 50 51 52 55 58 59</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[4]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 31 32 33 34 35 37 39 40</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[5]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[5]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  2  3  4  5  7  8  9 10 13 14 16 18 19 21 22 23 24 25 26 28 30 31 34 37</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 40 51 52 53 54 55 57 58 59</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[5]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 43 45 46 47 49 50</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[6]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[6]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  3  4  6  7  8 10 11 12 13 14 15 16 19 21 22 25 26 28 30 31 32 34 37 39</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 40 41 42 43 44 45 46 48 49</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[6]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 51 52 55 56 58 59</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $nfolds</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 6</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "custom_cross_validation" "cross_validation"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [3] "list"                   </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="st">"Subsample Balanced Counts (Example Fold 1 Train):"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Subsample Balanced Counts (Example Fold 1 Train):"</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="fu"><a href="crossval_samples.html">crossval_samples</a></span><span class="op">(</span><span class="va">cval_sub</span>, <span class="va">design_df</span>, <span class="va">des</span><span class="op">$</span><span class="va">y_train</span><span class="op">)</span><span class="op">$</span><span class="va">ytrain</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -235,74 +190,23 @@ k-fold structure.</p>
 <span class="r-in"><span><span class="va">cval_over</span> <span class="op">&lt;-</span> <span class="fu">balance_partitions</span><span class="op">(</span><span class="va">cval_unbalanced</span>, <span class="va">des</span>, method <span class="op">=</span> <span class="st">"oversample"</span>, seed <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Oversampling the test set ('balance_test_set = TRUE', method = 'oversample') is generally not recommended and may lead to inflated performance metrics.</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">cval_over</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[1]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[1]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 11 12 13 13 13 13 14 14 15 16 16 18 18 18 19 19 20 21 21 21 22 23 23 25 28</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 28 28 28 28 29 29 29 31 31 32 32 33 33 34 34 36 36 37 37 37 38 39 41 43 43</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [51] 44 46 49 49 51 52 54 54 55 55 57 57 58 58 58 58 59 60</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[1]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 1 1 1 1 2 2 4 4 6 8 8 9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB; font-weight: bold;">Custom Cross-Validation</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Configuration</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Observations:    </span><span style="color: #00BB00;">60</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  - Number of Folds: </span><span style="color: #00BB00;">6</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[2]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  1  1  3  4  5  6  7  7  7  8 10 22 22 22 22 23 23 23 25 25 28 28 29 29</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 30 32 32 34 34 34 35 36 36 37 38 38 38 40 40 40 41 41 42 43 43 44 45 46 47</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [51] 49 49 49 50 51 52 52 54 54 55 56 56 56 58 59 60</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">- Folds</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  Fold    Train    Test   </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  1       </span><span style="color: #00BB00;">68     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">12     </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  2       </span><span style="color: #00BB00;">66     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">14     </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  3       </span><span style="color: #00BB00;">66     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">14     </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  4       </span><span style="color: #00BB00;">68     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">12     </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  5       </span><span style="color: #00BB00;">66     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">14     </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBBBB;">  6       </span><span style="color: #00BB00;">66     </span><span style="color: #BBBBBB;">  </span><span style="color: #00BB00;">14     </span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #0000BB; font-style: italic;">(mean train = 67, mean test = 13)</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[2]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 11 13 14 16 16 16 18 18 18 19 19 19 20 20</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[3]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[3]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  2  3  5  5  6  7  7  7  7  9 10 10 11 11 15 16 16 18 19 20 31 31 31 32</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 32 32 34 34 35 37 37 37 39 39 40 40 40 40 41 41 42 42 42 43 43 43 44 45 45</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [51] 46 46 46 47 48 48 49 50 50 51 52 54 55 58 58 59</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[3]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 21 22 22 22 24 24 24 25 25 27 28 28 29 30</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[4]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[4]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  3  6  7  7  7  9 10 10 12 13 13 13 14 14 14 14 16 17 17 18 19 19 21 21</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 23 24 25 25 25 25 27 27 27 28 28 28 42 42 43 43 43 45 45 45 45 46 46 46 46</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [51] 46 48 48 49 50 52 52 53 53 53 54 55 55 55 57 57 58 59</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[4]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 31 32 33 33 34 35 37 37 37 38 39 40</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[5]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[5]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  1  1  1  1  3  4  4  4  7  8  9  9 10 11 12 12 12 13 13 13 15 17 20 20</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 21 21 21 22 22 22 22 23 23 23 24 24 25 25 31 31 31 31 32 32 32 33 33 34 34</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [51] 35 37 37 37 38 38 39 39 40 40 51 52 52 57 58 59</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[5]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 41 41 43 45 46 46 46 46 47 48 49 49 50 50</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[6]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[6]]$train</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  3  5  7  8  8  9 11 11 13 13 13 14 14 15 15 16 16 16 17 18 18 19 20 21</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [26] 21 22 24 25 25 25 26 26 27 28 28 28 28 30 30 31 31 32 33 34 34 34 39 39 40</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [51] 40 41 42 42 43 43 44 46 46 47 48 49 49 49 49 49</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $sample_set[[6]]$test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 52 52 53 54 54 54 55 55 57 57 58 58 58 59</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $nfolds</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 6</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "custom_cross_validation" "cross_validation"       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [3] "list"                   </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="st">"Oversample Balanced Counts (Example Fold 1 Train):"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Oversample Balanced Counts (Example Fold 1 Train):"</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="fu"><a href="crossval_samples.html">crossval_samples</a></span><span class="op">(</span><span class="va">cval_over</span>, <span class="va">design_df</span>, <span class="va">des</span><span class="op">$</span><span class="va">y_train</span><span class="op">)</span><span class="op">$</span><span class="va">ytrain</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></span>

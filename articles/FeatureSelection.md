@@ -31,7 +31,12 @@ suppressPackageStartupMessages(library(rMVPA))
 # Create a feature selector using FTest with top_k cutoff (select top 10 features)
 fsel <- feature_selector(method = "FTest", cutoff_type = "top_k", cutoff_value = 10)
 fsel
-#> Feature Selector Object\n-----------------------\nMethod:         FTest \nCutoff Type:    top_k \nCutoff Value:   10 \n
+#> 
+#> Feature Selector
+#> 
+#>   - Method:       FTest
+#>   - Cutoff Type:  top_k
+#>   - Cutoff Value: 10
 ```
 
 Similarly, you can create a feature selector that selects a proportion
@@ -42,7 +47,12 @@ top 10% of features based on the FTest ranking:
 # Create a feature selector using FTest with top_p cutoff (select top 10% of features)
 fsel <- feature_selector(method = "FTest", cutoff_type = "top_p", cutoff_value = 0.1)
 fsel
-#> Feature Selector Object\n-----------------------\nMethod:         FTest \nCutoff Type:    top_p \nCutoff Value:   0.1 \n
+#> 
+#> Feature Selector
+#> 
+#>   - Method:       FTest
+#>   - Cutoff Type:  top_p
+#>   - Cutoff Value: 0.1
 ```
 
 ## Applying Feature Selection to Data
