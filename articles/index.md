@@ -51,6 +51,8 @@ RSA methods from basic to specialized approaches
   Connectivity](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md):
 - [Feature-RSA Across States: Domain Adaptation from Encoding to
   Recall](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md):
+- [Reproducing Kriegeskorte (2008) with
+  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.md):
 
 ### Representation Mapping (REMAP) Models
 
