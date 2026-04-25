@@ -21,3 +21,12 @@ tests/testthat/_problems/
 # Local planning/PRD docs
 searchlight_performance_execution_plan.md
 searchlight_performance_prd.md
+
+# Local vignette renders (rebuilt by R CMD build / pkgdown)
+vignettes/*.html
+vignettes/*_files/
+
+# Compiled C/C++ artefacts
+src/*.o
+src/*.so
+src/*.dll
