@@ -106,13 +106,14 @@ design in one call:</p>
 <span><span class="co">#&gt;   - Split Groups:  None</span></span></code></pre></div>
 <p>The dataset bundles a 4-D <code>NeuroVec</code> (voxels × time) and a
 binary <code>NeuroVol</code> mask. Two pictures make the shape concrete:
-a mid-axial slice of the mask, and the trial × run grid of the
-design.</p>
+a mid-axial slice of one trial’s voxel pattern, and the trial × run grid
+of the design.</p>
 <div class="figure">
-<img src="Constructing_Datasets_files/figure-html/synthetic-visual-1.png" class="r-plt" alt="Left: a mid-axial slice of the binary mask (active voxels in dark blue). Right: each trial coloured by run; runs split into equal-length blocks of trials." width="672"><p class="caption">
-Left: a mid-axial slice of the binary mask (active voxels in dark blue).
-Right: each trial coloured by run; runs split into equal-length blocks
-of trials.
+<img src="Constructing_Datasets_files/figure-html/synthetic-visual-1.png" class="r-plt" alt="Left: a mid-axial slice of one trial's voxel pattern (signed activation, blue↔red). The synthetic mask covers the full 6x6x6 volume here; in real data the mask would be a brain envelope. Right: each trial coloured by run; runs split into equal-length blocks of trials." width="672"><p class="caption">
+Left: a mid-axial slice of one trial’s voxel pattern (signed activation,
+blue↔︎red). The synthetic mask covers the full 6x6x6 volume here; in real
+data the mask would be a brain envelope. Right: each trial coloured by
+run; runs split into equal-length blocks of trials.
 </p>
 </div>
 <p>You can also assemble the pieces manually if you want explicit

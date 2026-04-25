@@ -44,16 +44,18 @@ print(ds$design)
 
 The dataset bundles a 4-D `NeuroVec` (voxels × time) and a binary
 `NeuroVol` mask. Two pictures make the shape concrete: a mid-axial slice
-of the mask, and the trial × run grid of the design.
+of one trial’s voxel pattern, and the trial × run grid of the design.
 
-![Left: a mid-axial slice of the binary mask (active voxels in dark
-blue). Right: each trial coloured by run; runs split into equal-length
-blocks of
+![Left: a mid-axial slice of one trial's voxel pattern (signed
+activation, blue↔red). The synthetic mask covers the full 6x6x6 volume
+here; in real data the mask would be a brain envelope. Right: each trial
+coloured by run; runs split into equal-length blocks of
 trials.](Constructing_Datasets_files/figure-html/synthetic-visual-1.png)
 
-Left: a mid-axial slice of the binary mask (active voxels in dark blue).
-Right: each trial coloured by run; runs split into equal-length blocks
-of trials.
+Left: a mid-axial slice of one trial’s voxel pattern (signed activation,
+blue↔︎red). The synthetic mask covers the full 6x6x6 volume here; in real
+data the mask would be a brain envelope. Right: each trial coloured by
+run; runs split into equal-length blocks of trials.
 
 You can also assemble the pieces manually if you want explicit control
 over the design data frame:

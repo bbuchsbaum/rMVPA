@@ -89,63 +89,91 @@ whether neural patterns match a predicted similarity structure.</li>
 <div class="section level2">
 <h2 id="quick-example-searchlight-classification">Quick example: searchlight classification<a class="anchor" aria-label="anchor" href="#quick-example-searchlight-classification"></a>
 </h2>
+<p>A complete searchlight run is four short steps. Each builds one
+object the next step needs.</p>
+<p><strong>1. Load the package and generate a tiny synthetic
+dataset.</strong> <code><a href="../reference/gen_sample_dataset.html">gen_sample_dataset()</a></code> returns both the
+imaging data (an <code>mvpa_dataset</code>) and the experimental design
+(an <code>mvpa_design</code>).</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/rMVPA" class="external-link">rMVPA</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/neuroim2" class="external-link">neuroim2</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Generate a synthetic 6 x 6 x 6 dataset with 80 observations in 4 runs</span></span>
 <span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">6</span>, <span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">80</span>, blocks <span class="op">=</span> <span class="fl">4</span>,</span>
 <span>                           nlevels <span class="op">=</span> <span class="fl">2</span>, response_type <span class="op">=</span> <span class="st">"categorical"</span>,</span>
-<span>                           data_mode <span class="op">=</span> <span class="st">"image"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Build the MVPA model: dataset + design + classifier + cross-validation</span></span>
-<span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
-<span><span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span>
-<span><span class="va">mod</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span></span>
-<span></span>
+<span>                           data_mode <span class="op">=</span> <span class="st">"image"</span><span class="op">)</span></span></code></pre></div>
+<p><strong>2. Wrap the data in an <code>mvpa_dataset</code> and choose a
+cross-validation scheme.</strong> Run-blocked CV uses each scanning run
+as a held-out fold — the standard way to keep training and test trials
+temporally independent.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
+<span><span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span></code></pre></div>
+<p><strong>3. Pick a classifier and bind it into a model
+specification.</strong> <code>load_model("sda_notune")</code> retrieves
+a pre-registered shrinkage discriminant model from the
+<code>MVPAModels</code> registry; <code><a href="../reference/mvpa_model.html">mvpa_model()</a></code> glues the
+dataset, design, classifier, and CV scheme together.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">mod</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span></span>
 <span><span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span><span class="va">mod</span>, dataset <span class="op">=</span> <span class="va">dset</span>, design <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">design</span>,</span>
 <span>                    crossval <span class="op">=</span> <span class="va">cval</span>,</span>
-<span>                    tune_grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>lambda <span class="op">=</span> <span class="fl">0.01</span>, diagonal <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Run a searchlight with a 4-mm radius</span></span>
-<span><span class="va">sl_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">mspec</span>, radius <span class="op">=</span> <span class="fl">4</span>, method <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span>
+<span>                    tune_grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>lambda <span class="op">=</span> <span class="fl">0.01</span>, diagonal <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><strong>4. Run a 4 mm searchlight.</strong> Each voxel becomes the
+centre of a sphere; the model is fit and cross-validated locally;
+performance metrics are returned per centre as voxel-wise maps.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sl_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">mspec</span>, radius <span class="op">=</span> <span class="fl">4</span>, method <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">sl_result</span><span class="op">$</span><span class="va">results</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "Accuracy" "AUC"</span></span></code></pre></div>
-<p><code><a href="../reference/run_searchlight.html">run_searchlight()</a></code> returns a named list of performance
-maps (one per metric). Each map is a <code>NeuroVol</code> you can write
-to disk with <code><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html" class="external-link">neuroim2::write_vol()</a></code>.</p>
+<p><code><a href="../reference/run_searchlight.html">run_searchlight()</a></code> returned a named list of performance
+maps (one per metric — accuracy and AUC by default for two-class
+problems). Each entry is a <code>NeuroVol</code> you can save with
+<code><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html" class="external-link">neuroim2::write_vol()</a></code> or display with any volumetric
+viewer.</p>
 </div>
 <div class="section level2">
 <h2 id="regional-classification">Regional classification<a class="anchor" aria-label="anchor" href="#regional-classification"></a>
 </h2>
-<p>The same model spec works for ROI-based analysis. You just need a
-region mask – an integer-labeled volume where each non-zero value
-defines an ROI.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Build a toy 3-region mask from the active voxels</span></span>
-<span><span class="va">mask</span>   <span class="op">&lt;-</span> <span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span></span>
-<span><span class="va">nvox</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">mask</span><span class="op">)</span></span>
+<p>The same model spec runs over predefined ROIs instead of every voxel.
+The only new piece is a <em>region mask</em>: an integer-labelled
+<code>NeuroVol</code> where each non-zero value identifies one ROI.</p>
+<p><strong>1. Build a toy 3-region mask from the active voxels.</strong>
+Real analyses use an atlas or a parcellation; here we just split the
+mask randomly so the example is self-contained.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">mask</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
-<span><span class="va">region_mask</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, <span class="va">nvox</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>                        <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">mask</span><span class="op">)</span>, indices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">mask</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">reg_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mspec</span>, <span class="va">region_mask</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">reg_result</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
+<span><span class="va">region_mask</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">mask</span><span class="op">)</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">mask</span><span class="op">)</span>,</span>
+<span>  indices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">mask</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><strong>2. Run regional MVPA.</strong> <code><a href="../reference/run_regional-methods.html">run_regional()</a></code>
+reuses the model spec from the searchlight example — same classifier,
+same CV scheme, just a different spatial unit.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">reg_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mspec</span>, <span class="va">region_mask</span><span class="op">)</span></span>
+<span><span class="va">reg_result</span><span class="op">$</span><span class="va">performance_table</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
 <span><span class="co">#&gt;   roinum Accuracy     AUC</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1    0.512 -<span style="color: #BB0000;">0.038</span><span style="color: #BB0000; text-decoration: underline;">7</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2    0.512  0.151 </span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3    0.462 -<span style="color: #BB0000;">0.166</span></span></span></code></pre></div>
-<p>Each row of the performance table reports cross-validated metrics for
-one ROI.</p>
+<p>Each row reports one ROI’s cross-validated metrics. A note on the
+values: rMVPA reports <strong>AUC as <code>AUC − 0.5</code></strong>, so
+the chance level is <strong>0</strong>, not 0.5, and slightly negative
+AUCs (e.g. <code>-0.04</code>) just mean the classifier did marginally
+worse than chance — typical for a synthetic null example like this one.
+Real datasets with signal will give clearly positive AUCs.</p>
 </div>
 <div class="section level2">
 <h2 id="rsa-in-30-seconds">RSA in 30 seconds<a class="anchor" aria-label="anchor" href="#rsa-in-30-seconds"></a>
 </h2>
 <p>RSA asks whether the pattern of neural similarities across conditions
 matches a model-predicted similarity structure.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a synthetic dataset with 5 conditions</span></span>
 <span><span class="va">rsa_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">6</span>, <span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">100</span>, blocks <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>                               nlevels <span class="op">=</span> <span class="fl">5</span>, response_type <span class="op">=</span> <span class="st">"categorical"</span>,</span>
