@@ -23,20 +23,24 @@ includes:
 
 
 ## Searchlight Analysis
-```{r setup, echo=FALSE, message=FALSE}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
-suppressPackageStartupMessages(library(neuroim2))
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  message  = FALSE,
+  warning  = FALSE,
+  fig.width = 6, fig.height = 4
+)
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) {
+  ggplot2::theme_set(albersdown::theme_albers(params$family))
+}
+library(neuroim2)
 library(rMVPA)
 
-# Safe histogram helper: prefer ggplot2; otherwise print a compact summary
 safe_plot_hist <- function(x, title = "Histogram", bins = 30) {
   x <- as.numeric(x)
   x <- x[is.finite(x)]
-  if (!length(x)) {
-    message("No finite AUC values to plot.")
-    return(invisible(NULL))
-  }
+  if (!length(x)) return(invisible(NULL))
   if (requireNamespace("ggplot2", quietly = TRUE)) {
     df <- data.frame(x = x)
     p <- ggplot2::ggplot(df, ggplot2::aes(x = x)) +
@@ -45,13 +49,11 @@ safe_plot_hist <- function(x, title = "Histogram", bins = 30) {
       ggplot2::theme_minimal()
     print(p)
   } else {
-    smry <- sprintf("AUC summary: n=%d, mean=%.3f, sd=%.3f, min=%.3f, max=%.3f", 
-                    length(x), mean(x), stats::sd(x), min(x), max(x))
-    message(smry)
+    cat(sprintf("AUC summary: n=%d, mean=%.3f, sd=%.3f, min=%.3f, max=%.3f\n",
+                length(x), mean(x), stats::sd(x), min(x), max(x)))
   }
 }
 
-# Light build mode for pkgdown to avoid long-running chunks
 light_build <- identical(Sys.getenv("IN_PKGDOWN"), "true")
 ```
 

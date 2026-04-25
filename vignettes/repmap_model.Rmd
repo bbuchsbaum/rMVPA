@@ -25,6 +25,8 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 set.seed(1)
 ```
 
+> *ReNA-Map* is one of four cross-domain representational models in rMVPA. For the section's terminology and how to choose between *ReNA-RC*, *ReNA-Map*, *ReNA-RM*, and *REMAP-RRR*, see the glossary at the top of `vignette("Naive_Cross_Decoding")`.
+
 Overview
 --------
 
@@ -67,6 +69,34 @@ Data requirements
 
 - A design with a per-trial item key used to average trials into item-level prototypes.
 - A seed feature matrix whose rownames match item IDs in the design.
+
+What does a seed feature space look like?
+-----------------------------------------
+
+ReNA-Map needs a per-item feature matrix (rows = items, columns = features). Below is a toy 6-item, 8-feature seed and the implied item-by-item similarity it predicts:
+
+```{r repmap-seed}
+set.seed(11)
+K <- 6; P <- 8
+items <- paste0("I", seq_len(K))
+seedF <- matrix(rnorm(K * P), K, P)
+rownames(seedF) <- items
+seed_sim <- tcrossprod(base::scale(seedF))
+```
+
+```{r repmap-seed-plot, echo = FALSE, fig.cap = "Left: seed feature matrix (rows = items, columns = features). Right: implied item-by-item similarity (centered features dot product). ReNA-Map asks each ROI how many of these feature dimensions it can recover.", fig.width = 7, fig.height = 3.4, out.width = "85%"}
+op <- par(mfrow = c(1, 2), mar = c(3, 3, 1.6, 0.5))
+image(seq_len(P), seq_len(K), t(seedF),
+      col = hcl.colors(48, "Blue-Red 3"),
+      axes = FALSE, xlab = "feature", ylab = "item", main = "seed features")
+axis(1, at = seq_len(P)); axis(2, at = seq_len(K), labels = items, las = 1); box()
+image(seq_len(K), seq_len(K), seed_sim,
+      col = hcl.colors(48, "Blue-Red 3"),
+      axes = FALSE, xlab = "", ylab = "", main = "implied item similarity")
+axis(1, at = seq_len(K), labels = items, las = 1)
+axis(2, at = seq_len(K), labels = items, las = 1); box()
+par(op)
+```
 
 Quick start: single ROI
 -----------------------

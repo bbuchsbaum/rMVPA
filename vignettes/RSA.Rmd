@@ -21,17 +21,57 @@ includes:
 
 ---
 
-```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+```{r setup, include = FALSE}
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
-suppressPackageStartupMessages({
-  library(neuroim2)
-  library(rMVPA)
-})
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  message  = FALSE,
+  warning  = FALSE,
+  fig.width = 6, fig.height = 4
+)
+library(neuroim2)
+library(rMVPA)
 ```
 
-## Introduction to Representational Similarity Analysis
+## What problem does RSA solve?
 
-Representational Similarity Analysis (RSA) compares neural activity patterns with computational models by measuring pattern similarities, matching them against model predictions, and quantifying how well models explain the neural data. The `rMVPA` package implements this technique for neuroimaging analysis.
+You have a hypothesis about how stimuli relate to each other — by category, by visual similarity, by some embedding from a computational model. RSA tests whether the brain's pattern of *similarities* across those stimuli matches your predicted pattern. The geometry of activity, not the activity itself, is the data.
+
+The whole workflow is four steps: (i) build an MVPA dataset, (ii) supply one or more model RDMs (representational dissimilarity matrices), (iii) wrap them in an `rsa_design()`, (iv) fit with `rsa_model()` and run regionally or via searchlight.
+
+## A first win
+
+Build a tiny dataset whose first half of trials shares one latent structure and the second half shares another, and a single model RDM that knows about it.
+
+```{r quick-data}
+set.seed(2026)
+ds <- gen_sample_dataset(D = c(8, 8, 8), nobs = 40, blocks = 4, nlevels = 2)
+
+# A simple ordinal model RDM: nearby trial indices are predicted to be similar.
+model_rdm <- as.matrix(stats::dist(seq_len(40)))
+```
+
+```{r quick-rdm-plot, echo = FALSE, fig.cap = "A model RDM. Dark cells = predicted small dissimilarity (similar items); bright cells = predicted large dissimilarity. Diagonal = 0.", out.width = "55%"}
+op <- par(mar = c(2, 2, 1.5, 0.5))
+image(seq_len(40), seq_len(40), model_rdm,
+      col = hcl.colors(48, "YlOrBr", rev = TRUE), axes = FALSE,
+      xlab = "", ylab = "", main = "Model RDM")
+box()
+par(op)
+```
+
+Fit RSA in one regional pass:
+
+```{r quick-fit}
+des <- rsa_design(~ model_rdm, list(model_rdm = model_rdm),
+                  block_var = ds$design$block_var)
+mod <- rsa_model(ds$dataset, des, distmethod = "pearson", regtype = "pearson")
+res <- run_regional(mod, region_mask = ds$dataset$mask, verbose = FALSE)
+res$performance_table
+```
+
+The `performance_table` row reports, per ROI, how well that ROI's neural pair-dissimilarity vector tracks the model RDM. That's the entire RSA core loop. The rest of this vignette covers the parts you'll actually want to control: how to build model RDMs, how to combine multiple RDMs, how to handle correlated RDMs, and how to wire it into searchlight.
 
 ## Basic concepts
 
@@ -46,11 +86,10 @@ In practice you (i) create an MVPA dataset, (ii) define one or more model dissim
 
 ### 1. Creating Sample Data
 
-Let's create a simple example dataset with known structure:
+A larger synthetic dataset for the rest of the walkthrough:
 
-```{r create_sample_data, message=FALSE, warning=FALSE}
-# Generate a sample dataset (20x20x8 volume, 80 observations, 4 blocks)
-dataset <- rMVPA::gen_sample_dataset(D=c(20,20,8), nobs = 80, blocks=4)
+```{r create_sample_data}
+dataset <- rMVPA::gen_sample_dataset(D = c(20, 20, 8), nobs = 80, blocks = 4)
 ```
 
 ### 2. Creating Model Dissimilarity Matrices

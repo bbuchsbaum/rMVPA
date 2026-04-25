@@ -5,6 +5,11 @@ template:
   bootstrap: 5
   package: albersdown
 articles:
+- title: Get Started
+  desc: |
+    Start here. One vignette, three small examples — searchlight classification, regional classification, RSA.
+  contents:
+  - rMVPA
 - title: Core Concepts
   desc: |
     Essential concepts and basic workflows
@@ -19,8 +24,6 @@ articles:
   - Searchlight_Analysis
   - Regional_Analysis
   - CommandLine
-  - CommandLineScripts
-  - MVPA_RegionalCmdline
 - title: Representational Similarity Analysis
   desc: |
     RSA methods from basic to specialized approaches
@@ -29,10 +32,10 @@ articles:
   - Contrast_RSA
   - Temporal_Confounds_in_RSA
   - Advanced_RSA
-  - Feature_RSA_Domain_Adaptation
+  - Feature_RSA_Advanced_Workflows
   - Feature_RSA_Connectivity
   - Model_Space_Connectivity
-  - Feature_RSA_Advanced_Workflows
+  - Feature_RSA_Domain_Adaptation
 - title: Representation Mapping (REMAP) Models
   desc: |
     Models for learning transformations between perception and memory representations

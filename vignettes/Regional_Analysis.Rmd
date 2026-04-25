@@ -23,9 +23,18 @@ includes:
 
 ---
 
-```{r setup, echo=FALSE, message=FALSE}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  message  = FALSE,
+  warning  = FALSE
+)
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) {
+  ggplot2::theme_set(albersdown::theme_albers(params$family))
+}
+library(neuroim2)
+library(rMVPA)
 ```
 
 # Introduction
@@ -104,11 +113,25 @@ The output is a `regional_mvpa_result` object with a `performance_table` (crossâ
 We can inspect the performance table to evaluate model accuracy in each region.
 
 ```{r performance_results}
-# Display performance metrics for each region
 print(regional_results$performance_table)
 ```
 
-For a more detailed view, the prediction table shows trial-by-trial predictions:
+```{r regional-perf-bars, echo = FALSE, fig.cap = "Cross-validated accuracy per region. The dashed line marks chance for a 2-class problem.", out.width = "70%", fig.width = 5.6, fig.height = 3.4}
+perf <- regional_results$performance_table
+metric <- intersect(c("Accuracy", "AUC"), names(perf))[1]
+if (!is.na(metric) && nrow(perf) > 0) {
+  vals <- as.numeric(perf[[metric]])
+  ids  <- as.character(perf$roinum)
+  op <- par(mar = c(3.5, 4, 1.5, 0.5))
+  bp <- barplot(vals, names.arg = ids, ylim = c(0, 1),
+                col = "#3a5b97", border = NA,
+                xlab = "ROI", ylab = metric, main = "")
+  abline(h = 0.5, lty = 2, col = "grey50")
+  par(op)
+}
+```
+
+The bar plot makes between-region differences visible at a glance and shows where each region sits relative to chance. For a more detailed view, the prediction table shows trial-by-trial predictions:
 
 ```{r prediction_results}
 # Display the prediction table

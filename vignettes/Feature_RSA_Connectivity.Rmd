@@ -158,6 +158,18 @@ conn_example <- build_connectivity_example()
 knitr::kable(round(conn_example$cross_raw, 2))
 ```
 
+```{r quick-win-heatmap, echo = FALSE, fig.cap = "Asymmetric ROI x ROI cross-connectivity. Rows are source ROIs (the geometry learned there), columns are target ROIs (the geometry observed there). Diagonal = within-ROI feature-RSA fit; off-diagonals = cross-ROI generalization.", out.width = "60%", fig.width = 4.8, fig.height = 4.2}
+M <- conn_example$cross_raw
+op <- par(mar = c(3.2, 3.2, 1.5, 0.5))
+image(seq_len(nrow(M)), seq_len(ncol(M)), M,
+      col = hcl.colors(48, "Blue-Red 3"), axes = FALSE,
+      xlab = "target ROI", ylab = "source ROI", main = "")
+axis(1, at = seq_len(ncol(M)), labels = colnames(M))
+axis(2, at = seq_len(nrow(M)), labels = rownames(M), las = 1)
+box()
+par(op)
+```
+
 ```{r quick-win-checks, include = FALSE}
 stopifnot(is.matrix(conn_example$predicted_connectivity))
 stopifnot(is.matrix(conn_example$cross_raw))

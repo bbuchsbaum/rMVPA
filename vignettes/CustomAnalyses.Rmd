@@ -24,16 +24,21 @@ includes:
 
 ---
 
-```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
-suppressPackageStartupMessages({
-  library(neuroim2)
-  library(rMVPA)
-  library(dplyr)
-  library(tibble)
-})
-# Ensure sequential plan for examples unless specified
-future::plan(future::sequential) 
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  message  = FALSE,
+  warning  = FALSE
+)
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) {
+  ggplot2::theme_set(albersdown::theme_albers(params$family))
+}
+library(neuroim2)
+library(rMVPA)
+library(dplyr)
+library(tibble)
+future::plan(future::sequential)
 ```
 
 # Introduction

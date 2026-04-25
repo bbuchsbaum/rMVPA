@@ -24,9 +24,18 @@ includes:
 
 ---
 
-```{r setup, echo=FALSE, message=FALSE}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  message  = FALSE,
+  warning  = FALSE
+)
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) {
+  ggplot2::theme_set(albersdown::theme_albers(params$family))
+}
+library(neuroim2)
+library(rMVPA)
 ```
 
 This vignette shows how to construct neuroimaging datasets for MVPA. We start with a runnable synthetic example, then show the pattern for real volumetric and surface data.
@@ -35,18 +44,34 @@ This vignette shows how to construct neuroimaging datasets for MVPA. We start wi
 
 The easiest way to get started is with `gen_sample_dataset()`, which creates a complete dataset and design in one call:
 
-```{r synthetic_example, message=FALSE, warning=FALSE}
-library(rMVPA)
-library(neuroim2)
-
-# Create a synthetic 6x6x6 dataset with 80 observations in 4 runs, 2 conditions
+```{r synthetic-example}
 ds <- gen_sample_dataset(D = c(6, 6, 6), nobs = 80, blocks = 4, nlevels = 2)
-
-# The result contains a dataset and a design
 print(ds$dataset)
 print(ds$design)
+```
 
-# You can also construct each piece manually:
+The dataset bundles a 4-D `NeuroVec` (voxels × time) and a binary `NeuroVol` mask. Two pictures make the shape concrete: a mid-axial slice of the mask, and the trial × run grid of the design.
+
+```{r synthetic-visual, echo = FALSE, fig.cap = "Left: a mid-axial slice of the binary mask (active voxels in dark blue). Right: each trial coloured by run; runs split into equal-length blocks of trials.", fig.width = 7, fig.height = 3.4}
+op <- par(mfrow = c(1, 2), mar = c(2.5, 2.5, 1.5, 0.5))
+mask_arr <- as.array(ds$dataset$mask)
+mid_z <- ceiling(dim(mask_arr)[3] / 2)
+image(mask_arr[, , mid_z], col = c("white", "#3a5b97"),
+      axes = FALSE, main = "mask slice")
+box()
+plot(seq_along(ds$design$block_var), ds$design$block_var,
+     pch = 16, cex = 0.7,
+     col = scales::alpha(hcl.colors(length(unique(ds$design$block_var)),
+                                     "Set 2"), 0.9)[ds$design$block_var],
+     xlab = "trial index", ylab = "run", axes = FALSE,
+     main = "design")
+axis(1); axis(2, at = seq_along(unique(ds$design$block_var)))
+par(op)
+```
+
+You can also assemble the pieces manually if you want explicit control over the design data frame:
+
+```{r synthetic-manual}
 dset <- mvpa_dataset(ds$dataset$train_data, mask = ds$dataset$mask)
 
 design_df <- data.frame(
@@ -54,7 +79,7 @@ design_df <- data.frame(
   block = ds$design$block_var
 )
 mvdes <- mvpa_design(design_df, y_train = ~ Y, block_var = ~ block)
-print(mvdes)
+mvdes
 ```
 
 ## Creating a Real Volumetric (Image-Based) Dataset
