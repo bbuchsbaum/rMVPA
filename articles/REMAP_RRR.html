@@ -106,7 +106,9 @@ the algorithm, use cases, and when domain adaptation is needed.</p>
 </h2>
 <p>We simulate a dataset with an external test set (perception→memory)
 and run both a naive cross‑decoding baseline and REMAP‑RRR over a small
-ROI mask.</p>
+ROI mask. The chunks in this vignette are shown but not evaluated during
+package builds because reduced-rank adapters can be slow on some
+systems; they are complete commands you can run interactively.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">toy</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>,<span class="fl">6</span>,<span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">120</span>, nlevels <span class="op">=</span> <span class="fl">4</span>, blocks <span class="op">=</span> <span class="fl">3</span>, external_test <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>

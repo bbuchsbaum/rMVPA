@@ -248,8 +248,7 @@ function.</p>
 <span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Print the results table</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_regional_results</span><span class="op">)</span></span>
+<span><span class="va">custom_regional_results</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 6</span></span></span>
 <span><span class="co">#&gt;      id mean_signal sd_signal n_features error error_message</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        </span></span>
@@ -258,22 +257,15 @@ function.</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>     3    -<span style="color: #BB0000;">0.001</span><span style="color: #BB0000; text-decoration: underline;">93</span>     0.998        323 FALSE ~            </span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>     4     0.023<span style="text-decoration: underline;">2</span>      1.02          24 FALSE ~</span></span>
 <span></span>
-<span><span class="co"># Example with error handling (using the robust function and potential small ROI 4)</span></span>
-<span><span class="co"># Suppress expected warnings from the logger about the error</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="op">{</span></span>
-<span>    <span class="va">custom_regional_error_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_custom_regional.html">run_custom_regional</a></span><span class="op">(</span></span>
-<span>      dataset <span class="op">=</span> <span class="va">dataset_obj</span>,</span>
-<span>      region_mask <span class="op">=</span> <span class="va">region_mask_vol</span>,</span>
-<span>      custom_func <span class="op">=</span> <span class="va">calculate_roi_stats_robust</span>, <span class="co"># Function that might error</span></span>
-<span>      .cores <span class="op">=</span> <span class="fl">1</span>, </span>
-<span>      .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>    <span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="va">custom_regional_error_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_custom_regional.html">run_custom_regional</a></span><span class="op">(</span></span>
+<span>  dataset <span class="op">=</span> <span class="va">dataset_obj</span>,</span>
+<span>  region_mask <span class="op">=</span> <span class="va">region_mask_vol</span>,</span>
+<span>  custom_func <span class="op">=</span> <span class="va">calculate_roi_stats_robust</span>,</span>
+<span>  .cores <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nResults with potential errors:\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Results with potential errors:</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_regional_error_results</span><span class="op">)</span></span>
+<span><span class="va">custom_regional_error_results</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 6</span></span></span>
 <span><span class="co">#&gt;      id mean_signal sd_signal n_features error error_message</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        </span></span>

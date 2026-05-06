@@ -105,40 +105,14 @@ theoretical representational models.</p>
 </h3>
 <p>Let’s walk through a complete example:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">## Generate data and weakly-correlated features</span></span>
-<span><span class="co"># Synthetic dataset: 6x6x6, 50 observations (4 blocks)</span></span>
-<span><span class="va">data_out</span> <span class="op">&lt;-</span> <span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>,<span class="fl">6</span>,<span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">50</span>, blocks <span class="op">=</span> <span class="fl">4</span>, nlevels <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $dataset</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  MVPA Dataset </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; - Training Data </span></span>
-<span><span class="co">#&gt;   - Dimensions:  6 x 6 x 6 x 50 observations </span></span>
-<span><span class="co">#&gt;   - Type:  DenseNeuroVec </span></span>
-<span><span class="co">#&gt; - Test Data </span></span>
-<span><span class="co">#&gt;   -  None </span></span>
-<span><span class="co">#&gt; - Mask Information </span></span>
-<span><span class="co">#&gt;   - Areas:  TRUE : 216 </span></span>
-<span><span class="co">#&gt;   - Active voxels/vertices:  216 </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $design</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  MVPA Design </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; - Training Data </span></span>
-<span><span class="co">#&gt;   - Observations:  50 </span></span>
-<span><span class="co">#&gt;   - Response Type:  Factor</span></span>
-<span><span class="co">#&gt;   - Levels:  a, b </span></span>
-<span><span class="co">#&gt;   - Class Distribution:  a: 25, b: 25 </span></span>
-<span><span class="co">#&gt; - Test Data </span></span>
-<span><span class="co">#&gt;   -  None </span></span>
-<span><span class="co">#&gt; - Structure </span></span>
-<span><span class="co">#&gt;   - Blocking:  Present</span></span>
-<span><span class="co">#&gt;   - Number of Blocks:  4 </span></span>
-<span><span class="co">#&gt;   - Mean Block Size:  12  (SD:  0.58 ) </span></span>
-<span><span class="co">#&gt;   - Split Groups:  None</span></span>
+<code class="sourceCode R"><span><span class="va">data_out</span> <span class="op">&lt;-</span> <span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>,<span class="fl">6</span>,<span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">50</span>, blocks <span class="op">=</span> <span class="fl">4</span>, nlevels <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  observations <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span>,</span>
+<span>  active_voxels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span>,</span>
+<span>  blocks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">data_out</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;   observations active_voxels blocks</span></span>
+<span><span class="co">#&gt; 1           50           216      4</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
 <span><span class="va">n_stimuli</span>  <span class="op">&lt;-</span> <span class="fl">50</span></span>
@@ -208,11 +182,9 @@ theoretical representational models.</p>
 <span>  indices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">mask_vol</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Run regional analysis (suppress log messages for clarity)</span></span>
-<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">suppressMessages</a></span><span class="op">(</span><span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">feature_model</span>, <span class="va">region_mask</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">feature_model</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Examine results</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">performance_table</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
 <span><span class="co">#&gt;   roinum pattern_correlation pattern_discrimination pattern_rank_percentile</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
@@ -241,44 +213,31 @@ multicollinearity.</p>
 <span>    method <span class="op">=</span> <span class="va">method</span>,</span>
 <span>    crossval <span class="op">=</span> <span class="va">crossval</span>  <span class="co"># Add cross-validation</span></span>
 <span>  <span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">suppressMessages</a></span><span class="op">(</span><span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">region_mask</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Compare performance</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">methods</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nMethod:"</span>, <span class="va">methods</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_list</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Method: pls </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
-<span><span class="co">#&gt;   roinum pattern_correlation pattern_discrimination pattern_rank_percentile</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1               0.403                  0.378                   0.798</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2               0.385                  0.349                   0.786</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3               0.368                  0.335                   0.766</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 6 more variables: rdm_correlation &lt;dbl&gt;, voxel_correlation &lt;dbl&gt;,</span></span></span>
-<span><span class="co">#&gt; <span style="color: #949494;">#   mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Method: pca </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
-<span><span class="co">#&gt;   roinum pattern_correlation pattern_discrimination pattern_rank_percentile</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1               0.399                  0.374                   0.794</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2               0.380                  0.344                   0.779</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3               0.363                  0.330                   0.760</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 6 more variables: rdm_correlation &lt;dbl&gt;, voxel_correlation &lt;dbl&gt;,</span></span></span>
-<span><span class="co">#&gt; <span style="color: #949494;">#   mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Method: glmnet </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
-<span><span class="co">#&gt;   roinum pattern_correlation pattern_discrimination pattern_rank_percentile</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1               0.379                  0.357                   0.803</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2               0.367                  0.339                   0.787</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3               0.377                  0.351                   0.793</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 6 more variables: rdm_correlation &lt;dbl&gt;, voxel_correlation &lt;dbl&gt;,</span></span></span>
-<span><span class="co">#&gt; <span style="color: #949494;">#   mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span></code></pre></div>
+<span><span class="va">method_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Map</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">method</span>, <span class="va">res</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">tab</span> <span class="op">&lt;-</span> <span class="va">res</span><span class="op">$</span><span class="va">performance_table</span></span>
+<span>  <span class="va">tab</span><span class="op">$</span><span class="va">method</span> <span class="op">&lt;-</span> <span class="va">method</span></span>
+<span>  <span class="va">tab</span></span>
+<span><span class="op">}</span>, <span class="va">methods</span>, <span class="va">results_list</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">method_summary</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"method"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">method_summary</span><span class="op">)</span>, <span class="st">"method"</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 9 × 11</span></span></span>
+<span><span class="co">#&gt;   method roinum pattern_correlation pattern_discrimination</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> pls         1               0.403                  0.378</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> pls         2               0.385                  0.349</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> pls         3               0.368                  0.335</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> pca         1               0.399                  0.374</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> pca         2               0.380                  0.344</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> pca         3               0.363                  0.330</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> glmnet      1               0.379                  0.357</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span> glmnet      2               0.367                  0.339</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">9</span> glmnet      3               0.377                  0.351</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 7 more variables: pattern_rank_percentile &lt;dbl&gt;, rdm_correlation &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   voxel_correlation &lt;dbl&gt;, mse &lt;dbl&gt;, r_squared &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -328,11 +287,9 @@ high‑resolution or long‑duration datasets.</p>
 <span>  rsa_simfun <span class="op">=</span> <span class="st">"pearson"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Run analysis (suppress log messages for clarity)</span></span>
-<span><span class="va">results_vector</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">suppressMessages</a></span><span class="op">(</span><span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">vector_model</span>, <span class="va">region_mask</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">results_vector</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">vector_model</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Examine results</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_vector</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
+<span><span class="va">results_vector</span><span class="op">$</span><span class="va">performance_table</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
 <span><span class="co">#&gt;   roinum rsa_score</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
@@ -359,30 +316,25 @@ high‑resolution or long‑duration datasets.</p>
 <span>    design <span class="op">=</span> <span class="va">design</span>,</span>
 <span>    distfun <span class="op">=</span> <span class="fu"><a href="../reference/distance-constructors.html">cordist</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">suppressMessages</a></span><span class="op">(</span><span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">region_mask</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Compare results</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">block_sizes</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nBlock size:"</span>, <span class="va">block_sizes</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_blocks</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Block size: 5 </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
-<span><span class="co">#&gt;   roinum rsa_score</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1     0.552</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2     0.522</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3     0.478</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Block size: 10 </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
-<span><span class="co">#&gt;   roinum rsa_score</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1     0.554</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2     0.531</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3     0.482</span></span></code></pre></div>
+<span><span class="va">block_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Map</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">block_size</span>, <span class="va">res</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">tab</span> <span class="op">&lt;-</span> <span class="va">res</span><span class="op">$</span><span class="va">performance_table</span></span>
+<span>  <span class="va">tab</span><span class="op">$</span><span class="va">block_size</span> <span class="op">&lt;-</span> <span class="va">block_size</span></span>
+<span>  <span class="va">tab</span></span>
+<span><span class="op">}</span>, <span class="va">block_sizes</span>, <span class="va">results_blocks</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">block_summary</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"block_size"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">block_summary</span><span class="op">)</span>, <span class="st">"block_size"</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 3</span></span></span>
+<span><span class="co">#&gt;   block_size roinum rsa_score</span></span>
+<span><span class="co">#&gt;        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>          5      1     0.552</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>          5      2     0.522</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>          5      3     0.478</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>         10      1     0.554</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span>         10      2     0.531</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span>         10      3     0.482</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">

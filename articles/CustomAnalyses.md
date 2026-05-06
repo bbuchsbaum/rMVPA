@@ -185,8 +185,7 @@ custom_regional_results <- run_custom_regional(
   .verbose = FALSE
 )
 
-# Print the results table
-print(custom_regional_results)
+custom_regional_results
 #> # A tibble: 4 × 6
 #>      id mean_signal sd_signal n_features error error_message
 #>   <int>       <dbl>     <dbl>      <int> <lgl> <chr>        
@@ -195,22 +194,15 @@ print(custom_regional_results)
 #> 3     3    -0.00193     0.998        323 FALSE ~            
 #> 4     4     0.0232      1.02          24 FALSE ~
 
-# Example with error handling (using the robust function and potential small ROI 4)
-# Suppress expected warnings from the logger about the error
-suppressWarnings({
-    custom_regional_error_results <- run_custom_regional(
-      dataset = dataset_obj,
-      region_mask = region_mask_vol,
-      custom_func = calculate_roi_stats_robust, # Function that might error
-      .cores = 1, 
-      .verbose = FALSE
-    )
-})
+custom_regional_error_results <- run_custom_regional(
+  dataset = dataset_obj,
+  region_mask = region_mask_vol,
+  custom_func = calculate_roi_stats_robust,
+  .cores = 1,
+  .verbose = FALSE
+)
 
-cat("\nResults with potential errors:\n")
-#> 
-#> Results with potential errors:
-print(custom_regional_error_results)
+custom_regional_error_results
 #> # A tibble: 4 × 6
 #>      id mean_signal sd_signal n_features error error_message
 #>   <int>       <dbl>     <dbl>      <int> <lgl> <chr>        

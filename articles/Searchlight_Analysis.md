@@ -2,6 +2,18 @@
 
 ## Searchlight Analysis
 
+Use searchlight MVPA when you want a whole-brain map of local decoding
+performance rather than one score per anatomical ROI. The input is the
+same
+[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+you would use for a regional analysis; the output is a
+`searchlight_result` with one performance map per metric.
+
+The examples below are written against a tiny synthetic volume. The
+fitting chunks are left unevaluated in the vignette source because real
+searchlights can take minutes to hours, but the calls are complete and
+can be run as-is.
+
 ### Simulated data
 
 We first create a small volumetric dataset for demonstration. The call
@@ -13,39 +25,15 @@ value contains both the data (`mvpa_dataset`) and the design
 
 ``` r
 
-
 dataset <- gen_sample_dataset(D=c(6,6,6), nobs = 80, blocks=4, nlevels=2)
-print(dataset)
-#> $dataset
-#> 
-#>  MVPA Dataset 
-#> 
-#> - Training Data 
-#>   - Dimensions:  6 x 6 x 6 x 80 observations 
-#>   - Type:  DenseNeuroVec 
-#> - Test Data 
-#>   -  None 
-#> - Mask Information 
-#>   - Areas:  TRUE : 216 
-#>   - Active voxels/vertices:  216 
-#> 
-#> 
-#> $design
-#> 
-#>  MVPA Design 
-#> 
-#> - Training Data 
-#>   - Observations:  80 
-#>   - Response Type:  Factor
-#>   - Levels:  a, b 
-#>   - Class Distribution:  a: 40, b: 40 
-#> - Test Data 
-#>   -  None 
-#> - Structure 
-#>   - Blocking:  Present
-#>   - Number of Blocks:  4 
-#>   - Mean Block Size:  20  (SD:  0 ) 
-#>   - Split Groups:  None
+data.frame(
+  observations = length(dataset$design$block_var),
+  active_voxels = sum(dataset$dataset$mask),
+  blocks = length(unique(dataset$design$block_var)),
+  classes = length(levels(dataset$design$targets))
+)
+#>   observations active_voxels blocks classes
+#> 1           80           216      4       2
 ```
 
 ### Cross‑validation
@@ -141,6 +129,10 @@ voxel.
 result <- run_searchlight(model, radius=4, method="standard")
 result
 ```
+
+After fitting, inspect `names(result$results)` to see the available
+performance maps. For a two-class classifier, `result$results$AUC` is
+the usual first map to view.
 
 ## Randomized searchlight
 

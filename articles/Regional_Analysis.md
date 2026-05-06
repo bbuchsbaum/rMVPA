@@ -2,16 +2,15 @@
 
 ## Introduction
 
-Regional MVPA evaluates prediction performance within predefined brain
-regions. This vignette walks through the complete workflow using rMVPA:
+Use regional MVPA when you already have an ROI mask and want one
+prediction summary per region. The input is a 4D neuroimaging dataset
+plus a design table; the output is a `regional_mvpa_result` containing
+cross-validated performance, trial-level predictions, and map-ready
+regional summaries.
 
-We’ll generate synthetic data, define ROIs with a region mask, build the
-MVPA model with cross-validation, run the analysis, and examine the
-results. The implementation follows the approach in
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md),
-[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md),
-and
-[`mvpa_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md).
+This vignette follows one compact workflow: make a small dataset, define
+three ROIs, fit a blocked cross-validated classifier, and inspect the
+region-level performance.
 
 ## Data Generation and Preparation
 
@@ -23,44 +22,19 @@ design for cross-validation.
 
 ``` r
 
-library(rMVPA)
-library(neuroim2)
-# Generate a synthetic dataset with dimensions 6x6x6, 80 observations, divided into 4 blocks
 data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 80, blocks = 4, nlevels = 2)
-print(data_out)
-#> $dataset
-#> 
-#>  MVPA Dataset 
-#> 
-#> - Training Data 
-#>   - Dimensions:  6 x 6 x 6 x 80 observations 
-#>   - Type:  DenseNeuroVec 
-#> - Test Data 
-#>   -  None 
-#> - Mask Information 
-#>   - Areas:  TRUE : 216 
-#>   - Active voxels/vertices:  216 
-#> 
-#> 
-#> $design
-#> 
-#>  MVPA Design 
-#> 
-#> - Training Data 
-#>   - Observations:  80 
-#>   - Response Type:  Factor
-#>   - Levels:  a, b 
-#>   - Class Distribution:  a: 40, b: 40 
-#> - Test Data 
-#>   -  None 
-#> - Structure 
-#>   - Blocking:  Present
-#>   - Number of Blocks:  4 
-#>   - Mean Block Size:  20  (SD:  0 ) 
-#>   - Split Groups:  None
+
+data.frame(
+  observations = length(data_out$design$block_var),
+  active_voxels = sum(data_out$dataset$mask),
+  blocks = length(unique(data_out$design$block_var)),
+  classes = length(levels(data_out$design$targets))
+)
+#>   observations active_voxels blocks classes
+#> 1           80           216      4       2
 ```
 
-The returned list contains:
+The returned list contains two objects:
 
 - **dataset**: an MVPA dataset object with training data and a binary
   mask.
@@ -76,13 +50,15 @@ partitioned into three regions of interest.
 
 ``` r
 
-# Extract the binary mask from the dataset
 mask <- data_out$dataset$mask
 nvox <- sum(mask)
 
-# Create a regional mask: assign each voxel a random region number (1 to 3)
-set.seed(123)  # for reproducibility
-region_mask <- neuroim2::NeuroVol(sample(1:3, size = nvox, replace = TRUE), neuroim2::space(mask), indices = which(mask > 0))
+set.seed(123)
+region_mask <- neuroim2::NeuroVol(
+  sample(1:3, size = nvox, replace = TRUE),
+  neuroim2::space(mask),
+  indices = which(mask > 0)
+)
 table(region_mask)
 #> region_mask
 #>  1  2  3 
@@ -99,19 +75,20 @@ using a chosen classifier and cross‑validation strategy.
 
 ``` r
 
-# Create MVPA dataset object from the generated training data and mask
- dset <- mvpa_dataset(data_out$dataset$train_data, mask = data_out$dataset$mask)
-
-# Build cross-validation structure using block information from the design
+dset <- mvpa_dataset(data_out$dataset$train_data, mask = data_out$dataset$mask)
 cval <- blocked_cross_validation(data_out$design$block_var)
 
-# Load a classification model; here we use "sda" (Shrinkage Discriminant Analysis)
 mod <- load_model("sda")
 tune_grid <- data.frame(lambda = 0.01, diagonal = FALSE)
 
-# Create the MVPA model object
-mvpa_mod <- mvpa_model(mod, dataset = dset, design = data_out$design, crossval = cval, tune_grid = tune_grid)
-print(mvpa_mod)
+mvpa_mod <- mvpa_model(
+  mod,
+  dataset = dset,
+  design = data_out$design,
+  crossval = cval,
+  tune_grid = tune_grid
+)
+mvpa_mod
 #> mvpa_model object. 
 #> model:  sda 
 #> model type:  classification 
@@ -159,10 +136,8 @@ print(mvpa_mod)
 #>   - Split Groups:  None
 ```
 
-The
-[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
-function, as defined in `mvpa_model.R`, packages all necessary
-parameters including cross-validation and performance computation.
+The model object packages the dataset, design, classifier, tuning grid,
+and cross-validation plan.
 
 ## Running the Regional Analysis
 
@@ -174,7 +149,6 @@ prediction tables.
 
 ``` r
 
-# Run the regional analysis on the defined region mask
 regional_results <- run_regional(mvpa_mod, region_mask)
 ```
 
@@ -190,7 +164,7 @@ region.
 
 ``` r
 
-print(regional_results$performance_table)
+regional_results$performance_table
 #> # A tibble: 3 × 3
 #>   roinum Accuracy      AUC
 #>    <int>    <dbl>    <dbl>
@@ -207,51 +181,26 @@ Cross-validated accuracy per region. The dashed line marks chance for a
 2-class problem.
 
 The bar plot makes between-region differences visible at a glance and
-shows where each region sits relative to chance. For a more detailed
-view, the prediction table shows trial-by-trial predictions:
+shows where each region sits relative to chance. For a compact
+trial-level check, show the first few predictions:
 
 ``` r
 
-# Display the prediction table
-print(regional_results$prediction_table)
-#> # A tibble: 240 × 8
+utils::head(regional_results$prediction_table)
+#> # A tibble: 6 × 8
 #> # Rowwise: 
-#>    .rownum roinum observed pobserved predicted correct prob_a  prob_b
-#>      <int>  <int> <fct>        <dbl> <fct>     <lgl>    <dbl>   <dbl>
-#>  1       1      1 b           0.872  b         TRUE    0.128  0.872  
-#>  2       2      1 a           0.961  a         TRUE    0.961  0.0393 
-#>  3       3      1 a           0.996  a         TRUE    0.996  0.00371
-#>  4       4      1 b           0.983  b         TRUE    0.0166 0.983  
-#>  5       5      1 b           0.0243 a         FALSE   0.976  0.0243 
-#>  6       6      1 a           0.805  a         TRUE    0.805  0.195  
-#>  7       7      1 b           0.799  b         TRUE    0.201  0.799  
-#>  8       8      1 a           0.0667 b         FALSE   0.0667 0.933  
-#>  9       9      1 a           0.999  a         TRUE    0.999  0.00124
-#> 10      10      1 a           0.554  a         TRUE    0.554  0.446  
-#> # ℹ 230 more rows
+#>   .rownum roinum observed pobserved predicted correct prob_a  prob_b
+#>     <int>  <int> <fct>        <dbl> <fct>     <lgl>    <dbl>   <dbl>
+#> 1       1      1 b           0.872  b         TRUE    0.128  0.872  
+#> 2       2      1 a           0.961  a         TRUE    0.961  0.0393 
+#> 3       3      1 a           0.996  a         TRUE    0.996  0.00371
+#> 4       4      1 b           0.983  b         TRUE    0.0166 0.983  
+#> 5       5      1 b           0.0243 a         FALSE   0.976  0.0243 
+#> 6       6      1 a           0.805  a         TRUE    0.805  0.195
 ```
 
 Volumetric results (`vol_results`) can be further visualized with
 neuroimaging tools to determine spatial patterns of performance.
-
-## Under the Hood: How It Works
-
-The
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
-function internally calls
-[`prep_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/prep_regional.md)
-to process the region mask, and then uses
-[`mvpa_iterate()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
-to apply the MVPA model across each ROI. Functions such as
-`combine_regional_results()` and
-[`combine_prediction_tables()`](http://bbuchsbaum.github.io/rMVPA/reference/combine_prediction_tables.md)
-merge the individual regional outputs into a comprehensive result.
-
-This modular design ensures that:
-
-- Data integrity is maintained.
-- Cross-validation is properly applied.
-- Results are aggregated for clear interpretation at the regional level.
 
 ## Summary
 

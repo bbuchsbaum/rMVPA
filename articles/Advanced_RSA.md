@@ -36,40 +36,14 @@ Let’s walk through a complete example:
 
 ``` r
 
-## Generate data and weakly-correlated features
-# Synthetic dataset: 6x6x6, 50 observations (4 blocks)
 data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 50, blocks = 4, nlevels = 2)
-print(data_out)
-#> $dataset
-#> 
-#>  MVPA Dataset 
-#> 
-#> - Training Data 
-#>   - Dimensions:  6 x 6 x 6 x 50 observations 
-#>   - Type:  DenseNeuroVec 
-#> - Test Data 
-#>   -  None 
-#> - Mask Information 
-#>   - Areas:  TRUE : 216 
-#>   - Active voxels/vertices:  216 
-#> 
-#> 
-#> $design
-#> 
-#>  MVPA Design 
-#> 
-#> - Training Data 
-#>   - Observations:  50 
-#>   - Response Type:  Factor
-#>   - Levels:  a, b 
-#>   - Class Distribution:  a: 25, b: 25 
-#> - Test Data 
-#>   -  None 
-#> - Structure 
-#>   - Blocking:  Present
-#>   - Number of Blocks:  4 
-#>   - Mean Block Size:  12  (SD:  0.58 ) 
-#>   - Split Groups:  None
+data.frame(
+  observations = length(data_out$design$block_var),
+  active_voxels = sum(data_out$dataset$mask),
+  blocks = length(unique(data_out$design$block_var))
+)
+#>   observations active_voxels blocks
+#> 1           50           216      4
 
 set.seed(123)
 n_stimuli  <- 50
@@ -139,11 +113,9 @@ region_mask <- neuroim2::NeuroVol(
   indices = which(mask_vol > 0)
 )
 
-# Run regional analysis (suppress log messages for clarity)
-results <- suppressWarnings(suppressMessages(run_regional(feature_model, region_mask)))
+results <- run_regional(feature_model, region_mask)
 
-# Examine results
-print(results$performance_table)
+results$performance_table
 #> # A tibble: 3 × 10
 #>   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
 #>    <int>               <dbl>                  <dbl>                   <dbl>
@@ -174,44 +146,31 @@ results_list <- lapply(methods, function(method) {
     method = method,
     crossval = crossval  # Add cross-validation
   )
-  suppressWarnings(suppressMessages(run_regional(model, region_mask)))
+  run_regional(model, region_mask)
 })
 
-# Compare performance
-for (i in seq_along(methods)) {
-  cat("\nMethod:", methods[i], "\n")
-  print(results_list[[i]]$performance_table)
-}
-#> 
-#> Method: pls 
-#> # A tibble: 3 × 10
-#>   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
-#>    <int>               <dbl>                  <dbl>                   <dbl>
-#> 1      1               0.403                  0.378                   0.798
-#> 2      2               0.385                  0.349                   0.786
-#> 3      3               0.368                  0.335                   0.766
-#> # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
-#> #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
-#> 
-#> Method: pca 
-#> # A tibble: 3 × 10
-#>   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
-#>    <int>               <dbl>                  <dbl>                   <dbl>
-#> 1      1               0.399                  0.374                   0.794
-#> 2      2               0.380                  0.344                   0.779
-#> 3      3               0.363                  0.330                   0.760
-#> # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
-#> #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
-#> 
-#> Method: glmnet 
-#> # A tibble: 3 × 10
-#>   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
-#>    <int>               <dbl>                  <dbl>                   <dbl>
-#> 1      1               0.379                  0.357                   0.803
-#> 2      2               0.367                  0.339                   0.787
-#> 3      3               0.377                  0.351                   0.793
-#> # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
-#> #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
+method_summary <- do.call(rbind, Map(function(method, res) {
+  tab <- res$performance_table
+  tab$method <- method
+  tab
+}, methods, results_list))
+
+method_summary[, c("method", setdiff(names(method_summary), "method"))]
+#> # A tibble: 9 × 11
+#>   method roinum pattern_correlation pattern_discrimination
+#>   <chr>   <int>               <dbl>                  <dbl>
+#> 1 pls         1               0.403                  0.378
+#> 2 pls         2               0.385                  0.349
+#> 3 pls         3               0.368                  0.335
+#> 4 pca         1               0.399                  0.374
+#> 5 pca         2               0.380                  0.344
+#> 6 pca         3               0.363                  0.330
+#> 7 glmnet      1               0.379                  0.357
+#> 8 glmnet      2               0.367                  0.339
+#> 9 glmnet      3               0.377                  0.351
+#> # ℹ 7 more variables: pattern_rank_percentile <dbl>, rdm_correlation <dbl>,
+#> #   voxel_correlation <dbl>, mse <dbl>, r_squared <dbl>,
+#> #   mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
 ```
 
 ## Vector-Based RSA
@@ -258,11 +217,9 @@ vector_model <- vector_rsa_model(
   rsa_simfun = "pearson"
 )
 
-# Run analysis (suppress log messages for clarity)
-results_vector <- suppressWarnings(suppressMessages(run_regional(vector_model, region_mask)))
+results_vector <- run_regional(vector_model, region_mask)
 
-# Examine results
-print(results_vector$performance_table)
+results_vector$performance_table
 #> # A tibble: 3 × 2
 #>   roinum rsa_score
 #>    <int>     <dbl>
@@ -291,30 +248,25 @@ results_blocks <- lapply(block_sizes, function(size) {
     design = design,
     distfun = cordist()
   )
-  suppressWarnings(suppressMessages(run_regional(model, region_mask)))
+  run_regional(model, region_mask)
 })
 
-# Compare results
-for (i in seq_along(block_sizes)) {
-  cat("\nBlock size:", block_sizes[i], "\n")
-  print(results_blocks[[i]]$performance_table)
-}
-#> 
-#> Block size: 5 
-#> # A tibble: 3 × 2
-#>   roinum rsa_score
-#>    <int>     <dbl>
-#> 1      1     0.552
-#> 2      2     0.522
-#> 3      3     0.478
-#> 
-#> Block size: 10 
-#> # A tibble: 3 × 2
-#>   roinum rsa_score
-#>    <int>     <dbl>
-#> 1      1     0.554
-#> 2      2     0.531
-#> 3      3     0.482
+block_summary <- do.call(rbind, Map(function(block_size, res) {
+  tab <- res$performance_table
+  tab$block_size <- block_size
+  tab
+}, block_sizes, results_blocks))
+
+block_summary[, c("block_size", setdiff(names(block_summary), "block_size"))]
+#> # A tibble: 6 × 3
+#>   block_size roinum rsa_score
+#>        <dbl>  <int>     <dbl>
+#> 1          5      1     0.552
+#> 2          5      2     0.522
+#> 3          5      3     0.478
+#> 4         10      1     0.554
+#> 5         10      2     0.531
+#> 6         10      3     0.482
 ```
 
 ## When to Use Each Method

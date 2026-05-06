@@ -482,9 +482,10 @@ map.</p>
 <span></span>
 <span><span class="va">conn_sl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/model_space_connectivity.html">model_space_connectivity</a></span><span class="op">(</span></span>
 <span>  <span class="va">res_sl</span>,</span>
-<span>  k <span class="op">=</span> <span class="fl">20</span>,           <span class="co"># number of anchors</span></span>
-<span>  scale <span class="op">=</span> <span class="st">"norm"</span>,   <span class="co"># cosine similarity</span></span>
-<span>  random_seed <span class="op">=</span> <span class="fl">1L</span>  <span class="co"># reproducible k-means starts</span></span>
+<span>  k <span class="op">=</span> <span class="fl">20</span>,             <span class="co"># number of anchors</span></span>
+<span>  scale <span class="op">=</span> <span class="st">"norm"</span>,     <span class="co"># cosine similarity</span></span>
+<span>  random_seed <span class="op">=</span> <span class="fl">1L</span>,   <span class="co"># reproducible k-means starts</span></span>
+<span>  build_maps <span class="op">=</span> <span class="cn">FALSE</span>  <span class="co"># set TRUE when you want anchor similarity maps</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">conn_sl</span><span class="op">)</span></span></code></pre></div>
@@ -521,12 +522,15 @@ each anchor</td>
 <tr class="odd">
 <td align="left"><code>vol_results</code></td>
 <td align="left">Named list of <code>NeuroVol</code> (or
-<code>NeuroSurface</code>) — one map per anchor</td>
+<code>NeuroSurface</code>) when <code>build_maps = TRUE</code> — one map
+per anchor</td>
 </tr>
 </tbody>
 </table>
 <p>Memory is O(n_centers × k) regardless of the model-RDM dimension or
-the number of trials.</p>
+the number of trials. Use <code>build_maps = FALSE</code> while choosing
+<code>k</code> or inspecting clusters; turn maps on only once you know
+which anchor summary you want to write or visualize.</p>
 <p>If you already have anchor centers in mind — for example, peak
 coordinates from a prior analysis or specific parcels — pass them with
 <code>seeds = c(&lt;center IDs&gt;)</code> and the function skips

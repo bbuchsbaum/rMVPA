@@ -40,7 +40,9 @@ predicted templates in the whitened space.
 
 We simulate a dataset with an external test set (perception→memory) and
 run both a naive cross‑decoding baseline and REMAP‑RRR over a small ROI
-mask.
+mask. The chunks in this vignette are shown but not evaluated during
+package builds because reduced-rank adapters can be slow on some
+systems; they are complete commands you can run interactively.
 
 ``` r
 
