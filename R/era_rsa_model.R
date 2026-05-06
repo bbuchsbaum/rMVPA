@@ -10,6 +10,12 @@
 #' - Second-order geometry: correlation between encoding and retrieval RDMs.
 #' - Optional confound-aware metrics and diagnostics (block/lag/run).
 #'
+#' \code{era_rsa_model()} itself returns a model specification. The scalar
+#' outputs below are emitted when that specification is evaluated with
+#' \code{\link{run_regional}()} or \code{\link{run_searchlight}()}: regional
+#' analyses place them in \code{result$performance_table}; searchlight analyses
+#' expose them as metric maps listed in \code{result$metrics}.
+#'
 #' @section Metrics:
 #' For each ROI / searchlight center, \code{era_rsa_model} emits a set of
 #' scalar metrics that are turned into spatial maps by \code{run_regional()}
@@ -96,8 +102,9 @@
 #'   When \code{run_enc} and \code{run_ret} entries are present they are used
 #'   to compute \code{geom_cor_run_partial}, the ER geometry correlation after
 #'   regressing out these run confounds.
-#' @param include_diag Logical; if TRUE (default) ERA off-diagonal mean excludes diagonal
-#'   by setting it to NA first; diagonal metrics are always retained.
+#' @param include_diag Logical retained for API compatibility. Diagonal ERA
+#'   metrics are always retained, and the off-diagonal mean used by
+#'   \code{era_diag_minus_off} always excludes matching-item diagonal entries.
 #' @param item_block Optional factor of per-item blocks, aligned to item keys.
 #'   Typically derived by aggregating a trial-level block/run variable in
 #'   \code{design$train_design} to the item level (e.g., modal block per item).
@@ -115,7 +122,9 @@
 #'   item keys. See \code{item_run_enc} for how it is used.
 #' @param ... Additional fields stored on the model spec.
 #'
-#' @return A model spec of class "era_rsa_model" compatible with run_regional()/run_searchlight().
+#' @return A model spec of class \code{"era_rsa_model"} compatible with
+#'   \code{\link{run_regional}()} and \code{\link{run_searchlight}()}. When fit,
+#'   the spec emits the scalar metrics documented in \strong{Metrics}.
 #' @examples
 #' \dontrun{
 #'   # See vignette for complete ERA-RSA workflow
@@ -212,7 +221,15 @@ era_rsa_model <- function(dataset,
 #' length across ROIs.
 #'
 #' @param model An era_rsa_model object.
-#' @return A named character vector mapping metric names to \code{"scalar"}.
+#' @return A named character vector mapping each emitted metric name to
+#'   \code{"scalar"}. Base metrics are \code{n_items}, \code{era_top1_acc},
+#'   \code{era_diag_mean}, \code{era_diag_minus_off}, \code{geom_cor},
+#'   \code{era_diag_minus_off_same_block},
+#'   \code{era_diag_minus_off_diff_block}, \code{era_lag_cor},
+#'   \code{geom_cor_run_partial}, and \code{geom_cor_xrun}. If
+#'   \code{confound_rdms} is supplied, the schema also includes
+#'   \code{beta_enc_geom}, one \code{beta_<name>} per confound RDM,
+#'   \code{sp_enc_geom}, and one \code{sp_<name>} per confound RDM.
 #' @keywords internal
 #' @export
 output_schema.era_rsa_model <- function(model) {
@@ -448,5 +465,4 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
 
   roi_result(metrics = perf, indices = ind, id = id)
 }
-
 

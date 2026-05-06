@@ -1,5 +1,42 @@
 context("era_rsa_model")
 
+test_that("era_rsa_model output schema documents all scalar metrics", {
+  base_schema <- output_schema(structure(
+    list(confound_rdms = NULL),
+    class = "era_rsa_model"
+  ))
+  expect_identical(
+    names(base_schema),
+    c(
+      "n_items",
+      "era_top1_acc",
+      "era_diag_mean",
+      "era_diag_minus_off",
+      "geom_cor",
+      "era_diag_minus_off_same_block",
+      "era_diag_minus_off_diff_block",
+      "era_lag_cor",
+      "geom_cor_run_partial",
+      "geom_cor_xrun"
+    )
+  )
+  expect_true(all(base_schema == "scalar"))
+
+  conf_schema <- output_schema(structure(
+    list(confound_rdms = list(block = diag(2), time_enc = diag(2))),
+    class = "era_rsa_model"
+  ))
+  expect_true(all(c(
+    "beta_enc_geom",
+    "beta_block",
+    "beta_time_enc",
+    "sp_enc_geom",
+    "sp_block",
+    "sp_time_enc"
+  ) %in% names(conf_schema)))
+  expect_true(all(conf_schema == "scalar"))
+})
+
 test_that("era_rsa_model runs regionally and returns expected metrics", {
   skip_on_cran()
   set.seed(123)

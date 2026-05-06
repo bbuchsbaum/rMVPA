@@ -50,8 +50,9 @@ When \code{run_enc} and \code{run_ret} entries are present they are used
 to compute \code{geom_cor_run_partial}, the ER geometry correlation after
 regressing out these run confounds.}
 
-\item{include_diag}{Logical; if TRUE (default) ERA off-diagonal mean excludes diagonal
-by setting it to NA first; diagonal metrics are always retained.}
+\item{include_diag}{Logical retained for API compatibility. Diagonal ERA
+metrics are always retained, and the off-diagonal mean used by
+\code{era_diag_minus_off} always excludes matching-item diagonal entries.}
 
 \item{item_block}{Optional factor of per-item blocks, aligned to item keys.
 Typically derived by aggregating a trial-level block/run variable in
@@ -75,7 +76,9 @@ item keys. See \code{item_run_enc} for how it is used.}
 \item{...}{Additional fields stored on the model spec.}
 }
 \value{
-A model spec of class "era_rsa_model" compatible with run_regional()/run_searchlight().
+A model spec of class \code{"era_rsa_model"} compatible with
+  \code{\link{run_regional}()} and \code{\link{run_searchlight}()}. When fit,
+  the spec emits the scalar metrics documented in \strong{Metrics}.
 }
 \description{
 Combines first-order encoding-retrieval similarity (ERA) with second-order
@@ -88,6 +91,12 @@ Key outputs per ROI/searchlight sphere include:
 - First-order ERA: top-1 accuracy, diagonal mean, diagonal-minus-off.
 - Second-order geometry: correlation between encoding and retrieval RDMs.
 - Optional confound-aware metrics and diagnostics (block/lag/run).
+
+\code{era_rsa_model()} itself returns a model specification. The scalar
+outputs below are emitted when that specification is evaluated with
+\code{\link{run_regional}()} or \code{\link{run_searchlight}()}: regional
+analyses place them in \code{result$performance_table}; searchlight analyses
+expose them as metric maps listed in \code{result$metrics}.
 }
 \section{Metrics}{
 

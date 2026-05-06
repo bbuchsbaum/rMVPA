@@ -10,7 +10,15 @@
 \item{model}{An era_rsa_model object.}
 }
 \value{
-A named character vector mapping metric names to \code{"scalar"}.
+A named character vector mapping each emitted metric name to
+  \code{"scalar"}. Base metrics are \code{n_items}, \code{era_top1_acc},
+  \code{era_diag_mean}, \code{era_diag_minus_off}, \code{geom_cor},
+  \code{era_diag_minus_off_same_block},
+  \code{era_diag_minus_off_diff_block}, \code{era_lag_cor},
+  \code{geom_cor_run_partial}, and \code{geom_cor_xrun}. If
+  \code{confound_rdms} is supplied, the schema also includes
+  \code{beta_enc_geom}, one \code{beta_<name>} per confound RDM,
+  \code{sp_enc_geom}, and one \code{sp_<name>} per confound RDM.
 }
 \description{
 Declares all scalar metrics emitted by \code{fit_roi.era_rsa_model} so that
