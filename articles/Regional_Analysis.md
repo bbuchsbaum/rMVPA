@@ -22,6 +22,7 @@ multiple observations), along with a binary mask and an associated
 design for cross-validation.
 
 ``` r
+
 library(rMVPA)
 library(neuroim2)
 # Generate a synthetic dataset with dimensions 6x6x6, 80 observations, divided into 4 blocks
@@ -74,6 +75,7 @@ label (from 1 to 3). This simulates a scenario where the brain is
 partitioned into three regions of interest.
 
 ``` r
+
 # Extract the binary mask from the dataset
 mask <- data_out$dataset$mask
 nvox <- sum(mask)
@@ -96,6 +98,7 @@ block variable and response), and define the model with
 using a chosen classifier and cross‑validation strategy.
 
 ``` r
+
 # Create MVPA dataset object from the generated training data and mask
  dset <- mvpa_dataset(data_out$dataset$train_data, mask = data_out$dataset$mask)
 
@@ -170,6 +173,7 @@ MVPA model to each ROI, and then compiles performance metrics and
 prediction tables.
 
 ``` r
+
 # Run the regional analysis on the defined region mask
 regional_results <- run_regional(mvpa_mod, region_mask)
 ```
@@ -185,6 +189,7 @@ We can inspect the performance table to evaluate model accuracy in each
 region.
 
 ``` r
+
 print(regional_results$performance_table)
 #> # A tibble: 3 × 3
 #>   roinum Accuracy      AUC
@@ -206,6 +211,7 @@ shows where each region sits relative to chance. For a more detailed
 view, the prediction table shows trial-by-trial predictions:
 
 ``` r
+
 # Display the prediction table
 print(regional_results$prediction_table)
 #> # A tibble: 240 × 8

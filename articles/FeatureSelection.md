@@ -27,6 +27,7 @@ function. For example, to construct a feature selector using the FTest
 method with a top_k cutoff (selecting the top 10 features):
 
 ``` r
+
 suppressPackageStartupMessages(library(rMVPA))
 # Create a feature selector using FTest with top_k cutoff (select top 10 features)
 fsel <- feature_selector(method = "FTest", cutoff_type = "top_k", cutoff_value = 10)
@@ -44,6 +45,7 @@ of features using the top_p option. In the example below, we select the
 top 10% of features based on the FTest ranking:
 
 ``` r
+
 # Create a feature selector using FTest with top_p cutoff (select top 10% of features)
 fsel <- feature_selector(method = "FTest", cutoff_type = "top_p", cutoff_value = 0.1)
 fsel
@@ -66,6 +68,7 @@ with `TRUE` for selected features and `FALSE` otherwise.
 Below is an example using simulated data:
 
 ``` r
+
 # Simulate a response variable (categorical)
 Y <- factor(rep(letters[1:4], each = 25))
 
@@ -86,6 +89,7 @@ features. For example, with a cutoff value of 0.1, the top 10% of
 features will be selected:
 
 ``` r
+
 # Apply feature selection using the FTest method with top_p cutoff (select top 10% of features)
 fsel <- feature_selector(method = "FTest", cutoff_type = "top_p", cutoff_value = 0.1)
 selected_features <- select_features(fsel, X, Y)
@@ -103,6 +107,7 @@ selection. The `catscore` method computes a correlation-adjusted t-score
 for each feature. Here’s an example:
 
 ``` r
+
 # Create a feature selector using catscore with top_k cutoff (select top 10 features)
 fsel <- feature_selector(method = "catscore", cutoff_type = "top_k", cutoff_value = 10)
 

@@ -63,6 +63,7 @@ for backward compatibility, but new plugins should use `fit_roi`.
 
 ## Minimal Example
 
+
     my_model <- function(dataset, design, alpha = 0.1, ...) {
       create_model_spec(
         "my_model",

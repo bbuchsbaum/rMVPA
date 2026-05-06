@@ -68,6 +68,7 @@ Correlations are passed through softmax to produce pseudo-probabilities.
 ## Quick example
 
 ``` r
+
 set.seed(42)
 data_info <- gen_sample_dataset(
   D = c(10, 10, 10), nobs = 80, nlevels = 4,
@@ -96,6 +97,7 @@ print(model)
 ```
 
 ``` r
+
 results <- run_regional(model, roi_mask)
 metric_cols <- intersect(
   c("roinum", "Accuracy", "AUC"),
@@ -111,6 +113,7 @@ results$performance_table[, metric_cols, drop = FALSE]
 ```
 
 ``` r
+
 chance <- 1 / nlevels(data_info$design$y_test)
 cat(sprintf("Chance level: %.0f%%\n", chance * 100))
 #> Chance level: 25%
@@ -131,6 +134,7 @@ images during perception and recall), you can form **item-level
 prototypes** instead:
 
 ``` r
+
 model <- naive_xdec_model(
   dataset = dataset,
   design  = design,
@@ -174,6 +178,7 @@ Naive cross-decoding plugs directly into
 [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md):
 
 ``` r
+
 model <- naive_xdec_model(dataset = dataset, design = design)
 sl_results <- run_searchlight(model, radius = 3)
 ```

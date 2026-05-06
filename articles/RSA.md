@@ -23,6 +23,7 @@ structure and the second half shares another, and a single model RDM
 that knows about it.
 
 ``` r
+
 set.seed(2026)
 ds <- gen_sample_dataset(D = c(8, 8, 8), nobs = 40, blocks = 4, nlevels = 2)
 
@@ -40,6 +41,7 @@ bright cells = predicted large dissimilarity. Diagonal = 0.
 Fit RSA in one regional pass:
 
 ``` r
+
 des <- rsa_design(~ model_rdm, list(model_rdm = model_rdm),
                   block_var = ds$design$block_var)
 mod <- rsa_model(ds$dataset, des, distmethod = "pearson", regtype = "pearson")
@@ -80,6 +82,7 @@ and evaluate the RSA model.
 A larger synthetic dataset for the rest of the walkthrough:
 
 ``` r
+
 dataset <- rMVPA::gen_sample_dataset(D = c(20, 20, 8), nobs = 80, blocks = 4)
 ```
 
@@ -88,6 +91,7 @@ dataset <- rMVPA::gen_sample_dataset(D = c(20, 20, 8), nobs = 80, blocks = 4)
 You can use different types of dissimilarity matrices:
 
 ``` r
+
 # Method 1: Using dist() on feature vectors
 model_features <- matrix(rnorm(80*10), 80, 10)  # 80 trials, 10 features
 model_rdm <- dist(model_features)  # Default is Euclidean distance
@@ -102,6 +106,7 @@ The RSA design specifies how to compare neural and model dissimilarity
 patterns:
 
 ``` r
+
 # Basic design with one model RDM
 basic_design <- rsa_design(
   formula = ~ model_rdm,
@@ -137,6 +142,7 @@ and returns adjusted RDMs that can be passed directly to
 [`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md).
 
 ``` r
+
 set.seed(12)
 
 shared_visual <- matrix(rnorm(80 * 4), 80, 4)
@@ -167,6 +173,7 @@ part predicted by earlier layer innovations and the residual
 layer-specific component.
 
 ``` r
+
 decorrelated <- rdm_decorrelate(
   cnn_rdms,
   method = "ordered_innovation",
@@ -189,6 +196,7 @@ adjusted RDM still resembles the original. The adjusted RDMs are
 ordinary `dist` objects, so they can be used in a standard RSA design.
 
 ``` r
+
 cnn_design <- rsa_design(
   formula = ~ vgg4 + vgg7 + vgg11 + vgg16,
   data = decorrelated$rdms,
@@ -210,6 +218,7 @@ function supports different methods for computing neural dissimilarities
 and analyzing relationships:
 
 ``` r
+
 # Create MVPA dataset
 dset <- mvpa_dataset(dataset$dataset$train_data, mask=dataset$dataset$mask)
 
@@ -236,6 +245,7 @@ results <- run_searchlight(
 `rMVPA` supports several methods for comparing neural and model RDMs:
 
 ``` r
+
 # Pearson correlation
 rsa_pearson <- rsa_model(dset, basic_design, 
                         distmethod = "pearson", 
@@ -273,6 +283,7 @@ between patterns within the same run/block. This is important because:
 Here’s a visualization of what `keep_intra_run = FALSE` does:
 
 ``` r
+
 # Create a small example with 2 runs, 4 trials each
 mini_data <- matrix(1:8, ncol=1)  # Trial numbers 1-8
 run_labels <- c(1,1,1,1, 2,2,2,2)  # Two runs with 4 trials each
@@ -303,6 +314,7 @@ print(comparison_matrix[lower.tri(comparison_matrix)])
 When we create an RSA design with `keep_intra_run = FALSE`:
 
 ``` r
+
 # Create design excluding within-run comparisons
 blocked_design <- rsa_design(
   formula = ~ model_rdm,
@@ -331,6 +343,7 @@ strict control of temporal structure.
 You can examine and visualize the RSA results:
 
 ``` r
+
 # Extract the searchlight map
 rsa_map <- results$results$model_rdm
 

@@ -19,12 +19,14 @@ underscore spellings are still accepted for compatibility.
 Install the package:
 
 ``` r
+
 pak::pak("bbuchsbaum/rMVPA")
 ```
 
 Then copy the packaged wrappers into a directory on your `PATH`:
 
 ``` r
+
 rMVPA::install_cli("~/.local/bin", overwrite = TRUE)
 ```
 

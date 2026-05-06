@@ -81,8 +81,9 @@ era_rsa_model(
 
 - include_diag:
 
-  Logical; if TRUE (default) ERA off-diagonal mean excludes diagonal by
-  setting it to NA first; diagonal metrics are always retained.
+  Logical retained for API compatibility. Diagonal ERA metrics are
+  always retained, and the off-diagonal mean used by
+  `era_diag_minus_off` always excludes matching-item diagonal entries.
 
 - item_block:
 
@@ -117,8 +118,11 @@ era_rsa_model(
 
 ## Value
 
-A model spec of class "era_rsa_model" compatible with
-run_regional()/run_searchlight().
+A model spec of class `"era_rsa_model"` compatible with
+[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+and
+[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
+When fit, the spec emits the scalar metrics documented in **Metrics**.
 
 ## Details
 
@@ -126,6 +130,14 @@ Key outputs per ROI/searchlight sphere include: - First-order ERA: top-1
 accuracy, diagonal mean, diagonal-minus-off. - Second-order geometry:
 correlation between encoding and retrieval RDMs. - Optional
 confound-aware metrics and diagnostics (block/lag/run).
+
+`era_rsa_model()` itself returns a model specification. The scalar
+outputs below are emitted when that specification is evaluated with
+[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+or
+[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md):
+regional analyses place them in `result$performance_table`; searchlight
+analyses expose them as metric maps listed in `result$metrics`.
 
 ## Metrics
 

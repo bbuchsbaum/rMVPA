@@ -82,18 +82,31 @@ of voxel contribution reliability across cross-validation folds within
 >     of squared differences (M2) for Δ_q,v as each fold’s Δ_fold
 >     arrives. Discard Δ_fold afterwards. Requires only O(Q × V) memory
 >     buffer per searchlight.
->     `R # Pseudo-R for Welford inside sphere loop # Needs mean_D, m2_D (both QxV) initialized delta <- Delta_fold - mean_D mean_D <- mean_D + delta / fold_id m2_D <- m2_D + delta * (Delta_fold - mean_D) # After loop: var_D <- m2_D / (S - 1)`
+>
+>     ``` r
+>
+>     # Pseudo-R for Welford inside sphere loop
+>     # Needs mean_D, m2_D (both QxV) initialized
+>     delta <- Delta_fold - mean_D
+>     mean_D <- mean_D + delta / fold_id
+>     m2_D <- m2_D + delta * (Delta_fold - mean_D)
+>     # After loop: var_D <- m2_D / (S - 1)
+>     ```
+>
 > 2.  **Center-voxel only:** Compute and store ρ_q,v only for the center
 >     voxel of the searchlight. Reliability information gets implicitly
 >     smoothed across the brain by overlapping searchlights.
+>
 > 3.  **Split-half reliability (S=2):** If using only two folds (e.g.,
 >     odd vs. even runs), variance is analytic: Var = (Δ₁ - Δ₂)² / 4.
 >     Matches Walther et al. (2016) approach. Coarser but very cheap.
+>
 > 4.  **Jack-knife (Leave-One-Run-Out, S \>= 3):** Recompute Δ leaving
 >     out run s (Δ\_(-s)). Variance is computed from these S
 >     pseudo-values. Requires minimal extra buffering if Δ\_(-s) is
 >     recomputed on demand.
 >     `jack_var = (S-1)/S * sum( (Delta_neg_s - mean(Delta_neg_s))^2 )`
+>
 > 5.  **Bootstrap (Fold-level Resampling, S \>= 3):** Sample S folds
 >     with replacement B times (e.g., B=100). Compute variance of Δ
 >     across bootstrap samples. CPU scales with B, but uses pre-computed
@@ -200,6 +213,7 @@ the `"recon_score"` output metric.
 > is between two vectors of length K(K-1)/2.
 >
 > ``` r
+>
 > # Pseudo-R for r_v inside sphere loop, after beta & Delta computed
 > y_emp <- lower(G_hat_empirical) # Precompute
 > beta_diag <- diag(beta)         # QxQ

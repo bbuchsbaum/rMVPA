@@ -35,6 +35,7 @@ theoretical representational models.
 Let’s walk through a complete example:
 
 ``` r
+
 ## Generate data and weakly-correlated features
 # Synthetic dataset: 6x6x6, 50 observations (4 blocks)
 data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 50, blocks = 4, nlevels = 2)
@@ -163,6 +164,7 @@ net) adds regularization that helps with feature selection and
 multicollinearity.
 
 ``` r
+
 # Compare different methods
 methods <- c("pls", "pca", "glmnet")
 results_list <- lapply(methods, function(method) {
@@ -233,6 +235,7 @@ high‑resolution or long‑duration datasets.
 ### Implementation Example
 
 ``` r
+
 # Create distance matrix for stimuli
 stim_distances <- as.matrix(dist(feature_matrix))
 rownames(stim_distances) <- stim_labels
@@ -273,6 +276,7 @@ print(results_vector$performance_table)
 Vector-Based RSA automatically handles block structure:
 
 ``` r
+
 # Compare with different block structures
 block_sizes <- c(5, 10)
 results_blocks <- lapply(block_sizes, function(size) {

@@ -43,6 +43,7 @@ run both a naive cross‑decoding baseline and REMAP‑RRR over a small ROI
 mask.
 
 ``` r
+
 set.seed(1)
 toy <- gen_sample_dataset(D = c(6,6,6), nobs = 120, nlevels = 4, blocks = 3, external_test = TRUE)
 
@@ -99,6 +100,7 @@ diagnostic vectors. The easiest way to inspect it is to call
 on a single ROI and examine the `result$predictor` field.
 
 ``` r
+
 # Inspect diagnostics for a single ROI
 vox <- which(toy$dataset$mask > 0)[1:40]
 one_roi <- extract_roi(vox, toy$dataset)
@@ -120,6 +122,7 @@ Two convenience helpers make it easy to quantify “how transformed is
 memory?” and “which items are closer/farther from perception?”
 
 ``` r
+
 # ROI‑level summary (works from performance_table; no fits required)
 roi_tab <- summarize_remap_roi(res_remap)
 head(roi_tab)
@@ -143,6 +146,7 @@ maps in `res_remap$vol_results`. You can write them with
 [`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md):
 
 ``` r
+
 maps_to_write <- res_remap$vol_results[c("remap_improv", "delta_frob_mean", "lambda_mean")]
 save_results(maps_to_write, dir = "remap_maps", level = "minimal")
 ```
@@ -177,6 +181,7 @@ running it on large volumes may be time‑consuming. Use a small radius
 and/or fixed rank for quick checks.
 
 ``` r
+
 sl_res <- run_searchlight(ms_remap, radius = 6, method = "randomized", niter = 2)
 sl_res
 # Maps include standard metrics and adapter_* summaries. Use names(sl_res$results).

@@ -71,6 +71,7 @@ features). Below is a toy 6-item, 8-feature seed and the implied
 item-by-item similarity it predicts:
 
 ``` r
+
 set.seed(11)
 K <- 6; P <- 8
 items <- paste0("I", seq_len(K))
@@ -95,6 +96,7 @@ The minimal path uses a small synthetic dataset and a single ROI built
 from a handful of voxels.
 
 ``` r
+
 library(rMVPA)
 
 ## Synthetic dataset
@@ -133,6 +135,7 @@ builds a simple two-ROI mask for demonstration. This step can take
 longer; we keep it disabled by default.
 
 ``` r
+
 ## Create a toy two-ROI mask by splitting the active mask indices
 ## (This is just to illustrate the API; use real ROI atlases in practice.)
 region_vec <- as.vector(ds$dataset$mask)
@@ -181,5 +184,6 @@ region_mask <- neuroim2::NeuroVol(array(region_vec, dim = dim(ds$dataset$mask)),
 ## Session info
 
 ``` r
+
 sessionInfo()
 ```

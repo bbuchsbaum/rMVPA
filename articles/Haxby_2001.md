@@ -38,6 +38,7 @@ workflow produces after first-level GLM extraction or condition
 averaging.
 
 ``` r
+
 bundle <- readRDS(resolve_haxby_path())
 
 dim(bundle$patterns)
@@ -61,6 +62,7 @@ observations) and a 3-D mask. We rebuild both from the bundle’s metadata
 and the VT mask indices.
 
 ``` r
+
 # Reconstruct the binary VT mask in scanner space.
 mask_arr <- array(0L, bundle$mask_dim)
 mask_arr[bundle$mask_idx] <- 1L
@@ -97,6 +99,7 @@ variable (the run index).
 then produces 12 leave-one-run-out folds.
 
 ``` r
+
 design_df <- data.frame(
   category = bundle$category,
   run      = bundle$run
@@ -110,6 +113,7 @@ strong default for high-dimensional, low-sample-size patterns like this
 one.
 
 ``` r
+
 sda_mod <- load_model("sda_notune")
 mspec <- mvpa_model(
   model    = sda_mod,
@@ -169,6 +173,7 @@ is the VT mask, then call
 [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
 
 ``` r
+
 region_mask <- NeuroVol(mask_arr, bundle$mask_space)
 res <- run_regional(mspec, region_mask, verbose = FALSE)
 res$performance_table
@@ -181,6 +186,7 @@ res$performance_table
 ## Cross-validated accuracy
 
 ``` r
+
 acc <- res$performance_table$Accuracy
 cat(sprintf("8-way accuracy in VT cortex: %.1f%%  (chance = %.1f%%)\n",
             100 * acc, 100 / 8))
@@ -199,6 +205,7 @@ predicted vs observed gives the confusion matrix and per-category
 accuracy.
 
 ``` r
+
 pred <- res$prediction_table
 conf <- table(observed = pred$observed, predicted = pred$predicted)
 round(prop.table(conf, margin = 1), 2)
@@ -225,6 +232,7 @@ while cat / shoe / bottle confuse with one another – the canonical Haxby
 2001 pattern.
 
 ``` r
+
 per_cat <- diag(prop.table(as.matrix(conf), margin = 1))
 round(sort(per_cat, decreasing = TRUE), 2)
 #> [1] 1.00 0.08 0.08 0.00 0.00 0.00 0.00 0.00
@@ -249,6 +257,7 @@ classifiers covering different inductive biases:
   default.
 
 ``` r
+
 fit_one <- function(model_name, ...) {
   t0 <- Sys.time()
   mspec <- mvpa_model(load_model(model_name), dataset = ds, design = mvdes,
@@ -273,11 +282,11 @@ panel <- rbind(
 panel <- panel[order(-panel$accuracy), ]
 panel
 #>    classifier accuracy   auc seconds
-#> 5  sda_notune    0.917 0.973     1.6
-#> 4   svmLinear    0.698 0.853     2.3
-#> 3          rf    0.500 0.694    11.9
-#> 2 naive_bayes    0.375 0.481     1.9
-#> 1    corclass    0.271 0.289     1.3
+#> 5  sda_notune    0.917 0.973     1.5
+#> 4   svmLinear    0.698 0.853     2.0
+#> 3          rf    0.500 0.694    10.4
+#> 2 naive_bayes    0.375 0.481     1.7
+#> 1    corclass    0.271 0.289     1.1
 ```
 
 ![Cross-validated accuracy under five classifiers, all on the same VT
@@ -326,6 +335,7 @@ GLM, two routes:
 the canonical preprocessed Subject 1 data with the published VT mask:
 
 ``` r
+
 download.file(
   "http://data.pymvpa.org/datasets/haxby2001/subj1-2010.01.14.tar.gz",
   destfile = "subj1.tar.gz", mode = "wb"
@@ -338,6 +348,7 @@ untar("subj1.tar.gz")
 layout (no preprocessing, no VT mask — bring your own pipeline):
 
 ``` r
+
 library(openneuro)
 res <- on_download(id = "ds000105", subjects = "sub-1")
 # files are cached under on_cache_info()$path

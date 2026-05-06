@@ -13,17 +13,18 @@ together.
 ## What is the shortest map of the workflow space?
 
 ``` r
+
 advanced_summary <- build_advanced_summary()
 
 knitr::kable(advanced_summary, digits = 3)
 ```
 
-| workflow                 | core_function                                            | summary_value |
-|:-------------------------|:---------------------------------------------------------|--------------:|
-| within_roi               | feature_rsa_model()                                      |         0.036 |
-| cross_state_da           | feature_rsa_da_model()                                   |         0.090 |
-| cross_roi_generalization | feature_rsa_cross_connectivity()                         |         0.000 |
-| offset_diagnostics       | feature_rsa_cross_connectivity(adjust = ‘double_center’) |         0.162 |
+| workflow | core_function | summary_value |
+|:---|:---|---:|
+| within_roi | feature_rsa_model() | 0.036 |
+| cross_state_da | feature_rsa_da_model() | 0.090 |
+| cross_roi_generalization | feature_rsa_cross_connectivity() | 0.000 |
+| offset_diagnostics | feature_rsa_cross_connectivity(adjust = ‘double_center’) | 0.162 |
 
 The table gives you four practical signals:
 
@@ -44,6 +45,7 @@ geometry scores from
 [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
 
 ``` r
+
 base_fit <- build_base_feature_rsa()
 
 base_fit$result$performance_table[, c("roinum", "rdm_correlation")]
@@ -68,6 +70,7 @@ example is encoding to recall: the rows still refer to the same latent
 content, but the source and target mappings need not be identical.
 
 ``` r
+
 da_perf <- build_small_da_example()
 
 knitr::kable(da_perf, digits = 3)
@@ -95,6 +98,7 @@ whether geometry learned in one parcel matches held-out observed
 geometry in another.
 
 ``` r
+
 knitr::kable(round(base_fit$cross_raw, 2))
 ```
 
@@ -117,6 +121,7 @@ feature of the data, but it can also swamp the pair-specific structure
 you actually care about.
 
 ``` r
+
 offset_table <- build_offset_example()
 
 knitr::kable(offset_table, digits = 2)

@@ -10,6 +10,7 @@ functions.
 ## Trial-level temporal RDMs
 
 ``` r
+
 set.seed(1)
 n <- 30
 onsets <- seq(0, by=1, length.out=n)  # seconds
@@ -113,6 +114,7 @@ td
     30  98.0  81.5  62.0  39.5  14.0
 
 ``` r
+
 # Matrix for plotting
 td_mat  <- as.matrix(td)
 mn      <- min(td_mat[lower.tri(td_mat)], na.rm = TRUE)
@@ -123,6 +125,7 @@ td_plot <- if (is.finite(mx - mn) && (mx - mn) > 0) (td_mat - mn) / (mx - mn) el
 ## Visualizing temporal RDMs
 
 ``` r
+
 op <- par(mar=c(3,3,2,1))
 image(t(td_plot[nrow(td_plot):1, ]), axes=FALSE, col=cols(64))
 box(); title("Temporal RDM (exp kernel)")
@@ -132,12 +135,14 @@ axis(1, at=c(0,1), labels=c("1","n")); axis(2, at=c(0,1), labels=c("n","1"))
 ![](Temporal_Confounds_in_RSA_files/figure-html/plot_temporal_rdm-1.png)
 
 ``` r
+
 invisible(par(op))
 ```
 
 ## Using in rsa_design
 
 ``` r
+
 task_rdm <- as.dist(matrix(stats::runif(n*n), n, n))
 rtemp <- temporal(onsets, block = runs, kernel = "exp")
 rdes <- rsa_design(~ task_rdm + rtemp,
@@ -145,6 +150,7 @@ rdes <- rsa_design(~ task_rdm + rtemp,
                    block_var=~ runs, keep_intra_run=TRUE)
 print(rdes)
 ```
+
 
      RSA Design 
     - - - - - - - - - - - - - - - - - - - - 
@@ -168,6 +174,7 @@ print(rdes)
 ## Assessing overlap with a task RDM
 
 ``` r
+
 task_mat <- as.matrix(task_rdm)
 tvec <- lower_tri(td_plot)
 avec <- lower_tri(task_mat)
@@ -182,12 +189,14 @@ legend("topleft", bty="n",
 ![](Temporal_Confounds_in_RSA_files/figure-html/task_temporal_overlap-1.png)
 
 ``` r
+
 invisible(par(op))
 ```
 
 ## HRF-overlap confound
 
 ``` r
+
 hrf_rdm <- temporal_hrf_overlap(onsets, durations=rep(1, n), run=runs,
                                 TR=0.8, similarity="overlap", metric="distance")
 hrf_mat <- as.matrix(hrf_rdm)
@@ -205,12 +214,14 @@ axis(1, at=c(0,1), labels=c("1","n")); axis(2, at=c(0,1), labels=c("n","1"))
 ![](Temporal_Confounds_in_RSA_files/figure-html/hrf_overlap_rdm-1.png)
 
 ``` r
+
 invisible(par(op))
 ```
 
 ## Multiple confounds at once
 
 ``` r
+
 spec <- list(adj=list(kernel="adjacent", width=1),
              exp3=list(kernel="exp", lambda=3),
              hrf=list(kind="hrf", TR=0.8))
@@ -233,6 +244,7 @@ str(tc)
       ..- attr(*, "method")= chr "temporal_hrf:spm:overlap:distance"
 
 ``` r
+
 op <- par(mfrow=c(1,3), mar=c(3,3,2,1))
 for (nm in names(tc)) {
   M <- as.matrix(tc[[nm]])
@@ -244,12 +256,14 @@ for (nm in names(tc)) {
 ![](Temporal_Confounds_in_RSA_files/figure-html/plot_confounds-1.png)
 
 ``` r
+
 invisible(par(op))
 ```
 
 ## Condition-level nuisances for MS-ReVE
 
 ``` r
+
 df <- data.frame(cond = factor(rep(letters[1:3], each=10)), run=runs)
 mvdes <- mvpa_design(df, y_train=~cond, block_var=~run)
 
@@ -283,6 +297,7 @@ str(ms_tc)
 ## Appendix: Residualizing a toy RDM
 
 ``` r
+
 # Simulate a toy ROI RDM as a mixture of task + temporal + noise
 toy_roi <- scale(0.6 * task_mat + 0.3 * td_mat + matrix(rnorm(n*n, sd=.1), n, n))
 diag(toy_roi) <- 0; toy_roi <- (toy_roi + t(toy_roi))/2
@@ -296,6 +311,7 @@ cat(sprintf("Before residualization: cor(ROI, temporal) = %.2f\n", stats::cor(v_
     Before residualization: cor(ROI, temporal) = 0.99
 
 ``` r
+
 # Residualize ROI distances on temporal distances
 resid_roi <- stats::lm(v_roi ~ v_temp)$residuals
 cat(sprintf("After residualization:  cor(resid ROI, temporal) = %.2f\n", stats::cor(resid_roi, v_temp)))
@@ -304,6 +320,7 @@ cat(sprintf("After residualization:  cor(resid ROI, temporal) = %.2f\n", stats::
     After residualization:  cor(resid ROI, temporal) = -0.00
 
 ``` r
+
 # Visualize effect
 op <- par(mfrow=c(1,2), mar=c(4,4,2,1))
 plot(v_temp, v_roi, pch=16, cex=.6, col="#444444",
@@ -320,5 +337,6 @@ abline(h=0, col="#cc0000", lwd=2)
 ![](Temporal_Confounds_in_RSA_files/figure-html/residualize_rdm-1.png)
 
 ``` r
+
 invisible(par(op))
 ```

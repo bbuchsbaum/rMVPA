@@ -66,17 +66,19 @@
 <p><strong>Challenge:</strong> Storing Δ_q,v for every fold (S), contrast (Q), voxel (V) in every searchlight (#SL) can consume significant RAM (e.g., S × Q × V × #SL × 8 bytes).</p>
 <strong>Cost-Saving Strategies:</strong>
 <ol style="list-style-type: decimal"><li>
-<strong>On-the-fly Welford variance:</strong> Update the running mean and sum of squared differences (M2) for Δ_q,v as each fold’s Δ_fold arrives. Discard Δ_fold afterwards. Requires only O(Q × V) memory buffer per searchlight. <code>R     # Pseudo-R for Welford inside sphere loop     # Needs mean_D, m2_D (both QxV) initialized     delta &lt;- Delta_fold - mean_D     mean_D &lt;- mean_D + delta / fold_id     m2_D &lt;- m2_D + delta * (Delta_fold - mean_D)     # After loop: var_D &lt;- m2_D / (S - 1)</code>
+<p><strong>On-the-fly Welford variance:</strong> Update the running mean and sum of squared differences (M2) for Δ_q,v as each fold’s Δ_fold arrives. Discard Δ_fold afterwards. Requires only O(Q × V) memory buffer per searchlight.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Pseudo-R for Welford inside sphere loop</span></span>
+<span><span class="co"># Needs mean_D, m2_D (both QxV) initialized</span></span>
+<span><span class="va">delta</span> <span class="op">&lt;-</span> <span class="va">Delta_fold</span> <span class="op">-</span> <span class="va">mean_D</span></span>
+<span><span class="va">mean_D</span> <span class="op">&lt;-</span> <span class="va">mean_D</span> <span class="op">+</span> <span class="va">delta</span> <span class="op">/</span> <span class="va">fold_id</span></span>
+<span><span class="va">m2_D</span> <span class="op">&lt;-</span> <span class="va">m2_D</span> <span class="op">+</span> <span class="va">delta</span> <span class="op">*</span> <span class="op">(</span><span class="va">Delta_fold</span> <span class="op">-</span> <span class="va">mean_D</span><span class="op">)</span></span>
+<span><span class="co"># After loop: var_D &lt;- m2_D / (S - 1)</span></span></code></pre></div>
 </li>
-<li>
-<strong>Center-voxel only:</strong> Compute and store ρ_q,v only for the center voxel of the searchlight. Reliability information gets implicitly smoothed across the brain by overlapping searchlights.</li>
-<li>
-<strong>Split-half reliability (S=2):</strong> If using only two folds (e.g., odd vs. even runs), variance is analytic: Var = (Δ₁ - Δ₂)² / 4. Matches Walther et al. (2016) approach. Coarser but very cheap.</li>
-<li>
-<strong>Jack-knife (Leave-One-Run-Out, S &gt;= 3):</strong> Recompute Δ leaving out run s (Δ_(-s)). Variance is computed from these S pseudo-values. Requires minimal extra buffering if Δ_(-s) is recomputed on demand. <code>jack_var = (S-1)/S * sum( (Delta_neg_s - mean(Delta_neg_s))^2 )</code>
-</li>
-<li>
-<strong>Bootstrap (Fold-level Resampling, S &gt;= 3):</strong> Sample S folds with replacement B times (e.g., B=100). Compute variance of Δ across bootstrap samples. CPU scales with B, but uses pre-computed per-fold Δ (if stored/cached) or recomputes on the fly.</li>
+<li><p><strong>Center-voxel only:</strong> Compute and store ρ_q,v only for the center voxel of the searchlight. Reliability information gets implicitly smoothed across the brain by overlapping searchlights.</p></li>
+<li><p><strong>Split-half reliability (S=2):</strong> If using only two folds (e.g., odd vs. even runs), variance is analytic: Var = (Δ₁ - Δ₂)² / 4. Matches Walther et al. (2016) approach. Coarser but very cheap.</p></li>
+<li><p><strong>Jack-knife (Leave-One-Run-Out, S &gt;= 3):</strong> Recompute Δ leaving out run s (Δ_(-s)). Variance is computed from these S pseudo-values. Requires minimal extra buffering if Δ_(-s) is recomputed on demand. <code>jack_var = (S-1)/S * sum( (Delta_neg_s - mean(Delta_neg_s))^2 )</code></p></li>
+<li><p><strong>Bootstrap (Fold-level Resampling, S &gt;= 3):</strong> Sample S folds with replacement B times (e.g., B=100). Compute variance of Δ across bootstrap samples. CPU scales with B, but uses pre-computed per-fold Δ (if stored/cached) or recomputes on the fly.</p></li>
 </ol><p><strong>Recommendation:</strong> Welford or Jack-knife offer good precision with low memory overhead for S &gt;= 3. Split-half is viable for S=2 or when coarse reliability is sufficient.</p>
 </blockquote>
 <p><!-- FUTURE IMPLEMENTATION NOTES FOR RELIABILITY (ρ_q,v) --></p>
@@ -105,7 +107,7 @@
 <p><strong>Calculating the Score (r_v):</strong> Correlate the vectorized lower triangle of the one-voxel RDM (Ĝ^(v)) with the vectorized lower triangle of the empirical RDM (Ĝ_empirical) from the searchlight: [ r_v = ( <em>{}(^{(v)}), ; </em>{}(_{}) ) ]</p>
 <p><strong>Interpretation:</strong> A map of r_v (or |r_v|) highlights voxels that are individually highly informative about the multi-contrast representational structure.</p>
 <p><strong>Implementation Cost:</strong> Very low. Requires C, β_q, Δ_q,v, and vec(Ĝ_empirical), most of which are already computed. The matrix multiplications per voxel are small (KxQ, QxQ, QxK). The correlation is between two vectors of length K(K-1)/2.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Pseudo-R for r_v inside sphere loop, after beta &amp; Delta computed</span></span>
 <span><span class="va">y_emp</span> <span class="op">&lt;-</span> <span class="fu">lower</span><span class="op">(</span><span class="va">G_hat_empirical</span><span class="op">)</span> <span class="co"># Precompute</span></span>
 <span><span class="va">beta_diag</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">beta</span><span class="op">)</span>         <span class="co"># QxQ</span></span>

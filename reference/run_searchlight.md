@@ -69,6 +69,7 @@ When `verbose = TRUE` is passed via `...` and the progressr package is
 installed, real-time per-ROI progress updates are emitted from parallel
 workers. To enable a progress bar:
 
+
       library(progressr)
       handlers(global = TRUE)               # once per session
       result <- run_searchlight(mspec, radius = 8, verbose = TRUE)
@@ -110,18 +111,18 @@ Without progressr, only coarse batch-level log messages are shown.
     radius = 8,            # 8mm radius
     method = "standard"    # Use standard searchlight
   )
-#> INFO [2026-04-25 22:05:35] searchlight engine: legacy (no eligible fast path)
-#> INFO [2026-04-25 22:05:35] Running standard searchlight with radius = 8
-#> INFO [2026-04-25 22:05:35] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-04-25 22:05:35] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
-#> INFO [2026-04-25 22:05:35] creating standard searchlight
-#> INFO [2026-04-25 22:05:35] running standard searchlight iterator
-#> INFO [2026-04-25 22:07:01] 
+#> INFO [2026-05-06 16:38:07] searchlight engine: legacy (no eligible fast path)
+#> INFO [2026-05-06 16:38:07] Running standard searchlight with radius = 8
+#> INFO [2026-05-06 16:38:07] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-05-06 16:38:07] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
+#> INFO [2026-05-06 16:38:07] creating standard searchlight
+#> INFO [2026-05-06 16:38:07] running standard searchlight iterator
+#> INFO [2026-05-06 16:39:36] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 512
 #> - Processed: 512
 #> - Skipped: 0
-#> INFO [2026-04-25 22:07:02] searchlight (standard): 512 ROIs processed (success=512, errors=0)
+#> INFO [2026-05-06 16:39:37] searchlight (standard): 512 ROIs processed (success=512, errors=0)
   
   # Run with custom batch size for memory management
   # results <- run_searchlight(

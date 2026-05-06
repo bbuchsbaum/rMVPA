@@ -64,6 +64,7 @@ ordinal X RDM and a noisy linear transformation of it as Y, so the two
 are related but not identical.
 
 ``` r
+
 set.seed(31)
 K <- 6
 items <- paste0("I", seq_len(K))
@@ -85,6 +86,7 @@ through an ROI’s representational geometry.
 ## Quick start: single ROI
 
 ``` r
+
 library(rMVPA)
 
 ## Synthetic dataset
@@ -115,6 +117,7 @@ out$performance[[1]]
 ## Regional analysis
 
 ``` r
+
 ## Toy two-ROI mask (demo only)
 region_vec <- as.vector(ds$dataset$mask)
 inds <- which(region_vec > 0)
@@ -158,5 +161,6 @@ region_mask <- neuroim2::NeuroVol(array(region_vec, dim = dim(ds$dataset$mask)),
 ## Session info
 
 ``` r
+
 sessionInfo()
 ```

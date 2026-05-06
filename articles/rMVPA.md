@@ -26,6 +26,7 @@ returns both the imaging data (an `mvpa_dataset`) and the experimental
 design (an `mvpa_design`).
 
 ``` r
+
 library(rMVPA)
 library(neuroim2)
 
@@ -39,6 +40,7 @@ scheme.** Run-blocked CV uses each scanning run as a held-out fold — the
 standard way to keep training and test trials temporally independent.
 
 ``` r
+
 dset <- mvpa_dataset(data$dataset$train_data, mask = data$dataset$mask)
 cval <- blocked_cross_validation(data$design$block_var)
 ```
@@ -50,6 +52,7 @@ discriminant model from the `MVPAModels` registry;
 glues the dataset, design, classifier, and CV scheme together.
 
 ``` r
+
 mod  <- load_model("sda_notune")
 mspec <- mvpa_model(mod, dataset = dset, design = data$design,
                     crossval = cval,
@@ -61,6 +64,7 @@ sphere; the model is fit and cross-validated locally; performance
 metrics are returned per centre as voxel-wise maps.
 
 ``` r
+
 sl_result <- run_searchlight(mspec, radius = 4, method = "standard")
 names(sl_result$results)
 #> [1] "Accuracy" "AUC"
@@ -84,6 +88,7 @@ use an atlas or a parcellation; here we just split the mask randomly so
 the example is self-contained.
 
 ``` r
+
 mask <- data$dataset$mask
 set.seed(42)
 region_mask <- NeuroVol(
@@ -99,6 +104,7 @@ reuses the model spec from the searchlight example — same classifier,
 same CV scheme, just a different spatial unit.
 
 ``` r
+
 reg_result <- run_regional(mspec, region_mask)
 reg_result$performance_table
 #> # A tibble: 3 × 3
@@ -122,6 +128,7 @@ RSA asks whether the pattern of neural similarities across conditions
 matches a model-predicted similarity structure.
 
 ``` r
+
 # Create a synthetic dataset with 5 conditions
 rsa_data <- gen_sample_dataset(D = c(6, 6, 6), nobs = 100, blocks = 5,
                                nlevels = 5, response_type = "categorical",

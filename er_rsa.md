@@ -324,6 +324,7 @@ metrics.
 ### Example design with confounds
 
 ``` r
+
 # K items
 K <- length(unique(item_ids))
 
@@ -358,6 +359,7 @@ era_spec <- era_rsa_model(
 1.  Prototypes and key alignment
 
 ``` r
+
 Xenc <- as.matrix(neuroim2::values(roi$train_roi))
 Xret <- as.matrix(neuroim2::values(roi$test_roi))
 
@@ -379,6 +381,7 @@ K <- nrow(E)
 2.  First‑order ERA (E×R)
 
 ``` r
+
 S_ER <- cor(t(E), t(R))  # K x K
 
 diag_vals <- diag(S_ER)
@@ -390,6 +393,7 @@ era_delta <- mean(diag_vals) - mean(off_vals)
 3.  Second‑order geometries and ER correlation
 
 ``` r
+
 D_EE <- distfun(E)
 D_RR <- distfun(R)
 
@@ -401,6 +405,7 @@ geom_corr <- cor(v_EE, v_RR, method = "spearman")
 4.  Fold in model RDMs + confounds (RSA‑style)
 
 ``` r
+
 # Vectorized model RDMs from rsa_design (same item order)
 mm_list <- rsa_model_mat(mod_spec$design)  # list of vectors
 X_model <- as.data.frame(mm_list)          # Npair x P
@@ -420,6 +425,7 @@ beta_R <- coef(fit_R)[-1]
 5.  Package outputs
 
 ``` r
+
 obs  <- factor(common, levels = common)
 pred <- factor(common[apply(S_ER, 1, which.max)], levels = common)
 probs <- S_ER  # optionally row-softmax
@@ -662,6 +668,7 @@ Builds item lists and optional item‑level confound summaries (block,
 time), plus ready‑to‑use item‑level confound RDMs.
 
 ``` r
+
 #' Build item-level ERA-RSA confound RDMs from an mvpa_design
 #'
 #' @param design mvpa_design (same object you pass to era_rsa_model).
@@ -764,6 +771,7 @@ era_rsa_design <- function(design,
 Usage with `era_rsa_model`:
 
 ``` r
+
 era_des <- era_rsa_design(
   design       = my_design,
   key_var      = ~ ImageID,
@@ -795,6 +803,7 @@ mspec <- era_rsa_model(
 Patch snippets to add after computing `S` and `diag_sim`:
 
 ``` r
+
 # --- Block-limited ERA (if item_block is available) ------------------------
 era_diag_minus_off_same_block <- NA_real_
 era_diag_minus_off_diff_block <- NA_real_
@@ -839,6 +848,7 @@ perf <- c(perf, era_lag_cor = era_lag_cor)
 1.  Build design helpers:
 
 ``` r
+
 era_des <- era_rsa_design(
   design       = my_design,
   key_var      = ~ ImageID,
@@ -853,6 +863,7 @@ era_des <- era_rsa_design(
 2.  Create model spec:
 
 ``` r
+
 mspec <- era_rsa_model(
   dataset  = my_dataset,
   design   = my_design,
@@ -871,6 +882,7 @@ mspec <- era_rsa_model(
 3.  Run and inspect:
 
 ``` r
+
 res <- run_regional(mspec, region_mask)
 # res$performance_table now contains:
 # - era_top1_acc, era_diag_mean, era_diag_minus_off
@@ -958,6 +970,7 @@ metrics for robustness.
 After computing `D_enc`, `D_ret`, and vectors `dE`, `dR`:
 
 ``` r
+
 # Run-partial ER geometry (residualize dE and dR on run confounds)
 geom_cor_run_partial <- NA_real_
 if (!is.null(mod_spec$confound_rdms$run_enc) && !is.null(mod_spec$confound_rdms$run_ret)) {

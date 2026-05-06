@@ -13,9 +13,11 @@ Formal definition for condition pair (k=(i,j)) with (M) partitions (Eq.
 {k,m}=b\_{i,m}-b\_{j,m}, \] where (P) is the number of voxels/channels.
 Equivalent “single-fold-vs-rest” algebra can also be used.
 
-Key properties \* **Unbiased**:
-(E\[d_k\]=\_k^({T}*k/P). \* Can be **negative** when the true distance is ~0 – keep these values, do not truncate. \* Variance is () times larger than the biased estimator but decreases with more partitions. \* **Whitening**: pre-multiply patterns by (W=*{}){-1/2})
-to obtain Mahalanobis distances; crucial for fMRI.
+Key properties \* **Unbiased**: (E\[d_k\]=\_k^{T}*k/P). \* Can be
+**negative** when the true distance is ~0 – keep these values, do not
+truncate. \* Variance is () times larger than the biased estimator but
+decreases with more partitions. \* **Whitening**: pre-multiply patterns
+by (W=*{}^{-1/2}) to obtain Mahalanobis distances; crucial for fMRI.
 
 ------------------------------------------------------------------------
 
@@ -44,17 +46,18 @@ unchanged …
 
 ### A.1 Step-wise Implementation Table (adapted from user note)
 
-| Step  | What to compute                             | Suggested R objects / code changes                                                                                                                                                                |
-|-------|---------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **A** | *Return fold-wise condition means.*         | `compute_crossvalidated_means_sl(return_folds = TRUE)` returns a list with `mean = U_hat_sl`, `folds = U_folds` (K × V × M).                                                                      |
-| **B** | *Pre-whiten each fold.*                     | Within the same helper: if `W` provided, `U_folds[,,m] %*% W`.                                                                                                                                    |
-| **C** | *Cross-fold inner products only for m ≠ n.* | New helper `crossnobis_distance(U_folds, P)` computes distance vector; pseudo-code shown below.                                                                                                   |
-| **D** | *Expose to RSA regression.*                 | [`train_model.contrast_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/train_model.md) uses this distance vector when `estimation_method == "crossnobis"`. `include_vec` still applied. |
-| **E** | *Allow negative outputs.*                   | No truncation; document in Roxygen.                                                                                                                                                               |
-| **F** | *Unit tests.*                               | Noise-only simulation: mean distance ≈ 0; biased Euclidean positive.                                                                                                                              |
-| **G** | *Performance tips.*                         | Vectorise across pairs; optionally migrate to Rcpp.                                                                                                                                               |
+| Step | What to compute | Suggested R objects / code changes |
+|----|----|----|
+| **A** | *Return fold-wise condition means.* | `compute_crossvalidated_means_sl(return_folds = TRUE)` returns a list with `mean = U_hat_sl`, `folds = U_folds` (K × V × M). |
+| **B** | *Pre-whiten each fold.* | Within the same helper: if `W` provided, `U_folds[,,m] %*% W`. |
+| **C** | *Cross-fold inner products only for m ≠ n.* | New helper `crossnobis_distance(U_folds, P)` computes distance vector; pseudo-code shown below. |
+| **D** | *Expose to RSA regression.* | [`train_model.contrast_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/train_model.md) uses this distance vector when `estimation_method == "crossnobis"`. `include_vec` still applied. |
+| **E** | *Allow negative outputs.* | No truncation; document in Roxygen. |
+| **F** | *Unit tests.* | Noise-only simulation: mean distance ≈ 0; biased Euclidean positive. |
+| **G** | *Performance tips.* | Vectorise across pairs; optionally migrate to Rcpp. |
 
 ``` r
+
 crossnobis_distance <- function(U_folds) {
   K <- dim(U_folds)[1]; V <- dim(U_folds)[2]; M <- dim(U_folds)[3]
   if (M < 2) rlang::abort("Need at least two partitions for cross-nobis.")
@@ -78,6 +81,7 @@ crossnobis_distance <- function(U_folds) {
 ### A.2 Quick Sanity-Check
 
 ``` r
+
 set.seed(1)
 K <- 4; V <- 30; M <- 8
 true <- matrix(rnorm(K*V), K, V)          # ground-truth patterns

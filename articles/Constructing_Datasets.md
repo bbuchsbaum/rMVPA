@@ -11,6 +11,7 @@ The easiest way to get started is with
 which creates a complete dataset and design in one call:
 
 ``` r
+
 ds <- gen_sample_dataset(D = c(6, 6, 6), nobs = 80, blocks = 4, nlevels = 2)
 print(ds$dataset)
 #> 
@@ -61,6 +62,7 @@ You can also assemble the pieces manually if you want explicit control
 over the design data frame:
 
 ``` r
+
 dset <- mvpa_dataset(ds$dataset$train_data, mask = ds$dataset$mask)
 
 design_df <- data.frame(
@@ -95,6 +97,7 @@ This example assumes you have a 4D fMRI file (“bold.nii.gz”) and a
 corresponding 3D brain mask file (“mask.nii.gz”).
 
 ``` r
+
 library(neuroim2)
 
 # Read the fMRI data as a NeuroVec object using neuroim2::read_vec
@@ -119,6 +122,7 @@ This example assumes you have cortical geometry stored in a file (e.g.,
 corresponding to the number of vertices and the number of observations.
 
 ``` r
+
 ## remotes::install_github("bbuchsbaum/neurosurf")
 library(neurosurf)
 

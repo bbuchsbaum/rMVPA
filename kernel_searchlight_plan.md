@@ -84,6 +84,7 @@ defaults, so existing scripts keep working.
 from handling arbitrary structures, enforce a simple contract:
 
 ``` r
+
 kernel_result <- list(
   metrics = c(accuracy = 0.75, auc = 0.82, ...),  # named numeric vector (required)
   diagnostics = list(...)                         # optional, arbitrary structure
@@ -125,6 +126,7 @@ to pre-define/cache shapes independently
 factories for common cases:
 
 ``` r
+
 spherical_provider(radius = 8)           # bundles shape + materializer
 ellipsoidal_provider(radii = c(8,8,4))   # anisotropic
 surface_geodesic_provider(radius_mm = 15)
@@ -160,6 +162,7 @@ Different kernels have different resource profiles; consider adding an
 optional `executor` hook:
 
 ``` r
+
 kernel_searchlight(
   sampler = grid_sampler(...),
   materializer = spherical(...),
@@ -248,6 +251,7 @@ regional
 **Old approach**: S3 dispatch on model type
 
 ``` r
+
 model <- remap_rrr_model(dataset, design, rank = 0)
 run_searchlight(model, radius = 8)  # → dispatches to run_searchlight.remap_rrr_model()
 ```
@@ -255,6 +259,7 @@ run_searchlight(model, radius = 8)  # → dispatches to run_searchlight.remap_rr
 **New approach**: Explicit kernel selection
 
 ``` r
+
 kernel_searchlight(dataset, model_spec,
                   kernel = remap_rrr_kernel(),
                   materializer = spherical_materializer(8))
@@ -266,6 +271,7 @@ Model objects don’t disappear—they gain a `to_kernel()` method that
 extracts their analysis logic:
 
 ``` r
+
 #' Extract kernel function from model specification
 #' @return A kernel function with signature:
 #'   function(roi_data, roi_indices, ...) → list(metrics = c(...), diagnostics = list(...))
@@ -296,6 +302,7 @@ to_kernel.remap_rrr_model <- function(model_spec, ...) {
 ### The adapter pattern: `run_searchlight()` delegates
 
 ``` r
+
 run_searchlight <- function(model_spec, ...) UseMethod("run_searchlight")
 
 # Generic dispatcher delegates to kernel_searchlight
@@ -328,6 +335,7 @@ run_searchlight.remap_rrr_model <- function(model_spec, radius = 8,
 **Tier 1: Basic users (unchanged)**
 
 ``` r
+
 # Create model, run searchlight - just works
 model <- remap_rrr_model(dataset, design, rank = 0)
 results <- run_searchlight(model, radius = 8)
@@ -336,6 +344,7 @@ results <- run_searchlight(model, radius = 8)
 **Tier 2: Customization (opt-in)**
 
 ``` r
+
 # Same model, but customize geometry
 results <- run_searchlight(
   model,
@@ -352,6 +361,7 @@ results <- run_searchlight(
 **Tier 3: Power users (full control)**
 
 ``` r
+
 # Direct kernel API for maximum flexibility
 my_kernel <- function(roi_data, roi_indices) {
   # Custom analysis
@@ -385,6 +395,7 @@ just wrapped - S3 dispatch works exactly as before
 **Incremental migration path**:
 
 ``` r
+
 # Phase 1: Everything unchanged
 model <- mvpa_model(dataset, design, model = "sda")
 run_searchlight(model, radius = 8)  # works via to_kernel()
@@ -402,6 +413,7 @@ kernel_searchlight(dataset, model,
 **Regional/searchlight unification for free**:
 
 ``` r
+
 # Same kernel works in both contexts
 run_searchlight(model, radius = 8)   # uses grid sampler
 run_regional(model, roi_mask)        # uses atlas provider
@@ -457,6 +469,7 @@ model-specific defaults (fully explicit)
 3.  Create `kernel_searchlight()` as orchestrator:
 
     ``` r
+
     kernel_searchlight(dataset, model_spec,
                       sampler = grid_sampler(),
                       materializer = spherical_materializer(radius = 8),
@@ -469,6 +482,7 @@ model-specific defaults (fully explicit)
     to delegate:
 
     ``` r
+
     run_searchlight.mvpa_model <- function(model_spec, radius = 8, ...) {
       kernel_searchlight(model_spec$dataset, model_spec,
                         materializer = spherical_materializer(radius),
@@ -518,6 +532,7 @@ kernels
 1.  Implement `kernel_regional()` with parallel structure:
 
     ``` r
+
     kernel_regional(dataset, model_spec,
                    roi_provider = atlas_provider(mask),
                    roi_materializer = identity_materializer(),

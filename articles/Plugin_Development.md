@@ -1,6 +1,7 @@
 # Building Plugin Analyses for rMVPA
 
 ``` r
+
 library(rMVPA)
 library(neuroim2)
 future::plan(future::sequential)
@@ -42,6 +43,7 @@ plugins when the ROI computation itself is novel.
 ## Step 1: Define a constructor
 
 ``` r
+
 toy_plugin_model <- function(dataset, design, center_stat = c("mean", "median")) {
   center_stat <- match.arg(center_stat)
   create_model_spec(
@@ -58,6 +60,7 @@ toy_plugin_model <- function(dataset, design, center_stat = c("mean", "median"))
 ## Step 2: Declare the metric schema
 
 ``` r
+
 output_schema.toy_plugin_model <- function(model) {
   list(
     score = "scalar",
@@ -69,6 +72,7 @@ output_schema.toy_plugin_model <- function(model) {
 ## Step 3: Implement `fit_roi`
 
 ``` r
+
 fit_roi.toy_plugin_model <- function(model, roi_data, context, ...) {
   x <- roi_data$train_data
   score <- if (identical(model$center_stat, "median")) stats::median(x) else mean(x)
@@ -88,6 +92,7 @@ execution to
 instead of reimplementing CV loops in each plugin:
 
 ``` r
+
 fit_roi.my_classif_plugin <- function(model, roi_data, context, ...) {
   cv_evaluate_roi(
     model_spec = model,
@@ -104,6 +109,7 @@ For a package, these methods are discovered automatically when your
 package is loaded. In an interactive session, register them explicitly:
 
 ``` r
+
 registerS3method(
   "fit_roi",
   "toy_plugin_model",
@@ -128,6 +134,7 @@ and
 to verify your contract before expensive runs.
 
 ``` r
+
 ds <- gen_sample_dataset(c(4, 4, 4), nobs = 20, nlevels = 2, blocks = 2)
 mspec <- toy_plugin_model(ds$dataset, ds$design)
 
@@ -143,6 +150,7 @@ plugin_check
 ```
 
 ``` r
+
 validate_model_spec(mspec, require_schema = TRUE, dry_run = TRUE)
 #> <model_spec_validation_result> class=toy_plugin_model valid=TRUE (pass=5 warn=0 fail=0)
 ```
@@ -150,6 +158,7 @@ validate_model_spec(mspec, require_schema = TRUE, dry_run = TRUE)
 ## Run on searchlight and regional harnesses
 
 ``` r
+
 sl_res <- run_searchlight(mspec, radius = 2, method = "standard")
 names(sl_res$results)
 #> [1] "score"  "spread"
@@ -169,6 +178,7 @@ If your model spec stores heavy transient objects, define a class method
 that strips them before distributed execution.
 
 ``` r
+
 strip_dataset.toy_plugin_model <- function(obj, ...) {
   obj$dataset <- NULL
   obj

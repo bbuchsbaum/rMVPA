@@ -72,6 +72,7 @@ a six-item ordinal seed: items closer in index are predicted to be more
 similar.
 
 ``` r
+
 K <- 6
 items <- paste0("I", seq_len(K))
 S <- as.matrix(stats::dist(seq_len(K)))
@@ -95,6 +96,7 @@ geometry, after partialling out the confound.
 ## Quick start: single ROI
 
 ``` r
+
 library(rMVPA)
 
 ## Synthetic dataset
@@ -131,6 +133,7 @@ out$performance[[1]]
 ## Regional analysis
 
 ``` r
+
 ## Toy two-ROI mask (demo only)
 region_vec <- as.vector(ds$dataset$mask)
 inds <- which(region_vec > 0)
@@ -173,5 +176,6 @@ region_mask <- neuroim2::NeuroVol(array(region_vec, dim = dim(ds$dataset$mask)),
 ## Session info
 
 ``` r
+
 sessionInfo()
 ```

@@ -37,6 +37,7 @@ that pull voxel patterns in one direction, negatives in the opposite
 direction.
 
 ``` r
+
 # Generate dummy dataset (small 6x6x6 volume, 32 samples)
 set.seed(42)
 data_info <- gen_sample_dataset(D = c(6,6,6), nobs = 32, blocks = 4)
@@ -71,6 +72,7 @@ print("Contrast Matrix (centered):")
     ## [1] "Contrast Matrix (centered):"
 
 ``` r
+
 print(round(C_mat, 2))
 ```
 
@@ -84,6 +86,7 @@ print(round(C_mat, 2))
     ## [1] 0 0
 
 ``` r
+
 ms_des <- msreve_design(data_info$design, contrast_matrix = C_mat)
 ```
 
@@ -91,6 +94,7 @@ Next we create the model specification and run a tiny searchlight over
 the volume, requesting the default `"beta_delta"` metric.
 
 ``` r
+
 cv_spec <- blocked_cross_validation(data_info$design$block_var)
 
 model_spec <- contrast_rsa_model(
@@ -164,8 +168,8 @@ The main output options are:
 
 ### `beta_delta`
 
-The product of the RSA regression coefficient ($\beta_{q}$) and the
-voxel’s projection onto each contrast ($\Delta_{q,v}$). This signed
+The product of the RSA regression coefficient ($`\beta_q`$) and the
+voxel’s projection onto each contrast ($`\Delta_{q,v}`$). This signed
 quantity indicates how strongly the voxel supports the representational
 difference captured by each contrast. Positive values mean the voxel
 pattern aligns with the predicted direction; negative values indicate
@@ -173,15 +177,15 @@ the opposite.
 
 ### `beta_only`
 
-Only the regression coefficients $\beta_{q}$. Useful when you want a map
+Only the regression coefficients $`\beta_q`$. Useful when you want a map
 of how much each contrast explains the local RDM independent of the
 voxel projections.
 
 ### `delta_only`
 
-The projection values $\Delta_{q,v}$ by themselves. These show the raw
+The projection values $`\Delta_{q,v}`$ by themselves. These show the raw
 contribution of each voxel to the contrast space before weighting by
-$\beta_{q}$.
+$`\beta_q`$.
 
 ### `recon_score`
 
@@ -198,17 +202,17 @@ and requires `normalize_delta = TRUE` when constructing the model.
 
 ### `beta_delta_reliable`
 
-Reliability-weighted contributions $\rho_{q,v}\beta_{q}\Delta_{q,v}$.
-The weights $\rho_{q,v}$ reflect how stable each voxel’s contributions
+Reliability-weighted contributions $`\rho_{q,v} \beta_q \Delta_{q,v}`$.
+The weights $`\rho_{q,v}`$ reflect how stable each voxel’s contributions
 are across cross-validation folds, highlighting consistent effects.
 
 ### `composite`
 
 The sum of beta-weighted, normalized contributions across contrasts
-($\sum_{q}\beta_{q}{\widetilde{\Delta}}_{q,v}$). This “net pull”
-summarizes whether a voxel overall favors the positive or negative side
-of the contrast space. Interpretation is easiest when the contrast
-matrix is orthonormal.
+($`\sum_q \beta_q \tilde{\Delta}_{q,v}`$). This “net pull” summarizes
+whether a voxel overall favors the positive or negative side of the
+contrast space. Interpretation is easiest when the contrast matrix is
+orthonormal.
 
 Together these metrics support flexible interrogation of how each voxel
 or region participates in the specified representational contrasts.

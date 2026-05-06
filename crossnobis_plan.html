@@ -40,7 +40,7 @@
 <h2 id="id_0-paper-summary--motivation">0 Paper Summary &amp; Motivation<a class="anchor" aria-label="anchor" href="#id_0-paper-summary--motivation"></a></h2>
 <p>The cross-nobis (a.k.a. <em>cross-validated Mahalanobis</em>) distance provides an <strong>unbiased</strong> estimate of the true squared pattern distance by <strong>multiplying pattern differences that were estimated from <em>independent</em> data partitions</strong>. Ordinary (same-fold) distances are positively biased because noise is multiplied by itself.</p>
 <p>Formal definition for condition pair (k=(i,j)) with (M) partitions (Eq. 5, Diedrichsen &amp; Kriegeskorte 2017): [ d_k = <em>{mn} </em>{k,m}^{T},<em>{k,n}, </em>{k,m}=b_{i,m}-b_{j,m}, ] where (P) is the number of voxels/channels. Equivalent “single-fold-vs-rest” algebra can also be used.</p>
-<p>Key properties * <strong>Unbiased</strong>: (E[d_k]=_k<sup>{T}<em>k/P). * Can be <strong>negative</strong> when the true distance is ~0 – keep these values, do not truncate. * Variance is () times larger than the biased estimator but decreases with more partitions. * <strong>Whitening</strong>: pre-multiply patterns by (W=</em>{}</sup>{-1/2}) to obtain Mahalanobis distances; crucial for fMRI.</p>
+<p>Key properties * <strong>Unbiased</strong>: (E[d_k]=_k^{T}<em>k/P). * Can be <strong>negative</strong> when the true distance is ~0 – keep these values, do not truncate. * Variance is () times larger than the biased estimator but decreases with more partitions. * <strong>Whitening</strong>: pre-multiply patterns by (W=</em>{}^{-1/2}) to obtain Mahalanobis distances; crucial for fMRI.</p>
 <hr><p>(Sections 1–9 below incorporate this theory.)</p>
 </div>
 <div class="section level2">
@@ -50,45 +50,45 @@
 </div>
 <div class="section level2">
 <h2 id="id_9-timeline-suggestion">9 Timeline (suggestion)<a class="anchor" aria-label="anchor" href="#id_9-timeline-suggestion"></a></h2>
-<table class="table"><thead><tr class="header"><th>Week</th>
+<table class="table"><thead><tr><th>Week</th>
 <th>Deliverable</th>
-</tr></thead><tbody><tr class="odd"><td>1</td>
+</tr></thead><tbody><tr><td>1</td>
 <td>Helper function + unit tests pass</td>
-</tr><tr class="even"><td>2</td>
+</tr><tr><td>2</td>
 <td>Integration into train_model + searchlight plumbing</td>
-</tr><tr class="odd"><td>3</td>
+</tr><tr><td>3</td>
 <td>Documentation, vignette, example rebuild</td>
-</tr><tr class="even"><td>4</td>
+</tr><tr><td>4</td>
 <td>Profiling &amp; optional Rcpp optimisation</td>
 </tr></tbody></table><hr></div>
 <div class="section level2">
 <h2 id="appendix-a-detailed-implementation-table--sanity-check-code">Appendix A Detailed Implementation Table &amp; Sanity-Check Code<a class="anchor" aria-label="anchor" href="#appendix-a-detailed-implementation-table--sanity-check-code"></a></h2>
 <div class="section level3">
 <h3 id="a1-step-wise-implementation-table-adapted-from-user-note">A.1 Step-wise Implementation Table (adapted from user note)<a class="anchor" aria-label="anchor" href="#a1-step-wise-implementation-table-adapted-from-user-note"></a></h3>
-<table class="table"><colgroup><col width="10%"><col width="28%"><col width="61%"></colgroup><thead><tr class="header"><th>Step</th>
+<table class="table"><colgroup><col width="10%"><col width="28%"><col width="61%"></colgroup><thead><tr><th>Step</th>
 <th>What to compute</th>
 <th>Suggested R objects / code changes</th>
-</tr></thead><tbody><tr class="odd"><td><strong>A</strong></td>
+</tr></thead><tbody><tr><td><strong>A</strong></td>
 <td><em>Return fold-wise condition means.</em></td>
 <td>
 <code>compute_crossvalidated_means_sl(return_folds = TRUE)</code> returns a list with <code>mean = U_hat_sl</code>, <code>folds = U_folds</code> (K × V × M).</td>
-</tr><tr class="even"><td><strong>B</strong></td>
+</tr><tr><td><strong>B</strong></td>
 <td><em>Pre-whiten each fold.</em></td>
 <td>Within the same helper: if <code>W</code> provided, <code>U_folds[,,m] %*% W</code>.</td>
-</tr><tr class="odd"><td><strong>C</strong></td>
+</tr><tr><td><strong>C</strong></td>
 <td><em>Cross-fold inner products only for m ≠ n.</em></td>
 <td>New helper <code>crossnobis_distance(U_folds, P)</code> computes distance vector; pseudo-code shown below.</td>
-</tr><tr class="even"><td><strong>D</strong></td>
+</tr><tr><td><strong>D</strong></td>
 <td><em>Expose to RSA regression.</em></td>
 <td>
 <code><a href="reference/train_model.html">train_model.contrast_rsa_model()</a></code> uses this distance vector when <code>estimation_method == "crossnobis"</code>. <code>include_vec</code> still applied.</td>
-</tr><tr class="odd"><td><strong>E</strong></td>
+</tr><tr><td><strong>E</strong></td>
 <td><em>Allow negative outputs.</em></td>
 <td>No truncation; document in Roxygen.</td>
-</tr><tr class="even"><td><strong>F</strong></td>
+</tr><tr><td><strong>F</strong></td>
 <td><em>Unit tests.</em></td>
 <td>Noise-only simulation: mean distance ≈ 0; biased Euclidean positive.</td>
-</tr><tr class="odd"><td><strong>G</strong></td>
+</tr><tr><td><strong>G</strong></td>
 <td><em>Performance tips.</em></td>
 <td>Vectorise across pairs; optionally migrate to Rcpp.</td>
 </tr></tbody></table><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">

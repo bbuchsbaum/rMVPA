@@ -13,6 +13,7 @@ value contains both the data (`mvpa_dataset`) and the design
 
 ``` r
 
+
 dataset <- gen_sample_dataset(D=c(6,6,6), nobs = 80, blocks=4, nlevels=2)
 print(dataset)
 #> $dataset
@@ -55,6 +56,7 @@ block. This leave‑one‑group‑out strategy respects temporal correlations
 within runs and yields a more realistic estimate of generalization.
 
 ``` r
+
 block <- dataset$design$block_var
 crossval <- blocked_cross_validation(block)
 crossval
@@ -78,6 +80,7 @@ package](https://cran.r-project.org/web/packages/sda/index.html) for
 details.
 
 ``` r
+
 sda_model <- load_model("sda_notune") 
 model <- mvpa_model(model=sda_model, dataset=dataset$dataset, design=dataset$design, crossval=crossval)
 model
@@ -134,6 +137,7 @@ For two‑class problems we report cross‑validated accuracy and AUC
 voxel.
 
 ``` r
+
 result <- run_searchlight(model, radius=4, method="standard")
 result
 ```
@@ -148,6 +152,7 @@ often reduces computation, since the number of models scales with
 `nvoxels / radius × niter` rather than the total number of voxels.
 
 ``` r
+
 result <- run_searchlight(model, radius=4, method="randomized", niter=8)
 result
 ```
@@ -160,6 +165,7 @@ can also register your own with
 Two robust options that ship with rMVPA are `hdrda` and `pca_lda`:
 
 ``` r
+
 # High‑Dimensional Regularized Discriminant Analysis
 hdrda <- load_model("hdrda")
 model_hdrda <- mvpa_model(model = hdrda, dataset = dataset$dataset, design = dataset$design,
@@ -169,6 +175,7 @@ res_hdrda
 ```
 
 ``` r
+
 # PCA + LDA pipeline
 pca_lda <- load_model("pca_lda")
 model_pca_lda <- mvpa_model(model = pca_lda, dataset = dataset$dataset, design = dataset$design,
@@ -189,6 +196,7 @@ your dataset/design (same pattern as localizer→WM), and optionally a
 domains.
 
 ``` r
+
 # Synthetic source→target setup
 toy <- gen_sample_dataset(D = c(6,6,6), nobs = 120, nlevels = 4, blocks = 3, external_test = TRUE)
 regionMask <- neuroim2::NeuroVol(sample(1:5, size = length(toy$dataset$mask), replace = TRUE),

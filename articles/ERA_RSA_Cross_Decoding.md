@@ -29,6 +29,7 @@ and treat its training split as **encoding** and its external test split
 as **retrieval**.
 
 ``` r
+
 set.seed(123)
 
 toy <- gen_sample_dataset(
@@ -108,6 +109,7 @@ the relative distances among encoded items are preserved during
 retrieval.
 
 ``` r
+
 # Simple 3-region mask for demonstration
 region_mask <- NeuroVol(
   sample(1:3, size = length(toy$dataset$mask), replace = TRUE),
@@ -189,6 +191,7 @@ The `performance_table` contains one row per region and several ERA-RSA
 metrics.
 
 ``` r
+
 head(era_res$performance_table)
 #> # A tibble: 3 x 11
 #>   roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor
@@ -214,6 +217,7 @@ These quantify both cross-decoding performance and representational
 geometry alignment between phases.
 
 ``` r
+
 era_res$performance_table[
   ,
   c("roinum", "era_top1_acc", "era_diag_minus_off", "geom_cor")
@@ -242,6 +246,7 @@ but one may carry item-specific diagonal similarity while another mainly
 preserves the relative geometry among items.
 
 ``` r
+
 partition_ms <- era_partition_model(
   dataset = toy$dataset,
   design  = toy$design,
@@ -256,6 +261,7 @@ partition_res <- run_regional(partition_ms, region_mask)
 ```
 
 ``` r
+
 partition_cols <- c(
   "roinum",
   "n_items",
@@ -321,6 +327,7 @@ We can also run ERA-RSA in a searchlight mode to obtain whole-brain maps
 of the same metrics.
 
 ``` r
+
 set.seed(456)
 
 era_sl <- run_searchlight(
@@ -356,6 +363,7 @@ The `searchlight_result` contains:
 - `results`: a list of `NeuroVol` maps, one per metric.
 
 ``` r
+
 era_sl$metrics
 #>  [1] "n_items"                       "era_top1_acc"                 
 #>  [3] "era_diag_mean"                 "era_diag_minus_off"           
@@ -368,6 +376,7 @@ We can save the searchlight maps using
 [`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md):
 
 ``` r
+
 out_dir <- tempfile("era_rsa_sl_")
 dir.create(out_dir, showWarnings = FALSE)
 
@@ -394,6 +403,7 @@ rows/columns correspond to item keys.
 A common pattern is to build run-based confounds:
 
 ``` r
+
 items <- levels(toy$design$train_design$item)
 
 # Example: per-item encoding run (modal run for each item)
@@ -437,6 +447,7 @@ With these supplied, two additional metrics become available:
 `design$train_design$block_var`:
 
 ``` r
+
 item_block <- factor(item_run_enc, levels = sort(unique(item_run_enc)))
 
 era_ms_block <- era_rsa_model(

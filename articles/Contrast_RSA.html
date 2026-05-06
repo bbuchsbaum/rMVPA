@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-04-25</h4>
+            <h4 data-toc-skip class="date">2026-05-06</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Contrast_RSA.Rmd" class="external-link"><code>vignettes/Contrast_RSA.Rmd</code></a></small>
       <div class="d-none name"><code>Contrast_RSA.Rmd</code></div>
@@ -223,7 +223,7 @@ pattern onto contrast <em>q</em>, indicating directional alignment</li>
 <p>The product of the RSA regression coefficient
 (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>β</mi><mi>q</mi></msub><annotation encoding="application/x-tex">\beta_q</annotation></semantics></math>)
 and the voxel’s projection onto each contrast
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>Δ</mi><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub><annotation encoding="application/x-tex">\Delta_{q,v}</annotation></semantics></math>).
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi mathvariant="normal">Δ</mi><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub><annotation encoding="application/x-tex">\Delta_{q,v}</annotation></semantics></math>).
 This signed quantity indicates how strongly the voxel supports the
 representational difference captured by each contrast. Positive values
 mean the voxel pattern aligns with the predicted direction; negative
@@ -243,7 +243,7 @@ RDM independent of the voxel projections.</p>
 <code>delta_only</code><a class="anchor" aria-label="anchor" href="#delta_only"></a>
 </h3>
 <p>The projection values
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>Δ</mi><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub><annotation encoding="application/x-tex">\Delta_{q,v}</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi mathvariant="normal">Δ</mi><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub><annotation encoding="application/x-tex">\Delta_{q,v}</annotation></semantics></math>
 by themselves. These show the raw contribution of each voxel to the
 contrast space before weighting by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>β</mi><mi>q</mi></msub><annotation encoding="application/x-tex">\beta_q</annotation></semantics></math>.</p>
@@ -271,7 +271,7 @@ constructing the model.</p>
 <code>beta_delta_reliable</code><a class="anchor" aria-label="anchor" href="#beta_delta_reliable"></a>
 </h3>
 <p>Reliability-weighted contributions
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ρ</mi><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub><msub><mi>β</mi><mi>q</mi></msub><msub><mi>Δ</mi><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\rho_{q,v} \beta_q \Delta_{q,v}</annotation></semantics></math>.
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ρ</mi><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub><msub><mi>β</mi><mi>q</mi></msub><msub><mi mathvariant="normal">Δ</mi><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\rho_{q,v} \beta_q \Delta_{q,v}</annotation></semantics></math>.
 The weights
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ρ</mi><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub><annotation encoding="application/x-tex">\rho_{q,v}</annotation></semantics></math>
 reflect how stable each voxel’s contributions are across
@@ -282,7 +282,7 @@ cross-validation folds, highlighting consistent effects.</p>
 <code>composite</code><a class="anchor" aria-label="anchor" href="#composite"></a>
 </h3>
 <p>The sum of beta-weighted, normalized contributions across contrasts
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>q</mi></msub><msub><mi>β</mi><mi>q</mi></msub><msub><mover><mi>Δ</mi><mo accent="true">̃</mo></mover><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum_q \beta_q \tilde{\Delta}_{q,v}</annotation></semantics></math>).
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>∑</mo><mi>q</mi></msub><msub><mi>β</mi><mi>q</mi></msub><msub><mover><mi mathvariant="normal">Δ</mi><mo accent="true">̃</mo></mover><mrow><mi>q</mi><mo>,</mo><mi>v</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum_q \beta_q \tilde{\Delta}_{q,v}</annotation></semantics></math>).
 This “net pull” summarizes whether a voxel overall favors the positive
 or negative side of the contrast space. Interpretation is easiest when
 the contrast matrix is orthonormal.</p>

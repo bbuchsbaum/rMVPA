@@ -98,6 +98,7 @@ appropriate for the problem at hand. See example below.
 ## Examples
 
 ``` r
+
 mod <- load_model("sda")
 arr_data <- array(rnorm(6*6*6*100), c(6,6,6,100))
 sp <- neuroim2::NeuroSpace(c(6,6,6,100))

@@ -61,7 +61,15 @@ length across ROIs.</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A named character vector mapping metric names to <code>"scalar"</code>.</p>
+    <p>A named character vector mapping each emitted metric name to
+  <code>"scalar"</code>. Base metrics are <code>n_items</code>, <code>era_top1_acc</code>,
+  <code>era_diag_mean</code>, <code>era_diag_minus_off</code>, <code>geom_cor</code>,
+  <code>era_diag_minus_off_same_block</code>,
+  <code>era_diag_minus_off_diff_block</code>, <code>era_lag_cor</code>,
+  <code>geom_cor_run_partial</code>, and <code>geom_cor_xrun</code>. If
+  <code>confound_rdms</code> is supplied, the schema also includes
+  <code>beta_enc_geom</code>, one <code>beta_&lt;name&gt;</code> per confound RDM,
+  <code>sp_enc_geom</code>, and one <code>sp_&lt;name&gt;</code> per confound RDM.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

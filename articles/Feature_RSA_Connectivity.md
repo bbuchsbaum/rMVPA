@@ -20,6 +20,7 @@ stores the predicted and observed RDM vectors for each ROI, and then
 builds the asymmetric ROI_i -\> ROI_j matrix.
 
 ``` r
+
 conn_example <- build_connectivity_example()
 
 knitr::kable(round(conn_example$cross_raw, 2))
@@ -56,6 +57,7 @@ That stores compact lower-triangle RDM vectors for each ROI, and
 pulls them into a tibble.
 
 ``` r
+
 head(conn_example$vecs[, c("roinum", "n_obs")])
 #> # A tibble: 4 × 2
 #>   roinum n_obs
@@ -79,6 +81,7 @@ ROIs. It correlates predicted RDM vectors with predicted RDM vectors, so
 the result is symmetric.
 
 ``` r
+
 predicted_connectivity <- feature_rsa_connectivity(
   conn_example$vecs,
   method = "spearman"
@@ -111,6 +114,7 @@ each ROI a decorrelated model-space fingerprint, and then compares those
 fingerprints.
 
 ``` r
+
 model_space <- build_model_space_example()
 
 knitr::kable(round(model_space$conn$profile_similarity, 2))
@@ -129,6 +133,7 @@ across the model-space axes, ignoring overall strength. The
 strength-sensitive version is stored in `model_space$conn$similarity`.
 
 ``` r
+
 knitr::kable(round(model_space$conn$model_axis_cor, 2))
 ```
 
@@ -153,6 +158,7 @@ answers the transfer question directly: does the geometry predicted from
 ROI i match the held-out observed geometry in ROI j?
 
 ``` r
+
 cross_connectivity <- feature_rsa_cross_connectivity(
   conn_example$vecs,
   method = "spearman"
@@ -186,6 +192,7 @@ making some ROIs carry more of a shared representational backbone than
 others.
 
 ``` r
+
 stripe_example <- build_striping_example()
 
 knitr::kable(round(stripe_example$raw, 2))
@@ -210,6 +217,7 @@ pair-specific transfer after discounting globally strong sources and
 globally easy targets.
 
 ``` r
+
 knitr::kable(round(stripe_example$double_centered, 2))
 ```
 
@@ -221,6 +229,7 @@ knitr::kable(round(stripe_example$double_centered, 2))
 | -0.26 | -0.22 | -0.39 |  0.87 |
 
 ``` r
+
 knitr::kable(stripe_example$offsets, digits = 2)
 ```
 
@@ -242,6 +251,7 @@ is better when the stripe pattern reflects one dominant shared geometry
 present in nearly every ROI.
 
 ``` r
+
 knitr::kable(round(stripe_example$residualized, 2))
 ```
 
@@ -273,16 +283,16 @@ connectivity. They are not redundant — they answer subtly different
 questions, and the right tool depends on whether you supply a *model* or
 a *feature space*:
 
-|                                         | **Feature-RSA connectivity** *(this vignette)*                                                                | **Model-space connectivity** *([`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md))* |
-|:----------------------------------------|:--------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------|
-| **What you supply**                     | A feature matrix `F` (or similarity matrix `S`)                                                               | One or more explicit model RDMs                                                                                                                   |
-| **Fitting**                             | CV-fitted PLS / PCA / glmnet maps neural patterns ↔︎ feature space                                             | No fitting — neural pair vectors are projected onto a fixed model-RDM basis                                                                       |
-| **What gets compared across ROIs**      | Predicted trial-by-trial RDM vectors (length `n_pairs`)                                                       | Whitened projections onto the model-RDM subspace (length K, the number of model RDMs after orthogonalisation)                                     |
-| **Sensitive to**                        | All representational geometry the feature space can capture, including structure beyond the supplied features | Only structure within the declared model-RDM subspace                                                                                             |
-| **Memory per ROI**                      | O(n_pairs); often hundreds of thousands of numbers                                                            | O(K); typically 2–10 numbers                                                                                                                      |
-| **Best when**                           | You don’t have a clean theoretical RDM; you want a data-driven, model-free similarity measure                 | You have specific theoretical RDMs (semantic, visual, motor…) and want to ask which regions express each                                          |
-| **Diagonal of the connectivity matrix** | ROI’s CV-predicted-vs-observed RDM alignment                                                                  | ROI’s strength of model-RDM expression                                                                                                            |
-| **Cross-domain pairs (set A vs set B)** | Implicit through cross-validated prediction                                                                   | First-class via `pair_rsa_design(..., pairs = "between")`                                                                                         |
+|  | **Feature-RSA connectivity** *(this vignette)* | **Model-space connectivity** *([`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md))* |
+|:---|:---|:---|
+| **What you supply** | A feature matrix `F` (or similarity matrix `S`) | One or more explicit model RDMs |
+| **Fitting** | CV-fitted PLS / PCA / glmnet maps neural patterns ↔︎ feature space | No fitting — neural pair vectors are projected onto a fixed model-RDM basis |
+| **What gets compared across ROIs** | Predicted trial-by-trial RDM vectors (length `n_pairs`) | Whitened projections onto the model-RDM subspace (length K, the number of model RDMs after orthogonalisation) |
+| **Sensitive to** | All representational geometry the feature space can capture, including structure beyond the supplied features | Only structure within the declared model-RDM subspace |
+| **Memory per ROI** | O(n_pairs); often hundreds of thousands of numbers | O(K); typically 2–10 numbers |
+| **Best when** | You don’t have a clean theoretical RDM; you want a data-driven, model-free similarity measure | You have specific theoretical RDMs (semantic, visual, motor…) and want to ask which regions express each |
+| **Diagonal of the connectivity matrix** | ROI’s CV-predicted-vs-observed RDM alignment | ROI’s strength of model-RDM expression |
+| **Cross-domain pairs (set A vs set B)** | Implicit through cross-validated prediction | First-class via `pair_rsa_design(..., pairs = "between")` |
 
 A useful rule of thumb: **declared model → model-space connectivity;
 learned model → feature-RSA connectivity.** When in doubt, run both:

@@ -11,6 +11,7 @@ transparent and consistent.
 ## Helpers (new file: `R/result_helpers.R`)
 
 ``` r
+
 as_ok <- function(val, id, ctx = list()) {
   tibble::tibble(
     result = list(val$result %||% NULL),

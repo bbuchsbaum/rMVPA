@@ -40,6 +40,7 @@ respects the temporal structure of the data by using scanning runs as
 natural validation blocks.
 
 ``` r
+
 # Create a simple blocked structure: 5 runs with 20 trials each
 block_var <- rep(1:5, each = 20)
 cval <- blocked_cross_validation(block_var)
@@ -59,6 +60,7 @@ print(cval)
 ### Implementation Example
 
 ``` r
+
 # Generate example data
 set.seed(123)
 dat <- data.frame(
@@ -95,6 +97,7 @@ This method combines blocking with bootstrap resampling, providing more
 stable performance estimates while respecting the run structure.
 
 ``` r
+
 # Create bootstrap blocked CV with 20 repetitions
 boot_cval <- bootstrap_blocked_cross_validation(block_var, nreps = 20)
 print(boot_cval)
@@ -135,6 +138,7 @@ print(boot_samples)
 You can provide weights to influence the sampling probability:
 
 ``` r
+
 # Create weights (e.g., based on motion parameters)
 weights <- runif(length(block_var))
 weighted_boot_cval <- bootstrap_blocked_cross_validation(
@@ -167,6 +171,7 @@ This method creates sequential folds within each block, useful when
 temporal order matters.
 
 ``` r
+
 # Create sequential blocked CV with 2 folds and 4 repetitions
 seq_cval <- sequential_blocked_cross_validation(
   block_var,
@@ -201,6 +206,7 @@ This approach randomly splits blocks into two groups, useful for rapid
 performance estimation.
 
 ``` r
+
 # Create two-fold blocked CV with 10 repetitions
 twofold_cval <- twofold_blocked_cross_validation(block_var, nreps = 10)
 print(twofold_cval)
@@ -225,6 +231,7 @@ For specialized validation schemes, you can define custom
 training/testing splits:
 
 ``` r
+
 # Define custom splits
 custom_splits <- list(
   list(train = 1:60, test = 61:100),
@@ -256,6 +263,7 @@ Here’s a complete example using blocked cross-validation with an SDA
 classifier:
 
 ``` r
+
 # Setup cross-validation
 block_var <- rep(1:5, each = 20)
 cval <- blocked_cross_validation(block_var)
@@ -327,6 +335,7 @@ Let’s perform a regional MVPA analysis using different cross-validation
 strategies:
 
 ``` r
+
 # Generate a sample dataset
 data_out <- gen_sample_dataset(D = c(6,6,6), nobs = 80, blocks = 4, nlevels = 2)
 
@@ -403,6 +412,7 @@ We can also use different cross-validation strategies in searchlight
 analysis:
 
 ``` r
+
 # Example 3: Searchlight with Sequential Blocked Cross-Validation
 seq_cv <- sequential_blocked_cross_validation(
   data_out$design$block_var,
@@ -440,6 +450,7 @@ over repetitions to summarize performance.
 Here’s a more detailed comparison of different CV strategies:
 
 ``` r
+
 # Create different CV schemes
 cv_schemes <- list(
   blocked = blocked_cross_validation(data_out$design$block_var),

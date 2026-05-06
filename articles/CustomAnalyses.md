@@ -33,6 +33,7 @@ predefined regions of interest (ROIs).
 **Usage:**
 
 ``` r
+
 run_custom_regional(
   dataset,      # mvpa_dataset or mvpa_surface_dataset
   region_mask,  # NeuroVol or NeuroSurface mask defining ROIs
@@ -68,6 +69,7 @@ searchlight spheres across the brain.
 **Usage:**
 
 ``` r
+
 run_custom_searchlight(
   dataset,      # mvpa_dataset or mvpa_surface_dataset
   custom_func,  # Your R function
@@ -110,6 +112,7 @@ First, we generate a sample volumetric dataset and define our custom
 function.
 
 ``` r
+
 # Generate sample dataset (e.g., 10x10x10 volume, 50 observations, 2 blocks)
 dset_info <- gen_sample_dataset(D = c(10, 10, 10), nobs = 50, blocks = 2, nlevels=2)
 dataset_obj <- dset_info$dataset
@@ -156,6 +159,7 @@ calculate_roi_stats_robust <- function(data, info) {
 Now, we create a region mask and run `run_custom_regional`.
 
 ``` r
+
 # Create a region mask with 4 ROIs covering parts of the dataset mask
 mask_vol <- dataset_obj$mask
 mask_arr <- array(0, dim(mask_vol))
@@ -235,6 +239,7 @@ for the metrics.
 Next, we run a searchlight analysis using the same custom function.
 
 ``` r
+
 # Run the custom searchlight analysis (standard method)
 # Use a moderate radius; set cores > 1 for parallel execution if available
 # Note: Running in parallel might print messages about the future plan setting.
@@ -347,6 +352,7 @@ typically a `classification_result` – and must return a **numeric
 vector** of scalar metrics (named if you return more than one):
 
 ``` r
+
 my_perf <- function(result) {
   # classification_result: result$observed, result$predicted, result$probs
   acc  <- mean(result$observed == result$predicted)
@@ -365,6 +371,7 @@ You pass this function to
 via the `performance` argument:
 
 ``` r
+
 data <- gen_sample_dataset(
   D = c(6, 6, 6),
   nobs = 100,
@@ -401,6 +408,7 @@ in `split_groups`, and
 automatically applies your metric both globally and within each group:
 
 ``` r
+
 design_df <- data.frame(
   Y   = rep(letters[1:2], 50),
   run = rep(1:5, length.out = 100)

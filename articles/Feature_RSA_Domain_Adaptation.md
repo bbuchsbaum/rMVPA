@@ -23,18 +23,19 @@ encoding-to-recall analysis:
   target rows
 
 ``` r
+
 da_example <- build_da_example()
 da_compare <- fit_da_models(da_example)
 
 knitr::kable(da_compare, digits = 3)
 ```
 
-|             | model       | target_pattern_correlation | target_rdm_correlation | target_r2_full |
-|:------------|:------------|---------------------------:|-----------------------:|---------------:|
-| coupled_da  | coupled_da  |                      0.963 |                  0.939 |          0.813 |
-| builder_da  | builder_da  |                      0.946 |                  0.888 |          0.788 |
-| stacked_da  | stacked_da  |                      0.871 |                  0.849 |          0.454 |
-| source_only | source_only |                      0.843 |                  0.830 |          0.365 |
+|  | model | target_pattern_correlation | target_rdm_correlation | target_r2_full |
+|:---|:---|---:|---:|---:|
+| coupled_da | coupled_da | 0.963 | 0.939 | 0.813 |
+| builder_da | builder_da | 0.946 | 0.888 | 0.788 |
+| stacked_da | stacked_da | 0.871 | 0.849 | 0.454 |
+| source_only | source_only | 0.843 | 0.830 | 0.365 |
 
 In this toy problem, the source-only model already knows something
 useful about the feature space, but it misses the state shift. The
@@ -55,6 +56,7 @@ In a real encoding-to-recall analysis you usually have:
 The design object stores that separation explicitly.
 
 ``` r
+
 data.frame(
   source_rows = nrow(da_example$design_fixed$X_train$X),
   target_rows = nrow(da_example$design_fixed$X_test$X),
@@ -80,6 +82,7 @@ The most direct workflow uses a fixed target representation and lets the
 model adapt the mapping on target-train rows only.
 
 ``` r
+
 coupled_spec <- feature_rsa_da_model(
   dataset = da_example$dataset,
   design = da_example$design_fixed,
@@ -119,6 +122,7 @@ the outer target fold, and it must return the target predictors in the
 original target row order.
 
 ``` r
+
 target_builder <- function(X_train, train_idx, builder_data) {
   X_target <- builder_data$X_target
   train_center <- colMeans(X_target[train_idx, , drop = FALSE])
@@ -133,6 +137,7 @@ step. In a real watch-to-recall pipeline, this is where you would plug
 in your row-matching or alignment routine.
 
 ``` r
+
 builder_design <- feature_sets_design(
   X_train = da_example$design_fixed$X_train,
   X_test = NULL,
@@ -173,6 +178,7 @@ abandon the DA workflow. The model will fall back to contiguous target
 folds, and you can add a purge gap to reduce temporal leakage.
 
 ``` r
+
 single_run_spec <- feature_rsa_da_model(
   dataset = da_example$dataset,
   design = builder_design,

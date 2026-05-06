@@ -27,6 +27,7 @@ redistributed by the rsatoolbox project (see
 `inst/extdata/kriegeskorte92/README.md` for citation details).
 
 ``` r
+
 data_path <- resolve_kriegeskorte_path()
 bundle <- readRDS(data_path)
 
@@ -50,6 +51,7 @@ hIT RDM you see the same coarse 2 × 2 block structure — small
 dissimilarities within each animacy group, large dissimilarities across.
 
 ``` r
+
 hit_subj1 <- bundle$brain[["hIT_BE_Session_1"]]
 animacy   <- bundle$model[["animacy"]]
 ```
@@ -80,6 +82,7 @@ call to
 numbers are visibly familiar.
 
 ``` r
+
 spearman_rdm <- function(A, B) {
   cor(A[lower.tri(A)], B[lower.tri(B)], method = "spearman")
 }
@@ -113,6 +116,7 @@ human-IT RDM and one model RDM. The rows are 4 subjects × 2 sessions;
 the columns are the 8 model RDMs.
 
 ``` r
+
 mean_score <- colMeans(scores)
 round(sort(mean_score, decreasing = TRUE), 3)
 #>               animacy              monkeyIT FaceBodyManmadeNatobj 
@@ -152,6 +156,7 @@ an ROI), project onto the model-RDM subspace via
 and compare unit fingerprints.
 
 ``` r
+
 roi_mat <- vapply(bundle$brain, function(R) R[lower.tri(R)],
                   numeric(92 * 91 / 2))
 mod_mat <- vapply(bundle$model, function(M) M[lower.tri(M)],
@@ -228,6 +233,7 @@ a quick face-validity check we report the cross-subject mean and the
 SEM:
 
 ``` r
+
 ranking <- data.frame(
   model       = names(bundle$model),
   mean_rho    = round(mean_score, 3),

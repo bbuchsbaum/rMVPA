@@ -23,20 +23,21 @@ per-ROI diagnostics come for free.
 
 ## What you can build with it
 
-| You want to …                                                                      | Reach for                                                                                                                                                                                                                                                                          | Vignette                                                                                                                                                                                                                                                                  |
-|:-----------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Decode condition labels from local activity (8-way category, condition pair, etc.) | [`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md) + [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md) / [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)                      | [`Searchlight_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html), [`Regional_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html), [`Haxby_2001`](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html) ⓡ |
-| Test whether a region’s pattern geometry matches a model RDM                       | [`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md) + [`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md) (or [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md))                                 | [`RSA`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.html), [`Kriegeskorte_92_Images`](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html) ⓡ                                                                                                      |
-| Ask which regions share representational geometry through your models              | [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) on `rsa_model(..., return_fingerprint = TRUE)`                                                                                                                             | [`Model_Space_Connectivity`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html)                                                                                                                                                                   |
-| Decompose representational structure by signed contrasts (MS-ReVE)                 | [`contrast_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md)                                                                                                                                                                                        | [`Contrast_RSA`](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html)                                                                                                                                                                                           |
-| Cross-decode between encoding & retrieval (ERA), or perception & memory            | [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md), [`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md), [`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md), the ReNA family | [`ERA_RSA_Cross_Decoding`](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html), [`REMAP_RRR`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html), and the `Naive_Cross_Decoding` glossary                                                   |
-| Plug in a custom per-ROI / per-sphere function                                     | [`run_custom_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md) / [`run_custom_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md)                                                                                | [`CustomAnalyses`](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html), [`Plugin_Development`](https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html)                                                                                          |
+| You want to … | Reach for | Vignette |
+|:---|:---|:---|
+| Decode condition labels from local activity (8-way category, condition pair, etc.) | [`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md) + [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md) / [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) | [`Searchlight_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html), [`Regional_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html), [`Haxby_2001`](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html) ⓡ |
+| Test whether a region’s pattern geometry matches a model RDM | [`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md) + [`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md) (or [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)) | [`RSA`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.html), [`Kriegeskorte_92_Images`](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html) ⓡ |
+| Ask which regions share representational geometry through your models | [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) on `rsa_model(..., return_fingerprint = TRUE)` | [`Model_Space_Connectivity`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html) |
+| Decompose representational structure by signed contrasts (MS-ReVE) | [`contrast_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md) | [`Contrast_RSA`](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html) |
+| Cross-decode between encoding & retrieval (ERA), or perception & memory | [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md), [`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md), [`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md), the ReNA family | [`ERA_RSA_Cross_Decoding`](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html), [`REMAP_RRR`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html), and the `Naive_Cross_Decoding` glossary |
+| Plug in a custom per-ROI / per-sphere function | [`run_custom_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md) / [`run_custom_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md) | [`CustomAnalyses`](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html), [`Plugin_Development`](https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html) |
 
 ⓡ = real public data, not synthetic.
 
 ## A 30-second taste
 
 ``` r
+
 library(rMVPA)
 
 # Synthetic 6 x 6 x 6, 80 trials, 4 runs, 2 categories
@@ -82,6 +83,7 @@ regenerate it from upstream sources.
 From within R:
 
 ``` r
+
 # install.packages("pak")
 pak::pak("bbuchsbaum/neuroim2")    # required, not on CRAN yet
 pak::pak("bbuchsbaum/rMVPA")
@@ -90,6 +92,7 @@ pak::pak("bbuchsbaum/rMVPA")
 Or with devtools:
 
 ``` r
+
 library(devtools)
 install_github("bbuchsbaum/neuroim2")
 install_github("bbuchsbaum/rMVPA")
@@ -101,6 +104,7 @@ install_github("bbuchsbaum/rMVPA")
 analyses:
 
 ``` r
+
 # After installing, copy the wrappers onto your PATH
 rMVPA::install_cli("~/.local/bin", overwrite = TRUE)
 ```

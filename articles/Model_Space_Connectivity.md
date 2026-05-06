@@ -31,16 +31,16 @@ rMVPA exposes two complementary ways to ask “do these ROIs share
 representational geometry?” Picking the right one is the single most
 important decision in this analysis:
 
-|                                         | **Model-space connectivity** *(this vignette)*                                                                             | **Feature-RSA connectivity** *([`vignette("Feature_RSA_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md))* |
-|:----------------------------------------|:---------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Question it answers**                 | Do ROIs project onto the *same axes of my declared model RDMs*?                                                            | Do ROIs *predict the same trial-by-trial similarity structure* through a learned feature space?                                                   |
-| **What you supply**                     | One or more explicit model RDMs                                                                                            | A feature matrix `F` (or similarity matrix `S`)                                                                                                   |
-| **What gets compared across ROIs**      | Whitened projections onto the model-RDM subspace (length-K fingerprints, K = number of model RDMs after orthogonalisation) | Predicted RDM vectors of length `n_trials × (n_trials − 1) / 2`                                                                                   |
-| **Fitting required?**                   | No — just project the neural pair vector onto a fixed orthonormal basis                                                    | Yes — cross-validated PLS / PCA / glmnet inside [`feature_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)         |
-| **Memory per unit**                     | O(K), typically 2–10 numbers                                                                                               | O(n_pairs), can be 10⁴–10⁵ numbers                                                                                                                |
-| **Searchlight-friendly?**               | Yes — fingerprints fit easily; k-means anchors avoid `n_centers²` blow-up                                                  | Marginal — requires file-backed RDM storage and is more expensive to compare across centers                                                       |
-| **Best when**                           | You have specific theoretical RDMs (semantic, visual, motor…) and want to ask which regions express each                   | You don’t have a clean theoretical RDM and want a model-free, data-driven similarity measure                                                      |
-| **Diagonal of the connectivity matrix** | ROI’s *strength* of model-RDM expression                                                                                   | ROI’s CV-predicted-vs-observed RDM alignment                                                                                                      |
+|  | **Model-space connectivity** *(this vignette)* | **Feature-RSA connectivity** *([`vignette("Feature_RSA_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md))* |
+|:---|:---|:---|
+| **Question it answers** | Do ROIs project onto the *same axes of my declared model RDMs*? | Do ROIs *predict the same trial-by-trial similarity structure* through a learned feature space? |
+| **What you supply** | One or more explicit model RDMs | A feature matrix `F` (or similarity matrix `S`) |
+| **What gets compared across ROIs** | Whitened projections onto the model-RDM subspace (length-K fingerprints, K = number of model RDMs after orthogonalisation) | Predicted RDM vectors of length `n_trials × (n_trials − 1) / 2` |
+| **Fitting required?** | No — just project the neural pair vector onto a fixed orthonormal basis | Yes — cross-validated PLS / PCA / glmnet inside [`feature_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md) |
+| **Memory per unit** | O(K), typically 2–10 numbers | O(n_pairs), can be 10⁴–10⁵ numbers |
+| **Searchlight-friendly?** | Yes — fingerprints fit easily; k-means anchors avoid `n_centers²` blow-up | Marginal — requires file-backed RDM storage and is more expensive to compare across centers |
+| **Best when** | You have specific theoretical RDMs (semantic, visual, motor…) and want to ask which regions express each | You don’t have a clean theoretical RDM and want a model-free, data-driven similarity measure |
+| **Diagonal of the connectivity matrix** | ROI’s *strength* of model-RDM expression | ROI’s CV-predicted-vs-observed RDM alignment |
 
 A useful rule of thumb: **declared model → model-space connectivity;
 learned model → feature-RSA connectivity.** If you find yourself
@@ -78,6 +78,7 @@ this vignette teaches.
 We’ll use a small synthetic dataset with 80 trials and four ROIs.
 
 ``` r
+
 set.seed(2026)
 toy <- gen_sample_dataset(D = c(6, 6, 6), nobs = 80, blocks = 4, nlevels = 2)
 dset <- toy$dataset
@@ -93,6 +94,7 @@ region_mask <- NeuroVol(
 Two model RDMs — say, a “category” RDM and a “feature” RDM:
 
 ``` r
+
 n <- 80L
 R_cat <- as.matrix(stats::dist(matrix(rnorm(n * 4), n, 4)))
 R_feat <- as.matrix(stats::dist(matrix(rnorm(n * 4), n, 4)))
@@ -108,6 +110,7 @@ are interchangeable; we use
 here to keep one consistent design API throughout the vignette.
 
 ``` r
+
 des <- pair_rsa_design(
   items_a = paste0("trial", seq_len(n)),
   model   = list(category = R_cat, feature = R_feat)
@@ -118,6 +121,7 @@ Fit the RSA model with fingerprint capture turned on, and run it
 regionally.
 
 ``` r
+
 m <- rsa_model(
   dataset = dset, design = des,
   distmethod = "pearson", regtype = "pearson",
@@ -130,6 +134,7 @@ reg <- run_regional(m, region_mask, verbose = FALSE)
 You already get the standard ROI×metric performance table:
 
 ``` r
+
 reg$performance_table
 #> # A tibble: 4 × 3
 #>   roinum category  feature
@@ -144,6 +149,7 @@ The new piece is the per-ROI fingerprint matrix, attached as an
 attribute:
 
 ``` r
+
 fp <- attr(reg, "fingerprints")
 fp$scores
 #>            PC1          PC2
@@ -156,6 +162,7 @@ fp$scores
 And the connectivity summary is one line:
 
 ``` r
+
 conn <- model_space_connectivity(reg)
 round(conn$similarity, 3)
 #>   1      2     3      4
@@ -188,6 +195,7 @@ your model-RDM subspace (here K = 2 because we passed two RDMs).
 standardizes the fingerprints and returns several views of `F · Fᵀ`:
 
 ``` r
+
 conn$rank
 #> [1] 2
 dim(conn$scores)
@@ -205,15 +213,15 @@ names(conn)
 #> [19] "model_labels"            "decomposition_available"
 ```
 
-| Field                   | Shape               | What it is                                        |
-|:------------------------|:--------------------|:--------------------------------------------------|
-| `scores`                | ROIs × axes         | The whitened fingerprint matrix `F`               |
-| `similarity`            | ROIs × ROIs         | `F · Fᵀ` — strength-sensitive ROI similarity      |
-| `profile_similarity`    | ROIs × ROIs         | Cosine of fingerprints — orientation only         |
-| `component_similarity`  | list of ROIs × ROIs | One rank-1 matrix per orthogonal axis             |
-| `common_similarity`     | ROIs × ROIs         | The first component (often the shared model axis) |
-| `difference_similarity` | ROIs × ROIs         | Sum of the rest (differentiating axes)            |
-| `model_axis_cor`        | axes × models       | How each axis loads on your original RDMs         |
+| Field | Shape | What it is |
+|:---|:---|:---|
+| `scores` | ROIs × axes | The whitened fingerprint matrix `F` |
+| `similarity` | ROIs × ROIs | `F · Fᵀ` — strength-sensitive ROI similarity |
+| `profile_similarity` | ROIs × ROIs | Cosine of fingerprints — orientation only |
+| `component_similarity` | list of ROIs × ROIs | One rank-1 matrix per orthogonal axis |
+| `common_similarity` | ROIs × ROIs | The first component (often the shared model axis) |
+| `difference_similarity` | ROIs × ROIs | Sum of the rest (differentiating axes) |
+| `model_axis_cor` | axes × models | How each axis loads on your original RDMs |
 
 If you only care about *who is similar to whom in geometry*, look at
 `profile_similarity`. If you care about *who has strong representations
@@ -231,6 +239,7 @@ to
 [`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md):
 
 ``` r
+
 classic <- rsa_design(~ R_cat, list(R_cat = R_cat))
 paired  <- pair_rsa_design(
   items_a = paste0("trial", seq_len(n)),
@@ -257,6 +266,7 @@ natural pair space is the rectangular `n_a × n_b` table, not the lower
 triangle of one square RDM.
 
 ``` r
+
 n_a <- 6L; n_b <- 8L
 items_A <- paste0("A", seq_len(n_a))
 items_B <- paste0("B", seq_len(n_b))
@@ -296,6 +306,7 @@ Sometimes the model RDM is easier to define as a function of item
 attributes than as a precomputed matrix:
 
 ``` r
+
 items <- c("apple", "pear", "plum", "fig")
 features <- data.frame(length = c(5, 4, 4, 3), vowels = c(2, 2, 1, 1))
 
@@ -338,6 +349,7 @@ similarity matrix plus one brain map per anchor — a “this voxel’s
 representational geometry resembles anchor j” map.
 
 ``` r
+
 res_sl <- run_searchlight(m, radius = 6, method = "standard")
 
 conn_sl <- model_space_connectivity(
@@ -352,12 +364,12 @@ names(conn_sl)
 
 The returned `model_space_anchor_connectivity` object exposes:
 
-| Field         | What it is                                                        |
-|:--------------|:------------------------------------------------------------------|
-| `anchors`     | Center IDs of the chosen anchor searchlights                      |
-| `cluster_id`  | Cluster assignment for every searchlight                          |
-| `centroids`   | The k-means centroids in fingerprint space                        |
-| `similarity`  | `n_centers × k` matrix of similarities to each anchor             |
+| Field | What it is |
+|:---|:---|
+| `anchors` | Center IDs of the chosen anchor searchlights |
+| `cluster_id` | Cluster assignment for every searchlight |
+| `centroids` | The k-means centroids in fingerprint space |
+| `similarity` | `n_centers × k` matrix of similarities to each anchor |
 | `vol_results` | Named list of `NeuroVol` (or `NeuroSurface`) — one map per anchor |
 
 Memory is O(n_centers × k) regardless of the model-RDM dimension or the
@@ -368,6 +380,7 @@ coordinates from a prior analysis or specific parcels — pass them with
 `seeds = c(<center IDs>)` and the function skips k-means entirely:
 
 ``` r
+
 conn_sl <- model_space_connectivity(res_sl, seeds = c(101L, 422L, 1037L))
 ```
 
@@ -381,14 +394,14 @@ anchors.
 
 ## Object zoo
 
-| Class                             | Constructor                                                                                                           | What it holds                                                                                        |
-|:----------------------------------|:----------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------|
-| `pair_rsa_design`                 | [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)                                 | A pair table, model RDM vectors, optional nuisance vectors. Inherits from `rsa_design`.              |
-| `rsa_model`                       | `rsa_model(..., return_fingerprint = TRUE)`                                                                           | A fittable RSA spec that emits fingerprints alongside the standard scores.                           |
-| `regional_mvpa_result`            | [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)                               | Per-ROI results. Carries fingerprints in `attr(., "fingerprints")` when `return_fingerprint = TRUE`. |
-| `searchlight_result`              | [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)                                 | Per-center results. Same fingerprint attribute.                                                      |
-| `rdm_model_space_connectivity`    | [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) (regional)    | ROI×ROI similarity matrix and decompositions.                                                        |
-| `model_space_anchor_connectivity` | [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) (searchlight) | Anchor maps and `n_centers × k` similarity matrix.                                                   |
+| Class | Constructor | What it holds |
+|:---|:---|:---|
+| `pair_rsa_design` | [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md) | A pair table, model RDM vectors, optional nuisance vectors. Inherits from `rsa_design`. |
+| `rsa_model` | `rsa_model(..., return_fingerprint = TRUE)` | A fittable RSA spec that emits fingerprints alongside the standard scores. |
+| `regional_mvpa_result` | [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) | Per-ROI results. Carries fingerprints in `attr(., "fingerprints")` when `return_fingerprint = TRUE`. |
+| `searchlight_result` | [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md) | Per-center results. Same fingerprint attribute. |
+| `rdm_model_space_connectivity` | [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) (regional) | ROI×ROI similarity matrix and decompositions. |
+| `model_space_anchor_connectivity` | [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) (searchlight) | Anchor maps and `n_centers × k` similarity matrix. |
 
 ## Where to go next
 
