@@ -271,9 +271,10 @@ res_sl <- run_searchlight(m, radius = 6, method = "standard")
 
 conn_sl <- model_space_connectivity(
   res_sl,
-  k = 20,           # number of anchors
-  scale = "norm",   # cosine similarity
-  random_seed = 1L  # reproducible k-means starts
+  k = 20,             # number of anchors
+  scale = "norm",     # cosine similarity
+  random_seed = 1L,   # reproducible k-means starts
+  build_maps = FALSE  # set TRUE when you want anchor similarity maps
 )
 
 names(conn_sl)
@@ -287,9 +288,11 @@ The returned `model_space_anchor_connectivity` object exposes:
 | `cluster_id` | Cluster assignment for every searchlight |
 | `centroids` | The k-means centroids in fingerprint space |
 | `similarity` | `n_centers × k` matrix of similarities to each anchor |
-| `vol_results` | Named list of `NeuroVol` (or `NeuroSurface`) — one map per anchor |
+| `vol_results` | Named list of `NeuroVol` (or `NeuroSurface`) when `build_maps = TRUE` — one map per anchor |
 
 Memory is O(n_centers × k) regardless of the model-RDM dimension or the number of trials.
+Use `build_maps = FALSE` while choosing `k` or inspecting clusters; turn maps on
+only once you know which anchor summary you want to write or visualize.
 
 If you already have anchor centers in mind — for example, peak coordinates from a prior analysis or specific parcels — pass them with `seeds = c(<center IDs>)` and the function skips k-means entirely:
 

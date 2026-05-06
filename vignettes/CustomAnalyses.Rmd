@@ -194,23 +194,17 @@ custom_regional_results <- run_custom_regional(
   .verbose = FALSE
 )
 
-# Print the results table
-print(custom_regional_results)
+custom_regional_results
 
-# Example with error handling (using the robust function and potential small ROI 4)
-# Suppress expected warnings from the logger about the error
-suppressWarnings({
-    custom_regional_error_results <- run_custom_regional(
-      dataset = dataset_obj,
-      region_mask = region_mask_vol,
-      custom_func = calculate_roi_stats_robust, # Function that might error
-      .cores = 1, 
-      .verbose = FALSE
-    )
-})
+custom_regional_error_results <- run_custom_regional(
+  dataset = dataset_obj,
+  region_mask = region_mask_vol,
+  custom_func = calculate_roi_stats_robust,
+  .cores = 1,
+  .verbose = FALSE
+)
 
-cat("\nResults with potential errors:\n")
-print(custom_regional_error_results)
+custom_regional_error_results
 
 ```
 

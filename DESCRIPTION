@@ -134,6 +134,7 @@ Suggests:
     fmrihrf,
     foreach,
     future.callr,
+    ggplot2,
     iterators,
     jsonlite,
     knitr,

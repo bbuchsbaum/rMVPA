@@ -215,7 +215,7 @@ partition_ms <- era_partition_model(
   distfun = cordist("pearson"),
   rsa_simfun = "spearman",
   xdec_link_by = "item",
-  include_procrustes = FALSE
+  include_procrustes = FALSE # keep the toy example fast; see note below
 )
 
 partition_res <- run_regional(partition_ms, region_mask)

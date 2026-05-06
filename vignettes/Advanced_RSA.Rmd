@@ -58,10 +58,12 @@ The core distinction is that Feature‑Based RSA predicts feature values directl
 Let's walk through a complete example:
 
 ```{r generate_data}
-## Generate data and weakly-correlated features
-# Synthetic dataset: 6x6x6, 50 observations (4 blocks)
 data_out <- rMVPA::gen_sample_dataset(D = c(6,6,6), nobs = 50, blocks = 4, nlevels = 2)
-print(data_out)
+data.frame(
+  observations = length(data_out$design$block_var),
+  active_voxels = sum(data_out$dataset$mask),
+  blocks = length(unique(data_out$design$block_var))
+)
 
 set.seed(123)
 n_stimuli  <- 50
@@ -131,11 +133,9 @@ region_mask <- neuroim2::NeuroVol(
   indices = which(mask_vol > 0)
 )
 
-# Run regional analysis (suppress log messages for clarity)
-results <- suppressWarnings(suppressMessages(run_regional(feature_model, region_mask)))
+results <- run_regional(feature_model, region_mask)
 
-# Examine results
-print(results$performance_table)
+results$performance_table
 ```
 
 ## Available methods
@@ -152,14 +152,16 @@ results_list <- lapply(methods, function(method) {
     method = method,
     crossval = crossval  # Add cross-validation
   )
-  suppressWarnings(suppressMessages(run_regional(model, region_mask)))
+  run_regional(model, region_mask)
 })
 
-# Compare performance
-for (i in seq_along(methods)) {
-  cat("\nMethod:", methods[i], "\n")
-  print(results_list[[i]]$performance_table)
-}
+method_summary <- do.call(rbind, Map(function(method, res) {
+  tab <- res$performance_table
+  tab$method <- method
+  tab
+}, methods, results_list))
+
+method_summary[, c("method", setdiff(names(method_summary), "method"))]
 ```
 
 # Vector-Based RSA
@@ -197,11 +199,9 @@ vector_model <- vector_rsa_model(
   rsa_simfun = "pearson"
 )
 
-# Run analysis (suppress log messages for clarity)
-results_vector <- suppressWarnings(suppressMessages(run_regional(vector_model, region_mask)))
+results_vector <- run_regional(vector_model, region_mask)
 
-# Examine results
-print(results_vector$performance_table)
+results_vector$performance_table
 ```
 
 ## Efficient Block Handling
@@ -223,14 +223,16 @@ results_blocks <- lapply(block_sizes, function(size) {
     design = design,
     distfun = cordist()
   )
-  suppressWarnings(suppressMessages(run_regional(model, region_mask)))
+  run_regional(model, region_mask)
 })
 
-# Compare results
-for (i in seq_along(block_sizes)) {
-  cat("\nBlock size:", block_sizes[i], "\n")
-  print(results_blocks[[i]]$performance_table)
-}
+block_summary <- do.call(rbind, Map(function(block_size, res) {
+  tab <- res$performance_table
+  tab$block_size <- block_size
+  tab
+}, block_sizes, results_blocks))
+
+block_summary[, c("block_size", setdiff(names(block_summary), "block_size"))]
 ```
 
 # When to Use Each Method

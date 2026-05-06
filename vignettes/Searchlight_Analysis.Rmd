@@ -20,9 +20,17 @@ includes:
     <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-teal');});</script>
 
 ---
-
-
 ## Searchlight Analysis
+
+Use searchlight MVPA when you want a whole-brain map of local decoding
+performance rather than one score per anatomical ROI. The input is the same
+`mvpa_model()` you would use for a regional analysis; the output is a
+`searchlight_result` with one performance map per metric.
+
+The examples below are written against a tiny synthetic volume. The fitting
+chunks are left unevaluated in the vignette source because real searchlights can
+take minutes to hours, but the calls are complete and can be run as-is.
+
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -36,25 +44,6 @@ if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown"
 }
 library(neuroim2)
 library(rMVPA)
-
-safe_plot_hist <- function(x, title = "Histogram", bins = 30) {
-  x <- as.numeric(x)
-  x <- x[is.finite(x)]
-  if (!length(x)) return(invisible(NULL))
-  if (requireNamespace("ggplot2", quietly = TRUE)) {
-    df <- data.frame(x = x)
-    p <- ggplot2::ggplot(df, ggplot2::aes(x = x)) +
-      ggplot2::geom_histogram(bins = bins, fill = "grey80", color = "white") +
-      ggplot2::labs(title = title, x = "AUC", y = "Count") +
-      ggplot2::theme_minimal()
-    print(p)
-  } else {
-    cat(sprintf("AUC summary: n=%d, mean=%.3f, sd=%.3f, min=%.3f, max=%.3f\n",
-                length(x), mean(x), stats::sd(x), min(x), max(x)))
-  }
-}
-
-light_build <- identical(Sys.getenv("IN_PKGDOWN"), "true")
 ```
 
 ### Simulated data
@@ -63,9 +52,13 @@ We first create a small volumetric dataset for demonstration. The call below gen
 
 
 ```{r simulated_data}
-
 dataset <- gen_sample_dataset(D=c(6,6,6), nobs = 80, blocks=4, nlevels=2)
-print(dataset)
+data.frame(
+  observations = length(dataset$design$block_var),
+  active_voxels = sum(dataset$dataset$mask),
+  blocks = length(unique(dataset$design$block_var)),
+  classes = length(levels(dataset$design$targets))
+)
 ```
 
 ### Cross‑validation
@@ -92,41 +85,29 @@ model
 
 `run_searchlight()` returns image volumes with performance metrics at each sphere center. For two‑class problems we report cross‑validated accuracy and AUC (centered at 0 by subtracting 0.5). The `radius` is in millimeters; `method = "standard"` evaluates one model per sphere centered on each voxel.
 
-```{r standard_searchlight, eval=!light_build}
+```{r standard_searchlight, eval=FALSE}
 result <- run_searchlight(model, radius=4, method="standard")
 result
 ```
 
-```{r standard_searchlight_hist, echo=FALSE, eval=!light_build}
-if (!is.null(result$results$AUC)) {
-  auc_vals <- as.numeric(neuroim2::values(result$results$AUC))
-  auc_vals <- auc_vals[is.finite(auc_vals)]
-  if (length(auc_vals) > 0) safe_plot_hist(auc_vals, title = "Searchlight AUC (centered)")
-}
-```
+After fitting, inspect `names(result$results)` to see the available performance
+maps. For a two-class classifier, `result$results$AUC` is the usual first map to
+view.
 
 ## Randomized searchlight
 
 The randomized variant samples non‑overlapping spheres and propagates each sphere’s score to all voxels it covers. Repeating this for `niter` exhaustive passes yields, at each voxel, the average performance across the spheres that included it. This can improve spatial localization and often reduces computation, since the number of models scales with `nvoxels / radius × niter` rather than the total number of voxels.
 
-```{r randomized_searchlight, eval=!light_build}
+```{r randomized_searchlight, eval=FALSE}
 result <- run_searchlight(model, radius=4, method="randomized", niter=8)
 result
-```
-
-```{r randomized_searchlight_hist, echo=FALSE, eval=!light_build}
-if (!is.null(result$results$AUC)) {
-  auc_vals <- as.numeric(neuroim2::values(result$results$AUC))
-  auc_vals <- auc_vals[is.finite(auc_vals)]
-  if (length(auc_vals) > 0) safe_plot_hist(auc_vals, title = "Randomized Searchlight AUC (centered)")
-}
 ```
 
 ## Using different classifiers
 
 Any classifier in the rMVPA registry can be used in a searchlight. You can also register your own with `register_mvpa_model()`. Two robust options that ship with rMVPA are `hdrda` and `pca_lda`:
 
-```{r hdrda_classifier, eval=!light_build}
+```{r hdrda_classifier, eval=FALSE}
 # High‑Dimensional Regularized Discriminant Analysis
 hdrda <- load_model("hdrda")
 model_hdrda <- mvpa_model(model = hdrda, dataset = dataset$dataset, design = dataset$design,
@@ -135,7 +116,7 @@ res_hdrda <- run_searchlight(model_hdrda, radius = 4, method = "randomized", nit
 res_hdrda
 ```
 
-```{r pca_lda_classifier, eval=!light_build}
+```{r pca_lda_classifier, eval=FALSE}
 # PCA + LDA pipeline
 pca_lda <- load_model("pca_lda")
 model_pca_lda <- mvpa_model(model = pca_lda, dataset = dataset$dataset, design = dataset$design,
@@ -148,7 +129,7 @@ res_pca_lda
 
 REMAP‑RRR models memory as perception plus a low‑rank correction in a jointly whitened space. It learns a residual map Δ on the prototype residuals (Y_w − X_w) ≈ X_w Δ, builds predicted memory templates Ŷ_w = X_w + λ X_w Δ (with λ tuned on training items), and classifies held‑out memory trials by correlation to Ŷ_w. Provide an external test set in your dataset/design (same pattern as localizer→WM), and optionally a `link_by` column shared by train/test designs to pair items across domains.
 
-```{r remap_rrr_example, eval=!light_build}
+```{r remap_rrr_example, eval=FALSE}
 # Synthetic source→target setup
 toy <- gen_sample_dataset(D = c(6,6,6), nobs = 120, nlevels = 4, blocks = 3, external_test = TRUE)
 regionMask <- neuroim2::NeuroVol(sample(1:5, size = length(toy$dataset$mask), replace = TRUE),
