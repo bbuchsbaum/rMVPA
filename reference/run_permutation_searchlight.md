@@ -159,202 +159,202 @@ engine-specific branching.
   # Strategy 1: subsampled iterator (default, universal)
   pc1   <- permutation_control(n_perm = 10, subsample = 0.2, seed = 1L)
   res1  <- run_permutation_searchlight(mspec, radius = 3, perm_ctrl = pc1)
-#> INFO [2026-05-06 23:49:05] Running observed searchlight (radius = 3 mm) ...
+#> INFO [2026-05-07 20:44:36] Running observed searchlight (radius = 3 mm) ...
 #> Warning: run_searchlight preflight reported 0 failure(s) and 1 warning(s).
 #> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.
-#> INFO [2026-05-06 23:49:05] searchlight engine: legacy (no eligible fast path)
-#> INFO [2026-05-06 23:49:05] Running standard searchlight with radius = 3
-#> INFO [2026-05-06 23:49:05] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-05-06 23:49:05] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
-#> INFO [2026-05-06 23:49:05] creating standard searchlight
-#> INFO [2026-05-06 23:49:05] running standard searchlight iterator
-#> INFO [2026-05-06 23:49:16] 
+#> INFO [2026-05-07 20:44:36] searchlight engine: legacy (no eligible fast path)
+#> INFO [2026-05-07 20:44:36] Running standard searchlight with radius = 3
+#> INFO [2026-05-07 20:44:36] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-05-07 20:44:36] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
+#> INFO [2026-05-07 20:44:36] creating standard searchlight
+#> INFO [2026-05-07 20:44:36] running standard searchlight iterator
+#> INFO [2026-05-07 20:44:47] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 125
 #> - Processed: 125
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:16] searchlight (standard): 125 ROIs processed (success=125, errors=0)
-#> INFO [2026-05-06 23:49:16] Building searchlight iterator ...
-#> INFO [2026-05-06 23:49:16] Subsampling searchlight centers ...
-#> INFO [2026-05-06 23:49:16] Using 25 / 125 centers for permutation runs.
-#> INFO [2026-05-06 23:49:16] Permutation 1 / 10 (strategy: iterate) ...
-#> INFO [2026-05-06 23:49:18] 
+#> INFO [2026-05-07 20:44:48] searchlight (standard): 125 ROIs processed (success=125, errors=0)
+#> INFO [2026-05-07 20:44:48] Building searchlight iterator ...
+#> INFO [2026-05-07 20:44:48] Subsampling searchlight centers ...
+#> INFO [2026-05-07 20:44:48] Using 25 / 125 centers for permutation runs.
+#> INFO [2026-05-07 20:44:48] Permutation 1 / 10 (strategy: iterate) ...
+#> INFO [2026-05-07 20:44:50] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 25
 #> - Processed: 25
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:19] Permutation 2 / 10 (strategy: iterate) ...
-#> INFO [2026-05-06 23:49:21] 
+#> INFO [2026-05-07 20:44:51] Permutation 2 / 10 (strategy: iterate) ...
+#> INFO [2026-05-07 20:44:53] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 25
 #> - Processed: 25
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:21] Permutation 3 / 10 (strategy: iterate) ...
-#> INFO [2026-05-06 23:49:23] 
+#> INFO [2026-05-07 20:44:53] Permutation 3 / 10 (strategy: iterate) ...
+#> INFO [2026-05-07 20:44:56] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 25
 #> - Processed: 25
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:24] Permutation 4 / 10 (strategy: iterate) ...
-#> INFO [2026-05-06 23:49:26] 
+#> INFO [2026-05-07 20:44:56] Permutation 4 / 10 (strategy: iterate) ...
+#> INFO [2026-05-07 20:44:58] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 25
 #> - Processed: 25
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:26] Permutation 5 / 10 (strategy: iterate) ...
-#> INFO [2026-05-06 23:49:28] 
+#> INFO [2026-05-07 20:44:59] Permutation 5 / 10 (strategy: iterate) ...
+#> INFO [2026-05-07 20:45:01] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 25
 #> - Processed: 25
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:29] Permutation 6 / 10 (strategy: iterate) ...
-#> INFO [2026-05-06 23:49:31] 
+#> INFO [2026-05-07 20:45:01] Permutation 6 / 10 (strategy: iterate) ...
+#> INFO [2026-05-07 20:45:04] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 25
 #> - Processed: 25
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:31] Permutation 7 / 10 (strategy: iterate) ...
-#> INFO [2026-05-06 23:49:33] 
+#> INFO [2026-05-07 20:45:04] Permutation 7 / 10 (strategy: iterate) ...
+#> INFO [2026-05-07 20:45:06] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 25
 #> - Processed: 25
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:34] Permutation 8 / 10 (strategy: iterate) ...
-#> INFO [2026-05-06 23:49:36] 
+#> INFO [2026-05-07 20:45:06] Permutation 8 / 10 (strategy: iterate) ...
+#> INFO [2026-05-07 20:45:09] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 25
 #> - Processed: 25
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:36] Permutation 9 / 10 (strategy: iterate) ...
-#> INFO [2026-05-06 23:49:38] 
+#> INFO [2026-05-07 20:45:09] Permutation 9 / 10 (strategy: iterate) ...
+#> INFO [2026-05-07 20:45:11] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 25
 #> - Processed: 25
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:38] Permutation 10 / 10 (strategy: iterate) ...
-#> INFO [2026-05-06 23:49:41] 
+#> INFO [2026-05-07 20:45:12] Permutation 10 / 10 (strategy: iterate) ...
+#> INFO [2026-05-07 20:45:14] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 25
 #> - Processed: 25
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:41] Running null diagnostics ...
+#> INFO [2026-05-07 20:45:14] Running null diagnostics ...
 #> Null Distribution Diagnostics (n_perm = 10 )
 #> -------------------------------------------------- 
 #>   nfeatures            [OK]
 #>     rho=-0.141  p=0.0253
 #>     No significant correlation with nfeatures.
 #> -------------------------------------------------- 
-#> INFO [2026-05-06 23:49:41] Building adjusted null distribution (adjusted, 5 bins) ...
-#> INFO [2026-05-06 23:49:41] Computing p-values for 125 centers ...
-#> INFO [2026-05-06 23:49:41] Building p-value spatial maps ...
-#> INFO [2026-05-06 23:49:41] Done. 0 centers significant at FDR < 0.05 (fdr).
+#> INFO [2026-05-07 20:45:14] Building adjusted null distribution (adjusted, 5 bins) ...
+#> INFO [2026-05-07 20:45:14] Computing p-values for 125 centers ...
+#> INFO [2026-05-07 20:45:14] Building p-value spatial maps ...
+#> INFO [2026-05-07 20:45:14] Done. 0 centers significant at FDR < 0.05 (fdr).
 
   # Strategy 2: full-brain via run_searchlight (engine-aware)
   pc2   <- permutation_control(n_perm = 5, perm_strategy = "searchlight",
                                seed = 1L)
   res2  <- run_permutation_searchlight(mspec, radius = 3, perm_ctrl = pc2)
-#> INFO [2026-05-06 23:49:41] Running observed searchlight (radius = 3 mm) ...
+#> INFO [2026-05-07 20:45:14] Running observed searchlight (radius = 3 mm) ...
 #> Warning: run_searchlight preflight reported 0 failure(s) and 1 warning(s).
 #> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.
-#> INFO [2026-05-06 23:49:41] searchlight engine: legacy (no eligible fast path)
-#> INFO [2026-05-06 23:49:41] Running standard searchlight with radius = 3
-#> INFO [2026-05-06 23:49:41] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-05-06 23:49:41] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
-#> INFO [2026-05-06 23:49:41] creating standard searchlight
-#> INFO [2026-05-06 23:49:41] running standard searchlight iterator
-#> INFO [2026-05-06 23:49:51] 
+#> INFO [2026-05-07 20:45:14] searchlight engine: legacy (no eligible fast path)
+#> INFO [2026-05-07 20:45:14] Running standard searchlight with radius = 3
+#> INFO [2026-05-07 20:45:14] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-05-07 20:45:14] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
+#> INFO [2026-05-07 20:45:14] creating standard searchlight
+#> INFO [2026-05-07 20:45:14] running standard searchlight iterator
+#> INFO [2026-05-07 20:45:25] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 125
 #> - Processed: 125
 #> - Skipped: 0
-#> INFO [2026-05-06 23:49:51] searchlight (standard): 125 ROIs processed (success=125, errors=0)
-#> INFO [2026-05-06 23:49:51] Building searchlight iterator ...
-#> INFO [2026-05-06 23:49:51] Strategy = 'searchlight': full brain computed per permutation. 'subsample' parameter ignored; all 125 centers contribute to null.
-#> INFO [2026-05-06 23:49:51] Permutation 1 / 5 (strategy: searchlight) ...
+#> INFO [2026-05-07 20:45:25] searchlight (standard): 125 ROIs processed (success=125, errors=0)
+#> INFO [2026-05-07 20:45:25] Building searchlight iterator ...
+#> INFO [2026-05-07 20:45:25] Strategy = 'searchlight': full brain computed per permutation. 'subsample' parameter ignored; all 125 centers contribute to null.
+#> INFO [2026-05-07 20:45:25] Permutation 1 / 5 (strategy: searchlight) ...
 #> Warning: run_searchlight preflight reported 0 failure(s) and 1 warning(s).
 #> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.
-#> INFO [2026-05-06 23:49:51] searchlight engine: legacy (no eligible fast path)
-#> INFO [2026-05-06 23:49:51] Running standard searchlight with radius = 3
-#> INFO [2026-05-06 23:49:51] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-05-06 23:49:51] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
-#> INFO [2026-05-06 23:49:51] creating standard searchlight
-#> INFO [2026-05-06 23:49:51] running standard searchlight iterator
-#> INFO [2026-05-06 23:50:02] 
+#> INFO [2026-05-07 20:45:25] searchlight engine: legacy (no eligible fast path)
+#> INFO [2026-05-07 20:45:25] Running standard searchlight with radius = 3
+#> INFO [2026-05-07 20:45:25] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-05-07 20:45:25] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
+#> INFO [2026-05-07 20:45:25] creating standard searchlight
+#> INFO [2026-05-07 20:45:25] running standard searchlight iterator
+#> INFO [2026-05-07 20:45:37] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 125
 #> - Processed: 125
 #> - Skipped: 0
-#> INFO [2026-05-06 23:50:02] searchlight (standard): 125 ROIs processed (success=125, errors=0)
-#> INFO [2026-05-06 23:50:02] Permutation 2 / 5 (strategy: searchlight) ...
+#> INFO [2026-05-07 20:45:37] searchlight (standard): 125 ROIs processed (success=125, errors=0)
+#> INFO [2026-05-07 20:45:37] Permutation 2 / 5 (strategy: searchlight) ...
 #> Warning: run_searchlight preflight reported 0 failure(s) and 1 warning(s).
 #> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.
-#> INFO [2026-05-06 23:50:02] searchlight engine: legacy (no eligible fast path)
-#> INFO [2026-05-06 23:50:02] Running standard searchlight with radius = 3
-#> INFO [2026-05-06 23:50:02] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-05-06 23:50:02] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
-#> INFO [2026-05-06 23:50:02] creating standard searchlight
-#> INFO [2026-05-06 23:50:02] running standard searchlight iterator
-#> INFO [2026-05-06 23:50:12] 
+#> INFO [2026-05-07 20:45:37] searchlight engine: legacy (no eligible fast path)
+#> INFO [2026-05-07 20:45:37] Running standard searchlight with radius = 3
+#> INFO [2026-05-07 20:45:37] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-05-07 20:45:37] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
+#> INFO [2026-05-07 20:45:37] creating standard searchlight
+#> INFO [2026-05-07 20:45:37] running standard searchlight iterator
+#> INFO [2026-05-07 20:45:48] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 125
 #> - Processed: 125
 #> - Skipped: 0
-#> INFO [2026-05-06 23:50:12] searchlight (standard): 125 ROIs processed (success=125, errors=0)
-#> INFO [2026-05-06 23:50:12] Permutation 3 / 5 (strategy: searchlight) ...
+#> INFO [2026-05-07 20:45:48] searchlight (standard): 125 ROIs processed (success=125, errors=0)
+#> INFO [2026-05-07 20:45:48] Permutation 3 / 5 (strategy: searchlight) ...
 #> Warning: run_searchlight preflight reported 0 failure(s) and 1 warning(s).
 #> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.
-#> INFO [2026-05-06 23:50:12] searchlight engine: legacy (no eligible fast path)
-#> INFO [2026-05-06 23:50:12] Running standard searchlight with radius = 3
-#> INFO [2026-05-06 23:50:12] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-05-06 23:50:12] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
-#> INFO [2026-05-06 23:50:12] creating standard searchlight
-#> INFO [2026-05-06 23:50:12] running standard searchlight iterator
-#> INFO [2026-05-06 23:50:23] 
+#> INFO [2026-05-07 20:45:48] searchlight engine: legacy (no eligible fast path)
+#> INFO [2026-05-07 20:45:48] Running standard searchlight with radius = 3
+#> INFO [2026-05-07 20:45:48] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-05-07 20:45:48] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
+#> INFO [2026-05-07 20:45:48] creating standard searchlight
+#> INFO [2026-05-07 20:45:48] running standard searchlight iterator
+#> INFO [2026-05-07 20:45:59] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 125
 #> - Processed: 125
 #> - Skipped: 0
-#> INFO [2026-05-06 23:50:23] searchlight (standard): 125 ROIs processed (success=125, errors=0)
-#> INFO [2026-05-06 23:50:23] Permutation 4 / 5 (strategy: searchlight) ...
+#> INFO [2026-05-07 20:45:59] searchlight (standard): 125 ROIs processed (success=125, errors=0)
+#> INFO [2026-05-07 20:45:59] Permutation 4 / 5 (strategy: searchlight) ...
 #> Warning: run_searchlight preflight reported 0 failure(s) and 1 warning(s).
 #> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.
-#> INFO [2026-05-06 23:50:23] searchlight engine: legacy (no eligible fast path)
-#> INFO [2026-05-06 23:50:23] Running standard searchlight with radius = 3
-#> INFO [2026-05-06 23:50:23] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-05-06 23:50:23] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
-#> INFO [2026-05-06 23:50:23] creating standard searchlight
-#> INFO [2026-05-06 23:50:23] running standard searchlight iterator
-#> INFO [2026-05-06 23:50:33] 
+#> INFO [2026-05-07 20:45:59] searchlight engine: legacy (no eligible fast path)
+#> INFO [2026-05-07 20:45:59] Running standard searchlight with radius = 3
+#> INFO [2026-05-07 20:45:59] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-05-07 20:45:59] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
+#> INFO [2026-05-07 20:45:59] creating standard searchlight
+#> INFO [2026-05-07 20:45:59] running standard searchlight iterator
+#> INFO [2026-05-07 20:46:10] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 125
 #> - Processed: 125
 #> - Skipped: 0
-#> INFO [2026-05-06 23:50:34] searchlight (standard): 125 ROIs processed (success=125, errors=0)
-#> INFO [2026-05-06 23:50:34] Permutation 5 / 5 (strategy: searchlight) ...
+#> INFO [2026-05-07 20:46:11] searchlight (standard): 125 ROIs processed (success=125, errors=0)
+#> INFO [2026-05-07 20:46:11] Permutation 5 / 5 (strategy: searchlight) ...
 #> Warning: run_searchlight preflight reported 0 failure(s) and 1 warning(s).
 #> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.
-#> INFO [2026-05-06 23:50:34] searchlight engine: legacy (no eligible fast path)
-#> INFO [2026-05-06 23:50:34] Running standard searchlight with radius = 3
-#> INFO [2026-05-06 23:50:34] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-05-06 23:50:34] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
-#> INFO [2026-05-06 23:50:34] creating standard searchlight
-#> INFO [2026-05-06 23:50:34] running standard searchlight iterator
-#> INFO [2026-05-06 23:50:44] 
+#> INFO [2026-05-07 20:46:11] searchlight engine: legacy (no eligible fast path)
+#> INFO [2026-05-07 20:46:11] Running standard searchlight with radius = 3
+#> INFO [2026-05-07 20:46:11] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-05-07 20:46:11] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)
+#> INFO [2026-05-07 20:46:11] creating standard searchlight
+#> INFO [2026-05-07 20:46:11] running standard searchlight iterator
+#> INFO [2026-05-07 20:46:21] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 125
 #> - Processed: 125
 #> - Skipped: 0
-#> INFO [2026-05-06 23:50:44] searchlight (standard): 125 ROIs processed (success=125, errors=0)
-#> INFO [2026-05-06 23:50:44] Running null diagnostics ...
+#> INFO [2026-05-07 20:46:22] searchlight (standard): 125 ROIs processed (success=125, errors=0)
+#> INFO [2026-05-07 20:46:22] Running null diagnostics ...
 #> Null Distribution Diagnostics (n_perm = 5 )
 #> -------------------------------------------------- 
 #>   nfeatures            [FLAGGED]
 #>     rho=-0.173  p=0.0000
 #>     Null correlates with nfeatures (p < 0.01); covariate adjustment recommended.
 #> -------------------------------------------------- 
-#> INFO [2026-05-06 23:50:44] Building adjusted null distribution (adjusted, 5 bins) ...
-#> INFO [2026-05-06 23:50:44] Computing p-values for 125 centers ...
-#> INFO [2026-05-06 23:50:44] Building p-value spatial maps ...
-#> INFO [2026-05-06 23:50:44] Done. 0 centers significant at FDR < 0.05 (fdr).
+#> INFO [2026-05-07 20:46:22] Building adjusted null distribution (adjusted, 5 bins) ...
+#> INFO [2026-05-07 20:46:22] Computing p-values for 125 centers ...
+#> INFO [2026-05-07 20:46:22] Building p-value spatial maps ...
+#> INFO [2026-05-07 20:46:22] Done. 0 centers significant at FDR < 0.05 (fdr).
 # }
 ```

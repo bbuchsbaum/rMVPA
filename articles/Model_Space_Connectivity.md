@@ -258,6 +258,27 @@ if you prefer;
 [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
 is here so the design layer can also handle the cases below.
 
+Classic
+[`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
+also has the same explicit nuisance channel. Nuisance RDMs enter the
+fitted RSA model, but they do not define fingerprint axes:
+
+``` r
+
+R_order <- as.matrix(stats::dist(seq_len(n)))
+
+classic_nuis <- rsa_design(
+  ~ R_cat + R_feat,
+  data = list(R_cat = R_cat, R_feat = R_feat),
+  nuisance = list(order = R_order)
+)
+
+names(classic_nuis$model_mat)
+#> [1] "R_cat"  "R_feat" "order"
+classic_nuis$nuisance_predictors
+#> [1] "order"
+```
+
 ### Cross-domain (between) pairs
 
 When item set A and item set B differ — for example, items shown in
@@ -399,6 +420,7 @@ anchors.
 
 | Class | Constructor | What it holds |
 |:---|:---|:---|
+| `rsa_design` | `rsa_design(..., nuisance = list(...))` | Classical within-domain RSA design with optional nuisance RDMs. |
 | `pair_rsa_design` | [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md) | A pair table, model RDM vectors, optional nuisance vectors. Inherits from `rsa_design`. |
 | `rsa_model` | `rsa_model(..., return_fingerprint = TRUE)` | A fittable RSA spec that emits fingerprints alongside the standard scores. |
 | `regional_mvpa_result` | [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) | Per-ROI results. Carries fingerprints in `attr(., "fingerprints")` when `return_fingerprint = TRUE`. |

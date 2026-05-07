@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-05-06</h4>
+            <h4 data-toc-skip class="date">2026-05-07</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Model_Space_Connectivity.Rmd" class="external-link"><code>vignettes/Model_Space_Connectivity.Rmd</code></a></small>
       <div class="d-none name"><code>Model_Space_Connectivity.Rmd</code></div>
@@ -389,6 +389,22 @@ Equivalent to <code><a href="../reference/rsa_design.html">rsa_design()</a></cod
 feed into <code><a href="../reference/rsa_model.html">rsa_model()</a></code> interchangeably. You can keep using
 <code><a href="../reference/rsa_design.html">rsa_design()</a></code> if you prefer; <code><a href="../reference/pair_rsa_design.html">pair_rsa_design()</a></code>
 is here so the design layer can also handle the cases below.</p>
+<p>Classic <code><a href="../reference/rsa_design.html">rsa_design()</a></code> also has the same explicit nuisance
+channel. Nuisance RDMs enter the fitted RSA model, but they do not
+define fingerprint axes:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">R_order</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/dist.html" class="external-link">dist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">classic_nuis</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_design.html">rsa_design</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span> <span class="va">R_cat</span> <span class="op">+</span> <span class="va">R_feat</span>,</span>
+<span>  data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>R_cat <span class="op">=</span> <span class="va">R_cat</span>, R_feat <span class="op">=</span> <span class="va">R_feat</span><span class="op">)</span>,</span>
+<span>  nuisance <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>order <span class="op">=</span> <span class="va">R_order</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">classic_nuis</span><span class="op">$</span><span class="va">model_mat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "R_cat"  "R_feat" "order"</span></span>
+<span><span class="va">classic_nuis</span><span class="op">$</span><span class="va">nuisance_predictors</span></span>
+<span><span class="co">#&gt; [1] "order"</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="cross-domain-between-pairs">Cross-domain (between) pairs<a class="anchor" aria-label="anchor" href="#cross-domain-between-pairs"></a>
@@ -398,7 +414,7 @@ is here so the design layer can also handle the cases below.</p>
 vs <em>movie B</em> — the natural pair space is the rectangular
 <code>n_a × n_b</code> table, not the lower triangle of one square
 RDM.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">n_a</span> <span class="op">&lt;-</span> <span class="fl">6L</span>; <span class="va">n_b</span> <span class="op">&lt;-</span> <span class="fl">8L</span></span>
 <span><span class="va">items_A</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n_a</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">items_B</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"B"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n_b</span><span class="op">)</span><span class="op">)</span></span>
@@ -433,7 +449,7 @@ in the within-domain case. ROI-to-ROI connectivity through
 </h3>
 <p>Sometimes the model RDM is easier to define as a function of item
 attributes than as a precomputed matrix:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">items</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"apple"</span>, <span class="st">"pear"</span>, <span class="st">"plum"</span>, <span class="st">"fig"</span><span class="op">)</span></span>
 <span><span class="va">features</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>length <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">4</span>, <span class="fl">4</span>, <span class="fl">3</span><span class="op">)</span>, vowels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -477,7 +493,7 @@ each centroid as an <em>anchor</em>. Connectivity becomes an
 <code>n_centers × k</code> similarity matrix plus one brain map per
 anchor — a “this voxel’s representational geometry resembles anchor j”
 map.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_sl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">m</span>, radius <span class="op">=</span> <span class="fl">6</span>, method <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">conn_sl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/model_space_connectivity.html">model_space_connectivity</a></span><span class="op">(</span></span>
@@ -535,7 +551,7 @@ which anchor summary you want to write or visualize.</p>
 coordinates from a prior analysis or specific parcels — pass them with
 <code>seeds = c(&lt;center IDs&gt;)</code> and the function skips
 k-means entirely:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">conn_sl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/model_space_connectivity.html">model_space_connectivity</a></span><span class="op">(</span><span class="va">res_sl</span>, seeds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">101L</span>, <span class="fl">422L</span>, <span class="fl">1037L</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -564,36 +580,42 @@ fingerprints than requested anchors.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
+<td align="left"><code>rsa_design</code></td>
+<td align="left"><code>rsa_design(..., nuisance = list(...))</code></td>
+<td align="left">Classical within-domain RSA design with optional
+nuisance RDMs.</td>
+</tr>
+<tr class="even">
 <td align="left"><code>pair_rsa_design</code></td>
 <td align="left"><code><a href="../reference/pair_rsa_design.html">pair_rsa_design()</a></code></td>
 <td align="left">A pair table, model RDM vectors, optional nuisance
 vectors. Inherits from <code>rsa_design</code>.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left"><code>rsa_model</code></td>
 <td align="left"><code>rsa_model(..., return_fingerprint = TRUE)</code></td>
 <td align="left">A fittable RSA spec that emits fingerprints alongside
 the standard scores.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left"><code>regional_mvpa_result</code></td>
 <td align="left"><code><a href="../reference/run_regional-methods.html">run_regional()</a></code></td>
 <td align="left">Per-ROI results. Carries fingerprints in
 <code>attr(., "fingerprints")</code> when
 <code>return_fingerprint = TRUE</code>.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left"><code>searchlight_result</code></td>
 <td align="left"><code><a href="../reference/run_searchlight.html">run_searchlight()</a></code></td>
 <td align="left">Per-center results. Same fingerprint attribute.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left"><code>rdm_model_space_connectivity</code></td>
 <td align="left">
 <code><a href="../reference/model_space_connectivity.html">model_space_connectivity()</a></code> (regional)</td>
 <td align="left">ROI×ROI similarity matrix and decompositions.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left"><code>model_space_anchor_connectivity</code></td>
 <td align="left">
 <code><a href="../reference/model_space_connectivity.html">model_space_connectivity()</a></code>

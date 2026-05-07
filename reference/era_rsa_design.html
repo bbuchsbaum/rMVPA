@@ -54,7 +54,8 @@ temporal helpers in R/temporal_rdms.R to avoid redundancy.</p>
 <span>  encoding_level <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  retrieval_level <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  block_var <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  time_var <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  time_var <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  phase_scoped_runs <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -88,6 +89,15 @@ temporal helpers in R/temporal_rdms.R to avoid redundancy.</p>
 
 <dt id="arg-time-var">time_var<a class="anchor" aria-label="anchor" href="#arg-time-var"></a></dt>
 <dd><p>Optional column giving trial index or onset time.</p></dd>
+
+
+<dt id="arg-phase-scoped-runs">phase_scoped_runs<a class="anchor" aria-label="anchor" href="#arg-phase-scoped-runs"></a></dt>
+<dd><p>Logical; when <code>TRUE</code>, prefix per-item run
+labels with <code>enc_</code> / <code>ret_</code> so encoding and retrieval scans
+with overlapping numeric labels (e.g. both phases have runs 1, 2, 3)
+are not treated as the same run during cross-phase ERA comparisons.
+Default <code>FALSE</code> for back-compatibility; set to <code>TRUE</code> when
+the encoding and retrieval phases come from different scan sessions.</p></dd>
 
 </dl></div>
     <div class="section level2">

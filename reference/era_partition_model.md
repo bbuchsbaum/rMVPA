@@ -20,6 +20,8 @@ era_partition_model(
   second_order_nuisance = NULL,
   item_block_enc = NULL,
   item_block_ret = NULL,
+  item_run_enc = NULL,
+  item_run_ret = NULL,
   item_time_enc = NULL,
   item_time_ret = NULL,
   item_category = NULL,
@@ -30,6 +32,9 @@ era_partition_model(
   min_procrustes_train_items = 3L,
   return_matrices = FALSE,
   return_xdec_predictions = FALSE,
+  auto_nuisance = TRUE,
+  global_nuisance = FALSE,
+  require_run_metadata = FALSE,
   ...
 )
 ```
@@ -71,7 +76,18 @@ era_partition_model(
 - item_block_enc, item_block_ret:
 
   Optional item-level block labels for source and target states. Named
-  vectors are matched to item keys.
+  vectors are matched to item keys. Both are required to enable the
+  same/different block nuisance regressors used by
+  `.era_partition_first_nuisance()` and
+  `.era_partition_second_nuisance()`; supplying only one is treated as
+  missing for cross-state nuisance purposes.
+
+- item_run_enc, item_run_ret:
+
+  Optional item-level run labels for source and target states. Named
+  vectors are matched to item keys and, when `auto_nuisance` includes
+  `"run"`, add `same_run_cross`, `same_run_enc`, and `same_run_ret`
+  nuisance regressors.
 
 - item_time_enc, item_time_ret:
 
@@ -119,6 +135,36 @@ era_partition_model(
   Logical; store the trial-level `classification_result` produced by the
   direct cross-decoder in each ROI result.
 
+- auto_nuisance:
+
+  Logical or character vector controlling automatically derived
+  item-level nuisance regressors. `TRUE` includes available `"block"`,
+  `"run"`, `"time"`, `"category"`, and `"global"` regressors. `FALSE`
+  disables all automatic nuisance regressors so only
+  `first_order_nuisance` and `second_order_nuisance` are used. A
+  character vector selects specific groups.
+
+- global_nuisance:
+
+  Logical or pre-supplied list controlling whole-mask global similarity
+  nuisance. `FALSE` (default) disables it. `TRUE` computes item-level
+  whole-mask similarity/RDMs over `dataset$mask` once at construction
+  time. A pre-computed list with `S_cross`/ `first`, `D_enc`/`enc`, and
+  `D_ret`/`ret` matrices can be supplied directly. When `auto_nuisance`
+  includes `"global"`, the cross-state similarity enters the first-order
+  model as `global_cross`, and the encoding/retrieval RDMs enter the
+  second-order model as `global_enc` and `global_ret`. Caveat: each
+  ROI/sphere is part of the global mask, so for large regional ROIs
+  covering most of the mask the residualization partially removes local
+  signal too.
+
+- require_run_metadata:
+
+  Logical; if `TRUE`, missing item-level block metadata becomes an error
+  rather than a warning. Use this when downstream nuisance partitioning
+  depends on the same/different-block regressors. Default `FALSE` (warn
+  only).
+
 - ...:
 
   Additional fields stored on the model spec.
@@ -127,3 +173,19 @@ era_partition_model(
 
 A model spec of class \`era_partition_model\` for \`run_regional()\` or
 \`run_searchlight()\`.
+
+## Trial-level vs. item-level metadata
+
+`block_var` on
+[`mvpa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+is *trial-level* and is not automatically used here. The first- and
+second-order nuisance regressors (`same_block_cross`, `same_block_enc`,
+`same_block_ret`) require *item-level* vectors named by levels of
+`key_var`: pass `item_block_enc` and `item_block_ret` explicitly. Run
+nuisance regressors similarly require `item_run_enc` and `item_run_ret`.
+Use `auto_nuisance = FALSE` to suppress all automatic
+block/run/time/category regressors when supplying a custom nuisance
+model, or pass a character vector such as `c("run", "time")` to keep
+only selected groups. When run labels overlap across encoding and
+retrieval scans, use phase-scoped labels such as `enc_1` / `ret_1` so
+item-level equality across phases is meaningful.

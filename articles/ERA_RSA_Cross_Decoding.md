@@ -144,6 +144,7 @@ era_ms
 #>   - retrieval_level: 2
 #>   - distfun: cordist / pearson
 #>   - rsa_simfun: spearman
+#>   - partial_against: run
 #>   - include_diag: TRUE
 #> 
 #>  MVPA Dataset 
@@ -193,15 +194,15 @@ metrics.
 ``` r
 
 head(era_res$performance_table)
-#> # A tibble: 3 x 11
+#> # A tibble: 3 x 12
 #>   roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor
 #>    <int>   <dbl>        <dbl>         <dbl>              <dbl>    <dbl>
 #> 1      1      24       0.0417       -0.0153            -0.0172  -0.0539
 #> 2      2      24       0.0833       -0.0437            -0.0481   0.0179
 #> 3      3      24       0.0417        0.0509             0.0387   0.0304
-#> # i 5 more variables: era_diag_minus_off_same_block <dbl>,
+#> # i 6 more variables: era_diag_minus_off_same_block <dbl>,
 #> #   era_diag_minus_off_diff_block <dbl>, era_lag_cor <dbl>,
-#> #   geom_cor_run_partial <dbl>, geom_cor_xrun <dbl>
+#> #   geom_cor_partial <dbl>, geom_cor_run_partial <dbl>, geom_cor_xrun <dbl>
 ```
 
 Key metrics include:
@@ -301,12 +302,16 @@ relative arrangement of items is preserved even when direct item
 identification is weak.
 
 [`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
-can also include block, category, temporal, and custom nuisance
-regressors through `item_block_enc`, `item_block_ret`, `item_time_enc`,
-`item_time_ret`, `item_category`, `first_order_nuisance`, and
-`second_order_nuisance`. If you have enough paired items, set
-`include_procrustes = TRUE` to add a leakage-free orthogonal alignment
-decoder.
+can also include block, run, category, temporal, and custom nuisance
+regressors through item-level vectors such as `item_block_enc`,
+`item_block_ret`, `item_run_enc`, `item_run_ret`, `item_time_enc`,
+`item_time_ret`, `item_category`, plus `first_order_nuisance` and
+`second_order_nuisance`. By default, available item-level nuisance
+groups are added automatically. Use `auto_nuisance = FALSE` to use only
+custom nuisance regressors, or a character vector such as
+`auto_nuisance = c("run", "time")` to keep selected groups. If you have
+enough paired items, set `include_procrustes = TRUE` to add a
+leakage-free orthogonal alignment decoder.
 
 `include_procrustes` controls an optional decoder that first learns an
 orthogonal Procrustes map from encoding prototypes into retrieval
@@ -352,6 +357,7 @@ era_sl
 #>   -  era_diag_minus_off_same_block  (Type:  DenseNeuroVol ) 
 #>   -  era_diag_minus_off_diff_block  (Type:  DenseNeuroVol ) 
 #>   -  era_lag_cor  (Type:  DenseNeuroVol ) 
+#>   -  geom_cor_partial  (Type:  DenseNeuroVol ) 
 #>   -  geom_cor_run_partial  (Type:  DenseNeuroVol ) 
 #>   -  geom_cor_xrun  (Type:  DenseNeuroVol )
 ```
@@ -369,7 +375,8 @@ era_sl$metrics
 #>  [3] "era_diag_mean"                 "era_diag_minus_off"           
 #>  [5] "geom_cor"                      "era_diag_minus_off_same_block"
 #>  [7] "era_diag_minus_off_diff_block" "era_lag_cor"                  
-#>  [9] "geom_cor_run_partial"          "geom_cor_xrun"
+#>  [9] "geom_cor_partial"              "geom_cor_run_partial"         
+#> [11] "geom_cor_xrun"
 ```
 
 We can save the searchlight maps using
@@ -398,48 +405,128 @@ level, and must align with the levels of `key_var`.
 
 `confound_rdms` is a named list of K×K matrices or `"dist"` objects
 describing item-by-item nuisance structure (e.g., block/run/time), where
-rows/columns correspond to item keys.
+rows and columns correspond to item keys.
 
-A common pattern is to build run-based confounds:
+Run confounds can now be supplied in the simpler item-level form used by
+the cross-run diagnostic. You pass `item_run_enc` and `item_run_ret`;
+ERA-RSA derives the same-run RDMs internally for `geom_cor_run_partial`.
 
 ``` r
 
 items <- levels(toy$design$train_design$item)
 
-# Example: per-item encoding run (modal run for each item)
 Mode <- function(x) { ux <- unique(x); ux[which.max(tabulate(match(x, ux)))] }
 item_run_enc <- sapply(items, function(it) {
   Mode(toy$design$train_design$block_var[toy$design$train_design$item == it])
 })
-names(item_run_enc) <- items
+item_run_ret <- sapply(items, function(it) {
+  Mode(toy$design$test_design$block_var[toy$design$test_design$item == it])
+})
+names(item_run_enc) <- names(item_run_ret) <- items
 
-# Example: per-item retrieval run (could differ from encoding)
-item_run_ret <- sample(item_run_enc)
+item_run_enc <- factor(paste0("enc_", item_run_enc))
+item_run_ret <- factor(paste0("ret_", item_run_ret))
+names(item_run_enc) <- names(item_run_ret) <- items
+```
 
-# Build run confound RDMs on the item grid
-run_enc <- outer(item_run_enc, item_run_enc, FUN = function(a, b) as.numeric(a == b))
-run_ret <- outer(item_run_ret, item_run_ret, FUN = function(a, b) as.numeric(a == b))
-rownames(run_enc) <- colnames(run_enc) <- items
-rownames(run_ret) <- colnames(run_ret) <- items
+You can add temporal or block RDMs to `confound_rdms` and choose which
+groups enter the general partial-geometry metric with `partial_against`.
+
+``` r
+
+time_enc <- setNames(seq_along(items), items)
+time_enc_rdm <- abs(outer(time_enc, time_enc, "-"))
+rownames(time_enc_rdm) <- colnames(time_enc_rdm) <- items
 
 era_ms_conf <- era_rsa_model(
   dataset = toy$dataset,
   design  = toy$design,
   key_var = ~ item,
   phase_var = ~ block_var,
-  confound_rdms = list(run_enc = run_enc, run_ret = run_ret),
-  item_run_enc  = factor(item_run_enc),
-  item_run_ret  = factor(item_run_ret)
+  confound_rdms = list(time_enc = time_enc_rdm),
+  partial_against = c("run", "time"),
+  item_run_enc = item_run_enc,
+  item_run_ret = item_run_ret
 )
+
+era_conf_res <- run_regional(era_ms_conf, region_mask)
 ```
 
-With these supplied, two additional metrics become available:
+``` r
 
-- `geom_cor_run_partial`: correlation between encoding and retrieval
-  RDMs after regressing out the enc/ret run RDMs.
-- `geom_cor_xrun`: correlation between encoding and retrieval RDMs
-  restricted to item pairs that differ in both encoding and retrieval
-  run.
+era_conf_res$performance_table[
+  ,
+  c("roinum", "geom_cor", "geom_cor_partial",
+    "geom_cor_run_partial", "geom_cor_xrun", "beta_time_enc")
+]
+#> # A tibble: 3 x 6
+#>   roinum geom_cor geom_cor_partial geom_cor_run_partial geom_cor_xrun
+#>    <int>    <dbl>            <dbl>                <dbl>         <dbl>
+#> 1      1 -0.0631          -0.0638              -0.0628             NA
+#> 2      2  0.00263          0.00133              0.00252            NA
+#> 3      3  0.0199           0.0159               0.0200             NA
+#> # i 1 more variable: beta_time_enc <dbl>
+```
+
+The three geometry metrics have different interpretations:
+
+- `geom_cor`: raw correlation between encoding and retrieval RDMs.
+- `geom_cor_partial`: residualized geometry correlation after regressing
+  out the nuisance groups selected by `partial_against`.
+- `geom_cor_run_partial`: legacy run-only partial geometry correlation.
+  It is still reported for continuity and is derived from `item_run_enc`
+  / `item_run_ret` when explicit `confound_rdms$run_enc` and
+  `confound_rdms$run_ret` are absent.
+- `geom_cor_xrun`: raw geometry correlation restricted to item pairs
+  that differ in both encoding and retrieval run.
+
+For temporal confounds, a common choice is
+`partial_against = c("run", "time")`. If you want only a temporal
+residualization, use `partial_against = "time"` or the exact RDM name,
+such as `partial_against = "time_enc"`.
+
+### Whole-mask global nuisance
+
+If you want to remove broad similarity structure shared across the whole
+analysis mask, set `global_nuisance = TRUE`. ERA-RSA computes item-level
+whole-mask RDMs once and adds them as `global_enc` and `global_ret`
+nuisance RDMs. When `partial_against` is left at its default, enabling
+`global_nuisance` makes the effective partial model
+`c("run", "global")`; set `partial_against` explicitly if you want a
+different nuisance set.
+
+``` r
+
+item_block <- factor(item_run_enc, levels = sort(unique(item_run_enc)))
+
+era_ms_global <- era_rsa_model(
+  dataset = toy$dataset,
+  design  = toy$design,
+  key_var = ~ item,
+  phase_var = ~ block_var,
+  item_block = item_block,
+  item_run_enc = item_run_enc,
+  item_run_ret = item_run_ret,
+  global_nuisance = TRUE
+)
+
+era_global_res <- run_regional(era_ms_global, region_mask)
+```
+
+``` r
+
+era_global_res$performance_table[
+  ,
+  c("roinum", "geom_cor_partial", "geom_cor_run_partial",
+    "beta_global_enc", "beta_global_ret")
+]
+#> # A tibble: 3 x 5
+#>   roinum geom_cor_partial geom_cor_run_partial beta_global_enc beta_global_ret
+#>    <int>            <dbl>                <dbl>           <dbl>           <dbl>
+#> 1      1           0.0152             -0.0628          -0.0989           1.16 
+#> 2      2           0.0134              0.00252          0.0701           0.860
+#> 3      3          -0.0260              0.0200           0.0711           0.850
+```
 
 ### Block structure (`item_block`)
 
@@ -447,8 +534,6 @@ With these supplied, two additional metrics become available:
 `design$train_design$block_var`:
 
 ``` r
-
-item_block <- factor(item_run_enc, levels = sort(unique(item_run_enc)))
 
 era_ms_block <- era_rsa_model(
   dataset    = toy$dataset,
@@ -480,6 +565,88 @@ In applied analyses, you would construct `item_block`, `item_lag`,
 experiment’s design tables following the patterns above, then pass them
 into
 [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md).
+
+### Run and temporal nuisance in `era_partition_model()`
+
+The variance-partition model uses the same item-level metadata but
+separates first-order cross-state similarity from second-order geometry
+preservation. When `auto_nuisance` includes `"run"`, the model adds
+same-run nuisance regressors to both levels of the partition.
+
+``` r
+
+partition_nuis_ms <- era_partition_model(
+  dataset = toy$dataset,
+  design  = toy$design,
+  key_var = ~ item,
+  item_run_enc = item_run_enc,
+  item_run_ret = item_run_ret,
+  item_time_enc = time_enc,
+  item_time_ret = time_enc + length(items),
+  auto_nuisance = c("run", "time"),
+  include_procrustes = FALSE
+)
+
+partition_nuis_res <- run_regional(partition_nuis_ms, region_mask)
+```
+
+``` r
+
+partition_nuis_res$performance_table[
+  ,
+  c("roinum", "first_order_delta_r2", "second_order_delta_r2",
+    "nuisance_first_order_n", "nuisance_second_order_n")
+]
+#> # A tibble: 3 x 5
+#>   roinum first_order_delta_r2 second_order_delta_r2 nuisance_first_order_n
+#>    <int>                <dbl>                 <dbl>                  <dbl>
+#> 1      1             0.000244            0.00406                         4
+#> 2      2             0.00198             0.00000176                      4
+#> 3      3             0.00123             0.000252                        4
+#> # i 1 more variable: nuisance_second_order_n <dbl>
+```
+
+Here the first-order nuisance set contains `same_run_cross`, `enc_time`,
+`ret_time`, and `abs_lag`. The second-order nuisance set contains
+`same_run_enc`, `same_run_ret`, `temporal_distance_enc`, and
+`temporal_distance_ret`. Set `auto_nuisance = FALSE` when you want to
+replace these defaults with custom kernels through
+`first_order_nuisance` and `second_order_nuisance`.
+
+Whole-mask nuisance is also available in the partition model. When
+`auto_nuisance` includes `"global"`, the first-order partition receives
+`global_cross`; the second-order partition receives `global_enc` and
+`global_ret`.
+
+``` r
+
+partition_global_ms <- era_partition_model(
+  dataset = toy$dataset,
+  design  = toy$design,
+  key_var = ~ item,
+  global_nuisance = TRUE,
+  auto_nuisance = "global",
+  include_procrustes = FALSE
+)
+
+partition_global_res <- run_regional(partition_global_ms, region_mask)
+```
+
+``` r
+
+partition_global_res$performance_table[
+  ,
+  c("roinum", "first_order_delta_r2", "second_order_delta_r2",
+    "nuisance_first_order_n", "nuisance_second_order_n")
+]
+#> # A tibble: 3 x 5
+#>   roinum first_order_delta_r2 second_order_delta_r2 nuisance_first_order_n
+#>    <int>                <dbl>                 <dbl>                  <dbl>
+#> 1      1            0.0000202              0.000128                      1
+#> 2      2            0.00113                0.000139                      1
+#> 3      3            0.00236                0.000493                      1
+#> # i 1 more variable: nuisance_second_order_n <dbl>
+```
 
 ## 6. Summary
 

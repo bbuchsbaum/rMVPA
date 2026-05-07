@@ -66,6 +66,8 @@ nuisance pair models.</p>
 <span>  second_order_nuisance <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  item_block_enc <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  item_block_ret <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  item_run_enc <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  item_run_ret <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  item_time_enc <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  item_time_ret <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  item_category <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -76,6 +78,9 @@ nuisance pair models.</p>
 <span>  min_procrustes_train_items <span class="op">=</span> <span class="fl">3L</span>,</span>
 <span>  return_matrices <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  return_xdec_predictions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  auto_nuisance <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  global_nuisance <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  require_run_metadata <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -118,7 +123,18 @@ lower-triangle vectors for geometry nuisance regressors.</p></dd>
 
 <dt id="arg-item-block-enc-item-block-ret">item_block_enc, item_block_ret<a class="anchor" aria-label="anchor" href="#arg-item-block-enc-item-block-ret"></a></dt>
 <dd><p>Optional item-level block labels for
-source and target states. Named vectors are matched to item keys.</p></dd>
+source and target states. Named vectors are matched to item keys. Both
+are required to enable the same/different block nuisance regressors used
+by <code>.era_partition_first_nuisance()</code> and
+<code>.era_partition_second_nuisance()</code>; supplying only one is treated
+as missing for cross-state nuisance purposes.</p></dd>
+
+
+<dt id="arg-item-run-enc-item-run-ret">item_run_enc, item_run_ret<a class="anchor" aria-label="anchor" href="#arg-item-run-enc-item-run-ret"></a></dt>
+<dd><p>Optional item-level run labels for source
+and target states. Named vectors are matched to item keys and, when
+<code>auto_nuisance</code> includes <code>"run"</code>, add <code>same_run_cross</code>,
+<code>same_run_enc</code>, and <code>same_run_ret</code> nuisance regressors.</p></dd>
 
 
 <dt id="arg-item-time-enc-item-time-ret">item_time_enc, item_time_ret<a class="anchor" aria-label="anchor" href="#arg-item-time-enc-item-time-ret"></a></dt>
@@ -169,6 +185,38 @@ ROI result for diagnostics.</p></dd>
 ROI result.</p></dd>
 
 
+<dt id="arg-auto-nuisance">auto_nuisance<a class="anchor" aria-label="anchor" href="#arg-auto-nuisance"></a></dt>
+<dd><p>Logical or character vector controlling automatically
+derived item-level nuisance regressors. <code>TRUE</code> includes available
+<code>"block"</code>, <code>"run"</code>, <code>"time"</code>, <code>"category"</code>, and
+<code>"global"</code>
+regressors. <code>FALSE</code> disables all automatic nuisance regressors so
+only <code>first_order_nuisance</code> and <code>second_order_nuisance</code> are
+used. A character vector selects specific groups.</p></dd>
+
+
+<dt id="arg-global-nuisance">global_nuisance<a class="anchor" aria-label="anchor" href="#arg-global-nuisance"></a></dt>
+<dd><p>Logical or pre-supplied list controlling whole-mask
+global similarity nuisance. <code>FALSE</code> (default) disables it. <code>TRUE</code>
+computes item-level whole-mask similarity/RDMs over <code>dataset$mask</code>
+once at construction time. A pre-computed list with <code>S_cross</code>/
+<code>first</code>, <code>D_enc</code>/<code>enc</code>, and <code>D_ret</code>/<code>ret</code>
+matrices can be supplied directly. When <code>auto_nuisance</code> includes
+<code>"global"</code>, the cross-state similarity enters the first-order model
+as <code>global_cross</code>, and the encoding/retrieval RDMs enter the
+second-order model as <code>global_enc</code> and <code>global_ret</code>. Caveat:
+each ROI/sphere is part of the global mask, so for large regional ROIs
+covering most of the mask the residualization partially removes local
+signal too.</p></dd>
+
+
+<dt id="arg-require-run-metadata">require_run_metadata<a class="anchor" aria-label="anchor" href="#arg-require-run-metadata"></a></dt>
+<dd><p>Logical; if <code>TRUE</code>, missing item-level
+block metadata becomes an error rather than a warning. Use this when
+downstream nuisance partitioning depends on the same/different-block
+regressors. Default <code>FALSE</code> (warn only).</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional fields stored on the model spec.</p></dd>
 
@@ -177,6 +225,23 @@ ROI result.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A model spec of class `era_partition_model` for `run_regional()` or
   `run_searchlight()`.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="trial-level-vs-item-level-metadata">Trial-level vs. item-level metadata<a class="anchor" aria-label="anchor" href="#trial-level-vs-item-level-metadata"></a></h2>
+
+
+<p><code>block_var</code> on <code><a href="mvpa_design.html">mvpa_design()</a></code> is <em>trial-level</em> and
+is not automatically used here. The first- and second-order nuisance
+regressors (<code>same_block_cross</code>, <code>same_block_enc</code>,
+<code>same_block_ret</code>) require <em>item-level</em> vectors named by levels
+of <code>key_var</code>: pass <code>item_block_enc</code> and <code>item_block_ret</code>
+explicitly. Run nuisance regressors similarly require <code>item_run_enc</code>
+and <code>item_run_ret</code>. Use <code>auto_nuisance = FALSE</code> to suppress all
+automatic block/run/time/category regressors when supplying a custom
+nuisance model, or pass a character vector such as <code>c("run", "time")</code>
+to keep only selected groups. When run labels overlap across encoding and
+retrieval scans, use phase-scoped labels such as <code>enc_1</code> /
+<code>ret_1</code> so item-level equality across phases is meaningful.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

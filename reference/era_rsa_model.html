@@ -60,11 +60,14 @@ iterators.</p>
 <span>  distfun <span class="op">=</span> <span class="fu"><a href="distance-constructors.html">cordist</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"pearson"</span><span class="op">)</span>,</span>
 <span>  rsa_simfun <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pearson"</span>, <span class="st">"spearman"</span><span class="op">)</span>,</span>
 <span>  confound_rdms <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  partial_against <span class="op">=</span> <span class="st">"run"</span>,</span>
 <span>  include_diag <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  item_block <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  item_lag <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  item_run_enc <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  item_run_ret <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  global_nuisance <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  require_run_metadata <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -115,7 +118,21 @@ encoding item-level nuisance/model RDMs (e.g., block, run, time). Rows
 and columns should correspond to item keys (levels of <code>key_var</code>).
 When <code>run_enc</code> and <code>run_ret</code> entries are present they are used
 to compute <code>geom_cor_run_partial</code>, the ER geometry correlation after
-regressing out these run confounds.</p></dd>
+regressing out these run confounds. The same list also supplies candidate
+nuisance RDMs for <code>geom_cor_partial</code>, selected by
+<code>partial_against</code>.</p></dd>
+
+
+<dt id="arg-partial-against">partial_against<a class="anchor" aria-label="anchor" href="#arg-partial-against"></a></dt>
+<dd><p>Character vector selecting nuisance groups or exact
+<code>confound_rdms</code> names used for the general <code>geom_cor_partial</code>
+metric. Recognized groups are <code>"run"</code>, <code>"time"</code>,
+<code>"block"</code>, <code>"category"</code>, <code>"global"</code>, and <code>"all"</code>.
+Exact confound names such as <code>"time_enc"</code> are also allowed. The
+default <code>"run"</code> preserves the legacy run-partial interpretation while
+exposing the result under the more general <code>geom_cor_partial</code> name.
+If <code>global_nuisance</code> is enabled and <code>partial_against</code> is not
+supplied explicitly, the effective default is <code>c("run", "global")</code>.</p></dd>
 
 
 <dt id="arg-include-diag">include_diag<a class="anchor" aria-label="anchor" href="#arg-include-diag"></a></dt>
@@ -149,6 +166,29 @@ restricted to item pairs differing in both encoding and retrieval run.</p></dd>
 <dt id="arg-item-run-ret">item_run_ret<a class="anchor" aria-label="anchor" href="#arg-item-run-ret"></a></dt>
 <dd><p>Optional factor of per-item retrieval runs, aligned to
 item keys. See <code>item_run_enc</code> for how it is used.</p></dd>
+
+
+<dt id="arg-global-nuisance">global_nuisance<a class="anchor" aria-label="anchor" href="#arg-global-nuisance"></a></dt>
+<dd><p>Logical or pre-supplied list controlling whole-mask
+global similarity nuisance. <code>FALSE</code> (default) disables it. <code>TRUE</code>
+computes K x K item-level RDMs (<code>global_enc</code>, <code>global_ret</code>) over
+the full <code>dataset$mask</code> once at construction time and adds them to
+<code>confound_rdms</code>. They are then picked up by <code>geom_cor_partial</code>
+when <code>partial_against</code> includes <code>"global"</code> (or <code>"all"</code>).
+A pre-computed list with elements <code>D_enc</code>/<code>enc</code> and
+<code>D_ret</code>/<code>ret</code> can be supplied directly for non-standard dataset
+backends. Caveat: each ROI/sphere is part of the global mask, so for large
+regional ROIs covering most of the mask the residualization partially
+removes the local signal.</p></dd>
+
+
+<dt id="arg-require-run-metadata">require_run_metadata<a class="anchor" aria-label="anchor" href="#arg-require-run-metadata"></a></dt>
+<dd><p>Logical; if <code>TRUE</code>, missing item-level run
+or block metadata becomes an error rather than a warning. Use this when a
+downstream analysis depends on <code>era_diag_minus_off_same_block</code>,
+<code>era_diag_minus_off_diff_block</code>, or <code>geom_cor_xrun</code> — the
+constructor will refuse to silently produce schemas where those metrics
+are guaranteed to be <code>NA</code>. Default <code>FALSE</code> (warn only).</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -203,6 +243,13 @@ and <code><a href="run_searchlight.html">run_searchlight()</a></code>:</p><dl><d
     correlation (Pearson or Spearman, per <code>rsa_simfun</code>) between the
     vectorised lower triangles of the encoding and retrieval RDMs.</p></dd>
 
+  <dt>geom_cor_partial</dt>
+<dd><p>General nuisance-partial ER geometry correlation. This residualizes both
+    encoding and retrieval geometry vectors against the confounds selected
+    by <code>partial_against</code>, then correlates the residuals. Run confounds
+    can be supplied either as <code>confound_rdms$run_enc</code>/<code>run_ret</code> or
+    derived from <code>item_run_enc</code>/<code>item_run_ret</code>.</p></dd>
+
   <dt>era_diag_minus_off_same_block</dt>
 <dd><p>Block-limited ERA contrast when <code>item_block</code> is supplied:
     diagonal ERA minus the mean similarity to other items in the same
@@ -219,9 +266,10 @@ and <code><a href="run_searchlight.html">run_searchlight()</a></code>:</p><dl><d
 
   <dt>geom_cor_run_partial</dt>
 <dd><p>Run-partial ER geometry correlation, when run-level confounds are
-    supplied via <code>confound_rdms$run_enc</code> and <code>confound_rdms$run_ret</code>.
-    Computed as the correlation between encoding and retrieval RDMs
-    after regressing out those run RDMs.</p></dd>
+    supplied via <code>confound_rdms$run_enc</code>/<code>run_ret</code> or derivable
+    from <code>item_run_enc</code>/<code>item_run_ret</code>. Computed as the
+    correlation between encoding and retrieval RDMs after regressing out
+    those run RDMs.</p></dd>
 
   <dt>geom_cor_xrun</dt>
 <dd><p>Cross-run-only ER geometry correlation, when <code>item_run_enc</code> and
@@ -242,6 +290,28 @@ and <code><a href="run_searchlight.html">run_searchlight()</a></code>:</p><dl><d
 
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="trial-level-vs-item-level-metadata">Trial-level vs. item-level metadata<a class="anchor" aria-label="anchor" href="#trial-level-vs-item-level-metadata"></a></h2>
+
+
+<p><code>block_var</code> on <code><a href="mvpa_design.html">mvpa_design()</a></code> is <em>trial-level</em>
+metadata (one entry per row of the design table) and is used by
+cross-validation, not by the ERA item-level metrics. The block/run-aware
+metrics (<code>era_diag_minus_off_same_block</code>,
+<code>era_diag_minus_off_diff_block</code>, <code>geom_cor_xrun</code>) are computed
+from <em>item-level</em> vectors indexed by levels of <code>key_var</code>:
+<code>item_block</code>, <code>item_run_enc</code>, and <code>item_run_ret</code>. These must
+be supplied directly here; passing <code>block_var = ~run</code> to
+<code><a href="mvpa_design.html">mvpa_design()</a></code> alone will not enable them, and the model will warn
+that those metrics will be <code>NA</code>. See <code><a href="era_rsa_design.html">era_rsa_design()</a></code>
+for a helper that builds these vectors from the design table.</p>
+<p>For external train/test phases (encoding vs. retrieval), run labels often
+collide across phases (both phases may have runs <code>1, 2, 3</code> that
+correspond to different scans). When <code>item_run_enc</code> and
+<code>item_run_ret</code> share atomic values that are not phase-scoped, supply
+phase-prefixed labels such as <code>enc_1</code> / <code>ret_1</code> so cross-phase
+equality tests are not spuriously satisfied.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

@@ -15,7 +15,8 @@ era_rsa_design(
   encoding_level = NULL,
   retrieval_level = NULL,
   block_var = NULL,
-  time_var = NULL
+  time_var = NULL,
+  phase_scoped_runs = FALSE
 )
 ```
 
@@ -48,6 +49,15 @@ era_rsa_design(
 - time_var:
 
   Optional column giving trial index or onset time.
+
+- phase_scoped_runs:
+
+  Logical; when `TRUE`, prefix per-item run labels with `enc_` / `ret_`
+  so encoding and retrieval scans with overlapping numeric labels (e.g.
+  both phases have runs 1, 2, 3) are not treated as the same run during
+  cross-phase ERA comparisons. Default `FALSE` for back-compatibility;
+  set to `TRUE` when the encoding and retrieval phases come from
+  different scan sessions.
 
 ## Value
 

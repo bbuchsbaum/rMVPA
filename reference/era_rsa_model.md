@@ -21,11 +21,14 @@ era_rsa_model(
   distfun = cordist(method = "pearson"),
   rsa_simfun = c("pearson", "spearman"),
   confound_rdms = NULL,
+  partial_against = "run",
   include_diag = TRUE,
   item_block = NULL,
   item_lag = NULL,
   item_run_enc = NULL,
   item_run_ret = NULL,
+  global_nuisance = FALSE,
+  require_run_metadata = FALSE,
   ...
 )
 ```
@@ -77,7 +80,19 @@ era_rsa_model(
   columns should correspond to item keys (levels of `key_var`). When
   `run_enc` and `run_ret` entries are present they are used to compute
   `geom_cor_run_partial`, the ER geometry correlation after regressing
-  out these run confounds.
+  out these run confounds. The same list also supplies candidate
+  nuisance RDMs for `geom_cor_partial`, selected by `partial_against`.
+
+- partial_against:
+
+  Character vector selecting nuisance groups or exact `confound_rdms`
+  names used for the general `geom_cor_partial` metric. Recognized
+  groups are `"run"`, `"time"`, `"block"`, `"category"`, `"global"`, and
+  `"all"`. Exact confound names such as `"time_enc"` are also allowed.
+  The default `"run"` preserves the legacy run-partial interpretation
+  while exposing the result under the more general `geom_cor_partial`
+  name. If `global_nuisance` is enabled and `partial_against` is not
+  supplied explicitly, the effective default is `c("run", "global")`.
 
 - include_diag:
 
@@ -111,6 +126,28 @@ era_rsa_model(
 
   Optional factor of per-item retrieval runs, aligned to item keys. See
   `item_run_enc` for how it is used.
+
+- global_nuisance:
+
+  Logical or pre-supplied list controlling whole-mask global similarity
+  nuisance. `FALSE` (default) disables it. `TRUE` computes K x K
+  item-level RDMs (`global_enc`, `global_ret`) over the full
+  `dataset$mask` once at construction time and adds them to
+  `confound_rdms`. They are then picked up by `geom_cor_partial` when
+  `partial_against` includes `"global"` (or `"all"`). A pre-computed
+  list with elements `D_enc`/`enc` and `D_ret`/`ret` can be supplied
+  directly for non-standard dataset backends. Caveat: each ROI/sphere is
+  part of the global mask, so for large regional ROIs covering most of
+  the mask the residualization partially removes the local signal.
+
+- require_run_metadata:
+
+  Logical; if `TRUE`, missing item-level run or block metadata becomes
+  an error rather than a warning. Use this when a downstream analysis
+  depends on `era_diag_minus_off_same_block`,
+  `era_diag_minus_off_diff_block`, or `geom_cor_xrun` — the constructor
+  will refuse to silently produce schemas where those metrics are
+  guaranteed to be `NA`. Default `FALSE` (warn only).
 
 - ...:
 
@@ -176,6 +213,14 @@ and
   between the vectorised lower triangles of the encoding and retrieval
   RDMs.
 
+- geom_cor_partial:
+
+  General nuisance-partial ER geometry correlation. This residualizes
+  both encoding and retrieval geometry vectors against the confounds
+  selected by `partial_against`, then correlates the residuals. Run
+  confounds can be supplied either as `confound_rdms$run_enc`/`run_ret`
+  or derived from `item_run_enc`/`item_run_ret`.
+
 - era_diag_minus_off_same_block:
 
   Block-limited ERA contrast when `item_block` is supplied: diagonal ERA
@@ -196,9 +241,9 @@ and
 - geom_cor_run_partial:
 
   Run-partial ER geometry correlation, when run-level confounds are
-  supplied via `confound_rdms$run_enc` and `confound_rdms$run_ret`.
-  Computed as the correlation between encoding and retrieval RDMs after
-  regressing out those run RDMs.
+  supplied via `confound_rdms$run_enc`/`run_ret` or derivable from
+  `item_run_enc`/`item_run_ret`. Computed as the correlation between
+  encoding and retrieval RDMs after regressing out those run RDMs.
 
 - geom_cor_xrun:
 
@@ -219,6 +264,30 @@ and
   If `run_lm_semipartial()` is available, `sp_<name>` terms provide
   semi-partial R\\^2\\-like diagnostics for each confound RDM,
   quantifying unique variance explained in retrieval geometry.
+
+## Trial-level vs. item-level metadata
+
+`block_var` on
+[`mvpa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+is *trial-level* metadata (one entry per row of the design table) and is
+used by cross-validation, not by the ERA item-level metrics. The
+block/run-aware metrics (`era_diag_minus_off_same_block`,
+`era_diag_minus_off_diff_block`, `geom_cor_xrun`) are computed from
+*item-level* vectors indexed by levels of `key_var`: `item_block`,
+`item_run_enc`, and `item_run_ret`. These must be supplied directly
+here; passing `block_var = ~run` to
+[`mvpa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+alone will not enable them, and the model will warn that those metrics
+will be `NA`. See
+[`era_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_design.md)
+for a helper that builds these vectors from the design table.
+
+For external train/test phases (encoding vs. retrieval), run labels
+often collide across phases (both phases may have runs `1, 2, 3` that
+correspond to different scans). When `item_run_enc` and `item_run_ret`
+share atomic values that are not phase-scoped, supply phase-prefixed
+labels such as `enc_1` / `ret_1` so cross-phase equality tests are not
+spuriously satisfied.
 
 ## Examples
 
