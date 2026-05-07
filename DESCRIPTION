@@ -99,6 +99,7 @@ Collate:
     'remap_rrr_model.R'
     'run_searchlight_remap_rrr.R'
     'era_rsa_design.R'
+    'era_global_nuisance.R'
     'era_rsa_model.R'
     'era_partition_model.R'
     'remap_utils.R'

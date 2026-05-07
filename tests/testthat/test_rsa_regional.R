@@ -68,6 +68,36 @@ test_that("rsa_model_mat returns vectors of correct length and sanitized names",
   expect_true(all(grepl("Dmat", names(mm))))
 })
 
+test_that("rsa_design accepts explicit nuisance RDMs and preserves predictor roles", {
+  set.seed(20260507)
+  n <- 10L
+  signal <- as.matrix(dist(matrix(rnorm(n * 3), n, 3)))
+  nuisance <- as.matrix(dist(seq_len(n)))
+  block <- rep(1:2, length.out = n)
+
+  rdes <- rsa_design(
+    ~ signal,
+    data = list(signal = signal, block = block),
+    block_var = "block",
+    nuisance = list(order = nuisance)
+  )
+
+  expect_identical(names(rdes$model_mat), c("signal", "order"))
+  expect_identical(rdes$model_predictors, "signal")
+  expect_identical(rdes$nuisance_predictors, "order")
+  expect_identical(unname(rdes$predictor_roles), c("model", "nuisance"))
+  expect_equal(length(rdes$model_mat$signal), sum(rdes$include))
+  expect_equal(length(rdes$model_mat$order), sum(rdes$include))
+})
+
+test_that("rsa_design rejects sanitized nuisance name collisions", {
+  Dmat <- as.matrix(dist(matrix(rnorm(6 * 2), 6, 2)))
+  expect_error(
+    rsa_design(~ Dmat, list(Dmat = Dmat), nuisance = list(Dmat = Dmat)),
+    "unique"
+  )
+})
+
 ## --- Training and Print Methods ---
 test_that("train_model.rsa_model with 'lm' regtype returns coefficients with proper names", {
   set.seed(123)

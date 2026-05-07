@@ -5,9 +5,13 @@ context("era_partition_model")
                                       second_order_nuisance = NULL,
                                       item_block_enc = NULL,
                                       item_block_ret = NULL,
+                                      item_run_enc = NULL,
+                                      item_run_ret = NULL,
                                       item_time_enc = NULL,
                                       item_time_ret = NULL,
-                                      item_category = NULL) {
+                                      item_category = NULL,
+                                      auto_nuisance = TRUE,
+                                      global_nuisance = FALSE) {
   toy <- gen_sample_dataset(
     D = c(3, 3, 3),
     nobs = K,
@@ -29,11 +33,15 @@ context("era_partition_model")
     second_order_nuisance = second_order_nuisance,
     item_block_enc = item_block_enc,
     item_block_ret = item_block_ret,
+    item_run_enc = item_run_enc,
+    item_run_ret = item_run_ret,
     item_time_enc = item_time_enc,
     item_time_ret = item_time_ret,
     item_category = item_category,
     include_procrustes = include_procrustes,
-    min_procrustes_train_items = 3L
+    min_procrustes_train_items = 3L,
+    auto_nuisance = auto_nuisance,
+    global_nuisance = global_nuisance
   )
 }
 
@@ -100,6 +108,8 @@ test_that("nuisance builders preserve first-order and second-order orientation",
   keys <- paste0("item", seq_len(K))
   block_enc <- setNames(c("a", "b", "a", "b"), keys)
   block_ret <- setNames(c("a", "a", "b", "b"), keys)
+  run_enc <- setNames(c("r1", "r2", "r1", "r2"), keys)
+  run_ret <- setNames(c("r1", "r1", "r2", "r2"), keys)
   time_enc <- setNames(c(10, 20, 30, 40), keys)
   time_ret <- setNames(c(1, 2, 3, 4), keys)
 
@@ -108,6 +118,8 @@ test_that("nuisance builders preserve first-order and second-order orientation",
     p = 4,
     item_block_enc = block_enc,
     item_block_ret = block_ret,
+    item_run_enc = run_enc,
+    item_run_ret = run_ret,
     item_time_enc = time_enc,
     item_time_ret = time_ret,
     include_procrustes = FALSE
@@ -115,15 +127,120 @@ test_that("nuisance builders preserve first-order and second-order orientation",
 
   first <- rMVPA:::.era_partition_first_nuisance(model, keys)
   expect_equal(unname(matrix(first$same_block_cross, K, K)), unname(outer(block_ret, block_enc, "==") * 1))
+  expect_equal(unname(matrix(first$same_run_cross, K, K)), unname(outer(run_ret, run_enc, "==") * 1))
   expect_equal(matrix(first$enc_time, K, K), matrix(rep(time_enc, each = K), K, K))
   expect_equal(matrix(first$ret_time, K, K), matrix(rep(time_ret, times = K), K, K))
   expect_equal(unname(matrix(first$abs_lag, K, K)), unname(abs(outer(time_ret, time_enc, "-"))))
 
   second <- rMVPA:::.era_partition_second_nuisance(model, keys)
+  run_enc_mat <- outer(run_enc, run_enc, "==")
+  run_ret_mat <- outer(run_ret, run_ret, "==")
+  expect_equal(second$same_run_enc, as.numeric(run_enc_mat[lower.tri(run_enc_mat)]))
+  expect_equal(second$same_run_ret, as.numeric(run_ret_mat[lower.tri(run_ret_mat)]))
   enc_td <- abs(outer(time_enc, time_enc, "-"))
   ret_td <- abs(outer(time_ret, time_ret, "-"))
   expect_equal(second$temporal_distance_enc, enc_td[lower.tri(enc_td)])
   expect_equal(second$temporal_distance_ret, ret_td[lower.tri(ret_td)])
+})
+
+test_that("era_partition_model can disable or select automatic nuisance groups", {
+  K <- 5
+  keys <- paste0("item", seq_len(K))
+  block_enc <- setNames(rep(c("b1", "b2"), length.out = K), keys)
+  block_ret <- setNames(rep(c("b2", "b1"), length.out = K), keys)
+  run_enc <- setNames(rep(c("r1", "r2"), length.out = K), keys)
+  run_ret <- setNames(rep(c("s1", "s2"), length.out = K), keys)
+  time_enc <- setNames(seq_len(K), keys)
+  time_ret <- setNames(seq_len(K) + 10, keys)
+  category <- setNames(rep(letters[1:2], length.out = K), keys)
+
+  model_none <- .era_partition_test_model(
+    K = K, p = 3,
+    item_block_enc = block_enc,
+    item_block_ret = block_ret,
+    item_run_enc = run_enc,
+    item_run_ret = run_ret,
+    item_time_enc = time_enc,
+    item_time_ret = time_ret,
+    item_category = category,
+    include_procrustes = FALSE,
+    auto_nuisance = FALSE
+  )
+  expect_length(rMVPA:::.era_partition_first_nuisance(model_none, keys), 0L)
+  expect_length(rMVPA:::.era_partition_second_nuisance(model_none, keys), 0L)
+
+  model_run <- .era_partition_test_model(
+    K = K, p = 3,
+    item_block_enc = block_enc,
+    item_block_ret = block_ret,
+    item_run_enc = run_enc,
+    item_run_ret = run_ret,
+    item_time_enc = time_enc,
+    item_time_ret = time_ret,
+    item_category = category,
+    include_procrustes = FALSE,
+    auto_nuisance = "run"
+  )
+  expect_identical(names(rMVPA:::.era_partition_first_nuisance(model_run, keys)), "same_run_cross")
+  expect_identical(names(rMVPA:::.era_partition_second_nuisance(model_run, keys)), c("same_run_enc", "same_run_ret"))
+})
+
+test_that("era_partition_model consumes global nuisance as a selectable auto group", {
+  K <- 4
+  keys <- paste0("item", seq_len(K))
+  S_cross <- matrix(seq_len(K * K), K, K)
+  D_enc <- as.matrix(stats::dist(matrix(c(0, 1, 3, 6), ncol = 1)))
+  D_ret <- as.matrix(stats::dist(matrix(c(0, 2, 5, 9), ncol = 1)))
+  dimnames(S_cross) <- list(keys, keys)
+  rownames(D_enc) <- colnames(D_enc) <- keys
+  rownames(D_ret) <- colnames(D_ret) <- keys
+  global <- list(S_cross = S_cross, D_enc = D_enc, D_ret = D_ret)
+
+  model_global <- .era_partition_test_model(
+    K = K, p = 3,
+    include_procrustes = FALSE,
+    auto_nuisance = "global",
+    global_nuisance = global
+  )
+  first <- rMVPA:::.era_partition_first_nuisance(model_global, keys)
+  second <- rMVPA:::.era_partition_second_nuisance(model_global, keys)
+
+  expect_identical(names(first), "global_cross")
+  expect_equal(first$global_cross, as.numeric(S_cross))
+  expect_identical(names(second), c("global_enc", "global_ret"))
+  expect_equal(second$global_enc, as.numeric(D_enc[lower.tri(D_enc)]))
+  expect_equal(second$global_ret, as.numeric(D_ret[lower.tri(D_ret)]))
+
+  model_off <- .era_partition_test_model(
+    K = K, p = 3,
+    include_procrustes = FALSE,
+    auto_nuisance = FALSE,
+    global_nuisance = global
+  )
+  expect_length(rMVPA:::.era_partition_first_nuisance(model_off, keys), 0L)
+  expect_length(rMVPA:::.era_partition_second_nuisance(model_off, keys), 0L)
+})
+
+test_that("era_partition_model compares phase-scoped factor run labels", {
+  K <- 4
+  keys <- paste0("item", seq_len(K))
+  run_enc <- factor(setNames(c("enc_1", "enc_2", "enc_1", "enc_2"), keys))
+  run_ret <- factor(setNames(c("ret_1", "ret_1", "ret_2", "ret_2"), keys))
+
+  model <- .era_partition_test_model(
+    K = K, p = 3,
+    item_run_enc = run_enc,
+    item_run_ret = run_ret,
+    include_procrustes = FALSE,
+    auto_nuisance = "run"
+  )
+
+  first <- rMVPA:::.era_partition_first_nuisance(model, keys)
+  second <- rMVPA:::.era_partition_second_nuisance(model, keys)
+
+  expect_equal(unname(matrix(first$same_run_cross, K, K)), matrix(0, K, K))
+  expect_equal(second$same_run_enc, as.numeric(outer(as.character(run_enc), as.character(run_enc), "==")[lower.tri(diag(K))]))
+  expect_equal(second$same_run_ret, as.numeric(outer(as.character(run_ret), as.character(run_ret), "==")[lower.tri(diag(K))]))
 })
 
 test_that("era_partition_model returns matched first- and second-order metrics", {
@@ -395,12 +512,16 @@ test_that("era_partition_model includes automatic block and temporal nuisances",
   time_enc <- setNames(seq_len(K), keys)
   time_ret <- setNames(seq_len(K) + 10, keys)
   category <- setNames(rep(letters[1:2], length.out = K), keys)
+  run_enc <- setNames(rep(c("enc_1", "enc_2"), length.out = K), keys)
+  run_ret <- setNames(rep(c("ret_1", "ret_2"), length.out = K), keys)
 
   model <- .era_partition_test_model(
     K,
     p,
     item_block_enc = block_enc,
     item_block_ret = block_ret,
+    item_run_enc = run_enc,
+    item_run_ret = run_ret,
     item_time_enc = time_enc,
     item_time_ret = time_ret,
     item_category = category
@@ -408,8 +529,8 @@ test_that("era_partition_model includes automatic block and temporal nuisances",
   out <- .era_partition_fit_direct(model, E, R)
 
   expect_false(out$error)
-  expect_equal(out$metrics[["nuisance_first_order_n"]], 5)
-  expect_equal(out$metrics[["nuisance_second_order_n"]], 5)
+  expect_equal(out$metrics[["nuisance_first_order_n"]], 6)
+  expect_equal(out$metrics[["nuisance_second_order_n"]], 7)
   expect_true(is.finite(out$metrics[["first_order_delta_r2"]]))
   expect_true(is.finite(out$metrics[["second_order_delta_r2"]]))
 })
@@ -515,4 +636,42 @@ test_that("era_partition_model can run through regional iterator", {
   res <- run_regional(model, region_mask)
   expect_s3_class(res, "regional_mvpa_result")
   expect_true(all(c("first_order_delta_r2", "second_order_delta_r2") %in% names(res$performance_table)))
+})
+
+test_that("era_partition_model warns when item-level block metadata is missing", {
+  expect_warning(
+    .era_partition_test_model(K = 8, p = 3, include_procrustes = FALSE),
+    "item_block_enc.*item_block_ret"
+  )
+
+  toy <- gen_sample_dataset(D = c(3,3,3), nobs = 8, nlevels = 2, blocks = 2,
+                            external_test = TRUE, ntest_obs = 8)
+  keys <- paste0("item", seq_len(8))
+  toy$design$train_design$item <- factor(keys, levels = keys)
+  toy$design$test_design$item  <- factor(keys, levels = keys)
+  expect_error(
+    era_partition_model(
+      dataset = toy$dataset, design = toy$design,
+      key_var = ~ item, distfun = eucdist(),
+      include_procrustes = FALSE,
+      require_run_metadata = TRUE
+    ),
+    "item_block_enc"
+  )
+})
+
+test_that("era_partition_model flags overlapping enc/ret block labels", {
+  K <- 6
+  keys <- paste0("item", seq_len(K))
+  block_enc <- setNames(rep(c(1, 2), length.out = K), keys)
+  block_ret <- setNames(rep(c(1, 2), length.out = K), keys)
+  expect_warning(
+    .era_partition_test_model(
+      K = K, p = 3,
+      item_block_enc = block_enc,
+      item_block_ret = block_ret,
+      include_procrustes = FALSE
+    ),
+    "phase-scoped labels"
+  )
 })

@@ -16,6 +16,7 @@ test_that("era_rsa_model output schema documents all scalar metrics", {
       "era_diag_minus_off_same_block",
       "era_diag_minus_off_diff_block",
       "era_lag_cor",
+      "geom_cor_partial",
       "geom_cor_run_partial",
       "geom_cor_xrun"
     )
@@ -35,6 +36,182 @@ test_that("era_rsa_model output schema documents all scalar metrics", {
     "sp_time_enc"
   ) %in% names(conf_schema)))
   expect_true(all(conf_schema == "scalar"))
+})
+
+test_that("era_rsa_model partial geometry selects nuisance groups and exact names", {
+  keys <- paste0("item", seq_len(4))
+  time_vec <- c(0, 1, 3, 4, 6, 7)
+  signal <- c(-2, -1, 0, 1, 2, 3)
+  dE <- signal + time_vec
+  dR <- 2 * signal + time_vec
+
+  time_mat <- matrix(0, 4, 4)
+  time_mat[lower.tri(time_mat)] <- time_vec
+  time_mat <- time_mat + t(time_mat)
+  rownames(time_mat) <- colnames(time_mat) <- keys
+
+  got_group <- rMVPA:::.era_partial_geometry_cor(
+    dE = dE,
+    dR = dR,
+    confound_rdms = list(time_enc = time_mat),
+    keys = keys,
+    partial_against = "time",
+    method = "pearson"
+  )
+  got_exact <- rMVPA:::.era_partial_geometry_cor(
+    dE = dE,
+    dR = dR,
+    confound_rdms = list(time_enc = time_mat),
+    keys = keys,
+    partial_against = "time_enc",
+    method = "pearson"
+  )
+  oracle <- stats::cor(
+    stats::resid(stats::lm(dE ~ time_vec)),
+    stats::resid(stats::lm(dR ~ time_vec))
+  )
+
+  expect_equal(got_group, oracle, tolerance = 1e-12)
+  expect_equal(got_exact, oracle, tolerance = 1e-12)
+  expect_true(is.na(rMVPA:::.era_partial_geometry_cor(
+    dE = dE,
+    dR = dR,
+    confound_rdms = list(time_enc = time_mat),
+    keys = keys,
+    partial_against = "run",
+    method = "pearson"
+  )))
+})
+
+test_that("era_rsa_model derives run partial geometry from item_run metadata", {
+  set.seed(11)
+  K <- 6
+  p <- 5
+  toy <- gen_sample_dataset(D = c(3,3,3), nobs = K, nlevels = 2, blocks = 2,
+                            external_test = TRUE, ntest_obs = K)
+  keys <- paste0("item", seq_len(K))
+  toy$design$train_design$item <- factor(keys, levels = keys)
+  toy$design$test_design$item  <- factor(keys, levels = keys)
+
+  item_run_enc <- setNames(rep(c("enc_1", "enc_2"), length.out = K), keys)
+  item_run_ret <- setNames(rep(c("ret_1", "ret_2", "ret_3"), length.out = K), keys)
+  model <- suppressWarnings(era_rsa_model(
+    dataset = toy$dataset,
+    design = toy$design,
+    key_var = ~ item,
+    phase_var = ~ block_var,
+    item_block = setNames(rep(c("b1", "b2"), length.out = K), keys),
+    item_run_enc = item_run_enc,
+    item_run_ret = item_run_ret
+  ))
+
+  E <- matrix(rnorm(K * p), K, p)
+  R <- E + matrix(rnorm(K * p, sd = 0.2), K, p)
+  out <- fit_roi(
+    model,
+    roi_data = list(train_data = E, test_data = R, indices = seq_len(p)),
+    context = list(id = 1L)
+  )
+
+  expect_false(out$error)
+  expect_true(is.finite(out$metrics[["geom_cor_partial"]]))
+  expect_true(is.finite(out$metrics[["geom_cor_run_partial"]]))
+  expect_equal(out$metrics[["geom_cor_partial"]], out$metrics[["geom_cor_run_partial"]], tolerance = 1e-12)
+})
+
+test_that("era_rsa_model merges and selects global nuisance RDMs", {
+  set.seed(12)
+  K <- 5
+  keys <- paste0("item", seq_len(K))
+  toy <- gen_sample_dataset(D = c(3, 3, 3), nobs = K, nlevels = 2, blocks = 2,
+                            external_test = TRUE, ntest_obs = K)
+  toy$design$train_design$item <- factor(keys, levels = keys)
+  toy$design$test_design$item <- factor(keys, levels = keys)
+
+  D_enc <- as.matrix(stats::dist(matrix(seq_len(K), ncol = 1)))
+  D_ret <- as.matrix(stats::dist(matrix(seq_len(K)^2, ncol = 1)))
+  rownames(D_enc) <- colnames(D_enc) <- keys
+  rownames(D_ret) <- colnames(D_ret) <- keys
+
+  model <- suppressWarnings(era_rsa_model(
+    dataset = toy$dataset,
+    design = toy$design,
+    key_var = ~ item,
+    phase_var = ~ block_var,
+    item_block = setNames(rep(c("b1", "b2"), length.out = K), keys),
+    global_nuisance = list(D_enc = D_enc, D_ret = D_ret)
+  ))
+
+  expect_identical(names(model$confound_rdms), c("global_enc", "global_ret"))
+  expect_identical(model$partial_against, c("run", "global"))
+  expect_identical(
+    rMVPA:::.era_select_confound_names(names(model$confound_rdms), "global"),
+    c("global_enc", "global_ret")
+  )
+
+  model_null <- suppressWarnings(era_rsa_model(
+    dataset = toy$dataset,
+    design = toy$design,
+    key_var = ~ item,
+    phase_var = ~ block_var,
+    item_block = setNames(rep(c("b1", "b2"), length.out = K), keys),
+    global_nuisance = NULL
+  ))
+  expect_identical(model_null$partial_against, "run")
+})
+
+test_that("global nuisance auto-computes item-level whole-mask RDMs", {
+  set.seed(13)
+  K <- 6
+  keys <- paste0("item", seq_len(K))
+  toy <- gen_sample_dataset(D = c(3, 3, 3), nobs = K, nlevels = 2, blocks = 2,
+                            external_test = TRUE, ntest_obs = K)
+  toy$design$train_design$item <- factor(keys, levels = keys)
+  toy$design$test_design$item <- factor(keys, levels = keys)
+
+  got <- rMVPA:::.era_resolve_global_nuisance(
+    TRUE,
+    dataset = toy$dataset,
+    design = toy$design,
+    key_var = "item",
+    distfun = eucdist()
+  )
+
+  expect_identical(got$common_keys, keys)
+  expect_equal(dim(got$S_cross), c(K, K))
+  expect_equal(dim(got$D_enc), c(K, K))
+  expect_equal(dim(got$D_ret), c(K, K))
+  expect_identical(rownames(got$S_cross), keys)
+  expect_identical(colnames(got$S_cross), keys)
+  expect_equal(unname(diag(got$D_enc)), rep(0, K), tolerance = 1e-12)
+  expect_equal(unname(diag(got$D_ret)), rep(0, K), tolerance = 1e-12)
+})
+
+test_that("ERA models retain evaluated character key_var values", {
+  K <- 5
+  keys <- paste0("item", seq_len(K))
+  toy <- gen_sample_dataset(D = c(3, 3, 3), nobs = K, nlevels = 2, blocks = 2,
+                            external_test = TRUE, ntest_obs = K)
+  toy$design$train_design$item <- factor(keys, levels = keys)
+  toy$design$test_design$item <- factor(keys, levels = keys)
+  kv <- "item"
+
+  rsa_model <- suppressWarnings(era_rsa_model(
+    dataset = toy$dataset,
+    design = toy$design,
+    key_var = kv,
+    phase_var = ~ block_var,
+    item_block = setNames(rep(c("b1", "b2"), length.out = K), keys)
+  ))
+  partition_model <- suppressWarnings(era_partition_model(
+    dataset = toy$dataset,
+    design = toy$design,
+    key_var = kv,
+    include_procrustes = FALSE
+  ))
+
+  expect_identical(rsa_model$key_var, "item")
+  expect_identical(partition_model$key_var, "item")
 })
 
 test_that("era_rsa_model runs regionally and returns expected metrics", {
@@ -253,7 +430,53 @@ test_that("era_rsa_model works with euclidean distfun", {
   )
   regionMask <- neuroim2::NeuroVol(sample(1:2, size = length(toy$dataset$mask), replace = TRUE),
                                    neuroim2::space(toy$dataset$mask))
-  res <- run_regional(ms, regionMask)
+  res <- run_regional(suppressWarnings(ms), regionMask)
   expect_s3_class(res, "regional_mvpa_result")
   expect_true("geom_cor" %in% names(res$performance_table))
+})
+
+test_that("era_rsa_model warns about missing item-level block/run metadata", {
+  set.seed(8)
+  toy <- gen_sample_dataset(D = c(3,3,3), nobs = 18, nlevels = 3, blocks = 3, external_test = TRUE)
+  toy$design$train_design$item <- toy$design$train_design$Y
+  toy$design$test_design$item  <- toy$design$test_design$Ytest
+
+  expect_warning(
+    era_rsa_model(toy$dataset, toy$design, key_var = ~ item, phase_var = ~ block_var),
+    "item_block.*will be NA"
+  )
+  expect_warning(
+    era_rsa_model(toy$dataset, toy$design, key_var = ~ item, phase_var = ~ block_var),
+    "geom_cor_xrun"
+  )
+
+  expect_error(
+    era_rsa_model(
+      toy$dataset, toy$design,
+      key_var = ~ item, phase_var = ~ block_var,
+      require_run_metadata = TRUE
+    ),
+    "item_block"
+  )
+})
+
+test_that("era_rsa_model warns when item_run_enc and item_run_ret share atomic labels", {
+  set.seed(9)
+  toy <- gen_sample_dataset(D = c(3,3,3), nobs = 18, nlevels = 3, blocks = 3, external_test = TRUE)
+  toy$design$train_design$item <- toy$design$train_design$Y
+  toy$design$test_design$item  <- toy$design$test_design$Ytest
+
+  items <- as.character(sort(intersect(toy$design$train_design$item, toy$design$test_design$item)))
+  ire <- setNames(rep_len(c(1, 2), length(items)), items)
+  irr <- setNames(rep_len(c(1, 2), length(items)), items)
+
+  expect_warning(
+    era_rsa_model(
+      toy$dataset, toy$design,
+      key_var = ~ item, phase_var = ~ block_var,
+      item_block = setNames(rep_len(c(1, 2), length(items)), items),
+      item_run_enc = ire, item_run_ret = irr
+    ),
+    "phase-scoped labels"
+  )
 })

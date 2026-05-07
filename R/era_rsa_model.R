@@ -45,6 +45,13 @@
 #'     correlation (Pearson or Spearman, per \code{rsa_simfun}) between the
 #'     vectorised lower triangles of the encoding and retrieval RDMs.
 #'   }
+#'   \item{geom_cor_partial}{
+#'     General nuisance-partial ER geometry correlation. This residualizes both
+#'     encoding and retrieval geometry vectors against the confounds selected
+#'     by \code{partial_against}, then correlates the residuals. Run confounds
+#'     can be supplied either as \code{confound_rdms$run_enc}/\code{run_ret} or
+#'     derived from \code{item_run_enc}/\code{item_run_ret}.
+#'   }
 #'   \item{era_diag_minus_off_same_block}{
 #'     Block-limited ERA contrast when \code{item_block} is supplied:
 #'     diagonal ERA minus the mean similarity to other items in the same
@@ -61,9 +68,10 @@
 #'   }
 #'   \item{geom_cor_run_partial}{
 #'     Run-partial ER geometry correlation, when run-level confounds are
-#'     supplied via \code{confound_rdms$run_enc} and \code{confound_rdms$run_ret}.
-#'     Computed as the correlation between encoding and retrieval RDMs
-#'     after regressing out those run RDMs.
+#'     supplied via \code{confound_rdms$run_enc}/\code{run_ret} or derivable
+#'     from \code{item_run_enc}/\code{item_run_ret}. Computed as the
+#'     correlation between encoding and retrieval RDMs after regressing out
+#'     those run RDMs.
 #'   }
 #'   \item{geom_cor_xrun}{
 #'     Cross-run-only ER geometry correlation, when \code{item_run_enc} and
@@ -101,7 +109,18 @@
 #'   and columns should correspond to item keys (levels of \code{key_var}).
 #'   When \code{run_enc} and \code{run_ret} entries are present they are used
 #'   to compute \code{geom_cor_run_partial}, the ER geometry correlation after
-#'   regressing out these run confounds.
+#'   regressing out these run confounds. The same list also supplies candidate
+#'   nuisance RDMs for \code{geom_cor_partial}, selected by
+#'   \code{partial_against}.
+#' @param partial_against Character vector selecting nuisance groups or exact
+#'   \code{confound_rdms} names used for the general \code{geom_cor_partial}
+#'   metric. Recognized groups are \code{"run"}, \code{"time"},
+#'   \code{"block"}, \code{"category"}, \code{"global"}, and \code{"all"}.
+#'   Exact confound names such as \code{"time_enc"} are also allowed. The
+#'   default \code{"run"} preserves the legacy run-partial interpretation while
+#'   exposing the result under the more general \code{geom_cor_partial} name.
+#'   If \code{global_nuisance} is enabled and \code{partial_against} is not
+#'   supplied explicitly, the effective default is \code{c("run", "global")}.
 #' @param include_diag Logical retained for API compatibility. Diagonal ERA
 #'   metrics are always retained, and the off-diagonal mean used by
 #'   \code{era_diag_minus_off} always excludes matching-item diagonal entries.
@@ -120,7 +139,44 @@
 #'   restricted to item pairs differing in both encoding and retrieval run.
 #' @param item_run_ret Optional factor of per-item retrieval runs, aligned to
 #'   item keys. See \code{item_run_enc} for how it is used.
+#' @param global_nuisance Logical or pre-supplied list controlling whole-mask
+#'   global similarity nuisance. \code{FALSE} (default) disables it. \code{TRUE}
+#'   computes K x K item-level RDMs (\code{global_enc}, \code{global_ret}) over
+#'   the full \code{dataset$mask} once at construction time and adds them to
+#'   \code{confound_rdms}. They are then picked up by \code{geom_cor_partial}
+#'   when \code{partial_against} includes \code{"global"} (or \code{"all"}).
+#'   A pre-computed list with elements \code{D_enc}/\code{enc} and
+#'   \code{D_ret}/\code{ret} can be supplied directly for non-standard dataset
+#'   backends. Caveat: each ROI/sphere is part of the global mask, so for large
+#'   regional ROIs covering most of the mask the residualization partially
+#'   removes the local signal.
+#' @param require_run_metadata Logical; if \code{TRUE}, missing item-level run
+#'   or block metadata becomes an error rather than a warning. Use this when a
+#'   downstream analysis depends on \code{era_diag_minus_off_same_block},
+#'   \code{era_diag_minus_off_diff_block}, or \code{geom_cor_xrun} — the
+#'   constructor will refuse to silently produce schemas where those metrics
+#'   are guaranteed to be \code{NA}. Default \code{FALSE} (warn only).
 #' @param ... Additional fields stored on the model spec.
+#'
+#' @section Trial-level vs. item-level metadata:
+#' \code{block_var} on \code{\link{mvpa_design}()} is \emph{trial-level}
+#' metadata (one entry per row of the design table) and is used by
+#' cross-validation, not by the ERA item-level metrics. The block/run-aware
+#' metrics (\code{era_diag_minus_off_same_block},
+#' \code{era_diag_minus_off_diff_block}, \code{geom_cor_xrun}) are computed
+#' from \emph{item-level} vectors indexed by levels of \code{key_var}:
+#' \code{item_block}, \code{item_run_enc}, and \code{item_run_ret}. These must
+#' be supplied directly here; passing \code{block_var = ~run} to
+#' \code{mvpa_design()} alone will not enable them, and the model will warn
+#' that those metrics will be \code{NA}. See \code{\link{era_rsa_design}()}
+#' for a helper that builds these vectors from the design table.
+#'
+#' For external train/test phases (encoding vs. retrieval), run labels often
+#' collide across phases (both phases may have runs \code{1, 2, 3} that
+#' correspond to different scans). When \code{item_run_enc} and
+#' \code{item_run_ret} share atomic values that are not phase-scoped, supply
+#' phase-prefixed labels such as \code{enc_1} / \code{ret_1} so cross-phase
+#' equality tests are not spuriously satisfied.
 #'
 #' @return A model spec of class \code{"era_rsa_model"} compatible with
 #'   \code{\link{run_regional}()} and \code{\link{run_searchlight}()}. When fit,
@@ -139,17 +195,31 @@ era_rsa_model <- function(dataset,
                           distfun         = cordist(method = "pearson"),
                           rsa_simfun      = c("pearson", "spearman"),
                           confound_rdms   = NULL,
+                          partial_against = "run",
                           include_diag    = TRUE,
                           item_block      = NULL,
                           item_lag        = NULL,
                           item_run_enc    = NULL,
                           item_run_ret    = NULL,
+                          global_nuisance = FALSE,
+                          require_run_metadata = FALSE,
                           ...) {
 
   rsa_simfun <- match.arg(rsa_simfun)
 
   stopifnot(inherits(dataset, "mvpa_dataset"))
   stopifnot(inherits(design,  "mvpa_design"))
+
+  .era_check_item_metadata(
+    where        = "era_rsa_model",
+    item_block   = item_block,
+    item_run_enc = item_run_enc,
+    item_run_ret = item_run_ret,
+    strict       = isTRUE(require_run_metadata),
+    metric_for_block = c("era_diag_minus_off_same_block",
+                         "era_diag_minus_off_diff_block"),
+    metric_for_run   = "geom_cor_xrun"
+  )
 
   # Normalize distfun
   if (is.character(distfun)) {
@@ -166,6 +236,26 @@ era_rsa_model <- function(dataset,
 
   if (is.null(encoding_level))  encoding_level  <- phase_lev[1L]
   if (is.null(retrieval_level)) retrieval_level <- phase_lev[2L]
+
+  if (!is.null(global_nuisance) && !isFALSE(global_nuisance) && missing(partial_against)) {
+    partial_against <- c("run", "global")
+  }
+
+  # Optional whole-mask global similarity nuisance: compute K x K RDMs once
+  # over the full dataset mask and merge them into confound_rdms so they can
+  # be picked up by `partial_against = "global"` (and the all/run/etc groups).
+  global_rdms <- .era_resolve_global_nuisance(
+    global_nuisance, dataset, design, key_var, distfun
+  )
+  if (!is.null(global_rdms)) {
+    if (is.null(confound_rdms)) confound_rdms <- list()
+    if (!is.null(global_rdms$D_enc) && is.null(confound_rdms$global_enc)) {
+      confound_rdms$global_enc <- global_rdms$D_enc
+    }
+    if (!is.null(global_rdms$D_ret) && is.null(confound_rdms$global_ret)) {
+      confound_rdms$global_ret <- global_rdms$D_ret
+    }
+  }
 
   # Normalize confound RDMs into matrices with names if provided
   if (!is.null(confound_rdms)) {
@@ -195,13 +285,14 @@ era_rsa_model <- function(dataset,
     # store parsed vectors to maintain levels/order
     key      = key_fac,
     phase    = phase_fac,
-    key_var  = substitute(key_var),
+    key_var  = key_var,
     phase_var= substitute(phase_var),
     encoding_level  = encoding_level,
     retrieval_level = retrieval_level,
     distfun        = distfun,
     rsa_simfun     = rsa_simfun,
     confound_rdms  = confound_rdms,
+    partial_against = partial_against,
     include_diag   = include_diag,
     item_block     = item_block,
     item_lag       = item_lag,
@@ -226,7 +317,8 @@ era_rsa_model <- function(dataset,
 #'   \code{era_diag_mean}, \code{era_diag_minus_off}, \code{geom_cor},
 #'   \code{era_diag_minus_off_same_block},
 #'   \code{era_diag_minus_off_diff_block}, \code{era_lag_cor},
-#'   \code{geom_cor_run_partial}, and \code{geom_cor_xrun}. If
+#'   \code{geom_cor_partial}, \code{geom_cor_run_partial}, and
+#'   \code{geom_cor_xrun}. If
 #'   \code{confound_rdms} is supplied, the schema also includes
 #'   \code{beta_enc_geom}, one \code{beta_<name>} per confound RDM,
 #'   \code{sp_enc_geom}, and one \code{sp_<name>} per confound RDM.
@@ -236,7 +328,7 @@ output_schema.era_rsa_model <- function(model) {
   base_names <- c("n_items", "era_top1_acc", "era_diag_mean", "era_diag_minus_off",
                   "geom_cor", "era_diag_minus_off_same_block",
                   "era_diag_minus_off_diff_block", "era_lag_cor",
-                  "geom_cor_run_partial", "geom_cor_xrun")
+                  "geom_cor_partial", "geom_cor_run_partial", "geom_cor_xrun")
 
   if (!is.null(model$confound_rdms)) {
     conf_names <- names(model$confound_rdms)
@@ -404,17 +496,31 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
     }
   }
 
-  # Run-partial ER geometry and cross-run-only geometry if run info available
+  # Partial ER geometry and cross-run-only geometry if nuisance/run info available
+  all_confounds <- .era_geometry_confound_rdms(
+    confound_rdms = model$confound_rdms,
+    item_run_enc = model$item_run_enc,
+    item_run_ret = model$item_run_ret,
+    keys = common_keys
+  )
+  geom_cor_partial <- .era_partial_geometry_cor(
+    dE = dE,
+    dR = dR,
+    confound_rdms = all_confounds,
+    keys = common_keys,
+    partial_against = model$partial_against %||% "run",
+    method = model$rsa_simfun
+  )
   geom_cor_run_partial <- NA_real_
   geom_cor_xrun        <- NA_real_
-  if (!is.null(model$confound_rdms$run_enc) && !is.null(model$confound_rdms$run_ret)) {
-    Renc    <- as.numeric(as.matrix(model$confound_rdms$run_enc)[common_keys, common_keys][lower.tri(D_enc)])
-    Rret    <- as.numeric(as.matrix(model$confound_rdms$run_ret)[common_keys, common_keys][lower.tri(D_ret)])
-    conf_df <- data.frame(enc_run = Renc, ret_run = Rret)
-    dE_res  <- stats::resid(stats::lm(dE ~ ., data = conf_df))
-    dR_res  <- stats::resid(stats::lm(dR ~ ., data = conf_df))
-    geom_cor_run_partial <- suppressWarnings(stats::cor(dE_res, dR_res, method = model$rsa_simfun, use = "complete.obs"))
-  }
+  geom_cor_run_partial <- .era_partial_geometry_cor(
+    dE = dE,
+    dR = dR,
+    confound_rdms = all_confounds,
+    keys = common_keys,
+    partial_against = "run",
+    method = model$rsa_simfun
+  )
   if (!is.null(model$item_run_enc) && !is.null(model$item_run_ret)) {
     ire <- model$item_run_enc
     irr <- model$item_run_ret
@@ -438,6 +544,7 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
     era_diag_minus_off_same_block = era_diag_minus_off_same_block,
     era_diag_minus_off_diff_block = era_diag_minus_off_diff_block,
     era_lag_cor                   = era_lag_cor,
+    geom_cor_partial              = geom_cor_partial,
     geom_cor_run_partial          = geom_cor_run_partial,
     geom_cor_xrun                 = geom_cor_xrun
   )
@@ -463,6 +570,213 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
     perf <- c(perf, full_beta, full_sp)
   }
 
-  roi_result(metrics = perf, indices = ind, id = id)
+roi_result(metrics = perf, indices = ind, id = id)
 }
 
+
+#' @noRd
+.era_geometry_confound_rdms <- function(confound_rdms = NULL,
+                                        item_run_enc = NULL,
+                                        item_run_ret = NULL,
+                                        keys) {
+  out <- confound_rdms %||% list()
+  if (length(out) && is.null(names(out))) {
+    names(out) <- paste0("confound_", seq_along(out))
+  }
+
+  run_rdms <- .era_run_confound_rdms(item_run_enc, item_run_ret, keys)
+  for (nm in names(run_rdms)) {
+    if (is.null(out[[nm]])) {
+      out[[nm]] <- run_rdms[[nm]]
+    }
+  }
+  out
+}
+
+#' @noRd
+.era_run_confound_rdms <- function(item_run_enc = NULL, item_run_ret = NULL, keys) {
+  if (is.null(item_run_enc) || is.null(item_run_ret)) {
+    return(list())
+  }
+
+  align <- function(x) {
+    if (!is.null(names(x))) {
+      x[match(keys, names(x))]
+    } else {
+      x[seq_along(keys)]
+    }
+  }
+  ire <- align(item_run_enc)
+  irr <- align(item_run_ret)
+
+  Renc <- outer(ire, ire, FUN = function(a, b) as.numeric(a == b))
+  Rret <- outer(irr, irr, FUN = function(a, b) as.numeric(a == b))
+  rownames(Renc) <- colnames(Renc) <- keys
+  rownames(Rret) <- colnames(Rret) <- keys
+  list(run_enc = Renc, run_ret = Rret)
+}
+
+#' @noRd
+.era_partial_geometry_cor <- function(dE,
+                                      dR,
+                                      confound_rdms,
+                                      keys,
+                                      partial_against = "run",
+                                      method = c("pearson", "spearman")) {
+  method <- match.arg(method)
+  if (is.null(confound_rdms) || !length(confound_rdms) || length(partial_against) == 0L) {
+    return(NA_real_)
+  }
+
+  nms <- names(confound_rdms)
+  selected <- .era_select_confound_names(nms, partial_against)
+  if (!length(selected)) {
+    return(NA_real_)
+  }
+
+  conf <- lapply(confound_rdms[selected], .era_vectorize_geometry_confound, keys = keys)
+  lens_ok <- vapply(conf, length, integer(1L)) == length(dE)
+  conf <- conf[lens_ok]
+  if (!length(conf)) {
+    return(NA_real_)
+  }
+
+  dat <- data.frame(.dE = as.numeric(dE), .dR = as.numeric(dR), as.data.frame(conf, optional = TRUE))
+  names(dat) <- c(".dE", ".dR", make.names(names(conf), unique = TRUE))
+  keep <- stats::complete.cases(dat)
+  keep <- keep & apply(dat, 1L, function(row) all(is.finite(row)))
+  dat <- dat[keep, , drop = FALSE]
+  if (nrow(dat) < 3L || stats::sd(dat$.dE) == 0 || stats::sd(dat$.dR) == 0) {
+    return(NA_real_)
+  }
+
+  conf_names <- setdiff(names(dat), c(".dE", ".dR"))
+  nonconstant <- vapply(dat[conf_names], function(x) stats::sd(x) > 0, logical(1L))
+  conf_names <- conf_names[nonconstant]
+  if (!length(conf_names)) {
+    return(NA_real_)
+  }
+
+  rhs <- paste(conf_names, collapse = " + ")
+  fit_e <- try(stats::lm(stats::as.formula(paste(".dE ~", rhs)), data = dat), silent = TRUE)
+  fit_r <- try(stats::lm(stats::as.formula(paste(".dR ~", rhs)), data = dat), silent = TRUE)
+  if (inherits(fit_e, "try-error") || inherits(fit_r, "try-error")) {
+    return(NA_real_)
+  }
+
+  e_res <- stats::resid(fit_e)
+  r_res <- stats::resid(fit_r)
+  suppressWarnings(stats::cor(e_res, r_res, method = method, use = "complete.obs"))
+}
+
+#' @noRd
+.era_select_confound_names <- function(nms, partial_against) {
+  if (is.null(nms) || !length(nms)) {
+    return(character())
+  }
+  partial_against <- unique(as.character(partial_against))
+  if ("all" %in% partial_against) {
+    return(nms)
+  }
+
+  selected <- partial_against[partial_against %in% nms]
+  group_patterns <- list(
+    run = "run",
+    time = "time|temporal|lag",
+    block = "block",
+    category = "category|cat",
+    global = "^global"
+  )
+  for (grp in intersect(names(group_patterns), partial_against)) {
+    selected <- c(selected, nms[grepl(group_patterns[[grp]], nms, ignore.case = TRUE)])
+  }
+  unique(selected)
+}
+
+#' @noRd
+.era_vectorize_geometry_confound <- function(x, keys) {
+  K <- length(keys)
+  lower_n <- K * (K - 1L) / 2L
+  if (inherits(x, "dist") || is.matrix(x) || is.data.frame(x)) {
+    M <- as.matrix(x)
+    if (!is.null(rownames(M)) && !is.null(colnames(M)) &&
+        all(keys %in% rownames(M)) && all(keys %in% colnames(M))) {
+      M <- M[keys, keys, drop = FALSE]
+    } else {
+      M <- M[seq_len(K), seq_len(K), drop = FALSE]
+    }
+    return(as.numeric(M[lower.tri(M)]))
+  }
+
+  v <- as.numeric(x)
+  if (length(v) == K * K) {
+    M <- matrix(v, nrow = K)
+    as.numeric(M[lower.tri(M)])
+  } else if (length(v) == lower_n) {
+    v
+  } else {
+    v
+  }
+}
+
+
+#' Validate item-level metadata for ERA models
+#'
+#' Used by \code{era_rsa_model()} and \code{era_partition_model()} to warn (or
+#' error, when \code{strict=TRUE}) about missing item-level vectors that would
+#' otherwise produce silently-NA metrics or unused nuisance regressors. Also
+#' detects an easy-to-miss namespace collision where encoding and retrieval
+#' run labels share atomic values without being phase-scoped.
+#'
+#' @param where Character; calling function name used in messages.
+#' @param item_block,item_run_enc,item_run_ret Optional item-level vectors.
+#' @param strict Logical; if \code{TRUE}, missing metadata becomes an error.
+#' @param metric_for_block Character vector of metric names that depend on
+#'   \code{item_block}.
+#' @param metric_for_run Character vector of metric names that depend on
+#'   \code{item_run_enc} / \code{item_run_ret}.
+#' @return Invisibly \code{NULL}; called for side effects.
+#' @keywords internal
+.era_check_item_metadata <- function(where,
+                                     item_block   = NULL,
+                                     item_run_enc = NULL,
+                                     item_run_ret = NULL,
+                                     strict       = FALSE,
+                                     metric_for_block = character(),
+                                     metric_for_run   = character()) {
+  emit <- if (isTRUE(strict)) {
+    function(msg) stop(sprintf("%s: %s", where, msg), call. = FALSE)
+  } else {
+    function(msg) warning(sprintf("%s: %s", where, msg), call. = FALSE)
+  }
+
+  if (is.null(item_block) && length(metric_for_block)) {
+    emit(sprintf(
+      "`item_block` is NULL; %s will be NA. Supply a per-item block vector named by levels of `key_var`, e.g. via `era_rsa_design(..., block_var = ~ run)$item_block`.",
+      paste(sprintf("`%s`", metric_for_block), collapse = " and ")
+    ))
+  }
+
+  run_missing <- is.null(item_run_enc) || is.null(item_run_ret)
+  if (run_missing && length(metric_for_run)) {
+    emit(sprintf(
+      "%s requires both `item_run_enc` and `item_run_ret` (per-item run vectors named by `key_var` levels); %s will be NA.",
+      paste(sprintf("`%s`", metric_for_run), collapse = " / "),
+      paste(sprintf("`%s`", metric_for_run), collapse = " and ")
+    ))
+  }
+
+  if (!is.null(item_run_enc) && !is.null(item_run_ret)) {
+    enc_vals <- as.character(unique(stats::na.omit(item_run_enc)))
+    ret_vals <- as.character(unique(stats::na.omit(item_run_ret)))
+    overlap  <- intersect(enc_vals, ret_vals)
+    if (length(overlap)) {
+      warning(sprintf(
+        "%s: `item_run_enc` and `item_run_ret` share label(s) %s. If encoding and retrieval are different scans, use phase-scoped labels (e.g. `enc_1` and `ret_1`) so cross-phase equality is not spuriously satisfied.",
+        where, paste(sprintf("'%s'", utils::head(overlap, 6L)), collapse = ", ")
+      ), call. = FALSE)
+    }
+  }
+
+  invisible(NULL)
+}

@@ -14,6 +14,8 @@ era_partition_model(
   second_order_nuisance = NULL,
   item_block_enc = NULL,
   item_block_ret = NULL,
+  item_run_enc = NULL,
+  item_run_ret = NULL,
   item_time_enc = NULL,
   item_time_ret = NULL,
   item_category = NULL,
@@ -24,6 +26,9 @@ era_partition_model(
   min_procrustes_train_items = 3L,
   return_matrices = FALSE,
   return_xdec_predictions = FALSE,
+  auto_nuisance = TRUE,
+  global_nuisance = FALSE,
+  require_run_metadata = FALSE,
   ...
 )
 }
@@ -47,7 +52,16 @@ Matrices are interpreted as target rows by source columns.}
 lower-triangle vectors for geometry nuisance regressors.}
 
 \item{item_block_enc, item_block_ret}{Optional item-level block labels for
-source and target states. Named vectors are matched to item keys.}
+source and target states. Named vectors are matched to item keys. Both
+are required to enable the same/different block nuisance regressors used
+by \code{.era_partition_first_nuisance()} and
+\code{.era_partition_second_nuisance()}; supplying only one is treated
+as missing for cross-state nuisance purposes.}
+
+\item{item_run_enc, item_run_ret}{Optional item-level run labels for source
+and target states. Named vectors are matched to item keys and, when
+\code{auto_nuisance} includes \code{"run"}, add \code{same_run_cross},
+\code{same_run_enc}, and \code{same_run_ret} nuisance regressors.}
 
 \item{item_time_enc, item_time_ret}{Optional item-level time/order values for
 source and target states. Named vectors are matched to item keys.}
@@ -79,6 +93,32 @@ ROI result for diagnostics.}
 \code{classification_result} produced by the direct cross-decoder in each
 ROI result.}
 
+\item{auto_nuisance}{Logical or character vector controlling automatically
+derived item-level nuisance regressors. \code{TRUE} includes available
+\code{"block"}, \code{"run"}, \code{"time"}, \code{"category"}, and
+\code{"global"}
+regressors. \code{FALSE} disables all automatic nuisance regressors so
+only \code{first_order_nuisance} and \code{second_order_nuisance} are
+used. A character vector selects specific groups.}
+
+\item{global_nuisance}{Logical or pre-supplied list controlling whole-mask
+global similarity nuisance. \code{FALSE} (default) disables it. \code{TRUE}
+computes item-level whole-mask similarity/RDMs over \code{dataset$mask}
+once at construction time. A pre-computed list with \code{S_cross}/
+\code{first}, \code{D_enc}/\code{enc}, and \code{D_ret}/\code{ret}
+matrices can be supplied directly. When \code{auto_nuisance} includes
+\code{"global"}, the cross-state similarity enters the first-order model
+as \code{global_cross}, and the encoding/retrieval RDMs enter the
+second-order model as \code{global_enc} and \code{global_ret}. Caveat:
+each ROI/sphere is part of the global mask, so for large regional ROIs
+covering most of the mask the residualization partially removes local
+signal too.}
+
+\item{require_run_metadata}{Logical; if \code{TRUE}, missing item-level
+block metadata becomes an error rather than a warning. Use this when
+downstream nuisance partitioning depends on the same/different-block
+regressors. Default \code{FALSE} (warn only).}
+
 \item{...}{Additional fields stored on the model spec.}
 }
 \value{
@@ -93,3 +133,19 @@ state (`dataset$test_data`), then estimates how much variance is uniquely
 explained by same-item transfer and by source-state geometry after optional
 nuisance pair models.
 }
+\section{Trial-level vs. item-level metadata}{
+
+\code{block_var} on \code{\link{mvpa_design}()} is \emph{trial-level} and
+is not automatically used here. The first- and second-order nuisance
+regressors (\code{same_block_cross}, \code{same_block_enc},
+\code{same_block_ret}) require \emph{item-level} vectors named by levels
+of \code{key_var}: pass \code{item_block_enc} and \code{item_block_ret}
+explicitly. Run nuisance regressors similarly require \code{item_run_enc}
+and \code{item_run_ret}. Use \code{auto_nuisance = FALSE} to suppress all
+automatic block/run/time/category regressors when supplying a custom
+nuisance model, or pass a character vector such as \code{c("run", "time")}
+to keep only selected groups. When run labels overlap across encoding and
+retrieval scans, use phase-scoped labels such as \code{enc_1} /
+\code{ret_1} so item-level equality across phases is meaningful.
+}
+

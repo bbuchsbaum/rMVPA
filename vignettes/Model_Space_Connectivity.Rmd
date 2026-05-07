@@ -204,6 +204,30 @@ identical(paired$model_mat$R_cat, classic$model_mat$R_cat)
 
 Both produce the same length-`n*(n-1)/2` pair vectors and feed into `rsa_model()` interchangeably. You can keep using `rsa_design()` if you prefer; `pair_rsa_design()` is here so the design layer can also handle the cases below.
 
+Classic `rsa_design()` also has the same explicit nuisance channel. Nuisance
+RDMs enter the fitted RSA model, but they do not define fingerprint axes:
+
+```{r classic-nuisance}
+R_order <- as.matrix(stats::dist(seq_len(n)))
+
+classic_nuis <- rsa_design(
+  ~ R_cat + R_feat,
+  data = list(R_cat = R_cat, R_feat = R_feat),
+  nuisance = list(order = R_order)
+)
+
+names(classic_nuis$model_mat)
+classic_nuis$nuisance_predictors
+```
+
+```{r check-classic-nuisance, include = FALSE}
+stopifnot(
+  identical(classic_nuis$model_predictors, c("R_cat", "R_feat")),
+  identical(classic_nuis$nuisance_predictors, "order"),
+  identical(names(classic_nuis$model_mat), c("R_cat", "R_feat", "order"))
+)
+```
+
 ### Cross-domain (between) pairs
 
 When item set A and item set B differ — for example, items shown in *encoding* vs *retrieval*, or items from *movie A* vs *movie B* — the natural pair space is the rectangular `n_a × n_b` table, not the lower triangle of one square RDM.
@@ -308,6 +332,7 @@ A practical default is `k = 20`. Reasonable lower bound: the rank of your model-
 
 | Class | Constructor | What it holds |
 |:------|:------------|:--------------|
+| `rsa_design` | `rsa_design(..., nuisance = list(...))` | Classical within-domain RSA design with optional nuisance RDMs. |
 | `pair_rsa_design` | `pair_rsa_design()` | A pair table, model RDM vectors, optional nuisance vectors. Inherits from `rsa_design`. |
 | `rsa_model` | `rsa_model(..., return_fingerprint = TRUE)` | A fittable RSA spec that emits fingerprints alongside the standard scores. |
 | `regional_mvpa_result` | `run_regional()` | Per-ROI results. Carries fingerprints in `attr(., "fingerprints")` when `return_fingerprint = TRUE`. |

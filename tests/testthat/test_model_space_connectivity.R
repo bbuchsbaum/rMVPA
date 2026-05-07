@@ -188,6 +188,39 @@ test_that("rsa_model fingerprints exclude nuisance predictors", {
   expect_equal(unname(fp), unname(ref$scores[1, ]), tolerance = 1e-10)
 })
 
+test_that("classic rsa_design nuisance predictors are excluded from fingerprints", {
+  skip_if_not_installed("neuroim2")
+  set.seed(32)
+  n <- 12L
+  v <- 20L
+  X <- matrix(rnorm(n * v), n, v)
+  R <- as.matrix(stats::dist(matrix(rnorm(n * 3), n, 3)))
+  N <- as.matrix(stats::dist(seq_len(n)))
+
+  des <- rsa_design(
+    ~ signal,
+    data = list(signal = R),
+    nuisance = list(order = N)
+  )
+
+  arr  <- array(rnorm(prod(c(2, 2, 2, n))), c(2, 2, 2, n))
+  sp   <- neuroim2::NeuroSpace(c(2, 2, 2, n))
+  vec  <- neuroim2::NeuroVec(arr, sp)
+  mask <- neuroim2::LogicalNeuroVol(array(1, c(2, 2, 2)),
+                                    neuroim2::NeuroSpace(c(2, 2, 2)))
+  ds   <- mvpa_dataset(train_data = vec, mask = mask)
+
+  m <- rsa_model(ds, des, distmethod = "pearson", regtype = "pearson",
+                 return_fingerprint = TRUE)
+  out <- train_model(m, X, y = NULL, indices = NULL)
+  fp <- attr(out, "fingerprint", exact = TRUE)
+
+  expect_named(out, c("signal", "order"))
+  expect_equal(length(fp), 1L)
+  expect_identical(m$design$model_predictors, "signal")
+  expect_identical(m$design$nuisance_predictors, "order")
+})
+
 test_that("rsa_model fingerprint basis drops near-collinear model axes without non-finite scores", {
   skip_if_not_installed("neuroim2")
   set.seed(515)

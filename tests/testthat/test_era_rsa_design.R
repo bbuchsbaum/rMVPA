@@ -58,6 +58,31 @@ test_that("era_rsa_design builds item summaries and confound RDMs from a two-pha
   expect_equal(dim(cr$run_ret), c(K, K))
 })
 
+test_that("era_rsa_design phase_scoped_runs prefixes encoding/retrieval run labels", {
+  set.seed(11)
+  K <- 4
+  items <- letters[1:K]
+  train_df <- data.frame(
+    Phase = factor(rep(c("enc", "ret"), each = K), levels = c("enc", "ret")),
+    Item  = rep(items, times = 2),
+    Block = c(1, 2, 1, 2, 1, 2, 1, 2),
+    Time  = seq_len(2 * K),
+    stringsAsFactors = FALSE
+  )
+  des <- mvpa_design(train_design = train_df, y_train = ~ Phase, block_var = ~ Block)
+
+  scoped <- era_rsa_design(
+    design = des, key_var = ~ Item, phase_var = ~ Phase,
+    encoding_level = "enc", retrieval_level = "ret",
+    block_var = ~ Block, time_var = ~ Time,
+    phase_scoped_runs = TRUE
+  )
+
+  expect_true(all(grepl("^enc_", levels(scoped$item_run_enc))))
+  expect_true(all(grepl("^ret_", levels(scoped$item_run_ret))))
+  expect_length(intersect(levels(scoped$item_run_enc), levels(scoped$item_run_ret)), 0L)
+})
+
 
 test_that("era_rsa_design outputs can be passed into era_rsa_model", {
   skip_on_cran()

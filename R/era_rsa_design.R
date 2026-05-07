@@ -11,6 +11,12 @@
 #' @param retrieval_level Retrieval phase label; default = second level of phase_var.
 #' @param block_var Optional column giving block/run membership.
 #' @param time_var Optional column giving trial index or onset time.
+#' @param phase_scoped_runs Logical; when \code{TRUE}, prefix per-item run
+#'   labels with \code{enc_} / \code{ret_} so encoding and retrieval scans
+#'   with overlapping numeric labels (e.g. both phases have runs 1, 2, 3)
+#'   are not treated as the same run during cross-phase ERA comparisons.
+#'   Default \code{FALSE} for back-compatibility; set to \code{TRUE} when
+#'   the encoding and retrieval phases come from different scan sessions.
 #'
 #' @return A list with elements:
 #'   \itemize{
@@ -32,7 +38,8 @@ era_rsa_design <- function(design,
                            encoding_level  = NULL,
                            retrieval_level = NULL,
                            block_var = NULL,
-                           time_var  = NULL) {
+                           time_var  = NULL,
+                           phase_scoped_runs = FALSE) {
 
   stopifnot(inherits(design, "mvpa_design"))
   d <- design$train_design
@@ -111,6 +118,14 @@ era_rsa_design <- function(design,
       if (length(b)) Mode(b) else NA
     })
     names(item_run_enc) <- names(item_run_ret) <- common_items
+
+    if (isTRUE(phase_scoped_runs)) {
+      scope_lab <- function(x, prefix) {
+        ifelse(is.na(x), NA_character_, paste0(prefix, as.character(x)))
+      }
+      item_run_enc <- setNames(scope_lab(item_run_enc, "enc_"), common_items)
+      item_run_ret <- setNames(scope_lab(item_run_ret, "ret_"), common_items)
+    }
 
     # Run confound RDMs for encoding and retrieval separately
     Renc <- outer(item_run_enc, item_run_enc, FUN = function(a, b) as.numeric(a == b))

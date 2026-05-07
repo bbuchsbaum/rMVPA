@@ -11,7 +11,8 @@ era_rsa_design(
   encoding_level = NULL,
   retrieval_level = NULL,
   block_var = NULL,
-  time_var = NULL
+  time_var = NULL,
+  phase_scoped_runs = FALSE
 )
 }
 \arguments{
@@ -28,6 +29,13 @@ era_rsa_design(
 \item{block_var}{Optional column giving block/run membership.}
 
 \item{time_var}{Optional column giving trial index or onset time.}
+
+\item{phase_scoped_runs}{Logical; when \code{TRUE}, prefix per-item run
+labels with \code{enc_} / \code{ret_} so encoding and retrieval scans
+with overlapping numeric labels (e.g. both phases have runs 1, 2, 3)
+are not treated as the same run during cross-phase ERA comparisons.
+Default \code{FALSE} for back-compatibility; set to \code{TRUE} when
+the encoding and retrieval phases come from different scan sessions.}
 }
 \value{
 A list with elements:

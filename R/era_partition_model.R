@@ -19,7 +19,15 @@
 #' @param second_order_nuisance Optional named list of `K x K` matrices or
 #'   lower-triangle vectors for geometry nuisance regressors.
 #' @param item_block_enc,item_block_ret Optional item-level block labels for
-#'   source and target states. Named vectors are matched to item keys.
+#'   source and target states. Named vectors are matched to item keys. Both
+#'   are required to enable the same/different block nuisance regressors used
+#'   by \code{.era_partition_first_nuisance()} and
+#'   \code{.era_partition_second_nuisance()}; supplying only one is treated
+#'   as missing for cross-state nuisance purposes.
+#' @param item_run_enc,item_run_ret Optional item-level run labels for source
+#'   and target states. Named vectors are matched to item keys and, when
+#'   \code{auto_nuisance} includes \code{"run"}, add \code{same_run_cross},
+#'   \code{same_run_enc}, and \code{same_run_ret} nuisance regressors.
 #' @param item_time_enc,item_time_ret Optional item-level time/order values for
 #'   source and target states. Named vectors are matched to item keys.
 #' @param item_category Optional item-level category labels used to add a
@@ -41,7 +49,44 @@
 #' @param return_xdec_predictions Logical; store the trial-level
 #'   \code{classification_result} produced by the direct cross-decoder in each
 #'   ROI result.
+#' @param auto_nuisance Logical or character vector controlling automatically
+#'   derived item-level nuisance regressors. \code{TRUE} includes available
+#'   \code{"block"}, \code{"run"}, \code{"time"}, \code{"category"}, and
+#'   \code{"global"}
+#'   regressors. \code{FALSE} disables all automatic nuisance regressors so
+#'   only \code{first_order_nuisance} and \code{second_order_nuisance} are
+#'   used. A character vector selects specific groups.
+#' @param global_nuisance Logical or pre-supplied list controlling whole-mask
+#'   global similarity nuisance. \code{FALSE} (default) disables it. \code{TRUE}
+#'   computes item-level whole-mask similarity/RDMs over \code{dataset$mask}
+#'   once at construction time. A pre-computed list with \code{S_cross}/
+#'   \code{first}, \code{D_enc}/\code{enc}, and \code{D_ret}/\code{ret}
+#'   matrices can be supplied directly. When \code{auto_nuisance} includes
+#'   \code{"global"}, the cross-state similarity enters the first-order model
+#'   as \code{global_cross}, and the encoding/retrieval RDMs enter the
+#'   second-order model as \code{global_enc} and \code{global_ret}. Caveat:
+#'   each ROI/sphere is part of the global mask, so for large regional ROIs
+#'   covering most of the mask the residualization partially removes local
+#'   signal too.
+#' @param require_run_metadata Logical; if \code{TRUE}, missing item-level
+#'   block metadata becomes an error rather than a warning. Use this when
+#'   downstream nuisance partitioning depends on the same/different-block
+#'   regressors. Default \code{FALSE} (warn only).
 #' @param ... Additional fields stored on the model spec.
+#'
+#' @section Trial-level vs. item-level metadata:
+#' \code{block_var} on \code{\link{mvpa_design}()} is \emph{trial-level} and
+#' is not automatically used here. The first- and second-order nuisance
+#' regressors (\code{same_block_cross}, \code{same_block_enc},
+#' \code{same_block_ret}) require \emph{item-level} vectors named by levels
+#' of \code{key_var}: pass \code{item_block_enc} and \code{item_block_ret}
+#' explicitly. Run nuisance regressors similarly require \code{item_run_enc}
+#' and \code{item_run_ret}. Use \code{auto_nuisance = FALSE} to suppress all
+#' automatic block/run/time/category regressors when supplying a custom
+#' nuisance model, or pass a character vector such as \code{c("run", "time")}
+#' to keep only selected groups. When run labels overlap across encoding and
+#' retrieval scans, use phase-scoped labels such as \code{enc_1} /
+#' \code{ret_1} so item-level equality across phases is meaningful.
 #'
 #' @return A model spec of class `era_partition_model` for `run_regional()` or
 #'   `run_searchlight()`.
@@ -55,6 +100,8 @@ era_partition_model <- function(dataset,
                                 second_order_nuisance = NULL,
                                 item_block_enc = NULL,
                                 item_block_ret = NULL,
+                                item_run_enc = NULL,
+                                item_run_ret = NULL,
                                 item_time_enc = NULL,
                                 item_time_ret = NULL,
                                 item_category = NULL,
@@ -65,6 +112,9 @@ era_partition_model <- function(dataset,
                                 min_procrustes_train_items = 3L,
                                 return_matrices = FALSE,
                                 return_xdec_predictions = FALSE,
+                                auto_nuisance = TRUE,
+                                global_nuisance = FALSE,
+                                require_run_metadata = FALSE,
                                 ...) {
 
   rsa_simfun <- match.arg(rsa_simfun)
@@ -79,6 +129,31 @@ era_partition_model <- function(dataset,
     stop("era_partition_model requires an external test set (dataset$test_data + design$y_test).", call. = FALSE)
   }
 
+  emit_meta <- if (isTRUE(require_run_metadata)) {
+    function(msg) stop(sprintf("era_partition_model: %s", msg), call. = FALSE)
+  } else {
+    function(msg) warning(sprintf("era_partition_model: %s", msg), call. = FALSE)
+  }
+  if (is.null(item_block_enc) || is.null(item_block_ret)) {
+    emit_meta(paste0(
+      "`item_block_enc` and `item_block_ret` are not both supplied; the ",
+      "`same_block_cross`, `same_block_enc`, and `same_block_ret` nuisance ",
+      "regressors will be omitted, which can change `first_order_delta_r2` / ",
+      "`second_order_delta_r2`. Pass per-item block vectors named by levels ",
+      "of `key_var` (e.g. via `era_rsa_design()`)."
+    ))
+  } else {
+    enc_vals <- as.character(unique(stats::na.omit(item_block_enc)))
+    ret_vals <- as.character(unique(stats::na.omit(item_block_ret)))
+    overlap  <- intersect(enc_vals, ret_vals)
+    if (length(overlap)) {
+      warning(sprintf(
+        "era_partition_model: `item_block_enc` and `item_block_ret` share label(s) %s. If these refer to different scans, use phase-scoped labels (e.g. `enc_1` / `ret_1`) so `same_block_cross` is not spuriously TRUE.",
+        paste(sprintf("'%s'", utils::head(overlap, 6L)), collapse = ", ")
+      ), call. = FALSE)
+    }
+  }
+
   if (is.character(distfun)) {
     distfun <- create_dist(distfun)
   }
@@ -87,12 +162,15 @@ era_partition_model <- function(dataset,
   }
 
   key_vec <- factor(parse_variable(key_var, design$train_design))
+  global_rdms <- .era_resolve_global_nuisance(
+    global_nuisance, dataset, design, key_var, distfun
+  )
   xdec_link_by_eff <- .era_partition_effective_xdec_link(
     design = design,
     link_by = xdec_link_by
   )
   xdec_key_train <- .era_partition_resolve_xdec_key(
-    key_var = substitute(key_var),
+    key_var = key_var,
     design_table = design$train_design,
     link_by = xdec_link_by_eff
   )
@@ -108,16 +186,20 @@ era_partition_model <- function(dataset,
     dataset = dataset,
     design = design,
     key = key_vec,
-    key_var = substitute(key_var),
+    key_var = key_var,
     distfun = distfun,
     rsa_simfun = rsa_simfun,
     first_order_nuisance = first_order_nuisance,
     second_order_nuisance = second_order_nuisance,
     item_block_enc = item_block_enc,
     item_block_ret = item_block_ret,
+    item_run_enc = item_run_enc,
+    item_run_ret = item_run_ret,
     item_time_enc = item_time_enc,
     item_time_ret = item_time_ret,
     item_category = item_category,
+    auto_nuisance = auto_nuisance,
+    global_nuisance = global_rdms,
     compute_xdec_performance = isTRUE(compute_xdec_performance),
     xdec_link_by = xdec_link_by_eff,
     xdec_link_by_requested = xdec_link_by,
@@ -563,23 +645,42 @@ output_schema.era_partition_model <- function(model) {
   K <- length(keys)
   out <- list()
 
-  block_enc <- .era_partition_align_item_vector(model$item_block_enc, keys)
-  block_ret <- .era_partition_align_item_vector(model$item_block_ret, keys)
-  if (!is.null(block_enc) && !is.null(block_ret)) {
-    out$same_block_cross <- as.numeric(outer(block_ret, block_enc, "=="))
+  if (.era_partition_auto_nuisance_enabled(model, "block")) {
+    block_enc <- .era_partition_align_item_vector(model$item_block_enc, keys)
+    block_ret <- .era_partition_align_item_vector(model$item_block_ret, keys)
+    if (!is.null(block_enc) && !is.null(block_ret)) {
+      out$same_block_cross <- as.numeric(outer(as.character(block_ret), as.character(block_enc), "=="))
+    }
   }
 
-  time_enc <- .era_partition_align_item_vector(model$item_time_enc, keys)
-  time_ret <- .era_partition_align_item_vector(model$item_time_ret, keys)
-  if (!is.null(time_enc) && !is.null(time_ret)) {
-    out$enc_time <- matrix(rep(as.numeric(time_enc), each = K), nrow = K)
-    out$ret_time <- matrix(rep(as.numeric(time_ret), times = K), nrow = K)
-    out$abs_lag <- abs(outer(as.numeric(time_ret), as.numeric(time_enc), "-"))
+  if (.era_partition_auto_nuisance_enabled(model, "run")) {
+    run_enc <- .era_partition_align_item_vector(model$item_run_enc, keys)
+    run_ret <- .era_partition_align_item_vector(model$item_run_ret, keys)
+    if (!is.null(run_enc) && !is.null(run_ret)) {
+      out$same_run_cross <- as.numeric(outer(as.character(run_ret), as.character(run_enc), "=="))
+    }
   }
 
-  category <- .era_partition_align_item_vector(model$item_category, keys)
-  if (!is.null(category)) {
-    out$same_category <- as.numeric(outer(category, category, "=="))
+  if (.era_partition_auto_nuisance_enabled(model, "time")) {
+    time_enc <- .era_partition_align_item_vector(model$item_time_enc, keys)
+    time_ret <- .era_partition_align_item_vector(model$item_time_ret, keys)
+    if (!is.null(time_enc) && !is.null(time_ret)) {
+      out$enc_time <- matrix(rep(as.numeric(time_enc), each = K), nrow = K)
+      out$ret_time <- matrix(rep(as.numeric(time_ret), times = K), nrow = K)
+      out$abs_lag <- abs(outer(as.numeric(time_ret), as.numeric(time_enc), "-"))
+    }
+  }
+
+  if (.era_partition_auto_nuisance_enabled(model, "category")) {
+    category <- .era_partition_align_item_vector(model$item_category, keys)
+    if (!is.null(category)) {
+      out$same_category <- as.numeric(outer(as.character(category), as.character(category), "=="))
+    }
+  }
+
+  if (.era_partition_auto_nuisance_enabled(model, "global")) {
+    global_first <- .era_partition_global_first_nuisance(model$global_nuisance, keys)
+    out <- c(out, global_first)
   }
 
   user <- .era_partition_cross_user_nuisance(model$first_order_nuisance, keys)
@@ -590,36 +691,105 @@ output_schema.era_partition_model <- function(model) {
 .era_partition_second_nuisance <- function(model, keys) {
   out <- list()
 
-  block_enc <- .era_partition_align_item_vector(model$item_block_enc, keys)
-  block_ret <- .era_partition_align_item_vector(model$item_block_ret, keys)
-  if (!is.null(block_enc)) {
-    M <- outer(block_enc, block_enc, "==")
-    out$same_block_enc <- as.numeric(M[lower.tri(M)])
-  }
-  if (!is.null(block_ret)) {
-    M <- outer(block_ret, block_ret, "==")
-    out$same_block_ret <- as.numeric(M[lower.tri(M)])
-  }
-
-  time_enc <- .era_partition_align_item_vector(model$item_time_enc, keys)
-  time_ret <- .era_partition_align_item_vector(model$item_time_ret, keys)
-  if (!is.null(time_enc)) {
-    M <- abs(outer(as.numeric(time_enc), as.numeric(time_enc), "-"))
-    out$temporal_distance_enc <- as.numeric(M[lower.tri(M)])
-  }
-  if (!is.null(time_ret)) {
-    M <- abs(outer(as.numeric(time_ret), as.numeric(time_ret), "-"))
-    out$temporal_distance_ret <- as.numeric(M[lower.tri(M)])
+  if (.era_partition_auto_nuisance_enabled(model, "block")) {
+    block_enc <- .era_partition_align_item_vector(model$item_block_enc, keys)
+    block_ret <- .era_partition_align_item_vector(model$item_block_ret, keys)
+    if (!is.null(block_enc)) {
+      M <- outer(as.character(block_enc), as.character(block_enc), "==")
+      out$same_block_enc <- as.numeric(M[lower.tri(M)])
+    }
+    if (!is.null(block_ret)) {
+      M <- outer(as.character(block_ret), as.character(block_ret), "==")
+      out$same_block_ret <- as.numeric(M[lower.tri(M)])
+    }
   }
 
-  category <- .era_partition_align_item_vector(model$item_category, keys)
-  if (!is.null(category)) {
-    M <- outer(category, category, "==")
-    out$same_category <- as.numeric(M[lower.tri(M)])
+  if (.era_partition_auto_nuisance_enabled(model, "run")) {
+    run_enc <- .era_partition_align_item_vector(model$item_run_enc, keys)
+    run_ret <- .era_partition_align_item_vector(model$item_run_ret, keys)
+    if (!is.null(run_enc)) {
+      M <- outer(as.character(run_enc), as.character(run_enc), "==")
+      out$same_run_enc <- as.numeric(M[lower.tri(M)])
+    }
+    if (!is.null(run_ret)) {
+      M <- outer(as.character(run_ret), as.character(run_ret), "==")
+      out$same_run_ret <- as.numeric(M[lower.tri(M)])
+    }
+  }
+
+  if (.era_partition_auto_nuisance_enabled(model, "time")) {
+    time_enc <- .era_partition_align_item_vector(model$item_time_enc, keys)
+    time_ret <- .era_partition_align_item_vector(model$item_time_ret, keys)
+    if (!is.null(time_enc)) {
+      M <- abs(outer(as.numeric(time_enc), as.numeric(time_enc), "-"))
+      out$temporal_distance_enc <- as.numeric(M[lower.tri(M)])
+    }
+    if (!is.null(time_ret)) {
+      M <- abs(outer(as.numeric(time_ret), as.numeric(time_ret), "-"))
+      out$temporal_distance_ret <- as.numeric(M[lower.tri(M)])
+    }
+  }
+
+  if (.era_partition_auto_nuisance_enabled(model, "category")) {
+    category <- .era_partition_align_item_vector(model$item_category, keys)
+    if (!is.null(category)) {
+      M <- outer(as.character(category), as.character(category), "==")
+      out$same_category <- as.numeric(M[lower.tri(M)])
+    }
+  }
+
+  if (.era_partition_auto_nuisance_enabled(model, "global")) {
+    global_second <- .era_partition_global_second_nuisance(model$global_nuisance, keys)
+    out <- c(out, global_second)
   }
 
   user <- .era_partition_geometry_user_nuisance(model$second_order_nuisance, keys)
   c(out, user)
+}
+
+#' @keywords internal
+.era_partition_auto_nuisance_enabled <- function(model, group) {
+  auto <- model$auto_nuisance
+  if (is.null(auto)) {
+    return(TRUE)
+  }
+  if (isFALSE(auto) || length(auto) == 0L) {
+    return(FALSE)
+  }
+  if (isTRUE(auto)) {
+    return(TRUE)
+  }
+  auto <- as.character(auto)
+  "all" %in% auto || group %in% auto
+}
+
+#' @noRd
+.era_partition_global_first_nuisance <- function(global_nuisance, keys) {
+  if (is.null(global_nuisance) || is.null(global_nuisance$S_cross)) {
+    return(list())
+  }
+  .era_partition_cross_user_nuisance(
+    list(global_cross = global_nuisance$S_cross),
+    keys = keys
+  )
+}
+
+#' @noRd
+.era_partition_global_second_nuisance <- function(global_nuisance, keys) {
+  if (is.null(global_nuisance)) {
+    return(list())
+  }
+  mats <- list()
+  if (!is.null(global_nuisance$D_enc)) {
+    mats$global_enc <- global_nuisance$D_enc
+  }
+  if (!is.null(global_nuisance$D_ret)) {
+    mats$global_ret <- global_nuisance$D_ret
+  }
+  if (!length(mats)) {
+    return(list())
+  }
+  .era_partition_geometry_user_nuisance(mats, keys = keys)
 }
 
 #' @keywords internal
