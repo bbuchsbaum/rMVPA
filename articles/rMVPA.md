@@ -180,10 +180,13 @@ Pick the next vignette by what you want to do:
   [`vignette("Contrast_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md)
 - ROI-to-ROI connectivity through model RDMs:
   [`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
-- Specialized variants and the workflow decision map:
-  [`vignette("Advanced_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Advanced_RSA.md)
-  and
+- Predict neural patterns from a feature matrix:
+  [`vignette("Feature_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)
+  (with
   [`vignette("Feature_RSA_Advanced_Workflows")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md)
+  for extensions)
+- Per-trial RSA with built-in across-block masking:
+  [`vignette("Vector_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md)
 
 **Cross-domain transfer (encoding ↔︎ retrieval, perception ↔︎ memory)**
 

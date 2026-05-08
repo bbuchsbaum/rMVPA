@@ -402,8 +402,11 @@ for the full workflow, including cross-domain pair designs
 - [`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
   – model-space fingerprints, ROI-to-ROI connectivity, pair_rsa_design,
   and searchlight anchor maps
-- [`vignette("Advanced_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Advanced_RSA.md)
-  – Feature-Based and Vector-Based RSA methods
+- [`vignette("Feature_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)
+  – Feature-Based RSA: predicting neural patterns from a feature matrix
+- [`vignette("Vector_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md)
+  – Vector-Based RSA: per-trial RSA scores with built-in across-block
+  masking
 - [`vignette("Contrast_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md)
   – MS-ReVE: contrast-based decomposition of representational geometry
 - [`vignette("Temporal_Confounds_in_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md)

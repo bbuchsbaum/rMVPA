@@ -788,8 +788,10 @@ RSA methods from basic to specialized approaches
   contrast_rsa_model](http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md):
 - [Temporal Confounds in
   RSA](http://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md):
-- [Advanced RSA Methods: Feature-Based and Vector-Based
-  Approaches](http://bbuchsbaum.github.io/rMVPA/articles/Advanced_RSA.md):
+- [Feature-Based
+  RSA](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md):
+- [Vector-Based
+  RSA](http://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md):
 - [Feature-RSA Advanced
   Workflows](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md):
 - [Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset

@@ -2,7 +2,6 @@ pandoc: 3.8.3
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
-  Advanced_RSA: Advanced_RSA.html
   CommandLine: CommandLine.html
   CommandLineScripts: CommandLineScripts.html
   Constructing_Datasets: Constructing_Datasets.html
@@ -13,6 +12,7 @@ articles:
   Feature_RSA_Advanced_Workflows: Feature_RSA_Advanced_Workflows.html
   Feature_RSA_Connectivity: Feature_RSA_Connectivity.html
   Feature_RSA_Domain_Adaptation: Feature_RSA_Domain_Adaptation.html
+  Feature_RSA: Feature_RSA.html
   FeatureSelection: FeatureSelection.html
   Haxby_2001: Haxby_2001.html
   Kriegeskorte_92_Images: Kriegeskorte_92_Images.html
@@ -29,7 +29,8 @@ articles:
   RSA: RSA.html
   Searchlight_Analysis: Searchlight_Analysis.html
   Temporal_Confounds_in_RSA: Temporal_Confounds_in_RSA.html
-last_built: 2026-05-07T20:43Z
+  Vector_RSA: Vector_RSA.html
+last_built: 2026-05-08T14:24Z
 urls:
   reference: http://bbuchsbaum.github.io/rMVPA/reference
   article: http://bbuchsbaum.github.io/rMVPA/articles
