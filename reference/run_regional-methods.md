@@ -274,12 +274,12 @@ Without progressr, only coarse batch-level log messages are shown.
   
   # Run regional analysis
   results <- run_regional(mspec, region_mask)
-#> INFO [2026-05-08 17:31:53] 
+#> INFO [2026-05-08 19:52:13] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 5
 #> - Processed: 5
 #> - Skipped: 0
-#> INFO [2026-05-08 17:31:53] run_regional: 5 ROIs processed (success=5, errors=0)
+#> INFO [2026-05-08 19:52:14] run_regional: 5 ROIs processed (success=5, errors=0)
   
   # Access results
   head(results$performance_table)     # Performance metrics
