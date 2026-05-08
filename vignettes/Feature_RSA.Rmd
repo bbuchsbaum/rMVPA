@@ -1,0 +1,191 @@
+---
+title: "Feature-Based RSA"
+author: Bradley Buchsbaum
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 3
+vignette: |
+  %\VignetteIndexEntry{Feature-Based RSA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+params:
+  family: red
+  preset: homage
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-teal');});</script>
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  message  = FALSE,
+  warning  = FALSE
+)
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) {
+  ggplot2::theme_set(albersdown::theme_albers(params$family))
+}
+library(rMVPA)
+```
+
+## What problem does Feature-Based RSA solve?
+
+You already have a feature space for your stimuli — semantic embeddings, CNN layer activations, behavioural ratings, model logits. The question is not "do two RDMs correlate?" but **"does this brain region encode these features well enough that I can predict held-out neural patterns from them?"**
+
+Feature-Based RSA fits a cross-validated regression from the feature matrix `F` (trials × features) to the neural pattern matrix `X` (trials × voxels), evaluates on held-out trials, and reports several reconstruction metrics. It sits between standard RSA (correlate two RDMs) and full encoding/decoding (fit voxelwise GLMs): you get an RDM-level summary *and* trial-level pattern fidelity, with regularisation and component selection built in.
+
+## When to use it
+
+Use Feature-Based RSA when:
+
+- You have a **named, fixed feature space** (rows = trials, columns = features) and want to ask whether an ROI encodes those specific dimensions.
+- You care about **per-trial pattern reconstruction**, not just whether two RDMs correlate — for example, you want to test whether semantic embeddings predict the *exact* held-out trial pattern, not just average geometry.
+- You want **regularisation** (PLS, PCR, or elastic net) because your feature space is high-dimensional, correlated, or has more features than trials.
+- You want **multiple performance metrics** out of one fit — pattern correlation, pattern discrimination, RDM correlation, voxel correlation, R² — rather than choosing one a priori.
+
+If you only have a model RDM (no feature matrix) and want a per-trial similarity score with built-in across-block masking, see `vignette("Vector_RSA")`. If you want to test multiple model RDMs as regressors and read out coefficients, see `vignette("RSA")`.
+
+## Inputs and outputs
+
+| Component | What it is |
+|---|---|
+| `F` (or `S`) | Feature matrix `n_trials × n_features` — *or* a similarity matrix `S` that gets eigen-decomposed into a feature basis. |
+| `labels` | Vector of length `n_trials` naming each row of `F`. |
+| `mvpa_dataset` | Neural data `X`: `n_trials × n_voxels` per ROI/searchlight. |
+| `crossval` | A cross-validation spec. Required (or pass `block_var` to the design and let it build a blocked CV). |
+| Output | Per-ROI metrics including `pattern_correlation`, `pattern_discrimination`, `pattern_rank_percentile`, `rdm_correlation`, `voxel_correlation`, `mse`, `r_squared`, `mean_voxelwise_temporal_cor`, and `ncomp` (components actually used). |
+
+## Minimal example
+
+We will:
+
+1. Generate a small synthetic dataset where the brain patterns *are* driven by a known feature matrix.
+2. Build a `feature_rsa_design` from that feature matrix.
+3. Fit `feature_rsa_model()` with PLS regression and inspect the per-region performance.
+
+```{r minimal-data}
+set.seed(2026)
+
+# Synthetic neural data: 50 trials in 4 blocks, small mask.
+sim <- gen_sample_dataset(D = c(6, 6, 6), nobs = 50, blocks = 4, nlevels = 2)
+
+# Feature matrix shared across the simulation: 5 features driven by 2 latent factors.
+n_trials   <- 50
+n_features <- 5
+Z <- matrix(rnorm(n_trials * 2), n_trials, 2)
+B <- matrix(rnorm(2 * n_features), 2, n_features)
+F <- 0.7 * (Z %*% B) + 0.3 * matrix(rnorm(n_trials * n_features), n_trials, n_features)
+F <- base::scale(F)
+colnames(F) <- paste0("feat_", seq_len(n_features))
+labels <- paste0("trial_", seq_len(n_trials))
+```
+
+Inject a weak signal driven by the *same* latent factors `Z` into the brain data, so that a feature-RSA model has something to recover:
+
+```{r minimal-inject}
+mask_vol  <- sim$dataset$mask
+mask_idx  <- which(as.logical(neuroim2::values(mask_vol)))
+
+datamat <- do.call(cbind, lapply(
+  neuroim2::vols(sim$dataset$train_data),
+  function(v) as.numeric(v[mask_idx])
+))
+
+p1 <- rnorm(length(mask_idx)); p1 <- p1 / sd(p1)
+p2 <- rnorm(length(mask_idx)); p2 <- p2 / sd(p2)
+datamat <- datamat + p1 %*% t(0.5 * Z[, 1]) + p2 %*% t(0.5 * Z[, 2])
+
+train_vec <- neuroim2::SparseNeuroVec(
+  datamat, neuroim2::space(sim$dataset$train_data),
+  mask = as.logical(neuroim2::values(mask_vol))
+)
+dset <- mvpa_dataset(train_vec, mask = mask_vol)
+```
+
+Now build the design and the model:
+
+```{r minimal-design}
+design <- feature_rsa_design(
+  F        = F,
+  labels   = labels,
+  max_comps = 2          # cap PLS/PCR components
+)
+
+cv <- blocked_cross_validation(sim$design$block_var)
+
+mod <- feature_rsa_model(
+  dataset  = dset,
+  design   = design,
+  method   = "pls",      # PLS regression: F -> X
+  crossval = cv
+)
+```
+
+A regional run that splits the mask into a few ROIs:
+
+```{r minimal-run}
+nvox <- sum(mask_vol)
+region_mask <- neuroim2::NeuroVol(
+  sample(1:3, size = nvox, replace = TRUE),
+  neuroim2::space(mask_vol),
+  indices = which(mask_vol > 0)
+)
+
+res <- run_regional(mod, region_mask)
+res$performance_table
+```
+
+Each row is one ROI. `pattern_correlation` and `rdm_correlation` are usually the most diagnostic columns: they answer "did the model produce a sensible held-out pattern?" and "did the predicted pattern have the right pairwise geometry?" respectively. `ncomp` records how many PLS components were actually used (controlled by `ncomp_selection`).
+
+## Choosing a method
+
+`feature_rsa_model()` supports three estimators. The right choice depends on the feature space:
+
+| Method | Best when | Notes |
+|---|---|---|
+| `"pls"` (default) | Features are correlated; you want supervised dimensionality reduction. | Uses `pls::plsr`. Fits up to `max_comps` components. |
+| `"pca"` | You want to reduce features unsupervised first, then regress on PCs. | Principal component regression via `pls::pcr`. |
+| `"glmnet"` | High-dimensional or sparse features; you want shrinkage. | Multivariate Gaussian elastic net via `glmnet`. Tune with `alpha`, `lambda`, `cv_glmnet`. |
+
+For PLS and PCR, `ncomp_selection` decides how many of the fitted components are used at prediction time:
+
+- `"loo"` (default): leave-one-out CV, picks the fewest components within one SE of the minimum RMSEP.
+- `"pve"`: stop when cumulative explained variance crosses `pve_threshold` (default 0.9).
+- `"max"`: always use `max_comps` components.
+
+```{r compare-methods}
+methods <- c("pls", "pca", "glmnet")
+summary_rows <- lapply(methods, function(m) {
+  spec <- feature_rsa_model(dataset = dset, design = design, method = m, crossval = cv)
+  out  <- run_regional(spec, region_mask)
+  cbind(method = m, out$performance_table)
+})
+do.call(rbind, summary_rows)
+```
+
+## How it differs from standard RSA
+
+| | Standard RSA (`rsa_model`) | Feature-Based RSA (`feature_rsa_model`) |
+|---|---|---|
+| Input | One or more **model RDMs** | A **feature matrix** `F` (or symmetric similarity `S`) |
+| Comparison | Correlation/regression on **vectorised RDMs** | Cross-validated regression on **trial-level patterns** |
+| Cross-validation | Optional (block exclusion) | Required (`crossval`) — predicts held-out trials |
+| Output | One coefficient or correlation per RDM | Multiple metrics per ROI: pattern, RDM, voxel, R² |
+| Good for | Testing competing geometric hypotheses | Asking *"does this region encode these features?"* |
+
+Standard RSA is lighter and more interpretable when your hypothesis is about geometry. Feature-Based RSA is the right tool when you have an actual feature space and want to know whether the brain tracks it well enough to *predict* the next held-out trial.
+
+## What's next
+
+- `vignette("Vector_RSA")` — per-trial RSA scores with built-in across-block masking, when you have a single reference RDM.
+- `vignette("Feature_RSA_Advanced_Workflows")` — workflow extensions: returning predicted RDM vectors, cross-ROI representational connectivity from feature-RSA fits, multi-scenario evaluation.
+- `vignette("Feature_RSA_Connectivity")` and `vignette("Feature_RSA_Domain_Adaptation")` — connectivity and cross-state extensions of the same model.
+- `?feature_rsa_design`, `?feature_rsa_model` — full argument reference.

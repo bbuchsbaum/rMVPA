@@ -152,7 +152,8 @@ Pick the next vignette by what you want to do:
 - Standard RSA: `vignette("RSA")`
 - Decompose geometry by signed contrasts (MS-ReVE): `vignette("Contrast_RSA")`
 - ROI-to-ROI connectivity through model RDMs: `vignette("Model_Space_Connectivity")`
-- Specialized variants and the workflow decision map: `vignette("Advanced_RSA")` and `vignette("Feature_RSA_Advanced_Workflows")`
+- Predict neural patterns from a feature matrix: `vignette("Feature_RSA")` (with `vignette("Feature_RSA_Advanced_Workflows")` for extensions)
+- Per-trial RSA with built-in across-block masking: `vignette("Vector_RSA")`
 
 **Cross-domain transfer (encoding ↔ retrieval, perception ↔ memory)**
 

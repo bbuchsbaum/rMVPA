@@ -32,7 +32,8 @@ articles:
   - RSA
   - Contrast_RSA
   - Temporal_Confounds_in_RSA
-  - Advanced_RSA
+  - Feature_RSA
+  - Vector_RSA
   - Feature_RSA_Advanced_Workflows
   - Feature_RSA_Connectivity
   - Model_Space_Connectivity
