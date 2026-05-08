@@ -16,6 +16,14 @@
 #' @param link_by Optional character; if provided, prototypes and observed labels
 #'   are keyed by this column instead of y.
 #' @param return_predictions logical; keep per-ROI predictions.
+#' @param performance Optional user-supplied performance function. When
+#'   non-`NULL`, must be a function that accepts the classification result
+#'   object (with fields `observed`, `predicted`, `probs`, `testind`,
+#'   `test_design`) and returns a named numeric vector of metrics. Routed
+#'   through [get_custom_perf()], which annotates it as `"custom"`; this
+#'   disables the optimised fast-metric kernel and ensures the user's
+#'   function is always called on the full result object. When `NULL`, the
+#'   default binary / multiclass / regression performance helper is used.
 #' @param ... Additional arguments (currently unused).
 #'
 #' @return model spec object of class `naive_xdec_model` for use with
@@ -25,11 +33,29 @@
 #'   # Requires dataset with train_data and test_data
 #'   ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
 #'   model <- naive_xdec_model(ds$dataset, ds$design)
+#'
+#'   # Custom metric that uses a column from test_design
+#'   custom_fun <- function(result) {
+#'     vivid <- result$test_design$RateVivid
+#'     probs <- as.matrix(result$probs)
+#'     obs   <- as.character(result$observed)
+#'     true_p <- probs[cbind(seq_along(obs), match(obs, colnames(probs)))]
+#'     c(vivid_spearman = stats::cor(vivid, true_p, method = "spearman"))
+#'   }
+#'   model <- naive_xdec_model(ds$dataset, ds$design, performance = custom_fun)
 #' }
 #' @export
-naive_xdec_model <- function(dataset, design, link_by = NULL, return_predictions = TRUE, ...) {
-  # Choose performance function based on training response
-  perf_fun <- if (is.numeric(design$y_train)) {
+naive_xdec_model <- function(dataset, design, link_by = NULL,
+                              return_predictions = TRUE,
+                              performance = NULL, ...) {
+  # Choose performance function: user-supplied custom takes precedence; else
+  # pick the default helper based on the training response type.
+  perf_fun <- if (!is.null(performance)) {
+    if (!is.function(performance)) {
+      stop("`performance` must be a function or NULL", call. = FALSE)
+    }
+    get_custom_perf(performance, design$split_groups)
+  } else if (is.numeric(design$y_train)) {
     get_regression_perf(design$split_groups)
   } else if (length(levels(design$y_train)) > 2) {
     get_multiclass_perf(design$split_groups, class_metrics = FALSE)
@@ -85,6 +111,12 @@ print.naive_xdec_model <- function(x, ...) {
   perf_kind <- attr(perf_fun, "rmvpa_perf_kind", exact = TRUE)
 
   if (is.null(perf_kind)) {
+    return(list(enabled = FALSE))
+  }
+
+  # User-supplied custom performance functions must always run on the full
+  # classification result; never short-circuit through the fast-metric kernel.
+  if (identical(perf_kind, "custom")) {
     return(list(enabled = FALSE))
   }
 
