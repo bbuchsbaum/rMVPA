@@ -189,26 +189,27 @@ save_results.rmvpa_analysis_run <- function(x, dir = NULL,
     )
   }
 
-  manifest <- list(
-    created = as.character(Sys.time()),
-    mode = x$analysis$mode,
-    preflight_policy = x$preflight,
-    config_summary = .summarize_public_config(x$analysis$config),
-    entries = lapply(seq_along(x$analysis$entries), function(i) {
-      entry <- x$analysis$entries[[i]]
-      list(
-        name = .analysis_output_label(entry$name, i),
-        model_class = class(entry$model_spec)[1],
-        dataset_class = class(entry$model_spec$dataset)[1],
-        design_class = class(entry$model_spec$design)[1]
-      )
-    }),
-    git_sha = .git_head_sha(),
-    session_info = capture.output(utils::sessionInfo()),
-    files = paths
+  paths$manifest <- .try_write_manifest(
+    build = function() list(
+      created = as.character(Sys.time()),
+      mode = x$analysis$mode,
+      preflight_policy = x$preflight,
+      config_summary = .summarize_public_config(x$analysis$config),
+      entries = lapply(seq_along(x$analysis$entries), function(i) {
+        entry <- x$analysis$entries[[i]]
+        list(
+          name = .analysis_output_label(entry$name, i),
+          model_class = class(entry$model_spec)[1],
+          dataset_class = class(entry$model_spec$dataset)[1],
+          design_class = class(entry$model_spec$design)[1]
+        )
+      }),
+      git_sha = .git_head_sha(),
+      session_info = .safe_session_info(),
+      files = paths
+    ),
+    dir = dir, quiet = quiet, paths = paths
   )
-
-  paths$manifest <- .write_manifest(manifest, dir, quiet)
   invisible(paths)
 }
 

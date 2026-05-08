@@ -275,3 +275,67 @@ test_that("save_results.regional_mvpa_result records file-backed rdm_batches in 
   unlink(temp_dir, recursive = TRUE)
   unlink(out_dir, recursive = TRUE)
 })
+
+test_that("save_results writes maps + fallback manifest when metadata collection errors", {
+  library(neuroim2)
+
+  dim <- c(6, 6, 6)
+  space <- NeuroSpace(dim, c(1, 1, 1))
+  vol <- NeuroVol(array(runif(prod(dim)), dim), space)
+
+  result <- structure(
+    list(
+      results = list(accuracy = vol),
+      n_voxels = prod(dim),
+      active_voxels = prod(dim),
+      metrics = "accuracy"
+    ),
+    class = c("searchlight_result", "list")
+  )
+
+  temp_dir <- tempfile()
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+
+  # Simulate the failure mode in issue #61: runtime metadata collection
+  # (e.g. sessionInfo() tripping on a malformed package DESCRIPTION) errors
+  # *after* maps have been written.
+  testthat::local_mocked_bindings(
+    .manifest_runtime_context = function(x) stop("simulated $Priority failure"),
+    .package = "rMVPA"
+  )
+
+  expect_warning(
+    save_results(result, temp_dir, quiet = TRUE),
+    "Manifest metadata collection failed"
+  )
+
+  # Maps are present despite metadata failure
+  expect_true(file.exists(file.path(temp_dir, "maps", "accuracy.nii.gz")))
+
+  # A fallback manifest was still written
+  manifest_path <- list.files(temp_dir, pattern = "^manifest\\.", full.names = TRUE)[1]
+  expect_true(file.exists(manifest_path))
+
+  ext <- tools::file_ext(manifest_path)
+  if (ext == "rds") {
+    manifest <- readRDS(manifest_path)
+    expect_equal(manifest$manifest_status, "fallback")
+    expect_match(manifest$manifest_error, "simulated \\$Priority failure")
+  } else {
+    txt <- paste(readLines(manifest_path, warn = FALSE), collapse = "\n")
+    expect_match(txt, "fallback")
+    expect_match(txt, "simulated")
+  }
+})
+
+test_that(".safe_session_info degrades gracefully when sessionInfo errors", {
+  testthat::local_mocked_bindings(
+    sessionInfo = function(...) stop("malformed DESCRIPTION"),
+    .package = "utils"
+  )
+
+  out <- rMVPA:::.safe_session_info()
+  expect_type(out, "character")
+  expect_true(any(grepl("sessionInfo\\(\\) unavailable", out)))
+  expect_true(any(grepl("malformed DESCRIPTION", out)))
+})

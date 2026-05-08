@@ -162,14 +162,53 @@ save_results <- function(x, dir,
   }
 }
 
+.safe_session_info <- function() {
+  tryCatch(
+    capture.output(utils::sessionInfo()),
+    error = function(e) c(
+      sprintf("R version: %s", R.version.string),
+      sprintf("Platform: %s", R.version$platform),
+      sprintf("sessionInfo() unavailable: %s", conditionMessage(e))
+    )
+  )
+}
+
 .manifest_runtime_context <- function(x) {
+  safe <- function(expr) tryCatch(expr, error = function(e) NULL)
   list(
-    analysis_context = attr(x, "analysis_context", exact = TRUE),
-    searchlight_engine = attr(x, "searchlight_engine", exact = TRUE),
-    preflight = .validation_result_payload(attr(x, "preflight", exact = TRUE)),
-    timing = attr(x, "timing", exact = TRUE),
-    session_info = capture.output(utils::sessionInfo()),
-    git_sha = .git_head_sha()
+    analysis_context  = safe(attr(x, "analysis_context", exact = TRUE)),
+    searchlight_engine = safe(attr(x, "searchlight_engine", exact = TRUE)),
+    preflight         = safe(.validation_result_payload(attr(x, "preflight", exact = TRUE))),
+    timing            = safe(attr(x, "timing", exact = TRUE)),
+    session_info      = .safe_session_info(),
+    git_sha           = safe(.git_head_sha())
+  )
+}
+
+# Build + write a manifest defensively.
+# `build` is a thunk returning the full manifest list. If it errors, we warn
+# and write a minimal fallback manifest so already-written maps aren't
+# orphaned by a metadata collection failure.
+.try_write_manifest <- function(build, dir, quiet, paths) {
+  full <- tryCatch(build(), error = function(e) e)
+  if (inherits(full, "error")) {
+    warning("Manifest metadata collection failed: ", conditionMessage(full),
+            ". Writing minimal fallback manifest.", call. = FALSE)
+    full <- list(
+      created         = as.character(Sys.time()),
+      manifest_status = "fallback",
+      manifest_error  = conditionMessage(full),
+      rMVPA_version   = tryCatch(as.character(utils::packageVersion("rMVPA")),
+                                 error = function(e) NA_character_),
+      files           = paths
+    )
+  }
+  tryCatch(
+    .write_manifest(full, dir, quiet),
+    error = function(e) {
+      warning("Failed to write manifest: ", conditionMessage(e), call. = FALSE)
+      NA_character_
+    }
   )
 }
 
@@ -398,19 +437,20 @@ save_results.searchlight_result <- function(x, dir,
 
   # ---- manifest ----
   if ("manifest" %in% include) {
-    man <- list(
-      created = as.character(Sys.time()),
-      rMVPA_version   = tryCatch(as.character(utils::packageVersion("rMVPA")), error = function(e) NA_character_),
-      neuroim2_version = tryCatch(as.character(utils::packageVersion("neuroim2")), error = function(e) NA_character_),
-      neurosurf_version = if (requireNamespace("neurosurf", quietly = TRUE))
-        as.character(utils::packageVersion("neurosurf")) else NA_character_,
-      class = class(x),
-      metrics = names_all,
-      runtime = .manifest_runtime_context(x),
-      files = paths
+    paths$manifest <- .try_write_manifest(
+      build = function() list(
+        created = as.character(Sys.time()),
+        rMVPA_version   = tryCatch(as.character(utils::packageVersion("rMVPA")), error = function(e) NA_character_),
+        neuroim2_version = tryCatch(as.character(utils::packageVersion("neuroim2")), error = function(e) NA_character_),
+        neurosurf_version = if (requireNamespace("neurosurf", quietly = TRUE))
+          as.character(utils::packageVersion("neurosurf")) else NA_character_,
+        class = class(x),
+        metrics = names_all,
+        runtime = .manifest_runtime_context(x),
+        files = paths
+      ),
+      dir = dir, quiet = quiet, paths = paths
     )
-    mfile <- .write_manifest(man, dir, quiet)
-    paths$manifest <- mfile
   }
 
   invisible(paths)
@@ -519,19 +559,20 @@ save_results.regional_mvpa_result <- function(x, dir,
 
   # Manifest
   if ("manifest" %in% include) {
-    man <- list(
-      created = as.character(Sys.time()),
-      rMVPA_version = tryCatch(as.character(utils::packageVersion("rMVPA")),
-                               error = function(e) NA_character_),
-      class = class(x),
-      n_rois = if (!is.null(x$performance_table)) nrow(x$performance_table) else NA_integer_,
-      has_fits = !is.null(x$fits) && length(x$fits) > 0,
-      has_rdm_batches = !is.null(x$rdm_batch_dir),
-      runtime = .manifest_runtime_context(x),
-      files = paths
+    paths$manifest <- .try_write_manifest(
+      build = function() list(
+        created = as.character(Sys.time()),
+        rMVPA_version = tryCatch(as.character(utils::packageVersion("rMVPA")),
+                                 error = function(e) NA_character_),
+        class = class(x),
+        n_rois = if (!is.null(x$performance_table)) nrow(x$performance_table) else NA_integer_,
+        has_fits = !is.null(x$fits) && length(x$fits) > 0,
+        has_rdm_batches = !is.null(x$rdm_batch_dir),
+        runtime = .manifest_runtime_context(x),
+        files = paths
+      ),
+      dir = dir, quiet = quiet, paths = paths
     )
-    mfile <- .write_manifest(man, dir, quiet)
-    paths$manifest <- mfile
   }
 
   invisible(paths)
@@ -608,15 +649,17 @@ save_results.global_mvpa_result <- function(x, dir,
   }
 
   if ("manifest" %in% include) {
-    man <- list(
-      created = as.character(Sys.time()),
-      rMVPA_version = tryCatch(as.character(utils::packageVersion("rMVPA")),
-                               error = function(e) NA_character_),
-      class = class(x),
-      runtime = .manifest_runtime_context(x),
-      files = paths
+    paths$manifest <- .try_write_manifest(
+      build = function() list(
+        created = as.character(Sys.time()),
+        rMVPA_version = tryCatch(as.character(utils::packageVersion("rMVPA")),
+                                 error = function(e) NA_character_),
+        class = class(x),
+        runtime = .manifest_runtime_context(x),
+        files = paths
+      ),
+      dir = dir, quiet = quiet, paths = paths
     )
-    paths$manifest <- .write_manifest(man, dir, quiet)
   }
 
   invisible(paths)
