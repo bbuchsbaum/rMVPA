@@ -41,7 +41,6 @@
 ^\.rcmdcheck_result\.rds$
 ^.*\.Rcheck$
 ^archive($|/)
-^sketches($|/)
 ^src/Makevars$
 ^src/.*\.(o|so|dll|dylib)$
 ^searchlight_performance_execution_plan\.md$

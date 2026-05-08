@@ -73,6 +73,14 @@ res$performance_table
 
 The `performance_table` row reports, per ROI, how well that ROI's neural pair-dissimilarity vector tracks the model RDM. That's the entire RSA core loop. The rest of this vignette covers the parts you'll actually want to control: how to build model RDMs, how to combine multiple RDMs, how to handle correlated RDMs, and how to wire it into searchlight.
 
+### The whole pipeline at a glance
+
+Before walking through each step, here is the standard-RSA flow on a small synthetic dataset. Patterns become a neural RDM via `dist()`; model RDMs encode hypotheses; the comparison is a regression on the lower triangle.
+
+```{r rsa-schematic, echo = FALSE, fig.width = 9, fig.height = 5.4, out.width = "100%", fig.cap = "Standard RSA in five panels. (1) condition x voxel patterns. (2) neural RDM. (3a/3b) two model RDMs (category, identity). (4) lower-triangle scatter of model vs neural with Spearman rho. (5) coefficients from a multi-RDM regression of the neural RDM on both model RDMs."}
+invisible(rsa_schematic_basic())
+```
+
 ## Basic concepts
 
 ### Dissimilarity matrices

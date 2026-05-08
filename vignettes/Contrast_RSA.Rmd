@@ -78,6 +78,12 @@ print(round(C_mat, 2))
 ms_des <- msreve_design(data_info$design, contrast_matrix = C_mat)
 ```
 
+### The whole pipeline at a glance
+
+```{r msreve-schematic, echo = FALSE, fig.width = 9, fig.height = 5.6, out.width = "100%", fig.cap = "MS-ReVE in six panels. (1) contrast matrix C (K conditions x Q contrasts). (2a/2b) each contrast's predicted dissimilarity Delta_q = -c_q c_q^T. (3) a searchlight neural RDM. (4) beta_q from regressing the neural RDM on the Delta_q stack. (5) signed voxel score beta_q * Delta_{q,v}: positive voxels pull the contrast in its predicted direction, negative voxels oppose. (6) summary equations. The figure uses synthetic patterns separate from the example below; it is here to anchor the symbols you will see in the metrics section."}
+invisible(rsa_schematic_msreve())
+```
+
 Next we create the model specification and run a tiny searchlight over the volume, requesting the default `"beta_delta"` metric.
 
 ```{r run_msreve_searchlight, message=FALSE, warning=FALSE}
