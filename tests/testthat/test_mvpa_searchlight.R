@@ -152,9 +152,11 @@ test_that("standard surface-based mvpa_searchlight runs without error", {
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("sda_notune")
   mspec <- mvpa_model(model, dataset$dataset, dataset$design,model_type="classification", crossval=cval)
-  res <- run_searchlight(mspec, radius=4, method="standard")
+  # radius=8: the std.8 mesh in neurosurf has ~642 vertices, so smaller radii
+  # leave most surface searchlights with <2 active vertices after thinning.
+  res <- run_searchlight(mspec, radius=8, method="standard")
   expect_true(!is.null(res))
-  
+
 })
 
 test_that("randomized surface-based mvpa_searchlight runs without error", {
