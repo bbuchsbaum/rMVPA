@@ -52,6 +52,7 @@ adaptation. Serves as a comparator for REMAP-RRR.</p>
 <span>  <span class="va">design</span>,</span>
 <span>  link_by <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  return_predictions <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  performance <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -79,6 +80,17 @@ are keyed by this column instead of y.</p></dd>
 <dd><p>logical; keep per-ROI predictions.</p></dd>
 
 
+<dt id="arg-performance">performance<a class="anchor" aria-label="anchor" href="#arg-performance"></a></dt>
+<dd><p>Optional user-supplied performance function. When
+non-`NULL`, must be a function that accepts the classification result
+object (with fields `observed`, `predicted`, `probs`, `testind`,
+`test_design`) and returns a named numeric vector of metrics. Routed
+through [get_custom_perf()], which annotates it as `"custom"`; this
+disables the optimised fast-metric kernel and ensures the user's
+function is always called on the full result object. When `NULL`, the
+default binary / multiclass / regression performance helper is used.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments (currently unused).</p></dd>
 
@@ -102,6 +114,16 @@ transfer" or "direct transfer" in machine learning literature.</p>
 <span class="r-in"><span>  <span class="co"># Requires dataset with train_data and test_data</span></span></span>
 <span class="r-in"><span>  <span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>,<span class="fl">5</span>,<span class="fl">5</span><span class="op">)</span>, <span class="fl">20</span>, external_test<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">naive_xdec_model</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">ds</span><span class="op">$</span><span class="va">design</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span>  <span class="co"># Custom metric that uses a column from test_design</span></span></span>
+<span class="r-in"><span>  <span class="va">custom_fun</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="va">vivid</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">test_design</span><span class="op">$</span><span class="va">RateVivid</span></span></span>
+<span class="r-in"><span>    <span class="va">probs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">probs</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">obs</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">observed</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">true_p</span> <span class="op">&lt;-</span> <span class="va">probs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">obs</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/match.html" class="external-link">match</a></span><span class="op">(</span><span class="va">obs</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">probs</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>vivid_spearman <span class="op">=</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span><span class="va">vivid</span>, <span class="va">true_p</span>, method <span class="op">=</span> <span class="st">"spearman"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span></span></span>
+<span class="r-in"><span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">naive_xdec_model</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">ds</span><span class="op">$</span><span class="va">design</span>, performance <span class="op">=</span> <span class="va">custom_fun</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

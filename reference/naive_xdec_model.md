@@ -12,6 +12,7 @@ naive_xdec_model(
   design,
   link_by = NULL,
   return_predictions = TRUE,
+  performance = NULL,
   ...
 )
 ```
@@ -38,6 +39,18 @@ naive_xdec_model(
 
   logical; keep per-ROI predictions.
 
+- performance:
+
+  Optional user-supplied performance function. When non-\`NULL\`, must
+  be a function that accepts the classification result object (with
+  fields \`observed\`, \`predicted\`, \`probs\`, \`testind\`,
+  \`test_design\`) and returns a named numeric vector of metrics. Routed
+  through \[get_custom_perf()\], which annotates it as \`"custom"\`;
+  this disables the optimised fast-metric kernel and ensures the user's
+  function is always called on the full result object. When \`NULL\`,
+  the default binary / multiclass / regression performance helper is
+  used.
+
 - ...:
 
   Additional arguments (currently unused).
@@ -62,5 +75,15 @@ if (FALSE) { # \dontrun{
   # Requires dataset with train_data and test_data
   ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
   model <- naive_xdec_model(ds$dataset, ds$design)
+
+  # Custom metric that uses a column from test_design
+  custom_fun <- function(result) {
+    vivid <- result$test_design$RateVivid
+    probs <- as.matrix(result$probs)
+    obs   <- as.character(result$observed)
+    true_p <- probs[cbind(seq_along(obs), match(obs, colnames(probs)))]
+    c(vivid_spearman = stats::cor(vivid, true_p, method = "spearman"))
+  }
+  model <- naive_xdec_model(ds$dataset, ds$design, performance = custom_fun)
 } # }
 ```
