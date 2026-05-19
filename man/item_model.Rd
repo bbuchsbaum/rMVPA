@@ -28,9 +28,9 @@ item_model(
 
 \item{mode}{Decoding mode: `"classification"` or `"regression"`.}
 
-\item{metric}{Optional ITEM metric.
-Classification: `"accuracy"`, `"balanced_accuracy"`.
-Regression: `"correlation"`, `"rmse"`.}
+\item{metric}{Optional ITEM metric. Validated against `mode` at
+construction. Classification: `"accuracy"`, `"balanced_accuracy"`.
+Regression: `"correlation"`, `"rmse"`. `NULL` uses the `fmrilss` default.}
 
 \item{ridge_u}{Non-negative ridge used when computing `U`.}
 
@@ -71,4 +71,10 @@ the decoder is fit:
 
 Use ITEM when you want an explicit trial-estimation stage and direct control
 over trial covariance handling (`U`), especially for trial-level diagnostics.
+
+When `return_predictions = TRUE` (the default) the full per-fold
+cross-validation payload is retained on every ROI result. The searchlight
+schema combiner discards this payload and keeps only the scalar maps, but
+`run_regional()` retains the full results list; for analyses with many ROIs
+or large trial counts, pass `return_predictions = FALSE` to bound memory.
 }
