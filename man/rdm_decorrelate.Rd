@@ -13,7 +13,7 @@ rdm_decorrelate(
   gamma_grid = seq(0, 1, by = 0.05),
   mu = 1,
   target = c("mean_abs", "mean_squared"),
-  return = c("dist", "matrix", "vector"),
+  output = c("dist", "matrix", "vector"),
   project_correlation = FALSE,
   zca_ridge = 1e-08,
   max_combinations = 2e+05,
@@ -48,7 +48,7 @@ shrinkage. The first RDM is fixed at `gamma = 1`.}
 pairwise correlation; `"mean_squared"` penalizes mean squared pairwise
 correlation.}
 
-\item{return}{Character string. `"dist"` returns adjusted RDMs as `dist`
+\item{output}{Character string. `"dist"` returns adjusted RDMs as `dist`
 objects, `"matrix"` returns symmetric matrices, and `"vector"` returns
 lower-triangular vectors.}
 

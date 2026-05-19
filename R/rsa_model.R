@@ -1083,8 +1083,8 @@ rsa_model <- function(dataset,
     return(NULL)
   }
   storage.mode(mat) <- "double"
-  X <- .rdm_model_space_standardize_matrix(mat, method = method, tol = tol,
-                                           label = "model_mat")
+  X <- .rdm_standardize_columns(mat, similarity = method, tol = tol,
+                                label = "model_mat")
   bf <- .rdm_model_space_basis(X, basis = basis, tol = tol)
   list(
     Q          = bf$Q,

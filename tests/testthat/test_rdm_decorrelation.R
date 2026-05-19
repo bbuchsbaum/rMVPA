@@ -51,7 +51,7 @@ test_that("ordered innovation full residuals are orthogonal in RDM-vector space"
     method = "ordered_innovation",
     similarity = "pearson",
     objective = "full_residual",
-    return = "matrix"
+    output = "matrix"
   )
 
   C <- dec$cross_rdm_cor_after
@@ -69,14 +69,14 @@ test_that("constraint objective satisfies epsilon when feasible and preserves mo
     similarity = "pearson",
     epsilon = 0.02,
     gamma_grid = seq(0, 1, by = 0.1),
-    return = "vector"
+    output = "vector"
   )
   relaxed <- rdm_decorrelate(
     rdms,
     similarity = "pearson",
     epsilon = 0.5,
     gamma_grid = seq(0, 1, by = 0.1),
-    return = "vector"
+    output = "vector"
   )
 
   expect_lte(tight$mean_abs_cor_after, 0.02 + 1e-12)
@@ -110,7 +110,7 @@ test_that("ZCA decorrelation whitens full-rank RDM vectors", {
     rdms,
     method = "zca",
     similarity = "pearson",
-    return = "vector"
+    output = "vector"
   )
 
   cov_after <- crossprod(as.matrix(dec$vectors)) / (nrow(dec$vectors) - 1L)
@@ -124,7 +124,7 @@ test_that("ordered decorrelation is invariant to common item permutation", {
     rdms,
     similarity = "pearson",
     objective = "full_residual",
-    return = "matrix"
+    output = "matrix"
   )
 
   perm <- sample(seq_len(9))
@@ -133,7 +133,7 @@ test_that("ordered decorrelation is invariant to common item permutation", {
     rdms_perm,
     similarity = "pearson",
     objective = "full_residual",
-    return = "matrix"
+    output = "matrix"
   )
   inv <- order(perm)
   unpermuted <- lapply(dec_perm$rdms, function(M) M[inv, inv])
@@ -151,7 +151,7 @@ test_that("correlation projection returns valid correlation-cone RDMs", {
     rdms,
     similarity = "pearson",
     objective = "full_residual",
-    return = "matrix",
+    output = "matrix",
     project_correlation = TRUE
   )
 
@@ -188,7 +188,7 @@ test_that("duplicated RDMs yield explicit degenerate innovation diagnostics", {
     rdms,
     similarity = "pearson",
     objective = "full_residual",
-    return = "vector"
+    output = "vector"
   )
 
   expect_true(dec$diagnostics$degenerate_innovation[[2]])
@@ -208,7 +208,7 @@ test_that("rdm_decorrelate representative problem stays within perf budget", {
       similarity = "spearman",
       epsilon = 0.05,
       gamma_grid = seq(0, 1, by = 0.05),
-      return = "vector"
+      output = "vector"
     )
   })["elapsed"])
   budget <- as.numeric(Sys.getenv("RMVPA_RDM_DECORRELATE_MAX_SECONDS", "5"))
