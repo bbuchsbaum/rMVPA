@@ -40,6 +40,65 @@ test_that("item_design validates dimensions and stores ITEM metadata", {
   )
 })
 
+test_that("item_model validates metric against mode at construction", {
+  set.seed(9011)
+
+  n_time <- 40
+  n_trials <- 12
+  ds <- gen_sample_dataset(c(3, 3, 3), nobs = n_time, blocks = 3, nlevels = 2)
+  X_t <- matrix(rnorm(n_time * n_trials), nrow = n_time, ncol = n_trials)
+  run_id <- rep(1:3, each = 4)
+  T_target <- as.numeric(scale(rnorm(n_trials)))
+
+  des <- item_design(
+    train_design = ds$design$train_design,
+    X_t = X_t,
+    T_target = T_target,
+    run_id = run_id
+  )
+
+  expect_error(
+    item_model(
+      dataset = ds$dataset,
+      design = des,
+      mode = "regression",
+      metric = "accuracy"
+    ),
+    "metric 'accuracy' is not valid for mode 'regression'"
+  )
+
+  expect_error(
+    item_model(
+      dataset = ds$dataset,
+      design = des,
+      mode = "classification",
+      metric = "rmse"
+    ),
+    "metric 'rmse' is not valid for mode 'classification'"
+  )
+
+  expect_error(
+    item_model(
+      dataset = ds$dataset,
+      design = des,
+      mode = "regression",
+      metric = c("rmse", "correlation")
+    ),
+    "metric must be NULL or a single character string"
+  )
+
+  expect_s3_class(
+    item_model(
+      dataset = ds$dataset,
+      design = des,
+      mode = "regression",
+      metric = NULL,
+      solver = "svd"
+    ),
+    "item_model"
+  )
+})
+
 test_that("item_model fit_roi path returns scalar metrics", {
   set.seed(9002)
 

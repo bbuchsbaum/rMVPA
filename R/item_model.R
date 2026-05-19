@@ -16,9 +16,9 @@
 #' @param dataset An `mvpa_dataset`.
 #' @param design An `item_design` object.
 #' @param mode Decoding mode: `"classification"` or `"regression"`.
-#' @param metric Optional ITEM metric.
-#'   Classification: `"accuracy"`, `"balanced_accuracy"`.
-#'   Regression: `"correlation"`, `"rmse"`.
+#' @param metric Optional ITEM metric. Validated against `mode` at
+#'   construction. Classification: `"accuracy"`, `"balanced_accuracy"`.
+#'   Regression: `"correlation"`, `"rmse"`. `NULL` uses the `fmrilss` default.
 #' @param ridge_u Non-negative ridge used when computing `U`.
 #' @param ridge_w Non-negative ridge used when fitting ITEM weights per fold.
 #' @param lsa_method LS-A backend for `fmrilss::lsa()` (`"r"` or `"cpp"`).
@@ -30,6 +30,13 @@
 #' @param compute_performance Reserved for API compatibility. ITEM always
 #'   computes scalar ROI metrics for mapping.
 #' @param ... Additional fields stored on the model spec.
+#'
+#' @details
+#' When `return_predictions = TRUE` (the default) the full per-fold
+#' cross-validation payload is retained on every ROI result. The searchlight
+#' schema combiner discards this payload and keeps only the scalar maps, but
+#' `run_regional()` retains the full results list; for analyses with many ROIs
+#' or large trial counts, pass `return_predictions = FALSE` to bound memory.
 #'
 #' @return A model spec of class `item_model` compatible with
 #'   `run_regional()` and `run_searchlight()`.
@@ -54,6 +61,7 @@ item_model <- function(dataset,
   lsa_method <- match.arg(lsa_method)
   solver <- match.arg(solver)
   u_storage <- match.arg(u_storage)
+  metric <- .item_validate_metric(metric, mode)
 
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "item_design"), msg = "design must inherit class 'item_design'.")
@@ -149,6 +157,43 @@ item_model <- function(dataset,
     Nuisance = design$Nuisance,
     ...
   )
+}
+
+#' @keywords internal
+#' @noRd
+.item_metric_choices <- function(mode) {
+  switch(
+    mode,
+    classification = c("accuracy", "balanced_accuracy"),
+    regression = c("correlation", "rmse"),
+    character(0)
+  )
+}
+
+#' @keywords internal
+#' @noRd
+.item_validate_metric <- function(metric, mode) {
+  if (is.null(metric)) {
+    return(NULL)
+  }
+  if (!is.character(metric) || length(metric) != 1L || is.na(metric)) {
+    stop("metric must be NULL or a single character string.", call. = FALSE)
+  }
+
+  choices <- .item_metric_choices(mode)
+  if (!metric %in% choices) {
+    stop(
+      sprintf(
+        "metric '%s' is not valid for mode '%s'. Valid metrics: %s.",
+        metric,
+        mode,
+        paste(choices, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+
+  metric
 }
 
 #' @rdname fit_roi
@@ -273,5 +318,8 @@ output_schema.item_model <- function(model) {
 #' @keywords internal
 #' @export
 process_roi.item_model <- function(mod_spec, roi, rnum, center_global_id = NA, ...) {
+  # Explicit S3 registration so item_model participates in the standard
+  # process_roi dispatch chain; behaviour is fully delegated to
+  # process_roi.default, which routes to the fit_roi.item_model shim.
   NextMethod()
 }

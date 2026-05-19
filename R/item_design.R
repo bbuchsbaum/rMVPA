@@ -81,7 +81,15 @@ item_design <- function(train_design = NULL,
     validate = TRUE
   )
 
-  # Keep cv_labels aligned with TR rows; ITEM folds are handled internally by run_id.
+  # ITEM invariant: cross-validation folds are derived internally by
+  # `fmrilss::item_cv()` from trial-level `run_id`, NOT from the mvpa_design
+  # block/cv machinery. cv_labels/targets are therefore deliberately set to TR
+  # row indices (placeholders aligned to nrow(X_t)) so the design satisfies the
+  # mvpa_design contract without implying a trial-level supervised signal.
+  # Consequently `y_train.item_design()` returns TR indices, not trial targets;
+  # an item_design is only meaningful when consumed by `item_model`. `block_var`
+  # is intentionally omitted for the same reason -- wiring run_id here would
+  # double up fold logic with item_cv.
   base <- mvpa_design(
     train_design = train_design,
     cv_labels = seq_len(n_time),
@@ -109,6 +117,9 @@ item_design <- function(train_design = NULL,
 #' @export
 #' @rdname y_train-methods
 y_train.item_design <- function(obj) {
+  # Returns TR row indices, not trial-level targets. See the ITEM invariant
+  # note in item_design(): supervised trial targets live in obj$T_target and
+  # are consumed directly by item_model/fmrilss::item_cv.
   obj$cv_labels
 }
 
@@ -124,7 +135,7 @@ print.item_design <- function(x, ...) {
   cat(sprintf("TR rows: %s\n", n_time))
   cat(sprintf("Trials: %s\n", n_trials))
   cat(sprintf("Runs: %s\n", n_runs))
-  cat(sprintf("Targets columns: %s\n", if (!is.null(x$T_target)) ncol(x$T_target) else NA_integer_))
+  cat(sprintf("Targets columns: %s\n", if (!is.null(x$T_target)) NCOL(x$T_target) else NA_integer_))
   invisible(x)
 }
 
