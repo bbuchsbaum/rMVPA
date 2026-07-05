@@ -19,6 +19,7 @@ tests/testthat/_problems/
 ..pdf
 
 # Local planning/PRD docs
+planning/
 searchlight_performance_execution_plan.md
 searchlight_performance_prd.md
 
