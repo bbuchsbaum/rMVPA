@@ -843,6 +843,10 @@ do_randomized <- function(model_spec, radius, niter,
   model_spec <- configure_runtime_backend(
     model_spec, backend = backend, context = "do_randomized"
   )
+  if (inherits(model_spec, "shard_model_spec") && !is.null(model_spec$shard_data)) {
+    model_spec$.shard_cleanup_on_exit <- FALSE
+    on.exit(shard_cleanup(model_spec$shard_data), add = TRUE)
+  }
 
   error=NULL
   total_models <- 0
@@ -1004,6 +1008,10 @@ do_resampled <- function(model_spec, radius, niter,
   model_spec <- configure_runtime_backend(
     model_spec, backend = backend, context = "do_resampled"
   )
+  if (inherits(model_spec, "shard_model_spec") && !is.null(model_spec$shard_data)) {
+    model_spec$.shard_cleanup_on_exit <- FALSE
+    on.exit(shard_cleanup(model_spec$shard_data), add = TRUE)
+  }
 
   futile.logger::flog.info("Starting resampled searchlight analysis:")
   futile.logger::flog.info("- Radius: %s", crayon::blue(paste(radius, collapse = ", ")))

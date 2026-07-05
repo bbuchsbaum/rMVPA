@@ -272,9 +272,9 @@ test_that("era_partition_model direct xdec metrics match naive_xdec_model", {
   toy <- fix$toy
 
   roi_data <- list(
-    train_data = t(as.matrix(toy$dataset$train_data)),
-    test_data = t(as.matrix(toy$dataset$test_data)),
-    indices = seq_len(nrow(as.matrix(toy$dataset$train_data)))
+    train_data = fix$E,
+    test_data = fix$R,
+    indices = seq_len(ncol(fix$E))
   )
   context <- fix$context
 
@@ -296,8 +296,8 @@ test_that("era_partition_model direct xdec metrics match naive_xdec_model", {
   era_out <- fit_roi(era_model, roi_data, context)
   naive_out <- fit_roi(naive_model, roi_data, context)
 
-  expect_false(era_out$error)
-  expect_false(naive_out$error)
+  expect_false(era_out$error, info = era_out$error_message)
+  expect_false(naive_out$error, info = naive_out$error_message)
   expect_equal(
     era_out$metrics[c("xdec_Accuracy", "xdec_AUC")],
     setNames(naive_out$metrics[c("Accuracy", "AUC")], c("xdec_Accuracy", "xdec_AUC")),

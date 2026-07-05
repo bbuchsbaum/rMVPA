@@ -825,7 +825,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
       mod_spec$.cv_fold_cache <- .build_cv_fold_cache(mod_spec)
     }
 
-    if (use_shard_backend) {
+    if (use_shard_backend && shard_cleanup_on_exit(mod_spec)) {
       on.exit(shard_cleanup(mod_spec$shard_data), add = TRUE)
     }
 

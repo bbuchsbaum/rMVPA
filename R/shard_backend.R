@@ -79,8 +79,16 @@ use_shard <- function(mod_spec) {
   futile.logger::flog.info("shard backend: preparing shared memory for dataset (%s)",
                             paste(class(dataset), collapse = ", "))
   mod_spec$shard_data <- shard_prepare_dataset(dataset)
+  mod_spec$.shard_cleanup_on_exit <- TRUE
   class(mod_spec) <- unique(c("shard_model_spec", class(mod_spec)))
   mod_spec
+}
+
+#' @keywords internal
+#' @noRd
+shard_cleanup_on_exit <- function(mod_spec) {
+  is.null(mod_spec$.shard_cleanup_on_exit) ||
+    isTRUE(mod_spec$.shard_cleanup_on_exit)
 }
 
 #' Resolve Execution Backend for a Model Spec
@@ -547,7 +555,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
 
   # Build a worker function with a minimal captured environment so futures
   # do not accidentally inherit large objects from the calling frame.
-  make_worker_fun <- function(progress_tick = NULL) {
+  make_worker_fun <- function(progress_tick = NULL, remote = FALSE) {
     worker_impl <- function(.id, rnum, sample, size,
                             progress_tick, analysis_type, min_voxels,
                             shard_data, fail_fast, drop_probs, obj,
@@ -638,7 +646,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
       })
     }
 
-    if (requireNamespace("carrier", quietly = TRUE)) {
+    if (isTRUE(remote) && requireNamespace("carrier", quietly = TRUE)) {
       return(carrier::crate(
         function(.id, rnum, sample, size) {
           worker_impl(
@@ -710,7 +718,21 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
 
   # ---- parallel map: workers extract ROIs from shared memory -------------
   run_map <- function(progress_tick = NULL) {
-    worker_fun <- make_worker_fun(progress_tick = progress_tick)
+    if (nworkers <= 1L) {
+      worker_fun <- make_worker_fun(progress_tick = progress_tick, remote = FALSE)
+      out <- vector("list", total_items)
+      for (i in seq_len(total_items)) {
+        out[[i]] <- worker_fun(
+          .id = frame$.id[[i]],
+          rnum = frame$rnum[[i]],
+          sample = frame$sample[[i]],
+          size = frame$size[[i]]
+        )
+      }
+      return(out)
+    }
+
+    worker_fun <- make_worker_fun(progress_tick = progress_tick, remote = TRUE)
     furrr::future_pmap(
       frame,
       worker_fun,

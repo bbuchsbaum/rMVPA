@@ -737,6 +737,60 @@ test_that("backend='auto' runs and remains backward compatible", {
   })
 })
 
+test_that("shard backend uses local map when only one worker is active", {
+  skip_if_not_installed("future")
+  skip_if_not_installed("furrr")
+
+  old_plan <- future::plan(future::sequential)
+  on.exit(future::plan(old_plan), add = TRUE)
+
+  withr::local_options(list(rMVPA.test.used_future_pmap = FALSE))
+  trace("future_pmap",
+        where = asNamespace("furrr"),
+        tracer = quote(options(rMVPA.test.used_future_pmap = TRUE)),
+        print = FALSE)
+  on.exit(untrace("future_pmap", where = asNamespace("furrr")), add = TRUE)
+
+  ds <- gen_sample_dataset(c(4, 4, 4), 12, blocks = 2, nlevels = 2)
+  cval <- blocked_cross_validation(ds$design$block_var)
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+                      "classification", crossval = cval)
+  mspec <- use_shard(mspec)
+
+  sl <- get_searchlight(ds$dataset, radius = 2)
+  vox_iter <- lapply(sl, function(x) x)
+  vox_iter <- vox_iter[1:min(3, length(vox_iter))]
+
+  res <- muffle_worker_version_warnings(
+    mvpa_iterate(mspec, vox_iter, ids = seq_along(vox_iter))
+  )
+
+  expect_equal(nrow(res), length(vox_iter))
+  expect_false(isTRUE(getOption("rMVPA.test.used_future_pmap")))
+})
+
+test_that("randomized shard searchlight keeps shared handles across iterations", {
+  ds <- gen_sample_dataset(c(4, 4, 4), 12, blocks = 2, nlevels = 2)
+  cval <- blocked_cross_validation(ds$design$block_var)
+  mdl <- load_model("sda_notune")
+  mspec <- mvpa_model(mdl, ds$dataset, ds$design,
+                      "classification", crossval = cval)
+
+  res <- suppressWarnings(
+    run_searchlight(
+      mspec,
+      radius = 2,
+      method = "randomized",
+      niter = 2,
+      backend = "shard"
+    )
+  )
+
+  expect_true(inherits(res, "searchlight_result"))
+  expect_true(length(res$results) > 0)
+})
+
 test_that("shard backend works when return_predictions is FALSE", {
   skip_on_cran()
 
@@ -829,6 +883,7 @@ test_that("shard workers do not inherit large caller globals", {
 
 test_that("shard backend uses carrier::crate when carrier is installed", {
   skip_on_cran()
+  skip_if_not_installed("future")
   skip_if_not_installed("carrier")
 
   withr::local_options(list(rMVPA.test.used_carrier_crate = FALSE))
@@ -848,6 +903,9 @@ test_that("shard backend uses carrier::crate when carrier is installed", {
   sl <- get_searchlight(ds$dataset, radius = 3)
   vox_iter <- lapply(sl, function(x) x)
   vox_iter <- vox_iter[1:min(2, length(vox_iter))]
+
+  old_plan <- future::plan(future::multisession, workers = 2)
+  on.exit(future::plan(old_plan), add = TRUE)
 
   expect_no_error(
     muffle_worker_version_warnings(
