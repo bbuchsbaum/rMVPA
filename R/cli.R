@@ -463,7 +463,7 @@ install_cli <- function(dest_dir = "~/.local/bin",
         type = "character",
         metavar = "NAME",
         default = NULL,
-        help = "Searchlight engine: auto, legacy, swift, or dual_lda_fast."
+        help = "Searchlight engine: auto, legacy, swift, dual_lda_fast, or naive_xdec_fast."
       ),
       optparse::make_option(
         c("--batch-size"),
@@ -807,7 +807,10 @@ install_cli <- function(dest_dir = "~/.local/bin",
       stop("Searchlight iterations must be a positive integer.", call. = FALSE)
     }
     if (!is.null(cfg$engine)) {
-      cfg$engine <- match.arg(as.character(cfg$engine)[1], c("auto", "legacy", "swift", "dual_lda_fast"))
+      cfg$engine <- match.arg(
+        as.character(cfg$engine)[1],
+        c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast")
+      )
     }
   } else {
     if (!is.null(cfg$pool_predictions)) {

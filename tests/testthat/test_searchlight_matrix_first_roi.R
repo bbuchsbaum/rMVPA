@@ -120,3 +120,41 @@ test_that("matrix-first ROI path preserves naive_xdec_model searchlight outputs"
     rtol = 1e-8
   )
 })
+
+test_that("naive_xdec fast searchlight engine preserves legacy outputs", {
+  ds <- gen_sample_dataset(
+    D = c(5, 5, 5),
+    nobs = 30,
+    nlevels = 3,
+    blocks = 5,
+    external_test = TRUE,
+    ntest_obs = 30
+  )
+  mspec <- naive_xdec_model(ds$dataset, ds$design, return_predictions = FALSE)
+
+  set.seed(3310)
+  res_legacy <- run_searchlight(
+    mspec,
+    radius = 2,
+    method = "standard",
+    backend = "default",
+    engine = "legacy"
+  )
+
+  set.seed(3310)
+  res_fast <- run_searchlight(
+    mspec,
+    radius = 2,
+    method = "standard",
+    backend = "default",
+    engine = "naive_xdec_fast"
+  )
+
+  expect_identical(attr(res_fast, "searchlight_engine", exact = TRUE), "naive_xdec_fast")
+  expect_searchlight_parity(
+    reference = res_legacy,
+    candidate = res_fast,
+    atol = 1e-10,
+    rtol = 1e-8
+  )
+})

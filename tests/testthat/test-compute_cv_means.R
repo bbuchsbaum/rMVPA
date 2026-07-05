@@ -253,12 +253,10 @@ test_that("compute_crossvalidated_means_sl with 'crossnobis' and W, return_folds
       expect_false(any(is.na(U_folds)))
       expect_false(any(is.na(U_hat_mean)))
 
-      # Test if whitening was applied (even if identity W in this specific setup)
-      # For fold 1 (trains on block 2 data)
-      train_idx_f1 <- .mock_train_indices(cv_spec, 1)
-      # Get what the raw (unwhitened) means for fold 1 would have been
-      raw_means_f1 <- rMVPA:::process_single_fold(sl_data[train_idx_f1, , drop=FALSE],
-                                                  mvpa_des$Y[train_idx_f1],
+      # Test if whitening was applied to the independent partition for fold 1.
+      partition_idx_f1 <- setdiff(seq_len(nrow(sl_data)), .mock_train_indices(cv_spec, 1))
+      raw_means_f1 <- rMVPA:::process_single_fold(sl_data[partition_idx_f1, , drop=FALSE],
+                                                  mvpa_des$Y[partition_idx_f1],
                                                   levels(mvpa_des$Y), n_cond, n_voxels,
                                                   "average", NULL, colnames(sl_data))
       # Expected whitened means for fold 1 = raw_means_f1 %*% W
@@ -267,6 +265,51 @@ test_that("compute_crossvalidated_means_sl with 'crossnobis' and W, return_folds
       colnames(expected_whitened_fold1) <- colnames(raw_means_f1) 
       
       expect_equal(U_folds[,,1], expected_whitened_fold1, tolerance = 1e-6)
+    }
+  )
+})
+
+test_that("compute_crossvalidated_means_sl with 'crossnobis' allows NULL W as Euclidean identity", {
+  n_samples <- 12; n_cond <- 3; n_blocks <- 2; n_voxels <- 5
+  mvpa_des <- mock_mvpa_design_cv(n_samples, n_cond, n_blocks)
+  cv_spec <- mock_cv_spec_s3(mvpa_des)
+  set.seed(1271)
+  cond_means_per_sample <- as.numeric(mvpa_des$Y)
+  sl_data <- matrix(rep(cond_means_per_sample, n_voxels), nrow = n_samples, ncol = n_voxels) +
+               matrix(rnorm(n_samples * n_voxels, 0, 0.1), nrow = n_samples)
+  colnames(sl_data) <- paste0("V", 1:n_voxels)
+
+  with_mocked_bindings(
+    get_nfolds = .mock_get_nfolds,
+    train_indices = .mock_train_indices,
+    .package = "rMVPA",
+    {
+      res_crossnobis <- compute_crossvalidated_means_sl(
+        sl_data, mvpa_des, cv_spec,
+        estimation_method = "crossnobis",
+        whitening_matrix_W = NULL,
+        return_folds = TRUE
+      )
+      expected_folds <- array(NA_real_,
+                              dim = c(n_cond, n_voxels, n_blocks),
+                              dimnames = dimnames(res_crossnobis$fold_estimates))
+      for (f in seq_len(n_blocks)) {
+        partition_idx <- setdiff(seq_len(nrow(sl_data)), .mock_train_indices(cv_spec, f))
+        expected_folds[, , f] <- rMVPA:::process_single_fold(
+          sl_data[partition_idx, , drop = FALSE],
+          mvpa_des$Y[partition_idx],
+          levels(mvpa_des$Y),
+          n_cond,
+          n_voxels,
+          "average",
+          NULL,
+          colnames(sl_data)
+        )
+      }
+
+      expect_equal(res_crossnobis$fold_estimates, expected_folds, tolerance = 1e-12)
+      expect_equal(res_crossnobis$mean_estimate, apply(expected_folds, c(1, 2), mean),
+                   tolerance = 1e-12)
     }
   )
 })
@@ -325,9 +368,9 @@ test_that("compute_crossvalidated_means_sl ('crossnobis') correctly whitens per-
       U_folds_whitened <- res_list$fold_estimates
       
       for (f in 1:.mock_get_nfolds(cv_spec)) {
-        train_idx <- .mock_train_indices(cv_spec, f)
-        raw_fold_means <- rMVPA:::process_single_fold(sl_data[train_idx, , drop = FALSE],
-                                                      mvpa_des$Y[train_idx],
+        partition_idx <- setdiff(seq_len(nrow(sl_data)), .mock_train_indices(cv_spec, f))
+        raw_fold_means <- rMVPA:::process_single_fold(sl_data[partition_idx, , drop = FALSE],
+                                                      mvpa_des$Y[partition_idx],
                                                       levels(mvpa_des$Y), n_cond, n_voxels,
                                                       "average", NULL, colnames(sl_data))
         expected_whitened_fold_means <- raw_fold_means %*% W
@@ -453,4 +496,4 @@ test_that("compute_crossvalidated_means_sl skips empty training folds gracefully
       expect_false(any(is.na(res$fold_estimates[,,2])))
     }
   )
-}) 
+})

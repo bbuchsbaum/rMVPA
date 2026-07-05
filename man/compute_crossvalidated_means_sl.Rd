@@ -30,13 +30,15 @@ Currently supported: \code{"average"} (simple mean of training samples per condi
 \itemize{
   \item \code{"average"}: Simple mean of training samples per condition.
   \item \code{"L2_norm"}: Identical to \code{"average"} but each condition pattern (row) is finally scaled to unit L2 norm. Useful when you need to equalise overall pattern energy across conditions before RSA.
-  \item \code{"crossnobis"}: Applies a pre-computed whitening matrix (see `whitening_matrix_W`) to the average pattern of each condition within each cross-validation training fold, before averaging these whitened patterns across folds. This aims to produce noise-normalized condition representations.
+  \item \code{"crossnobis"}: Computes independent partition-wise condition means for crossnobis distances/second moments. If `whitening_matrix_W` is supplied, each partition mean is whitened before being returned/averaged; if it is `NULL`, raw Euclidean patterns are used.
 }
 Default is \code{"average"}.}
 
 \item{whitening_matrix_W}{Optional V x V numeric matrix, where V is the number of voxels/features in `sl_data`. 
 This matrix should be the whitening transformation (e.g., Sigma_noise^(-1/2)) derived from GLM residuals.
-Required and used only if `estimation_method = "crossnobis"`.}
+If comparing to implementations that accept a precision matrix P directly, use W such that W \%*\% t(W) = P
+(for example, `t(chol(P))` for a positive-definite precision matrix).
+Used only if `estimation_method = "crossnobis"`. If `NULL`, no whitening is applied.}
 
 \item{return_folds}{Logical, if TRUE, the function returns a list containing both the
 overall mean estimate (`mean_estimate`) and an array of per-fold estimates (`fold_estimates`).

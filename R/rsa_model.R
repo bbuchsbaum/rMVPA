@@ -562,8 +562,7 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
       }
       train_dat <- train_dat[ia, , drop = FALSE]
     }
-    dtrain <- 1 - cor(t(train_dat), method = obj$distmethod)
-    dvec   <- dtrain[lower.tri(dtrain)]
+    dvec <- .rdm_vector_correlation(train_dat, method = obj$distmethod, center = "none")
   }
 
   # 2) Exclude certain comparisons if needed

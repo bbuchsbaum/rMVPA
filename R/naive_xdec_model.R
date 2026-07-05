@@ -232,27 +232,14 @@ print.naive_xdec_model <- function(x, ...) {
     return(out)
   }
 
-  if (anyNA(Xa) || anyNA(Xb) || any(!is.finite(Xa)) || any(!is.finite(Xb))) {
-    return(cor(t(Xa), t(Xb)))
-  }
-
-  ma <- rowMeans(Xa)
-  mb <- rowMeans(Xb)
-  Ac <- sweep(Xa, 1, ma, "-")
-  Bc <- sweep(Xb, 1, mb, "-")
-
-  sa <- sqrt(rowSums(Ac * Ac) / (p - 1))
-  sb <- sqrt(rowSums(Bc * Bc) / (p - 1))
-  cov <- tcrossprod(Ac, Bc) / (p - 1)
-  denom <- tcrossprod(sa, sb)
-
-  out <- cov / denom
+  out <- suppressWarnings(cor(t(Xa), t(Xb)))
   out[!is.finite(out)] <- NA_real_
   out
 }
 
 #' @keywords internal
-.naive_xdec_fit_core <- function(Xtr, Xte, kernel = NULL, key_tr = NULL, key_te = NULL) {
+.naive_xdec_fit_core <- function(Xtr, Xte, kernel = NULL, key_tr = NULL, key_te = NULL,
+                                 return_probs = TRUE, return_scores = FALSE) {
   if (!is.null(kernel)) {
     if (nrow(Xtr) == kernel$n_train && nrow(Xte) == kernel$n_test) {
       Xp <- crossprod(kernel$group_mat, Xtr)
@@ -281,11 +268,19 @@ print.naive_xdec_model <- function(x, ...) {
   if (is.null(colnames(scores))) {
     colnames(scores) <- levs
   }
-  probs <- .nx_softmax(scores)
-  colnames(probs) <- levs
   pred <- factor(levs[max.col(scores)], levels = levs)
 
-  list(obs = obs, pred = pred, probs = probs)
+  probs <- NULL
+  if (isTRUE(return_probs)) {
+    probs <- .nx_softmax(scores)
+    colnames(probs) <- levs
+  }
+
+  ret <- list(obs = obs, pred = pred, probs = probs)
+  if (isTRUE(return_scores)) {
+    ret$scores <- scores
+  }
+  ret
 }
 
 #' @keywords internal
@@ -294,6 +289,380 @@ print.naive_xdec_model <- function(x, ...) {
   m <- matrixStats::rowMaxs(scores)
   z <- exp(sweep(scores, 1, m, "-"))
   sweep(z, 1, rowSums(z), "/")
+}
+
+#' @keywords internal
+.nx_row_logsumexp <- function(scores) {
+  m <- matrixStats::rowMaxs(scores)
+  m + log(rowSums(exp(sweep(scores, 1, m, "-"))))
+}
+
+#' @keywords internal
+.naive_xdec_metric_from_scores <- function(observed, pred, scores, classes, kind,
+                                           class_metrics = FALSE) {
+  observed <- factor(observed, levels = classes)
+  pred <- factor(pred, levels = classes)
+  acc <- mean(pred == observed)
+
+  if (identical(kind, "binary")) {
+    score <- if (ncol(scores) >= 2L) {
+      scores[, 2L] - scores[, 1L]
+    } else {
+      scores[, 1L]
+    }
+    auc <- .dual_lda_auc_from_scores(score, observed == classes[2L])
+    auc_centered <- if (is.na(auc)) NA_real_ else 2 * auc - 1
+    return(c(Accuracy = acc, AUC = auc_centered))
+  }
+
+  k <- length(classes)
+  log_denom <- .nx_row_logsumexp(scores)
+  aucres <- rep(NA_real_, k)
+  for (i in seq_len(k)) {
+    score <- scores[, i] - log_denom
+    aucres[i] <- .dual_lda_auc_from_scores(score, observed == classes[i])
+  }
+
+  auc_centered <- 2 * aucres - 1
+  mean_auc <- mean(auc_centered, na.rm = TRUE)
+  if (is.nan(mean_auc)) {
+    mean_auc <- NA_real_
+  }
+
+  metrics <- c(Accuracy = acc, AUC = mean_auc)
+  if (isTRUE(class_metrics)) {
+    names(auc_centered) <- paste0("AUC_", classes)
+    c(metrics, auc_centered)
+  } else {
+    metrics
+  }
+}
+
+#' @keywords internal
+.naive_xdec_metric_from_scores_with_splits <- function(observed, pred, scores,
+                                                       test_idx, classes, kind,
+                                                       split_groups = NULL,
+                                                       class_metrics = FALSE) {
+  base_vals <- .naive_xdec_metric_from_scores(
+    observed = observed,
+    pred = pred,
+    scores = scores,
+    classes = classes,
+    kind = kind,
+    class_metrics = class_metrics
+  )
+
+  if (is.null(split_groups) || length(split_groups) == 0L) {
+    return(base_vals)
+  }
+
+  tags <- names(split_groups)
+  if (is.null(tags) || length(tags) == 0L) {
+    return(base_vals)
+  }
+
+  split_vecs <- lapply(tags, function(tag) {
+    design_idx <- split_groups[[tag]]
+    res_idx <- which(test_idx %in% design_idx)
+
+    if (!length(res_idx)) {
+      vals <- rep(NA_real_, length(base_vals))
+      names(vals) <- paste0(names(base_vals), "_", tag)
+      return(vals)
+    }
+
+    vals <- .naive_xdec_metric_from_scores(
+      observed = observed[res_idx],
+      pred = pred[res_idx],
+      scores = scores[res_idx, , drop = FALSE],
+      classes = classes,
+      kind = kind,
+      class_metrics = class_metrics
+    )
+    names(vals) <- paste0(names(vals), "_", tag)
+    vals
+  })
+
+  c(base_vals, unlist(split_vecs))
+}
+
+#' @keywords internal
+.naive_xdec_fast_metrics_from_scores <- function(model, core, test_idx) {
+  if (is.null(core$scores) ||
+      anyNA(core$obs) ||
+      anyNA(core$scores) ||
+      any(!is.finite(core$scores))) {
+    return(NULL)
+  }
+
+  classes <- levels(core$obs)
+  metric_mode <- .naive_xdec_fast_metric_mode(model, classes = classes)
+  if (!isTRUE(metric_mode$enabled)) {
+    return(NULL)
+  }
+
+  if (!exists(".dual_lda_auc_from_scores", mode = "function", inherits = TRUE)) {
+    return(NULL)
+  }
+
+  .naive_xdec_metric_from_scores_with_splits(
+    observed = core$obs,
+    pred = core$pred,
+    scores = core$scores,
+    test_idx = test_idx,
+    classes = classes,
+    kind = metric_mode$kind,
+    split_groups = metric_mode$split_groups,
+    class_metrics = metric_mode$class_metrics
+  )
+}
+
+#' @keywords internal
+.is_naive_xdec_fast_path <- function(model_spec, method) {
+  if (!inherits(model_spec, "naive_xdec_model") ||
+      !identical(method, "standard") ||
+      !isTRUE(has_test_set(model_spec)) ||
+      isTRUE(model_spec$return_predictions) ||
+      is.null(model_spec$.fast_kernel) ||
+      inherits(model_spec$dataset, "mvpa_multibasis_image_dataset") ||
+      !inherits(model_spec$dataset, "mvpa_image_dataset") ||
+      is.null(model_spec$dataset$test_data)) {
+    return(FALSE)
+  }
+
+  classes <- model_spec$.fast_kernel$levels
+  metric_mode <- .naive_xdec_fast_metric_mode(model_spec, classes = classes)
+  isTRUE(metric_mode$enabled)
+}
+
+#' @keywords internal
+.naive_xdec_expand_searchlight_ids <- function(roi) {
+  ids <- tryCatch({
+    coords <- tryCatch(roi@coords, error = function(...) NULL)
+    sp <- tryCatch(roi@space, error = function(...) NULL)
+    if (!is.null(coords) && !is.null(sp)) {
+      neuroim2::grid_to_index(sp, coords)
+    } else {
+      roi
+    }
+  }, error = function(...) roi)
+
+  ids <- suppressWarnings(as.integer(ids))
+  ids[is.finite(ids) & ids > 0L]
+}
+
+#' @keywords internal
+.naive_xdec_filter_feature_mask <- function(Xtr, feature_ids, center_id = NULL,
+                                            min_voxels = 1L) {
+  stats <- .filter_roi_stats(Xtr)
+  keep <- !stats$nas & stats$sdnonzero
+
+  if (!is.null(center_id) && length(center_id) == 1L && !is.na(center_id)) {
+    kp <- match(center_id, feature_ids)
+    if (!is.na(kp) && !keep[kp]) {
+      keep[kp] <- TRUE
+    }
+  }
+
+  if (sum(keep) < min_voxels) {
+    return(NULL)
+  }
+  keep
+}
+
+#' @keywords internal
+.naive_xdec_image_feature_matrices <- function(dataset) {
+  mask_idx <- which(dataset$mask > 0)
+  if (!length(mask_idx)) {
+    stop("naive_xdec fast searchlight requires at least one active mask voxel.", call. = FALSE)
+  }
+
+  list(
+    train = as.matrix(neuroim2::series(dataset$train_data, mask_idx)),
+    test = as.matrix(neuroim2::series(dataset$test_data, mask_idx)),
+    mask_idx = as.integer(mask_idx)
+  )
+}
+
+#' @keywords internal
+.naive_xdec_bad_searchlight_row <- function(id, message) {
+  tibble::tibble(
+    result = list(NULL),
+    indices = list(NULL),
+    performance = list(NULL),
+    id = id,
+    error = TRUE,
+    error_message = message,
+    warning = TRUE,
+    warning_message = message
+  )
+}
+
+#' @keywords internal
+.naive_xdec_standard_searchlight_fast <- function(model_spec, radius, k = NULL,
+                                                  verbose = FALSE) {
+  dataset <- model_spec$dataset
+  slight <- get_searchlight(dataset, "standard", radius, k = k)
+  center_ids <- get_center_ids(dataset)
+  if (length(center_ids) != length(slight)) {
+    stop("naive_xdec fast searchlight: center id count does not match searchlight count.",
+         call. = FALSE)
+  }
+
+  mats <- .naive_xdec_image_feature_matrices(dataset)
+  col_map <- integer(max(mats$mask_idx))
+  col_map[mats$mask_idx] <- seq_along(mats$mask_idx)
+
+  perf_rows <- vector("list", length(slight))
+  good_ids <- integer(length(slight))
+  bad_rows <- vector("list", length(slight))
+  n_good <- 0L
+  n_bad <- 0L
+  test_idx <- seq_len(nrow(mats$test))
+
+  for (i in seq_along(slight)) {
+    center_id <- as.integer(center_ids[[i]])
+    roi_ids <- .naive_xdec_expand_searchlight_ids(slight[[i]])
+    if (!length(roi_ids)) {
+      n_bad <- n_bad + 1L
+      bad_rows[[n_bad]] <- .naive_xdec_bad_searchlight_row(center_id, "empty ROI")
+      next
+    }
+
+    valid <- roi_ids <= length(col_map) & col_map[roi_ids] > 0L
+    roi_ids <- roi_ids[valid]
+    cols <- col_map[roi_ids]
+    if (!length(cols)) {
+      n_bad <- n_bad + 1L
+      bad_rows[[n_bad]] <- .naive_xdec_bad_searchlight_row(center_id, "ROI outside mask")
+      next
+    }
+
+    Xtr <- mats$train[, cols, drop = FALSE]
+    keep <- .naive_xdec_filter_feature_mask(
+      Xtr = Xtr,
+      feature_ids = roi_ids,
+      center_id = center_id,
+      min_voxels = 1L
+    )
+    if (is.null(keep)) {
+      n_bad <- n_bad + 1L
+      bad_rows[[n_bad]] <- .naive_xdec_bad_searchlight_row(center_id, "ROI filtered out")
+      next
+    }
+
+    Xtr <- Xtr[, keep, drop = FALSE]
+    Xte <- mats$test[, cols[keep], drop = FALSE]
+
+    perf_error <- NULL
+    perf <- tryCatch({
+      core <- .naive_xdec_fit_core(
+        Xtr = Xtr,
+        Xte = Xte,
+        kernel = model_spec$.fast_kernel,
+        return_probs = FALSE,
+        return_scores = TRUE
+      )
+      out <- .naive_xdec_fast_metrics_from_scores(model_spec, core, test_idx = test_idx)
+      if (is.null(out)) {
+        core <- .naive_xdec_fit_core(Xtr = Xtr, Xte = Xte, kernel = model_spec$.fast_kernel)
+        out <- .naive_xdec_fast_metrics(model_spec, core, test_idx = test_idx)
+      }
+      out
+    }, error = function(e) {
+      perf_error <<- conditionMessage(e)
+      NULL
+    })
+
+    if (is.null(perf)) {
+      n_bad <- n_bad + 1L
+      bad_rows[[n_bad]] <- .naive_xdec_bad_searchlight_row(
+        center_id,
+        perf_error %||% "metric computation failed"
+      )
+      next
+    }
+
+    n_good <- n_good + 1L
+    perf_rows[[n_good]] <- perf
+    good_ids[[n_good]] <- center_id
+  }
+
+  if (n_good == 0L) {
+    stop("No valid results for naive_xdec fast searchlight: all ROIs failed to process.",
+         call. = FALSE)
+  }
+
+  perf_mat <- do.call(rbind, perf_rows[seq_len(n_good)])
+  good_ids <- good_ids[seq_len(n_good)]
+  out <- wrap_out(perf_mat, dataset, good_ids)
+
+  bad_results <- if (n_bad > 0L) {
+    dplyr::bind_rows(bad_rows[seq_len(n_bad)])
+  } else {
+    tibble::tibble(
+      result = list(),
+      indices = list(),
+      performance = list(),
+      id = integer(),
+      error = logical(),
+      error_message = character(),
+      warning = logical(),
+      warning_message = character()
+    )
+  }
+  attr(out, "bad_results") <- bad_results
+  attr(out, "searchlight_engine") <- "naive_xdec_fast"
+  out
+}
+
+#' @keywords internal
+#' @noRd
+.run_searchlight_engine.naive_xdec_model <- function(model_spec, radius, method,
+                                                     engine = "auto",
+                                                     niter = 4L,
+                                                     combiner = "average",
+                                                     drop_probs = FALSE,
+                                                     fail_fast = FALSE,
+                                                     backend = c("default", "shard", "auto"),
+                                                     incremental = TRUE,
+                                                     gamma = NULL,
+                                                     verbose = FALSE,
+                                                     k = NULL,
+                                                     ...) {
+  requested <- .match_searchlight_engine(engine)
+  backend <- match.arg(backend)
+
+  if (identical(requested, "legacy")) {
+    return(list(handled = FALSE, result = NULL, engine = "legacy"))
+  }
+
+  eligible <- .is_naive_xdec_fast_path(model_spec, method) &&
+    requested %in% c("auto", "naive_xdec_fast") &&
+    backend %in% c("default", "auto") &&
+    !isTRUE(drop_probs) &&
+    !isTRUE(fail_fast) &&
+    is.character(combiner) &&
+    combiner[1] %in% c("average", "standard")
+
+  if (!isTRUE(eligible)) {
+    if (identical(requested, "naive_xdec_fast")) {
+      stop("Requested searchlight engine 'naive_xdec_fast' is not eligible for this analysis.",
+           call. = FALSE)
+    }
+    return(list(handled = FALSE, result = NULL, engine = "legacy"))
+  }
+
+  list(
+    handled = TRUE,
+    result = .naive_xdec_standard_searchlight_fast(
+      model_spec = model_spec,
+      radius = radius,
+      k = k,
+      verbose = verbose
+    ),
+    engine = "naive_xdec_fast"
+  )
 }
 
 #' @export
@@ -337,16 +706,41 @@ fit_roi.naive_xdec_model <- function(model, roi_data, context, ...) {
     key_te <- keys$key_te
   }
 
+  classes <- if (!is.null(model$.fast_kernel)) {
+    model$.fast_kernel$levels
+  } else {
+    levels(key_tr)
+  }
+  metric_mode <- .naive_xdec_fast_metric_mode(model, classes = classes)
+  score_fast_metrics <- !isTRUE(model$return_predictions) && isTRUE(metric_mode$enabled)
+
   core <- .naive_xdec_fit_core(
     Xtr = Xtr,
     Xte = Xte,
     kernel = model$.fast_kernel,
     key_tr = key_tr,
-    key_te = key_te
+    key_te = key_te,
+    return_probs = !score_fast_metrics,
+    return_scores = score_fast_metrics
   )
 
   test_ind <- seq_len(nrow(Xte))
-  fast_perf <- .naive_xdec_fast_metrics(model, core, test_idx = test_ind)
+  fast_perf <- if (score_fast_metrics) {
+    .naive_xdec_fast_metrics_from_scores(model, core, test_idx = test_ind)
+  } else {
+    .naive_xdec_fast_metrics(model, core, test_idx = test_ind)
+  }
+
+  if (score_fast_metrics && is.null(fast_perf)) {
+    core <- .naive_xdec_fit_core(
+      Xtr = Xtr,
+      Xte = Xte,
+      kernel = model$.fast_kernel,
+      key_tr = key_tr,
+      key_te = key_te
+    )
+    fast_perf <- .naive_xdec_fast_metrics(model, core, test_idx = test_ind)
+  }
 
   need_result_object <- isTRUE(model$return_predictions) || is.null(fast_perf)
   cres <- NULL

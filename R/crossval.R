@@ -820,6 +820,42 @@ train_indices.blocked_cross_validation <- function(obj, fold_num, ...) {
   which(obj$block_var != test_block_value)
 }
 
+#' Get independent partition indices for a cross-validation fold
+#'
+#' Returns the samples belonging to the held-out/independent partition for a
+#' fold. This is distinct from \code{\link{train_indices}}, which returns the
+#' training samples for predictive cross-validation. Crossnobis estimators use
+#' partition indices because their cross-fold products require independent
+#' pattern estimates.
+#'
+#' @param obj A \code{cross_validation} object.
+#' @param fold_num Integer fold number.
+#' @param ... Additional arguments passed to methods.
+#'
+#' @return Integer sample indices for the requested independent partition.
+#' @keywords internal
+#' @export
+partition_indices <- function(obj, fold_num, ...) {
+  UseMethod("partition_indices")
+}
+
+#' @export
+partition_indices.default <- function(obj, fold_num, n_samples = NULL, ...) {
+  if (is.null(n_samples)) {
+    stop("`n_samples` must be supplied when deriving partition indices from `train_indices`.", call. = FALSE)
+  }
+  setdiff(seq_len(n_samples), train_indices(obj, fold_num))
+}
+
+#' @export
+partition_indices.blocked_cross_validation <- function(obj, fold_num, ...) {
+  if (fold_num < 1 || fold_num > obj$nfolds) {
+    stop(paste0("Invalid fold_num: ", fold_num, ". Must be between 1 and ", obj$nfolds), call. = FALSE)
+  }
+  partition_block_value <- obj$block_ind[fold_num]
+  which(obj$block_var == partition_block_value)
+}
+
 #' @export
 get_nfolds.kfold_cross_validation <- function(obj, ...) {
   obj$nfolds
@@ -832,6 +868,14 @@ train_indices.kfold_cross_validation <- function(obj, fold_num, ...) {
   }
   # For kfold_cross_validation, block_var directly contains fold assignments (1 to k)
   which(obj$block_var != fold_num)
+}
+
+#' @export
+partition_indices.kfold_cross_validation <- function(obj, fold_num, ...) {
+  if (fold_num < 1 || fold_num > obj$nfolds) {
+    stop(paste0("Invalid fold_num: ", fold_num, ". Must be between 1 and ", obj$nfolds), call. = FALSE)
+  }
+  which(obj$block_var == fold_num)
 }
 
 #' @export
@@ -890,6 +934,11 @@ train_indices.bootstrap_blocked_cross_validation <- function(obj, fold_num, ...)
 }
 
 #' @export
+partition_indices.bootstrap_blocked_cross_validation <- function(obj, fold_num, ...) {
+  stop("`partition_indices.bootstrap_blocked_cross_validation` is not implemented. Crossnobis estimation requires deterministic independent partitions.", call. = FALSE)
+}
+
+#' @export
 get_nfolds.sequential_blocked_cross_validation <- function(obj, ...) {
   # This CV scheme defines sub-folds within primary blocks.
   # get_nfolds refers to these sub-folds. The nreps is for different random assignments to these sub-folds.
@@ -940,6 +989,14 @@ train_indices.custom_cross_validation <- function(obj, fold_num, ...) {
     stop(paste0("Invalid fold_num: ", fold_num, ". Must be between 1 and ", length(obj$sample_set)), call. = FALSE)
   }
   obj$sample_set[[fold_num]]$train
+}
+
+#' @export
+partition_indices.custom_cross_validation <- function(obj, fold_num, ...) {
+  if (fold_num < 1 || fold_num > length(obj$sample_set)) {
+    stop(paste0("Invalid fold_num: ", fold_num, ". Must be between 1 and ", length(obj$sample_set)), call. = FALSE)
+  }
+  obj$sample_set[[fold_num]]$test
 }
 
 

@@ -1351,7 +1351,7 @@ run_searchlight_base <- function(model_spec,
 #' @param ... Additional arguments passed through:
 #'   \describe{
 #'     \item{engine}{Searchlight engine: \code{"auto"} (default), \code{"legacy"},
-#'       \code{"swift"}, or \code{"dual_lda_fast"}.}
+#'       \code{"swift"}, \code{"dual_lda_fast"}, or \code{"naive_xdec_fast"}.}
 #'     \item{combiner}{Combiner function or name for randomized/resampled methods
 #'       (default \code{"average"}).}
 #'     \item{drop_probs}{If \code{TRUE}, drop probability predictions (default \code{FALSE}).}
@@ -1421,6 +1421,7 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
         backend = backend,
         incremental = incremental,
         gamma = gamma,
+        k = k,
         verbose = verbose
       ),
       dots

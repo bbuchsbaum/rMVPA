@@ -85,6 +85,40 @@ manual_crossnobis <- function(U_folds) {
   res
 }
 
+rsatoolbox_leave_one_out_reference <- function(U_folds, precision = NULL) {
+  K <- dim(U_folds)[1]
+  V <- dim(U_folds)[2]
+  M <- dim(U_folds)[3]
+  if (is.null(precision)) {
+    precision <- diag(V)
+  }
+
+  pair_idx <- which(lower.tri(matrix(TRUE, nrow = K, ncol = K)), arr.ind = TRUE)
+  rdms <- matrix(NA_real_, nrow = M, ncol = nrow(pair_idx))
+  G_sum <- matrix(0, nrow = K, ncol = K,
+                  dimnames = list(dimnames(U_folds)[[1]], dimnames(U_folds)[[1]]))
+
+  for (m in seq_len(M)) {
+    train <- apply(U_folds[, , -m, drop = FALSE], c(1, 2), mean)
+    test <- U_folds[, , m, drop = FALSE][, , 1]
+    kernel <- train %*% precision %*% t(test)
+    dmat <- outer(diag(kernel), diag(kernel), "+") - kernel - t(kernel)
+    rdms[m, ] <- dmat[lower.tri(dmat)] / V
+    G_sum <- G_sum + kernel
+  }
+
+  pair_names <- paste0(dimnames(U_folds)[[1]][pair_idx[, 1]],
+                       "_vs_",
+                       dimnames(U_folds)[[1]][pair_idx[, 2]])
+  distances <- colMeans(rdms)
+  names(distances) <- pair_names
+
+  list(
+    distances = distances,
+    second_moment = G_sum / M
+  )
+}
+
 
 test_that("compute_crossnobis_distances_sl matches manual computation and is invariant to fold order", {
   set.seed(123)
@@ -104,6 +138,70 @@ test_that("compute_crossnobis_distances_sl matches manual computation and is inv
   for (m in seq_len(M)) U_folds_I[, , m] <- U_folds_I[, , m] %*% Iw
   res_I <- compute_crossnobis_distances_sl(U_folds_I, P_voxels = V)
   expect_equal(res_I, expected, tolerance = 1e-12)
+})
+
+test_that("compute_crossnobis_second_moment_sl matches manual Gram and distances derive from it", {
+  set.seed(321)
+  K <- 4; V <- 3; M <- 4
+  U_folds <- array(rnorm(K * V * M), dim = c(K, V, M),
+                   dimnames = list(paste0("C", 1:K), paste0("V", 1:V), paste0("F", 1:M)))
+
+  U_sum <- rowSums(U_folds, dims = 2)
+  dim(U_sum) <- c(K, V)
+  sum_gram <- tcrossprod(U_sum)
+  within_fold_gram <- matrix(0, K, K)
+  for (m in seq_len(M)) {
+    within_fold_gram <- within_fold_gram + tcrossprod(U_folds[, , m])
+  }
+  expected_G <- (sum_gram - within_fold_gram) / (M * (M - 1))
+  dimnames(expected_G) <- list(paste0("C", 1:K), paste0("C", 1:K))
+
+  G_cv <- rMVPA:::compute_crossnobis_second_moment_sl(U_folds, vectorize = FALSE)
+  expect_equal(G_cv, expected_G, tolerance = 1e-12)
+
+  d_from_G <- (diag(G_cv)[row(G_cv)] + diag(G_cv)[col(G_cv)] - 2 * G_cv)[lower.tri(G_cv)] / V
+  d_direct <- compute_crossnobis_distances_sl(U_folds, P_voxels = V)
+  names(d_from_G) <- names(d_direct)
+  expect_equal(d_direct, d_from_G, tolerance = 1e-12)
+})
+
+test_that("crossnobis helpers match rsatoolbox leave-one-out train/test formulation", {
+  set.seed(224)
+  K <- 5; V <- 4; M <- 3
+  U_folds <- array(rnorm(K * V * M), dim = c(K, V, M),
+                   dimnames = list(paste0("C", 1:K), paste0("V", 1:V), paste0("F", 1:M)))
+  A <- matrix(rnorm(V * V), nrow = V)
+  precision <- crossprod(A) + diag(V) * 0.25
+
+  ref_euclidean <- rsatoolbox_leave_one_out_reference(U_folds)
+  expect_equal(
+    compute_crossnobis_distances_sl(U_folds, P_voxels = V),
+    ref_euclidean$distances,
+    tolerance = 1e-12
+  )
+  expect_equal(
+    rMVPA:::compute_crossnobis_second_moment_sl(U_folds, vectorize = FALSE),
+    ref_euclidean$second_moment,
+    tolerance = 1e-12
+  )
+
+  W <- t(chol(precision))
+  U_whitened <- U_folds
+  for (m in seq_len(M)) {
+    U_whitened[, , m] <- U_whitened[, , m] %*% W
+  }
+
+  ref_mahalanobis <- rsatoolbox_leave_one_out_reference(U_folds, precision = precision)
+  expect_equal(
+    compute_crossnobis_distances_sl(U_whitened, P_voxels = V),
+    ref_mahalanobis$distances,
+    tolerance = 1e-12
+  )
+  expect_equal(
+    rMVPA:::compute_crossnobis_second_moment_sl(U_whitened, vectorize = FALSE),
+    ref_mahalanobis$second_moment,
+    tolerance = 1e-12
+  )
 })
 
 

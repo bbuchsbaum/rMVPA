@@ -128,6 +128,161 @@ pcadist <- function(labels=NULL, ncomp=2, whiten=TRUE, threshfun=NULL,
   create_dist("pcadist", labels, whiten=whiten, threshfun=tfun, dist_method=dist_method, center = center)
 }
 
+#' @noRd
+.rdm_empty_vector <- function() {
+  numeric(0)
+}
+
+#' @noRd
+.rdm_clamp_near_zero <- function(x) {
+  finite <- is.finite(x)
+  if (!any(finite)) {
+    return(x)
+  }
+  tol <- sqrt(.Machine$double.eps) * max(1, max(abs(x[finite])))
+  x[finite & x < 0 & x > -tol] <- 0
+  x
+}
+
+#' @noRd
+.rdm_prepare_matrix <- function(X, center = c("none", "stimulus_mean")) {
+  center <- match.arg(center)
+  if (is.data.frame(X) || inherits(X, "Matrix")) {
+    X <- as.matrix(X)
+  }
+  if (is.matrix(X) && !is.numeric(X)) {
+    storage.mode(X) <- "double"
+  }
+  if (!is.matrix(X) || !is.numeric(X)) {
+    rlang::abort("`X` must be a numeric matrix.")
+  }
+  center_patterns(X, method = center)
+}
+
+#' @noRd
+.rdm_vector_from_kernel <- function(kernel, n_features = NULL,
+                                    normalize_by_features = FALSE) {
+  if (!is.matrix(kernel) || !is.numeric(kernel) || nrow(kernel) != ncol(kernel)) {
+    rlang::abort("`kernel` must be a square numeric matrix.")
+  }
+  K <- nrow(kernel)
+  if (K < 2L) {
+    return(.rdm_empty_vector())
+  }
+  pair_info <- .rdm_pair_indices(K)
+  diag_vals <- diag(kernel)
+  out <- unname(diag_vals[pair_info$i] + diag_vals[pair_info$j] -
+    2 * kernel[cbind(pair_info$i, pair_info$j)]
+  )
+  out <- .rdm_clamp_near_zero(out)
+  if (isTRUE(normalize_by_features)) {
+    if (!is.numeric(n_features) || length(n_features) != 1L ||
+        !is.finite(n_features) || n_features <= 0) {
+      rlang::abort("`n_features` must be a single positive number when normalization is requested.")
+    }
+    out <- out / n_features
+  }
+  out
+}
+
+#' @noRd
+.rdm_vector_sqeuclidean <- function(X, center = c("none", "stimulus_mean"),
+                                    normalize_by_features = FALSE) {
+  X <- .rdm_prepare_matrix(X, center = center)
+  .rdm_vector_from_kernel(
+    tcrossprod(X),
+    n_features = ncol(X),
+    normalize_by_features = normalize_by_features
+  )
+}
+
+#' @noRd
+.rdm_vector_euclidean <- function(X, center = c("none", "stimulus_mean")) {
+  out <- sqrt(pmax(.rdm_vector_sqeuclidean(X, center = center), 0))
+  out
+}
+
+#' @noRd
+.rdm_vector_sqmahalanobis <- function(X, precision,
+                                      center = c("none", "stimulus_mean"),
+                                      normalize_by_features = FALSE) {
+  X <- .rdm_prepare_matrix(X, center = center)
+  if (!is.matrix(precision) || !is.numeric(precision) ||
+      nrow(precision) != ncol(precision) || nrow(precision) != ncol(X)) {
+    rlang::abort("`precision` must be a square numeric matrix matching `ncol(X)`.")
+  }
+  .rdm_vector_from_kernel(
+    X %*% precision %*% t(X),
+    n_features = ncol(X),
+    normalize_by_features = normalize_by_features
+  )
+}
+
+#' @noRd
+.rdm_vector_mahalanobis <- function(X, precision,
+                                    center = c("none", "stimulus_mean")) {
+  sqrt(pmax(.rdm_vector_sqmahalanobis(X, precision, center = center), 0))
+}
+
+#' @noRd
+.rdm_rank_rows <- function(X) {
+  if (nrow(X) == 0L) {
+    return(X)
+  }
+  ranked <- t(apply(X, 1L, rank, ties.method = "average"))
+  dimnames(ranked) <- dimnames(X)
+  ranked
+}
+
+#' @noRd
+.rdm_vector_correlation <- function(X, method = c("pearson", "spearman"),
+                                    center = c("none", "stimulus_mean")) {
+  method <- match.arg(method)
+  X <- .rdm_prepare_matrix(X, center = center)
+  K <- nrow(X)
+  if (K < 2L) {
+    return(.rdm_empty_vector())
+  }
+  if (identical(method, "spearman")) {
+    X <- .rdm_rank_rows(X)
+  }
+
+  X <- sweep(X, 1L, rowMeans(X), "-")
+  norms <- sqrt(rowSums(X^2))
+  if (any(norms == 0, na.rm = TRUE)) {
+    warning("the standard deviation is zero")
+  }
+  X <- sweep(X, 1L, norms, "/")
+
+  pair_info <- .rdm_pair_indices(K)
+  sim <- tcrossprod(X)
+  out <- unname(1 - sim[cbind(pair_info$i, pair_info$j)])
+  out
+}
+
+#' @noRd
+pairwise_dist_vector <- function(obj, X, precision = NULL, ...) {
+  if (inherits(obj, "cordist")) {
+    return(.rdm_vector_correlation(
+      X,
+      method = obj$method %||% "pearson",
+      center = obj$center %||% "none"
+    ))
+  }
+  if (inherits(obj, "euclidean")) {
+    return(.rdm_vector_euclidean(X, center = obj$center %||% "none"))
+  }
+  if (inherits(obj, "mahalanobis") && !is.null(precision)) {
+    return(.rdm_vector_mahalanobis(
+      X,
+      precision = precision,
+      center = obj$center %||% "none"
+    ))
+  }
+  D <- pairwise_dist(obj, X, ...)
+  D[lower.tri(D)]
+}
+
 
 #' Compute Pairwise Correlation Distances
 #'
@@ -323,5 +478,3 @@ pairwise_dist.robustmahadist <- function(obj, X,...) {
   }
   dist_matrix
 }
-
-

@@ -30,7 +30,7 @@ cross-validated condition means (U_hat) or distances. Supported:
 \itemize{
   \item \code{"average"}: Simple mean of training samples per condition (for U_hat).
   \item \code{"L2_norm"}: Like \code{"average"}, but U_hat rows are L2-normalized.
-  \item \code{"crossnobis"}: Computes unbiased squared Euclidean distances directly using the Crossnobis method. Results in a distance vector for RSA, not a U_hat matrix for empirical G construction in the same way. U_hat for delta calculation is still computed using "average" method internally when this is selected. Requires `return_folds=TRUE` from `compute_crossvalidated_means_sl`.
+  \item \code{"crossnobis"}: Computes an unbiased cross-validated second-moment matrix from independent partition means. This preserves the same second-moment regression semantics as the "average" path while removing the same-partition noise floor. Per-fold means from the same crossnobis path are averaged for delta calculation. Requires `return_folds=TRUE` from `compute_crossvalidated_means_sl`.
 }
 Passed to \code{\link{compute_crossvalidated_means_sl}} (for "average", "L2_norm", or to get per-fold means for "crossnobis").}
 
@@ -72,11 +72,13 @@ is still emitted.}
 values) are estimated across cross-validation folds during training and can
 be incorporated into the output metrics. Default is \code{FALSE}.}
 
-\item{whitening_matrix_W}{Optional V x V numeric matrix (voxels x voxels). Required if
-`estimation_method = "crossnobis"` and Mahalanobis (rather than Euclidean)
-distances are desired. This matrix (e.g., \eqn{\Sigma_{noise}^{-1/2}}) is passed to
-`compute_crossvalidated_means_sl` to whiten per-fold estimates before distance calculation.
-Default is `NULL` (Euclidean distances for Crossnobis).}
+\item{whitening_matrix_W}{Optional V x V numeric matrix (voxels x voxels). Supply this if
+`estimation_method = "crossnobis"` and noise-normalized/Mahalanobis
+second moments are desired. This matrix (e.g., \eqn{\Sigma_{noise}^{-1/2}}) is passed to
+`compute_crossvalidated_means_sl` to whiten per-fold estimates before second-moment calculation.
+If comparing to implementations that take a precision matrix P directly, use W such that
+W \%*\% t(W) = P (for example, `t(chol(P))` for a positive-definite precision matrix).
+Default is `NULL` (Euclidean/no-whitening Crossnobis).}
 
 \item{...}{Additional arguments passed to \code{create_model_spec}.}
 }
@@ -94,8 +96,8 @@ This model is designed for MS-ReVE style analyses where the goal is to understan
 how different predefined contrasts contribute to the representational structure
 observed in neural data, particularly at a fine-grained (e.g., voxel) level.
 It involves:
-1. Estimating cross-validated condition mean patterns (U_hat) or distances (for Crossnobis).
-2. Constructing an empirical second-moment matrix (G_hat) from U_hat or using the Crossnobis distances directly.
+1. Estimating cross-validated condition mean patterns (U_hat) or partition means (for Crossnobis).
+2. Constructing an empirical second-moment matrix (G_hat) from U_hat or using the unbiased cross-validated second moment directly.
 3. Creating theoretical second-moment matrices (RDMs) from each contrast vector.
 4. Regressing the vectorized empirical RDM/distances onto the vectorized contrast RDMs to get beta coefficients.
 5. Projecting voxel patterns (from U_hat) onto the contrast space to get delta values.
@@ -227,9 +229,8 @@ define training sets for each fold iterated by `compute_crossvalidated_means_sl`
   print(model_composite)
 
   # --- Example 6: Crossnobis estimation_method ---
-  # This only shows setting the method. Actual training would require passing
-  # a pre-computed whitening_matrix_W to compute_crossvalidated_means_sl,
-  # which is called by train_model.contrast_rsa_model.
+  # This shows the Euclidean crossnobis path. Supply whitening_matrix_W
+  # when Mahalanobis crossnobis distances are desired.
   model_crossnobis <- contrast_rsa_model(
       dataset = mvpa_dat,
       design = msreve_des,

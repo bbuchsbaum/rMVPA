@@ -649,23 +649,19 @@ test_that("train_model.contrast_rsa_model handles whitening_matrix_W for crossno
     } else {
        attr(sl_data, "W_received") <- FALSE
     }
-    # Return a structure that dist_sq_from_fold_means can use
-    # and also the U_hat for delta calc
-    # For this test, exact values don't matter as much as the W plumbing
     K_val <- mvpa_des$ncond
     V_val <- ncol(sl_data)
-    
-    # Mocked fold_means: list over folds, each KxV
-    # Here, we need cv_spec to get n_folds
-    # Assuming cv_spec is auto-generated if NULL in train_model from model_spec$dataset$design$block_var
     n_folds_mock <- length(unique(mvpa_des$block_var))
-    
-    mock_fold_means <- rep(list(matrix(0, nrow=K_val, ncol=V_val)), n_folds_mock)
-    
+
+    condition_names <- levels(mvpa_des$Y)
+    mock_mean <- matrix(0, nrow = K_val, ncol = V_val,
+                        dimnames = list(condition_names, NULL))
+    mock_fold_means <- array(0, dim = c(K_val, V_val, n_folds_mock),
+                             dimnames = list(condition_names, NULL, paste0("Fold", seq_len(n_folds_mock))))
+
     return(list(
-      fold_means = mock_fold_means, 
-      U_hat = matrix(0, nrow=K_val, ncol=V_val), # For U_hat_for_delta_calc
-      params = list() # other params if any
+      mean_estimate = mock_mean,
+      fold_estimates = mock_fold_means
     ))
   }
   
@@ -689,7 +685,6 @@ test_that("train_model.contrast_rsa_model handles whitening_matrix_W for crossno
           }
           mock_compute_cv_means_cn(sl_data, mvpa_des, cv_spec, estimation_method, whitening_matrix_W, ...)
       },
-      compute_crossnobis_distances_sl = function(...) rep(NA_real_, 3),
       .package = "rMVPA",
       {
         train_model(
@@ -739,6 +734,100 @@ test_that("train_model.contrast_rsa_model errors when whitening_matrix_W dimensi
     train_model(model_spec_cn, sl_data, sl_info, cv_spec),
     regexp = "whitening_matrix_W.*dimensions"  # expect informative abort
   )
+})
+
+test_that("train_model.contrast_rsa_model runs Euclidean crossnobis without whitening_matrix_W", {
+  n_samples <- 24; n_cond <- 4; n_blocks <- 3; n_voxels_sl <- 6
+  dset <- mock_mvpa_dataset_train(n_samples, n_cond, n_blocks, n_voxels = n_voxels_sl)
+
+  C_mat_for_train <- C_fixed_centered_4x2_scaled
+  rownames(C_mat_for_train) <- levels(dset$design$Y)
+  ms_des <- suppressWarnings(msreve_design(dset$design, C_mat_for_train))
+
+  model_spec_cn <- contrast_rsa_model(
+    dataset = dset,
+    design = ms_des,
+    estimation_method = "crossnobis",
+    output_metric = c("beta_only", "delta_only", "beta_delta"),
+    whitening_matrix_W = NULL,
+    check_collinearity = FALSE
+  )
+
+  cv_spec <- mock_cv_spec_s3(dset$design)
+  sl_info <- list(center_local_id = 2, center_global_id = 2, radius = 0, n_voxels = n_voxels_sl)
+
+  res <- with_mocked_bindings(
+    get_nfolds = .mock_get_nfolds_contrast,
+    train_indices = .mock_train_indices_contrast,
+    .package = "rMVPA",
+    {
+      suppressWarnings(train_model(model_spec_cn, dset$train_data, sl_info, cv_spec))
+    }
+  )
+
+  expect_s3_class(res, "contrast_rsa_model_results")
+  expect_named(res, c("beta_only", "delta_only", "beta_delta"))
+  expect_false(any(is.na(res$beta_only)))
+  expect_false(any(is.na(res$delta_only)))
+  expect_false(any(is.na(res$beta_delta)))
+})
+
+test_that("crossnobis uses second-moment response with the same sign as average path", {
+  n_cond <- 4
+  n_blocks <- 3
+  contrast_vec <- c(1, 1, -1, -1) / 2
+  cond_names <- paste0("Cond", seq_len(n_cond))
+  Y_labels <- factor(rep(cond_names, times = n_blocks), levels = cond_names)
+  block_var <- factor(rep(seq_len(n_blocks), each = n_cond))
+  signal_by_condition <- setNames(2 * contrast_vec, cond_names)
+  data_mat <- matrix(signal_by_condition[as.character(Y_labels)], ncol = 1,
+                     dimnames = list(NULL, "V1"))
+
+  mvpa_des <- mock_mvpa_design_cv(
+    n_samples = length(Y_labels),
+    n_cond = n_cond,
+    n_blocks = n_blocks,
+    Y_labels = Y_labels
+  )
+  mvpa_des$block_var <- block_var
+
+  dset <- structure(
+    list(
+      train_data = data_mat,
+      mask = array(1, dim = c(1, 1, 1)),
+      has_test_set = FALSE,
+      design = mvpa_des,
+      nfeatures = 1
+    ),
+    class = c("mvpa_dataset", "list")
+  )
+
+  C_mat <- matrix(contrast_vec, ncol = 1,
+                  dimnames = list(cond_names, "signed_axis"))
+  ms_des <- msreve_design(mvpa_des, C_mat)
+  cv_spec <- blocked_cross_validation(as.integer(block_var))
+  sl_info <- list(center_local_id = 1, center_global_id = 1, radius = 0, n_voxels = 1)
+
+  spec_average <- contrast_rsa_model(
+    dataset = dset,
+    design = ms_des,
+    estimation_method = "average",
+    output_metric = "beta_only",
+    check_collinearity = FALSE
+  )
+  spec_crossnobis <- contrast_rsa_model(
+    dataset = dset,
+    design = ms_des,
+    estimation_method = "crossnobis",
+    output_metric = "beta_only",
+    check_collinearity = FALSE
+  )
+
+  res_average <- suppressWarnings(train_model(spec_average, data_mat, sl_info, cv_spec))
+  res_crossnobis <- suppressWarnings(train_model(spec_crossnobis, data_mat, sl_info, cv_spec))
+
+  expect_gt(unname(res_crossnobis$beta_only["signed_axis"]), 0)
+  expect_equal(res_crossnobis$beta_only, res_average$beta_only, tolerance = 1e-12)
 })
 
 # Highly discriminating metric-consistency test -----------------------------------------------------

@@ -165,6 +165,101 @@ test_that("naive_xdec fast metrics match legacy performance computation (binary)
   expect_equal(fast_perf, legacy_perf, tolerance = 1e-12)
 })
 
+test_that("naive_xdec score-only metrics match legacy performance with splits", {
+  split_by <- factor(rep(c("early", "late"), each = 18L))
+  fix <- build_naive_xdec_fast_fixture(seed = 9409L, nlevels = 3L)
+  fix$design$split_groups <- split(seq_len(length(split_by)), split_by)
+  model <- naive_xdec_model(fix$dataset, fix$design, return_predictions = FALSE)
+
+  core_scores <- .naive_xdec_fit_core(
+    Xtr = fix$roi_data$train_data,
+    Xte = fix$roi_data$test_data,
+    kernel = model$.fast_kernel,
+    return_probs = FALSE,
+    return_scores = TRUE
+  )
+  test_ind <- seq_len(nrow(fix$roi_data$test_data))
+  score_perf <- rMVPA:::.naive_xdec_fast_metrics_from_scores(model, core_scores, test_idx = test_ind)
+
+  core_probs <- .naive_xdec_fit_core(
+    Xtr = fix$roi_data$train_data,
+    Xte = fix$roi_data$test_data,
+    kernel = model$.fast_kernel
+  )
+  legacy_result <- classification_result(
+    core_probs$obs,
+    core_probs$pred,
+    core_probs$probs,
+    testind = test_ind,
+    test_design = fix$design$test_design,
+    predictor = NULL
+  )
+  legacy_perf <- compute_performance(model, legacy_result)
+
+  expect_true(is.numeric(score_perf))
+  expect_equal(score_perf, legacy_perf, tolerance = 1e-12)
+})
+
+test_that("naive_xdec score-only metrics match legacy performance for binary labels", {
+  fix <- build_naive_xdec_fast_fixture(seed = 9410L, nlevels = 2L)
+  model <- naive_xdec_model(fix$dataset, fix$design, return_predictions = FALSE)
+
+  core_scores <- .naive_xdec_fit_core(
+    Xtr = fix$roi_data$train_data,
+    Xte = fix$roi_data$test_data,
+    kernel = model$.fast_kernel,
+    return_probs = FALSE,
+    return_scores = TRUE
+  )
+  test_ind <- seq_len(nrow(fix$roi_data$test_data))
+  score_perf <- rMVPA:::.naive_xdec_fast_metrics_from_scores(model, core_scores, test_idx = test_ind)
+
+  core_probs <- .naive_xdec_fit_core(
+    Xtr = fix$roi_data$train_data,
+    Xte = fix$roi_data$test_data,
+    kernel = model$.fast_kernel
+  )
+  legacy_result <- classification_result(
+    core_probs$obs,
+    core_probs$pred,
+    core_probs$probs,
+    testind = test_ind,
+    test_design = fix$design$test_design,
+    predictor = NULL
+  )
+  legacy_perf <- compute_performance(model, legacy_result)
+
+  expect_true(is.numeric(score_perf))
+  expect_equal(score_perf, legacy_perf, tolerance = 1e-12)
+})
+
+test_that("naive_xdec skips softmax when score-only fast metrics are available", {
+  fix <- build_naive_xdec_fast_fixture(seed = 9411L, nlevels = 3L)
+  model <- naive_xdec_model(fix$dataset, fix$design, return_predictions = FALSE)
+
+  out <- testthat::with_mocked_bindings(
+    fit_roi.naive_xdec_model(model, fix$roi_data, fix$context),
+    .nx_softmax = function(...) stop(".nx_softmax should not be called"),
+    .package = "rMVPA"
+  )
+
+  expect_false(out$error)
+  expect_null(out$result)
+  expect_true(is.numeric(out$metrics))
+})
+
+test_that("nx row correlation matches base cor and preserves p<2 degeneracy", {
+  set.seed(9412L)
+  Xa <- matrix(rnorm(8 * 5), nrow = 8)
+  Xb <- matrix(rnorm(3 * 5), nrow = 3)
+
+  expect_equal(.nx_row_cor(Xa, Xb), cor(t(Xa), t(Xb)), tolerance = 1e-12)
+
+  deg <- .nx_row_cor(matrix(1:4, ncol = 1), matrix(5:7, ncol = 1))
+  expect_true(all(is.na(deg)))
+  expect_equal(dim(deg), c(4L, 3L))
+})
+
 test_that("naive_xdec skips classification_result when predictions are disabled", {
   fix <- build_naive_xdec_fast_fixture(seed = 9407L, nlevels = 3L)
   model <- naive_xdec_model(fix$dataset, fix$design, return_predictions = FALSE)

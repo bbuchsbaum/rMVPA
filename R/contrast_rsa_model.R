@@ -13,7 +13,7 @@
 #'   \itemize{
 #'     \item \code{"average"}: Simple mean of training samples per condition (for U_hat).
 #'     \item \code{"L2_norm"}: Like \code{"average"}, but U_hat rows are L2-normalized.
-#'     \item \code{"crossnobis"}: Computes unbiased squared Euclidean distances directly using the Crossnobis method. Results in a distance vector for RSA, not a U_hat matrix for empirical G construction in the same way. U_hat for delta calculation is still computed using "average" method internally when this is selected. Requires `return_folds=TRUE` from `compute_crossvalidated_means_sl`.
+#'     \item \code{"crossnobis"}: Computes an unbiased cross-validated second-moment matrix from independent partition means. This preserves the same second-moment regression semantics as the "average" path while removing the same-partition noise floor. Per-fold means from the same crossnobis path are averaged for delta calculation. Requires `return_folds=TRUE` from `compute_crossvalidated_means_sl`.
 #'   }
 #'   Passed to \code{\link{compute_crossvalidated_means_sl}} (for "average", "L2_norm", or to get per-fold means for "crossnobis").
 #' @param regression_type Character string specifying the method for the RSA regression
@@ -48,11 +48,13 @@
 #' @param calc_reliability Logical. If TRUE, voxel-wise contribution reliability (rho
 #'   values) are estimated across cross-validation folds during training and can
 #'   be incorporated into the output metrics. Default is \code{FALSE}.
-#' @param whitening_matrix_W Optional V x V numeric matrix (voxels x voxels). Required if
-#'   `estimation_method = "crossnobis"` and Mahalanobis (rather than Euclidean)
-#'   distances are desired. This matrix (e.g., \eqn{\Sigma_{noise}^{-1/2}}) is passed to
-#'   `compute_crossvalidated_means_sl` to whiten per-fold estimates before distance calculation.
-#'   Default is `NULL` (Euclidean distances for Crossnobis).
+#' @param whitening_matrix_W Optional V x V numeric matrix (voxels x voxels). Supply this if
+#'   `estimation_method = "crossnobis"` and noise-normalized/Mahalanobis
+#'   second moments are desired. This matrix (e.g., \eqn{\Sigma_{noise}^{-1/2}}) is passed to
+#'   `compute_crossvalidated_means_sl` to whiten per-fold estimates before second-moment calculation.
+#'   If comparing to implementations that take a precision matrix P directly, use W such that
+#'   W %*% t(W) = P (for example, `t(chol(P))` for a positive-definite precision matrix).
+#'   Default is `NULL` (Euclidean/no-whitening Crossnobis).
 #' @param ... Additional arguments passed to \code{create_model_spec}.
 #'
 #' @details
@@ -60,8 +62,8 @@
 #' how different predefined contrasts contribute to the representational structure
 #' observed in neural data, particularly at a fine-grained (e.g., voxel) level.
 #' It involves:
-#' 1. Estimating cross-validated condition mean patterns (U_hat) or distances (for Crossnobis).
-#' 2. Constructing an empirical second-moment matrix (G_hat) from U_hat or using the Crossnobis distances directly.
+#' 1. Estimating cross-validated condition mean patterns (U_hat) or partition means (for Crossnobis).
+#' 2. Constructing an empirical second-moment matrix (G_hat) from U_hat or using the unbiased cross-validated second moment directly.
 #' 3. Creating theoretical second-moment matrices (RDMs) from each contrast vector.
 #' 4. Regressing the vectorized empirical RDM/distances onto the vectorized contrast RDMs to get beta coefficients.
 #' 5. Projecting voxel patterns (from U_hat) onto the contrast space to get delta values.
@@ -199,9 +201,8 @@
 #'   print(model_composite)
 #'
 #'   # --- Example 6: Crossnobis estimation_method ---
-#'   # This only shows setting the method. Actual training would require passing
-#'   # a pre-computed whitening_matrix_W to compute_crossvalidated_means_sl,
-#'   # which is called by train_model.contrast_rsa_model.
+#'   # This shows the Euclidean crossnobis path. Supply whitening_matrix_W
+#'   # when Mahalanobis crossnobis distances are desired.
 #'   model_crossnobis <- contrast_rsa_model(
 #'       dataset = mvpa_dat,
 #'       design = msreve_des,
@@ -505,10 +506,11 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
     if (is.null(current_na_reason)) current_na_reason <<- reason
   }
 
-  # --- Step 1: Compute Cross-Validated Means (Uhat_sl) or Distances --- 
-  # And also get U_hat for Delta calculation if using crossnobis for distances
+  # --- Step 1: Compute Cross-Validated Means (Uhat_sl) or Second Moments ---
+  # And also get U_hat for Delta calculation if using crossnobis.
   U_hat_for_delta_calc <- NULL
   dvec_sl              <- NULL
+  G_hat_sl             <- NULL
 
   if (obj$estimation_method == "crossnobis") {
     cv_outputs <- compute_crossvalidated_means_sl(
@@ -519,12 +521,10 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
       whitening_matrix_W = obj$whitening_matrix_W,
       return_folds = TRUE
     )
-    U_hat_for_delta_calc <- cv_outputs$mean_estimate # This is the overall mean estimate
-    U_folds_data         <- cv_outputs$fold_estimates  # This is K x V x M for distance calc
-    
-    P_voxels <- ncol(sl_data) # Or ncol(U_hat_for_delta_calc)
-    # Ensure crossnobis_helpers.R is sourced or function is available
-    dvec_sl <- compute_crossnobis_distances_sl(U_folds_data, P_voxels)
+    U_hat_for_delta_calc <- cv_outputs$mean_estimate
+    U_folds_data         <- cv_outputs$fold_estimates
+    G_hat_sl <- compute_crossnobis_second_moment_sl(U_folds_data, vectorize = FALSE)
+    dvec_sl <- G_hat_sl[lower.tri(G_hat_sl)]
 
   } else { # "average" or "L2_norm"
     cv_outputs <- compute_crossvalidated_means_sl(
@@ -1050,7 +1050,11 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
             G_hat_v <- C_ord %*% loading_diag %*% t(C_ord)
             vec_G_hat_v <- G_hat_v[lower.tri(G_hat_v)]
             
-            G_hat_sl_for_recon <- U_hat_for_delta_calc %*% t(U_hat_for_delta_calc)
+            G_hat_sl_for_recon <- if (!is.null(G_hat_sl)) {
+                G_hat_sl
+            } else {
+                U_hat_for_delta_calc %*% t(U_hat_for_delta_calc)
+            }
             vec_G_hat_sl_empirical <- G_hat_sl_for_recon[lower.tri(G_hat_sl_for_recon)]
             
             if (!is.null(include_vec)) {
@@ -1289,5 +1293,3 @@ fit_roi.contrast_rsa_model <- function(model, roi_data, context, ...) {
 
   roi_result(metrics = perf, indices = ind, id = id, result = train_result)
 }
-
-

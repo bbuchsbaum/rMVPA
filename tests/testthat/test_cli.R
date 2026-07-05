@@ -33,6 +33,19 @@ test_that("cli_finalize_config applies stable defaults and legacy aliases", {
   expect_equal(out$niter, 4L)
 })
 
+test_that("cli_finalize_config accepts naive_xdec searchlight engine", {
+  cfg <- structure(
+    list(
+      mode = "searchlight",
+      engine = "naive_xdec_fast"
+    ),
+    class = c("rmvpa_config", "list")
+  )
+
+  out <- rMVPA:::.cli_finalize_config(cfg, "searchlight")
+  expect_equal(out$engine, "naive_xdec_fast")
+})
+
 test_that("cli_prepare_output enforces overwrite and skip semantics", {
   out_dir <- tempfile("rmvpa-cli-out-")
   dir.create(out_dir)

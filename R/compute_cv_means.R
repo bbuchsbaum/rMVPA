@@ -16,12 +16,14 @@
 #'   \itemize{
 #'     \item \code{"average"}: Simple mean of training samples per condition.
 #'     \item \code{"L2_norm"}: Identical to \code{"average"} but each condition pattern (row) is finally scaled to unit L2 norm. Useful when you need to equalise overall pattern energy across conditions before RSA.
-#'     \item \code{"crossnobis"}: Applies a pre-computed whitening matrix (see `whitening_matrix_W`) to the average pattern of each condition within each cross-validation training fold, before averaging these whitened patterns across folds. This aims to produce noise-normalized condition representations.
+#'     \item \code{"crossnobis"}: Computes independent partition-wise condition means for crossnobis distances/second moments. If `whitening_matrix_W` is supplied, each partition mean is whitened before being returned/averaged; if it is `NULL`, raw Euclidean patterns are used.
 #'   }
 #'   Default is \code{"average"}.
 #' @param whitening_matrix_W Optional V x V numeric matrix, where V is the number of voxels/features in `sl_data`. 
 #'   This matrix should be the whitening transformation (e.g., Sigma_noise^(-1/2)) derived from GLM residuals.
-#'   Required and used only if `estimation_method = "crossnobis"`.
+#'   If comparing to implementations that accept a precision matrix P directly, use W such that W %*% t(W) = P
+#'   (for example, `t(chol(P))` for a positive-definite precision matrix).
+#'   Used only if `estimation_method = "crossnobis"`. If `NULL`, no whitening is applied.
 #' @param return_folds Logical, if TRUE, the function returns a list containing both the
 #'   overall mean estimate (`mean_estimate`) and an array of per-fold estimates (`fold_estimates`).
 #'   If FALSE (default), only the overall mean estimate is returned.
@@ -87,10 +89,7 @@ compute_crossvalidated_means_sl <- function(sl_data,
 
   estimation_method <- match.arg(estimation_method, choices = c("average", "L2_norm", "crossnobis"))
 
-  if (estimation_method == "crossnobis") {
-    if (is.null(whitening_matrix_W)) {
-      rlang::abort("`whitening_matrix_W` must be provided when `estimation_method = crossnobis`.")
-    }
+  if (estimation_method == "crossnobis" && !is.null(whitening_matrix_W)) {
     if (!is.matrix(whitening_matrix_W) || !is.numeric(whitening_matrix_W)) {
       rlang::abort("`whitening_matrix_W` must be a numeric matrix.")
     }
@@ -125,14 +124,42 @@ compute_crossvalidated_means_sl <- function(sl_data,
   n_voxels <- ncol(sl_data)
   n_folds <- get_nfolds(cv_spec)
 
-  # Confirm the train_indices generic is available before using it
-  if (!exists("train_indices", mode = "function")) {
+  # Confirm the relevant fold-index generic is available before using it
+  if (estimation_method == "crossnobis") {
+    if (!exists("partition_indices", mode = "function")) {
+      rlang::abort("Required generic 'partition_indices' is not available in scope.")
+    }
+  } else if (!exists("train_indices", mode = "function")) {
     rlang::abort("Required generic 'train_indices' is not available in scope.")
   }
 
-  # Pre-compute training indices for each fold and label factor once
-  train_idx_list <- lapply(seq_len(n_folds), function(f) train_indices(cv_spec, f))
+  # Pre-compute fold indices once. Crossnobis requires independent partitions;
+  # average/L2_norm keep the historical all-but-held-out training-fold behavior.
+  fold_membership <- NULL
+  fold_idx_list <- if (estimation_method == "crossnobis") {
+    fold_membership <- .crossnobis_partition_membership(cv_spec, n_samples = nrow(sl_data))
+    if (is.null(fold_membership)) {
+      lapply(seq_len(n_folds), function(f) partition_indices(cv_spec, f, n_samples = nrow(sl_data)))
+    } else {
+      NULL
+    }
+  } else {
+    lapply(seq_len(n_folds), function(f) train_indices(cv_spec, f))
+  }
   condition_labels_factor <- factor(condition_labels, levels = unique_conditions)
+
+  if (estimation_method == "crossnobis") {
+    return(.compute_crossnobis_partition_means_sl(
+      sl_data = sl_data,
+      condition_labels_factor = condition_labels_factor,
+      unique_conditions = unique_conditions,
+      fold_idx_list = fold_idx_list,
+      fold_membership = fold_membership,
+      n_folds = n_folds,
+      whitening_matrix_W = whitening_matrix_W,
+      return_folds = return_folds
+    ))
+  }
 
   # Prepare containers for online averaging (memory-efficient vs full 3-D array)
   U_hat_sl_cum <- matrix(0, nrow = n_conditions, ncol = n_voxels,
@@ -152,7 +179,7 @@ compute_crossvalidated_means_sl <- function(sl_data,
   # Iterate folds and accumulate means using vectorised operations
   for (i in seq_len(n_folds)) {
 
-    fold_train_idx <- train_idx_list[[i]]
+    fold_train_idx <- fold_idx_list[[i]]
 
     if (length(fold_train_idx) == 0) {
       warning(paste("Fold", i, "has no training samples. Skipping."))
@@ -191,7 +218,7 @@ compute_crossvalidated_means_sl <- function(sl_data,
         counts_by_cond[present_idx]
       fold_means[is.nan(fold_means) | is.infinite(fold_means)] <- NA_real_
 
-      if (estimation_method == "crossnobis") {
+      if (estimation_method == "crossnobis" && !is.null(whitening_matrix_W)) {
         fold_means[present_idx, ] <- fold_means[present_idx, , drop = FALSE] %*%
           whitening_matrix_W
       }
@@ -256,6 +283,139 @@ compute_crossvalidated_means_sl <- function(sl_data,
   }
 }
 
+#' Compute crossnobis partition means in one grouped pass
+#'
+#' @noRd
+.crossnobis_partition_membership <- function(cv_spec, n_samples) {
+  if (inherits(cv_spec, "blocked_cross_validation")) {
+    if (length(cv_spec$block_var) != n_samples) {
+      rlang::abort("Length of `cv_spec$block_var` must match the number of samples.")
+    }
+    fold_id <- match(cv_spec$block_var, cv_spec$block_ind)
+    if (anyNA(fold_id)) {
+      rlang::abort("`cv_spec$block_var` contains values not present in `cv_spec$block_ind`.")
+    }
+    return(as.integer(fold_id))
+  }
+
+  if (inherits(cv_spec, "kfold_cross_validation")) {
+    if (length(cv_spec$block_var) != n_samples) {
+      rlang::abort("Length of `cv_spec$block_var` must match the number of samples.")
+    }
+    fold_id <- as.integer(cv_spec$block_var)
+    if (anyNA(fold_id) || any(fold_id < 1L | fold_id > cv_spec$nfolds)) {
+      rlang::abort("`cv_spec$block_var` must contain fold IDs between 1 and `cv_spec$nfolds`.")
+    }
+    return(fold_id)
+  }
+
+  NULL
+}
+
+#' @noRd
+.compute_crossnobis_partition_means_sl <- function(sl_data,
+                                                   condition_labels_factor,
+                                                   unique_conditions,
+                                                   fold_idx_list = NULL,
+                                                   fold_membership = NULL,
+                                                   n_folds = NULL,
+                                                   whitening_matrix_W = NULL,
+                                                   return_folds = FALSE) {
+  n_conditions <- length(unique_conditions)
+  n_voxels <- ncol(sl_data)
+  if (is.null(n_folds)) {
+    n_folds <- if (!is.null(fold_idx_list)) length(fold_idx_list) else max(fold_membership)
+  }
+  voxel_names <- colnames(sl_data)
+  fold_names <- paste0("Fold", seq_len(n_folds))
+
+  if (!is.null(fold_membership)) {
+    if (length(fold_membership) != nrow(sl_data)) {
+      rlang::abort("Length of `fold_membership` must match the number of rows in `sl_data`.")
+    }
+    if (anyNA(fold_membership) || any(fold_membership < 1L | fold_membership > n_folds)) {
+      rlang::abort("`fold_membership` must contain fold IDs between 1 and `n_folds`.")
+    }
+    sample_idx <- seq_len(nrow(sl_data))
+    fold_id <- as.integer(fold_membership)
+    fold_lengths <- tabulate(fold_id, nbins = n_folds)
+  } else {
+    fold_lengths <- lengths(fold_idx_list)
+    sample_idx <- unlist(fold_idx_list, use.names = FALSE)
+    fold_id <- rep.int(seq_len(n_folds), fold_lengths)
+  }
+
+  empty_folds <- which(fold_lengths == 0L)
+  if (length(empty_folds) > 0L) {
+    for (i in empty_folds) {
+      warning(paste("Fold", i, "has no training samples. Skipping."))
+    }
+  }
+
+  n_fold_condition <- n_conditions * n_folds
+  fold_means_long <- matrix(NA_real_,
+                            nrow = n_fold_condition,
+                            ncol = n_voxels,
+                            dimnames = list(NULL, voxel_names))
+  counts <- integer(n_fold_condition)
+
+  if (sum(fold_lengths) > 0L) {
+    condition_id <- as.integer(condition_labels_factor[sample_idx])
+    valid <- !is.na(condition_id)
+
+    if (any(!valid)) {
+      warning("Encountered training condition without a matching level in unique_conditions when aggregating fold means. Ignoring unmatched rows.")
+    }
+
+    if (any(valid)) {
+      group_id <- (fold_id[valid] - 1L) * n_conditions + condition_id[valid]
+      sums_by_fold_condition <- rowsum(sl_data[sample_idx[valid], , drop = FALSE],
+                                       group = group_id,
+                                       reorder = TRUE,
+                                       na.rm = TRUE)
+      group_rows <- as.integer(rownames(sums_by_fold_condition))
+      counts <- tabulate(group_id, nbins = n_fold_condition)
+      fold_means_long[group_rows, ] <- sweep(sums_by_fold_condition, 1,
+                                             counts[group_rows], FUN = "/")
+      fold_means_long[is.nan(fold_means_long) | is.infinite(fold_means_long)] <- NA_real_
+    }
+  }
+
+  if (!is.null(whitening_matrix_W)) {
+    fold_means_long <- fold_means_long %*% whitening_matrix_W
+    colnames(fold_means_long) <- voxel_names
+  }
+
+  fold_condition_present <- counts > 0L
+  condition_id_by_row <- rep(seq_len(n_conditions), times = n_folds)
+  U_hat_sl_cum <- matrix(0, nrow = n_conditions, ncol = n_voxels,
+                         dimnames = list(unique_conditions, voxel_names))
+
+  if (any(fold_condition_present)) {
+    summed_by_condition <- rowsum(fold_means_long[fold_condition_present, , drop = FALSE],
+                                  group = condition_id_by_row[fold_condition_present],
+                                  reorder = TRUE,
+                                  na.rm = FALSE)
+    U_hat_sl_cum[as.integer(rownames(summed_by_condition)), ] <- summed_by_condition
+  }
+
+  cond_fold_counts <- tabulate(condition_id_by_row[fold_condition_present],
+                               nbins = n_conditions)
+  divisors <- ifelse(cond_fold_counts > 0L, cond_fold_counts, NA_real_)
+  U_hat_sl <- sweep(U_hat_sl_cum, 1, divisors, FUN = "/")
+
+  if (!isTRUE(return_folds)) {
+    return(U_hat_sl)
+  }
+
+  U_folds_array <- aperm(array(fold_means_long,
+                               dim = c(n_conditions, n_folds, n_voxels)),
+                         perm = c(1, 3, 2))
+  dimnames(U_folds_array) <- list(unique_conditions, voxel_names, fold_names)
+
+  list(mean_estimate = U_hat_sl, fold_estimates = U_folds_array)
+}
+
 #' Process a single cross-validation fold
 #'
 #' Internal helper used by `compute_crossvalidated_means_sl`.
@@ -298,7 +458,7 @@ process_single_fold <- function(train_data_fold,
                              dimnames = list(NULL, sl_colnames))
   }
 
-  if (estimation_method == "crossnobis") {
+  if (estimation_method == "crossnobis" && !is.null(whitening_matrix_W)) {
     if (nrow(fold_means_mat) > 0) {
       fold_means_mat_processed <- fold_means_mat %*% whitening_matrix_W
       if (!is.null(colnames(fold_means_mat))) {

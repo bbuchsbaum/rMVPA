@@ -1,7 +1,7 @@
 #' @keywords internal
 #' @noRd
 .match_searchlight_engine <- function(engine = "auto") {
-  allowed <- c("auto", "legacy", "swift", "dual_lda_fast")
+  allowed <- c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast")
   match.arg(as.character(engine)[1], allowed)
 }
 
@@ -23,6 +23,12 @@
       label = "Dual-LDA incremental fast path",
       eligible = function(model_spec, method) {
         .is_dual_lda_fast_path(model_spec, method)
+      }
+    ),
+    naive_xdec_fast = list(
+      label = "Naive cross-decoding matrix fast path",
+      eligible = function(model_spec, method) {
+        .is_naive_xdec_fast_path(model_spec, method)
       }
     )
   )
@@ -71,13 +77,13 @@ searchlight_engines <- function(model_spec = NULL,
 #' @param model_spec A model specification.
 #' @param method Searchlight method to audit.
 #' @param engine Requested engine policy: \code{"auto"}, \code{"legacy"},
-#'   \code{"swift"}, or \code{"dual_lda_fast"}.
+#'   \code{"swift"}, \code{"dual_lda_fast"}, or \code{"naive_xdec_fast"}.
 #'
 #' @return A data frame with selection metadata.
 #' @export
 explain_searchlight_engine <- function(model_spec,
                                        method = c("standard", "randomized", "resampled"),
-                                       engine = c("auto", "legacy", "swift", "dual_lda_fast")) {
+                                       engine = c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast")) {
   method <- match.arg(method)
   requested <- .match_searchlight_engine(match.arg(engine))
   registry_tbl <- searchlight_engines(model_spec = model_spec, method = method)
