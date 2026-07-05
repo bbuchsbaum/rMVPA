@@ -4,7 +4,9 @@
 .Ruserdata
 inst/doc
 docs
-oldR
+oldR/
+test1/
+test2/
 CRAN_guidance.md
 rMVPA_cheatsheet.md
 00check.log
