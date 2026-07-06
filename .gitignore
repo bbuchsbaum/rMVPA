@@ -2,8 +2,12 @@
 .Rhistory
 .RData
 .Ruserdata
+.DS_Store
 inst/doc
 docs
+adocs/
+covr/
+vendor/
 oldR/
 test1/
 test2/
@@ -33,3 +37,5 @@ vignettes/*_files/
 src/*.o
 src/*.so
 src/*.dll
+src/*.gcda
+src/*.gcno
