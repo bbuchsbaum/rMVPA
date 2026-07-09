@@ -87,11 +87,7 @@ explain_searchlight_engine <- function(model_spec,
   method <- match.arg(method)
   requested <- .match_searchlight_engine(match.arg(engine))
   registry_tbl <- searchlight_engines(model_spec = model_spec, method = method)
-  selected <- if (inherits(model_spec, "mvpa_model")) {
-    .resolve_searchlight_engine.mvpa_model(model_spec, method = method, engine = requested)
-  } else {
-    "legacy"
-  }
+  selected <- .resolve_searchlight_engine(model_spec, method = method, engine = requested)
 
   registry_tbl$requested <- requested
   registry_tbl$selected <- registry_tbl$engine == selected
@@ -134,6 +130,32 @@ explain_searchlight_engine <- function(model_spec,
   )
 }
 
+#' Resolve the searchlight engine for a model specification
+#'
+#' Single entry point for deciding which engine would run for a given
+#' \code{model_spec}/\code{method}/\code{engine} request. Both the diagnostic
+#' helper \code{explain_searchlight_engine()} and the mvpa_model runner rely on
+#' this so the reported engine matches the engine that actually executes.
+#'
+#' Dispatch is explicit rather than S3 because these engine helpers are
+#' unexported, dotted-name functions with no \code{S3method()} registration;
+#' relying on \code{UseMethod()} to reach a \code{.default} fallback is not
+#' robust for such names. Model classes with a fast path are disjoint (a
+#' \code{naive_xdec_model} does not inherit \code{mvpa_model}), so a small
+#' \code{inherits()} ladder is unambiguous and keeps resolution in one place.
+#'
+#' @keywords internal
+#' @noRd
+.resolve_searchlight_engine <- function(model_spec, method, engine = "auto") {
+  if (inherits(model_spec, "naive_xdec_model")) {
+    return(.resolve_searchlight_engine.naive_xdec_model(model_spec, method, engine))
+  }
+  if (inherits(model_spec, "mvpa_model")) {
+    return(.resolve_searchlight_engine.mvpa_model(model_spec, method, engine))
+  }
+  "legacy"
+}
+
 #' @keywords internal
 #' @noRd
 .resolve_searchlight_engine.mvpa_model <- function(model_spec, method, engine = "auto") {
@@ -157,6 +179,28 @@ explain_searchlight_engine <- function(model_spec,
 
   if (isTRUE(registry$swift$eligible(model_spec, method))) {
     return("swift")
+  }
+
+  "legacy"
+}
+
+#' @keywords internal
+#' @noRd
+.resolve_searchlight_engine.naive_xdec_model <- function(model_spec, method, engine = "auto") {
+  requested <- .match_searchlight_engine(engine)
+  if (identical(requested, "legacy")) {
+    return("legacy")
+  }
+
+  registry <- .searchlight_engine_registry()
+  eligible <- isTRUE(registry$naive_xdec_fast$eligible(model_spec, method))
+
+  if (identical(requested, "auto")) {
+    return(if (eligible) "naive_xdec_fast" else "legacy")
+  }
+
+  if (identical(requested, "naive_xdec_fast") && eligible) {
+    return("naive_xdec_fast")
   }
 
   "legacy"
@@ -230,7 +274,14 @@ explain_searchlight_engine <- function(model_spec,
     return(res)
   }
 
-  NULL
+  # Defensive: every engine that .resolve_searchlight_engine can return for an
+  # mvpa_model must have an executor branch above. A fall-through means a new
+  # engine was registered without wiring it here; fail loudly rather than
+  # returning NULL (which the caller would treat as a successful empty result).
+  stop(
+    sprintf("Internal error: no executor for searchlight engine '%s'.", engine),
+    call. = FALSE
+  )
 }
 
 #' @keywords internal

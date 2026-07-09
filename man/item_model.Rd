@@ -72,6 +72,7 @@ the decoder is fit:
 Use ITEM when you want an explicit trial-estimation stage and direct control
 over trial covariance handling (`U`), especially for trial-level diagnostics.
 
+
 When `return_predictions = TRUE` (the default) the full per-fold
 cross-validation payload is retained on every ROI result. The searchlight
 schema combiner discards this payload and keeps only the scalar maps, but

@@ -263,25 +263,8 @@ print.searchlight_result <- function(x, ...) {
       if (metric_name %in% names(x$results)) {
         metric_map <- x$results[[metric_name]]
         map_type <- class(metric_map)[1]
-        cat(info_style("  - "), metric_style(metric_name), 
+        cat(info_style("  - "), metric_style(metric_name),
             info_style(" (Type: "), type_style(map_type), info_style(")"), "\n")
-        
-        # Optionally, add simple summary stats if feasible and desired
-        # This requires knowing how to get data from metric_map (NeuroVol/NeuroSurfaceVector)
-        # For example (conceptual, needs specific accessors for neuroim2/neurosurf objects):
-        # data_values <- try(as.vector(metric_map), silent = TRUE) # or specific accessor
-        # if (!inherits(data_values, "try-error") && is.numeric(data_values)) {
-        #   data_values_no_na <- data_values[!is.na(data_values) & data_values != 0]
-        #   if (length(data_values_no_na) > 0) {
-        #     cat(info_style("    - Mean (non-zero): "), number_style(sprintf("%.4f", mean(data_values_no_na))), "\n")
-        #     cat(info_style("    - SD   (non-zero): "), number_style(sprintf("%.4f", sd(data_values_no_na))), "\n")
-        #     cat(info_style("    - Range(non-zero): "), number_style(sprintf("[%.4f, %.4f]", min(data_values_no_na), max(data_values_no_na))), "\n")
-        #   } else {
-        #     cat(info_style("    - (No non-zero data for summary stats)"), "\n")
-        #   }
-        # } else {
-        #    cat(info_style("    - (Summary stats not available for this map type)"), "\n")
-        # }
       } else {
         cat(info_style("  - "), metric_style(metric_name), info_style(" (Map data not found in results)"), "\n")
       }
@@ -313,11 +296,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
     summarize_errors(bad_results, "combine_standard")
     stop("No valid results for standard searchlight: all ROIs failed to process")
   }
-  
-  result <- NULL
 
-
-  
   # Proceed with combining results
   tryCatch({
     ind <- unlist(good_results$id)
@@ -624,36 +603,6 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL, ...) 
   ret
 }
 
-#' Pool classifier results
-#'
-#' This function pools classifier results collected over a set of overlapping indices.
-#'
-#' @keywords internal
-#' @param ... A variable list of data frames containing classifier results to be pooled.
-#' @return A list of merged classifier results.
-#' @noRd
-pool_results <- function(...) {
-  reslist <- list(...)
-  is_df <- sapply(reslist, function(res) inherits(res, "data.frame"))
-  assertthat::assert_that(all(is_df), msg="pool_results: all arguments must be of type 'data.frame'")
-  good_results <- do.call(rbind, reslist)
-
-  ## map every result to the set of indices in that set
-  indmap <- do.call(rbind, lapply(1:nrow(good_results), function(i) {
-    ind <- good_results$indices[[i]]
-    cbind(i, ind)
-  }))
-  
-  
-  respsets <- split(indmap[,1], indmap[,2])
-  
-  merged_results <- purrr::map(respsets, do_merge_results, good_results=good_results)
-
-  return(merged_results)
-}
-
-
-
 #' Merge searchlight results
 #'
 #' This function merges searchlight results, combining the first result with the rest of the results.
@@ -813,6 +762,26 @@ pool_randomized <- function(model_spec,
   ret
 }
 
+#' Extract searchlight center indices
+#'
+#' Surface searchlights represent each ROI as an integer vector carrying the
+#' center in its \code{"center.index"} attribute; volumetric ROIs are S4 objects
+#' exposing the center via the \code{parent_index} slot. Returns the integer
+#' vector of center ids (empty when \code{slight} has no ROIs).
+#'
+#' @keywords internal
+#' @noRd
+.searchlight_center_ids <- function(slight) {
+  if (length(slight) == 0L) {
+    return(integer(0))
+  }
+  if (is.integer(slight[[1]])) {
+    purrr::map_int(slight, ~ attr(., "center.index"))
+  } else {
+    purrr::map_int(slight, ~ .@parent_index)
+  }
+}
+
 #' Perform randomized searchlight analysis
 #'
 #' This function performs randomized searchlight analysis using a specified model, radius, and number of iterations.
@@ -848,10 +817,9 @@ do_randomized <- function(model_spec, radius, niter,
     on.exit(shard_cleanup(model_spec$shard_data), add = TRUE)
   }
 
-  error=NULL
   total_models <- 0
   total_errors <- 0
-  
+
   if (drop_probs && identical(combiner, pool_randomized)) {
     stop("drop_probs = TRUE is incompatible with combiner=pool_randomized (probs are required for merging). Choose combiner='average' or FALSE.")
   }
@@ -865,15 +833,9 @@ do_randomized <- function(model_spec, radius, niter,
     futile.logger::flog.debug("do_randomized iter %d: Generating searchlight with radius %d", i, radius)
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
 
-    ## hacky
     futile.logger::flog.debug("do_randomized iter %d: Got %d ROIs, extracting center indices", i, length(slight))
 
-    cind <- if (is.integer(slight[[1]])) {
-      ## SurfaceSearchlight...
-      purrr::map_int(slight, ~ attr(., "center.index"))
-    } else {
-      purrr::map_int(slight, ~ .@parent_index)
-    }
+    cind <- .searchlight_center_ids(slight)
 
     # Pass analysis_type to the mvpa function
     futile.logger::flog.debug("do_randomized iter %d: Calling mvpa_fun with %d ROIs", i, length(slight))
@@ -1024,11 +986,7 @@ do_resampled <- function(model_spec, radius, niter,
   slight <- get_searchlight(model_spec$dataset, type = "resampled", radius = radius, iter = niter)
   futile.logger::flog.debug("do_resampled: Got %d ROIs, extracting center indices", length(slight))
 
-  cind <- if (is.integer(slight[[1]])) {
-    purrr::map_int(slight, ~ attr(., "center.index"))
-  } else {
-    purrr::map_int(slight, ~ .@parent_index)
-  }
+  cind <- .searchlight_center_ids(slight)
 
   result <- tryCatch({
     mvpa_fun(model_spec, slight, cind, analysis_type = "searchlight",
@@ -1106,7 +1064,6 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
     model_spec, backend = backend, context = "do_standard"
   )
 
-  error=NULL
   flog.info("creating standard searchlight")
   t_sl_create <- proc.time()[3]
   slight <- get_searchlight(model_spec$dataset, "standard", radius, k = k)

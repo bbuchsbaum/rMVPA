@@ -53,7 +53,7 @@
 #'   second moments are desired. This matrix (e.g., \eqn{\Sigma_{noise}^{-1/2}}) is passed to
 #'   `compute_crossvalidated_means_sl` to whiten per-fold estimates before second-moment calculation.
 #'   If comparing to implementations that take a precision matrix P directly, use W such that
-#'   W %*% t(W) = P (for example, `t(chol(P))` for a positive-definite precision matrix).
+#'   W \%*\% t(W) = P (for example, `t(chol(P))` for a positive-definite precision matrix).
 #'   Default is `NULL` (Euclidean/no-whitening Crossnobis).
 #' @param ... Additional arguments passed to \code{create_model_spec}.
 #'

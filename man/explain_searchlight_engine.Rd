@@ -7,7 +7,7 @@
 explain_searchlight_engine(
   model_spec,
   method = c("standard", "randomized", "resampled"),
-  engine = c("auto", "legacy", "swift", "dual_lda_fast")
+  engine = c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast")
 )
 }
 \arguments{
@@ -16,7 +16,7 @@ explain_searchlight_engine(
 \item{method}{Searchlight method to audit.}
 
 \item{engine}{Requested engine policy: \code{"auto"}, \code{"legacy"},
-\code{"swift"}, or \code{"dual_lda_fast"}.}
+\code{"swift"}, \code{"dual_lda_fast"}, or \code{"naive_xdec_fast"}.}
 }
 \value{
 A data frame with selection metadata.

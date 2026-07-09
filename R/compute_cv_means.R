@@ -21,7 +21,7 @@
 #'   Default is \code{"average"}.
 #' @param whitening_matrix_W Optional V x V numeric matrix, where V is the number of voxels/features in `sl_data`. 
 #'   This matrix should be the whitening transformation (e.g., Sigma_noise^(-1/2)) derived from GLM residuals.
-#'   If comparing to implementations that accept a precision matrix P directly, use W such that W %*% t(W) = P
+#'   If comparing to implementations that accept a precision matrix P directly, use W such that W \%*\% t(W) = P
 #'   (for example, `t(chol(P))` for a positive-definite precision matrix).
 #'   Used only if `estimation_method = "crossnobis"`. If `NULL`, no whitening is applied.
 #' @param return_folds Logical, if TRUE, the function returns a list containing both the

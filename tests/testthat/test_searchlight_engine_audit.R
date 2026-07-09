@@ -61,6 +61,18 @@ test_that("strict engine request + execution failure stops with error", {
   )
 })
 
+test_that(".searchlight_center_ids handles empty and surface-style searchlights", {
+  # No ROIs -> empty integer vector (guards the slight[[1]] indexing).
+  expect_identical(rMVPA:::.searchlight_center_ids(list()), integer(0))
+
+  # Surface searchlights: integer ROIs carrying the center in an attribute.
+  surf_like <- list(
+    structure(1:5, center.index = 10L),
+    structure(6:9, center.index = 22L)
+  )
+  expect_identical(rMVPA:::.searchlight_center_ids(surf_like), c(10L, 22L))
+})
+
 test_that("auto engine failure falls back to legacy with warning", {
   warns <- character(0)
   ret <- withCallingHandlers(
