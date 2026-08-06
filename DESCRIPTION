@@ -67,6 +67,7 @@ Collate:
     'shard_backend.R'
     'resampling_utils.R'
     'rsa_model.R'
+    'rsa_schematic.R'
     'roisplit.R'
     'searchlight_engine_utils.R'
     'dual_lda_searchlight.R'
