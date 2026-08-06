@@ -17,7 +17,6 @@
 #'   \code{neural_rdm}, \code{model_rdms}, \code{betas}, \code{rho_cat}.
 #' @keywords internal
 #' @noRd
-#' @export
 rsa_schematic_basic <- function(file = NULL, seed = 7) {
   set.seed(seed)
   K <- 8
@@ -104,7 +103,6 @@ rsa_schematic_basic <- function(file = NULL, seed = 7) {
 #'   \code{neural_rdm}, \code{beta}, \code{beta_delta}.
 #' @keywords internal
 #' @noRd
-#' @export
 rsa_schematic_msreve <- function(file = NULL, seed = 11) {
   set.seed(seed)
   K <- 4
