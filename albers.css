@@ -1,20 +1,47 @@
 /* ---------- Albersdown: Bauhaus geometric system ---------- */
+
+/* Bundled, latin-subset, variable-weight web fonts (OFL; see inst/fonts/LICENSE).
+   Referenced by relative path so html_vignette self-contained builds embed them
+   and the pkgdown site serves them locally — no third-party network requests. */
+@font-face { font-family: "Familjen Grotesk"; font-style: normal; font-weight: 400 700; font-display: swap; src: url("fonts/familjen-grotesk.woff2") format("woff2"); }
+@font-face { font-family: "Newsreader"; font-style: normal; font-weight: 400 600; font-display: swap; src: url("fonts/newsreader.woff2") format("woff2"); }
+@font-face { font-family: "Newsreader"; font-style: italic; font-weight: 400 500; font-display: swap; src: url("fonts/newsreader-italic.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 300 700; font-display: swap; src: url("fonts/space-grotesk.woff2") format("woff2"); }
+@font-face { font-family: "Hanken Grotesk"; font-style: normal; font-weight: 400 700; font-display: swap; src: url("fonts/hanken-grotesk.woff2") format("woff2"); }
+@font-face { font-family: "Spline Sans Mono"; font-style: normal; font-weight: 400 500; font-display: swap; src: url("fonts/spline-sans-mono.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 500; font-display: swap; src: url("fonts/jetbrains-mono.woff2") format("woff2"); }
+
 :root {
-  --ink: #17181a;
-  --bg: #f3f5f7;
-  --surface: #ffffff;
-  --surface-strong: #f7f9fb;
-  --muted: #636b76;
-  --border: #d5dae1;
-  --code-bg: #ecf0f4;
+  /* Default direction = Homage (warm). `.preset-interaction` overrides to cool. */
+  --ink: #1f1b16;
+  --bg: #efe7d6;
+  --surface: #fbf7ee;
+  --surface-strong: #f4eedf;
+  --muted: #7a7264;
+  --border: #e0d6c0;
+  --code-bg: #fbf7ee;
+  --code-fg: #332f28;
+  --code-border: #e0d6c0;
+  --tok-fun: #1f6f6b;
+  --tok-str: #8e2d1c;
+  --tok-num: #d98324;
+  --tok-com: #9a9078;
+  --tok-kw: #c24a2e;
   --shadow-soft: 0 1px 3px rgba(9, 11, 15, 0.045);
   --shadow-card: 0 1px 5px rgba(9, 11, 15, 0.055);
   --content: 78ch;
   --anchor-offset: 76px;
-  --font-body: "Avenir Next", "Gill Sans", "Trebuchet MS", system-ui, -apple-system, sans-serif;
-  --font-display: "Avenir Next", "Gill Sans", "Century Gothic", "Trebuchet MS", system-ui, sans-serif;
-  --font-mono: "Iosevka Term", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
-  --heading-weight: 730;
+
+  /* html_vignette (CRAN) page + sidebar geometry */
+  --vig-toc-width: 15rem;
+  --vig-gap: clamp(1.5rem, 2.4vw, 2.6rem);
+  --vig-pad-block: clamp(1.75rem, 3vw, 3rem);
+  --vig-pad-inline: clamp(1.2rem, 3vw, 2.6rem);
+  --font-body: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-display: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-ui: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --heading-weight: 700;
   --module: 4px;
 
   --space-1: 0.25rem;
@@ -51,6 +78,24 @@
   --accent-hover: #a9351f;
   --accent-tint: rgba(228, 73, 38, 0.09);
   --accent-band: rgba(228, 73, 38, 0.14);
+
+  /* Nested-square "Homage to the Square" marker. Core + mid rings follow the
+     active family (--A*); the outer ring is a per-direction signature hue. */
+  --sq-size: 0.46em;
+  --sq-ring: 0.12em;
+  --sq-outer: #e0a100;
+}
+
+/* Re-resolve family-indirected tokens at <body>, where .palette-* sets the --A
+   ramp. CSS substitutes var() against the element that DECLARES the property,
+   so these must live on body (not :root) to follow the active family instead of
+   baking in the default-red value. */
+body {
+  --accent-ink: var(--A900);
+  --accent: var(--A500);
+  --accent-strong: var(--A700);
+  --sq-core: var(--A900);
+  --sq-mid: var(--A500);
 }
 
 /* -- Intensity modes ------------------------------------------------------ */
@@ -58,9 +103,10 @@
 .style-minimal {
   --rule-strong: 1px;
   --ribbon-opacity: 0.46;
+  /* quieter, smaller nested-square marker */
+  --sq-size: 0.4em;
+  --sq-ring: 0.1em;
   --nav-dash-weight: 600;
-  --dash-weight: 560;
-  --dash-opacity: 0.7;
   --subdash-opacity: 0.64;
   --overview-dash-weight: 560;
   --overview-dash-opacity: 0.74;
@@ -72,9 +118,10 @@
 .style-assertive {
   --rule-strong: 3px;
   --ribbon-opacity: 0.82;
+  /* bolder, larger nested-square marker */
+  --sq-size: 0.56em;
+  --sq-ring: 0.17em;
   --nav-dash-weight: 720;
-  --dash-weight: 700;
-  --dash-opacity: 0.96;
   --subdash-opacity: 0.9;
   --overview-dash-weight: 680;
   --overview-dash-opacity: 0.94;
@@ -150,6 +197,55 @@
 /* -- Presets: ground / surface / ink variations --------------------------- */
 
 /* ALBERS_TOKENS_PRESETS_START */
+/* Homage direction — warm cream ground, Newsreader serif body, light code.
+   Matches the :root default; present so the class is explicit and idempotent. */
+.preset-homage {
+  --bg: #efe7d6;
+  --surface: #fbf7ee;
+  --surface-strong: #f4eedf;
+  --ink: #1f1b16;
+  --muted: #7a7264;
+  --border: #e0d6c0;
+  --code-bg: #fbf7ee;
+  --code-fg: #332f28;
+  --code-border: #e0d6c0;
+  --tok-fun: #1f6f6b;
+  --tok-str: #8e2d1c;
+  --tok-num: #d98324;
+  --tok-com: #9a9078;
+  --tok-kw: #c24a2e;
+  --font-body: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-display: "Familjen Grotesk", system-ui, sans-serif;
+  --font-ui: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --sq-outer: #e0a100;
+  --heading-weight: 700;
+}
+
+/* Interaction direction — cool grey ground, all-grotesk, dark code blocks. */
+.preset-interaction {
+  --bg: #f1f2f4;
+  --surface: #ffffff;
+  --surface-strong: #f7f8fa;
+  --ink: #15181e;
+  --muted: #7b8494;
+  --border: #e3e6eb;
+  --code-bg: #15181e;
+  --code-fg: #c9d0dc;
+  --code-border: #15181e;
+  --tok-fun: #7fa6f0;
+  --tok-str: #e9904f;
+  --tok-num: #9ad0a0;
+  --tok-com: #6b7484;
+  --tok-kw: #f4b43c;
+  --font-body: "Hanken Grotesk", system-ui, sans-serif;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-ui: "Hanken Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --sq-outer: var(--A300);
+  --heading-weight: 600;
+}
+
 /* Study preset */
 .preset-study {
   --bg: #f7f9fb;
@@ -355,6 +451,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* The direction/preset classes live on <body>, but <html> paints any page area
+   the body box doesn't cover (below a short body, or the gutter beside a
+   constrained vignette card). <html> can't inherit the body's class, so mirror
+   each non-default ground onto it -- otherwise a non-Homage page falls back to
+   the Homage cream where the body doesn't reach. Homage is the :root default. */
+html:has(body.preset-interaction) { --bg: #f1f2f4; }
+html:has(body.preset-study) { --bg: #f7f9fb; }
+html:has(body.preset-structural) { --bg: #e6e9ed; }
+html:has(body.preset-adobe) { --bg: #ece9e7; }
+html:has(body.preset-midnight) { --bg: #0d1117; }
+
 /* -- Albers calibration: strict orthogonal UI ----------------------------- */
 .navbar .nav-link,
 .navbar .navbar-brand,
@@ -390,6 +497,157 @@ main,
   max-width: var(--content);
   margin-inline: auto;
   padding-inline: clamp(16px, 2.4vw, 34px);
+}
+
+/* -- html_vignette (CRAN) layout ----------------------------------------- *
+ * rmarkdown::html_vignette renders content directly inside <body>, with a
+ * top-level <div id="TOC"> and no .contents / .page-content / .main-container
+ * wrapper. pkgdown wraps article content in .contents and uses a lowercase
+ * #toc, so the rules above never matched the vignette DOM -- on CRAN the text
+ * ran full-bleed and the TOC was an unstyled list at the top. The rules below
+ * are scoped to the vignette DOM only: a <body> that has a direct-child #TOC
+ * (or the optional .albers-vignette marker class). They are inert on the
+ * pkgdown site, whose <body> has no direct #TOC child.
+ * --------------------------------------------------------------------------- */
+body.albers-vignette,
+body:has(> #TOC) {
+  box-sizing: border-box;
+  max-width: calc(var(--content) + 2 * var(--vig-pad-inline));
+  margin-inline: auto;
+  padding: var(--vig-pad-block) var(--vig-pad-inline);
+  background: var(--surface);
+  border: var(--rule-thin) solid var(--border);
+  box-shadow: var(--shadow-soft);
+  position: relative;
+}
+
+/* Albers ribbon down the inner edge, echoing .page-content */
+body.albers-vignette::before,
+body:has(> #TOC)::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: var(--rule-strong);
+  background: var(--A500);
+  opacity: var(--ribbon-opacity);
+  pointer-events: none;
+}
+
+body.albers-vignette > h1.title,
+body:has(> #TOC) > h1.title {
+  margin-top: 0;
+}
+
+/* TOC as an Albers surface card (used in both 1- and 2-column modes) */
+body.albers-vignette > #TOC,
+body:has(> #TOC) > #TOC {
+  background: var(--surface-strong);
+  border: var(--rule-thin) solid var(--border);
+  border-left: var(--rule-strong) solid var(--A500);
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
+  margin-block: var(--space-5) var(--space-6);
+  font-size: 0.92em;
+  line-height: 1.4;
+}
+
+body.albers-vignette > #TOC ul,
+body:has(> #TOC) > #TOC ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+body.albers-vignette > #TOC ul ul,
+body:has(> #TOC) > #TOC ul ul {
+  padding-left: 0.95em;
+  margin-top: 0.18rem;
+}
+
+body.albers-vignette > #TOC li,
+body:has(> #TOC) > #TOC li {
+  position: relative;
+  margin: 0.2rem 0;
+  padding-left: 0.95em;
+}
+
+body.albers-vignette > #TOC li::before,
+body:has(> #TOC) > #TOC li::before {
+  content: "–";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--A500);
+  opacity: var(--subdash-opacity);
+}
+
+body.albers-vignette > #TOC a,
+body:has(> #TOC) > #TOC a {
+  color: var(--muted) !important;
+  text-decoration: none !important;
+  border-bottom: none !important;
+}
+
+body.albers-vignette > #TOC a:hover,
+body.albers-vignette > #TOC a:focus-visible,
+body:has(> #TOC) > #TOC a:hover,
+body:has(> #TOC) > #TOC a:focus-visible {
+  color: var(--accent-ink) !important;
+}
+
+/* Two-column layout with a sticky sidebar on wide viewports. The flat
+ * html_vignette DOM (title, #TOC, and section divs are all siblings of
+ * <body>) is laid out as a grid: the title spans both columns, the TOC
+ * occupies the left column and spans the section rows so it can stick. */
+@media (min-width: 1080px) {
+  body.albers-vignette,
+  body:has(> #TOC) {
+    max-width: calc(
+      var(--content) + var(--vig-toc-width) + var(--vig-gap) +
+        2 * var(--vig-pad-inline)
+    );
+    display: grid;
+    grid-template-columns: [toc] var(--vig-toc-width) [main] minmax(0, 1fr);
+    column-gap: var(--vig-gap);
+    align-items: start;
+  }
+
+  body.albers-vignette > *,
+  body:has(> #TOC) > * {
+    grid-column: main;
+    min-width: 0;
+  }
+
+  body.albers-vignette > h1.title,
+  body:has(> #TOC) > h1.title {
+    grid-column: toc / -1;
+  }
+
+  body.albers-vignette > #TOC,
+  body:has(> #TOC) > #TOC {
+    grid-column: toc;
+    grid-row: 2 / span 200;
+    align-self: start;
+    position: sticky;
+    top: var(--vig-pad-block);
+    max-height: calc(100vh - 2 * var(--vig-pad-block));
+    overflow-y: auto;
+    margin-block: 0;
+  }
+}
+
+/* Edge-to-edge on phones: drop the card chrome */
+@media (max-width: 620px) {
+  body.albers-vignette,
+  body:has(> #TOC) {
+    border: none;
+    box-shadow: none;
+    padding-inline: 18px;
+  }
+  body.albers-vignette::before,
+  body:has(> #TOC)::before {
+    display: none;
+  }
 }
 
 /* -- Surfaces ------------------------------------------------------------ */
@@ -491,50 +749,55 @@ h3 {
 }
 
 h1 {
-  font-size: clamp(2rem, 2.6vw, 2.42rem);
-  letter-spacing: 0.008em;
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  letter-spacing: -0.022em;
   text-wrap: balance;
-  font-weight: calc(var(--heading-weight) + 35);
+  font-weight: calc(var(--heading-weight) + 40);
 }
 
+/* Section headers are compact uppercase grotesk labels (matches the resdesign
+   screenshots), carrying a small nested-square marker. h1 stays large and
+   sentence-case with no marker. */
 h2 {
-  font-size: clamp(1.34rem, 2vw, 1.58rem);
-  letter-spacing: 0.075em;
+  font-family: var(--font-ui);
+  font-size: 1.04rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-weight: var(--heading-weight);
+  font-weight: 700;
 }
 
 h3 {
-  font-size: clamp(1.08rem, 1.5vw, 1.24rem);
-  letter-spacing: 0.04em;
-  font-weight: calc(var(--heading-weight) - 40);
+  font-family: var(--font-ui);
+  font-size: 0.86rem;
+  letter-spacing: 0.12em;
+  font-weight: 700;
   text-transform: uppercase;
+  color: var(--muted);
 }
 
 h2,
 h3 {
   position: relative;
-  padding-left: 0.82em;
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
   padding-right: 1.45em;
   scroll-margin-top: var(--anchor-offset);
 }
 
+/* Nested-square section marker: a small core square with two box-shadow rings,
+   echoing Albers's "Homage to the Square". Replaces the 1.x em-dash. */
 h2::before,
 h3::before {
-  content: "—";
-  position: absolute;
-  left: 0;
-  top: 0.02em;
-  color: var(--A500);
-  line-height: 1;
-  font-weight: var(--dash-weight);
-  opacity: var(--dash-opacity);
-}
-
-h3::before {
-  content: "–";
-  color: var(--A700);
-  opacity: var(--subdash-opacity);
+  content: "";
+  flex: none;
+  margin-left: var(--sq-ring);
+  width: var(--sq-size);
+  height: var(--sq-size);
+  background: var(--sq-core);
+  box-shadow:
+    0 0 0 var(--sq-ring) var(--sq-mid),
+    0 0 0 calc(2 * var(--sq-ring)) var(--sq-outer);
 }
 
 /* -- Links --------------------------------------------------------------- */
@@ -588,7 +851,7 @@ pre {
 /* Keep code legible when Bootstrap switches `data-bs-theme`. */
 pre,
 .sourceCode pre {
-  color: var(--ink);
+  color: var(--code-fg);
 }
 
 [data-bs-theme="dark"] pre,
@@ -602,7 +865,7 @@ pre code {
   padding: 0;
   word-break: normal;
   overflow-wrap: normal;
-  color: var(--ink);
+  color: var(--code-fg);
 }
 
 button.copy-code {
@@ -627,25 +890,31 @@ button.copy-code:active {
   transform: translateY(1px);
 }
 
-p code {
-  background: var(--code-bg);
+/* Inline code stays a light chip with accent ink in BOTH directions (never the
+   dark block background that Interaction uses for `pre`). */
+:not(pre) > code {
+  background: var(--surface-strong);
   border: var(--rule-thin) solid var(--border);
+  color: var(--accent-ink);
   padding: 0.12em 0.36em;
+  font-size: 0.86em;
 }
 
 /* -- Syntax Highlighting -------------------------------------------------- */
+/* Token colours come from per-direction --tok-* so they stay legible on both
+   the light (Homage) and dark (Interaction) code grounds. */
 .sourceCode .va,
 .sourceCode .op,
 .sourceCode .pp,
 .sourceCode .ot,
 .sourceCode .sc {
-  color: var(--ink);
+  color: var(--code-fg);
 }
 
 pre code .kw,
 .sourceCode .kw,
 .hljs-keyword {
-  color: var(--A900);
+  color: var(--tok-kw);
   font-weight: 650;
 }
 
@@ -653,27 +922,43 @@ pre code .fu,
 .sourceCode .fu,
 .hljs-title,
 .hljs-function {
-  color: var(--A700);
+  color: var(--tok-fun);
 }
 
 pre code .st,
 .sourceCode .st,
 .hljs-string {
-  color: color-mix(in srgb, var(--A500) 68%, var(--ink));
+  color: var(--tok-str);
 }
 
 pre code .co,
 .sourceCode .co,
 .hljs-comment {
-  color: var(--muted);
+  color: var(--tok-com);
   font-style: italic;
 }
 
 pre code .cn,
+.sourceCode .dv,
+.sourceCode .fl,
+.sourceCode .bn,
 .sourceCode .cn,
 .hljs-number,
 .hljs-literal {
-  color: color-mix(in srgb, var(--A300) 64%, var(--ink));
+  color: var(--tok-num);
+}
+
+/* downlit links inside code read as code (function colour), not page links */
+pre code a,
+pre code a:visited,
+div.sourceCode a,
+div.sourceCode a:visited {
+  color: var(--tok-fun) !important;
+  text-decoration: none;
+}
+pre code a:hover,
+div.sourceCode a:hover {
+  text-decoration: underline;
 }
 
 /* -- Tables -------------------------------------------------------------- */
@@ -749,11 +1034,25 @@ figcaption {
 /* -- Callouts ------------------------------------------------------------ */
 blockquote,
 .callout {
-  border-left: var(--rule-strong) solid var(--A500);
-  border-top: var(--rule-thin) solid var(--border);
-  background: var(--accent-band);
+  position: relative;
+  border: var(--rule-thin) solid var(--border);
+  border-left: 3px solid var(--accent);
+  background: var(--surface-strong);
   padding: 16px 22px;
   margin-block: 1.45rem;
+}
+
+/* small nested-square corner accent (matches the resdesign callout) */
+blockquote::after,
+.callout::after {
+  content: "";
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 0.5em;
+  height: 0.5em;
+  background: var(--sq-mid);
+  box-shadow: 0 0 0 0.17em var(--sq-outer);
 }
 
 blockquote p { margin: 0; }
@@ -978,6 +1277,20 @@ h3:focus-within .anchor {
   letter-spacing: 0.05em;
 }
 
+/* Theme Lab palette chips: live swatches of the active family's four tones,
+   so changing the family is visible immediately. */
+.theme-lab__chips .albers-chip {
+  color: #fff;
+  border-color: transparent;
+}
+.theme-lab__chips .albers-chip:nth-child(1) { background: var(--A900); }
+.theme-lab__chips .albers-chip:nth-child(2) { background: var(--A700); }
+.theme-lab__chips .albers-chip:nth-child(3) { background: var(--A500); }
+.theme-lab__chips .albers-chip:nth-child(4) {
+  background: var(--A300);
+  color: var(--ink);
+}
+
 body.preset-midnight #toc > .nav a.nav-link {
   color: color-mix(in srgb, var(--ink) 84%, var(--A300));
 }
@@ -1156,9 +1469,21 @@ body.preset-midnight .html-widget {
 @media print {
   body { background: #fff !important; }
 
+  body.albers-vignette,
+  body:has(> #TOC) {
+    display: block;
+    max-width: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+  body.albers-vignette::before,
+  body:has(> #TOC)::before { display: none; }
+
   .navbar,
   .sidebar,
   .toc,
+  #TOC,
   .page-header,
   .homage-hero,
   .hr-notch,

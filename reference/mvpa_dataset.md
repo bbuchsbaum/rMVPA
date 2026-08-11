@@ -1,7 +1,9 @@
 # Create an MVPA Dataset Object
 
 Creates a dataset object for MVPA analysis that encapsulates a training
-dataset, an optional test dataset, and a voxel mask.
+dataset, an optional test dataset, and a voxel mask. All image
+components must share the same complete spatial geometry; matching
+dimensions alone are not enough.
 
 ## Usage
 

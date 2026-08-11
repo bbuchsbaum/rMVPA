@@ -13,6 +13,7 @@ run_custom_searchlight(
   radius,
   method = c("standard", "randomized"),
   niter = 100,
+  user_data = NULL,
   ...,
   .cores = 1,
   .verbose = FALSE
@@ -58,6 +59,14 @@ run_custom_searchlight(
   The number of iterations for a "randomized" searchlight. Ignored if
   \`method = "standard"\`. Defaults to 100.
 
+- user_data:
+
+  Optional caller-supplied object made available unchanged as
+  \`sl_info\$user_data\` inside every callback. This is useful for trial
+  metadata, continuous covariates, item mappings, or other
+  analysis-specific context. For datasets with an external test set, the
+  corresponding test sphere is available as \`sl_info\$test_data\`.
+
 - ...:
 
   Optional arguments passed to \`mvpa_iterate\` (e.g., \`batch_size\`).
@@ -65,8 +74,8 @@ run_custom_searchlight(
 - .cores:
 
   Number of cores to use for parallel processing via the \`future\`
-  framework. Defaults to 1 (sequential). Set using \`future::plan()\`
-  beforehand for more control.
+  framework. Defaults to 1 (sequential). The requested plan is scoped to
+  this call and the caller's previous plan is restored afterward.
 
 - .verbose:
 
@@ -104,6 +113,12 @@ The \`custom_func\` performs the core calculation for each sphere. The
 framework manages the iteration, data handling, parallelization, error
 catching, and result aggregation.
 
+\`sl_data\` always contains the training data for the sphere. If
+\`dataset\` has a test set, \`sl_info\$test_data\` is a
+samples-by-features matrix for the same spatial features. This keeps
+existing two-argument callbacks compatible while allowing arbitrary
+train/test calculations without concatenating the images.
+
 For \`method = "standard"\`, the function iterates through every active
 voxel/vertex in the dataset mask as a potential sphere center. For
 \`method = "randomized"\`, it randomly selects sphere centers for
@@ -135,6 +150,14 @@ my_sl_stats <- function(sl_data, sl_info) {
   sd_signal <- sd(sl_data, na.rm = TRUE)
   list(mean_signal = mean_signal, sd_signal = sd_signal,
        n_vox_in_sphere = ncol(sl_data))
+}
+
+# Analysis-specific continuous association using a separate test image:
+association <- function(sl_data, sl_info) {
+  effect <- rowMeans(sl_info$test_data - sl_data)
+  z <- is.finite(effect) & is.finite(sl_info$user_data$covariate)
+  list(covariate_cor = cor(effect[z], sl_info$user_data$covariate[z]),
+       n_pairs = sum(z))
 }
 
 # Run the custom searchlight (standard method)

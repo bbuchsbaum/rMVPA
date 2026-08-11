@@ -49,8 +49,8 @@ run_searchlight(
 
   engine
 
-  :   Searchlight engine: `"auto"` (default), `"legacy"`, `"swift"`, or
-      `"dual_lda_fast"`.
+  :   Searchlight engine: `"auto"` (default), `"legacy"`, `"swift"`,
+      `"dual_lda_fast"`, or `"naive_xdec_fast"`.
 
   combiner
 

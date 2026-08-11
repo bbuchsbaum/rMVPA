@@ -1,5 +1,5 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   CommandLine: CommandLine.html
@@ -15,6 +15,7 @@ articles:
   Feature_RSA: Feature_RSA.html
   FeatureSelection: FeatureSelection.html
   Haxby_2001: Haxby_2001.html
+  ITEM_Decoding: ITEM_Decoding.html
   Kriegeskorte_92_Images: Kriegeskorte_92_Images.html
   Model_Space_Connectivity: Model_Space_Connectivity.html
   MVPA_RegionalCmdline: MVPA_RegionalCmdline.html
@@ -30,7 +31,7 @@ articles:
   Searchlight_Analysis: Searchlight_Analysis.html
   Temporal_Confounds_in_RSA: Temporal_Confounds_in_RSA.html
   Vector_RSA: Vector_RSA.html
-last_built: 2026-05-08T19:49Z
+last_built: 2026-08-11T19:44Z
 urls:
   reference: http://bbuchsbaum.github.io/rMVPA/reference
   article: http://bbuchsbaum.github.io/rMVPA/articles

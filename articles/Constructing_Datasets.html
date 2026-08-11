@@ -7,8 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Constructing Datasets for MVPA Analysis • rMVPA</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="Constructing Datasets for MVPA Analysis">
@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-05-08</h4>
+            <h4 data-toc-skip class="date">2026-08-11</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Constructing_Datasets.Rmd" class="external-link"><code>vignettes/Constructing_Datasets.Rmd</code></a></small>
       <div class="d-none name"><code>Constructing_Datasets.Rmd</code></div>
@@ -176,23 +176,23 @@ corresponding to the number of vertices and the number of
 observations.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">## remotes::install_github("bbuchsbaum/neurosurf")</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/neurosurf" class="external-link">neurosurf</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bbuchsbaum.github.io/neurosurf" class="external-link">neurosurf</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Load the cortical geometry</span></span>
-<span><span class="va">geom</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/neurosurf/man/read_surf_geometry.html" class="external-link">read_surf_geometry</a></span><span class="op">(</span><span class="st">"path/to/subject.lh.smoothwm.asc"</span><span class="op">)</span></span>
+<span><span class="va">geom</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neurosurf/reference/read_surf_geometry.html" class="external-link">read_surf_geometry</a></span><span class="op">(</span><span class="st">"path/to/subject.lh.smoothwm.asc"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Read the surface data from a CSV file</span></span>
 <span><span class="co"># The CSV should not have a header and have dimensions: number of vertices x number of observations</span></span>
 <span><span class="va">data_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="st">"path/to/surface_data.csv"</span>, header <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Verify that the number of rows in the data matches the geometry</span></span>
-<span><span class="va">nvert</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="fu">neurosurf</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/neurosurf/man/vertices-methods.html" class="external-link">vertices</a></span><span class="op">(</span><span class="va">geom</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">nvert</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="fu">neurosurf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neurosurf/reference/vertices-methods.html" class="external-link">vertices</a></span><span class="op">(</span><span class="va">geom</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">data_matrix</span><span class="op">)</span> <span class="op">!=</span> <span class="va">nvert</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"The number of vertices in the data does not match the geometry."</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="co"># Create a NeuroSurfaceVector using the geometry and the data matrix</span></span>
-<span><span class="va">real_neurosurf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/neurosurf/man/NeuroSurfaceVector.html" class="external-link">NeuroSurfaceVector</a></span><span class="op">(</span><span class="va">geom</span>, <span class="fl">1</span><span class="op">:</span><span class="va">nvert</span>, <span class="va">data_matrix</span><span class="op">)</span></span>
+<span><span class="va">real_neurosurf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neurosurf/reference/NeuroSurfaceVector.html" class="external-link">NeuroSurfaceVector</a></span><span class="op">(</span><span class="va">geom</span>, <span class="fl">1</span><span class="op">:</span><span class="va">nvert</span>, <span class="va">data_matrix</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create the MVPA surface dataset; if no mask is provided, one is generated automatically</span></span>
 <span><span class="va">real_surface_dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_surface_dataset.html">mvpa_surface_dataset</a></span><span class="op">(</span>train_data <span class="op">=</span> <span class="va">real_neurosurf</span>, name <span class="op">=</span> <span class="st">"lh"</span><span class="op">)</span></span>
@@ -223,7 +223,7 @@ before running the code.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

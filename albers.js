@@ -1,6 +1,6 @@
 (function () {
   var FAMILY_CLASSES = ["red", "lapis", "ochre", "teal", "green", "violet"];
-  var PRESET_CLASSES = ["study", "structural", "adobe", "midnight"];
+  var PRESET_CLASSES = ["homage", "interaction", "study", "structural", "adobe", "midnight"];
   var STYLE_CLASSES = ["minimal", "assertive"];
 
   function classes(prefix, values) {

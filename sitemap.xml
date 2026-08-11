@@ -15,6 +15,7 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/articles/ITEM_Decoding.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/MVPA_RegionalCmdline.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html</loc></url>
@@ -32,14 +33,9 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/repmed_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/articles/repnet_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/authors.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/contrast_rsa_plan.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/contrast_rsa_plan_phase2.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/crossnobis_plan.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/er_rsa.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/error_handling.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/hr_frem_plan.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/index.html</loc></url>
-<url><loc>http://bbuchsbaum.github.io/rMVPA/kernel_searchlight_plan.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/news/index.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/MVPAModels.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/add_interaction_contrasts.html</loc></url>
@@ -177,6 +173,7 @@
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/output_schema.era_rsa_model.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/output_schema.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.html</loc></url>
+<url><loc>http://bbuchsbaum.github.io/rMVPA/reference/partition_indices.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/performance-methods.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/performance.regression_result.html</loc></url>
 <url><loc>http://bbuchsbaum.github.io/rMVPA/reference/permutation_control.html</loc></url>

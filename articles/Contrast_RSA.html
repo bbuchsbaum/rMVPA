@@ -7,8 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Contrast RSA with contrast_rsa_model • rMVPA</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="Contrast RSA with contrast_rsa_model">
@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-05-08</h4>
+            <h4 data-toc-skip class="date">2026-08-11</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Contrast_RSA.Rmd" class="external-link"><code>vignettes/Contrast_RSA.Rmd</code></a></small>
       <div class="d-none name"><code>Contrast_RSA.Rmd</code></div>
@@ -141,6 +141,21 @@ direction.</p>
 <span><span class="co">## [1] 0 0</span></span></code></pre>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ms_des</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/msreve_design.html">msreve_design</a></span><span class="op">(</span><span class="va">data_info</span><span class="op">$</span><span class="va">design</span>, contrast_matrix <span class="op">=</span> <span class="va">C_mat</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="the-whole-pipeline-at-a-glance">The whole pipeline at a glance<a class="anchor" aria-label="anchor" href="#the-whole-pipeline-at-a-glance"></a>
+</h3>
+<div class="figure">
+<img src="Contrast_RSA_files/figure-html/msreve-schematic-1.png" class="r-plt" alt="MS-ReVE in six panels. (1) contrast matrix C (K conditions x Q contrasts). (2a/2b) each contrast's predicted dissimilarity Delta_q = -c_q c_q^T. (3) a searchlight neural RDM. (4) beta_q from regressing the neural RDM on the Delta_q stack. (5) signed voxel score beta_q * Delta_{q,v}: positive voxels pull the contrast in its predicted direction, negative voxels oppose. (6) summary equations. The figure uses synthetic patterns separate from the example below; it is here to anchor the symbols you will see in the metrics section." width="100%"><p class="caption">
+MS-ReVE in six panels. (1) contrast matrix C (K conditions x Q
+contrasts). (2a/2b) each contrast’s predicted dissimilarity Delta_q =
+-c_q c_q^T. (3) a searchlight neural RDM. (4) beta_q from regressing the
+neural RDM on the Delta_q stack. (5) signed voxel score beta_q *
+Delta_{q,v}: positive voxels pull the contrast in its predicted
+direction, negative voxels oppose. (6) summary equations. The figure
+uses synthetic patterns separate from the example below; it is here to
+anchor the symbols you will see in the metrics section.
+</p>
+</div>
 <p>Next we create the model specification and run a tiny searchlight
 over the volume, requesting the default <code>"beta_delta"</code>
 metric.</p>
@@ -198,6 +213,7 @@ metric.</p>
 <span><span class="co">## 8          4   beta_delta.A_vs_B -0.090866802</span></span>
 <span><span class="co">## 9          5 beta_delta.AB_vs_CD -0.039160407</span></span>
 <span><span class="co">## 10         5   beta_delta.A_vs_B -0.336847744</span></span></code></pre>
+</div>
 </div>
 <div class="section level2">
 <h2 id="understanding-the-metrics">Understanding the metrics<a class="anchor" aria-label="anchor" href="#understanding-the-metrics"></a>
@@ -353,7 +369,7 @@ temporal autocorrelation is a concern</li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

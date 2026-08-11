@@ -241,8 +241,8 @@ analysis:
   neighbourhood strategy
 - `--iterations` sets the number of passes for randomized or resampled
   searchlights
-- `--engine=auto|legacy|swift|dual_lda_fast` selects the searchlight
-  engine
+- `--engine=auto|legacy|swift|dual_lda_fast|naive_xdec_fast` selects the
+  searchlight engine
 - `--batch-size` controls how many searchlights are processed per batch
 
 For fast validation while tuning the engine or neighbourhood mode, use:

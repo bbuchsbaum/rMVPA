@@ -48,8 +48,8 @@ run_custom_regional(
 - .cores:
 
   Number of cores to use for parallel processing via the \`future\`
-  framework. Defaults to 1 (sequential). Set using \`future::plan()\`
-  beforehand for more control.
+  framework. Defaults to 1 (sequential). The requested plan is scoped to
+  this call and the caller's previous plan is restored afterward.
 
 - .verbose:
 

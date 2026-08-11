@@ -49,11 +49,11 @@ compute_crossvalidated_means_sl(
     (row) is finally scaled to unit L2 norm. Useful when you need to
     equalise overall pattern energy across conditions before RSA.
 
-  - `"crossnobis"`: Applies a pre-computed whitening matrix (see
-    \`whitening_matrix_W\`) to the average pattern of each condition
-    within each cross-validation training fold, before averaging these
-    whitened patterns across folds. This aims to produce
-    noise-normalized condition representations.
+  - `"crossnobis"`: Computes independent partition-wise condition means
+    for crossnobis distances/second moments. If \`whitening_matrix_W\`
+    is supplied, each partition mean is whitened before being
+    returned/averaged; if it is \`NULL\`, raw Euclidean patterns are
+    used.
 
   Default is `"average"`.
 
@@ -62,7 +62,11 @@ compute_crossvalidated_means_sl(
   Optional V x V numeric matrix, where V is the number of
   voxels/features in \`sl_data\`. This matrix should be the whitening
   transformation (e.g., Sigma_noise^(-1/2)) derived from GLM residuals.
-  Required and used only if \`estimation_method = "crossnobis"\`.
+  If comparing to implementations that accept a precision matrix P
+  directly, use W such that W %\*% t(W) = P (for example, \`t(chol(P))\`
+  for a positive-definite precision matrix). Used only if
+  \`estimation_method = "crossnobis"\`. If \`NULL\`, no whitening is
+  applied.
 
 - return_folds:
 

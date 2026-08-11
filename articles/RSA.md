@@ -59,6 +59,24 @@ core loop. The rest of this vignette covers the parts you’ll actually
 want to control: how to build model RDMs, how to combine multiple RDMs,
 how to handle correlated RDMs, and how to wire it into searchlight.
 
+### The whole pipeline at a glance
+
+Before walking through each step, here is the standard-RSA flow on a
+small synthetic dataset. Patterns become a neural RDM via
+[`dist()`](https://rdrr.io/r/stats/dist.html); model RDMs encode
+hypotheses; the comparison is a regression on the lower triangle.
+
+![Standard RSA in five panels. (1) condition x voxel patterns. (2)
+neural RDM. (3a/3b) two model RDMs (category, identity). (4)
+lower-triangle scatter of model vs neural with Spearman rho. (5)
+coefficients from a multi-RDM regression of the neural RDM on both model
+RDMs.](RSA_files/figure-html/rsa-schematic-1.png)
+
+Standard RSA in five panels. (1) condition x voxel patterns. (2) neural
+RDM. (3a/3b) two model RDMs (category, identity). (4) lower-triangle
+scatter of model vs neural with Spearman rho. (5) coefficients from a
+multi-RDM regression of the neural RDM on both model RDMs.
+
 ## Basic concepts
 
 ### Dissimilarity matrices
@@ -350,7 +368,7 @@ rsa_map <- results$results$model_rdm
 # Compute range of correlation values
 rsa_values <- neuroim2::values(rsa_map)
 range(rsa_values, na.rm = TRUE)
-#> [1] -0.06774093  0.06292384
+#> [1] -0.07452463  0.05025552
 
 # Basic summary of the searchlight result
 print(results)

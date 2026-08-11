@@ -1,0 +1,271 @@
+# ITEM Trial-Wise Decoding
+
+## Overview
+
+ITEM (Inverse Transformed Encoding Model) decoding is a trial-wise
+pipeline for ROI and searchlight analysis. Unlike standard MVPA, which
+decodes from a single pattern per trial without accounting for how
+overlapping hemodynamic responses correlate trial estimates, ITEM makes
+the trial-estimation step explicit and then *corrects for the covariance
+it induces*.
+
+The pipeline has two stages:
+
+1.  **Trial estimation.** A least-squares-all (LS-A) GLM regresses the
+    TR-level data onto a trial-wise design matrix `X_t`, yielding one
+    response pattern per trial (`Gamma`).
+2.  **Covariance-aware decoding.** Because nearby trials share
+    overlapping HRFs, the trial estimates are correlated even when the
+    underlying signals are not. ITEM computes this trial-by-trial
+    covariance `U` analytically from `X_t` and uses it to whiten the
+    decoder, then evaluates with leave-one-run-out cross-validation.
+
+This differs from the archived `hrfdecoder` pathway, which fit a
+continuous-time decoder directly on TR-level data and aggregated TR
+predictions to events afterward. Reach for ITEM when you want an
+explicit trial-estimation stage and direct control over trial covariance
+handling, especially for trial-level diagnostics.
+
+The implementation delegates the numerical work (`item_build_design`,
+`item_compute_u`, `lsa`, `item_cv`) to the
+[`fmrilss`](https://github.com/bbuchsbaum/fmrilss) package, which is an
+optional dependency.
+
+## The two ITEM objects
+
+| Object | Constructor | Role |
+|----|----|----|
+| Design | [`item_design()`](http://bbuchsbaum.github.io/rMVPA/reference/item_design.md) | Couples the trial-wise design matrix `X_t` and trial targets `T_target` to TR-level observations. |
+| Model spec | [`item_model()`](http://bbuchsbaum.github.io/rMVPA/reference/item_model.md) | Configures the decoder (mode, metric, ridge, solver) and precomputes `U`. Compatible with [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) and [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md). |
+
+The key distinction from a standard `mvpa_design` is that supervised
+information lives at the **trial** level (`T_target`, length
+`n_trials`), while the data extracted per ROI/searchlight lives at the
+**TR** level (`nrow(X_t)` rows). Cross-validation folds are derived
+internally from the trial-level `run_id` – you do not specify a
+`block_var`.
+
+## Quick example
+
+We simulate a small dataset, build a trial-wise design, and run a
+regression decode over three ROIs.
+
+``` r
+
+set.seed(42)
+
+n_time   <- 80   # TR-level observations
+n_trials <- 24   # trials to decode
+n_runs   <- 4
+
+data_info <- gen_sample_dataset(
+  D = c(10, 10, 10), nobs = n_time, nlevels = 2, blocks = n_runs
+)
+
+# Trial-wise design matrix: one column per trial (n_time x n_trials).
+# In real analyses this is built from your event onsets and an HRF.
+X_t    <- matrix(rnorm(n_time * n_trials), nrow = n_time, ncol = n_trials)
+run_id <- rep(seq_len(n_runs), each = n_trials / n_runs)
+
+# Continuous trial-level target (regression mode).
+T_target <- as.numeric(scale(rnorm(n_trials)))
+
+des <- item_design(
+  train_design = data_info$design$train_design,
+  X_t          = X_t,
+  T_target     = T_target,
+  run_id       = run_id
+)
+
+print(des)
+#> item_design
+#> ===========
+#> TR rows: 80
+#> Trials: 24
+#> Runs: 4
+#> Targets columns: 1
+```
+
+``` r
+
+model <- item_model(
+  dataset = data_info$dataset,
+  design  = des,
+  mode    = "regression",
+  metric  = "correlation",
+  solver  = "svd"
+)
+```
+
+``` r
+
+roi_mask <- NeuroVol(
+  sample(1:3, length(data_info$dataset$mask), replace = TRUE),
+  space(data_info$dataset$mask)
+)
+
+results <- run_regional(model, roi_mask)
+results$performance_table
+#> # A tibble: 3 × 4
+#>   roinum item_score_mean item_score_sd item_n_folds
+#>    <int>           <dbl>         <dbl>        <dbl>
+#> 1      1         -0.0452         0.439            4
+#> 2      2          0.103          0.461            4
+#> 3      3          0.134          0.527            4
+```
+
+Every ROI/searchlight location reports three scalars:
+
+- `item_score_mean` – mean of the chosen metric across folds,
+- `item_score_sd` – across-fold standard deviation,
+- `item_n_folds` – number of cross-validation folds (runs).
+
+With random data the correlation hovers near zero. With real fMRI data,
+an `item_score_mean` reliably above zero (regression) or above chance
+(classification) indicates decodable trial-level structure.
+
+## Classification mode
+
+For categorical targets, pass a factor (or character vector) as
+`T_target` and set `mode = "classification"`:
+
+``` r
+
+T_class <- factor(rep(c("face", "house"), length.out = n_trials))
+
+des_cls <- item_design(
+  train_design = data_info$design$train_design,
+  X_t          = X_t,
+  T_target     = T_class,
+  run_id       = run_id
+)
+
+model_cls <- item_model(
+  dataset = data_info$dataset,
+  design  = des_cls,
+  mode    = "classification",
+  metric  = "balanced_accuracy",
+  solver  = "svd"
+)
+
+run_regional(model_cls, roi_mask)$performance_table
+#> # A tibble: 3 × 4
+#>   roinum item_score_mean item_score_sd item_n_folds
+#>    <int>           <dbl>         <dbl>        <dbl>
+#> 1      1           0.375        0.0833            4
+#> 2      2           0.417        0.289             4
+#> 3      3           0.375        0.160             4
+```
+
+The `metric` argument is validated against `mode` at construction, so a
+mismatch (for example `mode = "classification"` with `metric = "rmse"`)
+fails immediately rather than producing a map of errored ROIs. Valid
+choices are `"accuracy"` / `"balanced_accuracy"` for classification and
+`"correlation"` / `"rmse"` for regression. `metric = NULL` uses the
+`fmrilss` default for the mode.
+
+## Searchlight
+
+The same model spec drops straight into
+[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
+ITEM exposes an output schema, so the searchlight produces one map per
+scalar metric:
+
+``` r
+
+sl <- run_searchlight(model, radius = 4, method = "standard")
+names(sl$results)
+#> [1] "item_score_mean" "item_score_sd"   "item_n_folds"
+```
+
+For whole-brain searchlights, set `return_predictions = FALSE` on the
+model spec. The searchlight schema combiner only keeps the scalar maps,
+but
+[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+retains the full per-fold prediction payload on every ROI; disabling
+predictions bounds memory when there are many ROIs or trials.
+
+## Accounting for temporal autocorrelation
+
+If you have an estimate of the TR-level noise covariance (or its
+precision), pass it through `V` / `v_type` on the design. ITEM folds it
+into the analytic trial covariance `U`:
+
+``` r
+
+# V_cov: n_time x n_time temporal covariance (e.g. from an AR model)
+des_v <- item_design(
+  train_design = train_design,
+  X_t          = X_t,
+  T_target     = T_target,
+  run_id       = run_id,
+  V            = V_cov,
+  v_type       = "cov"      # or "precision" if you pass the inverse
+)
+```
+
+Nuisance regressors that should be projected out during LS-A trial
+estimation (motion, drift) go through the `Z` / `Nuisance` arguments of
+[`item_design()`](http://bbuchsbaum.github.io/rMVPA/reference/item_design.md).
+
+## Trial-alignment guard
+
+A common, hard-to-spot bug is a mismatch between the trial order in
+`X_t` and the trial order in your behavioural targets. ITEM can guard
+against this with a hash of the trial identifiers:
+
+``` r
+
+des <- item_design(
+  X_t        = X_t,
+  T_target   = T_target,
+  run_id     = run_id,
+  trial_id   = trial_ids,
+  trial_hash = fmrilss:::.item_simple_hash(trial_ids)
+)
+
+model <- item_model(dataset, des, mode = "regression", check_hash = TRUE)
+```
+
+When `check_hash = TRUE`, each fold verifies the trial hash before
+decoding and the ROI fails loudly (“Trial hash mismatch”) instead of
+silently returning a meaningless score.
+
+## Tuning knobs
+
+| Argument | Default | Purpose |
+|----|----|----|
+| `ridge_u` | `0` | Ridge added when inverting to form `U`. |
+| `ridge_w` | `1e-4` | Ridge on the per-fold ITEM weights. |
+| `solver` | `"chol"` | Linear solver (`"chol"`, `"svd"`, `"pinv"`); falls back to `"svd"` on collinearity. |
+| `u_storage` | `"matrix"` | Store `U` as a full matrix or per-run blocks (`"by_run"`); use blocks for many trials. |
+| `lsa_method` | `"r"` | LS-A backend (`"r"` or `"cpp"`). |
+
+## Troubleshooting
+
+**“requires package ‘fmrilss’”** – ITEM delegates its numerics to
+`fmrilss`. Install it with
+`remotes::install_github("bbuchsbaum/fmrilss")`.
+
+**“ROI rows … must match nrow(X_t)”** – the data extracted per ROI has a
+different number of TR rows than `X_t`. Confirm
+`nrow(X_t) == nobs(dataset)` and that the dataset and design describe
+the same scan.
+
+**“requested ‘chol’ but used ‘svd’”** – a benign fallback warning
+emitted when trial estimates are collinear within a fold; the decode
+still completes via the SVD solver. Increase `ridge_w` to suppress it.
+
+**Scores near chance everywhere** – expected for null data. With real
+data, check that `X_t` is built from the correct onsets/HRF and that
+`T_target` is aligned to trials (consider the `check_hash` guard above).
+
+## Next steps
+
+- [`?item_model`](http://bbuchsbaum.github.io/rMVPA/reference/item_model.md),
+  [`?item_design`](http://bbuchsbaum.github.io/rMVPA/reference/item_design.md)
+  – full parameter documentation
+- [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md)
+  – a no-learning cross-domain baseline
+- [`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
+  – general searchlight workflow

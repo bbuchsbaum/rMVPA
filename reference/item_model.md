@@ -41,8 +41,9 @@ item_model(
 
 - metric:
 
-  Optional ITEM metric. Classification: \`"accuracy"\`,
-  \`"balanced_accuracy"\`. Regression: \`"correlation"\`, \`"rmse"\`.
+  Optional ITEM metric. Validated against \`mode\` at construction.
+  Classification: \`"accuracy"\`, \`"balanced_accuracy"\`. Regression:
+  \`"correlation"\`, \`"rmse"\`. \`NULL\` uses the \`fmrilss\` default.
 
 - ridge_u:
 
@@ -104,3 +105,10 @@ data and aggregates TR predictions to events afterward.
 Use ITEM when you want an explicit trial-estimation stage and direct
 control over trial covariance handling (\`U\`), especially for
 trial-level diagnostics.
+
+When \`return_predictions = TRUE\` (the default) the full per-fold
+cross-validation payload is retained on every ROI result. The
+searchlight schema combiner discards this payload and keeps only the
+scalar maps, but \`run_regional()\` retains the full results list; for
+analyses with many ROIs or large trial counts, pass \`return_predictions
+= FALSE\` to bound memory.
