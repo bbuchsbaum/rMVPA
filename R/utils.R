@@ -296,6 +296,65 @@ utils::globalVariables(c(
   "scores_list"
 ))
 
+#' Apply a scoped future plan with an exact worker contract
+#'
+#' Internal helper shared by the CLI and custom analysis entry points. The
+#' caller owns restoration of the returned `old_plan`, normally via
+#' `on.exit(future::plan(state$old_plan), add = TRUE)`.
+#'
+#' @keywords internal
+#' @noRd
+.rmvpa_apply_future_plan <- function(
+    workers,
+    future_plan = c("auto", "sequential", "multisession", "multicore"),
+    announce = FALSE) {
+  future_plan <- match.arg(future_plan)
+  if (!is.numeric(workers) || length(workers) != 1L || is.na(workers) ||
+      workers < 1 || workers != as.integer(workers)) {
+    stop("`workers` must be a positive integer.", call. = FALSE)
+  }
+  workers <- as.integer(workers)
+
+  available <- tryCatch(future::availableCores(), error = function(e) NA_integer_)
+  actual_workers <- workers
+  if (is.numeric(available) && length(available) == 1L && !is.na(available) && available > 0L) {
+    actual_workers <- min(workers, as.integer(available))
+    if (actual_workers < workers) {
+      warning(
+        sprintf("Requested %d workers but only %d are available; using %d.",
+                workers, available, actual_workers),
+        call. = FALSE
+      )
+    }
+  }
+
+  strategy <- if (actual_workers <= 1L || identical(future_plan, "sequential")) {
+    "sequential"
+  } else if (identical(future_plan, "auto")) {
+    if (isTRUE(future::supportsMulticore())) "multicore" else "multisession"
+  } else if (identical(future_plan, "multicore") && !isTRUE(future::supportsMulticore())) {
+    warning("multicore is not supported here; falling back to multisession.", call. = FALSE)
+    "multisession"
+  } else {
+    future_plan
+  }
+
+  old_plan <- future::plan()
+  if (identical(strategy, "sequential")) {
+    future::plan(future::sequential)
+  } else if (identical(strategy, "multicore")) {
+    future::plan(future::multicore, workers = actual_workers)
+  } else {
+    future::plan(future::multisession, workers = actual_workers)
+  }
+
+  if (isTRUE(announce)) {
+    message("Using future plan '", strategy, "' with ", actual_workers, " worker(s) for this call.")
+  }
+
+  list(workers = actual_workers, strategy = strategy, old_plan = old_plan)
+}
+
 #' Report System and Package Information for rMVPA
 #'
 #' Gathers and displays information about the R session, operating system,

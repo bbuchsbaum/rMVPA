@@ -542,6 +542,48 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
   list(start = start, end = end)
 }
 
+# Estimate a conservative searchlight batch size. A batch is extracted into
+# the main process before futures are launched, so center count must not be the
+# dominant default. The estimate includes train and test observations plus a
+# two-copy allowance for extraction and serialization/transient objects.
+.default_searchlight_batch_size <- function(dataset, vox_list, nworkers,
+                                            memory_budget = getOption(
+                                              "rMVPA.searchlight_mem_budget",
+                                              512 * 1024^2
+                                            )) {
+  if (!is.numeric(memory_budget) || length(memory_budget) != 1L ||
+      is.na(memory_budget) || memory_budget <= 0) {
+    warning(
+      "Invalid `rMVPA.searchlight_mem_budget`; using 512 MiB.",
+      call. = FALSE
+    )
+    memory_budget <- 512 * 1024^2
+  }
+
+  train_obs <- nobs(dataset)
+  test_obs <- if (isTRUE(has_test_set(dataset)) && !is.null(dataset$test_data)) {
+    test_dims <- dim(dataset$test_data)
+    as.integer(test_dims[length(test_dims)])
+  } else {
+    0L
+  }
+  sphere_sizes <- lengths(vox_list)
+  representative_voxels <- max(
+    1,
+    as.double(stats::quantile(sphere_sizes, probs = 0.9, names = FALSE, type = 1))
+  )
+  bytes_per_roi <- representative_voxels * (train_obs + test_obs) * 8 * 2
+  max_by_memory <- max(
+    1L,
+    as.integer(min(.Machine$integer.max, floor(memory_budget / bytes_per_roi)))
+  )
+
+  # Bound scheduler/list overhead even when the raw matrices are tiny. This
+  # replaces the old rule that selected ten percent of all brain centers.
+  task_cap <- max(64L, as.integer(nworkers) * 8L)
+  as.integer(min(length(vox_list), max_by_memory, task_cap))
+}
+
 #' @keywords internal
 #' @noRd
 .prepare_batch_frame <- function(mod_spec, dset, vox_batch, batch_positions,
@@ -810,9 +852,19 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
             mem_budget / 1e9)
         }
       } else {
-        # Searchlight: many small ROIs. Batch for memory, but keep
-        # batches large enough to fill all workers several times over.
-        batch_size <- max(nworkers * 20L, as.integer(0.1 * length(ids)))
+        # Searchlight: bound both extracted matrix memory and per-batch
+        # scheduler/list overhead. Users can still override `batch_size`.
+        batch_size <- .default_searchlight_batch_size(
+          mod_spec$dataset,
+          vox_list,
+          nworkers
+        )
+        futile.logger::flog.info(
+          "Using automatic searchlight batch size %d for %d centers (memory budget %.1f MiB).",
+          batch_size,
+          length(ids),
+          getOption("rMVPA.searchlight_mem_budget", 512 * 1024^2) / 1024^2
+        )
       }
     }
     batch_size <- max(1L, min(as.integer(batch_size), length(ids)))

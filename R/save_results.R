@@ -311,6 +311,13 @@ save_results.searchlight_result <- function(x, dir,
   # Partition volumetric vs surface
   for (nm in names_all) {
     obj <- x$results[[nm]]
+    # Custom searchlights retain per-metric summaries in a
+    # searchlight_performance wrapper. The spatial payload is still an ordinary
+    # map and should follow the same save path as model-based searchlights.
+    if (inherits(obj, "searchlight_performance") &&
+        is.list(obj) && !is.null(obj$data)) {
+      obj <- obj$data
+    }
     if (inherits(obj, c("NeuroVol","NeuroVec"))) {
       vols[[nm]] <- obj
     } else if (inherits(obj, c("NeuroSurface","NeuroSurfaceVector"))) {

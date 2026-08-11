@@ -18,8 +18,8 @@
 #'   (or tibble) containing scalar metric values.
 #' @param ... Optional arguments passed to `mvpa_iterate` (e.g., `batch_size`).
 #' @param .cores Number of cores to use for parallel processing via the
-#'   `future` framework. Defaults to 1 (sequential). Set using
-#'   `future::plan()` beforehand for more control.
+#'   `future` framework. Defaults to 1 (sequential). The requested plan is
+#'   scoped to this call and the caller's previous plan is restored afterward.
 #' @param .verbose Logical. If `TRUE`, prints progress messages during iteration.
 #'   Defaults to `FALSE`.
 #'
@@ -89,18 +89,8 @@ run_custom_regional <- function(dataset, region_mask, custom_func, ...,
 
 
   # --- Setup Parallel Backend ---
-  # Note: User is encouraged to set the plan *before* calling for more control
-  if (.cores > 1 && !inherits(future::plan(), c("multicore", "multisession", "cluster"))) {
-      if (requireNamespace("future.apply", quietly = TRUE)) {
-          message("Setting future plan to 'multisession' with ", .cores, " workers for this function call.")
-          old_plan <- future::plan(future::multisession, workers = .cores)
-          on.exit(future::plan(old_plan), add = TRUE) # Restore previous plan on exit
-      } else {
-          warning("Parallel execution requested (cores > 1), but 'future' backend is not multisession/multicore ",
-                  "and 'future.apply' is not installed to automatically set it. Running sequentially. ",
-                  "Use future::plan() to set backend manually.", call. = FALSE)
-      }
-  }
+  plan_state <- .rmvpa_apply_future_plan(.cores)
+  on.exit(future::plan(plan_state$old_plan), add = TRUE)
 
   # --- Prepare for Iteration ---
   # Create a minimal dummy model spec - needed for mvpa_iterate internals
@@ -290,10 +280,15 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #'   large datasets). Defaults to "standard".
 #' @param niter The number of iterations for a "randomized" searchlight.
 #'   Ignored if `method = "standard"`. Defaults to 100.
+#' @param user_data Optional caller-supplied object made available unchanged as
+#'   `sl_info$user_data` inside every callback. This is useful for trial
+#'   metadata, continuous covariates, item mappings, or other analysis-specific
+#'   context. For datasets with an external test set, the corresponding test
+#'   sphere is available as `sl_info$test_data`.
 #' @param ... Optional arguments passed to `mvpa_iterate` (e.g., `batch_size`).
 #' @param .cores Number of cores to use for parallel processing via the
-#'   `future` framework. Defaults to 1 (sequential). Set using
-#'   `future::plan()` beforehand for more control.
+#'   `future` framework. Defaults to 1 (sequential). The requested plan is
+#'   scoped to this call and the caller's previous plan is restored afterward.
 #' @param .verbose Logical. If `TRUE`, prints progress messages during iteration.
 #'   Defaults to `FALSE`.
 #'
@@ -322,6 +317,11 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #' manages the iteration, data handling, parallelization, error catching, and
 #' result aggregation.
 #'
+#' `sl_data` always contains the training data for the sphere. If `dataset` has
+#' a test set, `sl_info$test_data` is a samples-by-features matrix for the same
+#' spatial features. This keeps existing two-argument callbacks compatible while
+#' allowing arbitrary train/test calculations without concatenating the images.
+#'
 #' For `method = "standard"`, the function iterates through every active voxel/vertex
 #' in the dataset mask as a potential sphere center.
 #' For `method = "randomized"`, it randomly selects sphere centers for `niter`
@@ -344,6 +344,14 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #'   sd_signal <- sd(sl_data, na.rm = TRUE)
 #'   list(mean_signal = mean_signal, sd_signal = sd_signal,
 #'        n_vox_in_sphere = ncol(sl_data))
+#' }
+#'
+#' # Analysis-specific continuous association using a separate test image:
+#' association <- function(sl_data, sl_info) {
+#'   effect <- rowMeans(sl_info$test_data - sl_data)
+#'   z <- is.finite(effect) & is.finite(sl_info$user_data$covariate)
+#'   list(covariate_cor = cor(effect[z], sl_info$user_data$covariate[z]),
+#'        n_pairs = sum(z))
 #' }
 #'
 #' # Run the custom searchlight (standard method)
@@ -374,7 +382,7 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #' @export
 run_custom_searchlight <- function(dataset, custom_func, radius,
                                    method = c("standard", "randomized"),
-                                   niter = 100, ...,
+                                   niter = 100, user_data = NULL, ...,
                                    .cores = 1, .verbose = FALSE) {
 
   # --- Input Validation ---
@@ -410,17 +418,10 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
   }
 
   # --- Setup Parallel Backend ---
-  if (.cores > 1 && !inherits(future::plan(), c("multicore", "multisession", "cluster"))) {
-      if (requireNamespace("future.apply", quietly = TRUE)) {
-          message("Setting future plan to 'multisession' with ", .cores, " workers for this function call.")
-          old_plan <- future::plan(future::multisession, workers = .cores)
-          on.exit(future::plan(old_plan), add = TRUE) # Restore previous plan on exit
-      } else {
-          warning("Parallel execution requested (cores > 1), but 'future' backend is not multisession/multicore ",
-                  "and 'future.apply' is not installed to automatically set it. Running sequentially. ",
-                  "Use future::plan() to set backend manually.", call. = FALSE)
-      }
-  }
+  # Always apply the requested worker count for this call. In particular,
+  # `.cores = 1` must override an inherited parallel plan.
+  plan_state <- .rmvpa_apply_future_plan(.cores)
+  on.exit(future::plan(plan_state$old_plan), add = TRUE)
 
   # --- Prepare for Iteration ---
   # Create a minimal dummy model spec - needed for mvpa_iterate internals,
@@ -441,8 +442,14 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
       # `rnum` is the index of the center voxel/vertex
       
       sl_data <- tryCatch({
-          neuroim2::values(roi$train_roi) # Data within the sphere (samples x features)
+          as.matrix(neuroim2::values(roi$train_roi)) # samples x features
       }, error = function(e) { NULL })
+
+      sl_test_data <- if (!is.null(roi$test_roi)) {
+          tryCatch(as.matrix(neuroim2::values(roi$test_roi)), error = function(e) NULL)
+      } else {
+          NULL
+      }
 
       sl_indices <- tryCatch({
            neuroim2::indices(roi$train_roi) # Feature indices within the sphere
@@ -458,7 +465,12 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
                           warning = TRUE, warning_message = "Failed to extract data or sphere empty"))
       }
 
-      sl_info <- list(center_index = rnum, indices = sl_indices)
+      sl_info <- list(
+          center_index = rnum,
+          indices = sl_indices,
+          test_data = sl_test_data,
+          user_data = user_data
+      )
       # Could add coords: sl_info$coords <- neuroim2::coords(neuroim2::spatial(roi$train_roi))
 
       tryCatch({

@@ -162,10 +162,74 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
 }
 
 
+.spatial_geometry_differences <- function(reference, candidate, tolerance = 1e-7) {
+  ref_dims <- as.integer(dim(reference)[1:3])
+  candidate_dims <- as.integer(dim(candidate)[1:3])
+  differences <- character()
+
+  if (!identical(ref_dims, candidate_dims)) {
+    differences <- c(differences, "dimensions")
+  }
+
+  ref_space <- tryCatch(neuroim2::space(reference), error = function(e) NULL)
+  candidate_space <- tryCatch(neuroim2::space(candidate), error = function(e) NULL)
+  if (is.null(ref_space) || is.null(candidate_space)) {
+    return(differences)
+  }
+
+  same_numeric <- function(x, y) {
+    isTRUE(all.equal(
+      as.numeric(x), as.numeric(y),
+      tolerance = tolerance,
+      check.attributes = FALSE
+    ))
+  }
+
+  if (!same_numeric(neuroim2::spacing(ref_space), neuroim2::spacing(candidate_space))) {
+    differences <- c(differences, "spacing")
+  }
+  if (!same_numeric(neuroim2::origin(ref_space), neuroim2::origin(candidate_space))) {
+    differences <- c(differences, "origin")
+  }
+  if (!isTRUE(all.equal(
+    neuroim2::axes(ref_space), neuroim2::axes(candidate_space),
+    check.attributes = TRUE
+  ))) {
+    differences <- c(differences, "axes")
+  }
+  if (!isTRUE(all.equal(
+    unname(as.matrix(neuroim2::trans(ref_space))),
+    unname(as.matrix(neuroim2::trans(candidate_space))),
+    tolerance = tolerance,
+    check.attributes = FALSE
+  ))) {
+    differences <- c(differences, "affine transform")
+  }
+
+  unique(differences)
+}
+
+#' @keywords internal
+#' @noRd
+.validate_spatial_geometry <- function(reference, candidate,
+                                       reference_name, candidate_name,
+                                       tolerance = 1e-7) {
+  differences <- .spatial_geometry_differences(reference, candidate, tolerance)
+  if (length(differences) > 0L) {
+    stop(
+      "Spatial geometry mismatch between `", reference_name, "` and `",
+      candidate_name, "`: ", paste(differences, collapse = ", "), ".",
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
 #' Create an MVPA Dataset Object
 #'
-#' Creates a dataset object for MVPA analysis that encapsulates a training dataset, 
-#' an optional test dataset, and a voxel mask.
+#' Creates a dataset object for MVPA analysis that encapsulates a training dataset,
+#' an optional test dataset, and a voxel mask. All image components must share
+#' the same complete spatial geometry; matching dimensions alone are not enough.
 #'
 #' @param train_data The training data set: a \code{NeuroVec} instance
 #' @param test_data Optional test data set: a \code{NeuroVec} instance (default: NULL)
@@ -188,19 +252,25 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
 #' print(dim(dataset$train_data))
 #' print(sum(dataset$mask > 0))
 #'
-#' @seealso 
+#' @seealso
 #' \code{\link{mvpa_surface_dataset}} for creating surface-based MVPA datasets
-#' 
+#'
 #' \code{\link{mvpa_design}} for creating the corresponding design object
 #'
 #' @importFrom assertthat assert_that
 #' @export
+
 mvpa_dataset <- function(train_data, test_data=NULL, mask) {
   assert_that(inherits(train_data, "NeuroVec"))
   if (!is.null(test_data)) {
     assert_that(inherits(test_data, "NeuroVec"))
   }
   assert_that(inherits(mask, "NeuroVol"))
+
+  .validate_spatial_geometry(train_data, mask, "train_data", "mask")
+  if (!is.null(test_data)) {
+    .validate_spatial_geometry(train_data, test_data, "train_data", "test_data")
+  }
   
   # Check for single-voxel datasets (1,1,1,time)
   mask_dims <- dim(mask)[1:3]

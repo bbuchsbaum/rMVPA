@@ -195,3 +195,96 @@ test_that("run_custom_searchlight runs in parallel (standard)", {
                 values(results_seq$results$mean_signal$data)) 
 
 })
+
+test_that("custom callbacks receive separate test data and arbitrary user data", {
+  set.seed(42)
+  dims <- c(4, 4, 4)
+  n_obs <- 6L
+  sp <- neuroim2::NeuroSpace(c(dims, n_obs))
+  mask_sp <- neuroim2::NeuroSpace(dims)
+  covariate <- c(-2, -1, 0, 1, 2, NA_real_)
+
+  train_array <- array(rnorm(prod(dims) * n_obs), c(dims, n_obs))
+  test_array <- train_array
+  for (i in seq_len(n_obs)) {
+    test_array[, , , i] <- test_array[, , , i] + ifelse(is.na(covariate[i]), 0, covariate[i])
+  }
+
+  dataset <- mvpa_dataset(
+    neuroim2::NeuroVec(train_array, sp),
+    test_data = neuroim2::NeuroVec(test_array, sp),
+    mask = neuroim2::NeuroVol(array(1, dims), mask_sp)
+  )
+
+  continuous_association <- function(sl_data, sl_info) {
+    expect_true(is.matrix(sl_info$test_data))
+    effect <- rowMeans(sl_info$test_data - sl_data)
+    ok <- is.finite(effect) & is.finite(sl_info$user_data$covariate)
+    list(
+      covariate_cor = stats::cor(effect[ok], sl_info$user_data$covariate[ok]),
+      n_pairs = sum(ok)
+    )
+  }
+
+  result <- run_custom_searchlight(
+    dataset,
+    continuous_association,
+    radius = 1,
+    user_data = list(covariate = covariate),
+    batch_size = 8,
+    .cores = 1,
+    .verbose = FALSE
+  )
+
+  active <- which(dataset$mask > 0)
+  cors <- neuroim2::values(result$results$covariate_cor$data)[active]
+  counts <- neuroim2::values(result$results$n_pairs$data)[active]
+  expect_equal(cors[is.finite(cors)], rep(1, sum(is.finite(cors))), tolerance = 1e-12)
+  expect_equal(counts[is.finite(counts)], rep(5, sum(is.finite(counts))))
+})
+
+test_that(".cores = 1 overrides and restores an inherited parallel plan", {
+  skip_if_not_installed("future")
+  skip_if_not_installed("future.apply")
+  skip_on_cran()
+
+  old_plan <- future::plan()
+  on.exit(future::plan(old_plan), add = TRUE)
+  future::plan(future::multisession, workers = 2)
+  parent_pid <- Sys.getpid()
+
+  result <- run_custom_searchlight(
+    dataset_vol,
+    function(sl_data, sl_info) list(pid = Sys.getpid()),
+    radius = 1,
+    batch_size = 8,
+    .cores = 1,
+    .verbose = FALSE
+  )
+
+  active <- which(dataset_vol$mask > 0)
+  observed <- unique(stats::na.omit(
+    as.numeric(neuroim2::values(result$results$pid$data))[active]
+  ))
+  expect_equal(observed, parent_pid)
+  expect_equal(future::nbrOfWorkers(), 2L)
+})
+
+test_that("save_results writes custom searchlight performance maps", {
+  result <- run_custom_searchlight(
+    dataset_vol,
+    mean_signal_sl,
+    radius = 1,
+    batch_size = 8,
+    .cores = 1,
+    .verbose = FALSE
+  )
+  out <- tempfile("custom-searchlight-save-")
+
+  paths <- save_results(result, out, stack = "none", quiet = TRUE)
+
+  expect_true(dir.exists(file.path(out, "maps")))
+  expect_true(file.exists(file.path(out, "maps", "mean_signal.nii.gz")))
+  expect_false(dir.exists(file.path(out, "aux")))
+  expect_true(length(paths$maps) == 1L)
+})

@@ -33,8 +33,8 @@ The function *must* return a named list or a single-row data frame
 \item{...}{Optional arguments passed to `mvpa_iterate` (e.g., `batch_size`).}
 
 \item{.cores}{Number of cores to use for parallel processing via the
-`future` framework. Defaults to 1 (sequential). Set using
-`future::plan()` beforehand for more control.}
+`future` framework. Defaults to 1 (sequential). The requested plan is
+scoped to this call and the caller's previous plan is restored afterward.}
 
 \item{.verbose}{Logical. If `TRUE`, prints progress messages during iteration.
 Defaults to `FALSE`.}

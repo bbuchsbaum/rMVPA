@@ -114,3 +114,31 @@ test_that("mvpa_iterate is stable under fail_fast toggle when processor succeeds
   expect_equal(res_slow$error_message, res_fast$error_message)
   expect_equal(res_slow$warning_message, res_fast$warning_message)
 })
+
+test_that("automatic searchlight batching is bounded independently of center count", {
+  old_opt <- options(
+    rMVPA.profile_searchlight = TRUE,
+    rMVPA.searchlight_backend_default = "default",
+    rMVPA.searchlight_mem_budget = 512 * 1024^2
+  )
+  on.exit(options(old_opt), add = TRUE)
+
+  built <- build_iterate_test_spec()
+  mspec <- built$mspec
+  mask_idx <- as.integer(which(built$dataset$dataset$mask > 0))
+  one_voxel_rois <- rep(list(mask_idx[[1]]), 640L)
+
+  res <- mvpa_iterate(
+    mod_spec = mspec,
+    vox_list = one_voxel_rois,
+    ids = seq_along(one_voxel_rois),
+    verbose = FALSE,
+    analysis_type = "searchlight",
+    processor = make_passthrough_processor()
+  )
+
+  timing <- attr(res, "timing")
+  requested <- vapply(timing$batch, `[[`, integer(1), "n_rois_requested")
+  expect_lte(max(requested), max(64L, future::nbrOfWorkers() * 8L))
+  expect_gt(length(requested), 1L)
+})

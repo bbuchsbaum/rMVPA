@@ -23,8 +23,9 @@ An \code{mvpa_dataset} object (S3 class) containing:
   }
 }
 \description{
-Creates a dataset object for MVPA analysis that encapsulates a training dataset, 
-an optional test dataset, and a voxel mask.
+Creates a dataset object for MVPA analysis that encapsulates a training dataset,
+an optional test dataset, and a voxel mask. All image components must share
+the same complete spatial geometry; matching dimensions alone are not enough.
 }
 \examples{
 # Use gen_sample_dataset helper to create a simple dataset

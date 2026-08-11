@@ -88,6 +88,31 @@ test_that("save_results can still stack into 4D when requested", {
   unlink(temp_dir, recursive = TRUE)
 })
 
+test_that("save_results unwraps searchlight_performance maps", {
+  library(neuroim2)
+
+  dims <- c(4, 4, 4)
+  sp <- NeuroSpace(dims)
+  vol <- NeuroVol(array(seq_len(prod(dims)), dims), sp)
+  wrapped <- rMVPA:::create_searchlight_performance(vol, "custom_metric", 1:5)
+  result <- structure(
+    list(
+      results = list(custom_metric = wrapped),
+      n_voxels = prod(dims),
+      active_voxels = prod(dims),
+      metrics = "custom_metric"
+    ),
+    class = c("searchlight_result", "list")
+  )
+  out <- tempfile("wrapped-searchlight-")
+
+  paths <- save_results(result, out, stack = "none", quiet = TRUE)
+
+  expect_true(file.exists(file.path(out, "maps", "custom_metric.nii.gz")))
+  expect_false(dir.exists(file.path(out, "aux")))
+  expect_true(length(paths$maps) == 1L)
+})
+
 test_that("save_results handles mixed metric names appropriately", {
   library(neuroim2)
   

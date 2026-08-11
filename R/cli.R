@@ -911,46 +911,7 @@ install_cli <- function(dest_dir = "~/.local/bin",
 #' @keywords internal
 #' @noRd
 .cli_apply_future_plan <- function(workers, future_plan = c("auto", "sequential", "multisession", "multicore")) {
-  future_plan <- match.arg(future_plan)
-
-  available <- tryCatch(future::availableCores(), error = function(e) NA_integer_)
-  if (is.numeric(available) && length(available) == 1L && !is.na(available) && available > 0L) {
-    actual_workers <- min(as.integer(workers), as.integer(available))
-    if (actual_workers < workers) {
-      warning(
-        sprintf("Requested %d workers but only %d are available; using %d.", workers, available, actual_workers),
-        call. = FALSE
-      )
-    }
-  } else {
-    actual_workers <- as.integer(workers)
-  }
-
-  strategy <- if (actual_workers <= 1L || identical(future_plan, "sequential")) {
-    "sequential"
-  } else if (identical(future_plan, "auto")) {
-    if (isTRUE(future::supportsMulticore())) "multicore" else "multisession"
-  } else if (identical(future_plan, "multicore") && !isTRUE(future::supportsMulticore())) {
-    warning("multicore is not supported here; falling back to multisession.", call. = FALSE)
-    "multisession"
-  } else {
-    future_plan
-  }
-
-  old_plan <- future::plan()
-  if (identical(strategy, "sequential")) {
-    future::plan(future::sequential)
-  } else if (identical(strategy, "multicore")) {
-    future::plan(future::multicore, workers = actual_workers)
-  } else {
-    future::plan(future::multisession, workers = actual_workers)
-  }
-
-  list(
-    workers = actual_workers,
-    strategy = strategy,
-    old_plan = old_plan
-  )
+  .rmvpa_apply_future_plan(workers, future_plan)
 }
 
 #' @keywords internal
