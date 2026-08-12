@@ -8,7 +8,7 @@ era_rsa_model(
   dataset,
   design,
   key_var,
-  phase_var,
+  phase_var = NULL,
   encoding_level = NULL,
   retrieval_level = NULL,
   distfun = cordist(method = "pearson"),
@@ -22,21 +22,32 @@ era_rsa_model(
   item_run_ret = NULL,
   global_nuisance = FALSE,
   require_run_metadata = FALSE,
+  pairing = c("average", "one_to_one"),
+  era_simfun = c("pearson", "spearman"),
+  era_min_voxels = 2L,
+  era_correlates = NULL,
+  era_cor_method = c("spearman", "pearson"),
+  era_association = NULL,
+  era_effects = NULL,
+  era_min_complete = 4L,
   ...
 )
 }
 \arguments{
-\item{dataset}{An mvpa_dataset with train_data (encoding) and test_data (retrieval).}
+\item{dataset}{An mvpa_dataset with either separate encoding/retrieval
+\code{train_data}/\code{test_data}, or a combined \code{train_data} whose
+phases are selected by \code{phase_var}.}
 
-\item{design}{An mvpa_design describing trial structure with train/test designs.}
+\item{design}{An mvpa_design describing trial structure. For combined data,
+\code{train_design} must contain all encoding and retrieval rows in the
+same order as the data observations.}
 
 \item{key_var}{Column name or formula giving the item key that links encoding
 and retrieval trials (e.g., ~ ImageID).}
 
-\item{phase_var}{Column name or formula giving phase labels (must include
-encoding and retrieval levels if using a single-phase dataset; for the
-default two-dataset usage, this is still parsed for consistency but not
-required for operations).}
+\item{phase_var}{Optional column name or formula giving phase labels. It is
+required when encoding and retrieval observations occupy one combined
+dataset and optional for an already separated external test set.}
 
 \item{encoding_level}{Level of phase_var to treat as encoding (default: first level).}
 
@@ -106,6 +117,38 @@ downstream analysis depends on \code{era_diag_minus_off_same_block},
 \code{era_diag_minus_off_diff_block}, or \code{geom_cor_xrun} — the
 constructor will refuse to silently produce schemas where those metrics
 are guaranteed to be \code{NA}. Default \code{FALSE} (warn only).}
+
+\item{pairing}{Item-cardinality policy. \code{"average"} preserves the
+existing behavior of averaging repeated observations into item
+prototypes. \code{"one_to_one"} requires exactly one encoding and one
+retrieval observation for every item and identical item sets.}
+
+\item{era_simfun}{Similarity used for the first-order encoding-retrieval
+matrix, either \code{"pearson"} or \code{"spearman"}.}
+
+\item{era_min_voxels}{Minimum finite voxel pairs required for an
+encoding-retrieval similarity.}
+
+\item{era_correlates}{Optional right-hand-side formula selecting numeric
+retrieval variables for zero-order correlations with matched-item ERA
+similarity, for example \code{~ vividness}.}
+
+\item{era_cor_method}{Correlation method for \code{era_correlates}, either
+\code{"spearman"} or \code{"pearson"}.}
+
+\item{era_association}{Optional right-hand-side regression formula for
+matched-item ERA similarity, for example
+\code{~ vividness + retrieval_run + trial_order}. The response is supplied
+internally. Formula variables are evaluated in the retrieval design.}
+
+\item{era_effects}{Right-hand-side formula naming the one-degree-of-freedom
+focal terms from \code{era_association} for which signed semi-partial
+correlations (part-r) should be emitted. Multi-column factors should be
+retained as adjustment variables or represented by an explicit one-df
+contrast column.}
+
+\item{era_min_complete}{Minimum number of complete matched items required
+for zero-order correlations and adjusted association models.}
 
 \item{...}{Additional fields stored on the model spec.}
 }
@@ -183,6 +226,21 @@ and \code{run_searchlight()}:
     correlation between diagonal ERA values and the per-item lag
     (e.g., retrieval minus encoding onset), using complete cases only.
   }
+  \item{era_<variable>_cor / era_<variable>_n}{
+    When \code{era_correlates} is supplied, the zero-order correlation
+    between matched-item ERA similarity and each selected retrieval
+    variable, plus its variable-specific number of complete item pairs.
+  }
+  \item{era_assoc_part_r_<effect>}{
+    When \code{era_association} and \code{era_effects} are supplied, the
+    signed semi-partial correlation (part-r) for each focal one-df effect
+    after adjusting for all other terms in the association formula.
+    Adjustment-only terms do not create maps.
+  }
+  \item{era_assoc_n / era_assoc_df_resid}{
+    Joint complete-item count and residual degrees of freedom for the
+    adjusted association model.
+  }
   \item{geom_cor_run_partial}{
     Run-partial ER geometry correlation, when run-level confounds are
     supplied via \code{confound_rdms$run_enc}/\code{run_ret} or derivable
@@ -230,6 +288,17 @@ correspond to different scans). When \code{item_run_enc} and
 \code{item_run_ret} share atomic values that are not phase-scoped, supply
 phase-prefixed labels such as \code{enc_1} / \code{ret_1} so cross-phase
 equality tests are not spuriously satisfied.
+}
+
+\section{Association interpretation}{
+
+\code{era_correlates} and \code{era_association} operate on the vector of
+matched-item encoding-retrieval similarities, not on the within-phase RDM
+vectors used by \code{geom_cor}. Missing values in each zero-order correlate
+are removed separately. The adjusted model uses one joint complete-case set
+across ERA similarity and every association term. Signed part-r is invariant
+to linear rescaling of a focal predictor; its square equals that term's
+incremental R-squared, which is deliberately not emitted as a default map.
 }
 
 \examples{

@@ -66,6 +66,21 @@
 #'     correlation between diagonal ERA values and the per-item lag
 #'     (e.g., retrieval minus encoding onset), using complete cases only.
 #'   }
+#'   \item{era_<variable>_cor / era_<variable>_n}{
+#'     When \code{era_correlates} is supplied, the zero-order correlation
+#'     between matched-item ERA similarity and each selected retrieval
+#'     variable, plus its variable-specific number of complete item pairs.
+#'   }
+#'   \item{era_assoc_part_r_<effect>}{
+#'     When \code{era_association} and \code{era_effects} are supplied, the
+#'     signed semi-partial correlation (part-r) for each focal one-df effect
+#'     after adjusting for all other terms in the association formula.
+#'     Adjustment-only terms do not create maps.
+#'   }
+#'   \item{era_assoc_n / era_assoc_df_resid}{
+#'     Joint complete-item count and residual degrees of freedom for the
+#'     adjusted association model.
+#'   }
 #'   \item{geom_cor_run_partial}{
 #'     Run-partial ER geometry correlation, when run-level confounds are
 #'     supplied via \code{confound_rdms$run_enc}/\code{run_ret} or derivable
@@ -92,16 +107,43 @@
 #'   }
 #' }
 #'
-#' @param dataset An mvpa_dataset with train_data (encoding) and test_data (retrieval).
-#' @param design  An mvpa_design describing trial structure with train/test designs.
+#' @param dataset An mvpa_dataset with either separate encoding/retrieval
+#'   \code{train_data}/\code{test_data}, or a combined \code{train_data} whose
+#'   phases are selected by \code{phase_var}.
+#' @param design An mvpa_design describing trial structure. For combined data,
+#'   \code{train_design} must contain all encoding and retrieval rows in the
+#'   same order as the data observations.
 #' @param key_var Column name or formula giving the item key that links encoding
 #'   and retrieval trials (e.g., ~ ImageID).
-#' @param phase_var Column name or formula giving phase labels (must include
-#'   encoding and retrieval levels if using a single-phase dataset; for the
-#'   default two-dataset usage, this is still parsed for consistency but not
-#'   required for operations).
+#' @param phase_var Optional column name or formula giving phase labels. It is
+#'   required when encoding and retrieval observations occupy one combined
+#'   dataset and optional for an already separated external test set.
 #' @param encoding_level Level of phase_var to treat as encoding (default: first level).
 #' @param retrieval_level Level of phase_var to treat as retrieval (default: second level).
+#' @param pairing Item-cardinality policy. \code{"average"} preserves the
+#'   existing behavior of averaging repeated observations into item
+#'   prototypes. \code{"one_to_one"} requires exactly one encoding and one
+#'   retrieval observation for every item and identical item sets.
+#' @param era_simfun Similarity used for the first-order encoding-retrieval
+#'   matrix, either \code{"pearson"} or \code{"spearman"}.
+#' @param era_min_voxels Minimum finite voxel pairs required for an
+#'   encoding-retrieval similarity.
+#' @param era_correlates Optional right-hand-side formula selecting numeric
+#'   retrieval variables for zero-order correlations with matched-item ERA
+#'   similarity, for example \code{~ vividness}.
+#' @param era_cor_method Correlation method for \code{era_correlates}, either
+#'   \code{"spearman"} or \code{"pearson"}.
+#' @param era_association Optional right-hand-side regression formula for
+#'   matched-item ERA similarity, for example
+#'   \code{~ vividness + retrieval_run + trial_order}. The response is supplied
+#'   internally. Formula variables are evaluated in the retrieval design.
+#' @param era_effects Right-hand-side formula naming the one-degree-of-freedom
+#'   focal terms from \code{era_association} for which signed semi-partial
+#'   correlations (part-r) should be emitted. Multi-column factors should be
+#'   retained as adjustment variables or represented by an explicit one-df
+#'   contrast column.
+#' @param era_min_complete Minimum number of complete matched items required
+#'   for zero-order correlations and adjusted association models.
 #' @param distfun A distfun used to compute within-phase RDMs (e.g., cordist("pearson")).
 #' @param rsa_simfun Character: similarity for comparing RDMs, one of "pearson" or "spearman".
 #' @param confound_rdms Optional named list of KxK matrices or "dist" objects
@@ -181,6 +223,15 @@
 #' @return A model spec of class \code{"era_rsa_model"} compatible with
 #'   \code{\link{run_regional}()} and \code{\link{run_searchlight}()}. When fit,
 #'   the spec emits the scalar metrics documented in \strong{Metrics}.
+#'
+#' @section Association interpretation:
+#' \code{era_correlates} and \code{era_association} operate on the vector of
+#' matched-item encoding-retrieval similarities, not on the within-phase RDM
+#' vectors used by \code{geom_cor}. Missing values in each zero-order correlate
+#' are removed separately. The adjusted model uses one joint complete-case set
+#' across ERA similarity and every association term. Signed part-r is invariant
+#' to linear rescaling of a focal predictor; its square equals that term's
+#' incremental R-squared, which is deliberately not emitted as a default map.
 #' @examples
 #' \dontrun{
 #'   # See vignette for complete ERA-RSA workflow
@@ -189,7 +240,7 @@
 era_rsa_model <- function(dataset,
                           design,
                           key_var,
-                          phase_var,
+                          phase_var = NULL,
                           encoding_level  = NULL,
                           retrieval_level = NULL,
                           distfun         = cordist(method = "pearson"),
@@ -203,12 +254,61 @@ era_rsa_model <- function(dataset,
                           item_run_ret    = NULL,
                           global_nuisance = FALSE,
                           require_run_metadata = FALSE,
+                          pairing         = c("average", "one_to_one"),
+                          era_simfun       = c("pearson", "spearman"),
+                          era_min_voxels   = 2L,
+                          era_correlates   = NULL,
+                          era_cor_method   = c("spearman", "pearson"),
+                          era_association  = NULL,
+                          era_effects      = NULL,
+                          era_min_complete = 4L,
                           ...) {
 
+  pairing <- match.arg(pairing)
+  era_simfun <- match.arg(era_simfun)
+  era_cor_method <- match.arg(era_cor_method)
   rsa_simfun <- match.arg(rsa_simfun)
+
+  if (length(era_min_voxels) != 1L || is.na(era_min_voxels) || era_min_voxels < 2L) {
+    stop("`era_min_voxels` must be a single integer >= 2.", call. = FALSE)
+  }
+  if (length(era_min_complete) != 1L || is.na(era_min_complete) || era_min_complete < 3L) {
+    stop("`era_min_complete` must be a single integer >= 3.", call. = FALSE)
+  }
+  era_min_voxels <- as.integer(era_min_voxels)
+  era_min_complete <- as.integer(era_min_complete)
 
   stopifnot(inherits(dataset, "mvpa_dataset"))
   stopifnot(inherits(design,  "mvpa_design"))
+
+  era_correlates <- .era_rhs_formula(era_correlates, "era_correlates")
+  era_association <- .era_rhs_formula(era_association, "era_association")
+  era_effects <- .era_rhs_formula(era_effects, "era_effects")
+
+  prepared <- .era_prepare_inputs(
+    dataset = dataset,
+    design = design,
+    key_var = key_var,
+    phase_var = phase_var,
+    encoding_level = encoding_level,
+    retrieval_level = retrieval_level
+  )
+  dataset <- prepared$dataset
+  design <- prepared$design
+  encoding_level <- prepared$encoding_level
+  retrieval_level <- prepared$retrieval_level
+  pairing_info <- .era_pairing_info(design, key_var, pairing)
+
+  association_data <- .era_association_item_data(
+    design = design,
+    key_var = key_var,
+    common_keys = pairing_info$common_keys,
+    formulas = list(era_correlates, era_association, era_effects)
+  )
+  era_correlate_spec <- .era_prepare_correlates(era_correlates, association_data)
+  era_association_spec <- .era_prepare_association(
+    era_association, era_effects, association_data
+  )
 
   .era_check_item_metadata(
     where        = "era_rsa_model",
@@ -227,15 +327,13 @@ era_rsa_model <- function(dataset,
   }
   stopifnot(inherits(distfun, "distfun"))
 
-  # Parse design variables from train_design for stable levels/order
-  phase_vec <- parse_variable(phase_var, design$train_design)
+  # Parse normalized design variables for stable levels/order.
   key_vec   <- parse_variable(key_var,   design$train_design)
-  phase_fac <- factor(phase_vec)
   key_fac   <- factor(key_vec)
-  phase_lev <- levels(phase_fac)
-
-  if (is.null(encoding_level))  encoding_level  <- phase_lev[1L]
-  if (is.null(retrieval_level)) retrieval_level <- phase_lev[2L]
+  phase_fac <- factor(
+    rep(as.character(encoding_level), length(key_vec)),
+    levels = c(as.character(encoding_level), as.character(retrieval_level))
+  )
 
   if (!is.null(global_nuisance) && !isFALSE(global_nuisance) && missing(partial_against)) {
     partial_against <- c("run", "global")
@@ -286,9 +384,20 @@ era_rsa_model <- function(dataset,
     key      = key_fac,
     phase    = phase_fac,
     key_var  = key_var,
-    phase_var= substitute(phase_var),
+    phase_var= phase_var,
     encoding_level  = encoding_level,
     retrieval_level = retrieval_level,
+    pairing          = pairing,
+    pairing_info     = pairing_info,
+    era_simfun       = era_simfun,
+    era_min_voxels   = era_min_voxels,
+    era_cor_method   = era_cor_method,
+    era_min_complete = era_min_complete,
+    era_correlate_spec = era_correlate_spec,
+    era_association_spec = era_association_spec,
+    era_combined_input = prepared$combined,
+    era_encoding_indices = prepared$encoding_indices,
+    era_retrieval_indices = prepared$retrieval_indices,
     distfun        = distfun,
     rsa_simfun     = rsa_simfun,
     confound_rdms  = confound_rdms,
@@ -318,7 +427,8 @@ era_rsa_model <- function(dataset,
 #'   \code{era_diag_minus_off_same_block},
 #'   \code{era_diag_minus_off_diff_block}, \code{era_lag_cor},
 #'   \code{geom_cor_partial}, \code{geom_cor_run_partial}, and
-#'   \code{geom_cor_xrun}. If
+#'   \code{geom_cor_xrun}. Association metrics are appended dynamically from
+#'   \code{era_correlates} and \code{era_effects}. If
 #'   \code{confound_rdms} is supplied, the schema also includes
 #'   \code{beta_enc_geom}, one \code{beta_<name>} per confound RDM,
 #'   \code{sp_enc_geom}, and one \code{sp_<name>} per confound RDM.
@@ -329,6 +439,12 @@ output_schema.era_rsa_model <- function(model) {
                   "geom_cor", "era_diag_minus_off_same_block",
                   "era_diag_minus_off_diff_block", "era_lag_cor",
                   "geom_cor_partial", "geom_cor_run_partial", "geom_cor_xrun")
+
+  base_names <- c(
+    base_names,
+    .era_correlate_metric_names(model$era_correlate_spec),
+    .era_association_metric_names(model$era_association_spec)
+  )
 
   if (!is.null(model$confound_rdms)) {
     conf_names <- names(model$confound_rdms)
@@ -420,11 +536,18 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
   R <- R[, keep_vox, drop = FALSE]
 
   # First-order ERA: similarity and diagnostics
-  S             <- suppressWarnings(stats::cor(t(E), t(R), use = "pairwise.complete.obs"))
+  S <- .era_cross_similarity(
+    E,
+    R,
+    method = model$era_simfun %||% "pearson",
+    min_voxels = model$era_min_voxels %||% 2L
+  )
   diag_sim      <- diag(S)
   era_diag_mean <- mean(diag_sim, na.rm = TRUE)
+  if (is.nan(era_diag_mean)) era_diag_mean <- NA_real_
   off           <- S; diag(off) <- NA_real_
   era_off_mean  <- mean(off, na.rm = TRUE)
+  if (is.nan(era_off_mean)) era_off_mean <- NA_real_
   era_diag_minus_off <- era_diag_mean - era_off_mean
   max_enc_idx   <- apply(S, 2, function(col) if (all(is.na(col))) NA_integer_ else which.max(col))
   era_top1_acc  <- mean((!is.na(max_enc_idx)) & (max_enc_idx == seq_len(K)))
@@ -547,6 +670,23 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
     geom_cor_partial              = geom_cor_partial,
     geom_cor_run_partial          = geom_cor_run_partial,
     geom_cor_xrun                 = geom_cor_xrun
+  )
+
+  perf <- c(
+    perf,
+    .era_correlate_metrics(
+      similarity = diag_sim,
+      keys = common_keys,
+      spec = model$era_correlate_spec,
+      method = model$era_cor_method %||% "spearman",
+      min_complete = model$era_min_complete %||% 4L
+    ),
+    .era_association_metrics(
+      similarity = diag_sim,
+      keys = common_keys,
+      spec = model$era_association_spec,
+      min_complete = model$era_min_complete %||% 4L
+    )
   )
 
   # Always include confound-derived metrics if schema declares them

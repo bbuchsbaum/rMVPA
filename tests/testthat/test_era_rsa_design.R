@@ -125,3 +125,37 @@ test_that("era_rsa_design outputs can be passed into era_rsa_model", {
   res <- run_regional(ms, mask)
   expect_s3_class(res, "regional_mvpa_result")
 })
+
+test_that("era_rsa_design reads encoding and retrieval metadata from external tables", {
+  items <- letters[1:5]
+  enc <- data.frame(
+    item = items,
+    run = 1:5,
+    onset = seq_len(5),
+    condition = rep(c("a", "b"), length.out = 5)
+  )
+  ret <- data.frame(
+    item = items,
+    run = 6:10,
+    onset = seq_len(5) + 20,
+    condition = rep(c("a", "b"), length.out = 5)
+  )
+  design <- mvpa_design(
+    enc,
+    test_design = ret,
+    y_train = ~ condition,
+    y_test = ~ condition
+  )
+
+  out <- era_rsa_design(
+    design,
+    key_var = ~ item,
+    block_var = ~ run,
+    time_var = ~ onset,
+    phase_scoped_runs = TRUE
+  )
+
+  expect_equal(unname(out$item_time_ret - out$item_time_enc), rep(20, 5))
+  expect_identical(as.character(out$item_run_enc), paste0("enc_", 1:5))
+  expect_identical(as.character(out$item_run_ret), paste0("ret_", 6:10))
+})

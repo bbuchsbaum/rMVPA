@@ -7,7 +7,7 @@
 era_rsa_design(
   design,
   key_var,
-  phase_var,
+  phase_var = NULL,
   encoding_level = NULL,
   retrieval_level = NULL,
   block_var = NULL,
@@ -20,7 +20,9 @@ era_rsa_design(
 
 \item{key_var}{Column name or formula giving the item ID (e.g., ~ ImageID).}
 
-\item{phase_var}{Column name or formula indicating phase (e.g., ~ Phase).}
+\item{phase_var}{Optional column name or formula indicating phase (e.g.,
+\code{~ Phase}). Required when both phases occupy \code{train_design};
+optional when \code{test_design} already represents retrieval.}
 
 \item{encoding_level}{Encoding phase label; default = first level of phase_var.}
 

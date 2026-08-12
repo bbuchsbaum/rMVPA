@@ -6,7 +6,9 @@
 #'
 #' @param design mvpa_design (same object passed to era_rsa_model).
 #' @param key_var Column name or formula giving the item ID (e.g., ~ ImageID).
-#' @param phase_var Column name or formula indicating phase (e.g., ~ Phase).
+#' @param phase_var Optional column name or formula indicating phase (e.g.,
+#'   \code{~ Phase}). Required when both phases occupy \code{train_design};
+#'   optional when \code{test_design} already represents retrieval.
 #' @param encoding_level Encoding phase label; default = first level of phase_var.
 #' @param retrieval_level Retrieval phase label; default = second level of phase_var.
 #' @param block_var Optional column giving block/run membership.
@@ -34,7 +36,7 @@
 #' @export
 era_rsa_design <- function(design,
                            key_var,
-                           phase_var,
+                           phase_var = NULL,
                            encoding_level  = NULL,
                            retrieval_level = NULL,
                            block_var = NULL,
@@ -42,24 +44,47 @@ era_rsa_design <- function(design,
                            phase_scoped_runs = FALSE) {
 
   stopifnot(inherits(design, "mvpa_design"))
-  d <- design$train_design
-
-  key   <- parse_variable(key_var,   d)
-  phase <- factor(parse_variable(phase_var, d))
-  levs  <- levels(phase)
-  if (is.null(encoding_level))  encoding_level  <- levs[1L]
-  if (is.null(retrieval_level)) retrieval_level <- levs[2L]
-
-  enc_mask <- phase == encoding_level
-  ret_mask <- phase == retrieval_level
-
-  block <- if (!is.null(block_var)) parse_variable(block_var, d) else NULL
-  timev <- if (!is.null(time_var))  parse_variable(time_var,  d) else NULL
+  external <- !is.null(design$test_design)
+  if (external) {
+    parse_optional <- function(var, data) {
+      if (is.null(var)) return(NULL)
+      tryCatch(parse_variable(var, data), error = function(e) NULL)
+    }
+    d_enc <- design$train_design
+    d_ret <- design$test_design
+    key_enc <- parse_variable(key_var, d_enc)
+    key_ret <- parse_variable(key_var, d_ret)
+    block_enc <- parse_optional(block_var, d_enc)
+    block_ret <- parse_optional(block_var, d_ret)
+    time_enc <- parse_optional(time_var, d_enc)
+    time_ret <- parse_optional(time_var, d_ret)
+    encoding_level <- encoding_level %||% "encoding"
+    retrieval_level <- retrieval_level %||% "retrieval"
+  } else {
+    if (is.null(phase_var)) {
+      stop("`phase_var` is required when retrieval is not in `design$test_design`.",
+           call. = FALSE)
+    }
+    d <- design$train_design
+    key <- parse_variable(key_var, d)
+    phase <- factor(parse_variable(phase_var, d))
+    levs <- levels(droplevels(phase))
+    if (is.null(encoding_level)) encoding_level <- levs[1L]
+    if (is.null(retrieval_level)) retrieval_level <- levs[2L]
+    enc_mask <- phase == encoding_level
+    ret_mask <- phase == retrieval_level
+    key_enc <- key[enc_mask]
+    key_ret <- key[ret_mask]
+    block <- if (!is.null(block_var)) parse_variable(block_var, d) else NULL
+    timev <- if (!is.null(time_var)) parse_variable(time_var, d) else NULL
+    block_enc <- if (!is.null(block)) block[enc_mask] else NULL
+    block_ret <- if (!is.null(block)) block[ret_mask] else NULL
+    time_enc <- if (!is.null(timev)) timev[enc_mask] else NULL
+    time_ret <- if (!is.null(timev)) timev[ret_mask] else NULL
+  }
 
   # items with at least one enc and one ret trial
-  key_enc <- unique(key[enc_mask])
-  key_ret <- unique(key[ret_mask])
-  common_items <- sort(intersect(key_enc, key_ret))
+  common_items <- sort(intersect(unique(key_enc), unique(key_ret)))
 
   Mode <- function(x) { ux <- unique(x); ux[which.max(tabulate(match(x, ux)))] }
 
@@ -71,9 +96,9 @@ era_rsa_design <- function(design,
   item_run_ret  <- NULL
   confound_rdms <- list()
 
-  if (!is.null(block)) {
+  if (!is.null(block_enc)) {
     item_block <- sapply(common_items, function(k) {
-      b_enc <- block[enc_mask & key == k]
+      b_enc <- block_enc[key_enc == k]
       if (length(b_enc)) Mode(b_enc) else NA
     })
     names(item_block) <- common_items
@@ -82,14 +107,14 @@ era_rsa_design <- function(design,
     confound_rdms$block <- B
   }
 
-  if (!is.null(timev)) {
+  if (!is.null(time_enc)) {
     item_time_enc <- sapply(common_items, function(k) {
-      t_enc <- timev[enc_mask & key == k]
-      if (length(t_enc)) mean(t_enc) else NA_real_
+      values <- time_enc[key_enc == k]
+      if (length(values)) mean(values) else NA_real_
     })
     item_time_ret <- sapply(common_items, function(k) {
-      t_ret <- timev[ret_mask & key == k]
-      if (length(t_ret)) mean(t_ret) else NA_real_
+      values <- time_ret[key_ret == k]
+      if (length(values)) mean(values) else NA_real_
     })
     names(item_time_enc) <- names(item_time_ret) <- common_items
     item_lag <- item_time_ret - item_time_enc
@@ -108,13 +133,13 @@ era_rsa_design <- function(design,
   }
 
   # Optional: per-item run labels by phase when block_var encodes runs
-  if (!is.null(block)) {
+  if (!is.null(block_enc)) {
     item_run_enc <- sapply(common_items, function(k) {
-      b <- block[enc_mask & key == k]
+      b <- block_enc[key_enc == k]
       if (length(b)) Mode(b) else NA
     })
     item_run_ret <- sapply(common_items, function(k) {
-      b <- block[ret_mask & key == k]
+      b <- block_ret[key_ret == k]
       if (length(b)) Mode(b) else NA
     })
     names(item_run_enc) <- names(item_run_ret) <- common_items
@@ -147,4 +172,3 @@ era_rsa_design <- function(design,
     confound_rdms  = confound_rdms
   )
 }
-
