@@ -78,14 +78,33 @@ two extra notions:
   the same `key_var`, not just the same category.
 - **`phase_var`**: a phase label (e.g., encoding vs retrieval). In the
   external-test setup used here, the train split is treated as encoding
-  and the test split as retrieval, so `phase_var` is mostly a
-  placeholder to keep the interface consistent. It becomes important in
-  single-dataset designs where both phases live in the same time series.
+  and the test split as retrieval, so `phase_var` is optional. It is
+  required when both phases live in the same image series.
 
 In short, `y_train`/`y_test` describe *what was shown* on each trial
 (class/category), while `key_var` defines *which item* that trial
 belongs to; ERA-RSA uses the item keys to build encoding–retrieval
 similarity and geometry.
+
+For a combined series with alternating encoding and retrieval blocks,
+keep one design row per image volume and identify phases explicitly:
+
+``` r
+
+era_ms <- era_rsa_model(
+  dataset = combined_dataset,
+  design = combined_design,
+  key_var = ~ item,
+  phase_var = ~ phase,
+  encoding_level = "E",
+  retrieval_level = "R",
+  pairing = "one_to_one"
+)
+```
+
+Pairing is always by `key_var`, never by row adjacency or block order.
+rMVPA splits the image series internally while preserving the original
+observation order within each phase.
 
 ## 2. Regional ERA-RSA Model
 
@@ -120,7 +139,8 @@ era_ms <- era_rsa_model(
   dataset   = toy$dataset,
   design    = toy$design,
   key_var   = ~ item,          # item key linking encoding ↔ retrieval
-  phase_var = ~ block_var,     # parsed for interface; train/test define phases here
+  pairing   = "one_to_one",    # require one encoding and one retrieval row per item
+  era_simfun = "pearson",      # matched-item encoding-retrieval similarity
   distfun   = cordist("pearson"), # builds encoding and retrieval RDMs
   rsa_simfun = "spearman"         # compares those RDMs; output is geom_cor
 )
@@ -139,9 +159,14 @@ era_ms
 #>   - Basis Count:  1 
 #> - Parameters 
 #>   - key_var: ~item
-#>   - phase_var: ~block_var
-#>   - encoding_level: 1
-#>   - retrieval_level: 2
+#>   - encoding_level: encoding
+#>   - retrieval_level: retrieval
+#>   - pairing: one_to_one
+#>   - era_simfun: pearson
+#>   - era_min_voxels: 2
+#>   - era_cor_method: spearman
+#>   - era_min_complete: 4
+#>   - era_combined_input: FALSE
 #>   - distfun: cordist / pearson
 #>   - rsa_simfun: spearman
 #>   - partial_against: run
@@ -231,7 +256,75 @@ era_res$performance_table[
 #> 3      3       0.0417             0.0387   0.0304
 ```
 
-## 3. When do you need ERA partitioning?
+## 3. Relating item similarity to retrieval ratings
+
+A retrieval rating can be related directly to the matched-item E–R
+similarity computed in each region or searchlight sphere. Missing
+ratings do not remove items from `era_diag_mean`; each zero-order
+correlation uses its own complete pairs.
+
+``` r
+
+set.seed(512)
+toy$design$test_design$vividness <- sample(1:6, length(item_keys), replace = TRUE)
+toy$design$test_design$vividness[c(4, 17)] <- NA_real_
+toy$design$test_design$retrieval_run <- factor(
+  rep(paste0("run_", 1:3), length.out = length(item_keys))
+)
+toy$design$test_design$trial_order <- seq_along(item_keys)
+```
+
+Use `era_correlates` for the unadjusted relationship. Use
+`era_association` for the adjusted model and `era_effects` to select the
+directional, one-degree-of-freedom effects that should become maps:
+
+``` r
+
+era_assoc_ms <- era_rsa_model(
+  dataset = toy$dataset,
+  design = toy$design,
+  key_var = ~ item,
+  pairing = "one_to_one",
+  era_simfun = "spearman",
+  era_min_voxels = 3,
+  era_correlates = ~ vividness,
+  era_cor_method = "spearman",
+  era_association = ~ vividness + retrieval_run + trial_order,
+  era_effects = ~ vividness,
+  era_min_complete = 4
+)
+
+era_assoc_res <- run_regional(era_assoc_ms, region_mask)
+era_assoc_res$performance_table[
+  ,
+  c("roinum", "era_diag_mean", "era_vividness_cor", "era_vividness_n",
+    "era_assoc_part_r_vividness", "era_assoc_n", "era_assoc_df_resid")
+]
+#> # A tibble: 3 x 7
+#>   roinum era_diag_mean era_vividness_cor era_vividness_n era_assoc_part_r_vivi~1
+#>    <int>         <dbl>             <dbl>           <dbl>                   <dbl>
+#> 1      1       -0.0191          -0.113                22                 -0.0802
+#> 2      2       -0.0541          -0.00895              22                 -0.132 
+#> 3      3        0.0504          -0.297                22                 -0.172 
+#> # i abbreviated name: 1: era_assoc_part_r_vividness
+#> # i 2 more variables: era_assoc_n <dbl>, era_assoc_df_resid <dbl>
+```
+
+`era_vividness_cor` is the zero-order Spearman correlation.
+`era_assoc_part_r_vividness` is the signed semi-partial correlation
+after adjusting for retrieval run and trial order. It is invariant to
+linear rescaling of vividness. Adjustment-only terms remain in the model
+but do not create unsigned or reference-dependent maps. A multi-level
+factor needs an explicit one-degree-of-freedom contrast before it can be
+requested in `era_effects`.
+
+The association model uses one joint complete-case set across similarity
+and all regression variables, reported as `era_assoc_n`. It does not
+emit raw beta or R-squared maps. Before conventional second-level
+analysis, Fisher-transform subject-level correlation or part-r maps
+where that model’s assumptions call for it.
+
+## 4. When do you need ERA partitioning?
 
 The ERA-RSA summary above gives you direct item matching and a raw
 geometry correlation.
@@ -326,7 +419,7 @@ off for small toy examples or when there are too few paired items for
 stable held-out alignment; `min_procrustes_train_items` sets that
 minimum.
 
-## 4. Searchlight ERA-RSA
+## 5. Searchlight ERA-RSA
 
 We can also run ERA-RSA in a searchlight mode to obtain whole-brain maps
 of the same metrics.
@@ -336,7 +429,7 @@ of the same metrics.
 set.seed(456)
 
 era_sl <- run_searchlight(
-  era_ms,
+  era_assoc_ms,
   radius = 2,         # searchlight radius in voxels
   method = "standard" # ERA-RSA currently uses standard searchlight
 )
@@ -359,13 +452,18 @@ era_sl
 #>   -  era_lag_cor  (Type:  DenseNeuroVol ) 
 #>   -  geom_cor_partial  (Type:  DenseNeuroVol ) 
 #>   -  geom_cor_run_partial  (Type:  DenseNeuroVol ) 
-#>   -  geom_cor_xrun  (Type:  DenseNeuroVol )
+#>   -  geom_cor_xrun  (Type:  DenseNeuroVol ) 
+#>   -  era_vividness_cor  (Type:  DenseNeuroVol ) 
+#>   -  era_vividness_n  (Type:  DenseNeuroVol ) 
+#>   -  era_assoc_part_r_vividness  (Type:  DenseNeuroVol ) 
+#>   -  era_assoc_n  (Type:  DenseNeuroVol ) 
+#>   -  era_assoc_df_resid  (Type:  DenseNeuroVol )
 ```
 
 The `searchlight_result` contains:
 
 - `metrics`: names of the output maps (e.g., `geom_cor`,
-  `era_top1_acc`),
+  `era_vividness_cor`, and `era_assoc_part_r_vividness`),
 - `results`: a list of `NeuroVol` maps, one per metric.
 
 ``` r
@@ -376,7 +474,9 @@ era_sl$metrics
 #>  [5] "geom_cor"                      "era_diag_minus_off_same_block"
 #>  [7] "era_diag_minus_off_diff_block" "era_lag_cor"                  
 #>  [9] "geom_cor_partial"              "geom_cor_run_partial"         
-#> [11] "geom_cor_xrun"
+#> [11] "geom_cor_xrun"                 "era_vividness_cor"            
+#> [13] "era_vividness_n"               "era_assoc_part_r_vividness"   
+#> [15] "era_assoc_n"                   "era_assoc_df_resid"
 ```
 
 We can save the searchlight maps using
@@ -395,7 +495,7 @@ This will create one NIfTI file per metric (e.g., `geom_cor.nii.gz`,
 `era_top1_acc.nii.gz`) that can be viewed in your favorite neuroimaging
 software.
 
-## 5. Adding Confounds and Lag Information
+## 6. Adding Confounds and Lag Information
 
 ERA-RSA can optionally incorporate item-level confounds and lag
 variables. These are all defined at the **item** level, not the trial
@@ -648,12 +748,14 @@ partition_global_res$performance_table[
 #> # i 1 more variable: nuisance_second_order_n <dbl>
 ```
 
-## 6. Summary
+## 7. Summary
 
 - [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
   provides a unified framework for:
   - cross-decoding between encoding and retrieval, and
-  - comparing encoding and retrieval representational geometries.
+  - comparing encoding and retrieval representational geometries, and
+  - mapping zero-order and adjusted directional associations between
+    matched-item similarity and retrieval variables.
 - [`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
   separates direct item transfer, variance uniquely explained by
   same-item similarity, and variance explained by preserved second-order

@@ -50,7 +50,7 @@ temporal helpers in R/temporal_rdms.R to avoid redundancy.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">era_rsa_design</span><span class="op">(</span></span>
 <span>  <span class="va">design</span>,</span>
 <span>  <span class="va">key_var</span>,</span>
-<span>  <span class="va">phase_var</span>,</span>
+<span>  phase_var <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  encoding_level <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  retrieval_level <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  block_var <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -72,7 +72,9 @@ temporal helpers in R/temporal_rdms.R to avoid redundancy.</p>
 
 
 <dt id="arg-phase-var">phase_var<a class="anchor" aria-label="anchor" href="#arg-phase-var"></a></dt>
-<dd><p>Column name or formula indicating phase (e.g., ~ Phase).</p></dd>
+<dd><p>Optional column name or formula indicating phase (e.g.,
+<code>~ Phase</code>). Required when both phases occupy <code>train_design</code>;
+optional when <code>test_design</code> already represents retrieval.</p></dd>
 
 
 <dt id="arg-encoding-level">encoding_level<a class="anchor" aria-label="anchor" href="#arg-encoding-level"></a></dt>

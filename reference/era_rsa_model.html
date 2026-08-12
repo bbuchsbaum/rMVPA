@@ -54,7 +54,7 @@ iterators.</p>
 <span>  <span class="va">dataset</span>,</span>
 <span>  <span class="va">design</span>,</span>
 <span>  <span class="va">key_var</span>,</span>
-<span>  <span class="va">phase_var</span>,</span>
+<span>  phase_var <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  encoding_level <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  retrieval_level <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  distfun <span class="op">=</span> <span class="fu"><a href="distance-constructors.html">cordist</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"pearson"</span><span class="op">)</span>,</span>
@@ -68,6 +68,14 @@ iterators.</p>
 <span>  item_run_ret <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  global_nuisance <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  require_run_metadata <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  pairing <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"average"</span>, <span class="st">"one_to_one"</span><span class="op">)</span>,</span>
+<span>  era_simfun <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pearson"</span>, <span class="st">"spearman"</span><span class="op">)</span>,</span>
+<span>  era_min_voxels <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>  era_correlates <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  era_cor_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"spearman"</span>, <span class="st">"pearson"</span><span class="op">)</span>,</span>
+<span>  era_association <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  era_effects <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  era_min_complete <span class="op">=</span> <span class="fl">4L</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -77,11 +85,15 @@ iterators.</p>
 
 
 <dl><dt id="arg-dataset">dataset<a class="anchor" aria-label="anchor" href="#arg-dataset"></a></dt>
-<dd><p>An mvpa_dataset with train_data (encoding) and test_data (retrieval).</p></dd>
+<dd><p>An mvpa_dataset with either separate encoding/retrieval
+<code>train_data</code>/<code>test_data</code>, or a combined <code>train_data</code> whose
+phases are selected by <code>phase_var</code>.</p></dd>
 
 
 <dt id="arg-design">design<a class="anchor" aria-label="anchor" href="#arg-design"></a></dt>
-<dd><p>An mvpa_design describing trial structure with train/test designs.</p></dd>
+<dd><p>An mvpa_design describing trial structure. For combined data,
+<code>train_design</code> must contain all encoding and retrieval rows in the
+same order as the data observations.</p></dd>
 
 
 <dt id="arg-key-var">key_var<a class="anchor" aria-label="anchor" href="#arg-key-var"></a></dt>
@@ -90,10 +102,9 @@ and retrieval trials (e.g., ~ ImageID).</p></dd>
 
 
 <dt id="arg-phase-var">phase_var<a class="anchor" aria-label="anchor" href="#arg-phase-var"></a></dt>
-<dd><p>Column name or formula giving phase labels (must include
-encoding and retrieval levels if using a single-phase dataset; for the
-default two-dataset usage, this is still parsed for consistency but not
-required for operations).</p></dd>
+<dd><p>Optional column name or formula giving phase labels. It is
+required when encoding and retrieval observations occupy one combined
+dataset and optional for an already separated external test set.</p></dd>
 
 
 <dt id="arg-encoding-level">encoding_level<a class="anchor" aria-label="anchor" href="#arg-encoding-level"></a></dt>
@@ -191,6 +202,54 @@ constructor will refuse to silently produce schemas where those metrics
 are guaranteed to be <code>NA</code>. Default <code>FALSE</code> (warn only).</p></dd>
 
 
+<dt id="arg-pairing">pairing<a class="anchor" aria-label="anchor" href="#arg-pairing"></a></dt>
+<dd><p>Item-cardinality policy. <code>"average"</code> preserves the
+existing behavior of averaging repeated observations into item
+prototypes. <code>"one_to_one"</code> requires exactly one encoding and one
+retrieval observation for every item and identical item sets.</p></dd>
+
+
+<dt id="arg-era-simfun">era_simfun<a class="anchor" aria-label="anchor" href="#arg-era-simfun"></a></dt>
+<dd><p>Similarity used for the first-order encoding-retrieval
+matrix, either <code>"pearson"</code> or <code>"spearman"</code>.</p></dd>
+
+
+<dt id="arg-era-min-voxels">era_min_voxels<a class="anchor" aria-label="anchor" href="#arg-era-min-voxels"></a></dt>
+<dd><p>Minimum finite voxel pairs required for an
+encoding-retrieval similarity.</p></dd>
+
+
+<dt id="arg-era-correlates">era_correlates<a class="anchor" aria-label="anchor" href="#arg-era-correlates"></a></dt>
+<dd><p>Optional right-hand-side formula selecting numeric
+retrieval variables for zero-order correlations with matched-item ERA
+similarity, for example <code>~ vividness</code>.</p></dd>
+
+
+<dt id="arg-era-cor-method">era_cor_method<a class="anchor" aria-label="anchor" href="#arg-era-cor-method"></a></dt>
+<dd><p>Correlation method for <code>era_correlates</code>, either
+<code>"spearman"</code> or <code>"pearson"</code>.</p></dd>
+
+
+<dt id="arg-era-association">era_association<a class="anchor" aria-label="anchor" href="#arg-era-association"></a></dt>
+<dd><p>Optional right-hand-side regression formula for
+matched-item ERA similarity, for example
+<code>~ vividness + retrieval_run + trial_order</code>. The response is supplied
+internally. Formula variables are evaluated in the retrieval design.</p></dd>
+
+
+<dt id="arg-era-effects">era_effects<a class="anchor" aria-label="anchor" href="#arg-era-effects"></a></dt>
+<dd><p>Right-hand-side formula naming the one-degree-of-freedom
+focal terms from <code>era_association</code> for which signed semi-partial
+correlations (part-r) should be emitted. Multi-column factors should be
+retained as adjustment variables or represented by an explicit one-df
+contrast column.</p></dd>
+
+
+<dt id="arg-era-min-complete">era_min_complete<a class="anchor" aria-label="anchor" href="#arg-era-min-complete"></a></dt>
+<dd><p>Minimum number of complete matched items required
+for zero-order correlations and adjusted association models.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional fields stored on the model spec.</p></dd>
 
@@ -264,6 +323,21 @@ and <code><a href="run_searchlight.html">run_searchlight()</a></code>:</p><dl><d
     correlation between diagonal ERA values and the per-item lag
     (e.g., retrieval minus encoding onset), using complete cases only.</p></dd>
 
+  <dt>era_&lt;variable&gt;_cor / era_&lt;variable&gt;_n</dt>
+<dd><p>When <code>era_correlates</code> is supplied, the zero-order correlation
+    between matched-item ERA similarity and each selected retrieval
+    variable, plus its variable-specific number of complete item pairs.</p></dd>
+
+  <dt>era_assoc_part_r_&lt;effect&gt;</dt>
+<dd><p>When <code>era_association</code> and <code>era_effects</code> are supplied, the
+    signed semi-partial correlation (part-r) for each focal one-df effect
+    after adjusting for all other terms in the association formula.
+    Adjustment-only terms do not create maps.</p></dd>
+
+  <dt>era_assoc_n / era_assoc_df_resid</dt>
+<dd><p>Joint complete-item count and residual degrees of freedom for the
+    adjusted association model.</p></dd>
+
   <dt>geom_cor_run_partial</dt>
 <dd><p>Run-partial ER geometry correlation, when run-level confounds are
     supplied via <code>confound_rdms$run_enc</code>/<code>run_ret</code> or derivable
@@ -311,6 +385,18 @@ correspond to different scans). When <code>item_run_enc</code> and
 <code>item_run_ret</code> share atomic values that are not phase-scoped, supply
 phase-prefixed labels such as <code>enc_1</code> / <code>ret_1</code> so cross-phase
 equality tests are not spuriously satisfied.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="association-interpretation">Association interpretation<a class="anchor" aria-label="anchor" href="#association-interpretation"></a></h2>
+
+
+<p><code>era_correlates</code> and <code>era_association</code> operate on the vector of
+matched-item encoding-retrieval similarities, not on the within-phase RDM
+vectors used by <code>geom_cor</code>. Missing values in each zero-order correlate
+are removed separately. The adjusted model uses one joint complete-case set
+across ERA similarity and every association term. Signed part-r is invariant
+to linear rescaling of a focal predictor; its square equals that term's
+incremental R-squared, which is deliberately not emitted as a default map.</p>
     </div>
 
     <div class="section level2">

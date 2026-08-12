@@ -11,7 +11,7 @@ R/temporal_rdms.R to avoid redundancy.
 era_rsa_design(
   design,
   key_var,
-  phase_var,
+  phase_var = NULL,
   encoding_level = NULL,
   retrieval_level = NULL,
   block_var = NULL,
@@ -32,7 +32,9 @@ era_rsa_design(
 
 - phase_var:
 
-  Column name or formula indicating phase (e.g., ~ Phase).
+  Optional column name or formula indicating phase (e.g., `~ Phase`).
+  Required when both phases occupy `train_design`; optional when
+  `test_design` already represents retrieval.
 
 - encoding_level:
 
