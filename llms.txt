@@ -747,10 +747,11 @@ All functions exported by rMVPA
 
 ### Get Started
 
-Start here. One vignette, three small examples — searchlight
-classification, regional classification, RSA.
+Start here. Decode real Haxby data with held-out-run validation, inspect
+every error, and learn the object chain shared by regional and
+searchlight analyses.
 
-- [Get Started with
+- [Decode a held-out fMRI run with
   rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/rMVPA.md):
 
 ### Core Concepts

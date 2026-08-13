@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Get Started with rMVPA • rMVPA</title>
+<title>Decode a held-out fMRI run with rMVPA • rMVPA</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<script src="../extra.js"></script><meta property="og:title" content="Get Started with rMVPA">
+<script src="../extra.js"></script><meta property="og:title" content="Decode a held-out fMRI run with rMVPA">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -53,11 +53,10 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Get Started with rMVPA</h1>
+      <h1>Decode a held-out fMRI run with rMVPA</h1>
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-13</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/rMVPA.Rmd" class="external-link"><code>vignettes/rMVPA.Rmd</code></a></small>
       <div class="d-none name"><code>rMVPA.Rmd</code></div>
@@ -65,201 +64,418 @@ Buchsbaum</h4>
 
     
     
+<p>Can a distributed fMRI pattern identify what a person is viewing
+<strong>in a run the model has never seen</strong>? This guide answers
+that question with Subject 1 from Haxby et al. (2001): 96
+ventral-temporal patterns, eight visual categories, and 12 scanning
+runs. We will hold out one entire run at a time, fit a classifier on the
+other 11, and collect 96 genuinely out-of-sample predictions.</p>
+<p>By the end, you will have a checked analysis specification, a
+cross-validated accuracy estimate, and a confusion matrix that shows
+where the classifier succeeds and fails. The example is small enough to
+run during package checks, but the objects and analysis engine are the
+same ones used for atlas regions and whole-brain searchlights.</p>
+<blockquote>
+<p><strong>Scientific scope.</strong> This is a within-subject
+demonstration of generalization across runs. It is not evidence about
+new participants, and its accuracy is not a population-level inferential
+test.</p>
+</blockquote>
 <div class="section level2">
-<h2 id="why-rmvpa">Why rMVPA?<a class="anchor" aria-label="anchor" href="#why-rmvpa"></a>
+<h2 id="what-data-are-we-decoding">What data are we decoding?<a class="anchor" aria-label="anchor" href="#what-data-are-we-decoding"></a>
 </h2>
-<p>Decoding stimulus categories from fMRI activation patterns requires
-coordinating data loading, model selection, cross-validation, and
-spatial iteration (searchlights or ROIs). rMVPA handles all of this so
-you can focus on your scientific question rather than pipeline
-plumbing.</p>
-<p>This vignette walks you through three analyses on synthetic data:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Searchlight classification</strong> – decode conditions at
-every voxel neighbourhood in the brain.</li>
-<li>
-<strong>Regional classification</strong> – decode within predefined
-ROIs.</li>
-<li>
-<strong>RSA (Representational Similarity Analysis)</strong> – test
-whether neural patterns match a predicted similarity structure.</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="quick-example-searchlight-classification">Quick example: searchlight classification<a class="anchor" aria-label="anchor" href="#quick-example-searchlight-classification"></a>
-</h2>
-<p>A complete searchlight run is four short steps. Each builds one
-object the next step needs.</p>
-<p><strong>1. Load the package and generate a tiny synthetic
-dataset.</strong> <code><a href="../reference/gen_sample_dataset.html">gen_sample_dataset()</a></code> returns both the
-imaging data (an <code>mvpa_dataset</code>) and the experimental design
-(an <code>mvpa_design</code>).</p>
+<p>The package ships a compact derivative of the public Haxby dataset.
+Each row is the mean activation pattern for one category in one run;
+each column is a voxel in the published ventral-temporal (VT) mask. The
+raw BOLD time series have already been reduced to analysis-ready
+patterns, so no download is needed. This is a reanalysis of that
+derivative, not a literal reproduction of Haxby et al.’s original
+classifier and validation procedure. The derivative was built from the
+<a href="http://data.pymvpa.org/datasets/haxby2001/subj1-2010.01.14.tar.gz" class="external-link">PyMVPA
+Subject 1 tutorial archive</a>; <code>data-raw/haxby2001_subj1.R</code>
+is the complete rebuild script, and
+<code>inst/extdata/haxby2001_subj1/README.md</code> records the contents
+and redistribution note. The SHA-256 digest of the analyzed
+<code>patterns.rds</code> file is
+<code>0d2c8cd36ec955a31e201b10efeae6c4a478da6dcc1f5bf05af0c9ef22c21706</code>.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/rMVPA" class="external-link">rMVPA</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/neuroim2" class="external-link">neuroim2</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">bundle</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu">resolve_haxby_path</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">6</span>, <span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">80</span>, blocks <span class="op">=</span> <span class="fl">4</span>,</span>
-<span>                           nlevels <span class="op">=</span> <span class="fl">2</span>, response_type <span class="op">=</span> <span class="st">"categorical"</span>,</span>
-<span>                           data_mode <span class="op">=</span> <span class="st">"image"</span><span class="op">)</span></span></code></pre></div>
-<p><strong>2. Wrap the data in an <code>mvpa_dataset</code> and choose a
-cross-validation scheme.</strong> Run-blocked CV uses each scanning run
-as a held-out fold — the standard way to keep training and test trials
-temporally independent.</p>
+<span><span class="va">data_overview</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  patterns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">bundle</span><span class="op">$</span><span class="va">patterns</span><span class="op">)</span>,</span>
+<span>  voxels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">bundle</span><span class="op">$</span><span class="va">patterns</span><span class="op">)</span>,</span>
+<span>  categories <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">bundle</span><span class="op">$</span><span class="va">category</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  runs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">bundle</span><span class="op">$</span><span class="va">run</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">data_overview</span>, caption <span class="op">=</span> <span class="st">"The bundled Haxby derivative."</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>The bundled Haxby derivative.</caption>
+<thead><tr class="header">
+<th align="right">patterns</th>
+<th align="right">voxels</th>
+<th align="right">categories</th>
+<th align="right">runs</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="right">96</td>
+<td align="right">577</td>
+<td align="right">8</td>
+<td align="right">12</td>
+</tr></tbody>
+</table>
+<p>The design is balanced: every run contributes one pattern for each of
+the eight categories. That matters because the nominal accuracy expected
+from uniform guessing is <code>1 / 8 = 12.5%</code>.</p>
+<p>In your own study, these rows would usually be trial-wise or
+condition-wise beta estimates from a first-level model. See
+<code><a href="../articles/Constructing_Datasets.html">vignette("Constructing_Datasets")</a></code> for file-backed images,
+masks, and other input layouts.</p>
+</div>
+<div class="section level2">
+<h2 id="what-must-remain-independent">What must remain independent?<a class="anchor" aria-label="anchor" href="#what-must-remain-independent"></a>
+</h2>
+<p>Measurements from the same fMRI run share drift, motion, and temporal
+noise. A random row-wise split can therefore put correlated observations
+on both sides of the train/test boundary and exaggerate performance. Our
+estimand is instead explicit:</p>
+<blockquote>
+<p>How accurately can a model trained on 11 runs classify the eight
+category patterns in the twelfth run?</p>
+</blockquote>
+<p>We encode the category as the response, the run as the blocking
+variable, and use leave-one-run-out cross-validation.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
-<span><span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span></code></pre></div>
-<p><strong>3. Pick a classifier and bind it into a model
-specification.</strong> <code>load_model("sda_notune")</code> retrieves
-a pre-registered shrinkage discriminant model from the
-<code>MVPAModels</code> registry; <code><a href="../reference/mvpa_model.html">mvpa_model()</a></code> glues the
-dataset, design, classifier, and CV scheme together.</p>
+<code class="sourceCode R"><span><span class="va">design_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  category <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">bundle</span><span class="op">$</span><span class="va">category</span><span class="op">)</span>,</span>
+<span>  run <span class="op">=</span> <span class="va">bundle</span><span class="op">$</span><span class="va">run</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_design.html">mvpa_design</a></span><span class="op">(</span></span>
+<span>  <span class="va">design_table</span>,</span>
+<span>  y_train <span class="op">=</span> <span class="op">~</span> <span class="va">category</span>,</span>
+<span>  block_var <span class="op">=</span> <span class="op">~</span> <span class="va">run</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">crossval</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">bundle</span><span class="op">$</span><span class="va">run</span><span class="op">)</span></span></code></pre></div>
+<p>There are 12 folds. In each fold, 88 patterns train the model and the
+eight patterns from one untouched run test it. Every category appears
+once in every test fold.</p>
+</div>
+<div class="section level2">
+<h2 id="how-does-rmvpa-represent-the-analysis">How does rMVPA represent the analysis?<a class="anchor" aria-label="anchor" href="#how-does-rmvpa-represent-the-analysis"></a>
+</h2>
+<p>An rMVPA workflow has four scientific objects. Keeping them separate
+makes the analysis auditable: the imaging measurements live in a
+dataset, the response and grouping variables live in a design, the
+estimator and resampling rule live in a model specification, and an
+engine decides <em>where</em> to fit it.</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Question</th>
+<th align="left">Object in this analysis</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">What are the measurements?</td>
+<td align="left">An <code>mvpa_dataset</code> with 96 VT patterns</td>
+</tr>
+<tr class="even">
+<td align="left">What is predicted, and what defines independence?</td>
+<td align="left">An <code>mvpa_design</code> with category and run</td>
+</tr>
+<tr class="odd">
+<td align="left">What is fitted and resampled?</td>
+<td align="left">An <code>mvpa_model</code> with blocked CV</td>
+</tr>
+<tr class="even">
+<td align="left">Where is it fitted?</td>
+<td align="left">One labelled VT region passed to
+<code><a href="../reference/run_regional-methods.html">run_regional()</a></code>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The bundle stores a matrix plus spatial metadata. The next chunk
+back-projects the voxel columns into a 4-D sparse neuroimaging object.
+With your own data, <code><a href="https://bbuchsbaum.github.io/neuroim2/reference/read_vec.html" class="external-link">neuroim2::read_vec()</a></code> and
+<code><a href="https://bbuchsbaum.github.io/neuroim2/reference/read_vol.html" class="external-link">neuroim2::read_vol()</a></code> usually provide these objects
+directly.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mod</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span></span>
-<span><span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span><span class="va">mod</span>, dataset <span class="op">=</span> <span class="va">dset</span>, design <span class="op">=</span> <span class="va">data</span><span class="op">$</span><span class="va">design</span>,</span>
-<span>                    crossval <span class="op">=</span> <span class="va">cval</span>,</span>
-<span>                    tune_grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>lambda <span class="op">=</span> <span class="fl">0.01</span>, diagonal <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><strong>4. Run a 4 mm searchlight.</strong> Each voxel becomes the
-centre of a sphere; the model is fit and cross-validated locally;
-performance metrics are returned per centre as voxel-wise maps.</p>
+<code class="sourceCode R"><span><span class="va">mask_array</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fl">0L</span>, <span class="va">bundle</span><span class="op">$</span><span class="va">mask_dim</span><span class="op">)</span></span>
+<span><span class="va">mask_array</span><span class="op">[</span><span class="va">bundle</span><span class="op">$</span><span class="va">mask_idx</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1L</span></span>
+<span><span class="va">vt_mask</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/LogicalNeuroVol-class.html" class="external-link">LogicalNeuroVol</a></span><span class="op">(</span><span class="va">mask_array</span>, <span class="va">bundle</span><span class="op">$</span><span class="va">mask_space</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">voxel_by_pattern</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">bundle</span><span class="op">$</span><span class="va">patterns</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/mode.html" class="external-link">storage.mode</a></span><span class="op">(</span><span class="va">voxel_by_pattern</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="st">"double"</span></span>
+<span><span class="va">vector_space</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/add_dim-methods.html" class="external-link">add_dim</a></span><span class="op">(</span><span class="va">bundle</span><span class="op">$</span><span class="va">mask_space</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">voxel_by_pattern</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">bold_patterns</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/SparseNeuroVec-class.html" class="external-link">SparseNeuroVec</a></span><span class="op">(</span></span>
+<span>  <span class="va">voxel_by_pattern</span>,</span>
+<span>  space <span class="op">=</span> <span class="va">vector_space</span>,</span>
+<span>  mask <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">as.logical</a></span><span class="op">(</span><span class="va">mask_array</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">vt_region</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="va">mask_array</span>, <span class="va">bundle</span><span class="op">$</span><span class="va">mask_space</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sl_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">mspec</span>, radius <span class="op">=</span> <span class="fl">4</span>, method <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">sl_result</span><span class="op">$</span><span class="va">results</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Accuracy" "AUC"</span></span></code></pre></div>
-<p><code><a href="../reference/run_searchlight.html">run_searchlight()</a></code> returned a named list of performance
-maps (one per metric — accuracy and AUC by default for two-class
-problems). Each entry is a <code>NeuroVol</code> you can save with
-<code><a href="https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html" class="external-link">neuroim2::write_vol()</a></code> or display with any volumetric
-viewer.</p>
-</div>
-<div class="section level2">
-<h2 id="regional-classification">Regional classification<a class="anchor" aria-label="anchor" href="#regional-classification"></a>
-</h2>
-<p>The same model spec runs over predefined ROIs instead of every voxel.
-The only new piece is a <em>region mask</em>: an integer-labelled
-<code>NeuroVol</code> where each non-zero value identifies one ROI.</p>
-<p><strong>1. Build a toy 3-region mask from the active voxels.</strong>
-Real analyses use an atlas or a parcellation; here we just split the
-mask randomly so the example is self-contained.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mask</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
-<span><span class="va">region_mask</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">mask</span><span class="op">)</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">mask</span><span class="op">)</span>,</span>
-<span>  indices <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">mask</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">bold_patterns</span>, mask <span class="op">=</span> <span class="va">vt_mask</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span>,</span>
+<span>  dataset <span class="op">=</span> <span class="va">dataset</span>,</span>
+<span>  design <span class="op">=</span> <span class="va">design</span>,</span>
+<span>  crossval <span class="op">=</span> <span class="va">crossval</span>,</span>
+<span>  return_predictions <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><strong>2. Run regional MVPA.</strong> <code><a href="../reference/run_regional-methods.html">run_regional()</a></code>
-reuses the model spec from the searchlight example — same classifier,
-same CV scheme, just a different spatial unit.</p>
+<p><code>sda_notune</code> is shrinkage discriminant analysis with no
+hyperparameter search. It is a strong default when the number of
+correlated voxels is large relative to the number of observations. The
+estimator is refitted from scratch inside each training fold; the
+held-out run is used only for prediction. This model requires the
+suggested CRAN package <code>sda</code>; install that optional
+dependency before running the vignette if it is not already
+available.</p>
+</div>
+<div class="section level2">
+<h2 id="can-we-catch-a-bad-design-before-fitting">Can we catch a bad design before fitting?<a class="anchor" aria-label="anchor" href="#can-we-catch-a-bad-design-before-fitting"></a>
+</h2>
+<p><code><a href="../reference/validate_analysis.html">validate_analysis()</a></code> checks the specification for common
+failures such as a cross-validation rule that ignores run structure,
+missing classes in a fold, or test folds that are too small.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">preflight</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/validate_analysis.html">validate_analysis</a></span><span class="op">(</span><span class="va">model</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">preflight_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  passed <span class="op">=</span> <span class="va">preflight</span><span class="op">$</span><span class="va">n_pass</span>,</span>
+<span>  warnings <span class="op">=</span> <span class="va">preflight</span><span class="op">$</span><span class="va">n_warn</span>,</span>
+<span>  failures <span class="op">=</span> <span class="va">preflight</span><span class="op">$</span><span class="va">n_fail</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">preflight_summary</span>, caption <span class="op">=</span> <span class="st">"Static checks before model fitting."</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Static checks before model fitting.</caption>
+<thead><tr class="header">
+<th align="right">passed</th>
+<th align="right">warnings</th>
+<th align="right">failures</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="right">6</td>
+<td align="right">0</td>
+<td align="right">0</td>
+</tr></tbody>
+</table>
+<p>A clean preflight is necessary, not magical. It can verify the design
+and fold structure represented in these objects; it cannot prove that
+upstream preprocessing was scientifically appropriate. Any data-driven
+scaling, feature selection, or tuning must also be learned without
+looking at the test observations.
+<code><a href="../articles/FeatureSelection.html">vignette("FeatureSelection")</a></code> shows how to place feature
+selection inside the resampling loop.</p>
+</div>
+<div class="section level2">
+<h2 id="what-does-the-held-out-analysis-find">What does the held-out analysis find?<a class="anchor" aria-label="anchor" href="#what-does-the-held-out-analysis-find"></a>
+</h2>
+<p>The VT mask contains one non-zero region, so
+<code><a href="../reference/run_regional-methods.html">run_regional()</a></code> fits the model once per fold in that region
+and then pools the held-out predictions. Setting
+<code>preflight = "error"</code> prevents execution if a methodological
+check fails.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">reg_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mspec</span>, <span class="va">region_mask</span><span class="op">)</span></span>
-<span><span class="va">reg_result</span><span class="op">$</span><span class="va">performance_table</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
-<span><span class="co">#&gt;   roinum Accuracy     AUC</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1    0.512 -<span style="color: #BB0000;">0.038</span><span style="color: #BB0000; text-decoration: underline;">7</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2    0.512  0.151 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3    0.462 -<span style="color: #BB0000;">0.166</span></span></span></code></pre></div>
-<p>Each row reports one ROI’s cross-validated metrics. A note on the
-values: rMVPA reports <strong>AUC as <code>AUC − 0.5</code></strong>, so
-the chance level is <strong>0</strong>, not 0.5, and slightly negative
-AUCs (e.g. <code>-0.04</code>) just mean the classifier did marginally
-worse than chance — typical for a synthetic null example like this one.
-Real datasets with signal will give clearly positive AUCs.</p>
-</div>
-<div class="section level2">
-<h2 id="rsa-in-30-seconds">RSA in 30 seconds<a class="anchor" aria-label="anchor" href="#rsa-in-30-seconds"></a>
-</h2>
-<p>RSA asks whether the pattern of neural similarities across conditions
-matches a model-predicted similarity structure.</p>
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span></span>
+<span>  <span class="va">model</span>,</span>
+<span>  region_mask <span class="op">=</span> <span class="va">vt_region</span>,</span>
+<span>  preflight <span class="op">=</span> <span class="st">"error"</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><code>result$performance_table</code> contains region-level metrics;
+<code>result$prediction_table</code> contains one row per held-out
+prediction. Accuracy is the most transparent primary measure for this
+balanced eight-way problem.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create a synthetic dataset with 5 conditions</span></span>
-<span><span class="va">rsa_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6</span>, <span class="fl">6</span>, <span class="fl">6</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">100</span>, blocks <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>                               nlevels <span class="op">=</span> <span class="fl">5</span>, response_type <span class="op">=</span> <span class="st">"categorical"</span>,</span>
-<span>                               data_mode <span class="op">=</span> <span class="st">"image"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">predictions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">prediction_table</span><span class="op">)</span></span>
+<span><span class="va">accuracy</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">performance_table</span><span class="op">$</span><span class="va">Accuracy</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">auc_centered</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">performance_table</span><span class="op">$</span><span class="va">AUC</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">chance</span> <span class="op">&lt;-</span> <span class="fl">1</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">design_table</span><span class="op">$</span><span class="va">category</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Hypothetical model: conditions are ordered, so nearby conditions are similar</span></span>
-<span><span class="va">ncond</span> <span class="op">&lt;-</span> <span class="fl">5</span></span>
-<span><span class="va">model_rdm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/dist.html" class="external-link">dist</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">ncond</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Build the RSA design and model</span></span>
-<span><span class="co"># data= is a list of predictor RDMs; block_var is the run vector</span></span>
-<span><span class="va">rsa_des</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_design.html">rsa_design</a></span><span class="op">(</span><span class="op">~</span> <span class="va">model_rdm</span>,</span>
-<span>                      data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>model_rdm <span class="op">=</span> <span class="va">model_rdm</span><span class="op">)</span>,</span>
-<span>                      block_var <span class="op">=</span> <span class="va">rsa_data</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">dset_rsa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span><span class="va">rsa_data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, mask <span class="op">=</span> <span class="va">rsa_data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
-<span><span class="va">rsa_mod</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_model.html">rsa_model</a></span><span class="op">(</span>dataset <span class="op">=</span> <span class="va">dset_rsa</span>, design <span class="op">=</span> <span class="va">rsa_des</span>,</span>
-<span>                      distmethod <span class="op">=</span> <span class="st">"spearman"</span>, regtype <span class="op">=</span> <span class="st">"pearson"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Regional RSA</span></span>
-<span><span class="va">rsa_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">rsa_mod</span>, region_mask <span class="op">=</span> <span class="va">rsa_data</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">rsa_result</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 2</span></span></span>
-<span><span class="co">#&gt;   roinum model_rdm</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1    0.012<span style="text-decoration: underline;">1</span></span></span></code></pre></div>
+<span><span class="va">result_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  held_out_predictions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">predictions</span><span class="op">)</span>,</span>
+<span>  correct <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">predictions</span><span class="op">$</span><span class="va">correct</span><span class="op">)</span>,</span>
+<span>  accuracy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.1f%%"</span>, <span class="fl">100</span> <span class="op">*</span> <span class="va">accuracy</span><span class="op">)</span>,</span>
+<span>  chance_accuracy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.1f%%"</span>, <span class="fl">100</span> <span class="op">*</span> <span class="va">chance</span><span class="op">)</span>,</span>
+<span>  accuracy_above_chance <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.1f points"</span>, <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">accuracy</span> <span class="op">-</span> <span class="va">chance</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  chance_centered_AUC <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.3f"</span>, <span class="va">auc_centered</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="va">result_summary</span>, caption <span class="op">=</span> <span class="st">"Performance pooled across 12 held-out runs."</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Performance pooled across 12 held-out runs.</caption>
+<colgroup>
+<col width="21%">
+<col width="8%">
+<col width="9%">
+<col width="16%">
+<col width="22%">
+<col width="20%">
+</colgroup>
+<thead><tr class="header">
+<th align="right">held_out_predictions</th>
+<th align="right">correct</th>
+<th align="left">accuracy</th>
+<th align="left">chance_accuracy</th>
+<th align="left">accuracy_above_chance</th>
+<th align="left">chance_centered_AUC</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="right">96</td>
+<td align="right">88</td>
+<td align="left">91.7%</td>
+<td align="left">12.5%</td>
+<td align="left">79.2 points</td>
+<td align="left">0.973</td>
+</tr></tbody>
+</table>
+<p>The model correctly classifies 88 of 96 patterns: <strong>91.7%
+accuracy</strong>, compared with 12.5% under uniform guessing. The
+result supports the narrow claim that category information in this
+subject’s VT patterns generalizes across runs.</p>
+<p>rMVPA reports multiclass AUC as the mean one-versus-rest AUC
+transformed to <code>2 * raw AUC - 1</code>. Its range is therefore -1
+to 1, with 0 as the chance reference and 1 as perfect ranking. It is not
+raw AUC and it is not <code>AUC - 0.5</code>.</p>
+<div class="figure" style="text-align: center">
+<img src="rMVPA_files/figure-html/diagnostics-1.png" class="r-plt" alt="Two-panel diagnostic figure. On the left, accuracy in each held-out run ranges from 0.75 to 1.0, well above the dashed chance line at 0.125, with pooled accuracy at 0.917. On the right, a row-normalized eight-category confusion matrix has a strong diagonal; bottle has the lowest category accuracy at 0.75." width="100%"><p class="caption">
+Held-out performance by test run (left) and the row-normalized confusion
+matrix (right). The dashed line is eight-way chance accuracy; the solid
+line is pooled accuracy. Every plotted value comes from a prediction
+made while that observation’s run was held out.
+</p>
+</div>
+<p>All 12 folds exceed chance, so the pooled result is not carried by a
+single run. The confusion matrix also prevents a high average from
+hiding a failed category: accuracy ranges from 75.0% for bottle to
+100.0%. Face and house patterns are classified at 91.7% and 100.0%,
+respectively.</p>
+<p>These diagnostics describe prediction, not mechanism. A classifier
+can use a distributed signal without identifying a unique set of
+causally responsible voxels, and a high score in one participant does
+not establish a group effect.</p>
 </div>
 <div class="section level2">
-<h2 id="where-to-go-next">Where to go next<a class="anchor" aria-label="anchor" href="#where-to-go-next"></a>
+<h2 id="how-do-you-adapt-this-workflow">How do you adapt this workflow?<a class="anchor" aria-label="anchor" href="#how-do-you-adapt-this-workflow"></a>
 </h2>
-<p>Pick the next vignette by what you want to do:</p>
-<p><strong>Build a real classification analysis</strong></p>
+<p>The scientific contract stays fixed while the spatial question
+changes:</p>
+<ol style="list-style-type: decimal">
+<li>Build an <code>mvpa_dataset</code> whose observations align exactly
+with the design.</li>
+<li>Put the response and the independence unit in an
+<code>mvpa_design</code>.</li>
+<li>Choose cross-validation that respects that unit.</li>
+<li>Validate the specification before fitting.</li>
+<li>Inspect fold-level and class-level behavior, not only a pooled
+score.</li>
+</ol>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">This example uses</th>
+<th align="left">Replace it with</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Block-mean VT patterns</td>
+<td align="left">Trial-wise or condition-wise patterns from your
+first-level model</td>
+</tr>
+<tr class="even">
+<td align="left"><code>category</code></td>
+<td align="left">The outcome your model should predict</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>run</code></td>
+<td align="left">The acquisition or grouping unit that must not cross a
+fold boundary</td>
+</tr>
+<tr class="even">
+<td align="left">The published VT mask</td>
+<td align="left">A region defined independently of the held-out
+outcomes</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>sda_notune</code></td>
+<td align="left">A classifier chosen before final evaluation, with any
+tuning nested inside CV</td>
+</tr>
+</tbody>
+</table>
+<p>For several atlas regions, supply an integer-labelled region mask to
+<code><a href="../reference/run_regional-methods.html">run_regional()</a></code>. For a local decoding map, the same model
+specification can be sent to the searchlight engine:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">searchlight_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span></span>
+<span>  <span class="va">model</span>,</span>
+<span>  radius <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  preflight <span class="op">=</span> <span class="st">"error"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>A searchlight changes the spatial estimand from “does this predefined
+region carry information?” to “where do local neighbourhoods carry
+information?” It also introduces many spatial comparisons and
+substantially more computation;
+<code><a href="../articles/Searchlight_Analysis.html">vignette("Searchlight_Analysis")</a></code> treats those choices
+directly.</p>
+<p>To save the regional tables and a reproducibility manifest:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/save_results.html">save_results</a></span><span class="op">(</span><span class="va">result</span>, dir <span class="op">=</span> <span class="st">"haxby-vt-results"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="where-should-you-go-next">Where should you go next?<a class="anchor" aria-label="anchor" href="#where-should-you-go-next"></a>
+</h2>
 <ul>
-<li>Cross-validation that respects fMRI run structure:
-<code><a href="../articles/CrossValidation.html">vignette("CrossValidation")</a></code>
-</li>
-<li>Searchlight pipelines, randomized variants, and result handling:
-<code><a href="../articles/Searchlight_Analysis.html">vignette("Searchlight_Analysis")</a></code>
-</li>
-<li>ROI / parcellation analyses with pooled diagnostics:
-<code><a href="../articles/Regional_Analysis.html">vignette("Regional_Analysis")</a></code>
-</li>
-<li>Feature selection inside the CV loop (avoid leakage):
-<code><a href="../articles/FeatureSelection.html">vignette("FeatureSelection")</a></code>
-</li>
+<li>
+<strong>Bring your own images and masks:</strong>
+<code><a href="../articles/Constructing_Datasets.html">vignette("Constructing_Datasets")</a></code>.</li>
+<li>
+<strong>Design leakage-resistant resampling:</strong>
+<code><a href="../articles/CrossValidation.html">vignette("CrossValidation")</a></code>.</li>
+<li>
+<strong>Select voxels inside the training folds:</strong>
+<code><a href="../articles/FeatureSelection.html">vignette("FeatureSelection")</a></code>.</li>
+<li>
+<strong>Move from one region to a decoding map:</strong>
+<code><a href="../articles/Searchlight_Analysis.html">vignette("Searchlight_Analysis")</a></code>.</li>
+<li>
+<strong>Study representational geometry instead of category
+prediction:</strong> <code><a href="../articles/RSA.html">vignette("RSA")</a></code>, followed by
+<code><a href="../articles/Kriegeskorte_92_Images.html">vignette("Kriegeskorte_92_Images")</a></code> for a real-data
+example.</li>
 </ul>
-<p><strong>Test representational hypotheses</strong></p>
-<ul>
-<li>Standard RSA: <code><a href="../articles/RSA.html">vignette("RSA")</a></code>
-</li>
-<li>Decompose geometry by signed contrasts (MS-ReVE):
-<code><a href="../articles/Contrast_RSA.html">vignette("Contrast_RSA")</a></code>
-</li>
-<li>ROI-to-ROI connectivity through model RDMs:
-<code><a href="../articles/Model_Space_Connectivity.html">vignette("Model_Space_Connectivity")</a></code>
-</li>
-<li>Predict neural patterns from a feature matrix:
-<code><a href="../articles/Feature_RSA.html">vignette("Feature_RSA")</a></code> (with
-<code><a href="../articles/Feature_RSA_Advanced_Workflows.html">vignette("Feature_RSA_Advanced_Workflows")</a></code> for
-extensions)</li>
-<li>Per-trial RSA with built-in across-block masking:
-<code><a href="../articles/Vector_RSA.html">vignette("Vector_RSA")</a></code>
-</li>
-</ul>
-<p><strong>Cross-domain transfer (encoding ↔︎ retrieval, perception ↔︎
-memory)</strong></p>
-<ul>
-<li>The naive baseline first:
-<code><a href="../articles/Naive_Cross_Decoding.html">vignette("Naive_Cross_Decoding")</a></code> — also defines the ReNA /
-REMAP terminology used by the rest of that section.</li>
-</ul>
-<p><strong>Run from the command line, not R</strong></p>
-<ul>
-<li>Installable wrappers and shared workflow flags:
-<code><a href="../articles/CommandLine.html">vignette("CommandLine")</a></code>
-</li>
-</ul>
-<p><strong>Plug in your own analysis</strong></p>
-<ul>
-<li>Wrap any per-ROI / per-sphere function:
-<code><a href="../articles/CustomAnalyses.html">vignette("CustomAnalyses")</a></code>
-</li>
-<li>Build a full S3 plugin with metric schemas:
-<code><a href="../articles/Plugin_Development.html">vignette("Plugin_Development")</a></code>
-</li>
-</ul>
+<p>The package’s core public workflow is now in view:</p>
+<pre class="text"><code>mvpa_dataset + mvpa_design + cross-validation
+                    |
+                    v
+                mvpa_model
+                    |
+          +---------+----------+
+          |                    |
+  run_regional()       run_searchlight()
+          |                    |
+          +---------+----------+
+                    v
+       checked predictions, metrics, and maps</code></pre>
+</div>
+<div class="section level2">
+<h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
+<p>Haxby JV, Gobbini MI, Furey ML, Ishai A, Schouten JL, Pietrini P
+(2001). Distributed and overlapping representations of faces and objects
+in ventral temporal cortex. <em>Science</em>, <strong>293</strong>,
+2425–2430. <a href="https://doi.org/10.1126/science.1063736" class="external-link">doi:10.1126/science.1063736</a>.</p>
+<p>Varoquaux G, Raamana PR, Engemann DA, Hoyos-Idrobo A, Schwartz Y,
+Thirion B (2017). Assessing and tuning brain decoders: cross-validation,
+caveats, and guidelines. <em>NeuroImage</em>, <strong>145</strong>,
+166–179. <a href="https://doi.org/10.1016/j.neuroimage.2016.10.038" class="external-link">doi:10.1016/j.neuroimage.2016.10.038</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

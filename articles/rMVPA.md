@@ -1,208 +1,362 @@
-# Get Started with rMVPA
+# Decode a held-out fMRI run with rMVPA
 
-## Why rMVPA?
+Can a distributed fMRI pattern identify what a person is viewing **in a
+run the model has never seen**? This guide answers that question with
+Subject 1 from Haxby et al. (2001): 96 ventral-temporal patterns, eight
+visual categories, and 12 scanning runs. We will hold out one entire run
+at a time, fit a classifier on the other 11, and collect 96 genuinely
+out-of-sample predictions.
 
-Decoding stimulus categories from fMRI activation patterns requires
-coordinating data loading, model selection, cross-validation, and
-spatial iteration (searchlights or ROIs). rMVPA handles all of this so
-you can focus on your scientific question rather than pipeline plumbing.
+By the end, you will have a checked analysis specification, a
+cross-validated accuracy estimate, and a confusion matrix that shows
+where the classifier succeeds and fails. The example is small enough to
+run during package checks, but the objects and analysis engine are the
+same ones used for atlas regions and whole-brain searchlights.
 
-This vignette walks you through three analyses on synthetic data:
+> **Scientific scope.** This is a within-subject demonstration of
+> generalization across runs. It is not evidence about new participants,
+> and its accuracy is not a population-level inferential test.
 
-1.  **Searchlight classification** – decode conditions at every voxel
-    neighbourhood in the brain.
-2.  **Regional classification** – decode within predefined ROIs.
-3.  **RSA (Representational Similarity Analysis)** – test whether neural
-    patterns match a predicted similarity structure.
+## What data are we decoding?
 
-## Quick example: searchlight classification
-
-A complete searchlight run is four short steps. Each builds one object
-the next step needs.
-
-**1. Load the package and generate a tiny synthetic dataset.**
-[`gen_sample_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md)
-returns both the imaging data (an `mvpa_dataset`) and the experimental
-design (an `mvpa_design`).
+The package ships a compact derivative of the public Haxby dataset. Each
+row is the mean activation pattern for one category in one run; each
+column is a voxel in the published ventral-temporal (VT) mask. The raw
+BOLD time series have already been reduced to analysis-ready patterns,
+so no download is needed. This is a reanalysis of that derivative, not a
+literal reproduction of Haxby et al.’s original classifier and
+validation procedure. The derivative was built from the [PyMVPA Subject
+1 tutorial
+archive](http://data.pymvpa.org/datasets/haxby2001/subj1-2010.01.14.tar.gz);
+`data-raw/haxby2001_subj1.R` is the complete rebuild script, and
+`inst/extdata/haxby2001_subj1/README.md` records the contents and
+redistribution note. The SHA-256 digest of the analyzed `patterns.rds`
+file is
+`0d2c8cd36ec955a31e201b10efeae6c4a478da6dcc1f5bf05af0c9ef22c21706`.
 
 ``` r
 
-library(rMVPA)
-library(neuroim2)
+bundle <- readRDS(resolve_haxby_path())
 
-data <- gen_sample_dataset(D = c(6, 6, 6), nobs = 80, blocks = 4,
-                           nlevels = 2, response_type = "categorical",
-                           data_mode = "image")
+data_overview <- data.frame(
+  patterns = nrow(bundle$patterns),
+  voxels = ncol(bundle$patterns),
+  categories = length(unique(bundle$category)),
+  runs = length(unique(bundle$run))
+)
+knitr::kable(data_overview, caption = "The bundled Haxby derivative.")
 ```
 
-**2. Wrap the data in an `mvpa_dataset` and choose a cross-validation
-scheme.** Run-blocked CV uses each scanning run as a held-out fold — the
-standard way to keep training and test trials temporally independent.
+| patterns | voxels | categories | runs |
+|---------:|-------:|-----------:|-----:|
+|       96 |    577 |          8 |   12 |
+
+The bundled Haxby derivative. {.table}
+
+The design is balanced: every run contributes one pattern for each of
+the eight categories. That matters because the nominal accuracy expected
+from uniform guessing is `1 / 8 = 12.5%`.
+
+In your own study, these rows would usually be trial-wise or
+condition-wise beta estimates from a first-level model. See
+[`vignette("Constructing_Datasets")`](http://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.md)
+for file-backed images, masks, and other input layouts.
+
+## What must remain independent?
+
+Measurements from the same fMRI run share drift, motion, and temporal
+noise. A random row-wise split can therefore put correlated observations
+on both sides of the train/test boundary and exaggerate performance. Our
+estimand is instead explicit:
+
+> How accurately can a model trained on 11 runs classify the eight
+> category patterns in the twelfth run?
+
+We encode the category as the response, the run as the blocking
+variable, and use leave-one-run-out cross-validation.
 
 ``` r
 
-dset <- mvpa_dataset(data$dataset$train_data, mask = data$dataset$mask)
-cval <- blocked_cross_validation(data$design$block_var)
+design_table <- data.frame(
+  category = factor(bundle$category),
+  run = bundle$run
+)
+
+design <- mvpa_design(
+  design_table,
+  y_train = ~ category,
+  block_var = ~ run
+)
+crossval <- blocked_cross_validation(bundle$run)
 ```
 
-**3. Pick a classifier and bind it into a model specification.**
-`load_model("sda_notune")` retrieves a pre-registered shrinkage
-discriminant model from the `MVPAModels` registry;
-[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
-glues the dataset, design, classifier, and CV scheme together.
+There are 12 folds. In each fold, 88 patterns train the model and the
+eight patterns from one untouched run test it. Every category appears
+once in every test fold.
+
+## How does rMVPA represent the analysis?
+
+An rMVPA workflow has four scientific objects. Keeping them separate
+makes the analysis auditable: the imaging measurements live in a
+dataset, the response and grouping variables live in a design, the
+estimator and resampling rule live in a model specification, and an
+engine decides *where* to fit it.
+
+| Question | Object in this analysis |
+|:---|:---|
+| What are the measurements? | An `mvpa_dataset` with 96 VT patterns |
+| What is predicted, and what defines independence? | An `mvpa_design` with category and run |
+| What is fitted and resampled? | An `mvpa_model` with blocked CV |
+| Where is it fitted? | One labelled VT region passed to [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) |
+
+The bundle stores a matrix plus spatial metadata. The next chunk
+back-projects the voxel columns into a 4-D sparse neuroimaging object.
+With your own data,
+[`neuroim2::read_vec()`](https://bbuchsbaum.github.io/neuroim2/reference/read_vec.html)
+and
+[`neuroim2::read_vol()`](https://bbuchsbaum.github.io/neuroim2/reference/read_vol.html)
+usually provide these objects directly.
 
 ``` r
 
-mod  <- load_model("sda_notune")
-mspec <- mvpa_model(mod, dataset = dset, design = data$design,
-                    crossval = cval,
-                    tune_grid = data.frame(lambda = 0.01, diagonal = FALSE))
+mask_array <- array(0L, bundle$mask_dim)
+mask_array[bundle$mask_idx] <- 1L
+vt_mask <- LogicalNeuroVol(mask_array, bundle$mask_space)
+
+voxel_by_pattern <- t(bundle$patterns)
+storage.mode(voxel_by_pattern) <- "double"
+vector_space <- neuroim2::add_dim(bundle$mask_space, ncol(voxel_by_pattern))
+bold_patterns <- SparseNeuroVec(
+  voxel_by_pattern,
+  space = vector_space,
+  mask = as.logical(mask_array)
+)
+vt_region <- NeuroVol(mask_array, bundle$mask_space)
 ```
 
-**4. Run a 4 mm searchlight.** Each voxel becomes the centre of a
-sphere; the model is fit and cross-validated locally; performance
-metrics are returned per centre as voxel-wise maps.
-
 ``` r
 
-sl_result <- run_searchlight(mspec, radius = 4, method = "standard")
-names(sl_result$results)
-#> [1] "Accuracy" "AUC"
-```
+dataset <- mvpa_dataset(bold_patterns, mask = vt_mask)
 
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
-returned a named list of performance maps (one per metric — accuracy and
-AUC by default for two-class problems). Each entry is a `NeuroVol` you
-can save with
-[`neuroim2::write_vol()`](https://bbuchsbaum.github.io/neuroim2/reference/write_vol-methods.html)
-or display with any volumetric viewer.
-
-## Regional classification
-
-The same model spec runs over predefined ROIs instead of every voxel.
-The only new piece is a *region mask*: an integer-labelled `NeuroVol`
-where each non-zero value identifies one ROI.
-
-**1. Build a toy 3-region mask from the active voxels.** Real analyses
-use an atlas or a parcellation; here we just split the mask randomly so
-the example is self-contained.
-
-``` r
-
-mask <- data$dataset$mask
-set.seed(42)
-region_mask <- NeuroVol(
-  sample(1:3, sum(mask), replace = TRUE),
-  space(mask),
-  indices = which(mask > 0)
+model <- mvpa_model(
+  model = load_model("sda_notune"),
+  dataset = dataset,
+  design = design,
+  crossval = crossval,
+  return_predictions = TRUE
 )
 ```
 
-**2. Run regional MVPA.**
+`sda_notune` is shrinkage discriminant analysis with no hyperparameter
+search. It is a strong default when the number of correlated voxels is
+large relative to the number of observations. The estimator is refitted
+from scratch inside each training fold; the held-out run is used only
+for prediction. This model requires the suggested CRAN package `sda`;
+install that optional dependency before running the vignette if it is
+not already available.
+
+## Can we catch a bad design before fitting?
+
+[`validate_analysis()`](http://bbuchsbaum.github.io/rMVPA/reference/validate_analysis.md)
+checks the specification for common failures such as a cross-validation
+rule that ignores run structure, missing classes in a fold, or test
+folds that are too small.
+
+``` r
+
+preflight <- validate_analysis(model, verbose = FALSE)
+
+preflight_summary <- data.frame(
+  passed = preflight$n_pass,
+  warnings = preflight$n_warn,
+  failures = preflight$n_fail
+)
+knitr::kable(preflight_summary, caption = "Static checks before model fitting.")
+```
+
+| passed | warnings | failures |
+|-------:|---------:|---------:|
+|      6 |        0 |        0 |
+
+Static checks before model fitting. {.table}
+
+A clean preflight is necessary, not magical. It can verify the design
+and fold structure represented in these objects; it cannot prove that
+upstream preprocessing was scientifically appropriate. Any data-driven
+scaling, feature selection, or tuning must also be learned without
+looking at the test observations.
+[`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+shows how to place feature selection inside the resampling loop.
+
+## What does the held-out analysis find?
+
+The VT mask contains one non-zero region, so
 [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
-reuses the model spec from the searchlight example — same classifier,
-same CV scheme, just a different spatial unit.
+fits the model once per fold in that region and then pools the held-out
+predictions. Setting `preflight = "error"` prevents execution if a
+methodological check fails.
 
 ``` r
 
-reg_result <- run_regional(mspec, region_mask)
-reg_result$performance_table
-#> # A tibble: 3 × 3
-#>   roinum Accuracy     AUC
-#>    <int>    <dbl>   <dbl>
-#> 1      1    0.512 -0.0387
-#> 2      2    0.512  0.151 
-#> 3      3    0.462 -0.166
+result <- run_regional(
+  model,
+  region_mask = vt_region,
+  preflight = "error",
+  verbose = FALSE
+)
 ```
 
-Each row reports one ROI’s cross-validated metrics. A note on the
-values: rMVPA reports **AUC as `AUC − 0.5`**, so the chance level is
-**0**, not 0.5, and slightly negative AUCs (e.g. `-0.04`) just mean the
-classifier did marginally worse than chance — typical for a synthetic
-null example like this one. Real datasets with signal will give clearly
-positive AUCs.
-
-## RSA in 30 seconds
-
-RSA asks whether the pattern of neural similarities across conditions
-matches a model-predicted similarity structure.
+`result$performance_table` contains region-level metrics;
+`result$prediction_table` contains one row per held-out prediction.
+Accuracy is the most transparent primary measure for this balanced
+eight-way problem.
 
 ``` r
 
-# Create a synthetic dataset with 5 conditions
-rsa_data <- gen_sample_dataset(D = c(6, 6, 6), nobs = 100, blocks = 5,
-                               nlevels = 5, response_type = "categorical",
-                               data_mode = "image")
+predictions <- as.data.frame(result$prediction_table)
+accuracy <- result$performance_table$Accuracy[[1]]
+auc_centered <- result$performance_table$AUC[[1]]
+chance <- 1 / length(unique(design_table$category))
 
-# Hypothetical model: conditions are ordered, so nearby conditions are similar
-ncond <- 5
-model_rdm <- as.matrix(dist(1:ncond))
-
-# Build the RSA design and model
-# data= is a list of predictor RDMs; block_var is the run vector
-rsa_des <- rsa_design(~ model_rdm,
-                      data = list(model_rdm = model_rdm),
-                      block_var = rsa_data$design$block_var)
-
-dset_rsa <- mvpa_dataset(rsa_data$dataset$train_data, mask = rsa_data$dataset$mask)
-rsa_mod  <- rsa_model(dataset = dset_rsa, design = rsa_des,
-                      distmethod = "spearman", regtype = "pearson")
-
-# Regional RSA
-rsa_result <- run_regional(rsa_mod, region_mask = rsa_data$dataset$mask)
-head(rsa_result$performance_table)
-#> # A tibble: 1 × 2
-#>   roinum model_rdm
-#>    <int>     <dbl>
-#> 1      1    0.0121
+result_summary <- data.frame(
+  held_out_predictions = nrow(predictions),
+  correct = sum(predictions$correct),
+  accuracy = sprintf("%.1f%%", 100 * accuracy),
+  chance_accuracy = sprintf("%.1f%%", 100 * chance),
+  accuracy_above_chance = sprintf("%.1f points", 100 * (accuracy - chance)),
+  chance_centered_AUC = sprintf("%.3f", auc_centered)
+)
+knitr::kable(result_summary, caption = "Performance pooled across 12 held-out runs.")
 ```
 
-## Where to go next
+| held_out_predictions | correct | accuracy | chance_accuracy | accuracy_above_chance | chance_centered_AUC |
+|---:|---:|:---|:---|:---|:---|
+| 96 | 88 | 91.7% | 12.5% | 79.2 points | 0.973 |
 
-Pick the next vignette by what you want to do:
+Performance pooled across 12 held-out runs. {.table}
 
-**Build a real classification analysis**
+The model correctly classifies 88 of 96 patterns: **91.7% accuracy**,
+compared with 12.5% under uniform guessing. The result supports the
+narrow claim that category information in this subject’s VT patterns
+generalizes across runs.
 
-- Cross-validation that respects fMRI run structure:
-  [`vignette("CrossValidation")`](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
-- Searchlight pipelines, randomized variants, and result handling:
-  [`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
-- ROI / parcellation analyses with pooled diagnostics:
-  [`vignette("Regional_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md)
-- Feature selection inside the CV loop (avoid leakage):
-  [`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+rMVPA reports multiclass AUC as the mean one-versus-rest AUC transformed
+to `2 * raw AUC - 1`. Its range is therefore -1 to 1, with 0 as the
+chance reference and 1 as perfect ranking. It is not raw AUC and it is
+not `AUC - 0.5`.
 
-**Test representational hypotheses**
+![Two-panel diagnostic figure. On the left, accuracy in each held-out
+run ranges from 0.75 to 1.0, well above the dashed chance line at 0.125,
+with pooled accuracy at 0.917. On the right, a row-normalized
+eight-category confusion matrix has a strong diagonal; bottle has the
+lowest category accuracy at
+0.75.](rMVPA_files/figure-html/diagnostics-1.png)
 
-- Standard RSA:
-  [`vignette("RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/RSA.md)
-- Decompose geometry by signed contrasts (MS-ReVE):
-  [`vignette("Contrast_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md)
-- ROI-to-ROI connectivity through model RDMs:
-  [`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
-- Predict neural patterns from a feature matrix:
-  [`vignette("Feature_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)
-  (with
-  [`vignette("Feature_RSA_Advanced_Workflows")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md)
-  for extensions)
-- Per-trial RSA with built-in across-block masking:
-  [`vignette("Vector_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md)
+Held-out performance by test run (left) and the row-normalized confusion
+matrix (right). The dashed line is eight-way chance accuracy; the solid
+line is pooled accuracy. Every plotted value comes from a prediction
+made while that observation’s run was held out.
 
-**Cross-domain transfer (encoding ↔︎ retrieval, perception ↔︎ memory)**
+All 12 folds exceed chance, so the pooled result is not carried by a
+single run. The confusion matrix also prevents a high average from
+hiding a failed category: accuracy ranges from 75.0% for bottle to
+100.0%. Face and house patterns are classified at 91.7% and 100.0%,
+respectively.
 
-- The naive baseline first:
-  [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md)
-  — also defines the ReNA / REMAP terminology used by the rest of that
-  section.
+These diagnostics describe prediction, not mechanism. A classifier can
+use a distributed signal without identifying a unique set of causally
+responsible voxels, and a high score in one participant does not
+establish a group effect.
 
-**Run from the command line, not R**
+## How do you adapt this workflow?
 
-- Installable wrappers and shared workflow flags:
-  [`vignette("CommandLine")`](http://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md)
+The scientific contract stays fixed while the spatial question changes:
 
-**Plug in your own analysis**
+1.  Build an `mvpa_dataset` whose observations align exactly with the
+    design.
+2.  Put the response and the independence unit in an `mvpa_design`.
+3.  Choose cross-validation that respects that unit.
+4.  Validate the specification before fitting.
+5.  Inspect fold-level and class-level behavior, not only a pooled
+    score.
 
-- Wrap any per-ROI / per-sphere function:
-  [`vignette("CustomAnalyses")`](http://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.md)
-- Build a full S3 plugin with metric schemas:
-  [`vignette("Plugin_Development")`](http://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.md)
+| This example uses | Replace it with |
+|:---|:---|
+| Block-mean VT patterns | Trial-wise or condition-wise patterns from your first-level model |
+| `category` | The outcome your model should predict |
+| `run` | The acquisition or grouping unit that must not cross a fold boundary |
+| The published VT mask | A region defined independently of the held-out outcomes |
+| `sda_notune` | A classifier chosen before final evaluation, with any tuning nested inside CV |
+
+For several atlas regions, supply an integer-labelled region mask to
+[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
+For a local decoding map, the same model specification can be sent to
+the searchlight engine:
+
+``` r
+
+searchlight_result <- run_searchlight(
+  model,
+  radius = 4,
+  preflight = "error"
+)
+```
+
+A searchlight changes the spatial estimand from “does this predefined
+region carry information?” to “where do local neighbourhoods carry
+information?” It also introduces many spatial comparisons and
+substantially more computation;
+[`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
+treats those choices directly.
+
+To save the regional tables and a reproducibility manifest:
+
+``` r
+
+save_results(result, dir = "haxby-vt-results")
+```
+
+## Where should you go next?
+
+- **Bring your own images and masks:**
+  [`vignette("Constructing_Datasets")`](http://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.md).
+- **Design leakage-resistant resampling:**
+  [`vignette("CrossValidation")`](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md).
+- **Select voxels inside the training folds:**
+  [`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md).
+- **Move from one region to a decoding map:**
+  [`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md).
+- **Study representational geometry instead of category prediction:**
+  [`vignette("RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/RSA.md),
+  followed by
+  [`vignette("Kriegeskorte_92_Images")`](http://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.md)
+  for a real-data example.
+
+The package’s core public workflow is now in view:
+
+``` text
+mvpa_dataset + mvpa_design + cross-validation
+                    |
+                    v
+                mvpa_model
+                    |
+          +---------+----------+
+          |                    |
+  run_regional()       run_searchlight()
+          |                    |
+          +---------+----------+
+                    v
+       checked predictions, metrics, and maps
+```
+
+## References
+
+Haxby JV, Gobbini MI, Furey ML, Ishai A, Schouten JL, Pietrini P (2001).
+Distributed and overlapping representations of faces and objects in
+ventral temporal cortex. *Science*, **293**, 2425–2430.
+[doi:10.1126/science.1063736](https://doi.org/10.1126/science.1063736).
+
+Varoquaux G, Raamana PR, Engemann DA, Hoyos-Idrobo A, Schwartz Y,
+Thirion B (2017). Assessing and tuning brain decoders: cross-validation,
+caveats, and guidelines. *NeuroImage*, **145**, 166–179.
+[doi:10.1016/j.neuroimage.2016.10.038](https://doi.org/10.1016/j.neuroimage.2016.10.038).
