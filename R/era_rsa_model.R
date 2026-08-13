@@ -299,14 +299,8 @@ era_rsa_model <- function(dataset,
   era_cor_method <- match.arg(era_cor_method)
   rsa_simfun <- match.arg(rsa_simfun)
 
-  if (length(era_min_voxels) != 1L || is.na(era_min_voxels) || era_min_voxels < 2L) {
-    stop("`era_min_voxels` must be a single integer >= 2.", call. = FALSE)
-  }
-  if (length(era_min_complete) != 1L || is.na(era_min_complete) || era_min_complete < 3L) {
-    stop("`era_min_complete` must be a single integer >= 3.", call. = FALSE)
-  }
-  era_min_voxels <- as.integer(era_min_voxels)
-  era_min_complete <- as.integer(era_min_complete)
+  era_min_voxels <- .era_count_scalar(era_min_voxels, "era_min_voxels", 2L)
+  era_min_complete <- .era_count_scalar(era_min_complete, "era_min_complete", 3L)
 
   stopifnot(inherits(dataset, "mvpa_dataset"))
   stopifnot(inherits(design,  "mvpa_design"))

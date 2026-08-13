@@ -24,11 +24,18 @@ testthat::skip_if_not_installed("neuroim2")
     array(as.numeric(t(R)), c(dims, K)),
     neuroim2::NeuroSpace(c(dims, K))
   )
-  tab <- data.frame(item = factor(keys, levels = keys))
+  train_tab <- data.frame(item = factor(keys, levels = keys))
+  test_tab <- data.frame(
+    item = factor(keys, levels = keys),
+    vividness = as.numeric(sample(seq_len(K))),
+    retrieval_run = factor(rep(c("run_1", "run_2"), length.out = K)),
+    trial_order = seq_len(K)
+  )
+  test_tab$vividness[seq.int(11L, K, by = 11L)] <- NA_real_
   dataset <- mvpa_dataset(enc, test_data = ret, mask = mask)
   design <- mvpa_design(
-    tab,
-    test_design = tab,
+    train_tab,
+    test_design = test_tab,
     y_train = ~ item,
     y_test = ~ item
   )
@@ -37,7 +44,10 @@ testthat::skip_if_not_installed("neuroim2")
     design,
     key_var = ~ item,
     pairing = "one_to_one",
-    era_components = "item"
+    era_components = "item",
+    era_association = ~ vividness + retrieval_run + trial_order,
+    era_effects = ~ vividness,
+    era_min_complete = 4L
   ))
 }
 

@@ -13,6 +13,18 @@
 
 #' @keywords internal
 #' @noRd
+.era_count_scalar <- function(x, arg, minimum) {
+  valid <- is.numeric(x) && length(x) == 1L && !is.na(x) &&
+    is.finite(x) && x >= minimum && x == floor(x)
+  if (!isTRUE(valid)) {
+    stop(sprintf("`%s` must be a single integer >= %d.", arg, minimum),
+         call. = FALSE)
+  }
+  as.integer(x)
+}
+
+#' @keywords internal
+#' @noRd
 .era_observation_count <- function(x) {
   dx <- dim(x)
   if (is.null(dx) || length(dx) < 2L) {
@@ -524,6 +536,9 @@
   if (!is.null(block)) {
     block_levels <- unique(block[!is.na(block)])
     block_id <- match(block, block_levels)
+    labeled_valid <- enc$valid & !is.na(block_id)
+    labeled_sum <- colSums(enc$values[labeled_valid, , drop = FALSE])
+    labeled_count <- sum(labeled_valid)
     block_sums <- matrix(0, nrow = length(block_levels), ncol = ncol(E))
     block_counts <- integer(length(block_levels))
     for (g in seq_along(block_levels)) {
@@ -541,9 +556,9 @@
         same_sum <- block_sums[g, ] - if (enc$valid[[i]]) enc$values[i, ] else 0
         same_specificity[[i]] <- matched[[i]] - sum(ret$values[i, ] * same_sum) / same_n
       }
-      diff_n <- enc_count - block_counts[[g]]
+      diff_n <- labeled_count - block_counts[[g]]
       if (diff_n > 0L) {
-        diff_sum <- enc_sum - block_sums[g, ]
+        diff_sum <- labeled_sum - block_sums[g, ]
         diff_specificity[[i]] <- matched[[i]] - sum(ret$values[i, ] * diff_sum) / diff_n
       }
     }

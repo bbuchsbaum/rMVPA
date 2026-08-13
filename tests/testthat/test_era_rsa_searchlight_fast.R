@@ -244,6 +244,28 @@ test_that("parallel shard execution is numerically identical", {
 
   suppressWarnings({
     future::plan(future::multisession, workers = 2L)
+    parent_engine_signature <- paste(deparse(body(get(
+      ".era_fast_fit_task",
+      envir = asNamespace("rMVPA"),
+      inherits = FALSE
+    ))), collapse = "\n")
+    worker_engine_signature <- future::value(future::future({
+      ns <- asNamespace("rMVPA")
+      if (!exists(".era_fast_fit_task", envir = ns, inherits = FALSE)) {
+        return(NULL)
+      }
+      paste(deparse(body(get(
+        ".era_fast_fit_task",
+        envir = ns,
+        inherits = FALSE
+      ))), collapse = "\n")
+    }))
+    if (!identical(worker_engine_signature, parent_engine_signature)) {
+      skip(paste0(
+        "multisession parity requires workers to load the current installed ",
+        "rMVPA package; source-loaded tests cannot replace a stale worker namespace"
+      ))
+    }
     parallel <- run_searchlight(
       model, radius = 1, method = "standard",
       engine = "era_rsa_fast", backend = "shard", preflight = "off"
