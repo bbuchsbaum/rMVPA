@@ -20,6 +20,9 @@
 * `mvpa_design()` now accepts row-aligned numeric, integer, character, logical,
   and factor vectors for blocking and splitting variables, with explicit
   alignment errors.
+* Dual-LDA AUC scoring now treats differences at accumulated floating-point
+  error scale as ties, preserving incremental/full searchlight parity across
+  platforms without relaxing the parity threshold.
 * `era_rsa_model()` now accepts combined encoding/retrieval image series split
   explicitly by `phase_var`, validates optional one-to-one item pairing, and
   supports Pearson or Spearman matched-item similarity.

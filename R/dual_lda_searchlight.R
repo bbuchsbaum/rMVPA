@@ -666,6 +666,37 @@
 
 #' @keywords internal
 #' @noRd
+.dual_lda_stable_rank <- function(score) {
+  n <- length(score)
+  if (n < 2L) {
+    return(rep.int(1, n))
+  }
+
+  ord <- order(score)
+  sorted <- score[ord]
+  scale <- max(1, max(abs(sorted)))
+  tolerance <- 128 * .Machine$double.eps * n * scale
+
+  group <- integer(n)
+  group[[1L]] <- 1L
+  anchor <- sorted[[1L]]
+  for (i in 2:n) {
+    if (sorted[[i]] - anchor > tolerance) {
+      group[[i]] <- group[[i - 1L]] + 1L
+      anchor <- sorted[[i]]
+    } else {
+      group[[i]] <- group[[i - 1L]]
+    }
+  }
+
+  ranked <- ave(seq_len(n), group, FUN = mean)
+  out <- numeric(n)
+  out[ord] <- ranked
+  out
+}
+
+#' @keywords internal
+#' @noRd
 .dual_lda_auc_from_scores <- function(score, positive) {
   positive <- as.logical(positive)
   n_pos <- sum(positive)
@@ -675,7 +706,10 @@
     return(NA_real_)
   }
 
-  r <- rank(score, ties.method = "average")
+  # Incremental factorizations can perturb mathematically tied scores by a few
+  # ulps. Treat differences at the accumulated floating-point error scale as
+  # ties so AUC does not turn roundoff into a discrete ordering change.
+  r <- .dual_lda_stable_rank(score)
   (sum(r[positive]) - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
 }
 

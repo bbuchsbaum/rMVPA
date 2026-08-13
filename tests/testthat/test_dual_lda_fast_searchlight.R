@@ -507,6 +507,17 @@ test_that("dual_lda fast metric kernel matches generic multiclass performance", 
   expect_equal(perf_fast_class, perf_ref_class, tolerance = 1e-10)
 })
 
+test_that("dual_lda AUC treats roundoff-scale score perturbations as ties", {
+  score <- c(0, 0, 1, 1)
+  perturbed <- score + c(5e-14, -5e-14, 5e-14, -5e-14)
+  positive <- c(TRUE, FALSE, TRUE, FALSE)
+
+  expect_identical(
+    rMVPA:::.dual_lda_auc_from_scores(perturbed, positive),
+    rMVPA:::.dual_lda_auc_from_scores(score, positive)
+  )
+})
+
 test_that("dual_lda fast metric kernel matches generic binary performance", {
   set.seed(3111)
   classes <- c("neg", "pos")
@@ -614,9 +625,7 @@ test_that("dual_lda incremental updates match full recomputation", {
   expect_searchlight_parity(
     reference = res_full,
     candidate = res_inc,
-    # Incremental rank-update accumulates floating-point drift (~0.025 AUC);
-    # this is inherent to the approach, not a correctness bug.
-    atol = 3e-2,
+    atol = 1e-10,
     rtol = 1e-6
   )
 })
@@ -644,7 +653,10 @@ test_that("dual_lda differential fuzz check across random seeds", {
 test_that("dual_lda remains finite under near-singular regime with tiny ridge", {
   set.seed(4041)
   built <- build_dual_lda_mspec(D = c(4, 4, 4), nobs = 15, nlevels = 3, blocks = 3, gamma = 1e-6)
-  res <- run_searchlight(built$mspec, radius = 2, method = "standard", incremental = TRUE)
+  expect_warning(
+    res <- run_searchlight(built$mspec, radius = 2, method = "standard", incremental = TRUE),
+    "block_class_coverage"
+  )
 
   acc <- metric_map_values(res, "Accuracy")
   auc <- metric_map_values(res, "AUC")
