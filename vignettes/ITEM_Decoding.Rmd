@@ -4,7 +4,9 @@ author: rMVPA authors
 date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
 vignette: |
-  %\VignetteIndexEntry{ITEM Trial-Wise Decoding} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{ITEM Trial-Wise Decoding}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 params:
   family: red
   preset: homage

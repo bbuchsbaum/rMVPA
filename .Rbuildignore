@@ -12,7 +12,9 @@
 ^\.cursor($|/)
 ^test1($|/)
 ^test2($|/)
-.*md
+^[^/]+\.md$
+^paper/.*\.md$
+^planning($|/)
 .*xml
 ^\.claude($|/)
 ^Makefile$
@@ -28,8 +30,6 @@
 ^vignettes/Searchlight_Analysis\.html$
 ^vignettes/Temporal_Confounds_in_RSA\.html$
 ^vignettes/Searchlight_Analysis_callr2_files($|/)
-^vignettes/albers\.css$
-^vignettes/albers\.js$
 ^test_debug_logging\.R$
 ^tmp_test_vec\.nii$
 ^\.omc($|/)

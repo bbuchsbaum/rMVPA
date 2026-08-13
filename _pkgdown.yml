@@ -7,7 +7,9 @@ template:
 articles:
 - title: Get Started
   desc: |
-    Start here. One vignette, three small examples — searchlight classification, regional classification, RSA.
+    Start here. Decode real Haxby data with held-out-run validation, inspect
+    every error, and learn the object chain shared by regional and searchlight
+    analyses.
   contents:
   - rMVPA
 - title: Core Concepts

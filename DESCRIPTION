@@ -160,6 +160,7 @@ Suggests:
     withr,
     xgboost,
     yaml
+VignetteBuilder: knitr
 Remotes:
     bbuchsbaum/fmridesign,
     bbuchsbaum/fmrilss,

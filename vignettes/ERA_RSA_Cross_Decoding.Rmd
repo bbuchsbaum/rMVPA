@@ -4,7 +4,9 @@ author: rMVPA authors
 date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
 vignette: |
-  %\VignetteIndexEntry{ERA-RSA: Cross-Decoding Between Encoding and Retrieval} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{ERA-RSA: Cross-Decoding Between Encoding and Retrieval}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 params:
   family: violet
   preset: homage

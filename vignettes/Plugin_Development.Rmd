@@ -7,7 +7,9 @@ output:
     toc: yes
     toc_depth: 3
 vignette: |
-  %\VignetteIndexEntry{Building Plugin Analyses for rMVPA} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Building Plugin Analyses for rMVPA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 params:
   family: red
   preset: homage
