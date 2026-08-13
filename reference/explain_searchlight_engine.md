@@ -9,7 +9,8 @@ method, along with the eligibility status of each registered engine.
 explain_searchlight_engine(
   model_spec,
   method = c("standard", "randomized", "resampled"),
-  engine = c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast")
+  engine = c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast",
+    "era_rsa_fast")
 )
 ```
 
@@ -25,8 +26,9 @@ explain_searchlight_engine(
 
 - engine:
 
-  Requested engine policy: `"auto"`, `"legacy"`, `"swift"`,
-  `"dual_lda_fast"`, or `"naive_xdec_fast"`.
+  Requested engine policy: `"auto"`, `"legacy"` (the compatibility key
+  for the general-purpose iterator), `"swift"`, `"dual_lda_fast"`,
+  `"naive_xdec_fast"`, or `"era_rsa_fast"`.
 
 ## Value
 

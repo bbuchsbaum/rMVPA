@@ -54,7 +54,12 @@ Instead, each worker receives lightweight ALTREP handles that point into the
 shared-memory segment and extracts its own ROI columns on demand.
 This eliminates the two main memory bottlenecks of the default pipeline:</p><ol><li><p>Serial <code>extract_roi()</code> in the main process.</p></li>
 <li><p>Serialisation of large ROI matrices to workers via <span class="pkg">furrr</span>.</p></li>
-</ol></div>
+</ol><p>Searchlight batches carry only neighborhood indices, so automatic shard
+batches are larger than default-backend batches to amortize scheduling
+overhead. Full garbage collection is not forced between shard batches by
+default; set <code>options(rMVPA.shard_gc_each_batch = TRUE)</code> to restore
+that conservative behavior when diagnosing memory pressure.</p>
+    </div>
     <div class="section level2">
     <h2 id="supported-dataset-types">Supported dataset types<a class="anchor" aria-label="anchor" href="#supported-dataset-types"></a></h2>
 

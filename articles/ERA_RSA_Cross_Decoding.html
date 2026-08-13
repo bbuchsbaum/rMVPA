@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">rMVPA
 authors</h4>
             
-            <h4 data-toc-skip class="date">2026-08-12</h4>
+            <h4 data-toc-skip class="date">2026-08-13</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/ERA_RSA_Cross_Decoding.Rmd" class="external-link"><code>vignettes/ERA_RSA_Cross_Decoding.Rmd</code></a></small>
       <div class="d-none name"><code>ERA_RSA_Cross_Decoding.Rmd</code></div>
@@ -211,7 +211,7 @@ retrieval.</p>
 <span>  design    <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
 <span>  key_var   <span class="op">=</span> <span class="op">~</span> <span class="va">item</span>,          <span class="co"># item key linking encoding ↔ retrieval</span></span>
 <span>  pairing   <span class="op">=</span> <span class="st">"one_to_one"</span>,    <span class="co"># require one encoding and one retrieval row per item</span></span>
-<span>  era_simfun <span class="op">=</span> <span class="st">"pearson"</span>,      <span class="co"># matched-item encoding-retrieval similarity</span></span>
+<span>  era_simfun <span class="op">=</span> <span class="st">"pearson"</span>,      <span class="co"># item-level encoding-retrieval similarity</span></span>
 <span>  distfun   <span class="op">=</span> <span class="fu"><a href="../reference/distance-constructors.html">cordist</a></span><span class="op">(</span><span class="st">"pearson"</span><span class="op">)</span>, <span class="co"># builds encoding and retrieval RDMs</span></span>
 <span>  rsa_simfun <span class="op">=</span> <span class="st">"spearman"</span>         <span class="co"># compares those RDMs; output is geom_cor</span></span>
 <span><span class="op">)</span></span>
@@ -235,6 +235,8 @@ retrieval.</p>
 <span><span class="co">#&gt;   - pairing: one_to_one</span></span>
 <span><span class="co">#&gt;   - era_simfun: pearson</span></span>
 <span><span class="co">#&gt;   - era_min_voxels: 2</span></span>
+<span><span class="co">#&gt;   - era_components: item, identification, geometry</span></span>
+<span><span class="co">#&gt;   - era_association_score: item_specificity</span></span>
 <span><span class="co">#&gt;   - era_cor_method: spearman</span></span>
 <span><span class="co">#&gt;   - era_min_complete: 4</span></span>
 <span><span class="co">#&gt;   - era_combined_input: FALSE</span></span>
@@ -304,8 +306,12 @@ the item key.</li>
 <code>era_diag_mean</code> — mean encoding–retrieval similarity on
 the diagonal.</li>
 <li>
-<code>era_diag_minus_off</code> — diagonal minus off-diagonal
-similarity.</li>
+<code>era_diag_minus_off</code> — mean item-specific similarity: for
+each retrieval item, matched similarity minus its own mean similarity to
+nonmatching encoding items. With complete similarities this equals
+diagonal mean minus the grand off-diagonal mean. If pairwise
+similarities are missing, each item with an estimable contrast receives
+equal weight.</li>
 <li>
 <code>geom_cor</code> — the second-order correlation between the
 encoding and retrieval RDMs. With <code>rsa_simfun = "spearman"</code>,
@@ -328,10 +334,15 @@ geometry alignment between phases.</p>
 <div class="section level2">
 <h2 id="relating-item-similarity-to-retrieval-ratings">3. Relating item similarity to retrieval ratings<a class="anchor" aria-label="anchor" href="#relating-item-similarity-to-retrieval-ratings"></a>
 </h2>
-<p>A retrieval rating can be related directly to the matched-item E–R
-similarity computed in each region or searchlight sphere. Missing
-ratings do not remove items from <code>era_diag_mean</code>; each
-zero-order correlation uses its own complete pairs.</p>
+<p>A retrieval rating can be related directly to an item-specific E–R
+score computed in each region or searchlight sphere. By default, this is
+matched similarity minus that retrieval item’s mean nonmatch similarity,
+so every retrieval trial has its own local background. Missing ratings
+do not remove items from <code>era_diag_mean</code>; each zero-order
+correlation uses its own complete pairs. Set
+<code>era_association_score = "matched"</code> only when the intended
+response is raw matched E–R similarity without background
+correction.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">512</span><span class="op">)</span></span>
 <span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">test_design</span><span class="op">$</span><span class="va">vividness</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">6</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">item_keys</span><span class="op">)</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -352,6 +363,8 @@ one-degree-of-freedom effects that should become maps:</p>
 <span>  pairing <span class="op">=</span> <span class="st">"one_to_one"</span>,</span>
 <span>  era_simfun <span class="op">=</span> <span class="st">"spearman"</span>,</span>
 <span>  era_min_voxels <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  era_components <span class="op">=</span> <span class="st">"item"</span>,</span>
+<span>  era_association_score <span class="op">=</span> <span class="st">"item_specificity"</span>,</span>
 <span>  era_correlates <span class="op">=</span> <span class="op">~</span> <span class="va">vividness</span>,</span>
 <span>  era_cor_method <span class="op">=</span> <span class="st">"spearman"</span>,</span>
 <span>  era_association <span class="op">=</span> <span class="op">~</span> <span class="va">vividness</span> <span class="op">+</span> <span class="va">retrieval_run</span> <span class="op">+</span> <span class="va">trial_order</span>,</span>
@@ -368,16 +381,16 @@ one-degree-of-freedom effects that should become maps:</p>
 <span><span class="co">#&gt; # A tibble: 3 x 7</span></span>
 <span><span class="co">#&gt;   roinum era_diag_mean era_vividness_cor era_vividness_n era_assoc_part_r_vivi~1</span></span>
 <span><span class="co">#&gt;    &lt;int&gt;         &lt;dbl&gt;             &lt;dbl&gt;           &lt;dbl&gt;                   &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt; 1      1       -0.0191          -0.113                22                 -0.0802</span></span>
-<span><span class="co">#&gt; 2      2       -0.0541          -0.00895              22                 -0.132 </span></span>
-<span><span class="co">#&gt; 3      3        0.0504          -0.297                22                 -0.172 </span></span>
+<span><span class="co">#&gt; 1      1       -0.0191           -0.0473              22                 -0.0332</span></span>
+<span><span class="co">#&gt; 2      2       -0.0541           -0.0346              22                 -0.111 </span></span>
+<span><span class="co">#&gt; 3      3        0.0504           -0.276               22                 -0.211 </span></span>
 <span><span class="co">#&gt; # i abbreviated name: 1: era_assoc_part_r_vividness</span></span>
 <span><span class="co">#&gt; # i 2 more variables: era_assoc_n &lt;dbl&gt;, era_assoc_df_resid &lt;dbl&gt;</span></span></code></pre></div>
-<p><code>era_vividness_cor</code> is the zero-order Spearman
-correlation. <code>era_assoc_part_r_vividness</code> is the signed
-semi-partial correlation after adjusting for retrieval run and trial
-order. It is invariant to linear rescaling of vividness. Adjustment-only
-terms remain in the model but do not create unsigned or
+<p><code>era_vividness_cor</code> is the zero-order Spearman correlation
+with item specificity. <code>era_assoc_part_r_vividness</code> is the
+signed semi-partial correlation after adjusting for retrieval run and
+trial order. It is invariant to linear rescaling of vividness.
+Adjustment-only terms remain in the model but do not create unsigned or
 reference-dependent maps. A multi-level factor needs an explicit
 one-degree-of-freedom contrast before it can be requested in
 <code>era_effects</code>.</p>
@@ -505,16 +518,11 @@ maps of the same metrics.</p>
 <span><span class="co">#&gt;   - Voxels/Vertices with Results:  64 </span></span>
 <span><span class="co">#&gt; - Output Maps (Metrics) </span></span>
 <span><span class="co">#&gt;   -  n_items  (Type:  DenseNeuroVol ) </span></span>
-<span><span class="co">#&gt;   -  era_top1_acc  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_diag_mean  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_diag_minus_off  (Type:  DenseNeuroVol ) </span></span>
-<span><span class="co">#&gt;   -  geom_cor  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_diag_minus_off_same_block  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_diag_minus_off_diff_block  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_lag_cor  (Type:  DenseNeuroVol ) </span></span>
-<span><span class="co">#&gt;   -  geom_cor_partial  (Type:  DenseNeuroVol ) </span></span>
-<span><span class="co">#&gt;   -  geom_cor_run_partial  (Type:  DenseNeuroVol ) </span></span>
-<span><span class="co">#&gt;   -  geom_cor_xrun  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_vividness_cor  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_vividness_n  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_assoc_part_r_vividness  (Type:  DenseNeuroVol ) </span></span>
@@ -524,7 +532,7 @@ maps of the same metrics.</p>
 <ul>
 <li>
 <code>metrics</code>: names of the output maps (e.g.,
-<code>geom_cor</code>, <code>era_vividness_cor</code>, and
+<code>era_diag_minus_off</code>, <code>era_vividness_cor</code>, and
 <code>era_assoc_part_r_vividness</code>),</li>
 <li>
 <code>results</code>: a list of <code>NeuroVol</code> maps, one per
@@ -532,14 +540,12 @@ metric.</li>
 </ul>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_sl</span><span class="op">$</span><span class="va">metrics</span></span>
-<span><span class="co">#&gt;  [1] "n_items"                       "era_top1_acc"                 </span></span>
-<span><span class="co">#&gt;  [3] "era_diag_mean"                 "era_diag_minus_off"           </span></span>
-<span><span class="co">#&gt;  [5] "geom_cor"                      "era_diag_minus_off_same_block"</span></span>
-<span><span class="co">#&gt;  [7] "era_diag_minus_off_diff_block" "era_lag_cor"                  </span></span>
-<span><span class="co">#&gt;  [9] "geom_cor_partial"              "geom_cor_run_partial"         </span></span>
-<span><span class="co">#&gt; [11] "geom_cor_xrun"                 "era_vividness_cor"            </span></span>
-<span><span class="co">#&gt; [13] "era_vividness_n"               "era_assoc_part_r_vividness"   </span></span>
-<span><span class="co">#&gt; [15] "era_assoc_n"                   "era_assoc_df_resid"</span></span></code></pre></div>
+<span><span class="co">#&gt;  [1] "n_items"                       "era_diag_mean"                </span></span>
+<span><span class="co">#&gt;  [3] "era_diag_minus_off"            "era_diag_minus_off_same_block"</span></span>
+<span><span class="co">#&gt;  [5] "era_diag_minus_off_diff_block" "era_lag_cor"                  </span></span>
+<span><span class="co">#&gt;  [7] "era_vividness_cor"             "era_vividness_n"              </span></span>
+<span><span class="co">#&gt;  [9] "era_assoc_part_r_vividness"    "era_assoc_n"                  </span></span>
+<span><span class="co">#&gt; [11] "era_assoc_df_resid"</span></span></code></pre></div>
 <p>We can save the searchlight maps using
 <code><a href="../reference/save_results.html">save_results()</a></code>:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
@@ -548,9 +554,38 @@ metric.</li>
 <span></span>
 <span><span class="fu"><a href="../reference/save_results.html">save_results</a></span><span class="op">(</span><span class="va">era_sl</span>, <span class="va">out_dir</span>, level <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">out_dir</span>, <span class="st">"maps"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>This will create one NIfTI file per metric (e.g.,
-<code>geom_cor.nii.gz</code>, <code>era_top1_acc.nii.gz</code>) that can
-be viewed in your favorite neuroimaging software.</p>
+<p>This will create one NIfTI file per requested metric (e.g.,
+<code>era_diag_minus_off.nii.gz</code>,
+<code>era_vividness_cor.nii.gz</code>) that can be viewed in your
+favorite neuroimaging software.</p>
+<p>For association-focused HPC analyses, combine the item-only model
+above with the shard backend:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">era_sl_hpc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span></span>
+<span>  <span class="va">era_assoc_ms</span>,</span>
+<span>  radius <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"standard"</span>,</span>
+<span>  engine <span class="op">=</span> <span class="st">"era_rsa_fast"</span>,</span>
+<span>  backend <span class="op">=</span> <span class="st">"shard"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><code>era_components = "item"</code> skips top-1 identification and
+both within-phase RDMs. For a one-to-one volumetric standard
+searchlight, <code>engine = "auto"</code> (the default) selects the same
+dedicated ERA-RSA engine shown explicitly above. It slices train/test
+matrices directly, applies the established train-only feature filter and
+center-preservation rule, and then calls the same
+<code><a href="../reference/fit_roi.era_rsa_model.html">fit_roi.era_rsa_model()</a></code> computation used by the
+general-purpose iterator. With <code>backend = "shard"</code>, workers
+slice shared matrices directly rather than constructing and serializing
+an ROI object for every sphere. Request
+<code>era_components = c("item", "identification")</code> when top-1
+accuracy is also needed, or retain the default components when geometry
+maps are required; all three component families use the same dedicated
+extraction engine. Repeated- item averaging, non-volumetric data, and
+randomized/resampled searchlights continue through the general-purpose
+iterator. Its existing compatibility key,
+<code>engine = "legacy"</code>, remains available for an explicit
+reference run.</p>
 </div>
 <div class="section level2">
 <h2 id="adding-confounds-and-lag-information">6. Adding Confounds and Lag Information<a class="anchor" aria-label="anchor" href="#adding-confounds-and-lag-information"></a>
@@ -570,7 +605,7 @@ keys.</p>
 by the cross-run diagnostic. You pass <code>item_run_enc</code> and
 <code>item_run_ret</code>; ERA-RSA derives the same-run RDMs internally
 for <code>geom_cor_run_partial</code>.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">items</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">train_design</span><span class="op">$</span><span class="va">item</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">Mode</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">{</span> <span class="va">ux</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>; <span class="va">ux</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tabulate.html" class="external-link">tabulate</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/match.html" class="external-link">match</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">ux</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">]</span> <span class="op">}</span></span>
@@ -588,7 +623,7 @@ for <code>geom_cor_run_partial</code>.</p>
 <p>You can add temporal or block RDMs to <code>confound_rdms</code> and
 choose which groups enter the general partial-geometry metric with
 <code>partial_against</code>.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">time_enc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">items</span><span class="op">)</span>, <span class="va">items</span><span class="op">)</span></span>
 <span><span class="va">time_enc_rdm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/outer.html" class="external-link">outer</a></span><span class="op">(</span><span class="va">time_enc</span>, <span class="va">time_enc</span>, <span class="st">"-"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">time_enc_rdm</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">time_enc_rdm</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">items</span></span>
@@ -605,7 +640,7 @@ choose which groups enter the general partial-geometry metric with
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_conf_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">era_ms_conf</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_conf_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
 <span>  ,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"geom_cor"</span>, <span class="st">"geom_cor_partial"</span>,</span>
@@ -654,7 +689,7 @@ computes item-level whole-mask RDMs once and adds them as
 <code>global_nuisance</code> makes the effective partial model
 <code>c("run", "global")</code>; set <code>partial_against</code>
 explicitly if you want a different nuisance set.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">item_block</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">item_run_enc</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">item_run_enc</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_ms_global</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_rsa_model.html">era_rsa_model</a></span><span class="op">(</span></span>
@@ -669,7 +704,7 @@ explicitly if you want a different nuisance set.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_global_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">era_ms_global</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_global_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
 <span>  ,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"geom_cor_partial"</span>, <span class="st">"geom_cor_run_partial"</span>,</span>
@@ -687,7 +722,7 @@ explicitly if you want a different nuisance set.</p>
 </h3>
 <p><code>item_block</code> encodes a per-item block/condition, typically
 derived from <code>design$train_design$block_var</code>:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_ms_block</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_rsa_model.html">era_rsa_model</a></span><span class="op">(</span></span>
 <span>  dataset    <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
 <span>  design     <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
@@ -698,11 +733,13 @@ derived from <code>design$train_design$block_var</code>:</p>
 <p>This enables block-limited ERA contrasts:</p>
 <ul>
 <li>
-<code>era_diag_minus_off_same_block</code>: diagonal ERA minus mean
-similarity to other items in the same block.</li>
+<code>era_diag_minus_off_same_block</code>: each retrieval item’s
+matched ERA minus its mean similarity to other encoding items in the
+same block, averaged equally over retrieval items.</li>
 <li>
-<code>era_diag_minus_off_diff_block</code>: diagonal ERA minus mean
-similarity to items in different blocks.</li>
+<code>era_diag_minus_off_diff_block</code>: each retrieval item’s
+matched ERA minus its mean similarity to encoding items in different
+blocks, averaged equally over retrieval items.</li>
 </ul>
 </div>
 <div class="section level3">
@@ -730,7 +767,7 @@ separates first-order cross-state similarity from second-order geometry
 preservation. When <code>auto_nuisance</code> includes
 <code>"run"</code>, the model adds same-run nuisance regressors to both
 levels of the partition.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_nuis_ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_partition_model.html">era_partition_model</a></span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
 <span>  design  <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
@@ -744,7 +781,7 @@ levels of the partition.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">partition_nuis_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">partition_nuis_ms</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_nuis_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
 <span>  ,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"first_order_delta_r2"</span>, <span class="st">"second_order_delta_r2"</span>,</span>
@@ -771,7 +808,7 @@ and <code>second_order_nuisance</code>.</p>
 first-order partition receives <code>global_cross</code>; the
 second-order partition receives <code>global_enc</code> and
 <code>global_ret</code>.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_global_ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_partition_model.html">era_partition_model</a></span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
 <span>  design  <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
@@ -782,7 +819,7 @@ second-order partition receives <code>global_enc</code> and
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">partition_global_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">partition_global_ms</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_global_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
 <span>  ,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"first_order_delta_r2"</span>, <span class="st">"second_order_delta_r2"</span>,</span>
@@ -808,7 +845,8 @@ second-order partition receives <code>global_enc</code> and
 <li>comparing encoding and retrieval representational geometries,
 and</li>
 <li>mapping zero-order and adjusted directional associations between
-matched-item similarity and retrieval variables.</li>
+item-specific matched-minus-nonmatch similarity and retrieval
+variables.</li>
 </ul>
 </li>
 <li>

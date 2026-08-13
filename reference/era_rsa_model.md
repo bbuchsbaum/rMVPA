@@ -32,6 +32,8 @@ era_rsa_model(
   pairing = c("average", "one_to_one"),
   era_simfun = c("pearson", "spearman"),
   era_min_voxels = 2L,
+  era_components = c("item", "identification", "geometry"),
+  era_association_score = c("item_specificity", "matched"),
   era_correlates = NULL,
   era_cor_method = c("spearman", "pearson"),
   era_association = NULL,
@@ -108,8 +110,8 @@ era_rsa_model(
 - include_diag:
 
   Logical retained for API compatibility. Diagonal ERA metrics are
-  always retained, and the off-diagonal mean used by
-  `era_diag_minus_off` always excludes matching-item diagonal entries.
+  always retained. The trial-specific nonmatch backgrounds used by
+  `era_diag_minus_off` always exclude the matching-item diagonal.
 
 - item_block:
 
@@ -177,11 +179,29 @@ era_rsa_model(
   Minimum finite voxel pairs required for an encoding-retrieval
   similarity.
 
+- era_components:
+
+  Character vector selecting computation families: `"item"` computes
+  matched similarity, trial-specific nonmatch contrasts, lag, and
+  item-covariate associations; `"identification"` adds the full
+  cross-item matrix and top-1 accuracy; `"geometry"` adds within-phase
+  RDM metrics and geometry nuisance models. The default retains all
+  existing outputs. Use `era_components = "item"` for the
+  association-focused path, which is linear in the number of items when
+  item patterns are finite.
+
+- era_association_score:
+
+  Per-item response used by `era_correlates` and `era_association`.
+  `"item_specificity"` (default) subtracts each retrieval item's mean
+  similarity to nonmatching encoding items. `"matched"` uses raw matched
+  encoding-retrieval similarity.
+
 - era_correlates:
 
   Optional right-hand-side formula selecting numeric retrieval variables
-  for zero-order correlations with matched-item ERA similarity, for
-  example `~ vividness`.
+  for zero-order correlations with the score selected by
+  `era_association_score`, for example `~ vividness`.
 
 - era_cor_method:
 
@@ -190,10 +210,10 @@ era_rsa_model(
 
 - era_association:
 
-  Optional right-hand-side regression formula for matched-item ERA
-  similarity, for example `~ vividness + retrieval_run + trial_order`.
-  The response is supplied internally. Formula variables are evaluated
-  in the retrieval design.
+  Optional right-hand-side regression formula for the score selected by
+  `era_association_score`, for example
+  `~ vividness + retrieval_run + trial_order`. The response is supplied
+  internally. Formula variables are evaluated in the retrieval design.
 
 - era_effects:
 
@@ -261,9 +281,13 @@ and
 
 - era_diag_minus_off:
 
-  Diagonal-minus-off-diagonal ERA contrast: `era_diag_mean` minus the
-  mean similarity to all non-matching items, capturing how much
-  same-item pairs stand out from other pairs.
+  Mean item-specific ERA contrast. For each retrieval item, its matched
+  encoding similarity is contrasted with that retrieval item's mean
+  similarity to all nonmatching encoding items; those trial-specific
+  contrasts are then averaged. With complete data this is algebraically
+  identical to diagonal mean minus the grand off-diagonal mean. With
+  missing pairwise similarities it gives each retrieval item with an
+  estimable contrast equal weight.
 
 - geom_cor:
 
@@ -300,8 +324,8 @@ and
 - era\_\<variable\>\_cor / era\_\<variable\>\_n:
 
   When `era_correlates` is supplied, the zero-order correlation between
-  matched-item ERA similarity and each selected retrieval variable, plus
-  its variable-specific number of complete item pairs.
+  the selected per-item ERA association score and each retrieval
+  variable, plus its variable-specific number of complete item pairs.
 
 - era_assoc_part_r\_\<effect\>:
 
@@ -369,13 +393,15 @@ spuriously satisfied.
 ## Association interpretation
 
 `era_correlates` and `era_association` operate on the vector of
-matched-item encoding-retrieval similarities, not on the within-phase
-RDM vectors used by `geom_cor`. Missing values in each zero-order
-correlate are removed separately. The adjusted model uses one joint
-complete-case set across ERA similarity and every association term.
-Signed part-r is invariant to linear rescaling of a focal predictor; its
-square equals that term's incremental R-squared, which is deliberately
-not emitted as a default map.
+item-specific matched-minus-nonmatch scores by default, not on the
+within-phase RDM vectors used by `geom_cor`. Set
+`era_association_score = "matched"` to use raw matched similarities.
+Missing values in each zero-order correlate are removed separately. The
+adjusted model uses one joint complete-case set across the selected ERA
+score and every association term. Signed part-r is invariant to linear
+rescaling of a focal predictor; its square equals that term's
+incremental R-squared, which is deliberately not emitted as a default
+map.
 
 ## Examples
 

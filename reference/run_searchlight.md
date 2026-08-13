@@ -111,19 +111,19 @@ Without progressr, only coarse batch-level log messages are shown.
     radius = 8,            # 8mm radius
     method = "standard"    # Use standard searchlight
   )
-#> INFO [2026-08-12 19:35:31] searchlight engine: legacy (no eligible fast path)
-#> INFO [2026-08-12 19:35:31] Running standard searchlight with radius = 8
-#> INFO [2026-08-12 19:35:31] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-08-12 19:35:31] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
-#> INFO [2026-08-12 19:35:31] creating standard searchlight
-#> INFO [2026-08-12 19:35:31] running standard searchlight iterator
-#> INFO [2026-08-12 19:35:31] Using automatic searchlight batch size 64 for 512 centers (memory budget 512.0 MiB).
-#> INFO [2026-08-12 19:36:34] 
+#> INFO [2026-08-13 01:25:20] searchlight engine: general-purpose iterator (no eligible fast path)
+#> INFO [2026-08-13 01:25:20] Running standard searchlight with radius = 8
+#> INFO [2026-08-13 01:25:20] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-08-13 01:25:20] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
+#> INFO [2026-08-13 01:25:20] creating standard searchlight
+#> INFO [2026-08-13 01:25:20] running standard searchlight iterator
+#> INFO [2026-08-13 01:25:20] Using automatic searchlight batch size 512 for 512 centers (memory budget 512.0 MiB).
+#> INFO [2026-08-13 01:26:37] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 512
 #> - Processed: 512
 #> - Skipped: 0
-#> INFO [2026-08-12 19:36:35] searchlight (standard): 512 ROIs processed (success=512, errors=0)
+#> INFO [2026-08-13 01:26:37] searchlight (standard): 512 ROIs processed (success=512, errors=0)
   
   # Run with custom batch size for memory management
   # results <- run_searchlight(

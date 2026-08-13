@@ -51,6 +51,9 @@
 <li>
 <code><a href="../reference/era_rsa_model.html">era_rsa_model()</a></code> now accepts combined encoding/retrieval image series split explicitly by <code>phase_var</code>, validates optional one-to-one item pairing, and supports Pearson or Spearman matched-item similarity.</li>
 <li>ERA-RSA can now map zero-order item-covariate correlations and adjusted, directional semi-partial correlations via <code>era_correlates</code>, <code>era_association</code>, and <code>era_effects</code>, with complete-item counts and no redundant unsigned R-squared maps.</li>
+<li>ERA-RSA item associations now use trial-specific matched-minus-nonmatch similarity by default, with raw matched similarity available explicitly via <code>era_association_score = "matched"</code>. The new <code>era_components</code> argument can skip identification and geometry work for association-focused searchlights.</li>
+<li>ERA-RSA searchlights now reuse prepared item pairing, use allocation-light item and RDM-vector kernels for finite data, and amortize shard dispatch with larger index-only batches and optional rather than unconditional batch GC.</li>
+<li>Eligible one-to-one volumetric ERA-RSA standard searchlights now select a dedicated direct-matrix engine automatically. It filters matrix columns with the same center-preservation rules as the general-purpose iterator, calls the same per-ROI scientific kernel, and supports shared-memory shard workers without constructing an ROI object for every sphere. The existing <code>engine = "legacy"</code> compatibility key requests an explicit general-iterator reference run; <code>engine = "era_rsa_fast"</code> requires the fast path.</li>
 <li>Moved 11 packages from Imports to Suggests for lazy dependency loading.</li>
 <li>Various bug fixes and stability improvements.</li>
 </ul></div>

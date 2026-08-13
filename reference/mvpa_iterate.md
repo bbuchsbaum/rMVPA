@@ -40,10 +40,12 @@ mvpa_iterate(
 
 - batch_size:
 
-  Integer specifying number of ROIs to process per batch. For
-  searchlight analyses the default is 10% of total ROIs. For regional
-  analyses the default is all ROIs in one batch, unless the estimated
-  extraction memory would exceed the budget set by
+  Integer specifying number of ROIs to process per batch. Searchlight
+  analyses use a memory-aware automatic size based on sphere size,
+  observation count, worker count, and backend; shard batches are larger
+  because they carry indices rather than extracted ROI matrices. For
+  regional analyses the default is all ROIs in one batch, unless the
+  estimated extraction memory would exceed the budget set by
   `options(rMVPA.regional_mem_budget)` (default 2 GB), in which case
   batches are automatically sized to stay within the budget.
 
@@ -142,9 +144,9 @@ batch:
   vox_iter <- lapply(sl, function(x) x)
   results <- mvpa_iterate(mspec, vox_iter[1:5],
     ids=seq_along(vox_iter[1:5]))
-#> INFO [2026-08-12 19:34:12] Using automatic searchlight batch size 5 for 5 centers (memory budget 512.0 MiB).
-#> INFO [2026-08-12 19:34:12] Processing batch 1/1 (5 ROIs in this batch)
-#> INFO [2026-08-12 19:34:13] 
+#> INFO [2026-08-13 01:24:00] Using automatic searchlight batch size 5 for 5 centers (memory budget 512.0 MiB).
+#> INFO [2026-08-13 01:24:00] Processing batch 1/1 (5 ROIs in this batch)
+#> INFO [2026-08-13 01:24:01] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 5
 #> - Processed: 5

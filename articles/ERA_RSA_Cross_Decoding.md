@@ -140,7 +140,7 @@ era_ms <- era_rsa_model(
   design    = toy$design,
   key_var   = ~ item,          # item key linking encoding ↔ retrieval
   pairing   = "one_to_one",    # require one encoding and one retrieval row per item
-  era_simfun = "pearson",      # matched-item encoding-retrieval similarity
+  era_simfun = "pearson",      # item-level encoding-retrieval similarity
   distfun   = cordist("pearson"), # builds encoding and retrieval RDMs
   rsa_simfun = "spearman"         # compares those RDMs; output is geom_cor
 )
@@ -164,6 +164,8 @@ era_ms
 #>   - pairing: one_to_one
 #>   - era_simfun: pearson
 #>   - era_min_voxels: 2
+#>   - era_components: item, identification, geometry
+#>   - era_association_score: item_specificity
 #>   - era_cor_method: spearman
 #>   - era_min_complete: 4
 #>   - era_combined_input: FALSE
@@ -234,7 +236,12 @@ Key metrics include:
 
 - `era_top1_acc` — top-1 encoding→retrieval accuracy for the item key.
 - `era_diag_mean` — mean encoding–retrieval similarity on the diagonal.
-- `era_diag_minus_off` — diagonal minus off-diagonal similarity.
+- `era_diag_minus_off` — mean item-specific similarity: for each
+  retrieval item, matched similarity minus its own mean similarity to
+  nonmatching encoding items. With complete similarities this equals
+  diagonal mean minus the grand off-diagonal mean. If pairwise
+  similarities are missing, each item with an estimable contrast
+  receives equal weight.
 - `geom_cor` — the second-order correlation between the encoding and
   retrieval RDMs. With `rsa_simfun = "spearman"`, this is a rank
   correlation over item-pair dissimilarities.
@@ -258,10 +265,14 @@ era_res$performance_table[
 
 ## 3. Relating item similarity to retrieval ratings
 
-A retrieval rating can be related directly to the matched-item E–R
-similarity computed in each region or searchlight sphere. Missing
-ratings do not remove items from `era_diag_mean`; each zero-order
-correlation uses its own complete pairs.
+A retrieval rating can be related directly to an item-specific E–R score
+computed in each region or searchlight sphere. By default, this is
+matched similarity minus that retrieval item’s mean nonmatch similarity,
+so every retrieval trial has its own local background. Missing ratings
+do not remove items from `era_diag_mean`; each zero-order correlation
+uses its own complete pairs. Set `era_association_score = "matched"`
+only when the intended response is raw matched E–R similarity without
+background correction.
 
 ``` r
 
@@ -287,6 +298,8 @@ era_assoc_ms <- era_rsa_model(
   pairing = "one_to_one",
   era_simfun = "spearman",
   era_min_voxels = 3,
+  era_components = "item",
+  era_association_score = "item_specificity",
   era_correlates = ~ vividness,
   era_cor_method = "spearman",
   era_association = ~ vividness + retrieval_run + trial_order,
@@ -303,20 +316,20 @@ era_assoc_res$performance_table[
 #> # A tibble: 3 x 7
 #>   roinum era_diag_mean era_vividness_cor era_vividness_n era_assoc_part_r_vivi~1
 #>    <int>         <dbl>             <dbl>           <dbl>                   <dbl>
-#> 1      1       -0.0191          -0.113                22                 -0.0802
-#> 2      2       -0.0541          -0.00895              22                 -0.132 
-#> 3      3        0.0504          -0.297                22                 -0.172 
+#> 1      1       -0.0191           -0.0473              22                 -0.0332
+#> 2      2       -0.0541           -0.0346              22                 -0.111 
+#> 3      3        0.0504           -0.276               22                 -0.211 
 #> # i abbreviated name: 1: era_assoc_part_r_vividness
 #> # i 2 more variables: era_assoc_n <dbl>, era_assoc_df_resid <dbl>
 ```
 
-`era_vividness_cor` is the zero-order Spearman correlation.
-`era_assoc_part_r_vividness` is the signed semi-partial correlation
-after adjusting for retrieval run and trial order. It is invariant to
-linear rescaling of vividness. Adjustment-only terms remain in the model
-but do not create unsigned or reference-dependent maps. A multi-level
-factor needs an explicit one-degree-of-freedom contrast before it can be
-requested in `era_effects`.
+`era_vividness_cor` is the zero-order Spearman correlation with item
+specificity. `era_assoc_part_r_vividness` is the signed semi-partial
+correlation after adjusting for retrieval run and trial order. It is
+invariant to linear rescaling of vividness. Adjustment-only terms remain
+in the model but do not create unsigned or reference-dependent maps. A
+multi-level factor needs an explicit one-degree-of-freedom contrast
+before it can be requested in `era_effects`.
 
 The association model uses one joint complete-case set across similarity
 and all regression variables, reported as `era_assoc_n`. It does not
@@ -443,16 +456,11 @@ era_sl
 #>   - Voxels/Vertices with Results:  64 
 #> - Output Maps (Metrics) 
 #>   -  n_items  (Type:  DenseNeuroVol ) 
-#>   -  era_top1_acc  (Type:  DenseNeuroVol ) 
 #>   -  era_diag_mean  (Type:  DenseNeuroVol ) 
 #>   -  era_diag_minus_off  (Type:  DenseNeuroVol ) 
-#>   -  geom_cor  (Type:  DenseNeuroVol ) 
 #>   -  era_diag_minus_off_same_block  (Type:  DenseNeuroVol ) 
 #>   -  era_diag_minus_off_diff_block  (Type:  DenseNeuroVol ) 
 #>   -  era_lag_cor  (Type:  DenseNeuroVol ) 
-#>   -  geom_cor_partial  (Type:  DenseNeuroVol ) 
-#>   -  geom_cor_run_partial  (Type:  DenseNeuroVol ) 
-#>   -  geom_cor_xrun  (Type:  DenseNeuroVol ) 
 #>   -  era_vividness_cor  (Type:  DenseNeuroVol ) 
 #>   -  era_vividness_n  (Type:  DenseNeuroVol ) 
 #>   -  era_assoc_part_r_vividness  (Type:  DenseNeuroVol ) 
@@ -462,21 +470,19 @@ era_sl
 
 The `searchlight_result` contains:
 
-- `metrics`: names of the output maps (e.g., `geom_cor`,
+- `metrics`: names of the output maps (e.g., `era_diag_minus_off`,
   `era_vividness_cor`, and `era_assoc_part_r_vividness`),
 - `results`: a list of `NeuroVol` maps, one per metric.
 
 ``` r
 
 era_sl$metrics
-#>  [1] "n_items"                       "era_top1_acc"                 
-#>  [3] "era_diag_mean"                 "era_diag_minus_off"           
-#>  [5] "geom_cor"                      "era_diag_minus_off_same_block"
-#>  [7] "era_diag_minus_off_diff_block" "era_lag_cor"                  
-#>  [9] "geom_cor_partial"              "geom_cor_run_partial"         
-#> [11] "geom_cor_xrun"                 "era_vividness_cor"            
-#> [13] "era_vividness_n"               "era_assoc_part_r_vividness"   
-#> [15] "era_assoc_n"                   "era_assoc_df_resid"
+#>  [1] "n_items"                       "era_diag_mean"                
+#>  [3] "era_diag_minus_off"            "era_diag_minus_off_same_block"
+#>  [5] "era_diag_minus_off_diff_block" "era_lag_cor"                  
+#>  [7] "era_vividness_cor"             "era_vividness_n"              
+#>  [9] "era_assoc_part_r_vividness"    "era_assoc_n"                  
+#> [11] "era_assoc_df_resid"
 ```
 
 We can save the searchlight maps using
@@ -491,9 +497,41 @@ save_results(era_sl, out_dir, level = "standard")
 list.files(file.path(out_dir, "maps"))
 ```
 
-This will create one NIfTI file per metric (e.g., `geom_cor.nii.gz`,
-`era_top1_acc.nii.gz`) that can be viewed in your favorite neuroimaging
-software.
+This will create one NIfTI file per requested metric (e.g.,
+`era_diag_minus_off.nii.gz`, `era_vividness_cor.nii.gz`) that can be
+viewed in your favorite neuroimaging software.
+
+For association-focused HPC analyses, combine the item-only model above
+with the shard backend:
+
+``` r
+
+era_sl_hpc <- run_searchlight(
+  era_assoc_ms,
+  radius = 2,
+  method = "standard",
+  engine = "era_rsa_fast",
+  backend = "shard"
+)
+```
+
+`era_components = "item"` skips top-1 identification and both
+within-phase RDMs. For a one-to-one volumetric standard searchlight,
+`engine = "auto"` (the default) selects the same dedicated ERA-RSA
+engine shown explicitly above. It slices train/test matrices directly,
+applies the established train-only feature filter and
+center-preservation rule, and then calls the same
+[`fit_roi.era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.era_rsa_model.md)
+computation used by the general-purpose iterator. With
+`backend = "shard"`, workers slice shared matrices directly rather than
+constructing and serializing an ROI object for every sphere. Request
+`era_components = c("item", "identification")` when top-1 accuracy is
+also needed, or retain the default components when geometry maps are
+required; all three component families use the same dedicated extraction
+engine. Repeated- item averaging, non-volumetric data, and
+randomized/resampled searchlights continue through the general-purpose
+iterator. Its existing compatibility key, `engine = "legacy"`, remains
+available for an explicit reference run.
 
 ## 6. Adding Confounds and Lag Information
 
@@ -646,10 +684,12 @@ era_ms_block <- era_rsa_model(
 
 This enables block-limited ERA contrasts:
 
-- `era_diag_minus_off_same_block`: diagonal ERA minus mean similarity to
-  other items in the same block.
-- `era_diag_minus_off_diff_block`: diagonal ERA minus mean similarity to
-  items in different blocks.
+- `era_diag_minus_off_same_block`: each retrieval item’s matched ERA
+  minus its mean similarity to other encoding items in the same block,
+  averaged equally over retrieval items.
+- `era_diag_minus_off_diff_block`: each retrieval item’s matched ERA
+  minus its mean similarity to encoding items in different blocks,
+  averaged equally over retrieval items.
 
 ### Lag information (`item_lag`)
 
@@ -755,7 +795,8 @@ partition_global_res$performance_table[
   - cross-decoding between encoding and retrieval, and
   - comparing encoding and retrieval representational geometries, and
   - mapping zero-order and adjusted directional associations between
-    matched-item similarity and retrieval variables.
+    item-specific matched-minus-nonmatch similarity and retrieval
+    variables.
 - [`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
   separates direct item transfer, variance uniquely explained by
   same-item similarity, and variance explained by preserved second-order

@@ -47,7 +47,8 @@ method, along with the eligibility status of each registered engine.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">explain_searchlight_engine</span><span class="op">(</span></span>
 <span>  <span class="va">model_spec</span>,</span>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"standard"</span>, <span class="st">"randomized"</span>, <span class="st">"resampled"</span><span class="op">)</span>,</span>
-<span>  engine <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"legacy"</span>, <span class="st">"swift"</span>, <span class="st">"dual_lda_fast"</span>, <span class="st">"naive_xdec_fast"</span><span class="op">)</span></span>
+<span>  engine <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"legacy"</span>, <span class="st">"swift"</span>, <span class="st">"dual_lda_fast"</span>, <span class="st">"naive_xdec_fast"</span>,</span>
+<span>    <span class="st">"era_rsa_fast"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -64,8 +65,10 @@ method, along with the eligibility status of each registered engine.</p>
 
 
 <dt id="arg-engine">engine<a class="anchor" aria-label="anchor" href="#arg-engine"></a></dt>
-<dd><p>Requested engine policy: <code>"auto"</code>, <code>"legacy"</code>,
-<code>"swift"</code>, <code>"dual_lda_fast"</code>, or <code>"naive_xdec_fast"</code>.</p></dd>
+<dd><p>Requested engine policy: <code>"auto"</code>, <code>"legacy"</code>
+(the compatibility key for the general-purpose iterator), <code>"swift"</code>,
+<code>"dual_lda_fast"</code>, <code>"naive_xdec_fast"</code>, or
+<code>"era_rsa_fast"</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
