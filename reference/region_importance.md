@@ -77,11 +77,11 @@ perspective ("where does the signal originate?").
 
 **Complementary methods.** For forward-model (activation-pattern)
 interpretation of linear models, use
-[`haufe_importance`](http://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.md)
+[`haufe_importance`](https://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.md)
 directly or rely on the `importance_vector` returned by
-[`run_global`](http://bbuchsbaum.github.io/rMVPA/reference/run_global.md),
+[`run_global`](https://bbuchsbaum.github.io/rMVPA/reference/run_global.md),
 which uses
-[`model_importance`](http://bbuchsbaum.github.io/rMVPA/reference/model_importance.md)
+[`model_importance`](https://bbuchsbaum.github.io/rMVPA/reference/model_importance.md)
 internally. For non-linear models such as random forests,
 `region_importance` is the recommended approach.
 

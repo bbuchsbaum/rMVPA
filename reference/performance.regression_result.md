@@ -42,7 +42,7 @@ relationship between predicted and observed values.
 
 ## See also
 
-[`regression_result`](http://bbuchsbaum.github.io/rMVPA/reference/regression_result.md)
+[`regression_result`](https://bbuchsbaum.github.io/rMVPA/reference/regression_result.md)
 
 ## Examples
 

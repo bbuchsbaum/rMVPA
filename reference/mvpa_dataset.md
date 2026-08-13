@@ -47,10 +47,10 @@ An `mvpa_dataset` object (S3 class) containing:
 
 ## See also
 
-[`mvpa_surface_dataset`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_surface_dataset.md)
+[`mvpa_surface_dataset`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_surface_dataset.md)
 for creating surface-based MVPA datasets
 
-[`mvpa_design`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+[`mvpa_design`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
 for creating the corresponding design object
 
 ## Examples

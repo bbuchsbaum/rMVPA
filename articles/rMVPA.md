@@ -59,7 +59,7 @@ from uniform guessing is `1 / 8 = 12.5%`.
 
 In your own study, these rows would usually be trial-wise or
 condition-wise beta estimates from a first-level model. See
-[`vignette("Constructing_Datasets")`](http://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.md)
+[`vignette("Constructing_Datasets")`](https://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.md)
 for file-backed images, masks, and other input layouts.
 
 ## What must remain independent?
@@ -107,7 +107,7 @@ engine decides *where* to fit it.
 | What are the measurements? | An `mvpa_dataset` with 96 VT patterns |
 | What is predicted, and what defines independence? | An `mvpa_design` with category and run |
 | What is fitted and resampled? | An `mvpa_model` with blocked CV |
-| Where is it fitted? | One labelled VT region passed to [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) |
+| Where is it fitted? | One labelled VT region passed to [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) |
 
 The bundle stores a matrix plus spatial metadata. The next chunk
 back-projects the voxel columns into a 4-D sparse neuroimaging object.
@@ -157,7 +157,7 @@ not already available.
 
 ## Can we catch a bad design before fitting?
 
-[`validate_analysis()`](http://bbuchsbaum.github.io/rMVPA/reference/validate_analysis.md)
+[`validate_analysis()`](https://bbuchsbaum.github.io/rMVPA/reference/validate_analysis.md)
 checks the specification for common failures such as a cross-validation
 rule that ignores run structure, missing classes in a fold, or test
 folds that are too small.
@@ -185,13 +185,13 @@ and fold structure represented in these objects; it cannot prove that
 upstream preprocessing was scientifically appropriate. Any data-driven
 scaling, feature selection, or tuning must also be learned without
 looking at the test observations.
-[`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+[`vignette("FeatureSelection")`](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
 shows how to place feature selection inside the resampling loop.
 
 ## What does the held-out analysis find?
 
 The VT mask contains one non-zero region, so
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
 fits the model once per fold in that region and then pools the held-out
 predictions. Setting `preflight = "error"` prevents execution if a
 methodological check fails.
@@ -289,7 +289,7 @@ The scientific contract stays fixed while the spatial question changes:
 | `sda_notune` | A classifier chosen before final evaluation, with any tuning nested inside CV |
 
 For several atlas regions, supply an integer-labelled region mask to
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
 For a local decoding map, the same model specification can be sent to
 the searchlight engine:
 
@@ -306,7 +306,7 @@ A searchlight changes the spatial estimand from “does this predefined
 region carry information?” to “where do local neighbourhoods carry
 information?” It also introduces many spatial comparisons and
 substantially more computation;
-[`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
+[`vignette("Searchlight_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
 treats those choices directly.
 
 To save the regional tables and a reproducibility manifest:
@@ -319,17 +319,17 @@ save_results(result, dir = "haxby-vt-results")
 ## Where should you go next?
 
 - **Bring your own images and masks:**
-  [`vignette("Constructing_Datasets")`](http://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.md).
+  [`vignette("Constructing_Datasets")`](https://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.md).
 - **Design leakage-resistant resampling:**
-  [`vignette("CrossValidation")`](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md).
+  [`vignette("CrossValidation")`](https://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md).
 - **Select voxels inside the training folds:**
-  [`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md).
+  [`vignette("FeatureSelection")`](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md).
 - **Move from one region to a decoding map:**
-  [`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md).
+  [`vignette("Searchlight_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md).
 - **Study representational geometry instead of category prediction:**
-  [`vignette("RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/RSA.md),
+  [`vignette("RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md),
   followed by
-  [`vignette("Kriegeskorte_92_Images")`](http://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.md)
+  [`vignette("Kriegeskorte_92_Images")`](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.md)
   for a real-data example.
 
 The package’s core public workflow is now in view:

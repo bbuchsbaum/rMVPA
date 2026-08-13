@@ -97,7 +97,7 @@ Rscript -e "covr::package_coverage()"
   - **ITEM Decoding**: trial-wise decoding with analytic
     trial-covariance correction (`R/item_model.R`, `R/item_design.R`);
     delegates numerics to the optional `fmrilss` package. See
-    [`vignette("ITEM_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/ITEM_Decoding.md).
+    [`vignette("ITEM_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/ITEM_Decoding.md).
   - **Continuous Decoding**: archived `hrfdecoder` materials live under
     `archive/hrfdecoder/` and are excluded from package builds
 

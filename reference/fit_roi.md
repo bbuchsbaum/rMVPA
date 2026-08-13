@@ -112,13 +112,13 @@ fit_roi(model, roi_data, context, ...)
 ## Value
 
 A
-[`roi_result`](http://bbuchsbaum.github.io/rMVPA/reference/roi_result.md)
+[`roi_result`](https://bbuchsbaum.github.io/rMVPA/reference/roi_result.md)
 object.
 
 ## Details
 
 Models that implement `fit_roi` are automatically preferred by
-[`process_roi.default`](http://bbuchsbaum.github.io/rMVPA/reference/process_roi-methods.md)
+[`process_roi.default`](https://bbuchsbaum.github.io/rMVPA/reference/process_roi-methods.md)
 over the legacy dispatch chain (`internal_crossval` /
 `external_crossval` / `train_model`).
 
@@ -126,15 +126,15 @@ over the legacy dispatch chain (`internal_crossval` /
 
 `fit_roi` is currently scoped to ROI/searchlight iteration. Whole-brain
 global analysis uses
-[`run_global`](http://bbuchsbaum.github.io/rMVPA/reference/run_global.md)
+[`run_global`](https://bbuchsbaum.github.io/rMVPA/reference/run_global.md)
 via a separate `cv_run_global -> train_model` path. A future refactor
 may unify these flows under a single fit contract.
 
 ## See also
 
-[`roi_result`](http://bbuchsbaum.github.io/rMVPA/reference/roi_result.md),
-[`output_schema`](http://bbuchsbaum.github.io/rMVPA/reference/output_schema.md),
-[`process_roi`](http://bbuchsbaum.github.io/rMVPA/reference/process_roi-methods.md)
+[`roi_result`](https://bbuchsbaum.github.io/rMVPA/reference/roi_result.md),
+[`output_schema`](https://bbuchsbaum.github.io/rMVPA/reference/output_schema.md),
+[`process_roi`](https://bbuchsbaum.github.io/rMVPA/reference/process_roi-methods.md)
 
 ## Examples
 

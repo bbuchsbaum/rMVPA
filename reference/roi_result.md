@@ -1,7 +1,7 @@
 # Construct a Standardized ROI Result
 
 Creates a uniform return type for per-ROI analysis. Every
-[`fit_roi`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
+[`fit_roi`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
 method should return an `roi_result`.
 
 ## Usage

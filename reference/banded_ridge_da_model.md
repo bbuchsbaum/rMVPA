@@ -234,11 +234,11 @@ set \\g\\.
 
 ## See also
 
-[`feature_sets`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets.md),
-[`expected_features`](http://bbuchsbaum.github.io/rMVPA/reference/expected_features.md),
-[`feature_sets_design`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md),
-[`banded_ridge_da`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md),
-[`grouped_ridge_da`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md)
+[`feature_sets`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets.md),
+[`expected_features`](https://bbuchsbaum.github.io/rMVPA/reference/expected_features.md),
+[`feature_sets_design`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md),
+[`banded_ridge_da`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md),
+[`grouped_ridge_da`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md)
 
 ## Examples
 

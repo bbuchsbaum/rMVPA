@@ -7,7 +7,7 @@ The feature space is the same across phases, but the brain state
 changes. People watch a movie, then recall it. They see an image, then
 imagine it. They listen to a story, then retell it.
 
-[`feature_rsa_da_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_da_model.md)
+[`feature_rsa_da_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_da_model.md)
 exists for that setting. It lets you keep the feature space fixed,
 borrow strength from the source state, and evaluate representational
 geometry on held-out target-state folds.
@@ -69,9 +69,9 @@ data.frame(
 #> 1          36          24               6 low, semantic           3
 ```
 
-[`feature_sets_design()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md)
+[`feature_sets_design()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md)
 keeps the source and target predictors separate, and
-[`feature_rsa_da_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_da_model.md)
+[`feature_rsa_da_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_da_model.md)
 uses held-out target folds for evaluation. If your recall data already
 have an externally defined target representation, you can pass it as a
 fixed `X_test`.
@@ -216,7 +216,7 @@ state.
 
 The next question is often no longer about one ROI. If you want to ask
 whether feature-RSA geometry generalizes across ROIs, see
-[`vignette("Feature_RSA_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
+[`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
 If you want the broader decision map for within-ROI fits, cross-state
 transfer, and cross-ROI transfer, see
-[`vignette("Feature_RSA_Advanced_Workflows")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md).
+[`vignette("Feature_RSA_Advanced_Workflows")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md).

@@ -49,6 +49,10 @@
 <li>
 <code><a href="../reference/save_results.html">save_results()</a></code> now writes custom searchlight metric maps as NIfTI files instead of storing their wrappers as auxiliary R objects.</li>
 <li>
+<code><a href="../reference/save_results.html">save_results()</a></code> no longer loads optional surface packages merely to record their versions when writing a volumetric-result manifest.</li>
+<li>
+<code><a href="../reference/mvpa_design.html">mvpa_design()</a></code> now accepts row-aligned numeric, integer, character, logical, and factor vectors for blocking and splitting variables, with explicit alignment errors.</li>
+<li>
 <code><a href="../reference/era_rsa_model.html">era_rsa_model()</a></code> now accepts combined encoding/retrieval image series split explicitly by <code>phase_var</code>, validates optional one-to-one item pairing, and supports Pearson or Spearman matched-item similarity.</li>
 <li>ERA-RSA can now map zero-order item-covariate correlations and adjusted, directional semi-partial correlations via <code>era_correlates</code>, <code>era_association</code>, and <code>era_effects</code>, with complete-item counts and no redundant unsigned R-squared maps.</li>
 <li>ERA-RSA item associations now use trial-specific matched-minus-nonmatch similarity by default, with raw matched similarity available explicitly via <code>era_association_score = "matched"</code>. The new <code>era_components</code> argument can skip identification and geometry work for association-focused searchlights.</li>

@@ -36,10 +36,10 @@ Use Feature-Based RSA when:
 
 If you only have a model RDM (no feature matrix) and want a per-trial
 similarity score with built-in across-block masking, see
-[`vignette("Vector_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md).
+[`vignette("Vector_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md).
 If you want to test multiple model RDMs as regressors and read out
 coefficients, see
-[`vignette("RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/RSA.md).
+[`vignette("RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md).
 
 ## Inputs and outputs
 
@@ -59,7 +59,7 @@ We will:
     driven by a known feature matrix.
 2.  Build a `feature_rsa_design` from that feature matrix.
 3.  Fit
-    [`feature_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+    [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
     with PLS regression and inspect the per-region performance.
 
 ``` r
@@ -155,7 +155,7 @@ components were actually used (controlled by `ncomp_selection`).
 
 ## Choosing a method
 
-[`feature_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+[`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
 supports three estimators. The right choice depends on the feature
 space:
 
@@ -232,17 +232,17 @@ enough to *predict* the next held-out trial.
 
 ## What’s next
 
-- [`vignette("Vector_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md)
+- [`vignette("Vector_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md)
   — per-trial RSA scores with built-in across-block masking, when you
   have a single reference RDM.
-- [`vignette("Feature_RSA_Advanced_Workflows")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md)
+- [`vignette("Feature_RSA_Advanced_Workflows")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md)
   — workflow extensions: returning predicted RDM vectors, cross-ROI
   representational connectivity from feature-RSA fits, multi-scenario
   evaluation.
-- [`vignette("Feature_RSA_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md)
+- [`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md)
   and
-  [`vignette("Feature_RSA_Domain_Adaptation")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md)
+  [`vignette("Feature_RSA_Domain_Adaptation")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md)
   — connectivity and cross-state extensions of the same model.
-- [`?feature_rsa_design`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_design.md),
-  [`?feature_rsa_model`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+- [`?feature_rsa_design`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_design.md),
+  [`?feature_rsa_model`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
   — full argument reference.

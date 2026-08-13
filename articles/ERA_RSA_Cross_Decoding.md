@@ -3,7 +3,7 @@
 ## Overview
 
 The **ERA-RSA model**
-([`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md))
+([`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md))
 combines:
 
 - **Encoding–Retrieval Accuracy (ERA)** — first-order similarity between
@@ -24,7 +24,7 @@ ERA-RSA is designed for situations where you have:
 ## 1. Synthetic Encoding/Retrieval Dataset
 
 We start from
-[`gen_sample_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md)
+[`gen_sample_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md)
 and treat its training split as **encoding** and its external test split
 as **retrieval**.
 
@@ -341,7 +341,7 @@ where that model’s assumptions call for it.
 
 The ERA-RSA summary above gives you direct item matching and a raw
 geometry correlation.
-[`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+[`era_partition_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
 asks a sharper follow-up question: how much of the encoding-retrieval
 relationship is uniquely explained by same-item transfer, and how much
 is uniquely explained by preserved representational geometry after
@@ -394,7 +394,7 @@ Read these metrics in layers:
   the encoding-by-retrieval similarity matrix.
 - `xdec_Accuracy` is the trial-level direct cross-decoding metric,
   matched to the same prototype scorer used by
-  [`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
+  [`naive_xdec_model()`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
 - `first_order_delta_r2` is the unique variance explained by same-item
   transfer in the cross-state similarity matrix.
 - `second_order_delta_r2` and `geom_cor` summarize whether the encoding
@@ -407,7 +407,7 @@ much global geometry preservation. The reverse pattern suggests that the
 relative arrangement of items is preserved even when direct item
 identification is weak.
 
-[`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+[`era_partition_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
 can also include block, run, category, temporal, and custom nuisance
 regressors through item-level vectors such as `item_block_enc`,
 `item_block_ret`, `item_run_enc`, `item_run_ret`, `item_time_enc`,
@@ -486,7 +486,7 @@ era_sl$metrics
 ```
 
 We can save the searchlight maps using
-[`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md):
+[`save_results()`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.md):
 
 ``` r
 
@@ -521,7 +521,7 @@ within-phase RDMs. For a one-to-one volumetric standard searchlight,
 engine shown explicitly above. It slices train/test matrices directly,
 applies the established train-only feature filter and
 center-preservation rule, and then calls the same
-[`fit_roi.era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.era_rsa_model.md)
+[`fit_roi.era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.era_rsa_model.md)
 computation used by the general-purpose iterator. With
 `backend = "shard"`, workers slice shared matrices directly rather than
 constructing and serializing an ROI object for every sphere. Request
@@ -704,7 +704,7 @@ In applied analyses, you would construct `item_block`, `item_lag`,
 `item_run_enc`, `item_run_ret`, and `confound_rdms` from your
 experiment’s design tables following the patterns above, then pass them
 into
-[`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md).
+[`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md).
 
 ### Run and temporal nuisance in `era_partition_model()`
 
@@ -790,28 +790,28 @@ partition_global_res$performance_table[
 
 ## 7. Summary
 
-- [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
+- [`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
   provides a unified framework for:
   - cross-decoding between encoding and retrieval, and
   - comparing encoding and retrieval representational geometries, and
   - mapping zero-order and adjusted directional associations between
     item-specific matched-minus-nonmatch similarity and retrieval
     variables.
-- [`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+- [`era_partition_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
   separates direct item transfer, variance uniquely explained by
   same-item similarity, and variance explained by preserved second-order
   geometry.
 - It integrates naturally with:
-  - [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+  - [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
     for ROI-based analyses, and
-  - [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
+  - [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
     for whole-brain mapping.
 - Outputs are standard rMVPA result objects, so the same tooling
-  ([`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md),
+  ([`save_results()`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.md),
   plotting, etc.) applies as for other models such as
-  [`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
+  [`naive_xdec_model()`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
   and
-  [`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md).
+  [`remap_rrr_model()`](https://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md).
 
 ERA-RSA is particularly useful when you want to go beyond simple
 accuracy and ask **how similar the geometry of neural representations is

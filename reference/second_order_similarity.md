@@ -26,7 +26,7 @@ second_order_similarity(
 - distfun:
 
   An S3 distance object (see
-  [`create_dist`](http://bbuchsbaum.github.io/rMVPA/reference/create_dist.md))
+  [`create_dist`](https://bbuchsbaum.github.io/rMVPA/reference/create_dist.md))
   specifying how to compute a pairwise distance matrix from `X`.
 
 - X:

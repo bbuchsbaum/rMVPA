@@ -1,11 +1,11 @@
 # Build Mock ROI Data for Plugin Tests
 
 Constructs a minimal ROI payload compatible with
-[`fit_roi`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md).
+[`fit_roi`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md).
 This is useful for unit-testing plugin methods without running
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
+[`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
 or
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
 
 ## Usage
 

@@ -481,14 +481,14 @@ perf_vec <- c(base_perf, extra)
 
 This section captures the concrete implementation sketched for adding
 ERA‑RSA directly into rMVPA as: -
-[`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
+[`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
 — model spec constructor (mirrors
-[`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)/[`vector_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.md)
+[`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)/[`vector_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.md)
 with `create_model_spec`). - `process_roi.era_rsa_model()` — per‑ROI
 processor compatible with
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
 /
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
+[`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
 
 It implements: - First‑order ERA (encoding–retrieval similarity /
 matching) - Second‑order ER geometry (RDM of encoding vs RDM of
@@ -507,7 +507,7 @@ column/formula indicating phase (encoding vs retrieval) -
 `encoding_level`, `retrieval_level`: which levels of `phase_var` map to
 E/R (default: first two levels) - `distfun`: distance function for
 within‑phase RDMs (object or shortcut handled by
-[`create_dist()`](http://bbuchsbaum.github.io/rMVPA/reference/create_dist.md)) -
+[`create_dist()`](https://bbuchsbaum.github.io/rMVPA/reference/create_dist.md)) -
 `rsa_simfun`: similarity for comparing `D_EE` vs `D_RR`
 (“pearson”\|“spearman”) - `confound_rdms`: optional named list of K×K
 matrices or `dist` objects at item level - `include_diag`,
@@ -621,10 +621,10 @@ and `sp_*` terms from geometry regression.
 - Refine first‑order metrics (e.g., block‑limited ERA, lag‑specific
   ERA).
 - Consider a small
-  [`era_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_design.md)
+  [`era_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_design.md)
   helper to auto‑build key/phase/confound RDMs from a tidy design table,
   mirroring the ergonomics of
-  [`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md).
+  [`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md).
 
 ------------------------------------------------------------------------
 
@@ -933,16 +933,16 @@ metrics for robustness.
 
 - For item‑level temporal confound RDMs, avoid custom
   [`outer()`](https://rdrr.io/r/base/outer.html) code and call
-  [`temporal_rdm()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
+  [`temporal_rdm()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
   directly on per‑item times:
   - `confound_rdms$time_enc <- temporal_rdm(index = item_time_enc, block = item_block, kernel = "linear" /*or exp/gauss*/, within_blocks_only = TRUE)`
   - Optionally build a retrieval‑time RDM:
     `confound_rdms$time_ret <- temporal_rdm(index = item_time_ret, block = item_block, ...)`.
 - If you have onsets rather than indices, use
-  [`temporal_from_onsets()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_from_onsets.md)
+  [`temporal_from_onsets()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_from_onsets.md)
   convenience sugar.
 - For richer temporal nuisance sets,
-  [`temporal_confounds()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_confounds.md)
+  [`temporal_confounds()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_confounds.md)
   can generate multiple trial‑level nuisances that you can then reduce
   to item level if needed.
 - Keep the lag‑specific ERA metric as a simple scalar (correlation of
@@ -959,7 +959,7 @@ metrics for robustness.
   - `confound_rdms$run_enc[i,j] = 1(a same encoding run as b)`
   - `confound_rdms$run_ret[i,j] = 1(a same retrieval run as b)`
 - Produce temporal confounds via
-  [`temporal_rdm()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
+  [`temporal_rdm()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
   (rather than manual [`outer()`](https://rdrr.io/r/base/outer.html)):
   - `confound_rdms$time_enc <- temporal_rdm(item_time_enc, block = item_block, kernel = "exp", within_blocks_only = TRUE, metric = "distance")`
   - Optionally `confound_rdms$time_ret` similarly, if retrieval times
@@ -1016,6 +1016,6 @@ feasible; the second‑order controls above then provide symmetry.
   `geom_cor_run_partial` (run‑partial), and optionally `geom_cor_xrun`
   (cross‑run only).
 - Use
-  [`temporal_rdm()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)‑based
+  [`temporal_rdm()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)‑based
   confounds (encoding time, optionally retrieval time) to show
   lag/carry‑over is not driving second‑order effects.

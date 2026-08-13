@@ -1,9 +1,9 @@
 # Generate Cross-Validation Folds
 
 Convenience wrapper around
-[`crossval_samples`](http://bbuchsbaum.github.io/rMVPA/reference/crossval_samples.md)
+[`crossval_samples`](https://bbuchsbaum.github.io/rMVPA/reference/crossval_samples.md)
 for use inside
-[`fit_roi`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
+[`fit_roi`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
 methods. Separates fold generation from the iteration engine so that
 models can generate folds directly.
 
@@ -34,5 +34,5 @@ A tibble with columns `ytrain`, `ytest`, `train`, `test`, and `.id`.
 
 ## See also
 
-[`crossval_samples`](http://bbuchsbaum.github.io/rMVPA/reference/crossval_samples.md),
-[`fit_roi`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
+[`crossval_samples`](https://bbuchsbaum.github.io/rMVPA/reference/crossval_samples.md),
+[`fit_roi`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)

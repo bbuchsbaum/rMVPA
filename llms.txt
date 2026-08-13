@@ -25,12 +25,12 @@ per-ROI diagnostics come for free.
 
 | You want to … | Reach for | Vignette |
 |:---|:---|:---|
-| Decode condition labels from local activity (8-way category, condition pair, etc.) | [`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md) + [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md) / [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) | [`Searchlight_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html), [`Regional_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html), [`Haxby_2001`](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html) ⓡ |
-| Test whether a region’s pattern geometry matches a model RDM | [`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md) + [`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md) (or [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)) | [`RSA`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.html), [`Kriegeskorte_92_Images`](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html) ⓡ |
-| Ask which regions share representational geometry through your models | [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) on `rsa_model(..., return_fingerprint = TRUE)` | [`Model_Space_Connectivity`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html) |
-| Decompose representational structure by signed contrasts (MS-ReVE) | [`contrast_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md) | [`Contrast_RSA`](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html) |
-| Cross-decode between encoding & retrieval (ERA), or perception & memory | [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md), [`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md), [`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md), the ReNA family | [`ERA_RSA_Cross_Decoding`](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html), [`REMAP_RRR`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html), and the `Naive_Cross_Decoding` glossary |
-| Plug in a custom per-ROI / per-sphere function | [`run_custom_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md) / [`run_custom_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md) | [`CustomAnalyses`](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html), [`Plugin_Development`](https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html) |
+| Decode condition labels from local activity (8-way category, condition pair, etc.) | [`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md) + [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md) / [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) | [`Searchlight_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html), [`Regional_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html), [`Haxby_2001`](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html) ⓡ |
+| Test whether a region’s pattern geometry matches a model RDM | [`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md) + [`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md) (or [`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)) | [`RSA`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.html), [`Kriegeskorte_92_Images`](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html) ⓡ |
+| Ask which regions share representational geometry through your models | [`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) on `rsa_model(..., return_fingerprint = TRUE)` | [`Model_Space_Connectivity`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html) |
+| Decompose representational structure by signed contrasts (MS-ReVE) | [`contrast_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md) | [`Contrast_RSA`](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html) |
+| Cross-decode between encoding & retrieval (ERA), or perception & memory | [`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md), [`naive_xdec_model()`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md), [`remap_rrr_model()`](https://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md), the ReNA family | [`ERA_RSA_Cross_Decoding`](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html), [`REMAP_RRR`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html), and the `Naive_Cross_Decoding` glossary |
+| Plug in a custom per-ROI / per-sphere function | [`run_custom_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md) / [`run_custom_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md) | [`CustomAnalyses`](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html), [`Plugin_Development`](https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html) |
 
 ⓡ = real public data, not synthetic.
 
@@ -61,8 +61,8 @@ classification, RSA, and cross-domain workflows.
 
 ## Real-data demonstrations
 
-The catalogue includes two non-synthetic vignettes that reproduce
-canonical findings on public data, end-to-end:
+The catalogue includes two non-synthetic vignettes that reanalyse public
+data end-to-end:
 
 - **Kriegeskorte 2008**
   ([vignette](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html))
@@ -72,8 +72,10 @@ canonical findings on public data, end-to-end:
 - **Haxby 2001**
   ([vignette](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html))
   — Subject 1 ventral-temporal patterns. Reaches **91.7 %** 8-way
-  category accuracy at 12.5 % chance with `sda_notune`. Reproduces the
-  canonical face / house / object confusion structure.
+  category accuracy at 12.5 % chance with `sda_notune`. Reports every
+  held-out prediction and the complete row-normalized confusion matrix
+  without treating this single-subject reanalysis as a literal
+  reproduction of the original classifier.
 
 The bundled data lives under `inst/extdata/`; the `data-raw/*.R` scripts
 regenerate it from upstream sources.
@@ -121,9 +123,9 @@ for input formats, configuration files, and parallelisation.
 ## API stability
 
 Public-API surface is intentionally narrow and explicit. Use
-[`rmvpa_api_lifecycle()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.md)
+[`rmvpa_api_lifecycle()`](https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.md)
 to inspect lifecycle tiers and
-[`rmvpa_stable_api()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.md)
+[`rmvpa_stable_api()`](https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.md)
 to list the stable entry points intended for scripts, extensions, and
 downstream packages.
 
@@ -141,606 +143,606 @@ If you use rMVPA in your research, please cite:
 Summaries that quantify how far memory is from perception and how large
 the learned correction is.
 
-- [`summarize_remap_roi()`](http://bbuchsbaum.github.io/rMVPA/reference/summarize_remap_roi.md)
+- [`summarize_remap_roi()`](https://bbuchsbaum.github.io/rMVPA/reference/summarize_remap_roi.md)
   : Summarize REMAP diagnostics at the ROI level
-- [`summarize_remap_items()`](http://bbuchsbaum.github.io/rMVPA/reference/summarize_remap_items.md)
+- [`summarize_remap_items()`](https://bbuchsbaum.github.io/rMVPA/reference/summarize_remap_items.md)
   : Summarize REMAP item-level residuals for an ROI
 
 ## All Functions
 
 All functions exported by rMVPA
 
-- [`MVPAModels`](http://bbuchsbaum.github.io/rMVPA/reference/MVPAModels.md)
+- [`MVPAModels`](https://bbuchsbaum.github.io/rMVPA/reference/MVPAModels.md)
   : Pre-defined MVPA Classification Models
 
-- [`add_interaction_contrasts()`](http://bbuchsbaum.github.io/rMVPA/reference/add_interaction_contrasts.md)
+- [`add_interaction_contrasts()`](https://bbuchsbaum.github.io/rMVPA/reference/add_interaction_contrasts.md)
   : Add Interaction Contrasts to an msreve_design
 
-- [`as_roi()`](http://bbuchsbaum.github.io/rMVPA/reference/as_roi.md) :
+- [`as_roi()`](https://bbuchsbaum.github.io/rMVPA/reference/as_roi.md) :
   Convert object to ROI
 
-- [`average_labels()`](http://bbuchsbaum.github.io/rMVPA/reference/average_labels.md)
+- [`average_labels()`](https://bbuchsbaum.github.io/rMVPA/reference/average_labels.md)
   : Average NeuroVec Data by Labels
 
-- [`balance_partitions()`](http://bbuchsbaum.github.io/rMVPA/reference/balance_partitions.md)
+- [`balance_partitions()`](https://bbuchsbaum.github.io/rMVPA/reference/balance_partitions.md)
   : Balance Cross-Validation Partitions
 
-- [`banded_ridge_da()`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md)
-  [`grouped_ridge_da()`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md)
+- [`banded_ridge_da()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md)
+  [`grouped_ridge_da()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md)
   : Convenience wrapper: build a grouped-ridge domain-adaptation model
   from matrices
 
-- [`banded_ridge_da_model()`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md)
-  [`grouped_ridge_da_model()`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md)
+- [`banded_ridge_da_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md)
+  [`grouped_ridge_da_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md)
   : Grouped (banded) ridge domain-adaptation model (continuous
   predictors -\> brain)
 
-- [`binary_classification_result()`](http://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.md)
+- [`binary_classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.md)
   : Classification results for binary outcome
 
-- [`blocks()`](http://bbuchsbaum.github.io/rMVPA/reference/blocks.md) :
+- [`blocks()`](https://bbuchsbaum.github.io/rMVPA/reference/blocks.md) :
   Define consecutive column blocks as feature sets
 
-- [`build_analysis()`](http://bbuchsbaum.github.io/rMVPA/reference/build_analysis.md)
+- [`build_analysis()`](https://bbuchsbaum.github.io/rMVPA/reference/build_analysis.md)
   : Build an Analysis Object
 
-- [`by_set()`](http://bbuchsbaum.github.io/rMVPA/reference/by_set.md) :
+- [`by_set()`](https://bbuchsbaum.github.io/rMVPA/reference/by_set.md) :
   Define feature sets by a per-column set label
 
-- [`category_rdm()`](http://bbuchsbaum.github.io/rMVPA/reference/category_rdm.md)
+- [`category_rdm()`](https://bbuchsbaum.github.io/rMVPA/reference/category_rdm.md)
   : Create Hypothesis RDM from Category Structure
 
-- [`classification_result()`](http://bbuchsbaum.github.io/rMVPA/reference/classification_result.md)
+- [`classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/classification_result.md)
   :
 
   Create a `classification_result` instance
 
-- [`combine_prediction_tables()`](http://bbuchsbaum.github.io/rMVPA/reference/combine_prediction_tables.md)
+- [`combine_prediction_tables()`](https://bbuchsbaum.github.io/rMVPA/reference/combine_prediction_tables.md)
   : Combine prediction tables
 
-- [`compute_local_redundancy()`](http://bbuchsbaum.github.io/rMVPA/reference/compute_local_redundancy.md)
+- [`compute_local_redundancy()`](https://bbuchsbaum.github.io/rMVPA/reference/compute_local_redundancy.md)
   : Compute Local Redundancy for Each Searchlight Center
 
-- [`contrast_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md)
+- [`contrast_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md)
   : Constructor for contrast_rsa_model
 
-- [`contrasts()`](http://bbuchsbaum.github.io/rMVPA/reference/contrasts.md)
+- [`contrasts()`](https://bbuchsbaum.github.io/rMVPA/reference/contrasts.md)
   : Generate Contrast Matrices
 
-- [`create_dist()`](http://bbuchsbaum.github.io/rMVPA/reference/create_dist.md)
+- [`create_dist()`](https://bbuchsbaum.github.io/rMVPA/reference/create_dist.md)
   : Create a Distance Function Object
 
-- [`create_model_spec()`](http://bbuchsbaum.github.io/rMVPA/reference/create_model_spec.md)
+- [`create_model_spec()`](https://bbuchsbaum.github.io/rMVPA/reference/create_model_spec.md)
   : Create a Generic Model Specification
 
-- [`bootstrap_blocked_cross_validation()`](http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md)
-  [`blocked_cross_validation()`](http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md)
-  [`sequential_blocked_cross_validation()`](http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md)
-  [`custom_cross_validation()`](http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md)
+- [`bootstrap_blocked_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md)
+  [`blocked_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md)
+  [`sequential_blocked_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md)
+  [`custom_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md)
   : bootstrap_blocked_cross_validation
 
-- [`crossv_block()`](http://bbuchsbaum.github.io/rMVPA/reference/crossv_block.md)
+- [`crossv_block()`](https://bbuchsbaum.github.io/rMVPA/reference/crossv_block.md)
   : Block Cross-Validation Data Preparation
 
-- [`crossv_k()`](http://bbuchsbaum.github.io/rMVPA/reference/crossv_k.md)
+- [`crossv_k()`](https://bbuchsbaum.github.io/rMVPA/reference/crossv_k.md)
   : K-fold Cross-Validation Data Preparation
 
-- [`crossval_samples()`](http://bbuchsbaum.github.io/rMVPA/reference/crossval_samples.md)
+- [`crossval_samples()`](https://bbuchsbaum.github.io/rMVPA/reference/crossval_samples.md)
   : Cross-validation samples
 
-- [`custom_performance()`](http://bbuchsbaum.github.io/rMVPA/reference/custom_performance.md)
+- [`custom_performance()`](https://bbuchsbaum.github.io/rMVPA/reference/custom_performance.md)
   : Apply Custom Performance Metric to Prediction Result
 
-- [`cv_evaluate_roi()`](http://bbuchsbaum.github.io/rMVPA/reference/cv_evaluate_roi.md)
+- [`cv_evaluate_roi()`](https://bbuchsbaum.github.io/rMVPA/reference/cv_evaluate_roi.md)
   : Evaluate One ROI with rMVPA Cross-Validation Helpers
 
-- [`data_sample()`](http://bbuchsbaum.github.io/rMVPA/reference/data_sample.md)
+- [`data_sample()`](https://bbuchsbaum.github.io/rMVPA/reference/data_sample.md)
   : Extract Sample from Dataset
 
-- [`cordist()`](http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
-  [`mahadist()`](http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
-  [`eucdist()`](http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
-  [`euclidean()`](http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
-  [`robustmahadist()`](http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
-  [`pcadist()`](http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
+- [`cordist()`](https://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
+  [`mahadist()`](https://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
+  [`eucdist()`](https://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
+  [`euclidean()`](https://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
+  [`robustmahadist()`](https://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
+  [`pcadist()`](https://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)
   : Distance Function Constructors
 
-- [`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+- [`era_partition_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
   : ERA Variance-Partition Model
 
-- [`era_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_design.md)
+- [`era_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_design.md)
   : Build item-level ERA-RSA confounds and summaries from mvpa_design
 
-- [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
+- [`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
   : ERA-RSA: Encoding-Retrieval Similarity and ER Geometry
 
-- [`evaluate_model.feature_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/evaluate_model.feature_rsa_model.md)
+- [`evaluate_model.feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/evaluate_model.feature_rsa_model.md)
   : Evaluate model performance for feature RSA
 
-- [`evaluate_model.vector_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/evaluate_model.vector_rsa_model.md)
+- [`evaluate_model.vector_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/evaluate_model.vector_rsa_model.md)
   : Evaluate model performance for vector RSA
 
-- [`expected_features()`](http://bbuchsbaum.github.io/rMVPA/reference/expected_features.md)
+- [`expected_features()`](https://bbuchsbaum.github.io/rMVPA/reference/expected_features.md)
   : Build expected-domain features from a soft alignment matrix
 
-- [`explain_searchlight_engine()`](http://bbuchsbaum.github.io/rMVPA/reference/explain_searchlight_engine.md)
+- [`explain_searchlight_engine()`](https://bbuchsbaum.github.io/rMVPA/reference/explain_searchlight_engine.md)
   : Explain Searchlight Engine Selection
 
-- [`extract_weights()`](http://bbuchsbaum.github.io/rMVPA/reference/extract_weights.md)
+- [`extract_weights()`](https://bbuchsbaum.github.io/rMVPA/reference/extract_weights.md)
   : Extract Raw Model Weights
 
-- [`feature_rsa_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
+- [`feature_rsa_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
   : Compute ROI-by-ROI Representational Connectivity from Feature RSA
   Predictions
 
-- [`feature_rsa_cross_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)
+- [`feature_rsa_cross_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)
   : Compute Cross-Connectivity: Predicted-Observed ROI x ROI Matrix
 
-- [`feature_rsa_da_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_da_model.md)
+- [`feature_rsa_da_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_da_model.md)
   : Feature-RSA Domain Adaptation Model
 
-- [`feature_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_design.md)
+- [`feature_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_design.md)
   : Create a Feature-Based RSA Design
 
-- [`feature_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+- [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
   : Create a Feature-Based RSA Model
 
-- [`feature_rsa_rdm_vectors()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md)
+- [`feature_rsa_rdm_vectors()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md)
   : Extract Per-ROI Predicted and Observed RDM Vectors from Feature RSA
   Results
 
-- [`feature_selection`](http://bbuchsbaum.github.io/rMVPA/reference/feature_selection.md)
+- [`feature_selection`](https://bbuchsbaum.github.io/rMVPA/reference/feature_selection.md)
   : Feature Selection Methods
 
-- [`feature_selector()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_selector.md)
+- [`feature_selector()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_selector.md)
   : Create a feature selection specification
 
-- [`feature_sets()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets.md)
+- [`feature_sets()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets.md)
   : Feature sets: grouped predictor matrices
 
-- [`feature_sets_design()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md)
+- [`feature_sets_design()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md)
   : Feature-sets design (mvpa_design extension for continuous
   regression)
 
-- [`fit_model()`](http://bbuchsbaum.github.io/rMVPA/reference/fit_model-methods.md)
+- [`fit_model()`](https://bbuchsbaum.github.io/rMVPA/reference/fit_model-methods.md)
   : Fit Model
 
-- [`fit_roi()`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
+- [`fit_roi()`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
   : Fit a Model on a Single ROI
 
-- [`fit_roi(`*`<contrast_rsa_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.contrast_rsa_model.md)
+- [`fit_roi(`*`<contrast_rsa_model>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.contrast_rsa_model.md)
   : Fit ROI for contrast_rsa_model
 
-- [`format_result()`](http://bbuchsbaum.github.io/rMVPA/reference/format_result.md)
+- [`format_result()`](https://bbuchsbaum.github.io/rMVPA/reference/format_result.md)
   : Format Result Object
 
-- [`gen_clustered_sample_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/gen_clustered_sample_dataset.md)
+- [`gen_clustered_sample_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/gen_clustered_sample_dataset.md)
   : Generate a Synthetic Clustered MVPA Dataset
 
-- [`gen_sample_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md)
+- [`gen_sample_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md)
   : Generate Sample Dataset for MVPA Analysis
 
-- [`generate_folds()`](http://bbuchsbaum.github.io/rMVPA/reference/generate_folds.md)
+- [`generate_folds()`](https://bbuchsbaum.github.io/rMVPA/reference/generate_folds.md)
   : Generate Cross-Validation Folds
 
-- [`get_center_ids()`](http://bbuchsbaum.github.io/rMVPA/reference/get_center_ids.md)
+- [`get_center_ids()`](https://bbuchsbaum.github.io/rMVPA/reference/get_center_ids.md)
   : Get Center IDs for Searchlight Iteration
 
-- [`get_feature_matrix()`](http://bbuchsbaum.github.io/rMVPA/reference/get_feature_matrix.md)
+- [`get_feature_matrix()`](https://bbuchsbaum.github.io/rMVPA/reference/get_feature_matrix.md)
   : Extract Full Feature Matrix from a Dataset
 
-- [`get_nfolds()`](http://bbuchsbaum.github.io/rMVPA/reference/get_nfolds.md)
+- [`get_nfolds()`](https://bbuchsbaum.github.io/rMVPA/reference/get_nfolds.md)
   : Get the Number of Folds
 
-- [`get_samples()`](http://bbuchsbaum.github.io/rMVPA/reference/get_samples.md)
+- [`get_samples()`](https://bbuchsbaum.github.io/rMVPA/reference/get_samples.md)
   : Get Multiple Data Samples
 
-- [`get_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.md)
+- [`get_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.md)
   : Generate Searchlight Iterator
 
-- [`global_mvpa_result()`](http://bbuchsbaum.github.io/rMVPA/reference/global_mvpa_result.md)
+- [`global_mvpa_result()`](https://bbuchsbaum.github.io/rMVPA/reference/global_mvpa_result.md)
   : Construct a Global MVPA Result
 
-- [`group_means()`](http://bbuchsbaum.github.io/rMVPA/reference/group_means.md)
+- [`group_means()`](https://bbuchsbaum.github.io/rMVPA/reference/group_means.md)
   : Compute Group Means of a Matrix
 
-- [`has_crossval()`](http://bbuchsbaum.github.io/rMVPA/reference/has_crossval-methods.md)
+- [`has_crossval()`](https://bbuchsbaum.github.io/rMVPA/reference/has_crossval-methods.md)
   : Cross-Validation Availability
 
-- [`has_test_set()`](http://bbuchsbaum.github.io/rMVPA/reference/has_test_set-methods.md)
+- [`has_test_set()`](https://bbuchsbaum.github.io/rMVPA/reference/has_test_set-methods.md)
   : Test Set Availability
 
-- [`haufe_importance()`](http://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.md)
+- [`haufe_importance()`](https://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.md)
   : Haufe Feature Importance (Activation Patterns)
 
-- [`install_cli()`](http://bbuchsbaum.github.io/rMVPA/reference/install_cli.md)
+- [`install_cli()`](https://bbuchsbaum.github.io/rMVPA/reference/install_cli.md)
   : Install rMVPA Command-Line Wrappers
 
-- [`item_design()`](http://bbuchsbaum.github.io/rMVPA/reference/item_design.md)
+- [`item_design()`](https://bbuchsbaum.github.io/rMVPA/reference/item_design.md)
   : Construct an ITEM design for trial-wise decoding
 
-- [`item_model()`](http://bbuchsbaum.github.io/rMVPA/reference/item_model.md)
+- [`item_model()`](https://bbuchsbaum.github.io/rMVPA/reference/item_model.md)
   : ITEM decoding model for ROI/searchlight analysis
 
-- [`kfold_cross_validation()`](http://bbuchsbaum.github.io/rMVPA/reference/kfold_cross_validation.md)
+- [`kfold_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/kfold_cross_validation.md)
   : kfold_cross_validation
 
-- [`load_model()`](http://bbuchsbaum.github.io/rMVPA/reference/load_model.md)
+- [`load_model()`](https://bbuchsbaum.github.io/rMVPA/reference/load_model.md)
   : Load a Pre-defined MVPA Model
 
-- [`make_feature_contrasts()`](http://bbuchsbaum.github.io/rMVPA/reference/make_feature_contrasts.md)
+- [`make_feature_contrasts()`](https://bbuchsbaum.github.io/rMVPA/reference/make_feature_contrasts.md)
   : Generate Contrasts from a Feature Matrix (Optional PCA)
 
-- [`manova_design()`](http://bbuchsbaum.github.io/rMVPA/reference/manova_design.md)
+- [`manova_design()`](https://bbuchsbaum.github.io/rMVPA/reference/manova_design.md)
   : Create a MANOVA Design
 
-- [`manova_model()`](http://bbuchsbaum.github.io/rMVPA/reference/manova_model.md)
+- [`manova_model()`](https://bbuchsbaum.github.io/rMVPA/reference/manova_model.md)
   : Create a MANOVA Model
 
-- [`merge_classif_results()`](http://bbuchsbaum.github.io/rMVPA/reference/merge_classif_results.md)
+- [`merge_classif_results()`](https://bbuchsbaum.github.io/rMVPA/reference/merge_classif_results.md)
   : Merge Multiple Classification/Regression Results
 
-- [`merge_predictions()`](http://bbuchsbaum.github.io/rMVPA/reference/merge_predictions.md)
+- [`merge_predictions()`](https://bbuchsbaum.github.io/rMVPA/reference/merge_predictions.md)
   : Merge Predictions
 
-- [`merge_results(`*`<manova_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
-  [`merge_results(`*`<mvpa_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
-  [`merge_results(`*`<binary_classification_result>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
-  [`merge_results(`*`<regression_result>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
-  [`merge_results(`*`<multiway_classification_result>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
-  [`merge_results(`*`<regional_mvpa_result>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
-  [`merge_results(`*`<rsa_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
-  [`merge_results(`*`<vector_rsa_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
-  [`merge_results(`*`<feature_rsa_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
+- [`merge_results(`*`<manova_model>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
+  [`merge_results(`*`<mvpa_model>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
+  [`merge_results(`*`<binary_classification_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
+  [`merge_results(`*`<regression_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
+  [`merge_results(`*`<multiway_classification_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
+  [`merge_results(`*`<regional_mvpa_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
+  [`merge_results(`*`<rsa_model>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
+  [`merge_results(`*`<vector_rsa_model>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
+  [`merge_results(`*`<feature_rsa_model>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/merge_results-methods.md)
   : Merge Results for MANOVA Model
 
-- [`merge_results()`](http://bbuchsbaum.github.io/rMVPA/reference/merge_results.md)
+- [`merge_results()`](https://bbuchsbaum.github.io/rMVPA/reference/merge_results.md)
   : Merge Multiple Results
 
-- [`mock_context()`](http://bbuchsbaum.github.io/rMVPA/reference/mock_context.md)
+- [`mock_context()`](https://bbuchsbaum.github.io/rMVPA/reference/mock_context.md)
   : Build a Mock fit_roi Context
 
-- [`mock_roi_data()`](http://bbuchsbaum.github.io/rMVPA/reference/mock_roi_data.md)
+- [`mock_roi_data()`](https://bbuchsbaum.github.io/rMVPA/reference/mock_roi_data.md)
   : Build Mock ROI Data for Plugin Tests
 
-- [`model_importance()`](http://bbuchsbaum.github.io/rMVPA/reference/model_importance.md)
+- [`model_importance()`](https://bbuchsbaum.github.io/rMVPA/reference/model_importance.md)
   : Per-Feature Model Importance
 
-- [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
+- [`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
   : Model-space representational connectivity from a fitted rMVPA result
 
-- [`msreve_design()`](http://bbuchsbaum.github.io/rMVPA/reference/msreve_design.md)
+- [`msreve_design()`](https://bbuchsbaum.github.io/rMVPA/reference/msreve_design.md)
   : Constructor for msreve_design
 
-- [`msreve_temporal_confounds()`](http://bbuchsbaum.github.io/rMVPA/reference/msreve_temporal_confounds.md)
+- [`msreve_temporal_confounds()`](https://bbuchsbaum.github.io/rMVPA/reference/msreve_temporal_confounds.md)
   : MS-ReVE: build temporal nuisance RDMs from a spec
 
-- [`multiway_classification_result()`](http://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.md)
+- [`multiway_classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.md)
   : Create a Multiway Classification Result Object
 
-- [`mvpa_clustered_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_clustered_dataset.md)
+- [`mvpa_clustered_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_clustered_dataset.md)
   : Create an MVPA Dataset for Clustered/Parcellated Data
 
-- [`mvpa_config()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_config.md)
+- [`mvpa_config()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_config.md)
   : Build a Public Analysis Configuration
 
-- [`mvpa_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
+- [`mvpa_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
   : Create an MVPA Dataset Object
 
-- [`mvpa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+- [`mvpa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
   : Create an MVPA Design Object
 
-- [`mvpa_iterate()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
+- [`mvpa_iterate()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
   : Iterate MVPA Analysis Over Multiple ROIs
 
-- [`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+- [`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
   : Create an MVPA Model
 
-- [`mvpa_multibasis_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_multibasis_dataset.md)
+- [`mvpa_multibasis_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_multibasis_dataset.md)
   : Create a Multibasis MVPA Image Dataset
 
-- [`mvpa_multibasis_image_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_multibasis_image_dataset.md)
+- [`mvpa_multibasis_image_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_multibasis_image_dataset.md)
   :
 
   Alias for `mvpa_multibasis_dataset`
 
-- [`mvpa_surface_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_surface_dataset.md)
+- [`mvpa_surface_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_surface_dataset.md)
   : Create a Surface-Based MVPA Dataset Object
 
-- [`mvpa_sysinfo()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_sysinfo.md)
+- [`mvpa_sysinfo()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_sysinfo.md)
   : Report System and Package Information for rMVPA
 
-- [`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
+- [`naive_xdec_model()`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
   : Naive Cross-Decoding (correlation to source prototypes)
 
-- [`new-analysis-overview`](http://bbuchsbaum.github.io/rMVPA/reference/new-analysis-overview.md)
+- [`new-analysis-overview`](https://bbuchsbaum.github.io/rMVPA/reference/new-analysis-overview.md)
   : Extending rMVPA: Plugin Analysis Models
 
-- [`nmf_preprocess_maps()`](http://bbuchsbaum.github.io/rMVPA/reference/nmf_preprocess_maps.md)
+- [`nmf_preprocess_maps()`](https://bbuchsbaum.github.io/rMVPA/reference/nmf_preprocess_maps.md)
   : Preprocess Maps for Spatial NMF
 
-- [`nobs()`](http://bbuchsbaum.github.io/rMVPA/reference/nobs.md) : Get
+- [`nobs()`](https://bbuchsbaum.github.io/rMVPA/reference/nobs.md) : Get
   Number of Observations
 
-- [`nresponses()`](http://bbuchsbaum.github.io/rMVPA/reference/nresponses.md)
+- [`nresponses()`](https://bbuchsbaum.github.io/rMVPA/reference/nresponses.md)
   : Number of Response Categories
 
-- [`orthogonalize_contrasts()`](http://bbuchsbaum.github.io/rMVPA/reference/orthogonalize_contrasts.md)
+- [`orthogonalize_contrasts()`](https://bbuchsbaum.github.io/rMVPA/reference/orthogonalize_contrasts.md)
   : Orthogonalize a Contrast Matrix
 
-- [`output_schema(`*`<contrast_rsa_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/output_schema.contrast_rsa_model.md)
+- [`output_schema(`*`<contrast_rsa_model>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/output_schema.contrast_rsa_model.md)
   : Output schema for contrast_rsa_model
 
-- [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
+- [`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
   : Construct a pair-observation RSA design
 
-- [`performance()`](http://bbuchsbaum.github.io/rMVPA/reference/performance-methods.md)
+- [`performance()`](https://bbuchsbaum.github.io/rMVPA/reference/performance-methods.md)
   : Compute Performance Metrics
 
-- [`performance(`*`<regression_result>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/performance.regression_result.md)
+- [`performance(`*`<regression_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/performance.regression_result.md)
   : Calculate Performance Metrics for Regression Result
 
-- [`permutation_control()`](http://bbuchsbaum.github.io/rMVPA/reference/permutation_control.md)
+- [`permutation_control()`](https://bbuchsbaum.github.io/rMVPA/reference/permutation_control.md)
   : Create a Permutation Control Object
 
-- [`permute_labels()`](http://bbuchsbaum.github.io/rMVPA/reference/permute_labels.md)
+- [`permute_labels()`](https://bbuchsbaum.github.io/rMVPA/reference/permute_labels.md)
   : Permute Training Labels in an MVPA Design
 
-- [`predict_model()`](http://bbuchsbaum.github.io/rMVPA/reference/predict_model.md)
+- [`predict_model()`](https://bbuchsbaum.github.io/rMVPA/reference/predict_model.md)
   : Predict Model Output
 
-- [`predicted_class()`](http://bbuchsbaum.github.io/rMVPA/reference/predicted_class.md)
+- [`predicted_class()`](https://bbuchsbaum.github.io/rMVPA/reference/predicted_class.md)
   : Calculate the Predicted Class from Probability Matrix
 
-- [`prep_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/prep_regional.md)
+- [`prep_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/prep_regional.md)
   : Prepare regional data for MVPA analysis
 
-- [`print(`*`<feature_rsa_design>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/print.feature_rsa_design.md)
+- [`print(`*`<feature_rsa_design>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/print.feature_rsa_design.md)
   : Print Method for Feature RSA Design
 
-- [`print(`*`<feature_rsa_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/print.feature_rsa_model.md)
+- [`print(`*`<feature_rsa_model>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/print.feature_rsa_model.md)
   : Print Method for Feature RSA Model
 
-- [`print(`*`<feature_sets>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/print.feature_sets.md)
+- [`print(`*`<feature_sets>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/print.feature_sets.md)
   : Print method for feature_sets
 
-- [`print(`*`<feature_sets_design>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/print.feature_sets_design.md)
+- [`print(`*`<feature_sets_design>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/print.feature_sets_design.md)
   : Print method for feature_sets_design
 
-- [`print(`*`<vector_rsa_design>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/print.vector_rsa_design.md)
+- [`print(`*`<vector_rsa_design>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/print.vector_rsa_design.md)
   : Print Method for vector_rsa_design
 
-- [`print(`*`<vector_rsa_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/print.vector_rsa_model.md)
+- [`print(`*`<vector_rsa_model>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/print.vector_rsa_model.md)
   : Print Method for vector_rsa_model
 
-- [`prob_observed()`](http://bbuchsbaum.github.io/rMVPA/reference/prob_observed.md)
+- [`prob_observed()`](https://bbuchsbaum.github.io/rMVPA/reference/prob_observed.md)
   : Probability of Observed Class
 
-- [`process_roi()`](http://bbuchsbaum.github.io/rMVPA/reference/process_roi-methods.md)
+- [`process_roi()`](https://bbuchsbaum.github.io/rMVPA/reference/process_roi-methods.md)
   : Process ROI
 
-- [`rdm_decorrelate()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_decorrelate.md)
+- [`rdm_decorrelate()`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_decorrelate.md)
   : Decorrelation of correlated model RDMs
 
-- [`rdm_model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
+- [`rdm_model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
   : ROI-by-ROI similarity through a correlated model-RDM space
 
-- [`region_importance()`](http://bbuchsbaum.github.io/rMVPA/reference/region_importance.md)
+- [`region_importance()`](https://bbuchsbaum.github.io/rMVPA/reference/region_importance.md)
   : Region Importance via Random Subset Comparison
 
-- [`region_importance_result()`](http://bbuchsbaum.github.io/rMVPA/reference/region_importance_result.md)
+- [`region_importance_result()`](https://bbuchsbaum.github.io/rMVPA/reference/region_importance_result.md)
   : Construct a Region Importance Result
 
-- [`regional_mvpa_result()`](http://bbuchsbaum.github.io/rMVPA/reference/regional_mvpa_result.md)
+- [`regional_mvpa_result()`](https://bbuchsbaum.github.io/rMVPA/reference/regional_mvpa_result.md)
   :
 
   Create a `regional_mvpa_result` instance
 
-- [`register_mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/register_mvpa_model.md)
+- [`register_mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/register_mvpa_model.md)
   : Register a Custom MVPA Model
 
-- [`regression_result()`](http://bbuchsbaum.github.io/rMVPA/reference/regression_result.md)
+- [`regression_result()`](https://bbuchsbaum.github.io/rMVPA/reference/regression_result.md)
   : Create a Regression Result Object
 
-- [`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md)
+- [`remap_rrr_model()`](https://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md)
   : REMAP-RRR: Residual low-rank, domain-adaptive cross-decoding
 
-- [`repmap_design()`](http://bbuchsbaum.github.io/rMVPA/reference/repmap_design.md)
+- [`repmap_design()`](https://bbuchsbaum.github.io/rMVPA/reference/repmap_design.md)
   : Representational mapping design helper (ReNA-Map)
 
-- [`repmap_model()`](http://bbuchsbaum.github.io/rMVPA/reference/repmap_model.md)
+- [`repmap_model()`](https://bbuchsbaum.github.io/rMVPA/reference/repmap_model.md)
   : Representational mapping model (ReNA-Map)
 
-- [`repmed_design()`](http://bbuchsbaum.github.io/rMVPA/reference/repmed_design.md)
+- [`repmed_design()`](https://bbuchsbaum.github.io/rMVPA/reference/repmed_design.md)
   : Representational mediation design helper (ReNA-RM)
 
-- [`repmed_model()`](http://bbuchsbaum.github.io/rMVPA/reference/repmed_model.md)
+- [`repmed_model()`](https://bbuchsbaum.github.io/rMVPA/reference/repmed_model.md)
   : Representational mediation model (ReNA-RM)
 
-- [`repnet_design()`](http://bbuchsbaum.github.io/rMVPA/reference/repnet_design.md)
+- [`repnet_design()`](https://bbuchsbaum.github.io/rMVPA/reference/repnet_design.md)
   : Representational connectivity design helper (ReNA-RC)
 
-- [`repnet_model()`](http://bbuchsbaum.github.io/rMVPA/reference/repnet_model.md)
+- [`repnet_model()`](https://bbuchsbaum.github.io/rMVPA/reference/repnet_model.md)
   : Representational connectivity model (ReNA-RC)
 
-- [`rmvpa_api_lifecycle()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.md)
+- [`rmvpa_api_lifecycle()`](https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.md)
   : List the rMVPA API Lifecycle Registry
 
-- [`rmvpa_stable_api()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.md)
+- [`rmvpa_stable_api()`](https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.md)
   : Return the Stable rMVPA API Surface
 
-- [`roi_result()`](http://bbuchsbaum.github.io/rMVPA/reference/roi_result.md)
+- [`roi_result()`](https://bbuchsbaum.github.io/rMVPA/reference/roi_result.md)
   : Construct a Standardized ROI Result
 
-- [`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
+- [`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
   : Construct a design for an RSA (Representational Similarity Analysis)
   model
 
-- [`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+- [`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
   : Construct an RSA (Representational Similarity Analysis) model
 
-- [`run_analysis()`](http://bbuchsbaum.github.io/rMVPA/reference/run_analysis.md)
+- [`run_analysis()`](https://bbuchsbaum.github.io/rMVPA/reference/run_analysis.md)
   : Run a Built Analysis
 
-- [`run_custom_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md)
+- [`run_custom_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md)
   : Run a Custom Analysis Function Regionally
 
-- [`run_custom_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md)
+- [`run_custom_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md)
   : Run a Custom Analysis Function in a Searchlight
 
-- [`run_global()`](http://bbuchsbaum.github.io/rMVPA/reference/run_global.md)
+- [`run_global()`](https://bbuchsbaum.github.io/rMVPA/reference/run_global.md)
   : Run Global (Whole-Brain) MVPA Analysis
 
-- [`run_permutation_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_permutation_searchlight.md)
+- [`run_permutation_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_permutation_searchlight.md)
   : Run Permutation Searchlight Inference
 
-- [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
-  [`run_regional_base()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+- [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+  [`run_regional_base()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
   : Region of Interest Based MVPA Analysis
 
-- [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
+- [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
   : Run Searchlight Analysis
 
-- [`run_searchlight(`*`<default>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.default.md)
+- [`run_searchlight(`*`<default>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.default.md)
   : Default method for run_searchlight
 
-- [`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md)
+- [`save_results()`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.md)
   : Save MVPA Results to Disk
 
-- [`save_results(`*`<rmvpa_analysis_run>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.rmvpa_analysis_run.md)
+- [`save_results(`*`<rmvpa_analysis_run>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.rmvpa_analysis_run.md)
   : Save a High-Level Analysis Run
 
-- [`schema_scalar()`](http://bbuchsbaum.github.io/rMVPA/reference/schema_metric_spec.md)
-  [`schema_vector()`](http://bbuchsbaum.github.io/rMVPA/reference/schema_metric_spec.md)
+- [`schema_scalar()`](https://bbuchsbaum.github.io/rMVPA/reference/schema_metric_spec.md)
+  [`schema_vector()`](https://bbuchsbaum.github.io/rMVPA/reference/schema_metric_spec.md)
   : Metric Schema Constructors
 
-- [`searchlight_engines()`](http://bbuchsbaum.github.io/rMVPA/reference/searchlight_engines.md)
+- [`searchlight_engines()`](https://bbuchsbaum.github.io/rMVPA/reference/searchlight_engines.md)
   : Summarize Available Searchlight Engines
 
-- [`searchlight_mode()`](http://bbuchsbaum.github.io/rMVPA/reference/searchlight_mode.md)
+- [`searchlight_mode()`](https://bbuchsbaum.github.io/rMVPA/reference/searchlight_mode.md)
   : Get Or Set Searchlight Mode
 
-- [`second_order_similarity()`](http://bbuchsbaum.github.io/rMVPA/reference/second_order_similarity.md)
+- [`second_order_similarity()`](https://bbuchsbaum.github.io/rMVPA/reference/second_order_similarity.md)
   : Compute Second-Order Similarity Scores
 
-- [`select_features()`](http://bbuchsbaum.github.io/rMVPA/reference/select_features-methods.md)
+- [`select_features()`](https://bbuchsbaum.github.io/rMVPA/reference/select_features-methods.md)
   : Select Features
 
-- [`set_log_level()`](http://bbuchsbaum.github.io/rMVPA/reference/set_log_level.md)
+- [`set_log_level()`](https://bbuchsbaum.github.io/rMVPA/reference/set_log_level.md)
   : Set rMVPA Logging Level
 
-- [`shard_backend`](http://bbuchsbaum.github.io/rMVPA/reference/shard_backend.md)
+- [`shard_backend`](https://bbuchsbaum.github.io/rMVPA/reference/shard_backend.md)
   : Experimental Shared-Memory Backend for Parallel MVPA
 
-- [`shard_cleanup()`](http://bbuchsbaum.github.io/rMVPA/reference/shard_cleanup.md)
+- [`shard_cleanup()`](https://bbuchsbaum.github.io/rMVPA/reference/shard_cleanup.md)
   : Clean Up Shared-Memory Segments
 
-- [`spatial_nmf()`](http://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf.md)
+- [`spatial_nmf()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf.md)
   : Spatial Non-negative Matrix Factorization
 
-- [`spatial_nmf_component_test()`](http://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_component_test.md)
+- [`spatial_nmf_component_test()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_component_test.md)
   : Component-level Inference for Spatial NMF
 
-- [`spatial_nmf_global_test()`](http://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_global_test.md)
+- [`spatial_nmf_global_test()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_global_test.md)
   : Global Cross-validated Group Test for Spatial NMF
 
-- [`spatial_nmf_maps()`](http://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_maps.md)
+- [`spatial_nmf_maps()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_maps.md)
   : Spatial NMF on Map Lists
 
-- [`spatial_nmf_stability()`](http://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_stability.md)
+- [`spatial_nmf_stability()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_stability.md)
   : Bootstrap Stability for Spatial NMF Components
 
-- [`spatial_nmf_voxelwise_stats()`](http://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_voxelwise_stats.md)
+- [`spatial_nmf_voxelwise_stats()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_voxelwise_stats.md)
   : Voxelwise Statistics from Spatial NMF Stability
 
-- [`strip_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/strip_dataset-methods.md)
+- [`strip_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/strip_dataset-methods.md)
   : Strip Dataset from Model Specification
 
-- [`sub_result(`*`<multiway_classification_result>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/sub_result-methods.md)
-  [`sub_result(`*`<binary_classification_result>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/sub_result-methods.md)
+- [`sub_result(`*`<multiway_classification_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/sub_result-methods.md)
+  [`sub_result(`*`<binary_classification_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/sub_result-methods.md)
   : Subset Multiway Classification Result
 
-- [`sub_result()`](http://bbuchsbaum.github.io/rMVPA/reference/sub_result.md)
+- [`sub_result()`](https://bbuchsbaum.github.io/rMVPA/reference/sub_result.md)
   : Extract Row-wise Subset of a Result
 
-- [`subsample_centers()`](http://bbuchsbaum.github.io/rMVPA/reference/subsample_centers.md)
+- [`subsample_centers()`](https://bbuchsbaum.github.io/rMVPA/reference/subsample_centers.md)
   : Subsample Searchlight Centers
 
-- [`subspace_alignment_model()`](http://bbuchsbaum.github.io/rMVPA/reference/subspace_alignment_model.md)
+- [`subspace_alignment_model()`](https://bbuchsbaum.github.io/rMVPA/reference/subspace_alignment_model.md)
   : Subspace Alignment cross-decoder
 
-- [`summarize_remap_items()`](http://bbuchsbaum.github.io/rMVPA/reference/summarize_remap_items.md)
+- [`summarize_remap_items()`](https://bbuchsbaum.github.io/rMVPA/reference/summarize_remap_items.md)
   : Summarize REMAP item-level residuals for an ROI
 
-- [`summarize_remap_roi()`](http://bbuchsbaum.github.io/rMVPA/reference/summarize_remap_roi.md)
+- [`summarize_remap_roi()`](https://bbuchsbaum.github.io/rMVPA/reference/summarize_remap_roi.md)
   : Summarize REMAP diagnostics at the ROI level
 
-- [`summary(`*`<feature_rsa_model>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/summary.feature_rsa_model.md)
+- [`summary(`*`<feature_rsa_model>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/summary.feature_rsa_model.md)
   : Summary Method for Feature RSA Model
 
-- [`table_to_rdm()`](http://bbuchsbaum.github.io/rMVPA/reference/table_to_rdm.md)
+- [`table_to_rdm()`](https://bbuchsbaum.github.io/rMVPA/reference/table_to_rdm.md)
   : Convert Similarity Table to RDM
 
-- [`temporal()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal.md)
+- [`temporal()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal.md)
   : Temporal RDM wrapper for formula usage
 
-- [`temporal_confounds()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_confounds.md)
+- [`temporal_confounds()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_confounds.md)
   : Build multiple temporal confounds from a spec
 
-- [`temporal_from_onsets()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_from_onsets.md)
+- [`temporal_from_onsets()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_from_onsets.md)
   : Temporal RDM from onsets (sugar)
 
-- [`temporal_hrf_overlap()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_hrf_overlap.md)
+- [`temporal_hrf_overlap()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_hrf_overlap.md)
   : HRF-overlap temporal confound RDM
 
-- [`temporal_nuisance_for_msreve()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_nuisance_for_msreve.md)
+- [`temporal_nuisance_for_msreve()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_nuisance_for_msreve.md)
   : Temporal nuisance RDM at condition level (for MS-ReVE)
 
-- [`temporal_rdm()`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
+- [`temporal_rdm()`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
   : Temporal/ordinal nuisance RDM (trial-level)
 
-- [`test_design()`](http://bbuchsbaum.github.io/rMVPA/reference/test_design-methods.md)
+- [`test_design()`](https://bbuchsbaum.github.io/rMVPA/reference/test_design-methods.md)
   : Test Design Extraction
 
-- [`train_indices()`](http://bbuchsbaum.github.io/rMVPA/reference/train_indices.md)
+- [`train_indices()`](https://bbuchsbaum.github.io/rMVPA/reference/train_indices.md)
   : Get Training Indices for a Fold
 
-- [`transform_contrasts()`](http://bbuchsbaum.github.io/rMVPA/reference/transform_contrasts.md)
+- [`transform_contrasts()`](https://bbuchsbaum.github.io/rMVPA/reference/transform_contrasts.md)
   : Apply Transformations to an Existing Contrast Matrix
 
-- [`tune_grid()`](http://bbuchsbaum.github.io/rMVPA/reference/tune_grid-methods.md)
+- [`tune_grid()`](https://bbuchsbaum.github.io/rMVPA/reference/tune_grid-methods.md)
   : Extract Tuning Grid
 
-- [`twofold_blocked_cross_validation()`](http://bbuchsbaum.github.io/rMVPA/reference/twofold_blocked_cross_validation.md)
+- [`twofold_blocked_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/twofold_blocked_cross_validation.md)
   : twofold_blocked_cross_validation
 
-- [`use_shard()`](http://bbuchsbaum.github.io/rMVPA/reference/use_shard.md)
+- [`use_shard()`](https://bbuchsbaum.github.io/rMVPA/reference/use_shard.md)
   : Enable Shared-Memory Backend for an MVPA Model Spec
 
-- [`validate_analysis()`](http://bbuchsbaum.github.io/rMVPA/reference/validate_analysis.md)
+- [`validate_analysis()`](https://bbuchsbaum.github.io/rMVPA/reference/validate_analysis.md)
   : Validate an MVPA Analysis for Common Methodological Issues
 
-- [`validate_cutoff()`](http://bbuchsbaum.github.io/rMVPA/reference/validate_cutoff.md)
+- [`validate_cutoff()`](https://bbuchsbaum.github.io/rMVPA/reference/validate_cutoff.md)
   : Validate Feature-Selection Cutoff
 
-- [`validate_model_spec()`](http://bbuchsbaum.github.io/rMVPA/reference/validate_model_spec.md)
-  [`print(`*`<model_spec_validation_result>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/validate_model_spec.md)
+- [`validate_model_spec()`](https://bbuchsbaum.github.io/rMVPA/reference/validate_model_spec.md)
+  [`print(`*`<model_spec_validation_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/validate_model_spec.md)
   : Validate a Model Specification for Plugin Readiness
 
-- [`validate_plugin_model()`](http://bbuchsbaum.github.io/rMVPA/reference/validate_plugin_model.md)
-  [`print(`*`<plugin_validation_result>`*`)`](http://bbuchsbaum.github.io/rMVPA/reference/validate_plugin_model.md)
+- [`validate_plugin_model()`](https://bbuchsbaum.github.io/rMVPA/reference/validate_plugin_model.md)
+  [`print(`*`<plugin_validation_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/validate_plugin_model.md)
   : Validate a Plugin Model Contract
 
-- [`vector_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_design.md)
+- [`vector_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_design.md)
   : Construct a design for a vectorized RSA model
 
-- [`vector_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.md)
+- [`vector_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.md)
   : Create a vectorized RSA model
 
-- [`y_test()`](http://bbuchsbaum.github.io/rMVPA/reference/y_test-methods.md)
+- [`y_test()`](https://bbuchsbaum.github.io/rMVPA/reference/y_test-methods.md)
   : Test Labels/Response Extraction
 
-- [`y_train()`](http://bbuchsbaum.github.io/rMVPA/reference/y_train-methods.md)
+- [`y_train()`](https://bbuchsbaum.github.io/rMVPA/reference/y_train-methods.md)
   : Training Labels/Response Extraction
 
 # Articles
@@ -752,18 +754,18 @@ every error, and learn the object chain shared by regional and
 searchlight analyses.
 
 - [Decode a held-out fMRI run with
-  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/rMVPA.md):
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/rMVPA.md):
 
 ### Core Concepts
 
 Essential concepts and basic workflows
 
 - [Constructing Datasets for MVPA
-  Analysis](http://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.md):
+  Analysis](https://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.md):
 - [Cross-Validation Strategies in
-  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md):
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md):
 - [Feature Selection in
-  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md):
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md):
 
 ### Standard MVPA Analysis
 
@@ -771,40 +773,40 @@ Classification and regression analyses using searchlight and regional
 approaches
 
 - [Searchlight
-  Analysis](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md):
+  Analysis](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md):
 - [Advanced Regional MVPA Analysis in
-  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md):
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md):
 - [Reproducing Haxby (2001) classification with
-  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.md):
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.md):
 - [ITEM Trial-Wise
-  Decoding](http://bbuchsbaum.github.io/rMVPA/articles/ITEM_Decoding.md):
+  Decoding](https://bbuchsbaum.github.io/rMVPA/articles/ITEM_Decoding.md):
 - [Command-Line MVPA
-  Interfaces](http://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md):
+  Interfaces](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md):
 
 ### Representational Similarity Analysis
 
 RSA methods from basic to specialized approaches
 
 - [Representational Similarity Analysis (RSA) in
-  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/RSA.md):
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md):
 - [Contrast RSA with
-  contrast_rsa_model](http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md):
+  contrast_rsa_model](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md):
 - [Temporal Confounds in
-  RSA](http://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md):
+  RSA](https://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md):
 - [Feature-Based
-  RSA](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md):
+  RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md):
 - [Vector-Based
-  RSA](http://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md):
+  RSA](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md):
 - [Feature-RSA Advanced
-  Workflows](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md):
+  Workflows](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md):
 - [Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset
-  Control](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md):
+  Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md):
 - [Model-Space Representational
-  Connectivity](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md):
+  Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md):
 - [Feature-RSA Across States: Domain Adaptation from Encoding to
-  Recall](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md):
+  Recall](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md):
 - [Reproducing Kriegeskorte (2008) with
-  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.md):
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.md):
 
 ### Representation Mapping (REMAP) Models
 
@@ -812,23 +814,23 @@ Models for learning transformations between perception and memory
 representations
 
 - [Naive
-  Cross-Decoding](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md):
+  Cross-Decoding](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md):
 - [ERA-RSA: Cross-Decoding Between Encoding and
-  Retrieval](http://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.md):
+  Retrieval](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.md):
 - [REMAP‑RRR — Domain‑Adaptive
-  Cross‑Decoding](http://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md):
+  Cross‑Decoding](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md):
 - [Representational Mapping (ReNA-Map):
-  repmap_model](http://bbuchsbaum.github.io/rMVPA/articles/repmap_model.md):
+  repmap_model](https://bbuchsbaum.github.io/rMVPA/articles/repmap_model.md):
 - [Representational Mediation (ReNA-RM):
-  repmed_model](http://bbuchsbaum.github.io/rMVPA/articles/repmed_model.md):
+  repmed_model](https://bbuchsbaum.github.io/rMVPA/articles/repmed_model.md):
 - [Representational Connectivity (ReNA-RC):
-  repnet_model](http://bbuchsbaum.github.io/rMVPA/articles/repnet_model.md):
+  repnet_model](https://bbuchsbaum.github.io/rMVPA/articles/repnet_model.md):
 
 ### Extensibility
 
 Customizing and extending rMVPA functionality
 
 - [Running Custom Analyses with
-  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.md):
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.md):
 - [Building Plugin Analyses for
-  rMVPA](http://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.md):
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.md):

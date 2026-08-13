@@ -9,30 +9,30 @@ easier to keep straight if defined once:
 - **Naive cross-decoding** *(this vignette)* — the no-learning baseline:
   classify target patterns against source prototypes via correlation.
   Lives in
-  [`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
+  [`naive_xdec_model()`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
 - **ERA-RSA**
-  *([`vignette("ERA_RSA_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.md))*
+  *([`vignette("ERA_RSA_Cross_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.md))*
   — encoding-retrieval analysis combining first-order item match and
   second-order RDM similarity. Lives in
-  [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
+  [`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
   and
-  [`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md).
+  [`era_partition_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md).
 - **REMAP-RRR**
-  *([`vignette("REMAP_RRR")`](http://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md))*
+  *([`vignette("REMAP_RRR")`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md))*
   — domain-adaptive cross-decoding via reduced-rank regression. Lives in
-  [`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md).
+  [`remap_rrr_model()`](https://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md).
 - **ReNA-Map**
-  *([`vignette("repmap_model")`](http://bbuchsbaum.github.io/rMVPA/articles/repmap_model.md),
-  [`repmap_model()`](http://bbuchsbaum.github.io/rMVPA/reference/repmap_model.md))*
+  *([`vignette("repmap_model")`](https://bbuchsbaum.github.io/rMVPA/articles/repmap_model.md),
+  [`repmap_model()`](https://bbuchsbaum.github.io/rMVPA/reference/repmap_model.md))*
   — predicts an ROI’s pattern from a low-rank seed feature space.
 - **ReNA-RM**
-  *([`vignette("repmed_model")`](http://bbuchsbaum.github.io/rMVPA/articles/repmed_model.md),
-  [`repmed_model()`](http://bbuchsbaum.github.io/rMVPA/reference/repmed_model.md))*
+  *([`vignette("repmed_model")`](https://bbuchsbaum.github.io/rMVPA/articles/repmed_model.md),
+  [`repmed_model()`](https://bbuchsbaum.github.io/rMVPA/reference/repmed_model.md))*
   — tests whether one ROI’s geometry mediates another’s relationship to
   a seed.
 - **ReNA-RC**
-  *([`vignette("repnet_model")`](http://bbuchsbaum.github.io/rMVPA/articles/repnet_model.md),
-  [`repnet_model()`](http://bbuchsbaum.github.io/rMVPA/reference/repnet_model.md))*
+  *([`vignette("repnet_model")`](https://bbuchsbaum.github.io/rMVPA/articles/repnet_model.md),
+  [`repnet_model()`](https://bbuchsbaum.github.io/rMVPA/reference/repnet_model.md))*
   — representational connectivity: correlates an ROI’s RDM with a seed
   RDM, with optional confound RDMs.
 
@@ -53,7 +53,7 @@ This makes the analysis deliberately conservative. If it works, the
 representations are already aligned well enough to transfer directly. If
 it does not, the result is still useful because it tells you how much
 work a domain-adaptive model such as
-[`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md)
+[`remap_rrr_model()`](https://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md)
 or an encoding-retrieval partition analysis has to explain.
 
 **Algorithm:**
@@ -153,7 +153,7 @@ first result to check because it maps directly onto classification
 accuracy.
 
 The
-[`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+[`era_partition_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
 analysis uses the same direct-transfer idea as one component of a
 broader encoding-retrieval analysis. It builds matched source and target
 prototypes for the item key, then reports:
@@ -165,9 +165,9 @@ prototypes for the item key, then reports:
 - optional leakage-free Procrustes alignment metrics.
 
 Use
-[`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
+[`naive_xdec_model()`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
 when you need a clean baseline map or ROI table for direct transfer. Use
-[`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+[`era_partition_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
 when your scientific question is whether encoding-retrieval transfer
 reflects item-specific similarity, preserved representational geometry,
 or nuisance structure such as block, category, or temporal lag.
@@ -175,7 +175,7 @@ or nuisance structure such as block, category, or temporal lag.
 ## Searchlight analysis
 
 Naive cross-decoding plugs directly into
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md):
+[`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md):
 
 ``` r
 
@@ -190,9 +190,9 @@ across domains, voxel by voxel.
 
 **“requires external test set”** — Naive cross-decoding needs separate
 train and test data. Provide `external_test = TRUE` in
-[`gen_sample_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md),
+[`gen_sample_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md),
 or construct your
-[`mvpa_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
+[`mvpa_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
 with both `train_data` and `test_data`.
 
 **All predictions are the same class** — Prototypes may be too similar.
@@ -203,15 +203,15 @@ to work.
 **Chance-level performance everywhere** — This is the expected outcome
 when there is a large systematic domain shift. Consider domain-adaptive
 models such as
-[`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md)
+[`remap_rrr_model()`](https://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md)
 (see
-[`vignette("REMAP_RRR")`](http://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)).
+[`vignette("REMAP_RRR")`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)).
 
 ## Next steps
 
-- [`vignette("REMAP_RRR")`](http://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)
+- [`vignette("REMAP_RRR")`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)
   — domain-adaptive cross-decoding with low-rank corrections
-- [`vignette("ERA_RSA_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.md)
+- [`vignette("ERA_RSA_Cross_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.md)
   — encoding-retrieval RSA and ERA partitioning
-- [`?naive_xdec_model`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
+- [`?naive_xdec_model`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
   — full parameter documentation

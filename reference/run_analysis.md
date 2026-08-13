@@ -1,7 +1,7 @@
 # Run a Built Analysis
 
 Runs a high-level workflow object created by
-[`build_analysis`](http://bbuchsbaum.github.io/rMVPA/reference/build_analysis.md).
+[`build_analysis`](https://bbuchsbaum.github.io/rMVPA/reference/build_analysis.md).
 The input can also be an `rmvpa_config`, in which case it is built
 first.
 

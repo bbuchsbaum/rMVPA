@@ -35,8 +35,8 @@ optional dependency.
 
 | Object | Constructor | Role |
 |----|----|----|
-| Design | [`item_design()`](http://bbuchsbaum.github.io/rMVPA/reference/item_design.md) | Couples the trial-wise design matrix `X_t` and trial targets `T_target` to TR-level observations. |
-| Model spec | [`item_model()`](http://bbuchsbaum.github.io/rMVPA/reference/item_model.md) | Configures the decoder (mode, metric, ridge, solver) and precomputes `U`. Compatible with [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) and [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md). |
+| Design | [`item_design()`](https://bbuchsbaum.github.io/rMVPA/reference/item_design.md) | Couples the trial-wise design matrix `X_t` and trial targets `T_target` to TR-level observations. |
+| Model spec | [`item_model()`](https://bbuchsbaum.github.io/rMVPA/reference/item_model.md) | Configures the decoder (mode, metric, ridge, solver) and precomputes `U`. Compatible with [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) and [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md). |
 
 The key distinction from a standard `mvpa_design` is that supervised
 information lives at the **trial** level (`T_target`, length
@@ -167,7 +167,7 @@ choices are `"accuracy"` / `"balanced_accuracy"` for classification and
 ## Searchlight
 
 The same model spec drops straight into
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
+[`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
 ITEM exposes an output schema, so the searchlight produces one map per
 scalar metric:
 
@@ -181,7 +181,7 @@ names(sl$results)
 For whole-brain searchlights, set `return_predictions = FALSE` on the
 model spec. The searchlight schema combiner only keeps the scalar maps,
 but
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
 retains the full per-fold prediction payload on every ROI; disabling
 predictions bounds memory when there are many ROIs or trials.
 
@@ -206,7 +206,7 @@ des_v <- item_design(
 
 Nuisance regressors that should be projected out during LS-A trial
 estimation (motion, drift) go through the `Z` / `Nuisance` arguments of
-[`item_design()`](http://bbuchsbaum.github.io/rMVPA/reference/item_design.md).
+[`item_design()`](https://bbuchsbaum.github.io/rMVPA/reference/item_design.md).
 
 ## Trial-alignment guard
 
@@ -262,10 +262,10 @@ data, check that `X_t` is built from the correct onsets/HRF and that
 
 ## Next steps
 
-- [`?item_model`](http://bbuchsbaum.github.io/rMVPA/reference/item_model.md),
-  [`?item_design`](http://bbuchsbaum.github.io/rMVPA/reference/item_design.md)
+- [`?item_model`](https://bbuchsbaum.github.io/rMVPA/reference/item_model.md),
+  [`?item_design`](https://bbuchsbaum.github.io/rMVPA/reference/item_design.md)
   – full parameter documentation
-- [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md)
+- [`vignette("Naive_Cross_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md)
   – a no-learning cross-domain baseline
-- [`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
+- [`vignette("Searchlight_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
   – general searchlight workflow

@@ -4,7 +4,7 @@ Unified entry point for second-order representational connectivity.
 Accepts a matrix/list/tibble of per-unit RDM vectors, or a fitted
 regional result carrying per-ROI model-space fingerprints / RDM vectors,
 and forwards to
-[`rdm_model_space_connectivity`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
+[`rdm_model_space_connectivity`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
 for the projection and similarity summaries.
 
 ## Usage
@@ -60,7 +60,7 @@ model_space_connectivity(
   (forwarded directly to `rdm_model_space_connectivity`), or a fitted
   regional rMVPA object that carries fingerprints / RDM vectors per ROI
   (e.g. `regional_mvpa_result` from
-  [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+  [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
   on an `rsa_model(..., return_fingerprint = TRUE)` or a
   `feature_rsa_model(..., return_rdm_vectors = TRUE)`).
 
@@ -80,7 +80,7 @@ model_space_connectivity(
 - method, basis, use, tol, return_projected:
 
   Forwarded to
-  [`rdm_model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md).
+  [`rdm_model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md).
   See that function for details.
 
 - prefer:
@@ -119,13 +119,13 @@ model_space_connectivity(
 
   Logical; if `TRUE` (default) build one `NeuroVol`/`NeuroSurface` per
   anchor via
-  [`build_output_map`](http://bbuchsbaum.github.io/rMVPA/reference/build_output_map.md).
+  [`build_output_map`](https://bbuchsbaum.github.io/rMVPA/reference/build_output_map.md).
   Skip with `FALSE` if you only need the numerical similarity matrix.
 
 ## Value
 
 An object of class `rdm_model_space_connectivity` (see
-[`rdm_model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
+[`rdm_model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
 for details).
 
 For `searchlight_result` inputs, an object of class
@@ -151,7 +151,7 @@ plus one brain map per anchor. Memory is \\\mathcal{O}(n\_{centers}
 
 ## See also
 
-[`rdm_model_space_connectivity`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md),
-[`pair_rsa_design`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md),
-[`rsa_model`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md),
-[`feature_rsa_rdm_vectors`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md)
+[`rdm_model_space_connectivity`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md),
+[`pair_rsa_design`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md),
+[`rsa_model`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md),
+[`feature_rsa_rdm_vectors`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md)

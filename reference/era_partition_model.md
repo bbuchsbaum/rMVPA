@@ -103,7 +103,7 @@ era_partition_model(
 
   Logical; compute trial-level naive cross-decoding performance using
   the same prototype scorer as
-  [`naive_xdec_model`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
+  [`naive_xdec_model`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
 
 - xdec_link_by:
 
@@ -177,7 +177,7 @@ A model spec of class \`era_partition_model\` for \`run_regional()\` or
 ## Trial-level vs. item-level metadata
 
 `block_var` on
-[`mvpa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+[`mvpa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
 is *trial-level* and is not automatically used here. The first- and
 second-order nuisance regressors (`same_block_cross`, `same_block_enc`,
 `same_block_ret`) require *item-level* vectors named by levels of

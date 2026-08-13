@@ -2,7 +2,7 @@
 
 Returns the samples belonging to the held-out/independent partition for
 a fold. This is distinct from
-[`train_indices`](http://bbuchsbaum.github.io/rMVPA/reference/train_indices.md),
+[`train_indices`](https://bbuchsbaum.github.io/rMVPA/reference/train_indices.md),
 which returns the training samples for predictive cross-validation.
 Crossnobis estimators use partition indices because their cross-fold
 products require independent pattern estimates.

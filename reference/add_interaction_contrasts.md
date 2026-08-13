@@ -26,7 +26,7 @@ add_interaction_contrasts(design, pairs = NULL, orthogonalize = TRUE)
 
   Logical; if `TRUE` (default) the expanded contrast matrix is passed
   through
-  [`orthogonalize_contrasts`](http://bbuchsbaum.github.io/rMVPA/reference/orthogonalize_contrasts.md).
+  [`orthogonalize_contrasts`](https://bbuchsbaum.github.io/rMVPA/reference/orthogonalize_contrasts.md).
 
 ## Value
 

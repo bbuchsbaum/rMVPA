@@ -50,9 +50,9 @@ A binary classification result object, with the class attribute set to
 ## See also
 
 Other classification_result:
-[`classification_result()`](http://bbuchsbaum.github.io/rMVPA/reference/classification_result.md),
-[`multiway_classification_result()`](http://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.md),
-[`regression_result()`](http://bbuchsbaum.github.io/rMVPA/reference/regression_result.md)
+[`classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/classification_result.md),
+[`multiway_classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.md),
+[`regression_result()`](https://bbuchsbaum.github.io/rMVPA/reference/regression_result.md)
 
 ## Examples
 

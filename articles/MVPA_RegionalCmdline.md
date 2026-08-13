@@ -3,7 +3,7 @@
 ## Superseded
 
 This vignette has been superseded by
-[`vignette("CommandLine")`](http://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md),
+[`vignette("CommandLine")`](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md),
 which now documents the supported command-line interface for both:
 
 - `rmvpa-searchlight`
@@ -20,5 +20,5 @@ Use the unified vignette for:
   pooling
 
 If you arrived here from an older link, switch to
-[`vignette("CommandLine")`](http://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md)
+[`vignette("CommandLine")`](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md)
 for the current interface.

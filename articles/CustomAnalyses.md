@@ -7,9 +7,9 @@ MVPA and RSA models. You might want to compute simple univariate
 statistics inside an ROI, apply a bespoke connectivity metric to each
 searchlight sphere, or prototype a new method without creating a full S3
 model. To make this easy,
-[`run_custom_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md)
+[`run_custom_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md)
 and
-[`run_custom_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md)
+[`run_custom_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md)
 let you apply any R function to ROI or sphere data while reusing
 `rMVPA`’s data extraction, iteration, parallelization, and error
 handling.
@@ -359,7 +359,7 @@ my_perf <- function(result) {
 ```
 
 You pass this function to
-[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+[`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
 via the `performance` argument:
 
 ``` r
@@ -396,7 +396,7 @@ becomes one volumetric map in the searchlight or regional result.
 
 If your design specifies `split_by`, `mvpa_design` stores the grouping
 in `split_groups`, and
-[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+[`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
 automatically applies your metric both globally and within each group:
 
 ``` r
@@ -437,13 +437,13 @@ of the result via `testind`.
 The `run_custom_regional` and `run_custom_searchlight` functions provide
 a powerful mechanism to extend `rMVPA`’s capabilities at the
 ROI/searchlight level, while the `performance` hook in
-[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+[`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
 lets you swap in custom scalar metrics for standard MVPA workflows.
 Together, these tools allow you to integrate bespoke analyses into
 `rMVPA` with minimal boilerplate.
 
 For implementation details, see
-[`run_custom_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md),
-[`run_custom_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md),
+[`run_custom_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md),
+[`run_custom_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md),
 and
-[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md).
+[`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md).

@@ -53,6 +53,6 @@ predictor.
 ## See also
 
 Other classification_result:
-[`binary_classification_result()`](http://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.md),
-[`classification_result()`](http://bbuchsbaum.github.io/rMVPA/reference/classification_result.md),
-[`regression_result()`](http://bbuchsbaum.github.io/rMVPA/reference/regression_result.md)
+[`binary_classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.md),
+[`classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/classification_result.md),
+[`regression_result()`](https://bbuchsbaum.github.io/rMVPA/reference/regression_result.md)

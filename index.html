@@ -55,7 +55,7 @@
 <div class="page-header"><h1 id="rmvpa--multivoxel-pattern-analysis-in-r">rMVPA — multivoxel pattern analysis in R<a class="anchor" aria-label="anchor" href="#rmvpa--multivoxel-pattern-analysis-in-r"></a>
 </h1></div>
 <p>A methodologically rigorous toolbox for decoding and representational analysis of neuroimaging data. One model spec runs <em>regionally</em> or via <em>searchlight</em>. Cross-validation respects fMRI run structure. RSA, MS-ReVE contrast decomposition, model-space connectivity, ERA cross-decoding, and domain-adaptive REMAP-RRR are all first-class — no one-off scripts in a graveyard of unmaintained lab repos.</p>
-<p>📖 <strong>Documentation:</strong> <a href="https://bbuchsbaum.github.io/rMVPA/" class="external-link uri">https://bbuchsbaum.github.io/rMVPA/</a></p>
+<p>📖 <strong>Documentation:</strong> <a href="https://bbuchsbaum.github.io/rMVPA/" class="uri">https://bbuchsbaum.github.io/rMVPA/</a></p>
 <div class="section level2">
 <h2 id="the-mental-model">The mental model<a class="anchor" aria-label="anchor" href="#the-mental-model"></a>
 </h2>
@@ -86,33 +86,33 @@
 <code><a href="reference/mvpa_model.html">mvpa_model()</a></code> + <code><a href="reference/run_searchlight.html">run_searchlight()</a></code> / <code><a href="reference/run_regional-methods.html">run_regional()</a></code>
 </td>
 <td align="left">
-<a href="https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html" class="external-link"><code>Searchlight_Analysis</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html" class="external-link"><code>Regional_Analysis</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html" class="external-link"><code>Haxby_2001</code></a> ⓡ</td>
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html"><code>Searchlight_Analysis</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html"><code>Regional_Analysis</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html"><code>Haxby_2001</code></a> ⓡ</td>
 </tr>
 <tr>
 <td align="left">Test whether a region’s pattern geometry matches a model RDM</td>
 <td align="left">
 <code><a href="reference/rsa_model.html">rsa_model()</a></code> + <code><a href="reference/rsa_design.html">rsa_design()</a></code> (or <code><a href="reference/pair_rsa_design.html">pair_rsa_design()</a></code>)</td>
 <td align="left">
-<a href="https://bbuchsbaum.github.io/rMVPA/articles/RSA.html" class="external-link"><code>RSA</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html" class="external-link"><code>Kriegeskorte_92_Images</code></a> ⓡ</td>
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/RSA.html"><code>RSA</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html"><code>Kriegeskorte_92_Images</code></a> ⓡ</td>
 </tr>
 <tr>
 <td align="left">Ask which regions share representational geometry through your models</td>
 <td align="left">
 <code><a href="reference/model_space_connectivity.html">model_space_connectivity()</a></code> on <code>rsa_model(..., return_fingerprint = TRUE)</code>
 </td>
-<td align="left"><a href="https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html" class="external-link"><code>Model_Space_Connectivity</code></a></td>
+<td align="left"><a href="https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html"><code>Model_Space_Connectivity</code></a></td>
 </tr>
 <tr>
 <td align="left">Decompose representational structure by signed contrasts (MS-ReVE)</td>
 <td align="left"><code><a href="reference/contrast_rsa_model.html">contrast_rsa_model()</a></code></td>
-<td align="left"><a href="https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html" class="external-link"><code>Contrast_RSA</code></a></td>
+<td align="left"><a href="https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html"><code>Contrast_RSA</code></a></td>
 </tr>
 <tr>
 <td align="left">Cross-decode between encoding &amp; retrieval (ERA), or perception &amp; memory</td>
 <td align="left">
 <code><a href="reference/era_rsa_model.html">era_rsa_model()</a></code>, <code><a href="reference/naive_xdec_model.html">naive_xdec_model()</a></code>, <code><a href="reference/remap_rrr_model.html">remap_rrr_model()</a></code>, the ReNA family</td>
 <td align="left">
-<a href="https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html" class="external-link"><code>ERA_RSA_Cross_Decoding</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html" class="external-link"><code>REMAP_RRR</code></a>, and the <code>Naive_Cross_Decoding</code> glossary</td>
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html"><code>ERA_RSA_Cross_Decoding</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html"><code>REMAP_RRR</code></a>, and the <code>Naive_Cross_Decoding</code> glossary</td>
 </tr>
 <tr>
 <td align="left">Plug in a custom per-ROI / per-sphere function</td>
@@ -120,7 +120,7 @@
 <code><a href="reference/run_custom_regional.html">run_custom_regional()</a></code> / <code><a href="reference/run_custom_searchlight.html">run_custom_searchlight()</a></code>
 </td>
 <td align="left">
-<a href="https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html" class="external-link"><code>CustomAnalyses</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html" class="external-link"><code>Plugin_Development</code></a>
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html"><code>CustomAnalyses</code></a>, <a href="https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html"><code>Plugin_Development</code></a>
 </td>
 </tr>
 </tbody>
@@ -152,12 +152,12 @@
 <div class="section level2">
 <h2 id="real-data-demonstrations">Real-data demonstrations<a class="anchor" aria-label="anchor" href="#real-data-demonstrations"></a>
 </h2>
-<p>The catalogue includes two non-synthetic vignettes that reproduce canonical findings on public data, end-to-end:</p>
+<p>The catalogue includes two non-synthetic vignettes that reanalyse public data end-to-end:</p>
 <ul>
 <li>
-<strong>Kriegeskorte 2008</strong> (<a href="https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html" class="external-link">vignette</a>) — 92 object images, 4 subjects × 2 sessions of human-IT RDMs. Recovers the published model-RDM ranking (monkey-IT and animacy lead; low-level vision lags) and shows model-space connectivity across subjects.</li>
+<strong>Kriegeskorte 2008</strong> (<a href="https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html">vignette</a>) — 92 object images, 4 subjects × 2 sessions of human-IT RDMs. Recovers the published model-RDM ranking (monkey-IT and animacy lead; low-level vision lags) and shows model-space connectivity across subjects.</li>
 <li>
-<strong>Haxby 2001</strong> (<a href="https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html" class="external-link">vignette</a>) — Subject 1 ventral-temporal patterns. Reaches <strong>91.7 %</strong> 8-way category accuracy at 12.5 % chance with <code>sda_notune</code>. Reproduces the canonical face / house / object confusion structure.</li>
+<strong>Haxby 2001</strong> (<a href="https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html">vignette</a>) — Subject 1 ventral-temporal patterns. Reaches <strong>91.7 %</strong> 8-way category accuracy at 12.5 % chance with <code>sda_notune</code>. Reports every held-out prediction and the complete row-normalized confusion matrix without treating this single-subject reanalysis as a literal reproduction of the original classifier.</li>
 </ul>
 <p>The bundled data lives under <code>inst/extdata/</code>; the <code>data-raw/*.R</code> scripts regenerate it from upstream sources.</p>
 </div>
@@ -184,7 +184,7 @@
 <span><span class="fu">rMVPA</span><span class="fu">::</span><span class="fu"><a href="reference/install_cli.html">install_cli</a></span><span class="op">(</span><span class="st">"~/.local/bin"</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="ex">rmvpa-searchlight</span> <span class="at">--help</span></span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="ex">rmvpa-regional</span>   <span class="at">--help</span></span></code></pre></div>
-<p>See <a href="https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.html" class="external-link"><code>vignette("CommandLine")</code></a> for input formats, configuration files, and parallelisation.</p>
+<p>See <a href="https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.html"><code>vignette("CommandLine")</code></a> for input formats, configuration files, and parallelisation.</p>
 </div>
 <div class="section level2">
 <h2 id="api-stability">API stability<a class="anchor" aria-label="anchor" href="#api-stability"></a>

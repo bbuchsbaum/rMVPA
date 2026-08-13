@@ -9,7 +9,7 @@ powerful, this approach cannot tell you *which aspects* of the
 representational structure drive the effect, or *which individual
 voxels* contribute most to specific theoretical dimensions.
 
-[`contrast_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md)
+[`contrast_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md)
 implements the Multi‑Dimensional Signed Representational Voxel Encoding
 (MS‑ReVE) approach to address these limitations. MS‑ReVE decomposes the
 local representational geometry into user-defined contrasts—linear

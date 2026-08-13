@@ -25,7 +25,7 @@ rdm_model_space_connectivity(
   ROI RDM vectors. Accepted forms are a matrix with RDM cells in rows
   and ROIs in columns, a named list of numeric vectors, a tibble/data
   frame with columns \`roinum\` and \`rdm_vec\` as returned by
-  [`feature_rsa_rdm_vectors`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md),
+  [`feature_rsa_rdm_vectors`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md),
   or a \`regional_mvpa_result\` containing stored feature-RSA RDM
   vectors.
 

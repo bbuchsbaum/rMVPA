@@ -98,7 +98,7 @@ rmvpa-regional --example-config
 - `--version` prints the installed `rMVPA` version.
 
 You can also register custom models in R via
-[`register_mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/register_mvpa_model.md)
+[`register_mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/register_mvpa_model.md)
 and then invoke them from the CLI by name. Domain-adaptive
 cross-decoding is available via `--model remap_rrr`.
 
@@ -178,7 +178,7 @@ This makes batch jobs and reruns much safer:
   to disk
 
 At the default `standard` save level,
-[`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md)
+[`save_results()`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.md)
 writes the main outputs plus a manifest. `complete` also writes summary
 tables and auxiliary objects.
 
@@ -209,9 +209,9 @@ cross_validation:
 ```
 
 See
-[`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+[`vignette("FeatureSelection")`](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
 and
-[`vignette("CrossValidation")`](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
+[`vignette("CrossValidation")`](https://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
 for the full option surface.
 
 ## Searchlight Analysis (`rmvpa-searchlight`)
@@ -408,7 +408,7 @@ remap_min_pairs: 5
 
 Outputs include the standard regional summaries plus REMAP diagnostics
 such as `remap_improv`, `delta_frob_mean`, and `lambda_mean`. See
-[`vignette("REMAP_RRR")`](http://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)
+[`vignette("REMAP_RRR")`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)
 for the model-level details.
 
 ## Backward Compatibility

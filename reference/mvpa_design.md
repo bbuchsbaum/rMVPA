@@ -42,12 +42,14 @@ mvpa_design(
 
 - block_var:
 
-  Optional formula or vector specifying the blocking variable for
-  cross-validation
+  Optional formula, scalar column name, or row-aligned numeric, integer,
+  character, logical, or factor vector specifying the blocking variable
+  for cross-validation.
 
 - split_by:
 
-  Optional formula or vector for splitting analyses
+  Optional formula, scalar column name, or row-aligned atomic vector
+  specifying how to split analyses.
 
 - cv_labels:
 
@@ -107,9 +109,10 @@ The `y_train` and `y_test` can be specified either as formulas (e.g., ~
 condition) or as vectors. If formulas are used, they are evaluated
 within the respective design matrices.
 
-The `block_var` and `split_by` can also be specified as formulas or
-vectors. If formulas, they are evaluated within the training design
-matrix.
+The `block_var` and `split_by` can be specified as formulas, scalar
+column names, or row-aligned atomic vectors. Formulas and column names
+are evaluated within the relevant design matrix; vectors must have
+exactly one value per design row.
 
 The new `cv_labels` and `targets` parameters allow separating the labels
 used for fold construction from the actual training targets. When using
@@ -118,7 +121,7 @@ parsed `y_train` value.
 
 ## See also
 
-[`mvpa_dataset`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
+[`mvpa_dataset`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
 for creating the corresponding dataset object
 
 ## Examples

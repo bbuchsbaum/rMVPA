@@ -12,7 +12,7 @@ standard classification workflow.
 By the end you will have:
 
 - A working
-  [`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+  [`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
   pipeline against real fMRI data,
 - Cross-validated 8-way category accuracy in VT cortex that’s clearly
   above the chance level of 12.5%,
@@ -95,7 +95,7 @@ ds
 
 The design has one response variable (the 8-way category) and a blocking
 variable (the run index).
-[`blocked_cross_validation()`](http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md)
+[`blocked_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md)
 then produces 12 leave-one-run-out folds.
 
 ``` r
@@ -170,7 +170,7 @@ mspec
 
 For a single-ROI analysis, build a region mask whose only non-zero label
 is the VT mask, then call
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
 
 ``` r
 
@@ -199,7 +199,7 @@ Haxby finding.
 
 ## The classic per-category pattern
 
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
 collected trial-level predictions in `res$prediction_table`. Tabulating
 predicted vs observed gives the confusion matrix and per-category
 accuracy.
@@ -242,7 +242,7 @@ Faces and houses lead — exactly as in Figure 2 of the original paper.
 
 ## Comparing classifiers
 
-[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+[`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
 reads its classifier from rMVPA’s pre-registered registry, so swapping
 the family is one line. Below we run the same VT analysis under five
 classifiers covering different inductive biases:
@@ -282,11 +282,11 @@ panel <- rbind(
 panel <- panel[order(-panel$accuracy), ]
 panel
 #>    classifier accuracy   auc seconds
-#> 5  sda_notune    0.917 0.973     1.8
-#> 4   svmLinear    0.698 0.853     2.3
-#> 3          rf    0.500 0.694    10.4
-#> 2 naive_bayes    0.375 0.481     1.8
-#> 1    corclass    0.271 0.289     1.2
+#> 5  sda_notune    0.917 0.973     1.7
+#> 4   svmLinear    0.698 0.853     2.4
+#> 3          rf    0.500 0.694    11.7
+#> 2 naive_bayes    0.375 0.481     1.9
+#> 1    corclass    0.271 0.289     1.4
 ```
 
 ![Cross-validated accuracy under five classifiers, all on the same VT
@@ -321,7 +321,7 @@ structurally different from the 8-way leave-one-run-out reported here.
 
 The full `MVPAModels` registry includes 22 classifiers; see
 `ls(rMVPA:::MVPAModels)` for the complete list and
-[`vignette("FeatureSelection")`](http://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+[`vignette("FeatureSelection")`](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
 for adding feature selection inside the CV loop.
 
 ## Where the raw data lives
@@ -360,17 +360,17 @@ The package’s `data-raw/haxby2001_subj1.R` script reproduces the bundled
 ## Where to go next
 
 - For a searchlight version of this analysis, see
-  [`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md).
+  [`vignette("Searchlight_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md).
   The same `mspec` plus
-  [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
+  [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
   produces a per-voxel decoding map.
 - For RSA-style geometry (rather than category labels),
-  [`vignette("Kriegeskorte_92_Images")`](http://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.md)
+  [`vignette("Kriegeskorte_92_Images")`](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.md)
   walks through the matched real-data RSA workflow.
 - For rMVPA’s classification ergonomics in general, see
-  [`vignette("Regional_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md)
+  [`vignette("Regional_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md)
   and
-  [`vignette("CrossValidation")`](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md).
+  [`vignette("CrossValidation")`](https://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md).
 
 ## Citation
 

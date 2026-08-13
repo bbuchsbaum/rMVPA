@@ -1,7 +1,7 @@
 # Create a Permutation Control Object
 
 Specifies all tuning parameters for
-[`run_permutation_searchlight`](http://bbuchsbaum.github.io/rMVPA/reference/run_permutation_searchlight.md).
+[`run_permutation_searchlight`](https://bbuchsbaum.github.io/rMVPA/reference/run_permutation_searchlight.md).
 
 ## Usage
 
@@ -80,7 +80,7 @@ permutation_control(
   `"iterate"` (default)
 
   :   Each permutation runs
-      [`mvpa_iterate`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
+      [`mvpa_iterate`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
       on a **subsampled** set of centers. This is the universal, safe
       path: it works with every model type and every searchlight engine
       because it goes through the generic per-ROI iterator.
@@ -95,7 +95,7 @@ permutation_control(
   `"searchlight"`
 
   :   Each permutation runs
-      [`run_searchlight`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
+      [`run_searchlight`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
       on the **full brain**, then extracts metric values at every
       center. Because the call goes through the standard
       `run_searchlight` dispatch, it automatically benefits from any

@@ -54,7 +54,7 @@ temporal_nuisance_for_msreve(
 - kernel:
 
   character string specifying kernel type (see
-  [`temporal_rdm`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md))
+  [`temporal_rdm`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md))
 
 - units:
 

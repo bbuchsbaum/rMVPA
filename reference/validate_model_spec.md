@@ -31,7 +31,7 @@ print(x, ...)
 - dry_run:
 
   Logical; if `TRUE`, run
-  [`validate_plugin_model`](http://bbuchsbaum.github.io/rMVPA/reference/validate_plugin_model.md)
+  [`validate_plugin_model`](https://bbuchsbaum.github.io/rMVPA/reference/validate_plugin_model.md)
   on mock ROI/context inputs.
 
 - roi_data:

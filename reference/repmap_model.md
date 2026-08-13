@@ -32,7 +32,7 @@ repmap_model(
 - repmap_des:
 
   Output of
-  [`repmap_design`](http://bbuchsbaum.github.io/rMVPA/reference/repmap_design.md).
+  [`repmap_design`](https://bbuchsbaum.github.io/rMVPA/reference/repmap_design.md).
 
 - key_var:
 

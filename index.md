@@ -25,12 +25,12 @@ per-ROI diagnostics come for free.
 
 | You want to … | Reach for | Vignette |
 |:---|:---|:---|
-| Decode condition labels from local activity (8-way category, condition pair, etc.) | [`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md) + [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md) / [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) | [`Searchlight_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html), [`Regional_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html), [`Haxby_2001`](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html) ⓡ |
-| Test whether a region’s pattern geometry matches a model RDM | [`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md) + [`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md) (or [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)) | [`RSA`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.html), [`Kriegeskorte_92_Images`](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html) ⓡ |
-| Ask which regions share representational geometry through your models | [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) on `rsa_model(..., return_fingerprint = TRUE)` | [`Model_Space_Connectivity`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html) |
-| Decompose representational structure by signed contrasts (MS-ReVE) | [`contrast_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md) | [`Contrast_RSA`](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html) |
-| Cross-decode between encoding & retrieval (ERA), or perception & memory | [`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md), [`naive_xdec_model()`](http://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md), [`remap_rrr_model()`](http://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md), the ReNA family | [`ERA_RSA_Cross_Decoding`](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html), [`REMAP_RRR`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html), and the `Naive_Cross_Decoding` glossary |
-| Plug in a custom per-ROI / per-sphere function | [`run_custom_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md) / [`run_custom_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md) | [`CustomAnalyses`](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html), [`Plugin_Development`](https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html) |
+| Decode condition labels from local activity (8-way category, condition pair, etc.) | [`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md) + [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md) / [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) | [`Searchlight_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.html), [`Regional_Analysis`](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.html), [`Haxby_2001`](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html) ⓡ |
+| Test whether a region’s pattern geometry matches a model RDM | [`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md) + [`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md) (or [`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)) | [`RSA`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.html), [`Kriegeskorte_92_Images`](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html) ⓡ |
+| Ask which regions share representational geometry through your models | [`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) on `rsa_model(..., return_fingerprint = TRUE)` | [`Model_Space_Connectivity`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html) |
+| Decompose representational structure by signed contrasts (MS-ReVE) | [`contrast_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md) | [`Contrast_RSA`](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html) |
+| Cross-decode between encoding & retrieval (ERA), or perception & memory | [`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md), [`naive_xdec_model()`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md), [`remap_rrr_model()`](https://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md), the ReNA family | [`ERA_RSA_Cross_Decoding`](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html), [`REMAP_RRR`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html), and the `Naive_Cross_Decoding` glossary |
+| Plug in a custom per-ROI / per-sphere function | [`run_custom_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md) / [`run_custom_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md) | [`CustomAnalyses`](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html), [`Plugin_Development`](https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html) |
 
 ⓡ = real public data, not synthetic.
 
@@ -61,8 +61,8 @@ classification, RSA, and cross-domain workflows.
 
 ## Real-data demonstrations
 
-The catalogue includes two non-synthetic vignettes that reproduce
-canonical findings on public data, end-to-end:
+The catalogue includes two non-synthetic vignettes that reanalyse public
+data end-to-end:
 
 - **Kriegeskorte 2008**
   ([vignette](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html))
@@ -72,8 +72,10 @@ canonical findings on public data, end-to-end:
 - **Haxby 2001**
   ([vignette](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html))
   — Subject 1 ventral-temporal patterns. Reaches **91.7 %** 8-way
-  category accuracy at 12.5 % chance with `sda_notune`. Reproduces the
-  canonical face / house / object confusion structure.
+  category accuracy at 12.5 % chance with `sda_notune`. Reports every
+  held-out prediction and the complete row-normalized confusion matrix
+  without treating this single-subject reanalysis as a literal
+  reproduction of the original classifier.
 
 The bundled data lives under `inst/extdata/`; the `data-raw/*.R` scripts
 regenerate it from upstream sources.
@@ -121,9 +123,9 @@ for input formats, configuration files, and parallelisation.
 ## API stability
 
 Public-API surface is intentionally narrow and explicit. Use
-[`rmvpa_api_lifecycle()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.md)
+[`rmvpa_api_lifecycle()`](https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.md)
 to inspect lifecycle tiers and
-[`rmvpa_stable_api()`](http://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.md)
+[`rmvpa_stable_api()`](https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.md)
 to list the stable entry points intended for scripts, extensions, and
 downstream packages.
 

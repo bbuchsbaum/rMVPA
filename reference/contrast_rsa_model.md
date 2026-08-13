@@ -53,7 +53,7 @@ contrast_rsa_model(
     \`return_folds=TRUE\` from \`compute_crossvalidated_means_sl\`.
 
   Passed to
-  [`compute_crossvalidated_means_sl`](http://bbuchsbaum.github.io/rMVPA/reference/compute_crossvalidated_means_sl.md)
+  [`compute_crossvalidated_means_sl`](https://bbuchsbaum.github.io/rMVPA/reference/compute_crossvalidated_means_sl.md)
   (for "average", "L2_norm", or to get per-fold means for "crossnobis").
 
 - regression_type:

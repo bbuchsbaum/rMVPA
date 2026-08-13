@@ -91,19 +91,19 @@ used to down-weight uncertain recall TRs (see \`expected_features()\`).
 
 ## See also
 
-[`blocks`](http://bbuchsbaum.github.io/rMVPA/reference/blocks.md),
-[`by_set`](http://bbuchsbaum.github.io/rMVPA/reference/by_set.md),
+[`blocks`](https://bbuchsbaum.github.io/rMVPA/reference/blocks.md),
+[`by_set`](https://bbuchsbaum.github.io/rMVPA/reference/by_set.md),
 `feature_sets`,
-[`expected_features`](http://bbuchsbaum.github.io/rMVPA/reference/expected_features.md),
-[`feature_sets_design`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md),
-[`banded_ridge_da_model`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
-[`grouped_ridge_da_model`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
-[`banded_ridge_da`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md),
-[`grouped_ridge_da`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md)
+[`expected_features`](https://bbuchsbaum.github.io/rMVPA/reference/expected_features.md),
+[`feature_sets_design`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md),
+[`banded_ridge_da_model`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
+[`grouped_ridge_da_model`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
+[`banded_ridge_da`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md),
+[`grouped_ridge_da`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md)
 
-[`blocks`](http://bbuchsbaum.github.io/rMVPA/reference/blocks.md),
-[`by_set`](http://bbuchsbaum.github.io/rMVPA/reference/by_set.md),
-[`expected_features`](http://bbuchsbaum.github.io/rMVPA/reference/expected_features.md)
+[`blocks`](https://bbuchsbaum.github.io/rMVPA/reference/blocks.md),
+[`by_set`](https://bbuchsbaum.github.io/rMVPA/reference/by_set.md),
+[`expected_features`](https://bbuchsbaum.github.io/rMVPA/reference/expected_features.md)
 
 ## Examples
 

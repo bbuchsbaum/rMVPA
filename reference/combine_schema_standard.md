@@ -1,9 +1,9 @@
 # Schema-driven combiner for searchlight results
 
 Drop-in replacement for
-[`combine_standard`](http://bbuchsbaum.github.io/rMVPA/reference/combine_standard.md)
+[`combine_standard`](https://bbuchsbaum.github.io/rMVPA/reference/combine_standard.md)
 that uses the model's
-[`output_schema`](http://bbuchsbaum.github.io/rMVPA/reference/output_schema.md)
+[`output_schema`](https://bbuchsbaum.github.io/rMVPA/reference/output_schema.md)
 to build output maps. Falls back to `combine_standard` if the schema is
 `NULL`.
 

@@ -69,7 +69,7 @@ spatial_nmf(
 
   Input transformation before NMF: "none" requires non-negative input;
   other values use the same semantics as
-  [`nmf_preprocess_maps`](http://bbuchsbaum.github.io/rMVPA/reference/nmf_preprocess_maps.md).
+  [`nmf_preprocess_maps`](https://bbuchsbaum.github.io/rMVPA/reference/nmf_preprocess_maps.md).
 
 - min_val:
 
@@ -110,17 +110,17 @@ spatial_nmf(
 - component_test:
 
   NULL to skip, TRUE for defaults, or a list of arguments passed to
-  [`spatial_nmf_component_test`](http://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_component_test.md).
+  [`spatial_nmf_component_test`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_component_test.md).
 
 - global_test:
 
   NULL to skip, TRUE for defaults, or a list of arguments passed to
-  [`spatial_nmf_global_test`](http://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_global_test.md).
+  [`spatial_nmf_global_test`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_global_test.md).
 
 - stability:
 
   NULL to skip, TRUE for defaults, or a list of arguments passed to
-  [`spatial_nmf_stability`](http://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_stability.md).
+  [`spatial_nmf_stability`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_stability.md).
 
 - voxelwise_stats:
 

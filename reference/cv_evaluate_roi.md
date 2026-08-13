@@ -26,12 +26,12 @@ cv_evaluate_roi(
 - roi_data:
 
   ROI payload as used by
-  [`fit_roi`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md).
+  [`fit_roi`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md).
 
 - context:
 
   Context list (defaults to
-  [`mock_context()`](http://bbuchsbaum.github.io/rMVPA/reference/mock_context.md)
+  [`mock_context()`](https://bbuchsbaum.github.io/rMVPA/reference/mock_context.md)
   based on `model_spec`).
 
 - mode:
@@ -52,5 +52,5 @@ cv_evaluate_roi(
 ## Value
 
 A
-[`roi_result`](http://bbuchsbaum.github.io/rMVPA/reference/roi_result.md)
+[`roi_result`](https://bbuchsbaum.github.io/rMVPA/reference/roi_result.md)
 by default, or a tibble row when `return = "row"`.

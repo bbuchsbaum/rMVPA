@@ -27,7 +27,7 @@ subsample_centers(
 
   A searchlight iterator (list of integer voxel-index vectors) as
   returned by
-  [`get_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.md).
+  [`get_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.md).
 
 - n_centers:
 

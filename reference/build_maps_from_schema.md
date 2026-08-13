@@ -23,7 +23,7 @@ build_maps_from_schema(schema, perf_mat, dataset, ids)
 - dataset:
 
   The dataset object (used by
-  [`build_output_map`](http://bbuchsbaum.github.io/rMVPA/reference/build_output_map.md)).
+  [`build_output_map`](https://bbuchsbaum.github.io/rMVPA/reference/build_output_map.md)).
 
 - ids:
 

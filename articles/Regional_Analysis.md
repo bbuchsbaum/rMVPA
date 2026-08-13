@@ -15,7 +15,7 @@ region-level performance.
 ## Data Generation and Preparation
 
 We begin by generating a synthetic volumetric dataset using the
-[`gen_sample_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md)
+[`gen_sample_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md)
 function. This function creates a 4D array (with spatial dimensions and
 multiple observations), along with a binary mask and an associated
 design for cross-validation.
@@ -70,7 +70,7 @@ table(region_mask)
 Next, we create an MVPA model to evaluate a classification task. In
 brief, we construct an `mvpa_dataset`, specify the design (including the
 block variable and response), and define the model with
-[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+[`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
 using a chosen classifier and cross‑validation strategy.
 
 ``` r
@@ -142,7 +142,7 @@ and cross-validation plan.
 ## Running the Regional Analysis
 
 The regional analysis is executed with
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
 Internally it prepares ROI indices from the region mask, applies the
 MVPA model to each ROI, and then compiles performance metrics and
 prediction tables.
@@ -211,7 +211,7 @@ have the tools to conduct regional MVPA analyses on your own
 neuroimaging data.
 
 For further details, see
-[`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
+[`vignette("Searchlight_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
 for the searchlight counterpart and
-[`vignette("CrossValidation")`](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
+[`vignette("CrossValidation")`](https://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
 for cross-validation strategies.

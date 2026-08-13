@@ -11,9 +11,9 @@ not the activity itself, is the data.
 The whole workflow is four steps: (i) build an MVPA dataset, (ii) supply
 one or more model RDMs (representational dissimilarity matrices), (iii)
 wrap them in an
-[`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md),
+[`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md),
 (iv) fit with
-[`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+[`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
 and run regionally or via searchlight.
 
 ## A first win
@@ -153,11 +153,11 @@ ordered and often share substantial representational structure. If you
 enter these RDMs directly into a multiple-RDM RSA model, shared geometry
 can make the individual layer effects hard to interpret.
 
-[`rdm_decorrelate()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_decorrelate.md)
+[`rdm_decorrelate()`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_decorrelate.md)
 is a preprocessing helper for this situation. It works on the
 lower-triangular RDM vectors, estimates layer-specific innovation RDMs,
 and returns adjusted RDMs that can be passed directly to
-[`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md).
+[`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md).
 
 ``` r
 
@@ -231,7 +231,7 @@ ordinary covariance shrinkage estimates.
 ### 4. Creating and Running an RSA Model
 
 The
-[`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+[`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
 function supports different methods for computing neural dissimilarities
 and analyzing relationships:
 
@@ -403,31 +403,31 @@ approaches appropriate for your analysis goals.
 
 Once you have RSA scores per ROI, a natural follow-up is “where else
 does this geometry live?”
-[`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+[`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
 accepts `return_fingerprint = TRUE`, which stores a small per-ROI
 projection of the neural pair vector onto your model RDM subspace.
-[`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
+[`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
 then turns those fingerprints into ROI-by-ROI representational
 connectivity in one call. The same flag also feeds k-means anchor maps
 for searchlight runs without materialising an `n_centers × n_centers`
 matrix. See
-[`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
+[`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
 for the full workflow, including cross-domain pair designs
 (`pair_rsa_design(..., pairs = "between")`).
 
 ## Further reading
 
-- [`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
+- [`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
   – model-space fingerprints, ROI-to-ROI connectivity, pair_rsa_design,
   and searchlight anchor maps
-- [`vignette("Feature_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)
+- [`vignette("Feature_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)
   – Feature-Based RSA: predicting neural patterns from a feature matrix
-- [`vignette("Vector_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md)
+- [`vignette("Vector_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md)
   – Vector-Based RSA: per-trial RSA scores with built-in across-block
   masking
-- [`vignette("Contrast_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md)
+- [`vignette("Contrast_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md)
   – MS-ReVE: contrast-based decomposition of representational geometry
-- [`vignette("Temporal_Confounds_in_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md)
+- [`vignette("Temporal_Confounds_in_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md)
   – controlling for temporal proximity confounds
 
 ## References

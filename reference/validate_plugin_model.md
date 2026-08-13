@@ -1,11 +1,11 @@
 # Validate a Plugin Model Contract
 
 Executes one
-[`fit_roi`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md) call
-and checks that the model returns a valid
-[`roi_result`](http://bbuchsbaum.github.io/rMVPA/reference/roi_result.md)
+[`fit_roi`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
+call and checks that the model returns a valid
+[`roi_result`](https://bbuchsbaum.github.io/rMVPA/reference/roi_result.md)
 with metrics that match
-[`output_schema`](http://bbuchsbaum.github.io/rMVPA/reference/output_schema.md)
+[`output_schema`](https://bbuchsbaum.github.io/rMVPA/reference/output_schema.md)
 (when present).
 
 ## Usage
@@ -31,7 +31,7 @@ print(x, ...)
 - roi_data:
 
   ROI payload passed to `fit_roi`. Defaults to
-  [`mock_roi_data()`](http://bbuchsbaum.github.io/rMVPA/reference/mock_roi_data.md).
+  [`mock_roi_data()`](https://bbuchsbaum.github.io/rMVPA/reference/mock_roi_data.md).
 
 - context:
 

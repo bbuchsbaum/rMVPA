@@ -19,7 +19,7 @@ score_observed(observed_values, adjusted_null, covariates_full)
 - adjusted_null:
 
   An `"adjusted_null"` object from
-  [`build_adjusted_null`](http://bbuchsbaum.github.io/rMVPA/reference/build_adjusted_null.md).
+  [`build_adjusted_null`](https://bbuchsbaum.github.io/rMVPA/reference/build_adjusted_null.md).
 
 - covariates_full:
 

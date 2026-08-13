@@ -25,7 +25,7 @@ feature_rsa_connectivity(
   Either a `regional_mvpa_result` produced by
   `feature_rsa_model(..., return_rdm_vectors=TRUE)` or the tibble
   returned by
-  [`feature_rsa_rdm_vectors()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md).
+  [`feature_rsa_rdm_vectors()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md).
   Regional results may store RDM vectors either in-memory or in
   file-backed batches written by
   `run_regional(..., save_rdm_vectors_dir = ...)`.

@@ -65,8 +65,8 @@ rows are renormalized to sum to 1 and \`row_weights\` is set to 1.
 
 ## See also
 
-[`feature_sets`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets.md),
-[`feature_sets_design`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md)
+[`feature_sets`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets.md),
+[`feature_sets_design`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md)
 
 ## Examples
 

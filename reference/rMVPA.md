@@ -22,21 +22,21 @@ searchlight analyses. Key functionalities cover:
 
 Useful functions:
 
-- [`mvpa_dataset`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
+- [`mvpa_dataset`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
   for creating datasets
 
-- [`run_searchlight`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
+- [`run_searchlight`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
   for searchlight analyses
 
-- [`run_regional`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+- [`run_regional`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
   for ROI analyses
 
-- [`spatial_nmf_maps`](http://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_maps.md)
+- [`spatial_nmf_maps`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_maps.md)
   for spatial NMF and component inference
 
-- [`rsa_model`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md),
-  [`contrast_rsa_model`](http://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md),
-  [`vector_rsa_model`](http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.md)
+- [`rsa_model`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md),
+  [`contrast_rsa_model`](https://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md),
+  [`vector_rsa_model`](https://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.md)
   for different RSA approaches
 
 For a detailed introduction and examples, see the package vignette:

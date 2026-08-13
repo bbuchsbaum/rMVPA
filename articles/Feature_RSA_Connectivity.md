@@ -6,9 +6,9 @@ is larger. If ROI 3 learns a useful geometry, does that geometry show up
 in ROI 7 as well? If one target ROI is easy for every source ROI, how do
 you separate that global effect from pair-specific transfer?
 
-[`feature_rsa_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
+[`feature_rsa_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
 and
-[`feature_rsa_cross_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)
+[`feature_rsa_cross_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)
 answer those questions at the level of representational geometry rather
 than voxel weights. That matters because ROI sizes can differ and you
 still get a clean ROI x ROI summary.
@@ -51,9 +51,9 @@ off-diagonal entries are cross-ROI generalization scores.
 ## How do you extract the per-ROI geometry?
 
 The only extra requirement is `return_rdm_vectors = TRUE` when you fit
-[`feature_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md).
+[`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md).
 That stores compact lower-triangle RDM vectors for each ROI, and
-[`feature_rsa_rdm_vectors()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md)
+[`feature_rsa_rdm_vectors()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md)
 pulls them into a tibble.
 
 ``` r
@@ -75,7 +75,7 @@ around for a second-stage comparison.
 
 ## When do you want the symmetric matrix?
 
-[`feature_rsa_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
+[`feature_rsa_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
 asks whether the predicted geometries themselves are similar across
 ROIs. It correlates predicted RDM vectors with predicted RDM vectors, so
 the result is symmetric.
@@ -108,7 +108,7 @@ but whether they are similar in the part of their geometry explained by
 a family of model RDMs. If the models are correlated, treat them as one
 model space rather than four separate targets.
 
-[`rdm_model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
+[`rdm_model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
 projects each ROI RDM into the subspace spanned by the model RDMs, gives
 each ROI a decorrelated model-space fingerprint, and then compares those
 fingerprints.
@@ -153,7 +153,7 @@ similarity from the part outside the model space.
 
 ## When do you want the asymmetric matrix?
 
-[`feature_rsa_cross_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)
+[`feature_rsa_cross_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)
 answers the transfer question directly: does the geometry predicted from
 ROI i match the held-out observed geometry in ROI j?
 
@@ -283,7 +283,7 @@ connectivity. They are not redundant — they answer subtly different
 questions, and the right tool depends on whether you supply a *model* or
 a *feature space*:
 
-|  | **Feature-RSA connectivity** *(this vignette)* | **Model-space connectivity** *([`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md))* |
+|  | **Feature-RSA connectivity** *(this vignette)* | **Model-space connectivity** *([`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md))* |
 |:---|:---|:---|
 | **What you supply** | A feature matrix `F` (or similarity matrix `S`) | One or more explicit model RDMs |
 | **Fitting** | CV-fitted PLS / PCA / glmnet maps neural patterns ↔︎ feature space | No fitting — neural pair vectors are projected onto a fixed model-RDM basis |
@@ -303,9 +303,9 @@ often the most interesting result.
 
 If your transfer problem is across cognitive states rather than across
 ROIs, see
-[`vignette("Feature_RSA_Domain_Adaptation")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md).
+[`vignette("Feature_RSA_Domain_Adaptation")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md).
 If you want the broader decision map for within-ROI fits, cross-state
 transfer, and ROI-to-ROI generalization, see
-[`vignette("Feature_RSA_Advanced_Workflows")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md).
+[`vignette("Feature_RSA_Advanced_Workflows")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md).
 For the model-RDM-driven counterpart of the connectivity workflow, see
-[`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md).
+[`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md).

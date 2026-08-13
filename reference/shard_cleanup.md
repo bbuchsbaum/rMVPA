@@ -1,9 +1,9 @@
 # Clean Up Shared-Memory Segments
 
 Closes shared-memory segments created by
-[`use_shard`](http://bbuchsbaum.github.io/rMVPA/reference/use_shard.md).
+[`use_shard`](https://bbuchsbaum.github.io/rMVPA/reference/use_shard.md).
 Called automatically at the end of
-[`mvpa_iterate()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md);
+[`mvpa_iterate()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md);
 can also be invoked manually.
 
 ## Usage

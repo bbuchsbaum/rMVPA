@@ -1,16 +1,48 @@
 /* ---------- Albersdown: Bauhaus geometric system ---------- */
+
+/* Bundled, latin-subset, variable-weight web fonts (OFL; see fonts/LICENSE).
+   Referenced by relative path so html_vignette self-contained builds embed them
+   and the pkgdown site serves them locally — no third-party network requests. */
+@font-face { font-family: "Familjen Grotesk"; font-style: normal; font-weight: 400 700; font-display: swap; src: url("fonts/familjen-grotesk.woff2") format("woff2"); }
+@font-face { font-family: "Newsreader"; font-style: normal; font-weight: 400 600; font-display: swap; src: url("fonts/newsreader.woff2") format("woff2"); }
+@font-face { font-family: "Newsreader"; font-style: italic; font-weight: 400 500; font-display: swap; src: url("fonts/newsreader-italic.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 300 700; font-display: swap; src: url("fonts/space-grotesk.woff2") format("woff2"); }
+@font-face { font-family: "Hanken Grotesk"; font-style: normal; font-weight: 400 700; font-display: swap; src: url("fonts/hanken-grotesk.woff2") format("woff2"); }
+@font-face { font-family: "Spline Sans Mono"; font-style: normal; font-weight: 400 500; font-display: swap; src: url("fonts/spline-sans-mono.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 500; font-display: swap; src: url("fonts/jetbrains-mono.woff2") format("woff2"); }
+
 :root {
-  --ink: #17181a;
-  --bg: #f3f5f7;
-  --surface: #ffffff;
-  --surface-strong: #f7f9fb;
-  --muted: #636b76;
-  --border: #d5dae1;
-  --code-bg: #ecf0f4;
+  /* Default direction = Homage (warm). `.preset-interaction` overrides to cool. */
+  --ink: #1f1b16;
+  --bg: #efe7d6;
+  --surface: #fbf7ee;
+  --surface-strong: #f4eedf;
+  --muted: #7a7264;
+  --border: #e0d6c0;
+  --code-bg: #fbf7ee;
+  --code-fg: #332f28;
+  --code-border: #e0d6c0;
+  --tok-fun: #1f6f6b;
+  --tok-str: #8e2d1c;
+  --tok-num: #d98324;
+  --tok-com: #9a9078;
+  --tok-kw: #c24a2e;
   --shadow-soft: 0 1px 3px rgba(9, 11, 15, 0.045);
   --shadow-card: 0 1px 5px rgba(9, 11, 15, 0.055);
   --content: 78ch;
   --anchor-offset: 76px;
+
+  /* html_vignette (CRAN) page + sidebar geometry */
+  --vig-toc-width: 15rem;
+  --vig-gap: clamp(1.5rem, 2.4vw, 2.6rem);
+  --vig-pad-block: clamp(1.75rem, 3vw, 3rem);
+  --vig-pad-inline: clamp(1.2rem, 3vw, 2.6rem);
+  --font-body: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-display: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-ui: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --heading-weight: 700;
+  --module: 4px;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -33,7 +65,7 @@
   --table-hover-alpha: 70%;
 
   /* Homage Red (default family) */
-  --A900: #cd2d26;
+  --A900: #c22b23;
   --A700: #dc3925;
   --A500: #e44926;
   --A300: #e35b2d;
@@ -46,6 +78,24 @@
   --accent-hover: #a9351f;
   --accent-tint: rgba(228, 73, 38, 0.09);
   --accent-band: rgba(228, 73, 38, 0.14);
+
+  /* Nested-square "Homage to the Square" marker. Core + mid rings follow the
+     active family (--A*); the outer ring is a per-direction signature hue. */
+  --sq-size: 0.46em;
+  --sq-ring: 0.12em;
+  --sq-outer: #e0a100;
+}
+
+/* Re-resolve family-indirected tokens at <body>, where .palette-* sets the --A
+   ramp. CSS substitutes var() against the element that DECLARES the property,
+   so these must live on body (not :root) to follow the active family instead of
+   baking in the default-red value. */
+body {
+  --accent-ink: var(--A900);
+  --accent: var(--A500);
+  --accent-strong: var(--A700);
+  --sq-core: var(--A900);
+  --sq-mid: var(--A500);
 }
 
 /* -- Intensity modes ------------------------------------------------------ */
@@ -53,9 +103,10 @@
 .style-minimal {
   --rule-strong: 1px;
   --ribbon-opacity: 0.46;
+  /* quieter, smaller nested-square marker */
+  --sq-size: 0.4em;
+  --sq-ring: 0.1em;
   --nav-dash-weight: 600;
-  --dash-weight: 560;
-  --dash-opacity: 0.7;
   --subdash-opacity: 0.64;
   --overview-dash-weight: 560;
   --overview-dash-opacity: 0.74;
@@ -67,9 +118,10 @@
 .style-assertive {
   --rule-strong: 3px;
   --ribbon-opacity: 0.82;
+  /* bolder, larger nested-square marker */
+  --sq-size: 0.56em;
+  --sq-ring: 0.17em;
   --nav-dash-weight: 720;
-  --dash-weight: 700;
-  --dash-opacity: 0.96;
   --subdash-opacity: 0.9;
   --overview-dash-weight: 680;
   --overview-dash-opacity: 0.94;
@@ -79,60 +131,122 @@
 }
 
 /* -- Palette families ---------------------------------------------------- */
-.palette-lapis  {
-  --A900: #1b2a74;
-  --A700: #20399c;
-  --A500: #2c4fcc;
-  --A300: #4968d6;
-  --accent-hover: #1a377f;
-  --accent-tint: rgba(44, 79, 204, 0.1);
+/* ALBERS_TOKENS_FAMILIES_START */
+.palette-red {
+  --A900: #C22B23;
+  --A700: #DC3925;
+  --A500: #E44926;
+  --A300: #E35B2D;
+  --accent-hover: #A9351F;
+  --accent-tint: rgba(228, 73, 38, 0.09);
+  --accent-band: rgba(228, 73, 38, 0.14);
+}
+
+.palette-lapis {
+  --A900: #1B2A74;
+  --A700: #20399C;
+  --A500: #2C4FCC;
+  --A300: #4968D6;
+  --accent-hover: #1A377F;
+  --accent-tint: rgba(44, 79, 204, 0.10);
   --accent-band: rgba(44, 79, 204, 0.15);
 }
 
-.palette-ochre  {
-  --A900: #6f5200;
-  --A700: #8b6700;
-  --A500: #b48900;
-  --A300: #d7a700;
-  --accent-hover: #7a5c00;
-  --accent-tint: rgba(180, 137, 0, 0.1);
+.palette-ochre {
+  --A900: #6F5200;
+  --A700: #8B6700;
+  --A500: #B48900;
+  --A300: #D7A700;
+  --accent-hover: #7A5C00;
+  --accent-tint: rgba(180, 137, 0, 0.10);
   --accent-band: rgba(180, 137, 0, 0.16);
 }
 
-.palette-teal   {
-  --A900: #0d4a4a;
-  --A700: #0f5e5e;
+.palette-teal {
+  --A900: #0D4A4A;
+  --A700: #0F5E5E;
   --A500: #127373;
-  --A300: #2f8c8c;
-  --accent-hover: #0f6060;
-  --accent-tint: rgba(18, 115, 115, 0.1);
+  --A300: #2F8C8C;
+  --accent-hover: #0F6060;
+  --accent-tint: rgba(18, 115, 115, 0.10);
   --accent-band: rgba(18, 115, 115, 0.15);
 }
 
-.palette-green  {
-  --A900: #1b5e20;
-  --A700: #2e7d32;
-  --A500: #388e3c;
-  --A300: #66bb6a;
-  --accent-hover: #2e7d32;
-  --accent-tint: rgba(56, 142, 60, 0.1);
+.palette-green {
+  --A900: #1B5E20;
+  --A700: #2E7D32;
+  --A500: #388E3C;
+  --A300: #66BB6A;
+  --accent-hover: #2E7D32;
+  --accent-tint: rgba(56, 142, 60, 0.10);
   --accent-band: rgba(56, 142, 60, 0.15);
 }
 
 .palette-violet {
-  --A900: #4a148c;
-  --A700: #6a1b9a;
-  --A500: #8e24aa;
-  --A300: #ba68c8;
-  --accent-ink-dark: #d59ae7;
-  --accent-hover: #71208d;
+  --A900: #4A148C;
+  --A700: #6A1B9A;
+  --A500: #8E24AA;
+  --A300: #BA68C8;
+  --accent-ink-dark: #D59AE7;
+  --accent-hover: #71208D;
   --accent-tint: rgba(142, 36, 170, 0.11);
   --accent-band: rgba(142, 36, 170, 0.16);
 }
+/* ALBERS_TOKENS_FAMILIES_END */
 
 /* -- Presets: ground / surface / ink variations --------------------------- */
 
-/* Study — clean analytical white (Interaction of Color plates) */
+/* ALBERS_TOKENS_PRESETS_START */
+/* Homage direction — warm cream ground, Newsreader serif body, light code.
+   Matches the :root default; present so the class is explicit and idempotent. */
+.preset-homage {
+  --bg: #efe7d6;
+  --surface: #fbf7ee;
+  --surface-strong: #f4eedf;
+  --ink: #1f1b16;
+  --muted: #7a7264;
+  --border: #e0d6c0;
+  --code-bg: #fbf7ee;
+  --code-fg: #332f28;
+  --code-border: #e0d6c0;
+  --tok-fun: #1f6f6b;
+  --tok-str: #8e2d1c;
+  --tok-num: #d98324;
+  --tok-com: #9a9078;
+  --tok-kw: #c24a2e;
+  --font-body: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-display: "Familjen Grotesk", system-ui, sans-serif;
+  --font-ui: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --sq-outer: #e0a100;
+  --heading-weight: 700;
+}
+
+/* Interaction direction — cool grey ground, all-grotesk, dark code blocks. */
+.preset-interaction {
+  --bg: #f1f2f4;
+  --surface: #ffffff;
+  --surface-strong: #f7f8fa;
+  --ink: #15181e;
+  --muted: #7b8494;
+  --border: #e3e6eb;
+  --code-bg: #15181e;
+  --code-fg: #c9d0dc;
+  --code-border: #15181e;
+  --tok-fun: #7fa6f0;
+  --tok-str: #e9904f;
+  --tok-num: #9ad0a0;
+  --tok-com: #6b7484;
+  --tok-kw: #f4b43c;
+  --font-body: "Hanken Grotesk", system-ui, sans-serif;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-ui: "Hanken Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --sq-outer: var(--A300);
+  --heading-weight: 600;
+}
+
+/* Study preset */
 .preset-study {
   --bg: #f7f9fb;
   --surface: #ffffff;
@@ -141,9 +255,11 @@
   --muted: #68717d;
   --border: #dde2e8;
   --code-bg: #f1f4f8;
+  --font-display: "Avenir Next", "Gill Sans", "Trebuchet MS", system-ui, sans-serif;
+  --heading-weight: 730;
 }
 
-/* Structural — beton brut, shadowless precision (Structural Constellations) */
+/* Structural preset */
 .preset-structural {
   --bg: #e6e9ed;
   --surface: #f1f3f6;
@@ -154,9 +270,11 @@
   --code-bg: #e0e5ea;
   --shadow-soft: none;
   --shadow-card: none;
+  --font-display: "Franklin Gothic Medium", "Avenir Next", "Gill Sans", sans-serif;
+  --heading-weight: 760;
 }
 
-/* Adobe — warm architectural grey, Le Corbusier beton (not sandy) */
+/* Adobe preset */
 .preset-adobe {
   --bg: #ece9e7;
   --surface: #f3f1ef;
@@ -167,24 +285,26 @@
   --code-bg: #e3dfdc;
   --shadow-soft: 0 2px 7px rgba(0, 0, 0, 0.04);
   --shadow-card: 0 2px 9px rgba(0, 0, 0, 0.05);
+  --font-display: "Optima", "Avenir Next", "Gill Sans", sans-serif;
+  --heading-weight: 720;
 }
 
-/* Midnight — deep dark (jewel-tone accents against indigo-black) */
+/* Midnight preset */
 .preset-midnight {
   --bg: #0d1117;
   --surface: #151b24;
   --surface-strong: #1a212d;
   --ink: #e8e6e1;
-  --muted: #9aa2b0;
+  --muted: #b2bac7;
   --border: #2c3342;
-  --code-bg: #111722;
+  --code-bg: #0f1520;
   --shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.4);
   --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.45);
+  --font-display: "Avenir Next", "Gill Sans", "Trebuchet MS", sans-serif;
+  --heading-weight: 740;
   --accent-ink: var(--accent-ink-dark);
-  --accent-hover: #f2b2a7;
-  --accent-tint: rgba(228, 73, 38, 0.2);
-  --accent-band: rgba(228, 73, 38, 0.25);
 }
+/* ALBERS_TOKENS_PRESETS_END */
 
 /* -- Dark mode (system / Bootstrap) -------------------------------------- */
 @media (prefers-color-scheme: dark) {
@@ -221,6 +341,100 @@
   --accent-band: rgba(228, 73, 38, 0.25);
 }
 
+/* ALBERS_TOKENS_DARK_FAMILIES_START */
+body[data-bs-theme="dark"].palette-red,
+[data-bs-theme="dark"] body.palette-red {
+  --accent-ink: #FFB8A9;
+  --accent-hover: #FFD2C7;
+  --accent-tint: rgba(228, 73, 38, 0.24);
+  --accent-band: rgba(228, 73, 38, 0.30);
+}
+
+body[data-bs-theme="dark"].palette-lapis,
+[data-bs-theme="dark"] body.palette-lapis {
+  --accent-ink: #AAB9FF;
+  --accent-hover: #C6D0FF;
+  --accent-tint: rgba(73, 104, 214, 0.24);
+  --accent-band: rgba(73, 104, 214, 0.30);
+}
+
+body[data-bs-theme="dark"].palette-ochre,
+[data-bs-theme="dark"] body.palette-ochre {
+  --accent-ink: #FFD46E;
+  --accent-hover: #FFE4A7;
+  --accent-tint: rgba(180, 137, 0, 0.24);
+  --accent-band: rgba(180, 137, 0, 0.31);
+}
+
+body[data-bs-theme="dark"].palette-teal,
+[data-bs-theme="dark"] body.palette-teal {
+  --accent-ink: #9BDCD9;
+  --accent-hover: #B8E8E5;
+  --accent-tint: rgba(47, 140, 140, 0.24);
+  --accent-band: rgba(47, 140, 140, 0.30);
+}
+
+body[data-bs-theme="dark"].palette-green,
+[data-bs-theme="dark"] body.palette-green {
+  --accent-ink: #AFE7B1;
+  --accent-hover: #CAF0CB;
+  --accent-tint: rgba(102, 187, 106, 0.24);
+  --accent-band: rgba(102, 187, 106, 0.30);
+}
+
+body[data-bs-theme="dark"].palette-violet,
+[data-bs-theme="dark"] body.palette-violet {
+  --accent-ink: #DFB3EC;
+  --accent-hover: #ECCFF4;
+  --accent-tint: rgba(186, 104, 200, 0.24);
+  --accent-band: rgba(186, 104, 200, 0.31);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.palette-red {
+    --accent-ink: #FFB8A9;
+    --accent-hover: #FFD2C7;
+    --accent-tint: rgba(228, 73, 38, 0.24);
+    --accent-band: rgba(228, 73, 38, 0.30);
+  }
+
+  body.palette-lapis {
+    --accent-ink: #AAB9FF;
+    --accent-hover: #C6D0FF;
+    --accent-tint: rgba(73, 104, 214, 0.24);
+    --accent-band: rgba(73, 104, 214, 0.30);
+  }
+
+  body.palette-ochre {
+    --accent-ink: #FFD46E;
+    --accent-hover: #FFE4A7;
+    --accent-tint: rgba(180, 137, 0, 0.24);
+    --accent-band: rgba(180, 137, 0, 0.31);
+  }
+
+  body.palette-teal {
+    --accent-ink: #9BDCD9;
+    --accent-hover: #B8E8E5;
+    --accent-tint: rgba(47, 140, 140, 0.24);
+    --accent-band: rgba(47, 140, 140, 0.30);
+  }
+
+  body.palette-green {
+    --accent-ink: #AFE7B1;
+    --accent-hover: #CAF0CB;
+    --accent-tint: rgba(102, 187, 106, 0.24);
+    --accent-band: rgba(102, 187, 106, 0.30);
+  }
+
+  body.palette-violet {
+    --accent-ink: #DFB3EC;
+    --accent-hover: #ECCFF4;
+    --accent-tint: rgba(186, 104, 200, 0.24);
+    --accent-band: rgba(186, 104, 200, 0.31);
+  }
+}
+/* ALBERS_TOKENS_DARK_FAMILIES_END */
+
 /* -- Base typography & layout -------------------------------------------- */
 :root { scrollbar-gutter: stable both-edges; }
 
@@ -228,13 +442,51 @@ html,
 body {
   background-color: var(--bg);
   color: var(--ink);
-  font-family: "Avenir Next", "Gill Sans", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   font-size: 17.5px;
   line-height: 1.58;
   letter-spacing: 0.01em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* The direction/preset classes live on <body>, but <html> paints any page area
+   the body box doesn't cover (below a short body, or the gutter beside a
+   constrained vignette card). <html> can't inherit the body's class, so mirror
+   each non-default ground onto it -- otherwise a non-Homage page falls back to
+   the Homage cream where the body doesn't reach. Homage is the :root default. */
+html:has(body.preset-interaction) { --bg: #f1f2f4; }
+html:has(body.preset-study) { --bg: #f7f9fb; }
+html:has(body.preset-structural) { --bg: #e6e9ed; }
+html:has(body.preset-adobe) { --bg: #ece9e7; }
+html:has(body.preset-midnight) { --bg: #0d1117; }
+
+/* -- Albers calibration: strict orthogonal UI ----------------------------- */
+.navbar .nav-link,
+.navbar .navbar-brand,
+.nav-item .nav-link,
+.btn,
+.form-control,
+input[type="search"],
+button.copy-code,
+pre,
+table,
+blockquote,
+.callout,
+.theme-lab__panel,
+.theme-lab__preview,
+.albers-chip,
+#toc > .nav a.nav-link,
+aside,
+.dropdown-menu,
+.popover,
+.page-content,
+.article,
+.reference,
+.template-home,
+.page-header {
+  border-radius: 0 !important;
 }
 
 main,
@@ -245,6 +497,157 @@ main,
   max-width: var(--content);
   margin-inline: auto;
   padding-inline: clamp(16px, 2.4vw, 34px);
+}
+
+/* -- html_vignette (CRAN) layout ----------------------------------------- *
+ * rmarkdown::html_vignette renders content directly inside <body>, with a
+ * top-level <div id="TOC"> and no .contents / .page-content / .main-container
+ * wrapper. pkgdown wraps article content in .contents and uses a lowercase
+ * #toc, so the rules above never matched the vignette DOM -- on CRAN the text
+ * ran full-bleed and the TOC was an unstyled list at the top. The rules below
+ * are scoped to the vignette DOM only: a <body> that has a direct-child #TOC
+ * (or the optional .albers-vignette marker class). They are inert on the
+ * pkgdown site, whose <body> has no direct #TOC child.
+ * --------------------------------------------------------------------------- */
+body.albers-vignette,
+body:has(> #TOC) {
+  box-sizing: border-box;
+  max-width: calc(var(--content) + 2 * var(--vig-pad-inline));
+  margin-inline: auto;
+  padding: var(--vig-pad-block) var(--vig-pad-inline);
+  background: var(--surface);
+  border: var(--rule-thin) solid var(--border);
+  box-shadow: var(--shadow-soft);
+  position: relative;
+}
+
+/* Albers ribbon down the inner edge, echoing .page-content */
+body.albers-vignette::before,
+body:has(> #TOC)::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: var(--rule-strong);
+  background: var(--A500);
+  opacity: var(--ribbon-opacity);
+  pointer-events: none;
+}
+
+body.albers-vignette > h1.title,
+body:has(> #TOC) > h1.title {
+  margin-top: 0;
+}
+
+/* TOC as an Albers surface card (used in both 1- and 2-column modes) */
+body.albers-vignette > #TOC,
+body:has(> #TOC) > #TOC {
+  background: var(--surface-strong);
+  border: var(--rule-thin) solid var(--border);
+  border-left: var(--rule-strong) solid var(--A500);
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
+  margin-block: var(--space-5) var(--space-6);
+  font-size: 0.92em;
+  line-height: 1.4;
+}
+
+body.albers-vignette > #TOC ul,
+body:has(> #TOC) > #TOC ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+body.albers-vignette > #TOC ul ul,
+body:has(> #TOC) > #TOC ul ul {
+  padding-left: 0.95em;
+  margin-top: 0.18rem;
+}
+
+body.albers-vignette > #TOC li,
+body:has(> #TOC) > #TOC li {
+  position: relative;
+  margin: 0.2rem 0;
+  padding-left: 0.95em;
+}
+
+body.albers-vignette > #TOC li::before,
+body:has(> #TOC) > #TOC li::before {
+  content: "–";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--A500);
+  opacity: var(--subdash-opacity);
+}
+
+body.albers-vignette > #TOC a,
+body:has(> #TOC) > #TOC a {
+  color: var(--muted) !important;
+  text-decoration: none !important;
+  border-bottom: none !important;
+}
+
+body.albers-vignette > #TOC a:hover,
+body.albers-vignette > #TOC a:focus-visible,
+body:has(> #TOC) > #TOC a:hover,
+body:has(> #TOC) > #TOC a:focus-visible {
+  color: var(--accent-ink) !important;
+}
+
+/* Two-column layout with a sticky sidebar on wide viewports. The flat
+ * html_vignette DOM (title, #TOC, and section divs are all siblings of
+ * <body>) is laid out as a grid: the title spans both columns, the TOC
+ * occupies the left column and spans the section rows so it can stick. */
+@media (min-width: 1080px) {
+  body.albers-vignette,
+  body:has(> #TOC) {
+    max-width: calc(
+      var(--content) + var(--vig-toc-width) + var(--vig-gap) +
+        2 * var(--vig-pad-inline)
+    );
+    display: grid;
+    grid-template-columns: [toc] var(--vig-toc-width) [main] minmax(0, 1fr);
+    column-gap: var(--vig-gap);
+    align-items: start;
+  }
+
+  body.albers-vignette > *,
+  body:has(> #TOC) > * {
+    grid-column: main;
+    min-width: 0;
+  }
+
+  body.albers-vignette > h1.title,
+  body:has(> #TOC) > h1.title {
+    grid-column: toc / -1;
+  }
+
+  body.albers-vignette > #TOC,
+  body:has(> #TOC) > #TOC {
+    grid-column: toc;
+    grid-row: 2 / span 200;
+    align-self: start;
+    position: sticky;
+    top: var(--vig-pad-block);
+    max-height: calc(100vh - 2 * var(--vig-pad-block));
+    overflow-y: auto;
+    margin-block: 0;
+  }
+}
+
+/* Edge-to-edge on phones: drop the card chrome */
+@media (max-width: 620px) {
+  body.albers-vignette,
+  body:has(> #TOC) {
+    border: none;
+    box-shadow: none;
+    padding-inline: 18px;
+  }
+  body.albers-vignette::before,
+  body:has(> #TOC)::before {
+    display: none;
+  }
 }
 
 /* -- Surfaces ------------------------------------------------------------ */
@@ -338,6 +741,7 @@ p { margin-block: 0 1.02rem; }
 h1,
 h2,
 h3 {
+  font-family: var(--font-display);
   color: var(--ink);
   line-height: 1.18;
   margin-top: var(--space-6);
@@ -345,49 +749,55 @@ h3 {
 }
 
 h1 {
-  font-size: clamp(2rem, 2.6vw, 2.42rem);
-  letter-spacing: 0.012em;
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  letter-spacing: -0.022em;
   text-wrap: balance;
-  font-weight: 760;
+  font-weight: calc(var(--heading-weight) + 40);
 }
 
+/* Section headers are compact uppercase grotesk labels (matches the resdesign
+   screenshots), carrying a small nested-square marker. h1 stays large and
+   sentence-case with no marker. */
 h2 {
-  font-size: clamp(1.34rem, 2vw, 1.58rem);
-  letter-spacing: 0.06em;
+  font-family: var(--font-ui);
+  font-size: 1.04rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-weight: 730;
+  font-weight: 700;
 }
 
 h3 {
-  font-size: clamp(1.08rem, 1.5vw, 1.24rem);
-  letter-spacing: 0.02em;
-  font-weight: 690;
+  font-family: var(--font-ui);
+  font-size: 0.86rem;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 h2,
 h3 {
   position: relative;
-  padding-left: 0.82em;
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
   padding-right: 1.45em;
   scroll-margin-top: var(--anchor-offset);
 }
 
+/* Nested-square section marker: a small core square with two box-shadow rings,
+   echoing Albers's "Homage to the Square". Replaces the 1.x em-dash. */
 h2::before,
 h3::before {
-  content: "—";
-  position: absolute;
-  left: 0;
-  top: 0.02em;
-  color: var(--A500);
-  line-height: 1;
-  font-weight: var(--dash-weight);
-  opacity: var(--dash-opacity);
-}
-
-h3::before {
-  content: "–";
-  color: var(--A700);
-  opacity: var(--subdash-opacity);
+  content: "";
+  flex: none;
+  margin-left: var(--sq-ring);
+  width: var(--sq-size);
+  height: var(--sq-size);
+  background: var(--sq-core);
+  box-shadow:
+    0 0 0 var(--sq-ring) var(--sq-mid),
+    0 0 0 calc(2 * var(--sq-ring)) var(--sq-outer);
 }
 
 /* -- Links --------------------------------------------------------------- */
@@ -420,7 +830,7 @@ code,
 pre,
 kbd,
 samp {
-  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 0.95em;
   line-height: 1.52;
 }
@@ -438,12 +848,24 @@ pre {
   -moz-tab-size: 2;
 }
 
+/* Keep code legible when Bootstrap switches `data-bs-theme`. */
+pre,
+.sourceCode pre {
+  color: var(--code-fg);
+}
+
+[data-bs-theme="dark"] pre,
+[data-bs-theme="dark"] code {
+  background-color: var(--code-bg);
+}
+
 pre code {
   background: transparent;
   border: none;
   padding: 0;
   word-break: normal;
   overflow-wrap: normal;
+  color: var(--code-fg);
 }
 
 button.copy-code {
@@ -454,7 +876,7 @@ button.copy-code {
   background: var(--surface);
   color: var(--accent-ink);
   padding: 4px 8px;
-  font: 650 11px/1 "Avenir Next", system-ui, sans-serif;
+  font: 650 11px/1 var(--font-display);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
@@ -468,10 +890,75 @@ button.copy-code:active {
   transform: translateY(1px);
 }
 
-p code {
-  background: var(--code-bg);
+/* Inline code stays a light chip with accent ink in BOTH directions (never the
+   dark block background that Interaction uses for `pre`). */
+:not(pre) > code {
+  background: var(--surface-strong);
   border: var(--rule-thin) solid var(--border);
+  color: var(--accent-ink);
   padding: 0.12em 0.36em;
+  font-size: 0.86em;
+}
+
+/* -- Syntax Highlighting -------------------------------------------------- */
+/* Token colours come from per-direction --tok-* so they stay legible on both
+   the light (Homage) and dark (Interaction) code grounds. */
+.sourceCode .va,
+.sourceCode .op,
+.sourceCode .pp,
+.sourceCode .ot,
+.sourceCode .sc {
+  color: var(--code-fg);
+}
+
+pre code .kw,
+.sourceCode .kw,
+.hljs-keyword {
+  color: var(--tok-kw);
+  font-weight: 650;
+}
+
+pre code .fu,
+.sourceCode .fu,
+.hljs-title,
+.hljs-function {
+  color: var(--tok-fun);
+}
+
+pre code .st,
+.sourceCode .st,
+.hljs-string {
+  color: var(--tok-str);
+}
+
+pre code .co,
+.sourceCode .co,
+.hljs-comment {
+  color: var(--tok-com);
+  font-style: italic;
+}
+
+pre code .cn,
+.sourceCode .dv,
+.sourceCode .fl,
+.sourceCode .bn,
+.sourceCode .cn,
+.hljs-number,
+.hljs-literal {
+  color: var(--tok-num);
+}
+
+/* downlit links inside code read as code (function colour), not page links */
+pre code a,
+pre code a:visited,
+div.sourceCode a,
+div.sourceCode a:visited {
+  color: var(--tok-fun) !important;
+  text-decoration: none;
+}
+pre code a:hover,
+div.sourceCode a:hover {
+  text-decoration: underline;
 }
 
 /* -- Tables -------------------------------------------------------------- */
@@ -518,17 +1005,79 @@ caption {
   font-size: 0.94em;
 }
 
+/* -- Figures ------------------------------------------------------------- */
+figure {
+  margin-block: 1.2rem 1.6rem;
+  padding: 0.78rem 0.82rem;
+  border: var(--rule-thin) solid var(--border);
+  background: var(--surface);
+}
+
+figure::before {
+  content: "";
+  display: block;
+  height: var(--rule-strong);
+  width: clamp(64px, 18%, 160px);
+  background: var(--A500);
+  opacity: 0.58;
+  margin-bottom: 0.68rem;
+}
+
+figcaption {
+  margin-top: 0.58rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.052em;
+  color: var(--muted);
+}
+
 /* -- Callouts ------------------------------------------------------------ */
 blockquote,
 .callout {
-  border-left: var(--rule-strong) solid var(--A500);
-  border-top: var(--rule-thin) solid var(--border);
-  background: var(--accent-band);
+  position: relative;
+  border: var(--rule-thin) solid var(--border);
+  border-left: 3px solid var(--accent);
+  background: var(--surface-strong);
   padding: 16px 22px;
   margin-block: 1.45rem;
 }
 
+/* small nested-square corner accent (matches the resdesign callout) */
+blockquote::after,
+.callout::after {
+  content: "";
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 0.5em;
+  height: 0.5em;
+  background: var(--sq-mid);
+  box-shadow: 0 0 0 0.17em var(--sq-outer);
+}
+
 blockquote p { margin: 0; }
+
+.callout-note {
+  border-left-color: var(--A500);
+  background: var(--accent-band);
+}
+
+.callout-insight {
+  border-left-color: var(--A700);
+  background: var(--accent-tint);
+}
+
+.callout-warning {
+  border-left-color: #b48900;
+  background: rgba(180, 137, 0, 0.12);
+}
+
+.callout-experiment {
+  border-left-color: color-mix(in srgb, var(--A500) 60%, var(--A900));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--A300) 22%, transparent) 0 2px, transparent 2px),
+    color-mix(in srgb, var(--accent-band) 75%, var(--surface));
+}
 
 /* -- Anchors ------------------------------------------------------------- */
 h2:hover .anchor,
@@ -574,6 +1123,72 @@ h3:focus-within .anchor {
   margin-block: 1rem 0.55rem;
 }
 
+/* -- Interaction plate motif ---------------------------------------------- */
+.albers-plate {
+  position: relative;
+  width: min(100%, 560px);
+  aspect-ratio: 1 / 1;
+  margin: calc(var(--module) * 7) 0 calc(var(--module) * 8);
+  border: var(--rule-thin) solid var(--border);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.albers-plate__outer,
+.albers-plate__inner,
+.albers-plate__core {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.albers-plate__outer {
+  width: 72%;
+  aspect-ratio: 1 / 1;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--A300);
+}
+
+.albers-plate__inner {
+  width: 50%;
+  aspect-ratio: 1 / 1;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--A700);
+}
+
+.albers-plate__core {
+  width: 28%;
+  aspect-ratio: 1 / 1;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--A900);
+}
+
+.albers-composition {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 5;
+  min-height: clamp(96px, 18vw, 214px);
+  background: var(--surface);
+  border: var(--rule-thin) solid var(--border);
+  margin-block: 1.2rem 1.5rem;
+  overflow: hidden;
+}
+
+.albers-composition svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.albers-composition--dense {
+  min-height: clamp(120px, 23vw, 270px);
+}
+
 .hr-notch {
   height: 0;
   border-top: var(--rule-thin) solid var(--border);
@@ -602,6 +1217,100 @@ h3:focus-within .anchor {
   color: var(--A500);
   font-weight: var(--overview-dash-weight);
   opacity: var(--overview-dash-opacity);
+}
+
+/* -- Theme Lab ----------------------------------------------------------- */
+.theme-lab {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.theme-lab__panel {
+  border: var(--rule-thin) solid var(--border);
+  background: var(--surface-strong);
+  padding: var(--space-4);
+}
+
+.theme-lab__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.theme-lab label {
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: var(--space-1);
+}
+
+.theme-lab select,
+.theme-lab input {
+  width: 100%;
+  border: var(--rule-thin) solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.46rem 0.5rem;
+}
+
+.theme-lab__preview {
+  border: var(--rule-thin) solid var(--border);
+  background: var(--surface);
+  padding: var(--space-4);
+}
+
+.theme-lab__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.albers-chip {
+  border: var(--rule-thin) solid var(--border);
+  background: var(--surface-strong);
+  color: var(--ink);
+  padding: 0.2rem 0.44rem;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Theme Lab palette chips: live swatches of the active family's four tones,
+   so changing the family is visible immediately. */
+.theme-lab__chips .albers-chip {
+  color: #fff;
+  border-color: transparent;
+}
+.theme-lab__chips .albers-chip:nth-child(1) { background: var(--A900); }
+.theme-lab__chips .albers-chip:nth-child(2) { background: var(--A700); }
+.theme-lab__chips .albers-chip:nth-child(3) { background: var(--A500); }
+.theme-lab__chips .albers-chip:nth-child(4) {
+  background: var(--A300);
+  color: var(--ink);
+}
+
+body.preset-midnight #toc > .nav a.nav-link {
+  color: color-mix(in srgb, var(--ink) 84%, var(--A300));
+}
+
+body.preset-midnight #toc > .nav a.nav-link:hover,
+body.preset-midnight #toc > .nav a.nav-link:focus {
+  background-color: color-mix(in srgb, var(--A300) 24%, transparent);
+}
+
+body.preset-midnight #toc > .nav a.nav-link.active {
+  color: var(--accent-ink);
+  background-color: color-mix(in srgb, var(--A300) 30%, var(--surface));
+}
+
+/* Bootstrap inverts `img.r-plt` in dark mode; disable it for true midnight renders. */
+body.preset-midnight img.r-plt,
+body.preset-midnight pre .r-plt.img img,
+body.preset-midnight .cell-output-display img,
+body.preset-midnight .html-widget {
+  filter: none !important;
 }
 
 /* -- Responsive ---------------------------------------------------------- */
@@ -760,9 +1469,21 @@ h3:focus-within .anchor {
 @media print {
   body { background: #fff !important; }
 
+  body.albers-vignette,
+  body:has(> #TOC) {
+    display: block;
+    max-width: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+  body.albers-vignette::before,
+  body:has(> #TOC)::before { display: none; }
+
   .navbar,
   .sidebar,
   .toc,
+  #TOC,
   .page-header,
   .homage-hero,
   .hr-notch,

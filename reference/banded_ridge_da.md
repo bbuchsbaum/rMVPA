@@ -115,10 +115,10 @@ matrix and you want to declare sets via \`blocks()\` or \`by_set()\`.
 
 ## See also
 
-[`banded_ridge_da_model`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
-[`grouped_ridge_da_model`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
-[`blocks`](http://bbuchsbaum.github.io/rMVPA/reference/blocks.md),
-[`by_set`](http://bbuchsbaum.github.io/rMVPA/reference/by_set.md)
+[`banded_ridge_da_model`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
+[`grouped_ridge_da_model`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
+[`blocks`](https://bbuchsbaum.github.io/rMVPA/reference/blocks.md),
+[`by_set`](https://bbuchsbaum.github.io/rMVPA/reference/by_set.md)
 
 ## Examples
 

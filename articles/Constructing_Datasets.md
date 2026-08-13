@@ -7,7 +7,7 @@ volumetric and surface data.
 ## Quick Start with Synthetic Data
 
 The easiest way to get started is with
-[`gen_sample_dataset()`](http://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md),
+[`gen_sample_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/gen_sample_dataset.md),
 which creates a complete dataset and design in one call:
 
 ``` r

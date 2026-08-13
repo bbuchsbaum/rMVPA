@@ -16,7 +16,7 @@ appear:
 rMVPA answers both with one fitted object. A single call to
 `rsa_model(..., return_fingerprint = TRUE)` produces, per ROI or per
 searchlight, a small *model-space fingerprint* vector.
-[`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
+[`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
 then turns those fingerprints into the cross-ROI similarity summaries
 you want — without you having to refit anything or assemble RDM vectors
 by hand.
@@ -31,12 +31,12 @@ rMVPA exposes two complementary ways to ask “do these ROIs share
 representational geometry?” Picking the right one is the single most
 important decision in this analysis:
 
-|  | **Model-space connectivity** *(this vignette)* | **Feature-RSA connectivity** *([`vignette("Feature_RSA_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md))* |
+|  | **Model-space connectivity** *(this vignette)* | **Feature-RSA connectivity** *([`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md))* |
 |:---|:---|:---|
 | **Question it answers** | Do ROIs project onto the *same axes of my declared model RDMs*? | Do ROIs *predict the same trial-by-trial similarity structure* through a learned feature space? |
 | **What you supply** | One or more explicit model RDMs | A feature matrix `F` (or similarity matrix `S`) |
 | **What gets compared across ROIs** | Whitened projections onto the model-RDM subspace (length-K fingerprints, K = number of model RDMs after orthogonalisation) | Predicted RDM vectors of length `n_trials × (n_trials − 1) / 2` |
-| **Fitting required?** | No — just project the neural pair vector onto a fixed orthonormal basis | Yes — cross-validated PLS / PCA / glmnet inside [`feature_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md) |
+| **Fitting required?** | No — just project the neural pair vector onto a fixed orthonormal basis | Yes — cross-validated PLS / PCA / glmnet inside [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md) |
 | **Memory per unit** | O(K), typically 2–10 numbers | O(n_pairs), can be 10⁴–10⁵ numbers |
 | **Searchlight-friendly?** | Yes — fingerprints fit easily; k-means anchors avoid `n_centers²` blow-up | Marginal — requires file-backed RDM storage and is more expensive to compare across centers |
 | **Best when** | You have specific theoretical RDMs (semantic, visual, motor…) and want to ask which regions express each | You don’t have a clean theoretical RDM and want a model-free, data-driven similarity measure |
@@ -61,12 +61,12 @@ informative.
 - A *pair design* says which item pairs you compare and what your model
   RDMs predict for each pair.
 - For each ROI / searchlight,
-  [`train_model.rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/train_model.md)
+  [`train_model.rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/train_model.md)
   computes the neural pair-dissimilarity vector and regresses it on your
   model RDMs. With `return_fingerprint = TRUE` it also stores the
   standardized projection of the neural pair vector onto an orthonormal
   basis of the model-RDM subspace.
-- [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
+- [`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
   collects those projections into a matrix `F` (ROIs × axes) and reports
   `F · Fᵀ` plus its standard decompositions.
 
@@ -101,12 +101,12 @@ R_feat <- as.matrix(stats::dist(matrix(rnorm(n * 4), n, 4)))
 ```
 
 A
-[`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
+[`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
 is a generalization of
-[`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md).
+[`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md).
 For the within-domain case (one item set, lower-triangle pairs) the two
 are interchangeable; we use
-[`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
+[`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
 here to keep one consistent design API throughout the vignette.
 
 ``` r
@@ -191,7 +191,7 @@ can do.
 
 Per ROI, the fingerprint is a length-K vector where K is the rank of
 your model-RDM subspace (here K = 2 because we passed two RDMs).
-[`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
+[`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
 standardizes the fingerprints and returns several views of `F · Fᵀ`:
 
 ``` r
@@ -229,14 +229,14 @@ of these models*, look at `similarity` and the diagonal.
 
 ## Pair designs in two flavors
 
-[`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
+[`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
 is the unified pair-coordinate system. It supports two modes.
 
 ### Within-domain pairs (default)
 
 The classical RSA layout: one item set, lower-triangle pairs. Equivalent
 to
-[`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md):
+[`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md):
 
 ``` r
 
@@ -251,15 +251,15 @@ identical(paired$model_mat$R_cat, classic$model_mat$R_cat)
 ```
 
 Both produce the same length-`n*(n-1)/2` pair vectors and feed into
-[`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+[`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
 interchangeably. You can keep using
-[`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
+[`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
 if you prefer;
-[`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
+[`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
 is here so the design layer can also handle the cases below.
 
 Classic
-[`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
+[`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
 also has the same explicit nuisance channel. Nuisance RDMs enter the
 fitted RSA model, but they do not define fingerprint axes:
 
@@ -311,14 +311,14 @@ length(cross_des$model_mat$M)              # n_a * n_b — full rectangular bloc
 ```
 
 Used with
-[`rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md),
+[`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md),
 this design causes the engine to compute the *rectangular* neural
 pair-dissimilarity block — `1 - cor(rows_A, rows_B)` — instead of a
 lower triangle. You get back per-ROI scores and (with
 `return_fingerprint = TRUE`) per-ROI fingerprints exactly as in the
 within-domain case. ROI-to-ROI connectivity through *cross-domain*
 geometry then drops out of the same
-[`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
+[`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
 call.
 
 ### Function-valued model entries
@@ -421,34 +421,34 @@ anchors.
 | Class | Constructor | What it holds |
 |:---|:---|:---|
 | `rsa_design` | `rsa_design(..., nuisance = list(...))` | Classical within-domain RSA design with optional nuisance RDMs. |
-| `pair_rsa_design` | [`pair_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md) | A pair table, model RDM vectors, optional nuisance vectors. Inherits from `rsa_design`. |
+| `pair_rsa_design` | [`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md) | A pair table, model RDM vectors, optional nuisance vectors. Inherits from `rsa_design`. |
 | `rsa_model` | `rsa_model(..., return_fingerprint = TRUE)` | A fittable RSA spec that emits fingerprints alongside the standard scores. |
-| `regional_mvpa_result` | [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) | Per-ROI results. Carries fingerprints in `attr(., "fingerprints")` when `return_fingerprint = TRUE`. |
-| `searchlight_result` | [`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md) | Per-center results. Same fingerprint attribute. |
-| `rdm_model_space_connectivity` | [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) (regional) | ROI×ROI similarity matrix and decompositions. |
-| `model_space_anchor_connectivity` | [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) (searchlight) | Anchor maps and `n_centers × k` similarity matrix. |
+| `regional_mvpa_result` | [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) | Per-ROI results. Carries fingerprints in `attr(., "fingerprints")` when `return_fingerprint = TRUE`. |
+| `searchlight_result` | [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md) | Per-center results. Same fingerprint attribute. |
+| `rdm_model_space_connectivity` | [`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) (regional) | ROI×ROI similarity matrix and decompositions. |
+| `model_space_anchor_connectivity` | [`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md) (searchlight) | Anchor maps and `n_centers × k` similarity matrix. |
 
 ## Where to go next
 
 - For decorrelating correlated model RDMs *before* you run any of the
   above, see
-  [`vignette("RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/RSA.md)
+  [`vignette("RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md)
   and
-  [`?rdm_decorrelate`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_decorrelate.md).
+  [`?rdm_decorrelate`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_decorrelate.md).
 - For the *learned-feature-space* connectivity path — predicting one
   ROI’s RDM from another via a feature-RSA model — see
-  [`vignette("Feature_RSA_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
+  [`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
   The two paths are complementary:
-  [`model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
+  [`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
   works in your declared model-RDM subspace;
-  [`feature_rsa_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
+  [`feature_rsa_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
   works in a fitted feature space.
 - For variance partitioning by signed contrasts, see
-  [`vignette("Contrast_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md).
+  [`vignette("Contrast_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md).
 - For temporal / nuisance pair predictors, see
-  [`vignette("Temporal_Confounds_in_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md)
+  [`vignette("Temporal_Confounds_in_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md)
   and
-  [`?temporal_rdm`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md).
+  [`?temporal_rdm`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md).
 
 ## Reproducibility note
 

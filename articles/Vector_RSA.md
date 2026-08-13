@@ -39,9 +39,9 @@ Use Vector-Based RSA when:
 
 If you instead have a feature matrix and want regression-style metrics
 (pattern correlation, R²) under cross-validation, see
-[`vignette("Feature_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md).
+[`vignette("Feature_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md).
 If you want to fit multiple model RDMs as competing predictors, see
-[`vignette("RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/RSA.md).
+[`vignette("RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md).
 
 ## Inputs and outputs
 
@@ -51,7 +51,7 @@ If you want to fit multiple model RDMs as competing predictors, see
 | `labels` | Length `n_trials` vector. Each entry must appear in `rownames(D)`. The design expands `D` to an `n_trials × n_trials` matrix (`Dexpanded`) by row matching. |
 | `block_var` | Length `n_trials` vector of block IDs (e.g. run number). Trials sharing a block are excluded from each other’s correlation neighbourhood. |
 | `mvpa_dataset` | Neural data: `n_trials × n_voxels` per ROI. |
-| `distfun` | A distance object from [`create_dist()`](http://bbuchsbaum.github.io/rMVPA/reference/create_dist.md) (e.g. [`cordist()`](http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md), [`eucdist()`](http://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)) used on the *neural* data. |
+| `distfun` | A distance object from [`create_dist()`](https://bbuchsbaum.github.io/rMVPA/reference/create_dist.md) (e.g. [`cordist()`](https://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md), [`eucdist()`](https://bbuchsbaum.github.io/rMVPA/reference/distance-constructors.md)) used on the *neural* data. |
 | `rsa_simfun` | `"pearson"` (default) or `"spearman"` — the correlation between the neural and reference distance vectors. |
 | Output | Per-ROI `rsa_score` (mean across trials). With `nperm > 0`: also `p_rsa_score`, `z_rsa_score`. With `return_predictions = TRUE`: a `prediction_table` containing the per-trial scores. |
 
@@ -205,12 +205,12 @@ distributions are also returned.
 
 ## What’s next
 
-- [`vignette("Feature_RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)
+- [`vignette("Feature_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)
   — when you have a feature matrix rather than a single reference RDM.
-- [`vignette("RSA")`](http://bbuchsbaum.github.io/rMVPA/articles/RSA.md)
+- [`vignette("RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md)
   — the standard whole-RDM workflow with multiple model RDMs and
   `keep_intra_run`.
-- [`?vector_rsa_design`](http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_design.md),
-  [`?vector_rsa_model`](http://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.md),
-  [`?second_order_similarity`](http://bbuchsbaum.github.io/rMVPA/reference/second_order_similarity.md)
+- [`?vector_rsa_design`](https://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_design.md),
+  [`?vector_rsa_model`](https://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.md),
+  [`?second_order_similarity`](https://bbuchsbaum.github.io/rMVPA/reference/second_order_similarity.md)
   — argument reference and the underlying scoring function.

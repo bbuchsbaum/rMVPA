@@ -30,7 +30,7 @@ rsa_model(
 - design:
 
   An instance of an `rsa_design` created by
-  [`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md).
+  [`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md).
 
 - distmethod:
 
@@ -73,7 +73,7 @@ rsa_model(
   vector onto an orthonormal basis of the signal model RDM subspace and
   return the standardized model-space score vector alongside the
   standard outputs. For
-  [`pair_rsa_design`](http://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
+  [`pair_rsa_design`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
   objects, predictors supplied through `nuisance` are excluded from this
   fingerprint basis. The basis is cached on the model spec and reused
   across ROIs/searchlight units. Default `FALSE`.

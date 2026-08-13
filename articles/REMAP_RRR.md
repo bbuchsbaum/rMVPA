@@ -32,7 +32,7 @@ predicted templates in the whitened space.
 
 > **Note**: For a complete introduction to naive cross-decoding (the
 > baseline method), see
-> [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md).
+> [`vignette("Naive_Cross_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md).
 > That vignette explains the algorithm, use cases, and when domain
 > adaptation is needed.
 
@@ -98,7 +98,7 @@ usual MVPA metrics and new REMAP diagnostics:
 When `return_adapter = TRUE` (default), each ROI row also carries a rich
 `predictor` object inside the `classification_result` containing
 diagnostic vectors. The easiest way to inspect it is to call
-[`process_roi()`](http://bbuchsbaum.github.io/rMVPA/reference/process_roi-methods.md)
+[`process_roi()`](https://bbuchsbaum.github.io/rMVPA/reference/process_roi-methods.md)
 on a single ROI and examine the `result$predictor` field.
 
 ``` r
@@ -145,7 +145,7 @@ that item.
 
 The ROI metrics in `performance_table` are also available as volumetric
 maps in `res_remap$vol_results`. You can write them with
-[`save_results()`](http://bbuchsbaum.github.io/rMVPA/reference/save_results.md):
+[`save_results()`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.md):
 
 ``` r
 

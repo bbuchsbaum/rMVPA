@@ -38,11 +38,11 @@ The table gives you four practical signals:
 ## When is standard feature-RSA enough?
 
 Stay with
-[`feature_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+[`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
 when your question is local to one ROI and one state. You fit the model
 in the usual way, hold out data within that state, and read the ROI-wise
 geometry scores from
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md).
 
 ``` r
 
@@ -64,7 +64,7 @@ explains one parcel on its own terms.
 ## When do you need domain adaptation?
 
 Switch to
-[`feature_rsa_da_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_da_model.md)
+[`feature_rsa_da_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_da_model.md)
 when the feature space is shared but the state changes. The canonical
 example is encoding to recall: the rows still refer to the same latent
 content, but the source and target mappings need not be identical.
@@ -86,12 +86,12 @@ It is whether a model that can adapt on target-train rows recovers more
 held-out target geometry than a source-only baseline. When the
 target-side representation is itself estimated from target data, use a
 fold-aware `target_builder` as shown in
-[`vignette("Feature_RSA_Domain_Adaptation")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md).
+[`vignette("Feature_RSA_Domain_Adaptation")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md).
 
 ## When do you want ROI_i -\> ROI_j transfer?
 
 Use
-[`feature_rsa_cross_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)
+[`feature_rsa_cross_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)
 when you want a full asymmetric ROI x ROI matrix. The rows are source
 ROIs, the columns are target ROIs, and the off-diagonals tell you
 whether geometry learned in one parcel matches held-out observed
@@ -143,18 +143,18 @@ cross-correlation is computed.
 ## Decision rules
 
 - Use
-  [`feature_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+  [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
   for one ROI, one state, held-out evaluation in the same domain.
 - Use
-  [`feature_rsa_da_model()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_da_model.md)
+  [`feature_rsa_da_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_da_model.md)
   when the feature space is shared across states and the target mapping
   may shift.
 - Use
-  [`feature_rsa_cross_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)
+  [`feature_rsa_cross_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_cross_connectivity.md)
   when you want ROI-to-ROI generalization at the level of predicted
   versus observed geometry.
 - Use
-  [`feature_rsa_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
+  [`feature_rsa_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
   when you want a symmetric similarity matrix of predicted geometries
   themselves.
 - Use `adjust = "double_center"` or `adjust = "residualize_mean"` only
@@ -165,6 +165,6 @@ cross-correlation is computed.
 
 For the full cross-state workflow, including fold-aware target
 rebuilding, see
-[`vignette("Feature_RSA_Domain_Adaptation")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md).
+[`vignette("Feature_RSA_Domain_Adaptation")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md).
 For the full ROI-to-ROI workflow and stripe-mitigation examples, see
-[`vignette("Feature_RSA_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
+[`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).

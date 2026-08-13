@@ -1,7 +1,7 @@
 # Build a Mock fit_roi Context
 
 Creates the standard `context` list passed to
-[`fit_roi`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
+[`fit_roi`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
 methods.
 
 ## Usage
@@ -15,7 +15,7 @@ mock_context(design = NULL, cv_spec = NULL, id = 1L, center_global_id = NA_integ
 - design:
 
   Optional design object. If `NULL`, a small synthetic
-  [`mvpa_design`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+  [`mvpa_design`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
   is created.
 
 - cv_spec:

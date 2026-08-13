@@ -2,7 +2,7 @@
 
 These convenience functions build specific types of distance function
 objects via
-[`create_dist`](http://bbuchsbaum.github.io/rMVPA/reference/create_dist.md).
+[`create_dist`](https://bbuchsbaum.github.io/rMVPA/reference/create_dist.md).
 Each returns an S3 object inheriting from `c("<method>", "distfun")`.
 
 ## Usage
@@ -81,7 +81,7 @@ reduced PCA space.
 
 ## See also
 
-[`create_dist`](http://bbuchsbaum.github.io/rMVPA/reference/create_dist.md)
+[`create_dist`](https://bbuchsbaum.github.io/rMVPA/reference/create_dist.md)
 for the underlying constructor.
 
 ## Examples

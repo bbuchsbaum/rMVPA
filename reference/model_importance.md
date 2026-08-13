@@ -68,7 +68,7 @@ The importance measure returned depends on the model class:
   This is a **backward** (decoding) measure and is **not** Haufe-safe:
   suppressor variables that reduce node impurity without carrying neural
   signal will receive high importance. Use
-  [`region_importance`](http://bbuchsbaum.github.io/rMVPA/reference/region_importance.md)
+  [`region_importance`](https://bbuchsbaum.github.io/rMVPA/reference/region_importance.md)
   for a slower but more robust backward measure that is bounded by
   out-of-sample performance, or restrict neuroscience interpretation to
   linear models with Haufe-based importance.
@@ -84,9 +84,9 @@ The importance measure returned depends on the model class:
 `importance = TRUE`. Both are **backward** (decoding) measures and may
 assign high importance to suppressor variables that do not carry neural
 signal. For neuroscience interpretation, prefer
-[`haufe_importance`](http://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.md)
+[`haufe_importance`](https://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.md)
 with a linear model or use
-[`region_importance`](http://bbuchsbaum.github.io/rMVPA/reference/region_importance.md)
+[`region_importance`](https://bbuchsbaum.github.io/rMVPA/reference/region_importance.md)
 for a model-agnostic alternative bounded by out-of-sample performance.
 
 ## Examples

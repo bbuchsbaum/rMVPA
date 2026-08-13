@@ -46,6 +46,6 @@ predicted values, test design, test indices, and predictor.
 ## See also
 
 Other classification_result:
-[`binary_classification_result()`](http://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.md),
-[`classification_result()`](http://bbuchsbaum.github.io/rMVPA/reference/classification_result.md),
-[`multiway_classification_result()`](http://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.md)
+[`binary_classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.md),
+[`classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/classification_result.md),
+[`multiway_classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.md)

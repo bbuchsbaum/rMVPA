@@ -14,7 +14,7 @@ build_analysis(config)
 - config:
 
   An `rmvpa_config` returned by
-  [`mvpa_config`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_config.md),
+  [`mvpa_config`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_config.md),
   or a named list containing at least `mode`.
 
 ## Value

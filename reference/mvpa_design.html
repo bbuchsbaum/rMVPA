@@ -79,11 +79,14 @@ mutually exclusive with <code>cv_labels</code>)</p></dd>
 
 
 <dt id="arg-block-var">block_var<a class="anchor" aria-label="anchor" href="#arg-block-var"></a></dt>
-<dd><p>Optional formula or vector specifying the blocking variable for cross-validation</p></dd>
+<dd><p>Optional formula, scalar column name, or row-aligned numeric,
+integer, character, logical, or factor vector specifying the blocking
+variable for cross-validation.</p></dd>
 
 
 <dt id="arg-split-by">split_by<a class="anchor" aria-label="anchor" href="#arg-split-by"></a></dt>
-<dd><p>Optional formula or vector for splitting analyses</p></dd>
+<dd><p>Optional formula, scalar column name, or row-aligned atomic
+vector specifying how to split analyses.</p></dd>
 
 
 <dt id="arg-cv-labels">cv_labels<a class="anchor" aria-label="anchor" href="#arg-cv-labels"></a></dt>
@@ -133,8 +136,10 @@ when <code>cv_labels</code> is supplied, or to the parsed <code>y_train</code> w
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The <code>y_train</code> and <code>y_test</code> can be specified either as formulas (e.g., ~ condition)
 or as vectors. If formulas are used, they are evaluated within the respective design matrices.</p>
-<p>The <code>block_var</code> and <code>split_by</code> can also be specified as formulas or vectors.
-If formulas, they are evaluated within the training design matrix.</p>
+<p>The <code>block_var</code> and <code>split_by</code> can be specified as formulas, scalar
+column names, or row-aligned atomic vectors. Formulas and column names are
+evaluated within the relevant design matrix; vectors must have exactly one
+value per design row.</p>
 <p>The new <code>cv_labels</code> and <code>targets</code> parameters allow separating the labels used
 for fold construction from the actual training targets. When using the old <code>y_train</code>
 path, both <code>cv_labels</code> and <code>targets</code> are set to the parsed <code>y_train</code> value.</p>

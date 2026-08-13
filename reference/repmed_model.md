@@ -30,7 +30,7 @@ repmed_model(
 - repmed_des:
 
   Output of
-  [`repmed_design`](http://bbuchsbaum.github.io/rMVPA/reference/repmed_design.md).
+  [`repmed_design`](https://bbuchsbaum.github.io/rMVPA/reference/repmed_design.md).
 
 - key_var:
 

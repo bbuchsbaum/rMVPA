@@ -1,7 +1,7 @@
 # Metric Schema Constructors
 
 Helpers for defining typed metric entries in
-[`output_schema`](http://bbuchsbaum.github.io/rMVPA/reference/output_schema.md)
+[`output_schema`](https://bbuchsbaum.github.io/rMVPA/reference/output_schema.md)
 methods for plugin models.
 
 ## Usage

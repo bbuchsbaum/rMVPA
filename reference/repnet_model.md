@@ -30,7 +30,7 @@ repnet_model(
 - repnet_des:
 
   Output of
-  [`repnet_design`](http://bbuchsbaum.github.io/rMVPA/reference/repnet_design.md).
+  [`repnet_design`](https://bbuchsbaum.github.io/rMVPA/reference/repnet_design.md).
 
 - distfun:
 
@@ -48,9 +48,9 @@ repnet_model(
 ## Value
 
 A model spec of class `"repnet_model"` compatible with
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
 and
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
+[`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
 
 ## Examples
 

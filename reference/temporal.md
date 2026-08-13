@@ -1,7 +1,7 @@
 # Temporal RDM wrapper for formula usage
 
 Convenience wrapper for
-[`temporal_rdm`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
+[`temporal_rdm`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
 that simplifies usage in RSA formulas.
 
 ## Usage
@@ -23,7 +23,7 @@ temporal(index, block = NULL, ..., as_dist = TRUE)
 - ...:
 
   additional parameters passed to
-  [`temporal_rdm`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
+  [`temporal_rdm`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
 
 - as_dist:
 
@@ -40,7 +40,7 @@ calls `temporal_rdm` with the same parameters.
 
 ## See also
 
-[`temporal_rdm`](http://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
+[`temporal_rdm`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md)
 
 ## Examples
 

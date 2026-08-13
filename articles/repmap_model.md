@@ -4,7 +4,7 @@
 > rMVPA. For the section’s terminology and how to choose between
 > *ReNA-RC*, *ReNA-Map*, *ReNA-RM*, and *REMAP-RRR*, see the glossary at
 > the top of
-> [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md).
+> [`vignette("Naive_Cross_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md).
 
 ## Overview
 
@@ -174,11 +174,11 @@ region_mask <- neuroim2::NeuroVol(array(region_vec, dim = dim(ds$dataset$mask)),
 
 ## See also
 
-- [`vignette("repmed_model")`](http://bbuchsbaum.github.io/rMVPA/articles/repmed_model.md)
+- [`vignette("repmed_model")`](https://bbuchsbaum.github.io/rMVPA/articles/repmed_model.md)
   – Representational Mediation (ReNA-RM)
-- [`vignette("repnet_model")`](http://bbuchsbaum.github.io/rMVPA/articles/repnet_model.md)
+- [`vignette("repnet_model")`](https://bbuchsbaum.github.io/rMVPA/articles/repnet_model.md)
   – Representational Connectivity (ReNA-RC)
-- [`vignette("Naive_Cross_Decoding")`](http://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md)
+- [`vignette("Naive_Cross_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md)
   – Naive cross-decoding baseline
 
 ## Session info

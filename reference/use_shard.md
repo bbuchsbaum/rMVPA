@@ -2,7 +2,7 @@
 
 Prepares the dataset for shared-memory access and tags the model
 specification so that
-[`mvpa_iterate`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
+[`mvpa_iterate`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
 uses the shard backend instead of the default furrr pipeline.
 
 ## Usage
@@ -16,7 +16,7 @@ use_shard(mod_spec)
 - mod_spec:
 
   A model specification created by
-  [`mvpa_model`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+  [`mvpa_model`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
   (or any constructor that produces an object inheriting from
   `"model_spec"`).
 

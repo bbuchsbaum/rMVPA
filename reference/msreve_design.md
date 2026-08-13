@@ -38,7 +38,7 @@ msreve_design(
 
   Logical. If TRUE, automatically add pairwise interaction contrasts
   using
-  [`add_interaction_contrasts`](http://bbuchsbaum.github.io/rMVPA/reference/add_interaction_contrasts.md).
+  [`add_interaction_contrasts`](https://bbuchsbaum.github.io/rMVPA/reference/add_interaction_contrasts.md).
 
 - nuisance_rdms:
 

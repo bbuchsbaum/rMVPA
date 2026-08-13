@@ -5,7 +5,7 @@
 Use searchlight MVPA when you want a whole-brain map of local decoding
 performance rather than one score per anatomical ROI. The input is the
 same
-[`mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+[`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
 you would use for a regional analysis; the output is a
 `searchlight_result` with one performance map per metric.
 
@@ -117,7 +117,7 @@ model
 
 ### Standard searchlight
 
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
+[`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
 returns image volumes with performance metrics at each sphere center.
 For two‑class problems we report cross‑validated accuracy and AUC
 (centered at 0 by subtracting 0.5). The `radius` is in millimeters;
@@ -153,7 +153,7 @@ result
 
 Any classifier in the rMVPA registry can be used in a searchlight. You
 can also register your own with
-[`register_mvpa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/register_mvpa_model.md).
+[`register_mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/register_mvpa_model.md).
 Two robust options that ship with rMVPA are `hdrda` and `pca_lda`:
 
 ``` r
@@ -210,9 +210,9 @@ via `rrpack`.
 
 ## See also
 
-- [`vignette("Regional_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md)
+- [`vignette("Regional_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md)
   – the ROI-based counterpart to searchlight analysis
-- [`vignette("CrossValidation")`](http://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
+- [`vignette("CrossValidation")`](https://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
   – cross-validation strategies for fMRI
-- [`vignette("CustomAnalyses")`](http://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.md)
+- [`vignette("CustomAnalyses")`](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.md)
   – plug in your own analysis functions

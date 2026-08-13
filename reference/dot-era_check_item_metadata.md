@@ -1,9 +1,9 @@
 # Validate item-level metadata for ERA models
 
 Used by
-[`era_rsa_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
+[`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
 and
-[`era_partition_model()`](http://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
+[`era_partition_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md)
 to warn (or error, when `strict=TRUE`) about missing item-level vectors
 that would otherwise produce silently-NA metrics or unused nuisance
 regressors. Also detects an easy-to-miss namespace collision where

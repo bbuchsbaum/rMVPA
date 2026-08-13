@@ -22,7 +22,7 @@ top proportion `p` (e.g., `p = 0.1` keeps the top 10%).
 ## Creating a Feature Selector Object
 
 To create a feature selector in `rMVPA`, use the
-[`feature_selector()`](http://bbuchsbaum.github.io/rMVPA/reference/feature_selector.md)
+[`feature_selector()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_selector.md)
 function. For example, to construct a feature selector using the FTest
 method with a top_k cutoff (selecting the top 10 features):
 
@@ -60,7 +60,7 @@ fsel
 ## Applying Feature Selection to Data
 
 The
-[`select_features()`](http://bbuchsbaum.github.io/rMVPA/reference/select_features-methods.md)
+[`select_features()`](https://bbuchsbaum.github.io/rMVPA/reference/select_features-methods.md)
 function applies the feature selection process to a given feature matrix
 `X` and a response variable `Y`. The function returns a logical vector
 with `TRUE` for selected features and `FALSE` otherwise.

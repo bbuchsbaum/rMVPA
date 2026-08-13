@@ -318,10 +318,10 @@ stable estimates. The rMVPA package supports all these approaches,
 including custom schemes for specialized needs.
 
 For implementation details, see
-[`blocked_cross_validation()`](http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md),
-[`bootstrap_blocked_cross_validation()`](http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md),
+[`blocked_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md),
+[`bootstrap_blocked_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md),
 and
-[`custom_cross_validation()`](http://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md).
+[`custom_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md).
 
 ## Integration with Regional and Searchlight Analyses
 
@@ -500,6 +500,6 @@ allowing researchers to choose the most appropriate validation approach
 for their specific analysis needs.
 
 For more details, see
-[`vignette("Regional_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md)
+[`vignette("Regional_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md)
 and
-[`vignette("Searchlight_Analysis")`](http://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md).
+[`vignette("Searchlight_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md).

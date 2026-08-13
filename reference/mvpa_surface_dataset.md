@@ -64,10 +64,10 @@ length equal to the number of nodes in the surface geometry.
 
 ## See also
 
-[`mvpa_dataset`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
+[`mvpa_dataset`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
 for creating volume-based MVPA datasets
 
-[`mvpa_design`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+[`mvpa_design`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
 for creating the corresponding design object
 
 ## Examples

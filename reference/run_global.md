@@ -63,7 +63,7 @@ A `global_mvpa_result` object.
 
 `run_global` currently uses a dedicated global CV/training pipeline
 rather than dispatching through
-[`fit_roi`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md).
+[`fit_roi`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md).
 This is intentional for now; future cleanup may unify global and ROI
 fitting interfaces.
 

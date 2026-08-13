@@ -1,7 +1,7 @@
 # Construct a pair-observation RSA design
 
 Generalizes
-[`rsa_design`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
+[`rsa_design`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
 to support arbitrary pair-observation geometries: lower-triangle
 within-domain pairs (the classical RSA layout), rectangular
 between-domain pairs (e.g. items in domain A vs. items in domain B), and
@@ -102,7 +102,7 @@ pair_rsa_design(
 
 A list with class `c("pair_rsa_design", "rsa_design", "list")`
 containing all fields produced by
-[`rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
+[`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
 plus
 
 - pair_kind:
@@ -129,7 +129,7 @@ plus
 
 The returned object inherits from `rsa_design` so it is a drop-in
 replacement when used with
-[`rsa_model`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+[`rsa_model`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
 and the regional / searchlight engines. Within-domain pair designs are
 fully interoperable with the existing `train_model.rsa_model` path;
 between-domain designs are dispatched on the `pair_kind` field, which
@@ -138,9 +138,9 @@ dissimilarity block instead of the lower triangle.
 
 ## See also
 
-[`rsa_design`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md),
-[`rsa_model`](http://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md),
-[`model_space_connectivity`](http://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
+[`rsa_design`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md),
+[`rsa_model`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md),
+[`model_space_connectivity`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
 
 ## Examples
 

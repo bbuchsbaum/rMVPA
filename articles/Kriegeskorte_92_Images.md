@@ -77,7 +77,7 @@ The classical question is: which of these candidate models best explains
 the hIT geometry, and how stable is that ranking across subjects? In
 rMVPA, comparing per-subject RDMs against multiple model RDMs is one
 call to
-[`rdm_model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
+[`rdm_model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md)
 — but for a clean Spearman-correlation table we’ll do it directly so the
 numbers are visibly familiar.
 
@@ -152,7 +152,7 @@ Two sessions from the same subject ought to look more like each other
 than two sessions from different subjects, and the package exposes that
 question directly. Treat each of the 8 RDMs as a “unit” (the analogue of
 an ROI), project onto the model-RDM subspace via
-[`rdm_model_space_connectivity()`](http://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md),
+[`rdm_model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_model_space_connectivity.md),
 and compare unit fingerprints.
 
 ``` r
@@ -221,7 +221,7 @@ the model space is shared across subjects.
 contributions from each orthogonal axis of the model space. The first
 axis captures most of the shared geometry; the rest distinguish *which*
 models a given (subject, session) leans on more than the others. See
-[`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
+[`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
 for that workflow on synthetic data.
 
 ## Verifying against the published table
@@ -261,12 +261,12 @@ different absolute numbers but the same ranking.
 
 - For a synthetic-data walkthrough of the same connectivity machinery,
   see
-  [`vignette("Model_Space_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md).
+  [`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md).
 - For pair-design generalisations (cross-domain RDMs, function-valued
   model entries), see the same vignette.
 - For Feature-RSA’s complementary “predict the RDM through a learned
   feature space” workflow, see
-  [`vignette("Feature_RSA_Connectivity")`](http://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
+  [`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
 
 ## Citation
 

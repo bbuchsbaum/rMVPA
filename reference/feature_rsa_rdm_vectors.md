@@ -18,7 +18,7 @@ feature_rsa_rdm_vectors(x)
 - x:
 
   A `regional_mvpa_result` returned by
-  [`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+  [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
   for a `feature_rsa_model`, or a tibble/data frame with columns
   `roinum` and `rdm_vec`. A `regional_mvpa_result` may store vectors
   either in-memory or on disk in `$rdm_batch_dir`.

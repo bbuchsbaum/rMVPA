@@ -3,9 +3,9 @@
 Combines first-order encoding-retrieval similarity (ERA) with
 second-order RSA between encoding and retrieval representational
 geometries. Works with
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
 and
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
+[`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
 using the standard rMVPA iterators.
 
 ## Usage
@@ -235,9 +235,9 @@ era_rsa_model(
 ## Value
 
 A model spec of class `"era_rsa_model"` compatible with
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
 and
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
+[`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
 When fit, the spec emits the scalar metrics documented in **Metrics**.
 
 ## Details
@@ -249,9 +249,9 @@ confound-aware metrics and diagnostics (block/lag/run).
 
 `era_rsa_model()` itself returns a model specification. The scalar
 outputs below are emitted when that specification is evaluated with
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
 or
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md):
+[`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md):
 regional analyses place them in `result$performance_table`; searchlight
 analyses expose them as metric maps listed in `result$metrics`.
 
@@ -259,9 +259,9 @@ analyses expose them as metric maps listed in `result$metrics`.
 
 For each ROI / searchlight center, `era_rsa_model` emits a set of scalar
 metrics that are turned into spatial maps by
-[`run_regional()`](http://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+[`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
 and
-[`run_searchlight()`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md):
+[`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md):
 
 - n_items:
 
@@ -369,7 +369,7 @@ and
 ## Trial-level vs. item-level metadata
 
 `block_var` on
-[`mvpa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+[`mvpa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
 is *trial-level* metadata (one entry per row of the design table) and is
 used by cross-validation, not by the ERA item-level metrics. The
 block/run-aware metrics (`era_diag_minus_off_same_block`,
@@ -377,10 +377,10 @@ block/run-aware metrics (`era_diag_minus_off_same_block`,
 *item-level* vectors indexed by levels of `key_var`: `item_block`,
 `item_run_enc`, and `item_run_ret`. These must be supplied directly
 here; passing `block_var = ~run` to
-[`mvpa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+[`mvpa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
 alone will not enable them, and the model will warn that those metrics
 will be `NA`. See
-[`era_rsa_design()`](http://bbuchsbaum.github.io/rMVPA/reference/era_rsa_design.md)
+[`era_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_design.md)
 for a helper that builds these vectors from the design table.
 
 For external train/test phases (encoding vs. retrieval), run labels

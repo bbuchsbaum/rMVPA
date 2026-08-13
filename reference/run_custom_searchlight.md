@@ -131,10 +131,10 @@ set of named scalar metrics for every sphere it successfully processes.
 
 ## See also
 
-[`run_custom_regional`](http://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md),
-[`run_searchlight_base`](http://bbuchsbaum.github.io/rMVPA/reference/run_searchlight_base.md),
-[`get_searchlight`](http://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.md),
-[`mvpa_iterate`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
+[`run_custom_regional`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md),
+[`run_searchlight_base`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight_base.md),
+[`get_searchlight`](https://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.md),
+[`mvpa_iterate`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
 
 ## Examples
 

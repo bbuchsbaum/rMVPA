@@ -100,10 +100,10 @@ Neuroimaging (PRNI), IEEE. https://inria.hal.science/hal-00839984
 
 ## See also
 
-[`MVPAModels`](http://bbuchsbaum.github.io/rMVPA/reference/MVPAModels.md)
+[`MVPAModels`](https://bbuchsbaum.github.io/rMVPA/reference/MVPAModels.md)
 for the complete list of available custom MVPA models
 
-[`mvpa_model`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
+[`mvpa_model`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
 for using these models in MVPA analyses
 
 ## Examples

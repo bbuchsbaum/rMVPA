@@ -104,12 +104,12 @@ remain untouched until evaluation.
 
 ## See also
 
-[`feature_sets`](http://bbuchsbaum.github.io/rMVPA/reference/feature_sets.md),
-[`expected_features`](http://bbuchsbaum.github.io/rMVPA/reference/expected_features.md),
-[`banded_ridge_da_model`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
-[`grouped_ridge_da_model`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
-[`banded_ridge_da`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md),
-[`grouped_ridge_da`](http://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md)
+[`feature_sets`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets.md),
+[`expected_features`](https://bbuchsbaum.github.io/rMVPA/reference/expected_features.md),
+[`banded_ridge_da_model`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
+[`grouped_ridge_da_model`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.md),
+[`banded_ridge_da`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md),
+[`grouped_ridge_da`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.md)
 
 ## Examples
 

@@ -1,7 +1,7 @@
 # Declare the Output Metric Schema for a Model
 
 Returns a named list describing the metrics that
-[`fit_roi`](http://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
+[`fit_roi`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
 produces for this model type. Used by the generic combiner (Phase 2) to
 build the correct number of output maps without model-specific
 `combine_*` functions.

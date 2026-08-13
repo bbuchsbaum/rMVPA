@@ -47,7 +47,7 @@ run_searchlight(
 
   - `batch_size`: Integer specifying how many searchlights (ROIs) are
     grouped into a single batch for processing by
-    [`mvpa_iterate`](http://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md).
+    [`mvpa_iterate`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md).
     Each batch is launched sequentially, while ROIs within a batch are
     processed in parallel (using the active future/furrr plan). The
     default is 10% of the total number of searchlights. Smaller values
@@ -111,19 +111,19 @@ Without progressr, only coarse batch-level log messages are shown.
     radius = 8,            # 8mm radius
     method = "standard"    # Use standard searchlight
   )
-#> INFO [2026-08-13 11:08:12] searchlight engine: general-purpose iterator (no eligible fast path)
-#> INFO [2026-08-13 11:08:12] Running standard searchlight with radius = 8
-#> INFO [2026-08-13 11:08:12] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-08-13 11:08:12] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
-#> INFO [2026-08-13 11:08:12] creating standard searchlight
-#> INFO [2026-08-13 11:08:12] running standard searchlight iterator
-#> INFO [2026-08-13 11:08:12] Using automatic searchlight batch size 512 for 512 centers (memory budget 512.0 MiB).
-#> INFO [2026-08-13 11:09:27] 
+#> INFO [2026-08-13 12:10:38] searchlight engine: general-purpose iterator (no eligible fast path)
+#> INFO [2026-08-13 12:10:38] Running standard searchlight with radius = 8
+#> INFO [2026-08-13 12:10:38] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-08-13 12:10:38] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
+#> INFO [2026-08-13 12:10:38] creating standard searchlight
+#> INFO [2026-08-13 12:10:38] running standard searchlight iterator
+#> INFO [2026-08-13 12:10:38] Using automatic searchlight batch size 512 for 512 centers (memory budget 512.0 MiB).
+#> INFO [2026-08-13 12:11:48] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 512
 #> - Processed: 512
 #> - Skipped: 0
-#> INFO [2026-08-13 11:09:27] searchlight (standard): 512 ROIs processed (success=512, errors=0)
+#> INFO [2026-08-13 12:11:48] searchlight (standard): 512 ROIs processed (success=512, errors=0)
   
   # Run with custom batch size for memory management
   # results <- run_searchlight(
