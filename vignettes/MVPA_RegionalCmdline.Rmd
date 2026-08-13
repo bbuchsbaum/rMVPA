@@ -2,7 +2,22 @@
 title: MVPA Regional Analysis Tutorial
 author: Bradley Buchsbaum
 date: '`r Sys.Date()`'
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 2.0
+    css: albers.css
+    includes:
+      in_header: albers-header.html
+params:
+  family: red
+  preset: interaction
+resource_files:
+- albers.css
+- albers.js
+- albers-header.html
+- fonts
+
 vignette: |
   %\VignetteIndexEntry{MVPA Regional Analysis Tutorial}
   %\VignetteEngine{knitr::rmarkdown}

@@ -31,6 +31,7 @@ searchlight_performance_prd.md
 
 # Local vignette renders (rebuilt by R CMD build / pkgdown)
 vignettes/*.html
+!vignettes/albers-header.html
 vignettes/*_files/
 
 # Compiled C/C++ artefacts

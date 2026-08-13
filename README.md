@@ -71,15 +71,17 @@ classification, RSA, and cross-domain workflows.
 
 ## Real-data demonstrations
 
-The catalogue includes two non-synthetic vignettes that reproduce canonical
-findings on public data, end-to-end:
+The catalogue includes two non-synthetic vignettes that reanalyse public data
+end-to-end:
 
 - **Kriegeskorte 2008** ([vignette](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html)) — 92 object images, 4 subjects × 2 sessions of human-IT RDMs.
   Recovers the published model-RDM ranking (monkey-IT and animacy lead;
   low-level vision lags) and shows model-space connectivity across subjects.
 - **Haxby 2001** ([vignette](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.html)) — Subject 1 ventral-temporal patterns. Reaches
   **91.7 %** 8-way category accuracy at 12.5 % chance with `sda_notune`.
-  Reproduces the canonical face / house / object confusion structure.
+  Reports every held-out prediction and the complete row-normalized confusion
+  matrix without treating this single-subject reanalysis as a literal
+  reproduction of the original classifier.
 
 The bundled data lives under `inst/extdata/`; the
 `data-raw/*.R` scripts regenerate it from upstream sources.

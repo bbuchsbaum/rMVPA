@@ -6,22 +6,22 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 3
+    css: albers.css
+    includes:
+      in_header: albers-header.html
+params:
+  family: red
+  preset: interaction
+resource_files:
+- albers.css
+- albers.js
+- albers-header.html
+- fonts
+
 vignette: |
   %\VignetteIndexEntry{Command-Line MVPA Interfaces}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-params:
-  family: red
-  preset: homage
-css: albers.css
-resource_files:
-- albers.css
-- albers.js
-includes:
-  in_header: |-
-    <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('palette-teal');});</script>
-
 ---
 
 # Introduction

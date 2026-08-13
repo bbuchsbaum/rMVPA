@@ -1,4 +1,4 @@
-url: http://bbuchsbaum.github.io/rMVPA/
+url: https://bbuchsbaum.github.io/rMVPA/
 code:
   run_dont_test: no
 template:
@@ -10,8 +10,7 @@ articles:
     Start here. Decode real Haxby data with held-out-run validation, inspect
     every error, and learn the object chain shared by regional and searchlight
     analyses.
-  contents:
-  - rMVPA
+  contents: rMVPA
 - title: Core Concepts
   desc: |
     Essential concepts and basic workflows
