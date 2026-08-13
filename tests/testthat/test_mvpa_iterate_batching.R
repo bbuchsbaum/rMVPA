@@ -142,3 +142,27 @@ test_that("automatic searchlight batching is bounded independently of center cou
   expect_lte(max(requested), max(64L, future::nbrOfWorkers() * 8L))
   expect_gt(length(requested), 1L)
 })
+
+test_that("shard batching amortizes dispatch for index-only task frames", {
+  built <- build_iterate_test_spec()
+  mask_idx <- as.integer(which(built$dataset$dataset$mask > 0))
+  vox_list <- rep(list(mask_idx[seq_len(8L)]), 10000L)
+  workers <- 16L
+
+  default_size <- rMVPA:::.default_searchlight_batch_size(
+    built$dataset$dataset,
+    vox_list,
+    nworkers = workers,
+    use_shard_backend = FALSE
+  )
+  shard_size <- rMVPA:::.default_searchlight_batch_size(
+    built$dataset$dataset,
+    vox_list,
+    nworkers = workers,
+    use_shard_backend = TRUE
+  )
+
+  expect_identical(default_size, 128L)
+  expect_identical(shard_size, 2048L)
+  expect_gt(shard_size, default_size)
+})

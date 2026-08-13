@@ -103,6 +103,7 @@ Collate:
     'era_association.R'
     'era_global_nuisance.R'
     'era_rsa_model.R'
+    'era_rsa_searchlight.R'
     'era_partition_model.R'
     'remap_utils.R'
     'rena_design.R'

@@ -14,6 +14,11 @@
 #'   \item Serial \code{extract_roi()} in the main process.
 #'   \item Serialisation of large ROI matrices to workers via \pkg{furrr}.
 #' }
+#' Searchlight batches carry only neighborhood indices, so automatic shard
+#' batches are larger than default-backend batches to amortize scheduling
+#' overhead. Full garbage collection is not forced between shard batches by
+#' default; set \code{options(rMVPA.shard_gc_each_batch = TRUE)} to restore
+#' that conservative behavior when diagnosing memory pressure.
 #'
 #' @section Supported dataset types:
 #' \itemize{
@@ -530,7 +535,9 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
                                          analysis_type = "searchlight",
                                          drop_probs = FALSE,
                                          fail_fast = FALSE, ...) {
-  gc()
+  if (isTRUE(getOption("rMVPA.shard_gc_each_batch", FALSE))) {
+    gc()
+  }
 
   # Capture shared data before stripping
   shard_data <- obj$shard_data
@@ -540,6 +547,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
 
   # Remove shard class so downstream process_roi dispatches on the real class
   class(obj) <- setdiff(class(obj), "shard_model_spec")
+  future_seed <- !inherits(obj, "era_rsa_model")
 
   total_items <- nrow(frame)
 
@@ -737,7 +745,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
       frame,
       worker_fun,
       .options = furrr::furrr_options(
-        seed = TRUE,
+        seed = future_seed,
         conditions = "condition",
         chunk_size = chunk_size,
         globals = FALSE
@@ -764,7 +772,9 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
   }
 
   rm(frame, run_map)
-  gc()
+  if (isTRUE(getOption("rMVPA.shard_gc_each_batch", FALSE))) {
+    gc()
+  }
 
   dplyr::bind_rows(results)
 }

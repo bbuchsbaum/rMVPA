@@ -1175,7 +1175,7 @@ run_searchlight_base <- function(model_spec,
     if (!identical(requested_engine, "legacy")) {
       stop(
         sprintf(
-          "run_searchlight_base() executes the legacy iterator only. Use run_searchlight(..., engine='%s') for explicit engine dispatch.",
+          "run_searchlight_base() executes the general-purpose iterator only. Use run_searchlight(..., engine='%s') for explicit engine dispatch.",
           requested_engine
         ),
         call. = FALSE
@@ -1307,8 +1307,10 @@ run_searchlight_base <- function(model_spec,
 #' @inheritParams run_searchlight
 #' @param ... Additional arguments passed through:
 #'   \describe{
-#'     \item{engine}{Searchlight engine: \code{"auto"} (default), \code{"legacy"},
-#'       \code{"swift"}, \code{"dual_lda_fast"}, or \code{"naive_xdec_fast"}.}
+#'     \item{engine}{Searchlight engine: \code{"auto"} (default), \code{"legacy"}
+#'       (the compatibility key for the general-purpose iterator),
+#'       \code{"swift"}, \code{"dual_lda_fast"}, \code{"naive_xdec_fast"}, or
+#'       \code{"era_rsa_fast"}.}
 #'     \item{combiner}{Combiner function or name for randomized/resampled methods
 #'       (default \code{"average"}).}
 #'     \item{drop_probs}{If \code{TRUE}, drop probability predictions (default \code{FALSE}).}

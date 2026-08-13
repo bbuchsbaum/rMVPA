@@ -22,5 +22,19 @@
   directional semi-partial correlations via `era_correlates`,
   `era_association`, and `era_effects`, with complete-item counts and no
   redundant unsigned R-squared maps.
+* ERA-RSA item associations now use trial-specific matched-minus-nonmatch
+  similarity by default, with raw matched similarity available explicitly via
+  `era_association_score = "matched"`. The new `era_components` argument can
+  skip identification and geometry work for association-focused searchlights.
+* ERA-RSA searchlights now reuse prepared item pairing, use allocation-light
+  item and RDM-vector kernels for finite data, and amortize shard dispatch with
+  larger index-only batches and optional rather than unconditional batch GC.
+* Eligible one-to-one volumetric ERA-RSA standard searchlights now select a
+  dedicated direct-matrix engine automatically. It filters matrix columns with
+  the same center-preservation rules as the general-purpose iterator, calls the same
+  per-ROI scientific kernel, and supports shared-memory shard workers without
+  constructing an ROI object for every sphere. The existing `engine = "legacy"`
+  compatibility key requests an explicit general-iterator reference run;
+  `engine = "era_rsa_fast"` requires the fast path.
 * Moved 11 packages from Imports to Suggests for lazy dependency loading.
 * Various bug fixes and stability improvements.

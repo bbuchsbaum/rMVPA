@@ -27,8 +27,11 @@ and return_predictions (logical indicating whether to return predictions).}
 \item{ids}{Vector of identifiers for each ROI analysis. Defaults to 1:length(vox_list).}
 
 \item{batch_size}{Integer specifying number of ROIs to process per batch.
-For searchlight analyses the default is 10\% of total ROIs.
-For regional analyses the default is all ROIs in one batch, unless
+Searchlight analyses use a memory-aware automatic size based on
+sphere size, observation count, worker count, and backend; shard
+batches are larger because they carry indices rather than extracted
+ROI matrices. For regional analyses the default is all ROIs in one
+batch, unless
 the estimated extraction memory would exceed the budget set by
 \code{options(rMVPA.regional_mem_budget)} (default 2 GB), in which
 case batches are automatically sized to stay within the budget.}

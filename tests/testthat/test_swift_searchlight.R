@@ -261,7 +261,7 @@ test_that("explicit swift request errors when engine is ineligible", {
   })
 })
 
-test_that("run_searchlight_base rejects non-legacy engine argument", {
+test_that("run_searchlight_base rejects non-general engine argument", {
   skip_if_not_installed("neuroim2")
 
   with_swift_options({
@@ -275,7 +275,7 @@ test_that("run_searchlight_base rejects non-legacy engine argument", {
         niter = 1,
         engine = "swift"
       ),
-      regexp = "legacy iterator only"
+      regexp = "general-purpose iterator only"
     )
   })
 })

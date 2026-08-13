@@ -18,6 +18,11 @@ This eliminates the two main memory bottlenecks of the default pipeline:
   \item Serial \code{extract_roi()} in the main process.
   \item Serialisation of large ROI matrices to workers via \pkg{furrr}.
 }
+Searchlight batches carry only neighborhood indices, so automatic shard
+batches are larger than default-backend batches to amortize scheduling
+overhead. Full garbage collection is not forced between shard batches by
+default; set \code{options(rMVPA.shard_gc_each_batch = TRUE)} to restore
+that conservative behavior when diagnosing memory pressure.
 }
 \section{Supported dataset types}{
 

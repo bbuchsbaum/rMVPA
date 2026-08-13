@@ -542,11 +542,12 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
   list(start = start, end = end)
 }
 
-# Estimate a conservative searchlight batch size. A batch is extracted into
-# the main process before futures are launched, so center count must not be the
-# dominant default. The estimate includes train and test observations plus a
-# two-copy allowance for extraction and serialization/transient objects.
+# Estimate a conservative searchlight batch size. Default-backend batches hold
+# extracted ROI matrices and therefore include train/test observations plus a
+# two-copy allowance. Shard batches hold only neighborhood indices, so they use
+# a larger task cap and an index/result-overhead estimate.
 .default_searchlight_batch_size <- function(dataset, vox_list, nworkers,
+                                            use_shard_backend = FALSE,
                                             memory_budget = getOption(
                                               "rMVPA.searchlight_mem_budget",
                                               512 * 1024^2
@@ -572,7 +573,15 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
     1,
     as.double(stats::quantile(sphere_sizes, probs = 0.9, names = FALSE, type = 1))
   )
-  bytes_per_roi <- representative_voxels * (train_obs + test_obs) * 8 * 2
+  bytes_per_roi <- if (isTRUE(use_shard_backend)) {
+    # Shard batches carry neighborhood indices, not extracted train/test ROI
+    # matrices. Include a conservative per-task allowance for list/tibble and
+    # scalar-result overhead while permitting enough work per dispatch to
+    # amortize future setup on HPC nodes.
+    max(4096, representative_voxels * 4 * 4)
+  } else {
+    representative_voxels * (train_obs + test_obs) * 8 * 2
+  }
   max_by_memory <- max(
     1L,
     as.integer(min(.Machine$integer.max, floor(memory_budget / bytes_per_roi)))
@@ -580,7 +589,11 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
 
   # Bound scheduler/list overhead even when the raw matrices are tiny. This
   # replaces the old rule that selected ten percent of all brain centers.
-  task_cap <- max(64L, as.integer(nworkers) * 8L)
+  task_cap <- if (isTRUE(use_shard_backend)) {
+    max(1024L, as.integer(nworkers) * 128L)
+  } else {
+    max(64L, as.integer(nworkers) * 8L)
+  }
   as.integer(min(length(vox_list), max_by_memory, task_cap))
 }
 
@@ -749,8 +762,11 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
 #' @param vox_list A list of voxel indices or coordinates defining each ROI to analyze.
 #' @param ids Vector of identifiers for each ROI analysis. Defaults to 1:length(vox_list).
 #' @param batch_size Integer specifying number of ROIs to process per batch.
-#'        For searchlight analyses the default is 10\% of total ROIs.
-#'        For regional analyses the default is all ROIs in one batch, unless
+#'        Searchlight analyses use a memory-aware automatic size based on
+#'        sphere size, observation count, worker count, and backend; shard
+#'        batches are larger because they carry indices rather than extracted
+#'        ROI matrices. For regional analyses the default is all ROIs in one
+#'        batch, unless
 #'        the estimated extraction memory would exceed the budget set by
 #'        \code{options(rMVPA.regional_mem_budget)} (default 2 GB), in which
 #'        case batches are automatically sized to stay within the budget.
@@ -829,6 +845,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                 msg = paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
 
     analysis_type <- match.arg(analysis_type)
+    use_shard_backend <- inherits(mod_spec, "shard_model_spec")
 
     # --- auto-size batches based on analysis type and available workers ---
     nworkers <- future::nbrOfWorkers()
@@ -857,7 +874,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
         batch_size <- .default_searchlight_batch_size(
           mod_spec$dataset,
           vox_list,
-          nworkers
+          nworkers,
+          use_shard_backend = use_shard_backend
         )
         futile.logger::flog.info(
           "Using automatic searchlight batch size %d for %d centers (memory budget %.1f MiB).",
@@ -872,7 +890,6 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     nbatches <- length(batch_bounds$start)
     
     dset <- mod_spec$dataset
-    use_shard_backend <- inherits(mod_spec, "shard_model_spec")
     if (!has_test_set(mod_spec)) {
       mod_spec$.cv_fold_cache <- .build_cv_fold_cache(mod_spec)
     }
@@ -997,7 +1014,10 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           sf <- NULL
           batch_prepared <- NULL
           vlist <- NULL
-          gc(FALSE)
+          if (!use_shard_backend ||
+              isTRUE(getOption("rMVPA.shard_gc_each_batch", FALSE))) {
+            gc(FALSE)
+          }
         } else {
           skipped_rois <- skipped_rois + length(batch_positions)
           futile.logger::flog.warn("%s Batch %s: All ROIs filtered out (size < 2 voxels)", 
@@ -1125,6 +1145,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
                                analysis_type = "searchlight", drop_probs = FALSE,
                                fail_fast = FALSE, ...) {
   gc()
+  future_seed <- !inherits(obj, "era_rsa_model")
   # Ensure workers never receive the full dataset.
   obj <- as_worker_spec(obj)
   total_items <- nrow(frame)
@@ -1260,7 +1281,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
 
     frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
       process_item(.id, rnum, roi, size, progress_tick = progress_tick)
-    }, .options = furrr::furrr_options(seed = TRUE, conditions = "condition",
+    }, .options = furrr::furrr_options(seed = future_seed, conditions = "condition",
                                        chunk_size = chunk_size))
   }
 

@@ -36,9 +36,13 @@
 #'     matrix).
 #'   }
 #'   \item{era_diag_minus_off}{
-#'     Diagonal-minus-off-diagonal ERA contrast: \code{era_diag_mean} minus
-#'     the mean similarity to all non-matching items, capturing how much
-#'     same-item pairs stand out from other pairs.
+#'     Mean item-specific ERA contrast. For each retrieval item, its matched
+#'     encoding similarity is contrasted with that retrieval item's mean
+#'     similarity to all nonmatching encoding items; those trial-specific
+#'     contrasts are then averaged. With complete data this is algebraically
+#'     identical to diagonal mean minus the grand off-diagonal mean. With
+#'     missing pairwise similarities it gives each retrieval item with an
+#'     estimable contrast equal weight.
 #'   }
 #'   \item{geom_cor}{
 #'     Correlation between encoding and retrieval representational geometries:
@@ -68,7 +72,7 @@
 #'   }
 #'   \item{era_<variable>_cor / era_<variable>_n}{
 #'     When \code{era_correlates} is supplied, the zero-order correlation
-#'     between matched-item ERA similarity and each selected retrieval
+#'     between the selected per-item ERA association score and each retrieval
 #'     variable, plus its variable-specific number of complete item pairs.
 #'   }
 #'   \item{era_assoc_part_r_<effect>}{
@@ -128,13 +132,25 @@
 #'   matrix, either \code{"pearson"} or \code{"spearman"}.
 #' @param era_min_voxels Minimum finite voxel pairs required for an
 #'   encoding-retrieval similarity.
+#' @param era_components Character vector selecting computation families:
+#'   \code{"item"} computes matched similarity, trial-specific nonmatch
+#'   contrasts, lag, and item-covariate associations; \code{"identification"}
+#'   adds the full cross-item matrix and top-1 accuracy; \code{"geometry"}
+#'   adds within-phase RDM metrics and geometry nuisance models. The default
+#'   retains all existing outputs. Use \code{era_components = "item"} for the
+#'   association-focused path, which is linear in the number of items when
+#'   item patterns are finite.
+#' @param era_association_score Per-item response used by \code{era_correlates}
+#'   and \code{era_association}. \code{"item_specificity"} (default) subtracts
+#'   each retrieval item's mean similarity to nonmatching encoding items.
+#'   \code{"matched"} uses raw matched encoding-retrieval similarity.
 #' @param era_correlates Optional right-hand-side formula selecting numeric
-#'   retrieval variables for zero-order correlations with matched-item ERA
-#'   similarity, for example \code{~ vividness}.
+#'   retrieval variables for zero-order correlations with the score selected
+#'   by \code{era_association_score}, for example \code{~ vividness}.
 #' @param era_cor_method Correlation method for \code{era_correlates}, either
 #'   \code{"spearman"} or \code{"pearson"}.
-#' @param era_association Optional right-hand-side regression formula for
-#'   matched-item ERA similarity, for example
+#' @param era_association Optional right-hand-side regression formula for the
+#'   score selected by \code{era_association_score}, for example
 #'   \code{~ vividness + retrieval_run + trial_order}. The response is supplied
 #'   internally. Formula variables are evaluated in the retrieval design.
 #' @param era_effects Right-hand-side formula naming the one-degree-of-freedom
@@ -164,8 +180,8 @@
 #'   If \code{global_nuisance} is enabled and \code{partial_against} is not
 #'   supplied explicitly, the effective default is \code{c("run", "global")}.
 #' @param include_diag Logical retained for API compatibility. Diagonal ERA
-#'   metrics are always retained, and the off-diagonal mean used by
-#'   \code{era_diag_minus_off} always excludes matching-item diagonal entries.
+#'   metrics are always retained. The trial-specific nonmatch backgrounds used
+#'   by \code{era_diag_minus_off} always exclude the matching-item diagonal.
 #' @param item_block Optional factor of per-item blocks, aligned to item keys.
 #'   Typically derived by aggregating a trial-level block/run variable in
 #'   \code{design$train_design} to the item level (e.g., modal block per item).
@@ -226,12 +242,14 @@
 #'
 #' @section Association interpretation:
 #' \code{era_correlates} and \code{era_association} operate on the vector of
-#' matched-item encoding-retrieval similarities, not on the within-phase RDM
-#' vectors used by \code{geom_cor}. Missing values in each zero-order correlate
-#' are removed separately. The adjusted model uses one joint complete-case set
-#' across ERA similarity and every association term. Signed part-r is invariant
-#' to linear rescaling of a focal predictor; its square equals that term's
-#' incremental R-squared, which is deliberately not emitted as a default map.
+#' item-specific matched-minus-nonmatch scores by default, not on the
+#' within-phase RDM vectors used by \code{geom_cor}. Set
+#' \code{era_association_score = "matched"} to use raw matched similarities.
+#' Missing values in each zero-order correlate are removed separately. The
+#' adjusted model uses one joint complete-case set across the selected ERA
+#' score and every association term. Signed part-r is invariant to linear
+#' rescaling of a focal predictor; its square equals that term's incremental
+#' R-squared, which is deliberately not emitted as a default map.
 #' @examples
 #' \dontrun{
 #'   # See vignette for complete ERA-RSA workflow
@@ -257,6 +275,8 @@ era_rsa_model <- function(dataset,
                           pairing         = c("average", "one_to_one"),
                           era_simfun       = c("pearson", "spearman"),
                           era_min_voxels   = 2L,
+                          era_components   = c("item", "identification", "geometry"),
+                          era_association_score = c("item_specificity", "matched"),
                           era_correlates   = NULL,
                           era_cor_method   = c("spearman", "pearson"),
                           era_association  = NULL,
@@ -266,6 +286,16 @@ era_rsa_model <- function(dataset,
 
   pairing <- match.arg(pairing)
   era_simfun <- match.arg(era_simfun)
+  allowed_components <- c("item", "identification", "geometry")
+  if (!is.character(era_components) || !length(era_components) ||
+      anyNA(era_components) || any(!era_components %in% allowed_components)) {
+    stop(
+      "`era_components` must contain one or more of 'item', 'identification', and 'geometry'.",
+      call. = FALSE
+    )
+  }
+  era_components <- allowed_components[allowed_components %in% unique(era_components)]
+  era_association_score <- match.arg(era_association_score)
   era_cor_method <- match.arg(era_cor_method)
   rsa_simfun <- match.arg(rsa_simfun)
 
@@ -284,6 +314,14 @@ era_rsa_model <- function(dataset,
   era_correlates <- .era_rhs_formula(era_correlates, "era_correlates")
   era_association <- .era_rhs_formula(era_association, "era_association")
   era_effects <- .era_rhs_formula(era_effects, "era_effects")
+  if (!("item" %in% era_components) &&
+      (!is.null(era_correlates) || !is.null(era_association) || !is.null(era_effects))) {
+    stop("ERA-RSA association formulas require the `item` component.", call. = FALSE)
+  }
+  if (!("geometry" %in% era_components) &&
+      (!is.null(confound_rdms) || !isFALSE(global_nuisance))) {
+    stop("ERA-RSA geometry confounds require the `geometry` component.", call. = FALSE)
+  }
 
   prepared <- .era_prepare_inputs(
     dataset = dataset,
@@ -312,13 +350,16 @@ era_rsa_model <- function(dataset,
 
   .era_check_item_metadata(
     where        = "era_rsa_model",
-    item_block   = item_block,
-    item_run_enc = item_run_enc,
-    item_run_ret = item_run_ret,
+    item_block   = if ("item" %in% era_components) item_block else NULL,
+    item_run_enc = if ("geometry" %in% era_components) item_run_enc else NULL,
+    item_run_ret = if ("geometry" %in% era_components) item_run_ret else NULL,
     strict       = isTRUE(require_run_metadata),
-    metric_for_block = c("era_diag_minus_off_same_block",
-                         "era_diag_minus_off_diff_block"),
-    metric_for_run   = "geom_cor_xrun"
+    metric_for_block = if ("item" %in% era_components) {
+      c("era_diag_minus_off_same_block", "era_diag_minus_off_diff_block")
+    } else character(),
+    metric_for_run = if ("geometry" %in% era_components) {
+      "geom_cor_xrun"
+    } else character()
   )
 
   # Normalize distfun
@@ -391,6 +432,8 @@ era_rsa_model <- function(dataset,
     pairing_info     = pairing_info,
     era_simfun       = era_simfun,
     era_min_voxels   = era_min_voxels,
+    era_components   = era_components,
+    era_association_score = era_association_score,
     era_cor_method   = era_cor_method,
     era_min_complete = era_min_complete,
     era_correlate_spec = era_correlate_spec,
@@ -435,18 +478,33 @@ era_rsa_model <- function(dataset,
 #' @keywords internal
 #' @export
 output_schema.era_rsa_model <- function(model) {
-  base_names <- c("n_items", "era_top1_acc", "era_diag_mean", "era_diag_minus_off",
-                  "geom_cor", "era_diag_minus_off_same_block",
-                  "era_diag_minus_off_diff_block", "era_lag_cor",
-                  "geom_cor_partial", "geom_cor_run_partial", "geom_cor_xrun")
-
-  base_names <- c(
-    base_names,
-    .era_correlate_metric_names(model$era_correlate_spec),
-    .era_association_metric_names(model$era_association_spec)
+  components <- model$era_components %||% c("item", "identification", "geometry")
+  metric_components <- c(
+    n_items = "always",
+    era_top1_acc = "identification",
+    era_diag_mean = "item",
+    era_diag_minus_off = "item",
+    geom_cor = "geometry",
+    era_diag_minus_off_same_block = "item",
+    era_diag_minus_off_diff_block = "item",
+    era_lag_cor = "item",
+    geom_cor_partial = "geometry",
+    geom_cor_run_partial = "geometry",
+    geom_cor_xrun = "geometry"
   )
+  base_names <- names(metric_components)[
+    metric_components == "always" | metric_components %in% components
+  ]
 
-  if (!is.null(model$confound_rdms)) {
+  if ("item" %in% components) {
+    base_names <- c(
+      base_names,
+      .era_correlate_metric_names(model$era_correlate_spec),
+      .era_association_metric_names(model$era_association_spec)
+    )
+  }
+
+  if ("geometry" %in% components && !is.null(model$confound_rdms)) {
     conf_names <- names(model$confound_rdms)
     beta_names <- paste0("beta_", c("enc_geom", conf_names))
     sp_names   <- paste0("sp_",   c("enc_geom", conf_names))
@@ -484,8 +542,6 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
   }
 
   Xret <- roi_data$test_data
-  des  <- model$design
-
   # Guard: non-degenerate ROI
   if (ncol(Xenc) < 1L || ncol(Xret) < 1L || nrow(Xenc) < 2L || nrow(Xret) < 2L) {
     return(roi_result(
@@ -495,20 +551,14 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
     ))
   }
 
-  # Extract keys for encoding/retrieval from design
-  key_tr_full <- parse_variable(model$key_var, des$train_design)
-  key_te_full <- parse_variable(model$key_var, des$test_design)
-  key_tr_full <- factor(key_tr_full, levels = levels(model$key))
-  key_te_full <- factor(key_te_full, levels = levels(model$key))
-
-  # Build item-level prototypes via group means
-  E_full <- group_means(Xenc, margin = 1, group = key_tr_full)
-  R_full <- group_means(Xret, margin = 1, group = key_te_full)
-
-  keys_enc    <- rownames(E_full)
-  keys_ret    <- rownames(R_full)
-  common_keys <- sort(intersect(keys_enc, keys_ret))
-  K           <- length(common_keys)
+  # Item alignment is invariant across spheres and was prepared by the
+  # constructor. One-to-one designs use direct row indexing; repeated-item
+  # designs retain pattern averaging.
+  prototypes <- .era_item_prototypes(Xenc, Xret, model$pairing_info)
+  E <- prototypes$E
+  R <- prototypes$R
+  common_keys <- prototypes$keys
+  K <- length(common_keys)
 
   if (K < 2L) {
     return(roi_result(
@@ -518,13 +568,10 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
     ))
   }
 
-  E <- E_full[common_keys, , drop = FALSE]
-  R <- R_full[common_keys, , drop = FALSE]
-
   # Drop voxels constant across both phases
   sd_E     <- apply(E, 2, stats::sd, na.rm = TRUE)
   sd_R     <- apply(R, 2, stats::sd, na.rm = TRUE)
-  keep_vox <- (sd_E > 0) | (sd_R > 0)
+  keep_vox <- (is.finite(sd_E) & sd_E > 0) | (is.finite(sd_R) & sd_R > 0)
   if (!any(keep_vox)) {
     return(roi_result(
       metrics = NULL, indices = ind, id = id,
@@ -535,33 +582,93 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
   E <- E[, keep_vox, drop = FALSE]
   R <- R[, keep_vox, drop = FALSE]
 
-  # First-order ERA: similarity and diagnostics
-  S <- .era_cross_similarity(
-    E,
-    R,
-    method = model$era_simfun %||% "pearson",
-    min_voxels = model$era_min_voxels %||% 2L
-  )
-  diag_sim      <- diag(S)
-  era_diag_mean <- mean(diag_sim, na.rm = TRUE)
-  if (is.nan(era_diag_mean)) era_diag_mean <- NA_real_
-  off           <- S; diag(off) <- NA_real_
-  era_off_mean  <- mean(off, na.rm = TRUE)
-  if (is.nan(era_off_mean)) era_off_mean <- NA_real_
-  era_diag_minus_off <- era_diag_mean - era_off_mean
-  max_enc_idx   <- apply(S, 2, function(col) if (all(is.na(col))) NA_integer_ else which.max(col))
-  era_top1_acc  <- mean((!is.na(max_enc_idx)) & (max_enc_idx == seq_len(K)))
+  components <- model$era_components %||% c("item", "identification", "geometry")
+  need_item <- "item" %in% components
+  need_identification <- "identification" %in% components
+  need_geometry <- "geometry" %in% components
 
-  # Second-order ER geometry
-  D_enc    <- pairwise_dist(model$distfun, E)
-  D_ret    <- pairwise_dist(model$distfun, R)
-  dE       <- as.numeric(D_enc[lower.tri(D_enc)])
-  dR       <- as.numeric(D_ret[lower.tri(D_ret)])
-  geom_cor <- suppressWarnings(stats::cor(dE, dR, method = model$rsa_simfun, use = "complete.obs"))
+  align_item_metadata <- function(x) {
+    if (is.null(x)) return(NULL)
+    if (!is.null(names(x))) x[match(common_keys, names(x))] else x[seq_len(K)]
+  }
+  mean_finite <- function(x) {
+    x <- x[is.finite(x)]
+    if (length(x)) mean(x) else NA_real_
+  }
+
+  diag_sim <- specificity <- rep(NA_real_, K)
+  era_top1_acc <- era_diag_mean <- era_diag_minus_off <- NA_real_
+  era_diag_minus_off_same_block <- era_diag_minus_off_diff_block <- NA_real_
+  era_lag_cor <- NA_real_
+
+  if (need_item || need_identification) {
+    item_scores <- .era_item_similarity_scores(
+      E,
+      R,
+      method = model$era_simfun %||% "pearson",
+      min_voxels = model$era_min_voxels %||% 2L,
+      need_matrix = need_identification,
+      item_block = if (need_item) align_item_metadata(model$item_block) else NULL
+    )
+    diag_sim <- item_scores$matched
+    specificity <- item_scores$specificity
+
+    if (need_identification) {
+      S <- item_scores$matrix
+      max_enc_idx <- apply(
+        S, 2L,
+        function(column) if (all(is.na(column))) NA_integer_ else which.max(column)
+      )
+      era_top1_acc <- mean(
+        (!is.na(max_enc_idx)) & (max_enc_idx == seq_len(K))
+      )
+    }
+
+    if (need_item) {
+      era_diag_mean <- mean_finite(diag_sim)
+      # This is the mean of equally weighted retrieval-trial specificity
+      # scores. It equals diagonal mean minus grand off-diagonal mean when all
+      # K*(K-1) nonmatching similarities are available.
+      era_diag_minus_off <- mean_finite(specificity)
+      era_diag_minus_off_same_block <- mean_finite(
+        item_scores$same_block_specificity
+      )
+      era_diag_minus_off_diff_block <- mean_finite(
+        item_scores$diff_block_specificity
+      )
+
+      lag <- align_item_metadata(model$item_lag)
+      if (!is.null(lag) && length(lag) == length(diag_sim) && any(!is.na(lag))) {
+        era_lag_cor <- suppressWarnings(stats::cor(
+          diag_sim, lag, method = "spearman", use = "complete.obs"
+        ))
+      }
+    }
+  }
+
+  geom_cor <- geom_cor_partial <- geom_cor_run_partial <- geom_cor_xrun <- NA_real_
+  dE <- dR <- numeric()
+  if (need_geometry) {
+    # The vector kernels avoid allocating full K-by-K RDMs for the common
+    # correlation and Euclidean distances. Preserve the established distance
+    # implementation as the exact fallback for non-finite inputs.
+    if (all(is.finite(E)) && all(is.finite(R))) {
+      dE <- suppressWarnings(pairwise_dist_vector(model$distfun, E))
+      dR <- suppressWarnings(pairwise_dist_vector(model$distfun, R))
+    } else {
+      D_enc <- pairwise_dist(model$distfun, E)
+      D_ret <- pairwise_dist(model$distfun, R)
+      dE <- as.numeric(D_enc[lower.tri(D_enc)])
+      dR <- as.numeric(D_ret[lower.tri(D_ret)])
+    }
+    geom_cor <- suppressWarnings(stats::cor(
+      dE, dR, method = model$rsa_simfun, use = "complete.obs"
+    ))
+  }
 
   # Optional geometry regression with confounds
   beta_vec <- c(); sp_vec <- c()
-  if (!is.null(model$confound_rdms) && K >= 3L) {
+  if (need_geometry && !is.null(model$confound_rdms) && K >= 3L) {
     mm <- list(enc_geom = dE)
     for (nm in names(model$confound_rdms)) {
       M <- as.matrix(model$confound_rdms[[nm]])
@@ -592,73 +699,47 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
     }
   }
 
-  # Block-limited ERA if item_block available
-  era_diag_minus_off_same_block <- NA_real_
-  era_diag_minus_off_diff_block <- NA_real_
-  if (!is.null(model$item_block)) {
-    ib <- model$item_block
-    if (!is.null(names(ib))) ib <- ib[match(common_keys, names(ib))] else ib <- ib[seq_along(common_keys)]
-    same_vals <- c(); diff_vals <- c()
-    for (i in seq_len(K)) {
-      same_idx <- setdiff(which(ib == ib[i]), i)
-      diff_idx <- which(ib != ib[i])
-      if (length(same_idx)) same_vals <- c(same_vals, S[i, same_idx])
-      if (length(diff_idx)) diff_vals <- c(diff_vals, S[i, diff_idx])
-    }
-    if (length(same_vals)) era_diag_minus_off_same_block <- mean(diag_sim, na.rm = TRUE) - mean(same_vals, na.rm = TRUE)
-    if (length(diff_vals)) era_diag_minus_off_diff_block <- mean(diag_sim, na.rm = TRUE) - mean(diff_vals, na.rm = TRUE)
-  }
-
-  # Lag-specific ERA if item_lag available
-  era_lag_cor <- NA_real_
-  if (!is.null(model$item_lag)) {
-    lag <- model$item_lag
-    if (!is.null(names(lag))) lag <- lag[match(common_keys, names(lag))] else lag <- lag[seq_along(common_keys)]
-    if (length(lag) == length(diag_sim) && any(!is.na(lag))) {
-      era_lag_cor <- suppressWarnings(stats::cor(diag_sim, lag, method = "spearman", use = "complete.obs"))
-    }
-  }
-
   # Partial ER geometry and cross-run-only geometry if nuisance/run info available
-  all_confounds <- .era_geometry_confound_rdms(
-    confound_rdms = model$confound_rdms,
-    item_run_enc = model$item_run_enc,
-    item_run_ret = model$item_run_ret,
-    keys = common_keys
-  )
-  geom_cor_partial <- .era_partial_geometry_cor(
-    dE = dE,
-    dR = dR,
-    confound_rdms = all_confounds,
-    keys = common_keys,
-    partial_against = model$partial_against %||% "run",
-    method = model$rsa_simfun
-  )
-  geom_cor_run_partial <- NA_real_
-  geom_cor_xrun        <- NA_real_
-  geom_cor_run_partial <- .era_partial_geometry_cor(
-    dE = dE,
-    dR = dR,
-    confound_rdms = all_confounds,
-    keys = common_keys,
-    partial_against = "run",
-    method = model$rsa_simfun
-  )
-  if (!is.null(model$item_run_enc) && !is.null(model$item_run_ret)) {
-    ire <- model$item_run_enc
-    irr <- model$item_run_ret
-    if (!is.null(names(ire))) ire <- ire[match(common_keys, names(ire))] else ire <- ire[seq_along(common_keys)]
-    if (!is.null(names(irr))) irr <- irr[match(common_keys, names(irr))] else irr <- irr[seq_along(common_keys)]
-    same_enc <- outer(ire, ire, "==")
-    same_ret <- outer(irr, irr, "==")
-    mask     <- lower.tri(D_enc) & !(same_enc | same_ret)
-    if (any(mask)) {
-      geom_cor_xrun <- suppressWarnings(stats::cor(D_enc[mask], D_ret[mask], method = model$rsa_simfun, use = "complete.obs"))
+  if (need_geometry) {
+    all_confounds <- .era_geometry_confound_rdms(
+      confound_rdms = model$confound_rdms,
+      item_run_enc = model$item_run_enc,
+      item_run_ret = model$item_run_ret,
+      keys = common_keys
+    )
+    geom_cor_partial <- .era_partial_geometry_cor(
+      dE = dE,
+      dR = dR,
+      confound_rdms = all_confounds,
+      keys = common_keys,
+      partial_against = model$partial_against %||% "run",
+      method = model$rsa_simfun
+    )
+    geom_cor_run_partial <- .era_partial_geometry_cor(
+      dE = dE,
+      dR = dR,
+      confound_rdms = all_confounds,
+      keys = common_keys,
+      partial_against = "run",
+      method = model$rsa_simfun
+    )
+    ire <- align_item_metadata(model$item_run_enc)
+    irr <- align_item_metadata(model$item_run_ret)
+    if (!is.null(ire) && !is.null(irr)) {
+      pair_info <- .rdm_pair_indices(K)
+      same_enc <- ire[pair_info$i] == ire[pair_info$j]
+      same_ret <- irr[pair_info$i] == irr[pair_info$j]
+      mask <- !is.na(same_enc) & !is.na(same_ret) & !(same_enc | same_ret)
+      if (any(mask)) {
+        geom_cor_xrun <- suppressWarnings(stats::cor(
+          dE[mask], dR[mask], method = model$rsa_simfun, use = "complete.obs"
+        ))
+      }
     }
   }
 
   # Assemble base perf vector
-  perf <- c(
+  all_perf <- c(
     n_items                       = K,
     era_top1_acc                  = era_top1_acc,
     era_diag_mean                 = era_diag_mean,
@@ -671,26 +752,33 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
     geom_cor_run_partial          = geom_cor_run_partial,
     geom_cor_xrun                 = geom_cor_xrun
   )
+  schema_names <- names(output_schema(model))
+  perf <- all_perf[names(all_perf) %in% schema_names]
 
-  perf <- c(
-    perf,
-    .era_correlate_metrics(
-      similarity = diag_sim,
-      keys = common_keys,
-      spec = model$era_correlate_spec,
-      method = model$era_cor_method %||% "spearman",
-      min_complete = model$era_min_complete %||% 4L
-    ),
-    .era_association_metrics(
-      similarity = diag_sim,
-      keys = common_keys,
-      spec = model$era_association_spec,
-      min_complete = model$era_min_complete %||% 4L
+  if (need_item) {
+    association_score <- if (identical(
+      model$era_association_score %||% "item_specificity", "matched"
+    )) diag_sim else specificity
+    perf <- c(
+      perf,
+      .era_correlate_metrics(
+        similarity = association_score,
+        keys = common_keys,
+        spec = model$era_correlate_spec,
+        method = model$era_cor_method %||% "spearman",
+        min_complete = model$era_min_complete %||% 4L
+      ),
+      .era_association_metrics(
+        similarity = association_score,
+        keys = common_keys,
+        spec = model$era_association_spec,
+        min_complete = model$era_min_complete %||% 4L
+      )
     )
-  )
+  }
 
   # Always include confound-derived metrics if schema declares them
-  if (!is.null(model$confound_rdms)) {
+  if (need_geometry && !is.null(model$confound_rdms)) {
     conf_names          <- names(model$confound_rdms)
     expected_beta_names <- paste0("beta_", c("enc_geom", conf_names))
     expected_sp_names   <- paste0("sp_",   c("enc_geom", conf_names))

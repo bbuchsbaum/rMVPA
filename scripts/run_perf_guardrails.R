@@ -112,6 +112,8 @@ main <- function() {
     "dual_lda_fast_searchlight_perf",
     "swift_searchlight_perf",
     "rsa_fast_kernel_perf",
+    "era_rsa_fast_kernel_perf",
+    "era_rsa_searchlight_engine_perf",
     "naive_xdec_fast_kernel_perf"
   )
   perf_filter <- Sys.getenv("RMVPA_PERF_FILTER", "")

@@ -1,7 +1,10 @@
 #' @keywords internal
 #' @noRd
 .match_searchlight_engine <- function(engine = "auto") {
-  allowed <- c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast")
+  allowed <- c(
+    "auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast",
+    "era_rsa_fast"
+  )
   match.arg(as.character(engine)[1], allowed)
 }
 
@@ -10,7 +13,7 @@
 .searchlight_engine_registry <- function() {
   list(
     legacy = list(
-      label = "Legacy iterator",
+      label = "General-purpose iterator (compatibility key: legacy)",
       eligible = function(model_spec, method) TRUE
     ),
     swift = list(
@@ -29,6 +32,12 @@
       label = "Naive cross-decoding matrix fast path",
       eligible = function(model_spec, method) {
         .is_naive_xdec_fast_path(model_spec, method)
+      }
+    ),
+    era_rsa_fast = list(
+      label = "ERA-RSA direct-matrix fast path",
+      eligible = function(model_spec, method) {
+        .is_era_rsa_fast_path(model_spec, method)
       }
     )
   )
@@ -76,14 +85,16 @@ searchlight_engines <- function(model_spec = NULL,
 #'
 #' @param model_spec A model specification.
 #' @param method Searchlight method to audit.
-#' @param engine Requested engine policy: \code{"auto"}, \code{"legacy"},
-#'   \code{"swift"}, \code{"dual_lda_fast"}, or \code{"naive_xdec_fast"}.
+#' @param engine Requested engine policy: \code{"auto"}, \code{"legacy"}
+#'   (the compatibility key for the general-purpose iterator), \code{"swift"},
+#'   \code{"dual_lda_fast"}, \code{"naive_xdec_fast"}, or
+#'   \code{"era_rsa_fast"}.
 #'
 #' @return A data frame with selection metadata.
 #' @export
 explain_searchlight_engine <- function(model_spec,
                                        method = c("standard", "randomized", "resampled"),
-                                       engine = c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast")) {
+                                       engine = c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast", "era_rsa_fast")) {
   method <- match.arg(method)
   requested <- .match_searchlight_engine(match.arg(engine))
   registry_tbl <- searchlight_engines(model_spec = model_spec, method = method)
@@ -147,6 +158,9 @@ explain_searchlight_engine <- function(model_spec,
 #' @keywords internal
 #' @noRd
 .resolve_searchlight_engine <- function(model_spec, method, engine = "auto") {
+  if (inherits(model_spec, "era_rsa_model")) {
+    return(.resolve_searchlight_engine.era_rsa_model(model_spec, method, engine))
+  }
   if (inherits(model_spec, "naive_xdec_model")) {
     return(.resolve_searchlight_engine.naive_xdec_model(model_spec, method, engine))
   }
@@ -319,7 +333,9 @@ explain_searchlight_engine <- function(model_spec,
 
   if (identical(engine, "legacy")) {
     if (!identical(requested, "legacy")) {
-      futile.logger::flog.info("searchlight engine: legacy (no eligible fast path)")
+      futile.logger::flog.info(
+        "searchlight engine: general-purpose iterator (no eligible fast path)"
+      )
     }
     return(list(
       handled = FALSE,
@@ -374,7 +390,7 @@ explain_searchlight_engine <- function(model_spec,
 
   warning(
     sprintf(
-      "searchlight engine '%s' failed, falling back to legacy: %s",
+      "searchlight engine '%s' failed, falling back to the general-purpose iterator: %s",
       engine,
       err_msg
     ),

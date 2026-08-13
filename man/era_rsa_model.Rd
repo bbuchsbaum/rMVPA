@@ -25,6 +25,8 @@ era_rsa_model(
   pairing = c("average", "one_to_one"),
   era_simfun = c("pearson", "spearman"),
   era_min_voxels = 2L,
+  era_components = c("item", "identification", "geometry"),
+  era_association_score = c("item_specificity", "matched"),
   era_correlates = NULL,
   era_cor_method = c("spearman", "pearson"),
   era_association = NULL,
@@ -77,8 +79,8 @@ If \code{global_nuisance} is enabled and \code{partial_against} is not
 supplied explicitly, the effective default is \code{c("run", "global")}.}
 
 \item{include_diag}{Logical retained for API compatibility. Diagonal ERA
-metrics are always retained, and the off-diagonal mean used by
-\code{era_diag_minus_off} always excludes matching-item diagonal entries.}
+metrics are always retained. The trial-specific nonmatch backgrounds used
+by \code{era_diag_minus_off} always exclude the matching-item diagonal.}
 
 \item{item_block}{Optional factor of per-item blocks, aligned to item keys.
 Typically derived by aggregating a trial-level block/run variable in
@@ -129,15 +131,29 @@ matrix, either \code{"pearson"} or \code{"spearman"}.}
 \item{era_min_voxels}{Minimum finite voxel pairs required for an
 encoding-retrieval similarity.}
 
+\item{era_components}{Character vector selecting computation families:
+\code{"item"} computes matched similarity, trial-specific nonmatch
+contrasts, lag, and item-covariate associations; \code{"identification"}
+adds the full cross-item matrix and top-1 accuracy; \code{"geometry"}
+adds within-phase RDM metrics and geometry nuisance models. The default
+retains all existing outputs. Use \code{era_components = "item"} for the
+association-focused path, which is linear in the number of items when
+item patterns are finite.}
+
+\item{era_association_score}{Per-item response used by \code{era_correlates}
+and \code{era_association}. \code{"item_specificity"} (default) subtracts
+each retrieval item's mean similarity to nonmatching encoding items.
+\code{"matched"} uses raw matched encoding-retrieval similarity.}
+
 \item{era_correlates}{Optional right-hand-side formula selecting numeric
-retrieval variables for zero-order correlations with matched-item ERA
-similarity, for example \code{~ vividness}.}
+retrieval variables for zero-order correlations with the score selected
+by \code{era_association_score}, for example \code{~ vividness}.}
 
 \item{era_cor_method}{Correlation method for \code{era_correlates}, either
 \code{"spearman"} or \code{"pearson"}.}
 
-\item{era_association}{Optional right-hand-side regression formula for
-matched-item ERA similarity, for example
+\item{era_association}{Optional right-hand-side regression formula for the
+score selected by \code{era_association_score}, for example
 \code{~ vividness + retrieval_run + trial_order}. The response is supplied
 internally. Formula variables are evaluated in the retrieval design.}
 
@@ -196,9 +212,13 @@ and \code{run_searchlight()}:
     matrix).
   }
   \item{era_diag_minus_off}{
-    Diagonal-minus-off-diagonal ERA contrast: \code{era_diag_mean} minus
-    the mean similarity to all non-matching items, capturing how much
-    same-item pairs stand out from other pairs.
+    Mean item-specific ERA contrast. For each retrieval item, its matched
+    encoding similarity is contrasted with that retrieval item's mean
+    similarity to all nonmatching encoding items; those trial-specific
+    contrasts are then averaged. With complete data this is algebraically
+    identical to diagonal mean minus the grand off-diagonal mean. With
+    missing pairwise similarities it gives each retrieval item with an
+    estimable contrast equal weight.
   }
   \item{geom_cor}{
     Correlation between encoding and retrieval representational geometries:
@@ -228,7 +248,7 @@ and \code{run_searchlight()}:
   }
   \item{era_<variable>_cor / era_<variable>_n}{
     When \code{era_correlates} is supplied, the zero-order correlation
-    between matched-item ERA similarity and each selected retrieval
+    between the selected per-item ERA association score and each retrieval
     variable, plus its variable-specific number of complete item pairs.
   }
   \item{era_assoc_part_r_<effect>}{
@@ -293,12 +313,14 @@ equality tests are not spuriously satisfied.
 \section{Association interpretation}{
 
 \code{era_correlates} and \code{era_association} operate on the vector of
-matched-item encoding-retrieval similarities, not on the within-phase RDM
-vectors used by \code{geom_cor}. Missing values in each zero-order correlate
-are removed separately. The adjusted model uses one joint complete-case set
-across ERA similarity and every association term. Signed part-r is invariant
-to linear rescaling of a focal predictor; its square equals that term's
-incremental R-squared, which is deliberately not emitted as a default map.
+item-specific matched-minus-nonmatch scores by default, not on the
+within-phase RDM vectors used by \code{geom_cor}. Set
+\code{era_association_score = "matched"} to use raw matched similarities.
+Missing values in each zero-order correlate are removed separately. The
+adjusted model uses one joint complete-case set across the selected ERA
+score and every association term. Signed part-r is invariant to linear
+rescaling of a focal predictor; its square equals that term's incremental
+R-squared, which is deliberately not emitted as a default map.
 }
 
 \examples{

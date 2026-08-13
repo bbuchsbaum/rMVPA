@@ -28,8 +28,10 @@ fall back to default).}
 
 \item{...}{Additional arguments passed through:
 \describe{
-  \item{engine}{Searchlight engine: \code{"auto"} (default), \code{"legacy"},
-    \code{"swift"}, \code{"dual_lda_fast"}, or \code{"naive_xdec_fast"}.}
+  \item{engine}{Searchlight engine: \code{"auto"} (default), \code{"legacy"}
+    (the compatibility key for the general-purpose iterator),
+    \code{"swift"}, \code{"dual_lda_fast"}, \code{"naive_xdec_fast"}, or
+    \code{"era_rsa_fast"}.}
   \item{combiner}{Combiner function or name for randomized/resampled methods
     (default \code{"average"}).}
   \item{drop_probs}{If \code{TRUE}, drop probability predictions (default \code{FALSE}).}

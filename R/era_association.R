@@ -183,9 +183,54 @@
     key_enc = key_enc,
     key_ret = key_ret,
     common_keys = common,
+    enc_rows = lapply(common, function(key) which(key_enc == key)),
+    ret_rows = lapply(common, function(key) which(key_ret == key)),
     enc_counts = enc_counts,
     ret_counts = ret_counts
   )
+}
+
+#' Build aligned item prototypes without reparsing design metadata
+#'
+#' The row maps are invariant across searchlight spheres and are prepared once
+#' by \code{.era_pairing_info()}. Strict one-to-one input therefore reduces to
+#' direct row indexing; repeated-item input retains the established group-mean
+#' estimand.
+#'
+#' @keywords internal
+#' @noRd
+.era_item_prototypes <- function(Xenc, Xret, pairing_info) {
+  if (nrow(Xenc) != length(pairing_info$key_enc) ||
+      nrow(Xret) != length(pairing_info$key_ret)) {
+    stop("ERA-RSA ROI observations do not match the prepared item pairing.",
+         call. = FALSE)
+  }
+
+  keys <- pairing_info$common_keys
+  if (identical(pairing_info$pairing, "one_to_one")) {
+    enc_idx <- vapply(pairing_info$enc_rows, `[[`, integer(1L), 1L)
+    ret_idx <- vapply(pairing_info$ret_rows, `[[`, integer(1L), 1L)
+    E <- Xenc[enc_idx, , drop = FALSE]
+    R <- Xret[ret_idx, , drop = FALSE]
+  } else {
+    mean_rows <- function(X, rows) {
+      out <- matrix(NA_real_, nrow = length(rows), ncol = ncol(X))
+      for (i in seq_along(rows)) {
+        idx <- rows[[i]]
+        if (length(idx) == 1L) {
+          out[i, ] <- X[idx, ]
+        } else {
+          out[i, ] <- colMeans(X[idx, , drop = FALSE], na.rm = FALSE)
+        }
+      }
+      out
+    }
+    E <- mean_rows(Xenc, pairing_info$enc_rows)
+    R <- mean_rows(Xret, pairing_info$ret_rows)
+  }
+
+  rownames(E) <- rownames(R) <- keys
+  list(E = E, R = R, keys = keys)
 }
 
 #' @keywords internal
@@ -361,6 +406,164 @@
   rownames(S) <- rownames(E)
   colnames(S) <- rownames(R)
   S
+}
+
+#' Normalize finite item patterns for correlation products
+#'
+#' @keywords internal
+#' @noRd
+.era_normalize_similarity_rows <- function(X, method = c("pearson", "spearman")) {
+  method <- match.arg(method)
+  X <- as.matrix(X)
+  if (identical(method, "spearman")) {
+    X <- t(apply(X, 1L, rank, ties.method = "average"))
+  }
+  X <- sweep(X, 1L, rowMeans(X), "-")
+  norms <- sqrt(rowSums(X * X))
+  valid <- is.finite(norms) & norms > 0
+  Z <- matrix(0, nrow = nrow(X), ncol = ncol(X), dimnames = dimnames(X))
+  if (any(valid)) {
+    Z[valid, ] <- X[valid, , drop = FALSE] / norms[valid]
+  }
+  list(values = Z, valid = valid)
+}
+
+#' Compute per-retrieval matched similarity and item-specific background
+#'
+#' For finite data this uses normalized pattern sums and is linear in the
+#' number of items for the item-level outputs. A full K-by-K matrix is formed
+#' only when identification metrics request it. Non-finite data use the exact
+#' pairwise-complete matrix implementation so missingness semantics are not
+#' approximated.
+#'
+#' @keywords internal
+#' @noRd
+.era_item_similarity_scores <- function(E,
+                                        R,
+                                        method = c("pearson", "spearman"),
+                                        min_voxels = 2L,
+                                        need_matrix = FALSE,
+                                        item_block = NULL) {
+  method <- match.arg(method)
+  E <- as.matrix(E)
+  R <- as.matrix(R)
+  if (nrow(E) != nrow(R) || ncol(E) != ncol(R)) {
+    stop("ERA-RSA item prototypes must have matching dimensions.", call. = FALSE)
+  }
+  K <- nrow(E)
+  if (K < 2L) {
+    stop("ERA-RSA item specificity requires at least two matched items.", call. = FALSE)
+  }
+
+  mean_finite <- function(x) {
+    x <- x[is.finite(x)]
+    if (length(x)) mean(x) else NA_real_
+  }
+  block <- if (is.null(item_block)) NULL else as.character(item_block)
+  if (!is.null(block) && length(block) != K) {
+    stop("ERA-RSA `item_block` must align with the matched item set.", call. = FALSE)
+  }
+
+  all_finite <- all(is.finite(E)) && all(is.finite(R))
+  if (!all_finite) {
+    S <- .era_cross_similarity(E, R, method = method, min_voxels = min_voxels)
+    matched <- diag(S)
+    background <- vapply(seq_len(K), function(i) mean_finite(S[-i, i]), numeric(1L))
+    same_specificity <- diff_specificity <- rep(NA_real_, K)
+    if (!is.null(block)) {
+      for (i in seq_len(K)) {
+        if (is.na(block[[i]]) || !is.finite(matched[[i]])) next
+        same_idx <- which(!is.na(block) & block == block[[i]] & seq_len(K) != i)
+        diff_idx <- which(!is.na(block) & block != block[[i]])
+        same_bg <- mean_finite(S[same_idx, i])
+        diff_bg <- mean_finite(S[diff_idx, i])
+        if (is.finite(same_bg)) same_specificity[[i]] <- matched[[i]] - same_bg
+        if (is.finite(diff_bg)) diff_specificity[[i]] <- matched[[i]] - diff_bg
+      }
+    }
+    return(list(
+      matrix = if (isTRUE(need_matrix)) S else NULL,
+      matched = matched,
+      background = background,
+      specificity = matched - background,
+      same_block_specificity = same_specificity,
+      diff_block_specificity = diff_specificity
+    ))
+  }
+
+  enc <- .era_normalize_similarity_rows(E, method = method)
+  ret <- .era_normalize_similarity_rows(R, method = method)
+  if (ncol(E) < min_voxels) {
+    enc$valid[] <- FALSE
+    ret$valid[] <- FALSE
+  }
+  valid_pair <- enc$valid & ret$valid
+  matched <- rep(NA_real_, K)
+  if (any(valid_pair)) {
+    matched[valid_pair] <- rowSums(
+      enc$values[valid_pair, , drop = FALSE] *
+        ret$values[valid_pair, , drop = FALSE]
+    )
+  }
+
+  enc_sum <- colSums(enc$values[enc$valid, , drop = FALSE])
+  enc_count <- sum(enc$valid)
+  background <- rep(NA_real_, K)
+  valid_background <- ret$valid & (enc_count - as.integer(enc$valid) > 0L)
+  if (any(valid_background)) {
+    totals <- as.vector(ret$values[valid_background, , drop = FALSE] %*% enc_sum)
+    matched_part <- ifelse(
+      enc$valid[valid_background], matched[valid_background], 0
+    )
+    background[valid_background] <-
+      (totals - matched_part) /
+      (enc_count - as.integer(enc$valid[valid_background]))
+  }
+
+  same_specificity <- diff_specificity <- rep(NA_real_, K)
+  if (!is.null(block)) {
+    block_levels <- unique(block[!is.na(block)])
+    block_id <- match(block, block_levels)
+    block_sums <- matrix(0, nrow = length(block_levels), ncol = ncol(E))
+    block_counts <- integer(length(block_levels))
+    for (g in seq_along(block_levels)) {
+      idx <- which(enc$valid & block_id == g)
+      block_counts[[g]] <- length(idx)
+      if (length(idx)) {
+        block_sums[g, ] <- colSums(enc$values[idx, , drop = FALSE])
+      }
+    }
+    for (i in seq_len(K)) {
+      g <- block_id[[i]]
+      if (is.na(g) || !ret$valid[[i]] || !is.finite(matched[[i]])) next
+      same_n <- block_counts[[g]] - as.integer(enc$valid[[i]])
+      if (same_n > 0L) {
+        same_sum <- block_sums[g, ] - if (enc$valid[[i]]) enc$values[i, ] else 0
+        same_specificity[[i]] <- matched[[i]] - sum(ret$values[i, ] * same_sum) / same_n
+      }
+      diff_n <- enc_count - block_counts[[g]]
+      if (diff_n > 0L) {
+        diff_sum <- enc_sum - block_sums[g, ]
+        diff_specificity[[i]] <- matched[[i]] - sum(ret$values[i, ] * diff_sum) / diff_n
+      }
+    }
+  }
+
+  S <- NULL
+  if (isTRUE(need_matrix)) {
+    S <- tcrossprod(enc$values, ret$values)
+    S[!outer(enc$valid, ret$valid, `&`)] <- NA_real_
+    rownames(S) <- rownames(E)
+    colnames(S) <- rownames(R)
+  }
+  list(
+    matrix = S,
+    matched = matched,
+    background = background,
+    specificity = matched - background,
+    same_block_specificity = same_specificity,
+    diff_block_specificity = diff_specificity
+  )
 }
 
 #' @keywords internal

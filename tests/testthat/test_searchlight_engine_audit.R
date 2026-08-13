@@ -73,7 +73,7 @@ test_that(".searchlight_center_ids handles empty and surface-style searchlights"
   expect_identical(rMVPA:::.searchlight_center_ids(surf_like), c(10L, 22L))
 })
 
-test_that("auto engine failure falls back to legacy with warning", {
+test_that("auto engine failure falls back to the general-purpose iterator with warning", {
   warns <- character(0)
   ret <- withCallingHandlers(
     testthat::with_mocked_bindings(
@@ -94,5 +94,5 @@ test_that("auto engine failure falls back to legacy with warning", {
   )
   expect_false(ret$handled)
   expect_identical(ret$engine, "legacy")
-  expect_true(any(grepl("falling back to legacy", warns)))
+  expect_true(any(grepl("falling back to the general-purpose iterator", warns)))
 })
