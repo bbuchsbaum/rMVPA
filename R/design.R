@@ -52,6 +52,17 @@ test_design.mvpa_design <- function(obj) {
 parse_variable <- function(var, design) {
   ret <- if (purrr::is_formula(var)) {
     vnames <- all.vars(var[[2]])
+    missing_vars <- setdiff(vnames, names(design))
+    if (length(missing_vars)) {
+      stop(
+        sprintf(
+          "Formula variable%s not found in `design`: %s",
+          if (length(missing_vars) == 1L) "" else "s",
+          paste(missing_vars, collapse = ", ")
+        ),
+        call. = FALSE
+      )
+    }
     ret <- if (length(vnames) > 1) {
       do.call("interaction", c(lapply(vnames, function(vname) as.factor(design[[vname]])), sep=":"))
     } else {
@@ -67,13 +78,26 @@ parse_variable <- function(var, design) {
       stop(paste("`design` does not contain variable named: ", var))
     }
     design[[var]]
-  } else if (is.factor(var) || is.integer(var)) {
-    if (is.data.frame(design)) {
-      assertthat::assert_that(nrow(design) == length(var)) 
+  } else if (is.null(dim(var)) &&
+             (is.factor(var) || is.numeric(var) || is.character(var) || is.logical(var))) {
+    if (is.data.frame(design) && nrow(design) != length(var)) {
+      stop(
+        sprintf(
+          "Row-aligned `var` must have length %d to match `design`; got %d.",
+          nrow(design), length(var)
+        ),
+        call. = FALSE
+      )
     }
     var
   } else {
-    stop("'var' must be a formula, factor, or character vector")
+    stop(
+      paste0(
+        "`var` must be a formula, a single column name, or a row-aligned ",
+        "numeric, integer, character, logical, or factor vector."
+      ),
+      call. = FALSE
+    )
   }
   
   if (is.factor(ret)) {
@@ -95,8 +119,11 @@ parse_variable <- function(var, design) {
 #' @param y_train Formula or vector specifying the training response variable (old path;
 #'   mutually exclusive with \code{cv_labels})
 #' @param y_test Optional formula or vector specifying the test response variable (default: NULL)
-#' @param block_var Optional formula or vector specifying the blocking variable for cross-validation
-#' @param split_by Optional formula or vector for splitting analyses
+#' @param block_var Optional formula, scalar column name, or row-aligned numeric,
+#'   integer, character, logical, or factor vector specifying the blocking
+#'   variable for cross-validation.
+#' @param split_by Optional formula, scalar column name, or row-aligned atomic
+#'   vector specifying how to split analyses.
 #' @param cv_labels Optional vector of labels used for cross-validation fold construction
 #'   (new path; mutually exclusive with \code{y_train}). If provided without \code{targets},
 #'   \code{targets} defaults to \code{cv_labels}.
@@ -120,8 +147,10 @@ parse_variable <- function(var, design) {
 #' The \code{y_train} and \code{y_test} can be specified either as formulas (e.g., ~ condition)
 #' or as vectors. If formulas are used, they are evaluated within the respective design matrices.
 #'
-#' The \code{block_var} and \code{split_by} can also be specified as formulas or vectors.
-#' If formulas, they are evaluated within the training design matrix.
+#' The \code{block_var} and \code{split_by} can be specified as formulas, scalar
+#' column names, or row-aligned atomic vectors. Formulas and column names are
+#' evaluated within the relevant design matrix; vectors must have exactly one
+#' value per design row.
 #'
 #' The new \code{cv_labels} and \code{targets} parameters allow separating the labels used
 #' for fold construction from the actual training targets. When using the old \code{y_train}

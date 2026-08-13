@@ -287,4 +287,5 @@ test_that("save_results writes custom searchlight performance maps", {
   expect_true(file.exists(file.path(out, "maps", "mean_signal.nii.gz")))
   expect_false(dir.exists(file.path(out, "aux")))
   expect_true(length(paths$maps) == 1L)
+  expect_true(file.exists(paths$manifest))
 })

@@ -449,8 +449,13 @@ save_results.searchlight_result <- function(x, dir,
         created = as.character(Sys.time()),
         rMVPA_version   = tryCatch(as.character(utils::packageVersion("rMVPA")), error = function(e) NA_character_),
         neuroim2_version = tryCatch(as.character(utils::packageVersion("neuroim2")), error = function(e) NA_character_),
-        neurosurf_version = if (requireNamespace("neurosurf", quietly = TRUE))
-          as.character(utils::packageVersion("neurosurf")) else NA_character_,
+        # Reading DESCRIPTION metadata does not load the optional namespace.
+        # A broken optional neurosurf installation must not prevent volumetric
+        # results and their manifest from being saved.
+        neurosurf_version = tryCatch(
+          as.character(utils::packageVersion("neurosurf")),
+          error = function(e) NA_character_
+        ),
         class = class(x),
         metrics = names_all,
         runtime = .manifest_runtime_context(x),

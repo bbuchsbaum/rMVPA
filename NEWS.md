@@ -15,6 +15,11 @@
   of the call and restore the caller's previous `future` plan afterward.
 * `save_results()` now writes custom searchlight metric maps as NIfTI files
   instead of storing their wrappers as auxiliary R objects.
+* `save_results()` no longer loads optional surface packages merely to record
+  their versions when writing a volumetric-result manifest.
+* `mvpa_design()` now accepts row-aligned numeric, integer, character, logical,
+  and factor vectors for blocking and splitting variables, with explicit
+  alignment errors.
 * `era_rsa_model()` now accepts combined encoding/retrieval image series split
   explicitly by `phase_var`, validates optional one-to-one item pairing, and
   supports Pearson or Spearman matched-item similarity.
