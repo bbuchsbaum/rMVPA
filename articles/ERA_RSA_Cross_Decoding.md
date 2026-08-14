@@ -286,8 +286,9 @@ toy$design$test_design$trial_order <- seq_along(item_keys)
 ```
 
 Use `era_correlates` for the unadjusted relationship. Use
-`era_association` for the adjusted model and `era_effects` to select the
-directional, one-degree-of-freedom effects that should become maps:
+`era_association` for the adjusted model, `era_effects` to select
+directional one-degree-of-freedom effects, and `era_effects_block` for
+omnibus tests of one or more terms:
 
 ``` r
 
@@ -304,6 +305,7 @@ era_assoc_ms <- era_rsa_model(
   era_cor_method = "spearman",
   era_association = ~ vividness + retrieval_run + trial_order,
   era_effects = ~ vividness,
+  era_effects_block = list(acquisition = ~ retrieval_run + trial_order),
   era_min_complete = 4
 )
 
@@ -311,16 +313,20 @@ era_assoc_res <- run_regional(era_assoc_ms, region_mask)
 era_assoc_res$performance_table[
   ,
   c("roinum", "era_diag_mean", "era_vividness_cor", "era_vividness_n",
-    "era_assoc_part_r_vividness", "era_assoc_n", "era_assoc_df_resid")
+    "era_assoc_part_r_vividness", "era_assoc_dr2_acquisition",
+    "era_assoc_F_acquisition", "era_assoc_df1_acquisition",
+    "era_assoc_n", "era_assoc_df_resid")
 ]
-#> # A tibble: 3 x 7
+#> # A tibble: 3 x 10
 #>   roinum era_diag_mean era_vividness_cor era_vividness_n era_assoc_part_r_vivi~1
 #>    <int>         <dbl>             <dbl>           <dbl>                   <dbl>
 #> 1      1       -0.0191           -0.0473              22                 -0.0332
 #> 2      2       -0.0541           -0.0346              22                 -0.111 
 #> 3      3        0.0504           -0.276               22                 -0.211 
 #> # i abbreviated name: 1: era_assoc_part_r_vividness
-#> # i 2 more variables: era_assoc_n <dbl>, era_assoc_df_resid <dbl>
+#> # i 5 more variables: era_assoc_dr2_acquisition <dbl>,
+#> #   era_assoc_F_acquisition <dbl>, era_assoc_df1_acquisition <dbl>,
+#> #   era_assoc_n <dbl>, era_assoc_df_resid <dbl>
 ```
 
 `era_vividness_cor` is the zero-order Spearman correlation with item
@@ -329,11 +335,18 @@ correlation after adjusting for retrieval run and trial order. It is
 invariant to linear rescaling of vividness. Adjustment-only terms remain
 in the model but do not create unsigned or reference-dependent maps. A
 multi-level factor needs an explicit one-degree-of-freedom contrast
-before it can be requested in `era_effects`.
+before it can be requested in `era_effects`. Blocks do not have that
+restriction: here, the `acquisition` block jointly removes the
+multi-column retrieval-run factor and trial order.
+`era_assoc_dr2_acquisition` is the block’s incremental R-squared,
+`era_assoc_F_acquisition` is its partial F statistic, and
+`era_assoc_df1_acquisition` is the fitted rank difference between the
+full and reduced models.
 
 The association model uses one joint complete-case set across similarity
-and all regression variables, reported as `era_assoc_n`. It does not
-emit raw beta or R-squared maps. Before conventional second-level
+and all regression variables, reported as `era_assoc_n`; every block
+comparison reuses exactly those rows. It does not emit raw beta or
+per-term unsigned R-squared maps. Before conventional second-level
 analysis, Fisher-transform subject-level correlation or part-r maps
 where that model’s assumptions call for it.
 
@@ -464,6 +477,9 @@ era_sl
 #>   -  era_vividness_cor  (Type:  DenseNeuroVol ) 
 #>   -  era_vividness_n  (Type:  DenseNeuroVol ) 
 #>   -  era_assoc_part_r_vividness  (Type:  DenseNeuroVol ) 
+#>   -  era_assoc_dr2_acquisition  (Type:  DenseNeuroVol ) 
+#>   -  era_assoc_F_acquisition  (Type:  DenseNeuroVol ) 
+#>   -  era_assoc_df1_acquisition  (Type:  DenseNeuroVol ) 
 #>   -  era_assoc_n  (Type:  DenseNeuroVol ) 
 #>   -  era_assoc_df_resid  (Type:  DenseNeuroVol )
 ```
@@ -481,8 +497,9 @@ era_sl$metrics
 #>  [3] "era_diag_minus_off"            "era_diag_minus_off_same_block"
 #>  [5] "era_diag_minus_off_diff_block" "era_lag_cor"                  
 #>  [7] "era_vividness_cor"             "era_vividness_n"              
-#>  [9] "era_assoc_part_r_vividness"    "era_assoc_n"                  
-#> [11] "era_assoc_df_resid"
+#>  [9] "era_assoc_part_r_vividness"    "era_assoc_dr2_acquisition"    
+#> [11] "era_assoc_F_acquisition"       "era_assoc_df1_acquisition"    
+#> [13] "era_assoc_n"                   "era_assoc_df_resid"
 ```
 
 We can save the searchlight maps using

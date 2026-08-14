@@ -24,7 +24,7 @@ Base metrics are `n_items`, `era_top1_acc`, `era_diag_mean`,
 `era_diag_minus_off`, `geom_cor`, `era_diag_minus_off_same_block`,
 `era_diag_minus_off_diff_block`, `era_lag_cor`, `geom_cor_partial`,
 `geom_cor_run_partial`, and `geom_cor_xrun`. Association metrics are
-appended dynamically from `era_correlates` and `era_effects`. If
-`confound_rdms` is supplied, the schema also includes `beta_enc_geom`,
-one `beta_<name>` per confound RDM, `sp_enc_geom`, and one `sp_<name>`
-per confound RDM.
+appended dynamically from `era_correlates`, `era_effects`, and
+`era_effects_block`. If `confound_rdms` is supplied, the schema also
+includes `beta_enc_geom`, one `beta_<name>` per confound RDM,
+`sp_enc_geom`, and one `sp_<name>` per confound RDM.

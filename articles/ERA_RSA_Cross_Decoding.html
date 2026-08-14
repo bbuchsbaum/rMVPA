@@ -352,9 +352,10 @@ correction.</p>
 <span><span class="op">)</span></span>
 <span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">test_design</span><span class="op">$</span><span class="va">trial_order</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">item_keys</span><span class="op">)</span></span></code></pre></div>
 <p>Use <code>era_correlates</code> for the unadjusted relationship. Use
-<code>era_association</code> for the adjusted model and
-<code>era_effects</code> to select the directional,
-one-degree-of-freedom effects that should become maps:</p>
+<code>era_association</code> for the adjusted model,
+<code>era_effects</code> to select directional one-degree-of-freedom
+effects, and <code>era_effects_block</code> for omnibus tests of one or
+more terms:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_assoc_ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_rsa_model.html">era_rsa_model</a></span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
@@ -369,6 +370,7 @@ one-degree-of-freedom effects that should become maps:</p>
 <span>  era_cor_method <span class="op">=</span> <span class="st">"spearman"</span>,</span>
 <span>  era_association <span class="op">=</span> <span class="op">~</span> <span class="va">vividness</span> <span class="op">+</span> <span class="va">retrieval_run</span> <span class="op">+</span> <span class="va">trial_order</span>,</span>
 <span>  era_effects <span class="op">=</span> <span class="op">~</span> <span class="va">vividness</span>,</span>
+<span>  era_effects_block <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>acquisition <span class="op">=</span> <span class="op">~</span> <span class="va">retrieval_run</span> <span class="op">+</span> <span class="va">trial_order</span><span class="op">)</span>,</span>
 <span>  era_min_complete <span class="op">=</span> <span class="fl">4</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -376,16 +378,20 @@ one-degree-of-freedom effects that should become maps:</p>
 <span><span class="va">era_assoc_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
 <span>  ,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"era_diag_mean"</span>, <span class="st">"era_vividness_cor"</span>, <span class="st">"era_vividness_n"</span>,</span>
-<span>    <span class="st">"era_assoc_part_r_vividness"</span>, <span class="st">"era_assoc_n"</span>, <span class="st">"era_assoc_df_resid"</span><span class="op">)</span></span>
+<span>    <span class="st">"era_assoc_part_r_vividness"</span>, <span class="st">"era_assoc_dr2_acquisition"</span>,</span>
+<span>    <span class="st">"era_assoc_F_acquisition"</span>, <span class="st">"era_assoc_df1_acquisition"</span>,</span>
+<span>    <span class="st">"era_assoc_n"</span>, <span class="st">"era_assoc_df_resid"</span><span class="op">)</span></span>
 <span><span class="op">]</span></span>
-<span><span class="co">#&gt; # A tibble: 3 x 7</span></span>
+<span><span class="co">#&gt; # A tibble: 3 x 10</span></span>
 <span><span class="co">#&gt;   roinum era_diag_mean era_vividness_cor era_vividness_n era_assoc_part_r_vivi~1</span></span>
 <span><span class="co">#&gt;    &lt;int&gt;         &lt;dbl&gt;             &lt;dbl&gt;           &lt;dbl&gt;                   &lt;dbl&gt;</span></span>
 <span><span class="co">#&gt; 1      1       -0.0191           -0.0473              22                 -0.0332</span></span>
 <span><span class="co">#&gt; 2      2       -0.0541           -0.0346              22                 -0.111 </span></span>
 <span><span class="co">#&gt; 3      3        0.0504           -0.276               22                 -0.211 </span></span>
 <span><span class="co">#&gt; # i abbreviated name: 1: era_assoc_part_r_vividness</span></span>
-<span><span class="co">#&gt; # i 2 more variables: era_assoc_n &lt;dbl&gt;, era_assoc_df_resid &lt;dbl&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; # i 5 more variables: era_assoc_dr2_acquisition &lt;dbl&gt;,</span></span>
+<span><span class="co">#&gt; #   era_assoc_F_acquisition &lt;dbl&gt;, era_assoc_df1_acquisition &lt;dbl&gt;,</span></span>
+<span><span class="co">#&gt; #   era_assoc_n &lt;dbl&gt;, era_assoc_df_resid &lt;dbl&gt;</span></span></code></pre></div>
 <p><code>era_vividness_cor</code> is the zero-order Spearman correlation
 with item specificity. <code>era_assoc_part_r_vividness</code> is the
 signed semi-partial correlation after adjusting for retrieval run and
@@ -393,10 +399,17 @@ trial order. It is invariant to linear rescaling of vividness.
 Adjustment-only terms remain in the model but do not create unsigned or
 reference-dependent maps. A multi-level factor needs an explicit
 one-degree-of-freedom contrast before it can be requested in
-<code>era_effects</code>.</p>
+<code>era_effects</code>. Blocks do not have that restriction: here, the
+<code>acquisition</code> block jointly removes the multi-column
+retrieval-run factor and trial order.
+<code>era_assoc_dr2_acquisition</code> is the block’s incremental
+R-squared, <code>era_assoc_F_acquisition</code> is its partial F
+statistic, and <code>era_assoc_df1_acquisition</code> is the fitted rank
+difference between the full and reduced models.</p>
 <p>The association model uses one joint complete-case set across
 similarity and all regression variables, reported as
-<code>era_assoc_n</code>. It does not emit raw beta or R-squared maps.
+<code>era_assoc_n</code>; every block comparison reuses exactly those
+rows. It does not emit raw beta or per-term unsigned R-squared maps.
 Before conventional second-level analysis, Fisher-transform
 subject-level correlation or part-r maps where that model’s assumptions
 call for it.</p>
@@ -526,6 +539,9 @@ maps of the same metrics.</p>
 <span><span class="co">#&gt;   -  era_vividness_cor  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_vividness_n  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_assoc_part_r_vividness  (Type:  DenseNeuroVol ) </span></span>
+<span><span class="co">#&gt;   -  era_assoc_dr2_acquisition  (Type:  DenseNeuroVol ) </span></span>
+<span><span class="co">#&gt;   -  era_assoc_F_acquisition  (Type:  DenseNeuroVol ) </span></span>
+<span><span class="co">#&gt;   -  era_assoc_df1_acquisition  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_assoc_n  (Type:  DenseNeuroVol ) </span></span>
 <span><span class="co">#&gt;   -  era_assoc_df_resid  (Type:  DenseNeuroVol )</span></span></code></pre></div>
 <p>The <code>searchlight_result</code> contains:</p>
@@ -544,8 +560,9 @@ metric.</li>
 <span><span class="co">#&gt;  [3] "era_diag_minus_off"            "era_diag_minus_off_same_block"</span></span>
 <span><span class="co">#&gt;  [5] "era_diag_minus_off_diff_block" "era_lag_cor"                  </span></span>
 <span><span class="co">#&gt;  [7] "era_vividness_cor"             "era_vividness_n"              </span></span>
-<span><span class="co">#&gt;  [9] "era_assoc_part_r_vividness"    "era_assoc_n"                  </span></span>
-<span><span class="co">#&gt; [11] "era_assoc_df_resid"</span></span></code></pre></div>
+<span><span class="co">#&gt;  [9] "era_assoc_part_r_vividness"    "era_assoc_dr2_acquisition"    </span></span>
+<span><span class="co">#&gt; [11] "era_assoc_F_acquisition"       "era_assoc_df1_acquisition"    </span></span>
+<span><span class="co">#&gt; [13] "era_assoc_n"                   "era_assoc_df_resid"</span></span></code></pre></div>
 <p>We can save the searchlight maps using
 <code><a href="../reference/save_results.html">save_results()</a></code>:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
