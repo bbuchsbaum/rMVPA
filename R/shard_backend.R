@@ -158,6 +158,7 @@ configure_runtime_backend <- function(model_spec,
 
 #' @keywords internal
 #' @noRd
+#' @export
 validate_analysis.shard_model_spec <- function(x, verbose = TRUE, ...) {
   class(x) <- setdiff(class(x), "shard_model_spec")
   validate_analysis(x, verbose = verbose, ...)

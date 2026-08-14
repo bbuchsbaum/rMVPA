@@ -36,7 +36,7 @@ take minutes to hours, but the calls are complete and can be run as-is.
 
 ```{r setup, include = FALSE}
 if (requireNamespace("ragg", quietly = TRUE)) knitr::opts_chunk$set(dev = "ragg_png")
-if (requireNamespace("systemfonts", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) albersdown::albers_register_fonts()
+if (requireNamespace("systemfonts", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE) && "albers_register_fonts" %in% getNamespaceExports("albersdown")) albersdown::albers_register_fonts()
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment  = "#>",
@@ -45,7 +45,7 @@ knitr::opts_chunk$set(
   fig.width = 6, fig.height = 4
 )
 if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) {
-  if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(family = params$family, preset = params$preset))
+  if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE) && "theme_albers" %in% getNamespaceExports("albersdown")) ggplot2::theme_set(albersdown::theme_albers(family = params$family, preset = params$preset))
 }
 library(neuroim2)
 library(rMVPA)
@@ -91,7 +91,7 @@ crossval
 
 ### Model specification
 
-We use the shrinkage discriminant analysis model (`sda_notune`), which estimates its shrinkage parameter from the training folds. See the [sda package](https://cran.r-project.org/web/packages/sda/index.html) for details.
+We use the shrinkage discriminant analysis model (`sda_notune`), which estimates its shrinkage parameter from the training folds. See the [sda package](https://CRAN.R-project.org/package=sda) for details.
 
 ```{r model_spec}
 sda_model <- load_model("sda_notune") 

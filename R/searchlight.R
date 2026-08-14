@@ -317,10 +317,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
       pob_list <- if ("prob_observed" %in% names(good_results)) {
         good_results$prob_observed
       } else {
-        good_results %>%
-          dplyr::select(result) %>%
-          dplyr::pull(result) %>%
-          purrr::map(~ prob_observed(.))
+        purrr::map(good_results$result, ~ prob_observed(.))
       }
 
       if (any(!vapply(pob_list, is.null, logical(1)))) {

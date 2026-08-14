@@ -1,9 +1,13 @@
-# rMVPA 0.1.2
+# rMVPA 0.1.3
 
-* Added anti-leakage validator (`validate_analysis()`) with 7 cross-validation checks.
-* Added permutation searchlight inference (`run_permutation_searchlight()`).
-* Added feature RSA ROI connectivity outputs.
-* Improved progress reporting for parallel analyses.
+* Fixed a silent positive bias in `crossnobis` estimation:
+  `compute_crossvalidated_means_sl()` now builds condition means from
+  independent partitions instead of overlapping leave-one-partition-out
+  training sets. Results produced with rMVPA 0.1.2's built-in crossnobis fold
+  constructor should be recomputed; results built from independent partition
+  means directly are unaffected.
+* The optional shard backend now requires shard 0.2.1 or newer, which safely
+  rejects invalidated shared-memory handles instead of dereferencing them.
 * `run_custom_searchlight()` now gives callbacks separate training and test
   sphere matrices plus arbitrary caller-supplied `user_data`, so custom
   train/test statistics can be computed without concatenating image series.
@@ -44,5 +48,12 @@
   constructing an ROI object for every sphere. The existing `engine = "legacy"`
   compatibility key requests an explicit general-iterator reference run;
   `engine = "era_rsa_fast"` requires the fast path.
+
+# rMVPA 0.1.2
+
+* Added anti-leakage validator (`validate_analysis()`) with 7 cross-validation checks.
+* Added permutation searchlight inference (`run_permutation_searchlight()`).
+* Added feature RSA ROI connectivity outputs.
+* Improved progress reporting for parallel analyses.
 * Moved 11 packages from Imports to Suggests for lazy dependency loading.
 * Various bug fixes and stability improvements.

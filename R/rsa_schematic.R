@@ -173,7 +173,7 @@ rsa_schematic_msreve <- function(file = NULL, seed = 11) {
                  palette = grDevices::hcl.colors(48, "Blue-Red 2"))
 
   graphics::par(mar = c(0.5, 0.5, 0.5, 0.5))
-  plot.new()
+  graphics::plot.new()
   graphics::plot.window(c(0, 1), c(0, 1))
   graphics::text(0.02, 0.85, "MS-ReVE summary", adj = 0, cex = 1.05, font = 2)
   graphics::text(0.02, 0.66, "neural RDM ~ sum_q beta_q * Delta_q + e",
@@ -219,7 +219,7 @@ rsa_schematic_msreve <- function(file = NULL, seed = 11) {
 #' @noRd
 .arrow_panel <- function(label) {
   graphics::par(mar = c(0.4, 0.4, 0.4, 0.4))
-  plot.new()
+  graphics::plot.new()
   graphics::plot.window(c(0, 1), c(0, 1))
   graphics::arrows(0.05, 0.5, 0.95, 0.5, length = 0.12, lwd = 2, col = "grey25")
   graphics::text(0.5, 0.78, label, cex = 0.95, col = "grey20")

@@ -25,6 +25,12 @@
 ^raw-data($|/)
 ^repomix-output\.txt$
 ^scripts($|/)
+^vendor($|/)
+^adocs($|/)
+^covr($|/)
+^data-raw($|/)
+^era_rsa_subject\.R$
+^README\.rmd$
 ^surface_test($|/)
 ^vignettes/Advanced_RSA\.html$
 ^vignettes/Searchlight_Analysis\.html$
@@ -43,6 +49,7 @@
 ^archive($|/)
 ^src/Makevars$
 ^src/.*\.(o|so|dll|dylib)$
+^src/.*\.(gcda|gcno)$
 ^searchlight_performance_execution_plan\.md$
 ^searchlight_performance_prd\.md$
 ^vignettes/(?!albers-header\.html$).*\.html$

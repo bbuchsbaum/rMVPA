@@ -355,7 +355,11 @@ test_that("shard specs are single-use; reruns require fresh use_shard()", {
     mvpa_iterate(mspec_shard, vox_iter, ids = seq_along(vox_iter))
   )
   expect_true(all(reuse_run$error))
-  expect_true(all(grepl("less than 2 features", reuse_run$error_message, fixed = TRUE)))
+  expect_true(all(grepl(
+    "shared memory segment is no longer valid",
+    reuse_run$error_message,
+    fixed = TRUE
+  )))
 
   # Supported path: refresh handles via use_shard() before rerunning.
   mspec_shard_fresh <- use_shard(mspec)

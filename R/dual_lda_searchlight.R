@@ -689,7 +689,7 @@
     }
   }
 
-  ranked <- ave(seq_len(n), group, FUN = mean)
+  ranked <- stats::ave(seq_len(n), group, FUN = mean)
   out <- numeric(n)
   out[ord] <- ranked
   out
