@@ -64,8 +64,7 @@ crossval
 
 We use the shrinkage discriminant analysis model (`sda_notune`), which
 estimates its shrinkage parameter from the training folds. See the [sda
-package](https://cran.r-project.org/web/packages/sda/index.html) for
-details.
+package](https://CRAN.R-project.org/package=sda) for details.
 
 ``` r
 

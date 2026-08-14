@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rMVPA</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-13</h4>
+            <h4 data-toc-skip class="date">2026-08-14</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Searchlight_Analysis.Rmd" class="external-link"><code>vignettes/Searchlight_Analysis.Rmd</code></a></small>
       <div class="d-none name"><code>Searchlight_Analysis.Rmd</code></div>
@@ -126,8 +126,8 @@ generalization.</p>
 </h3>
 <p>We use the shrinkage discriminant analysis model
 (<code>sda_notune</code>), which estimates its shrinkage parameter from
-the training folds. See the <a href="https://cran.r-project.org/web/packages/sda/index.html" class="external-link">sda
-package</a> for details.</p>
+the training folds. See the <a href="https://CRAN.R-project.org/package=sda" class="external-link">sda package</a> for
+details.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sda_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span> </span>
 <span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_model.html">mvpa_model</a></span><span class="op">(</span>model<span class="op">=</span><span class="va">sda_model</span>, dataset<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">dataset</span>, design<span class="op">=</span><span class="va">dataset</span><span class="op">$</span><span class="va">design</span>, crossval<span class="op">=</span><span class="va">crossval</span><span class="op">)</span></span>
