@@ -31,6 +31,7 @@ era_rsa_model(
   era_cor_method = c("spearman", "pearson"),
   era_association = NULL,
   era_effects = NULL,
+  era_effects_block = NULL,
   era_min_complete = 4L,
   ...
 )
@@ -163,6 +164,13 @@ correlations (part-r) should be emitted. Multi-column factors should be
 retained as adjustment variables or represented by an explicit one-df
 contrast column.}
 
+\item{era_effects_block}{Optional named list of right-hand-side formulas
+defining omnibus blocks from terms in \code{era_association}, for example
+\code{list(eye = ~ eye_sim_diff + mm_duration_diff + mm_shape)}. Each block
+may contain multi-column terms such as factors. The emitted delta-R-squared
+and partial F statistics compare nested models on one shared complete-case
+set; numerator degrees of freedom are based on the fitted rank difference.}
+
 \item{era_min_complete}{Minimum number of complete matched items required
 for zero-order correlations and adjusted association models.}
 
@@ -257,6 +265,11 @@ and \code{run_searchlight()}:
     after adjusting for all other terms in the association formula.
     Adjustment-only terms do not create maps.
   }
+  \item{era_assoc_dr2_<block> / era_assoc_F_<block> / era_assoc_df1_<block>}{
+    When \code{era_effects_block} is supplied, the block's incremental
+    R-squared, partial F statistic, and effective numerator degrees of
+    freedom. Full and reduced models use the same joint complete-item set.
+  }
   \item{era_assoc_n / era_assoc_df_resid}{
     Joint complete-item count and residual degrees of freedom for the
     adjusted association model.
@@ -320,7 +333,9 @@ Missing values in each zero-order correlate are removed separately. The
 adjusted model uses one joint complete-case set across the selected ERA
 score and every association term. Signed part-r is invariant to linear
 rescaling of a focal predictor; its square equals that term's incremental
-R-squared, which is deliberately not emitted as a default map.
+R-squared, which is deliberately not emitted as a default map. Named
+\code{era_effects_block} formulas instead test one or more terms jointly by
+comparing nested full and reduced models on that same complete-case set.
 }
 
 \examples{

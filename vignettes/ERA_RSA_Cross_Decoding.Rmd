@@ -257,8 +257,9 @@ toy$design$test_design$trial_order <- seq_along(item_keys)
 ```
 
 Use `era_correlates` for the unadjusted relationship. Use
-`era_association` for the adjusted model and `era_effects` to select the
-directional, one-degree-of-freedom effects that should become maps:
+`era_association` for the adjusted model, `era_effects` to select directional
+one-degree-of-freedom effects, and `era_effects_block` for omnibus tests of
+one or more terms:
 
 ```{r era-association-model}
 era_assoc_ms <- era_rsa_model(
@@ -274,6 +275,7 @@ era_assoc_ms <- era_rsa_model(
   era_cor_method = "spearman",
   era_association = ~ vividness + retrieval_run + trial_order,
   era_effects = ~ vividness,
+  era_effects_block = list(acquisition = ~ retrieval_run + trial_order),
   era_min_complete = 4
 )
 
@@ -281,7 +283,9 @@ era_assoc_res <- run_regional(era_assoc_ms, region_mask)
 era_assoc_res$performance_table[
   ,
   c("roinum", "era_diag_mean", "era_vividness_cor", "era_vividness_n",
-    "era_assoc_part_r_vividness", "era_assoc_n", "era_assoc_df_resid")
+    "era_assoc_part_r_vividness", "era_assoc_dr2_acquisition",
+    "era_assoc_F_acquisition", "era_assoc_df1_acquisition",
+    "era_assoc_n", "era_assoc_df_resid")
 ]
 ```
 
@@ -292,11 +296,17 @@ adjusting for retrieval run and trial order. It is invariant to linear
 rescaling of vividness. Adjustment-only terms remain in the model but do not
 create unsigned or reference-dependent maps. A multi-level factor needs an
 explicit one-degree-of-freedom contrast before it can be requested in
-`era_effects`.
+`era_effects`. Blocks do not have that restriction: here, the
+`acquisition` block jointly removes the multi-column retrieval-run factor and
+trial order. `era_assoc_dr2_acquisition` is the block's incremental R-squared,
+`era_assoc_F_acquisition` is its partial F statistic, and
+`era_assoc_df1_acquisition` is the fitted rank difference between the full and
+reduced models.
 
 The association model uses one joint complete-case set across similarity and
-all regression variables, reported as `era_assoc_n`. It does not emit raw beta
-or R-squared maps. Before conventional second-level analysis, Fisher-transform
+all regression variables, reported as `era_assoc_n`; every block comparison
+reuses exactly those rows. It does not emit raw beta or per-term unsigned
+R-squared maps. Before conventional second-level analysis, Fisher-transform
 subject-level correlation or part-r maps where that model's assumptions call
 for it.
 
@@ -304,9 +314,12 @@ for it.
 assoc_metrics <- era_assoc_res$performance_table
 stopifnot(
   all(c("era_vividness_cor", "era_vividness_n",
-        "era_assoc_part_r_vividness", "era_assoc_n") %in% names(assoc_metrics)),
+        "era_assoc_part_r_vividness", "era_assoc_dr2_acquisition",
+        "era_assoc_F_acquisition", "era_assoc_df1_acquisition",
+        "era_assoc_n") %in% names(assoc_metrics)),
   any(is.finite(assoc_metrics$era_vividness_cor)),
   any(is.finite(assoc_metrics$era_assoc_part_r_vividness)),
+  any(is.finite(assoc_metrics$era_assoc_F_acquisition)),
   all(assoc_metrics$era_vividness_n == length(item_keys) - 2)
 )
 ```

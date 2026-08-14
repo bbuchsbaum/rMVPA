@@ -11,6 +11,36 @@
   x
 }
 
+#' Normalize named ERA-RSA effect blocks
+#'
+#' @keywords internal
+#' @noRd
+.era_effect_blocks <- function(x) {
+  if (is.null(x)) return(NULL)
+  valid_names <- is.list(x) && length(x) && !is.null(names(x)) &&
+    !anyNA(names(x)) && all(nzchar(names(x))) && !anyDuplicated(names(x))
+  if (!isTRUE(valid_names)) {
+    stop("`era_effects_block` must be a named, non-empty list of RHS formulas.",
+         call. = FALSE)
+  }
+
+  formulas <- vector("list", length(x))
+  names(formulas) <- names(x)
+  for (i in seq_along(x)) {
+    arg <- sprintf("era_effects_block[['%s']]", names(x)[[i]])
+    formulas[[i]] <- .era_rhs_formula(x[[i]], arg)
+    if (is.null(formulas[[i]])) {
+      stop(sprintf("`%s` must not be NULL.", arg), call. = FALSE)
+    }
+  }
+
+  list(
+    formulas = formulas,
+    labels = names(x),
+    metric_labels = .era_metric_labels(names(x), "era_effects_block")
+  )
+}
+
 #' @keywords internal
 #' @noRd
 .era_count_scalar <- function(x, arg, minimum) {
@@ -336,17 +366,23 @@
 
 #' @keywords internal
 #' @noRd
-.era_prepare_association <- function(formula, effects, item_data) {
+.era_prepare_association <- function(formula, effects, item_data, effect_blocks = NULL) {
   formula <- .era_rhs_formula(formula, "era_association")
   if (is.null(formula)) {
     if (!is.null(effects)) {
       stop("`era_effects` requires `era_association`.", call. = FALSE)
     }
+    if (!is.null(effect_blocks)) {
+      stop("`era_effects_block` requires `era_association`.", call. = FALSE)
+    }
     return(NULL)
   }
   effects <- .era_rhs_formula(effects, "era_effects")
-  if (is.null(effects)) {
-    stop("`era_association` requires `era_effects` to identify directional focal terms.",
+  if (is.null(effects) && is.null(effect_blocks)) {
+    stop(paste0(
+      "`era_association` requires `era_effects` and/or `era_effects_block` ",
+      "to identify focal terms."
+    ),
          call. = FALSE)
   }
 
@@ -371,37 +407,68 @@
   }
   rownames(X) <- item_data$.era_key
 
-  effect_labels <- attr(stats::terms(effects), "term.labels")
-  missing_effects <- setdiff(effect_labels, term_labels)
-  if (!length(effect_labels) || length(missing_effects)) {
-    stop(sprintf(
-      "`era_effects` terms must occur exactly in `era_association`%s.",
-      if (length(missing_effects)) paste0(": ", paste(missing_effects, collapse = ", ")) else ""
-    ), call. = FALSE)
-  }
-
   assignment <- attr(X, "assign")
-  effect_columns <- integer(length(effect_labels))
-  for (i in seq_along(effect_labels)) {
-    term_id <- match(effect_labels[[i]], term_labels)
-    cols <- which(assignment == term_id)
-    if (length(cols) != 1L) {
+  effect_labels <- character()
+  effect_columns <- integer()
+  if (!is.null(effects)) {
+    effect_labels <- attr(stats::terms(effects), "term.labels")
+    missing_effects <- setdiff(effect_labels, term_labels)
+    if (!length(effect_labels) || length(missing_effects)) {
       stop(sprintf(
-        paste0(
-          "ERA-RSA focal term `%s` has %d model-matrix columns. ",
-          "Signed part-r requires a one-degree-of-freedom term; supply an explicit contrast column."
-        ),
-        effect_labels[[i]], length(cols)
+        "`era_effects` terms must occur exactly in `era_association`%s.",
+        if (length(missing_effects)) paste0(": ", paste(missing_effects, collapse = ", ")) else ""
       ), call. = FALSE)
     }
-    effect_columns[[i]] <- cols[[1L]]
+
+    effect_columns <- integer(length(effect_labels))
+    for (i in seq_along(effect_labels)) {
+      term_id <- match(effect_labels[[i]], term_labels)
+      cols <- which(assignment == term_id)
+      if (length(cols) != 1L) {
+        stop(sprintf(
+          paste0(
+            "ERA-RSA focal term `%s` has %d model-matrix columns. ",
+            "Signed part-r requires a one-degree-of-freedom term; supply an explicit contrast column."
+          ),
+          effect_labels[[i]], length(cols)
+        ), call. = FALSE)
+      }
+      effect_columns[[i]] <- cols[[1L]]
+    }
+  }
+
+  block_terms <- list()
+  block_columns <- list()
+  if (!is.null(effect_blocks)) {
+    block_terms <- lapply(effect_blocks$formulas, function(block_formula) {
+      attr(stats::terms(block_formula), "term.labels")
+    })
+    for (i in seq_along(block_terms)) {
+      terms_i <- block_terms[[i]]
+      missing_terms <- setdiff(terms_i, term_labels)
+      if (!length(terms_i) || length(missing_terms)) {
+        stop(sprintf(
+          "`era_effects_block[['%s']]` terms must occur exactly in `era_association`%s.",
+          effect_blocks$labels[[i]],
+          if (length(missing_terms)) paste0(": ", paste(missing_terms, collapse = ", ")) else ""
+        ), call. = FALSE)
+      }
+      term_ids <- match(terms_i, term_labels)
+      block_columns[[i]] <- which(assignment %in% term_ids)
+    }
+    names(block_terms) <- effect_blocks$labels
+    names(block_columns) <- effect_blocks$labels
   }
 
   list(
     matrix = X,
     effect_labels = effect_labels,
     effect_metric_labels = .era_metric_labels(effect_labels, "era_effects"),
-    effect_columns = effect_columns
+    effect_columns = effect_columns,
+    block_labels = effect_blocks$labels %||% character(),
+    block_metric_labels = effect_blocks$metric_labels %||% character(),
+    block_terms = block_terms,
+    block_columns = block_columns
   )
 }
 
@@ -618,13 +685,28 @@
   keep <- is.finite(similarity) & apply(X, 1L, function(row) all(is.finite(row)))
   n <- sum(keep)
 
-  values <- setNames(rep(NA_real_, length(spec$effect_columns)),
-                     paste0("era_assoc_part_r_", spec$effect_metric_labels))
+  effect_names <- if (length(spec$effect_metric_labels)) {
+    paste0("era_assoc_part_r_", spec$effect_metric_labels)
+  } else {
+    character()
+  }
+  values <- setNames(rep(NA_real_, length(effect_names)), effect_names)
+  block_values <- setNames(
+    rep(NA_real_, 3L * length(spec$block_columns)),
+    unlist(lapply(spec$block_metric_labels, function(label) {
+      c(
+        paste0("era_assoc_dr2_", label),
+        paste0("era_assoc_F_", label),
+        paste0("era_assoc_df1_", label)
+      )
+    }), use.names = FALSE)
+  )
   df_resid <- NA_real_
   if (n >= min_complete) {
     Xk <- X[keep, , drop = FALSE]
     yk <- similarity[keep]
-    full_rank <- qr(Xk)$rank
+    full <- stats::lm.fit(x = Xk, y = yk)
+    full_rank <- full$rank
     df_resid <- n - full_rank
     if (df_resid > 0L && stats::sd(yk) > 0) {
       for (i in seq_along(spec$effect_columns)) {
@@ -640,9 +722,33 @@
         }
       }
     }
+
+    tss <- sum((yk - mean(yk))^2)
+    if (length(spec$block_columns) && is.finite(tss) && tss > 0) {
+      rss_full <- sum(full$residuals^2)
+      for (i in seq_along(spec$block_columns)) {
+        label <- spec$block_metric_labels[[i]]
+        reduced_X <- Xk[, -spec$block_columns[[i]], drop = FALSE]
+        reduced <- stats::lm.fit(x = reduced_X, y = yk)
+        df1 <- full_rank - reduced$rank
+        delta_rss <- max(0, sum(reduced$residuals^2) - rss_full)
+
+        block_values[[paste0("era_assoc_dr2_", label)]] <- delta_rss / tss
+        block_values[[paste0("era_assoc_df1_", label)]] <- df1
+        if (df1 > 0L && df_resid > 0L) {
+          full_mse <- rss_full / df_resid
+          if (full_mse > 0) {
+            block_values[[paste0("era_assoc_F_", label)]] <-
+              (delta_rss / df1) / full_mse
+          } else if (delta_rss > 0) {
+            block_values[[paste0("era_assoc_F_", label)]] <- Inf
+          }
+        }
+      }
+    }
   }
 
-  c(values, era_assoc_n = n, era_assoc_df_resid = df_resid)
+  c(values, block_values, era_assoc_n = n, era_assoc_df_resid = df_resid)
 }
 
 #' @keywords internal
@@ -658,8 +764,20 @@
 #' @noRd
 .era_association_metric_names <- function(spec) {
   if (is.null(spec)) return(character())
+  effect_names <- if (length(spec$effect_metric_labels)) {
+    paste0("era_assoc_part_r_", spec$effect_metric_labels)
+  } else {
+    character()
+  }
   c(
-    paste0("era_assoc_part_r_", spec$effect_metric_labels),
+    effect_names,
+    unlist(lapply(spec$block_metric_labels, function(label) {
+      c(
+        paste0("era_assoc_dr2_", label),
+        paste0("era_assoc_F_", label),
+        paste0("era_assoc_df1_", label)
+      )
+    }), use.names = FALSE),
     "era_assoc_n",
     "era_assoc_df_resid"
   )

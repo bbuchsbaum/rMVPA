@@ -81,6 +81,11 @@
 #'     after adjusting for all other terms in the association formula.
 #'     Adjustment-only terms do not create maps.
 #'   }
+#'   \item{era_assoc_dr2_<block> / era_assoc_F_<block> / era_assoc_df1_<block>}{
+#'     When \code{era_effects_block} is supplied, the block's incremental
+#'     R-squared, partial F statistic, and effective numerator degrees of
+#'     freedom. Full and reduced models use the same joint complete-item set.
+#'   }
 #'   \item{era_assoc_n / era_assoc_df_resid}{
 #'     Joint complete-item count and residual degrees of freedom for the
 #'     adjusted association model.
@@ -158,6 +163,12 @@
 #'   correlations (part-r) should be emitted. Multi-column factors should be
 #'   retained as adjustment variables or represented by an explicit one-df
 #'   contrast column.
+#' @param era_effects_block Optional named list of right-hand-side formulas
+#'   defining omnibus blocks from terms in \code{era_association}, for example
+#'   \code{list(eye = ~ eye_sim_diff + mm_duration_diff + mm_shape)}. Each block
+#'   may contain multi-column terms such as factors. The emitted delta-R-squared
+#'   and partial F statistics compare nested models on one shared complete-case
+#'   set; numerator degrees of freedom are based on the fitted rank difference.
 #' @param era_min_complete Minimum number of complete matched items required
 #'   for zero-order correlations and adjusted association models.
 #' @param distfun A distfun used to compute within-phase RDMs (e.g., cordist("pearson")).
@@ -249,7 +260,9 @@
 #' adjusted model uses one joint complete-case set across the selected ERA
 #' score and every association term. Signed part-r is invariant to linear
 #' rescaling of a focal predictor; its square equals that term's incremental
-#' R-squared, which is deliberately not emitted as a default map.
+#' R-squared, which is deliberately not emitted as a default map. Named
+#' \code{era_effects_block} formulas instead test one or more terms jointly by
+#' comparing nested full and reduced models on that same complete-case set.
 #' @examples
 #' \dontrun{
 #'   # See vignette for complete ERA-RSA workflow
@@ -281,6 +294,7 @@ era_rsa_model <- function(dataset,
                           era_cor_method   = c("spearman", "pearson"),
                           era_association  = NULL,
                           era_effects      = NULL,
+                          era_effects_block = NULL,
                           era_min_complete = 4L,
                           ...) {
 
@@ -308,8 +322,10 @@ era_rsa_model <- function(dataset,
   era_correlates <- .era_rhs_formula(era_correlates, "era_correlates")
   era_association <- .era_rhs_formula(era_association, "era_association")
   era_effects <- .era_rhs_formula(era_effects, "era_effects")
+  era_effects_block <- .era_effect_blocks(era_effects_block)
   if (!("item" %in% era_components) &&
-      (!is.null(era_correlates) || !is.null(era_association) || !is.null(era_effects))) {
+      (!is.null(era_correlates) || !is.null(era_association) ||
+       !is.null(era_effects) || !is.null(era_effects_block))) {
     stop("ERA-RSA association formulas require the `item` component.", call. = FALSE)
   }
   if (!("geometry" %in% era_components) &&
@@ -335,11 +351,14 @@ era_rsa_model <- function(dataset,
     design = design,
     key_var = key_var,
     common_keys = pairing_info$common_keys,
-    formulas = list(era_correlates, era_association, era_effects)
+    formulas = c(
+      list(era_correlates, era_association, era_effects),
+      era_effects_block$formulas %||% list()
+    )
   )
   era_correlate_spec <- .era_prepare_correlates(era_correlates, association_data)
   era_association_spec <- .era_prepare_association(
-    era_association, era_effects, association_data
+    era_association, era_effects, association_data, era_effects_block
   )
 
   .era_check_item_metadata(
@@ -465,7 +484,8 @@ era_rsa_model <- function(dataset,
 #'   \code{era_diag_minus_off_diff_block}, \code{era_lag_cor},
 #'   \code{geom_cor_partial}, \code{geom_cor_run_partial}, and
 #'   \code{geom_cor_xrun}. Association metrics are appended dynamically from
-#'   \code{era_correlates} and \code{era_effects}. If
+#'   \code{era_correlates}, \code{era_effects}, and
+#'   \code{era_effects_block}. If
 #'   \code{confound_rdms} is supplied, the schema also includes
 #'   \code{beta_enc_geom}, one \code{beta_<name>} per confound RDM,
 #'   \code{sp_enc_geom}, and one \code{sp_<name>} per confound RDM.
@@ -686,7 +706,7 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
         tmp <- list(design = list(model_mat = mm))
         sr  <- try(run_lm_semipartial(dvec = dR, obj = tmp), silent = TRUE)
         if (!inherits(sr, "try-error") && is.numeric(sr)) {
-          names(sr) <- paste0("sp_", names(mm))
+          names(sr) <- paste0("sp_", names(sr))
           sp_vec <- sr
         }
       }

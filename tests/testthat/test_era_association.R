@@ -216,8 +216,18 @@ test_that("association formulas reject ambiguous or unsupported specifications",
                "era_association.*right-hand-side")
   expect_error(make_model(era_effects = ~ vividness),
                "era_effects.*requires.*era_association")
+  expect_error(make_model(era_effects_block = list(ratings = ~ vividness)),
+               "era_effects_block.*requires.*era_association")
   expect_error(make_model(era_association = ~ vividness),
                "era_association.*requires.*era_effects")
+  expect_error(make_model(
+    era_association = ~ vividness,
+    era_effects_block = list(~ vividness)
+  ), "named, non-empty list")
+  expect_error(make_model(
+    era_association = ~ vividness,
+    era_effects_block = list(other = ~ trial_order)
+  ), "terms must occur exactly.*trial_order")
   expect_error(make_model(era_association = ~ 0 + vividness,
                           era_effects = ~ vividness),
                "must include an intercept")
@@ -716,6 +726,133 @@ test_that("signed part-r agrees with incremental R-squared across randomized des
     expect_equal(got[["era_assoc_df_resid"]], sum(keep) - qr(Xk)$rank,
                  info = paste("df case", case))
   }
+})
+
+test_that("association blocks match nested LM tests on a shared complete-case set", {
+  set.seed(6901)
+  n <- 36L
+  keys <- sprintf("item_%02d", seq_len(n))
+  item_data <- data.frame(
+    .era_key = keys,
+    focal_1 = stats::rnorm(n),
+    focal_2 = stats::rnorm(n),
+    nuisance = stats::rnorm(n),
+    group = factor(rep(c("a", "b", "c"), each = n / 3L))
+  )
+  similarity <- with(
+    item_data,
+    0.7 * focal_1 - 0.4 * focal_2 + 0.2 * nuisance +
+      c(0, 0.5, -0.3)[group] + stats::rnorm(n, sd = 0.6)
+  )
+  item_data$focal_2[[4L]] <- NA_real_
+  item_data$nuisance[[11L]] <- NA_real_
+  similarity[[19L]] <- NA_real_
+
+  blocks <- rMVPA:::.era_effect_blocks(list(
+    signal = ~ focal_1 + focal_2,
+    category = ~ group
+  ))
+  spec <- rMVPA:::.era_prepare_association(
+    ~ focal_1 + focal_2 + nuisance + group,
+    ~ focal_1,
+    item_data,
+    blocks
+  )
+  got <- rMVPA:::.era_association_metrics(
+    similarity, keys, spec, min_complete = 4L
+  )
+
+  X <- spec$matrix
+  keep <- is.finite(similarity) & apply(X, 1L, function(row) all(is.finite(row)))
+  Xk <- X[keep, , drop = FALSE]
+  yk <- similarity[keep]
+  full <- stats::lm.fit(Xk, yk)
+  tss <- sum((yk - mean(yk))^2)
+
+  for (i in seq_along(spec$block_columns)) {
+    label <- spec$block_metric_labels[[i]]
+    reduced <- stats::lm.fit(Xk[, -spec$block_columns[[i]], drop = FALSE], yk)
+    delta_rss <- sum(reduced$residuals^2) - sum(full$residuals^2)
+    expected_df1 <- full$rank - reduced$rank
+    expected_dr2 <- delta_rss / tss
+    expected_F <- (delta_rss / expected_df1) /
+      (sum(full$residuals^2) / (sum(keep) - full$rank))
+
+    expect_equal(got[[paste0("era_assoc_dr2_", label)]], expected_dr2,
+                 tolerance = 2e-12)
+    expect_equal(got[[paste0("era_assoc_F_", label)]], expected_F,
+                 tolerance = 2e-12)
+    expect_equal(got[[paste0("era_assoc_df1_", label)]], expected_df1)
+  }
+  expect_equal(got[["era_assoc_n"]], n - 3L)
+  expect_equal(got[["era_assoc_df1_category"]], 2)
+})
+
+test_that("association blocks report aliased rank contributions without failing", {
+  set.seed(6902)
+  n <- 24L
+  x <- stats::rnorm(n)
+  item_data <- data.frame(
+    .era_key = sprintf("item_%02d", seq_len(n)),
+    x = x,
+    duplicate = x,
+    nuisance = stats::rnorm(n)
+  )
+  similarity <- 0.5 * x + stats::rnorm(n)
+  blocks <- rMVPA:::.era_effect_blocks(list(aliased = ~ duplicate))
+  spec <- rMVPA:::.era_prepare_association(
+    ~ x + duplicate + nuisance, NULL, item_data, blocks
+  )
+
+  got <- rMVPA:::.era_association_metrics(
+    similarity, item_data$.era_key, spec, min_complete = 4L
+  )
+
+  expect_equal(got[["era_assoc_df1_aliased"]], 0)
+  expect_equal(got[["era_assoc_dr2_aliased"]], 0, tolerance = 1e-14)
+  expect_true(is.na(got[["era_assoc_F_aliased"]]))
+})
+
+test_that("association block metrics appear in the stable output schema", {
+  fx <- .make_era_association_fixture(K = 9L)
+  model <- suppressWarnings(era_rsa_model(
+    dataset = fx$split_dataset,
+    design = fx$split_design,
+    key_var = ~ item,
+    pairing = "one_to_one",
+    era_components = "item",
+    era_association = ~ vividness + retrieval_run + trial_order,
+    era_effects_block = list(context = ~ retrieval_run + trial_order)
+  ))
+
+  nms <- names(output_schema(model))
+  expect_true(all(c(
+    "era_assoc_dr2_context",
+    "era_assoc_F_context",
+    "era_assoc_df1_context",
+    "era_assoc_n",
+    "era_assoc_df_resid"
+  ) %in% nms))
+  expect_false(any(grepl("era_assoc_part_r", nms)))
+
+  out <- fit_roi(
+    model,
+    roi_data = list(
+      train_data = fx$E,
+      test_data = fx$R,
+      indices = seq_len(ncol(fx$E))
+    ),
+    context = list(id = 1L)
+  )
+  expect_false(out$error)
+  expect_true(all(c(
+    "era_assoc_dr2_context",
+    "era_assoc_F_context",
+    "era_assoc_df1_context"
+  ) %in% names(out$metrics)))
+  expect_true(is.finite(out$metrics[["era_assoc_dr2_context"]]))
+  expect_true(is.finite(out$metrics[["era_assoc_F_context"]]))
+  expect_equal(out$metrics[["era_assoc_df1_context"]], 2)
 })
 
 test_that("association schema reports only focal directional effects", {

@@ -321,11 +321,14 @@ test_that("era_rsa_model randomized searchlight returns metric maps", {
 })
 
 
-test_that("era_rsa_model accepts confound RDMs and emits beta_* metrics", {
+test_that("era_rsa_model retains estimable sp maps with aliased confound RDMs", {
   skip_on_cran()
   set.seed(789)
 
-  toy <- gen_sample_dataset(D = c(3,3,3), nobs = 36, nlevels = 3, blocks = 3, external_test = TRUE)
+  toy <- gen_sample_dataset(
+    D = c(3, 3, 3), nobs = 48, nlevels = 6, blocks = 4,
+    external_test = TRUE
+  )
   toy$design$train_design$item <- toy$design$train_design$Y
   toy$design$test_design$item  <- toy$design$test_design$Ytest
 
@@ -345,7 +348,7 @@ test_that("era_rsa_model accepts confound RDMs and emits beta_* metrics", {
     design  = toy$design,
     key_var = ~ item,
     phase_var = ~ block_var,
-    confound_rdms = list(block = block_rdm)
+    confound_rdms = list(block = block_rdm, duplicate_block = block_rdm)
   )
 
   regionMask <- neuroim2::NeuroVol(sample(1:2, size = length(toy$dataset$mask), replace = TRUE),
@@ -354,6 +357,9 @@ test_that("era_rsa_model accepts confound RDMs and emits beta_* metrics", {
   expect_s3_class(res, "regional_mvpa_result")
   # Expect at least one beta_ term from geometry regression
   expect_true(any(grepl("^beta_", names(res$performance_table))))
+  expect_true(any(is.finite(res$performance_table$sp_enc_geom)))
+  expect_true(any(is.finite(res$performance_table$sp_block)))
+  expect_true(all(is.na(res$performance_table$sp_duplicate_block)))
 })
 
 

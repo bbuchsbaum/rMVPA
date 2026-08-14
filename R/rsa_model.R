@@ -491,8 +491,12 @@ run_lm_semipartial <- function(dvec, obj) {
   fit  <- lm(form, data=obj$design$model_mat)
   smry <- summary(fit)
   
-  # t-values (excluding intercept)
-  tvals <- coef(smry)[-1, 3]
+  # summary.lm omits aliased coefficients from its coefficient table. Keep the
+  # design contract stable by filling only estimable terms into a full vector.
+  coefficient_table <- coef(smry)
+  tvals <- setNames(rep(NA_real_, length(vnames)), vnames)
+  estimable <- intersect(vnames, rownames(coefficient_table))
+  tvals[estimable] <- coefficient_table[estimable, "t value"]
   
   # Residual MSE
   MSE <- smry$sigma^2
@@ -505,7 +509,6 @@ run_lm_semipartial <- function(dvec, obj) {
   sr2 <- (tvals^2 * MSE) / TSS
   sr  <- sign(tvals) * sqrt(sr2)
   
-  names(sr) <- vnames
   sr
 }
 

@@ -243,6 +243,26 @@ test_that("mvpa_regional with semipartial correlations runs without error", {
   expect_true("vol_results" %in% names(res))
 })
 
+test_that("semi-partial LM preserves aliased predictors as named NA values", {
+  set.seed(6801)
+  x <- stats::rnorm(30)
+  z <- stats::rnorm(30)
+  dvec <- 0.7 * x - 0.2 * z + stats::rnorm(30, sd = 0.4)
+  obj <- list(design = list(model_mat = list(
+    focal = x,
+    duplicate = x,
+    nuisance = z
+  )))
+
+  got <- rMVPA:::run_lm_semipartial(dvec, obj)
+
+  expect_identical(names(got), c("focal", "duplicate", "nuisance"))
+  expect_length(got, 3L)
+  expect_true(is.finite(got[["focal"]]))
+  expect_true(is.na(got[["duplicate"]]))
+  expect_true(is.finite(got[["nuisance"]]))
+})
+
 test_that("mvpa_regional with non-negative constraints runs without error", {
   dset <- gen_sample_dataset(RSA_DIMS, RSA_NOBS, blocks = 3)
   

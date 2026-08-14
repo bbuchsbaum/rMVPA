@@ -1,5 +1,11 @@
 # rMVPA 0.1.3
 
+* Rank-deficient RSA nuisance designs now retain aliased semi-partial terms as
+  named `NA` values instead of failing or silently replacing the complete
+  `sp_*` result set with missing maps.
+* `era_rsa_model()` now accepts named `era_effects_block` formulas and emits
+  block incremental R-squared, partial F, and rank-based numerator degrees of
+  freedom from full and reduced models fit to the same complete-item set.
 * Fixed a silent positive bias in `crossnobis` estimation:
   `compute_crossvalidated_means_sl()` now builds condition means from
   independent partitions instead of overlapping leave-one-partition-out

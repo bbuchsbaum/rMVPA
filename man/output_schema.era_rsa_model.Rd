@@ -17,7 +17,8 @@ A named character vector mapping each emitted metric name to
   \code{era_diag_minus_off_diff_block}, \code{era_lag_cor},
   \code{geom_cor_partial}, \code{geom_cor_run_partial}, and
   \code{geom_cor_xrun}. Association metrics are appended dynamically from
-  \code{era_correlates} and \code{era_effects}. If
+  \code{era_correlates}, \code{era_effects}, and
+  \code{era_effects_block}. If
   \code{confound_rdms} is supplied, the schema also includes
   \code{beta_enc_geom}, one \code{beta_<name>} per confound RDM,
   \code{sp_enc_geom}, and one \code{sp_<name>} per confound RDM.
