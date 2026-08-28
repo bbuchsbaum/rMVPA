@@ -318,8 +318,12 @@ test_that("feature_rsa_model shard vs default parity at mvpa_iterate level", {
 
 # ---- Shard with multisession workers ----
 
+# covr cannot safely serialize instrumented traces from shard-backed workers.
+# The exact same process contracts run in capability-tests and R CMD check.
+
 test_that("feature_rsa_model shard works across multisession workers", {
   skip_on_cran()
+  skip_on_covr()
   skip_if_not_installed("future")
   set.seed(42)
 
@@ -375,6 +379,7 @@ test_that("feature_rsa_model with backend='auto' works", {
 
 test_that("feature_rsa_model shard works across multicore workers", {
   skip_on_cran()
+  skip_on_covr()
   skip_if_not_installed("future")
   skip_if_not(isTRUE(future::supportsMulticore()),
               "future::multicore not supported in this environment")
@@ -407,6 +412,7 @@ test_that("feature_rsa_model shard works across multicore workers", {
 
 test_that("feature_rsa_model shard multicore parity with sequential", {
   skip_on_cran()
+  skip_on_covr()
   skip_if_not_installed("future")
   skip_if_not(isTRUE(future::supportsMulticore()),
               "future::multicore not supported in this environment")

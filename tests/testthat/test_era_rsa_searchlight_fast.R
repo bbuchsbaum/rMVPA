@@ -227,9 +227,12 @@ test_that("shard-backed dedicated engine matches the legacy path", {
   .expect_searchlight_maps_equal(fast, legacy)
 })
 
+# covr cannot safely serialize instrumented traces from shard-backed workers.
+# The exact same process contract runs in capability-tests and R CMD check.
 test_that("parallel shard execution is numerically identical", {
   skip_if_not_installed("shard")
   skip_on_cran()
+  skip_on_covr()
   old_plan <- future::plan()
   on.exit(future::plan(old_plan), add = TRUE)
   old_options <- options(parallelly.maxWorkers.localhost = 2)

@@ -184,8 +184,12 @@ test_that("repeated use_shard() cleans up previous handles", {
 
 # ---- Audit #3: cross-process ALTREP serialization via multisession ----
 
+# covr cannot safely serialize instrumented traces from shard-backed workers.
+# These process contracts remain mandatory in capability-tests and R CMD check.
+
 test_that("shard backend works across PSOCK multisession workers", {
   skip_on_cran()
+  skip_on_covr()
   skip_if_not_installed("future")
 
   ds <- gen_sample_dataset(c(5,5,5), 20, blocks = 2, nlevels = 2)
@@ -216,6 +220,7 @@ test_that("shard backend works across PSOCK multisession workers", {
 
 test_that("shard backend parity holds under future::multisession", {
   skip_on_cran()
+  skip_on_covr()
   skip_if_not_installed("future")
 
   ds <- gen_sample_dataset(c(5, 5, 5), 24, blocks = 3, nlevels = 2)
@@ -246,6 +251,7 @@ test_that("shard backend parity holds under future::multisession", {
 
 test_that("shard backend parity holds under future::multicore", {
   skip_on_cran()
+  skip_on_covr()
   skip_if_not_installed("future")
   skip_if_not(isTRUE(future::supportsMulticore()), "future::multicore not supported in this environment")
 
@@ -273,6 +279,7 @@ test_that("shard backend parity holds under future::multicore", {
 
 test_that("shard backend parity holds under future.callr::callr", {
   skip_on_cran()
+  skip_on_covr()
   skip_if_not_installed("future")
   skip_if_not_installed("future.callr")
 
@@ -300,6 +307,7 @@ test_that("shard backend parity holds under future.callr::callr", {
 
 test_that("switching future plans does not destabilize shard runs", {
   skip_on_cran()
+  skip_on_covr()
   skip_if_not_installed("future")
 
   ds <- gen_sample_dataset(c(5, 5, 5), 20, blocks = 2, nlevels = 2)
@@ -856,6 +864,7 @@ test_that("configure_runtime_backend backend='auto' falls back on unsupported da
 
 test_that("shard workers do not inherit large caller globals", {
   skip_on_cran()
+  skip_on_covr()
   skip_if_not_installed("future")
 
   # Keep globals budget small enough that accidental large exports fail fast.
@@ -887,6 +896,7 @@ test_that("shard workers do not inherit large caller globals", {
 
 test_that("shard backend uses carrier::crate when carrier is installed", {
   skip_on_cran()
+  skip_on_covr()
   skip_if_not_installed("future")
   skip_if_not_installed("carrier")
 
