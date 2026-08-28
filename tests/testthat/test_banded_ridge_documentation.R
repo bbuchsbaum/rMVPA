@@ -163,6 +163,14 @@ test_that("hosted artifact and Windows linkage gates are explicit", {
   expect_match(makevars, "$(LAPACK_LIBS)", fixed = TRUE)
   expect_match(makevars, "$(BLAS_LIBS)", fixed = TRUE)
   expect_match(makevars, "$(FLIBS)", fixed = TRUE)
+
+  buildignore_path <- .brdoc_root_file(".Rbuildignore")
+  buildignore <- readLines(buildignore_path, warn = FALSE)
+  expect_false(any(grepl(
+    "src/Makevars",
+    buildignore,
+    fixed = TRUE
+  )), info = "src/Makevars must be present in the source tarball")
 })
 
 test_that("issue 70 receipt declares seeds, folds, candidates, and uncertainty inputs", {
