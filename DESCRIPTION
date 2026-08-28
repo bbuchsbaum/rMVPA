@@ -172,7 +172,9 @@ Suggests:
 VignetteBuilder: knitr
 Remotes:
     bbuchsbaum/albersdown,
+    bbuchsbaum/fmriAR,
     bbuchsbaum/fmridesign,
+    bbuchsbaum/fmrihrf,
     bbuchsbaum/fmrilss,
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf,

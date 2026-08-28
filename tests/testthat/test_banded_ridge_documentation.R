@@ -120,6 +120,19 @@ test_that("constructor defaults and generated usage are documented exactly", {
                fixed = TRUE)
 })
 
+test_that("the hosted dependency chain is declared explicitly", {
+  description <- read.dcf(
+    .brdoc_root_file("DESCRIPTION"), fields = "Remotes"
+  )
+  remotes <- trimws(strsplit(description[[1L]], ",", fixed = TRUE)[[1L]])
+  required <- c(
+    "bbuchsbaum/fmridesign", "bbuchsbaum/fmrihrf",
+    "bbuchsbaum/fmrilss", "bbuchsbaum/fmriAR"
+  )
+
+  expect_true(all(required %in% remotes))
+})
+
 test_that("issue 70 receipt declares seeds, folds, candidates, and uncertainty inputs", {
   results_path <- .brdoc_root_file(
     "inst", "extdata", "banded_ridge_issue70_results.csv"
