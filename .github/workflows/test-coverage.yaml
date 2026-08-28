@@ -13,6 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      # Coverage is the serial line-instrumentation gate. The non-CRAN,
+      # process, and long-running contracts run uninstrumented in R-CMD-check,
+      # capability-tests, and extended-tests; instrumenting that full court can
+      # leave unserializable dependency state in covr's exit-time trace.
+      NOT_CRAN: "false"
       RMVPA_RUN_EXTENDED_TESTS: "false"
       RGL_USE_NULL: "TRUE"
 

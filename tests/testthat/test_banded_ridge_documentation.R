@@ -196,6 +196,44 @@ test_that("hosted artifact and Windows linkage gates are explicit", {
   )), info = "src/Makevars must be present in the source tarball")
 })
 
+test_that("coverage and uninstrumented integration courts stay separated", {
+  coverage_path <- .brdoc_root_file(
+    ".github", "workflows", "test-coverage.yaml"
+  )
+  integration_paths <- c(
+    .brdoc_root_file(".github", "workflows", "R-CMD-check.yaml"),
+    .brdoc_root_file(".github", "workflows", "capability-tests.yaml"),
+    .brdoc_root_file(".github", "workflows", "extended-tests.yaml")
+  )
+  capability_script_path <- .brdoc_root_file(
+    "scripts", "run_capability_tests.R"
+  )
+  artifacts <- c(coverage_path, integration_paths, capability_script_path)
+  skip_if_not(
+    all(file.exists(artifacts)),
+    "source-only CI artifacts are excluded from the tarball"
+  )
+
+  coverage <- readLines(coverage_path, warn = FALSE)
+  integrations <- unlist(
+    lapply(integration_paths, readLines, warn = FALSE),
+    use.names = FALSE
+  )
+  capability_script <- readLines(capability_script_path, warn = FALSE)
+
+  expect_true(any(grepl('NOT_CRAN: "false"', coverage, fixed = TRUE)))
+  expect_true(any(grepl("covr::codecov(", coverage, fixed = TRUE)))
+  expect_false(any(grepl(
+    'NOT_CRAN: "false"', integrations, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    '"test_feature_rsa_shard"', capability_script, fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    '"test_shard_backend"', capability_script, fixed = TRUE
+  )))
+})
+
 test_that("issue 70 receipt declares seeds, folds, candidates, and uncertainty inputs", {
   results_path <- .brdoc_inst_file(
     "extdata", "banded_ridge_issue70_results.csv"
