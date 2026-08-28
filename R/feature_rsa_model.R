@@ -113,20 +113,29 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   and including the component limit (`max_comps`).
 #' @param method Character string specifying the analysis method. One of:
 #'   \describe{
-#'     \item{pls}{Partial Least Squares regression predicting X from F (via \code{pls::plsr}).}
-#'     \item{pca}{Principal Component Regression predicting X from PCs of F (via \code{pls::pcr}).}
+#'     \item{pls}{Partial Least Squares regression predicting X from F using
+#'       the numerical algorithm configured by \code{pls::pls.options()}.}
+#'     \item{pca}{Principal Component Regression predicting X from PCs of F
+#'       using the algorithm configured by \code{pls::pls.options()} (SVD-PCR
+#'       by default).}
 #'     \item{glmnet}{Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.}
 #'   }
 #' @param crossval Optional cross-validation specification.
 #' @param ncomp_selection Character string controlling how the number of components
 #'   is chosen for \code{pls} and \code{pca} methods.  One of:
 #'   \describe{
-#'     \item{loo}{(Default) Fit with leave-one-out validation and select the
-#'       fewest components within one standard error of the minimum RMSEP
-#'       (\code{pls::selectNcomp}, method \code{"onesigma"}).}
+#'     \item{loo}{(Default) Use leave-one-observation-out validation and select
+#'       the fewest components within one standard error of the minimum
+#'       segment-wise MSE. This preserves the historical selection rule while
+#'       streaming held-out errors instead of retaining a validation cube.}
 #'     \item{pve}{Keep the fewest components whose cumulative explained
 #'       variance reaches \code{pve_threshold} of the total explained by all
 #'       fitted components.}
+#'     \item{blocked}{Use leave-one-block-out validation within each outer
+#'       training fold and apply the same one-standard-error rule as
+#'       \code{"loo"}. Each held-out block contributes one segment MSE.
+#'       Requires \code{design$block_var} and at least two training blocks in
+#'       every outer fold.}
 #'     \item{max}{Use all \code{max_comps} components (legacy behaviour).}
 #'   }
 #'   Ignored when \code{method = "glmnet"}.
@@ -166,17 +175,26 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' Feature RSA models analyze how well a feature matrix \code{F} (defined in the `design`)
 #' relates to neural data \code{X}. The `max_comps` parameter, inherited from the `design` object,
 #' sets an upper limit on the number of components fitted:
-#'   - \strong{pls}: PLS regression via \code{pls::plsr}. Fits up to `max_comps` components;
-#'     the actual number used for prediction is chosen by \code{ncomp_selection}.
-#'   - \strong{pca}: Principal Component Regression via \code{pls::pcr}. Fits up to
-#'     `max_comps` components; selection controlled by \code{ncomp_selection}.
+#'   - \strong{pls}: PLS regression using the configured \pkg{pls} numerical
+#'     kernel. Fits up to `max_comps` components; the actual number used for
+#'     prediction is chosen by \code{ncomp_selection}.
+#'   - \strong{pca}: Principal Component Regression using the configured
+#'     \pkg{pls} PCR kernel (SVD-PCR by default). Fits up to `max_comps`
+#'     components; selection is controlled by \code{ncomp_selection}.
 #'   - \strong{glmnet}: Elastic net regression via \code{glmnet} with multivariate Gaussian
 #'     response. Regularisation (lambda) can be auto-selected via \code{cv_glmnet=TRUE}.
 #'
 #' For \code{pls} and \code{pca}, the \code{ncomp_selection} argument determines how many
 #' of the fitted components are actually used for prediction.  The default
-#' (\code{"loo"}) fits the model with leave-one-out cross-validation and picks
-#' the fewest components within one SE of the minimum RMSEP.
+#' (\code{"loo"}) uses leave-one-observation-out validation and picks the
+#' fewest components within one SE of the minimum segment-wise MSE.
+#' \code{"blocked"} applies the same rule to leave-one-block-out segments
+#' within each outer training fold; centering and scaling are estimated again
+#' from each inner training split. It is usually the more faithful and much
+#' less expensive validation unit when observations are dependent within
+#' acquisition runs, sessions, or subjects. It is not interchangeable with
+#' \code{"pve"} or \code{"max"}, which do not estimate held-out prediction
+#' error for component selection.
 #'
 #' **Performance Metrics** (computed by `evaluate_model` after cross-validation):
 #'
@@ -216,7 +234,7 @@ feature_rsa_model <- function(dataset,
                                design,
                                method = c("pls", "pca", "glmnet"),
                                crossval = NULL,
-                               ncomp_selection = c("loo", "max", "pve"),
+                               ncomp_selection = c("loo", "max", "pve", "blocked"),
                                pve_threshold = 0.9,
                                alpha = 0.5,
                                cv_glmnet = FALSE,
@@ -237,9 +255,14 @@ feature_rsa_model <- function(dataset,
     stop("`cache_pca` is no longer supported. PCA caching was removed; use `ncomp_selection` controls for `method='pca'`.")
   }
 
-  if (ncomp_selection == "pve") {
+  component_method <- method %in% c("pls", "pca")
+  if (component_method && ncomp_selection == "pve") {
     assertthat::assert_that(is.numeric(pve_threshold) && pve_threshold > 0 && pve_threshold <= 1,
                            msg = "pve_threshold must be in (0, 1]")
+  }
+  if (component_method && ncomp_selection == "blocked" &&
+      is.null(design$block_var)) {
+    stop("ncomp_selection='blocked' requires design$block_var.", call. = FALSE)
   }
   assertthat::assert_that(
     is.logical(return_rdm_vectors) && length(return_rdm_vectors) == 1L && !is.na(return_rdm_vectors),
@@ -454,6 +477,62 @@ feature_rsa_model <- function(dataset,
   sqrt(pmax(ss / (p - 1L), 0))
 }
 
+#' Correlate matrix rows with a no-missing-data BLAS fast path
+#'
+#' Rows are variables and columns are paired observations, matching
+#' `stats::cor(t(X), t(Y), use = "pairwise.complete.obs")`. Missing data use
+#' that reference implementation directly. Otherwise centering and one
+#' `tcrossprod()` avoid the much slower generic pairwise-complete path.
+#' @noRd
+.feature_rsa_row_cor <- function(X, Y = NULL) {
+  X <- as.matrix(X)
+  same_matrix <- is.null(Y)
+  if (same_matrix) {
+    Y <- X
+  } else {
+    Y <- as.matrix(Y)
+  }
+
+  if (ncol(X) != ncol(Y)) {
+    stop("feature RSA row correlation: matrices must have the same columns.",
+         call. = FALSE)
+  }
+  if (anyNA(X) || anyNA(Y)) {
+    return(stats::cor(
+      t(X),
+      if (same_matrix) NULL else t(Y),
+      use = "pairwise.complete.obs"
+    ))
+  }
+  if (ncol(X) < 2L) {
+    out <- matrix(NA_real_, nrow = nrow(X), ncol = nrow(Y))
+    if (!is.null(rownames(X)) || !is.null(rownames(Y))) {
+      dimnames(out) <- list(rownames(X), rownames(Y))
+    }
+    return(out)
+  }
+
+  X_centered <- sweep(X, 1L, rowMeans(X), "-")
+  X_norm <- sqrt(rowSums(X_centered * X_centered))
+  if (same_matrix) {
+    Y_centered <- X_centered
+    Y_norm <- X_norm
+  } else {
+    Y_centered <- sweep(Y, 1L, rowMeans(Y), "-")
+    Y_norm <- sqrt(rowSums(Y_centered * Y_centered))
+  }
+
+  numerator <- tcrossprod(X_centered, Y_centered)
+  denominator <- outer(X_norm, Y_norm)
+  valid <- is.finite(denominator) & denominator > 0
+  out <- matrix(NA_real_, nrow = nrow(X), ncol = nrow(Y))
+  out[valid] <- numerator[valid] / denominator[valid]
+  if (!is.null(rownames(X)) || !is.null(rownames(Y))) {
+    dimnames(out) <- list(rownames(X), rownames(Y))
+  }
+  out
+}
+
 #' @noRd
 .feature_rsa_offdiag_mean <- function(mat, diag_vals = NULL) {
   if (!is.matrix(mat) || nrow(mat) < 2L) {
@@ -567,6 +646,359 @@ feature_rsa_model <- function(dataset,
 }
 
 
+#' Resolve the low-level pls fitting kernel used by feature RSA
+#' @noRd
+.feature_rsa_kernel_function <- function(method) {
+  method <- match.arg(method, c("pls", "pca"))
+  opts <- pls::pls.options()
+  algorithm <- if (identical(method, "pca")) opts$pcralg else opts$plsralg
+
+  fit_name <- switch(
+    algorithm,
+    kernelpls = "kernelpls.fit",
+    widekernelpls = "widekernelpls.fit",
+    simpls = "simpls.fit",
+    oscorespls = "oscorespls.fit",
+    nipalspls = "nipals.fit",
+    svdpc = "svdpc.fit",
+    NULL
+  )
+  if (is.null(fit_name)) {
+    stop(
+      sprintf(
+        "feature RSA does not support pls algorithm '%s' in the matrix kernel path.",
+        algorithm
+      ),
+      call. = FALSE
+    )
+  }
+
+  list(
+    name = algorithm,
+    fit = getExportedValue("pls", fit_name)
+  )
+}
+
+
+#' Fit a compact matrix-level PLS or PCR kernel
+#'
+#' The public `pls` formula interface retains model frames, fitted-value arrays,
+#' and (for validation) a large prediction cube. Feature RSA needs only the
+#' coefficient path and centering constants for the final prediction. This
+#' helper calls the same exported numerical kernels used by `pls::plsr()` and
+#' `pls::pcr()` and immediately discards all other material.
+#' @noRd
+.feature_rsa_fit_kernel <- function(predictors,
+                                    responses,
+                                    ncomp,
+                                    method,
+                                    keep_explained_variance = FALSE) {
+  predictors <- as.matrix(predictors)
+  responses <- as.matrix(responses)
+  predictor_names <- colnames(predictors)
+  response_names <- colnames(responses)
+  method <- match.arg(method, c("pls", "pca"))
+  ncomp <- as.integer(ncomp)
+
+  if (nrow(predictors) != nrow(responses)) {
+    stop("feature RSA kernel: predictors and responses must have the same rows.",
+         call. = FALSE)
+  }
+  if (nrow(predictors) < 2L || ncol(predictors) < 1L ||
+      ncol(responses) < 1L || length(ncomp) != 1L ||
+      is.na(ncomp) || ncomp < 1L) {
+    stop("feature RSA kernel: invalid matrix dimensions or component count.",
+         call. = FALSE)
+  }
+
+  kernel <- .feature_rsa_kernel_function(method)
+  raw_fit <- kernel$fit(
+    predictors,
+    responses,
+    ncomp = ncomp,
+    center = TRUE,
+    stripped = !isTRUE(keep_explained_variance)
+  )
+
+  coefficients <- raw_fit$coefficients
+  if (length(dim(coefficients)) == 2L) {
+    coefficients <- array(
+      coefficients,
+      dim = c(nrow(coefficients), ncol(coefficients), 1L)
+    )
+  }
+  dimnames(coefficients) <- list(
+    predictor_names,
+    response_names,
+    paste0(seq_len(dim(coefficients)[3L]), " comps")
+  )
+
+  out <- list(
+    coefficients = coefficients,
+    Xmeans = as.numeric(raw_fit$Xmeans),
+    Ymeans = as.numeric(raw_fit$Ymeans),
+    ncomp = as.integer(dim(coefficients)[3L]),
+    method = method,
+    algorithm = kernel$name,
+    predictor_names = predictor_names,
+    response_names = response_names
+  )
+  if (isTRUE(keep_explained_variance)) {
+    out$Xvar <- as.numeric(raw_fit$Xvar)
+    out$Xtotvar <- as.numeric(raw_fit$Xtotvar)
+  }
+  class(out) <- "feature_rsa_kernel_fit"
+  out
+}
+
+
+#' Predict from a compact feature RSA kernel
+#' @noRd
+.feature_rsa_predict_kernel <- function(fit, newdata, ncomp = fit$ncomp) {
+  if (!inherits(fit, "feature_rsa_kernel_fit")) {
+    stop("feature RSA kernel prediction requires a feature_rsa_kernel_fit.",
+         call. = FALSE)
+  }
+  newdata <- as.matrix(newdata)
+  ncomp <- as.integer(ncomp)
+  n_available <- dim(fit$coefficients)[3L]
+  if (length(ncomp) != 1L || is.na(ncomp) || ncomp < 1L ||
+      ncomp > n_available) {
+    stop(sprintf(
+      "feature RSA kernel prediction: ncomp must be between 1 and %d.",
+      n_available
+    ), call. = FALSE)
+  }
+  if (ncol(newdata) != length(fit$Xmeans)) {
+    stop(sprintf(
+      "feature RSA kernel prediction: expected %d columns, got %d.",
+      length(fit$Xmeans), ncol(newdata)
+    ), call. = FALSE)
+  }
+
+  centered <- sweep(newdata, 2L, fit$Xmeans, "-")
+  coefficients <- fit$coefficients[, , ncomp, drop = FALSE][, , 1L]
+  predicted <- centered %*% coefficients
+  if (!is.matrix(predicted)) {
+    predicted <- matrix(predicted, nrow = nrow(newdata))
+  }
+  predicted <- sweep(predicted, 2L, fit$Ymeans, "+")
+  if (!is.null(fit$response_names)) {
+    colnames(predicted) <- fit$response_names
+  }
+  predicted
+}
+
+
+#' Construct leave-one-block-out segments for an outer training fold
+#' @noRd
+.feature_rsa_block_segments <- function(block_var,
+                                        n_rows,
+                                        observation_indices = NULL) {
+  n_rows <- as.integer(n_rows)
+  if (length(n_rows) != 1L || is.na(n_rows) || n_rows < 2L) {
+    stop("feature RSA blocked selection: invalid training row count.",
+         call. = FALSE)
+  }
+  if (is.null(block_var)) {
+    stop("feature RSA blocked selection requires design$block_var.",
+         call. = FALSE)
+  }
+
+  if (is.null(observation_indices)) {
+    if (length(block_var) != n_rows) {
+      stop(
+        paste0(
+          "feature RSA blocked selection needs original observation indices ",
+          "when training on a subset of design$block_var."
+        ),
+        call. = FALSE
+      )
+    }
+    fold_blocks <- block_var
+  } else {
+    observation_indices <- as.integer(observation_indices)
+    if (length(observation_indices) != n_rows || anyNA(observation_indices) ||
+        any(observation_indices < 1L | observation_indices > length(block_var))) {
+      stop(
+        "feature RSA blocked selection received invalid observation indices.",
+        call. = FALSE
+      )
+    }
+    fold_blocks <- block_var[observation_indices]
+  }
+
+  if (anyNA(fold_blocks)) {
+    stop("feature RSA blocked selection does not allow missing block labels.",
+         call. = FALSE)
+  }
+  block_key <- as.character(fold_blocks)
+  segments <- unname(split(seq_len(n_rows), block_key, drop = TRUE))
+  segments <- Filter(length, segments)
+  if (length(segments) < 2L) {
+    stop(
+      "feature RSA blocked selection requires at least two non-empty blocks in every training fold.",
+      call. = FALSE
+    )
+  }
+  lapply(segments, as.integer)
+}
+
+
+#' Compute segment-wise validation MSE without retaining a prediction cube
+#'
+#' `pls:::mvrCv()` predicts every observation for every validation segment and
+#' only then retains the held-out rows. Feature RSA's component selector needs
+#' only one scalar MSE per segment and component. Computing those scalars while
+#' streaming segments preserves the selection estimand while bounding memory.
+#' @noRd
+.feature_rsa_cv_segment_mse <- function(predictors,
+                                        responses,
+                                        ncomp,
+                                        method,
+                                        segments,
+                                        fold_standardize = FALSE) {
+  predictors <- as.matrix(predictors)
+  responses <- as.matrix(responses)
+  method <- match.arg(method, c("pls", "pca"))
+  ncomp <- as.integer(ncomp)
+  nobj <- nrow(predictors)
+
+  if (!is.logical(fold_standardize) || length(fold_standardize) != 1L ||
+      is.na(fold_standardize)) {
+    stop("feature RSA CV: fold_standardize must be TRUE or FALSE.",
+         call. = FALSE)
+  }
+
+  if (nobj != nrow(responses)) {
+    stop("feature RSA CV: predictors and responses must have the same rows.",
+         call. = FALSE)
+  }
+  if (!is.list(segments) || length(segments) < 1L) {
+    stop("feature RSA CV: segments must be a non-empty list.", call. = FALSE)
+  }
+
+  segments <- lapply(segments, function(idx) {
+    idx <- unique(as.integer(idx))
+    if (!length(idx) || anyNA(idx) || any(idx < 1L | idx > nobj)) {
+      stop("feature RSA CV: segment indices are empty or out of bounds.",
+           call. = FALSE)
+    }
+    idx
+  })
+  max_segment <- max(lengths(segments))
+  # Match pls:::mvrCv(), which reserves one residual degree of freedom in
+  # every training split.
+  ncomp_cv <- min(ncomp, nobj - max_segment - 1L)
+  if (!is.finite(ncomp_cv) || ncomp_cv < 1L) {
+    stop("feature RSA CV: too few training rows for component selection.",
+         call. = FALSE)
+  }
+
+  nresp <- ncol(responses)
+  all_rows <- seq_len(nobj)
+  segment_mse <- matrix(
+    NA_real_,
+    nrow = length(segments),
+    ncol = ncomp_cv
+  )
+
+  for (s in seq_along(segments)) {
+    test_idx <- segments[[s]]
+    train_idx <- all_rows[-test_idx]
+    train_predictors <- predictors[train_idx, , drop = FALSE]
+    train_responses <- responses[train_idx, , drop = FALSE]
+    if (isTRUE(fold_standardize)) {
+      sf <- .standardize(train_predictors)
+      sx <- .standardize(train_responses)
+      train_predictors <- sf$X_sc
+      train_responses <- sx$X_sc
+      test_predictors <- scale(
+        predictors[test_idx, , drop = FALSE],
+        center = sf$mean,
+        scale = sf$sd
+      )
+      observed_test <- scale(
+        responses[test_idx, , drop = FALSE],
+        center = sx$mean,
+        scale = sx$sd
+      )
+    } else {
+      test_predictors <- predictors[test_idx, , drop = FALSE]
+      observed_test <- responses[test_idx, , drop = FALSE]
+    }
+    fit <- .feature_rsa_fit_kernel(
+      train_predictors,
+      train_responses,
+      ncomp = ncomp_cv,
+      method = method
+    )
+
+    test_centered <- sweep(
+      test_predictors,
+      2L,
+      fit$Xmeans,
+      "-"
+    )
+    coefficient_path <- matrix(
+      fit$coefficients,
+      nrow = dim(fit$coefficients)[1L],
+      ncol = nresp * ncomp_cv
+    )
+    pred_path <- test_centered %*% coefficient_path
+    pred_path <- sweep(
+      pred_path,
+      2L,
+      rep(fit$Ymeans, times = ncomp_cv),
+      "+"
+    )
+    for (k in seq_len(ncomp_cv)) {
+      cols <- seq.int((k - 1L) * nresp + 1L, k * nresp)
+      segment_mse[s, k] <- mean(
+        (observed_test - pred_path[, cols, drop = FALSE])^2,
+        na.rm = TRUE
+      )
+    }
+  }
+
+  segment_mse
+}
+
+
+#' Select components from segment-wise validation errors
+#' @noRd
+.feature_rsa_select_from_segment_mse <- function(segment_mse,
+                                                 method = "onesigma") {
+  segment_mse <- as.matrix(segment_mse)
+  if (!nrow(segment_mse) || !ncol(segment_mse)) {
+    return(NA_integer_)
+  }
+  mean_mse <- colMeans(segment_mse, na.rm = TRUE)
+  if (all(is.na(mean_mse) | !is.finite(mean_mse))) {
+    return(NA_integer_)
+  }
+
+  min_idx <- which.min(mean_mse)
+  if (!length(min_idx)) {
+    return(NA_integer_)
+  }
+  if (!identical(method, "onesigma")) {
+    return(as.integer(min_idx))
+  }
+
+  mse_at_min <- segment_mse[, min_idx]
+  n_finite <- sum(is.finite(mse_at_min))
+  if (n_finite < 2L) {
+    return(as.integer(min_idx))
+  }
+
+  se <- stats::sd(mse_at_min, na.rm = TRUE) / sqrt(n_finite)
+  threshold <- mean_mse[[min_idx]] + se
+  selected <- which(mean_mse <= threshold)[1L]
+  if (is.na(selected)) as.integer(min_idx) else as.integer(selected)
+}
+
+
 
 
 
@@ -587,13 +1019,14 @@ feature_rsa_model <- function(dataset,
   
   # Make predictions with the trained glmnet model
   # For mgaussian family, predict returns a list with one matrix per response
-  preds_mat <- if (model$cv_glmnet) {
-    # Use the CV-selected lambda
-    drop(predict(model$trained_model, newx = Fsc, s = "lambda.min"))
-  } else {
-    # Use the single lambda or the first lambda in sequence
-    drop(predict(model$trained_model, newx = Fsc, s = model$lambda_used))
-  }
+  # `lambda_used` is always numeric. For successful CV it is lambda.min from
+  # cv.glmnet; the retained fit is cv_fit$glmnet.fit, so no second full-data
+  # glmnet fit is needed merely to predict at that value.
+  preds_mat <- drop(predict(
+    model$trained_model,
+    newx = Fsc,
+    s = model$lambda_used
+  ))
 
 
   
@@ -666,8 +1099,17 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
         stop(sprintf("predict_model (%s): NaNs after standardization.", method))
       }
 
-      preds_raw <- predict(pls_model, newdata = sf_test, ncomp = ncomp_to_use)
-      preds_sc  <- drop(preds_raw)
+      preds_sc <- if (inherits(pls_model, "feature_rsa_kernel_fit")) {
+        .feature_rsa_predict_kernel(
+          pls_model,
+          sf_test,
+          ncomp = ncomp_to_use
+        )
+      } else {
+        # Backward compatibility for fit objects saved by rMVPA versions that
+        # retained a full pls::mvr object.
+        drop(predict(pls_model, newdata = sf_test, ncomp = ncomp_to_use))
+      }
 
       if (!is.matrix(preds_sc)) {
         preds_sc <- matrix(preds_sc, nrow = nrow(F_new), ncol = length(x_mean))
@@ -759,14 +1201,30 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   predicted_valid <- predicted[, valid_col, drop = FALSE]
   obs_row_sd <- .feature_rsa_row_sds(observed_valid)
   obs_row_ok <- obs_row_sd > sd_thresh
+  pred_row_sd <- .feature_rsa_row_sds(predicted_valid)
+  pred_row_ok <- pred_row_sd > sd_thresh
 
-  observed_trial_cor <- NULL
-  if (nrow(observed_valid) >= 3L) {
-    observed_trial_cor <- tryCatch(
-      stats::cor(t(observed_valid), use = "pairwise.complete.obs"),
+  # Row permutation changes only matrix indexing, not any pairwise
+  # correlation. Cache the three trial-level matrices once and reorder their
+  # rows/columns inside the permutation loop.
+  cross_trial_cor <- if (n_rows >= 2L) {
+    tryCatch(
+      .feature_rsa_row_cor(predicted_valid, observed_valid),
       error = function(e) NULL
     )
-  }
+  } else NULL
+  predicted_trial_cor <- if (n_rows >= 3L) {
+    tryCatch(
+      .feature_rsa_row_cor(predicted_valid),
+      error = function(e) NULL
+    )
+  } else NULL
+  observed_trial_cor <- if (n_rows >= 3L) {
+    tryCatch(
+      .feature_rsa_row_cor(observed_valid),
+      error = function(e) NULL
+    )
+  } else NULL
 
   no_na_fast_path <- n_rows > 1L &&
     length(valid_col) > 0L &&
@@ -824,13 +1282,13 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 
     ## -- Condition-pattern metrics (trial x trial) --
     ppc <- ppd <- ppr <- prdm <- NA_real_
-    pred_row_sd <- .feature_rsa_row_sds(perm_pred_valid)
-    vr <- which(obs_row_ok & pred_row_sd > sd_thresh)
+    vr <- which(obs_row_ok & pred_row_ok[perm_idx])
     if (length(vr) >= 2) {
-      cm <- tryCatch(stats::cor(t(perm_pred_valid[vr, , drop = FALSE]),
-                                t(observed_valid[vr, , drop = FALSE]),
-                                use = "pairwise.complete.obs"),
-                     error = function(e) NULL)
+      cm <- if (!is.null(cross_trial_cor)) {
+        cross_trial_cor[perm_idx[vr], vr, drop = FALSE]
+      } else {
+        NULL
+      }
       if (!is.null(cm)) {
         dc  <- diag(cm)
         ppc <- mean(dc, na.rm = TRUE)
@@ -853,14 +1311,16 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 
     ## -- Representational geometry (RDM correlation) --
     if (length(vr) >= 3) {
-      pc <- tryCatch(stats::cor(t(perm_pred_valid[vr, , drop = FALSE]),
-                                use = "pairwise.complete.obs"),
-                     error = function(e) NULL)
+      pc <- if (!is.null(predicted_trial_cor)) {
+        predicted_trial_cor[perm_idx[vr], perm_idx[vr], drop = FALSE]
+      } else {
+        NULL
+      }
       oc <- if (!is.null(observed_trial_cor)) {
         observed_trial_cor[vr, vr, drop = FALSE]
       } else {
-        tryCatch(stats::cor(t(observed_valid[vr, , drop = FALSE]),
-                            use = "pairwise.complete.obs"),
+        tryCatch(.feature_rsa_row_cor(
+                   observed_valid[vr, , drop = FALSE]),
                  error = function(e) NULL)
       }
       if (!is.null(pc) && !is.null(oc)) {
@@ -1085,7 +1545,7 @@ evaluate_model.feature_rsa_model <- function(object,
   if (length(valid_row) >= 2) {
     pmat <- predicted_valid[valid_row, , drop = FALSE]
     omat <- observed_valid[valid_row,  , drop = FALSE]
-    cormat_cond <- stats::cor(t(pmat), t(omat), use = "pairwise.complete.obs")
+    cormat_cond <- .feature_rsa_row_cor(pmat, omat)
 
     diag_cors   <- diag(cormat_cond)
     pattern_cor <- mean(diag_cors, na.rm = TRUE)
@@ -1119,8 +1579,8 @@ evaluate_model.feature_rsa_model <- function(object,
   if (length(valid_row) >= 3) {
     pmat <- predicted_valid[valid_row, , drop = FALSE]
     omat <- observed_valid[valid_row,  , drop = FALSE]
-    pc_subset <- tryCatch(stats::cor(t(pmat), use = "pairwise.complete.obs"), error = function(e) NULL)
-    oc_subset <- tryCatch(stats::cor(t(omat), use = "pairwise.complete.obs"), error = function(e) NULL)
+    pc_subset <- tryCatch(.feature_rsa_row_cor(pmat), error = function(e) NULL)
+    oc_subset <- tryCatch(.feature_rsa_row_cor(omat), error = function(e) NULL)
     if (!is.null(pc_subset) && !is.null(oc_subset)) {
       prdm <- 1 - pc_subset
       ordm <- 1 - oc_subset
@@ -1173,11 +1633,11 @@ evaluate_model.feature_rsa_model <- function(object,
         observed_rdm_vec <- .feature_rsa_rdm_vector_from_cor(oc_subset, n_obs)
       } else {
         pc_full <- tryCatch(
-          suppressWarnings(stats::cor(t(predicted_valid), use = "pairwise.complete.obs")),
+          suppressWarnings(.feature_rsa_row_cor(predicted_valid)),
           error = function(e) NULL
         )
         oc_full <- tryCatch(
-          suppressWarnings(stats::cor(t(observed_valid), use = "pairwise.complete.obs")),
+          suppressWarnings(.feature_rsa_row_cor(observed_valid)),
           error = function(e) NULL
         )
         predicted_rdm_vec <- .feature_rsa_rdm_vector_from_cor(pc_full, n_obs)
@@ -1242,7 +1702,7 @@ evaluate_model.feature_rsa_model <- function(object,
 
   pmat <- predicted[, valid_col, drop = FALSE]
   pc <- tryCatch(
-    suppressWarnings(stats::cor(t(pmat), use = "pairwise.complete.obs")),
+    suppressWarnings(.feature_rsa_row_cor(pmat)),
     error = function(e) NULL
   )
 
@@ -1269,8 +1729,10 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
   # X: brain data (samples x voxels)
   # y: should be the Feature Matrix F (samples x features)
   Fsub <- y
+  training_context <- list(...)
+  observation_indices <- training_context$observation_indices
   
-  result <- list(method=obj$method, design=obj$design)
+  result <- list(method = obj$method)
   
   # Check for minimum data size
   if (nrow(X) < 2 || ncol(X) < 1 || nrow(Fsub) < 2 || ncol(Fsub) < 1) {
@@ -1284,7 +1746,6 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
   # ---- PLS / PCA (unified via pls package) ----
   if (obj$method %in% c("pls", "pca")) {
     require_package("pls", "for PLS/PCA regression in feature RSA")
-    fit_func <- if (obj$method == "pls") pls::plsr else pls::pcr
     method_label <- toupper(obj$method)
     ncomp_sel <- obj$ncomp_selection %||% "max"
 
@@ -1311,15 +1772,32 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
                      k, obj$max_comps, max_k_possible))
       }
 
-      validation <- if (ncomp_sel == "loo") "LOO" else "none"
-      model <- fit_func(sx$X_sc ~ sf$X_sc, ncomp = k, scale = FALSE,
-                        validation = validation)
-
       # --- Component selection (always >= 1) ---
       ncomp_use <- k
-      if (ncomp_sel == "loo" && k > 1) {
+      if (ncomp_sel %in% c("loo", "blocked") && k > 1) {
         ncomp_use <- tryCatch({
-          nc <- .selectNcomp_mv(model, method = "onesigma")
+          segments <- if (identical(ncomp_sel, "blocked")) {
+            .feature_rsa_block_segments(
+              obj$design$block_var,
+              n_rows = nrow(sf$X_sc),
+              observation_indices = observation_indices
+            )
+          } else {
+            lapply(seq_len(nrow(sf$X_sc)), as.integer)
+          }
+          blocked_selection <- identical(ncomp_sel, "blocked")
+          segment_mse <- .feature_rsa_cv_segment_mse(
+            if (blocked_selection) Fsub else sf$X_sc,
+            if (blocked_selection) X else sx$X_sc,
+            ncomp = k,
+            method = obj$method,
+            segments = segments,
+            fold_standardize = blocked_selection
+          )
+          nc <- .feature_rsa_select_from_segment_mse(
+            segment_mse,
+            method = "onesigma"
+          )
           if (is.na(nc) || nc < 1L) {
             futile.logger::flog.warn(
               "train_model (%s): selectNcomp returned %s; falling back to %d components.",
@@ -1329,13 +1807,26 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
             nc
           }
         }, error = function(e) {
+          if (identical(ncomp_sel, "blocked")) {
+            stop(e)
+          }
           futile.logger::flog.warn(
             "train_model (%s): selectNcomp failed (%s); using all %d components.",
             method_label, e$message, k)
           k
         })
-      } else if (ncomp_sel == "pve") {
-        xvar <- pls::explvar(model)
+      }
+
+      model <- .feature_rsa_fit_kernel(
+        sf$X_sc,
+        sx$X_sc,
+        ncomp = k,
+        method = obj$method,
+        keep_explained_variance = identical(ncomp_sel, "pve")
+      )
+
+      if (ncomp_sel == "pve") {
+        xvar <- 100 * model$Xvar / model$Xtotvar
         cum_ratio <- cumsum(xvar) / sum(xvar)
         idx <- which(cum_ratio >= obj$pve_threshold)[1]
         if (is.na(idx)) {
@@ -1346,6 +1837,10 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
         } else {
           ncomp_use <- max(1L, idx)
         }
+        # Explained-variance diagnostics are needed only for component
+        # selection; do not retain them in every fold fit.
+        model$Xvar <- NULL
+        model$Xtotvar <- NULL
       }
 
       list(model = model, sx = sx, sf = sf, ncomp_use = ncomp_use)
@@ -1436,16 +1931,21 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
           }
         }
         
-        # Fit standard glmnet (either as fallback or primary)
-        final_fit <- glmnet::glmnet(
-          x = sf$X_sc,
-          y = sx$X_sc,
-          family = "mgaussian",
-          alpha = obj$alpha,
-          lambda = lambda_to_use, # Use CV lambda if available, otherwise obj$lambda
-          standardize = FALSE,
-          intercept = TRUE
-        )
+        # cv.glmnet already fits a full-data path. Reuse it after successful
+        # CV; otherwise fit the requested path once as the primary/fallback.
+        final_fit <- if (run_cv && !is.null(cv_results)) {
+          cv_results$glmnet.fit
+        } else {
+          glmnet::glmnet(
+            x = sf$X_sc,
+            y = sx$X_sc,
+            family = "mgaussian",
+            alpha = obj$alpha,
+            lambda = lambda_to_use,
+            standardize = FALSE,
+            intercept = TRUE
+          )
+        }
 
         # Determine lambda used for prediction
         lambda_used_for_pred <- if (run_cv && !is.null(cv_results)) {
@@ -1569,7 +2069,9 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
 #' @rdname y_train-methods
 #' @export
 y_train.feature_rsa_model <- function(obj) {
-  obj$design$targets  # Feature matrix for cross-validation data splitting
+  # Parallel worker specs retain one target matrix in the fold cache and drop
+  # the duplicate design copy. Controller specs continue to use design targets.
+  obj$design$targets %||% obj$.cv_fold_cache$y
 }
 
 #' @rdname y_train-methods
@@ -1637,43 +2139,19 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
     ))
   }
   
-  # Evaluate WITHOUT permutations at the fold level
-  perf <- evaluate_model.feature_rsa_model(
-    object = obj,
-    predicted = Xpred,
-    observed  = Xobs,
-    nperm = 0,  # no permutation here
-    compute_rdm_vectors = FALSE
-  )
-  
-  # Get ncomp from the first fold's result (assuming it's consistent)
+  # Fold metrics are intentionally deferred. merge_results() evaluates the
+  # complete out-of-fold prediction exactly once, so computing geometry here
+  # would be redundant and the result would be discarded.
   ncomp_used <- result$ncomp
-  
-  # Summarize
-  perf_mat <- matrix(
-    c(perf$pattern_correlation,
-      perf$pattern_discrimination,
-      perf$pattern_rank_percentile,
-      perf$rdm_correlation,
-      perf$voxel_correlation,
-      perf$mse,
-      perf$r_squared,
-      perf$mean_voxelwise_temporal_cor,
-      ncomp_used),
-    nrow = 1,
-    ncol = 9,
-    dimnames = list(NULL, c("pattern_correlation", "pattern_discrimination",
-                            "pattern_rank_percentile", "rdm_correlation",
-                            "voxel_correlation", "mse", "r_squared",
-                            "mean_voxelwise_temporal_cor", "ncomp"))
-  )
   
   tibble::tibble(
     observed    = list(Xobs),
     predicted   = list(Xpred),
     test_index  = list(context$test_ind),
-    result      = list(result),
-    performance = list(perf_mat),
+    # Prediction is complete, so the trained model and its coefficient path no
+    # longer need to survive until fold merging.
+    result      = list(list(ncomp = ncomp_used)),
+    performance = list(NULL),
     error       = FALSE,
     error_message = "~"
   )

@@ -166,3 +166,50 @@ test_that("shard batching amortizes dispatch for index-only task frames", {
   expect_identical(shard_size, 2048L)
   expect_gt(shard_size, default_size)
 })
+
+test_that("shard profiling records smaller index-only task frames", {
+  skip_if_not_installed("shard")
+
+  built <- build_iterate_test_spec()
+  mask_idx <- as.integer(which(built$dataset$dataset$mask > 0))
+  vox_list <- lapply(seq_len(8L), function(i) {
+    start <- 1L + (i - 1L) * 4L
+    mask_idx[start:(start + 7L)]
+  })
+  ids <- seq_along(vox_list)
+  processor <- make_passthrough_processor()
+
+  old_plan <- future::plan(future::sequential)
+  on.exit(future::plan(old_plan), add = TRUE)
+  old_opt <- options(rMVPA.profile_searchlight = TRUE)
+  on.exit(options(old_opt), add = TRUE)
+
+  default_result <- mvpa_iterate(
+    built$mspec,
+    vox_list,
+    ids = ids,
+    batch_size = length(ids),
+    verbose = FALSE,
+    analysis_type = "searchlight",
+    processor = processor
+  )
+
+  shard_spec <- use_shard(built$mspec)
+  on.exit(shard_cleanup(shard_spec$shard_data), add = TRUE)
+  shard_result <- mvpa_iterate(
+    shard_spec,
+    vox_list,
+    ids = ids,
+    batch_size = length(ids),
+    verbose = FALSE,
+    analysis_type = "searchlight",
+    processor = processor
+  )
+
+  default_bytes <- attr(default_result, "timing")$totals$frame_bytes_max
+  shard_bytes <- attr(shard_result, "timing")$totals$frame_bytes_max
+
+  expect_equal(shard_result$id, default_result$id)
+  expect_equal(shard_result$error, default_result$error)
+  expect_lt(shard_bytes, default_bytes)
+})

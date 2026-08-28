@@ -358,9 +358,21 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
       y_train(mspec)
     )
   } else {
+    cached_ytrain <- cv_cache$ytrain
+    cached_ytest <- cv_cache$ytest
+    if (is.null(cached_ytrain) || is.null(cached_ytest)) {
+      cached_ytrain <- lapply(
+        cv_cache$train_idx,
+        function(idx) subset_y(cv_cache$y, idx)
+      )
+      cached_ytest <- lapply(
+        cv_cache$test_idx,
+        function(idx) subset_y(cv_cache$y, idx)
+      )
+    }
     tibble::tibble(
-      ytrain = cv_cache$ytrain,
-      ytest = cv_cache$ytest,
+      ytrain = cached_ytrain,
+      ytest = cached_ytest,
       train = cv_cache$train_idx,
       test = cv_cache$test_idx,
       .id = cv_cache$fold_id
@@ -466,6 +478,7 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
         sl_info = sl_info,
         cv_spec = mspec$crossval,
         indices = ind,
+        observation_indices = train_ind,
         quiet_error = TRUE
       )
       format_result(
@@ -919,7 +932,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           get_samples_seconds = 0,
           roi_extract_seconds = 0,
           run_future_seconds = 0,
-          batch_seconds = 0
+          batch_seconds = 0,
+          frame_bytes_sum = 0,
+          frame_bytes_max = 0
         )
       )
     } else {
@@ -957,6 +972,11 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           min_voxels_required = min_voxels_required
         )
         sf <- batch_prepared$frame
+        frame_bytes <- if (profile_enabled) {
+          as.numeric(utils::object.size(sf))
+        } else {
+          NA_real_
+        }
         n_sf_after_size_filter <- batch_prepared$n_after_size_filter
         get_samples_elapsed <- batch_prepared$get_samples_seconds
         extract_elapsed <- batch_prepared$roi_extract_seconds
@@ -1040,6 +1060,11 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           timing$totals$roi_extract_seconds <- timing$totals$roi_extract_seconds + extract_elapsed
           timing$totals$run_future_seconds <- timing$totals$run_future_seconds + run_future_elapsed
           timing$totals$batch_seconds <- timing$totals$batch_seconds + batch_elapsed
+          timing$totals$frame_bytes_sum <- timing$totals$frame_bytes_sum + frame_bytes
+          timing$totals$frame_bytes_max <- max(
+            timing$totals$frame_bytes_max,
+            frame_bytes
+          )
           timing$batch[[i]] <- list(
             batch_index = i,
             n_rois_requested = length(batch_positions),
@@ -1048,7 +1073,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
             get_samples_seconds = as.numeric(get_samples_elapsed),
             roi_extract_seconds = as.numeric(extract_elapsed),
             run_future_seconds = as.numeric(run_future_elapsed),
-            batch_seconds = as.numeric(batch_elapsed)
+            batch_seconds = as.numeric(batch_elapsed),
+            frame_bytes = frame_bytes
           )
         }
         NULL
@@ -1130,6 +1156,25 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
 #' @noRd
 as_worker_spec <- function(obj) {
   obj$dataset <- NULL
+  if (inherits(obj, "feature_rsa_model") && is.list(obj$design)) {
+    # The fitting path uses design$targets (and the precomputed fold cache),
+    # not the original similarity matrix or presentation metadata. In
+    # particular, retaining an n x n design$S would serialize a quadratic
+    # object into every Future even when the neural data use shard.
+    obj$design$S <- NULL
+    obj$design$F <- NULL
+    obj$design$labels <- NULL
+    obj$design$cv_labels <- NULL
+    if (is.list(obj$.cv_fold_cache) && !is.null(obj$.cv_fold_cache$y)) {
+      # Keep one target matrix plus fold indices. The controller cache also
+      # stores every ytrain/ytest slice for fast repeated use, but sending
+      # those overlapping copies to each Future multiplies memory without
+      # saving meaningful worker computation.
+      obj$design$targets <- NULL
+      obj$.cv_fold_cache$ytrain <- NULL
+      obj$.cv_fold_cache$ytest <- NULL
+    }
+  }
   obj
 }
 

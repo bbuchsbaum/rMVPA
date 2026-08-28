@@ -18,6 +18,12 @@ articles:
   - Constructing_Datasets
   - CrossValidation
   - FeatureSelection
+- title: Performance and Deployment
+  desc: |
+    Choose Future process topologies, data transport, and native thread limits
+    with reproducible correctness and performance evidence.
+  contents:
+  - Parallelism
 - title: Voxelwise Encoding Models
   desc: |
     Fit leakage-safe grouped encoding models with per-response tuning,

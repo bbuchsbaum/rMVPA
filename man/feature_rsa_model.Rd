@@ -9,7 +9,7 @@ feature_rsa_model(
   design,
   method = c("pls", "pca", "glmnet"),
   crossval = NULL,
-  ncomp_selection = c("loo", "max", "pve"),
+  ncomp_selection = c("loo", "max", "pve", "blocked"),
   pve_threshold = 0.9,
   alpha = 0.5,
   cv_glmnet = FALSE,
@@ -29,8 +29,11 @@ and including the component limit (`max_comps`).}
 
 \item{method}{Character string specifying the analysis method. One of:
 \describe{
-  \item{pls}{Partial Least Squares regression predicting X from F (via \code{pls::plsr}).}
-  \item{pca}{Principal Component Regression predicting X from PCs of F (via \code{pls::pcr}).}
+  \item{pls}{Partial Least Squares regression predicting X from F using
+    the numerical algorithm configured by \code{pls::pls.options()}.}
+  \item{pca}{Principal Component Regression predicting X from PCs of F
+    using the algorithm configured by \code{pls::pls.options()} (SVD-PCR
+    by default).}
   \item{glmnet}{Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.}
 }}
 
@@ -39,12 +42,18 @@ and including the component limit (`max_comps`).}
 \item{ncomp_selection}{Character string controlling how the number of components
 is chosen for \code{pls} and \code{pca} methods.  One of:
 \describe{
-  \item{loo}{(Default) Fit with leave-one-out validation and select the
-    fewest components within one standard error of the minimum RMSEP
-    (\code{pls::selectNcomp}, method \code{"onesigma"}).}
+  \item{loo}{(Default) Use leave-one-observation-out validation and select
+    the fewest components within one standard error of the minimum
+    segment-wise MSE. This preserves the historical selection rule while
+    streaming held-out errors instead of retaining a validation cube.}
   \item{pve}{Keep the fewest components whose cumulative explained
     variance reaches \code{pve_threshold} of the total explained by all
     fitted components.}
+  \item{blocked}{Use leave-one-block-out validation within each outer
+    training fold and apply the same one-standard-error rule as
+    \code{"loo"}. Each held-out block contributes one segment MSE.
+    Requires \code{design$block_var} and at least two training blocks in
+    every outer fold.}
   \item{max}{Use all \code{max_comps} components (legacy behaviour).}
 }
 Ignored when \code{method = "glmnet"}.}
@@ -91,17 +100,26 @@ Creates a model for feature-based Representational Similarity Analysis (RSA) tha
 Feature RSA models analyze how well a feature matrix \code{F} (defined in the `design`)
 relates to neural data \code{X}. The `max_comps` parameter, inherited from the `design` object,
 sets an upper limit on the number of components fitted:
-  - \strong{pls}: PLS regression via \code{pls::plsr}. Fits up to `max_comps` components;
-    the actual number used for prediction is chosen by \code{ncomp_selection}.
-  - \strong{pca}: Principal Component Regression via \code{pls::pcr}. Fits up to
-    `max_comps` components; selection controlled by \code{ncomp_selection}.
+  - \strong{pls}: PLS regression using the configured \pkg{pls} numerical
+    kernel. Fits up to `max_comps` components; the actual number used for
+    prediction is chosen by \code{ncomp_selection}.
+  - \strong{pca}: Principal Component Regression using the configured
+    \pkg{pls} PCR kernel (SVD-PCR by default). Fits up to `max_comps`
+    components; selection is controlled by \code{ncomp_selection}.
   - \strong{glmnet}: Elastic net regression via \code{glmnet} with multivariate Gaussian
     response. Regularisation (lambda) can be auto-selected via \code{cv_glmnet=TRUE}.
 
 For \code{pls} and \code{pca}, the \code{ncomp_selection} argument determines how many
 of the fitted components are actually used for prediction.  The default
-(\code{"loo"}) fits the model with leave-one-out cross-validation and picks
-the fewest components within one SE of the minimum RMSEP.
+(\code{"loo"}) uses leave-one-observation-out validation and picks the
+fewest components within one SE of the minimum segment-wise MSE.
+\code{"blocked"} applies the same rule to leave-one-block-out segments
+within each outer training fold; centering and scaling are estimated again
+from each inner training split. It is usually the more faithful and much
+less expensive validation unit when observations are dependent within
+acquisition runs, sessions, or subjects. It is not interchangeable with
+\code{"pve"} or \code{"max"}, which do not estimate held-out prediction
+error for component selection.
 
 **Performance Metrics** (computed by `evaluate_model` after cross-validation):
 

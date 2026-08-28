@@ -986,6 +986,7 @@ run_regional_base <- function(model_spec,
     save_rdm_vectors_dir = save_rdm_vectors_dir,
     ...
   )
+  iterate_timing <- attr(results, "timing", exact = TRUE)
   
   # 2b) Surface errors (mirrors searchlight diagnostics)
   summarize_errors(results, "run_regional")
@@ -1060,6 +1061,10 @@ run_regional_base <- function(model_spec,
     if (!is.null(fp_table)) {
       attr(out, "fingerprints") <- fp_table
     }
+  }
+
+  if (!is.null(iterate_timing)) {
+    attr(out, "timing") <- list(iterate = iterate_timing)
   }
 
   out

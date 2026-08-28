@@ -1,38 +1,44 @@
 # Parallel Runtime Sweep
 
-`scripts/sweep_parallel_runtime_grid.R` is a small HPC triage harness for
-finding bad interactions between:
+`scripts/sweep_parallel_runtime_grid.R` characterizes three independent layers
+of parallel execution:
 
-- `future` backends (`sequential`, `multisession`, `multicore`, `callr`,
-  `mirai_multisession`)
-- worker counts
-- OpenMP thread counts
-- BLAS thread counts
-- `rMVPA` batch sizes
+1. the Future process topology (`sequential`, `multisession`, `multicore`,
+   `callr`, or `mirai_multisession`);
+2. the rMVPA data-transport backend (`default` or `shard`); and
+3. native thread limits for OpenMP and BLAS.
 
-The parent process launches each configuration in a fresh `Rscript` child,
-applies a wall-clock timeout, captures per-run logs, and writes both raw and
-summary CSV outputs. This is intended for debugging hangs where jobs appear
-busy but never complete.
+Future and furrr schedule work. The rMVPA backend controls how ROI data reach
+that work. Native libraries may create threads inside each Future worker. Do
+not treat these as interchangeable settings.
+
+The parent launches every configuration in a fresh `Rscript`, applies a hard
+timeout, captures a log, and writes raw and summary CSVs. A successful child
+also records a canonical numerical result, a result signature, task-frame
+sizes, phase timings, and sampled process-tree RSS.
 
 ## Why a fresh child per configuration?
 
-Thread-related env vars such as `OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, and
-`MKL_NUM_THREADS` need to be set before native libraries initialize. Running
-each combination in a fresh `Rscript` process makes those settings meaningful
-and keeps one bad configuration from poisoning the rest of the sweep.
+Thread variables such as `OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, and
+`MKL_NUM_THREADS` should be set before a native runtime initializes. A fresh
+process makes those settings meaningful and prevents a crash or hang in one
+configuration from contaminating later runs.
 
-## Quick Start
+Fresh processes also expose startup costs. For a short analysis, a socket or
+mirai plan can spend more time starting and loading workers than fitting the
+model. That is part of the observed run, but it does not predict performance
+for a long-lived worker pool.
 
-From the package root:
+## Quick start
+
+From the package root, write a manifest without running analyses:
 
 ```bash
 env \
   RMVPA_HPC_SWEEP_DRY_RUN=true \
+  RMVPA_HPC_SWEEP_DATA_BACKENDS=default,shard \
   Rscript scripts/sweep_parallel_runtime_grid.R
 ```
-
-This writes a manifest only. It does not run any analyses.
 
 For a small real sweep:
 
@@ -40,132 +46,139 @@ For a small real sweep:
 env \
   RMVPA_HPC_SWEEP_ANALYSES=regional \
   RMVPA_HPC_SWEEP_BACKENDS=sequential,multisession,multicore \
-  RMVPA_HPC_SWEEP_WORKER_COUNTS=1,2,4 \
-  RMVPA_HPC_SWEEP_OMP_THREAD_COUNTS=1,2,4 \
-  RMVPA_HPC_SWEEP_BLAS_THREAD_COUNTS=1,2 \
-  RMVPA_HPC_SWEEP_BATCH_SIZES=auto,4 \
+  RMVPA_HPC_SWEEP_DATA_BACKENDS=default,shard \
+  RMVPA_HPC_SWEEP_WORKER_COUNTS=1,2 \
+  RMVPA_HPC_SWEEP_OMP_THREAD_COUNTS=1 \
+  RMVPA_HPC_SWEEP_BLAS_THREAD_COUNTS=1 \
+  RMVPA_HPC_SWEEP_BATCH_SIZES=4 \
   RMVPA_HPC_SWEEP_REP=2 \
   RMVPA_HPC_SWEEP_TIMEOUT_SECONDS=300 \
-  RMVPA_HPC_SWEEP_OUT=.tmp/hpc_parallel_sweep_summary.csv \
-  RMVPA_HPC_SWEEP_OUT_RAW=.tmp/hpc_parallel_sweep_raw.csv \
-  RMVPA_HPC_SWEEP_LOG_DIR=.tmp/hpc_parallel_sweep_logs \
+  RMVPA_HPC_SWEEP_OUT=.tmp/parallel_sweep_summary.csv \
+  RMVPA_HPC_SWEEP_OUT_RAW=.tmp/parallel_sweep_raw.csv \
+  RMVPA_HPC_SWEEP_LOG_DIR=.tmp/parallel_sweep_logs \
   Rscript scripts/sweep_parallel_runtime_grid.R
 ```
 
-## Main Environment Variables
+Use `batch_size` small enough to produce multiple batches when the purpose is
+to exercise multiple workers. The publication driver refuses a receipt if
+`n_batches < 2`.
 
-- `RMVPA_HPC_SWEEP_ANALYSES`
-  Comma-separated analysis types. Supported: `regional`, `searchlight`.
-- `RMVPA_HPC_SWEEP_BACKENDS`
-  Comma-separated future backends. Supported:
-  `sequential,multisession,multicore,callr,mirai_multisession`.
-- `RMVPA_HPC_SWEEP_WORKER_COUNTS`
-  Comma-separated worker counts, e.g. `1,2,4,8`.
-- `RMVPA_HPC_SWEEP_OMP_THREAD_COUNTS`
-  Comma-separated `OMP_NUM_THREADS` values.
-- `RMVPA_HPC_SWEEP_BLAS_THREAD_COUNTS`
-  Comma-separated values applied to:
-  `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`, `BLIS_NUM_THREADS`,
-  `VECLIB_MAXIMUM_THREADS`.
-- `RMVPA_HPC_SWEEP_BATCH_SIZES`
-  Comma-separated batch sizes. Use `auto` and/or positive integers.
-- `RMVPA_HPC_SWEEP_REP`
-  Number of repetitions per configuration.
-- `RMVPA_HPC_SWEEP_TIMEOUT_SECONDS`
-  Hard wall-clock timeout per child run.
-- `RMVPA_HPC_SWEEP_RADIUS`
-  Searchlight radius for `searchlight` sweeps. Ignored for `regional`.
-- `RMVPA_HPC_SWEEP_OUT`
-  Summary CSV path.
-- `RMVPA_HPC_SWEEP_OUT_RAW`
-  Raw per-run CSV path.
-- `RMVPA_HPC_SWEEP_LOG_DIR`
-  Directory for per-run logs and child result files.
-- `RMVPA_HPC_SWEEP_DRY_RUN`
-  If `true`, only write the planned manifest.
+## Benchmark the exact checkout
 
-## Output Files
-
-- Summary CSV (`RMVPA_HPC_SWEEP_OUT`)
-  One row per configuration, aggregating repeated runs.
-- Raw CSV (`RMVPA_HPC_SWEEP_OUT_RAW`)
-  One row per actual run.
-- Log directory (`RMVPA_HPC_SWEEP_LOG_DIR`)
-  One `.log` file per run, useful when a configuration errors or times out.
-
-Raw rows include:
-
-- `status`: `ok`, `error`, `timeout`, `crash`, or `skip`
-- `elapsed_seconds`
-- `future_backend`
-- `workers`
-- `omp_threads`
-- `blas_threads`
-- `batch_size`
-- `message`
-- `log_file`
-
-## Interpreting Failures
-
-- `skip`
-  The backend was unavailable in the current R installation. Example:
-  `future.mirai` not installed.
-- `error`
-  The child process started and returned an R error.
-- `timeout`
-  The child stayed alive longer than `RMVPA_HPC_SWEEP_TIMEOUT_SECONDS` and was
-  terminated.
-- `crash`
-  The child exited without producing a normal result row. This is a useful
-  signal for low-level runtime problems.
-
-For `error`, `timeout`, and `crash`, inspect the corresponding `log_file`.
-
-## Suggested HPC Workflow
-
-1. Start with a dry run to confirm the grid size and output locations.
-2. Run a very small sweep first:
-   `workers=1,2`, `OMP=1,2`, `BLAS=1`, `REP=1`.
-3. Add backends gradually:
-   `sequential` -> `multisession` -> `multicore` -> `callr` -> `mirai`.
-4. Increase thread counts only after the low-thread grid is stable.
-5. Treat `workers * OMP threads * BLAS threads` as a potential oversubscription
-   budget, not independent knobs.
-
-## Example SLURM Job
+`pkgload::load_all()` is useful for debugging a sequential child, but a clean
+installed package is the defensible target for process-based measurements.
+Build the checkout, install the tarball into a temporary library, and put that
+library first:
 
 ```bash
-#!/bin/bash
-#SBATCH --job-name=rmvpa-sweep
-#SBATCH --cpus-per-task=16
-#SBATCH --time=02:00:00
-#SBATCH --mem=16G
-#SBATCH --output=logs/rmvpa-sweep-%j.out
-
-module load R
-cd /path/to/rMVPA
-
-mkdir -p .tmp/hpc_logs logs
-
-env \
-  RMVPA_HPC_SWEEP_ANALYSES=regional \
-  RMVPA_HPC_SWEEP_BACKENDS=sequential,multisession,multicore \
-  RMVPA_HPC_SWEEP_WORKER_COUNTS=1,2,4,8 \
-  RMVPA_HPC_SWEEP_OMP_THREAD_COUNTS=1,2,4 \
-  RMVPA_HPC_SWEEP_BLAS_THREAD_COUNTS=1,2,4 \
-  RMVPA_HPC_SWEEP_BATCH_SIZES=auto,4 \
-  RMVPA_HPC_SWEEP_REP=1 \
-  RMVPA_HPC_SWEEP_TIMEOUT_SECONDS=300 \
-  RMVPA_HPC_SWEEP_OUT=.tmp/hpc_parallel_sweep_summary.csv \
-  RMVPA_HPC_SWEEP_OUT_RAW=.tmp/hpc_parallel_sweep_raw.csv \
-  RMVPA_HPC_SWEEP_LOG_DIR=.tmp/hpc_logs \
-  Rscript scripts/sweep_parallel_runtime_grid.R
+R CMD build --no-build-vignettes --no-manual .
+benchmark_lib=$(mktemp -d /tmp/rmvpa-benchmark-lib.XXXXXX)
+R CMD INSTALL --library="$benchmark_lib" rMVPA_*.tar.gz
+R_LIBS="$benchmark_lib" \
+  Rscript inst/benchmarks/parallel_runtime_benchmark.R
 ```
 
-## Notes
+The benchmark driver fixes the seed and fixture, requests five batches,
+configures two workers for non-sequential plans, pins OpenMP and BLAS to one
+thread, runs three fresh-process repetitions, and refuses to publish unless
+all scheduler/data-backend results match to `1e-12` or better.
 
-- `mirai_multisession` is marked as `skip` unless `future.mirai` is installed.
-- `callr` is marked as `skip` unless `future.callr` is installed.
-- `multicore` is marked as `skip` when `future::supportsMulticore()` is false.
-- The script currently targets Unix-like systems. It is not designed for
-  Windows.
+## Main environment variables
+
+- `RMVPA_HPC_SWEEP_ANALYSES`: `regional` and/or `searchlight`.
+- `RMVPA_HPC_SWEEP_BACKENDS`: `sequential`, `multisession`, `multicore`,
+  `callr`, and/or `mirai_multisession`.
+- `RMVPA_HPC_SWEEP_DATA_BACKENDS`: `default` and/or `shard`.
+- `RMVPA_HPC_SWEEP_LOAD_MODE`: `installed` for evidence; `source` for local
+  debugging.
+- `RMVPA_HPC_SWEEP_WORKER_COUNTS`: requested Future worker counts.
+- `RMVPA_HPC_SWEEP_OMP_THREAD_COUNTS`: `OMP_NUM_THREADS` values.
+- `RMVPA_HPC_SWEEP_BLAS_THREAD_COUNTS`: values applied to
+  `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`, `BLIS_NUM_THREADS`, and
+  `VECLIB_MAXIMUM_THREADS`.
+- `RMVPA_HPC_SWEEP_BATCH_SIZES`: `auto` and/or positive integers.
+- `RMVPA_HPC_SWEEP_REP`: fresh-process repetitions per configuration.
+- `RMVPA_HPC_SWEEP_TIMEOUT_SECONDS`: hard timeout per child.
+- `RMVPA_HPC_SWEEP_DIMS`: three comma-separated spatial dimensions.
+- `RMVPA_HPC_SWEEP_NOBS`, `RMVPA_HPC_SWEEP_NLEVELS`,
+  `RMVPA_HPC_SWEEP_BLOCKS`, and `RMVPA_HPC_SWEEP_N_REGIONS`: fixture shape.
+- `RMVPA_HPC_SWEEP_MODEL`: registered rMVPA model ID.
+- `RMVPA_HPC_SWEEP_RADIUS`: searchlight radius; ignored for regional runs.
+- `RMVPA_HPC_SWEEP_OUT`, `RMVPA_HPC_SWEEP_OUT_RAW`, and
+  `RMVPA_HPC_SWEEP_LOG_DIR`: output locations.
+- `RMVPA_HPC_SWEEP_DRY_RUN`: write the planned grid without analyses.
+
+## Reading the receipt
+
+The raw CSV contains one row per run. Important fields are:
+
+- `status`: `ok`, `error`, `timeout`, `crash`, or `skip`;
+- `configured_workers` and `n_batches`: evidence that the intended path ran;
+- `result_keys`, `result_values`, and `result_signature`: the correctness
+  receipt;
+- `analysis_seconds`, `roi_extract_seconds`, and `run_future_seconds`: nested
+  timing phases;
+- `data_bytes`, `frame_bytes_sum`, and `frame_bytes_max`: R object sizes for
+  the source dataset and serialized task frames; and
+- `peak_tree_rss_bytes`, `peak_process_count`, and `memory_samples`: sampled
+  process accounting.
+
+Task-frame bytes are the robust structural comparison. The default backend
+strips the full dataset from the worker model specification, but the controller
+extracts ROI matrices and places them in task frames. Shard instead shares a
+matrix and sends lightweight indices. Thus, “multisession copies the entire
+dataset” is not an accurate description of rMVPA's default path, while
+“multisession has independent R processes and receives serialized task data”
+is accurate.
+
+Do not interpret summed RSS as unique physical memory. It can double-count
+shared and copy-on-write pages, and detached worker implementations may not
+remain descendants of the controller. The checked-in publication receipt does
+not use RSS for its memory claim.
+
+## Interpreting failures
+
+- `skip`: the backend is unavailable. For example, `future.mirai` or `shard`
+  is not installed, POSIX shared memory is unavailable, or multicore is not
+  supported.
+- `error`: the child returned an R error.
+- `timeout`: the child stayed alive beyond the configured deadline and was
+  terminated.
+- `crash`: the child exited without producing a result row.
+
+Inspect the corresponding `log_file` for every non-`ok` row. Matching status
+is not enough: compare canonical results within each fixture repetition.
+
+## OpenMP and oversubscription
+
+`OMP_NUM_THREADS` controls native OpenMP regions; it is not a Future worker
+count. A conservative upper budget is roughly Future workers times the maximum
+native threads used by each worker, with BLAS or other thread pools accounted
+for separately. The product is a capacity warning, not a promise that all
+pools are active simultaneously.
+
+An rMVPA workload that never enters an OpenMP region cannot validate fork plus
+OpenMP safety merely by sweeping `OMP_NUM_THREADS`. Use the sweep to isolate
+and reproduce a known native workload, not to certify a forked process after a
+few successful runs. R Core strongly discourages forked processing with
+multithreaded libraries; prefer separate R sessions and pin native threads
+unless the complete native stack is known to be fork-safe.
+
+## Suggested HPC workflow
+
+1. Use `parallelly::availableCores()` and the scheduler allocation rather than
+   the machine's physical core count.
+2. Start with `multisession`, `default`, two workers, and all native pools at
+   one thread.
+3. Confirm more than one batch, finite outputs, and numerical parity with the
+   sequential result.
+4. Add `shard` as a separate data-transport comparison.
+5. Add `mirai_multisession` only after its package and worker lifecycle are
+   verified on the target cluster.
+6. Treat `multicore` as an explicit Unix-only experiment, not the safe default.
+7. Scale workers, batch size, and native threads one axis at a time.
+
+`future.mirai::mirai_multisession` still uses separate R processes. It changes
+scheduling and communication; it does not itself turn rMVPA data into shared
+memory. It can be combined with the shard backend because these are orthogonal
+layers.

@@ -29,6 +29,34 @@ test_that("standard searchlight profiling attaches timing metadata", {
   expect_true(is.list(timing$iterate$totals))
   expect_true(is.numeric(timing$iterate$totals$get_samples_seconds))
   expect_true(is.numeric(timing$iterate$totals$run_future_seconds))
+  expect_true(is.numeric(timing$iterate$totals$frame_bytes_sum))
+  expect_true(is.numeric(timing$iterate$totals$frame_bytes_max))
+  expect_gt(timing$iterate$totals$frame_bytes_sum, 0)
+  expect_gt(timing$iterate$totals$frame_bytes_max, 0)
+})
+
+test_that("regional profiling propagates iterator timing metadata", {
+  mspec <- build_profile_test_spec()
+  mask <- mspec$dataset$mask
+  labels <- integer(length(mask))
+  inside <- which(as.vector(mask) > 0)
+  labels[inside] <- rep_len(1:4, length(inside))
+  region_mask <- neuroim2::NeuroVol(labels, neuroim2::space(mask))
+
+  old_opt <- options(rMVPA.profile_searchlight = TRUE)
+  on.exit(options(old_opt), add = TRUE)
+
+  res <- suppressWarnings(run_regional(
+    mspec,
+    region_mask,
+    backend = "default",
+    preflight = "off"
+  ))
+
+  timing <- attr(res, "timing")
+  expect_type(timing, "list")
+  expect_type(timing$iterate, "list")
+  expect_gt(timing$iterate$totals$frame_bytes_max, 0)
 })
 
 test_that("profiling mode does not change searchlight output maps", {
