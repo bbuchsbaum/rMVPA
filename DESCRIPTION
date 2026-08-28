@@ -172,9 +172,7 @@ Suggests:
 VignetteBuilder: knitr
 Remotes:
     bbuchsbaum/albersdown,
-    bbuchsbaum/fmriAR,
     bbuchsbaum/fmridesign,
-    bbuchsbaum/fmrihrf,
     bbuchsbaum/fmrilss,
     bbuchsbaum/neuroim2,
     bbuchsbaum/neurosurf,
@@ -183,4 +181,13 @@ Encoding: UTF-8
 NeedsCompilation: yes
 URL: https://github.com/bbuchsbaum/rMVPA, https://bbuchsbaum.github.io/rMVPA/
 BugReports: https://github.com/bbuchsbaum/rMVPA/issues
-Config/Needs/website: albersdown
+Config/Needs/check:
+    github::bbuchsbaum/fmriAR,
+    github::bbuchsbaum/fmrihrf
+Config/Needs/coverage:
+    github::bbuchsbaum/fmriAR,
+    github::bbuchsbaum/fmrihrf
+Config/Needs/website:
+    albersdown,
+    github::bbuchsbaum/fmriAR,
+    github::bbuchsbaum/fmrihrf
