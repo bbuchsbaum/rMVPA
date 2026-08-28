@@ -144,9 +144,9 @@ batch:
   vox_iter <- lapply(sl, function(x) x)
   results <- mvpa_iterate(mspec, vox_iter[1:5],
     ids=seq_along(vox_iter[1:5]))
-#> INFO [2026-08-28 16:58:55] Using automatic searchlight batch size 5 for 5 centers (memory budget 512.0 MiB).
-#> INFO [2026-08-28 16:58:55] Processing batch 1/1 (5 ROIs in this batch)
-#> INFO [2026-08-28 16:58:56] 
+#> INFO [2026-08-28 17:36:43] Using automatic searchlight batch size 5 for 5 centers (memory budget 512.0 MiB).
+#> INFO [2026-08-28 17:36:43] Processing batch 1/1 (5 ROIs in this batch)
+#> INFO [2026-08-28 17:36:44] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 5
 #> - Processed: 5
