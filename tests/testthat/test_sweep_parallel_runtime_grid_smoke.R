@@ -1,10 +1,14 @@
 test_that("parallel runtime sweep script writes dry-run manifests", {
   skip_on_cran()
 
-  script_path <- normalizePath(
-    testthat::test_path("..", "..", "scripts", "sweep_parallel_runtime_grid.R"),
-    mustWork = TRUE
+  script_candidate <- testthat::test_path(
+    "..", "..", "scripts", "sweep_parallel_runtime_grid.R"
   )
+  skip_if_not(
+    file.exists(script_candidate),
+    "the source-only runtime sweep is not installed with the package"
+  )
+  script_path <- normalizePath(script_candidate, mustWork = TRUE)
   out_summary <- tempfile("rmvpa-hpc-sweep-summary-", fileext = ".csv")
   out_raw <- tempfile("rmvpa-hpc-sweep-raw-", fileext = ".csv")
   log_dir <- tempfile("rmvpa-hpc-sweep-logs-")

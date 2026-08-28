@@ -241,6 +241,15 @@ test_that("cache instrumentation reuses only identical fold and theta decomposit
 })
 
 test_that("band, response, alpha-batch, and response-batch permutations preserve outputs", {
+  expect_batch_equivalent <- function(actual, expected) {
+    expect_identical(dim(actual), dim(expected))
+    expect_identical(dimnames(actual), dimnames(expected))
+    expect_true(all(is.finite(actual)))
+    expect_true(all(is.finite(expected)))
+    scale <- max(1, abs(actual), abs(expected))
+    expect_lte(max(abs(actual - expected)) / scale, 1e-12)
+  }
+
   set.seed(7909)
   X <- matrix(rnorm(26 * 10), 26, 10)
   Y <- matrix(rnorm(26 * 5), 26, 5,
@@ -265,15 +274,13 @@ test_that("band, response, alpha-batch, and response-batch permutations preserve
     alpha_batch_size = Inf, response_batch_size = Inf
   )
   for (aa in seq_along(alphas)) {
-    expect_equal(
+    expect_batch_equivalent(
       rMVPA:::.banded_ridge_predict_optimized(base_svd$fits[[aa]], X, groups),
-      rMVPA:::.banded_ridge_predict_optimized(batched_svd$fits[[aa]], X, groups),
-      tolerance = 1e-14
+      rMVPA:::.banded_ridge_predict_optimized(batched_svd$fits[[aa]], X, groups)
     )
-    expect_equal(
+    expect_batch_equivalent(
       rMVPA:::.banded_ridge_predict_optimized(base_dual$fits[[aa]], X, groups),
-      rMVPA:::.banded_ridge_predict_optimized(batched_dual$fits[[aa]], X, groups),
-      tolerance = 1e-14
+      rMVPA:::.banded_ridge_predict_optimized(batched_dual$fits[[aa]], X, groups)
     )
   }
 

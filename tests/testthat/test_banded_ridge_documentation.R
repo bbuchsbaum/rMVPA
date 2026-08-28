@@ -20,6 +20,15 @@ context("banded ridge documentation and certification artifacts")
   file.path(.brdoc_source_root(), ...)
 }
 
+.brdoc_inst_file <- function(...) {
+  source_path <- .brdoc_root_file("inst", ...)
+  if (file.exists(source_path)) return(source_path)
+
+  installed_path <- system.file(..., package = "rMVPA")
+  if (nzchar(installed_path)) return(installed_path)
+  source_path
+}
+
 test_that("source, Rd, NEWS, and pkgdown agree on the public lifecycle", {
   vignette_path <- .brdoc_root_file("vignettes", "Banded_Ridge_Encoding.Rmd")
   model_rd_path <- .brdoc_root_file("man", "banded_ridge_model.Rd")
@@ -71,10 +80,14 @@ test_that("source, Rd, NEWS, and pkgdown agree on the public lifecycle", {
 })
 
 test_that("the executable guide exposes the complete user journey without internals", {
-  vignette <- readLines(
-    .brdoc_root_file("vignettes", "Banded_Ridge_Encoding.Rmd"),
-    warn = FALSE
+  vignette_path <- .brdoc_root_file(
+    "vignettes", "Banded_Ridge_Encoding.Rmd"
   )
+  skip_if_not(
+    file.exists(vignette_path),
+    "the source vignette is not installed with the package"
+  )
+  vignette <- readLines(vignette_path, warn = FALSE)
   text <- paste(vignette, collapse = "\n")
   expected_calls <- c(
     "feature_sets(", "feature_sets_design(", "banded_ridge_model(",
@@ -95,7 +108,7 @@ test_that("the executable guide exposes the complete user journey without intern
   expect_match(text, "himalaya")
 })
 
-test_that("constructor defaults and generated usage are documented exactly", {
+test_that("constructor defaults and exports are stable", {
   defaults <- formals(banded_ridge_model)
   expect_identical(eval(defaults$theta_method)[[1L]], "grid")
   expect_null(defaults$delta_sets)
@@ -105,13 +118,23 @@ test_that("constructor defaults and generated usage are documented exactly", {
 
   exports <- getNamespaceExports("rMVPA")
   expect_true(all(c("banded_ridge_model", "run_banded_ridge") %in% exports))
-  namespace <- readLines(.brdoc_root_file("NAMESPACE"), warn = FALSE)
+})
+
+test_that("generated namespace and usage document the public contract", {
+  namespace_path <- .brdoc_root_file("NAMESPACE")
+  model_rd_path <- .brdoc_root_file("man", "banded_ridge_model.Rd")
+  skip_if_not(
+    all(file.exists(c(namespace_path, model_rd_path))),
+    "generated source documentation is not installed with the package"
+  )
+
+  namespace <- readLines(namespace_path, warn = FALSE)
   expect_true(any(namespace == "S3method(print,banded_ridge_result)"))
   expect_true(any(namespace == "S3method(run_regional,banded_ridge_model)"))
   expect_true(any(namespace == "S3method(run_searchlight,banded_ridge_model)"))
 
   model_rd <- paste(readLines(
-    .brdoc_root_file("man", "banded_ridge_model.Rd"), warn = FALSE
+    model_rd_path, warn = FALSE
   ), collapse = "\n")
   expect_match(model_rd, "delta_sets = NULL", fixed = TRUE)
   expect_match(model_rd, "theta_method = c(\"grid\", \"fixed\", \"random\")",
@@ -174,11 +197,11 @@ test_that("hosted artifact and Windows linkage gates are explicit", {
 })
 
 test_that("issue 70 receipt declares seeds, folds, candidates, and uncertainty inputs", {
-  results_path <- .brdoc_root_file(
-    "inst", "extdata", "banded_ridge_issue70_results.csv"
+  results_path <- .brdoc_inst_file(
+    "extdata", "banded_ridge_issue70_results.csv"
   )
-  script_path <- .brdoc_root_file(
-    "inst", "benchmarks", "banded_ridge_issue70.R"
+  script_path <- .brdoc_inst_file(
+    "benchmarks", "banded_ridge_issue70.R"
   )
   expect_true(file.exists(results_path))
   expect_true(file.exists(script_path))
@@ -210,11 +233,11 @@ test_that("issue 70 receipt declares seeds, folds, candidates, and uncertainty i
 })
 
 test_that("performance receipt separates timing snapshots from allocation contracts", {
-  results_path <- .brdoc_root_file(
-    "inst", "extdata", "banded_ridge_performance_results.csv"
+  results_path <- .brdoc_inst_file(
+    "extdata", "banded_ridge_performance_results.csv"
   )
-  script <- readLines(.brdoc_root_file(
-    "inst", "benchmarks", "banded_ridge_performance.R"
+  script <- readLines(.brdoc_inst_file(
+    "benchmarks", "banded_ridge_performance.R"
   ), warn = FALSE)
   results <- utils::read.csv(results_path, stringsAsFactors = FALSE)
 
