@@ -77,7 +77,26 @@ test_that("install_cli copies packaged wrappers", {
 
   expect_setequal(names(paths), c("searchlight", "regional"))
   expect_true(all(file.exists(paths)))
-  expect_true(all(file.access(paths, mode = 1) == 0))
+  if (.Platform$OS.type == "unix") {
+    expect_true(all(file.access(paths, mode = 1) == 0))
+  }
+
+  rscript <- file.path(R.home("bin"), "Rscript")
+  for (path in paths) {
+    version <- system2(
+      rscript,
+      c(shQuote(path), "--version"),
+      stdout = TRUE,
+      stderr = TRUE
+    )
+    version_status <- attr(version, "status")
+    if (is.null(version_status)) version_status <- 0L
+    expect_equal(version_status, 0L, info = path)
+    expect_true(any(grepl(
+      "^[0-9]+[.][0-9]+[.][0-9]+$",
+      trimws(version)
+    )), info = path)
+  }
 })
 
 test_that("cli parser accepts canonical and legacy option spellings", {
