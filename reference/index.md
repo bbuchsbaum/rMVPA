@@ -39,6 +39,9 @@ All functions exported by rMVPA
   : Grouped (banded) ridge domain-adaptation model (continuous
   predictors -\> brain)
 
+- [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md)
+  : First-class single-domain banded-ridge encoding model
+
 - [`binary_classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.md)
   : Classification results for binary outcome
 
@@ -445,6 +448,9 @@ All functions exported by rMVPA
 
 - [`run_analysis()`](https://bbuchsbaum.github.io/rMVPA/reference/run_analysis.md)
   : Run a Built Analysis
+
+- [`run_banded_ridge()`](https://bbuchsbaum.github.io/rMVPA/reference/run_banded_ridge.md)
+  : Run a chunked whole-brain banded-ridge encoding analysis
 
 - [`run_custom_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.md)
   : Run a Custom Analysis Function Regionally

@@ -20,6 +20,15 @@ Essential concepts and basic workflows
 - [Feature Selection in
   rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md):
 
+### Voxelwise Encoding Models
+
+Fit leakage-safe grouped encoding models with per-response tuning,
+scalable solvers, explicit storage contracts, and predictive band
+drop-out.
+
+- [Fit a Blocked Voxelwise Banded-Ridge Encoding
+  Model](https://bbuchsbaum.github.io/rMVPA/articles/Banded_Ridge_Encoding.md):
+
 ### Standard MVPA Analysis
 
 Classification and regression analyses using searchlight and regional

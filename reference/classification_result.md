@@ -74,6 +74,6 @@ cres <- classification_result(yobs, predicted, probs)
 
 # Compute default performance measures (Accuracy, AUC)
 performance(cres)
-#>    Accuracy         AUC 
-#>  0.25000000 -0.04666667 
+#>   Accuracy        AUC 
+#> 0.10000000 0.01333333 
 ```

@@ -48,6 +48,8 @@ grouped continuous predictors for stimulus-&gt;brain regression.</p>
 <span>  <span class="va">X_train</span>,</span>
 <span>  X_test <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  block_var_test <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  block_var_train <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  time_series <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  target_builder <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  target_builder_data <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  n_test <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -70,6 +72,18 @@ grouped continuous predictors for stimulus-&gt;brain regression.</p>
 <dt id="arg-block-var-test">block_var_test<a class="anchor" aria-label="anchor" href="#arg-block-var-test"></a></dt>
 <dd><p>Optional integer/factor vector of length T_rec defining
 test/target blocks (typically runs). Used by models that do test-time CV.</p></dd>
+
+
+<dt id="arg-block-var-train">block_var_train<a class="anchor" aria-label="anchor" href="#arg-block-var-train"></a></dt>
+<dd><p>Optional integer/factor vector with one value per
+training row. Single-domain models use this design-owned metadata for
+blocked outer and tuning folds.</p></dd>
+
+
+<dt id="arg-time-series">time_series<a class="anchor" aria-label="anchor" href="#arg-time-series"></a></dt>
+<dd><p>Logical scalar declaring that training rows are temporally
+ordered observations. Models must then use intact blocks or an explicit
+temporal purge rather than unsafe random row-wise CV.</p></dd>
 
 
 <dt id="arg-target-builder">target_builder<a class="anchor" aria-label="anchor" href="#arg-target-builder"></a></dt>

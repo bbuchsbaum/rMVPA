@@ -2,6 +2,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/404.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/CLAUDE.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/LICENSE-text.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/articles/Banded_Ridge_Encoding.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/articles/CommandLineScripts.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.html</loc></url>
@@ -45,6 +46,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/balance_partitions.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_da_model.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/blocks.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/build_adjusted_null.html</loc></url>
@@ -214,6 +216,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/run_analysis.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/run_banded_ridge.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/run_custom_regional.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/run_future-methods.html</loc></url>
