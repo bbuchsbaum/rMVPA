@@ -43,6 +43,7 @@ jobs:
           needs: check
           extra-packages: |
             any::testthat
+            local::.
             ${{ matrix.extra_packages }}
 
       - name: Run capability tests

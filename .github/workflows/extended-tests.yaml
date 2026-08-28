@@ -28,7 +28,7 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           needs: check
-          extra-packages: any::testthat
+          extra-packages: any::testthat, local::.
 
       - name: Run extended searchlight/regional tests
         run: |

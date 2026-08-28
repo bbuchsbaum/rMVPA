@@ -142,6 +142,29 @@ test_that("the hosted dependency chain is declared explicitly", {
   }
 })
 
+test_that("hosted artifact and Windows linkage gates are explicit", {
+  workflow_paths <- c(
+    .brdoc_root_file(".github", "workflows", "extended-tests.yaml"),
+    .brdoc_root_file(".github", "workflows", "capability-tests.yaml")
+  )
+  makevars_path <- .brdoc_root_file("src", "Makevars")
+  skip_if_not(
+    all(file.exists(c(workflow_paths, makevars_path))),
+    "source-only CI artifacts are excluded from the tarball"
+  )
+
+  workflows <- lapply(workflow_paths, readLines, warn = FALSE)
+  expect_true(all(vapply(
+    workflows,
+    function(lines) any(grepl("local::.", lines, fixed = TRUE)),
+    logical(1L)
+  )))
+  makevars <- paste(readLines(makevars_path, warn = FALSE), collapse = "\n")
+  expect_match(makevars, "$(LAPACK_LIBS)", fixed = TRUE)
+  expect_match(makevars, "$(BLAS_LIBS)", fixed = TRUE)
+  expect_match(makevars, "$(FLIBS)", fixed = TRUE)
+})
+
 test_that("issue 70 receipt declares seeds, folds, candidates, and uncertainty inputs", {
   results_path <- .brdoc_root_file(
     "inst", "extdata", "banded_ridge_issue70_results.csv"
