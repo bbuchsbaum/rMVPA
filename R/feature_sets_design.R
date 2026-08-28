@@ -43,6 +43,12 @@
 #' @param X_test Optional `feature_sets` object (test/target predictors).
 #' @param block_var_test Optional integer/factor vector of length T_rec defining
 #'   test/target blocks (typically runs). Used by models that do test-time CV.
+#' @param block_var_train Optional integer/factor vector with one value per
+#'   training row. Single-domain models use this design-owned metadata for
+#'   blocked outer and tuning folds.
+#' @param time_series Logical scalar declaring that training rows are temporally
+#'   ordered observations. Models must then use intact blocks or an explicit
+#'   temporal purge rather than unsafe random row-wise CV.
 #' @param target_builder Optional function that rebuilds target-domain predictors
 #'   per outer target fold. It is called with named arguments including
 #'   `X_train`, `X_test`, `train_idx`, `test_idx`, `fold_id`, `block_var_test`,
@@ -75,6 +81,8 @@
 feature_sets_design <- function(X_train,
                                 X_test = NULL,
                                 block_var_test = NULL,
+                                block_var_train = NULL,
+                                time_series = FALSE,
                                 target_builder = NULL,
                                 target_builder_data = NULL,
                                 n_test = NULL,
@@ -95,6 +103,16 @@ feature_sets_design <- function(X_train,
 
   T_enc <- nrow(X_train$X)
   train_df <- data.frame(.dummy = rep(1L, T_enc))
+  if (!is.null(block_var_train)) {
+    if (length(block_var_train) != T_enc || anyNA(block_var_train)) {
+      stop("feature_sets_design: block_var_train must have one non-missing value per training row.",
+           call. = FALSE)
+    }
+    train_df$.block <- block_var_train
+  }
+  if (!is.logical(time_series) || length(time_series) != 1L || is.na(time_series)) {
+    stop("feature_sets_design: time_series must be TRUE or FALSE.", call. = FALSE)
+  }
 
   T_rec <- NULL
   if (!is.null(X_test)) {
@@ -137,6 +155,8 @@ feature_sets_design <- function(X_train,
   mvdes$X_train <- X_train
   mvdes$X_test <- X_test
   mvdes$block_var_test <- block_var_test
+  mvdes$block_var_train <- block_var_train
+  mvdes$time_series <- time_series
   mvdes$target_builder <- target_builder
   mvdes$target_builder_data <- target_builder_data
   mvdes$n_test <- T_rec

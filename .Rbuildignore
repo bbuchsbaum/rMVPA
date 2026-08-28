@@ -8,6 +8,7 @@
 ^pkgdown($|/)
 ^\.albersdown\.bak($|/)
 ^\.git($|/)
+^\.mote($|/)
 ^oldR($|/)
 ^\.cursor($|/)
 ^test1($|/)

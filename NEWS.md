@@ -1,5 +1,21 @@
 # rMVPA 0.1.3
 
+* Added first-class single-domain banded-ridge encoding via
+  `banded_ridge_model()` and `run_banded_ridge()`. The public workflow provides
+  leakage-safe nested blocked CV, per-response or shared alpha/theta selection,
+  direct/SVD/dual solvers with allocation and cache provenance, chunked spatial
+  execution, exact outer-fold hyperparameter receipts, and optional OOF
+  predictions or primal/dual weight retention.
+* `feature_sets_design()` now stores training blocks and an explicit time-series
+  declaration. Banded-ridge models reject unsafe random time-series validation,
+  mismatched design rows, overlapping searchlight execution, and retained or
+  intermediate allocation requests above caller-supplied limits.
+* Optional `delta_sets` computes independently retuned predictive
+  leave-one-band-out outer-OOF delta R2. Effects are not clipped and are not an
+  additive unique/shared variance partition. The new executable
+  `Banded_Ridge_Encoding` vignette includes objective scaling, output and
+  storage contracts, a reproducible issue-#70 simulation audit, ecosystem
+  comparison boundaries, and fixed-shape performance receipts.
 * Rank-deficient RSA nuisance designs now retain aliased semi-partial terms as
   named `NA` values instead of failing or silently replacing the complete
   `sp_*` result set with missing maps.

@@ -8,6 +8,8 @@ feature_sets_design(
   X_train,
   X_test = NULL,
   block_var_test = NULL,
+  block_var_train = NULL,
+  time_series = FALSE,
   target_builder = NULL,
   target_builder_data = NULL,
   n_test = NULL,
@@ -21,6 +23,14 @@ feature_sets_design(
 
 \item{block_var_test}{Optional integer/factor vector of length T_rec defining
 test/target blocks (typically runs). Used by models that do test-time CV.}
+
+\item{block_var_train}{Optional integer/factor vector with one value per
+training row. Single-domain models use this design-owned metadata for
+blocked outer and tuning folds.}
+
+\item{time_series}{Logical scalar declaring that training rows are temporally
+ordered observations. Models must then use intact blocks or an explicit
+temporal purge rather than unsafe random row-wise CV.}
 
 \item{target_builder}{Optional function that rebuilds target-domain predictors
 per outer target fold. It is called with named arguments including

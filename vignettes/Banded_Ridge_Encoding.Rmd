@@ -1,0 +1,400 @@
+---
+title: 'Fit a Blocked Voxelwise Banded-Ridge Encoding Model'
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 2
+    css: albers.css
+    includes:
+      in_header: albers-header.html
+params:
+  family: lapis
+  preset: study
+resource_files:
+- albers.css
+- albers.js
+- albers-header.html
+- fonts
+vignette: |
+  %\VignetteIndexEntry{Fit a Blocked Voxelwise Banded-Ridge Encoding Model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+if (requireNamespace("ragg", quietly = TRUE)) knitr::opts_chunk$set(dev = "ragg_png")
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 8,
+  fig.height = 4.5,
+  fig.align = "center"
+)
+
+library(rMVPA)
+library(neuroim2)
+set.seed(20260828)
+```
+
+```{r albers-classes, echo = FALSE, results = 'asis'}
+cat(sprintf(
+  paste0(
+    '<script>document.addEventListener("DOMContentLoaded",function(){',
+    'document.body.classList.remove("palette-red","palette-lapis","palette-ochre","palette-teal","palette-green","palette-violet","preset-homage","preset-interaction","preset-study","preset-structural","preset-adobe","preset-midnight");',
+    'document.body.classList.add("palette-%s","preset-%s");',
+    '});</script>'
+  ),
+  params$family,
+  params$preset
+))
+```
+
+You have several time-aligned feature spaces---for example, visual motion,
+audio, and semantic features---and one BOLD response at every voxel. You want
+to predict each voxel on observations the model never saw, while allowing
+different feature spaces and different voxels to need different amounts of
+regularization. Randomly splitting a time series would leak temporal context,
+so the validation units must remain intact.
+
+This guide builds that analysis with three contiguous stimulus segments. By
+the end, you will have voxelwise outer out-of-fold predictions, MSE,
+correlation, R2, the alpha and feature-space weights selected inside each outer
+training set, and optional predictive leave-one-band-out delta R2 maps.
+
+```{r example-builder, include = FALSE}
+build_encoding_example <- function(seed = 20260828L) {
+  set.seed(seed)
+  n <- 36L
+  dims <- c(3L, 3L, 2L)
+  blocks_train <- rep(1:3, each = 12L)
+  X <- matrix(rnorm(n * 8L), n, 8L)
+  colnames(X) <- c(paste0("visual_", 1:4), paste0("semantic_", 1:4))
+  beta <- matrix(0, 8L, prod(dims))
+  beta[1:4, 1:9] <- matrix(rnorm(4L * 9L, sd = 0.7), 4L, 9L)
+  beta[5:8, 10:15] <- matrix(rnorm(4L * 6L, sd = 0.7), 4L, 6L)
+  beta[, 16:18] <- matrix(rnorm(8L * 3L, sd = 0.2), 8L, 3L)
+  Y <- X %*% beta + matrix(rnorm(n * prod(dims), sd = 0.6), n, prod(dims))
+  data_array <- array(as.vector(t(Y)), c(dims, n))
+  dataset <- mvpa_dataset(
+    NeuroVec(data_array, NeuroSpace(c(dims, n), c(1, 1, 1))),
+    mask = NeuroVol(array(1, dims), NeuroSpace(dims, c(1, 1, 1)))
+  )
+  list(X = X, Y = Y, blocks = blocks_train, dataset = dataset)
+}
+
+example <- build_encoding_example()
+```
+
+## What are the inputs?
+
+Rows of the predictor matrix must align exactly with volumes in the image
+series. `blocks()` receives **numbers of columns**, not column indices. The
+design owns both feature-band membership and the training block metadata, so
+the model cannot receive a second, conflicting band specification.
+
+```{r construct-design}
+features <- feature_sets(
+  example$X,
+  blocks(visual = 4, semantic = 4)
+)
+
+design <- feature_sets_design(
+  features,
+  block_var_train = example$blocks,
+  time_series = TRUE
+)
+```
+
+The example has 36 observations, eight predictors in two named bands, three
+independent temporal segments, and 18 active voxels.
+
+```{r input-overview, echo = FALSE}
+input_overview <- data.frame(
+  observations = nrow(example$X),
+  predictors = ncol(example$X),
+  feature_bands = length(features$set_order),
+  temporal_blocks = length(unique(example$blocks)),
+  active_voxels = sum(example$dataset$mask > 0)
+)
+knitr::kable(input_overview, caption = "Aligned inputs for the worked example.")
+```
+
+## How do you fit the model safely?
+
+The outer folds estimate generalization. The inner folds choose
+hyperparameters using only the corresponding outer-training rows. Because the
+design declares a time series, rMVPA refuses an unsafe random split unless you
+provide intact blocks or an explicit temporal purge.
+
+```{r fit-model}
+model <- banded_ridge_model(
+  example$dataset, design,
+  outer_crossval = 3, tune_crossval = 2,
+  alphas = c(0.1, 1, 10),
+  theta_method = "grid", theta_grid_points = 3,
+  target_batch_size = 7, return_predictions = TRUE,
+  delta_sets = "all"
+)
+
+result <- run_banded_ridge(model)
+```
+
+```{r validate-model, include = FALSE}
+stopifnot(
+  inherits(model, "banded_ridge_model"),
+  inherits(result, "banded_ridge_result"),
+  identical(dim(result$predictions), c(36L, 18L)),
+  identical(result$active_response_ids, 1:18),
+  nrow(result$metrics) == 18L,
+  nrow(result$hyperparameters) == 18L * 3L,
+  all(is.finite(result$metrics$mse)),
+  stats::sd(result$metrics$correlation) > 0,
+  identical(result$provenance$conceptual_model_count, 3L),
+  identical(result$provenance$outer_fold_ids,
+            names(result$predictive_leave_one_band_out$
+                    provenance$matched_outer_test_rows)),
+  setequal(
+    names(result$predictive_leave_one_band_out$maps),
+    c("delta_cv_r2_visual", "delta_cv_r2_semantic")
+  ),
+  any(abs(result$predictive_leave_one_band_out$effects[, 3:4]) > 1e-6)
+)
+```
+
+The compact result table is already in original voxel order. These are pooled
+outer out-of-fold metrics: every observation contributes once, from the outer
+fold in which it was held out.
+
+```{r inspect-metrics}
+head(result$metrics)
+```
+
+The hyperparameter table is deliberately fold-specific. A single averaged
+alpha or theta map is convenient for visualization, but this table is the
+exact record of what generated each fold's predictions.
+
+```{r inspect-hyperparameters}
+head(result$hyperparameters[, c(
+  "voxel_index", "outer_fold", "alpha",
+  "theta_visual", "theta_semantic", "inner_score"
+)])
+```
+
+```{r plot-summary, echo = FALSE}
+plot_encoding_summary <- function(result) {
+  old_par <- graphics::par(no.readonly = TRUE)
+  on.exit(graphics::par(old_par), add = TRUE)
+  graphics::par(mfrow = c(1, 2), mar = c(4, 4, 2, 0.5))
+  graphics::plot(
+    sort(result$metrics$correlation), pch = 19,
+    xlab = "Voxel rank", ylab = "Outer-OOF correlation",
+    main = "Predictive performance"
+  )
+  graphics::abline(h = 0, lty = 2, col = "grey50")
+  effects <- result$predictive_leave_one_band_out$effects[, 3:4]
+  graphics::boxplot(
+    effects, names = c("visual", "semantic"),
+    ylab = expression(Delta * R^2),
+    main = "Predictive band drop-out"
+  )
+  graphics::abline(h = 0, lty = 2, col = "grey50")
+}
+
+plot_encoding_summary(result)
+```
+
+Positive and negative values are both meaningful. A negative delta means the
+independently retuned reduced model predicted better in these finite samples;
+the value is never clipped.
+
+## Which loss and which score are you reading?
+
+Three quantities answer different questions:
+
+1. `inner_score` is the selection loss. The default is MSE computed from inner
+   out-of-fold predictions within one outer-training set. Correlation and R2
+   are explicit opt-in selection criteria.
+2. `mse`, `correlation`, and `r2` in `result$metrics` are descriptive scores
+   computed after concatenating the outer out-of-fold predictions. They are
+   not the inner selection scores.
+3. `delta_cv_r2_<band>` is `R2_full - R2_without_band`, using the same outer
+   test rows for both models. Each reduced model is tuned again. This is a
+   predictive leave-one-band-out effect, not an additive unique/shared
+   variance decomposition, so effects need not sum to the full-model R2.
+
+The fitted objective for a fixed candidate is
+
+\[
+  \widehat B = \arg\min_B
+  \lVert Y - XB \rVert_F^2 +
+  \sum_g \frac{\alpha}{\theta_g}\lVert B_g \rVert_F^2,
+\]
+
+where non-negative theta values sum to one. `theta_g = 0` excludes a band
+exactly. The squared-error term is not divided by the number of observations,
+so alpha is on the scale of the training cross-product. Centering and scaling
+are learned separately inside every training split. Equal theta values recover
+ordinary ridge after accounting for scale: with `G` bands and ordinary ridge
+penalty `lambda`, use `theta_g = 1/G` and `alpha = lambda/G`.
+
+## What is retained, and what can become large?
+
+The constructor resolves the solver and estimates retained output storage
+before fitting. The default keeps metrics and hyperparameters but not the full
+prediction matrix, coefficients, or nested diagnostics. Request those outputs
+only when you need them.
+
+```{r allocation-plan, echo = FALSE}
+allocation <- data.frame(
+  chosen_solver = model$solver,
+  reason = model$solver_plan$reason,
+  predictions_MiB = model$retention_estimated_bytes[["predictions"]] / 1024^2,
+  attribution_MiB = model$retention_estimated_bytes[["attribution"]] / 1024^2,
+  total_retained_MiB = model$retention_estimated_bytes[["total"]] / 1024^2
+)
+knitr::kable(allocation, digits = 4,
+             caption = "Decision and retained-storage estimate available before fitting.")
+```
+
+Use `weight_retention = "primal"` for outer-fold coefficient matrices or
+`"dual"` for outer-fold sample-space weights. `max_retained_mb` refuses an
+unsafe request before allocation; `weight_overflow = "none"` may explicitly
+fall back to no weights. `memory_limit_mb` independently guards solver
+intermediates. Runtime provenance records the chosen solver, chunk manifest,
+decomposition/cache counts, maximum chunk result size, and the B+1 cost of
+requested drop-out models.
+
+For `F` outer folds, `K` inner folds, `T` theta candidates, `A` alphas, and
+response chunks of size `B`, tuning evaluates approximately `F * K * T * A`
+candidate fits per conceptual model and then performs outer refits. Optimized
+paths reuse a decomposition across alpha values only when the training rows
+and theta are unchanged. Changing theta changes the scaled design/kernel and
+requires another decomposition; there is no claim of one decomposition for
+the entire search.
+
+## What did the issue #70 simulation show when rerun?
+
+Issue #70 reported a large relative gain from per-voxel penalties in one
+simulation. The reproducibility script installed at
+`benchmarks/banded_ridge_issue70.R` defines a concrete successor: two bands,
+40 voxels at SNR 1.0/0.4/0.0, six contiguous outer segments, nested tuning, and
+30 declared seeds. It compares shared alpha/theta with response-specific
+alpha/theta and reports the **absolute** OOF-correlation change.
+
+```{r issue70-load, include = FALSE}
+resolve_inst_file <- function(directory, filename) {
+  installed <- system.file(directory, filename, package = "rMVPA")
+  if (nzchar(installed) && file.exists(installed)) return(installed)
+  candidates <- c(
+    file.path("..", "inst", directory, filename),
+    file.path("inst", directory, filename)
+  )
+  found <- candidates[file.exists(candidates)]
+  if (!length(found)) stop("Cannot locate installed certification artifact.")
+  normalizePath(found[[1L]])
+}
+
+issue70 <- utils::read.csv(resolve_inst_file(
+  "extdata", "banded_ridge_issue70_results.csv"
+))
+issue70_by_rep <- aggregate(
+  cbind(shared_oof_correlation, response_oof_correlation,
+        absolute_correlation_gain) ~ seed + snr,
+  issue70, mean
+)
+issue70_summary <- do.call(rbind, lapply(
+  split(issue70_by_rep, issue70_by_rep$snr),
+  function(x) data.frame(
+    SNR = x$snr[[1L]],
+    shared_r = mean(x$shared_oof_correlation),
+    response_specific_r = mean(x$response_oof_correlation),
+    absolute_gain = mean(x$absolute_correlation_gain),
+    gain_q025 = unname(stats::quantile(x$absolute_correlation_gain, 0.025)),
+    gain_q975 = unname(stats::quantile(x$absolute_correlation_gain, 0.975))
+  )
+))
+
+# Re-run the first declared seed and compare with the bundled receipt. This
+# prevents the rendered table from silently surviving script/API drift.
+benchmark_environment <- new.env(parent = globalenv())
+sys.source(resolve_inst_file("benchmarks", "banded_ridge_issue70.R"),
+           envir = benchmark_environment)
+first_seed <- min(issue70$seed)
+rechecked <- benchmark_environment$issue70_one_replication(first_seed)
+stored_first <- issue70[issue70$seed == first_seed, ]
+stored_first <- stored_first[match(rechecked$response, stored_first$response), ]
+stopifnot(
+  length(unique(issue70$seed)) == 30L,
+  identical(sort(unique(issue70$snr)), c(0, 0.4, 1)),
+  max(abs(rechecked$shared_oof_correlation -
+            stored_first$shared_oof_correlation)) < 1e-12,
+  max(abs(rechecked$response_oof_correlation -
+            stored_first$response_oof_correlation)) < 1e-12,
+  identical(rechecked$fold_manifest, stored_first$fold_manifest),
+  identical(rechecked$candidate_manifest, stored_first$candidate_manifest)
+)
+```
+
+```{r issue70-summary, echo = FALSE}
+knitr::kable(
+  issue70_summary, digits = 3,
+  caption = paste0(
+    "Issue #70 successor simulation. Intervals are empirical 2.5% and 97.5% ",
+    "quantiles of replication-level mean absolute gains."
+  )
+)
+```
+
+This registered variant did **not** reproduce the earlier 78% claim. At SNR
+0.4, response-specific tuning changed OOF correlation by about -0.048 in
+absolute units (replication interval about -0.069 to -0.030). The result is
+specific to this data-generating process, MSE selection rule, and candidate
+grid; it is neither evidence that shared tuning is universally better nor a
+correctness test. Across pure-noise voxels, the replication-level mean
+response-specific correlation was close to zero (about -0.023; empirical 95%
+interval about -0.092 to 0.013). The direct/SVD/dual oracles, leakage
+mutations, and attribution adversaries provide correctness evidence instead.
+
+## How does this relate to other ridge tools?
+
+Choose by estimand and execution environment, then compare on identical folds,
+preprocessing, candidate sets, and response scoring.
+
+| Tool | Useful when | Important comparison boundary |
+|---|---|---|
+| Ordinary ridge | One common penalty across all feature columns is the scientific model | In rMVPA, use fixed equal theta and convert ordinary `lambda` to `alpha = lambda/G` |
+| [glmnet](https://cran.r-project.org/package=glmnet) | You need elastic-net/lasso paths or its established sparse-matrix tooling | `mgaussian` is a multi-task group penalty across responses; its objective scaling and standardization conventions differ |
+| [multiridge](https://cran.r-project.org/package=multiridge) | You want its multi-penalty CV or marginal-likelihood workflows for high-dimensional data blocks | Its optimization, preprocessing, and response model are not assumed to be numerically identical to this nested voxelwise estimand |
+| [himalaya](https://gallantlab.org/himalaya/) | You want Python, CPU/GPU backends, or multiple-kernel/group-ridge solvers at very large target counts | It is an external parity target, not an rMVPA dependency; align folds, centering, alpha/theta parameterization, and precision before comparing |
+
+The bundled fixed-shape performance receipt likewise characterizes, rather
+than proves superiority. On the recorded Apple M3 Max / R 4.5.1 run, the
+`n = 60, p = 512, V = 12` public workflow took median 0.226 seconds with the
+direct backend and 0.099 seconds with each optimized backend over five runs.
+The solver planner estimated 2.15 MB, 0.33 MB, and 0.17 MB of intermediate
+storage respectively. Wall times are tracked as snapshots; CI enforces
+structural shape, batching, allocation, cache, and numerical-parity contracts
+instead of brittle timing cutoffs.
+
+```{r performance-receipt, include = FALSE}
+performance <- utils::read.csv(resolve_inst_file(
+  "extdata", "banded_ridge_performance_results.csv"
+))
+stopifnot(
+  setequal(performance$shape, c("small", "wide")),
+  setequal(performance$solver, c("direct", "svd_primal", "dual_kernel")),
+  all(performance$elapsed_median_seconds > 0),
+  all(performance$estimated_solver_intermediate_peak_bytes > 0),
+  max(performance$max_abs_prediction_error_vs_direct) < 1e-10
+)
+```
+
+## Where should you go next?
+
+Use `?banded_ridge_model` for the complete objective, candidate, storage, and
+failure contracts; `?run_banded_ridge` for the result schema and regional
+batching rules; and `vignette("CrossValidation")` for broader validation
+design. For temporally ordered data, decide the independent blocks or purge
+from the acquisition and stimulus design before choosing a solver.
