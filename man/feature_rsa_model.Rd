@@ -7,7 +7,7 @@
 feature_rsa_model(
   dataset,
   design,
-  method = c("pls", "pca", "glmnet"),
+  method = c("pls", "pca", "glmnet", "ridge"),
   crossval = NULL,
   ncomp_selection = c("loo", "max", "pve", "blocked"),
   pve_threshold = 0.9,
@@ -18,6 +18,7 @@ feature_rsa_model(
   permute_by = c("features", "observations"),
   save_distributions = FALSE,
   return_rdm_vectors = FALSE,
+  lambda_selection = c("gcv", "loo", "blocked", "fixed"),
   ...
 )
 }
@@ -34,6 +35,8 @@ and including the component limit (`max_comps`).}
   \item{pca}{Principal Component Regression predicting X from PCs of F
     using the algorithm configured by \code{pls::pls.options()} (SVD-PCR
     by default).}
+  \item{ridge}{Multi-response ridge regression predicting X from F with
+    an economy-SVD solver and a normalized penalty.}
   \item{glmnet}{Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.}
 }}
 
@@ -56,7 +59,7 @@ is chosen for \code{pls} and \code{pca} methods.  One of:
     every outer fold.}
   \item{max}{Use all \code{max_comps} components (legacy behaviour).}
 }
-Ignored when \code{method = "glmnet"}.}
+Ignored when \code{method} is \code{"ridge"} or \code{"glmnet"}.}
 
 \item{pve_threshold}{Numeric in (0, 1].  When \code{ncomp_selection = "pve"},
 the proportion of total explained X-variance at which to stop adding
@@ -69,9 +72,13 @@ Defaults to 0.5 (equal mix of ridge and lasso).}
 \item{cv_glmnet}{Logical, if TRUE and method="glmnet", use cv.glmnet to automatically select the
 optimal lambda value via cross-validation. Defaults to FALSE.}
 
-\item{lambda}{Optional numeric value or sequence of values, only used when method="glmnet" and
-cv_glmnet=FALSE. Specifies the regularization parameter. If NULL (default), a sequence will be 
-automatically determined by glmnet.}
+\item{lambda}{Optional numeric value or sequence of regularization values.
+For \code{method = "ridge"}, values must be finite and non-negative and
+correspond to the normalized objective
+\eqn{n^{-1} ||Y-XB||_F^2 + \lambda ||B||_F^2}; \code{NULL} uses a fixed,
+data-independent grid. For \code{method = "glmnet"} with
+\code{cv_glmnet = FALSE}, values must be positive; \code{NULL} lets glmnet
+construct its path.}
 
 \item{nperm}{Integer, number of permutations to run for statistical testing of model performance
 metrics after merging cross-validation folds. Default 0 (no permutation testing).}
@@ -85,6 +92,15 @@ from the permutation test. Defaults to FALSE.}
 lower-triangle RDM vector in the regional result's `fits` slot. This is
 off by default because it can add substantial memory use for long time
 series or many ROIs.}
+
+\item{lambda_selection}{Character string controlling ridge penalty selection.
+\code{"gcv"} (default) minimizes generalized cross-validation error from
+one full-fold SVD. \code{"loo"} uses exact analytic leave-one-observation-out
+PRESS errors and the one-standard-error rule. \code{"blocked"} uses
+leave-one-block-out errors, with centering and scaling re-estimated inside
+every inner split, and the one-standard-error rule; it requires
+\code{design$block_var}. \code{"fixed"} requires one supplied \code{lambda}.
+Ignored for other methods.}
 
 \item{...}{Additional arguments (currently unused). Passing deprecated
 arguments such as \code{cache_pca} now results in an error.}
@@ -106,6 +122,9 @@ sets an upper limit on the number of components fitted:
   - \strong{pca}: Principal Component Regression using the configured
     \pkg{pls} PCR kernel (SVD-PCR by default). Fits up to `max_comps`
     components; selection is controlled by \code{ncomp_selection}.
+  - \strong{ridge}: Multi-response ridge regression using one economy SVD
+    per training matrix. This is a distinct estimator, not an approximation
+    to PLS or elastic net. Its penalty is selected by \code{lambda_selection}.
   - \strong{glmnet}: Elastic net regression via \code{glmnet} with multivariate Gaussian
     response. Regularisation (lambda) can be auto-selected via \code{cv_glmnet=TRUE}.
 
@@ -151,8 +170,10 @@ error for component selection.
   - `p_*`, `z_*`: If `nperm > 0`, permutation-based p-values and z-scores for
     the above metrics.
 
-The number of components actually used (`ncomp`) for the region/searchlight is
-also included in the performance output.
+For PLS, PCR, and glmnet, the number of components or its historical proxy
+(`ncomp`) is included in the performance output. Ridge instead reports the
+median selected penalty (`median_lambda`) and mean effective degrees of
+freedom (`mean_effective_df`) across outer folds.
 }
 \examples{
 \donttest{

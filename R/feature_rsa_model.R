@@ -118,6 +118,8 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'     \item{pca}{Principal Component Regression predicting X from PCs of F
 #'       using the algorithm configured by \code{pls::pls.options()} (SVD-PCR
 #'       by default).}
+#'     \item{ridge}{Multi-response ridge regression predicting X from F with
+#'       an economy-SVD solver and a normalized penalty.}
 #'     \item{glmnet}{Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.}
 #'   }
 #' @param crossval Optional cross-validation specification.
@@ -138,18 +140,30 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'       every outer fold.}
 #'     \item{max}{Use all \code{max_comps} components (legacy behaviour).}
 #'   }
-#'   Ignored when \code{method = "glmnet"}.
+#'   Ignored when \code{method} is \code{"ridge"} or \code{"glmnet"}.
 #' @param pve_threshold Numeric in (0, 1].  When \code{ncomp_selection = "pve"},
 #'   the proportion of total explained X-variance at which to stop adding
 #'   components.  Default 0.9.
+#' @param lambda_selection Character string controlling ridge penalty selection.
+#'   \code{"gcv"} (default) minimizes generalized cross-validation error from
+#'   one full-fold SVD. \code{"loo"} uses exact analytic leave-one-observation-out
+#'   PRESS errors and the one-standard-error rule. \code{"blocked"} uses
+#'   leave-one-block-out errors, with centering and scaling re-estimated inside
+#'   every inner split, and the one-standard-error rule; it requires
+#'   \code{design$block_var}. \code{"fixed"} requires one supplied \code{lambda}.
+#'   Ignored for other methods.
 #' @param alpha Numeric value between 0 and 1, only used when method="glmnet". Controls the elastic net
 #'   mixing parameter: 1 for lasso (default), 0 for ridge, values in between for a mixture.
 #'   Defaults to 0.5 (equal mix of ridge and lasso).
 #' @param cv_glmnet Logical, if TRUE and method="glmnet", use cv.glmnet to automatically select the
 #'   optimal lambda value via cross-validation. Defaults to FALSE.
-#' @param lambda Optional numeric value or sequence of values, only used when method="glmnet" and
-#'   cv_glmnet=FALSE. Specifies the regularization parameter. If NULL (default), a sequence will be 
-#'   automatically determined by glmnet.
+#' @param lambda Optional numeric value or sequence of regularization values.
+#'   For \code{method = "ridge"}, values must be finite and non-negative and
+#'   correspond to the normalized objective
+#'   \eqn{n^{-1} ||Y-XB||_F^2 + \lambda ||B||_F^2}; \code{NULL} uses a fixed,
+#'   data-independent grid. For \code{method = "glmnet"} with
+#'   \code{cv_glmnet = FALSE}, values must be positive; \code{NULL} lets glmnet
+#'   construct its path.
 #' @param nperm Integer, number of permutations to run for statistical testing of model performance
 #'   metrics after merging cross-validation folds. Default 0 (no permutation testing).
 #' @param permute_by DEPRECATED. Permutation is always done by shuffling rows of the predicted matrix.
@@ -181,6 +195,9 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   - \strong{pca}: Principal Component Regression using the configured
 #'     \pkg{pls} PCR kernel (SVD-PCR by default). Fits up to `max_comps`
 #'     components; selection is controlled by \code{ncomp_selection}.
+#'   - \strong{ridge}: Multi-response ridge regression using one economy SVD
+#'     per training matrix. This is a distinct estimator, not an approximation
+#'     to PLS or elastic net. Its penalty is selected by \code{lambda_selection}.
 #'   - \strong{glmnet}: Elastic net regression via \code{glmnet} with multivariate Gaussian
 #'     response. Regularisation (lambda) can be auto-selected via \code{cv_glmnet=TRUE}.
 #'
@@ -226,13 +243,15 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   - `p_*`, `z_*`: If `nperm > 0`, permutation-based p-values and z-scores for
 #'     the above metrics.
 #'
-#' The number of components actually used (`ncomp`) for the region/searchlight is
-#' also included in the performance output.
+#' For PLS, PCR, and glmnet, the number of components or its historical proxy
+#' (`ncomp`) is included in the performance output. Ridge instead reports the
+#' median selected penalty (`median_lambda`) and mean effective degrees of
+#' freedom (`mean_effective_df`) across outer folds.
 #'
 #' @export
 feature_rsa_model <- function(dataset,
                                design,
-                               method = c("pls", "pca", "glmnet"),
+                               method = c("pls", "pca", "glmnet", "ridge"),
                                crossval = NULL,
                                ncomp_selection = c("loo", "max", "pve", "blocked"),
                                pve_threshold = 0.9,
@@ -243,10 +262,12 @@ feature_rsa_model <- function(dataset,
                                permute_by = c("features", "observations"),
                                save_distributions = FALSE,
                                return_rdm_vectors = FALSE,
+                               lambda_selection = c("gcv", "loo", "blocked", "fixed"),
                                ...) {
   
   method <- match.arg(method)
   ncomp_selection <- match.arg(ncomp_selection)
+  lambda_selection <- match.arg(lambda_selection)
   permute_by <- match.arg(permute_by)
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "feature_rsa_design"))
@@ -263,6 +284,18 @@ feature_rsa_model <- function(dataset,
   if (component_method && ncomp_selection == "blocked" &&
       is.null(design$block_var)) {
     stop("ncomp_selection='blocked' requires design$block_var.", call. = FALSE)
+  }
+  if (method == "ridge") {
+    ridge_lambdas <- .feature_rsa_ridge_lambdas(lambda)
+    if (lambda_selection == "fixed" && length(ridge_lambdas) != 1L) {
+      stop(
+        "lambda_selection='fixed' requires exactly one finite, non-negative lambda.",
+        call. = FALSE
+      )
+    }
+    if (lambda_selection == "blocked" && is.null(design$block_var)) {
+      stop("lambda_selection='blocked' requires design$block_var.", call. = FALSE)
+    }
   }
   assertthat::assert_that(
     is.logical(return_rdm_vectors) && length(return_rdm_vectors) == 1L && !is.na(return_rdm_vectors),
@@ -336,6 +369,11 @@ feature_rsa_model <- function(dataset,
     model_spec$alpha <- alpha
     model_spec$cv_glmnet <- cv_glmnet
     model_spec$lambda <- lambda
+  } else if (method == "ridge") {
+    model_spec$lambda_selection <- lambda_selection
+    # Preserve an explicit NULL entry. Without exact list assignment, `$lambda`
+    # would partially match `lambda_selection` on ridge specifications.
+    model_spec["lambda"] <- list(lambda)
   }
   
   model_spec$nperm <- nperm
@@ -999,6 +1037,442 @@ feature_rsa_model <- function(dataset,
 }
 
 
+#' Validate or construct the normalized ridge penalty grid
+#'
+#' Feature RSA ridge uses the objective
+#' `mean((Y - X %*% B)^2) + lambda * ||B||_F^2`, up to the response-count
+#' constant.  The corresponding normal equations add `n * lambda` to the
+#' feature cross-product, making a supplied lambda comparable across folds of
+#' different sizes.
+#' @noRd
+.feature_rsa_ridge_lambdas <- function(lambda = NULL) {
+  if (is.null(lambda)) {
+    return(10 ^ seq(-6, 2, length.out = 49L))
+  }
+  if (!is.numeric(lambda) || !length(lambda) || anyNA(lambda) ||
+      any(!is.finite(lambda)) || any(lambda < 0)) {
+    stop("feature RSA ridge lambda values must be finite and non-negative.",
+         call. = FALSE)
+  }
+  sort(unique(as.numeric(lambda)))
+}
+
+
+#' Economy-SVD decomposition for multi-response feature RSA ridge
+#'
+#' The inputs are already on the preprocessing scale selected by the caller.
+#' This helper estimates an unpenalized intercept by centering, but deliberately
+#' does not rescale columns: LOO keeps the outer-fold scale fixed, while blocked
+#' tuning supplies matrices standardized inside each inner training split.
+#' @noRd
+.feature_rsa_ridge_decomposition <- function(predictors, responses) {
+  predictors <- as.matrix(predictors)
+  responses <- as.matrix(responses)
+  predictor_names <- colnames(predictors)
+  response_names <- colnames(responses)
+
+  if (nrow(predictors) != nrow(responses)) {
+    stop("feature RSA ridge: predictors and responses must have the same rows.",
+         call. = FALSE)
+  }
+  if (nrow(predictors) < 2L || ncol(predictors) < 1L ||
+      ncol(responses) < 1L) {
+    stop("feature RSA ridge: invalid matrix dimensions.", call. = FALSE)
+  }
+  if (any(!is.finite(predictors)) || any(!is.finite(responses))) {
+    stop("feature RSA ridge requires finite predictors and responses.",
+         call. = FALSE)
+  }
+
+  predictor_means <- colMeans(predictors)
+  response_means <- colMeans(responses)
+  predictors_centered <- sweep(predictors, 2L, predictor_means, "-")
+  responses_centered <- sweep(responses, 2L, response_means, "-")
+  spectral <- svd(
+    predictors_centered,
+    nu = min(dim(predictors_centered)),
+    nv = min(dim(predictors_centered))
+  )
+  tolerance <- .brs_spectral_tolerance(
+    spectral$d,
+    max(dim(predictors_centered)),
+    tolerance = NULL
+  )
+
+  out <- list(
+    U = spectral$u,
+    d = spectral$d,
+    V = spectral$v,
+    UY = crossprod(spectral$u, responses_centered),
+    responses_centered = responses_centered,
+    response_ss = sum(responses_centered ^ 2),
+    predictor_means = predictor_means,
+    response_means = response_means,
+    predictor_names = predictor_names,
+    response_names = response_names,
+    n = nrow(predictors),
+    p = ncol(predictors),
+    n_response = ncol(responses),
+    tolerance = tolerance,
+    rank = sum(spectral$d > tolerance)
+  )
+  class(out) <- c("feature_rsa_ridge_decomposition", "list")
+  out
+}
+
+
+.feature_rsa_ridge_shrinkage <- function(decomposition, lambda) {
+  if (!inherits(decomposition, "feature_rsa_ridge_decomposition")) {
+    stop("feature RSA ridge requires a spectral decomposition.", call. = FALSE)
+  }
+  lambda <- .feature_rsa_ridge_lambdas(lambda)
+  if (length(lambda) != 1L) {
+    stop("feature RSA ridge fit requires exactly one lambda.", call. = FALSE)
+  }
+  d <- decomposition$d
+  if (lambda == 0) {
+    keep <- d > decomposition$tolerance
+    coefficient <- numeric(length(d))
+    coefficient[keep] <- 1 / d[keep]
+    leverage <- as.numeric(keep)
+  } else {
+    penalty <- decomposition$n * lambda
+    coefficient <- d / (d ^ 2 + penalty)
+    leverage <- d ^ 2 / (d ^ 2 + penalty)
+  }
+  list(
+    lambda = lambda,
+    coefficient = coefficient,
+    leverage = leverage,
+    effective_df = 1 + sum(leverage)
+  )
+}
+
+
+#' Fit a compact multi-response ridge kernel
+#' @noRd
+.feature_rsa_ridge_fit_kernel <- function(predictors,
+                                          responses,
+                                          lambda,
+                                          decomposition = NULL) {
+  predictors <- as.matrix(predictors)
+  responses <- as.matrix(responses)
+  if (is.null(decomposition)) {
+    decomposition <- .feature_rsa_ridge_decomposition(predictors, responses)
+  } else if (!inherits(decomposition, "feature_rsa_ridge_decomposition") ||
+             decomposition$n != nrow(predictors) ||
+             decomposition$p != ncol(predictors) ||
+             decomposition$n_response != ncol(responses)) {
+    stop("feature RSA ridge decomposition does not match the supplied matrices.",
+         call. = FALSE)
+  }
+
+  shrinkage <- .feature_rsa_ridge_shrinkage(decomposition, lambda)
+  coefficients <- decomposition$V %*% sweep(
+    decomposition$UY,
+    1L,
+    shrinkage$coefficient,
+    "*"
+  )
+  dimnames(coefficients) <- list(
+    decomposition$predictor_names,
+    decomposition$response_names
+  )
+
+  out <- list(
+    coefficients = coefficients,
+    Xmeans = decomposition$predictor_means,
+    Ymeans = decomposition$response_means,
+    lambda = shrinkage$lambda,
+    effective_df = shrinkage$effective_df,
+    rank = decomposition$rank,
+    predictor_names = decomposition$predictor_names,
+    response_names = decomposition$response_names
+  )
+  class(out) <- c("feature_rsa_ridge_fit", "list")
+  out
+}
+
+
+#' Predict from a compact feature RSA ridge kernel
+#' @noRd
+.feature_rsa_ridge_predict_kernel <- function(fit, newdata) {
+  if (!inherits(fit, "feature_rsa_ridge_fit")) {
+    stop("feature RSA ridge prediction requires a feature_rsa_ridge_fit.",
+         call. = FALSE)
+  }
+  newdata <- as.matrix(newdata)
+  if (ncol(newdata) != length(fit$Xmeans)) {
+    stop(sprintf(
+      "feature RSA ridge prediction: expected %d columns, got %d.",
+      length(fit$Xmeans), ncol(newdata)
+    ), call. = FALSE)
+  }
+  if (any(!is.finite(newdata))) {
+    stop("feature RSA ridge prediction requires finite newdata.",
+         call. = FALSE)
+  }
+  predicted <- sweep(newdata, 2L, fit$Xmeans, "-") %*%
+    fit$coefficients
+  predicted <- sweep(predicted, 2L, fit$Ymeans, "+")
+  if (!is.null(fit$response_names)) {
+    colnames(predicted) <- fit$response_names
+  }
+  predicted
+}
+
+
+#' Generalized cross-validation scores for normalized ridge penalties
+#' @noRd
+.feature_rsa_ridge_gcv_scores <- function(decomposition, lambdas) {
+  lambdas <- .feature_rsa_ridge_lambdas(lambdas)
+  response_projection_ss <- rowSums(decomposition$UY ^ 2)
+  vapply(lambdas, function(lambda) {
+    shrinkage <- .feature_rsa_ridge_shrinkage(decomposition, lambda)
+    h <- shrinkage$leverage
+    rss <- decomposition$response_ss -
+      sum((2 * h - h ^ 2) * response_projection_ss)
+    rss <- max(rss, 0)
+    denominator <- 1 - shrinkage$effective_df / decomposition$n
+    if (!is.finite(denominator) || denominator <= sqrt(.Machine$double.eps)) {
+      return(Inf)
+    }
+    (rss / (decomposition$n * decomposition$n_response)) /
+      denominator ^ 2
+  }, numeric(1L))
+}
+
+
+#' Observation-wise analytic PRESS errors for normalized ridge penalties
+#' @noRd
+.feature_rsa_ridge_loo_mse <- function(decomposition, lambdas) {
+  lambdas <- .feature_rsa_ridge_lambdas(lambdas)
+  out <- matrix(
+    Inf,
+    nrow = decomposition$n,
+    ncol = length(lambdas),
+    dimnames = list(NULL, format(lambdas, scientific = TRUE))
+  )
+  squared_u <- decomposition$U ^ 2
+  leave_one_out_scale <- decomposition$n / (decomposition$n - 1)
+
+  for (j in seq_along(lambdas)) {
+    # A normalized penalty is (n - 1) * lambda in every leave-one-out fit,
+    # rather than n * lambda as in the full-data fit. Centering after deletion
+    # gives S[-i] = S - n/(n-1) x_i x_i'. Applying Sherman-Morrison to that
+    # downdate yields the exact refit residual below.
+    d <- decomposition$d
+    if (lambdas[[j]] == 0) {
+      keep <- d > decomposition$tolerance
+      shrinkage_leverage <- as.numeric(keep)
+    } else {
+      penalty <- (decomposition$n - 1) * lambdas[[j]]
+      shrinkage_leverage <- d ^ 2 / (d ^ 2 + penalty)
+    }
+    fitted_centered <- decomposition$U %*% sweep(
+      decomposition$UY,
+      1L,
+      shrinkage_leverage,
+      "*"
+    )
+    residual <- decomposition$responses_centered - fitted_centered
+    leverage <- leave_one_out_scale * rowSums(sweep(
+      squared_u,
+      2L,
+      shrinkage_leverage,
+      "*"
+    ))
+    denominator <- 1 - leverage
+    valid <- is.finite(denominator) &
+      denominator > sqrt(.Machine$double.eps)
+    if (any(valid)) {
+      loo_residual <- sweep(
+        leave_one_out_scale * residual[valid, , drop = FALSE],
+        1L,
+        denominator[valid],
+        "/"
+      )
+      out[valid, j] <- rowMeans(loo_residual ^ 2)
+    }
+  }
+  out
+}
+
+
+#' Held-out MSE path from compact ridge spectral cross-products
+#'
+#' For blocked tuning, materializing one held-out observations-by-voxels
+#' prediction matrix per lambda repeats a large matrix multiplication. The
+#' squared-error identity below reduces the entire path to one feature cross-
+#' product, one feature-response cross-product, and lambda-specific operations
+#' on matrices bounded by the feature rank.
+#' @noRd
+.feature_rsa_ridge_prediction_mse_path <- function(decomposition,
+                                                    newdata,
+                                                    observed,
+                                                    lambdas) {
+  if (!inherits(decomposition, "feature_rsa_ridge_decomposition")) {
+    stop("feature RSA ridge MSE path requires a spectral decomposition.",
+         call. = FALSE)
+  }
+  newdata <- as.matrix(newdata)
+  observed <- as.matrix(observed)
+  lambdas <- .feature_rsa_ridge_lambdas(lambdas)
+  if (nrow(newdata) != nrow(observed) ||
+      ncol(newdata) != decomposition$p ||
+      ncol(observed) != decomposition$n_response) {
+    stop("feature RSA ridge MSE path received incompatible matrices.",
+         call. = FALSE)
+  }
+  if (any(!is.finite(newdata)) || any(!is.finite(observed))) {
+    stop("feature RSA ridge MSE path requires finite matrices.",
+         call. = FALSE)
+  }
+
+  projected_features <- sweep(
+    newdata,
+    2L,
+    decomposition$predictor_means,
+    "-"
+  ) %*% decomposition$V
+  centered_observed <- sweep(
+    observed,
+    2L,
+    decomposition$response_means,
+    "-"
+  )
+  linear_term <- rowSums(
+    crossprod(projected_features, centered_observed) * decomposition$UY
+  )
+  quadratic_kernel <- crossprod(projected_features) *
+    tcrossprod(decomposition$UY)
+  observed_ss <- sum(centered_observed ^ 2)
+  denominator <- length(centered_observed)
+
+  vapply(lambdas, function(lambda) {
+    coefficient <- .feature_rsa_ridge_shrinkage(
+      decomposition,
+      lambda
+    )$coefficient
+    fitted_ss <- sum(quadratic_kernel * tcrossprod(coefficient))
+    residual_ss <- observed_ss -
+      2 * sum(coefficient * linear_term) + fitted_ss
+    max(residual_ss, 0) / denominator
+  }, numeric(1L))
+}
+
+
+#' Block-wise ridge errors with leakage-safe inner preprocessing
+#' @noRd
+.feature_rsa_ridge_block_mse <- function(features,
+                                         responses,
+                                         lambdas,
+                                         segments) {
+  features <- as.matrix(features)
+  responses <- as.matrix(responses)
+  lambdas <- .feature_rsa_ridge_lambdas(lambdas)
+  n <- nrow(features)
+  if (n != nrow(responses)) {
+    stop("feature RSA ridge blocked CV requires matching row counts.",
+         call. = FALSE)
+  }
+  if (!is.list(segments) || length(segments) < 2L) {
+    stop("feature RSA ridge blocked CV requires at least two segments.",
+         call. = FALSE)
+  }
+  segments <- lapply(segments, function(index) {
+    index <- unique(as.integer(index))
+    if (!length(index) || anyNA(index) || any(index < 1L | index > n)) {
+      stop("feature RSA ridge blocked CV received invalid segment indices.",
+           call. = FALSE)
+    }
+    index
+  })
+
+  out <- matrix(
+    NA_real_,
+    nrow = length(segments),
+    ncol = length(lambdas),
+    dimnames = list(NULL, format(lambdas, scientific = TRUE))
+  )
+  all_rows <- seq_len(n)
+  for (s in seq_along(segments)) {
+    test <- segments[[s]]
+    train <- all_rows[-test]
+    if (length(train) < 2L) {
+      stop("feature RSA ridge blocked CV has fewer than two training rows.",
+           call. = FALSE)
+    }
+    sf <- .standardize(features[train, , drop = FALSE])
+    sx <- .standardize(responses[train, , drop = FALSE])
+    test_features <- scale(
+      features[test, , drop = FALSE],
+      center = sf$mean,
+      scale = sf$sd
+    )
+    observed_test <- scale(
+      responses[test, , drop = FALSE],
+      center = sx$mean,
+      scale = sx$sd
+    )
+    decomposition <- .feature_rsa_ridge_decomposition(sf$X_sc, sx$X_sc)
+    out[s, ] <- .feature_rsa_ridge_prediction_mse_path(
+      decomposition,
+      test_features,
+      observed_test,
+      lambdas
+    )
+  }
+  out
+}
+
+
+#' Select a normalized ridge penalty from scalar or segment-wise scores
+#' @noRd
+.feature_rsa_ridge_select_lambda <- function(scores,
+                                             lambdas,
+                                             one_se = FALSE) {
+  lambdas <- .feature_rsa_ridge_lambdas(lambdas)
+  if (is.matrix(scores)) {
+    if (ncol(scores) != length(lambdas)) {
+      stop("feature RSA ridge score columns must match lambda values.",
+           call. = FALSE)
+    }
+    objective <- colMeans(scores, na.rm = TRUE)
+  } else {
+    scores <- as.numeric(scores)
+    if (length(scores) != length(lambdas)) {
+      stop("feature RSA ridge scores must match lambda values.",
+           call. = FALSE)
+    }
+    objective <- scores
+  }
+  valid <- is.finite(objective)
+  if (!any(valid)) {
+    stop("feature RSA ridge tuning produced no finite candidate score.",
+         call. = FALSE)
+  }
+  best_value <- min(objective[valid])
+  tolerance <- sqrt(.Machine$double.eps) * max(1, abs(best_value))
+  best <- which(valid & objective <= best_value + tolerance)
+  threshold <- best_value + tolerance
+
+  if (isTRUE(one_se) && is.matrix(scores)) {
+    best_index <- best[[which.max(lambdas[best])]]
+    values <- scores[, best_index]
+    values <- values[is.finite(values)]
+    standard_error <- if (length(values) >= 2L) {
+      stats::sd(values) / sqrt(length(values))
+    } else {
+      0
+    }
+    threshold <- objective[[best_index]] + standard_error + tolerance
+  }
+  eligible <- which(valid & objective <= threshold)
+  as.integer(eligible[[which.max(lambdas[eligible])]])
+}
+
+
 
 
 
@@ -1118,6 +1592,43 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
       preds <- sweep(sweep(preds_sc, 2, x_sd, "*"), 2, x_mean, "+")
       return(preds)
 
+    } else if (method == "ridge") {
+      required <- c("f_mean", "f_sd", "x_mean", "x_sd")
+      missing <- required[vapply(required, function(name) {
+        is.null(fit[[name]])
+      }, logical(1L))]
+      if (length(missing)) {
+        stop(sprintf(
+          "predict_model (ridge): Missing essential components: %s.",
+          paste(missing, collapse = ", ")
+        ))
+      }
+      if (!inherits(fit$trained_model, "feature_rsa_ridge_fit")) {
+        stop("predict_model (ridge): Invalid trained ridge model.")
+      }
+      if (ncol(F_new) != length(fit$f_mean)) {
+        stop(sprintf(
+          "predict_model (ridge): Feature column mismatch. Expected %d, got %d.",
+          length(fit$f_mean), ncol(F_new)
+        ))
+      }
+
+      features_scaled <- sweep(
+        sweep(F_new, 2L, fit$f_mean, "-"),
+        2L,
+        fit$f_sd,
+        "/"
+      )
+      predictions_scaled <- .feature_rsa_ridge_predict_kernel(
+        fit$trained_model,
+        features_scaled
+      )
+      return(sweep(
+        sweep(predictions_scaled, 2L, fit$x_sd, "*"),
+        2L,
+        fit$x_mean,
+        "+"
+      ))
     } else if (method == "glmnet") {
       return(.predict_glmnet(fit, F_new))
     } else {
@@ -1863,6 +2374,98 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
     result$f_sd          <- pls_res$sf$sd
     result$ncomp         <- pls_res$ncomp_use
 
+  } else if (obj$method == "ridge") {
+    ridge_result <- tryCatch({
+      var_X <- apply(X, 2L, stats::var, na.rm = TRUE)
+      var_F <- apply(Fsub, 2L, stats::var, na.rm = TRUE)
+      if (any(!is.finite(var_X)) || any(!is.finite(var_F)) ||
+          any(var_X < 1e-10) || any(var_F < 1e-10)) {
+        stop("Near zero or non-finite variance detected in X or F before standardization.")
+      }
+
+      sx <- .standardize(X)
+      sf <- .standardize(Fsub)
+      if (any(!is.finite(sx$X_sc)) || any(!is.finite(sf$X_sc)) ||
+          any(sx$sd < 1e-10) || any(sf$sd < 1e-10)) {
+        stop("Near zero or non-finite variance detected after standardization.")
+      }
+
+      lambdas <- .feature_rsa_ridge_lambdas(obj$lambda)
+      decomposition <- .feature_rsa_ridge_decomposition(
+        sf$X_sc,
+        sx$X_sc
+      )
+      selector <- obj$lambda_selection %||% "gcv"
+      selected_index <- switch(
+        selector,
+        fixed = {
+          if (length(lambdas) != 1L) {
+            stop("lambda_selection='fixed' requires exactly one lambda.")
+          }
+          1L
+        },
+        gcv = .feature_rsa_ridge_select_lambda(
+          .feature_rsa_ridge_gcv_scores(decomposition, lambdas),
+          lambdas
+        ),
+        loo = .feature_rsa_ridge_select_lambda(
+          .feature_rsa_ridge_loo_mse(decomposition, lambdas),
+          lambdas,
+          one_se = TRUE
+        ),
+        blocked = {
+          segments <- .feature_rsa_block_segments(
+            obj$design$block_var,
+            n_rows = nrow(Fsub),
+            observation_indices = observation_indices
+          )
+          .feature_rsa_ridge_select_lambda(
+            .feature_rsa_ridge_block_mse(
+              Fsub,
+              X,
+              lambdas,
+              segments
+            ),
+            lambdas,
+            one_se = TRUE
+          )
+        },
+        stop(sprintf("Unknown ridge lambda selection method: %s", selector))
+      )
+      selected_lambda <- lambdas[[selected_index]]
+      model <- .feature_rsa_ridge_fit_kernel(
+        sf$X_sc,
+        sx$X_sc,
+        selected_lambda,
+        decomposition = decomposition
+      )
+
+      list(
+        trained_model = model,
+        x_mean = sx$mean,
+        x_sd = sx$sd,
+        f_mean = sf$mean,
+        f_sd = sf$sd,
+        lambda = selected_lambda,
+        effective_df = model$effective_df,
+        lambda_selection = selector,
+        ncomp = NA_real_
+      )
+    }, error = function(e) {
+      error_msg <- sprintf(
+        "train_model (Ridge): Error during training - %s",
+        e$message
+      )
+      futile.logger::flog.error(error_msg)
+      list(error = error_msg)
+    })
+
+    if (!is.null(ridge_result$error)) {
+      result$error <- ridge_result$error
+      return(result)
+    }
+    result <- c(result, ridge_result)
+
   } else if (obj$method == "glmnet") {
     #
     # ---- GLMNet Train ----
@@ -2142,7 +2745,15 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
   # Fold metrics are intentionally deferred. merge_results() evaluates the
   # complete out-of-fold prediction exactly once, so computing geometry here
   # would be redundant and the result would be discarded.
-  ncomp_used <- result$ncomp
+  retained_result <- if (identical(obj$method, "ridge")) {
+    list(
+      lambda = result$lambda,
+      effective_df = result$effective_df,
+      ncomp = NA_real_
+    )
+  } else {
+    list(ncomp = result$ncomp)
+  }
   
   tibble::tibble(
     observed    = list(Xobs),
@@ -2150,7 +2761,7 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
     test_index  = list(context$test_ind),
     # Prediction is complete, so the trained model and its coefficient path no
     # longer need to survive until fold merging.
-    result      = list(list(ncomp = ncomp_used)),
+    result      = list(retained_result),
     performance = list(NULL),
     error       = FALSE,
     error_message = "~"
@@ -2196,14 +2807,13 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
     combined_predicted <- combined_predicted[ord, , drop = FALSE]
   }
   
-  # Extract ncomp from the first fold's result 
-  # (result_set$result is a list, first element is result from fold 1)
-  # Add robustness in case ncomp is NULL or NA
-  ncomp_val <- fold_results_list[[1]]$ncomp
-  ncomp_used <- if (!is.null(ncomp_val) && is.finite(ncomp_val)) {
-    ncomp_val
-  } else {
-    NA # Use NA if ncomp wasn't properly recorded
+  scalar_from_fold <- function(fold, name) {
+    value <- fold[[name]]
+    if (is.numeric(value) && length(value) == 1L && is.finite(value)) {
+      as.numeric(value)
+    } else {
+      NA_real_
+    }
   }
   
   # Now we do permutations (if nperm>0 in the model spec)
@@ -2225,16 +2835,48 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
     perf$voxel_correlation,
     perf$mse,
     perf$r_squared,
-    perf$mean_voxelwise_temporal_cor,
-    ncomp_used
+    perf$mean_voxelwise_temporal_cor
   )
   base_names <- c(
     "pattern_correlation", "pattern_discrimination", "pattern_rank_percentile",
     "rdm_correlation",
     "voxel_correlation", "mse", "r_squared",
-    "mean_voxelwise_temporal_cor",
-    "ncomp"
+    "mean_voxelwise_temporal_cor"
   )
+  if (identical(obj$method, "ridge")) {
+    fold_lambdas <- vapply(
+      fold_results_list,
+      scalar_from_fold,
+      numeric(1L),
+      name = "lambda"
+    )
+    fold_effective_df <- vapply(
+      fold_results_list,
+      scalar_from_fold,
+      numeric(1L),
+      name = "effective_df"
+    )
+    finite_lambdas <- fold_lambdas[is.finite(fold_lambdas)]
+    finite_effective_df <- fold_effective_df[is.finite(fold_effective_df)]
+    diagnostics <- c(
+      median_lambda = if (length(finite_lambdas)) {
+        stats::median(finite_lambdas)
+      } else {
+        NA_real_
+      },
+      mean_effective_df = if (length(finite_effective_df)) {
+        mean(finite_effective_df)
+      } else {
+        NA_real_
+      }
+    )
+  } else {
+    diagnostics <- c(
+      ncomp = scalar_from_fold(fold_results_list[[1L]], "ncomp")
+    )
+  }
+  base_metrics <- c(base_metrics, diagnostics)
+  base_names <- c(base_names, names(diagnostics))
 
   if (is.null(perf$permutation_results)) {
       perf_values <- base_metrics
@@ -2326,7 +2968,12 @@ output_schema.feature_rsa_model <- function(model) {
   nms <- c(
     "pattern_correlation", "pattern_discrimination", "pattern_rank_percentile",
     "rdm_correlation", "voxel_correlation", "mse", "r_squared",
-    "mean_voxelwise_temporal_cor", "ncomp"
+    "mean_voxelwise_temporal_cor",
+    if (identical(model$method, "ridge")) {
+      c("median_lambda", "mean_effective_df")
+    } else {
+      "ncomp"
+    }
   )
   setNames(rep("scalar", length(nms)), nms)
 }
@@ -2468,6 +3115,21 @@ print.feature_rsa_model <- function(x, ...) {
     if (sel == "pve" && !is.null(x$pve_threshold)) {
       cat(crayon::bold(crayon::blue("PVE threshold:          ")), x$pve_threshold, "\n")
     }
+  } else if (x$method == "ridge") {
+    selector <- x$lambda_selection %||% "gcv"
+    cat(crayon::bold(crayon::blue("Lambda selection:       ")), selector, "\n")
+    ridge_lambdas <- .feature_rsa_ridge_lambdas(x$lambda)
+    lambda_str <- if (length(ridge_lambdas) > 3L) {
+      paste0(
+        format(ridge_lambdas[[1L]], scientific = TRUE),
+        " ... ",
+        format(ridge_lambdas[[length(ridge_lambdas)]], scientific = TRUE),
+        " (", length(ridge_lambdas), " values)"
+      )
+    } else {
+      paste(format(ridge_lambdas, scientific = TRUE), collapse = ", ")
+    }
+    cat(crayon::bold(crayon::blue("Normalized lambda:      ")), lambda_str, "\n")
   } else if (x$method == "glmnet") {
     cat(crayon::bold(crayon::blue("Elastic Net alpha:      ")), x$alpha, "\n")
     cat(crayon::bold(crayon::blue("Cross-validate lambda:  ")), 

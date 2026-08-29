@@ -83,6 +83,47 @@ frperf_nested_segment_mse <- function(features,
   out
 }
 
+frperf_ridge_block_mse_materialized <- function(features,
+                                                 responses,
+                                                 lambdas,
+                                                 segments) {
+  ridge_decomposition <- frperf_internal(
+    ".feature_rsa_ridge_decomposition"
+  )
+  ridge_fit <- frperf_internal(".feature_rsa_ridge_fit_kernel")
+  ridge_predict <- frperf_internal(".feature_rsa_ridge_predict_kernel")
+  out <- matrix(NA_real_, nrow = length(segments), ncol = length(lambdas))
+  all_rows <- seq_len(nrow(features))
+  for (s in seq_along(segments)) {
+    test <- segments[[s]]
+    train <- all_rows[-test]
+    sf <- frperf_standardize(features[train, , drop = FALSE])
+    sx <- frperf_standardize(responses[train, , drop = FALSE])
+    test_features <- base::scale(
+      features[test, , drop = FALSE],
+      center = sf$center,
+      scale = sf$scale
+    )
+    observed <- base::scale(
+      responses[test, , drop = FALSE],
+      center = sx$center,
+      scale = sx$scale
+    )
+    decomposition <- ridge_decomposition(sf$values, sx$values)
+    for (j in seq_along(lambdas)) {
+      fit <- ridge_fit(
+        sf$values,
+        sx$values,
+        lambdas[[j]],
+        decomposition = decomposition
+      )
+      predicted <- ridge_predict(fit, test_features)
+      out[s, j] <- mean((observed - predicted) ^ 2)
+    }
+  }
+  out
+}
+
 frperf_onesigma <- function(segment_mse) {
   mean_mse <- colMeans(segment_mse)
   min_idx <- which.min(mean_mse)
@@ -175,6 +216,10 @@ frperf_empty_row <- function(section,
     max_abs_validation_error = NA_real_,
     selected_ncomp = NA_integer_,
     reference_selected_ncomp = NA_integer_,
+    selected_lambda = NA_real_,
+    holdout_mse = NA_real_,
+    holdout_pattern_correlation = NA_real_,
+    holdout_rdm_correlation = NA_real_,
     serialized_bytes = NA_real_,
     reference_serialized_bytes = NA_real_,
     payload_reduction_ratio = NA_real_,
@@ -251,6 +296,8 @@ frperf_hotpaths <- function(seed = 2026082861L,
   cv_segment_mse <- frperf_internal(".feature_rsa_cv_segment_mse")
   select_segments <- frperf_internal(".feature_rsa_select_from_segment_mse")
   row_cor <- frperf_internal(".feature_rsa_row_cor")
+  ridge_block_mse <- frperf_internal(".feature_rsa_ridge_block_mse")
+  ridge_lambdas <- frperf_internal(".feature_rsa_ridge_lambdas")(NULL)
 
   fit_pair <- frperf_pair(
     reference = function() {
@@ -424,6 +471,42 @@ frperf_hotpaths <- function(seed = 2026082861L,
   blocked_row$selected_ncomp <- blocked_pair$candidate_output$selected
   blocked_row$reference_selected_ncomp <- blocked_pair$reference_output$selected
 
+  ridge_block_pair <- frperf_pair(
+    reference = function() {
+      frperf_ridge_block_mse_materialized(
+        fixture$features,
+        fixture$responses,
+        ridge_lambdas,
+        block_segments
+      )
+    },
+    candidate = function() {
+      ridge_block_mse(
+        fixture$features,
+        fixture$responses,
+        ridge_lambdas,
+        block_segments
+      )
+    },
+    iterations = iterations,
+    operations_per_timing = 5L
+  )
+  ridge_block_row <- frperf_empty_row(
+    "ridge_selection",
+    "spectral_block_sse",
+    "materialized_block_predictions",
+    n_obs,
+    n_features,
+    n_voxels,
+    n_blocks,
+    max_comps,
+    iterations
+  )
+  ridge_block_row <- frperf_fill_timing(ridge_block_row, ridge_block_pair)
+  ridge_block_row$max_abs_validation_error <- max(abs(
+    ridge_block_pair$candidate_output - ridge_block_pair$reference_output
+  ))
+
   # Geometry becomes material for long designs. Use a separately seeded,
   # production-shaped matrix so elapsed time is above the timer resolution
   # even when the fitting fixture is intentionally small.
@@ -453,7 +536,13 @@ frperf_hotpaths <- function(seed = 2026082861L,
     correlation_pair$candidate_output - correlation_pair$reference_output
   ))
 
-  rows <- rbind(fit_row, loo_row, blocked_row, correlation_row)
+  rows <- rbind(
+    fit_row,
+    loo_row,
+    blocked_row,
+    ridge_block_row,
+    correlation_row
+  )
   if (any(rows$max_abs_prediction_error > 1e-9, na.rm = TRUE) ||
       any(rows$max_abs_validation_error > 1e-9, na.rm = TRUE) ||
       any(rows$selected_ncomp != rows$reference_selected_ncomp,
@@ -461,6 +550,480 @@ frperf_hotpaths <- function(seed = 2026082861L,
     stop("Feature RSA hot-path parity validation failed.", call. = FALSE)
   }
   rows
+}
+
+frperf_prediction_metrics <- function(predicted, observed, row_cor) {
+  predicted <- as.matrix(predicted)
+  observed <- as.matrix(observed)
+  center_rows <- function(x) {
+    sweep(x, 1L, rowMeans(x), "-")
+  }
+  predicted_centered <- center_rows(predicted)
+  observed_centered <- center_rows(observed)
+  denominator <- sqrt(
+    rowSums(predicted_centered ^ 2) * rowSums(observed_centered ^ 2)
+  )
+  pattern <- rowSums(predicted_centered * observed_centered) / denominator
+
+  predicted_rdm <- 1 - row_cor(predicted)
+  observed_rdm <- 1 - row_cor(observed)
+  lower <- lower.tri(predicted_rdm)
+  list(
+    mse = mean((predicted - observed) ^ 2),
+    pattern_correlation = mean(pattern[is.finite(pattern)]),
+    rdm_correlation = suppressWarnings(stats::cor(
+      predicted_rdm[lower],
+      observed_rdm[lower],
+      method = "spearman",
+      use = "complete.obs"
+    ))
+  )
+}
+
+frperf_ridge_estimators <- function(seed = 2026082864L,
+                                    n_obs = 120L,
+                                    n_features = 16L,
+                                    n_voxels = 100L,
+                                    n_blocks = 6L,
+                                    max_comps = 10L,
+                                    iterations = 3L,
+                                    include_glmnet = TRUE) {
+  fixture <- frperf_fixture(
+    seed,
+    n_obs,
+    n_features,
+    n_voxels,
+    n_blocks
+  )
+  holdout_block <- max(fixture$blocks)
+  train <- fixture$blocks != holdout_block
+  test <- !train
+  train_features <- fixture$features[train, , drop = FALSE]
+  train_responses <- fixture$responses[train, , drop = FALSE]
+  test_features <- fixture$features[test, , drop = FALSE]
+  test_responses <- fixture$responses[test, , drop = FALSE]
+  train_blocks <- fixture$blocks[train]
+  block_segments <- unname(split(seq_len(sum(train)), train_blocks))
+  loo_segments <- lapply(seq_len(sum(train)), as.integer)
+  max_comps <- min(
+    as.integer(max_comps),
+    ncol(train_features),
+    nrow(train_features) - 2L
+  )
+
+  fit_kernel <- frperf_internal(".feature_rsa_fit_kernel")
+  predict_kernel <- frperf_internal(".feature_rsa_predict_kernel")
+  cv_segment_mse <- frperf_internal(".feature_rsa_cv_segment_mse")
+  select_segments <- frperf_internal(".feature_rsa_select_from_segment_mse")
+  ridge_lambdas <- frperf_internal(".feature_rsa_ridge_lambdas")(NULL)
+  ridge_decomposition <- frperf_internal(
+    ".feature_rsa_ridge_decomposition"
+  )
+  ridge_gcv <- frperf_internal(".feature_rsa_ridge_gcv_scores")
+  ridge_loo <- frperf_internal(".feature_rsa_ridge_loo_mse")
+  ridge_blocked <- frperf_internal(".feature_rsa_ridge_block_mse")
+  ridge_select <- frperf_internal(".feature_rsa_ridge_select_lambda")
+  ridge_fit <- frperf_internal(".feature_rsa_ridge_fit_kernel")
+  ridge_predict <- frperf_internal(".feature_rsa_ridge_predict_kernel")
+  row_cor <- frperf_internal(".feature_rsa_row_cor")
+
+  standardize_outer <- function() {
+    sf <- frperf_standardize(train_features)
+    sx <- frperf_standardize(train_responses)
+    list(
+      sf = sf,
+      sx = sx,
+      test_features = base::scale(
+        test_features,
+        center = sf$center,
+        scale = sf$scale
+      ),
+      test_responses = base::scale(
+        test_responses,
+        center = sx$center,
+        scale = sx$scale
+      )
+    )
+  }
+
+  methods <- list(
+    pls_streaming_loo = function() {
+      scaled <- standardize_outer()
+      scores <- cv_segment_mse(
+        scaled$sf$values,
+        scaled$sx$values,
+        ncomp = max_comps,
+        method = "pls",
+        segments = loo_segments
+      )
+      selected <- select_segments(scores, method = "onesigma")
+      fit <- fit_kernel(
+        scaled$sf$values,
+        scaled$sx$values,
+        ncomp = max_comps,
+        method = "pls"
+      )
+      list(
+        prediction = predict_kernel(
+          fit,
+          scaled$test_features,
+          ncomp = selected
+        ),
+        observed = scaled$test_responses,
+        ncomp = selected,
+        lambda = NA_real_
+      )
+    },
+    pls_streaming_blocked = function() {
+      scaled <- standardize_outer()
+      scores <- cv_segment_mse(
+        train_features,
+        train_responses,
+        ncomp = max_comps,
+        method = "pls",
+        segments = block_segments,
+        fold_standardize = TRUE
+      )
+      selected <- select_segments(scores, method = "onesigma")
+      fit <- fit_kernel(
+        scaled$sf$values,
+        scaled$sx$values,
+        ncomp = max_comps,
+        method = "pls"
+      )
+      list(
+        prediction = predict_kernel(
+          fit,
+          scaled$test_features,
+          ncomp = selected
+        ),
+        observed = scaled$test_responses,
+        ncomp = selected,
+        lambda = NA_real_
+      )
+    },
+    ridge_gcv = function() {
+      scaled <- standardize_outer()
+      decomposition <- ridge_decomposition(
+        scaled$sf$values,
+        scaled$sx$values
+      )
+      selected <- ridge_select(
+        ridge_gcv(decomposition, ridge_lambdas),
+        ridge_lambdas
+      )
+      fit <- ridge_fit(
+        scaled$sf$values,
+        scaled$sx$values,
+        ridge_lambdas[[selected]],
+        decomposition = decomposition
+      )
+      list(
+        prediction = ridge_predict(fit, scaled$test_features),
+        observed = scaled$test_responses,
+        ncomp = NA_integer_,
+        lambda = ridge_lambdas[[selected]]
+      )
+    },
+    ridge_analytic_loo = function() {
+      scaled <- standardize_outer()
+      decomposition <- ridge_decomposition(
+        scaled$sf$values,
+        scaled$sx$values
+      )
+      selected <- ridge_select(
+        ridge_loo(decomposition, ridge_lambdas),
+        ridge_lambdas,
+        one_se = TRUE
+      )
+      fit <- ridge_fit(
+        scaled$sf$values,
+        scaled$sx$values,
+        ridge_lambdas[[selected]],
+        decomposition = decomposition
+      )
+      list(
+        prediction = ridge_predict(fit, scaled$test_features),
+        observed = scaled$test_responses,
+        ncomp = NA_integer_,
+        lambda = ridge_lambdas[[selected]]
+      )
+    },
+    ridge_blocked = function() {
+      scaled <- standardize_outer()
+      selected <- ridge_select(
+        ridge_blocked(
+          train_features,
+          train_responses,
+          ridge_lambdas,
+          block_segments
+        ),
+        ridge_lambdas,
+        one_se = TRUE
+      )
+      decomposition <- ridge_decomposition(
+        scaled$sf$values,
+        scaled$sx$values
+      )
+      fit <- ridge_fit(
+        scaled$sf$values,
+        scaled$sx$values,
+        ridge_lambdas[[selected]],
+        decomposition = decomposition
+      )
+      list(
+        prediction = ridge_predict(fit, scaled$test_features),
+        observed = scaled$test_responses,
+        ncomp = NA_integer_,
+        lambda = ridge_lambdas[[selected]]
+      )
+    }
+  )
+
+  if (isTRUE(include_glmnet) && requireNamespace("glmnet", quietly = TRUE)) {
+    methods$glmnet_alpha0_blocked_cv <- function() {
+      scaled <- standardize_outer()
+      fit <- glmnet::cv.glmnet(
+        x = scaled$sf$values,
+        y = scaled$sx$values,
+        family = "mgaussian",
+        alpha = 0,
+        foldid = as.integer(factor(train_blocks)),
+        standardize = FALSE,
+        intercept = TRUE,
+        parallel = FALSE
+      )
+      prediction <- drop(stats::predict(
+        fit,
+        newx = scaled$test_features,
+        s = "lambda.min"
+      ))
+      if (!is.matrix(prediction)) {
+        prediction <- matrix(prediction, nrow = nrow(scaled$test_features))
+      }
+      list(
+        prediction = prediction,
+        observed = scaled$test_responses,
+        ncomp = NA_integer_,
+        lambda = fit$lambda.min
+      )
+    }
+  }
+
+  outputs <- vector("list", length(methods))
+  names(outputs) <- names(methods)
+  operations_per_timing <- integer(length(methods))
+  for (j in seq_along(methods)) {
+    calibration <- system.time(outputs[[j]] <- methods[[j]]())[["elapsed"]]
+    operations_per_timing[[j]] <- if (!is.finite(calibration) ||
+                                          calibration <= 0) {
+      25L
+    } else {
+      max(1L, min(25L, as.integer(ceiling(0.02 / calibration))))
+    }
+  }
+  timings <- matrix(
+    NA_real_,
+    nrow = iterations,
+    ncol = length(methods),
+    dimnames = list(NULL, names(methods))
+  )
+  for (i in seq_len(iterations)) {
+    order <- seq_along(methods)
+    if (i %% 2L == 0L) order <- rev(order)
+    for (j in order) {
+      gc(verbose = FALSE)
+      timings[i, j] <- system.time({
+        for (operation in seq_len(operations_per_timing[[j]])) {
+          outputs[[j]] <- methods[[j]]()
+        }
+      })[["elapsed"]] / operations_per_timing[[j]]
+    }
+  }
+
+  reference_time <- stats::median(timings[, "pls_streaming_loo"])
+  do.call(rbind, lapply(seq_along(methods), function(j) {
+    output <- outputs[[j]]
+    metrics <- frperf_prediction_metrics(
+      output$prediction,
+      output$observed,
+      row_cor
+    )
+    row <- frperf_empty_row(
+      "ridge_estimator_comparison",
+      names(methods)[[j]],
+      "pls_streaming_loo",
+      n_obs,
+      n_features,
+      n_voxels,
+      n_blocks,
+      max_comps,
+      iterations
+    )
+    row$elapsed_median_seconds <- stats::median(timings[, j])
+    row$elapsed_min_seconds <- min(timings[, j])
+    row$elapsed_max_seconds <- max(timings[, j])
+    row$reference_median_seconds <- reference_time
+    row$speedup_vs_reference <- reference_time / row$elapsed_median_seconds
+    row$operations_per_timing <- operations_per_timing[[j]]
+    row$selected_ncomp <- output$ncomp
+    row$selected_lambda <- output$lambda
+    row$holdout_mse <- metrics$mse
+    row$holdout_pattern_correlation <- metrics$pattern_correlation
+    row$holdout_rdm_correlation <- metrics$rdm_correlation
+    row
+  }))
+}
+
+frperf_ridge_accuracy_suite <- function(
+    seeds = 2026082864L + seq_len(20L) - 1L,
+    n_obs = 120L,
+    n_features = 16L,
+    n_voxels = 100L,
+    n_blocks = 6L,
+    max_comps = 10L,
+    include_glmnet = TRUE) {
+  seeds <- as.integer(seeds)
+  if (!length(seeds) || anyNA(seeds)) {
+    stop("seeds must contain at least one finite integer.", call. = FALSE)
+  }
+  do.call(rbind, lapply(seeds, function(seed) {
+    rows <- frperf_ridge_estimators(
+      seed = seed,
+      n_obs = n_obs,
+      n_features = n_features,
+      n_voxels = n_voxels,
+      n_blocks = n_blocks,
+      max_comps = max_comps,
+      iterations = 1L,
+      include_glmnet = include_glmnet
+    )
+    rows$seed <- seed
+    rows
+  }))
+}
+
+frperf_ridge_accuracy_summary <- function(rows) {
+  required <- c(
+    "seed", "implementation", "holdout_mse",
+    "holdout_pattern_correlation", "holdout_rdm_correlation"
+  )
+  if (!is.data.frame(rows) || !all(required %in% names(rows))) {
+    stop("rows do not contain ridge accuracy-suite output.", call. = FALSE)
+  }
+  baseline <- rows[
+    rows$implementation == "pls_streaming_loo",
+    required,
+    drop = FALSE
+  ]
+  names(baseline)[-(1:2)] <- paste0("baseline_", names(baseline)[-(1:2)])
+  baseline$implementation <- NULL
+  compared <- merge(rows, baseline, by = "seed", all.x = TRUE, sort = FALSE)
+  compared$mse_ratio <- compared$holdout_mse /
+    compared$baseline_holdout_mse
+  compared$pattern_delta <- compared$holdout_pattern_correlation -
+    compared$baseline_holdout_pattern_correlation
+  compared$rdm_delta <- compared$holdout_rdm_correlation -
+    compared$baseline_holdout_rdm_correlation
+
+  implementations <- unique(compared$implementation)
+  do.call(rbind, lapply(implementations, function(implementation) {
+    values <- compared[compared$implementation == implementation, , drop = FALSE]
+    summary <- data.frame(
+      implementation = implementation,
+      n_seeds = nrow(values),
+      median_mse_ratio = stats::median(values$mse_ratio),
+      q90_mse_ratio = as.numeric(stats::quantile(
+        values$mse_ratio, 0.9, names = FALSE
+      )),
+      median_pattern_delta = stats::median(values$pattern_delta),
+      q10_pattern_delta = as.numeric(stats::quantile(
+        values$pattern_delta, 0.1, names = FALSE
+      )),
+      median_rdm_delta = stats::median(values$rdm_delta),
+      q10_rdm_delta = as.numeric(stats::quantile(
+        values$rdm_delta, 0.1, names = FALSE
+      )),
+      stringsAsFactors = FALSE
+    )
+    # These are prospective equivalence margins for this dense linear fixture,
+    # not universal method guarantees: typical MSE no more than 5% worse,
+    # 90th-percentile MSE no more than 20% worse, and correlation losses no
+    # larger than .01 typically or .03 at the lower decile.
+    summary$within_linear_fixture_margin <- with(summary,
+      median_mse_ratio <= 1.05 &&
+        q90_mse_ratio <= 1.20 &&
+        median_pattern_delta >= -0.01 &&
+        q10_pattern_delta >= -0.03 &&
+        median_rdm_delta >= -0.01 &&
+        q10_rdm_delta >= -0.03
+    )
+    summary
+  }))
+}
+
+frperf_ridge_accuracy_receipt <- function(rows, source_root = ".") {
+  summary <- frperf_ridge_accuracy_summary(rows)
+  timing <- do.call(rbind, lapply(
+    split(rows, rows$implementation),
+    function(values) {
+      data.frame(
+        implementation = values$implementation[[1L]],
+        median_seconds = stats::median(values$elapsed_median_seconds),
+        q10_seconds = as.numeric(stats::quantile(
+          values$elapsed_median_seconds, 0.1, names = FALSE
+        )),
+        q90_seconds = as.numeric(stats::quantile(
+          values$elapsed_median_seconds, 0.9, names = FALSE
+        )),
+        median_speedup_vs_pls_loo = stats::median(
+          values$speedup_vs_reference
+        ),
+        stringsAsFactors = FALSE
+      )
+    }
+  ))
+  receipt <- merge(summary, timing, by = "implementation", sort = FALSE)
+  receipt <- receipt[match(unique(rows$implementation), receipt$implementation), ]
+  receipt$seed_first <- min(rows$seed)
+  receipt$seed_last <- max(rows$seed)
+  receipt$n_obs <- unique(rows$n_obs)
+  receipt$n_features <- unique(rows$n_features)
+  receipt$n_voxels <- unique(rows$n_voxels)
+  receipt$n_blocks <- unique(rows$n_blocks)
+  receipt$max_comps <- unique(rows$max_comps)
+  receipt$fixture <- "correlated_dense_linear_last_block_holdout"
+  receipt$package_version <- as.character(utils::packageVersion("rMVPA"))
+  receipt$pls_version <- as.character(utils::packageVersion("pls"))
+  receipt$glmnet_version <- if (requireNamespace("glmnet", quietly = TRUE)) {
+    as.character(utils::packageVersion("glmnet"))
+  } else {
+    NA_character_
+  }
+  receipt$r_version <- R.version.string
+  receipt$platform <- R.version$platform
+  receipt$omp_threads <- Sys.getenv("OMP_NUM_THREADS", unset = NA_character_)
+  receipt$openblas_threads <- Sys.getenv(
+    "OPENBLAS_NUM_THREADS", unset = NA_character_
+  )
+  receipt$mkl_threads <- Sys.getenv("MKL_NUM_THREADS", unset = NA_character_)
+  receipt$veclib_threads <- Sys.getenv(
+    "VECLIB_MAXIMUM_THREADS", unset = NA_character_
+  )
+  receipt$git_head <- tryCatch(
+    system2("git", c("rev-parse", "HEAD"), stdout = TRUE,
+            stderr = FALSE)[[1L]],
+    error = function(e) NA_character_
+  )
+  receipt$worktree_dirty <- tryCatch(
+    length(system2("git", c("status", "--porcelain"), stdout = TRUE,
+                   stderr = FALSE)) > 0L,
+    error = function(e) NA
+  )
+  receipt$source_fingerprint <- frperf_source_fingerprint(source_root)
+  receipt$benchmark_date <- as.character(Sys.Date())
+  rownames(receipt) <- NULL
+  receipt
 }
 
 frperf_worker_payload <- function(seed = 2026082862L,
@@ -615,6 +1178,7 @@ frperf_run <- function(output_file = NULL,
                        source_root = ".") {
   rows <- rbind(
     frperf_hotpaths(iterations = iterations),
+    frperf_ridge_estimators(iterations = iterations),
     frperf_worker_payload()
   )
   if (isTRUE(include_end_to_end)) {
@@ -623,6 +1187,11 @@ frperf_run <- function(output_file = NULL,
 
   rows$package_version <- as.character(utils::packageVersion("rMVPA"))
   rows$pls_version <- as.character(utils::packageVersion("pls"))
+  rows$glmnet_version <- if (requireNamespace("glmnet", quietly = TRUE)) {
+    as.character(utils::packageVersion("glmnet"))
+  } else {
+    NA_character_
+  }
   rows$r_version <- R.version.string
   rows$platform <- R.version$platform
   rows$omp_threads <- Sys.getenv("OMP_NUM_THREADS", unset = NA_character_)

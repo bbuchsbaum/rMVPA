@@ -110,6 +110,56 @@ test_that("feature_rsa_model regional shard parity with default backend", {
   )
 })
 
+test_that("feature RSA ridge has exact regional shard parity", {
+  skip_on_cran()
+  set.seed(4513)
+
+  n <- 24L
+  dset <- gen_sample_dataset(c(3, 3, 3), n, blocks = 3)
+  features <- matrix(rnorm(n * 5), n, 5)
+  design <- feature_rsa_design(
+    F = features,
+    labels = seq_len(n),
+    block_var = dset$design$block_var
+  )
+  model <- feature_rsa_model(
+    dset$dataset,
+    design,
+    method = "ridge",
+    lambda_selection = "fixed",
+    lambda = 0.15
+  )
+  region_mask <- neuroim2::NeuroVol(
+    rep_len(1:2, length(dset$dataset$mask)),
+    neuroim2::space(dset$dataset$mask)
+  )
+
+  default <- muffle_worker_version_warnings(run_regional(
+    model,
+    region_mask,
+    backend = "default",
+    preflight = "off"
+  ))
+  sharded <- muffle_worker_version_warnings(run_regional(
+    model,
+    region_mask,
+    backend = "shard",
+    preflight = "off"
+  ))
+
+  expect_false(any(default$fits$error))
+  expect_identical(default$fits$error, sharded$fits$error)
+  expect_identical(
+    names(default$performance_table),
+    names(sharded$performance_table)
+  )
+  expect_equal(
+    default$performance_table,
+    sharded$performance_table,
+    tolerance = 1e-10
+  )
+})
+
 # ---- Regional: shard with S-based design ----
 
 test_that("feature_rsa_model with S-based design works with shard backend", {

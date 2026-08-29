@@ -64,7 +64,7 @@ Use Feature-Based RSA when:
 
 - You have a **named, fixed feature space** (rows = trials, columns = features) and want to ask whether an ROI encodes those specific dimensions.
 - You care about **per-trial pattern reconstruction**, not just whether two RDMs correlate — for example, you want to test whether semantic embeddings predict the *exact* held-out trial pattern, not just average geometry.
-- You want **regularisation** (PLS, PCR, or elastic net) because your feature space is high-dimensional, correlated, or has more features than trials.
+- You want **regularisation** (PLS, PCR, fast ridge, or elastic net) because your feature space is high-dimensional, correlated, or has more features than trials.
 - You want **multiple performance metrics** out of one fit — pattern correlation, pattern discrimination, RDM correlation, voxel correlation, R² — rather than choosing one a priori.
 
 If you only have a model RDM (no feature matrix) and want a per-trial similarity score with built-in across-block masking, see `vignette("Vector_RSA")`. If you want to test multiple model RDMs as regressors and read out coefficients, see `vignette("RSA")`.
@@ -77,7 +77,7 @@ If you only have a model RDM (no feature matrix) and want a per-trial similarity
 | `labels` | Vector of length `n_trials` naming each row of `F`. |
 | `mvpa_dataset` | Neural data `X`: `n_trials × n_voxels` per ROI/searchlight. |
 | `crossval` | A cross-validation spec. Required (or pass `block_var` to the design and let it build a blocked CV). |
-| Output | Per-ROI metrics including `pattern_correlation`, `pattern_discrimination`, `pattern_rank_percentile`, `rdm_correlation`, `voxel_correlation`, `mse`, `r_squared`, `mean_voxelwise_temporal_cor`, and `ncomp` (components actually used). |
+| Output | Per-ROI reconstruction and geometry metrics. PLS/PCR and glmnet also report `ncomp` (a historical nonzero-count proxy for glmnet); ridge reports `median_lambda` and `mean_effective_df` across outer folds. |
 
 ## Minimal example
 
@@ -165,13 +165,14 @@ Each row is one ROI. `pattern_correlation` and `rdm_correlation` are usually the
 
 ## Choosing a method
 
-`feature_rsa_model()` supports three estimators. The right choice depends on the feature space:
+`feature_rsa_model()` supports four estimators. The right choice depends on the feature space:
 
 | Method | Best when | Notes |
 |---|---|---|
 | `"pls"` (default) | Features are correlated; you want supervised dimensionality reduction. | Uses the configured `pls` PLS numerical kernel. Fits up to `max_comps` components. |
 | `"pca"` | You want to reduce features unsupervised first, then regress on PCs. | Uses the configured `pls` PCR numerical kernel (SVD-PCR by default). |
-| `"glmnet"` | High-dimensional or sparse features; you want shrinkage. | Multivariate Gaussian elastic net via `glmnet`. Tune with `alpha`, `lambda`, `cv_glmnet`. |
+| `"ridge"` | Effects are plausibly dense; you want fast, stable L2 shrinkage for many voxel responses. | Economy-SVD multi-response ridge. Tune with `lambda_selection`; coefficients are not sparse. |
+| `"glmnet"` | You expect sparse or grouped feature effects and need an elastic-net penalty. | Multivariate Gaussian elastic net via `glmnet`. Tune with `alpha`, `lambda`, `cv_glmnet`. |
 
 ## How should you select the number of components?
 
@@ -210,15 +211,78 @@ LOO remains intrinsically proportional to the number of training observations.
 Parallel workers keep one target matrix plus fold indices instead of serializing
 overlapping target slices for every fold.
 
+## When should you use fast ridge?
+
+Use `method = "ridge"` when the scientific model is a dense linear mapping
+from features to voxel responses and L2 shrinkage is acceptable. Ridge is a
+distinct estimator: it is neither approximate PLS nor sparse elastic net. It
+solves, after outer-fold standardisation,
+
+\[
+n^{-1}\lVert Y-XB\rVert_F^2 + \lambda\lVert B\rVert_F^2,
+\]
+
+with an unpenalised intercept. The normal equations therefore add
+`n * lambda` to the feature cross-product, so a supplied lambda has the same
+normalised meaning in folds of different sizes. `lambda = 0` requests the
+minimum-norm unpenalised solution.
+
+| `lambda_selection` | Inner work per outer training fold | Assumption and use |
+|---|---:|---|
+| `"gcv"` (default) | One economy SVD, scoring the full lambda grid | Fastest choice when rows can be treated as exchangeable. Minimises generalized cross-validation error. |
+| `"loo"` | One economy SVD plus analytic PRESS scoring | Exact LOO for the ridge estimator on the fixed outer-fold scale. Uses the one-standard-error rule and chooses the strongest eligible penalty. |
+| `"blocked"` | One economy SVD per retained training block | Preferred for dependent runs, sessions, or subjects. Re-estimates centering and scaling inside every inner split, then uses the one-standard-error rule. |
+| `"fixed"` | One final fit | Use one prespecified non-negative lambda; no data-driven inner tuning. |
+
+GCV and analytic LOO avoid a refit per observation. They still treat
+individual observations as the validation unit, and LOO keeps the outer-fold
+column scales fixed. If within-run dependence or fully nested preprocessing
+matters, use `"blocked"`; speed is not a reason to change the independence
+unit. The default grid is 49 fixed log-spaced values from `1e-6` to `1e2`.
+
+```{r ridge-model}
+ridge_mod <- feature_rsa_model(
+  dataset = dset,
+  design = design,
+  method = "ridge",
+  lambda_selection = "blocked",
+  crossval = cv
+)
+ridge_res <- run_regional(ridge_mod, region_mask)
+ridge_res$performance_table[
+  , c("roinum", "pattern_correlation", "rdm_correlation",
+      "median_lambda", "mean_effective_df")
+]
+```
+
+```{r ridge-model-assertions, include = FALSE}
+stopifnot(
+  all(is.finite(ridge_res$performance_table$median_lambda)),
+  all(ridge_res$performance_table$median_lambda >= 0),
+  all(is.finite(ridge_res$performance_table$mean_effective_df)),
+  all(ridge_res$performance_table$mean_effective_df >= 1)
+)
+```
+
+`median_lambda` is the median selected penalty across outer folds.
+`mean_effective_df` is the corresponding mean effective model dimension,
+including the intercept; it is the ridge analogue of a complexity diagnostic,
+not a component count.
+
 ```{r compare-methods}
-methods <- c("pls", "pca", "glmnet")
+methods <- c("pls", "pca", "ridge")
 summary_rows <- lapply(methods, function(m) {
   spec <- feature_rsa_model(
     dataset = dset, design = design, method = m, crossval = cv,
-    ncomp_selection = "blocked"
+    ncomp_selection = "blocked", lambda_selection = "blocked"
   )
-  out  <- run_regional(spec, region_mask)
-  cbind(method = m, out$performance_table)
+  out <- run_regional(spec, region_mask)$performance_table
+  data.frame(
+    method = m,
+    pattern_correlation = mean(out$pattern_correlation),
+    rdm_correlation = mean(out$rdm_correlation),
+    mse = mean(out$mse)
+  )
 })
 do.call(rbind, summary_rows)
 ```
@@ -226,15 +290,99 @@ do.call(rbind, summary_rows)
 ```{r component-selection-assertions, include = FALSE}
 stopifnot(
   length(design$block_var) == nrow(F),
-  length(unique(design$block_var)) >= 3L
+  length(unique(design$block_var)) >= 3L,
+  all(vapply(summary_rows, function(x) {
+    all(is.finite(unlist(x[c("pattern_correlation", "rdm_correlation", "mse")])))
+  }, logical(1L)))
 )
 ```
 
-For a reproducible performance characterization, run
-`inst/benchmarks/feature_rsa_hotpaths.R` from a source checkout. It compares
-the compact kernels with the former formula-based implementation, validates
-predictions and segment errors before timing, and records absolute repeated
-times rather than enforcing a machine-specific speed claim in ordinary tests.
+## What did the ridge benchmark show?
+
+The checked-in characterization uses 20 independently seeded dense linear
+fixtures. Each has 120 observations, 16 correlated features, 100 voxel
+responses, six blocks, and a never-tuned-on final held-out block. All native
+thread limits were one. The prospective accuracy margin required median MSE
+no more than 5% worse than PLS LOO, 90th-percentile MSE no more than 20% worse,
+and pattern/RDM correlation losses no larger than .01 at the median or .03 at
+the lower decile.
+
+```{r ridge-benchmark-receipt, echo = FALSE}
+ridge_receipt_path <- system.file(
+  "extdata", "feature_rsa_ridge_accuracy_results.csv",
+  package = "rMVPA"
+)
+if (!nzchar(ridge_receipt_path)) {
+  ridge_receipt_path <- file.path(
+    "..", "inst", "extdata", "feature_rsa_ridge_accuracy_results.csv"
+  )
+}
+ridge_receipt <- utils::read.csv(
+  ridge_receipt_path,
+  stringsAsFactors = FALSE
+)
+
+ridge_rows <- grepl("^ridge_", ridge_receipt$implementation)
+stopifnot(
+  nrow(ridge_receipt) == 6L,
+  all(ridge_receipt$n_seeds == 20L),
+  all(ridge_receipt$omp_threads == 1L),
+  all(ridge_receipt$openblas_threads == 1L),
+  all(ridge_receipt$mkl_threads == 1L),
+  all(ridge_receipt$veclib_threads == 1L),
+  all(ridge_receipt$within_linear_fixture_margin[ridge_rows]),
+  length(unique(ridge_receipt$source_fingerprint)) == 1L,
+  nzchar(unique(ridge_receipt$source_fingerprint))
+)
+
+display_ridge_receipt <- transform(
+  ridge_receipt,
+  method = c(
+    "PLS LOO", "PLS blocked", "Ridge GCV", "Ridge analytic LOO",
+    "Ridge blocked", "glmnet ridge blocked CV"
+  ),
+  median_ms = round(1000 * median_seconds, 2),
+  speedup = round(median_speedup_vs_pls_loo, 1),
+  mse_ratio = round(median_mse_ratio, 3),
+  pattern_delta = round(median_pattern_delta, 4),
+  rdm_delta = round(median_rdm_delta, 4)
+)[, c("method", "median_ms", "speedup", "mse_ratio",
+      "pattern_delta", "rdm_delta")]
+
+knitr::kable(
+  display_ridge_receipt,
+  col.names = c(
+    "Estimator / selector", "Median ms", "Speedup vs PLS LOO",
+    "MSE ratio", "Pattern delta", "RDM delta"
+  ),
+  caption = paste(
+    "Twenty-seed dense-linear characterization on Apple M3 Max.",
+    "Accuracy columns are relative to PLS LOO; timings are descriptive."
+  )
+)
+```
+
+All three ridge selectors cleared the declared margin. Median MSE was
+11--12% lower than PLS LOO, while median pattern and RDM correlations were
+slightly higher. GCV was about 39 times faster than PLS LOO; analytic LOO and
+blocked ridge were about 10 and 9 times faster. Blocked PLS was also about 11
+times faster than PLS LOO and had essentially identical accuracy here, so
+users who specifically need PLS should prefer a scientifically valid block
+unit rather than changing estimators only for speed.
+
+The `glmnet` result is not a general ranking: it reports that package's
+blocked-CV choice on this particular dense fixture, where it selected a
+different penalty and missed the fixture-specific equivalence margin. Ridge
+does not replace elastic net when sparsity is part of the estimand. Likewise,
+these simulations do not prove equivalence on a new dataset; compare outer-fold
+metrics on your own ROIs before changing a preregistered method.
+
+Run `inst/benchmarks/feature_rsa_hotpaths.R` from a source checkout to
+regenerate the receipt. The driver validates numerical parity before timing,
+records a source fingerprint and dirty-worktree status, and includes the former
+materialized blocked-ridge path as an oracle. The implementation uses base R's
+optimized SVD and matrix multiplication; profiling did not justify an Rcpp
+layer around those same kernels.
 
 ## How it differs from standard RSA
 
