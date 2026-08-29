@@ -111,7 +111,8 @@ Now build the design and the model:
 design <- feature_rsa_design(
   F        = F,
   labels   = labels,
-  max_comps = 2          # cap PLS/PCR components
+  max_comps = 2,         # cap PLS/PCR components
+  block_var = sim$design$block_var
 )
 
 cv <- blocked_cross_validation(sim$design$block_var)
@@ -120,6 +121,7 @@ mod <- feature_rsa_model(
   dataset  = dset,
   design   = design,
   method   = "pls",      # PLS regression: F -> X
+  ncomp_selection = "blocked",
   crossval = cv
 )
 ```
@@ -140,9 +142,9 @@ res$performance_table
 #> # A tibble: 3 × 10
 #>   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
 #>    <int>               <dbl>                  <dbl>                   <dbl>
-#> 1      1               0.385                  0.344                   0.788
-#> 2      2               0.405                  0.374                   0.798
-#> 3      3               0.361                  0.339                   0.774
+#> 1      1               0.285                  0.228                   0.669
+#> 2      2               0.325                  0.280                   0.7  
+#> 3      3               0.251                  0.216                   0.654
 #> # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
 #> #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
 ```
@@ -161,59 +163,100 @@ space:
 
 | Method | Best when | Notes |
 |----|----|----|
-| `"pls"` (default) | Features are correlated; you want supervised dimensionality reduction. | Uses [`pls::plsr`](https://khliland.github.io/pls/reference/mvr.html). Fits up to `max_comps` components. |
-| `"pca"` | You want to reduce features unsupervised first, then regress on PCs. | Principal component regression via [`pls::pcr`](https://khliland.github.io/pls/reference/mvr.html). |
+| `"pls"` (default) | Features are correlated; you want supervised dimensionality reduction. | Uses the configured `pls` PLS numerical kernel. Fits up to `max_comps` components. |
+| `"pca"` | You want to reduce features unsupervised first, then regress on PCs. | Uses the configured `pls` PCR numerical kernel (SVD-PCR by default). |
 | `"glmnet"` | High-dimensional or sparse features; you want shrinkage. | Multivariate Gaussian elastic net via `glmnet`. Tune with `alpha`, `lambda`, `cv_glmnet`. |
 
-For PLS and PCR, `ncomp_selection` decides how many of the fitted
-components are used at prediction time:
+## How should you select the number of components?
 
-- `"loo"` (default): leave-one-out CV, picks the fewest components
-  within one SE of the minimum RMSEP.
-- `"pve"`: stop when cumulative explained variance crosses
-  `pve_threshold` (default 0.9).
-- `"max"`: always use `max_comps` components.
+PLS and PCR fit up to `max_comps`; `ncomp_selection` decides how many
+are used for each outer-fold prediction. This tuning happens **inside**
+the outer cross-validation loop, so held-out outer observations never
+choose their own component count.
+
+| Selection | Inner work per outer training fold | What it estimates | When to use it |
+|----|---:|----|----|
+| `"blocked"` | One fit per training block, plus the final fit | Leave-one-block-out prediction error; each block contributes one MSE | Preferred when runs, sessions, subjects, or another genuine independence unit are available |
+| `"loo"` (default) | One fit per training observation, plus the final fit | Leave-one-observation-out prediction error | Backward-compatible choice for exchangeable, independent rows; expensive for long designs |
+| `"pve"` | One fit | Cumulative predictor variance explained, stopping at `pve_threshold` (default 0.9) | A fast heuristic when held-out tuning is not required |
+| `"max"` | One fit | No tuning; always use the available `max_comps` | A fixed-complexity analysis chosen in advance |
+
+The `"blocked"` and `"loo"` selectors use the same one-standard-error
+rule: choose the fewest components whose mean segment MSE is within one
+standard error of the minimum. They differ in the unit treated as
+exchangeable. If observations within a run are autocorrelated, LOO can
+be both unnecessarily slow and scientifically optimistic; blocking on
+run makes the validation unit match the acquisition structure. For
+`"blocked"`, feature and neural centering and scaling are re-estimated
+from each inner training split, so the held-out block does not set
+preprocessing parameters. With unequal block sizes, blocks receive equal
+weight rather than observations receiving equal weight.
+
+The default remains `"loo"` for compatibility. On blocked neuroimaging
+data, pass the same observation-aligned `block_var` to
+[`feature_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_design.md)
+and use `ncomp_selection = "blocked"`, as in the minimal example. Every
+outer training fold must retain at least two non-empty blocks; rMVPA
+fails the fold rather than silently reverting to a different selector.
+
+The implementation streams validation errors and retains only the
+compact coefficient path needed for prediction. This reduces transient
+memory but does not change the number of fits implied by the selector.
+In particular, exact LOO remains intrinsically proportional to the
+number of training observations. Parallel workers keep one target matrix
+plus fold indices instead of serializing overlapping target slices for
+every fold.
 
 ``` r
 
 methods <- c("pls", "pca", "glmnet")
 summary_rows <- lapply(methods, function(m) {
-  spec <- feature_rsa_model(dataset = dset, design = design, method = m, crossval = cv)
+  spec <- feature_rsa_model(
+    dataset = dset, design = design, method = m, crossval = cv,
+    ncomp_selection = "blocked"
+  )
   out  <- run_regional(spec, region_mask)
   cbind(method = m, out$performance_table)
 })
 do.call(rbind, summary_rows)
 #>   method roinum pattern_correlation pattern_discrimination
-#> 1    pls      1           0.3846940              0.3441974
-#> 2    pls      2           0.4045292              0.3739388
-#> 3    pls      3           0.3612074              0.3388624
-#> 4    pca      1           0.3805947              0.3398303
-#> 5    pca      2           0.4050113              0.3740592
-#> 6    pca      3           0.3576422              0.3349944
+#> 1    pls      1           0.2850026              0.2275442
+#> 2    pls      2           0.3247986              0.2802777
+#> 3    pls      3           0.2512543              0.2157884
+#> 4    pca      1           0.2835266              0.2262611
+#> 5    pca      2           0.3254417              0.2808132
+#> 6    pca      3           0.2477400              0.2120167
 #> 7 glmnet      1           0.3719819              0.3342702
 #> 8 glmnet      2           0.3859255              0.3572923
 #> 9 glmnet      3           0.3374512              0.3165107
 #>   pattern_rank_percentile rdm_correlation voxel_correlation      mse r_squared
-#> 1               0.7877551       0.6901634         0.4523082 1.143468 0.1926938
-#> 2               0.7975510       0.7482323         0.4646539 1.074230 0.2044189
-#> 3               0.7738776       0.6653580         0.4313721 1.197495 0.1720092
-#> 4               0.7848980       0.6827079         0.4468376 1.150273 0.1878893
-#> 5               0.7991837       0.7515874         0.4648338 1.072501 0.2056996
-#> 6               0.7734694       0.6618135         0.4279024 1.200183 0.1701507
+#> 1               0.6689796       0.5496127         0.3649092 1.248759 0.1183568
+#> 2               0.7000000       0.6694226         0.4053769 1.142053 0.1541890
+#> 3               0.6542857       0.5335336         0.3475725 1.298152 0.1024111
+#> 4               0.6685714       0.5494108         0.3604843 1.254104 0.1145828
+#> 5               0.7024490       0.6688983         0.4043075 1.143148 0.1533781
+#> 6               0.6538776       0.5240422         0.3447385 1.300160 0.1010227
 #> 7               0.8016327       0.7153794         0.4375939 1.176173 0.1696034
 #> 8               0.8020408       0.7590258         0.4450374 1.114066 0.1749165
 #> 9               0.7751020       0.6942123         0.4033873 1.258269 0.1299875
 #>   mean_voxelwise_temporal_cor ncomp
-#> 1                   0.3148281     2
-#> 2                   0.3338867     2
-#> 3                   0.2961254     2
-#> 4                   0.3096119     2
-#> 5                   0.3341077     2
-#> 6                   0.2929064     2
+#> 1                   0.2293049     2
+#> 2                   0.2684918     2
+#> 3                   0.2130810     2
+#> 4                   0.2240035     2
+#> 5                   0.2669684     2
+#> 6                   0.2096067     2
 #> 7                   0.3121517     5
 #> 8                   0.3287285     5
 #> 9                   0.2806889     5
 ```
+
+For a reproducible performance characterization, run
+`inst/benchmarks/feature_rsa_hotpaths.R` from a source checkout. It
+compares the compact kernels with the former formula-based
+implementation, validates predictions and segment errors before timing,
+and records absolute repeated times rather than enforcing a
+machine-specific speed claim in ordinary tests.
 
 ## How it differs from standard RSA
 

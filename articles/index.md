@@ -20,6 +20,14 @@ Essential concepts and basic workflows
 - [Feature Selection in
   rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md):
 
+### Performance and Deployment
+
+Choose Future process topologies, data transport, and native thread
+limits with reproducible correctness and performance evidence.
+
+- [Choose a Safe Parallel Runtime for
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Parallelism.md):
+
 ### Voxelwise Encoding Models
 
 Fit leakage-safe grouped encoding models with per-response tuning,

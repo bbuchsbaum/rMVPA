@@ -49,7 +49,7 @@
 <span>  <span class="va">design</span>,</span>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pls"</span>, <span class="st">"pca"</span>, <span class="st">"glmnet"</span><span class="op">)</span>,</span>
 <span>  crossval <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  ncomp_selection <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"loo"</span>, <span class="st">"max"</span>, <span class="st">"pve"</span><span class="op">)</span>,</span>
+<span>  ncomp_selection <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"loo"</span>, <span class="st">"max"</span>, <span class="st">"pve"</span>, <span class="st">"blocked"</span><span class="op">)</span>,</span>
 <span>  pve_threshold <span class="op">=</span> <span class="fl">0.9</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  cv_glmnet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -77,10 +77,13 @@ and including the component limit (`max_comps`).</p></dd>
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
 <dd><p>Character string specifying the analysis method. One of:</p><dl><dt>pls</dt>
-<dd><p>Partial Least Squares regression predicting X from F (via <code><a href="https://khliland.github.io/pls/reference/mvr.html" class="external-link">pls::plsr</a></code>).</p></dd>
+<dd><p>Partial Least Squares regression predicting X from F using
+    the numerical algorithm configured by <code><a href="https://khliland.github.io/pls/reference/pls.options.html" class="external-link">pls::pls.options()</a></code>.</p></dd>
 
   <dt>pca</dt>
-<dd><p>Principal Component Regression predicting X from PCs of F (via <code><a href="https://khliland.github.io/pls/reference/mvr.html" class="external-link">pls::pcr</a></code>).</p></dd>
+<dd><p>Principal Component Regression predicting X from PCs of F
+    using the algorithm configured by <code><a href="https://khliland.github.io/pls/reference/pls.options.html" class="external-link">pls::pls.options()</a></code> (SVD-PCR
+    by default).</p></dd>
 
   <dt>glmnet</dt>
 <dd><p>Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.</p></dd>
@@ -96,14 +99,22 @@ and including the component limit (`max_comps`).</p></dd>
 <dt id="arg-ncomp-selection">ncomp_selection<a class="anchor" aria-label="anchor" href="#arg-ncomp-selection"></a></dt>
 <dd><p>Character string controlling how the number of components
 is chosen for <code>pls</code> and <code>pca</code> methods.  One of:</p><dl><dt>loo</dt>
-<dd><p>(Default) Fit with leave-one-out validation and select the
-    fewest components within one standard error of the minimum RMSEP
-    (<code><a href="https://khliland.github.io/pls/reference/selectNcomp.html" class="external-link">pls::selectNcomp</a></code>, method <code>"onesigma"</code>).</p></dd>
+<dd><p>(Default) Use leave-one-observation-out validation and select
+    the fewest components within one standard error of the minimum
+    segment-wise MSE. This preserves the historical selection rule while
+    streaming held-out errors instead of retaining a validation cube.</p></dd>
 
   <dt>pve</dt>
 <dd><p>Keep the fewest components whose cumulative explained
     variance reaches <code>pve_threshold</code> of the total explained by all
     fitted components.</p></dd>
+
+  <dt>blocked</dt>
+<dd><p>Use leave-one-block-out validation within each outer
+    training fold and apply the same one-standard-error rule as
+    <code>"loo"</code>. Each held-out block contributes one segment MSE.
+    Requires <code>design$block_var</code> and at least two training blocks in
+    every outer fold.</p></dd>
 
   <dt>max</dt>
 <dd><p>Use all <code>max_comps</code> components (legacy behaviour).</p></dd>
@@ -170,16 +181,25 @@ arguments such as <code>cache_pca</code> now results in an error.</p></dd>
     <p>Feature RSA models analyze how well a feature matrix <code>F</code> (defined in the `design`)
 relates to neural data <code>X</code>. The `max_comps` parameter, inherited from the `design` object,
 sets an upper limit on the number of components fitted:
-  - <strong>pls</strong>: PLS regression via <code><a href="https://khliland.github.io/pls/reference/mvr.html" class="external-link">pls::plsr</a></code>. Fits up to `max_comps` components;
-    the actual number used for prediction is chosen by <code>ncomp_selection</code>.
-  - <strong>pca</strong>: Principal Component Regression via <code><a href="https://khliland.github.io/pls/reference/mvr.html" class="external-link">pls::pcr</a></code>. Fits up to
-    `max_comps` components; selection controlled by <code>ncomp_selection</code>.
+  - <strong>pls</strong>: PLS regression using the configured <span class="pkg">pls</span> numerical
+    kernel. Fits up to `max_comps` components; the actual number used for
+    prediction is chosen by <code>ncomp_selection</code>.
+  - <strong>pca</strong>: Principal Component Regression using the configured
+    <span class="pkg">pls</span> PCR kernel (SVD-PCR by default). Fits up to `max_comps`
+    components; selection is controlled by <code>ncomp_selection</code>.
   - <strong>glmnet</strong>: Elastic net regression via <code>glmnet</code> with multivariate Gaussian
     response. Regularisation (lambda) can be auto-selected via <code>cv_glmnet=TRUE</code>.</p>
 <p>For <code>pls</code> and <code>pca</code>, the <code>ncomp_selection</code> argument determines how many
 of the fitted components are actually used for prediction.  The default
-(<code>"loo"</code>) fits the model with leave-one-out cross-validation and picks
-the fewest components within one SE of the minimum RMSEP.</p>
+(<code>"loo"</code>) uses leave-one-observation-out validation and picks the
+fewest components within one SE of the minimum segment-wise MSE.
+<code>"blocked"</code> applies the same rule to leave-one-block-out segments
+within each outer training fold; centering and scaling are estimated again
+from each inner training split. It is usually the more faithful and much
+less expensive validation unit when observations are dependent within
+acquisition runs, sessions, or subjects. It is not interchangeable with
+<code>"pve"</code> or <code>"max"</code>, which do not estimate held-out prediction
+error for component selection.</p>
 <p>**Performance Metrics** (computed by `evaluate_model` after cross-validation):</p>
 <p>*Condition-pattern metrics* (trial x trial correlation matrix):
   - `pattern_correlation`: Average correlation between the predicted and observed

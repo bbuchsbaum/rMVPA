@@ -12,7 +12,7 @@ feature_rsa_model(
   design,
   method = c("pls", "pca", "glmnet"),
   crossval = NULL,
-  ncomp_selection = c("loo", "max", "pve"),
+  ncomp_selection = c("loo", "max", "pve", "blocked"),
   pve_threshold = 0.9,
   alpha = 0.5,
   cv_glmnet = FALSE,
@@ -42,13 +42,16 @@ feature_rsa_model(
 
   pls
 
-  :   Partial Least Squares regression predicting X from F (via
-      [`pls::plsr`](https://khliland.github.io/pls/reference/mvr.html)).
+  :   Partial Least Squares regression predicting X from F using the
+      numerical algorithm configured by
+      [`pls::pls.options()`](https://khliland.github.io/pls/reference/pls.options.html).
 
   pca
 
-  :   Principal Component Regression predicting X from PCs of F (via
-      [`pls::pcr`](https://khliland.github.io/pls/reference/mvr.html)).
+  :   Principal Component Regression predicting X from PCs of F using
+      the algorithm configured by
+      [`pls::pls.options()`](https://khliland.github.io/pls/reference/pls.options.html)
+      (SVD-PCR by default).
 
   glmnet
 
@@ -66,16 +69,25 @@ feature_rsa_model(
 
   loo
 
-  :   (Default) Fit with leave-one-out validation and select the fewest
-      components within one standard error of the minimum RMSEP
-      ([`pls::selectNcomp`](https://khliland.github.io/pls/reference/selectNcomp.html),
-      method `"onesigma"`).
+  :   (Default) Use leave-one-observation-out validation and select the
+      fewest components within one standard error of the minimum
+      segment-wise MSE. This preserves the historical selection rule
+      while streaming held-out errors instead of retaining a validation
+      cube.
 
   pve
 
   :   Keep the fewest components whose cumulative explained variance
       reaches `pve_threshold` of the total explained by all fitted
       components.
+
+  blocked
+
+  :   Use leave-one-block-out validation within each outer training fold
+      and apply the same one-standard-error rule as `"loo"`. Each
+      held-out block contributes one segment MSE. Requires
+      `design$block_var` and at least two training blocks in every outer
+      fold.
 
   max
 
@@ -146,20 +158,26 @@ A `feature_rsa_model` object (S3 class).
 Feature RSA models analyze how well a feature matrix `F` (defined in the
 \`design\`) relates to neural data `X`. The \`max_comps\` parameter,
 inherited from the \`design\` object, sets an upper limit on the number
-of components fitted: - **pls**: PLS regression via
-[`pls::plsr`](https://khliland.github.io/pls/reference/mvr.html). Fits
-up to \`max_comps\` components; the actual number used for prediction is
-chosen by `ncomp_selection`. - **pca**: Principal Component Regression
-via [`pls::pcr`](https://khliland.github.io/pls/reference/mvr.html).
-Fits up to \`max_comps\` components; selection controlled by
-`ncomp_selection`. - **glmnet**: Elastic net regression via `glmnet`
+of components fitted: - **pls**: PLS regression using the configured pls
+numerical kernel. Fits up to \`max_comps\` components; the actual number
+used for prediction is chosen by `ncomp_selection`. - **pca**: Principal
+Component Regression using the configured pls PCR kernel (SVD-PCR by
+default). Fits up to \`max_comps\` components; selection is controlled
+by `ncomp_selection`. - **glmnet**: Elastic net regression via `glmnet`
 with multivariate Gaussian response. Regularisation (lambda) can be
 auto-selected via `cv_glmnet=TRUE`.
 
 For `pls` and `pca`, the `ncomp_selection` argument determines how many
 of the fitted components are actually used for prediction. The default
-(`"loo"`) fits the model with leave-one-out cross-validation and picks
-the fewest components within one SE of the minimum RMSEP.
+(`"loo"`) uses leave-one-observation-out validation and picks the fewest
+components within one SE of the minimum segment-wise MSE. `"blocked"`
+applies the same rule to leave-one-block-out segments within each outer
+training fold; centering and scaling are estimated again from each inner
+training split. It is usually the more faithful and much less expensive
+validation unit when observations are dependent within acquisition runs,
+sessions, or subjects. It is not interchangeable with `"pve"` or
+`"max"`, which do not estimate held-out prediction error for component
+selection.
 
 \*\*Performance Metrics\*\* (computed by \`evaluate_model\` after
 cross-validation):
