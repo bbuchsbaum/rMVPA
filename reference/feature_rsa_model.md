@@ -10,7 +10,7 @@ Creates a model for feature-based Representational Similarity Analysis
 feature_rsa_model(
   dataset,
   design,
-  method = c("pls", "pca", "glmnet"),
+  method = c("pls", "pca", "glmnet", "ridge"),
   crossval = NULL,
   ncomp_selection = c("loo", "max", "pve", "blocked"),
   pve_threshold = 0.9,
@@ -21,6 +21,7 @@ feature_rsa_model(
   permute_by = c("features", "observations"),
   save_distributions = FALSE,
   return_rdm_vectors = FALSE,
+  lambda_selection = c("gcv", "loo", "blocked", "fixed"),
   ...
 )
 ```
@@ -52,6 +53,11 @@ feature_rsa_model(
       the algorithm configured by
       [`pls::pls.options()`](https://khliland.github.io/pls/reference/pls.options.html)
       (SVD-PCR by default).
+
+  ridge
+
+  :   Multi-response ridge regression predicting X from F with an
+      economy-SVD solver and a normalized penalty.
 
   glmnet
 
@@ -93,7 +99,7 @@ feature_rsa_model(
 
   :   Use all `max_comps` components (legacy behaviour).
 
-  Ignored when `method = "glmnet"`.
+  Ignored when `method` is `"ridge"` or `"glmnet"`.
 
 - pve_threshold:
 
@@ -116,10 +122,12 @@ feature_rsa_model(
 
 - lambda:
 
-  Optional numeric value or sequence of values, only used when
-  method="glmnet" and cv_glmnet=FALSE. Specifies the regularization
-  parameter. If NULL (default), a sequence will be automatically
-  determined by glmnet.
+  Optional numeric value or sequence of regularization values. For
+  `method = "ridge"`, values must be finite and non-negative and
+  correspond to the normalized objective \\n^{-1} \|\|Y-XB\|\|\_F^2 +
+  \lambda \|\|B\|\|\_F^2\\; `NULL` uses a fixed, data-independent grid.
+  For `method = "glmnet"` with `cv_glmnet = FALSE`, values must be
+  positive; `NULL` lets glmnet construct its path.
 
 - nperm:
 
@@ -144,6 +152,17 @@ feature_rsa_model(
   because it can add substantial memory use for long time series or many
   ROIs.
 
+- lambda_selection:
+
+  Character string controlling ridge penalty selection. `"gcv"`
+  (default) minimizes generalized cross-validation error from one
+  full-fold SVD. `"loo"` uses exact analytic leave-one-observation-out
+  PRESS errors and the one-standard-error rule. `"blocked"` uses
+  leave-one-block-out errors, with centering and scaling re-estimated
+  inside every inner split, and the one-standard-error rule; it requires
+  `design$block_var`. `"fixed"` requires one supplied `lambda`. Ignored
+  for other methods.
+
 - ...:
 
   Additional arguments (currently unused). Passing deprecated arguments
@@ -163,7 +182,10 @@ numerical kernel. Fits up to \`max_comps\` components; the actual number
 used for prediction is chosen by `ncomp_selection`. - **pca**: Principal
 Component Regression using the configured pls PCR kernel (SVD-PCR by
 default). Fits up to \`max_comps\` components; selection is controlled
-by `ncomp_selection`. - **glmnet**: Elastic net regression via `glmnet`
+by `ncomp_selection`. - **ridge**: Multi-response ridge regression using
+one economy SVD per training matrix. This is a distinct estimator, not
+an approximation to PLS or elastic net. Its penalty is selected by
+`lambda_selection`. - **glmnet**: Elastic net regression via `glmnet`
 with multivariate Gaussian response. Regularisation (lambda) can be
 auto-selected via `cv_glmnet=TRUE`.
 
@@ -208,8 +230,10 @@ courses.
 \- \`p\_\*\`, \`z\_\*\`: If \`nperm \> 0\`, permutation-based p-values
 and z-scores for the above metrics.
 
-The number of components actually used (\`ncomp\`) for the
-region/searchlight is also included in the performance output.
+For PLS, PCR, and glmnet, the number of components or its historical
+proxy (\`ncomp\`) is included in the performance output. Ridge instead
+reports the median selected penalty (\`median_lambda\`) and mean
+effective degrees of freedom (\`mean_effective_df\`) across outer folds.
 
 ## Examples
 

@@ -47,7 +47,7 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">feature_rsa_model</span><span class="op">(</span></span>
 <span>  <span class="va">dataset</span>,</span>
 <span>  <span class="va">design</span>,</span>
-<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pls"</span>, <span class="st">"pca"</span>, <span class="st">"glmnet"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pls"</span>, <span class="st">"pca"</span>, <span class="st">"glmnet"</span>, <span class="st">"ridge"</span><span class="op">)</span>,</span>
 <span>  crossval <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ncomp_selection <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"loo"</span>, <span class="st">"max"</span>, <span class="st">"pve"</span>, <span class="st">"blocked"</span><span class="op">)</span>,</span>
 <span>  pve_threshold <span class="op">=</span> <span class="fl">0.9</span>,</span>
@@ -58,6 +58,7 @@
 <span>  permute_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"features"</span>, <span class="st">"observations"</span><span class="op">)</span>,</span>
 <span>  save_distributions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  return_rdm_vectors <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  lambda_selection <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gcv"</span>, <span class="st">"loo"</span>, <span class="st">"blocked"</span>, <span class="st">"fixed"</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -84,6 +85,10 @@ and including the component limit (`max_comps`).</p></dd>
 <dd><p>Principal Component Regression predicting X from PCs of F
     using the algorithm configured by <code><a href="https://khliland.github.io/pls/reference/pls.options.html" class="external-link">pls::pls.options()</a></code> (SVD-PCR
     by default).</p></dd>
+
+  <dt>ridge</dt>
+<dd><p>Multi-response ridge regression predicting X from F with
+    an economy-SVD solver and a normalized penalty.</p></dd>
 
   <dt>glmnet</dt>
 <dd><p>Elastic net regression predicting X from F using glmnet with multivariate Gaussian response.</p></dd>
@@ -120,7 +125,7 @@ is chosen for <code>pls</code> and <code>pca</code> methods.  One of:</p><dl><dt
 <dd><p>Use all <code>max_comps</code> components (legacy behaviour).</p></dd>
 
 
-</dl><p>Ignored when <code>method = "glmnet"</code>.</p></dd>
+</dl><p>Ignored when <code>method</code> is <code>"ridge"</code> or <code>"glmnet"</code>.</p></dd>
 
 
 <dt id="arg-pve-threshold">pve_threshold<a class="anchor" aria-label="anchor" href="#arg-pve-threshold"></a></dt>
@@ -141,9 +146,13 @@ optimal lambda value via cross-validation. Defaults to FALSE.</p></dd>
 
 
 <dt id="arg-lambda">lambda<a class="anchor" aria-label="anchor" href="#arg-lambda"></a></dt>
-<dd><p>Optional numeric value or sequence of values, only used when method="glmnet" and
-cv_glmnet=FALSE. Specifies the regularization parameter. If NULL (default), a sequence will be
-automatically determined by glmnet.</p></dd>
+<dd><p>Optional numeric value or sequence of regularization values.
+For <code>method = "ridge"</code>, values must be finite and non-negative and
+correspond to the normalized objective
+\(n^{-1} ||Y-XB||_F^2 + \lambda ||B||_F^2\); <code>NULL</code> uses a fixed,
+data-independent grid. For <code>method = "glmnet"</code> with
+<code>cv_glmnet = FALSE</code>, values must be positive; <code>NULL</code> lets glmnet
+construct its path.</p></dd>
 
 
 <dt id="arg-nperm">nperm<a class="anchor" aria-label="anchor" href="#arg-nperm"></a></dt>
@@ -167,6 +176,17 @@ off by default because it can add substantial memory use for long time
 series or many ROIs.</p></dd>
 
 
+<dt id="arg-lambda-selection">lambda_selection<a class="anchor" aria-label="anchor" href="#arg-lambda-selection"></a></dt>
+<dd><p>Character string controlling ridge penalty selection.
+<code>"gcv"</code> (default) minimizes generalized cross-validation error from
+one full-fold SVD. <code>"loo"</code> uses exact analytic leave-one-observation-out
+PRESS errors and the one-standard-error rule. <code>"blocked"</code> uses
+leave-one-block-out errors, with centering and scaling re-estimated inside
+every inner split, and the one-standard-error rule; it requires
+<code>design$block_var</code>. <code>"fixed"</code> requires one supplied <code>lambda</code>.
+Ignored for other methods.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments (currently unused). Passing deprecated
 arguments such as <code>cache_pca</code> now results in an error.</p></dd>
@@ -187,6 +207,9 @@ sets an upper limit on the number of components fitted:
   - <strong>pca</strong>: Principal Component Regression using the configured
     <span class="pkg">pls</span> PCR kernel (SVD-PCR by default). Fits up to `max_comps`
     components; selection is controlled by <code>ncomp_selection</code>.
+  - <strong>ridge</strong>: Multi-response ridge regression using one economy SVD
+    per training matrix. This is a distinct estimator, not an approximation
+    to PLS or elastic net. Its penalty is selected by <code>lambda_selection</code>.
   - <strong>glmnet</strong>: Elastic net regression via <code>glmnet</code> with multivariate Gaussian
     response. Regularisation (lambda) can be auto-selected via <code>cv_glmnet=TRUE</code>.</p>
 <p>For <code>pls</code> and <code>pca</code>, the <code>ncomp_selection</code> argument determines how many
@@ -224,8 +247,10 @@ error for component selection.</p>
     between predicted and observed time courses.</p>
 <p>- `p_*`, `z_*`: If `nperm &gt; 0`, permutation-based p-values and z-scores for
     the above metrics.</p>
-<p>The number of components actually used (`ncomp`) for the region/searchlight is
-also included in the performance output.</p>
+<p>For PLS, PCR, and glmnet, the number of components or its historical proxy
+(`ncomp`) is included in the performance output. Ridge instead reports the
+median selected penalty (`median_lambda`) and mean effective degrees of
+freedom (`mean_effective_df`) across outer folds.</p>
     </div>
 
     <div class="section level2">

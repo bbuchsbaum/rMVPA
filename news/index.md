@@ -2,6 +2,14 @@
 
 ## rMVPA 0.1.3
 
+- `feature_rsa_model(method = "ridge")` adds a compact multi-response
+  ridge estimator for dense feature spaces. It supports one-SVD GCV,
+  exact analytic LOO, leakage-safe blocked selection, or a fixed
+  normalized penalty; reports selected lambda and effective degrees of
+  freedom rather than a component proxy; and has default/shard parity.
+  Blocked tuning scores its full penalty path from spectral
+  cross-products without materializing a voxel prediction matrix for
+  every candidate.
 - Added first-class single-domain banded-ridge encoding via
   [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md)
   and

@@ -93,9 +93,9 @@ specific dimensions.</li>
 not just whether two RDMs correlate — for example, you want to test
 whether semantic embeddings predict the <em>exact</em> held-out trial
 pattern, not just average geometry.</li>
-<li>You want <strong>regularisation</strong> (PLS, PCR, or elastic net)
-because your feature space is high-dimensional, correlated, or has more
-features than trials.</li>
+<li>You want <strong>regularisation</strong> (PLS, PCR, fast ridge, or
+elastic net) because your feature space is high-dimensional, correlated,
+or has more features than trials.</li>
 <li>You want <strong>multiple performance metrics</strong> out of one
 fit — pattern correlation, pattern discrimination, RDM correlation,
 voxel correlation, R² — rather than choosing one a priori.</li>
@@ -143,12 +143,10 @@ the design and let it build a blocked CV).</td>
 </tr>
 <tr class="odd">
 <td>Output</td>
-<td>Per-ROI metrics including <code>pattern_correlation</code>,
-<code>pattern_discrimination</code>,
-<code>pattern_rank_percentile</code>, <code>rdm_correlation</code>,
-<code>voxel_correlation</code>, <code>mse</code>,
-<code>r_squared</code>, <code>mean_voxelwise_temporal_cor</code>, and
-<code>ncomp</code> (components actually used).</td>
+<td>Per-ROI reconstruction and geometry metrics. PLS/PCR and glmnet also
+report <code>ncomp</code> (a historical nonzero-count proxy for glmnet);
+ridge reports <code>median_lambda</code> and
+<code>mean_effective_df</code> across outer folds.</td>
 </tr>
 </tbody>
 </table>
@@ -248,7 +246,7 @@ actually used (controlled by <code>ncomp_selection</code>).</p>
 <div class="section level2">
 <h2 id="choosing-a-method">Choosing a method<a class="anchor" aria-label="anchor" href="#choosing-a-method"></a>
 </h2>
-<p><code><a href="../reference/feature_rsa_model.html">feature_rsa_model()</a></code> supports three estimators. The right
+<p><code><a href="../reference/feature_rsa_model.html">feature_rsa_model()</a></code> supports four estimators. The right
 choice depends on the feature space:</p>
 <table class="table">
 <colgroup>
@@ -278,8 +276,16 @@ PCs.</td>
 by default).</td>
 </tr>
 <tr class="odd">
+<td><code>"ridge"</code></td>
+<td>Effects are plausibly dense; you want fast, stable L2 shrinkage for
+many voxel responses.</td>
+<td>Economy-SVD multi-response ridge. Tune with
+<code>lambda_selection</code>; coefficients are not sparse.</td>
+</tr>
+<tr class="even">
 <td><code>"glmnet"</code></td>
-<td>High-dimensional or sparse features; you want shrinkage.</td>
+<td>You expect sparse or grouped feature effects and need an elastic-net
+penalty.</td>
 <td>Multivariate Gaussian elastic net via <code>glmnet</code>. Tune with
 <code>alpha</code>, <code>lambda</code>, <code>cv_glmnet</code>.</td>
 </tr>
@@ -366,53 +372,217 @@ In particular, exact LOO remains intrinsically proportional to the
 number of training observations. Parallel workers keep one target matrix
 plus fold indices instead of serializing overlapping target slices for
 every fold.</p>
+</div>
+<div class="section level2">
+<h2 id="when-should-you-use-fast-ridge">When should you use fast ridge?<a class="anchor" aria-label="anchor" href="#when-should-you-use-fast-ridge"></a>
+</h2>
+<p>Use <code>method = "ridge"</code> when the scientific model is a
+dense linear mapping from features to voxel responses and L2 shrinkage
+is acceptable. Ridge is a distinct estimator: it is neither approximate
+PLS nor sparse elastic net. It solves, after outer-fold
+standardisation,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>n</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><msubsup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>Y</mi><mo>−</mo><mi>X</mi><mi>B</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mi>F</mi><mn>2</mn></msubsup><mo>+</mo><mi>λ</mi><msubsup><mrow><mo stretchy="true" form="prefix">‖</mo><mi>B</mi><mo stretchy="true" form="postfix">‖</mo></mrow><mi>F</mi><mn>2</mn></msubsup><mo>,</mo></mrow><annotation encoding="application/x-tex">
+n^{-1}\lVert Y-XB\rVert_F^2 + \lambda\lVert B\rVert_F^2,
+</annotation></semantics></math></p>
+<p>with an unpenalised intercept. The normal equations therefore add
+<code>n * lambda</code> to the feature cross-product, so a supplied
+lambda has the same normalised meaning in folds of different sizes.
+<code>lambda = 0</code> requests the minimum-norm unpenalised
+solution.</p>
+<table class="table">
+<colgroup>
+<col width="30%">
+<col width="40%">
+<col width="30%">
+</colgroup>
+<thead><tr class="header">
+<th><code>lambda_selection</code></th>
+<th align="right">Inner work per outer training fold</th>
+<th>Assumption and use</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>
+<code>"gcv"</code> (default)</td>
+<td align="right">One economy SVD, scoring the full lambda grid</td>
+<td>Fastest choice when rows can be treated as exchangeable. Minimises
+generalized cross-validation error.</td>
+</tr>
+<tr class="even">
+<td><code>"loo"</code></td>
+<td align="right">One economy SVD plus analytic PRESS scoring</td>
+<td>Exact LOO for the ridge estimator on the fixed outer-fold scale.
+Uses the one-standard-error rule and chooses the strongest eligible
+penalty.</td>
+</tr>
+<tr class="odd">
+<td><code>"blocked"</code></td>
+<td align="right">One economy SVD per retained training block</td>
+<td>Preferred for dependent runs, sessions, or subjects. Re-estimates
+centering and scaling inside every inner split, then uses the
+one-standard-error rule.</td>
+</tr>
+<tr class="even">
+<td><code>"fixed"</code></td>
+<td align="right">One final fit</td>
+<td>Use one prespecified non-negative lambda; no data-driven inner
+tuning.</td>
+</tr>
+</tbody>
+</table>
+<p>GCV and analytic LOO avoid a refit per observation. They still treat
+individual observations as the validation unit, and LOO keeps the
+outer-fold column scales fixed. If within-run dependence or fully nested
+preprocessing matters, use <code>"blocked"</code>; speed is not a reason
+to change the independence unit. The default grid is 49 fixed log-spaced
+values from <code>1e-6</code> to <code>1e2</code>.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">methods</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pls"</span>, <span class="st">"pca"</span>, <span class="st">"glmnet"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">ridge_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_rsa_model.html">feature_rsa_model</a></span><span class="op">(</span></span>
+<span>  dataset <span class="op">=</span> <span class="va">dset</span>,</span>
+<span>  design <span class="op">=</span> <span class="va">design</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"ridge"</span>,</span>
+<span>  lambda_selection <span class="op">=</span> <span class="st">"blocked"</span>,</span>
+<span>  crossval <span class="op">=</span> <span class="va">cv</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">ridge_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">ridge_mod</span>, <span class="va">region_mask</span><span class="op">)</span></span>
+<span><span class="va">ridge_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
+<span>  , <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"pattern_correlation"</span>, <span class="st">"rdm_correlation"</span>,</span>
+<span>      <span class="st">"median_lambda"</span>, <span class="st">"mean_effective_df"</span><span class="op">)</span></span>
+<span><span class="op">]</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 5</span></span></span>
+<span><span class="co">#&gt;   roinum pattern_correlation rdm_correlation median_lambda mean_effective_df</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1               0.293           0.603          3.40              1.95</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2               0.326           0.688          3.16              2.12</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3               0.211           0.515          6.81              1.65</span></span></code></pre></div>
+<p><code>median_lambda</code> is the median selected penalty across
+outer folds. <code>mean_effective_df</code> is the corresponding mean
+effective model dimension, including the intercept; it is the ridge
+analogue of a complexity diagnostic, not a component count.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">methods</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pls"</span>, <span class="st">"pca"</span>, <span class="st">"ridge"</span><span class="op">)</span></span>
 <span><span class="va">summary_rows</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">methods</span>, <span class="kw">function</span><span class="op">(</span><span class="va">m</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_rsa_model.html">feature_rsa_model</a></span><span class="op">(</span></span>
 <span>    dataset <span class="op">=</span> <span class="va">dset</span>, design <span class="op">=</span> <span class="va">design</span>, method <span class="op">=</span> <span class="va">m</span>, crossval <span class="op">=</span> <span class="va">cv</span>,</span>
-<span>    ncomp_selection <span class="op">=</span> <span class="st">"blocked"</span></span>
+<span>    ncomp_selection <span class="op">=</span> <span class="st">"blocked"</span>, lambda_selection <span class="op">=</span> <span class="st">"blocked"</span></span>
 <span>  <span class="op">)</span></span>
-<span>  <span class="va">out</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">spec</span>, <span class="va">region_mask</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>method <span class="op">=</span> <span class="va">m</span>, <span class="va">out</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
+<span>  <span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">spec</span>, <span class="va">region_mask</span><span class="op">)</span><span class="op">$</span><span class="va">performance_table</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    method <span class="op">=</span> <span class="va">m</span>,</span>
+<span>    pattern_correlation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">out</span><span class="op">$</span><span class="va">pattern_correlation</span><span class="op">)</span>,</span>
+<span>    rdm_correlation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">out</span><span class="op">$</span><span class="va">rdm_correlation</span><span class="op">)</span>,</span>
+<span>    mse <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">out</span><span class="op">$</span><span class="va">mse</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">summary_rows</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   method roinum pattern_correlation pattern_discrimination</span></span>
-<span><span class="co">#&gt; 1    pls      1           0.2850026              0.2275442</span></span>
-<span><span class="co">#&gt; 2    pls      2           0.3247986              0.2802777</span></span>
-<span><span class="co">#&gt; 3    pls      3           0.2512543              0.2157884</span></span>
-<span><span class="co">#&gt; 4    pca      1           0.2835266              0.2262611</span></span>
-<span><span class="co">#&gt; 5    pca      2           0.3254417              0.2808132</span></span>
-<span><span class="co">#&gt; 6    pca      3           0.2477400              0.2120167</span></span>
-<span><span class="co">#&gt; 7 glmnet      1           0.3719819              0.3342702</span></span>
-<span><span class="co">#&gt; 8 glmnet      2           0.3859255              0.3572923</span></span>
-<span><span class="co">#&gt; 9 glmnet      3           0.3374512              0.3165107</span></span>
-<span><span class="co">#&gt;   pattern_rank_percentile rdm_correlation voxel_correlation      mse r_squared</span></span>
-<span><span class="co">#&gt; 1               0.6689796       0.5496127         0.3649092 1.248759 0.1183568</span></span>
-<span><span class="co">#&gt; 2               0.7000000       0.6694226         0.4053769 1.142053 0.1541890</span></span>
-<span><span class="co">#&gt; 3               0.6542857       0.5335336         0.3475725 1.298152 0.1024111</span></span>
-<span><span class="co">#&gt; 4               0.6685714       0.5494108         0.3604843 1.254104 0.1145828</span></span>
-<span><span class="co">#&gt; 5               0.7024490       0.6688983         0.4043075 1.143148 0.1533781</span></span>
-<span><span class="co">#&gt; 6               0.6538776       0.5240422         0.3447385 1.300160 0.1010227</span></span>
-<span><span class="co">#&gt; 7               0.8016327       0.7153794         0.4375939 1.176173 0.1696034</span></span>
-<span><span class="co">#&gt; 8               0.8020408       0.7590258         0.4450374 1.114066 0.1749165</span></span>
-<span><span class="co">#&gt; 9               0.7751020       0.6942123         0.4033873 1.258269 0.1299875</span></span>
-<span><span class="co">#&gt;   mean_voxelwise_temporal_cor ncomp</span></span>
-<span><span class="co">#&gt; 1                   0.2293049     2</span></span>
-<span><span class="co">#&gt; 2                   0.2684918     2</span></span>
-<span><span class="co">#&gt; 3                   0.2130810     2</span></span>
-<span><span class="co">#&gt; 4                   0.2240035     2</span></span>
-<span><span class="co">#&gt; 5                   0.2669684     2</span></span>
-<span><span class="co">#&gt; 6                   0.2096067     2</span></span>
-<span><span class="co">#&gt; 7                   0.3121517     5</span></span>
-<span><span class="co">#&gt; 8                   0.3287285     5</span></span>
-<span><span class="co">#&gt; 9                   0.2806889     5</span></span></code></pre></div>
-<p>For a reproducible performance characterization, run
-<code>inst/benchmarks/feature_rsa_hotpaths.R</code> from a source
-checkout. It compares the compact kernels with the former formula-based
-implementation, validates predictions and segment errors before timing,
-and records absolute repeated times rather than enforcing a
-machine-specific speed claim in ordinary tests.</p>
+<span><span class="co">#&gt;   method pattern_correlation rdm_correlation      mse</span></span>
+<span><span class="co">#&gt; 1    pls           0.2870185       0.5841896 1.229655</span></span>
+<span><span class="co">#&gt; 2    pca           0.2855695       0.5807837 1.232471</span></span>
+<span><span class="co">#&gt; 3  ridge           0.2765517       0.6018877 1.250525</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="what-did-the-ridge-benchmark-show">What did the ridge benchmark show?<a class="anchor" aria-label="anchor" href="#what-did-the-ridge-benchmark-show"></a>
+</h2>
+<p>The checked-in characterization uses 20 independently seeded dense
+linear fixtures. Each has 120 observations, 16 correlated features, 100
+voxel responses, six blocks, and a never-tuned-on final held-out block.
+All native thread limits were one. The prospective accuracy margin
+required median MSE no more than 5% worse than PLS LOO, 90th-percentile
+MSE no more than 20% worse, and pattern/RDM correlation losses no larger
+than .01 at the median or .03 at the lower decile.</p>
+<table class="table">
+<caption>Twenty-seed dense-linear characterization on Apple M3 Max.
+Accuracy columns are relative to PLS LOO; timings are
+descriptive.</caption>
+<colgroup>
+<col width="27%">
+<col width="11%">
+<col width="21%">
+<col width="11%">
+<col width="16%">
+<col width="11%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Estimator / selector</th>
+<th align="right">Median ms</th>
+<th align="right">Speedup vs PLS LOO</th>
+<th align="right">MSE ratio</th>
+<th align="right">Pattern delta</th>
+<th align="right">RDM delta</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">PLS LOO</td>
+<td align="right">88.00</td>
+<td align="right">1.0</td>
+<td align="right">1.000</td>
+<td align="right">0.0000</td>
+<td align="right">0.0000</td>
+</tr>
+<tr class="even">
+<td align="left">PLS blocked</td>
+<td align="right">8.00</td>
+<td align="right">10.9</td>
+<td align="right">1.000</td>
+<td align="right">0.0000</td>
+<td align="right">0.0000</td>
+</tr>
+<tr class="odd">
+<td align="left">Ridge GCV</td>
+<td align="right">2.29</td>
+<td align="right">39.0</td>
+<td align="right">0.877</td>
+<td align="right">0.0022</td>
+<td align="right">0.0026</td>
+</tr>
+<tr class="even">
+<td align="left">Ridge analytic LOO</td>
+<td align="right">8.58</td>
+<td align="right">10.4</td>
+<td align="right">0.887</td>
+<td align="right">0.0018</td>
+<td align="right">0.0021</td>
+</tr>
+<tr class="odd">
+<td align="left">Ridge blocked</td>
+<td align="right">9.33</td>
+<td align="right">9.4</td>
+<td align="right">0.888</td>
+<td align="right">0.0018</td>
+<td align="right">0.0018</td>
+</tr>
+<tr class="even">
+<td align="left">glmnet ridge blocked CV</td>
+<td align="right">687.50</td>
+<td align="right">0.1</td>
+<td align="right">2.624</td>
+<td align="right">-0.0100</td>
+<td align="right">-0.0126</td>
+</tr>
+</tbody>
+</table>
+<p>All three ridge selectors cleared the declared margin. Median MSE was
+11–12% lower than PLS LOO, while median pattern and RDM correlations
+were slightly higher. GCV was about 39 times faster than PLS LOO;
+analytic LOO and blocked ridge were about 10 and 9 times faster. Blocked
+PLS was also about 11 times faster than PLS LOO and had essentially
+identical accuracy here, so users who specifically need PLS should
+prefer a scientifically valid block unit rather than changing estimators
+only for speed.</p>
+<p>The <code>glmnet</code> result is not a general ranking: it reports
+that package’s blocked-CV choice on this particular dense fixture, where
+it selected a different penalty and missed the fixture-specific
+equivalence margin. Ridge does not replace elastic net when sparsity is
+part of the estimand. Likewise, these simulations do not prove
+equivalence on a new dataset; compare outer-fold metrics on your own
+ROIs before changing a preregistered method.</p>
+<p>Run <code>inst/benchmarks/feature_rsa_hotpaths.R</code> from a source
+checkout to regenerate the receipt. The driver validates numerical
+parity before timing, records a source fingerprint and dirty-worktree
+status, and includes the former materialized blocked-ridge path as an
+oracle. The implementation uses base R’s optimized SVD and matrix
+multiplication; profiling did not justify an Rcpp layer around those
+same kernels.</p>
 </div>
 <div class="section level2">
 <h2 id="how-it-differs-from-standard-rsa">How it differs from standard RSA<a class="anchor" aria-label="anchor" href="#how-it-differs-from-standard-rsa"></a>
