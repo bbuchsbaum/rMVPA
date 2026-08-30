@@ -299,12 +299,12 @@ than .01 at the median or .03 at the lower decile.
 
 | Estimator / selector | Median ms | Speedup vs PLS LOO | MSE ratio | Pattern delta | RDM delta |
 |:---|---:|---:|---:|---:|---:|
-| PLS LOO | 88.00 | 1.0 | 1.000 | 0.0000 | 0.0000 |
-| PLS blocked | 8.00 | 10.9 | 1.000 | 0.0000 | 0.0000 |
-| Ridge GCV | 2.29 | 39.0 | 0.877 | 0.0022 | 0.0026 |
-| Ridge analytic LOO | 8.58 | 10.4 | 0.887 | 0.0018 | 0.0021 |
-| Ridge blocked | 9.33 | 9.4 | 0.888 | 0.0018 | 0.0018 |
-| glmnet ridge blocked CV | 687.50 | 0.1 | 2.624 | -0.0100 | -0.0126 |
+| PLS LOO | 100.50 | 1.0 | 1.000 | 0.0000 | 0.0000 |
+| PLS blocked | 9.67 | 11.2 | 1.000 | 0.0000 | 0.0000 |
+| Ridge GCV | 2.36 | 40.1 | 0.877 | 0.0022 | 0.0026 |
+| Ridge analytic LOO | 8.33 | 11.2 | 0.887 | 0.0018 | 0.0021 |
+| Ridge blocked | 9.00 | 10.2 | 0.888 | 0.0018 | 0.0018 |
+| glmnet ridge blocked CV | 861.50 | 0.1 | 2.624 | -0.0100 | -0.0126 |
 
 Twenty-seed dense-linear characterization on Apple M3 Max. Accuracy
 columns are relative to PLS LOO; timings are descriptive. {.table}

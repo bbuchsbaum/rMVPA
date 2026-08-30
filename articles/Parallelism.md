@@ -305,14 +305,14 @@ pairing ran in three fresh R processes from a clean installed rMVPA
 
 | Future plan  | Data backend | Median (s) | Range (s)     | Task frames (MiB) |
 |:-------------|:-------------|-----------:|:--------------|------------------:|
-| sequential   | default      |      6.356 | 6.248–7.873   |            12.444 |
-| sequential   | shard        |      5.446 | 4.382–9.437   |             0.101 |
-| multisession | default      |      8.770 | 8.739–10.648  |            12.444 |
-| multisession | shard        |      9.636 | 6.439–18.223  |             0.101 |
-| multicore    | default      |      7.123 | 5.925–9.948   |            12.444 |
-| multicore    | shard        |      4.029 | 3.319–7.765   |             0.101 |
-| mirai        | default      |     32.988 | 27.770–40.171 |            12.444 |
-| mirai        | shard        |     32.556 | 11.505–37.957 |             0.101 |
+| sequential   | default      |      6.408 | 5.531–6.558   |            12.444 |
+| sequential   | shard        |      4.671 | 4.389–6.488   |             0.101 |
+| multisession | default      |      9.532 | 8.718–9.867   |            12.444 |
+| multisession | shard        |      7.220 | 7.102–7.613   |             0.101 |
+| multicore    | default      |      6.615 | 6.367–7.163   |            12.444 |
+| multicore    | shard        |      3.966 | 3.402–4.840   |             0.101 |
+| mirai        | default      |     18.498 | 17.536–35.753 |            12.444 |
+| mirai        | shard        |     16.645 | 14.542–32.193 |             0.101 |
 
 Local fresh-process characterization on an Apple M3 Max (36 GB). Timings
 are descriptive, not thresholds. {.table}
