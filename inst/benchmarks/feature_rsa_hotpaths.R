@@ -660,8 +660,9 @@ frperf_ridge_estimators <- function(seed = 2026082864L,
       fit <- fit_kernel(
         scaled$sf$values,
         scaled$sx$values,
-        ncomp = max_comps,
-        method = "pls"
+        ncomp = selected,
+        method = "pls",
+        retain_ncomp = selected
       )
       list(
         prediction = predict_kernel(
@@ -688,8 +689,9 @@ frperf_ridge_estimators <- function(seed = 2026082864L,
       fit <- fit_kernel(
         scaled$sf$values,
         scaled$sx$values,
-        ncomp = max_comps,
-        method = "pls"
+        ncomp = selected,
+        method = "pls",
+        retain_ncomp = selected
       )
       list(
         prediction = predict_kernel(

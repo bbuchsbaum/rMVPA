@@ -132,6 +132,39 @@ test_that("feature RSA matrix kernels reproduce pls and pcr predictions", {
   }
 })
 
+test_that("feature RSA selected-component fits retain one coefficient matrix", {
+  set.seed(4417)
+  features <- matrix(rnorm(44 * 9), 44, 9)
+  responses <- matrix(rnorm(44 * 15), 44, 15)
+  new_features <- matrix(rnorm(6 * 9), 6, 9)
+
+  for (method in c("pls", "pca")) {
+    full <- rMVPA:::.feature_rsa_fit_kernel(
+      features, responses, ncomp = 6L, method = method
+    )
+    compact <- rMVPA:::.feature_rsa_fit_kernel(
+      features,
+      responses,
+      ncomp = 4L,
+      method = method,
+      retain_ncomp = 4L
+    )
+
+    expect_identical(dim(compact$coefficients), c(9L, 15L, 1L))
+    expect_identical(compact$component_numbers, 4L)
+    expect_identical(compact$ncomp, 4L)
+    expect_equal(
+      rMVPA:::.feature_rsa_predict_kernel(compact, new_features, ncomp = 4L),
+      rMVPA:::.feature_rsa_predict_kernel(full, new_features, ncomp = 4L),
+      tolerance = 2e-11
+    )
+    expect_lt(
+      length(serialize(compact, NULL)),
+      0.4 * length(serialize(full, NULL))
+    )
+  }
+})
+
 test_that("feature RSA matrix kernels respect supported pls algorithms", {
   set.seed(4413)
   features <- matrix(rnorm(40 * 7), 40, 7)
@@ -198,6 +231,32 @@ test_that("streaming feature RSA LOO errors reproduce pls validation", {
   }
 })
 
+test_that("component-blocked feature RSA errors reproduce the full path", {
+  set.seed(4418)
+  features <- scale(matrix(rnorm(32 * 8), 32, 8))
+  responses <- scale(matrix(rnorm(32 * 17), 32, 17))
+  segments <- split(seq_len(32L), rep(seq_len(4L), each = 8L))
+  old_target <- getOption("rMVPA.feature_rsa_component_target_bytes")
+  on.exit(options(rMVPA.feature_rsa_component_target_bytes = old_target), add = TRUE)
+
+  for (method in c("pls", "pca")) {
+    options(rMVPA.feature_rsa_component_target_bytes = Inf)
+    full <- rMVPA:::.feature_rsa_cv_segment_mse(
+      features, responses, 6L, method, segments
+    )
+    options(rMVPA.feature_rsa_component_target_bytes = 1)
+    one_at_a_time <- rMVPA:::.feature_rsa_cv_segment_mse(
+      features, responses, 6L, method, segments
+    )
+
+    expect_equal(one_at_a_time, full, tolerance = 2e-12)
+    expect_identical(
+      rMVPA:::.feature_rsa_select_from_segment_mse(one_at_a_time),
+      rMVPA:::.feature_rsa_select_from_segment_mse(full)
+    )
+  }
+})
+
 test_that("blocked feature RSA selection reproduces explicit pls CV segments", {
   set.seed(4410)
   n <- 48L
@@ -253,6 +312,8 @@ test_that("blocked feature RSA selection reproduces explicit pls CV segments", {
     )
 
     expect_identical(fit$ncomp, expected_ncomp)
+    expect_identical(dim(fit$trained_model$coefficients)[3L], 1L)
+    expect_identical(fit$trained_model$component_numbers, expected_ncomp)
     expect_equal(unname(got), unname(expected), tolerance = 3e-11)
   }
 })
@@ -516,6 +577,94 @@ test_that("feature RSA kernel explained variance reproduces pls::explvar", {
   }
 })
 
+test_that("slim PVE calculation reproduces every supported pls algorithm", {
+  set.seed(4419)
+  features <- scale(matrix(rnorm(46 * 9), 46, 9))
+  responses <- scale(matrix(rnorm(46 * 12), 46, 12))
+  old_options <- pls::pls.options()
+  on.exit(do.call(pls::pls.options, old_options), add = TRUE)
+
+  for (algorithm in c(
+    "kernelpls", "widekernelpls", "simpls", "oscorespls", "nipalspls"
+  )) {
+    pls::pls.options(plsralg = algorithm)
+    reference <- suppressWarnings(pls::plsr(
+      responses ~ features,
+      ncomp = 6L,
+      validation = "none",
+      scale = FALSE
+    ))
+    fit <- suppressWarnings(rMVPA:::.feature_rsa_fit_kernel(
+      features,
+      responses,
+      ncomp = 6L,
+      method = "pls",
+      keep_explained_variance = TRUE
+    ))
+
+    expect_equal(
+      100 * fit$Xvar / fit$Xtotvar,
+      as.numeric(pls::explvar(reference)),
+      tolerance = if (identical(algorithm, "widekernelpls")) 5e-8 else 5e-11,
+      info = algorithm
+    )
+    expect_false(any(c("fitted.values", "residuals") %in% names(fit)))
+  }
+})
+
+test_that("PVE training compacts to the selected component without prediction drift", {
+  set.seed(4421)
+  n <- 42L
+  features <- matrix(rnorm(n * 8), n, 8)
+  responses <- matrix(rnorm(n * 13), n, 13)
+  dset <- gen_sample_dataset(c(3, 3, 3), n, blocks = 3L)
+  design <- feature_rsa_design(
+    F = features,
+    labels = seq_len(n),
+    max_comps = 6L
+  )
+  sf <- reference_feature_rsa_standardize(features)
+  sx <- reference_feature_rsa_standardize(responses)
+
+  for (method in c("pls", "pca")) {
+    model <- feature_rsa_model(
+      dset$dataset,
+      design,
+      method = method,
+      ncomp_selection = "pve",
+      pve_threshold = 0.75,
+      crossval = blocked_cross_validation(dset$design$block_var)
+    )
+    fit <- train_model(
+      model, responses, features, indices = seq_len(ncol(responses))
+    )
+    got <- predict_model(model, fit, features)
+
+    reference <- reference_feature_rsa_fit(
+      sf$values, sx$values, ncomp = 6L, method = method
+    )
+    explained <- as.numeric(pls::explvar(reference))
+    expected_ncomp <- which(cumsum(explained) / sum(explained) >= 0.75)[1L]
+    expected_scaled <- drop(stats::predict(
+      reference, newdata = sf$values, ncomp = expected_ncomp
+    ))
+    expected <- sweep(
+      sweep(expected_scaled, 2L, sx$scale, "*"),
+      2L,
+      sx$center,
+      "+"
+    )
+
+    expect_identical(fit$ncomp, as.integer(expected_ncomp))
+    expect_identical(dim(fit$trained_model$coefficients)[3L], 1L)
+    expect_identical(
+      fit$trained_model$component_numbers,
+      as.integer(expected_ncomp)
+    )
+    expect_equal(unname(got), unname(expected), tolerance = 3e-11)
+  }
+})
+
 test_that("feature RSA kernel predictions are invariant to feature ordering", {
   set.seed(4404)
   features <- matrix(rnorm(36 * 8), 36, 8)
@@ -563,6 +712,46 @@ test_that("feature RSA fast row correlation matches stats::cor", {
     rMVPA:::.feature_rsa_row_cor(x_shifted, y_shifted),
     rMVPA:::.feature_rsa_row_cor(x, y),
     tolerance = 2e-11
+  )
+})
+
+test_that("blockwise feature RSA geometry matches dense correlation oracles", {
+  set.seed(4420)
+  observed <- matrix(rnorm(27 * 19), 27, 19)
+  predicted <- observed * 0.7 + matrix(rnorm(27 * 19, sd = 0.4), 27, 19)
+  old_block <- getOption("rMVPA.feature_rsa_metric_block_rows")
+  on.exit(options(rMVPA.feature_rsa_metric_block_rows = old_block), add = TRUE)
+  options(rMVPA.feature_rsa_metric_block_rows = 3L)
+
+  cross <- stats::cor(t(predicted), t(observed))
+  diagonal <- diag(cross)
+  dense_pattern <- c(
+    correlation = mean(diagonal),
+    discrimination = mean(diagonal) - mean(cross[row(cross) != col(cross)]),
+    rank = mean(vapply(seq_len(nrow(cross)), function(i) {
+      (sum(cross[i, ] <= cross[i, i]) - 1L) / (nrow(cross) - 1L)
+    }, numeric(1L)))
+  )
+  block_pattern <- rMVPA:::.feature_rsa_pattern_metrics_blockwise(
+    predicted, observed
+  )
+
+  expect_equal(block_pattern, dense_pattern, tolerance = 3e-12)
+  dense_predicted_rdm <- 1 - stats::cor(t(predicted))
+  expect_equal(
+    rMVPA:::.feature_rsa_rdm_vector_blockwise(predicted),
+    as.numeric(dense_predicted_rdm[lower.tri(dense_predicted_rdm)]),
+    tolerance = 3e-12
+  )
+
+  subset_rows <- c(6L, 2L, 9L, 1L, 7L)
+  pair_lookup <- matrix(NA_integer_, nrow(predicted), nrow(predicted))
+  pair_lookup[lower.tri(pair_lookup)] <-
+    seq_len(nrow(predicted) * (nrow(predicted) - 1L) / 2L)
+  pair_lookup[upper.tri(pair_lookup)] <- t(pair_lookup)[upper.tri(pair_lookup)]
+  expect_identical(
+    rMVPA:::.feature_rsa_pair_indices(subset_rows, nrow(predicted)),
+    as.integer(pair_lookup[subset_rows, subset_rows][lower.tri(pair_lookup[subset_rows, subset_rows])])
   )
 })
 
@@ -631,6 +820,8 @@ test_that("feature RSA training uses compact kernels with legacy prediction pari
     expect_s3_class(fit$trained_model, "feature_rsa_kernel_fit")
     expect_null(fit$trained_model$validation)
     expect_identical(fit$ncomp, expected_ncomp)
+    expect_identical(dim(fit$trained_model$coefficients)[3L], 1L)
+    expect_identical(fit$trained_model$component_numbers, expected_ncomp)
     expect_equal(unname(got), unname(expected), tolerance = 3e-11)
   }
 })
@@ -727,4 +918,47 @@ test_that("feature RSA fold formatting retains only merge inputs", {
   expect_named(out$result[[1L]], "ncomp")
   expect_identical(out$result[[1L]]$ncomp, fit$ncomp)
   expect_null(out$performance[[1L]])
+})
+
+test_that("preallocated feature RSA OOF merging matches fold-list merging", {
+  set.seed(4422)
+  observed <- matrix(rnorm(24 * 10), 24, 10)
+  predicted <- observed * 0.6 + matrix(rnorm(24 * 10, sd = 0.5), 24, 10)
+  folds <- list(17:24, 1:8, 9:16)
+  model <- structure(
+    list(
+      method = "pls",
+      nperm = 0L,
+      save_distributions = FALSE,
+      return_rdm_vectors = TRUE
+    ),
+    class = "feature_rsa_model"
+  )
+  fold_result <- tibble::tibble(
+    observed = lapply(folds, function(index) observed[index, , drop = FALSE]),
+    predicted = lapply(folds, function(index) predicted[index, , drop = FALSE]),
+    test_index = folds,
+    result = rep(list(list(ncomp = 3L)), length(folds)),
+    performance = rep(list(NULL), length(folds)),
+    error = FALSE,
+    error_message = "~"
+  )
+  legacy <- merge_results(
+    model, fold_result, indices = seq_len(ncol(observed)), id = 1L
+  )
+
+  optimized <- fold_result
+  optimized$observed <- rep(list(NULL), nrow(optimized))
+  optimized$predicted <- rep(list(NULL), nrow(optimized))
+  attr(optimized, "feature_rsa_oof") <- list(
+    observed = observed,
+    predicted = predicted,
+    test_index = seq_len(nrow(observed))
+  )
+  compact <- merge_results(
+    model, optimized, indices = seq_len(ncol(observed)), id = 1L
+  )
+
+  expect_equal(compact$performance[[1L]], legacy$performance[[1L]], tolerance = 1e-12)
+  expect_equal(compact$result[[1L]], legacy$result[[1L]], tolerance = 1e-12)
 })

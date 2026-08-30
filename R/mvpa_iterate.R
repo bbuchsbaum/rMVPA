@@ -379,6 +379,32 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
     )
   }
 
+  collect_feature_rsa_oof <- inherits(mspec, "feature_rsa_model")
+  if (collect_feature_rsa_oof) {
+    feature_test_indices <- lapply(seq_len(nrow(samples)), function(i) {
+      idx <- .extract_sample_indices(samples$test[[i]])
+      if (length(idx) == 0L) {
+        idx <- as.integer(seq_len(length(samples$ytest[[i]])))
+      }
+      as.integer(idx)
+    })
+    feature_all_test_index <- unlist(feature_test_indices, use.names = FALSE)
+    feature_order <- order(feature_all_test_index)
+    feature_destination <- integer(length(feature_order))
+    feature_destination[feature_order] <- seq_along(feature_order)
+    feature_oof_observed <- matrix(
+      NA_real_,
+      nrow = length(feature_all_test_index),
+      ncol = ncol(x_all)
+    )
+    feature_oof_predicted <- matrix(
+      NA_real_,
+      nrow = length(feature_all_test_index),
+      ncol = ncol(x_all)
+    )
+    feature_offset <- 0L
+  }
+
   # Get ROI indices (all global indices in this searchlight/region)
   if (is.null(ind)) {
     ind <- neuroim2::indices(roi$train_roi)
@@ -424,7 +450,11 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
     .id <- samples$.id[[i]]
 
     train_ind <- .extract_sample_indices(train)
-    test_ind <- .extract_sample_indices(test)
+    test_ind <- if (collect_feature_rsa_oof) {
+      feature_test_indices[[i]]
+    } else {
+      .extract_sample_indices(test)
+    }
 
     use_matrix_path <- matrix_first && length(train_ind) > 0L && length(test_ind) > 0L
     if (isTRUE(use_matrix_path) || !is.null(cv_cache)) {
@@ -448,7 +478,7 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
       test
     }
 
-    if (length(test_ind) == 0L) {
+    if (!collect_feature_rsa_oof && length(test_ind) == 0L) {
       test_ind <- as.integer(seq_len(length(ytest)))
     }
 
@@ -467,6 +497,9 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
           .id = .id
         )
       )
+      if (collect_feature_rsa_oof) {
+        feature_offset <- feature_offset + length(test_ind)
+      }
       next
     }
 
@@ -512,9 +545,41 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
         )
       )
     })
+
+    if (collect_feature_rsa_oof && !isTRUE(ret_list[[i]]$error[[1L]])) {
+      fold_observed <- as.matrix(ret_list[[i]]$observed[[1L]])
+      fold_predicted <- as.matrix(ret_list[[i]]$predicted[[1L]])
+      fold_length <- length(test_ind)
+      if (nrow(fold_observed) != fold_length ||
+          nrow(fold_predicted) != fold_length ||
+          ncol(fold_observed) != ncol(x_all) ||
+          ncol(fold_predicted) != ncol(x_all)) {
+        stop("feature RSA cross-validation produced incompatible fold matrices.",
+             call. = FALSE)
+      }
+      concatenated_positions <- seq.int(
+        feature_offset + 1L,
+        feature_offset + fold_length
+      )
+      destination <- feature_destination[concatenated_positions]
+      feature_oof_observed[destination, ] <- fold_observed
+      feature_oof_predicted[destination, ] <- fold_predicted
+      feature_offset <- feature_offset + fold_length
+      ret_list[[i]]$observed <- list(NULL)
+      ret_list[[i]]$predicted <- list(NULL)
+    } else if (collect_feature_rsa_oof) {
+      feature_offset <- feature_offset + length(test_ind)
+    }
   }
 
   ret <- ret_list %>% purrr::discard(is.null) %>% dplyr::bind_rows()
+  if (collect_feature_rsa_oof) {
+    attr(ret, "feature_rsa_oof") <- list(
+      observed = feature_oof_observed,
+      predicted = feature_oof_predicted,
+      test_index = feature_all_test_index[feature_order]
+    )
+  }
   
 
   merge_results(mspec, ret, indices=ind, id=id)

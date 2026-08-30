@@ -552,23 +552,246 @@ feature_rsa_model <- function(dataset,
 
   X_centered <- sweep(X, 1L, rowMeans(X), "-")
   X_norm <- sqrt(rowSums(X_centered * X_centered))
+  X_valid <- is.finite(X_norm) & X_norm > 0
+  if (any(X_valid)) {
+    X_centered[X_valid, ] <- sweep(
+      X_centered[X_valid, , drop = FALSE],
+      1L,
+      X_norm[X_valid],
+      "/"
+    )
+  }
+  X_centered[!X_valid, ] <- 0
   if (same_matrix) {
     Y_centered <- X_centered
     Y_norm <- X_norm
+    Y_valid <- X_valid
   } else {
     Y_centered <- sweep(Y, 1L, rowMeans(Y), "-")
     Y_norm <- sqrt(rowSums(Y_centered * Y_centered))
+    Y_valid <- is.finite(Y_norm) & Y_norm > 0
+    if (any(Y_valid)) {
+      Y_centered[Y_valid, ] <- sweep(
+        Y_centered[Y_valid, , drop = FALSE],
+        1L,
+        Y_norm[Y_valid],
+        "/"
+      )
+    }
+    Y_centered[!Y_valid, ] <- 0
   }
 
-  numerator <- tcrossprod(X_centered, Y_centered)
-  denominator <- outer(X_norm, Y_norm)
-  valid <- is.finite(denominator) & denominator > 0
-  out <- matrix(NA_real_, nrow = nrow(X), ncol = nrow(Y))
-  out[valid] <- numerator[valid] / denominator[valid]
+  out <- tcrossprod(X_centered, Y_centered)
+  if (any(!X_valid)) out[!X_valid, ] <- NA_real_
+  if (any(!Y_valid)) out[, !Y_valid] <- NA_real_
   if (!is.null(rownames(X)) || !is.null(rownames(Y))) {
     dimnames(out) <- list(rownames(X), rownames(Y))
   }
   out
+}
+
+
+#' Normalize rows for correlation kernels
+#' @noRd
+.feature_rsa_normalize_rows <- function(X) {
+  X <- as.matrix(X)
+  if (anyNA(X)) {
+    return(NULL)
+  }
+  centered <- sweep(X, 1L, rowMeans(X), "-")
+  norms <- sqrt(rowSums(centered * centered))
+  valid <- is.finite(norms) & norms > 0
+  if (any(valid)) {
+    centered[valid, ] <- sweep(
+      centered[valid, , drop = FALSE],
+      1L,
+      norms[valid],
+      "/"
+    )
+  }
+  centered[!valid, ] <- 0
+  list(values = centered, valid = valid)
+}
+
+
+#' Pattern metrics without retaining an observations-by-observations matrix
+#' @noRd
+.feature_rsa_pattern_metrics_blockwise <- function(predicted, observed) {
+  predicted <- as.matrix(predicted)
+  observed <- as.matrix(observed)
+  if (!identical(dim(predicted), dim(observed)) || nrow(predicted) < 2L) {
+    return(c(correlation = NA_real_, discrimination = NA_real_, rank = NA_real_))
+  }
+  pred_norm <- .feature_rsa_normalize_rows(predicted)
+  obs_norm <- .feature_rsa_normalize_rows(observed)
+  if (is.null(pred_norm) || is.null(obs_norm)) {
+    dense <- .feature_rsa_row_cor(predicted, observed)
+    diag_vals <- diag(dense)
+    nc <- nrow(dense)
+    ranks <- vapply(seq_len(nc), function(i) {
+      row_values <- dense[i, ]
+      denominator <- sum(!is.na(row_values)) - 1L
+      if (denominator > 0L && is.finite(row_values[[i]])) {
+        (sum(row_values <= row_values[[i]], na.rm = TRUE) - 1L) / denominator
+      } else {
+        NA_real_
+      }
+    }, numeric(1L))
+    pattern_cor <- mean(diag_vals, na.rm = TRUE)
+    return(c(
+      correlation = pattern_cor,
+      discrimination = pattern_cor - .feature_rsa_offdiag_mean(dense, diag_vals),
+      rank = mean(ranks, na.rm = TRUE)
+    ))
+  }
+
+  n <- nrow(predicted)
+  block_size <- getOption("rMVPA.feature_rsa_metric_block_rows", 128L)
+  block_size <- max(1L, min(n, as.integer(block_size)))
+  diag_vals <- rep(NA_real_, n)
+  ranks <- rep(NA_real_, n)
+  off_sum <- 0
+  off_count <- 0L
+
+  for (start in seq.int(1L, n, by = block_size)) {
+    stop_at <- min(n, start + block_size - 1L)
+    rows <- seq.int(start, stop_at)
+    block <- tcrossprod(
+      pred_norm$values[rows, , drop = FALSE],
+      obs_norm$values
+    )
+    for (local_row in seq_along(rows)) {
+      row_index <- rows[[local_row]]
+      row_values <- block[local_row, ]
+      diagonal <- row_values[[row_index]]
+      diag_vals[[row_index]] <- diagonal
+      if (is.finite(diagonal)) {
+        ranks[[row_index]] <-
+          (sum(row_values <= diagonal, na.rm = TRUE) - 1L) /
+          (sum(is.finite(row_values)) - 1L)
+      }
+      finite <- is.finite(row_values)
+      if (is.finite(diagonal)) finite[[row_index]] <- FALSE
+      off_sum <- off_sum + sum(row_values[finite])
+      off_count <- off_count + sum(finite)
+    }
+  }
+
+  pattern_cor <- mean(diag_vals, na.rm = TRUE)
+  off_mean <- if (off_count > 0L) off_sum / off_count else NA_real_
+  c(
+    correlation = pattern_cor,
+    discrimination = if (is.finite(pattern_cor) && is.finite(off_mean)) {
+      pattern_cor - off_mean
+    } else {
+      NA_real_
+    },
+    rank = mean(ranks, na.rm = TRUE)
+  )
+}
+
+
+#' Lower-triangle correlation-distance vector using bounded row blocks
+#' @noRd
+.feature_rsa_rdm_vector_blockwise <- function(X) {
+  X <- as.matrix(X)
+  n <- nrow(X)
+  n_pairs <- n * (n - 1L) / 2L
+  if (n_pairs < 1L) return(numeric(0))
+  normalized <- .feature_rsa_normalize_rows(X)
+  if (is.null(normalized)) {
+    dense <- .feature_rsa_row_cor(X)
+    return(as.numeric((1 - dense)[lower.tri(dense)]))
+  }
+
+  out <- numeric(n_pairs)
+  block_size <- getOption("rMVPA.feature_rsa_metric_block_rows", 128L)
+  block_size <- max(1L, min(n - 1L, as.integer(block_size)))
+  offset <- 0L
+  for (start in seq.int(1L, n - 1L, by = block_size)) {
+    stop_at <- min(n - 1L, start + block_size - 1L)
+    columns <- seq.int(start, stop_at)
+    block <- tcrossprod(
+      normalized$values[columns, , drop = FALSE],
+      normalized$values
+    )
+    for (local_column in seq_along(columns)) {
+      column <- columns[[local_column]]
+      rows <- seq.int(column + 1L, n)
+      count <- length(rows)
+      values <- block[local_column, rows]
+      if (!normalized$valid[[column]]) values[] <- NA_real_
+      invalid_rows <- !normalized$valid[rows]
+      if (any(invalid_rows)) values[invalid_rows] <- NA_real_
+      positions <- seq.int(offset + 1L, offset + count)
+      out[positions] <- 1 - values
+      offset <- offset + count
+    }
+  }
+  out
+}
+
+
+#' Map arbitrary row pairs into a full lower-triangle vector
+#' @noRd
+.feature_rsa_pair_indices <- function(rows, n) {
+  rows <- as.integer(rows)
+  m <- length(rows)
+  if (m < 2L) return(integer(0))
+  out <- integer(m * (m - 1L) / 2L)
+  offset <- 0L
+  for (column in seq_len(m - 1L)) {
+    left <- rows[[column]]
+    right <- rows[seq.int(column + 1L, m)]
+    lower <- pmax.int(left, right)
+    upper <- pmin.int(left, right)
+    count <- length(right)
+    positions <- seq.int(offset + 1L, offset + count)
+    out[positions] <-
+      (upper - 1L) * n - ((upper - 1L) * upper) %/% 2L + (lower - upper)
+    offset <- offset + count
+  }
+  out
+}
+
+
+#' Pattern metrics from indexed rows of a cached cross-correlation matrix
+#' @noRd
+.feature_rsa_pattern_metrics_from_cross <- function(cross_cor,
+                                                     predicted_rows,
+                                                     observed_rows) {
+  n <- length(predicted_rows)
+  if (n < 2L || length(observed_rows) != n) {
+    return(c(correlation = NA_real_, discrimination = NA_real_, rank = NA_real_))
+  }
+  diag_vals <- ranks <- rep(NA_real_, n)
+  off_sum <- 0
+  off_count <- 0L
+  for (i in seq_len(n)) {
+    row_values <- cross_cor[predicted_rows[[i]], observed_rows]
+    diagonal <- row_values[[i]]
+    diag_vals[[i]] <- diagonal
+    denominator <- sum(!is.na(row_values)) - 1L
+    if (denominator > 0L && is.finite(diagonal)) {
+      ranks[[i]] <-
+        (sum(row_values <= diagonal, na.rm = TRUE) - 1L) / denominator
+    }
+    finite <- is.finite(row_values)
+    if (is.finite(diagonal)) finite[[i]] <- FALSE
+    off_sum <- off_sum + sum(row_values[finite])
+    off_count <- off_count + sum(finite)
+  }
+  pattern_cor <- mean(diag_vals, na.rm = TRUE)
+  off_mean <- if (off_count > 0L) off_sum / off_count else NA_real_
+  c(
+    correlation = pattern_cor,
+    discrimination = if (is.finite(pattern_cor) && is.finite(off_mean)) {
+      pattern_cor - off_mean
+    } else {
+      NA_real_
+    },
+    rank = mean(ranks, na.rm = TRUE)
+  )
 }
 
 #' @noRd
@@ -718,6 +941,69 @@ feature_rsa_model <- function(dataset,
 }
 
 
+#' Recover predictor variance explained from a coefficient path
+#'
+#' Each successive PLS/PCR coefficient increment is rank one.  Its left
+#' direction is proportional to the corresponding effective score direction,
+#' so the usual pls::explvar quantity can be recovered without asking the pls
+#' kernels to retain fitted and residual arrays.
+#' @noRd
+.feature_rsa_x_variance_from_coefficients <- function(predictors,
+                                                       coefficients,
+                                                       xmeans) {
+  predictors <- as.matrix(predictors)
+  coefficients <- as.array(coefficients)
+  dims <- dim(coefficients)
+  if (length(dims) != 3L || dims[1L] != ncol(predictors)) {
+    return(NULL)
+  }
+
+  centered <- sweep(predictors, 2L, xmeans, "-")
+  ncomp <- dims[3L]
+  xvar <- numeric(ncomp)
+  tolerance <- .Machine$double.eps * max(
+    1,
+    sum(vapply(
+      seq_len(ncomp),
+      function(component) {
+        values <- coefficients[, , component, drop = FALSE]
+        sum(values * values)
+      },
+      numeric(1L)
+    ))
+  )
+
+  for (component in seq_len(ncomp)) {
+    increment <- coefficients[, , component, drop = FALSE][, , 1L]
+    if (component > 1L) {
+      increment <- increment - coefficients[, , component - 1L, drop = FALSE][, , 1L]
+    }
+    increment_ss <- sum(increment * increment)
+    if (!is.finite(increment_ss) || increment_ss <= tolerance) {
+      return(NULL)
+    }
+    direction <- La.svd(increment, nu = 1L, nv = 0L)$u[, 1L]
+    score <- as.numeric(centered %*% direction)
+    score_ss <- sum(score * score)
+    if (!is.finite(score_ss) || score_ss <= tolerance) {
+      return(NULL)
+    }
+    loading <- as.numeric(crossprod(centered, score)) / score_ss
+    xvar[[component]] <- sum(loading * loading) * score_ss
+  }
+
+  xtotvar <- sum(vapply(
+    seq_len(ncol(centered)),
+    function(column) sum(centered[, column] * centered[, column]),
+    numeric(1L)
+  ))
+  if (any(!is.finite(xvar)) || !is.finite(xtotvar)) {
+    return(NULL)
+  }
+  list(Xvar = xvar, Xtotvar = xtotvar)
+}
+
+
 #' Fit a compact matrix-level PLS or PCR kernel
 #'
 #' The public `pls` formula interface retains model frames, fitted-value arrays,
@@ -730,7 +1016,8 @@ feature_rsa_model <- function(dataset,
                                     responses,
                                     ncomp,
                                     method,
-                                    keep_explained_variance = FALSE) {
+                                    keep_explained_variance = FALSE,
+                                    retain_ncomp = NULL) {
   predictors <- as.matrix(predictors)
   responses <- as.matrix(responses)
   predictor_names <- colnames(predictors)
@@ -755,7 +1042,7 @@ feature_rsa_model <- function(dataset,
     responses,
     ncomp = ncomp,
     center = TRUE,
-    stripped = !isTRUE(keep_explained_variance)
+    stripped = TRUE
   )
 
   coefficients <- raw_fit$coefficients
@@ -765,25 +1052,52 @@ feature_rsa_model <- function(dataset,
       dim = c(nrow(coefficients), ncol(coefficients), 1L)
     )
   }
-  dimnames(coefficients) <- list(
-    predictor_names,
-    response_names,
-    paste0(seq_len(dim(coefficients)[3L]), " comps")
-  )
+  component_numbers <- seq_len(dim(coefficients)[3L])
+  if (!is.null(retain_ncomp)) {
+    retain_ncomp <- as.integer(retain_ncomp)
+    if (length(retain_ncomp) != 1L || is.na(retain_ncomp) ||
+        retain_ncomp < 1L || retain_ncomp > length(component_numbers)) {
+      stop("feature RSA kernel: invalid retained component.", call. = FALSE)
+    }
+    coefficients <- coefficients[, , retain_ncomp, drop = FALSE]
+    component_numbers <- retain_ncomp
+  }
 
   out <- list(
     coefficients = coefficients,
     Xmeans = as.numeric(raw_fit$Xmeans),
     Ymeans = as.numeric(raw_fit$Ymeans),
-    ncomp = as.integer(dim(coefficients)[3L]),
+    ncomp = as.integer(max(component_numbers)),
+    component_numbers = as.integer(component_numbers),
     method = method,
     algorithm = kernel$name,
     predictor_names = predictor_names,
     response_names = response_names
   )
   if (isTRUE(keep_explained_variance)) {
-    out$Xvar <- as.numeric(raw_fit$Xvar)
-    out$Xtotvar <- as.numeric(raw_fit$Xtotvar)
+    explained <- .feature_rsa_x_variance_from_coefficients(
+      predictors,
+      raw_fit$coefficients,
+      raw_fit$Xmeans
+    )
+    if (is.null(explained)) {
+      # Degenerate response directions are extremely unusual after the
+      # variance checks in train_model(), but the full pls path remains a
+      # semantics-preserving fallback for them.
+      variance_fit <- kernel$fit(
+        predictors,
+        responses,
+        ncomp = ncomp,
+        center = TRUE,
+        stripped = FALSE
+      )
+      explained <- list(
+        Xvar = as.numeric(variance_fit$Xvar),
+        Xtotvar = as.numeric(variance_fit$Xtotvar)
+      )
+    }
+    out$Xvar <- as.numeric(explained$Xvar)
+    out$Xtotvar <- as.numeric(explained$Xtotvar)
   }
   class(out) <- "feature_rsa_kernel_fit"
   out
@@ -799,12 +1113,14 @@ feature_rsa_model <- function(dataset,
   }
   newdata <- as.matrix(newdata)
   ncomp <- as.integer(ncomp)
-  n_available <- dim(fit$coefficients)[3L]
+  component_numbers <- fit$component_numbers %||%
+    seq_len(dim(fit$coefficients)[3L])
+  coefficient_index <- match(ncomp, component_numbers)
   if (length(ncomp) != 1L || is.na(ncomp) || ncomp < 1L ||
-      ncomp > n_available) {
+      is.na(coefficient_index)) {
     stop(sprintf(
-      "feature RSA kernel prediction: ncomp must be between 1 and %d.",
-      n_available
+      "feature RSA kernel prediction: component %s is not retained (available: %s).",
+      as.character(ncomp), paste(component_numbers, collapse = ", ")
     ), call. = FALSE)
   }
   if (ncol(newdata) != length(fit$Xmeans)) {
@@ -815,7 +1131,7 @@ feature_rsa_model <- function(dataset,
   }
 
   centered <- sweep(newdata, 2L, fit$Xmeans, "-")
-  coefficients <- fit$coefficients[, , ncomp, drop = FALSE][, , 1L]
+  coefficients <- fit$coefficients[, , coefficient_index, drop = FALSE][, , 1L]
   predicted <- centered %*% coefficients
   if (!is.matrix(predicted)) {
     predicted <- matrix(predicted, nrow = nrow(newdata))
@@ -978,24 +1294,51 @@ feature_rsa_model <- function(dataset,
       fit$Xmeans,
       "-"
     )
-    coefficient_path <- matrix(
-      fit$coefficients,
-      nrow = dim(fit$coefficients)[1L],
-      ncol = nresp * ncomp_cv
+    target_bytes <- getOption(
+      "rMVPA.feature_rsa_component_target_bytes",
+      32 * 1024^2
     )
-    pred_path <- test_centered %*% coefficient_path
-    pred_path <- sweep(
-      pred_path,
-      2L,
-      rep(fit$Ymeans, times = ncomp_cv),
-      "+"
-    )
-    for (k in seq_len(ncomp_cv)) {
-      cols <- seq.int((k - 1L) * nresp + 1L, k * nresp)
-      segment_mse[s, k] <- mean(
-        (observed_test - pred_path[, cols, drop = FALSE])^2,
-        na.rm = TRUE
+    bytes_per_component <- max(1, nrow(test_centered) * nresp * 8)
+    component_block_size <- if (is.numeric(target_bytes) &&
+                                length(target_bytes) == 1L &&
+                                is.finite(target_bytes) &&
+                                target_bytes > 0) {
+      max(
+        1L,
+        min(ncomp_cv, as.integer(floor(target_bytes / bytes_per_component)))
       )
+    } else {
+      ncomp_cv
+    }
+    component_starts <- seq.int(1L, ncomp_cv, by = component_block_size)
+    for (component_start in component_starts) {
+      component_end <- min(
+        ncomp_cv,
+        component_start + component_block_size - 1L
+      )
+      component_index <- seq.int(component_start, component_end)
+      coefficient_path <- matrix(
+        fit$coefficients[, , component_index, drop = FALSE],
+        nrow = dim(fit$coefficients)[1L],
+        ncol = nresp * length(component_index)
+      )
+      pred_path <- test_centered %*% coefficient_path
+      pred_path <- sweep(
+        pred_path,
+        2L,
+        rep(fit$Ymeans, times = length(component_index)),
+        "+"
+      )
+      for (local_component in seq_along(component_index)) {
+        cols <- seq.int(
+          (local_component - 1L) * nresp + 1L,
+          local_component * nresp
+        )
+        segment_mse[s, component_index[[local_component]]] <- mean(
+          (observed_test - pred_path[, cols, drop = FALSE])^2,
+          na.rm = TRUE
+        )
+      }
     }
   }
 
@@ -1698,7 +2041,9 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
                                    mse,
                                    r_squared,
                                    mean_voxelwise_temporal_cor,
-                                   valid_col)
+                                   valid_col,
+                                   predicted_rdm_cache = NULL,
+                                   observed_rdm_cache = NULL)
 {
   futile.logger::flog.info(
     "Performing permutation tests with %d permutations... (feature_rsa_model)",
@@ -1715,27 +2060,27 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   pred_row_sd <- .feature_rsa_row_sds(predicted_valid)
   pred_row_ok <- pred_row_sd > sd_thresh
 
-  # Row permutation changes only matrix indexing, not any pairwise
-  # correlation. Cache the three trial-level matrices once and reorder their
-  # rows/columns inside the permutation loop.
+  # Row permutation changes only matrix indexing, not pairwise correlation.
+  # Keep one cross-correlation matrix for pattern matching and compact
+  # lower-triangle vectors for the two within-space geometries.
   cross_trial_cor <- if (n_rows >= 2L) {
     tryCatch(
       .feature_rsa_row_cor(predicted_valid, observed_valid),
       error = function(e) NULL
     )
   } else NULL
-  predicted_trial_cor <- if (n_rows >= 3L) {
-    tryCatch(
-      .feature_rsa_row_cor(predicted_valid),
+  if (n_rows >= 3L && is.null(predicted_rdm_cache)) {
+    predicted_rdm_cache <- tryCatch(
+      .feature_rsa_rdm_vector_blockwise(predicted_valid),
       error = function(e) NULL
     )
-  } else NULL
-  observed_trial_cor <- if (n_rows >= 3L) {
-    tryCatch(
-      .feature_rsa_row_cor(observed_valid),
+  }
+  if (n_rows >= 3L && is.null(observed_rdm_cache)) {
+    observed_rdm_cache <- tryCatch(
+      .feature_rsa_rdm_vector_blockwise(observed_valid),
       error = function(e) NULL
     )
-  } else NULL
+  }
 
   no_na_fast_path <- n_rows > 1L &&
     length(valid_col) > 0L &&
@@ -1795,50 +2140,25 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
     ppc <- ppd <- ppr <- prdm <- NA_real_
     vr <- which(obs_row_ok & pred_row_ok[perm_idx])
     if (length(vr) >= 2) {
-      cm <- if (!is.null(cross_trial_cor)) {
-        cross_trial_cor[perm_idx[vr], vr, drop = FALSE]
-      } else {
-        NULL
-      }
-      if (!is.null(cm)) {
-        dc  <- diag(cm)
-        ppc <- mean(dc, na.rm = TRUE)
-        od <- .feature_rsa_offdiag_mean(cm, diag_vals = dc)
-        ppd <- if (is.finite(ppc) && is.finite(od)) ppc - od else NA_real_
-        nc <- nrow(cm)
-        rnk <- numeric(nc)
-        for (j in seq_len(nc)) {
-          rc <- cm[j, ]
-          dn <- sum(!is.na(rc)) - 1
-          rnk[j] <- if (dn > 0 && is.finite(rc[j])) {
-            (sum(rc <= rc[j], na.rm = TRUE) - 1) / dn
-          } else {
-            NA_real_
-          }
-        }
-        ppr <- mean(rnk, na.rm = TRUE)
+      if (!is.null(cross_trial_cor)) {
+        pattern_metrics <- .feature_rsa_pattern_metrics_from_cross(
+          cross_trial_cor,
+          predicted_rows = perm_idx[vr],
+          observed_rows = vr
+        )
+        ppc <- unname(pattern_metrics[["correlation"]])
+        ppd <- unname(pattern_metrics[["discrimination"]])
+        ppr <- unname(pattern_metrics[["rank"]])
       }
     }
 
     ## -- Representational geometry (RDM correlation) --
     if (length(vr) >= 3) {
-      pc <- if (!is.null(predicted_trial_cor)) {
-        predicted_trial_cor[perm_idx[vr], perm_idx[vr], drop = FALSE]
-      } else {
-        NULL
-      }
-      oc <- if (!is.null(observed_trial_cor)) {
-        observed_trial_cor[vr, vr, drop = FALSE]
-      } else {
-        tryCatch(.feature_rsa_row_cor(
-                   observed_valid[vr, , drop = FALSE]),
-                 error = function(e) NULL)
-      }
-      if (!is.null(pc) && !is.null(oc)) {
-        pd <- 1 - pc
-        od <- 1 - oc
-        pv <- pd[upper.tri(pd)]
-        ov <- od[upper.tri(od)]
+      if (!is.null(predicted_rdm_cache) && !is.null(observed_rdm_cache)) {
+        predicted_pair_index <- .feature_rsa_pair_indices(perm_idx[vr], n_rows)
+        observed_pair_index <- .feature_rsa_pair_indices(vr, n_rows)
+        pv <- predicted_rdm_cache[predicted_pair_index]
+        ov <- observed_rdm_cache[observed_pair_index]
         if (length(pv) >= 2 && length(pv) == length(ov)) {
           prdm <- tryCatch(stats::cor(pv, ov, method = "spearman", use = "complete.obs"),
                            error = function(e) NA_real_)
@@ -2050,36 +2370,16 @@ evaluate_model.feature_rsa_model <- function(object,
   pattern_discrim <- NA_real_
   pattern_rank    <- NA_real_
   rdm_cor         <- NA_real_
-  pc_subset <- NULL
-  oc_subset <- NULL
+  predicted_rdm_subset <- NULL
+  observed_rdm_subset <- NULL
 
   if (length(valid_row) >= 2) {
     pmat <- predicted_valid[valid_row, , drop = FALSE]
     omat <- observed_valid[valid_row,  , drop = FALSE]
-    cormat_cond <- .feature_rsa_row_cor(pmat, omat)
-
-    diag_cors   <- diag(cormat_cond)
-    pattern_cor <- mean(diag_cors, na.rm = TRUE)
-    off_diag <- .feature_rsa_offdiag_mean(cormat_cond, diag_vals = diag_cors)
-    nc <- nrow(cormat_cond)
-    pattern_discrim <- if (is.finite(pattern_cor) && is.finite(off_diag)) {
-      pattern_cor - off_diag
-    } else {
-      NA_real_
-    }
-
-    # rank percentile per trial
-    ranks <- numeric(nc)
-    for (i in seq_len(nc)) {
-      row_cors <- cormat_cond[i, ]
-      denom <- sum(!is.na(row_cors)) - 1
-      ranks[i] <- if (denom > 0 && is.finite(row_cors[i])) {
-        (sum(row_cors <= row_cors[i], na.rm = TRUE) - 1) / denom
-      } else {
-        NA_real_
-      }
-    }
-    pattern_rank <- mean(ranks, na.rm = TRUE)
+    pattern_metrics <- .feature_rsa_pattern_metrics_blockwise(pmat, omat)
+    pattern_cor <- unname(pattern_metrics[["correlation"]])
+    pattern_discrim <- unname(pattern_metrics[["discrimination"]])
+    pattern_rank <- unname(pattern_metrics[["rank"]])
   }
 
   ## ================================================================
@@ -2090,15 +2390,22 @@ evaluate_model.feature_rsa_model <- function(object,
   if (length(valid_row) >= 3) {
     pmat <- predicted_valid[valid_row, , drop = FALSE]
     omat <- observed_valid[valid_row,  , drop = FALSE]
-    pc_subset <- tryCatch(.feature_rsa_row_cor(pmat), error = function(e) NULL)
-    oc_subset <- tryCatch(.feature_rsa_row_cor(omat), error = function(e) NULL)
-    if (!is.null(pc_subset) && !is.null(oc_subset)) {
-      prdm <- 1 - pc_subset
-      ordm <- 1 - oc_subset
-      pv <- prdm[upper.tri(prdm)]
-      ov <- ordm[upper.tri(ordm)]
-      if (length(pv) >= 2 && length(pv) == length(ov)) {
-        rdm_cor <- tryCatch(stats::cor(pv, ov, method = "spearman", use = "complete.obs"),
+    predicted_rdm_subset <- tryCatch(
+      .feature_rsa_rdm_vector_blockwise(pmat),
+      error = function(e) NULL
+    )
+    observed_rdm_subset <- tryCatch(
+      .feature_rsa_rdm_vector_blockwise(omat),
+      error = function(e) NULL
+    )
+    if (!is.null(predicted_rdm_subset) && !is.null(observed_rdm_subset)) {
+      if (length(predicted_rdm_subset) >= 2 &&
+          length(predicted_rdm_subset) == length(observed_rdm_subset)) {
+        rdm_cor <- tryCatch(stats::cor(
+                              predicted_rdm_subset,
+                              observed_rdm_subset,
+                              method = "spearman",
+                              use = "complete.obs"),
                             error = function(e) NA_real_)
       }
     }
@@ -2125,37 +2432,44 @@ evaluate_model.feature_rsa_model <- function(object,
   }
   if (!is.finite(mean_voxelwise_temporal_cor)) mean_voxelwise_temporal_cor <- NA_real_
 
-  predicted_rdm_vec <- observed_rdm_vec <- NULL
-  if (isTRUE(compute_rdm_vectors)) {
+  predicted_rdm_cache <- observed_rdm_cache <- NULL
+  need_full_rdm <- isTRUE(compute_rdm_vectors) || nperm > 0L
+  if (need_full_rdm) {
     if (n_pairs < 1L) {
-      predicted_rdm_vec <- numeric(0)
-      observed_rdm_vec <- numeric(0)
+      predicted_rdm_cache <- numeric(0)
+      observed_rdm_cache <- numeric(0)
     } else if (length(valid_col) < 1L) {
-      predicted_rdm_vec <- rep(NA_real_, n_pairs)
-      observed_rdm_vec <- rep(NA_real_, n_pairs)
+      predicted_rdm_cache <- rep(NA_real_, n_pairs)
+      observed_rdm_cache <- rep(NA_real_, n_pairs)
     } else {
-      use_subset_cache <- !is.null(pc_subset) &&
-        !is.null(oc_subset) &&
+      use_subset_cache <- !is.null(predicted_rdm_subset) &&
+        !is.null(observed_rdm_subset) &&
         length(valid_row) == n_obs &&
         identical(valid_row, seq_len(n_obs))
 
       if (use_subset_cache) {
-        predicted_rdm_vec <- .feature_rsa_rdm_vector_from_cor(pc_subset, n_obs)
-        observed_rdm_vec <- .feature_rsa_rdm_vector_from_cor(oc_subset, n_obs)
+        predicted_rdm_cache <- predicted_rdm_subset
+        observed_rdm_cache <- observed_rdm_subset
       } else {
-        pc_full <- tryCatch(
-          suppressWarnings(.feature_rsa_row_cor(predicted_valid)),
+        predicted_rdm_cache <- tryCatch(
+          suppressWarnings(.feature_rsa_rdm_vector_blockwise(predicted_valid)),
           error = function(e) NULL
         )
-        oc_full <- tryCatch(
-          suppressWarnings(.feature_rsa_row_cor(observed_valid)),
+        observed_rdm_cache <- tryCatch(
+          suppressWarnings(.feature_rsa_rdm_vector_blockwise(observed_valid)),
           error = function(e) NULL
         )
-        predicted_rdm_vec <- .feature_rsa_rdm_vector_from_cor(pc_full, n_obs)
-        observed_rdm_vec <- .feature_rsa_rdm_vector_from_cor(oc_full, n_obs)
+        if (is.null(predicted_rdm_cache)) {
+          predicted_rdm_cache <- rep(NA_real_, n_pairs)
+        }
+        if (is.null(observed_rdm_cache)) {
+          observed_rdm_cache <- rep(NA_real_, n_pairs)
+        }
       }
     }
   }
+  predicted_rdm_vec <- if (isTRUE(compute_rdm_vectors)) predicted_rdm_cache else NULL
+  observed_rdm_vec <- if (isTRUE(compute_rdm_vectors)) observed_rdm_cache else NULL
 
   ## ================================================================
   ## 4. Permutation testing
@@ -2175,7 +2489,9 @@ evaluate_model.feature_rsa_model <- function(object,
       mse            = mse,
       r_squared      = r_squared,
       mean_voxelwise_temporal_cor = mean_voxelwise_temporal_cor,
-      valid_col      = valid_col
+      valid_col      = valid_col,
+      predicted_rdm_cache = predicted_rdm_cache,
+      observed_rdm_cache = observed_rdm_cache
     )
   }
 
@@ -2328,15 +2644,14 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
         })
       }
 
-      model <- .feature_rsa_fit_kernel(
-        sf$X_sc,
-        sx$X_sc,
-        ncomp = k,
-        method = obj$method,
-        keep_explained_variance = identical(ncomp_sel, "pve")
-      )
-
       if (ncomp_sel == "pve") {
+        model <- .feature_rsa_fit_kernel(
+          sf$X_sc,
+          sx$X_sc,
+          ncomp = k,
+          method = obj$method,
+          keep_explained_variance = TRUE
+        )
         xvar <- 100 * model$Xvar / model$Xtotvar
         cum_ratio <- cumsum(xvar) / sum(xvar)
         idx <- which(cum_ratio >= obj$pve_threshold)[1]
@@ -2352,6 +2667,20 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
         # selection; do not retain them in every fold fit.
         model$Xvar <- NULL
         model$Xtotvar <- NULL
+        model$coefficients <- model$coefficients[, , ncomp_use, drop = FALSE]
+        model$component_numbers <- as.integer(ncomp_use)
+        model$ncomp <- as.integer(ncomp_use)
+      } else {
+        # Component selection is already complete. Ask the numerical kernel for
+        # no more components than are needed and retain only the selected
+        # coefficient matrix for prediction.
+        model <- .feature_rsa_fit_kernel(
+          sf$X_sc,
+          sx$X_sc,
+          ncomp = ncomp_use,
+          method = obj$method,
+          retain_ncomp = ncomp_use
+        )
       }
 
       list(model = model, sx = sx, sf = sf, ncomp_use = ncomp_use)
@@ -2699,7 +3028,7 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
     ))
   }
   
-  Xobs  <- as.data.frame(context$test)
+  Xobs  <- as.matrix(context$test)
   Ftest <- as.matrix(context$ytest)
 
   if (nrow(Ftest) != nrow(Xobs)) {
@@ -2786,7 +3115,8 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
     )
   }
   
-  observed_list  <- result_set$observed
+  oof <- attr(result_set, "feature_rsa_oof", exact = TRUE)
+  observed_list <- result_set$observed
   predicted_list <- result_set$predicted
   test_index_list <- result_set$test_index
 
@@ -2795,16 +3125,22 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   # Get the list of results from each fold (contains ncomp)
   fold_results_list <- result_set$result
   
-  combined_observed  <- do.call(rbind, observed_list)
-  combined_predicted <- do.call(rbind, predicted_list)
-  combined_test_index <- NULL
-  if (!is.null(test_index_list) && length(test_index_list) == length(observed_list) &&
-      all(vapply(test_index_list, Negate(is.null), logical(1)))) {
-    combined_test_index <- unlist(test_index_list, use.names = FALSE)
-    ord <- order(combined_test_index)
-    combined_test_index <- combined_test_index[ord]
-    combined_observed <- combined_observed[ord, , drop = FALSE]
-    combined_predicted <- combined_predicted[ord, , drop = FALSE]
+  if (is.list(oof) && is.matrix(oof$observed) && is.matrix(oof$predicted)) {
+    combined_observed <- oof$observed
+    combined_predicted <- oof$predicted
+    combined_test_index <- oof$test_index
+  } else {
+    combined_observed <- do.call(rbind, observed_list)
+    combined_predicted <- do.call(rbind, predicted_list)
+    combined_test_index <- NULL
+    if (!is.null(test_index_list) && length(test_index_list) == length(observed_list) &&
+        all(vapply(test_index_list, Negate(is.null), logical(1)))) {
+      combined_test_index <- unlist(test_index_list, use.names = FALSE)
+      ord <- order(combined_test_index)
+      combined_test_index <- combined_test_index[ord]
+      combined_observed <- combined_observed[ord, , drop = FALSE]
+      combined_predicted <- combined_predicted[ord, , drop = FALSE]
+    }
   }
   
   scalar_from_fold <- function(fold, name) {
