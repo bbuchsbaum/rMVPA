@@ -2,6 +2,14 @@
 
 ## rMVPA 0.1.3
 
+- Feature RSA PLS/PCR component selection and ridge penalty selection
+  can now optimize held-out `pattern_discrimination` in leakage-safe
+  blocked inner CV; PLS/PCR can also optimize `pattern_rank_percentile`.
+  MSE remains the default tuning objective for this release. The
+  discrimination scorer exactly matches the reported
+  correct-minus-incorrect pattern-correlation advantage while scaling
+  linearly in held-out observations for a fixed voxel count and avoiding
+  a quadratic candidate-correlation matrix.
 - Feature RSA identification, discrimination, RDM, and permutation
   metrics now respect outer-fold candidate sets. This prevents merged
   out-of-fold predictions from being compared with targets that trained

@@ -195,21 +195,34 @@ choose their own component count.
 
 | Selection | Inner work per outer training fold | What it estimates | When to use it |
 |----|---:|----|----|
-| `"blocked"` | One fit per training block, plus the final fit | Leave-one-block-out prediction error; each block contributes one MSE | Preferred when runs, sessions, subjects, or another genuine independence unit are available |
-| `"loo"` (default) | One fit per training observation, plus the final fit | Leave-one-observation-out prediction error | Backward-compatible choice for exchangeable, independent rows; expensive for long designs |
+| `"blocked"` | One fit per training block, plus the final fit | Leave-one-block-out MSE or pattern-relative performance; each block contributes one score | Preferred when runs, sessions, subjects, or another genuine independence unit are available |
+| `"loo"` (default) | One fit per training observation, plus the final fit | Leave-one-observation-out MSE | Backward-compatible choice for exchangeable, independent rows; expensive for long designs |
 | `"pve"` | One fit | Cumulative predictor variance explained, stopping at `pve_threshold` (default 0.9) | A fast heuristic when held-out tuning is not required |
 | `"max"` | One fit | No tuning; always use the available `max_comps` | A fixed-complexity analysis chosen in advance |
 
-The `"blocked"` and `"loo"` selectors use the same one-standard-error
-rule: choose the fewest components whose mean segment MSE is within one
-standard error of the minimum. They differ in the unit treated as
-exchangeable. If observations within a run are autocorrelated, LOO can
-be both unnecessarily slow and scientifically optimistic; blocking on
-run makes the validation unit match the acquisition structure. For
-`"blocked"`, feature and neural centering and scaling are re-estimated
-from each inner training split, so the held-out block does not set
-preprocessing parameters. With unequal block sizes, blocks receive equal
-weight rather than observations receiving equal weight.
+`ncomp_objective = "mse"` remains the default in this release,
+preserving the existing selector and its one-standard-error rule: choose
+the fewest components whose mean segment MSE is within one standard
+error of the minimum. When the scientific target is relative pattern
+prediction, blocked selection can instead use
+`ncomp_objective = "pattern_discrimination"`. This maximizes the mean
+within-block correlation advantage of the correct neural pattern over
+incorrect candidate patterns. It is continuous, centered at zero under
+exchangeable null matching, and scales linearly in the number of
+candidates (at fixed voxel count) without forming a full candidate
+correlation matrix. `"pattern_rank_percentile"` remains available when
+identification rank itself is the planned estimand, but it is more
+discrete and tie-sensitive.
+
+Both pattern-relative objectives require `ncomp_selection = "blocked"`
+and at least two observations in every inner validation block. They
+default to the empirical optimum (`ncomp_one_se = FALSE`). Inner
+predictions are converted back to the original neural-response scale
+before scoring, matching the reported outer-fold metrics. Feature and
+neural centering and scaling are re-estimated from each inner training
+split, so the held-out block does not set preprocessing parameters. With
+unequal block sizes, blocks receive equal weight rather than
+observations receiving equal weight.
 
 The default remains `"loo"` for compatibility. On blocked neuroimaging
 data, pass the same observation-aligned `block_var` to
@@ -218,7 +231,20 @@ and use `ncomp_selection = "blocked"`, as in the minimal example. Every
 outer training fold must retain at least two non-empty blocks; rMVPA
 fails the fold rather than silently reverting to a different selector.
 
-The implementation streams validation errors and retains only the
+``` r
+
+pca_discrimination_mod <- feature_rsa_model(
+  dataset = dset,
+  design = design,
+  method = "pca",
+  ncomp_selection = "blocked",
+  ncomp_objective = "pattern_discrimination",
+  ncomp_one_se = FALSE,
+  crossval = cv
+)
+```
+
+The implementation streams validation scores and retains only the
 compact coefficient path needed for prediction. This reduces transient
 memory but does not change the number of fits implied by the selector.
 In particular, exact LOO remains intrinsically proportional to the
@@ -246,7 +272,7 @@ requests the minimum-norm unpenalised solution.
 |----|---:|----|
 | `"gcv"` (default) | One economy SVD, scoring the full lambda grid | Fastest choice when rows can be treated as exchangeable. Minimises generalized cross-validation error. |
 | `"loo"` | One economy SVD plus analytic PRESS scoring | Exact LOO for the ridge estimator on the fixed outer-fold scale. MSE tuning uses the one-standard-error rule by default. |
-| `"blocked"` | One economy SVD per retained training block | Preferred for dependent runs, sessions, or subjects. Re-estimates centering and scaling inside every inner split. Can tune MSE or held-out identification rank. |
+| `"blocked"` | One economy SVD per retained training block | Preferred for dependent runs, sessions, or subjects. Re-estimates centering and scaling inside every inner split. Can tune MSE, pattern discrimination, or identification rank. |
 | `"fixed"` | One final fit | Use one prespecified non-negative lambda; no data-driven inner tuning. |
 
 GCV and analytic LOO avoid a refit per observation. They still treat
@@ -256,13 +282,31 @@ preprocessing matters, use `"blocked"`; speed is not a reason to change
 the independence unit. The default grid is 49 fixed log-spaced values
 from `1e-6` to `1e2`.
 
-`lambda_objective = "mse"` is the default and is the only objective
-available for GCV and analytic LOO. If identification is the primary
-estimand, use blocked tuning with
-`lambda_objective = "pattern_rank_percentile"`. Every candidate rank is
-then computed wholly inside one held-out inner block. Rank tuning uses
-the empirical optimum by default; set `lambda_one_se = TRUE` only if the
-stronger-regularisation tie-break is part of the planned analysis.
+`lambda_objective = "mse"` remains the default in this release and is
+the only objective available for GCV and analytic LOO. For relative
+pattern prediction, use blocked tuning with
+`lambda_objective = "pattern_discrimination"`. The score is the same
+correct-minus-incorrect correlation advantage reported as
+`pattern_discrimination`, is evaluated in the original neural-response
+space, and uses a linear-time scorer. If identification rank itself is
+the primary estimand, `"pattern_rank_percentile"` is also available.
+Every candidate set is confined to one held-out inner block.
+Pattern-relative tuning uses the empirical optimum by default; set
+`lambda_one_se = TRUE` only if the stronger-regularisation tie-break is
+part of the planned analysis.
+
+``` r
+
+ridge_discrimination_mod <- feature_rsa_model(
+  dataset = dset,
+  design = design,
+  method = "ridge",
+  lambda_selection = "blocked",
+  lambda_objective = "pattern_discrimination",
+  lambda_one_se = FALSE,
+  crossval = cv
+)
+```
 
 ``` r
 
@@ -347,12 +391,12 @@ than .01 at the median or .03 at the lower decile.
 
 | Estimator / selector | Median ms | Speedup vs PLS LOO | MSE ratio | Pattern delta | RDM delta |
 |:---|---:|---:|---:|---:|---:|
-| PLS LOO | 116.5 | 1.0 | 1.000 | 0.0000 | 0.0000 |
-| PLS blocked | 10.5 | 11.1 | 1.000 | 0.0000 | 0.0000 |
-| Ridge GCV | 3.0 | 39.3 | 0.877 | 0.0022 | 0.0026 |
-| Ridge analytic LOO | 10.5 | 11.3 | 0.887 | 0.0018 | 0.0021 |
-| Ridge blocked | 12.0 | 9.7 | 0.888 | 0.0018 | 0.0018 |
-| glmnet ridge blocked CV | 899.0 | 0.1 | 2.624 | -0.0100 | -0.0126 |
+| PLS LOO | 90.00 | 1.0 | 1.000 | 0.0000 | 0.0000 |
+| PLS blocked | 8.00 | 11.1 | 1.000 | 0.0000 | 0.0000 |
+| Ridge GCV | 2.17 | 41.3 | 0.877 | 0.0022 | 0.0026 |
+| Ridge analytic LOO | 8.17 | 11.1 | 0.887 | 0.0018 | 0.0021 |
+| Ridge blocked | 8.67 | 10.3 | 0.888 | 0.0018 | 0.0018 |
+| glmnet ridge blocked CV | 676.00 | 0.1 | 2.624 | -0.0100 | -0.0126 |
 
 Twenty-seed dense-linear characterization on Apple M3 Max. Accuracy
 columns are relative to PLS LOO; timings are descriptive. {.table}
