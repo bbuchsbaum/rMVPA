@@ -49,7 +49,26 @@ coefficients, see
 | `labels` | Vector of length `n_trials` naming each row of `F`. |
 | `mvpa_dataset` | Neural data `X`: `n_trials × n_voxels` per ROI/searchlight. |
 | `crossval` | A cross-validation spec. Required (or pass `block_var` to the design and let it build a blocked CV). |
-| Output | Per-ROI reconstruction and geometry metrics. PLS/PCR and glmnet also report `ncomp` (a historical nonzero-count proxy for glmnet); ridge reports `median_lambda` and `mean_effective_df` across outer folds. |
+| Output | Per-ROI reconstruction and geometry metrics. PLS/PCR and glmnet also report `ncomp` (a historical nonzero-count proxy for glmnet); ridge reports its selected-penalty, effective-dimension, and grid-boundary diagnostics across outer folds. |
+
+### Which observations are valid matching candidates?
+
+Cross-validation produces one prediction for every observation, but
+those predictions do not all share the same training set. A prediction
+is therefore matched only against observed patterns from its own outer
+test fold. Comparing it with an observation from another fold would
+usually put a training target into the candidate set and can bias
+identification rank below chance even for an intercept-only model.
+
+Accordingly, `pattern_discrimination` and `pattern_rank_percentile` use
+only candidates withheld together. `rdm_correlation` uses only
+observation pairs withheld together. The diagonal `pattern_correlation`,
+global reconstruction metrics, and per-voxel temporal correlations
+retain their ordinary meanings. Permutation tests shuffle prediction
+labels within outer test folds. If RDM vectors are retained, they keep
+their full lower-triangle shape but mark cross-fold pairs as `NA`;
+[`feature_rsa_rdm_vectors()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md)
+also returns the fold assignment.
 
 ## Minimal example
 
@@ -142,9 +161,9 @@ res$performance_table
 #> # A tibble: 3 × 10
 #>   roinum pattern_correlation pattern_discrimination pattern_rank_percentile
 #>    <int>               <dbl>                  <dbl>                   <dbl>
-#> 1      1               0.285                  0.228                   0.669
-#> 2      2               0.325                  0.280                   0.7  
-#> 3      3               0.251                  0.216                   0.654
+#> 1      1               0.285                  0.282                   0.756
+#> 2      2               0.325                  0.336                   0.789
+#> 3      3               0.251                  0.282                   0.738
 #> # ℹ 6 more variables: rdm_correlation <dbl>, voxel_correlation <dbl>,
 #> #   mse <dbl>, r_squared <dbl>, mean_voxelwise_temporal_cor <dbl>, ncomp <dbl>
 ```
@@ -226,8 +245,8 @@ requests the minimum-norm unpenalised solution.
 | `lambda_selection` | Inner work per outer training fold | Assumption and use |
 |----|---:|----|
 | `"gcv"` (default) | One economy SVD, scoring the full lambda grid | Fastest choice when rows can be treated as exchangeable. Minimises generalized cross-validation error. |
-| `"loo"` | One economy SVD plus analytic PRESS scoring | Exact LOO for the ridge estimator on the fixed outer-fold scale. Uses the one-standard-error rule and chooses the strongest eligible penalty. |
-| `"blocked"` | One economy SVD per retained training block | Preferred for dependent runs, sessions, or subjects. Re-estimates centering and scaling inside every inner split, then uses the one-standard-error rule. |
+| `"loo"` | One economy SVD plus analytic PRESS scoring | Exact LOO for the ridge estimator on the fixed outer-fold scale. MSE tuning uses the one-standard-error rule by default. |
+| `"blocked"` | One economy SVD per retained training block | Preferred for dependent runs, sessions, or subjects. Re-estimates centering and scaling inside every inner split. Can tune MSE or held-out identification rank. |
 | `"fixed"` | One final fit | Use one prespecified non-negative lambda; no data-driven inner tuning. |
 
 GCV and analytic LOO avoid a refit per observation. They still treat
@@ -236,6 +255,27 @@ outer-fold column scales fixed. If within-run dependence or fully nested
 preprocessing matters, use `"blocked"`; speed is not a reason to change
 the independence unit. The default grid is 49 fixed log-spaced values
 from `1e-6` to `1e2`.
+
+`lambda_objective = "mse"` is the default and is the only objective
+available for GCV and analytic LOO. If identification is the primary
+estimand, use blocked tuning with
+`lambda_objective = "pattern_rank_percentile"`. Every candidate rank is
+then computed wholly inside one held-out inner block. Rank tuning uses
+the empirical optimum by default; set `lambda_one_se = TRUE` only if the
+stronger-regularisation tie-break is part of the planned analysis.
+
+``` r
+
+ridge_rank_mod <- feature_rsa_model(
+  dataset = dset,
+  design = design,
+  method = "ridge",
+  lambda_selection = "blocked",
+  lambda_objective = "pattern_rank_percentile",
+  lambda_one_se = FALSE,
+  crossval = cv
+)
+```
 
 ``` r
 
@@ -249,20 +289,28 @@ ridge_mod <- feature_rsa_model(
 ridge_res <- run_regional(ridge_mod, region_mask)
 ridge_res$performance_table[
   , c("roinum", "pattern_correlation", "rdm_correlation",
-      "median_lambda", "mean_effective_df")
+      "median_lambda", "mean_effective_df", "mean_nonintercept_df",
+      "lambda_min_boundary_fraction", "lambda_max_boundary_fraction")
 ]
-#> # A tibble: 3 × 5
+#> # A tibble: 3 × 8
 #>   roinum pattern_correlation rdm_correlation median_lambda mean_effective_df
 #>    <int>               <dbl>           <dbl>         <dbl>             <dbl>
-#> 1      1               0.293           0.603          3.40              1.95
+#> 1      1               0.293           0.636          3.40              1.95
 #> 2      2               0.326           0.688          3.16              2.12
-#> 3      3               0.211           0.515          6.81              1.65
+#> 3      3               0.211           0.554          6.81              1.65
+#> # ℹ 3 more variables: mean_nonintercept_df <dbl>,
+#> #   lambda_min_boundary_fraction <dbl>, lambda_max_boundary_fraction <dbl>
 ```
 
 `median_lambda` is the median selected penalty across outer folds.
 `mean_effective_df` is the corresponding mean effective model dimension,
 including the intercept; it is the ridge analogue of a complexity
-diagnostic, not a component count.
+diagnostic, not a component count. `mean_nonintercept_df` subtracts that
+intercept. `lambda_min_boundary_fraction` and
+`lambda_max_boundary_fraction` report the fraction of outer folds
+selecting an endpoint of the supplied grid. A high boundary fraction is
+a diagnostic to inspect the grid and the tuning estimand, not evidence
+by itself that the ridge calculation failed.
 
 ``` r
 
@@ -282,9 +330,9 @@ summary_rows <- lapply(methods, function(m) {
 })
 do.call(rbind, summary_rows)
 #>   method pattern_correlation rdm_correlation      mse
-#> 1    pls           0.2870185       0.5841896 1.229655
-#> 2    pca           0.2855695       0.5807837 1.232471
-#> 3  ridge           0.2765517       0.6018877 1.250525
+#> 1    pls           0.2870185       0.5951209 1.229655
+#> 2    pca           0.2855695       0.6046905 1.232471
+#> 3  ridge           0.2765517       0.6258379 1.250525
 ```
 
 ## What did the ridge benchmark show?
@@ -299,12 +347,12 @@ than .01 at the median or .03 at the lower decile.
 
 | Estimator / selector | Median ms | Speedup vs PLS LOO | MSE ratio | Pattern delta | RDM delta |
 |:---|---:|---:|---:|---:|---:|
-| PLS LOO | 100.50 | 1.0 | 1.000 | 0.0000 | 0.0000 |
-| PLS blocked | 9.67 | 11.2 | 1.000 | 0.0000 | 0.0000 |
-| Ridge GCV | 2.36 | 40.1 | 0.877 | 0.0022 | 0.0026 |
-| Ridge analytic LOO | 8.33 | 11.2 | 0.887 | 0.0018 | 0.0021 |
-| Ridge blocked | 9.00 | 10.2 | 0.888 | 0.0018 | 0.0018 |
-| glmnet ridge blocked CV | 861.50 | 0.1 | 2.624 | -0.0100 | -0.0126 |
+| PLS LOO | 116.5 | 1.0 | 1.000 | 0.0000 | 0.0000 |
+| PLS blocked | 10.5 | 11.1 | 1.000 | 0.0000 | 0.0000 |
+| Ridge GCV | 3.0 | 39.3 | 0.877 | 0.0022 | 0.0026 |
+| Ridge analytic LOO | 10.5 | 11.3 | 0.887 | 0.0018 | 0.0021 |
+| Ridge blocked | 12.0 | 9.7 | 0.888 | 0.0018 | 0.0018 |
+| glmnet ridge blocked CV | 899.0 | 0.1 | 2.624 | -0.0100 | -0.0126 |
 
 Twenty-seed dense-linear characterization on Apple M3 Max. Accuracy
 columns are relative to PLS LOO; timings are descriptive. {.table}

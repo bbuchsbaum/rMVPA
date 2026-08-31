@@ -22,6 +22,8 @@ feature_rsa_model(
   save_distributions = FALSE,
   return_rdm_vectors = FALSE,
   lambda_selection = c("gcv", "loo", "blocked", "fixed"),
+  lambda_objective = c("mse", "pattern_rank_percentile"),
+  lambda_one_se = NULL,
   ...
 )
 ```
@@ -148,20 +150,39 @@ feature_rsa_model(
 - return_rdm_vectors:
 
   Logical; if TRUE, retain each ROI's predicted lower-triangle RDM
-  vector in the regional result's \`fits\` slot. This is off by default
-  because it can add substantial memory use for long time series or many
-  ROIs.
+  vector in the regional result's \`fits\` slot. Cross-fold pairs are
+  stored as missing because the two observations were not withheld
+  together; the retained diagnostics include the observation order and
+  fold assignment. This is off by default because it can add substantial
+  memory use for long time series or many ROIs.
 
 - lambda_selection:
 
   Character string controlling ridge penalty selection. `"gcv"`
   (default) minimizes generalized cross-validation error from one
   full-fold SVD. `"loo"` uses exact analytic leave-one-observation-out
-  PRESS errors and the one-standard-error rule. `"blocked"` uses
-  leave-one-block-out errors, with centering and scaling re-estimated
-  inside every inner split, and the one-standard-error rule; it requires
-  `design$block_var`. `"fixed"` requires one supplied `lambda`. Ignored
-  for other methods.
+  PRESS errors. `"blocked"` uses leave-one-block-out errors, with
+  centering and scaling re-estimated inside every inner split; it
+  requires `design$block_var`. `"fixed"` requires one supplied `lambda`.
+  Selection applies the rule configured by `lambda_one_se`. Ignored for
+  other methods.
+
+- lambda_objective:
+
+  Character string naming the ridge tuning estimand. `"mse"` (default)
+  preserves GCV/LOO/blocked prediction-error tuning.
+  `"pattern_rank_percentile"` maximizes identification rank among
+  observations withheld together and therefore requires
+  `lambda_selection = "blocked"` with at least two observations per
+  inner validation block. Ignored for other methods.
+
+- lambda_one_se:
+
+  Optional logical controlling the one-standard-error rule for ridge
+  tuning. `NULL` uses `TRUE` for MSE-based LOO or blocked tuning and
+  `FALSE` otherwise. Identification tuning defaults to the empirical
+  optimum because stronger shrinkage is not inherently the safer error
+  for a rank objective.
 
 - ...:
 
@@ -209,15 +230,17 @@ cross-validation):
 observed spatial patterns for corresponding trials (diagonal of the
 trial x trial correlation matrix computed across voxels). -
 \`pattern_discrimination\`: \`pattern_correlation\` minus the mean
-off-diagonal correlation. Measures how much better the model predicts
-the correct trial's pattern compared to incorrect trials. -
-\`pattern_rank_percentile\`: For each trial, percentile rank of the
-correct pattern match among all candidates. 0.5 = chance, 1 = perfect.
+off-diagonal correlation among candidates withheld in the same outer
+fold. Measures how much better the model predicts the correct trial's
+pattern than eligible incorrect trials. - \`pattern_rank_percentile\`:
+For each trial, percentile rank of the correct pattern match among
+candidates withheld in the same outer fold. 0.5 = chance, 1 = perfect.
 
 \*Representational geometry\*: - \`rdm_correlation\`: Spearman
-correlation between the upper triangles of the observed and predicted
+correlation between jointly withheld pairs in the observed and predicted
 RDMs (defined as 1 - trial-by-trial correlation across voxels). Captures
-similarity of representational geometry.
+similarity of held-out representational geometry without comparing a
+prediction with a target that trained that prediction.
 
 \*Global reconstruction metrics\*: - \`voxel_correlation\`: Correlation
 of the flattened predicted and observed matrices (all trials x all
@@ -232,8 +255,10 @@ and z-scores for the above metrics.
 
 For PLS, PCR, and glmnet, the number of components or its historical
 proxy (\`ncomp\`) is included in the performance output. Ridge instead
-reports the median selected penalty (\`median_lambda\`) and mean
-effective degrees of freedom (\`mean_effective_df\`) across outer folds.
+reports the median selected penalty (\`median_lambda\`), mean effective
+degrees of freedom (\`mean_effective_df\`), non-intercept degrees of
+freedom, and fractions of folds selected at either end of the lambda
+grid.
 
 ## Examples
 

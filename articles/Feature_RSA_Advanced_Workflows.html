@@ -92,7 +92,7 @@ together.</p>
 <tr class="odd">
 <td align="left">within_roi</td>
 <td align="left">feature_rsa_model()</td>
-<td align="right">0.036</td>
+<td align="right">0.096</td>
 </tr>
 <tr class="even">
 <td align="left">cross_state_da</td>
@@ -102,7 +102,7 @@ together.</p>
 <tr class="odd">
 <td align="left">cross_roi_generalization</td>
 <td align="left">feature_rsa_cross_connectivity()</td>
-<td align="right">0.000</td>
+<td align="right">-0.017</td>
 </tr>
 <tr class="even">
 <td align="left">offset_diagnostics</td>
@@ -136,10 +136,10 @@ out data within that state, and read the ROI-wise geometry scores from
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 2</span></span></span>
 <span><span class="co">#&gt;   roinum rdm_correlation</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1        -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">25</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2         0.056<span style="text-decoration: underline;">3</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3         0.003<span style="text-decoration: underline;">01</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>      4         0.091<span style="text-decoration: underline;">2</span></span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1          0.084<span style="text-decoration: underline;">8</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2          0.091<span style="text-decoration: underline;">5</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3          0.128 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>      4          0.078<span style="text-decoration: underline;">9</span></span></span></code></pre></div>
 <p>This is the right default when you want to know whether a feature
 space explains one parcel on its own terms.</p>
 </div>
@@ -198,28 +198,28 @@ in one parcel matches held-out observed geometry in another.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="right">-0.01</td>
-<td align="right">0.06</td>
-<td align="right">-0.01</td>
+<td align="right">0.08</td>
 <td align="right">0.13</td>
+<td align="right">0.16</td>
+<td align="right">0.12</td>
 </tr>
 <tr class="even">
-<td align="right">0.01</td>
+<td align="right">0.11</td>
+<td align="right">0.09</td>
+<td align="right">0.16</td>
 <td align="right">0.06</td>
-<td align="right">0.03</td>
-<td align="right">0.03</td>
 </tr>
 <tr class="odd">
-<td align="right">-0.03</td>
-<td align="right">0.09</td>
-<td align="right">0.00</td>
-<td align="right">0.07</td>
+<td align="right">0.11</td>
+<td align="right">0.11</td>
+<td align="right">0.13</td>
+<td align="right">0.08</td>
 </tr>
 <tr class="even">
-<td align="right">0.01</td>
-<td align="right">0.03</td>
-<td align="right">0.00</td>
-<td align="right">0.09</td>
+<td align="right">0.08</td>
+<td align="right">0.08</td>
+<td align="right">0.16</td>
+<td align="right">0.08</td>
 </tr>
 </tbody>
 </table>

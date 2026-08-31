@@ -54,6 +54,7 @@ and optionally performs permutation tests.</p>
 <span>  nperm <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  save_distributions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  compute_rdm_vectors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">object</span><span class="op">$</span><span class="va">return_rdm_vectors</span><span class="op">)</span>,</span>
+<span>  fold_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -87,6 +88,13 @@ and optionally performs permutation tests.</p>
 and observed RDM vectors for reuse by downstream code.</p></dd>
 
 
+<dt id="arg-fold-id">fold_id<a class="anchor" aria-label="anchor" href="#arg-fold-id"></a></dt>
+<dd><p>Optional vector assigning each observation to its outer
+cross-validation test fold. Pattern discrimination, identification rank,
+and RDM correlation then use only candidates or pairs withheld together.
+Cross-validated workflows supply this automatically.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments</p></dd>
 
@@ -100,12 +108,19 @@ and observed RDM vectors for reuse by downstream code.</p></dd>
 
     <dt>pattern_discrimination</dt>
 <dd><p>Diagonal minus off-diagonal of the trial x
-      trial correlation matrix – how much better the correct trial is matched
-      than incorrect trials.</p></dd>
+      trial correlation matrix, restricted to candidates in the same outer
+      test fold – how much better the correct trial is matched than eligible
+      incorrect trials.</p></dd>
 
     <dt>pattern_rank_percentile</dt>
 <dd><p>For each trial, percentile rank of the
-      correct pattern among all candidates.  0.5 = chance, 1 = perfect.</p></dd>
+      correct pattern among candidates in the same outer test fold.
+      0.5 = chance, 1 = perfect.</p></dd>
+
+    <dt>rdm_correlation</dt>
+<dd><p>Spearman correlation between predicted and
+      observed correlation-distance pairs whose observations were withheld
+      together.</p></dd>
 
     <dt>voxel_correlation</dt>
 <dd><p>Correlation of the flattened predicted and

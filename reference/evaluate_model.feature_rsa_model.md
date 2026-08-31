@@ -14,6 +14,7 @@ evaluate_model.feature_rsa_model(
   nperm = 0,
   save_distributions = FALSE,
   compute_rdm_vectors = isTRUE(object$return_rdm_vectors),
+  fold_id = NULL,
   ...
 )
 ```
@@ -45,6 +46,13 @@ evaluate_model.feature_rsa_model(
   Logical; when TRUE, also return compact predicted and observed RDM
   vectors for reuse by downstream code.
 
+- fold_id:
+
+  Optional vector assigning each observation to its outer
+  cross-validation test fold. Pattern discrimination, identification
+  rank, and RDM correlation then use only candidates or pairs withheld
+  together. Cross-validated workflows supply this automatically.
+
 - ...:
 
   Additional arguments
@@ -61,13 +69,19 @@ A list containing:
 
 - pattern_discrimination:
 
-  Diagonal minus off-diagonal of the trial x trial correlation matrix –
-  how much better the correct trial is matched than incorrect trials.
+  Diagonal minus off-diagonal of the trial x trial correlation matrix,
+  restricted to candidates in the same outer test fold – how much better
+  the correct trial is matched than eligible incorrect trials.
 
 - pattern_rank_percentile:
 
-  For each trial, percentile rank of the correct pattern among all
-  candidates. 0.5 = chance, 1 = perfect.
+  For each trial, percentile rank of the correct pattern among
+  candidates in the same outer test fold. 0.5 = chance, 1 = perfect.
+
+- rdm_correlation:
+
+  Spearman correlation between predicted and observed
+  correlation-distance pairs whose observations were withheld together.
 
 - voxel_correlation:
 

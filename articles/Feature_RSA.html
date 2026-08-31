@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-30</h4>
+            <h4 data-toc-skip class="date">2026-08-31</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Feature_RSA.Rmd" class="external-link"><code>vignettes/Feature_RSA.Rmd</code></a></small>
       <div class="d-none name"><code>Feature_RSA.Rmd</code></div>
@@ -145,11 +145,31 @@ the design and let it build a blocked CV).</td>
 <td>Output</td>
 <td>Per-ROI reconstruction and geometry metrics. PLS/PCR and glmnet also
 report <code>ncomp</code> (a historical nonzero-count proxy for glmnet);
-ridge reports <code>median_lambda</code> and
-<code>mean_effective_df</code> across outer folds.</td>
+ridge reports its selected-penalty, effective-dimension, and
+grid-boundary diagnostics across outer folds.</td>
 </tr>
 </tbody>
 </table>
+<div class="section level3">
+<h3 id="which-observations-are-valid-matching-candidates">Which observations are valid matching candidates?<a class="anchor" aria-label="anchor" href="#which-observations-are-valid-matching-candidates"></a>
+</h3>
+<p>Cross-validation produces one prediction for every observation, but
+those predictions do not all share the same training set. A prediction
+is therefore matched only against observed patterns from its own outer
+test fold. Comparing it with an observation from another fold would
+usually put a training target into the candidate set and can bias
+identification rank below chance even for an intercept-only model.</p>
+<p>Accordingly, <code>pattern_discrimination</code> and
+<code>pattern_rank_percentile</code> use only candidates withheld
+together. <code>rdm_correlation</code> uses only observation pairs
+withheld together. The diagonal <code>pattern_correlation</code>, global
+reconstruction metrics, and per-voxel temporal correlations retain their
+ordinary meanings. Permutation tests shuffle prediction labels within
+outer test folds. If RDM vectors are retained, they keep their full
+lower-triangle shape but mark cross-fold pairs as <code>NA</code>;
+<code><a href="../reference/feature_rsa_rdm_vectors.html">feature_rsa_rdm_vectors()</a></code> also returns the fold
+assignment.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="minimal-example">Minimal example<a class="anchor" aria-label="anchor" href="#minimal-example"></a>
@@ -231,9 +251,9 @@ something to recover:</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 10</span></span></span>
 <span><span class="co">#&gt;   roinum pattern_correlation pattern_discrimination pattern_rank_percentile</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1               0.285                  0.228                   0.669</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2               0.325                  0.280                   0.7  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3               0.251                  0.216                   0.654</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1               0.285                  0.282                   0.756</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2               0.325                  0.336                   0.789</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3               0.251                  0.282                   0.738</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 6 more variables: rdm_correlation &lt;dbl&gt;, voxel_correlation &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   mse &lt;dbl&gt;, r_squared &lt;dbl&gt;, mean_voxelwise_temporal_cor &lt;dbl&gt;, ncomp &lt;dbl&gt;</span></span></span></code></pre></div>
 <p>Each row is one ROI. <code>pattern_correlation</code> and
@@ -411,16 +431,15 @@ generalized cross-validation error.</td>
 <tr class="even">
 <td><code>"loo"</code></td>
 <td align="right">One economy SVD plus analytic PRESS scoring</td>
-<td>Exact LOO for the ridge estimator on the fixed outer-fold scale.
-Uses the one-standard-error rule and chooses the strongest eligible
-penalty.</td>
+<td>Exact LOO for the ridge estimator on the fixed outer-fold scale. MSE
+tuning uses the one-standard-error rule by default.</td>
 </tr>
 <tr class="odd">
 <td><code>"blocked"</code></td>
 <td align="right">One economy SVD per retained training block</td>
 <td>Preferred for dependent runs, sessions, or subjects. Re-estimates
-centering and scaling inside every inner split, then uses the
-one-standard-error rule.</td>
+centering and scaling inside every inner split. Can tune MSE or held-out
+identification rank.</td>
 </tr>
 <tr class="even">
 <td><code>"fixed"</code></td>
@@ -436,7 +455,25 @@ outer-fold column scales fixed. If within-run dependence or fully nested
 preprocessing matters, use <code>"blocked"</code>; speed is not a reason
 to change the independence unit. The default grid is 49 fixed log-spaced
 values from <code>1e-6</code> to <code>1e2</code>.</p>
+<p><code>lambda_objective = "mse"</code> is the default and is the only
+objective available for GCV and analytic LOO. If identification is the
+primary estimand, use blocked tuning with
+<code>lambda_objective = "pattern_rank_percentile"</code>. Every
+candidate rank is then computed wholly inside one held-out inner block.
+Rank tuning uses the empirical optimum by default; set
+<code>lambda_one_se = TRUE</code> only if the stronger-regularisation
+tie-break is part of the planned analysis.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ridge_rank_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_rsa_model.html">feature_rsa_model</a></span><span class="op">(</span></span>
+<span>  dataset <span class="op">=</span> <span class="va">dset</span>,</span>
+<span>  design <span class="op">=</span> <span class="va">design</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"ridge"</span>,</span>
+<span>  lambda_selection <span class="op">=</span> <span class="st">"blocked"</span>,</span>
+<span>  lambda_objective <span class="op">=</span> <span class="st">"pattern_rank_percentile"</span>,</span>
+<span>  lambda_one_se <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  crossval <span class="op">=</span> <span class="va">cv</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ridge_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_rsa_model.html">feature_rsa_model</a></span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">dset</span>,</span>
 <span>  design <span class="op">=</span> <span class="va">design</span>,</span>
@@ -447,19 +484,28 @@ values from <code>1e-6</code> to <code>1e2</code>.</p>
 <span><span class="va">ridge_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">ridge_mod</span>, <span class="va">region_mask</span><span class="op">)</span></span>
 <span><span class="va">ridge_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
 <span>  , <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"pattern_correlation"</span>, <span class="st">"rdm_correlation"</span>,</span>
-<span>      <span class="st">"median_lambda"</span>, <span class="st">"mean_effective_df"</span><span class="op">)</span></span>
+<span>      <span class="st">"median_lambda"</span>, <span class="st">"mean_effective_df"</span>, <span class="st">"mean_nonintercept_df"</span>,</span>
+<span>      <span class="st">"lambda_min_boundary_fraction"</span>, <span class="st">"lambda_max_boundary_fraction"</span><span class="op">)</span></span>
 <span><span class="op">]</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 5</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 8</span></span></span>
 <span><span class="co">#&gt;   roinum pattern_correlation rdm_correlation median_lambda mean_effective_df</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1               0.293           0.603          3.40              1.95</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1               0.293           0.636          3.40              1.95</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2               0.326           0.688          3.16              2.12</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3               0.211           0.515          6.81              1.65</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3               0.211           0.554          6.81              1.65</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 3 more variables: mean_nonintercept_df &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   lambda_min_boundary_fraction &lt;dbl&gt;, lambda_max_boundary_fraction &lt;dbl&gt;</span></span></span></code></pre></div>
 <p><code>median_lambda</code> is the median selected penalty across
 outer folds. <code>mean_effective_df</code> is the corresponding mean
 effective model dimension, including the intercept; it is the ridge
-analogue of a complexity diagnostic, not a component count.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+analogue of a complexity diagnostic, not a component count.
+<code>mean_nonintercept_df</code> subtracts that intercept.
+<code>lambda_min_boundary_fraction</code> and
+<code>lambda_max_boundary_fraction</code> report the fraction of outer
+folds selecting an endpoint of the supplied grid. A high boundary
+fraction is a diagnostic to inspect the grid and the tuning estimand,
+not evidence by itself that the ridge calculation failed.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">methods</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pls"</span>, <span class="st">"pca"</span>, <span class="st">"ridge"</span><span class="op">)</span></span>
 <span><span class="va">summary_rows</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">methods</span>, <span class="kw">function</span><span class="op">(</span><span class="va">m</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/feature_rsa_model.html">feature_rsa_model</a></span><span class="op">(</span></span>
@@ -476,9 +522,9 @@ analogue of a complexity diagnostic, not a component count.</p>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">summary_rows</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   method pattern_correlation rdm_correlation      mse</span></span>
-<span><span class="co">#&gt; 1    pls           0.2870185       0.5841896 1.229655</span></span>
-<span><span class="co">#&gt; 2    pca           0.2855695       0.5807837 1.232471</span></span>
-<span><span class="co">#&gt; 3  ridge           0.2765517       0.6018877 1.250525</span></span></code></pre></div>
+<span><span class="co">#&gt; 1    pls           0.2870185       0.5951209 1.229655</span></span>
+<span><span class="co">#&gt; 2    pca           0.2855695       0.6046905 1.232471</span></span>
+<span><span class="co">#&gt; 3  ridge           0.2765517       0.6258379 1.250525</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="what-did-the-ridge-benchmark-show">What did the ridge benchmark show?<a class="anchor" aria-label="anchor" href="#what-did-the-ridge-benchmark-show"></a>
@@ -513,7 +559,7 @@ descriptive.</caption>
 <tbody>
 <tr class="odd">
 <td align="left">PLS LOO</td>
-<td align="right">100.50</td>
+<td align="right">116.5</td>
 <td align="right">1.0</td>
 <td align="right">1.000</td>
 <td align="right">0.0000</td>
@@ -521,39 +567,39 @@ descriptive.</caption>
 </tr>
 <tr class="even">
 <td align="left">PLS blocked</td>
-<td align="right">9.67</td>
-<td align="right">11.2</td>
+<td align="right">10.5</td>
+<td align="right">11.1</td>
 <td align="right">1.000</td>
 <td align="right">0.0000</td>
 <td align="right">0.0000</td>
 </tr>
 <tr class="odd">
 <td align="left">Ridge GCV</td>
-<td align="right">2.36</td>
-<td align="right">40.1</td>
+<td align="right">3.0</td>
+<td align="right">39.3</td>
 <td align="right">0.877</td>
 <td align="right">0.0022</td>
 <td align="right">0.0026</td>
 </tr>
 <tr class="even">
 <td align="left">Ridge analytic LOO</td>
-<td align="right">8.33</td>
-<td align="right">11.2</td>
+<td align="right">10.5</td>
+<td align="right">11.3</td>
 <td align="right">0.887</td>
 <td align="right">0.0018</td>
 <td align="right">0.0021</td>
 </tr>
 <tr class="odd">
 <td align="left">Ridge blocked</td>
-<td align="right">9.00</td>
-<td align="right">10.2</td>
+<td align="right">12.0</td>
+<td align="right">9.7</td>
 <td align="right">0.888</td>
 <td align="right">0.0018</td>
 <td align="right">0.0018</td>
 </tr>
 <tr class="even">
 <td align="left">glmnet ridge blocked CV</td>
-<td align="right">861.50</td>
+<td align="right">899.0</td>
 <td align="right">0.1</td>
 <td align="right">2.624</td>
 <td align="right">-0.0100</td>

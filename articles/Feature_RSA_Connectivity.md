@@ -26,12 +26,12 @@ conn_example <- build_connectivity_example()
 knitr::kable(round(conn_example$cross_raw, 2))
 ```
 
-|   1 |    2 |     3 |     4 |
-|----:|-----:|------:|------:|
-|   0 | 0.03 | -0.02 | -0.05 |
-|   0 | 0.07 | -0.03 | -0.02 |
-|   0 | 0.02 |  0.02 | -0.05 |
-|   0 | 0.03 | -0.01 | -0.01 |
+|    1 |    2 |    3 |    4 |
+|-----:|-----:|-----:|-----:|
+| 0.05 | 0.02 | 0.06 | 0.04 |
+| 0.03 | 0.03 | 0.07 | 0.04 |
+| 0.03 | 0.04 | 0.08 | 0.05 |
+| 0.04 | 0.04 | 0.06 | 0.04 |
 
 ![Asymmetric ROI x ROI cross-connectivity. Rows are source ROIs (the
 geometry learned there), columns are target ROIs (the geometry observed
@@ -92,10 +92,10 @@ knitr::kable(round(predicted_connectivity, 2))
 
 |    1 |    2 |    3 |    4 |
 |-----:|-----:|-----:|-----:|
-| 1.00 | 0.86 | 0.69 | 0.80 |
-| 0.86 | 1.00 | 0.68 | 0.84 |
-| 0.69 | 0.68 | 1.00 | 0.62 |
-| 0.80 | 0.84 | 0.62 | 1.00 |
+| 1.00 | 0.97 | 0.98 | 0.98 |
+| 0.97 | 1.00 | 0.99 | 0.99 |
+| 0.98 | 0.99 | 1.00 | 0.99 |
+| 0.98 | 0.99 | 0.99 | 1.00 |
 
 Use this matrix when you want a network summary of learned
 representational geometry itself. It is useful for asking which ROIs sit
@@ -167,12 +167,12 @@ cross_connectivity <- feature_rsa_cross_connectivity(
 knitr::kable(round(cross_connectivity, 2))
 ```
 
-|   1 |    2 |     3 |     4 |
-|----:|-----:|------:|------:|
-|   0 | 0.03 | -0.02 | -0.05 |
-|   0 | 0.07 | -0.03 | -0.02 |
-|   0 | 0.02 |  0.02 | -0.05 |
-|   0 | 0.03 | -0.01 | -0.01 |
+|    1 |    2 |    3 |    4 |
+|-----:|-----:|-----:|-----:|
+| 0.05 | 0.02 | 0.06 | 0.04 |
+| 0.03 | 0.03 | 0.07 | 0.04 |
+| 0.03 | 0.04 | 0.08 | 0.05 |
+| 0.04 | 0.04 | 0.06 | 0.04 |
 
 This matrix is the right one when you care about directional cross-ROI
 generalization. In general `ROI_i -> ROI_j` and `ROI_j -> ROI_i` need

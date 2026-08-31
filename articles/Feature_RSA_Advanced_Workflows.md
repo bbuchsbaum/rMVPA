@@ -21,9 +21,9 @@ knitr::kable(advanced_summary, digits = 3)
 
 | workflow | core_function | summary_value |
 |:---|:---|---:|
-| within_roi | feature_rsa_model() | 0.036 |
+| within_roi | feature_rsa_model() | 0.096 |
 | cross_state_da | feature_rsa_da_model() | 0.090 |
-| cross_roi_generalization | feature_rsa_cross_connectivity() | 0.000 |
+| cross_roi_generalization | feature_rsa_cross_connectivity() | -0.017 |
 | offset_diagnostics | feature_rsa_cross_connectivity(adjust = ‘double_center’) | 0.162 |
 
 The table gives you four practical signals:
@@ -52,10 +52,10 @@ base_fit$result$performance_table[, c("roinum", "rdm_correlation")]
 #> # A tibble: 4 × 2
 #>   roinum rdm_correlation
 #>    <int>           <dbl>
-#> 1      1        -0.00825
-#> 2      2         0.0563 
-#> 3      3         0.00301
-#> 4      4         0.0912
+#> 1      1          0.0848
+#> 2      2          0.0915
+#> 3      3          0.128 
+#> 4      4          0.0789
 ```
 
 This is the right default when you want to know whether a feature space
@@ -102,12 +102,12 @@ geometry in another.
 knitr::kable(round(base_fit$cross_raw, 2))
 ```
 
-|     1 |    2 |     3 |    4 |
-|------:|-----:|------:|-----:|
-| -0.01 | 0.06 | -0.01 | 0.13 |
-|  0.01 | 0.06 |  0.03 | 0.03 |
-| -0.03 | 0.09 |  0.00 | 0.07 |
-|  0.01 | 0.03 |  0.00 | 0.09 |
+|    1 |    2 |    3 |    4 |
+|-----:|-----:|-----:|-----:|
+| 0.08 | 0.13 | 0.16 | 0.12 |
+| 0.11 | 0.09 | 0.16 | 0.06 |
+| 0.11 | 0.11 | 0.13 | 0.08 |
+| 0.08 | 0.08 | 0.16 | 0.08 |
 
 This is the right analysis when ROI size differs and voxel-space weight
 transfer would be ill-posed, but you still want to ask whether

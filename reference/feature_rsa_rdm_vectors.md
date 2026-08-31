@@ -39,6 +39,11 @@ A tibble with one row per ROI and columns:
 
   List-column of observation ordering used for the predicted RDM.
 
+- fold_id:
+
+  List-column identifying the outer test fold for each observation.
+  Cross-fold entries in the RDM vectors are missing.
+
 - rdm_vec:
 
   List-column containing the lower-triangle predicted RDM vector for
