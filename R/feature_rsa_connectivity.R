@@ -18,6 +18,8 @@
 #'     \item{n_obs}{Number of observations contributing to the vector.}
 #'     \item{observation_index}{List-column of observation ordering used for the
 #'       predicted RDM.}
+#'     \item{fold_id}{List-column identifying the outer test fold for each
+#'       observation. Cross-fold entries in the RDM vectors are missing.}
 #'     \item{rdm_vec}{List-column containing the lower-triangle predicted RDM
 #'       vector for that ROI.}
 #'     \item{observed_rdm_vec}{List-column containing the lower-triangle
@@ -79,6 +81,7 @@ feature_rsa_rdm_vectors <- function(x) {
       roinum = roi_ids[[i]],
       n_obs = as.integer(if (is.null(pred$n_obs)) NA_integer_ else pred$n_obs),
       observation_index = list(pred$observation_index),
+      fold_id = list(tryCatch(pred$fold_id, error = function(...) NULL)),
       rdm_vec = list(as.numeric(vec)),
       observed_rdm_vec = list(if (!is.null(obs_vec)) as.numeric(obs_vec) else NULL)
     )

@@ -19,6 +19,8 @@ A tibble with one row per ROI and columns:
     \item{n_obs}{Number of observations contributing to the vector.}
     \item{observation_index}{List-column of observation ordering used for the
       predicted RDM.}
+    \item{fold_id}{List-column identifying the outer test fold for each
+      observation. Cross-fold entries in the RDM vectors are missing.}
     \item{rdm_vec}{List-column containing the lower-triangle predicted RDM
       vector for that ROI.}
     \item{observed_rdm_vec}{List-column containing the lower-triangle

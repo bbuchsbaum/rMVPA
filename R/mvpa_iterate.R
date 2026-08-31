@@ -389,6 +389,10 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
       as.integer(idx)
     })
     feature_all_test_index <- unlist(feature_test_indices, use.names = FALSE)
+    feature_all_fold_id <- rep.int(
+      seq_along(feature_test_indices),
+      lengths(feature_test_indices)
+    )
     feature_order <- order(feature_all_test_index)
     feature_destination <- integer(length(feature_order))
     feature_destination[feature_order] <- seq_along(feature_order)
@@ -577,7 +581,8 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
     attr(ret, "feature_rsa_oof") <- list(
       observed = feature_oof_observed,
       predicted = feature_oof_predicted,
-      test_index = feature_all_test_index[feature_order]
+      test_index = feature_all_test_index[feature_order],
+      fold_id = feature_all_fold_id[feature_order]
     )
   }
   
@@ -767,6 +772,7 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
       roinum = as.integer(batch_results$id[[i]]),
       n_obs = as.integer(if (is.null(predictor$n_obs)) NA_integer_ else predictor$n_obs),
       observation_index = list(tryCatch(predictor$observation_index, error = function(...) NULL)),
+      fold_id = list(tryCatch(predictor$fold_id, error = function(...) NULL)),
       rdm_vec = list(as.numeric(pred_vec)),
       observed_rdm_vec = list(if (!is.null(obs_vec)) as.numeric(obs_vec) else NULL)
     )
@@ -809,7 +815,8 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
       integer(1)
     ),
     has_obs = vapply(batch_tbl$observed_rdm_vec, function(v) !is.null(v), logical(1)),
-    observation_index = batch_tbl$observation_index
+    observation_index = batch_tbl$observation_index,
+    fold_id = batch_tbl$fold_id
   )
   saveRDS(manifest, manifest_file)
 

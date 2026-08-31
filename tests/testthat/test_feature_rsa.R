@@ -19,7 +19,8 @@ feature_rsa_perm_oracle <- function(observed,
                                     mse,
                                     r_squared,
                                     mean_voxelwise_temporal_cor,
-                                    valid_col) {
+                                    valid_col,
+                                    fold_id = NULL) {
   observed <- as.matrix(observed)
   predicted <- as.matrix(predicted)
 
@@ -46,10 +47,13 @@ feature_rsa_perm_oracle <- function(observed,
   names(obs_vals) <- metric_names
 
   n_rows <- nrow(predicted)
+  if (is.null(fold_id)) {
+    fold_id <- rep.int(1L, n_rows)
+  }
   sd_thresh <- 1e-12
   tss <- sum((observed - mean(observed, na.rm = TRUE))^2, na.rm = TRUE)
   observed_valid <- observed[, valid_col, drop = FALSE]
-  obs_row_sd <- apply(observed_valid, 1L, stats::sd)
+  obs_row_sd <- apply(observed, 1L, stats::sd)
 
   count_better <- setNames(integer(length(metric_names)), metric_names)
   sum_perm <- setNames(numeric(length(metric_names)), metric_names)
@@ -66,68 +70,114 @@ feature_rsa_perm_oracle <- function(observed,
   }
 
   for (i in seq_len(nperm)) {
-    perm_idx <- sample(n_rows)
+    perm_idx <- seq_len(n_rows)
+    for (fold in unique(fold_id)) {
+      rows <- which(fold_id == fold)
+      perm_idx[rows] <- if (length(rows) > 1L) sample(rows) else rows
+    }
     perm_pred <- predicted[perm_idx, , drop = FALSE]
     perm_pred_valid <- perm_pred[, valid_col, drop = FALSE]
 
     ppc <- ppd <- ppr <- prdm <- pvc <- pmse <- prsq <- pmvtc <- NA_real_
 
-    pred_row_sd <- apply(perm_pred_valid, 1L, stats::sd)
+    pred_row_sd <- apply(perm_pred, 1L, stats::sd)
     vr <- which(obs_row_sd > sd_thresh & pred_row_sd > sd_thresh)
 
-    if (length(vr) >= 2L) {
-      cm <- tryCatch(
-        stats::cor(
-          t(perm_pred_valid[vr, , drop = FALSE]),
-          t(observed_valid[vr, , drop = FALSE]),
-          use = "pairwise.complete.obs"
-        ),
-        error = function(e) NULL
-      )
-      if (!is.null(cm)) {
-        dc <- diag(cm)
-        ppc <- mean(dc, na.rm = TRUE)
-        ppd <- ppc - mean(cm[row(cm) != col(cm)], na.rm = TRUE)
-
-        ranks <- numeric(length(vr))
-        for (j in seq_along(vr)) {
-          row_cors <- cm[j, ]
-          denom <- sum(!is.na(row_cors)) - 1L
-          ranks[j] <- if (denom > 0L && is.finite(row_cors[j])) {
-            (sum(row_cors <= row_cors[j], na.rm = TRUE) - 1L) / denom
-          } else {
-            NA_real_
+    if (length(vr) >= 1L) {
+      diagonal <- ranks <- rep(NA_real_, length(vr))
+      off_diagonal <- numeric(0)
+      for (fold in unique(fold_id[vr])) {
+        positions <- which(fold_id[vr] == fold)
+        cm <- tryCatch(
+          stats::cor(
+            t(perm_pred[vr[positions], , drop = FALSE]),
+            t(observed[vr[positions], , drop = FALSE]),
+            use = "pairwise.complete.obs"
+          ),
+          error = function(e) NULL
+        )
+        if (is.null(cm)) {
+          next
+        }
+        if (length(positions) == 1L) {
+          cm <- matrix(cm, 1L, 1L)
+        }
+        diagonal[positions] <- diag(cm)
+        if (length(positions) >= 2L) {
+          off_diagonal <- c(
+            off_diagonal,
+            cm[row(cm) != col(cm) & is.finite(cm)]
+          )
+          for (local in seq_along(positions)) {
+            row_cors <- cm[local, ]
+            denominator <- sum(is.finite(row_cors)) - 1L
+            if (denominator > 0L && is.finite(row_cors[[local]])) {
+              ranks[positions[[local]]] <-
+                (sum(row_cors <= row_cors[[local]], na.rm = TRUE) - 1L) /
+                denominator
+            }
           }
         }
-        ppr <- mean(ranks, na.rm = TRUE)
       }
+      ppc <- if (any(is.finite(diagonal))) mean(diagonal, na.rm = TRUE) else NA_real_
+      ppd <- if (is.finite(ppc) && length(off_diagonal)) {
+        ppc - mean(off_diagonal)
+      } else {
+        NA_real_
+      }
+      ppr <- if (any(is.finite(ranks))) mean(ranks, na.rm = TRUE) else NA_real_
     }
 
-    if (length(vr) >= 3L) {
-      pc <- tryCatch(
-        stats::cor(t(perm_pred_valid[vr, , drop = FALSE]), use = "pairwise.complete.obs"),
-        error = function(e) NULL
-      )
-      oc <- tryCatch(
-        stats::cor(t(observed_valid[vr, , drop = FALSE]), use = "pairwise.complete.obs"),
-        error = function(e) NULL
-      )
-      if (!is.null(pc) && !is.null(oc)) {
-        pv <- (1 - pc)[upper.tri(pc)]
-        ov <- (1 - oc)[upper.tri(oc)]
-        if (length(pv) >= 2L && length(pv) == length(ov)) {
-          prdm <- tryCatch(
-            stats::cor(pv, ov, method = "spearman", use = "complete.obs"),
-            error = function(e) NA_real_
+    if (length(vr) >= 2L) {
+      predicted_distances <- observed_distances <- numeric(0)
+      for (fold in unique(fold_id[vr])) {
+        positions <- which(fold_id[vr] == fold)
+        if (length(positions) < 2L) {
+          next
+        }
+        pc <- tryCatch(
+          stats::cor(
+            t(perm_pred[vr[positions], , drop = FALSE]),
+            use = "pairwise.complete.obs"
+          ),
+          error = function(e) NULL
+        )
+        oc <- tryCatch(
+          stats::cor(
+            t(observed[vr[positions], , drop = FALSE]),
+            use = "pairwise.complete.obs"
+          ),
+          error = function(e) NULL
+        )
+        if (!is.null(pc) && !is.null(oc)) {
+          predicted_distances <- c(
+            predicted_distances,
+            (1 - pc)[lower.tri(pc)]
+          )
+          observed_distances <- c(
+            observed_distances,
+            (1 - oc)[lower.tri(oc)]
           )
         }
+      }
+      if (length(predicted_distances) >= 2L &&
+          length(predicted_distances) == length(observed_distances)) {
+        prdm <- tryCatch(
+          stats::cor(
+            predicted_distances,
+            observed_distances,
+            method = "spearman",
+            use = "complete.obs"
+          ),
+          error = function(e) NA_real_
+        )
       }
     }
 
     pvc <- tryCatch(
       stats::cor(
-        as.vector(perm_pred_valid),
-        as.vector(observed_valid),
+        as.vector(perm_pred),
+        as.vector(observed),
         use = "pairwise.complete.obs"
       ),
       error = function(e) NA_real_
@@ -701,6 +751,68 @@ test_that(".perm_test_feature_rsa matches a direct reference implementation", {
   expect_equal(got$permutation_distributions, oracle$permutation_distributions, tolerance = 1e-10)
 })
 
+test_that("fold-aware feature RSA permutations match a constrained oracle", {
+  set.seed(8124)
+  observed <- matrix(rnorm(12 * 9), 12, 9)
+  predicted <- observed * 0.4 + matrix(rnorm(12 * 9), 12, 9)
+  fold_id <- rep(c("film-2", "film-1", "film-3"), each = 4L)
+  perf <- evaluate_model.feature_rsa_model(
+    object = NULL,
+    predicted = predicted,
+    observed = observed,
+    fold_id = fold_id,
+    nperm = 0
+  )
+  valid_col <- which(
+    apply(observed, 2L, stats::sd) > 1e-12 &
+      apply(predicted, 2L, stats::sd) > 1e-12
+  )
+
+  set.seed(8125)
+  oracle <- feature_rsa_perm_oracle(
+    observed = observed,
+    predicted = predicted,
+    nperm = 15,
+    save_distributions = TRUE,
+    pattern_cor = perf$pattern_correlation,
+    pattern_discrim = perf$pattern_discrimination,
+    pattern_rank = perf$pattern_rank_percentile,
+    rdm_cor = perf$rdm_correlation,
+    voxel_cor = perf$voxel_correlation,
+    mse = perf$mse,
+    r_squared = perf$r_squared,
+    mean_voxelwise_temporal_cor = perf$mean_voxelwise_temporal_cor,
+    valid_col = valid_col,
+    fold_id = fold_id
+  )
+
+  set.seed(8125)
+  got <- rMVPA:::.perm_test_feature_rsa(
+    observed = observed,
+    predicted = predicted,
+    nperm = 15,
+    save_distributions = TRUE,
+    pattern_cor = perf$pattern_correlation,
+    pattern_discrim = perf$pattern_discrimination,
+    pattern_rank = perf$pattern_rank_percentile,
+    rdm_cor = perf$rdm_correlation,
+    voxel_cor = perf$voxel_correlation,
+    mse = perf$mse,
+    r_squared = perf$r_squared,
+    mean_voxelwise_temporal_cor = perf$mean_voxelwise_temporal_cor,
+    valid_col = valid_col,
+    fold_id = fold_id
+  )
+
+  expect_equal(got$p_values, oracle$p_values, tolerance = 1e-10)
+  expect_equal(got$z_scores, oracle$z_scores, tolerance = 1e-10)
+  expect_equal(
+    got$permutation_distributions,
+    oracle$permutation_distributions,
+    tolerance = 1e-10
+  )
+})
+
 # ---- ncomp_selection tests ----
 
 test_that("ncomp_selection='loo' selects components via LOO for PLS", {
@@ -928,6 +1040,8 @@ test_that("feature_rsa_model retains ROI predicted RDM vectors only when request
   expect_true(all(vapply(vecs$rdm_vec, is.numeric, logical(1))))
   expect_true(all(vapply(vecs$rdm_vec, length, integer(1)) == 24L * 23L / 2L))
   expect_true(all(vapply(vecs$observation_index, identical, logical(1), y = seq_len(24))))
+  expect_true(all(vapply(vecs$fold_id, length, integer(1)) == 24L))
+  expect_true(all(vapply(vecs$fold_id, identical, logical(1), y = vecs$fold_id[[1L]])))
 })
 
 test_that("feature_rsa_connectivity returns a symmetric ROI x ROI matrix and sparsifies only the final graph", {
@@ -1082,6 +1196,7 @@ test_that("feature_rsa connectivity supports file-backed rdm_batches output", {
   expect_equal(vecs_disk$roinum, vecs_mem$roinum)
   expect_equal(vecs_disk$rdm_vec, vecs_mem$rdm_vec)
   expect_equal(vecs_disk$observed_rdm_vec, vecs_mem$observed_rdm_vec)
+  expect_equal(vecs_disk$fold_id, vecs_mem$fold_id)
 
   conn_mem <- feature_rsa_connectivity(res_mem, method = "pearson")
   conn_disk <- feature_rsa_connectivity(res_disk, method = "pearson")

@@ -147,11 +147,23 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' @param lambda_selection Character string controlling ridge penalty selection.
 #'   \code{"gcv"} (default) minimizes generalized cross-validation error from
 #'   one full-fold SVD. \code{"loo"} uses exact analytic leave-one-observation-out
-#'   PRESS errors and the one-standard-error rule. \code{"blocked"} uses
+#'   PRESS errors. \code{"blocked"} uses
 #'   leave-one-block-out errors, with centering and scaling re-estimated inside
-#'   every inner split, and the one-standard-error rule; it requires
+#'   every inner split; it requires
 #'   \code{design$block_var}. \code{"fixed"} requires one supplied \code{lambda}.
-#'   Ignored for other methods.
+#'   Selection applies the rule configured by \code{lambda_one_se}. Ignored for
+#'   other methods.
+#' @param lambda_objective Character string naming the ridge tuning estimand.
+#'   \code{"mse"} (default) preserves GCV/LOO/blocked prediction-error tuning.
+#'   \code{"pattern_rank_percentile"} maximizes identification rank among
+#'   observations withheld together and therefore requires
+#'   \code{lambda_selection = "blocked"} with at least two observations per
+#'   inner validation block. Ignored for other methods.
+#' @param lambda_one_se Optional logical controlling the one-standard-error
+#'   rule for ridge tuning. \code{NULL} uses \code{TRUE} for MSE-based LOO or
+#'   blocked tuning and \code{FALSE} otherwise. Identification tuning defaults
+#'   to the empirical optimum because stronger shrinkage is not inherently the
+#'   safer error for a rank objective.
 #' @param alpha Numeric value between 0 and 1, only used when method="glmnet". Controls the elastic net
 #'   mixing parameter: 1 for lasso (default), 0 for ridge, values in between for a mixture.
 #'   Defaults to 0.5 (equal mix of ridge and lasso).
@@ -170,9 +182,11 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' @param save_distributions Logical, if TRUE and nperm > 0, save the full null distributions
 #'   from the permutation test. Defaults to FALSE.
 #' @param return_rdm_vectors Logical; if TRUE, retain each ROI's predicted
-#'   lower-triangle RDM vector in the regional result's `fits` slot. This is
-#'   off by default because it can add substantial memory use for long time
-#'   series or many ROIs.
+#'   lower-triangle RDM vector in the regional result's `fits` slot. Cross-fold
+#'   pairs are stored as missing because the two observations were not withheld
+#'   together; the retained diagnostics include the observation order and fold
+#'   assignment. This is off by default because it can add substantial memory
+#'   use for long time series or many ROIs.
 #' @param ... Additional arguments (currently unused). Passing deprecated
 #'   arguments such as \code{cache_pca} now results in an error.
 #'
@@ -219,16 +233,20 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   - `pattern_correlation`: Average correlation between the predicted and observed
 #'     spatial patterns for corresponding trials (diagonal of the trial x trial
 #'     correlation matrix computed across voxels).
-#'   - `pattern_discrimination`: `pattern_correlation` minus the mean off-diagonal
-#'     correlation.  Measures how much better the model predicts the correct trial's
-#'     pattern compared to incorrect trials.
+#'   - `pattern_discrimination`: `pattern_correlation` minus the mean
+#'     off-diagonal correlation among candidates withheld in the same outer
+#'     fold. Measures how much better the model predicts the correct trial's
+#'     pattern than eligible incorrect trials.
 #'   - `pattern_rank_percentile`: For each trial, percentile rank of the correct
-#'     pattern match among all candidates.  0.5 = chance, 1 = perfect.
+#'     pattern match among candidates withheld in the same outer fold.
+#'     0.5 = chance, 1 = perfect.
 #'
 #' *Representational geometry*:
-#'   - `rdm_correlation`: Spearman correlation between the upper triangles of the
-#'     observed and predicted RDMs (defined as 1 - trial-by-trial correlation
-#'     across voxels).  Captures similarity of representational geometry.
+#'   - `rdm_correlation`: Spearman correlation between jointly withheld pairs
+#'     in the observed and predicted RDMs (defined as 1 - trial-by-trial
+#'     correlation across voxels). Captures similarity of held-out
+#'     representational geometry without comparing a prediction with a target
+#'     that trained that prediction.
 #'
 #' *Global reconstruction metrics*:
 #'   - `voxel_correlation`: Correlation of the flattened predicted and observed
@@ -245,8 +263,9 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'
 #' For PLS, PCR, and glmnet, the number of components or its historical proxy
 #' (`ncomp`) is included in the performance output. Ridge instead reports the
-#' median selected penalty (`median_lambda`) and mean effective degrees of
-#' freedom (`mean_effective_df`) across outer folds.
+#' median selected penalty (`median_lambda`), mean effective degrees of freedom
+#' (`mean_effective_df`), non-intercept degrees of freedom, and fractions of
+#' folds selected at either end of the lambda grid.
 #'
 #' @export
 feature_rsa_model <- function(dataset,
@@ -263,11 +282,14 @@ feature_rsa_model <- function(dataset,
                                save_distributions = FALSE,
                                return_rdm_vectors = FALSE,
                                lambda_selection = c("gcv", "loo", "blocked", "fixed"),
+                               lambda_objective = c("mse", "pattern_rank_percentile"),
+                               lambda_one_se = NULL,
                                ...) {
   
   method <- match.arg(method)
   ncomp_selection <- match.arg(ncomp_selection)
   lambda_selection <- match.arg(lambda_selection)
+  lambda_objective <- match.arg(lambda_objective)
   permute_by <- match.arg(permute_by)
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "feature_rsa_design"))
@@ -287,6 +309,11 @@ feature_rsa_model <- function(dataset,
   }
   if (method == "ridge") {
     ridge_lambdas <- .feature_rsa_ridge_lambdas(lambda)
+    if (!is.null(lambda_one_se) &&
+        (!is.logical(lambda_one_se) || length(lambda_one_se) != 1L ||
+         is.na(lambda_one_se))) {
+      stop("lambda_one_se must be NULL, TRUE, or FALSE.", call. = FALSE)
+    }
     if (lambda_selection == "fixed" && length(ridge_lambdas) != 1L) {
       stop(
         "lambda_selection='fixed' requires exactly one finite, non-negative lambda.",
@@ -295,6 +322,28 @@ feature_rsa_model <- function(dataset,
     }
     if (lambda_selection == "blocked" && is.null(design$block_var)) {
       stop("lambda_selection='blocked' requires design$block_var.", call. = FALSE)
+    }
+    if (lambda_objective == "pattern_rank_percentile" &&
+        lambda_selection != "blocked") {
+      stop(
+        paste0(
+          "lambda_objective='pattern_rank_percentile' requires ",
+          "lambda_selection='blocked' so candidates are withheld together."
+        ),
+        call. = FALSE
+      )
+    }
+    if (isTRUE(lambda_one_se) &&
+        !lambda_selection %in% c("loo", "blocked")) {
+      stop(
+        "The one-SE rule requires lambda_selection='loo' or 'blocked'.",
+        call. = FALSE
+      )
+    }
+    if (is.null(lambda_one_se)) {
+      lambda_one_se <-
+        lambda_objective == "mse" &&
+        lambda_selection %in% c("loo", "blocked")
     }
   }
   assertthat::assert_that(
@@ -371,6 +420,8 @@ feature_rsa_model <- function(dataset,
     model_spec$lambda <- lambda
   } else if (method == "ridge") {
     model_spec$lambda_selection <- lambda_selection
+    model_spec$lambda_objective <- lambda_objective
+    model_spec$lambda_one_se <- isTRUE(lambda_one_se)
     # Preserve an explicit NULL entry. Without exact list assignment, `$lambda`
     # would partially match `lambda_selection` on ridge specifications.
     model_spec["lambda"] <- list(lambda)
@@ -485,13 +536,10 @@ feature_rsa_model <- function(dataset,
   if (n < 2L) {
     return(rep(NA_real_, p))
   }
-  if (anyNA(X)) {
-    return(apply(X, 2L, stats::sd))
-  }
-
-  cm <- colMeans(X)
-  ss <- colSums(X * X) - n * cm * cm
-  sqrt(pmax(ss / (n - 1L), 0))
+  # Do not use E[X^2] - E[X]^2 here. That one-pass identity loses all
+  # significant digits for constant or nearly constant non-zero columns and
+  # can turn an exact zero variance into an apparent sd around 1e-8.
+  matrixStats::colSds(X, na.rm = FALSE)
 }
 
 #' @noRd
@@ -506,13 +554,7 @@ feature_rsa_model <- function(dataset,
   if (p < 2L) {
     return(rep(NA_real_, n))
   }
-  if (anyNA(X)) {
-    return(apply(X, 1L, stats::sd))
-  }
-
-  rm <- rowMeans(X)
-  ss <- rowSums(X * X) - p * rm * rm
-  sqrt(pmax(ss / (p - 1L), 0))
+  matrixStats::rowSds(X, na.rm = FALSE)
 }
 
 #' Correlate matrix rows with a no-missing-data BLAS fast path
@@ -616,36 +658,88 @@ feature_rsa_model <- function(dataset,
 
 #' Pattern metrics without retaining an observations-by-observations matrix
 #' @noRd
-.feature_rsa_pattern_metrics_blockwise <- function(predicted, observed) {
+.feature_rsa_resolve_fold_id <- function(fold_id, n) {
+  if (is.null(fold_id)) {
+    return(rep.int(1L, n))
+  }
+  if (!is.atomic(fold_id) || length(fold_id) != n) {
+    stop(sprintf("feature RSA fold_id must have length %d.", n), call. = FALSE)
+  }
+  if (anyNA(fold_id)) {
+    stop("feature RSA fold_id cannot contain missing values.", call. = FALSE)
+  }
+  match(fold_id, unique(fold_id))
+}
+
+
+#' Fold-preserving row permutation
+#' @noRd
+.feature_rsa_permutation_index <- function(fold_id) {
+  fold_id <- .feature_rsa_resolve_fold_id(fold_id, length(fold_id))
+  out <- seq_along(fold_id)
+  for (rows in unname(split(out, fold_id))) {
+    # sample(5) samples from 1:5, so singleton groups need an explicit guard.
+    out[rows] <- if (length(rows) > 1L) sample(rows) else rows
+  }
+  out
+}
+
+
+#' Pattern metrics without retaining an observations-by-observations matrix
+#' @noRd
+.feature_rsa_pattern_metrics_blockwise <- function(predicted,
+                                                   observed,
+                                                   fold_id = NULL) {
   predicted <- as.matrix(predicted)
   observed <- as.matrix(observed)
   if (!identical(dim(predicted), dim(observed)) || nrow(predicted) < 2L) {
     return(c(correlation = NA_real_, discrimination = NA_real_, rank = NA_real_))
   }
+  n <- nrow(predicted)
+  fold_id <- .feature_rsa_resolve_fold_id(fold_id, n)
+  groups <- unname(split(seq_len(n), fold_id))
   pred_norm <- .feature_rsa_normalize_rows(predicted)
   obs_norm <- .feature_rsa_normalize_rows(observed)
   if (is.null(pred_norm) || is.null(obs_norm)) {
     dense <- .feature_rsa_row_cor(predicted, observed)
-    diag_vals <- diag(dense)
-    nc <- nrow(dense)
-    ranks <- vapply(seq_len(nc), function(i) {
-      row_values <- dense[i, ]
-      denominator <- sum(!is.na(row_values)) - 1L
-      if (denominator > 0L && is.finite(row_values[[i]])) {
-        (sum(row_values <= row_values[[i]], na.rm = TRUE) - 1L) / denominator
-      } else {
-        NA_real_
+    diag_vals <- ranks <- rep(NA_real_, n)
+    off_sum <- 0
+    off_count <- 0L
+    for (group in groups) {
+      for (row_index in group) {
+        correct <- match(row_index, group)
+        row_values <- dense[row_index, group]
+        diagonal <- row_values[[correct]]
+        diag_vals[[row_index]] <- diagonal
+        denominator <- sum(is.finite(row_values)) - 1L
+        if (denominator > 0L && is.finite(diagonal)) {
+          ranks[[row_index]] <-
+            (sum(row_values <= diagonal, na.rm = TRUE) - 1L) /
+            denominator
+        }
+        finite <- is.finite(row_values)
+        if (is.finite(diagonal)) finite[[correct]] <- FALSE
+        off_sum <- off_sum + sum(row_values[finite])
+        off_count <- off_count + sum(finite)
       }
-    }, numeric(1L))
-    pattern_cor <- mean(diag_vals, na.rm = TRUE)
+    }
+    pattern_cor <- if (any(is.finite(diag_vals))) {
+      mean(diag_vals, na.rm = TRUE)
+    } else {
+      NA_real_
+    }
+    off_mean <- if (off_count > 0L) off_sum / off_count else NA_real_
     return(c(
       correlation = pattern_cor,
-      discrimination = pattern_cor - .feature_rsa_offdiag_mean(dense, diag_vals),
-      rank = mean(ranks, na.rm = TRUE)
+      discrimination = if (is.finite(pattern_cor) && is.finite(off_mean)) {
+        pattern_cor - off_mean
+      } else {
+        NA_real_
+      },
+      rank = if (any(is.finite(ranks))) mean(ranks, na.rm = TRUE) else NA_real_
     ))
   }
 
-  n <- nrow(predicted)
   block_size <- getOption("rMVPA.feature_rsa_metric_block_rows", 128L)
   block_size <- max(1L, min(n, as.integer(block_size)))
   diag_vals <- rep(NA_real_, n)
@@ -653,31 +747,44 @@ feature_rsa_model <- function(dataset,
   off_sum <- 0
   off_count <- 0L
 
-  for (start in seq.int(1L, n, by = block_size)) {
-    stop_at <- min(n, start + block_size - 1L)
-    rows <- seq.int(start, stop_at)
-    block <- tcrossprod(
-      pred_norm$values[rows, , drop = FALSE],
-      obs_norm$values
-    )
-    for (local_row in seq_along(rows)) {
-      row_index <- rows[[local_row]]
-      row_values <- block[local_row, ]
-      diagonal <- row_values[[row_index]]
-      diag_vals[[row_index]] <- diagonal
-      if (is.finite(diagonal)) {
-        ranks[[row_index]] <-
-          (sum(row_values <= diagonal, na.rm = TRUE) - 1L) /
-          (sum(is.finite(row_values)) - 1L)
+  for (group in groups) {
+    group_size <- length(group)
+    for (start in seq.int(1L, group_size, by = block_size)) {
+      stop_at <- min(group_size, start + block_size - 1L)
+      local_rows <- seq.int(start, stop_at)
+      rows <- group[local_rows]
+      block <- tcrossprod(
+        pred_norm$values[rows, , drop = FALSE],
+        obs_norm$values[group, , drop = FALSE]
+      )
+      for (local_row in seq_along(rows)) {
+        row_index <- rows[[local_row]]
+        correct <- local_rows[[local_row]]
+        row_values <- block[local_row, ]
+        if (!pred_norm$valid[[row_index]]) row_values[] <- NA_real_
+        invalid_observed <- !obs_norm$valid[group]
+        if (any(invalid_observed)) row_values[invalid_observed] <- NA_real_
+        diagonal <- row_values[[correct]]
+        diag_vals[[row_index]] <- diagonal
+        denominator <- sum(is.finite(row_values)) - 1L
+        if (denominator > 0L && is.finite(diagonal)) {
+          ranks[[row_index]] <-
+            (sum(row_values <= diagonal, na.rm = TRUE) - 1L) /
+            denominator
+        }
+        finite <- is.finite(row_values)
+        if (is.finite(diagonal)) finite[[correct]] <- FALSE
+        off_sum <- off_sum + sum(row_values[finite])
+        off_count <- off_count + sum(finite)
       }
-      finite <- is.finite(row_values)
-      if (is.finite(diagonal)) finite[[row_index]] <- FALSE
-      off_sum <- off_sum + sum(row_values[finite])
-      off_count <- off_count + sum(finite)
     }
   }
 
-  pattern_cor <- mean(diag_vals, na.rm = TRUE)
+  pattern_cor <- if (any(is.finite(diag_vals))) {
+    mean(diag_vals, na.rm = TRUE)
+  } else {
+    NA_real_
+  }
   off_mean <- if (off_count > 0L) off_sum / off_count else NA_real_
   c(
     correlation = pattern_cor,
@@ -686,7 +793,7 @@ feature_rsa_model <- function(dataset,
     } else {
       NA_real_
     },
-    rank = mean(ranks, na.rm = TRUE)
+    rank = if (any(is.finite(ranks))) mean(ranks, na.rm = TRUE) else NA_real_
   )
 }
 
@@ -732,6 +839,39 @@ feature_rsa_model <- function(dataset,
 }
 
 
+#' Fold-restricted RDM vectors
+#'
+#' Compact output concatenates only within-fold pairs. Full output preserves
+#' the ordinary lower-triangle length and marks cross-fold pairs as missing.
+#' @noRd
+.feature_rsa_grouped_rdm_vectors <- function(X,
+                                             fold_id = NULL,
+                                             full_length = FALSE) {
+  X <- as.matrix(X)
+  n <- nrow(X)
+  fold_id <- .feature_rsa_resolve_fold_id(fold_id, n)
+  groups <- unname(split(seq_len(n), fold_id))
+  n_pairs <- n * (n - 1L) / 2L
+  if (n_pairs < 1L) return(numeric(0))
+
+  if (isTRUE(full_length)) {
+    out <- rep(NA_real_, n_pairs)
+    for (group in groups) {
+      if (length(group) < 2L) next
+      out[.feature_rsa_pair_indices(group, n)] <-
+        .feature_rsa_rdm_vector_blockwise(X[group, , drop = FALSE])
+    }
+    return(out)
+  }
+
+  values <- lapply(groups, function(group) {
+    if (length(group) < 2L) return(numeric(0))
+    .feature_rsa_rdm_vector_blockwise(X[group, , drop = FALSE])
+  })
+  unlist(values, use.names = FALSE)
+}
+
+
 #' Map arbitrary row pairs into a full lower-triangle vector
 #' @noRd
 .feature_rsa_pair_indices <- function(rows, n) {
@@ -755,33 +895,58 @@ feature_rsa_model <- function(dataset,
 }
 
 
+#' Full-vector pair indices restricted to jointly held-out folds
+#' @noRd
+.feature_rsa_grouped_pair_indices <- function(rows, fold_id, n) {
+  if (length(rows) != length(fold_id)) {
+    stop("feature RSA grouped pair rows and fold_id must have equal length.",
+         call. = FALSE)
+  }
+  fold_id <- .feature_rsa_resolve_fold_id(fold_id, length(rows))
+  groups <- unname(split(seq_along(rows), fold_id))
+  unlist(lapply(groups, function(group) {
+    .feature_rsa_pair_indices(rows[group], n)
+  }), use.names = FALSE)
+}
+
+
 #' Pattern metrics from indexed rows of a cached cross-correlation matrix
 #' @noRd
 .feature_rsa_pattern_metrics_from_cross <- function(cross_cor,
                                                      predicted_rows,
-                                                     observed_rows) {
+                                                     observed_rows,
+                                                     fold_id = NULL) {
   n <- length(predicted_rows)
-  if (n < 2L || length(observed_rows) != n) {
+  if (n < 1L || length(observed_rows) != n) {
     return(c(correlation = NA_real_, discrimination = NA_real_, rank = NA_real_))
   }
+  fold_id <- .feature_rsa_resolve_fold_id(fold_id, n)
+  groups <- unname(split(seq_len(n), fold_id))
   diag_vals <- ranks <- rep(NA_real_, n)
   off_sum <- 0
   off_count <- 0L
-  for (i in seq_len(n)) {
-    row_values <- cross_cor[predicted_rows[[i]], observed_rows]
-    diagonal <- row_values[[i]]
-    diag_vals[[i]] <- diagonal
-    denominator <- sum(!is.na(row_values)) - 1L
-    if (denominator > 0L && is.finite(diagonal)) {
-      ranks[[i]] <-
-        (sum(row_values <= diagonal, na.rm = TRUE) - 1L) / denominator
+  for (group in groups) {
+    for (i in group) {
+      correct <- match(i, group)
+      row_values <- cross_cor[predicted_rows[[i]], observed_rows[group]]
+      diagonal <- row_values[[correct]]
+      diag_vals[[i]] <- diagonal
+      denominator <- sum(is.finite(row_values)) - 1L
+      if (denominator > 0L && is.finite(diagonal)) {
+        ranks[[i]] <-
+          (sum(row_values <= diagonal, na.rm = TRUE) - 1L) / denominator
+      }
+      finite <- is.finite(row_values)
+      if (is.finite(diagonal)) finite[[correct]] <- FALSE
+      off_sum <- off_sum + sum(row_values[finite])
+      off_count <- off_count + sum(finite)
     }
-    finite <- is.finite(row_values)
-    if (is.finite(diagonal)) finite[[i]] <- FALSE
-    off_sum <- off_sum + sum(row_values[finite])
-    off_count <- off_count + sum(finite)
   }
-  pattern_cor <- mean(diag_vals, na.rm = TRUE)
+  pattern_cor <- if (any(is.finite(diag_vals))) {
+    mean(diag_vals, na.rm = TRUE)
+  } else {
+    NA_real_
+  }
   off_mean <- if (off_count > 0L) off_sum / off_count else NA_real_
   c(
     correlation = pattern_cor,
@@ -790,7 +955,7 @@ feature_rsa_model <- function(dataset,
     } else {
       NA_real_
     },
-    rank = mean(ranks, na.rm = TRUE)
+    rank = if (any(is.finite(ranks))) mean(ranks, na.rm = TRUE) else NA_real_
   )
 }
 
@@ -1770,6 +1935,92 @@ feature_rsa_model <- function(dataset,
 }
 
 
+#' Block-wise held-out identification path for ridge selection
+#'
+#' Each score is computed only among observations withheld together, so no
+#' candidate pattern used to train a prediction can enter its rank. Unlike the
+#' spectral MSE path, identification requires materialized held-out predictions
+#' for each candidate penalty.
+#' @noRd
+.feature_rsa_ridge_block_pattern_rank <- function(features,
+                                                  responses,
+                                                  lambdas,
+                                                  segments) {
+  features <- as.matrix(features)
+  responses <- as.matrix(responses)
+  lambdas <- .feature_rsa_ridge_lambdas(lambdas)
+  n <- nrow(features)
+  if (n != nrow(responses)) {
+    stop("feature RSA ridge blocked rank requires matching row counts.",
+         call. = FALSE)
+  }
+  if (!is.list(segments) || length(segments) < 2L) {
+    stop("feature RSA ridge blocked rank requires at least two segments.",
+         call. = FALSE)
+  }
+  segments <- lapply(segments, function(index) {
+    index <- unique(as.integer(index))
+    if (!length(index) || anyNA(index) || any(index < 1L | index > n)) {
+      stop("feature RSA ridge blocked rank received invalid segment indices.",
+           call. = FALSE)
+    }
+    if (length(index) < 2L) {
+      stop(
+        paste0(
+          "feature RSA ridge blocked rank requires at least two held-out ",
+          "observations in every segment."
+        ),
+        call. = FALSE
+      )
+    }
+    index
+  })
+
+  out <- matrix(
+    NA_real_,
+    nrow = length(segments),
+    ncol = length(lambdas),
+    dimnames = list(NULL, format(lambdas, scientific = TRUE))
+  )
+  all_rows <- seq_len(n)
+  for (s in seq_along(segments)) {
+    test <- segments[[s]]
+    train <- all_rows[-test]
+    if (length(train) < 2L) {
+      stop("feature RSA ridge blocked rank has fewer than two training rows.",
+           call. = FALSE)
+    }
+    sf <- .standardize(features[train, , drop = FALSE])
+    sx <- .standardize(responses[train, , drop = FALSE])
+    test_features <- scale(
+      features[test, , drop = FALSE],
+      center = sf$mean,
+      scale = sf$sd
+    )
+    observed_test <- scale(
+      responses[test, , drop = FALSE],
+      center = sx$mean,
+      scale = sx$sd
+    )
+    decomposition <- .feature_rsa_ridge_decomposition(sf$X_sc, sx$X_sc)
+    for (j in seq_along(lambdas)) {
+      fit <- .feature_rsa_ridge_fit_kernel(
+        sf$X_sc,
+        sx$X_sc,
+        lambdas[[j]],
+        decomposition = decomposition
+      )
+      predicted_test <- .feature_rsa_ridge_predict_kernel(fit, test_features)
+      out[s, j] <- .feature_rsa_pattern_metrics_blockwise(
+        predicted_test,
+        observed_test
+      )[["rank"]]
+    }
+  }
+  out
+}
+
+
 #' Select a normalized ridge penalty from scalar or segment-wise scores
 #' @noRd
 .feature_rsa_ridge_select_lambda <- function(scores,
@@ -2028,6 +2279,8 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #' @param r_squared Scalar: the observed R^2
 #' @param mean_voxelwise_temporal_cor Scalar: the observed mean voxelwise temporal correlation
 #' @param valid_col Integer vector of valid voxel columns
+#' @param fold_id Vector assigning observations to outer test folds. Null
+#'   permutations are restricted to rows in the same fold.
 #' @return A list with p-values, z-scores, and optionally a list of permutations
 .perm_test_feature_rsa <- function(observed,
                                    predicted,
@@ -2042,6 +2295,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
                                    r_squared,
                                    mean_voxelwise_temporal_cor,
                                    valid_col,
+                                   fold_id = NULL,
                                    predicted_rdm_cache = NULL,
                                    observed_rdm_cache = NULL)
 {
@@ -2051,13 +2305,14 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   )
 
   n_rows <- nrow(predicted)
+  fold_id <- .feature_rsa_resolve_fold_id(fold_id, n_rows)
   sd_thresh <- 1e-12
   tss <- sum((observed - mean(observed, na.rm = TRUE))^2, na.rm = TRUE)
   observed_valid <- observed[, valid_col, drop = FALSE]
   predicted_valid <- predicted[, valid_col, drop = FALSE]
-  obs_row_sd <- .feature_rsa_row_sds(observed_valid)
+  obs_row_sd <- .feature_rsa_row_sds(observed)
   obs_row_ok <- obs_row_sd > sd_thresh
-  pred_row_sd <- .feature_rsa_row_sds(predicted_valid)
+  pred_row_sd <- .feature_rsa_row_sds(predicted)
   pred_row_ok <- pred_row_sd > sd_thresh
 
   # Row permutation changes only matrix indexing, not pairwise correlation.
@@ -2065,46 +2320,60 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   # lower-triangle vectors for the two within-space geometries.
   cross_trial_cor <- if (n_rows >= 2L) {
     tryCatch(
-      .feature_rsa_row_cor(predicted_valid, observed_valid),
+      .feature_rsa_row_cor(predicted, observed),
       error = function(e) NULL
     )
   } else NULL
-  if (n_rows >= 3L && is.null(predicted_rdm_cache)) {
+  if (n_rows >= 2L && is.null(predicted_rdm_cache)) {
     predicted_rdm_cache <- tryCatch(
-      .feature_rsa_rdm_vector_blockwise(predicted_valid),
+      .feature_rsa_grouped_rdm_vectors(
+        predicted,
+        fold_id = fold_id,
+        full_length = TRUE
+      ),
       error = function(e) NULL
     )
   }
-  if (n_rows >= 3L && is.null(observed_rdm_cache)) {
+  if (n_rows >= 2L && is.null(observed_rdm_cache)) {
     observed_rdm_cache <- tryCatch(
-      .feature_rsa_rdm_vector_blockwise(observed_valid),
+      .feature_rsa_grouped_rdm_vectors(
+        observed,
+        fold_id = fold_id,
+        full_length = TRUE
+      ),
       error = function(e) NULL
     )
   }
 
-  no_na_fast_path <- n_rows > 1L &&
+  no_na_global_fast_path <- n_rows > 1L &&
+    !anyNA(observed) &&
+    !anyNA(predicted)
+  no_na_temporal_fast_path <- n_rows > 1L &&
     length(valid_col) > 0L &&
     !anyNA(observed_valid) &&
     !anyNA(predicted_valid)
 
-  if (no_na_fast_path) {
-    obs_centered_global <- observed_valid - mean(observed_valid)
-    pred_centered_global <- predicted_valid - mean(predicted_valid)
+  if (no_na_global_fast_path) {
+    obs_centered_global <- observed - mean(observed)
+    pred_centered_global <- predicted - mean(predicted)
     global_denom <- sqrt(
       sum(obs_centered_global * obs_centered_global) *
         sum(pred_centered_global * pred_centered_global)
-    )
-
-    obs_centered_cols <- sweep(observed_valid, 2L, colMeans(observed_valid), "-")
-    pred_centered_cols <- sweep(predicted_valid, 2L, colMeans(predicted_valid), "-")
-    col_denom <- sqrt(
-      colSums(obs_centered_cols * obs_centered_cols) *
-        colSums(pred_centered_cols * pred_centered_cols)
     )
   } else {
     global_denom <- NA_real_
     obs_centered_global <- NULL
     pred_centered_global <- NULL
+  }
+
+  if (no_na_temporal_fast_path) {
+    obs_centered_cols <- sweep(observed_valid, 2L, colMeans(observed_valid), "-")
+    pred_centered_cols <- sweep(predicted_valid, 2L, colMeans(predicted_valid), "-")
+    col_denom <- sqrt(
+      colSums(obs_centered_cols * obs_centered_cols) *
+      colSums(pred_centered_cols * pred_centered_cols)
+    )
+  } else {
     obs_centered_cols <- NULL
     pred_centered_cols <- NULL
     col_denom <- NULL
@@ -2132,7 +2401,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   }
 
   for (i in seq_len(nperm)) {
-    perm_idx  <- sample(n_rows)
+    perm_idx  <- .feature_rsa_permutation_index(fold_id)
     perm_pred <- predicted[perm_idx, , drop = FALSE]
     perm_pred_valid <- perm_pred[, valid_col, drop = FALSE]
 
@@ -2144,7 +2413,8 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
         pattern_metrics <- .feature_rsa_pattern_metrics_from_cross(
           cross_trial_cor,
           predicted_rows = perm_idx[vr],
-          observed_rows = vr
+          observed_rows = vr,
+          fold_id = fold_id[vr]
         )
         ppc <- unname(pattern_metrics[["correlation"]])
         ppd <- unname(pattern_metrics[["discrimination"]])
@@ -2153,10 +2423,18 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
     }
 
     ## -- Representational geometry (RDM correlation) --
-    if (length(vr) >= 3) {
+    if (length(vr) >= 2L) {
       if (!is.null(predicted_rdm_cache) && !is.null(observed_rdm_cache)) {
-        predicted_pair_index <- .feature_rsa_pair_indices(perm_idx[vr], n_rows)
-        observed_pair_index <- .feature_rsa_pair_indices(vr, n_rows)
+        predicted_pair_index <- .feature_rsa_grouped_pair_indices(
+          perm_idx[vr],
+          fold_id[vr],
+          n_rows
+        )
+        observed_pair_index <- .feature_rsa_grouped_pair_indices(
+          vr,
+          fold_id[vr],
+          n_rows
+        )
         pv <- predicted_rdm_cache[predicted_pair_index]
         ov <- observed_rdm_cache[observed_pair_index]
         if (length(pv) >= 2 && length(pv) == length(ov)) {
@@ -2167,11 +2445,12 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
     }
 
     ## -- Global reconstruction --
-    pvc <- if (no_na_fast_path && is.finite(global_denom) && global_denom > 0) {
+    pvc <- if (no_na_global_fast_path &&
+               is.finite(global_denom) && global_denom > 0) {
       sum(obs_centered_global * pred_centered_global[perm_idx, , drop = FALSE]) / global_denom
     } else {
-      tryCatch(stats::cor(as.vector(perm_pred_valid),
-                          as.vector(observed_valid),
+      tryCatch(stats::cor(as.vector(perm_pred),
+                          as.vector(observed),
                           use = "pairwise.complete.obs"),
                error = function(e) NA_real_)
     }
@@ -2181,7 +2460,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
     ## -- Voxel encoding --
     pmvtc <- NA_real_
     if (n_rows > 1 && length(valid_col) > 0) {
-      if (no_na_fast_path) {
+      if (no_na_temporal_fast_path) {
         vcors <- rep(NA_real_, length(valid_col))
         ok <- is.finite(col_denom) & col_denom > 0
         if (any(ok)) {
@@ -2262,6 +2541,10 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #' @param save_distributions Logical indicating whether to save full permutation distributions
 #' @param compute_rdm_vectors Logical; when TRUE, also return compact predicted
 #'   and observed RDM vectors for reuse by downstream code.
+#' @param fold_id Optional vector assigning each observation to its outer
+#'   cross-validation test fold. Pattern discrimination, identification rank,
+#'   and RDM correlation then use only candidates or pairs withheld together.
+#'   Cross-validated workflows supply this automatically.
 #' @param ... Additional arguments
 #'
 #' @return A list containing:
@@ -2270,10 +2553,15 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #'       matrix -- how well the predicted spatial pattern for each trial matches
 #'       the correct observed pattern.}
 #'     \item{pattern_discrimination}{Diagonal minus off-diagonal of the trial x
-#'       trial correlation matrix -- how much better the correct trial is matched
-#'       than incorrect trials.}
+#'       trial correlation matrix, restricted to candidates in the same outer
+#'       test fold -- how much better the correct trial is matched than eligible
+#'       incorrect trials.}
 #'     \item{pattern_rank_percentile}{For each trial, percentile rank of the
-#'       correct pattern among all candidates.  0.5 = chance, 1 = perfect.}
+#'       correct pattern among candidates in the same outer test fold.
+#'       0.5 = chance, 1 = perfect.}
+#'     \item{rdm_correlation}{Spearman correlation between predicted and
+#'       observed correlation-distance pairs whose observations were withheld
+#'       together.}
 #'     \item{voxel_correlation}{Correlation of the flattened predicted and
 #'       observed matrices (global reconstruction quality).}
 #'     \item{mse}{Mean squared error.}
@@ -2295,6 +2583,7 @@ evaluate_model.feature_rsa_model <- function(object,
                                              nperm = 0,
                                              save_distributions = FALSE,
                                              compute_rdm_vectors = isTRUE(object$return_rdm_vectors),
+                                             fold_id = NULL,
                                              ...)
 {
   observed  <- as.matrix(observed)
@@ -2310,9 +2599,10 @@ evaluate_model.feature_rsa_model <- function(object,
                  ncol(predicted), ncol(observed)))
   }
 
+  fold_id <- .feature_rsa_resolve_fold_id(fold_id, nrow(observed))
+
   sd_thresh <- 1e-12
   n_obs  <- nrow(observed)
-  n_vox  <- ncol(observed)
   n_pairs <- n_obs * (n_obs - 1L) / 2L
 
   ## -- helpers to avoid repeating variance checks --
@@ -2322,44 +2612,12 @@ evaluate_model.feature_rsa_model <- function(object,
   observed_valid <- observed[, valid_col, drop = FALSE]
   predicted_valid <- predicted[, valid_col, drop = FALSE]
 
-  ## -- check rows (trials) have variance across voxels --
-  obs_row_sd  <- .feature_rsa_row_sds(observed_valid)
-  pred_row_sd <- .feature_rsa_row_sds(predicted_valid)
+  ## Pattern and RDM metrics correlate across voxels, so a voxel that is
+  ## constant over observations can still carry spatial information. Temporal
+  ## variance filtering applies only to the per-voxel temporal metric.
+  obs_row_sd  <- .feature_rsa_row_sds(observed)
+  pred_row_sd <- .feature_rsa_row_sds(predicted)
   valid_row   <- which(obs_row_sd > sd_thresh & pred_row_sd > sd_thresh)
-
-  na_result <- list(
-    pattern_correlation        = NA_real_,
-    pattern_discrimination     = NA_real_,
-    pattern_rank_percentile    = NA_real_,
-    rdm_correlation            = NA_real_,
-    voxel_correlation          = NA_real_,
-    mse                        = mean((predicted - observed)^2, na.rm = TRUE),
-    r_squared                  = NA_real_,
-    mean_voxelwise_temporal_cor = NA_real_,
-    predicted_rdm_vec          = if (isTRUE(compute_rdm_vectors)) rep(NA_real_, n_pairs) else NULL,
-    observed_rdm_vec           = if (isTRUE(compute_rdm_vectors)) rep(NA_real_, n_pairs) else NULL,
-    permutation_results        = NULL
-  )
-
-  if (length(valid_col) == 0) {
-    n_obs_ok  <- sum(obs_sd  > sd_thresh, na.rm = TRUE)
-    n_pred_ok <- sum(pred_sd > sd_thresh, na.rm = TRUE)
-    futile.logger::flog.warn(
-      paste0("evaluate_model: No columns with finite variance; returning NA metrics. ",
-             "dims=%d obs x %d vox, obs cols with var=%d (max sd=%.2e), ",
-             "pred cols with var=%d (max sd=%.2e). ",
-             if (n_pred_ok == 0 && n_obs_ok > 0)
-               "Predictions are constant across trials -- the model likely has no predictive power for this ROI."
-             else if (n_obs_ok == 0)
-               "Observed data has no cross-trial variance -- ROI may be too small or data is constant."
-             else
-               "Both predicted and observed lack variance."),
-      n_obs, n_vox, n_obs_ok,
-      if (all(is.na(obs_sd))) NA_real_ else max(obs_sd, na.rm = TRUE),
-      n_pred_ok,
-      if (all(is.na(pred_sd))) NA_real_ else max(pred_sd, na.rm = TRUE))
-    return(na_result)
-  }
 
   ## ================================================================
   ## 1. Condition-pattern metrics  (trial x trial cormat)
@@ -2374,9 +2632,13 @@ evaluate_model.feature_rsa_model <- function(object,
   observed_rdm_subset <- NULL
 
   if (length(valid_row) >= 2) {
-    pmat <- predicted_valid[valid_row, , drop = FALSE]
-    omat <- observed_valid[valid_row,  , drop = FALSE]
-    pattern_metrics <- .feature_rsa_pattern_metrics_blockwise(pmat, omat)
+    pmat <- predicted[valid_row, , drop = FALSE]
+    omat <- observed[valid_row,  , drop = FALSE]
+    pattern_metrics <- .feature_rsa_pattern_metrics_blockwise(
+      pmat,
+      omat,
+      fold_id = fold_id[valid_row]
+    )
     pattern_cor <- unname(pattern_metrics[["correlation"]])
     pattern_discrim <- unname(pattern_metrics[["discrimination"]])
     pattern_rank <- unname(pattern_metrics[["rank"]])
@@ -2386,16 +2648,23 @@ evaluate_model.feature_rsa_model <- function(object,
   ## 1b. Representational geometry metric (RDM correlation)
   ## ================================================================
   ## Compute within-space RDMs (1 - trial-by-trial correlation) and correlate
-  ## upper triangles between predicted and observed.
-  if (length(valid_row) >= 3) {
-    pmat <- predicted_valid[valid_row, , drop = FALSE]
-    omat <- observed_valid[valid_row,  , drop = FALSE]
+  ## lower triangles between predicted and observed. With cross-validation,
+  ## only pairs withheld together enter the estimand.
+  if (length(valid_row) >= 2) {
+    pmat <- predicted[valid_row, , drop = FALSE]
+    omat <- observed[valid_row,  , drop = FALSE]
     predicted_rdm_subset <- tryCatch(
-      .feature_rsa_rdm_vector_blockwise(pmat),
+      .feature_rsa_grouped_rdm_vectors(
+        pmat,
+        fold_id = fold_id[valid_row]
+      ),
       error = function(e) NULL
     )
     observed_rdm_subset <- tryCatch(
-      .feature_rsa_rdm_vector_blockwise(omat),
+      .feature_rsa_grouped_rdm_vectors(
+        omat,
+        fold_id = fold_id[valid_row]
+      ),
       error = function(e) NULL
     )
     if (!is.null(predicted_rdm_subset) && !is.null(observed_rdm_subset)) {
@@ -2415,7 +2684,7 @@ evaluate_model.feature_rsa_model <- function(object,
   ## ================================================================
   ## 2. Global reconstruction metrics
   ## ================================================================
-  voxel_cor <- .feature_rsa_global_cor(predicted_valid, observed_valid)
+  voxel_cor <- .feature_rsa_global_cor(predicted, observed)
 
   mse <- mean((predicted - observed)^2, na.rm = TRUE)
   rss <- sum((observed - predicted)^2, na.rm = TRUE)
@@ -2438,33 +2707,28 @@ evaluate_model.feature_rsa_model <- function(object,
     if (n_pairs < 1L) {
       predicted_rdm_cache <- numeric(0)
       observed_rdm_cache <- numeric(0)
-    } else if (length(valid_col) < 1L) {
-      predicted_rdm_cache <- rep(NA_real_, n_pairs)
-      observed_rdm_cache <- rep(NA_real_, n_pairs)
     } else {
-      use_subset_cache <- !is.null(predicted_rdm_subset) &&
-        !is.null(observed_rdm_subset) &&
-        length(valid_row) == n_obs &&
-        identical(valid_row, seq_len(n_obs))
-
-      if (use_subset_cache) {
-        predicted_rdm_cache <- predicted_rdm_subset
-        observed_rdm_cache <- observed_rdm_subset
-      } else {
-        predicted_rdm_cache <- tryCatch(
-          suppressWarnings(.feature_rsa_rdm_vector_blockwise(predicted_valid)),
-          error = function(e) NULL
-        )
-        observed_rdm_cache <- tryCatch(
-          suppressWarnings(.feature_rsa_rdm_vector_blockwise(observed_valid)),
-          error = function(e) NULL
-        )
-        if (is.null(predicted_rdm_cache)) {
-          predicted_rdm_cache <- rep(NA_real_, n_pairs)
-        }
-        if (is.null(observed_rdm_cache)) {
-          observed_rdm_cache <- rep(NA_real_, n_pairs)
-        }
+      predicted_rdm_cache <- tryCatch(
+        suppressWarnings(.feature_rsa_grouped_rdm_vectors(
+          predicted,
+          fold_id = fold_id,
+          full_length = TRUE
+        )),
+        error = function(e) NULL
+      )
+      observed_rdm_cache <- tryCatch(
+        suppressWarnings(.feature_rsa_grouped_rdm_vectors(
+          observed,
+          fold_id = fold_id,
+          full_length = TRUE
+        )),
+        error = function(e) NULL
+      )
+      if (is.null(predicted_rdm_cache)) {
+        predicted_rdm_cache <- rep(NA_real_, n_pairs)
+      }
+      if (is.null(observed_rdm_cache)) {
+        observed_rdm_cache <- rep(NA_real_, n_pairs)
       }
     }
   }
@@ -2490,6 +2754,7 @@ evaluate_model.feature_rsa_model <- function(object,
       r_squared      = r_squared,
       mean_voxelwise_temporal_cor = mean_voxelwise_temporal_cor,
       valid_col      = valid_col,
+      fold_id        = fold_id,
       predicted_rdm_cache = predicted_rdm_cache,
       observed_rdm_cache = observed_rdm_cache
     )
@@ -2519,26 +2784,15 @@ evaluate_model.feature_rsa_model <- function(object,
     return(numeric(0))
   }
 
-  sd_thresh <- 1e-12
-  pred_sd <- .feature_rsa_col_sds(predicted)
-  valid_col <- which(pred_sd > sd_thresh)
-
-  if (length(valid_col) < 1L) {
-    return(rep(NA_real_, n_pairs))
-  }
-
-  pmat <- predicted[, valid_col, drop = FALSE]
-  pc <- tryCatch(
-    suppressWarnings(.feature_rsa_row_cor(pmat)),
+  out <- tryCatch(
+    suppressWarnings(.feature_rsa_rdm_vector_blockwise(predicted)),
     error = function(e) NULL
   )
 
-  if (is.null(pc) || !is.matrix(pc) || !all(dim(pc) == c(n_obs, n_obs))) {
+  if (is.null(out) || length(out) != n_pairs) {
     return(rep(NA_real_, n_pairs))
   }
-
-  prdm <- 1 - pc
-  as.numeric(prdm[lower.tri(prdm)])
+  out
 }
 
 
@@ -2725,6 +2979,20 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
         sx$X_sc
       )
       selector <- obj$lambda_selection %||% "gcv"
+      objective <- obj$lambda_objective %||% "mse"
+      lambda_one_se <- if (!is.null(obj$lambda_one_se)) {
+        isTRUE(obj$lambda_one_se)
+      } else {
+        objective == "mse" && selector %in% c("loo", "blocked")
+      }
+      if (objective == "pattern_rank_percentile" && selector != "blocked") {
+        stop(
+          paste0(
+            "lambda_objective='pattern_rank_percentile' requires ",
+            "lambda_selection='blocked'."
+          )
+        )
+      }
       selected_index <- switch(
         selector,
         fixed = {
@@ -2740,7 +3008,7 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
         loo = .feature_rsa_ridge_select_lambda(
           .feature_rsa_ridge_loo_mse(decomposition, lambdas),
           lambdas,
-          one_se = TRUE
+          one_se = lambda_one_se
         ),
         blocked = {
           segments <- .feature_rsa_block_segments(
@@ -2748,15 +3016,17 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
             n_rows = nrow(Fsub),
             observation_indices = observation_indices
           )
+          scores <- if (objective == "pattern_rank_percentile") {
+            1 - .feature_rsa_ridge_block_pattern_rank(
+              Fsub, X, lambdas, segments
+            )
+          } else {
+            .feature_rsa_ridge_block_mse(Fsub, X, lambdas, segments)
+          }
           .feature_rsa_ridge_select_lambda(
-            .feature_rsa_ridge_block_mse(
-              Fsub,
-              X,
-              lambdas,
-              segments
-            ),
+            scores,
             lambdas,
-            one_se = TRUE
+            one_se = lambda_one_se
           )
         },
         stop(sprintf("Unknown ridge lambda selection method: %s", selector))
@@ -2778,6 +3048,18 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
         lambda = selected_lambda,
         effective_df = model$effective_df,
         lambda_selection = selector,
+        lambda_objective = objective,
+        lambda_one_se = lambda_one_se,
+        lambda_at_min_boundary = if (selector == "fixed") {
+          NA_real_
+        } else {
+          as.numeric(selected_index == 1L)
+        },
+        lambda_at_max_boundary = if (selector == "fixed") {
+          NA_real_
+        } else {
+          as.numeric(selected_index == length(lambdas))
+        },
         ncomp = NA_real_
       )
     }, error = function(e) {
@@ -3078,6 +3360,8 @@ format_result.feature_rsa_model <- function(obj, result, error_message=NULL, con
     list(
       lambda = result$lambda,
       effective_df = result$effective_df,
+      lambda_at_min_boundary = result$lambda_at_min_boundary,
+      lambda_at_max_boundary = result$lambda_at_max_boundary,
       ncomp = NA_real_
     )
   } else {
@@ -3119,8 +3403,7 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   observed_list <- result_set$observed
   predicted_list <- result_set$predicted
   test_index_list <- result_set$test_index
-
-  
+  combined_fold_id <- NULL
   
   # Get the list of results from each fold (contains ncomp)
   fold_results_list <- result_set$result
@@ -3129,10 +3412,17 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
     combined_observed <- oof$observed
     combined_predicted <- oof$predicted
     combined_test_index <- oof$test_index
+    if (!is.null(oof$fold_id) &&
+        length(oof$fold_id) == nrow(combined_observed)) {
+      combined_fold_id <- oof$fold_id
+    }
   } else {
     combined_observed <- do.call(rbind, observed_list)
     combined_predicted <- do.call(rbind, predicted_list)
     combined_test_index <- NULL
+    combined_fold_id <- unlist(lapply(seq_along(observed_list), function(i) {
+      rep.int(i, nrow(as.matrix(observed_list[[i]])))
+    }), use.names = FALSE)
     if (!is.null(test_index_list) && length(test_index_list) == length(observed_list) &&
         all(vapply(test_index_list, Negate(is.null), logical(1)))) {
       combined_test_index <- unlist(test_index_list, use.names = FALSE)
@@ -3140,7 +3430,30 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
       combined_test_index <- combined_test_index[ord]
       combined_observed <- combined_observed[ord, , drop = FALSE]
       combined_predicted <- combined_predicted[ord, , drop = FALSE]
+      combined_fold_id <- combined_fold_id[ord]
     }
+  }
+
+  # Older preallocated result objects did not carry fold_id. Reconstruct it
+  # from their per-fold test indices when possible rather than reverting to a
+  # pooled candidate set.
+  if (is.null(combined_fold_id) &&
+      !is.null(test_index_list) &&
+      length(test_index_list) == length(fold_results_list) &&
+      all(vapply(test_index_list, Negate(is.null), logical(1)))) {
+    candidate_index <- unlist(test_index_list, use.names = FALSE)
+    candidate_fold <- rep.int(seq_along(test_index_list), lengths(test_index_list))
+    if (length(candidate_index) == nrow(combined_observed)) {
+      ord <- order(candidate_index)
+      combined_fold_id <- candidate_fold[ord]
+    }
+  }
+  if (is.null(combined_fold_id) ||
+      length(combined_fold_id) != nrow(combined_observed)) {
+    stop(
+      "feature RSA cross-validation results do not identify outer test folds.",
+      call. = FALSE
+    )
   }
   
   scalar_from_fold <- function(fold, name) {
@@ -3159,7 +3472,8 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
     observed  = combined_observed,
     nperm     = obj$nperm,
     save_distributions = obj$save_distributions,
-    compute_rdm_vectors = isTRUE(obj$return_rdm_vectors)
+    compute_rdm_vectors = isTRUE(obj$return_rdm_vectors),
+    fold_id = combined_fold_id
   )
   
   # Collate results
@@ -3194,6 +3508,20 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
     )
     finite_lambdas <- fold_lambdas[is.finite(fold_lambdas)]
     finite_effective_df <- fold_effective_df[is.finite(fold_effective_df)]
+    fold_min_boundary <- vapply(
+      fold_results_list,
+      scalar_from_fold,
+      numeric(1L),
+      name = "lambda_at_min_boundary"
+    )
+    fold_max_boundary <- vapply(
+      fold_results_list,
+      scalar_from_fold,
+      numeric(1L),
+      name = "lambda_at_max_boundary"
+    )
+    finite_min_boundary <- fold_min_boundary[is.finite(fold_min_boundary)]
+    finite_max_boundary <- fold_max_boundary[is.finite(fold_max_boundary)]
     diagnostics <- c(
       median_lambda = if (length(finite_lambdas)) {
         stats::median(finite_lambdas)
@@ -3202,6 +3530,21 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
       },
       mean_effective_df = if (length(finite_effective_df)) {
         mean(finite_effective_df)
+      } else {
+        NA_real_
+      },
+      mean_nonintercept_df = if (length(finite_effective_df)) {
+        mean(finite_effective_df) - 1
+      } else {
+        NA_real_
+      },
+      lambda_min_boundary_fraction = if (length(finite_min_boundary)) {
+        mean(finite_min_boundary)
+      } else {
+        NA_real_
+      },
+      lambda_max_boundary_fraction = if (length(finite_max_boundary)) {
+        mean(finite_max_boundary)
       } else {
         NA_real_
       }
@@ -3243,6 +3586,7 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
       predicted_rdm_vec = perf$predicted_rdm_vec,
       observed_rdm_vec  = perf$observed_rdm_vec,
       observation_index = combined_test_index,
+      fold_id = combined_fold_id,
       n_obs = nrow(combined_predicted)
     )
   }
@@ -3306,7 +3650,10 @@ output_schema.feature_rsa_model <- function(model) {
     "rdm_correlation", "voxel_correlation", "mse", "r_squared",
     "mean_voxelwise_temporal_cor",
     if (identical(model$method, "ridge")) {
-      c("median_lambda", "mean_effective_df")
+      c(
+        "median_lambda", "mean_effective_df", "mean_nonintercept_df",
+        "lambda_min_boundary_fraction", "lambda_max_boundary_fraction"
+      )
     } else {
       "ncomp"
     }
@@ -3453,7 +3800,23 @@ print.feature_rsa_model <- function(x, ...) {
     }
   } else if (x$method == "ridge") {
     selector <- x$lambda_selection %||% "gcv"
+    objective <- x$lambda_objective %||% "mse"
+    one_se <- if (!is.null(x$lambda_one_se)) {
+      isTRUE(x$lambda_one_se)
+    } else {
+      objective == "mse" && selector %in% c("loo", "blocked")
+    }
     cat(crayon::bold(crayon::blue("Lambda selection:       ")), selector, "\n")
+    cat(
+      crayon::bold(crayon::blue("Lambda objective:       ")),
+      objective,
+      "\n"
+    )
+    cat(
+      crayon::bold(crayon::blue("One-SE rule:            ")),
+      if (one_se) "Yes" else "No",
+      "\n"
+    )
     ridge_lambdas <- .feature_rsa_ridge_lambdas(x$lambda)
     lambda_str <- if (length(ridge_lambdas) > 3L) {
       paste0(

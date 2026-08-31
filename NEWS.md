@@ -1,5 +1,12 @@
 # rMVPA 0.1.3
 
+* Feature RSA identification, discrimination, RDM, and permutation metrics now
+  respect outer-fold candidate sets. This prevents merged out-of-fold
+  predictions from being compared with targets that trained those predictions.
+  Ridge can additionally tune blocked inner CV for held-out pattern rank via
+  `lambda_objective = "pattern_rank_percentile"`; new effective-dimension and
+  lambda-grid boundary diagnostics make over-shrinkage visible. Variance checks
+  now use numerically stable two-pass kernels.
 * `feature_rsa_model(method = "ridge")` adds a compact multi-response ridge
   estimator for dense feature spaces. It supports one-SVD GCV, exact analytic
   LOO, leakage-safe blocked selection, or a fixed normalized penalty; reports

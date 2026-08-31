@@ -114,6 +114,54 @@ ridge_reference_block_mse <- function(features,
   out
 }
 
+ridge_reference_pattern_rank <- function(predicted, observed) {
+  cross_cor <- suppressWarnings(stats::cor(
+    t(predicted),
+    t(observed),
+    use = "pairwise.complete.obs"
+  ))
+  ranks <- vapply(seq_len(nrow(cross_cor)), function(i) {
+    values <- cross_cor[i, ]
+    denominator <- sum(is.finite(values)) - 1L
+    if (denominator > 0L && is.finite(values[[i]])) {
+      (sum(values <= values[[i]], na.rm = TRUE) - 1L) / denominator
+    } else {
+      NA_real_
+    }
+  }, numeric(1L))
+  mean(ranks, na.rm = TRUE)
+}
+
+ridge_reference_block_pattern_rank <- function(features,
+                                                responses,
+                                                lambdas,
+                                                segments) {
+  all_rows <- seq_len(nrow(features))
+  out <- matrix(NA_real_, nrow = length(segments), ncol = length(lambdas))
+  for (s in seq_along(segments)) {
+    test <- segments[[s]]
+    train <- all_rows[-test]
+    sf <- ridge_reference_standardize(features[train, , drop = FALSE])
+    sy <- ridge_reference_standardize(responses[train, , drop = FALSE])
+    ftest <- base::scale(
+      features[test, , drop = FALSE],
+      center = sf$center,
+      scale = sf$scale
+    )
+    ytest <- base::scale(
+      responses[test, , drop = FALSE],
+      center = sy$center,
+      scale = sy$scale
+    )
+    for (j in seq_along(lambdas)) {
+      fit <- ridge_reference_fit(sf$values, sy$values, lambdas[[j]])
+      predicted <- ridge_reference_predict(fit, ftest)
+      out[s, j] <- ridge_reference_pattern_rank(predicted, ytest)
+    }
+  }
+  out
+}
+
 ridge_reference_one_se <- function(score_matrix, lambdas) {
   means <- colMeans(score_matrix)
   best <- which.min(means)
@@ -233,6 +281,63 @@ test_that("blocked ridge tuning reproduces nested standardization oracle", {
   )
 })
 
+test_that("blocked ridge rank tuning matches a direct nested-CV oracle", {
+  set.seed(4513)
+  features <- matrix(rnorm(36 * 7), 36, 7)
+  beta <- matrix(rnorm(7 * 15), 7, 15)
+  responses <- features %*% beta + matrix(rnorm(36 * 15, sd = 1.2), 36, 15)
+  segments <- split(seq_len(36), rep(seq_len(4L), each = 9L))
+  lambdas <- c(0.002, 0.03, 0.4, 4)
+
+  expected <- ridge_reference_block_pattern_rank(
+    features,
+    responses,
+    lambdas,
+    unname(segments)
+  )
+  got <- rMVPA:::.feature_rsa_ridge_block_pattern_rank(
+    features,
+    responses,
+    lambdas,
+    unname(segments)
+  )
+
+  expect_equal(unname(got), unname(expected), tolerance = 3e-10)
+  expect_identical(
+    rMVPA:::.feature_rsa_ridge_select_lambda(
+      1 - got,
+      lambdas,
+      one_se = FALSE
+    ),
+    which.max(colMeans(expected))
+  )
+
+  permuted <- rMVPA:::.feature_rsa_ridge_block_pattern_rank(
+    features,
+    responses[, rev(seq_len(ncol(responses))), drop = FALSE],
+    lambdas,
+    unname(segments)
+  )
+  expect_equal(permuted, got, tolerance = 3e-10)
+})
+
+test_that("blocked rank tuning rejects singleton validation segments", {
+  set.seed(4514)
+  features <- matrix(rnorm(12 * 4), 12, 4)
+  responses <- matrix(rnorm(12 * 8), 12, 8)
+  segments <- as.list(seq_len(12L))
+
+  expect_error(
+    rMVPA:::.feature_rsa_ridge_block_pattern_rank(
+      features,
+      responses,
+      c(0.1, 1),
+      segments
+    ),
+    "at least two held-out observations"
+  )
+})
+
 test_that("ridge public contract validates selection and lambda", {
   set.seed(4505)
   dset <- gen_sample_dataset(c(3, 3, 3), 24, blocks = 3)
@@ -251,6 +356,8 @@ test_that("ridge public contract validates selection and lambda", {
   )
   expect_identical(model$method, "ridge")
   expect_identical(model$lambda_selection, "gcv")
+  expect_identical(model$lambda_objective, "mse")
+  expect_false(model$lambda_one_se)
   expect_null(model$lambda)
 
   expect_error(feature_rsa_model(
@@ -285,6 +392,41 @@ test_that("ridge public contract validates selection and lambda", {
     lambda_selection = "blocked",
     crossval = blocked_cross_validation(dset$design$block_var)
   ), "requires design\\$block_var")
+
+  rank_model <- feature_rsa_model(
+    dset$dataset,
+    design,
+    method = "ridge",
+    lambda_selection = "blocked",
+    lambda_objective = "pattern_rank_percentile"
+  )
+  expect_identical(rank_model$lambda_objective, "pattern_rank_percentile")
+  expect_false(rank_model$lambda_one_se)
+
+  rank_one_se <- feature_rsa_model(
+    dset$dataset,
+    design,
+    method = "ridge",
+    lambda_selection = "blocked",
+    lambda_objective = "pattern_rank_percentile",
+    lambda_one_se = TRUE
+  )
+  expect_true(rank_one_se$lambda_one_se)
+
+  expect_error(feature_rsa_model(
+    dset$dataset,
+    design,
+    method = "ridge",
+    lambda_selection = "gcv",
+    lambda_objective = "pattern_rank_percentile"
+  ), "requires lambda_selection='blocked'")
+  expect_error(feature_rsa_model(
+    dset$dataset,
+    design,
+    method = "ridge",
+    lambda_selection = "gcv",
+    lambda_one_se = TRUE
+  ), "one-SE.*loo.*blocked")
 })
 
 test_that("ridge Feature RSA training and prediction preserve direct-solve output", {
@@ -418,7 +560,49 @@ test_that("public ridge selectors reproduce independent selection oracles", {
     expect_false(isTRUE(fit$error), info = selector)
     expect_equal(fit$lambda, unname(expected[[selector]]), info = selector)
     expect_identical(fit$lambda_selection, selector)
+    expect_equal(
+      fit$lambda_at_min_boundary,
+      as.numeric(fit$lambda == min(lambdas)),
+      info = selector
+    )
+    expect_equal(
+      fit$lambda_at_max_boundary,
+      as.numeric(fit$lambda == max(lambdas)),
+      info = selector
+    )
   }
+
+  rank_scores <- ridge_reference_block_pattern_rank(
+    features,
+    responses,
+    lambdas,
+    unname(split(seq_len(n), blocks))
+  )
+  mean_rank <- colMeans(rank_scores)
+  best_rank <- max(mean_rank)
+  rank_tolerance <- sqrt(.Machine$double.eps) * max(1, abs(best_rank))
+  rank_eligible <- which(mean_rank >= best_rank - rank_tolerance)
+  expected_rank_lambda <- max(lambdas[rank_eligible])
+  rank_model <- feature_rsa_model(
+    dset$dataset,
+    design,
+    method = "ridge",
+    lambda_selection = "blocked",
+    lambda_objective = "pattern_rank_percentile",
+    lambda_one_se = FALSE,
+    lambda = lambdas
+  )
+  rank_fit <- train_model(
+    rank_model,
+    responses,
+    features,
+    indices = seq_len(ncol(responses)),
+    observation_indices = seq_len(n)
+  )
+  expect_false(isTRUE(rank_fit$error))
+  expect_equal(rank_fit$lambda, expected_rank_lambda)
+  expect_identical(rank_fit$lambda_objective, "pattern_rank_percentile")
+  expect_false(rank_fit$lambda_one_se)
 })
 
 test_that("zero-penalty ridge is stable in the p-greater-than-n limit", {
@@ -569,13 +753,26 @@ test_that("regional ridge reports ridge diagnostics instead of ncomp", {
 
   expect_s3_class(result, "regional_mvpa_result")
   expect_false(any(result$fits$error))
-  expect_true(all(c("median_lambda", "mean_effective_df") %in%
+  expect_true(all(c(
+    "median_lambda", "mean_effective_df", "mean_nonintercept_df",
+    "lambda_min_boundary_fraction", "lambda_max_boundary_fraction"
+  ) %in%
                     names(performance)))
   expect_false("ncomp" %in% names(performance))
   expect_equal(performance$median_lambda, rep(0.2, nrow(performance)))
   expect_true(all(is.finite(performance$mean_effective_df)))
+  expect_equal(
+    performance$mean_nonintercept_df,
+    performance$mean_effective_df - 1,
+    tolerance = 1e-12
+  )
+  expect_true(all(is.na(performance$lambda_min_boundary_fraction)))
+  expect_true(all(is.na(performance$lambda_max_boundary_fraction)))
   expect_setequal(
-    tail(names(schema), 2L),
-    c("median_lambda", "mean_effective_df")
+    tail(names(schema), 5L),
+    c(
+      "median_lambda", "mean_effective_df", "mean_nonintercept_df",
+      "lambda_min_boundary_fraction", "lambda_max_boundary_fraction"
+    )
   )
 })

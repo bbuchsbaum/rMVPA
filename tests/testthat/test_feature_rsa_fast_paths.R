@@ -953,7 +953,8 @@ test_that("preallocated feature RSA OOF merging matches fold-list merging", {
   attr(optimized, "feature_rsa_oof") <- list(
     observed = observed,
     predicted = predicted,
-    test_index = seq_len(nrow(observed))
+    test_index = seq_len(nrow(observed)),
+    fold_id = rep(c(2L, 3L, 1L), each = 8L)
   )
   compact <- merge_results(
     model, optimized, indices = seq_len(ncol(observed)), id = 1L
@@ -961,4 +962,25 @@ test_that("preallocated feature RSA OOF merging matches fold-list merging", {
 
   expect_equal(compact$performance[[1L]], legacy$performance[[1L]], tolerance = 1e-12)
   expect_equal(compact$result[[1L]], legacy$result[[1L]], tolerance = 1e-12)
+  expected <- evaluate_model.feature_rsa_model(
+    object = model,
+    predicted = predicted,
+    observed = observed,
+    fold_id = rep(c(2L, 3L, 1L), each = 8L),
+    compute_rdm_vectors = TRUE
+  )
+  expect_equal(
+    unname(compact$performance[[1L]][1L, "pattern_rank_percentile"]),
+    expected$pattern_rank_percentile,
+    tolerance = 1e-12
+  )
+  expect_equal(
+    unname(compact$performance[[1L]][1L, "rdm_correlation"]),
+    expected$rdm_correlation,
+    tolerance = 1e-12
+  )
+  expect_identical(
+    compact$result[[1L]]$predictor$fold_id,
+    rep(c(2L, 3L, 1L), each = 8L)
+  )
 })

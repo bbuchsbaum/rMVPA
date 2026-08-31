@@ -11,6 +11,7 @@ evaluate_model.feature_rsa_model(
   nperm = 0,
   save_distributions = FALSE,
   compute_rdm_vectors = isTRUE(object$return_rdm_vectors),
+  fold_id = NULL,
   ...
 )
 }
@@ -28,6 +29,11 @@ evaluate_model.feature_rsa_model(
 \item{compute_rdm_vectors}{Logical; when TRUE, also return compact predicted
 and observed RDM vectors for reuse by downstream code.}
 
+\item{fold_id}{Optional vector assigning each observation to its outer
+cross-validation test fold. Pattern discrimination, identification rank,
+and RDM correlation then use only candidates or pairs withheld together.
+Cross-validated workflows supply this automatically.}
+
 \item{...}{Additional arguments}
 }
 \value{
@@ -37,10 +43,15 @@ A list containing:
       matrix -- how well the predicted spatial pattern for each trial matches
       the correct observed pattern.}
     \item{pattern_discrimination}{Diagonal minus off-diagonal of the trial x
-      trial correlation matrix -- how much better the correct trial is matched
-      than incorrect trials.}
+      trial correlation matrix, restricted to candidates in the same outer
+      test fold -- how much better the correct trial is matched than eligible
+      incorrect trials.}
     \item{pattern_rank_percentile}{For each trial, percentile rank of the
-      correct pattern among all candidates.  0.5 = chance, 1 = perfect.}
+      correct pattern among candidates in the same outer test fold.
+      0.5 = chance, 1 = perfect.}
+    \item{rdm_correlation}{Spearman correlation between predicted and
+      observed correlation-distance pairs whose observations were withheld
+      together.}
     \item{voxel_correlation}{Correlation of the flattened predicted and
       observed matrices (global reconstruction quality).}
     \item{mse}{Mean squared error.}
