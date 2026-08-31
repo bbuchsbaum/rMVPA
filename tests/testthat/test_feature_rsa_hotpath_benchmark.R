@@ -224,6 +224,13 @@ test_that("feature RSA documentation distinguishes selector estimands", {
   expect_match(feature_text, "One fit per training observation", fixed = TRUE)
   expect_match(feature_text, "equal weight", fixed = TRUE)
   expect_match(feature_text, "fails the fold", fixed = TRUE)
+  expect_match(
+    feature_text,
+    "`ncomp_objective = \"mse\"` remains the default",
+    fixed = TRUE
+  )
+  expect_match(feature_text, "pattern_discrimination", fixed = TRUE)
+  expect_match(feature_text, "linear-time scorer", fixed = TRUE)
   expect_match(feature_text, "method = \"ridge\"", fixed = TRUE)
   expect_match(feature_text, "Ridge is a\\s+distinct estimator")
   expect_match(feature_text, "feature_rsa_ridge_accuracy_results.csv",

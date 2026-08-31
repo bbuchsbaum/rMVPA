@@ -141,6 +141,20 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'     \item{max}{Use all \code{max_comps} components (legacy behaviour).}
 #'   }
 #'   Ignored when \code{method} is \code{"ridge"} or \code{"glmnet"}.
+#' @param ncomp_objective Character string naming the component-count tuning
+#'   estimand for \code{pls} and \code{pca}. \code{"mse"} remains the default
+#'   for backward compatibility. \code{"pattern_discrimination"} maximizes the
+#'   held-out correct-pattern correlation minus the mean correlation with
+#'   incorrect patterns. \code{"pattern_rank_percentile"} maximizes held-out
+#'   identification rank. Both pattern-relative objectives require
+#'   \code{ncomp_selection = "blocked"} with at least two observations per
+#'   inner validation block. Ignored for other methods.
+#' @param ncomp_one_se Optional logical controlling the one-standard-error rule
+#'   for component-count tuning. \code{NULL} uses \code{TRUE} for MSE-based LOO
+#'   or blocked tuning and \code{FALSE} otherwise. Pattern-relative tuning
+#'   defaults to the empirical optimum because a simpler component model is not
+#'   automatically preferable within one standard error on these objectives.
+#'   Ignored for other methods.
 #' @param pve_threshold Numeric in (0, 1].  When \code{ncomp_selection = "pve"},
 #'   the proportion of total explained X-variance at which to stop adding
 #'   components.  Default 0.9.
@@ -155,15 +169,17 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   other methods.
 #' @param lambda_objective Character string naming the ridge tuning estimand.
 #'   \code{"mse"} (default) preserves GCV/LOO/blocked prediction-error tuning.
+#'   \code{"pattern_discrimination"} maximizes the held-out correct-pattern
+#'   correlation minus the mean correlation with incorrect patterns.
 #'   \code{"pattern_rank_percentile"} maximizes identification rank among
-#'   observations withheld together and therefore requires
+#'   observations withheld together. Both pattern-relative objectives require
 #'   \code{lambda_selection = "blocked"} with at least two observations per
 #'   inner validation block. Ignored for other methods.
 #' @param lambda_one_se Optional logical controlling the one-standard-error
 #'   rule for ridge tuning. \code{NULL} uses \code{TRUE} for MSE-based LOO or
-#'   blocked tuning and \code{FALSE} otherwise. Identification tuning defaults
+#'   blocked tuning and \code{FALSE} otherwise. Pattern-relative tuning defaults
 #'   to the empirical optimum because stronger shrinkage is not inherently the
-#'   safer error for a rank objective.
+#'   safer error for a relative-pattern objective.
 #' @param alpha Numeric value between 0 and 1, only used when method="glmnet". Controls the elastic net
 #'   mixing parameter: 1 for lasso (default), 0 for ridge, values in between for a mixture.
 #'   Defaults to 0.5 (equal mix of ridge and lasso).
@@ -218,14 +234,18 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' For \code{pls} and \code{pca}, the \code{ncomp_selection} argument determines how many
 #' of the fitted components are actually used for prediction.  The default
 #' (\code{"loo"}) uses leave-one-observation-out validation and picks the
-#' fewest components within one SE of the minimum segment-wise MSE.
-#' \code{"blocked"} applies the same rule to leave-one-block-out segments
-#' within each outer training fold; centering and scaling are estimated again
-#' from each inner training split. It is usually the more faithful and much
-#' less expensive validation unit when observations are dependent within
-#' acquisition runs, sessions, or subjects. It is not interchangeable with
-#' \code{"pve"} or \code{"max"}, which do not estimate held-out prediction
-#' error for component selection.
+#' fewest components within one SE of the minimum segment-wise MSE. The
+#' \code{ncomp_objective = "mse"} default is retained for backward
+#' compatibility. With \code{ncomp_selection = "blocked"}, callers may instead
+#' maximize \code{"pattern_discrimination"} or
+#' \code{"pattern_rank_percentile"}; these relative objectives default to the
+#' empirical optimum rather than the one-SE rule. \code{"blocked"} uses
+#' leave-one-block-out segments within each outer training fold, and centering
+#' and scaling are estimated again from each inner training split. It is
+#' usually the more faithful and much less expensive validation unit when
+#' observations are dependent within acquisition runs, sessions, or subjects.
+#' It is not interchangeable with \code{"pve"} or \code{"max"}, which do not
+#' estimate held-out performance for component selection.
 #'
 #' **Performance Metrics** (computed by `evaluate_model` after cross-validation):
 #'
@@ -282,12 +302,15 @@ feature_rsa_model <- function(dataset,
                                save_distributions = FALSE,
                                return_rdm_vectors = FALSE,
                                lambda_selection = c("gcv", "loo", "blocked", "fixed"),
-                               lambda_objective = c("mse", "pattern_rank_percentile"),
+                               lambda_objective = c("mse", "pattern_discrimination", "pattern_rank_percentile"),
                                lambda_one_se = NULL,
+                               ncomp_objective = c("mse", "pattern_discrimination", "pattern_rank_percentile"),
+                               ncomp_one_se = NULL,
                                ...) {
   
   method <- match.arg(method)
   ncomp_selection <- match.arg(ncomp_selection)
+  ncomp_objective <- match.arg(ncomp_objective)
   lambda_selection <- match.arg(lambda_selection)
   lambda_objective <- match.arg(lambda_objective)
   permute_by <- match.arg(permute_by)
@@ -307,6 +330,34 @@ feature_rsa_model <- function(dataset,
       is.null(design$block_var)) {
     stop("ncomp_selection='blocked' requires design$block_var.", call. = FALSE)
   }
+  if (component_method) {
+    if (!is.null(ncomp_one_se) &&
+        (!is.logical(ncomp_one_se) || length(ncomp_one_se) != 1L ||
+         is.na(ncomp_one_se))) {
+      stop("ncomp_one_se must be NULL, TRUE, or FALSE.", call. = FALSE)
+    }
+    if (ncomp_objective != "mse" && ncomp_selection != "blocked") {
+      stop(
+        paste0(
+          "ncomp_objective='", ncomp_objective, "' requires ",
+          "ncomp_selection='blocked' so candidates are withheld together."
+        ),
+        call. = FALSE
+      )
+    }
+    if (isTRUE(ncomp_one_se) &&
+        !ncomp_selection %in% c("loo", "blocked")) {
+      stop(
+        "The one-SE rule requires ncomp_selection='loo' or 'blocked'.",
+        call. = FALSE
+      )
+    }
+    if (is.null(ncomp_one_se)) {
+      ncomp_one_se <-
+        ncomp_objective == "mse" &&
+        ncomp_selection %in% c("loo", "blocked")
+    }
+  }
   if (method == "ridge") {
     ridge_lambdas <- .feature_rsa_ridge_lambdas(lambda)
     if (!is.null(lambda_one_se) &&
@@ -323,11 +374,11 @@ feature_rsa_model <- function(dataset,
     if (lambda_selection == "blocked" && is.null(design$block_var)) {
       stop("lambda_selection='blocked' requires design$block_var.", call. = FALSE)
     }
-    if (lambda_objective == "pattern_rank_percentile" &&
+    if (lambda_objective != "mse" &&
         lambda_selection != "blocked") {
       stop(
         paste0(
-          "lambda_objective='pattern_rank_percentile' requires ",
+          "lambda_objective='", lambda_objective, "' requires ",
           "lambda_selection='blocked' so candidates are withheld together."
         ),
         call. = FALSE
@@ -411,6 +462,10 @@ feature_rsa_model <- function(dataset,
 
   # Component selection strategy (for PLS/PCA)
   model_spec$ncomp_selection <- ncomp_selection
+  model_spec$ncomp_objective <- ncomp_objective
+  if (component_method) {
+    model_spec$ncomp_one_se <- isTRUE(ncomp_one_se)
+  }
   model_spec$pve_threshold <- pve_threshold
 
   # GLMNet parameters
@@ -653,6 +708,69 @@ feature_rsa_model <- function(dataset,
   }
   centered[!valid, ] <- 0
   list(values = centered, valid = valid)
+}
+
+
+#' Linear-time pattern-discrimination score
+#'
+#' The mean of every off-diagonal cross-correlation can be recovered from
+#' column sums of row-normalized matrices. This computes the same
+#' diagonal-minus-off-diagonal estimand as the dense correlation matrix without
+#' allocating an observations-by-observations object.
+#' @noRd
+.feature_rsa_pattern_discrimination_linear <- function(predicted, observed) {
+  predicted <- as.matrix(predicted)
+  observed <- as.matrix(observed)
+  if (!identical(dim(predicted), dim(observed))) {
+    stop(
+      "feature RSA pattern discrimination requires matching matrix dimensions.",
+      call. = FALSE
+    )
+  }
+  if (nrow(predicted) < 2L ||
+      any(!is.finite(predicted)) || any(!is.finite(observed))) {
+    return(NA_real_)
+  }
+
+  pred_norm <- .feature_rsa_normalize_rows(predicted)
+  obs_norm <- .feature_rsa_normalize_rows(observed)
+  pred_valid <- pred_norm$valid
+  obs_valid <- obs_norm$valid
+  diagonal_valid <- pred_valid & obs_valid
+  diagonal_count <- sum(diagonal_valid)
+  off_count <- sum(pred_valid) * sum(obs_valid) - diagonal_count
+  if (diagonal_count < 1L || off_count < 1L) {
+    return(NA_real_)
+  }
+
+  diagonal_values <- rowSums(
+    pred_norm$values[diagonal_valid, , drop = FALSE] *
+      obs_norm$values[diagonal_valid, , drop = FALSE]
+  )
+  all_sum <- sum(
+    colSums(pred_norm$values[pred_valid, , drop = FALSE]) *
+      colSums(obs_norm$values[obs_valid, , drop = FALSE])
+  )
+  diagonal_sum <- sum(diagonal_values)
+  diagonal_sum / diagonal_count -
+    (all_sum - diagonal_sum) / off_count
+}
+
+
+#' Score a held-out pattern-relative objective
+#' @noRd
+.feature_rsa_pattern_objective <- function(predicted,
+                                           observed,
+                                           objective) {
+  objective <- match.arg(
+    objective,
+    c("pattern_discrimination", "pattern_rank_percentile")
+  )
+  if (objective == "pattern_discrimination") {
+    .feature_rsa_pattern_discrimination_linear(predicted, observed)
+  } else {
+    .feature_rsa_pattern_metrics_blockwise(predicted, observed)[["rank"]]
+  }
 }
 
 
@@ -1364,22 +1482,30 @@ feature_rsa_model <- function(dataset,
 }
 
 
-#' Compute segment-wise validation MSE without retaining a prediction cube
+#' Compute segment-wise validation scores without retaining a prediction cube
 #'
 #' `pls:::mvrCv()` predicts every observation for every validation segment and
 #' only then retains the held-out rows. Feature RSA's component selector needs
-#' only one scalar MSE per segment and component. Computing those scalars while
-#' streaming segments preserves the selection estimand while bounding memory.
+#' only one scalar score per segment and component. Computing those scalars
+#' while streaming segments preserves the selection estimand while bounding
+#' memory. Pattern-relative objectives are evaluated in the original neural
+#' response space after inner-fold predictions are unstandardized.
 #' @noRd
-.feature_rsa_cv_segment_mse <- function(predictors,
-                                        responses,
-                                        ncomp,
-                                        method,
-                                        segments,
-                                        fold_standardize = FALSE) {
+.feature_rsa_cv_segment_scores <- function(predictors,
+                                           responses,
+                                           ncomp,
+                                           method,
+                                           segments,
+                                           fold_standardize = FALSE,
+                                           objective = c(
+                                             "mse",
+                                             "pattern_discrimination",
+                                             "pattern_rank_percentile"
+                                           )) {
   predictors <- as.matrix(predictors)
   responses <- as.matrix(responses)
   method <- match.arg(method, c("pls", "pca"))
+  objective <- match.arg(objective)
   ncomp <- as.integer(ncomp)
   nobj <- nrow(predictors)
 
@@ -1405,6 +1531,23 @@ feature_rsa_model <- function(dataset,
     }
     idx
   })
+  if (objective != "mse") {
+    if (!isTRUE(fold_standardize)) {
+      stop(
+        "feature RSA pattern-relative component tuning requires nested fold standardization.",
+        call. = FALSE
+      )
+    }
+    if (any(lengths(segments) < 2L)) {
+      stop(
+        paste0(
+          "feature RSA pattern-relative component tuning requires at least ",
+          "two held-out observations in every segment."
+        ),
+        call. = FALSE
+      )
+    }
+  }
   max_segment <- max(lengths(segments))
   # Match pls:::mvrCv(), which reserves one residual degree of freedom in
   # every training split.
@@ -1416,7 +1559,7 @@ feature_rsa_model <- function(dataset,
 
   nresp <- ncol(responses)
   all_rows <- seq_len(nobj)
-  segment_mse <- matrix(
+  segment_scores <- matrix(
     NA_real_,
     nrow = length(segments),
     ncol = ncomp_cv
@@ -1499,49 +1642,119 @@ feature_rsa_model <- function(dataset,
           (local_component - 1L) * nresp + 1L,
           local_component * nresp
         )
-        segment_mse[s, component_index[[local_component]]] <- mean(
-          (observed_test - pred_path[, cols, drop = FALSE])^2,
-          na.rm = TRUE
-        )
+        predicted_component <- pred_path[, cols, drop = FALSE]
+        score <- if (objective == "mse") {
+          mean((observed_test - predicted_component)^2, na.rm = TRUE)
+        } else {
+          predicted_raw <- sweep(
+            sweep(predicted_component, 2L, sx$sd, "*"),
+            2L,
+            sx$mean,
+            "+"
+          )
+          .feature_rsa_pattern_objective(
+            predicted_raw,
+            responses[test_idx, , drop = FALSE],
+            objective
+          )
+        }
+        if (objective != "mse" && !is.finite(score)) {
+          stop(
+            sprintf(
+              paste0(
+                "feature RSA %s component tuning produced an undefined ",
+                "score for segment %d, component %d."
+              ),
+              objective,
+              s,
+              component_index[[local_component]]
+            ),
+            call. = FALSE
+          )
+        }
+        segment_scores[s, component_index[[local_component]]] <- score
       }
     }
   }
 
-  segment_mse
+  segment_scores
 }
 
 
-#' Select components from segment-wise validation errors
+#' Backward-compatible component MSE helper
+#' @noRd
+.feature_rsa_cv_segment_mse <- function(predictors,
+                                        responses,
+                                        ncomp,
+                                        method,
+                                        segments,
+                                        fold_standardize = FALSE) {
+  .feature_rsa_cv_segment_scores(
+    predictors = predictors,
+    responses = responses,
+    ncomp = ncomp,
+    method = method,
+    segments = segments,
+    fold_standardize = fold_standardize,
+    objective = "mse"
+  )
+}
+
+
+#' Select components from segment-wise validation scores
+#' @noRd
+.feature_rsa_select_from_segment_scores <- function(segment_scores,
+                                                    maximize = FALSE,
+                                                    one_se = TRUE) {
+  segment_scores <- as.matrix(segment_scores)
+  if (!nrow(segment_scores) || !ncol(segment_scores)) {
+    return(NA_integer_)
+  }
+  mean_scores <- colMeans(segment_scores, na.rm = TRUE)
+  valid <- is.finite(mean_scores)
+  if (!any(valid)) {
+    return(NA_integer_)
+  }
+
+  candidate_indices <- which(valid)
+  best_idx <- if (isTRUE(maximize)) {
+    candidate_indices[[which.max(mean_scores[valid])]]
+  } else {
+    candidate_indices[[which.min(mean_scores[valid])]]
+  }
+  if (!length(best_idx)) {
+    return(NA_integer_)
+  }
+  if (!isTRUE(one_se)) {
+    return(as.integer(best_idx))
+  }
+
+  score_at_best <- segment_scores[, best_idx]
+  n_finite <- sum(is.finite(score_at_best))
+  if (n_finite < 2L) {
+    return(as.integer(best_idx))
+  }
+
+  se <- stats::sd(score_at_best, na.rm = TRUE) / sqrt(n_finite)
+  eligible <- if (isTRUE(maximize)) {
+    which(valid & mean_scores >= mean_scores[[best_idx]] - se)
+  } else {
+    which(valid & mean_scores <= mean_scores[[best_idx]] + se)
+  }
+  selected <- eligible[[1L]]
+  if (is.na(selected)) as.integer(best_idx) else as.integer(selected)
+}
+
+
+#' Backward-compatible component MSE selector
 #' @noRd
 .feature_rsa_select_from_segment_mse <- function(segment_mse,
                                                  method = "onesigma") {
-  segment_mse <- as.matrix(segment_mse)
-  if (!nrow(segment_mse) || !ncol(segment_mse)) {
-    return(NA_integer_)
-  }
-  mean_mse <- colMeans(segment_mse, na.rm = TRUE)
-  if (all(is.na(mean_mse) | !is.finite(mean_mse))) {
-    return(NA_integer_)
-  }
-
-  min_idx <- which.min(mean_mse)
-  if (!length(min_idx)) {
-    return(NA_integer_)
-  }
-  if (!identical(method, "onesigma")) {
-    return(as.integer(min_idx))
-  }
-
-  mse_at_min <- segment_mse[, min_idx]
-  n_finite <- sum(is.finite(mse_at_min))
-  if (n_finite < 2L) {
-    return(as.integer(min_idx))
-  }
-
-  se <- stats::sd(mse_at_min, na.rm = TRUE) / sqrt(n_finite)
-  threshold <- mean_mse[[min_idx]] + se
-  selected <- which(mean_mse <= threshold)[1L]
-  if (is.na(selected)) as.integer(min_idx) else as.integer(selected)
+  .feature_rsa_select_from_segment_scores(
+    segment_mse,
+    maximize = FALSE,
+    one_se = identical(method, "onesigma")
+  )
 }
 
 
@@ -1935,39 +2148,45 @@ feature_rsa_model <- function(dataset,
 }
 
 
-#' Block-wise held-out identification path for ridge selection
+#' Block-wise held-out pattern-relative path for ridge selection
 #'
 #' Each score is computed only among observations withheld together, so no
-#' candidate pattern used to train a prediction can enter its rank. Unlike the
-#' spectral MSE path, identification requires materialized held-out predictions
-#' for each candidate penalty.
+#' candidate pattern used to train a prediction can enter its score. Unlike the
+#' spectral MSE path, pattern-relative scoring requires materialized held-out
+#' predictions for each candidate penalty. Predictions are returned to the raw
+#' neural response scale used by the reported outer-fold metrics.
 #' @noRd
-.feature_rsa_ridge_block_pattern_rank <- function(features,
-                                                  responses,
-                                                  lambdas,
-                                                  segments) {
+.feature_rsa_ridge_block_pattern_scores <- function(features,
+                                                    responses,
+                                                    lambdas,
+                                                    segments,
+                                                    objective = c(
+                                                      "pattern_discrimination",
+                                                      "pattern_rank_percentile"
+                                                    )) {
   features <- as.matrix(features)
   responses <- as.matrix(responses)
   lambdas <- .feature_rsa_ridge_lambdas(lambdas)
+  objective <- match.arg(objective)
   n <- nrow(features)
   if (n != nrow(responses)) {
-    stop("feature RSA ridge blocked rank requires matching row counts.",
+    stop("feature RSA ridge blocked pattern tuning requires matching row counts.",
          call. = FALSE)
   }
   if (!is.list(segments) || length(segments) < 2L) {
-    stop("feature RSA ridge blocked rank requires at least two segments.",
+    stop("feature RSA ridge blocked pattern tuning requires at least two segments.",
          call. = FALSE)
   }
   segments <- lapply(segments, function(index) {
     index <- unique(as.integer(index))
     if (!length(index) || anyNA(index) || any(index < 1L | index > n)) {
-      stop("feature RSA ridge blocked rank received invalid segment indices.",
+      stop("feature RSA ridge blocked pattern tuning received invalid segment indices.",
            call. = FALSE)
     }
     if (length(index) < 2L) {
       stop(
         paste0(
-          "feature RSA ridge blocked rank requires at least two held-out ",
+          "feature RSA ridge blocked pattern tuning requires at least two held-out ",
           "observations in every segment."
         ),
         call. = FALSE
@@ -1987,7 +2206,7 @@ feature_rsa_model <- function(dataset,
     test <- segments[[s]]
     train <- all_rows[-test]
     if (length(train) < 2L) {
-      stop("feature RSA ridge blocked rank has fewer than two training rows.",
+      stop("feature RSA ridge blocked pattern tuning has fewer than two training rows.",
            call. = FALSE)
     }
     sf <- .standardize(features[train, , drop = FALSE])
@@ -1997,11 +2216,6 @@ feature_rsa_model <- function(dataset,
       center = sf$mean,
       scale = sf$sd
     )
-    observed_test <- scale(
-      responses[test, , drop = FALSE],
-      center = sx$mean,
-      scale = sx$sd
-    )
     decomposition <- .feature_rsa_ridge_decomposition(sf$X_sc, sx$X_sc)
     for (j in seq_along(lambdas)) {
       fit <- .feature_rsa_ridge_fit_kernel(
@@ -2010,14 +2224,71 @@ feature_rsa_model <- function(dataset,
         lambdas[[j]],
         decomposition = decomposition
       )
-      predicted_test <- .feature_rsa_ridge_predict_kernel(fit, test_features)
-      out[s, j] <- .feature_rsa_pattern_metrics_blockwise(
+      predicted_standardized <- .feature_rsa_ridge_predict_kernel(
+        fit,
+        test_features
+      )
+      predicted_test <- sweep(
+        sweep(predicted_standardized, 2L, sx$sd, "*"),
+        2L,
+        sx$mean,
+        "+"
+      )
+      score <- .feature_rsa_pattern_objective(
         predicted_test,
-        observed_test
-      )[["rank"]]
+        responses[test, , drop = FALSE],
+        objective
+      )
+      if (!is.finite(score)) {
+        stop(
+          sprintf(
+            paste0(
+              "feature RSA ridge %s tuning produced an undefined score ",
+              "for segment %d, lambda %s."
+            ),
+            objective,
+            s,
+            format(lambdas[[j]], scientific = TRUE)
+          ),
+          call. = FALSE
+        )
+      }
+      out[s, j] <- score
     }
   }
   out
+}
+
+
+#' Block-wise held-out pattern discrimination for ridge selection
+#' @noRd
+.feature_rsa_ridge_block_pattern_discrimination <- function(features,
+                                                             responses,
+                                                             lambdas,
+                                                             segments) {
+  .feature_rsa_ridge_block_pattern_scores(
+    features,
+    responses,
+    lambdas,
+    segments,
+    objective = "pattern_discrimination"
+  )
+}
+
+
+#' Block-wise held-out identification rank for ridge selection
+#' @noRd
+.feature_rsa_ridge_block_pattern_rank <- function(features,
+                                                  responses,
+                                                  lambdas,
+                                                  segments) {
+  .feature_rsa_ridge_block_pattern_scores(
+    features,
+    responses,
+    lambdas,
+    segments,
+    objective = "pattern_rank_percentile"
+  )
 }
 
 
@@ -2829,6 +3100,21 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
     require_package("pls", "for PLS/PCA regression in feature RSA")
     method_label <- toupper(obj$method)
     ncomp_sel <- obj$ncomp_selection %||% "max"
+    ncomp_objective <- obj$ncomp_objective %||% "mse"
+    ncomp_one_se <- if (!is.null(obj$ncomp_one_se)) {
+      isTRUE(obj$ncomp_one_se)
+    } else {
+      ncomp_objective == "mse" && ncomp_sel %in% c("loo", "blocked")
+    }
+    if (ncomp_objective != "mse" && ncomp_sel != "blocked") {
+      stop(
+        paste0(
+          "ncomp_objective='", ncomp_objective, "' requires ",
+          "ncomp_selection='blocked'."
+        ),
+        call. = FALSE
+      )
+    }
 
     pls_res <- tryCatch({
       # Check for near-zero variance before standardization
@@ -2867,17 +3153,19 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
             lapply(seq_len(nrow(sf$X_sc)), as.integer)
           }
           blocked_selection <- identical(ncomp_sel, "blocked")
-          segment_mse <- .feature_rsa_cv_segment_mse(
+          segment_scores <- .feature_rsa_cv_segment_scores(
             if (blocked_selection) Fsub else sf$X_sc,
             if (blocked_selection) X else sx$X_sc,
             ncomp = k,
             method = obj$method,
             segments = segments,
-            fold_standardize = blocked_selection
+            fold_standardize = blocked_selection,
+            objective = ncomp_objective
           )
-          nc <- .feature_rsa_select_from_segment_mse(
-            segment_mse,
-            method = "onesigma"
+          nc <- .feature_rsa_select_from_segment_scores(
+            segment_scores,
+            maximize = ncomp_objective != "mse",
+            one_se = ncomp_one_se
           )
           if (is.na(nc) || nc < 1L) {
             futile.logger::flog.warn(
@@ -2956,6 +3244,9 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
     result$f_mean        <- pls_res$sf$mean
     result$f_sd          <- pls_res$sf$sd
     result$ncomp         <- pls_res$ncomp_use
+    result$ncomp_selection <- ncomp_sel
+    result$ncomp_objective <- ncomp_objective
+    result$ncomp_one_se <- ncomp_one_se
 
   } else if (obj$method == "ridge") {
     ridge_result <- tryCatch({
@@ -2985,10 +3276,10 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
       } else {
         objective == "mse" && selector %in% c("loo", "blocked")
       }
-      if (objective == "pattern_rank_percentile" && selector != "blocked") {
+      if (objective != "mse" && selector != "blocked") {
         stop(
           paste0(
-            "lambda_objective='pattern_rank_percentile' requires ",
+            "lambda_objective='", objective, "' requires ",
             "lambda_selection='blocked'."
           )
         )
@@ -3016,13 +3307,21 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
             n_rows = nrow(Fsub),
             observation_indices = observation_indices
           )
-          scores <- if (objective == "pattern_rank_percentile") {
-            1 - .feature_rsa_ridge_block_pattern_rank(
+          scores <- switch(
+            objective,
+            mse = .feature_rsa_ridge_block_mse(
               Fsub, X, lambdas, segments
-            )
-          } else {
-            .feature_rsa_ridge_block_mse(Fsub, X, lambdas, segments)
-          }
+            ),
+            pattern_discrimination =
+              -.feature_rsa_ridge_block_pattern_discrimination(
+                Fsub, X, lambdas, segments
+              ),
+            pattern_rank_percentile =
+              1 - .feature_rsa_ridge_block_pattern_rank(
+                Fsub, X, lambdas, segments
+              ),
+            stop(sprintf("Unknown ridge lambda objective: %s", objective))
+          )
           .feature_rsa_ridge_select_lambda(
             scores,
             lambdas,
@@ -3794,7 +4093,21 @@ print.feature_rsa_model <- function(x, ...) {
 
   if (x$method %in% c("pls", "pca")) {
     sel <- if (!is.null(x$ncomp_selection)) x$ncomp_selection else "max"
+    objective <- x$ncomp_objective %||% "mse"
+    one_se <- if (!is.null(x$ncomp_one_se)) {
+      isTRUE(x$ncomp_one_se)
+    } else {
+      objective == "mse" && sel %in% c("loo", "blocked")
+    }
     cat(crayon::bold(crayon::blue("Component selection:    ")), sel, "\n")
+    cat(crayon::bold(crayon::blue("Component objective:    ")), objective, "\n")
+    if (sel %in% c("loo", "blocked")) {
+      cat(
+        crayon::bold(crayon::blue("One-SE rule:            ")),
+        if (one_se) "Yes" else "No",
+        "\n"
+      )
+    }
     if (sel == "pve" && !is.null(x$pve_threshold)) {
       cat(crayon::bold(crayon::blue("PVE threshold:          ")), x$pve_threshold, "\n")
     }

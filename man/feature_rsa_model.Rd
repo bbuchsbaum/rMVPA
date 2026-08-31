@@ -19,8 +19,10 @@ feature_rsa_model(
   save_distributions = FALSE,
   return_rdm_vectors = FALSE,
   lambda_selection = c("gcv", "loo", "blocked", "fixed"),
-  lambda_objective = c("mse", "pattern_rank_percentile"),
+  lambda_objective = c("mse", "pattern_discrimination", "pattern_rank_percentile"),
   lambda_one_se = NULL,
+  ncomp_objective = c("mse", "pattern_discrimination", "pattern_rank_percentile"),
+  ncomp_one_se = NULL,
   ...
 )
 }
@@ -109,16 +111,34 @@ other methods.}
 
 \item{lambda_objective}{Character string naming the ridge tuning estimand.
 \code{"mse"} (default) preserves GCV/LOO/blocked prediction-error tuning.
+\code{"pattern_discrimination"} maximizes the held-out correct-pattern
+correlation minus the mean correlation with incorrect patterns.
 \code{"pattern_rank_percentile"} maximizes identification rank among
-observations withheld together and therefore requires
+observations withheld together. Both pattern-relative objectives require
 \code{lambda_selection = "blocked"} with at least two observations per
 inner validation block. Ignored for other methods.}
 
 \item{lambda_one_se}{Optional logical controlling the one-standard-error
 rule for ridge tuning. \code{NULL} uses \code{TRUE} for MSE-based LOO or
-blocked tuning and \code{FALSE} otherwise. Identification tuning defaults
+blocked tuning and \code{FALSE} otherwise. Pattern-relative tuning defaults
 to the empirical optimum because stronger shrinkage is not inherently the
-safer error for a rank objective.}
+safer error for a relative-pattern objective.}
+
+\item{ncomp_objective}{Character string naming the component-count tuning
+estimand for \code{pls} and \code{pca}. \code{"mse"} remains the default
+for backward compatibility. \code{"pattern_discrimination"} maximizes the
+held-out correct-pattern correlation minus the mean correlation with
+incorrect patterns. \code{"pattern_rank_percentile"} maximizes held-out
+identification rank. Both pattern-relative objectives require
+\code{ncomp_selection = "blocked"} with at least two observations per
+inner validation block. Ignored for other methods.}
+
+\item{ncomp_one_se}{Optional logical controlling the one-standard-error rule
+for component-count tuning. \code{NULL} uses \code{TRUE} for MSE-based LOO
+or blocked tuning and \code{FALSE} otherwise. Pattern-relative tuning
+defaults to the empirical optimum because a simpler component model is not
+automatically preferable within one standard error on these objectives.
+Ignored for other methods.}
 
 \item{...}{Additional arguments (currently unused). Passing deprecated
 arguments such as \code{cache_pca} now results in an error.}
@@ -149,14 +169,18 @@ sets an upper limit on the number of components fitted:
 For \code{pls} and \code{pca}, the \code{ncomp_selection} argument determines how many
 of the fitted components are actually used for prediction.  The default
 (\code{"loo"}) uses leave-one-observation-out validation and picks the
-fewest components within one SE of the minimum segment-wise MSE.
-\code{"blocked"} applies the same rule to leave-one-block-out segments
-within each outer training fold; centering and scaling are estimated again
-from each inner training split. It is usually the more faithful and much
-less expensive validation unit when observations are dependent within
-acquisition runs, sessions, or subjects. It is not interchangeable with
-\code{"pve"} or \code{"max"}, which do not estimate held-out prediction
-error for component selection.
+fewest components within one SE of the minimum segment-wise MSE. The
+\code{ncomp_objective = "mse"} default is retained for backward
+compatibility. With \code{ncomp_selection = "blocked"}, callers may instead
+maximize \code{"pattern_discrimination"} or
+\code{"pattern_rank_percentile"}; these relative objectives default to the
+empirical optimum rather than the one-SE rule. \code{"blocked"} uses
+leave-one-block-out segments within each outer training fold, and centering
+and scaling are estimated again from each inner training split. It is
+usually the more faithful and much less expensive validation unit when
+observations are dependent within acquisition runs, sessions, or subjects.
+It is not interchangeable with \code{"pve"} or \code{"max"}, which do not
+estimate held-out performance for component selection.
 
 **Performance Metrics** (computed by `evaluate_model` after cross-validation):
 

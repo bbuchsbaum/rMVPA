@@ -148,15 +148,19 @@ ridge_reference_block_pattern_rank <- function(features,
       center = sf$center,
       scale = sf$scale
     )
-    ytest <- base::scale(
-      responses[test, , drop = FALSE],
-      center = sy$center,
-      scale = sy$scale
-    )
     for (j in seq_along(lambdas)) {
       fit <- ridge_reference_fit(sf$values, sy$values, lambdas[[j]])
-      predicted <- ridge_reference_predict(fit, ftest)
-      out[s, j] <- ridge_reference_pattern_rank(predicted, ytest)
+      predicted_standardized <- ridge_reference_predict(fit, ftest)
+      predicted <- sweep(
+        sweep(predicted_standardized, 2L, sy$scale, "*"),
+        2L,
+        sy$center,
+        "+"
+      )
+      out[s, j] <- ridge_reference_pattern_rank(
+        predicted,
+        responses[test, , drop = FALSE]
+      )
     }
   }
   out
@@ -303,13 +307,20 @@ test_that("blocked ridge rank tuning matches a direct nested-CV oracle", {
   )
 
   expect_equal(unname(got), unname(expected), tolerance = 3e-10)
+  expected_mean <- colMeans(expected)
+  expected_tolerance <- sqrt(.Machine$double.eps) *
+    max(1, abs(max(expected_mean)))
+  expected_best <- which(
+    expected_mean >= max(expected_mean) - expected_tolerance
+  )
+  expected_index <- expected_best[[which.max(lambdas[expected_best])]]
   expect_identical(
     rMVPA:::.feature_rsa_ridge_select_lambda(
       1 - got,
       lambdas,
       one_se = FALSE
     ),
-    which.max(colMeans(expected))
+    expected_index
   )
 
   permuted <- rMVPA:::.feature_rsa_ridge_block_pattern_rank(
