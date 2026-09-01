@@ -203,17 +203,49 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   together; the retained diagnostics include the observation order and fold
 #'   assignment. This is off by default because it can add substantial memory
 #'   use for long time series or many ROIs.
+#' @param return_predictions Logical; if TRUE, retain each ROI's out-of-fold
+#'   predicted patterns (`Yhat`) together with the matching observed patterns,
+#'   observation order, outer-fold id, and voxel indices. These are stored in
+#'   the regional result's `fits` slot and extracted with
+#'   \code{\link{feature_rsa_predictions}}. Off by default because
+#'   `n_obs x n_voxels` matrices across many ROIs can be large.
+#' @param max_retained_mb Allocation contract (MiB) for retained out-of-fold
+#'   predicted and observed patterns. The estimate counts both matrices for a
+#'   partition of the active mask (one copy of each voxel). A refusal is
+#'   preferred to a silent out-of-memory failure.
+#' @param prediction_overflow What to do when the estimate exceeds
+#'   \code{max_retained_mb}: \code{"error"} refuses the request;
+#'   \code{"none"} disables prediction retention and records a notice.
 #' @param ... Additional arguments (currently unused). Passing deprecated
 #'   arguments such as \code{cache_pca} now results in an error.
 #'
 #' @return A \code{feature_rsa_model} object (S3 class).
 #'
+#' @seealso \code{\link{feature_rsa_predictions}}, \code{\link{feature_rsa_rdm_vectors}}
+#'
 #' @examples
 #' \donttest{
-#'   S <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
-#'   labels <- factor(letters[1:5])
-#'   des <- feature_rsa_design(S = S, labels = labels)
-#'   # mdl <- feature_rsa_model(dataset, des, method="pls")
+#'   set.seed(79)
+#'   sample <- gen_sample_dataset(c(4, 4, 4), nobs = 24, blocks = 3)
+#'   Fmat <- matrix(rnorm(24 * 6), 24, 6)
+#'   des <- feature_rsa_design(
+#'     F = Fmat,
+#'     labels = paste0("t", seq_len(24)),
+#'     max_comps = 3,
+#'     block_var = sample$design$block_var
+#'   )
+#'   mdl <- feature_rsa_model(
+#'     sample$dataset, des, method = "pca",
+#'     ncomp_selection = "max",
+#'     return_predictions = TRUE
+#'   )
+#'   region_mask <- neuroim2::NeuroVol(
+#'     sample(1:2, length(sample$dataset$mask), replace = TRUE),
+#'     neuroim2::space(sample$dataset$mask)
+#'   )
+#'   res <- run_regional(mdl, region_mask)
+#'   preds <- feature_rsa_predictions(res)
+#'   dim(preds$predicted[[1]])
 #' }
 #' @details
 #' Feature RSA models analyze how well a feature matrix \code{F} (defined in the `design`)
@@ -287,6 +319,16 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' (`mean_effective_df`), non-intercept degrees of freedom, and fractions of
 #' folds selected at either end of the lambda grid.
 #'
+#' **Out-of-fold predictions** (`return_predictions = TRUE`):
+#' Each ROI retains the merged out-of-fold `Yhat` and `Y` matrices, the
+#' observation order, and the outer-fold id used by the built-in scoring
+#' rules. Extract them with \code{\link{feature_rsa_predictions}} for
+#' post-hoc scoring (temporal windowing, whitened distances, custom
+#' identification rules) without crossing fold boundaries. This is a
+#' different payload from `return_rdm_vectors` and from the classification
+#' `prediction_table`. Overlapping searchlights are refused because they
+#' would retain multiple copies of each voxel.
+#'
 #' @export
 feature_rsa_model <- function(dataset,
                                design,
@@ -306,6 +348,9 @@ feature_rsa_model <- function(dataset,
                                lambda_one_se = NULL,
                                ncomp_objective = c("mse", "pattern_discrimination", "pattern_rank_percentile"),
                                ncomp_one_se = NULL,
+                               return_predictions = FALSE,
+                               max_retained_mb = 1024,
+                               prediction_overflow = c("error", "none"),
                                ...) {
   
   method <- match.arg(method)
@@ -401,6 +446,20 @@ feature_rsa_model <- function(dataset,
     is.logical(return_rdm_vectors) && length(return_rdm_vectors) == 1L && !is.na(return_rdm_vectors),
     msg = "return_rdm_vectors must be TRUE or FALSE"
   )
+  assertthat::assert_that(
+    is.logical(return_predictions) && length(return_predictions) == 1L && !is.na(return_predictions),
+    msg = "return_predictions must be TRUE or FALSE"
+  )
+  prediction_overflow <- tryCatch(
+    match.arg(prediction_overflow),
+    error = function(...) {
+      stop('prediction_overflow must be "error" or "none".', call. = FALSE)
+    }
+  )
+  if (!is.numeric(max_retained_mb) || length(max_retained_mb) != 1L ||
+      !is.finite(max_retained_mb) || max_retained_mb <= 0) {
+    stop("max_retained_mb must be one positive finite value.", call. = FALSE)
+  }
   
   # Additional validation for dataset dimensions
   mask_dims <- dim(dataset$mask)[1:3]
@@ -446,6 +505,19 @@ feature_rsa_model <- function(dataset,
   }
   
   max_comps <- design$max_comps
+  n_obs <- nrow(design$F)
+  if (is.null(n_obs) || !is.finite(n_obs) || n_obs < 1L) {
+    stop("feature_rsa_model: design must contain a feature matrix with at least one row.",
+         call. = FALSE)
+  }
+  retention <- .feature_rsa_validate_prediction_retention(
+    n_obs = n_obs,
+    n_voxels = active_voxels,
+    return_predictions = return_predictions,
+    max_retained_mb = max_retained_mb,
+    prediction_overflow = prediction_overflow
+  )
+  return_predictions <- isTRUE(retention$return_predictions)
   
   model_spec <- create_model_spec(
     "feature_rsa_model", 
@@ -453,8 +525,9 @@ feature_rsa_model <- function(dataset,
     design  = design, 
     method  = method, 
     crossval= crossval, 
-    compute_performance = TRUE, 
-    return_fits = isTRUE(return_rdm_vectors)
+    compute_performance = TRUE,
+    return_predictions = return_predictions,
+    return_fits = isTRUE(return_rdm_vectors) || return_predictions
   )
   
   # Single "max_comps" in use
@@ -486,7 +559,108 @@ feature_rsa_model <- function(dataset,
   model_spec$permute_by <- permute_by
   model_spec$save_distributions <- save_distributions
   model_spec$return_rdm_vectors <- isTRUE(return_rdm_vectors)
+  model_spec$max_retained_mb <- max_retained_mb
+  model_spec$prediction_overflow <- prediction_overflow
+  model_spec$retention_estimated_bytes <- retention$retention_estimated_bytes
+  model_spec$retention_notice <- retention$retention_notice
   
+  model_spec
+}
+
+
+#' Bytes retained for out-of-fold predicted and observed pattern matrices
+#' @noRd
+.feature_rsa_prediction_retention_bytes <- function(n_obs,
+                                                    n_voxels,
+                                                    return_predictions) {
+  if (!isTRUE(return_predictions)) {
+    return(0)
+  }
+  8 * as.numeric(n_obs) * as.numeric(n_voxels) * 2
+}
+
+
+#' Enforce the out-of-fold prediction allocation contract
+#' @noRd
+.feature_rsa_validate_prediction_retention <- function(n_obs,
+                                                       n_voxels,
+                                                       return_predictions,
+                                                       max_retained_mb,
+                                                       prediction_overflow = "error") {
+  bytes <- .feature_rsa_prediction_retention_bytes(
+    n_obs, n_voxels, return_predictions
+  )
+  notice <- NULL
+  if (isTRUE(return_predictions) && bytes > max_retained_mb * 1024^2) {
+    if (identical(prediction_overflow, "none")) {
+      notice <- paste0(
+        "Requested prediction retention was disabled because estimated retained ",
+        "storage exceeded ", max_retained_mb, " MiB."
+      )
+      return_predictions <- FALSE
+      bytes <- 0
+    } else {
+      stop(
+        "feature_rsa_model: requested out-of-fold predictions are estimated at ",
+        sprintf("%.3f", bytes / 1024^2),
+        " MiB, above max_retained_mb = ", max_retained_mb,
+        ". Reduce return_predictions or raise the explicit limit.",
+        call. = FALSE
+      )
+    }
+  }
+  list(
+    return_predictions = isTRUE(return_predictions),
+    retention_estimated_bytes = c(predictions = bytes, total = bytes),
+    retention_notice = notice
+  )
+}
+
+
+#' Count voxels that a regional mask will actually analyze
+#' @noRd
+.feature_rsa_region_voxel_count <- function(dataset, region_mask) {
+  region <- .ensure_dense_vol(region_mask)
+  region_vals <- as.vector(region)
+  n_region <- sum(region_vals > 0, na.rm = TRUE)
+  mask <- dataset$mask
+  if (is.null(mask)) {
+    return(as.integer(n_region))
+  }
+  mask_vals <- as.vector(.ensure_dense_vol(mask))
+  if (length(mask_vals) == length(region_vals)) {
+    return(as.integer(sum(region_vals > 0 & mask_vals > 0, na.rm = TRUE)))
+  }
+  as.integer(n_region)
+}
+
+
+#' Apply a stored prediction-retention contract to a concrete voxel count
+#' @noRd
+.feature_rsa_apply_prediction_retention <- function(model_spec, n_voxels) {
+  if (!isTRUE(model_spec$return_predictions)) {
+    return(model_spec)
+  }
+  max_mb <- model_spec$max_retained_mb
+  if (is.null(max_mb) || !is.numeric(max_mb) || !is.finite(max_mb)) {
+    return(model_spec)
+  }
+  n_obs <- nrow(model_spec$design$F)
+  overflow <- model_spec$prediction_overflow %||% "error"
+  retention <- .feature_rsa_validate_prediction_retention(
+    n_obs = n_obs,
+    n_voxels = n_voxels,
+    return_predictions = TRUE,
+    max_retained_mb = max_mb,
+    prediction_overflow = overflow
+  )
+  model_spec$return_predictions <- retention$return_predictions
+  model_spec$return_fits <- isTRUE(model_spec$return_rdm_vectors) ||
+    isTRUE(retention$return_predictions)
+  model_spec$retention_estimated_bytes <- retention$retention_estimated_bytes
+  if (!is.null(retention$retention_notice)) {
+    model_spec$retention_notice <- retention$retention_notice
+  }
   model_spec
 }
 
@@ -3880,13 +4054,34 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   )
 
   predictor_obj <- NULL
-  if (isTRUE(obj$return_rdm_vectors)) {
+  keep_rdm <- isTRUE(obj$return_rdm_vectors)
+  keep_predictions <- isTRUE(obj$return_predictions)
+  if (keep_predictions) {
+    max_mb <- obj$max_retained_mb
+    if (!is.null(max_mb) && is.numeric(max_mb) && is.finite(max_mb)) {
+      overflow <- obj$prediction_overflow %||% "error"
+      retention <- .feature_rsa_validate_prediction_retention(
+        n_obs = nrow(combined_predicted),
+        n_voxels = ncol(combined_predicted),
+        return_predictions = TRUE,
+        max_retained_mb = max_mb,
+        prediction_overflow = overflow
+      )
+      keep_predictions <- isTRUE(retention$return_predictions)
+    }
+  }
+  if (keep_rdm || keep_predictions) {
+    # Store `predicted`/`observed` even when NULL so `$predicted` cannot
+    # partial-match `predicted_rdm_vec`.
     predictor_obj <- list(
-      predicted_rdm_vec = perf$predicted_rdm_vec,
-      observed_rdm_vec  = perf$observed_rdm_vec,
+      predicted_rdm_vec = if (keep_rdm) perf$predicted_rdm_vec else NULL,
+      observed_rdm_vec  = if (keep_rdm) perf$observed_rdm_vec else NULL,
       observation_index = combined_test_index,
       fold_id = combined_fold_id,
-      n_obs = nrow(combined_predicted)
+      n_obs = nrow(combined_predicted),
+      predicted = if (keep_predictions) combined_predicted else NULL,
+      observed = if (keep_predictions) combined_observed else NULL,
+      voxel_index = if (keep_predictions) indices else NULL
     )
   }
   
@@ -3958,6 +4153,53 @@ output_schema.feature_rsa_model <- function(model) {
     }
   )
   setNames(rep("scalar", length(nms)), nms)
+}
+
+
+#' Regional MVPA for `feature_rsa_model` Objects
+#'
+#' Out-of-fold predicted patterns are retained in `$fits` when
+#' `feature_rsa_model(..., return_predictions = TRUE)`. Extract them with
+#' \code{\link{feature_rsa_predictions}} rather than a classification-style
+#' `prediction_table`.
+#'
+#' @rdname run_regional-methods
+#' @export
+run_regional.feature_rsa_model <- function(model_spec, region_mask,
+                                           backend = c("default", "shard", "auto"),
+                                           ...) {
+  n_voxels <- .feature_rsa_region_voxel_count(model_spec$dataset, region_mask)
+  model_spec <- .feature_rsa_apply_prediction_retention(model_spec, n_voxels)
+  dots <- list(...)
+  # Feature RSA predictions are observation-by-voxel matrices. The default
+  # regional combiner expects scalar observed/predicted vectors, so skip it.
+  dots$return_predictions <- FALSE
+  backend <- match.arg(backend)
+  do.call(run_regional_base, c(
+    list(model_spec, region_mask, backend = backend),
+    dots
+  ))
+}
+
+
+#' @rdname run_searchlight
+#' @export
+run_searchlight.feature_rsa_model <- function(model_spec, radius,
+                                              method = c("standard", "randomized", "resampled"),
+                                              niter = 4,
+                                              backend = c("default", "shard", "auto"),
+                                              ...) {
+  if (isTRUE(model_spec$return_predictions)) {
+    stop(
+      "feature_rsa_model(return_predictions = TRUE) is not supported for ",
+      "run_searchlight(): overlapping spheres would retain multiple copies of ",
+      "each voxel's out-of-fold predictions. Use run_regional() instead.",
+      call. = FALSE
+    )
+  }
+  run_searchlight.default(
+    model_spec, radius, method = method, niter = niter, backend = backend, ...
+  )
 }
 
 
@@ -4068,6 +4310,15 @@ print.feature_rsa_model <- function(x, ...) {
   
   # Display the method used (e.g., pls, pca, or glmnet)
   cat(crayon::bold(crayon::green("Method: ")), x$method, "\n")
+  cat(
+    crayon::bold(crayon::green("Return predictions:     ")),
+    if (isTRUE(x$return_predictions)) "Yes" else "No",
+    "\n"
+  )
+  if (!is.null(x$retention_notice)) {
+    cat(crayon::bold(crayon::yellow("Retention notice:       ")),
+        x$retention_notice, "\n")
+  }
   
   # Check if the design component is present to extract dimensions
   if (!is.null(x$design)) {

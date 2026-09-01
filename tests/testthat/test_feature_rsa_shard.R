@@ -254,6 +254,38 @@ test_that("feature_rsa_model preserves ROI RDM vectors under shard backend", {
   expect_true(all(vapply(vecs$rdm_vec, length, integer(1)) == 40L * 39L / 2L))
 })
 
+test_that("feature_rsa_model preserves OOF predictions under shard backend", {
+  skip_on_cran()
+  set.seed(1235)
+
+  dset <- gen_sample_dataset(c(4, 4, 4), 24, blocks = 3)
+  Fmat <- matrix(rnorm(24 * 6), 24, 6)
+  fdes <- feature_rsa_design(F = Fmat, labels = paste0("obs", 1:24), max_comps = 3)
+  mspec <- feature_rsa_model(
+    dset$dataset,
+    fdes,
+    method = "pca",
+    ncomp_selection = "max",
+    crossval = blocked_cross_validation(dset$design$block_var),
+    return_predictions = TRUE
+  )
+
+  region_mask <- neuroim2::NeuroVol(
+    sample(1:2, length(dset$dataset$mask), replace = TRUE),
+    neuroim2::space(dset$dataset$mask)
+  )
+
+  res <- muffle_worker_version_warnings(
+    run_regional(mspec, region_mask, backend = "shard")
+  )
+
+  preds <- feature_rsa_predictions(res)
+  expect_true(nrow(preds) > 0)
+  expect_true(all(vapply(preds$predicted, is.matrix, logical(1))))
+  expect_true(all(vapply(preds$predicted, nrow, integer(1)) == 24L))
+  expect_true(all(vapply(preds$fold_id, length, integer(1)) == 24L))
+})
+
 # ---- Regional: shard with ncomp_selection variants ----
 
 test_that("feature_rsa_model ncomp_selection='loo' works with shard backend", {

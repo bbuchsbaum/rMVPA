@@ -95,6 +95,118 @@ feature_rsa_rdm_vectors <- function(x) {
   dplyr::bind_rows(rows)
 }
 
+
+#' Extract Per-ROI Out-of-Fold Predictions from Feature RSA Results
+#'
+#' Pull the out-of-fold predicted patterns (`Yhat`) retained by
+#' \code{feature_rsa_model(..., return_predictions = TRUE)}. Each ROI keeps
+#' the merged prediction matrix, the matching observed neural patterns, the
+#' observation order, and the outer-fold id so later scoring cannot
+#' accidentally treat a training target as a candidate.
+#'
+#' @param x A \code{regional_mvpa_result} returned by \code{run_regional()} for a
+#'   \code{feature_rsa_model}, or a tibble/data frame that already has columns
+#'   \code{roinum} and \code{predicted}.
+#'
+#' @return A tibble with one row per ROI and columns:
+#'   \describe{
+#'     \item{roinum}{ROI id.}
+#'     \item{n_obs}{Number of observations in the retained matrices.}
+#'     \item{observation_index}{List-column of the observation order used for
+#'       the matrices.}
+#'     \item{fold_id}{List-column identifying the outer test fold for each
+#'       observation. Identification and geometry scoring must stay inside
+#'       these groups.}
+#'     \item{voxel_index}{List-column of the spatial indices for matrix
+#'       columns.}
+#'     \item{predicted}{List-column of out-of-fold `Yhat` matrices
+#'       (`n_obs` by `n_voxels`).}
+#'     \item{observed}{List-column of the matching observed pattern matrices.}
+#'   }
+#'
+#' @examples
+#' \donttest{
+#'   set.seed(79)
+#'   sample <- gen_sample_dataset(c(4, 4, 4), nobs = 24, blocks = 3)
+#'   Fmat <- matrix(rnorm(24 * 6), 24, 6)
+#'   des <- feature_rsa_design(
+#'     F = Fmat,
+#'     labels = paste0("t", seq_len(24)),
+#'     max_comps = 3,
+#'     block_var = sample$design$block_var
+#'   )
+#'   mdl <- feature_rsa_model(
+#'     sample$dataset, des, method = "pca",
+#'     ncomp_selection = "max",
+#'     return_predictions = TRUE
+#'   )
+#'   region_mask <- neuroim2::NeuroVol(
+#'     sample(1:2, length(sample$dataset$mask), replace = TRUE),
+#'     neuroim2::space(sample$dataset$mask)
+#'   )
+#'   res <- run_regional(mdl, region_mask)
+#'   preds <- feature_rsa_predictions(res)
+#'   dim(preds$predicted[[1]])
+#' }
+#' @export
+#' @seealso \code{\link{feature_rsa_model}}, \code{\link{feature_rsa_rdm_vectors}}
+feature_rsa_predictions <- function(x) {
+  if (is.data.frame(x) && all(c("roinum", "predicted") %in% names(x))) {
+    return(tibble::as_tibble(x))
+  }
+
+  if (!inherits(x, "regional_mvpa_result")) {
+    stop(
+      "feature_rsa_predictions: pass a regional_mvpa_result or a tibble with columns `roinum` and `predicted`.",
+      call. = FALSE
+    )
+  }
+
+  fits <- x$fits
+  if (is.null(fits) || !length(fits)) {
+    stop(
+      "feature_rsa_predictions: no ROI predictions found; re-run feature_rsa_model(..., return_predictions=TRUE).",
+      call. = FALSE
+    )
+  }
+
+  roi_ids <- seq_along(fits)
+  if (!is.null(x$performance_table) &&
+      is.data.frame(x$performance_table) &&
+      "roinum" %in% names(x$performance_table) &&
+      nrow(x$performance_table) == length(fits)) {
+    roi_ids <- x$performance_table$roinum
+  }
+
+  rows <- lapply(seq_along(fits), function(i) {
+    pred <- fits[[i]]
+    yhat <- tryCatch(pred[["predicted"]], error = function(...) NULL)
+    if (is.null(yhat)) {
+      return(NULL)
+    }
+    observed <- tryCatch(pred[["observed"]], error = function(...) NULL)
+    tibble::tibble(
+      roinum = roi_ids[[i]],
+      n_obs = as.integer(if (is.null(pred[["n_obs"]])) nrow(yhat) else pred[["n_obs"]]),
+      observation_index = list(pred[["observation_index"]]),
+      fold_id = list(tryCatch(pred[["fold_id"]], error = function(...) NULL)),
+      voxel_index = list(tryCatch(pred[["voxel_index"]], error = function(...) NULL)),
+      predicted = list(as.matrix(yhat)),
+      observed = list(if (is.null(observed)) NULL else as.matrix(observed))
+    )
+  })
+
+  rows <- Filter(Negate(is.null), rows)
+  if (!length(rows)) {
+    stop(
+      "feature_rsa_predictions: no out-of-fold predicted patterns found; re-run feature_rsa_model(..., return_predictions=TRUE).",
+      call. = FALSE
+    )
+  }
+
+  dplyr::bind_rows(rows)
+}
+
 .feature_rsa_sparsify_connectivity <- function(mat, keep = 1, absolute = FALSE) {
   if (!is.numeric(keep) || length(keep) != 1L || !is.finite(keep) || keep <= 0 || keep > 1) {
     stop("feature_rsa_connectivity: `keep` must be a scalar in (0, 1].")

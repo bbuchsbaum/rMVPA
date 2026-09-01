@@ -955,7 +955,7 @@ run_regional_base <- function(model_spec,
     if (!isTRUE(model_spec$return_rdm_vectors)) {
       stop("save_rdm_vectors_dir requires feature_rsa_model(..., return_rdm_vectors = TRUE).", call. = FALSE)
     }
-    if (isTRUE(return_predictions)) {
+    if (isTRUE(return_predictions) || isTRUE(model_spec$return_predictions)) {
       stop("save_rdm_vectors_dir is not compatible with return_predictions = TRUE.", call. = FALSE)
     }
 

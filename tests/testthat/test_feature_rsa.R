@@ -1250,9 +1250,9 @@ test_that("run_regional validates save_rdm_vectors_dir usage", {
     fdes,
     method = "pca",
     crossval = blocked_cross_validation(dset$design$block_var),
-    return_rdm_vectors = TRUE
+    return_rdm_vectors = TRUE,
+    return_predictions = TRUE
   )
-  frsa_with_preds$return_predictions <- TRUE
   expect_error(
     run_regional(frsa_with_preds, region_mask, save_rdm_vectors_dir = tempfile("rdm-batches-")),
     "not compatible with return_predictions = TRUE"
