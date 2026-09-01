@@ -13,6 +13,16 @@ run_searchlight(
   backend = c("default", "shard", "auto"),
   ...
 )
+
+# S3 method for class 'feature_rsa_model'
+run_searchlight(
+  model_spec,
+  radius,
+  method = c("standard", "randomized", "resampled"),
+  niter = 4,
+  backend = c("default", "shard", "auto"),
+  ...
+)
 ```
 
 ## Arguments
@@ -111,19 +121,19 @@ Without progressr, only coarse batch-level log messages are shown.
     radius = 8,            # 8mm radius
     method = "standard"    # Use standard searchlight
   )
-#> INFO [2026-08-31 22:18:53] searchlight engine: general-purpose iterator (no eligible fast path)
-#> INFO [2026-08-31 22:18:53] Running standard searchlight with radius = 8
-#> INFO [2026-08-31 22:18:53] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-08-31 22:18:53] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
-#> INFO [2026-08-31 22:18:53] creating standard searchlight
-#> INFO [2026-08-31 22:18:53] running standard searchlight iterator
-#> INFO [2026-08-31 22:18:53] Using automatic searchlight batch size 512 for 512 centers (memory budget 512.0 MiB).
-#> INFO [2026-08-31 22:20:01] 
+#> INFO [2026-09-01 16:45:15] searchlight engine: general-purpose iterator (no eligible fast path)
+#> INFO [2026-09-01 16:45:15] Running standard searchlight with radius = 8
+#> INFO [2026-09-01 16:45:15] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-09-01 16:45:15] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
+#> INFO [2026-09-01 16:45:15] creating standard searchlight
+#> INFO [2026-09-01 16:45:15] running standard searchlight iterator
+#> INFO [2026-09-01 16:45:15] Using automatic searchlight batch size 512 for 512 centers (memory budget 512.0 MiB).
+#> INFO [2026-09-01 16:46:25] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 512
 #> - Processed: 512
 #> - Skipped: 0
-#> INFO [2026-08-31 22:20:01] searchlight (standard): 512 ROIs processed (success=512, errors=0)
+#> INFO [2026-09-01 16:46:26] searchlight (standard): 512 ROIs processed (success=512, errors=0)
   
   # Run with custom batch size for memory management
   # results <- run_searchlight(

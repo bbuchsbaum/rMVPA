@@ -63,6 +63,9 @@
 <span>  lambda_one_se <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ncomp_objective <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mse"</span>, <span class="st">"pattern_discrimination"</span>, <span class="st">"pattern_rank_percentile"</span><span class="op">)</span>,</span>
 <span>  ncomp_one_se <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  return_predictions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  max_retained_mb <span class="op">=</span> <span class="fl">1024</span>,</span>
+<span>  prediction_overflow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -233,6 +236,28 @@ automatically preferable within one standard error on these objectives.
 Ignored for other methods.</p></dd>
 
 
+<dt id="arg-return-predictions">return_predictions<a class="anchor" aria-label="anchor" href="#arg-return-predictions"></a></dt>
+<dd><p>Logical; if TRUE, retain each ROI's out-of-fold
+predicted patterns (`Yhat`) together with the matching observed patterns,
+observation order, outer-fold id, and voxel indices. These are stored in
+the regional result's `fits` slot and extracted with
+<code><a href="feature_rsa_predictions.html">feature_rsa_predictions</a></code>. Off by default because
+`n_obs x n_voxels` matrices across many ROIs can be large.</p></dd>
+
+
+<dt id="arg-max-retained-mb">max_retained_mb<a class="anchor" aria-label="anchor" href="#arg-max-retained-mb"></a></dt>
+<dd><p>Allocation contract (MiB) for retained out-of-fold
+predicted and observed patterns. The estimate counts both matrices for a
+partition of the active mask (one copy of each voxel). A refusal is
+preferred to a silent out-of-memory failure.</p></dd>
+
+
+<dt id="arg-prediction-overflow">prediction_overflow<a class="anchor" aria-label="anchor" href="#arg-prediction-overflow"></a></dt>
+<dd><p>What to do when the estimate exceeds
+<code>max_retained_mb</code>: <code>"error"</code> refuses the request;
+<code>"none"</code> disables prediction retention and records a notice.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments (currently unused). Passing deprecated
 arguments such as <code>cache_pca</code> now results in an error.</p></dd>
@@ -306,15 +331,52 @@ estimate held-out performance for component selection.</p>
 median selected penalty (`median_lambda`), mean effective degrees of freedom
 (`mean_effective_df`), non-intercept degrees of freedom, and fractions of
 folds selected at either end of the lambda grid.</p>
+<p>**Out-of-fold predictions** (`return_predictions = TRUE`):
+Each ROI retains the merged out-of-fold `Yhat` and `Y` matrices, the
+observation order, and the outer-fold id used by the built-in scoring
+rules. Extract them with <code><a href="feature_rsa_predictions.html">feature_rsa_predictions</a></code> for
+post-hoc scoring (temporal windowing, whitened distances, custom
+identification rules) without crossing fold boundaries. This is a
+different payload from `return_rdm_vectors` and from the classification
+`prediction_table`. Overlapping searchlights are refused because they
+would retain multiple copies of each voxel.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="feature_rsa_predictions.html">feature_rsa_predictions</a></code>, <code><a href="feature_rsa_rdm_vectors.html">feature_rsa_rdm_vectors</a></code></p></div>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span>  <span class="va">S</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/dist.html" class="external-link">dist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">5</span><span class="op">*</span><span class="fl">3</span><span class="op">)</span>, <span class="fl">5</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">labels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">des</span> <span class="op">&lt;-</span> <span class="fu"><a href="feature_rsa_design.html">feature_rsa_design</a></span><span class="op">(</span>S <span class="op">=</span> <span class="va">S</span>, labels <span class="op">=</span> <span class="va">labels</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="co"># mdl &lt;- feature_rsa_model(dataset, des, method="pls")</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">79</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">4</span>, <span class="fl">4</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">24</span>, blocks <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">Fmat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">24</span> <span class="op">*</span> <span class="fl">6</span><span class="op">)</span>, <span class="fl">24</span>, <span class="fl">6</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">des</span> <span class="op">&lt;-</span> <span class="fu"><a href="feature_rsa_design.html">feature_rsa_design</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    F <span class="op">=</span> <span class="va">Fmat</span>,</span></span>
+<span class="r-in"><span>    labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"t"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fl">24</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    max_comps <span class="op">=</span> <span class="fl">3</span>,</span></span>
+<span class="r-in"><span>    block_var <span class="op">=</span> <span class="va">sample</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">mdl</span> <span class="op">&lt;-</span> <span class="fu">feature_rsa_model</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="va">sample</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">des</span>, method <span class="op">=</span> <span class="st">"pca"</span>,</span></span>
+<span class="r-in"><span>    ncomp_selection <span class="op">=</span> <span class="st">"max"</span>,</span></span>
+<span class="r-in"><span>    return_predictions <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">region_mask</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">sample</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">sample</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mdl</span>, <span class="va">region_mask</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-01 16:43:51] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">2</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">2</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-01 16:43:51] run_regional: 2 ROIs processed (success=2, errors=0)</span>
+<span class="r-in"><span>  <span class="va">preds</span> <span class="op">&lt;-</span> <span class="fu"><a href="feature_rsa_predictions.html">feature_rsa_predictions</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">preds</span><span class="op">$</span><span class="va">predicted</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 24 34</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

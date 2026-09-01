@@ -26,6 +26,9 @@ feature_rsa_model(
   lambda_one_se = NULL,
   ncomp_objective = c("mse", "pattern_discrimination", "pattern_rank_percentile"),
   ncomp_one_se = NULL,
+  return_predictions = FALSE,
+  max_retained_mb = 1024,
+  prediction_overflow = c("error", "none"),
   ...
 )
 ```
@@ -208,6 +211,29 @@ feature_rsa_model(
   automatically preferable within one standard error on these
   objectives. Ignored for other methods.
 
+- return_predictions:
+
+  Logical; if TRUE, retain each ROI's out-of-fold predicted patterns
+  (\`Yhat\`) together with the matching observed patterns, observation
+  order, outer-fold id, and voxel indices. These are stored in the
+  regional result's \`fits\` slot and extracted with
+  [`feature_rsa_predictions`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_predictions.md).
+  Off by default because \`n_obs x n_voxels\` matrices across many ROIs
+  can be large.
+
+- max_retained_mb:
+
+  Allocation contract (MiB) for retained out-of-fold predicted and
+  observed patterns. The estimate counts both matrices for a partition
+  of the active mask (one copy of each voxel). A refusal is preferred to
+  a silent out-of-memory failure.
+
+- prediction_overflow:
+
+  What to do when the estimate exceeds `max_retained_mb`: `"error"`
+  refuses the request; `"none"` disables prediction retention and
+  records a notice.
+
 - ...:
 
   Additional arguments (currently unused). Passing deprecated arguments
@@ -288,13 +314,53 @@ degrees of freedom (\`mean_effective_df\`), non-intercept degrees of
 freedom, and fractions of folds selected at either end of the lambda
 grid.
 
+\*\*Out-of-fold predictions\*\* (\`return_predictions = TRUE\`): Each
+ROI retains the merged out-of-fold \`Yhat\` and \`Y\` matrices, the
+observation order, and the outer-fold id used by the built-in scoring
+rules. Extract them with
+[`feature_rsa_predictions`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_predictions.md)
+for post-hoc scoring (temporal windowing, whitened distances, custom
+identification rules) without crossing fold boundaries. This is a
+different payload from \`return_rdm_vectors\` and from the
+classification \`prediction_table\`. Overlapping searchlights are
+refused because they would retain multiple copies of each voxel.
+
+## See also
+
+[`feature_rsa_predictions`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_predictions.md),
+[`feature_rsa_rdm_vectors`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md)
+
 ## Examples
 
 ``` r
 # \donttest{
-  S <- as.matrix(dist(matrix(rnorm(5*3), 5, 3)))
-  labels <- factor(letters[1:5])
-  des <- feature_rsa_design(S = S, labels = labels)
-  # mdl <- feature_rsa_model(dataset, des, method="pls")
+  set.seed(79)
+  sample <- gen_sample_dataset(c(4, 4, 4), nobs = 24, blocks = 3)
+  Fmat <- matrix(rnorm(24 * 6), 24, 6)
+  des <- feature_rsa_design(
+    F = Fmat,
+    labels = paste0("t", seq_len(24)),
+    max_comps = 3,
+    block_var = sample$design$block_var
+  )
+  mdl <- feature_rsa_model(
+    sample$dataset, des, method = "pca",
+    ncomp_selection = "max",
+    return_predictions = TRUE
+  )
+  region_mask <- neuroim2::NeuroVol(
+    sample(1:2, length(sample$dataset$mask), replace = TRUE),
+    neuroim2::space(sample$dataset$mask)
+  )
+  res <- run_regional(mdl, region_mask)
+#> INFO [2026-09-01 16:43:51] 
+#> MVPA Iteration Complete
+#> - Total ROIs: 2
+#> - Processed: 2
+#> - Skipped: 0
+#> INFO [2026-09-01 16:43:51] run_regional: 2 ROIs processed (success=2, errors=0)
+  preds <- feature_rsa_predictions(res)
+  dim(preds$predicted[[1]])
+#> [1] 24 34
 # }
 ```

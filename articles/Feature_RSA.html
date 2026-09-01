@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-08-31</h4>
+            <h4 data-toc-skip class="date">2026-09-01</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Feature_RSA.Rmd" class="external-link"><code>vignettes/Feature_RSA.Rmd</code></a></small>
       <div class="d-none name"><code>Feature_RSA.Rmd</code></div>
@@ -146,7 +146,10 @@ the design and let it build a blocked CV).</td>
 <td>Per-ROI reconstruction and geometry metrics. PLS/PCR and glmnet also
 report <code>ncomp</code> (a historical nonzero-count proxy for glmnet);
 ridge reports its selected-penalty, effective-dimension, and
-grid-boundary diagnostics across outer folds.</td>
+grid-boundary diagnostics across outer folds. With
+<code>return_predictions = TRUE</code>,
+<code><a href="../reference/feature_rsa_predictions.html">feature_rsa_predictions()</a></code> also returns per-ROI out-of-fold
+<code>Yhat</code> and <code>Y</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -169,6 +172,21 @@ outer test folds. If RDM vectors are retained, they keep their full
 lower-triangle shape but mark cross-fold pairs as <code>NA</code>;
 <code><a href="../reference/feature_rsa_rdm_vectors.html">feature_rsa_rdm_vectors()</a></code> also returns the fold
 assignment.</p>
+</div>
+<div class="section level3">
+<h3 id="custom-scoring-from-out-of-fold-predictions">Custom scoring from out-of-fold predictions<a class="anchor" aria-label="anchor" href="#custom-scoring-from-out-of-fold-predictions"></a>
+</h3>
+<p>The ten built-in columns are not the only scoring rules one might
+want. <code>return_predictions = TRUE</code> keeps each ROI’s
+out-of-fold <code>Yhat</code> together with the observed patterns,
+observation order, and outer-fold id.
+<code><a href="../reference/feature_rsa_predictions.html">feature_rsa_predictions()</a></code> extracts them so you can re-score
+at a coarser temporal grain, apply a whitened distance, or try any other
+rule without editing rMVPA — and without accidentally comparing a
+prediction to a training target from another fold. This is off by
+default because <code>n_obs × n_voxels</code> matrices across many
+parcels can be large; <code>max_retained_mb</code> refuses an allocation
+that would exceed an explicit limit.</p>
 </div>
 </div>
 <div class="section level2">

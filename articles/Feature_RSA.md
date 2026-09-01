@@ -49,7 +49,7 @@ coefficients, see
 | `labels` | Vector of length `n_trials` naming each row of `F`. |
 | `mvpa_dataset` | Neural data `X`: `n_trials × n_voxels` per ROI/searchlight. |
 | `crossval` | A cross-validation spec. Required (or pass `block_var` to the design and let it build a blocked CV). |
-| Output | Per-ROI reconstruction and geometry metrics. PLS/PCR and glmnet also report `ncomp` (a historical nonzero-count proxy for glmnet); ridge reports its selected-penalty, effective-dimension, and grid-boundary diagnostics across outer folds. |
+| Output | Per-ROI reconstruction and geometry metrics. PLS/PCR and glmnet also report `ncomp` (a historical nonzero-count proxy for glmnet); ridge reports its selected-penalty, effective-dimension, and grid-boundary diagnostics across outer folds. With `return_predictions = TRUE`, [`feature_rsa_predictions()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_predictions.md) also returns per-ROI out-of-fold `Yhat` and `Y`. |
 
 ### Which observations are valid matching candidates?
 
@@ -69,6 +69,19 @@ labels within outer test folds. If RDM vectors are retained, they keep
 their full lower-triangle shape but mark cross-fold pairs as `NA`;
 [`feature_rsa_rdm_vectors()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md)
 also returns the fold assignment.
+
+### Custom scoring from out-of-fold predictions
+
+The ten built-in columns are not the only scoring rules one might want.
+`return_predictions = TRUE` keeps each ROI’s out-of-fold `Yhat` together
+with the observed patterns, observation order, and outer-fold id.
+[`feature_rsa_predictions()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_predictions.md)
+extracts them so you can re-score at a coarser temporal grain, apply a
+whitened distance, or try any other rule without editing rMVPA — and
+without accidentally comparing a prediction to a training target from
+another fold. This is off by default because `n_obs × n_voxels` matrices
+across many parcels can be large; `max_retained_mb` refuses an
+allocation that would exceed an explicit limit.
 
 ## Minimal example
 

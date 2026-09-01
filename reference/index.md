@@ -152,6 +152,9 @@ All functions exported by rMVPA
 - [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
   : Create a Feature-Based RSA Model
 
+- [`feature_rsa_predictions()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_predictions.md)
+  : Extract Per-ROI Out-of-Fold Predictions from Feature RSA Results
+
 - [`feature_rsa_rdm_vectors()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_rdm_vectors.md)
   : Extract Per-ROI Predicted and Observed RDM Vectors from Feature RSA
   Results

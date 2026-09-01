@@ -2,6 +2,11 @@
 
 Run a separate MVPA analysis for multiple disjoint regions of interest.
 
+Out-of-fold predicted patterns are retained in \`\$fits\` when
+\`feature_rsa_model(..., return_predictions = TRUE)\`. Extract them with
+[`feature_rsa_predictions`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_predictions.md)
+rather than a classification-style \`prediction_table\`.
+
 ## Usage
 
 ``` r
@@ -57,6 +62,14 @@ run_regional(
 )
 
 # S3 method for class 'vector_rsa_model'
+run_regional(
+  model_spec,
+  region_mask,
+  backend = c("default", "shard", "auto"),
+  ...
+)
+
+# S3 method for class 'feature_rsa_model'
 run_regional(
   model_spec,
   region_mask,
@@ -274,12 +287,12 @@ Without progressr, only coarse batch-level log messages are shown.
   
   # Run regional analysis
   results <- run_regional(mspec, region_mask)
-#> INFO [2026-08-31 22:18:52] 
+#> INFO [2026-09-01 16:45:14] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 5
 #> - Processed: 5
 #> - Skipped: 0
-#> INFO [2026-08-31 22:18:52] run_regional: 5 ROIs processed (success=5, errors=0)
+#> INFO [2026-09-01 16:45:14] run_regional: 5 ROIs processed (success=5, errors=0)
   
   # Access results
   head(results$performance_table)     # Performance metrics
