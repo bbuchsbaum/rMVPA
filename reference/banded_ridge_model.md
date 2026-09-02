@@ -12,7 +12,7 @@ banded_ridge_model(
   dataset,
   design,
   outer_crossval = NULL,
-  tune_crossval,
+  tune_crossval = NULL,
   candidates = NULL,
   alphas = 10^seq(-2, 2, length.out = 9L),
   theta_method = c("grid", "fixed", "random"),
@@ -52,13 +52,34 @@ banded_ridge_model(
 
 - outer_crossval:
 
-  An explicit outer fold list or number of folds. If omitted, intact
-  training blocks are required and define the folds.
+  Outer fold specification: an integer fold count, a
+  \`cross_validation\` object (for example
+  [`blocked_cross_validation`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md),
+  [`kfold_cross_validation`](https://bbuchsbaum.github.io/rMVPA/reference/kfold_cross_validation.md),
+  or
+  [`custom_cross_validation`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md);
+  only schemes whose test partitions cover every training row exactly
+  once convert, so resampled or non-deterministic schemes are refused),
+  or an explicit list of \`list(id =, train =, test =)\` folds. If
+  omitted, intact training blocks are required and define at most five
+  folds. Integer counts and \`cross_validation\` objects have \`purge\`
+  applied to their training rows; an explicit fold list is validated as
+  supplied and must already respect \`purge\`.
 
 - tune_crossval:
 
-  Required inner fold count, or one explicit inner-fold list per outer
-  fold.
+  Inner fold count, or one explicit inner-fold list per outer fold.
+  \`NULL\` (the default) uses at most five inner folds, limited by the
+  number of declared training blocks (or rows, when no blocks are
+  declared) available inside each outer training set. A supplied value
+  is still type-checked but otherwise ignored when only one candidate
+  survives the alpha/theta scopes (for example \`theta_method =
+  "fixed"\` with one \`theta\` and one \`alphas\` value, or fixed scopes
+  with \`fixed_alpha\` and \`fixed_theta\`): nothing needs selecting, so
+  inner tuning is skipped, the model's \`inner_v\` is \`NA\`, and
+  reported \`inner_score\` values are \`NA\`. Inner folds are
+  constructed and validated when the model is created, so an impossible
+  request fails here rather than in \`run_banded_ridge()\`.
 
 - candidates:
 
@@ -108,7 +129,11 @@ banded_ridge_model(
 
 - purge:
 
-  Non-negative temporal gap removed around validation/test rows.
+  Non-negative temporal gap (in rows) around validation/test rows.
+  Training rows within the gap are dropped when folds are constructed
+  from an integer count or a \`cross_validation\` object; explicit fold
+  lists (outer or inner) are checked against the gap and rejected if
+  they violate it, never modified.
 
 - solver:
 

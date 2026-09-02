@@ -66,6 +66,7 @@
 <span>  return_predictions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  max_retained_mb <span class="op">=</span> <span class="fl">1024</span>,</span>
 <span>  prediction_overflow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
+<span>  feature_standardize <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -258,6 +259,18 @@ preferred to a silent out-of-memory failure.</p></dd>
 <code>"none"</code> disables prediction retention and records a notice.</p></dd>
 
 
+<dt id="arg-feature-standardize">feature_standardize<a class="anchor" aria-label="anchor" href="#arg-feature-standardize"></a></dt>
+<dd><p>How the feature matrix <code>F</code> is standardized
+inside each training fold: <code>"scale"</code> centers every column and
+divides it by its training-fold standard deviation; <code>"center"</code> only
+subtracts the training-fold column means. <code>NULL</code> (the default)
+resolves to <code>"center"</code> for designs built from a similarity matrix
+<code>S</code>, whose feature matrix consists of PCA-like scores, and to
+<code>"scale"</code> otherwise. Use <code>"center"</code> whenever the column
+variances of <code>F</code> are meaningful, e.g. PCA scores or other
+pre-whitened inputs. See the Feature standardization section.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments (currently unused). Passing deprecated
 arguments such as <code>cache_pca</code> now results in an error.</p></dd>
@@ -342,6 +355,37 @@ different payload from `return_rdm_vectors` and from the classification
 would retain multiple copies of each voxel.</p>
     </div>
     <div class="section level2">
+    <h2 id="feature-standardization">Feature standardization<a class="anchor" aria-label="anchor" href="#feature-standardization"></a></h2>
+
+
+<p>Inside every training fold the neural responses <code>X</code> are always
+z-scored column-wise, and by default the feature matrix <code>F</code> is too
+(<code>feature_standardize = "scale"</code>). Held-out rows are transformed with
+the training-fold means and scales, and predictions are returned on the
+original response scale. This differs from the default of
+<code><a href="https://khliland.github.io/pls/reference/mvr.html" class="external-link">pls::pcr()</a></code> (<code>scale = NULL</code>), so <code>method = "pca"</code> is
+correlation-PCR rather than covariance-PCR.</p>
+<p>Column scaling discards the variance profile of <code>F</code>. That is harmless
+for raw feature spaces but degenerate for inputs whose column variances
+carry the structure, such as PCA scores or any whitened matrix: after
+scaling every direction has unit variance, PCA component ordering is set by
+noise, and <code>F = U %*% S</code> gives exactly the same fit as
+<code>F = U</code>. Use <code>feature_standardize = "center"</code> for such inputs; it
+centers <code>F</code> per training fold without rescaling columns, and applies
+to the PLS/PCA, ridge, and glmnet paths alike, including nested blocked
+tuning. Designs built from a similarity matrix <code>S</code> store exactly such
+scores (eigenvectors weighted by the square roots of the eigenvalues), so
+they default to <code>"center"</code>.</p>
+<p>For <code>method = "pca"</code> under column scaling, the constructor inspects
+the correlation spectrum of <code>F</code> and warns when it is flat (condition
+number within two percent of one), the signature of columns that are
+exactly orthogonal on these rows, such as PCA scores computed from them.
+Scores computed on a superset of rows, or otherwise nearly whitened inputs,
+are not detected, so use <code>"center"</code> for any PCA-score input whether or
+not a warning appears. The diagnostic is stored in
+<code>model$feature_spectrum</code>.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="feature_rsa_predictions.html">feature_rsa_predictions</a></code>, <code><a href="feature_rsa_rdm_vectors.html">feature_rsa_rdm_vectors</a></code></p></div>
     </div>
@@ -368,12 +412,12 @@ would retain multiple copies of each voxel.</p>
 <span class="r-in"><span>    <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">sample</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mdl</span>, <span class="va">region_mask</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-01 16:43:51] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-02 09:55:31] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">2</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">2</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-01 16:43:51] run_regional: 2 ROIs processed (success=2, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-02 09:55:31] run_regional: 2 ROIs processed (success=2, errors=0)</span>
 <span class="r-in"><span>  <span class="va">preds</span> <span class="op">&lt;-</span> <span class="fu"><a href="feature_rsa_predictions.html">feature_rsa_predictions</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">preds</span><span class="op">$</span><span class="va">predicted</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 24 34</span>

@@ -199,6 +199,14 @@ supports four estimators. The right choice depends on the feature space:
 | `"ridge"` | Effects are plausibly dense; you want fast, stable L2 shrinkage for many voxel responses. | Economy-SVD multi-response ridge. Tune with `lambda_selection`; coefficients are not sparse. |
 | `"glmnet"` | You expect sparse or grouped feature effects and need an elastic-net penalty. | Multivariate Gaussian elastic net via `glmnet`. Tune with `alpha`, `lambda`, `cv_glmnet`. |
 
+All four estimators z-score `F` and `X` inside every training fold by
+default. If your feature matrix is already reduced (PCA scores, whitened
+embeddings), pass `feature_standardize = "center"`: column scaling would
+otherwise flatten its variance profile, and for `"pca"` the constructor
+warns when that leaves a flat spectrum with no direction to order
+components by. Designs built from a similarity matrix `S` already hold
+such scores and default to `"center"`.
+
 ## How should you select the number of components?
 
 PLS and PCR fit up to `max_comps`; `ncomp_selection` decides how many
@@ -404,12 +412,12 @@ than .01 at the median or .03 at the lower decile.
 
 | Estimator / selector | Median ms | Speedup vs PLS LOO | MSE ratio | Pattern delta | RDM delta |
 |:---|---:|---:|---:|---:|---:|
-| PLS LOO | 90.00 | 1.0 | 1.000 | 0.0000 | 0.0000 |
-| PLS blocked | 8.00 | 11.1 | 1.000 | 0.0000 | 0.0000 |
-| Ridge GCV | 2.17 | 41.3 | 0.877 | 0.0022 | 0.0026 |
-| Ridge analytic LOO | 8.17 | 11.1 | 0.887 | 0.0018 | 0.0021 |
-| Ridge blocked | 8.67 | 10.3 | 0.888 | 0.0018 | 0.0018 |
-| glmnet ridge blocked CV | 676.00 | 0.1 | 2.624 | -0.0100 | -0.0126 |
+| PLS LOO | 91.00 | 1.0 | 1.000 | 0.0000 | 0.0000 |
+| PLS blocked | 8.00 | 11.4 | 1.000 | 0.0000 | 0.0000 |
+| Ridge GCV | 2.19 | 41.9 | 0.877 | 0.0022 | 0.0026 |
+| Ridge analytic LOO | 8.33 | 10.9 | 0.887 | 0.0018 | 0.0021 |
+| Ridge blocked | 9.00 | 10.1 | 0.888 | 0.0018 | 0.0018 |
+| glmnet ridge blocked CV | 688.50 | 0.1 | 2.624 | -0.0100 | -0.0126 |
 
 Twenty-seed dense-linear characterization on Apple M3 Max. Accuracy
 columns are relative to PLS LOO; timings are descriptive. {.table}

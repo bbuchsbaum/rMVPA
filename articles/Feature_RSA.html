@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-01</h4>
+            <h4 data-toc-skip class="date">2026-09-02</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Feature_RSA.Rmd" class="external-link"><code>vignettes/Feature_RSA.Rmd</code></a></small>
       <div class="d-none name"><code>Feature_RSA.Rmd</code></div>
@@ -329,6 +329,15 @@ penalty.</td>
 </tr>
 </tbody>
 </table>
+<p>All four estimators z-score <code>F</code> and <code>X</code> inside
+every training fold by default. If your feature matrix is already
+reduced (PCA scores, whitened embeddings), pass
+<code>feature_standardize = "center"</code>: column scaling would
+otherwise flatten its variance profile, and for <code>"pca"</code> the
+constructor warns when that leaves a flat spectrum with no direction to
+order components by. Designs built from a similarity matrix
+<code>S</code> already hold such scores and default to
+<code>"center"</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="how-should-you-select-the-number-of-components">How should you select the number of components?<a class="anchor" aria-label="anchor" href="#how-should-you-select-the-number-of-components"></a>
@@ -614,7 +623,7 @@ descriptive.</caption>
 <tbody>
 <tr class="odd">
 <td align="left">PLS LOO</td>
-<td align="right">90.00</td>
+<td align="right">91.00</td>
 <td align="right">1.0</td>
 <td align="right">1.000</td>
 <td align="right">0.0000</td>
@@ -623,38 +632,38 @@ descriptive.</caption>
 <tr class="even">
 <td align="left">PLS blocked</td>
 <td align="right">8.00</td>
-<td align="right">11.1</td>
+<td align="right">11.4</td>
 <td align="right">1.000</td>
 <td align="right">0.0000</td>
 <td align="right">0.0000</td>
 </tr>
 <tr class="odd">
 <td align="left">Ridge GCV</td>
-<td align="right">2.17</td>
-<td align="right">41.3</td>
+<td align="right">2.19</td>
+<td align="right">41.9</td>
 <td align="right">0.877</td>
 <td align="right">0.0022</td>
 <td align="right">0.0026</td>
 </tr>
 <tr class="even">
 <td align="left">Ridge analytic LOO</td>
-<td align="right">8.17</td>
-<td align="right">11.1</td>
+<td align="right">8.33</td>
+<td align="right">10.9</td>
 <td align="right">0.887</td>
 <td align="right">0.0018</td>
 <td align="right">0.0021</td>
 </tr>
 <tr class="odd">
 <td align="left">Ridge blocked</td>
-<td align="right">8.67</td>
-<td align="right">10.3</td>
+<td align="right">9.00</td>
+<td align="right">10.1</td>
 <td align="right">0.888</td>
 <td align="right">0.0018</td>
 <td align="right">0.0018</td>
 </tr>
 <tr class="even">
 <td align="left">glmnet ridge blocked CV</td>
-<td align="right">676.00</td>
+<td align="right">688.50</td>
 <td align="right">0.1</td>
 <td align="right">2.624</td>
 <td align="right">-0.0100</td>

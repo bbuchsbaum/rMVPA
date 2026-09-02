@@ -67,6 +67,16 @@ model <- banded_ridge_model(
 result <- run_banded_ridge(model)
 ```
 
+`outer_crossval` also accepts a `cross_validation` object, so
+`blocked_cross_validation(example$blocks)` selects the same block-wise
+outer folds used elsewhere in rMVPA. Integer counts and
+`cross_validation` objects have `purge` applied to their training rows,
+whereas a hand-built fold list is validated as supplied. `tune_crossval`
+can be omitted: the default uses at most five inner folds, limited by
+the blocks (or rows, when none are declared) available inside each
+outer-training set, and inner tuning is skipped entirely when only one
+candidate survives the alpha/theta scopes.
+
 The compact result table is already in original voxel order. These are
 pooled outer out-of-fold metrics: every observation contributes once,
 from the outer fold in which it was held out.

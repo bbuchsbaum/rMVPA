@@ -29,6 +29,7 @@ feature_rsa_model(
   return_predictions = FALSE,
   max_retained_mb = 1024,
   prediction_overflow = c("error", "none"),
+  feature_standardize = NULL,
   ...
 )
 ```
@@ -234,6 +235,17 @@ feature_rsa_model(
   refuses the request; `"none"` disables prediction retention and
   records a notice.
 
+- feature_standardize:
+
+  How the feature matrix `F` is standardized inside each training fold:
+  `"scale"` centers every column and divides it by its training-fold
+  standard deviation; `"center"` only subtracts the training-fold column
+  means. `NULL` (the default) resolves to `"center"` for designs built
+  from a similarity matrix `S`, whose feature matrix consists of
+  PCA-like scores, and to `"scale"` otherwise. Use `"center"` whenever
+  the column variances of `F` are meaningful, e.g. PCA scores or other
+  pre-whitened inputs. See the Feature standardization section.
+
 - ...:
 
   Additional arguments (currently unused). Passing deprecated arguments
@@ -325,6 +337,37 @@ different payload from \`return_rdm_vectors\` and from the
 classification \`prediction_table\`. Overlapping searchlights are
 refused because they would retain multiple copies of each voxel.
 
+## Feature standardization
+
+Inside every training fold the neural responses `X` are always z-scored
+column-wise, and by default the feature matrix `F` is too
+(`feature_standardize = "scale"`). Held-out rows are transformed with
+the training-fold means and scales, and predictions are returned on the
+original response scale. This differs from the default of
+[`pls::pcr()`](https://khliland.github.io/pls/reference/mvr.html)
+(`scale = NULL`), so `method = "pca"` is correlation-PCR rather than
+covariance-PCR.
+
+Column scaling discards the variance profile of `F`. That is harmless
+for raw feature spaces but degenerate for inputs whose column variances
+carry the structure, such as PCA scores or any whitened matrix: after
+scaling every direction has unit variance, PCA component ordering is set
+by noise, and `F = U %*% S` gives exactly the same fit as `F = U`. Use
+`feature_standardize = "center"` for such inputs; it centers `F` per
+training fold without rescaling columns, and applies to the PLS/PCA,
+ridge, and glmnet paths alike, including nested blocked tuning. Designs
+built from a similarity matrix `S` store exactly such scores
+(eigenvectors weighted by the square roots of the eigenvalues), so they
+default to `"center"`.
+
+For `method = "pca"` under column scaling, the constructor inspects the
+correlation spectrum of `F` and warns when it is flat (condition number
+within two percent of one), the signature of columns that are exactly
+orthogonal on these rows, such as PCA scores computed from them. Scores
+computed on a superset of rows, or otherwise nearly whitened inputs, are
+not detected, so use `"center"` for any PCA-score input whether or not a
+warning appears. The diagnostic is stored in `model$feature_spectrum`.
+
 ## See also
 
 [`feature_rsa_predictions`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_predictions.md),
@@ -353,12 +396,12 @@ refused because they would retain multiple copies of each voxel.
     neuroim2::space(sample$dataset$mask)
   )
   res <- run_regional(mdl, region_mask)
-#> INFO [2026-09-01 16:43:51] 
+#> INFO [2026-09-02 09:55:31] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 2
 #> - Processed: 2
 #> - Skipped: 0
-#> INFO [2026-09-01 16:43:51] run_regional: 2 ROIs processed (success=2, errors=0)
+#> INFO [2026-09-02 09:55:31] run_regional: 2 ROIs processed (success=2, errors=0)
   preds <- feature_rsa_predictions(res)
   dim(preds$predicted[[1]])
 #> [1] 24 34

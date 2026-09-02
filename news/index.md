@@ -2,6 +2,42 @@
 
 ## rMVPA 0.1.3
 
+- [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+  gains `feature_standardize = c("scale", "center")`. The feature matrix
+  `F` has always been z-scored per training fold, which was undocumented
+  and discards the variance profile of pre-reduced inputs such as PCA
+  scores, making PCR component selection degenerate. `"center"`
+  subtracts training-fold means only and threads through the PLS/PCA,
+  ridge, and glmnet paths and their nested blocked tuning. Designs built
+  from a similarity matrix `S` now default to `"center"`, because their
+  feature matrix is exactly such scores; this changes results for
+  `method = "pca"` on those designs (previously degenerate) and, more
+  modestly, for PLS, ridge, and glmnet. Pass
+  `feature_standardize = "scale"` to restore the old behaviour. For
+  `method = "pca"` under column scaling, the constructor now warns when
+  the standardized `F` has a flat correlation spectrum, and stores the
+  diagnostic in `model$feature_spectrum`. The standardization contract
+  is documented in a new help section
+  ([\#82](https://github.com/bbuchsbaum/rMVPA/issues/82)).
+- [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md)
+  now accepts a `cross_validation` object (for example
+  [`blocked_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md),
+  [`kfold_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/kfold_cross_validation.md),
+  or
+  [`custom_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md))
+  for `outer_crossval`, converting it to internal folds with `purge`
+  applied to the training rows, instead of misrouting it into the
+  explicit-fold-list validator. `tune_crossval` is no longer required:
+  the default uses at most five inner folds limited by the blocks (or
+  rows, when no blocks are declared) available inside each
+  outer-training set, and it is ignored when only one candidate survives
+  the alpha/theta scopes, in which case inner tuning is skipped and
+  reported `inner_score` values are `NA`. Inner folds and the scope
+  constraints are now validated when the model is created, and the
+  purge-gap error for explicit fold lists says that such lists are
+  validated as supplied rather than purged
+  ([\#80](https://github.com/bbuchsbaum/rMVPA/issues/80),
+  [\#81](https://github.com/bbuchsbaum/rMVPA/issues/81)).
 - Feature RSA PLS/PCR component selection and ridge penalty selection
   can now optimize held-out `pattern_discrimination` in leakage-safe
   blocked inner CV; PLS/PCR can also optimize `pattern_rank_percentile`.
