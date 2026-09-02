@@ -387,12 +387,15 @@ test_that("disabled attribution performs no reduced work and enabled cost is exp
     enabled$result$provenance$work_manifest$model_id,
     rep(c("full", "without_a", "without_b"), 2L)
   )
+  # One fixed candidate leaves nothing to select, so inner tuning is skipped
+  # and every conceptual model costs exactly its three outer refits.
+  expect_identical(enabled$model$inner_tuning, "none")
   expect_equal(enabled$result$provenance$work_manifest$inner_candidate_fit_calls,
-               rep(6L, 6L))
+               rep(0L, 6L))
   expect_equal(enabled$result$provenance$work_manifest$outer_refit_calls,
                rep(3L, 6L))
   expect_equal(enabled$result$provenance$work_manifest$total_fit_calls,
-               rep(9L, 6L))
+               rep(3L, 6L))
   expect_gt(enabled$model$retention_estimated_bytes[["attribution"]], 0)
   expect_gt(enabled$model$retention_estimated_bytes[["total"]],
             disabled$model$retention_estimated_bytes[["total"]])

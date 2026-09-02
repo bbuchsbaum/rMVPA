@@ -541,3 +541,52 @@ test_that("nested tuning rejects malformed scopes, candidates, batches, and fold
     c("a", "b"), 1, method = "fixed", theta = c(0.5, 0.5)
   ), "must be named")
 })
+
+test_that("nested CV skips inner tuning only when exactly one candidate is available", {
+  expect_identical(rMVPA:::.brt_purge_train(1:10, 5L, 2L),
+                   c(1L, 2L, 8L, 9L, 10L))
+  expect_identical(rMVPA:::.brt_purge_train(1:10, 5L, 0L), 1:10)
+
+  data <- .brt_test_data(seed = 7230L)
+  expect_error(rMVPA:::.banded_ridge_nested_cv(
+    data$X, data$Y, data$outer, data$candidates,
+    feature_groups = data$feature_groups, inner_v = NA
+  ), "exactly one candidate")
+  expect_error(rMVPA:::.banded_ridge_nested_cv(
+    data$X, data$Y, data$outer, data$candidates,
+    feature_groups = data$feature_groups, inner_v = NaN
+  ), "at least two")
+
+  one <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), alphas = 0.2, method = "fixed", theta = c(a = 0.8, b = 0.2)
+  )
+  skipped <- rMVPA:::.banded_ridge_nested_cv(
+    data$X, data$Y, data$outer, one,
+    feature_groups = data$feature_groups, inner_v = NA, seed = 7231L
+  )
+  tuned <- rMVPA:::.banded_ridge_nested_cv(
+    data$X, data$Y, data$outer, one,
+    feature_groups = data$feature_groups, inner_v = 3L, seed = 7231L
+  )
+  expect_identical(skipped$inner_tuning, "none")
+  expect_identical(tuned$inner_tuning, "nested")
+  expect_equal(skipped$predictions, tuned$predictions, tolerance = 1e-12)
+  expect_true(all(is.na(skipped$selections$inner_score)))
+  expect_true(all(is.finite(tuned$selections$inner_score)))
+  expect_true(all(vapply(skipped$outer_results, function(x) {
+    length(x$inner_folds) == 0L && dim(x$inner_fold_scores)[[1L]] == 0L &&
+      length(x$preprocessing) == 0L
+  }, logical(1))))
+  expect_identical(unname(lengths(skipped$provenance$inner_fold_ids)),
+                   rep(0L, length(data$outer)))
+
+  scoped <- rMVPA:::.banded_ridge_nested_cv(
+    data$X, data$Y, data$outer, data$candidates,
+    feature_groups = data$feature_groups, inner_v = NA,
+    alpha_scope = "fixed", fixed_alpha = 0.2,
+    theta_scope = "fixed", fixed_theta = c(a = 0.8, b = 0.2), seed = 7231L
+  )
+  expect_true(all(scoped$selections$alpha == 0.2))
+  expect_true(all(scoped$selections$theta_a == 0.8))
+  expect_equal(scoped$predictions, skipped$predictions, tolerance = 1e-12)
+})

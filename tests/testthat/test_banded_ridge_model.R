@@ -305,8 +305,8 @@ test_that("constructor and spatial execution fail early on unsafe contracts", {
   expect_error(run_banded_ridge(model, response_partitions = list(ids, ids[[1L]])),
                "exactly once")
   expect_error(run_searchlight(model, radius = 2), "does not support overlapping")
-  impossible <- .brm_test_model(fixture, tune_crossval = 3L)
-  expect_error(run_banded_ridge(impossible), "fewer independent blocks")
+  expect_error(.brm_test_model(fixture, tune_crossval = 3L),
+               "fewer independent blocks")
 
   empty <- fixture$dataset
   empty$mask[] <- 0
@@ -361,4 +361,172 @@ test_that("print method reports the estimand-facing summary", {
   expect_match(paste(printed, collapse = "\n"), "Responses: 5")
   expect_match(paste(printed, collapse = "\n"), "Solver:    direct")
   expect_match(paste(printed, collapse = "\n"), "OOF MSE")
+})
+
+test_that("outer_crossval accepts cross_validation objects and applies purge", {
+  fixture <- .brm_test_fixture(seed = 8021L)
+  n <- nrow(fixture$X)
+  purge_rows <- function(train, test, gap) {
+    train[vapply(train, function(i) all(abs(i - test) > gap), logical(1))]
+  }
+  manual <- lapply(seq_len(3L), function(k) {
+    test <- which(fixture$blocks == k)
+    train <- setdiff(seq_len(n), test)
+    list(id = paste0("fold_", k), train = purge_rows(train, test, 1L),
+         test = test)
+  })
+
+  blocked <- .brm_test_model(
+    fixture, outer_crossval = blocked_cross_validation(fixture$blocks),
+    purge = 1L
+  )
+  expect_equal(blocked$outer_folds, manual)
+  explicit <- .brm_test_model(fixture, outer_crossval = manual, purge = 1L)
+  expect_equal(explicit$outer_folds, manual)
+  expect_equal(run_banded_ridge(blocked)$metrics,
+               run_banded_ridge(explicit)$metrics, tolerance = 1e-12)
+
+  unpurged <- lapply(manual, function(fold) {
+    list(id = fold$id, train = setdiff(seq_len(n), fold$test), test = fold$test)
+  })
+  expect_error(.brm_test_model(fixture, outer_crossval = unpurged, purge = 1L),
+               "validated as supplied")
+
+  custom <- custom_cross_validation(lapply(seq_len(3L), function(k) {
+    list(train = which(fixture$blocks != k), test = which(fixture$blocks == k))
+  }))
+  from_custom <- .brm_test_model(fixture, outer_crossval = custom)
+  expect_equal(from_custom$outer_folds, unpurged)
+
+  ordinary <- feature_sets_design(fixture$design$X_train)
+  set.seed(8024L)
+  kfold <- kfold_cross_validation(n, nfolds = 3L)
+  from_kfold <- banded_ridge_model(
+    fixture$dataset, ordinary, outer_crossval = kfold, tune_crossval = 2L,
+    candidates = fixture$candidates, solver = "direct"
+  )
+  for (k in seq_len(3L)) {
+    expect_identical(from_kfold$outer_folds[[k]]$test,
+                     which(kfold$block_var == k))
+  }
+
+  expect_error(.brm_test_model(
+    fixture,
+    outer_crossval = bootstrap_blocked_cross_validation(fixture$blocks, nreps = 2L)
+  ), "cannot be converted")
+  expect_error(.brm_test_model(
+    fixture,
+    outer_crossval = twofold_blocked_cross_validation(fixture$blocks, nreps = 2L)
+  ), "cannot be converted")
+  expect_error(.brm_test_model(
+    fixture, outer_crossval = blocked_cross_validation(c(fixture$blocks, 1L))
+  ), "block_var of length")
+  expect_error(.brm_test_model(
+    fixture, tune_crossval = blocked_cross_validation(fixture$blocks)
+  ), "accepted only for outer_crossval")
+  expect_error(.brm_test_model(fixture, outer_crossval = "three"),
+               "cross_validation object")
+  forward <- custom_cross_validation(list(
+    list(train = 1:6, test = 7:12), list(train = 1:12, test = 13:18)
+  ))
+  expect_error(.brm_test_model(fixture, outer_crossval = forward),
+               "cannot be converted.*exactly once")
+  expect_error(.brm_test_model(
+    fixture, outer_crossval = data.frame(train = 1L, test = 2L)
+  ), "data.frame")
+})
+
+test_that("tune_crossval defaults from available training units and validates early", {
+  fixture <- .brm_test_fixture(seed = 8022L)
+  model <- banded_ridge_model(
+    fixture$dataset, fixture$design, outer_crossval = 3L,
+    candidates = fixture$candidates, solver = "direct"
+  )
+  expect_identical(model$inner_v, 2L)
+  expect_identical(model$inner_tuning, "nested")
+  expect_null(model$inner_folds)
+  expect_s3_class(run_banded_ridge(model), "banded_ridge_result")
+
+  ordinary <- feature_sets_design(fixture$design$X_train)
+  plain <- banded_ridge_model(
+    fixture$dataset, ordinary, outer_crossval = 3L,
+    candidates = fixture$candidates, solver = "direct"
+  )
+  expect_identical(plain$inner_v, 5L)
+
+  two_blocks <- feature_sets_design(
+    fixture$design$X_train, block_var_train = rep(1:2, each = 9L),
+    time_series = TRUE
+  )
+  expect_error(banded_ridge_model(
+    fixture$dataset, two_blocks, candidates = fixture$candidates
+  ), "no usable default")
+
+  bad_inner <- rep(list(list(
+    list(id = "a", train = 1:2, test = 3:4),
+    list(id = "b", train = 3:4, test = 1:2)
+  )), 3L)
+  expect_error(.brm_test_model(fixture, tune_crossval = bad_inner),
+               "cannot be applied inside outer fold")
+  expect_error(.brm_test_model(fixture, tune_crossval = bad_inner[1:2]),
+               "one inner-fold list per outer fold")
+
+  # Contiguous outer folds survive the purge; the default random row-wise
+  # inner splits cannot, and the error says why.
+  no_blocks <- feature_sets_design(fixture$design$X_train, time_series = TRUE)
+  expect_error(banded_ridge_model(
+    fixture$dataset, no_blocks,
+    outer_crossval = blocked_cross_validation(fixture$blocks), purge = 5L,
+    candidates = fixture$candidates
+  ), "random row-wise splits")
+})
+
+test_that("inner tuning is skipped when only one candidate survives the scopes", {
+  fixture <- .brm_test_fixture(seed = 8023L)
+  single <- banded_ridge_model(
+    fixture$dataset, fixture$design, outer_crossval = 3L,
+    alphas = 1, theta_method = "fixed", theta = c(low = 0.5, semantic = 0.5),
+    solver = "direct", target_batch_size = 2L, return_predictions = TRUE,
+    seed = 8002L
+  )
+  expect_true(is.na(single$inner_v))
+  expect_identical(single$inner_tuning, "none")
+  expect_null(single$inner_folds)
+  result <- run_banded_ridge(single)
+  expect_true(all(is.na(result$hyperparameters$inner_score)))
+  expect_true(all(result$hyperparameters$alpha == 1))
+
+  observed <- .brm_active_response(fixture)
+  oracle <- rMVPA:::.banded_ridge_nested_cv(
+    fixture$X, observed, single$outer_folds, single$candidates,
+    feature_groups = as.character(fixture$design$X_train$set),
+    inner_v = 2L, blocks = fixture$blocks,
+    response_batch_size = ncol(observed), seed = single$seed,
+    solver = "direct"
+  )
+  expect_equal(result$predictions, oracle$predictions, tolerance = 1e-12)
+
+  fixed <- .brm_test_model(
+    fixture, tune_crossval = 2L, alpha_scope = "fixed", fixed_alpha = 0.2,
+    theta_scope = "fixed", fixed_theta = c(low = 0.8, semantic = 0.2),
+    delta_sets = "all"
+  )
+  expect_true(is.na(fixed$inner_v))
+  expect_identical(fixed$inner_tuning, "none")
+  fixed_result <- run_banded_ridge(fixed)
+  expect_true(all(fixed_result$hyperparameters$alpha == 0.2))
+  expect_length(unique(fixed_result$hyperparameters$candidate_id), 1L)
+  expect_true(all(is.na(fixed_result$hyperparameters$inner_score)))
+  expect_gt(nrow(fixed_result$predictive_leave_one_band_out$effects), 0L)
+
+  expect_error(.brm_test_model(fixture, alpha_scope = "fixed", fixed_alpha = 99),
+               "No candidate matches")
+  # A malformed tune_crossval is rejected even though it would be ignored.
+  expect_error(banded_ridge_model(
+    fixture$dataset, fixture$design, outer_crossval = 3L,
+    tune_crossval = "garbage", alphas = 1, theta_method = "fixed",
+    theta = c(low = 0.5, semantic = 0.5)
+  ), "integer of at least two")
+  expect_error(.brm_test_model(fixture, alpha_scope = "elsewhere"),
+               "should be one of")
 })

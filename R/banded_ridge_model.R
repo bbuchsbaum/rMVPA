@@ -15,6 +15,40 @@
   as.integer(utils::tail(dims, 1L))
 }
 
+# Convert a cross_validation object into the internal outer-fold list. The
+# object only expresses test partitions, so `purge` is applied to the training
+# rows here, exactly as the integer path does.
+.brm_folds_from_cross_validation <- function(spec, n, purge) {
+  cls <- class(spec)[[1L]]
+  if (!is.null(spec$block_var) && length(spec$block_var) != n) {
+    stop(
+      "banded_ridge_model: outer_crossval (", cls, ") has a block_var of ",
+      "length ", length(spec$block_var), " but the dataset has ", n,
+      " training observations.",
+      call. = FALSE
+    )
+  }
+  tryCatch(
+    lapply(seq_len(get_nfolds(spec)), function(k) {
+      test <- sort(as.integer(partition_indices(spec, k, n_samples = n)))
+      train <- sort(as.integer(train_indices(spec, k)))
+      list(
+        id = paste0("fold_", k),
+        train = .brt_purge_train(train, test, purge),
+        test = test
+      )
+    }),
+    error = function(e) {
+      stop(
+        "banded_ridge_model: outer_crossval of class '", cls, "' cannot be ",
+        "converted to deterministic, non-overlapping folds: ",
+        conditionMessage(e),
+        call. = FALSE
+      )
+    }
+  )
+}
+
 .brm_resolve_outer_folds <- function(spec, n, blocks, purge, seed) {
   if (is.null(spec)) {
     if (is.null(blocks) || length(unique(blocks)) < 2L) {
@@ -26,46 +60,140 @@
     }
     spec <- min(5L, length(unique(blocks)))
   }
-  if (is.list(spec)) {
-    return(.brt_validate_folds(
-      spec, seq_len(n), n, "outer_crossval", blocks = blocks,
-      purge = purge, require_coverage = TRUE
+  if (inherits(spec, "cross_validation")) {
+    cls <- class(spec)[[1L]]
+    folds <- .brm_folds_from_cross_validation(spec, n, purge)
+    return(tryCatch(
+      .brt_validate_folds(
+        folds, seq_len(n), n, "outer_crossval", blocks = blocks,
+        purge = purge, require_coverage = TRUE
+      ),
+      error = function(e) {
+        stop(
+          "banded_ridge_model: outer_crossval of class '", cls, "' cannot be ",
+          "converted to outer folds; only schemes whose test partitions cover ",
+          "every training row exactly once and respect declared blocks are ",
+          "usable: ", conditionMessage(e),
+          call. = FALSE
+        )
+      }
+    ))
+  } else if (is.data.frame(spec)) {
+    stop(
+      "outer_crossval must be an integer fold count, a cross_validation ",
+      "object, or an explicit list of list(id =, train =, test =) folds; a ",
+      "data.frame such as the output of crossval_samples() is not accepted.",
+      call. = FALSE
+    )
+  } else if (is.list(spec)) {
+    # Explicit fold lists are validated as supplied; see .brt_validate_folds.
+  } else {
+    if (!is.numeric(spec) || length(spec) != 1L || !is.finite(spec) ||
+        spec != as.integer(spec) || spec < 2L) {
+      stop(
+        "outer_crossval must be an integer of at least two, a ",
+        "cross_validation object, or an explicit fold list.",
+        call. = FALSE
+      )
+    }
+    return(.banded_ridge_make_folds(
+      seq_len(n), as.integer(spec), blocks = blocks, purge = purge, seed = seed
     ))
   }
-  if (!is.numeric(spec) || length(spec) != 1L || !is.finite(spec) ||
-      spec != as.integer(spec) || spec < 2L) {
-    stop("outer_crossval must be a fold list or an integer of at least two.",
-         call. = FALSE)
-  }
-  .banded_ridge_make_folds(
-    seq_len(n), as.integer(spec), blocks = blocks, purge = purge, seed = seed
+  .brt_validate_folds(
+    spec, seq_len(n), n, "outer_crossval", blocks = blocks,
+    purge = purge, require_coverage = TRUE
   )
 }
 
-.brm_resolve_tuning <- function(spec, outer_folds) {
-  if (is.null(spec)) {
-    stop("banded_ridge_model: tune_crossval is required and must be an inner-fold count or explicit nested fold list.",
-         call. = FALSE)
+# Default inner fold count: at most five, limited by the declared blocks (or
+# rows, when no blocks are declared) available inside each outer-training set.
+.brm_default_inner_v <- function(outer_folds, blocks) {
+  units <- vapply(outer_folds, function(fold) {
+    if (is.null(blocks)) length(fold$train) else length(unique(blocks[fold$train]))
+  }, integer(1))
+  inner_v <- min(5L, min(units))
+  if (inner_v < 2L) {
+    short <- outer_folds[[which.min(units)]]$id
+    stop(
+      "banded_ridge_model: tune_crossval has no usable default because outer ",
+      "fold '", short, "' retains only ", min(units), " declared training ",
+      "block(s); supply tune_crossval as an explicit nested fold list, or ",
+      "declare more training blocks.",
+      call. = FALSE
+    )
   }
-  if (is.list(spec)) {
-    if (length(spec) != length(outer_folds)) {
-      stop("tune_crossval must contain one inner-fold list per outer fold.",
+  inner_v
+}
+
+.brm_resolve_tuning <- function(spec, outer_folds, n, blocks, purge, seed,
+                                n_available) {
+  if (inherits(spec, "cross_validation")) {
+    stop(
+      "banded_ridge_model: tune_crossval must be an inner-fold count or one ",
+      "explicit inner-fold list per outer fold; cross_validation objects are ",
+      "accepted only for outer_crossval because inner folds are nested inside ",
+      "each outer-training set.",
+      call. = FALSE
+    )
+  }
+  # A supplied value is type-checked even when tuning turns out to be
+  # unnecessary, so a malformed argument is never silently ignored.
+  if (!is.null(spec)) {
+    if (is.list(spec)) {
+      if (length(spec) != length(outer_folds)) {
+        stop("tune_crossval must contain one inner-fold list per outer fold.",
+             call. = FALSE)
+      }
+    } else if (!is.numeric(spec) || length(spec) != 1L || !is.finite(spec) ||
+               spec != as.integer(spec) || spec < 2L) {
+      stop("tune_crossval must be an inner-fold list or an integer of at least two.",
            call. = FALSE)
     }
-    return(list(inner_folds = spec, inner_v = 2L))
   }
-  if (!is.numeric(spec) || length(spec) != 1L || !is.finite(spec) ||
-      spec != as.integer(spec) || spec < 2L) {
-    stop("tune_crossval must be an inner-fold list or an integer of at least two.",
-         call. = FALSE)
+  if (n_available < 2L) {
+    return(list(inner_folds = NULL, inner_v = NA_integer_, inner_tuning = "none"))
   }
-  list(inner_folds = NULL, inner_v = as.integer(spec))
+  if (is.null(spec)) spec <- .brm_default_inner_v(outer_folds, blocks)
+  tuning <- if (is.list(spec)) {
+    list(inner_folds = spec, inner_v = 2L, inner_tuning = "nested")
+  } else {
+    list(inner_folds = NULL, inner_v = as.integer(spec), inner_tuning = "nested")
+  }
+  # Construct and validate every inner fold now, so an impossible request
+  # fails at model creation rather than inside run_banded_ridge().
+  for (oo in seq_along(outer_folds)) {
+    tryCatch(
+      .brt_inner_folds(tuning$inner_folds, oo, outer_folds[[oo]]$train, n,
+                       tuning$inner_v, blocks, purge, seed),
+      error = function(e) {
+        hint <- if (is.null(blocks) && purge > 0L && is.null(tuning$inner_folds)) {
+          paste0(
+            " Without declared training blocks, inner folds are random ",
+            "row-wise splits, so a temporal purge can remove most training ",
+            "rows; declare contiguous blocks with feature_sets_design(",
+            "block_var_train = ...) or supply explicit nested inner folds."
+          )
+        } else ""
+        stop(
+          "banded_ridge_model: tune_crossval cannot be applied inside outer ",
+          "fold '", outer_folds[[oo]]$id, "': ", conditionMessage(e), hint,
+          call. = FALSE
+        )
+      }
+    )
+  }
+  if (!is.null(tuning$inner_folds)) {
+    tuning$inner_v <- as.integer(max(lengths(tuning$inner_folds)))
+  }
+  tuning
 }
 
 .brm_retention_estimate <- function(n, p, v, n_outer,
                                     weight_retention, return_predictions,
                                     retain_diagnostics, n_candidates, inner_v,
                                     n_delta = 0L, n_groups = 1L) {
+  if (is.na(inner_v)) inner_v <- 0L
   prediction <- if (return_predictions) 8 * n * v * (1L + n_delta) else 0
   weights <- switch(weight_retention,
     none = 0,
@@ -197,10 +325,29 @@
 #'   and active mask locations are responses.
 #' @param design A `feature_sets_design` containing `X_train`, band membership,
 #'   and optional `block_var_train` / `time_series` metadata.
-#' @param outer_crossval An explicit outer fold list or number of folds. If
-#'   omitted, intact training blocks are required and define the folds.
-#' @param tune_crossval Required inner fold count, or one explicit inner-fold
-#'   list per outer fold.
+#' @param outer_crossval Outer fold specification: an integer fold count, a
+#'   `cross_validation` object (for example
+#'   \code{\link{blocked_cross_validation}},
+#'   \code{\link{kfold_cross_validation}}, or
+#'   \code{\link{custom_cross_validation}}; only schemes whose test
+#'   partitions cover every training row exactly once convert, so resampled or
+#'   non-deterministic schemes are refused), or an explicit
+#'   list of `list(id =, train =, test =)` folds. If omitted, intact training
+#'   blocks are required and define at most five folds. Integer counts and
+#'   `cross_validation` objects have `purge` applied to their training rows;
+#'   an explicit fold list is validated as supplied and must already respect
+#'   `purge`.
+#' @param tune_crossval Inner fold count, or one explicit inner-fold list per
+#'   outer fold. `NULL` (the default) uses at most five inner folds, limited
+#'   by the number of declared training blocks (or rows, when no blocks are
+#'   declared) available inside each outer training set. A supplied value is
+#'   still type-checked but otherwise ignored when only one candidate survives the alpha/theta
+#'   scopes (for example `theta_method = "fixed"` with one `theta` and one
+#'   `alphas` value, or fixed scopes with `fixed_alpha` and `fixed_theta`):
+#'   nothing needs selecting, so inner tuning is skipped, the model's
+#'   `inner_v` is `NA`, and reported `inner_score` values are `NA`. Inner folds
+#'   are constructed and validated when the model is created, so an impossible
+#'   request fails here rather than in `run_banded_ridge()`.
 #' @param candidates Optional candidate manifest. By default one is created from
 #'   `alphas`, `theta_method`, and the remaining theta arguments.
 #' @param alphas Non-negative overall ridge penalties used when constructing
@@ -217,7 +364,11 @@
 #' @param delta_sets Optional feature-band names, or `"all"`, for independently
 #'   retuned predictive leave-one-band-out outer-OOF delta R2. `NULL` (the
 #'   default) performs no reduced-model work.
-#' @param purge Non-negative temporal gap removed around validation/test rows.
+#' @param purge Non-negative temporal gap (in rows) around validation/test
+#'   rows. Training rows within the gap are dropped when folds are constructed
+#'   from an integer count or a `cross_validation` object; explicit fold lists
+#'   (outer or inner) are checked against the gap and rejected if they violate
+#'   it, never modified.
 #' @param solver `"auto"`, `"direct"`, `"svd_primal"`, or `"dual_kernel"`.
 #' @param target_batch_size Maximum responses evaluated together.
 #' @param return_predictions Retain the complete outer out-of-fold prediction
@@ -262,7 +413,7 @@
 banded_ridge_model <- function(dataset,
                                design,
                                outer_crossval = NULL,
-                               tune_crossval,
+                               tune_crossval = NULL,
                                candidates = NULL,
                                alphas = 10^seq(-2, 2, length.out = 9L),
                                theta_method = c("grid", "fixed", "random"),
@@ -331,7 +482,6 @@ banded_ridge_model <- function(dataset,
   outer_folds <- .brm_resolve_outer_folds(
     outer_crossval, n, blocks, as.integer(purge), as.integer(seed)
   )
-  tuning <- .brm_resolve_tuning(tune_crossval, outer_folds)
   group_names <- design$X_train$set_order
   if (is.null(candidates)) {
     candidates <- .banded_ridge_candidates(
@@ -341,6 +491,14 @@ banded_ridge_model <- function(dataset,
   } else {
     candidates <- .brt_validate_candidates(candidates, group_names)
   }
+  available <- .brt_available_candidates(
+    candidates, alpha_scope, theta_scope,
+    fixed_alpha = fixed_alpha, fixed_theta = fixed_theta
+  )
+  tuning <- .brm_resolve_tuning(
+    tune_crossval, outer_folds, n, blocks, as.integer(purge), as.integer(seed),
+    n_available = length(available)
+  )
   delta_sets <- .bra_validate_delta_sets(delta_sets, group_names)
   reduced_candidates <- setNames(lapply(delta_sets, function(band) {
     .bra_reduced_candidates(candidates, band)
@@ -396,7 +554,8 @@ banded_ridge_model <- function(dataset,
     "banded_ridge_model", dataset, design,
     return_predictions = return_predictions, compute_performance = TRUE,
     outer_folds = outer_folds, inner_folds = tuning$inner_folds,
-    inner_v = tuning$inner_v, candidates = candidates, metric = metric,
+    inner_v = tuning$inner_v, inner_tuning = tuning$inner_tuning,
+    candidates = candidates, metric = metric,
     alpha_scope = alpha_scope, theta_scope = theta_scope,
     fixed_alpha = fixed_alpha, fixed_theta = fixed_theta,
     delta_sets = delta_sets, reduced_candidates = reduced_candidates,

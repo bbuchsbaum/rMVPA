@@ -30,6 +30,18 @@
   as.character(blocks)
 }
 
+#' Drop training rows within a temporal purge gap of any test row
+#'
+#' @keywords internal
+#' @noRd
+.brt_purge_train <- function(train, test, purge) {
+  if (purge > 0L && length(train) && length(test)) {
+    keep <- vapply(train, function(i) all(abs(i - test) > purge), logical(1))
+    train <- train[keep]
+  }
+  train
+}
+
 #' Construct deterministic ordinary, blocked, or purged CV folds
 #'
 #' @keywords internal
@@ -86,11 +98,7 @@
 
   folds <- lapply(seq_len(n_folds), function(k) {
     test <- sort(test_sets[[k]])
-    train <- setdiff(rows, test)
-    if (purge > 0L) {
-      keep <- vapply(train, function(i) all(abs(i - test) > purge), logical(1))
-      train <- train[keep]
-    }
+    train <- .brt_purge_train(setdiff(rows, test), test, purge)
     if (length(train) < 2L) {
       stop("Fold ", k, " has fewer than two training rows after blocking/purge.",
            call. = FALSE)
@@ -136,7 +144,14 @@
       stop(context, " fold ", ii, " splits at least one declared block.", call. = FALSE)
     }
     if (purge > 0L && any(vapply(train, function(i) any(abs(i - test) <= purge), logical(1)))) {
-      stop(context, " fold ", ii, " violates the declared temporal purge gap.", call. = FALSE)
+      stop(
+        context, " fold ", ii, " has training rows within purge = ", purge,
+        " of its test rows. Explicit fold lists are validated as supplied, not ",
+        "purged: remove those training rows yourself, or supply a fold count ",
+        "(or, for outer_crossval, a cross_validation object) so the purge is ",
+        "applied automatically.",
+        call. = FALSE
+      )
     }
     ids[[ii]] <- if (is.null(fold$id)) paste0("fold_", ii) else as.character(fold$id)
     if (length(ids[[ii]]) != 1L || is.na(ids[[ii]]) || !nzchar(ids[[ii]])) {
@@ -312,19 +327,17 @@
   candidate_indices[which(ok & values <= best + threshold)[[1L]]]
 }
 
-.brt_select_candidates <- function(scores,
-                                    candidates,
-                                    alpha_scope,
-                                    theta_scope,
-                                    fixed_alpha = NULL,
-                                    fixed_theta = NULL,
-                                    tie_tolerance = 1e-12) {
+#' Candidate indices that survive the fixed alpha/theta scope constraints
+#'
+#' @keywords internal
+#' @noRd
+.brt_available_candidates <- function(candidates,
+                                      alpha_scope,
+                                      theta_scope,
+                                      fixed_alpha = NULL,
+                                      fixed_theta = NULL) {
   alpha_scope <- .brt_scope(alpha_scope, "alpha_scope")
   theta_scope <- .brt_scope(theta_scope, "theta_scope")
-  if (!is.numeric(tie_tolerance) || length(tie_tolerance) != 1L ||
-      !is.finite(tie_tolerance) || tie_tolerance < 0) {
-    stop("tie_tolerance must be a finite non-negative scalar.", call. = FALSE)
-  }
   keep <- rep(TRUE, length(candidates$alpha))
   if (alpha_scope == "fixed") {
     if (is.null(fixed_alpha)) {
@@ -359,6 +372,27 @@
   }
   available <- which(keep)
   if (!length(available)) stop("No candidate matches the fixed alpha/theta constraints.", call. = FALSE)
+  available
+}
+
+.brt_select_candidates <- function(scores,
+                                    candidates,
+                                    alpha_scope,
+                                    theta_scope,
+                                    fixed_alpha = NULL,
+                                    fixed_theta = NULL,
+                                    tie_tolerance = 1e-12) {
+  alpha_scope <- .brt_scope(alpha_scope, "alpha_scope")
+  theta_scope <- .brt_scope(theta_scope, "theta_scope")
+  if (!is.numeric(tie_tolerance) || length(tie_tolerance) != 1L ||
+      !is.finite(tie_tolerance) || tie_tolerance < 0) {
+    stop("tie_tolerance must be a finite non-negative scalar.", call. = FALSE)
+  }
+  available <- .brt_available_candidates(
+    candidates, alpha_scope, theta_scope,
+    fixed_alpha = fixed_alpha, fixed_theta = fixed_theta
+  )
+  theta_keys <- .brt_theta_keys(candidates$theta)
   v <- ncol(scores)
 
   if (alpha_scope != "shared" && theta_scope != "shared") {
@@ -530,9 +564,13 @@
   v <- ncol(Y)
   blocks <- .brt_validate_blocks(blocks, n)
   candidates <- .brt_validate_candidates(candidates, gx$group_names)
-  if (!is.numeric(inner_v) || length(inner_v) != 1L || !is.finite(inner_v) ||
-      inner_v != as.integer(inner_v) || inner_v < 2L) {
-    stop("inner_v must be an integer of at least two.", call. = FALSE)
+  tune <- !(length(inner_v) == 1L && (is.logical(inner_v) || is.integer(inner_v)) &&
+              is.na(inner_v))
+  if (tune && (!is.numeric(inner_v) || length(inner_v) != 1L ||
+               !is.finite(inner_v) || inner_v != as.integer(inner_v) ||
+               inner_v < 2L)) {
+    stop("inner_v must be an integer of at least two, or NA to skip inner ",
+         "tuning when exactly one candidate is available.", call. = FALSE)
   }
   if (!is.numeric(response_batch_size) || length(response_batch_size) != 1L ||
       is.na(response_batch_size) || response_batch_size <= 0 ||
@@ -556,6 +594,15 @@
   }
   alpha_scope_canonical <- .brt_scope(alpha_scope, "alpha_scope")
   theta_scope_canonical <- .brt_scope(theta_scope, "theta_scope")
+  available <- .brt_available_candidates(
+    candidates, alpha_scope_canonical, theta_scope_canonical,
+    fixed_alpha = fixed_alpha, fixed_theta = fixed_theta
+  )
+  if (!tune && length(available) != 1L) {
+    stop("inner_v = NA skips inner tuning, which requires exactly one ",
+         "candidate under the fixed alpha/theta scopes; ", length(available),
+         " are available.", call. = FALSE)
+  }
   outer_folds <- .brt_validate_folds(
     outer_folds, allowed_rows = seq_len(n), n = n, context = "outer_folds",
     blocks = blocks, purge = as.integer(purge), require_coverage = TRUE
@@ -571,10 +618,12 @@
 
   for (oo in seq_along(outer_folds)) {
     outer <- outer_folds[[oo]]
-    inners <- .brt_inner_folds(
-      inner_folds, oo, outer$train, n, as.integer(inner_v), blocks,
-      as.integer(purge), as.integer(seed)
-    )
+    inners <- if (tune) {
+      .brt_inner_folds(
+        inner_folds, oo, outer$train, n, as.integer(inner_v), blocks,
+        as.integer(purge), as.integer(seed)
+      )
+    } else list()
     c_count <- length(candidates$alpha)
     fold_scores <- array(
       NA_real_, dim = c(length(inners), c_count, v),
@@ -589,7 +638,7 @@
       .brt_preprocessing_receipt(X, Y, fold, feature_groups, gx$group_names)
     })
 
-    for (cc in seq_len(c_count)) {
+    for (cc in if (tune) seq_len(c_count) else integer(0)) {
       args <- .brt_candidate_args(candidates, cc)
       inner_oof <- matrix(NA_real_, length(outer$train), v,
                           dimnames = list(as.character(outer$train), colnames(Y)))
@@ -627,12 +676,14 @@
       }
     }
 
-    objective <- if (metric == "mse") candidate_scores else -candidate_scores
-    selected <- .brt_select_candidates(
-      objective, candidates, alpha_scope_canonical, theta_scope_canonical,
-      fixed_alpha = fixed_alpha, fixed_theta = fixed_theta,
-      tie_tolerance = tie_tolerance
-    )
+    selected <- if (tune) {
+      objective <- if (metric == "mse") candidate_scores else -candidate_scores
+      .brt_select_candidates(
+        objective, candidates, alpha_scope_canonical, theta_scope_canonical,
+        fixed_alpha = fixed_alpha, fixed_theta = fixed_theta,
+        tie_tolerance = tie_tolerance
+      )
+    } else rep(available, v)
 
     outer_pred <- matrix(NA_real_, length(outer$test), v,
                          dimnames = list(as.character(outer$test), colnames(Y)))
@@ -729,6 +780,7 @@
     response_names = colnames(Y),
     group_names = gx$group_names,
     metric = metric,
+    inner_tuning = if (tune) "nested" else "none",
     alpha_scope = alpha_scope_canonical,
     theta_scope = theta_scope_canonical,
     fixed_alpha = fixed_alpha,
