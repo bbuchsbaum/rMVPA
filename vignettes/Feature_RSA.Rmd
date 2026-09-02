@@ -205,6 +205,13 @@ Each row is one ROI. `pattern_correlation` and `rdm_correlation` are usually the
 | `"ridge"` | Effects are plausibly dense; you want fast, stable L2 shrinkage for many voxel responses. | Economy-SVD multi-response ridge. Tune with `lambda_selection`; coefficients are not sparse. |
 | `"glmnet"` | You expect sparse or grouped feature effects and need an elastic-net penalty. | Multivariate Gaussian elastic net via `glmnet`. Tune with `alpha`, `lambda`, `cv_glmnet`. |
 
+All four estimators z-score `F` and `X` inside every training fold by default.
+If your feature matrix is already reduced (PCA scores, whitened embeddings),
+pass `feature_standardize = "center"`: column scaling would otherwise flatten
+its variance profile, and for `"pca"` the constructor warns when that leaves
+a flat spectrum with no direction to order components by. Designs built from
+a similarity matrix `S` already hold such scores and default to `"center"`.
+
 ## How should you select the number of components?
 
 PLS and PCR fit up to `max_comps`; `ncomp_selection` decides how many are used

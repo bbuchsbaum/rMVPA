@@ -26,6 +26,7 @@ feature_rsa_model(
   return_predictions = FALSE,
   max_retained_mb = 1024,
   prediction_overflow = c("error", "none"),
+  feature_standardize = NULL,
   ...
 )
 }
@@ -159,6 +160,16 @@ preferred to a silent out-of-memory failure.}
 \code{max_retained_mb}: \code{"error"} refuses the request;
 \code{"none"} disables prediction retention and records a notice.}
 
+\item{feature_standardize}{How the feature matrix \code{F} is standardized
+inside each training fold: \code{"scale"} centers every column and
+divides it by its training-fold standard deviation; \code{"center"} only
+subtracts the training-fold column means. \code{NULL} (the default)
+resolves to \code{"center"} for designs built from a similarity matrix
+\code{S}, whose feature matrix consists of PCA-like scores, and to
+\code{"scale"} otherwise. Use \code{"center"} whenever the column
+variances of \code{F} are meaningful, e.g. PCA scores or other
+pre-whitened inputs. See the Feature standardization section.}
+
 \item{...}{Additional arguments (currently unused). Passing deprecated
 arguments such as \code{cache_pca} now results in an error.}
 }
@@ -251,6 +262,38 @@ different payload from `return_rdm_vectors` and from the classification
 `prediction_table`. Overlapping searchlights are refused because they
 would retain multiple copies of each voxel.
 }
+\section{Feature standardization}{
+
+Inside every training fold the neural responses \code{X} are always
+z-scored column-wise, and by default the feature matrix \code{F} is too
+(\code{feature_standardize = "scale"}). Held-out rows are transformed with
+the training-fold means and scales, and predictions are returned on the
+original response scale. This differs from the default of
+\code{pls::pcr()} (\code{scale = NULL}), so \code{method = "pca"} is
+correlation-PCR rather than covariance-PCR.
+
+Column scaling discards the variance profile of \code{F}. That is harmless
+for raw feature spaces but degenerate for inputs whose column variances
+carry the structure, such as PCA scores or any whitened matrix: after
+scaling every direction has unit variance, PCA component ordering is set by
+noise, and \code{F = U \%*\% S} gives exactly the same fit as
+\code{F = U}. Use \code{feature_standardize = "center"} for such inputs; it
+centers \code{F} per training fold without rescaling columns, and applies
+to the PLS/PCA, ridge, and glmnet paths alike, including nested blocked
+tuning. Designs built from a similarity matrix \code{S} store exactly such
+scores (eigenvectors weighted by the square roots of the eigenvalues), so
+they default to \code{"center"}.
+
+For \code{method = "pca"} under column scaling, the constructor inspects
+the correlation spectrum of \code{F} and warns when it is flat (condition
+number within two percent of one), the signature of columns that are
+exactly orthogonal on these rows, such as PCA scores computed from them.
+Scores computed on a superset of rows, or otherwise nearly whitened inputs,
+are not detected, so use \code{"center"} for any PCA-score input whether or
+not a warning appears. The diagnostic is stored in
+\code{model$feature_spectrum}.
+}
+
 \examples{
 \donttest{
   set.seed(79)

@@ -216,8 +216,47 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' @param prediction_overflow What to do when the estimate exceeds
 #'   \code{max_retained_mb}: \code{"error"} refuses the request;
 #'   \code{"none"} disables prediction retention and records a notice.
+#' @param feature_standardize How the feature matrix \code{F} is standardized
+#'   inside each training fold: \code{"scale"} centers every column and
+#'   divides it by its training-fold standard deviation; \code{"center"} only
+#'   subtracts the training-fold column means. \code{NULL} (the default)
+#'   resolves to \code{"center"} for designs built from a similarity matrix
+#'   \code{S}, whose feature matrix consists of PCA-like scores, and to
+#'   \code{"scale"} otherwise. Use \code{"center"} whenever the column
+#'   variances of \code{F} are meaningful, e.g. PCA scores or other
+#'   pre-whitened inputs. See the Feature standardization section.
 #' @param ... Additional arguments (currently unused). Passing deprecated
 #'   arguments such as \code{cache_pca} now results in an error.
+#'
+#' @section Feature standardization:
+#' Inside every training fold the neural responses \code{X} are always
+#' z-scored column-wise, and by default the feature matrix \code{F} is too
+#' (\code{feature_standardize = "scale"}). Held-out rows are transformed with
+#' the training-fold means and scales, and predictions are returned on the
+#' original response scale. This differs from the default of
+#' \code{pls::pcr()} (\code{scale = NULL}), so \code{method = "pca"} is
+#' correlation-PCR rather than covariance-PCR.
+#'
+#' Column scaling discards the variance profile of \code{F}. That is harmless
+#' for raw feature spaces but degenerate for inputs whose column variances
+#' carry the structure, such as PCA scores or any whitened matrix: after
+#' scaling every direction has unit variance, PCA component ordering is set by
+#' noise, and \code{F = U \%*\% S} gives exactly the same fit as
+#' \code{F = U}. Use \code{feature_standardize = "center"} for such inputs; it
+#' centers \code{F} per training fold without rescaling columns, and applies
+#' to the PLS/PCA, ridge, and glmnet paths alike, including nested blocked
+#' tuning. Designs built from a similarity matrix \code{S} store exactly such
+#' scores (eigenvectors weighted by the square roots of the eigenvalues), so
+#' they default to \code{"center"}.
+#'
+#' For \code{method = "pca"} under column scaling, the constructor inspects
+#' the correlation spectrum of \code{F} and warns when it is flat (condition
+#' number within two percent of one), the signature of columns that are
+#' exactly orthogonal on these rows, such as PCA scores computed from them.
+#' Scores computed on a superset of rows, or otherwise nearly whitened inputs,
+#' are not detected, so use \code{"center"} for any PCA-score input whether or
+#' not a warning appears. The diagnostic is stored in
+#' \code{model$feature_spectrum}.
 #'
 #' @return A \code{feature_rsa_model} object (S3 class).
 #'
@@ -351,6 +390,7 @@ feature_rsa_model <- function(dataset,
                                return_predictions = FALSE,
                                max_retained_mb = 1024,
                                prediction_overflow = c("error", "none"),
+                               feature_standardize = NULL,
                                ...) {
   
   method <- match.arg(method)
@@ -361,6 +401,13 @@ feature_rsa_model <- function(dataset,
   permute_by <- match.arg(permute_by)
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "feature_rsa_design"))
+  # A design built from a similarity matrix S holds PCA-like scores, whose
+  # column variances are the eigenvalues; scaling them away is exactly the
+  # degenerate case, so such designs default to centering only.
+  if (is.null(feature_standardize)) {
+    feature_standardize <- if (!is.null(design$S)) "center" else "scale"
+  }
+  feature_standardize <- match.arg(feature_standardize, c("scale", "center"))
   extra_args <- list(...)
   if ("cache_pca" %in% names(extra_args)) {
     stop("`cache_pca` is no longer supported. PCA caching was removed; use `ncomp_selection` controls for `method='pca'`.")
@@ -532,6 +579,25 @@ feature_rsa_model <- function(dataset,
   
   # Single "max_comps" in use
   model_spec$max_comps <- max_comps
+  model_spec$feature_standardize <- feature_standardize
+
+  # Column scaling discards the variance profile of F. Warn when that leaves
+  # PCA/PCR with no dominant direction to order components by.
+  spectrum <- NULL
+  if (component_method && feature_standardize == "scale") {
+    spectrum <- .feature_rsa_spectrum_diagnostic(design$F)
+    if (method == "pca" && !is.null(spectrum) && isTRUE(spectrum$flat)) {
+      warning(sprintf(paste0(
+        "feature_rsa_model: after per-fold standardization the correlation ",
+        "spectrum of F is flat (condition number %.3f). Its columns are ",
+        "orthogonal with equal variance once scaled, as with PCA scores or ",
+        "whitened features, so PCA/PCR component ordering is arbitrary and ",
+        "ncomp selection is degenerate. If the column variances of F are ",
+        "meaningful, use feature_standardize = \"center\"."
+      ), spectrum$condition_number), call. = FALSE)
+    }
+  }
+  model_spec["feature_spectrum"] <- list(spectrum)
 
   # Component selection strategy (for PLS/PCA)
   model_spec$ncomp_selection <- ncomp_selection
@@ -1355,12 +1421,74 @@ feature_rsa_model <- function(dataset,
 }
 
 #' @noRd
-.standardize <- function(X) {
+.standardize <- function(X, method = c("scale", "center")) {
+  method <- match.arg(method)
   cm <- colMeans(X)
-  csd <- .feature_rsa_col_sds(X)
-  csd[csd == 0] <- 1
+  if (method == "scale") {
+    csd <- .feature_rsa_col_sds(X)
+    csd[csd == 0] <- 1
+  } else {
+    csd <- stats::setNames(rep(1, ncol(X)), colnames(X))
+  }
   X_sc <- scale(X, center=cm, scale=csd)
   list(X_sc = X_sc, mean = cm, sd = csd)
+}
+
+
+#' Is the correlation spectrum of F flat once its columns are scaled?
+#'
+#' Eigenvalues of the column-correlation matrix of F, accumulated over row
+#' chunks so no full-size copy is made. A condition number of one means every
+#' direction carries the same variance after column scaling, so PCA/PCR
+#' component ordering is arbitrary. Exactly orthogonal inputs such as PCA
+#' scores computed on these rows, or orthogonal equal-variance designs, give
+#' a condition number of one; noise and structured feature spaces do not, and
+#' PCA scores computed on a superset of rows are not detected. Columns are
+#' thinned deterministically beyond `max_cols`, which preserves exact
+#' orthogonality; rows are never thinned because that would not.
+#' @noRd
+.feature_rsa_spectrum_diagnostic <- function(F,
+                                             max_cols = 1000L,
+                                             chunk_rows = 4096L,
+                                             flat_condition = 1.02) {
+  F <- as.matrix(F)
+  n <- nrow(F)
+  p <- ncol(F)
+  if (is.null(n) || n < 3L || p < 2L) return(NULL)
+  cols <- if (p > max_cols) {
+    unique(as.integer(round(seq(1, p, length.out = max_cols))))
+  } else seq_len(p)
+  chunks <- split(seq_len(n), ceiling(seq_len(n) / as.integer(chunk_rows)))
+  sums <- numeric(length(cols))
+  for (idx in chunks) {
+    block <- F[idx, cols, drop = FALSE]
+    if (any(!is.finite(block))) return(NULL)
+    sums <- sums + colSums(block)
+  }
+  means <- sums / n
+  C <- matrix(0, length(cols), length(cols))
+  for (idx in chunks) {
+    C <- C + crossprod(sweep(F[idx, cols, drop = FALSE], 2L, means, "-"))
+  }
+  d <- diag(C)
+  keep <- is.finite(d) & d > 0
+  if (sum(keep) < 2L) return(NULL)
+  C <- C[keep, keep, drop = FALSE]
+  s <- 1 / sqrt(diag(C))
+  R <- C * tcrossprod(s)
+  lambda <- eigen(R, symmetric = TRUE, only.values = TRUE)$values
+  lam_max <- lambda[[1L]]
+  lam_min <- max(lambda[[length(lambda)]], 0)
+  condition <- if (lam_min > 0) lam_max / lam_min else Inf
+  list(
+    largest_eigenvalue = lam_max,
+    smallest_eigenvalue = lam_min,
+    condition_number = condition,
+    flat_condition = flat_condition,
+    n_rows = n,
+    n_cols = ncol(C),
+    flat = is.finite(condition) && condition <= flat_condition
+  )
 }
 
 
@@ -1675,11 +1803,13 @@ feature_rsa_model <- function(dataset,
                                              "mse",
                                              "pattern_discrimination",
                                              "pattern_rank_percentile"
-                                           )) {
+                                           ),
+                                           feature_standardize = c("scale", "center")) {
   predictors <- as.matrix(predictors)
   responses <- as.matrix(responses)
   method <- match.arg(method, c("pls", "pca"))
   objective <- match.arg(objective)
+  feature_standardize <- match.arg(feature_standardize)
   ncomp <- as.integer(ncomp)
   nobj <- nrow(predictors)
 
@@ -1745,7 +1875,7 @@ feature_rsa_model <- function(dataset,
     train_predictors <- predictors[train_idx, , drop = FALSE]
     train_responses <- responses[train_idx, , drop = FALSE]
     if (isTRUE(fold_standardize)) {
-      sf <- .standardize(train_predictors)
+      sf <- .standardize(train_predictors, feature_standardize)
       sx <- .standardize(train_responses)
       train_predictors <- sf$X_sc
       train_responses <- sx$X_sc
@@ -1862,7 +1992,8 @@ feature_rsa_model <- function(dataset,
                                         ncomp,
                                         method,
                                         segments,
-                                        fold_standardize = FALSE) {
+                                        fold_standardize = FALSE,
+                                        feature_standardize = "scale") {
   .feature_rsa_cv_segment_scores(
     predictors = predictors,
     responses = responses,
@@ -1870,7 +2001,8 @@ feature_rsa_model <- function(dataset,
     method = method,
     segments = segments,
     fold_standardize = fold_standardize,
-    objective = "mse"
+    objective = "mse",
+    feature_standardize = feature_standardize
   )
 }
 
@@ -2262,10 +2394,12 @@ feature_rsa_model <- function(dataset,
 .feature_rsa_ridge_block_mse <- function(features,
                                          responses,
                                          lambdas,
-                                         segments) {
+                                         segments,
+                                         feature_standardize = c("scale", "center")) {
   features <- as.matrix(features)
   responses <- as.matrix(responses)
   lambdas <- .feature_rsa_ridge_lambdas(lambdas)
+  feature_standardize <- match.arg(feature_standardize)
   n <- nrow(features)
   if (n != nrow(responses)) {
     stop("feature RSA ridge blocked CV requires matching row counts.",
@@ -2298,7 +2432,7 @@ feature_rsa_model <- function(dataset,
       stop("feature RSA ridge blocked CV has fewer than two training rows.",
            call. = FALSE)
     }
-    sf <- .standardize(features[train, , drop = FALSE])
+    sf <- .standardize(features[train, , drop = FALSE], feature_standardize)
     sx <- .standardize(responses[train, , drop = FALSE])
     test_features <- scale(
       features[test, , drop = FALSE],
@@ -2337,11 +2471,13 @@ feature_rsa_model <- function(dataset,
                                                     objective = c(
                                                       "pattern_discrimination",
                                                       "pattern_rank_percentile"
-                                                    )) {
+                                                    ),
+                                                    feature_standardize = c("scale", "center")) {
   features <- as.matrix(features)
   responses <- as.matrix(responses)
   lambdas <- .feature_rsa_ridge_lambdas(lambdas)
   objective <- match.arg(objective)
+  feature_standardize <- match.arg(feature_standardize)
   n <- nrow(features)
   if (n != nrow(responses)) {
     stop("feature RSA ridge blocked pattern tuning requires matching row counts.",
@@ -2383,7 +2519,7 @@ feature_rsa_model <- function(dataset,
       stop("feature RSA ridge blocked pattern tuning has fewer than two training rows.",
            call. = FALSE)
     }
-    sf <- .standardize(features[train, , drop = FALSE])
+    sf <- .standardize(features[train, , drop = FALSE], feature_standardize)
     sx <- .standardize(responses[train, , drop = FALSE])
     test_features <- scale(
       features[test, , drop = FALSE],
@@ -2439,13 +2575,15 @@ feature_rsa_model <- function(dataset,
 .feature_rsa_ridge_block_pattern_discrimination <- function(features,
                                                              responses,
                                                              lambdas,
-                                                             segments) {
+                                                             segments,
+                                                             feature_standardize = "scale") {
   .feature_rsa_ridge_block_pattern_scores(
     features,
     responses,
     lambdas,
     segments,
-    objective = "pattern_discrimination"
+    objective = "pattern_discrimination",
+    feature_standardize = feature_standardize
   )
 }
 
@@ -2455,13 +2593,15 @@ feature_rsa_model <- function(dataset,
 .feature_rsa_ridge_block_pattern_rank <- function(features,
                                                   responses,
                                                   lambdas,
-                                                  segments) {
+                                                  segments,
+                                                  feature_standardize = "scale") {
   .feature_rsa_ridge_block_pattern_scores(
     features,
     responses,
     lambdas,
     segments,
-    objective = "pattern_rank_percentile"
+    objective = "pattern_rank_percentile",
+    feature_standardize = feature_standardize
   )
 }
 
@@ -3259,6 +3399,9 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
   observation_indices <- training_context$observation_indices
   
   result <- list(method = obj$method)
+  feature_standardize <- match.arg(obj$feature_standardize %||% "scale",
+                                   c("scale", "center"))
+  result$feature_standardize <- feature_standardize
   
   # Check for minimum data size
   if (nrow(X) < 2 || ncol(X) < 1 || nrow(Fsub) < 2 || ncol(Fsub) < 1) {
@@ -3299,7 +3442,7 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
       }
 
       sx <- .standardize(X)
-      sf <- .standardize(Fsub)
+      sf <- .standardize(Fsub, feature_standardize)
 
       if (any(sx$sd < 1e-10) || any(sf$sd < 1e-10)) {
         stop("Near zero variance detected after standardization.")
@@ -3334,7 +3477,8 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
             method = obj$method,
             segments = segments,
             fold_standardize = blocked_selection,
-            objective = ncomp_objective
+            objective = ncomp_objective,
+            feature_standardize = feature_standardize
           )
           nc <- .feature_rsa_select_from_segment_scores(
             segment_scores,
@@ -3432,7 +3576,7 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
       }
 
       sx <- .standardize(X)
-      sf <- .standardize(Fsub)
+      sf <- .standardize(Fsub, feature_standardize)
       if (any(!is.finite(sx$X_sc)) || any(!is.finite(sf$X_sc)) ||
           any(sx$sd < 1e-10) || any(sf$sd < 1e-10)) {
         stop("Near zero or non-finite variance detected after standardization.")
@@ -3484,15 +3628,18 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
           scores <- switch(
             objective,
             mse = .feature_rsa_ridge_block_mse(
-              Fsub, X, lambdas, segments
+              Fsub, X, lambdas, segments,
+              feature_standardize = feature_standardize
             ),
             pattern_discrimination =
               -.feature_rsa_ridge_block_pattern_discrimination(
-                Fsub, X, lambdas, segments
+                Fsub, X, lambdas, segments,
+                feature_standardize = feature_standardize
               ),
             pattern_rank_percentile =
               1 - .feature_rsa_ridge_block_pattern_rank(
-                Fsub, X, lambdas, segments
+                Fsub, X, lambdas, segments,
+                feature_standardize = feature_standardize
               ),
             stop(sprintf("Unknown ridge lambda objective: %s", objective))
           )
@@ -3557,7 +3704,7 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
     glm_result <- tryCatch({
         # Standardize X and F
         sx <- .standardize(X)
-        sf <- .standardize(Fsub)
+        sf <- .standardize(Fsub, feature_standardize)
         
         if (any(sx$sd < 1e-10) || any(sf$sd < 1e-10)) { # Check variance
              stop("Zero variance detected in X or F after standardization.")
@@ -4310,6 +4457,8 @@ print.feature_rsa_model <- function(x, ...) {
   
   # Display the method used (e.g., pls, pca, or glmnet)
   cat(crayon::bold(crayon::green("Method: ")), x$method, "\n")
+  cat(crayon::bold(crayon::green("Feature standardization: ")),
+      x$feature_standardize %||% "scale", "\n")
   cat(
     crayon::bold(crayon::green("Return predictions:     ")),
     if (isTRUE(x$return_predictions)) "Yes" else "No",
