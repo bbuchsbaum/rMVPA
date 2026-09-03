@@ -185,11 +185,13 @@ Feature RSA models analyze how well a feature matrix \code{F} (defined in the `d
 relates to neural data \code{X}. The `max_comps` parameter, inherited from the `design` object,
 sets an upper limit on the number of components fitted:
   - \strong{pls}: PLS regression using the configured \pkg{pls} numerical
-    kernel. Fits up to `max_comps` components; the actual number used for
+    kernel. Fits up to `max_comps` components, capped at the numerical rank
+    of the training-fold feature matrix; the actual number used for
     prediction is chosen by \code{ncomp_selection}.
   - \strong{pca}: Principal Component Regression using the configured
     \pkg{pls} PCR kernel (SVD-PCR by default). Fits up to `max_comps`
-    components; selection is controlled by \code{ncomp_selection}.
+    components, capped in the same way; selection is controlled by
+    \code{ncomp_selection}.
   - \strong{ridge}: Multi-response ridge regression using one economy SVD
     per training matrix. This is a distinct estimator, not an approximation
     to PLS or elastic net. Its penalty is selected by \code{lambda_selection}.
@@ -292,6 +294,22 @@ Scores computed on a superset of rows, or otherwise nearly whitened inputs,
 are not detected, so use \code{"center"} for any PCA-score input whether or
 not a warning appears. The diagnostic is stored in
 \code{model$feature_spectrum}.
+
+Degenerate columns of \code{F} are treated according to what the requested
+standardization actually does. Under \code{"scale"} a column that is
+constant, or near-constant relative to the widest column, cannot be divided
+by its standard deviation: a column that is constant over every row is
+refused here, by the constructor, and one that is constant only within some
+training fold is refused by that fit, in both cases with a message naming
+how many such columns there are and which is worst. Constancy is judged
+against each column's own magnitude, never against the other columns' or
+against an absolute threshold, so \code{F} may mix units freely and
+rescaling it never changes the outcome. Under \code{"center"} no division
+takes place, so those columns are accepted; for \code{method = "pls"} and
+\code{method = "pca"} the number of components is then capped at the
+numerical rank of the feature matrix, both for the final fit and within
+each segment of blocked or leave-one-out component selection, which is what
+keeps undefined directions out of the fit and out of the tuning scores.
 }
 
 \examples{

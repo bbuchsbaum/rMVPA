@@ -212,6 +212,21 @@ its variance profile, and for `"pca"` the constructor warns when that leaves
 a flat spectrum with no direction to order components by. Designs built from
 a similarity matrix `S` already hold such scores and default to `"center"`.
 
+A constant column of `F` is only a problem for `"scale"`, which would have to
+divide by a standard deviation of zero. A column that is constant throughout
+is refused by `feature_rsa_model()` itself, before any ROI runs; one that is
+constant only within a training fold is refused by that fit. Either way the
+message names how many such columns there are and which is worst. Constancy
+is judged against each column's own magnitude, so `F` may mix units freely
+and rescaling it cannot change whether an analysis runs.
+
+Under `"center"` nothing is divided, so those columns are accepted, and
+`"pls"` and `"pca"` cap the number of components at the numerical rank of the
+feature matrix — for the final fit, and separately within each segment of
+`"blocked"` or `"loo"` component selection, so a column whose variance sits
+in a held-out block cannot contribute a meaningless component or a
+meaningless tuning score.
+
 ## How should you select the number of components?
 
 PLS and PCR fit up to `max_comps`; `ncomp_selection` decides how many are used
@@ -224,7 +239,7 @@ component count.
 | `"blocked"` | One fit per training block, plus the final fit | Leave-one-block-out MSE or pattern-relative performance; each block contributes one score | Preferred when runs, sessions, subjects, or another genuine independence unit are available |
 | `"loo"` (default) | One fit per training observation, plus the final fit | Leave-one-observation-out MSE | Backward-compatible choice for exchangeable, independent rows; expensive for long designs |
 | `"pve"` | One fit | Cumulative predictor variance explained, stopping at `pve_threshold` (default 0.9) | A fast heuristic when held-out tuning is not required |
-| `"max"` | One fit | No tuning; always use the available `max_comps` | A fixed-complexity analysis chosen in advance |
+| `"max"` | One fit | No tuning; use `max_comps`, capped at the numerical rank of `F` | A fixed-complexity analysis chosen in advance |
 
 `ncomp_objective = "mse"` remains the default in this release, preserving the
 existing selector and its one-standard-error rule: choose the fewest components

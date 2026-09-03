@@ -258,6 +258,22 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' not a warning appears. The diagnostic is stored in
 #' \code{model$feature_spectrum}.
 #'
+#' Degenerate columns of \code{F} are treated according to what the requested
+#' standardization actually does. Under \code{"scale"} a column that is
+#' constant, or near-constant relative to the widest column, cannot be divided
+#' by its standard deviation: a column that is constant over every row is
+#' refused here, by the constructor, and one that is constant only within some
+#' training fold is refused by that fit, in both cases with a message naming
+#' how many such columns there are and which is worst. Constancy is judged
+#' against each column's own magnitude, never against the other columns' or
+#' against an absolute threshold, so \code{F} may mix units freely and
+#' rescaling it never changes the outcome. Under \code{"center"} no division
+#' takes place, so those columns are accepted; for \code{method = "pls"} and
+#' \code{method = "pca"} the number of components is then capped at the
+#' numerical rank of the feature matrix, both for the final fit and within
+#' each segment of blocked or leave-one-out component selection, which is what
+#' keeps undefined directions out of the fit and out of the tuning scores.
+#'
 #' @return A \code{feature_rsa_model} object (S3 class).
 #'
 #' @seealso \code{\link{feature_rsa_predictions}}, \code{\link{feature_rsa_rdm_vectors}}
@@ -291,11 +307,13 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' relates to neural data \code{X}. The `max_comps` parameter, inherited from the `design` object,
 #' sets an upper limit on the number of components fitted:
 #'   - \strong{pls}: PLS regression using the configured \pkg{pls} numerical
-#'     kernel. Fits up to `max_comps` components; the actual number used for
+#'     kernel. Fits up to `max_comps` components, capped at the numerical rank
+#'     of the training-fold feature matrix; the actual number used for
 #'     prediction is chosen by \code{ncomp_selection}.
 #'   - \strong{pca}: Principal Component Regression using the configured
 #'     \pkg{pls} PCR kernel (SVD-PCR by default). Fits up to `max_comps`
-#'     components; selection is controlled by \code{ncomp_selection}.
+#'     components, capped in the same way; selection is controlled by
+#'     \code{ncomp_selection}.
 #'   - \strong{ridge}: Multi-response ridge regression using one economy SVD
 #'     per training matrix. This is a distinct estimator, not an approximation
 #'     to PLS or elastic net. Its penalty is selected by \code{lambda_selection}.
@@ -580,6 +598,18 @@ feature_rsa_model <- function(dataset,
   # Single "max_comps" in use
   model_spec$max_comps <- max_comps
   model_spec$feature_standardize <- feature_standardize
+
+  # A column of F that cannot be standardized at all fails in every fold of
+  # every ROI, and a whole job of failed ROIs only shows up as an all-NA
+  # performance table. Say it once, here, while the column can still be named.
+  .feature_rsa_assert_columns_usable(
+    design$F, "Feature matrix F",
+    check_constant = identical(feature_standardize, "scale"),
+    remedy = paste0(
+      "feature_standardize = \"scale\" cannot scale them; drop the ",
+      "columns or use feature_standardize = \"center\"."
+    )
+  )
 
   # Column scaling discards the variance profile of F. Warn when that leaves
   # PCA/PCR with no dominant direction to order components by.
@@ -1435,6 +1465,138 @@ feature_rsa_model <- function(dataset,
 }
 
 
+#' Refuse a matrix whose columns the requested standardization cannot use
+#'
+#' Two failures are worth stopping for: non-finite entries, and columns with
+#' no spread to divide by when the caller is about to divide by their standard
+#' deviation. The second test compares each column's standard deviation with
+#' that column's own magnitude, never with the other columns'. An absolute
+#' threshold is a statement about the units of the matrix rather than about
+#' its conditioning, and a threshold relative to the widest column is a
+#' statement about how the columns are scaled against each other - a feature
+#' matrix may legitimately mix units, which is exactly what
+#' `feature_standardize = "scale"` is for. Only a column whose spread is at
+#' the level of floating-point noise in its own values is unusable: centring
+#' it leaves rounding error, and scaling then amplifies that to unit variance.
+#' Callers that only centre a matrix pass `check_constant = FALSE`; a constant
+#' column is inert under centring.
+#'
+#' @param M Numeric matrix (samples x columns).
+#' @param label How the matrix is named in the error message.
+#' @param check_constant Whether constant columns are a failure.
+#' @param rel_tol Smallest usable ratio of a column's standard deviation to
+#'   its own magnitude. The default is about four orders of magnitude above
+#'   double precision, so a column carrying real information passes and one
+#'   that is constant up to rounding does not.
+#' @param remedy Sentence appended to the degenerate-column error message.
+#' @return `invisible(NULL)`; called for the error it raises.
+#' @noRd
+.feature_rsa_assert_columns_usable <- function(M,
+                                               label,
+                                               check_constant = TRUE,
+                                               rel_tol = 1e-12,
+                                               remedy = NULL) {
+  M <- as.matrix(M)
+  if (!ncol(M)) {
+    stop(sprintf("%s has no columns.", label), call. = FALSE)
+  }
+  if (nrow(M) < 2L) {
+    stop(sprintf("%s has %d row(s); at least 2 are required.",
+                 label, nrow(M)), call. = FALSE)
+  }
+  sds <- .feature_rsa_col_sds(M)
+  describe <- function(j) {
+    nms <- colnames(M)
+    if (!is.null(nms) && !is.na(nms[[j]]) && nzchar(nms[[j]])) {
+      sprintf("column %d ('%s')", j, nms[[j]])
+    } else {
+      sprintf("column %d", j)
+    }
+  }
+
+  nonfinite <- which(!is.finite(sds))
+  if (length(nonfinite)) {
+    stop(sprintf(
+      paste0("%s has %d of %d columns with non-finite values (first: %s). ",
+             "Remove or impute NA/NaN/Inf entries before fitting."),
+      label, length(nonfinite), ncol(M), describe(nonfinite[[1L]])),
+      call. = FALSE)
+  }
+  if (!isTRUE(check_constant)) {
+    return(invisible(NULL))
+  }
+
+  # A column of zeros has magnitude zero, and 0 <= rel_tol * 0 marks it
+  # degenerate, as it should be.
+  magnitude <- pmax(abs(colMeans(M)), sds)
+  degenerate <- which(sds <= rel_tol * magnitude)
+  if (length(degenerate)) {
+    ratio <- ifelse(magnitude[degenerate] > 0,
+                    sds[degenerate] / magnitude[degenerate], 0)
+    worst <- degenerate[[which.min(ratio)]]
+    stop(sprintf(
+      paste0("%s has %d of %d columns that are constant, or vary only at the ",
+             "level of floating-point noise (worst: %s, sd %.3g against a ",
+             "column magnitude of %.3g).%s"),
+      label, length(degenerate), ncol(M), describe(worst),
+      sds[[worst]], magnitude[[worst]],
+      if (is.null(remedy)) "" else paste0(" ", remedy)),
+      call. = FALSE)
+  }
+
+  invisible(NULL)
+}
+
+
+#' How many components of a standardized feature matrix are defined
+#'
+#' PLS and PCR are asked for a fixed number of components, but only as many as
+#' the numerical rank of the predictor block actually exist. Beyond it the pls
+#' kernels return NaN coefficients when a column is constant, and coefficients
+#' around 1e15 when a column is a combination of the others; both reach the
+#' caller as an all-NA performance table rather than as an error. The rank is
+#' the LINPACK pivoted-QR rank used by `lm()` to detect aliased predictors, so
+#' it is invariant to rescaling the matrix and does not fire on merely
+#' correlated columns.
+#'
+#' @param M Numeric matrix, already centred by `.standardize()`.
+#' @return Integer rank, `0L` for an empty or wholly degenerate matrix.
+#' @noRd
+.feature_rsa_component_rank <- function(M) {
+  M <- as.matrix(M)
+  if (!length(M) || !nrow(M) || !ncol(M)) {
+    return(0L)
+  }
+  as.integer(qr(M)$rank)
+}
+
+
+#' Screen the two matrices a feature RSA fit is about to standardize
+#'
+#' `X` is always z-scored, so a constant voxel has to be refused. `Fsub` is
+#' only divided by its column standard deviations under
+#' `feature_standardize = "scale"`; under `"center"` a constant column is
+#' inert, and for the component methods the rank cap in `train_model()` keeps
+#' it out of the fitted components.
+#' @noRd
+.feature_rsa_assert_training_inputs <- function(X, Fsub, feature_standardize) {
+  .feature_rsa_assert_columns_usable(
+    X, "Brain data X",
+    remedy = "Mask out constant voxels before fitting."
+  )
+  .feature_rsa_assert_columns_usable(
+    Fsub, "Feature matrix F",
+    check_constant = identical(feature_standardize, "scale"),
+    remedy = paste0(
+      "feature_standardize = \"scale\" cannot scale them; drop the ",
+      "columns or use feature_standardize = \"center\"."
+    )
+  )
+  invisible(NULL)
+}
+
+
+
 #' Is the correlation spectrum of F flat once its columns are scaled?
 #'
 #' Eigenvalues of the column-correlation matrix of F, accumulated over row
@@ -1893,10 +2055,21 @@ feature_rsa_model <- function(dataset,
       test_predictors <- predictors[test_idx, , drop = FALSE]
       observed_test <- responses[test_idx, , drop = FALSE]
     }
+    # Only as many components as this segment's own training rows define.
+    # A column whose variance sits in the held-out block is constant here,
+    # and pls answers for the components past that with NaN or ~1e30
+    # coefficients, which would enter the segment scores as if they were
+    # comparable numbers.
+    segment_ncomp <- min(
+      ncomp_cv, .feature_rsa_component_rank(train_predictors)
+    )
+    if (segment_ncomp < 1L) {
+      next
+    }
     fit <- .feature_rsa_fit_kernel(
       train_predictors,
       train_responses,
-      ncomp = ncomp_cv,
+      ncomp = segment_ncomp,
       method = method
     )
 
@@ -1917,15 +2090,18 @@ feature_rsa_model <- function(dataset,
                                 target_bytes > 0) {
       max(
         1L,
-        min(ncomp_cv, as.integer(floor(target_bytes / bytes_per_component)))
+        min(
+          segment_ncomp,
+          as.integer(floor(target_bytes / bytes_per_component))
+        )
       )
     } else {
-      ncomp_cv
+      segment_ncomp
     }
-    component_starts <- seq.int(1L, ncomp_cv, by = component_block_size)
+    component_starts <- seq.int(1L, segment_ncomp, by = component_block_size)
     for (component_start in component_starts) {
       component_end <- min(
-        ncomp_cv,
+        segment_ncomp,
         component_start + component_block_size - 1L
       )
       component_index <- seq.int(component_start, component_end)
@@ -2017,7 +2193,15 @@ feature_rsa_model <- function(dataset,
     return(NA_integer_)
   }
   mean_scores <- colMeans(segment_scores, na.rm = TRUE)
-  valid <- is.finite(mean_scores)
+  # Compare only component counts every segment could actually score. A
+  # segment whose training rows do not define that many components leaves a
+  # non-finite entry, and averaging over the segments that do would rank that
+  # component on a different set of folds from its competitors.
+  complete <- colSums(!is.finite(segment_scores)) == 0L
+  valid <- is.finite(mean_scores) & complete
+  if (!any(valid)) {
+    valid <- is.finite(mean_scores)
+  }
   if (!any(valid)) {
     return(NA_integer_)
   }
@@ -3434,26 +3618,32 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
     }
 
     pls_res <- tryCatch({
-      # Check for near-zero variance before standardization
-      var_X <- apply(X, 2, var, na.rm = TRUE)
-      var_F <- apply(Fsub, 2, var, na.rm = TRUE)
-      if (any(var_X < 1e-10) || any(var_F < 1e-10)) {
-        stop("Near zero variance detected in X or F before standardization.")
-      }
+      .feature_rsa_assert_training_inputs(X, Fsub, feature_standardize)
 
       sx <- .standardize(X)
       sf <- .standardize(Fsub, feature_standardize)
 
-      if (any(sx$sd < 1e-10) || any(sf$sd < 1e-10)) {
-        stop("Near zero variance detected after standardization.")
+      if (any(!is.finite(sx$X_sc)) || any(!is.finite(sf$X_sc))) {
+        stop("Non-finite values detected in X or F after standardization.")
       }
 
-      max_k_possible <- min(nrow(sf$X_sc) - 1, ncol(sf$X_sc))
+      structural_k <- min(nrow(sf$X_sc) - 1L, ncol(sf$X_sc))
+      f_rank <- .feature_rsa_component_rank(sf$X_sc)
+      max_k_possible <- min(structural_k, f_rank)
       k <- min(obj$max_comps, max_k_possible)
 
       if (k < 1) {
-        stop(sprintf("Number of components (%d) < 1 (max_comps: %d, max_possible: %d).",
-                     k, obj$max_comps, max_k_possible))
+        stop(sprintf(
+          paste0("Number of components (%d) < 1 (max_comps: %d, rows: %d, ",
+                 "columns: %d, numerical rank of F: %d)."),
+          k, obj$max_comps, nrow(sf$X_sc), ncol(sf$X_sc), f_rank))
+      }
+      if (f_rank < structural_k && obj$max_comps > f_rank) {
+        futile.logger::flog.debug(
+          paste0("train_model (%s): F has numerical rank %d of %d possible ",
+                 "components; fitting %d instead of %d."),
+          method_label, f_rank, structural_k, k,
+          min(obj$max_comps, structural_k))
       }
 
       # --- Component selection (always >= 1) ---
@@ -3568,18 +3758,12 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
 
   } else if (obj$method == "ridge") {
     ridge_result <- tryCatch({
-      var_X <- apply(X, 2L, stats::var, na.rm = TRUE)
-      var_F <- apply(Fsub, 2L, stats::var, na.rm = TRUE)
-      if (any(!is.finite(var_X)) || any(!is.finite(var_F)) ||
-          any(var_X < 1e-10) || any(var_F < 1e-10)) {
-        stop("Near zero or non-finite variance detected in X or F before standardization.")
-      }
+      .feature_rsa_assert_training_inputs(X, Fsub, feature_standardize)
 
       sx <- .standardize(X)
       sf <- .standardize(Fsub, feature_standardize)
-      if (any(!is.finite(sx$X_sc)) || any(!is.finite(sf$X_sc)) ||
-          any(sx$sd < 1e-10) || any(sf$sd < 1e-10)) {
-        stop("Near zero or non-finite variance detected after standardization.")
+      if (any(!is.finite(sx$X_sc)) || any(!is.finite(sf$X_sc))) {
+        stop("Non-finite values detected in X or F after standardization.")
       }
 
       lambdas <- .feature_rsa_ridge_lambdas(obj$lambda)
@@ -3703,11 +3887,12 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
     #
     glm_result <- tryCatch({
         # Standardize X and F
+        .feature_rsa_assert_training_inputs(X, Fsub, feature_standardize)
         sx <- .standardize(X)
         sf <- .standardize(Fsub, feature_standardize)
-        
-        if (any(sx$sd < 1e-10) || any(sf$sd < 1e-10)) { # Check variance
-             stop("Zero variance detected in X or F after standardization.")
+
+        if (any(!is.finite(sx$X_sc)) || any(!is.finite(sf$X_sc))) {
+             stop("Non-finite values detected in X or F after standardization.")
         }
 
         if (nrow(sx$X_sc) < 2 || nrow(sf$X_sc) < 2) {
