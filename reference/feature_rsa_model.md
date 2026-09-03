@@ -396,12 +396,12 @@ warning appears. The diagnostic is stored in `model$feature_spectrum`.
     neuroim2::space(sample$dataset$mask)
   )
   res <- run_regional(mdl, region_mask)
-#> INFO [2026-09-02 09:55:31] 
+#> INFO [2026-09-03 17:21:19] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 2
 #> - Processed: 2
 #> - Skipped: 0
-#> INFO [2026-09-02 09:55:31] run_regional: 2 ROIs processed (success=2, errors=0)
+#> INFO [2026-09-03 17:21:19] run_regional: 2 ROIs processed (success=2, errors=0)
   preds <- feature_rsa_predictions(res)
   dim(preds$predicted[[1]])
 #> [1] 24 34

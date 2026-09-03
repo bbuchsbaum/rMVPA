@@ -256,9 +256,14 @@ coefficient matrices or <code>"dual"</code> for outer-fold sample-space
 weights. <code>max_retained_mb</code> refuses an unsafe request before
 allocation; <code>weight_overflow = "none"</code> may explicitly fall
 back to no weights. <code>memory_limit_mb</code> independently guards
-solver intermediates. Runtime provenance records the chosen solver,
-chunk manifest, decomposition/cache counts, maximum chunk result size,
-and the B+1 cost of requested drop-out models.</p>
+solver intermediates and caps the retained decomposition cache: band
+Gram matrices are cached once per training split and shared across theta
+candidates and drop-out models, and least-recently-used entries are
+evicted (and recomputed on demand) once the cap is reached, so the limit
+changes reuse but never results. Runtime provenance records the chosen
+solver, chunk manifest, decomposition, band-Gram reuse, and eviction
+counts, maximum chunk result size, and the B+1 cost of requested
+drop-out models.</p>
 <p>For <code>F</code> outer folds, <code>K</code> inner folds,
 <code>T</code> theta candidates, <code>A</code> alphas, and response
 chunks of size <code>B</code>, tuning evaluates approximately

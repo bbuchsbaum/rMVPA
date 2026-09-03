@@ -210,7 +210,14 @@ diagnostics.</p></dd>
 
 
 <dt id="arg-memory-limit-mb">memory_limit_mb<a class="anchor" aria-label="anchor" href="#arg-memory-limit-mb"></a></dt>
-<dd><p>Solver intermediate-allocation contract.</p></dd>
+<dd><p>Solver intermediate-allocation contract in MiB. It
+bounds two separate pools, so peak solver memory can approach twice this
+value: per-fit intermediates are checked against it up front, and the
+retained decomposition cache of the optimized solvers is capped at it
+independently. Once cached band Grams and eigendecompositions would exceed
+the cap, the least recently used entries are evicted and recomputed on
+demand. Results are unchanged at any value; only reuse is lost, and
+provenance reports `solver_cache_evictions` and `solver_cache_peak_mb`.</p></dd>
 
 </dl></div>
     <div class="section level2">

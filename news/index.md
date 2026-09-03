@@ -2,6 +2,31 @@
 
 ## rMVPA 0.1.3
 
+- Banded-ridge tuning with the optimized solvers needs far less memory
+  and skips redundant work
+  ([\#84](https://github.com/bbuchsbaum/rMVPA/issues/84)). The per-fold
+  preprocessing receipt no longer runs a full `O(p^3)` direct solve just
+  to record centering and scaling; it computes the same statistics
+  directly. The solver cache verifies entries with a 128-bit content
+  hash instead of retaining a copy of the standardized training matrix
+  per (fold, theta) entry, which was the dominant memory consumer. Band
+  Gram matrices for `dual_kernel` are cached once per training split
+  under theta-free keys and shared across theta candidates, dual weight
+  extraction, leave-one-band-out models, and later response chunks while
+  the cache stays within its cap; the saving from Gram reuse is largest
+  on reference or single-threaded BLAS builds. Inner candidates are now
+  evaluated grouped by theta so each decomposition is reused across
+  alphas within a few fits. Column centering, scaling, and intercept
+  offsets on the banded-ridge path use recycled arithmetic instead of
+  [`sweep()`](https://rdrr.io/r/base/sweep.html), which is bit-identical
+  and avoids sweep’s transposed temporaries on `n x p` matrices.
+  `memory_limit_mb` now also caps the retained cache with
+  least-recently-used eviction; results are unchanged at any cap.
+  Provenance gains `solver_band_kernel_builds`,
+  `solver_band_kernel_hits`, `solver_cache_evictions`,
+  `solver_cache_oversize`, `solver_cache_peak_mb`, and
+  `solver_cache_limit_mb`, and the work manifest gains matching
+  per-model columns.
 - [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
   gains `feature_standardize = c("scale", "center")`. The feature matrix
   `F` has always been z-scored per training fold, which was undocumented
