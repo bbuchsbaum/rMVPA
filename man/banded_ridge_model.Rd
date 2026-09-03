@@ -116,7 +116,14 @@ diagnostics.}
 
 \item{seed}{Deterministic fold/candidate seed.}
 
-\item{memory_limit_mb}{Solver intermediate-allocation contract.}
+\item{memory_limit_mb}{Solver intermediate-allocation contract in MiB. It
+bounds two separate pools, so peak solver memory can approach twice this
+value: per-fit intermediates are checked against it up front, and the
+retained decomposition cache of the optimized solvers is capped at it
+independently. Once cached band Grams and eigendecompositions would exceed
+the cap, the least recently used entries are evicted and recomputed on
+demand. Results are unchanged at any value; only reuse is lost, and
+provenance reports `solver_cache_evictions` and `solver_cache_peak_mb`.}
 }
 \value{
 A `banded_ridge_model` specification for `run_banded_ridge()`.

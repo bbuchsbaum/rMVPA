@@ -429,3 +429,34 @@ test_that("optimized solver preserves dropout effects and reports reduced work",
       !is.na(svd$result$provenance$work_manifest$excluded_band)
   ))
 })
+
+test_that("dual leave-one-band-out models share band Grams with the full model", {
+  f <- .bra_factorial()
+  X <- cbind(f$z, f$u)
+  Y <- cbind(2 * f$z + f$u, f$z - 2 * f$u)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), c(0.1, 1), method = "grid", grid_points = 3L
+  )
+  direct <- .bra_test_problem(
+    X, Y, c("a", "b"), blocks_train = f$block, candidates = candidates,
+    target_batch_size = 1L, solver = "direct"
+  )
+  dual <- .bra_test_problem(
+    X, Y, c("a", "b"), blocks_train = f$block, candidates = candidates,
+    target_batch_size = 1L, solver = "dual_kernel"
+  )
+  expect_equal(
+    dual$result$predictive_leave_one_band_out$effects,
+    direct$result$predictive_leave_one_band_out$effects,
+    tolerance = 1e-10
+  )
+  manifest <- dual$result$provenance$work_manifest
+  reduced_rows <- !is.na(manifest$excluded_band)
+  expect_true(all(manifest$band_kernel_builds_added[reduced_rows] == 0L))
+  expect_true(all(manifest$band_kernel_hits_added[reduced_rows] > 0L))
+  expect_true(all(
+    manifest$band_kernel_builds_added[!reduced_rows & manifest$chunk == 1L] > 0L
+  ))
+  expect_identical(sum(manifest$cache_evictions_added), 0L)
+  expect_gt(dual$result$provenance$solver_band_kernel_hits, 0L)
+})

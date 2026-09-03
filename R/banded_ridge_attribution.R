@@ -81,8 +81,15 @@
 }
 
 .bra_cache_counters <- function(cache) {
-  if (is.null(cache)) return(c(decompositions = 0L, hits = 0L))
-  c(decompositions = cache$decomposition_count, hits = cache$hit_count)
+  if (is.null(cache)) {
+    return(c(decompositions = 0L, hits = 0L, kernel_builds = 0L,
+             kernel_hits = 0L, evictions = 0L, oversize = 0L))
+  }
+  c(decompositions = cache$decomposition_count, hits = cache$hit_count,
+    kernel_builds = cache$kernel_build_count,
+    kernel_hits = cache$kernel_hit_count,
+    evictions = cache$eviction_count,
+    oversize = cache$oversize_count)
 }
 
 .bra_work_row <- function(model_id,
@@ -113,6 +120,14 @@
     decompositions_added = as.integer(after[["decompositions"]] -
                                         before[["decompositions"]]),
     cache_hits_added = as.integer(after[["hits"]] - before[["hits"]]),
+    band_kernel_builds_added = as.integer(after[["kernel_builds"]] -
+                                            before[["kernel_builds"]]),
+    band_kernel_hits_added = as.integer(after[["kernel_hits"]] -
+                                          before[["kernel_hits"]]),
+    cache_evictions_added = as.integer(after[["evictions"]] -
+                                         before[["evictions"]]),
+    cache_oversize_added = as.integer(after[["oversize"]] -
+                                        before[["oversize"]]),
     stringsAsFactors = FALSE
   )
 }

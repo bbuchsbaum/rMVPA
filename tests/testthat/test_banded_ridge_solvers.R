@@ -454,3 +454,140 @@ test_that("solver contracts reject invalid paths, theta, caches, and prediction 
   expect_error(rMVPA:::.banded_ridge_predict_optimized(list(), X, groups),
                "banded_ridge_optimized_fit")
 })
+
+test_that("band Grams are cached theta-free, verified per band, and shared across models", {
+  set.seed(7920)
+  X <- matrix(rnorm(24 * 12), 24, 12)
+  Y <- matrix(rnorm(24 * 2), 24, 2)
+  groups <- rep(c("a", "b", "c"), each = 4)
+  thetas <- list(c(a = 0.2, b = 0.3, c = 0.5),
+                 c(a = 0.5, b = 0.25, c = 0.25),
+                 c(a = 0.1, b = 0.1, c = 0.8))
+  cache <- rMVPA:::.banded_ridge_solver_cache()
+  uncached <- lapply(thetas, function(theta) {
+    rMVPA:::.banded_ridge_fit_dual_path(X, Y, c(0.5, 2), theta, groups = groups)
+  })
+  cached <- lapply(seq_along(thetas), function(tt) {
+    rMVPA:::.banded_ridge_fit_dual_path(
+      X, Y, c(0.5, 2), thetas[[tt]], groups = groups, cache = cache,
+      cache_key = paste0("fold1::theta", tt), kernel_cache_key = "fold1"
+    )
+  })
+  expect_identical(cache$kernel_build_count, 3L)
+  expect_identical(cache$kernel_hit_count, 6L)
+  expect_identical(cache$decomposition_count, 3L)
+  expect_identical(cache$hit_count, 0L)
+  expect_identical(length(cache$entries), 6L)
+  expect_identical(cached[[1]]$band_kernel_builds, 3L)
+  expect_identical(cached[[1]]$band_kernel_hits, 0L)
+  expect_identical(cached[[3]]$band_kernel_builds, 0L)
+  expect_identical(cached[[3]]$band_kernel_hits, 3L)
+  expect_identical(cached[[2]]$kernel_cache_key, "fold1")
+  expect_null(uncached[[1]]$kernel_cache_key)
+  for (tt in seq_along(thetas)) {
+    for (aa in 1:2) {
+      expect_identical(cached[[tt]]$fits[[aa]]$dual_weights,
+                       uncached[[tt]]$fits[[aa]]$dual_weights)
+      expect_identical(cached[[tt]]$fits[[aa]]$standardized_coefficients,
+                       uncached[[tt]]$fits[[aa]]$standardized_coefficients)
+      expect_identical(cached[[tt]]$fits[[aa]]$solver$band_kernel_dimensions,
+                       uncached[[tt]]$fits[[aa]]$solver$band_kernel_dimensions)
+    }
+  }
+  # the cache verifies with content hashes and never retains the design
+  expect_true(all(vapply(cache$entries, function(entry) {
+    is.character(entry$signature) && length(entry$signature) == 1L
+  }, logical(1))))
+  expect_equal(cache$bytes,
+               sum(vapply(cache$entries, function(entry) entry$bytes, numeric(1))))
+  expect_equal(cache$peak_bytes, cache$bytes)
+
+  # a reduced model that drops band c reuses the a and b Grams on the same rows
+  keep <- groups != "c"
+  reduced <- rMVPA:::.banded_ridge_fit_dual_path(
+    X[, keep], Y, 1, c(a = 0.4, b = 0.6), groups = groups[keep], cache = cache,
+    cache_key = "without_c::fold1::theta1", kernel_cache_key = "fold1"
+  )
+  plain_reduced <- rMVPA:::.banded_ridge_fit_dual_path(
+    X[, keep], Y, 1, c(a = 0.4, b = 0.6), groups = groups[keep]
+  )
+  expect_identical(reduced$band_kernel_hits, 2L)
+  expect_identical(reduced$band_kernel_builds, 0L)
+  expect_identical(reduced$fits[[1]]$dual_weights,
+                   plain_reduced$fits[[1]]$dual_weights)
+
+  # different training rows under the same kernel key are refused, not reused
+  expect_error(rMVPA:::.banded_ridge_fit_dual_path(
+    X[-1, ], Y[-1, , drop = FALSE], 1, thetas[[1]], groups = groups,
+    cache = cache, cache_key = "other::theta1", kernel_cache_key = "fold1"
+  ), "cache_key collision")
+
+  svd_cache <- rMVPA:::.banded_ridge_solver_cache()
+  rMVPA:::.banded_ridge_fit_svd_path(
+    X, Y, 1, thetas[[1]], groups = groups, cache = svd_cache, cache_key = "k"
+  )
+  expect_true(is.character(svd_cache$entries[[1]]$signature))
+})
+
+test_that("byte-capped caches evict least recently used entries without changing results", {
+  value <- function(seed) { set.seed(seed); rnorm(100) }
+  a <- value(1); b <- value(2); c_ <- value(3)
+  unit <- as.numeric(object.size(a))
+  cache <- rMVPA:::.banded_ridge_solver_cache(max_bytes = 2.5 * unit)
+  expect_true(rMVPA:::.brs_cache_store(cache, "A", "sa", a))
+  expect_true(rMVPA:::.brs_cache_store(cache, "B", "sb", b))
+  expect_identical(rMVPA:::.brs_cache_lookup(cache, "A", "sa", "x"), a)
+  expect_true(rMVPA:::.brs_cache_store(cache, "C", "sc", c_))
+  expect_identical(sort(names(cache$entries)), c("A", "C"))
+  expect_identical(cache$eviction_count, 1L)
+  expect_equal(cache$bytes, 2 * unit)
+  expect_equal(cache$peak_bytes, 2 * unit)
+  expect_false(rMVPA:::.brs_cache_store(cache, "D", "sd", rnorm(1000)))
+  expect_identical(cache$oversize_count, 1L)
+  expect_true(rMVPA:::.brs_cache_store(cache, "A", "sa2", a))
+  expect_equal(cache$bytes, 2 * unit)
+  expect_identical(rMVPA:::.brs_cache_lookup(cache, "A", "sa2", "x"), a)
+  expect_error(rMVPA:::.banded_ridge_fit_dual_path(
+    matrix(rnorm(20), 10, 2), rnorm(10), 1, c(a = 1), groups = c("a", "a"),
+    cache = cache, cache_key = "k", kernel_cache_key = NA_character_
+  ), "kernel_cache_key")
+  expect_null(rMVPA:::.brs_cache_lookup(cache, "D", "sd", "x"))
+  expect_error(rMVPA:::.brs_cache_lookup(cache, "A", "other", "training data"),
+               "cache_key collision")
+  expect_error(rMVPA:::.banded_ridge_solver_cache(max_bytes = 0), "max_bytes")
+
+  set.seed(7922)
+  X <- matrix(rnorm(20 * 9), 20, 9)
+  Y <- matrix(rnorm(20 * 2), 20, 2)
+  groups <- rep(c("a", "b", "c"), each = 3)
+  thetas <- list(c(a = 0.2, b = 0.3, c = 0.5), c(a = 0.6, b = 0.2, c = 0.2))
+  reference <- lapply(thetas, function(theta) {
+    rMVPA:::.banded_ridge_fit_dual_path(X, Y, c(0.5, 5), theta, groups = groups)
+  })
+  one_gram <- as.numeric(object.size(matrix(0, 20, 20)))
+  replay <- function(cache) {
+    for (round in 1:2) {
+      for (tt in seq_along(thetas)) {
+        got <- rMVPA:::.banded_ridge_fit_dual_path(
+          X, Y, c(0.5, 5), thetas[[tt]], groups = groups, cache = cache,
+          cache_key = paste0("f::t", tt), kernel_cache_key = "f"
+        )
+        for (aa in 1:2) {
+          expect_identical(got$fits[[aa]]$dual_weights,
+                           reference[[tt]]$fits[[aa]]$dual_weights)
+        }
+        expect_lte(cache$bytes, cache$max_bytes)
+      }
+    }
+  }
+  thrashing <- rMVPA:::.banded_ridge_solver_cache(max_bytes = 2.5 * one_gram)
+  replay(thrashing)
+  expect_gt(thrashing$eviction_count, 0L)
+  expect_gt(length(thrashing$entries), 0L)
+  nothing <- rMVPA:::.banded_ridge_solver_cache(max_bytes = one_gram / 2)
+  replay(nothing)
+  expect_identical(length(nothing$entries), 0L)
+  expect_gt(nothing$oversize_count, 0L)
+  expect_identical(nothing$decomposition_count, 4L)
+  expect_identical(nothing$kernel_build_count, 12L)
+})

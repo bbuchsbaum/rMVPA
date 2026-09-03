@@ -293,12 +293,14 @@
       alpha <- selected$alpha[rows[[1L]]]
       theta <- as.numeric(selected[rows[[1L]], theta_columns, drop = TRUE])
       names(theta) <- nested$group_names
+      theta_key <- .brt_theta_keys(matrix(theta, nrow = 1L))
       path <- .banded_ridge_fit_dual_path(
         .brc_subset_rows(X, outer$train), Y[outer$train, rows, drop = FALSE],
         alphas = alpha, theta = theta, groups = groups,
         recover_primal = FALSE, cache = cache,
-        cache_key = paste(cache_prefix, "weights", oo,
-                          selected$candidate_id[rows[[1L]]], sep = "::")
+        cache_key = paste(cache_prefix, "outer", oo, "refit", "theta",
+                          theta_key, sep = "::"),
+        kernel_cache_key = paste(cache_prefix, "outer", oo, "refit", sep = "::")
       )
       fit <- path$fits[[1L]]
       for (jj in seq_along(rows)) {
@@ -380,7 +382,14 @@
 #'   diagnostics.
 #' @param weight_overflow Refuse an unsafe request or fall back to no weights.
 #' @param seed Deterministic fold/candidate seed.
-#' @param memory_limit_mb Solver intermediate-allocation contract.
+#' @param memory_limit_mb Solver intermediate-allocation contract in MiB. It
+#'   bounds two separate pools, so peak solver memory can approach twice this
+#'   value: per-fit intermediates are checked against it up front, and the
+#'   retained decomposition cache of the optimized solvers is capped at it
+#'   independently. Once cached band Grams and eigendecompositions would exceed
+#'   the cap, the least recently used entries are evicted and recomputed on
+#'   demand. Results are unchanged at any value; only reuse is lost, and
+#'   provenance reports `solver_cache_evictions` and `solver_cache_peak_mb`.
 #'
 #' @return A `banded_ridge_model` specification for `run_banded_ridge()`.
 #' @export
@@ -637,9 +646,12 @@ run_banded_ridge <- function(model,
   selection_rows <- list()
   diagnostics <- if (model$retain_diagnostics) list() else NULL
   weights <- if (model$weight_retention == "none") NULL else list()
-  cache <- if (model$solver == "direct") NULL else .banded_ridge_solver_cache()
+  cache_bytes <- model$memory_limit_mb * 1024^2
+  cache <- if (model$solver == "direct") {
+    NULL
+  } else .banded_ridge_solver_cache(max_bytes = cache_bytes)
   weight_cache <- if (model$weight_retention == "dual" && is.null(cache)) {
-    .banded_ridge_solver_cache()
+    .banded_ridge_solver_cache(max_bytes = cache_bytes)
   } else cache
   max_chunk_result_bytes <- 0
   peak_dimensions <- NULL
@@ -699,7 +711,8 @@ run_banded_ridge <- function(model,
         fixed_theta = model$reduced_fixed_theta[[band]],
         response_batch_size = length(ids), seed = model$seed,
         solver = model$solver, solver_cache = cache,
-        cache_prefix = paste("public", "without", band, sep = "::")
+        cache_prefix = paste("public", "without", band, sep = "::"),
+        kernel_cache_prefix = "public"
       )
       counters_after <- .bra_cache_counters(cache)
       work_rows[[length(work_rows) + 1L]] <- .bra_work_row(
@@ -851,6 +864,12 @@ run_banded_ridge <- function(model,
       retention_notice = model$retention_notice,
       solver_decomposition_count = if (is.null(cache)) 0L else cache$decomposition_count,
       solver_cache_hits = if (is.null(cache)) 0L else cache$hit_count,
+      solver_band_kernel_builds = if (is.null(cache)) 0L else cache$kernel_build_count,
+      solver_band_kernel_hits = if (is.null(cache)) 0L else cache$kernel_hit_count,
+      solver_cache_evictions = if (is.null(cache)) 0L else cache$eviction_count,
+      solver_cache_oversize = if (is.null(cache)) 0L else cache$oversize_count,
+      solver_cache_peak_mb = if (is.null(cache)) 0 else cache$peak_bytes / 1024^2,
+      solver_cache_limit_mb = model$memory_limit_mb,
       weight_decomposition_count = if (is.null(weight_cache) ||
                                           identical(weight_cache, cache)) {
         0L

@@ -302,10 +302,49 @@
   )
 }
 
+#' Column-wise centering and scaling without sweep()
+#'
+#' Elementwise `X[i, j] - center[j]` and `/ scale[j]` written with recycled
+#' vectors. This is the same IEEE arithmetic as `sweep()` (bit-identical
+#' results, dimnames preserved) without sweep's transposed intermediate arrays,
+#' and runs in roughly half the time on n x p matrices. The statistics are
+#' unnamed first: `rep()` would otherwise replicate feature names n times.
+#'
+#' @keywords internal
+#' @noRd
+.brc_center_columns <- function(X, center) {
+  X - rep(unname(center), each = nrow(X))
+}
+
+.brc_standardize_columns <- function(X, center, scale) {
+  n <- nrow(X)
+  (X - rep(unname(center), each = n)) / rep(unname(scale), each = n)
+}
+
+.brc_offset_columns <- function(X, offset) {
+  X + rep(unname(offset), each = nrow(X))
+}
+
 .brc_column_sds <- function(X) {
   n <- nrow(X)
-  centered <- sweep(X, 2L, colMeans(X), "-")
+  centered <- .brc_center_columns(X, colMeans(X))
   sqrt(colSums(centered * centered) / (n - 1L))
+}
+
+#' Training-split column centering and scaling used by every banded-ridge fit
+#'
+#' Constant columns keep a unit scale so they contribute zero after centering.
+#' All solver paths and the tuning preprocessing receipt call this helper so the
+#' receipt is exactly what the fits use.
+#'
+#' @keywords internal
+#' @noRd
+.brc_column_standardization <- function(X) {
+  center <- colMeans(X)
+  scale <- .brc_column_sds(X)
+  constant <- !is.finite(scale) | scale == 0
+  scale[constant] <- 1
+  list(center = center, scale = scale, constant = constant)
 }
 
 .brc_symmetric_solve <- function(A, B, tolerance = NULL) {
@@ -337,7 +376,7 @@
   keep <- ee$values > tolerance
   if (any(keep)) {
     projected <- crossprod(ee$vectors[, keep, drop = FALSE], B)
-    projected <- sweep(projected, 1L, ee$values[keep], "/")
+    projected <- projected / ee$values[keep]
     solution <- ee$vectors[, keep, drop = FALSE] %*% projected
   } else {
     solution <- matrix(0, nrow(A), ncol(B))
@@ -380,14 +419,14 @@
     theta = theta
   )
 
-  x_center <- colMeans(gx$X)
-  x_scale <- .brc_column_sds(gx$X)
-  constant_x <- !is.finite(x_scale) | x_scale == 0
-  x_scale[constant_x] <- 1
-  Xs <- sweep(sweep(gx$X, 2L, x_center, "-"), 2L, x_scale, "/")
+  standardization <- .brc_column_standardization(gx$X)
+  x_center <- standardization$center
+  x_scale <- standardization$scale
+  constant_x <- standardization$constant
+  Xs <- .brc_standardize_columns(gx$X, x_center, x_scale)
 
   y_center <- colMeans(Y)
-  Ys <- sweep(Y, 2L, y_center, "-")
+  Ys <- .brc_center_columns(Y, y_center)
 
   included <- penalty$included
   Xi <- Xs[, included, drop = FALSE]
@@ -400,7 +439,7 @@
   beta_standardized[included, ] <- solved$solution
   dimnames(beta_standardized) <- list(gx$feature_names, colnames(Y))
 
-  coefficients <- sweep(beta_standardized, 1L, x_scale, "/")
+  coefficients <- beta_standardized / x_scale
   dimnames(coefficients) <- dimnames(beta_standardized)
   intercept <- y_center - drop(crossprod(x_center, coefficients))
   names(intercept) <- colnames(Y)
@@ -453,7 +492,7 @@
     context = "newx"
   )
   out <- gx$X %*% object$coefficients
-  out <- sweep(out, 2L, object$intercept, "+")
+  out <- .brc_offset_columns(out, object$intercept)
   colnames(out) <- object$response_names
   out
 }
@@ -537,8 +576,8 @@
 
   residual <- observed - predicted
   mse <- colMeans(residual * residual)
-  observed_centered <- sweep(observed, 2L, colMeans(observed), "-")
-  predicted_centered <- sweep(predicted, 2L, colMeans(predicted), "-")
+  observed_centered <- .brc_center_columns(observed, colMeans(observed))
+  predicted_centered <- .brc_center_columns(predicted, colMeans(predicted))
   ss_tot <- colSums(observed_centered * observed_centered)
   pred_ss <- colSums(predicted_centered * predicted_centered)
   denom <- sqrt(ss_tot * pred_ss)

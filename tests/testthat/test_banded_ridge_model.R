@@ -530,3 +530,42 @@ test_that("inner tuning is skipped when only one candidate survives the scopes",
   expect_error(.brm_test_model(fixture, alpha_scope = "elsewhere"),
                "should be one of")
 })
+
+test_that("dual solver reuses band Grams and a capped cache reproduces results", {
+  fixture <- .brm_test_fixture(seed = 8030L)
+  dual <- run_banded_ridge(.brm_test_model(
+    fixture, solver = "dual_kernel", target_batch_size = 2L
+  ))
+  expect_gt(dual$provenance$solver_band_kernel_builds, 0L)
+  expect_gt(dual$provenance$solver_band_kernel_hits, 0L)
+  expect_identical(dual$provenance$solver_cache_evictions, 0L)
+  expect_identical(dual$provenance$solver_cache_oversize, 0L)
+  expect_identical(dual$provenance$solver_cache_limit_mb, 1024)
+  expect_gt(dual$provenance$solver_cache_peak_mb, 0)
+
+  # a cap above the solver plan's estimate but below the retained working set
+  plan_mib <- dual$provenance$solver_plan$estimated_mib[["dual_kernel"]]
+  cap <- max(plan_mib * 1.1, dual$provenance$solver_cache_peak_mb / 4)
+  expect_lt(cap, dual$provenance$solver_cache_peak_mb)
+  capped <- run_banded_ridge(.brm_test_model(
+    fixture, solver = "dual_kernel", target_batch_size = 2L,
+    memory_limit_mb = cap
+  ))
+  expect_gt(capped$provenance$solver_cache_evictions, 0L)
+  expect_identical(capped$provenance$solver_cache_limit_mb, cap)
+  expect_lte(capped$provenance$solver_cache_peak_mb, cap)
+  expect_identical(capped$predictions, dual$predictions)
+  expect_identical(capped$metrics, dual$metrics)
+  expect_identical(capped$hyperparameters, dual$hyperparameters)
+
+  # the plan estimate already exceeds one n x n entry, so any cap the plan
+  # accepts fits single entries: caching degrades to eviction, never to oversize
+  tiny <- run_banded_ridge(.brm_test_model(
+    fixture, solver = "dual_kernel", target_batch_size = 2L,
+    memory_limit_mb = plan_mib * 1.01
+  ))
+  expect_identical(tiny$provenance$solver_cache_oversize, 0L)
+  expect_gt(tiny$provenance$solver_cache_evictions, 0L)
+  expect_identical(tiny$predictions, dual$predictions)
+  expect_identical(sum(tiny$provenance$work_manifest$cache_oversize_added), 0L)
+})

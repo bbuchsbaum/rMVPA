@@ -460,7 +460,8 @@
                                args,
                                solver = "direct",
                                solver_cache = NULL,
-                               cache_key = NULL) {
+                               cache_key = NULL,
+                               kernel_cache_key = NULL) {
   tryCatch({
     if (solver == "direct") {
       result <- .banded_ridge_fit_predict_direct(
@@ -468,16 +469,20 @@
         alpha = args$alpha, theta = args$theta
       )
     } else {
-      fit_function <- if (solver == "svd_primal") {
-        .banded_ridge_fit_svd_path
+      path <- if (solver == "svd_primal") {
+        .banded_ridge_fit_svd_path(
+          .brc_subset_rows(X, train), Y[train, , drop = FALSE],
+          alphas = args$alpha, theta = args$theta, groups = feature_groups,
+          cache = solver_cache, cache_key = cache_key
+        )
       } else {
-        .banded_ridge_fit_dual_path
+        .banded_ridge_fit_dual_path(
+          .brc_subset_rows(X, train), Y[train, , drop = FALSE],
+          alphas = args$alpha, theta = args$theta, groups = feature_groups,
+          cache = solver_cache, cache_key = cache_key,
+          kernel_cache_key = kernel_cache_key
+        )
       }
-      path <- fit_function(
-        .brc_subset_rows(X, train), Y[train, , drop = FALSE],
-        alphas = args$alpha, theta = args$theta, groups = feature_groups,
-        cache = solver_cache, cache_key = cache_key
-      )
       fit <- path$fits[[1L]]
       predictions <- .banded_ridge_predict_optimized(
         fit, .brc_subset_rows(X, test), groups = feature_groups
@@ -517,15 +522,27 @@
   )
 }
 
-.brt_preprocessing_receipt <- function(X, Y, fold, feature_groups, group_names) {
-  neutral <- setNames(rep(1, length(group_names)), group_names)
-  fit <- .banded_ridge_fit_direct(
-    .brc_subset_rows(X, fold$train), Y[fold$train, , drop = FALSE],
-    groups = feature_groups, lambdas = neutral
-  )
+#' Record the training-split centering and scaling of one fold
+#'
+#' This is provenance only, so it computes the column statistics directly with
+#' the same helper every fit uses instead of running a full direct solve.
+#'
+#' @keywords internal
+#' @noRd
+.brt_preprocessing_receipt <- function(X, Y, fold, feature_groups) {
+  gx <- .brc_grouped_matrix(.brc_subset_rows(X, fold$train),
+                            groups = feature_groups, context = "X")
+  Y_train <- .brc_response_matrix(Y[fold$train, , drop = FALSE],
+                                  n_expected = nrow(gx$X))
+  if (nrow(gx$X) < 2L) {
+    stop("X and Y must contain at least two training rows.", call. = FALSE)
+  }
+  standardization <- .brc_column_standardization(gx$X)
   list(fold_id = fold$id, train = fold$train, test = fold$test,
-       x_center = fit$x_center, x_scale = fit$x_scale,
-       y_center = fit$y_center, constant_x = fit$constant_x)
+       x_center = setNames(standardization$center, gx$feature_names),
+       x_scale = setNames(standardization$scale, gx$feature_names),
+       y_center = setNames(colMeans(Y_train), colnames(Y_train)),
+       constant_x = setNames(standardization$constant, gx$feature_names))
 }
 
 #' Leakage-safe nested per-response tuning for the banded-ridge core
@@ -555,7 +572,8 @@
                                     tie_tolerance = 1e-12,
                                     solver = c("direct", "svd_primal", "dual_kernel"),
                                     solver_cache = NULL,
-                                    cache_prefix = "nested") {
+                                    cache_prefix = "nested",
+                                    kernel_cache_prefix = cache_prefix) {
   metric <- match.arg(metric)
   solver <- match.arg(solver)
   gx <- .brc_grouped_matrix(X, groups = feature_groups, context = "X")
@@ -585,6 +603,10 @@
       is.na(cache_prefix) || !nzchar(cache_prefix)) {
     stop("cache_prefix must be one non-empty string.", call. = FALSE)
   }
+  if (!is.character(kernel_cache_prefix) || length(kernel_cache_prefix) != 1L ||
+      is.na(kernel_cache_prefix) || !nzchar(kernel_cache_prefix)) {
+    stop("kernel_cache_prefix must be one non-empty string.", call. = FALSE)
+  }
   if (solver == "direct" && !is.null(solver_cache)) {
     stop("solver_cache is only used by svd_primal or dual_kernel.", call. = FALSE)
   }
@@ -610,6 +632,13 @@
 
   oof <- matrix(NA_real_, n, v, dimnames = list(rownames(Y), colnames(Y)))
   if (is.null(rownames(oof))) rownames(oof) <- as.character(seq_len(n))
+  # Evaluate candidates grouped by theta (first-appearance order, stable within
+  # a group) so each (fold, theta) decomposition is reused across alphas after
+  # K fits instead of after T * K fits, which keeps reuse inside a byte-capped
+  # cache. Scores are indexed by candidate, so results do not depend on order.
+  theta_keys <- .brt_theta_keys(candidates$theta)
+  candidate_order <- order(match(theta_keys, unique(theta_keys)),
+                           seq_along(theta_keys))
   outer_results <- vector("list", length(outer_folds))
   selection_rows <- list()
   error_rows <- list()
@@ -635,10 +664,10 @@
       dimnames = list(candidates$candidate_id, colnames(Y))
     )
     preprocessing <- lapply(inners, function(fold) {
-      .brt_preprocessing_receipt(X, Y, fold, feature_groups, gx$group_names)
+      .brt_preprocessing_receipt(X, Y, fold, feature_groups)
     })
 
-    for (cc in if (tune) seq_len(c_count) else integer(0)) {
+    for (cc in if (tune) candidate_order else integer(0)) {
       args <- .brt_candidate_args(candidates, cc)
       inner_oof <- matrix(NA_real_, length(outer$train), v,
                           dimnames = list(as.character(outer$train), colnames(Y)))
@@ -652,7 +681,9 @@
           cache_key = paste(cache_prefix, "outer", oo, "inner", ii,
                             "theta", .brt_theta_keys(matrix(
                               args$theta, nrow = 1L
-                            )), sep = "::")
+                            )), sep = "::"),
+          kernel_cache_key = paste(kernel_cache_prefix, "outer", oo,
+                                   "inner", ii, sep = "::")
         )
         if (!evaluated$ok) {
           candidate_valid <- FALSE
@@ -700,7 +731,9 @@
           feature_groups, args, solver = solver, solver_cache = solver_cache,
           cache_key = paste(cache_prefix, "outer", oo, "refit", "theta",
                             .brt_theta_keys(matrix(args$theta, nrow = 1L)),
-                            sep = "::")
+                            sep = "::"),
+          kernel_cache_key = paste(kernel_cache_prefix, "outer", oo, "refit",
+                                   sep = "::")
         )
         if (!fitted$ok) {
           stop("Selected candidate failed during outer refit: ", fitted$error,

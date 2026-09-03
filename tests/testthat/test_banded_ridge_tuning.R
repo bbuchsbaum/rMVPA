@@ -590,3 +590,108 @@ test_that("nested CV skips inner tuning only when exactly one candidate is avail
   expect_true(all(scoped$selections$theta_a == 0.8))
   expect_equal(scoped$predictions, skipped$predictions, tolerance = 1e-12)
 })
+
+test_that("preprocessing receipts equal the direct-fit standardization without a solve", {
+  data <- .brt_test_data(seed = 7230L)
+  X <- data$X
+  X[, 3] <- 4.5
+  fold <- data$inner[[1]][[1]]
+  receipt <- rMVPA:::.brt_preprocessing_receipt(X, data$Y, fold, data$feature_groups)
+  fit <- rMVPA:::.banded_ridge_fit_direct(
+    X[fold$train, , drop = FALSE], data$Y[fold$train, , drop = FALSE],
+    groups = data$feature_groups, lambdas = c(a = 1, b = 1)
+  )
+  expect_identical(receipt$x_center, fit$x_center)
+  expect_identical(receipt$x_scale, fit$x_scale)
+  expect_identical(receipt$y_center, fit$y_center)
+  expect_identical(receipt$constant_x, fit$constant_x)
+  expect_true(unname(receipt$constant_x)[[3]])
+  expect_identical(unname(receipt$x_scale)[[3]], 1)
+  expect_identical(receipt$fold_id, fold$id)
+  expect_identical(receipt$train, fold$train)
+  expect_identical(receipt$test, fold$test)
+  expect_error(rMVPA:::.brt_preprocessing_receipt(
+    X, data$Y, list(id = "f", train = 1L, test = 2:3), data$feature_groups
+  ), "at least two training rows")
+})
+
+test_that("theta-free Gram reuse and cache eviction leave nested dual results unchanged", {
+  data <- .brt_test_data(seed = 7231L, n = 36L, p = 8L, v = 3L)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), alphas = c(0.3, 3), method = "grid", grid_points = 4L
+  )
+  run <- function(cache, ...) {
+    rMVPA:::.banded_ridge_nested_cv(
+      data$X, data$Y, data$outer, candidates,
+      feature_groups = data$feature_groups, inner_folds = data$inner,
+      solver = "dual_kernel", solver_cache = cache, cache_prefix = "public", ...
+    )
+  }
+  same_results <- function(got, reference) {
+    expect_identical(got$predictions, reference$predictions)
+    expect_identical(got$selections, reference$selections)
+    expect_identical(got$performance, reference$performance)
+    expect_identical(lapply(got$outer_results, `[[`, "candidate_scores"),
+                     lapply(reference$outer_results, `[[`, "candidate_scores"))
+    expect_identical(lapply(got$outer_results, `[[`, "preprocessing"),
+                     lapply(reference$outer_results, `[[`, "preprocessing"))
+  }
+  reference <- run(NULL)
+  unlimited <- rMVPA:::.banded_ridge_solver_cache()
+  full <- run(unlimited)
+  same_results(full, reference)
+
+  n_inner <- sum(lengths(data$inner))
+  n_folds <- n_inner + length(data$outer)
+  n_candidates <- length(candidates$alpha)
+  n_theta <- length(unique(rMVPA:::.brt_theta_keys(candidates$theta)))
+  refit_calls <- vapply(full$outer_results, function(x) length(x$outer_fits), integer(1))
+  refit_thetas <- vapply(full$outer_results, function(x) {
+    length(unique(rMVPA:::.brt_theta_keys(
+      candidates$theta[x$selected$candidate_index, , drop = FALSE]
+    )))
+  }, integer(1))
+  total_fit_calls <- n_inner * n_candidates + sum(refit_calls)
+  expect_identical(unlimited$kernel_build_count, 2L * n_folds)
+  expect_identical(unlimited$kernel_hit_count, 2L * (total_fit_calls - n_folds))
+  expect_identical(unlimited$decomposition_count,
+                   n_inner * n_theta + sum(refit_thetas))
+  expect_identical(unlimited$hit_count,
+                   total_fit_calls - unlimited$decomposition_count)
+
+  # a leave-one-band-out model on the same folds shares the retained band's Grams
+  keep <- data$feature_groups != "b"
+  reduced_candidates <- rMVPA:::.banded_ridge_candidates(
+    "a", alphas = c(0.3, 3), method = "fixed", theta = rbind(c(a = 1))
+  )
+  run_reduced <- function(cache, ...) {
+    rMVPA:::.banded_ridge_nested_cv(
+      data$X[, keep, drop = FALSE], data$Y, data$outer, reduced_candidates,
+      feature_groups = data$feature_groups[keep], inner_folds = data$inner,
+      solver = "dual_kernel", solver_cache = cache, ...
+    )
+  }
+  builds_before <- unlimited$kernel_build_count
+  shared <- run_reduced(unlimited, cache_prefix = "public::without::b",
+                        kernel_cache_prefix = "public")
+  expect_identical(unlimited$kernel_build_count, builds_before)
+  same_results(shared, run_reduced(NULL))
+  isolated <- run_reduced(unlimited, cache_prefix = "public::without::b::isolated")
+  expect_identical(unlimited$kernel_build_count, builds_before + n_folds)
+  same_results(isolated, shared)
+  expect_error(run(NULL, kernel_cache_prefix = ""), "kernel_cache_prefix")
+
+  capped <- rMVPA:::.banded_ridge_solver_cache(
+    max_bytes = 3 * as.numeric(object.size(matrix(0, 24, 24)))
+  )
+  evicted <- run(capped)
+  same_results(evicted, reference)
+  expect_gt(capped$eviction_count, 0L)
+  expect_lte(capped$bytes, capped$max_bytes)
+
+  nothing <- rMVPA:::.banded_ridge_solver_cache(max_bytes = 500)
+  same_results(run(nothing), reference)
+  expect_identical(length(nothing$entries), 0L)
+  expect_gt(nothing$oversize_count, 0L)
+  expect_identical(nothing$decomposition_count, total_fit_calls)
+})

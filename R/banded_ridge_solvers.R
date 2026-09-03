@@ -35,13 +35,13 @@
   included_group <- theta > 0
   included <- unname(included_group[gx$group])
 
-  x_center <- colMeans(gx$X)
-  x_scale <- .brc_column_sds(gx$X)
-  constant_x <- !is.finite(x_scale) | x_scale == 0
-  x_scale[constant_x] <- 1
-  Xs <- sweep(sweep(gx$X, 2L, x_center, "-"), 2L, x_scale, "/")
+  standardization <- .brc_column_standardization(gx$X)
+  x_center <- standardization$center
+  x_scale <- standardization$scale
+  constant_x <- standardization$constant
+  Xs <- .brc_standardize_columns(gx$X, x_center, x_scale)
   y_center <- colMeans(Y)
-  Yc <- sweep(Y, 2L, y_center, "-")
+  Yc <- .brc_center_columns(Y, y_center)
   theta_feature <- unname(theta[gx$group])
 
   list(
@@ -69,23 +69,103 @@
 
 #' Create an exact-verification decomposition cache
 #'
-#' A caller-supplied key is never trusted by itself. Reuse requires byte-exact
-#' identity of standardized training X, group membership, and theta.
+#' A caller-supplied key is never trusted by itself. Reuse requires that a
+#' 128-bit content hash of the standardized training X (taken per band), the
+#' group membership, theta, and the solver options match the stored entry. The
+#' cache retains only the hash, never the training matrix. Band Gram matrices
+#' are stored under theta-free keys so a theta grid on one fold rebuilds only
+#' the weighted-kernel eigendecomposition. Once the retained bytes would exceed
+#' `max_bytes`, least-recently-used entries are evicted and recomputed on demand.
 #'
 #' @keywords internal
 #' @noRd
-.banded_ridge_solver_cache <- function() {
+.banded_ridge_solver_cache <- function(max_bytes = Inf) {
+  if (!is.numeric(max_bytes) || length(max_bytes) != 1L || is.na(max_bytes) ||
+      max_bytes <= 0) {
+    stop("max_bytes must be one positive number or Inf.", call. = FALSE)
+  }
   cache <- new.env(parent = emptyenv())
   cache$entries <- list()
   cache$decomposition_count <- 0L
   cache$hit_count <- 0L
+  cache$kernel_build_count <- 0L
+  cache$kernel_hit_count <- 0L
+  cache$eviction_count <- 0L
+  cache$oversize_count <- 0L
+  cache$bytes <- 0
+  cache$peak_bytes <- 0
+  cache$max_bytes <- as.numeric(max_bytes)
+  cache$tick <- 0
   class(cache) <- c("banded_ridge_solver_cache", "environment")
   cache
 }
 
-.brs_cache_signature <- function(prepared) {
-  list(Xs = prepared$Xs, group = prepared$group,
-       theta = prepared$theta, included = prepared$included)
+.brs_cache_check <- function(cache, cache_key, name = "cache_key") {
+  if (!inherits(cache, "banded_ridge_solver_cache")) {
+    stop("cache must be created by .banded_ridge_solver_cache().", call. = FALSE)
+  }
+  if (!is.character(cache_key) || length(cache_key) != 1L ||
+      is.na(cache_key) || !nzchar(cache_key)) {
+    stop(name, " must be one non-empty string when cache is supplied.",
+         call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+.brs_band_hashes <- function(prepared) {
+  vapply(prepared$group_names, function(group_name) {
+    rlang::hash(prepared$Xs[, prepared$group == group_name, drop = FALSE])
+  }, character(1))
+}
+
+.brs_cache_signature <- function(prepared, band_hashes, solver_options) {
+  rlang::hash(list(
+    band_hashes = unname(band_hashes),
+    group_names = prepared$group_names,
+    group = prepared$group,
+    theta = prepared$theta,
+    included = prepared$included,
+    solver_options = solver_options
+  ))
+}
+
+.brs_cache_lookup <- function(cache, entry_key, signature, what) {
+  existing <- cache$entries[[entry_key]]
+  if (is.null(existing)) {
+    return(NULL)
+  }
+  if (!identical(existing$signature, signature)) {
+    stop("cache_key collision: ", what, " changed under key '", entry_key, "'.",
+         call. = FALSE)
+  }
+  cache$tick <- cache$tick + 1
+  cache$entries[[entry_key]]$last_used <- cache$tick
+  existing$value
+}
+
+.brs_cache_store <- function(cache, entry_key, signature, value) {
+  bytes <- as.numeric(utils::object.size(value))
+  if (bytes > cache$max_bytes) {
+    cache$oversize_count <- cache$oversize_count + 1L
+    return(FALSE)
+  }
+  if (!is.null(cache$entries[[entry_key]])) {
+    cache$bytes <- cache$bytes - cache$entries[[entry_key]]$bytes
+    cache$entries[[entry_key]] <- NULL
+  }
+  while (length(cache$entries) && cache$bytes + bytes > cache$max_bytes) {
+    used <- vapply(cache$entries, function(entry) entry$last_used, numeric(1))
+    victim <- names(used)[[which.min(used)]]
+    cache$bytes <- cache$bytes - cache$entries[[victim]]$bytes
+    cache$entries[[victim]] <- NULL
+    cache$eviction_count <- cache$eviction_count + 1L
+  }
+  cache$tick <- cache$tick + 1
+  cache$entries[[entry_key]] <- list(signature = signature, value = value,
+                                     bytes = bytes, last_used = cache$tick)
+  cache$bytes <- cache$bytes + bytes
+  cache$peak_bytes <- max(cache$peak_bytes, cache$bytes)
+  TRUE
 }
 
 .brs_decomposition <- function(prepared,
@@ -93,36 +173,79 @@
                                cache,
                                cache_key,
                                solver_options,
-                               builder) {
-  signature <- .brs_cache_signature(prepared)
-  signature$solver_options <- solver_options
+                               builder,
+                               band_hashes = NULL) {
   if (is.null(cache)) {
     return(list(value = builder(), cache_hit = FALSE,
                 decomposition_count = 1L, cache_key = NULL))
   }
-  if (!inherits(cache, "banded_ridge_solver_cache")) {
-    stop("cache must be created by .banded_ridge_solver_cache().", call. = FALSE)
-  }
-  if (!is.character(cache_key) || length(cache_key) != 1L ||
-      is.na(cache_key) || !nzchar(cache_key)) {
-    stop("cache_key must be one non-empty string when cache is supplied.", call. = FALSE)
-  }
+  .brs_cache_check(cache, cache_key)
+  if (is.null(band_hashes)) band_hashes <- .brs_band_hashes(prepared)
+  signature <- .brs_cache_signature(prepared, band_hashes, solver_options)
   entry_key <- paste(backend, cache_key, sep = "::")
-  existing <- cache$entries[[entry_key]]
+  existing <- .brs_cache_lookup(
+    cache, entry_key, signature,
+    "training data, groups, theta, or solver options"
+  )
   if (!is.null(existing)) {
-    if (!identical(existing$signature, signature)) {
-      stop("cache_key collision: training data, groups, theta, or solver options changed.",
-           call. = FALSE)
-    }
     cache$hit_count <- cache$hit_count + 1L
-    return(list(value = existing$value, cache_hit = TRUE,
+    return(list(value = existing, cache_hit = TRUE,
                 decomposition_count = 0L, cache_key = cache_key))
   }
   value <- builder()
-  cache$entries[[entry_key]] <- list(signature = signature, value = value)
+  .brs_cache_store(cache, entry_key, signature, value)
   cache$decomposition_count <- cache$decomposition_count + 1L
   list(value = value, cache_hit = FALSE,
        decomposition_count = 1L, cache_key = cache_key)
+}
+
+#' Theta-independent band Gram matrices, cached under fold identity only
+#'
+#' Each band's Gram matrix depends on the standardized training columns of that
+#' band alone, so it is verified by a hash of exactly those columns. That lets
+#' the full model and every leave-one-band-out model share the Grams of the
+#' bands they have in common when they use the same `kernel_cache_key`.
+#'
+#' @keywords internal
+#' @noRd
+.brs_band_kernels <- function(prepared, cache = NULL, kernel_cache_key = NULL) {
+  kernels <- vector("list", length(prepared$group_names))
+  names(kernels) <- prepared$group_names
+  hashes <- NULL
+  hits <- 0L
+  builds <- 0L
+  if (!is.null(cache)) {
+    .brs_cache_check(cache, kernel_cache_key, name = "kernel_cache_key")
+    hashes <- setNames(character(length(prepared$group_names)),
+                       prepared$group_names)
+  }
+  for (group_name in prepared$group_names) {
+    Xg <- prepared$Xs[, prepared$group == group_name, drop = FALSE]
+    if (is.null(cache)) {
+      kernels[[group_name]] <- tcrossprod(Xg)
+      builds <- builds + 1L
+      next
+    }
+    signature <- rlang::hash(Xg)
+    hashes[[group_name]] <- signature
+    entry_key <- paste("band_kernel", kernel_cache_key, group_name, sep = "::")
+    existing <- .brs_cache_lookup(
+      cache, entry_key, signature,
+      paste0("standardized columns of band '", group_name, "'")
+    )
+    if (!is.null(existing)) {
+      kernels[[group_name]] <- existing
+      hits <- hits + 1L
+      cache$kernel_hit_count <- cache$kernel_hit_count + 1L
+    } else {
+      kernel <- tcrossprod(Xg)
+      .brs_cache_store(cache, entry_key, signature, kernel)
+      kernels[[group_name]] <- kernel
+      builds <- builds + 1L
+      cache$kernel_build_count <- cache$kernel_build_count + 1L
+    }
+  }
+  list(kernels = kernels, hashes = hashes, hits = hits, builds = builds)
 }
 
 .brs_spectral_tolerance <- function(values, dimension, tolerance = NULL) {
@@ -151,7 +274,7 @@
   } else {
     dimnames(beta_standardized) <- list(prepared$feature_names,
                                         prepared$response_names)
-    raw_coefficients <- sweep(beta_standardized, 1L, prepared$x_scale, "/")
+    raw_coefficients <- beta_standardized / prepared$x_scale
     dimnames(raw_coefficients) <- dimnames(beta_standardized)
     intercept <- prepared$y_center - drop(crossprod(prepared$x_center,
                                                      raw_coefficients))
@@ -190,7 +313,8 @@
 .brs_svd_decomposition <- function(prepared, solver_tolerance) {
   included <- prepared$included
   weight <- sqrt(prepared$theta_feature[included])
-  Z <- sweep(prepared$Xs[, included, drop = FALSE], 2L, weight, "*")
+  Z <- prepared$Xs[, included, drop = FALSE] *
+    rep(unname(weight), each = prepared$n)
   decomposition <- svd(Z, nu = min(dim(Z)), nv = min(dim(Z)))
   tolerance <- .brs_spectral_tolerance(
     decomposition$d, max(dim(Z)), solver_tolerance
@@ -221,20 +345,17 @@
     } else {
       d / (d * d + alpha)
     }
-    gamma <- decomposition$V %*% sweep(UY, 1L, multiplier, "*")
-    beta[decomposition$included, batch] <-
-      sweep(gamma, 1L, decomposition$weight, "*")
+    gamma <- decomposition$V %*% (UY * multiplier)
+    beta[decomposition$included, batch] <- gamma * decomposition$weight
 
     if (recover_dual) {
       if (alpha == 0) {
         dual_multiplier <- numeric(length(d))
         dual_multiplier[keep] <- 1 / (d[keep] * d[keep])
-        dual[, batch] <- decomposition$U %*%
-          sweep(UY, 1L, dual_multiplier, "*")
+        dual[, batch] <- decomposition$U %*% (UY * dual_multiplier)
       } else {
         projected <- decomposition$U %*% UY
-        dual[, batch] <- decomposition$U %*%
-          sweep(UY, 1L, 1 / (d * d + alpha), "*") +
+        dual[, batch] <- decomposition$U %*% (UY * (1 / (d * d + alpha))) +
           (Yb - projected) / alpha
       }
     }
@@ -309,13 +430,12 @@
   out
 }
 
-.brs_dual_decomposition <- function(prepared, solver_tolerance) {
-  band_kernels <- lapply(prepared$group_names, function(group_name) {
-    idx <- prepared$group == group_name
-    Xg <- prepared$Xs[, idx, drop = FALSE]
-    tcrossprod(Xg)
-  })
-  names(band_kernels) <- prepared$group_names
+.brs_dual_decomposition <- function(prepared,
+                                    solver_tolerance,
+                                    band_kernels = NULL) {
+  if (is.null(band_kernels)) {
+    band_kernels <- .brs_band_kernels(prepared)$kernels
+  }
   K <- matrix(0, prepared$n, prepared$n)
   for (group_name in prepared$group_names) {
     K <- K + prepared$theta[[group_name]] * band_kernels[[group_name]]
@@ -334,7 +454,7 @@
     values = values,
     tolerance = tolerance,
     rank = sum(values > tolerance),
-    band_kernels = band_kernels,
+    band_kernel_dimensions = vapply(band_kernels, dim, integer(2)),
     dimensions = c(
       weighted_kernel = length(K),
       band_kernels = sum(vapply(band_kernels, length, integer(1))),
@@ -361,12 +481,10 @@
     } else {
       1 / (values + alpha)
     }
-    weights <- decomposition$vectors %*% sweep(projected, 1L, multiplier, "*")
+    weights <- decomposition$vectors %*% (projected * multiplier)
     dual[, batch] <- weights
     if (recover_primal) {
-      beta[, batch] <- sweep(
-        crossprod(prepared$Xs, weights), 1L, prepared$theta_feature, "*"
-      )
+      beta[, batch] <- crossprod(prepared$Xs, weights) * prepared$theta_feature
     }
   }
   .brs_make_fit(
@@ -375,7 +493,7 @@
       rank = decomposition$rank,
       tolerance = decomposition$tolerance,
       spectral_fallback = if (alpha == 0) "minimum_norm_pseudoinverse" else "none",
-      band_kernel_dimensions = vapply(decomposition$band_kernels, dim, integer(2)),
+      band_kernel_dimensions = decomposition$band_kernel_dimensions,
       peak_intermediate_dimensions = c(
         weighted_kernel = prepared$n * prepared$n,
         band_kernel = prepared$n * prepared$n,
@@ -392,6 +510,9 @@
 
 #' Fit an alpha path from one weighted-kernel eigendecomposition
 #'
+#' `kernel_cache_key` identifies the training rows only (no theta); it defaults
+#' to `cache_key`, which preserves reuse across alphas but not across theta.
+#'
 #' @keywords internal
 #' @noRd
 .banded_ridge_fit_dual_path <- function(X,
@@ -404,17 +525,23 @@
                                         recover_primal = TRUE,
                                         solver_tolerance = NULL,
                                         cache = NULL,
-                                        cache_key = NULL) {
+                                        cache_key = NULL,
+                                        kernel_cache_key = NULL) {
   alphas <- .brs_validate_alphas(alphas)
   prepared <- .brs_prepare(X, Y, groups, theta)
   alpha_batch <- .brs_batch_size(alpha_batch_size, length(alphas),
                                  "alpha_batch_size")
   response_batch <- .brs_batch_size(response_batch_size, prepared$v,
                                     "response_batch_size")
+  if (!is.null(cache) && is.null(kernel_cache_key)) {
+    kernel_cache_key <- cache_key
+  }
+  band <- .brs_band_kernels(prepared, cache, kernel_cache_key)
   decomposition <- .brs_decomposition(
     prepared, "dual_kernel", cache, cache_key,
     list(solver_tolerance = solver_tolerance),
-    function() .brs_dual_decomposition(prepared, solver_tolerance)
+    function() .brs_dual_decomposition(prepared, solver_tolerance, band$kernels),
+    band_hashes = band$hashes
   )
   fits <- vector("list", length(alphas))
   for (alpha_indices in .brs_batches(length(alphas), alpha_batch)) {
@@ -436,6 +563,9 @@
     decomposition_count = decomposition$decomposition_count,
     cache_hit = decomposition$cache_hit,
     cache_key = decomposition$cache_key,
+    kernel_cache_key = if (is.null(cache)) NULL else kernel_cache_key,
+    band_kernel_builds = band$builds,
+    band_kernel_hits = band$hits,
     alpha_batch_size = alpha_batch_size,
     response_batch_size = response_batch_size,
     decomposition_dimensions = decomposition$value$dimensions
@@ -457,10 +587,9 @@
   )
   if (object$solver$backend == "svd_primal") {
     out <- gx$X %*% object$coefficients
-    out <- sweep(out, 2L, object$intercept, "+")
+    out <- .brc_offset_columns(out, object$intercept)
   } else if (object$solver$backend == "dual_kernel") {
-    Xs_new <- sweep(sweep(gx$X, 2L, object$x_center, "-"),
-                    2L, object$x_scale, "/")
+    Xs_new <- .brc_standardize_columns(gx$X, object$x_center, object$x_scale)
     cross_kernel <- matrix(0, nrow(Xs_new), nrow(object$training_xs))
     for (group_name in object$group_names) {
       idx <- unname(object$group) == group_name
@@ -469,7 +598,7 @@
            t(object$training_xs[, idx, drop = FALSE]))
     }
     out <- cross_kernel %*% object$dual_weights
-    out <- sweep(out, 2L, object$y_center, "+")
+    out <- .brc_offset_columns(out, object$y_center)
   } else {
     stop("Unknown optimized solver backend.", call. = FALSE)
   }

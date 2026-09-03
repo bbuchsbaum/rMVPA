@@ -272,8 +272,12 @@ Use `weight_retention = "primal"` for outer-fold coefficient matrices or
 `"dual"` for outer-fold sample-space weights. `max_retained_mb` refuses an
 unsafe request before allocation; `weight_overflow = "none"` may explicitly
 fall back to no weights. `memory_limit_mb` independently guards solver
-intermediates. Runtime provenance records the chosen solver, chunk manifest,
-decomposition/cache counts, maximum chunk result size, and the B+1 cost of
+intermediates and caps the retained decomposition cache: band Gram matrices are
+cached once per training split and shared across theta candidates and drop-out
+models, and least-recently-used entries are evicted (and recomputed on demand)
+once the cap is reached, so the limit changes reuse but never results. Runtime
+provenance records the chosen solver, chunk manifest, decomposition, band-Gram
+reuse, and eviction counts, maximum chunk result size, and the B+1 cost of
 requested drop-out models.
 
 For `F` outer folds, `K` inner folds, `T` theta candidates, `A` alphas, and

@@ -383,3 +383,21 @@ test_that("direct core matches the existing alpha_recall zero solve", {
                tolerance = 1e-11)
   expect_equal(unname(core_pred), unname(legacy_pred), tolerance = 1e-11)
 })
+
+test_that("column helpers reproduce sweep() bit for bit", {
+  set.seed(7301)
+  X <- matrix(rnorm(15 * 7), 15, 7, dimnames = list(NULL, paste0("x", 1:7)))
+  X[, 4] <- 2.5
+  center <- colMeans(X)
+  scale <- rMVPA:::.brc_column_sds(X)
+  scale[!is.finite(scale) | scale == 0] <- 1
+  expect_identical(rMVPA:::.brc_center_columns(X, center),
+                   sweep(X, 2L, center, "-"))
+  expect_identical(rMVPA:::.brc_standardize_columns(X, center, scale),
+                   sweep(sweep(X, 2L, center, "-"), 2L, scale, "/"))
+  expect_identical(rMVPA:::.brc_offset_columns(X, center),
+                   sweep(X, 2L, center, "+"))
+  B <- matrix(rnorm(7 * 3), 7, 3, dimnames = list(paste0("x", 1:7), NULL))
+  expect_identical(B / scale, sweep(B, 1L, scale, "/"))
+  expect_identical(B * scale, sweep(B, 1L, scale, "*"))
+})
