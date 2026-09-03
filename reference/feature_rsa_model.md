@@ -261,16 +261,18 @@ Feature RSA models analyze how well a feature matrix `F` (defined in the
 \`design\`) relates to neural data `X`. The \`max_comps\` parameter,
 inherited from the \`design\` object, sets an upper limit on the number
 of components fitted: - **pls**: PLS regression using the configured pls
-numerical kernel. Fits up to \`max_comps\` components; the actual number
+numerical kernel. Fits up to \`max_comps\` components, capped at the
+numerical rank of the training-fold feature matrix; the actual number
 used for prediction is chosen by `ncomp_selection`. - **pca**: Principal
 Component Regression using the configured pls PCR kernel (SVD-PCR by
-default). Fits up to \`max_comps\` components; selection is controlled
-by `ncomp_selection`. - **ridge**: Multi-response ridge regression using
-one economy SVD per training matrix. This is a distinct estimator, not
-an approximation to PLS or elastic net. Its penalty is selected by
-`lambda_selection`. - **glmnet**: Elastic net regression via `glmnet`
-with multivariate Gaussian response. Regularisation (lambda) can be
-auto-selected via `cv_glmnet=TRUE`.
+default). Fits up to \`max_comps\` components, capped in the same way;
+selection is controlled by `ncomp_selection`. - **ridge**:
+Multi-response ridge regression using one economy SVD per training
+matrix. This is a distinct estimator, not an approximation to PLS or
+elastic net. Its penalty is selected by `lambda_selection`. -
+**glmnet**: Elastic net regression via `glmnet` with multivariate
+Gaussian response. Regularisation (lambda) can be auto-selected via
+`cv_glmnet=TRUE`.
 
 For `pls` and `pca`, the `ncomp_selection` argument determines how many
 of the fitted components are actually used for prediction. The default
@@ -368,6 +370,23 @@ computed on a superset of rows, or otherwise nearly whitened inputs, are
 not detected, so use `"center"` for any PCA-score input whether or not a
 warning appears. The diagnostic is stored in `model$feature_spectrum`.
 
+Degenerate columns of `F` are treated according to what the requested
+standardization actually does. Under `"scale"` a column that is
+constant, or near-constant relative to the widest column, cannot be
+divided by its standard deviation: a column that is constant over every
+row is refused here, by the constructor, and one that is constant only
+within some training fold is refused by that fit, in both cases with a
+message naming how many such columns there are and which is worst.
+Constancy is judged against each column's own magnitude, never against
+the other columns' or against an absolute threshold, so `F` may mix
+units freely and rescaling it never changes the outcome. Under
+`"center"` no division takes place, so those columns are accepted; for
+`method = "pls"` and `method = "pca"` the number of components is then
+capped at the numerical rank of the feature matrix, both for the final
+fit and within each segment of blocked or leave-one-out component
+selection, which is what keeps undefined directions out of the fit and
+out of the tuning scores.
+
 ## See also
 
 [`feature_rsa_predictions`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_predictions.md),
@@ -396,12 +415,12 @@ warning appears. The diagnostic is stored in `model$feature_spectrum`.
     neuroim2::space(sample$dataset$mask)
   )
   res <- run_regional(mdl, region_mask)
-#> INFO [2026-09-03 17:21:19] 
+#> INFO [2026-09-03 17:34:33] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 2
 #> - Processed: 2
 #> - Skipped: 0
-#> INFO [2026-09-03 17:21:19] run_regional: 2 ROIs processed (success=2, errors=0)
+#> INFO [2026-09-03 17:34:34] run_regional: 2 ROIs processed (success=2, errors=0)
   preds <- feature_rsa_predictions(res)
   dim(preds$predicted[[1]])
 #> [1] 24 34

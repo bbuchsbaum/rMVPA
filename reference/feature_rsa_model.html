@@ -286,11 +286,13 @@ arguments such as <code>cache_pca</code> now results in an error.</p></dd>
 relates to neural data <code>X</code>. The `max_comps` parameter, inherited from the `design` object,
 sets an upper limit on the number of components fitted:
   - <strong>pls</strong>: PLS regression using the configured <span class="pkg">pls</span> numerical
-    kernel. Fits up to `max_comps` components; the actual number used for
+    kernel. Fits up to `max_comps` components, capped at the numerical rank
+    of the training-fold feature matrix; the actual number used for
     prediction is chosen by <code>ncomp_selection</code>.
   - <strong>pca</strong>: Principal Component Regression using the configured
     <span class="pkg">pls</span> PCR kernel (SVD-PCR by default). Fits up to `max_comps`
-    components; selection is controlled by <code>ncomp_selection</code>.
+    components, capped in the same way; selection is controlled by
+    <code>ncomp_selection</code>.
   - <strong>ridge</strong>: Multi-response ridge regression using one economy SVD
     per training matrix. This is a distinct estimator, not an approximation
     to PLS or elastic net. Its penalty is selected by <code>lambda_selection</code>.
@@ -384,6 +386,21 @@ Scores computed on a superset of rows, or otherwise nearly whitened inputs,
 are not detected, so use <code>"center"</code> for any PCA-score input whether or
 not a warning appears. The diagnostic is stored in
 <code>model$feature_spectrum</code>.</p>
+<p>Degenerate columns of <code>F</code> are treated according to what the requested
+standardization actually does. Under <code>"scale"</code> a column that is
+constant, or near-constant relative to the widest column, cannot be divided
+by its standard deviation: a column that is constant over every row is
+refused here, by the constructor, and one that is constant only within some
+training fold is refused by that fit, in both cases with a message naming
+how many such columns there are and which is worst. Constancy is judged
+against each column's own magnitude, never against the other columns' or
+against an absolute threshold, so <code>F</code> may mix units freely and
+rescaling it never changes the outcome. Under <code>"center"</code> no division
+takes place, so those columns are accepted; for <code>method = "pls"</code> and
+<code>method = "pca"</code> the number of components is then capped at the
+numerical rank of the feature matrix, both for the final fit and within
+each segment of blocked or leave-one-out component selection, which is what
+keeps undefined directions out of the fit and out of the tuning scores.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -412,12 +429,12 @@ not a warning appears. The diagnostic is stored in
 <span class="r-in"><span>    <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">sample</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mdl</span>, <span class="va">region_mask</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-03 17:21:19] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-03 17:34:33] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">2</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">2</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-03 17:21:19] run_regional: 2 ROIs processed (success=2, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-03 17:34:34] run_regional: 2 ROIs processed (success=2, errors=0)</span>
 <span class="r-in"><span>  <span class="va">preds</span> <span class="op">&lt;-</span> <span class="fu"><a href="feature_rsa_predictions.html">feature_rsa_predictions</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">preds</span><span class="op">$</span><span class="va">predicted</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 24 34</span>

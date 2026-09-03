@@ -338,6 +338,22 @@ constructor warns when that leaves a flat spectrum with no direction to
 order components by. Designs built from a similarity matrix
 <code>S</code> already hold such scores and default to
 <code>"center"</code>.</p>
+<p>A constant column of <code>F</code> is only a problem for
+<code>"scale"</code>, which would have to divide by a standard deviation
+of zero. A column that is constant throughout is refused by
+<code><a href="../reference/feature_rsa_model.html">feature_rsa_model()</a></code> itself, before any ROI runs; one that
+is constant only within a training fold is refused by that fit. Either
+way the message names how many such columns there are and which is
+worst. Constancy is judged against each column’s own magnitude, so
+<code>F</code> may mix units freely and rescaling it cannot change
+whether an analysis runs.</p>
+<p>Under <code>"center"</code> nothing is divided, so those columns are
+accepted, and <code>"pls"</code> and <code>"pca"</code> cap the number
+of components at the numerical rank of the feature matrix — for the
+final fit, and separately within each segment of <code>"blocked"</code>
+or <code>"loo"</code> component selection, so a column whose variance
+sits in a held-out block cannot contribute a meaningless component or a
+meaningless tuning score.</p>
 </div>
 <div class="section level2">
 <h2 id="how-should-you-select-the-number-of-components">How should you select the number of components?<a class="anchor" aria-label="anchor" href="#how-should-you-select-the-number-of-components"></a>
@@ -388,7 +404,8 @@ expensive for long designs</td>
 <tr class="even">
 <td><code>"max"</code></td>
 <td align="right">One fit</td>
-<td>No tuning; always use the available <code>max_comps</code>
+<td>No tuning; use <code>max_comps</code>, capped at the numerical rank
+of <code>F</code>
 </td>
 <td>A fixed-complexity analysis chosen in advance</td>
 </tr>
@@ -623,7 +640,7 @@ descriptive.</caption>
 <tbody>
 <tr class="odd">
 <td align="left">PLS LOO</td>
-<td align="right">91.00</td>
+<td align="right">206.50</td>
 <td align="right">1.0</td>
 <td align="right">1.000</td>
 <td align="right">0.0000</td>
@@ -631,39 +648,39 @@ descriptive.</caption>
 </tr>
 <tr class="even">
 <td align="left">PLS blocked</td>
-<td align="right">8.00</td>
-<td align="right">11.4</td>
+<td align="right">12.00</td>
+<td align="right">12.1</td>
 <td align="right">1.000</td>
 <td align="right">0.0000</td>
 <td align="right">0.0000</td>
 </tr>
 <tr class="odd">
 <td align="left">Ridge GCV</td>
-<td align="right">2.19</td>
-<td align="right">41.9</td>
+<td align="right">2.62</td>
+<td align="right">46.8</td>
 <td align="right">0.877</td>
 <td align="right">0.0022</td>
 <td align="right">0.0026</td>
 </tr>
 <tr class="even">
 <td align="left">Ridge analytic LOO</td>
-<td align="right">8.33</td>
-<td align="right">10.9</td>
+<td align="right">10.83</td>
+<td align="right">10.7</td>
 <td align="right">0.887</td>
 <td align="right">0.0018</td>
 <td align="right">0.0021</td>
 </tr>
 <tr class="odd">
 <td align="left">Ridge blocked</td>
-<td align="right">9.00</td>
-<td align="right">10.1</td>
+<td align="right">15.83</td>
+<td align="right">10.2</td>
 <td align="right">0.888</td>
 <td align="right">0.0018</td>
 <td align="right">0.0018</td>
 </tr>
 <tr class="even">
 <td align="left">glmnet ridge blocked CV</td>
-<td align="right">688.50</td>
+<td align="right">1402.00</td>
 <td align="right">0.1</td>
 <td align="right">2.624</td>
 <td align="right">-0.0100</td>

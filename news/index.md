@@ -2,6 +2,40 @@
 
 ## rMVPA 0.1.3
 
+- The near-zero-variance guard in
+  [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+  no longer fails ROIs it has no reason to fail
+  ([\#85](https://github.com/bbuchsbaum/rMVPA/issues/85)). Its threshold
+  on the feature matrix `F` was absolute (`var < 1e-10`), so multiplying
+  `F` by a constant, which leaves the centered PCR solution unchanged,
+  turned a working analysis into zero usable ROIs; and it ran even under
+  `feature_standardize = "center"`, where `F` is never divided by its
+  column standard deviations and a constant column is inert. The screen
+  now judges each column against its own magnitude, applies to `F` only
+  when `"scale"` is requested, and names how many columns are degenerate
+  and which is worst instead of aborting with
+  [`any()`](https://rdrr.io/r/base/any.html). Judging a column against
+  its own magnitude rather than against an absolute threshold or against
+  the widest column in the matrix means a feature matrix that mixes
+  units — the case `"scale"` exists for — is not refused, and rescaling
+  `F` cannot change the verdict. Non-finite entries are reported
+  separately and always. A column that is degenerate over every row now
+  fails in
+  [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+  itself, where it can still be named, rather than in every ROI of a job
+  whose only visible output is an all-NA performance table. The guard on
+  the brain data `X`, which is always z-scored, is unchanged in intent
+  but is likewise relative, so `X` in small units no longer fails.
+- [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+  no longer fits `pls` or `pca` components that the feature matrix does
+  not define. The component count is capped at the numerical rank of the
+  standardized feature matrix, for the final fit and separately within
+  each segment of `ncomp_selection = "blocked"` or `"loo"`. Beyond that
+  rank `pls` returns NaN or ~1e30 coefficients, which reached the caller
+  as an all-NA performance table rather than as an error, and entered
+  the tuning scores as if they were comparable numbers. A component
+  count that some segment cannot define is no longer a candidate, so
+  component counts are compared on the same segments.
 - Banded-ridge tuning with the optimized solvers needs far less memory
   and skips redundant work
   ([\#84](https://github.com/bbuchsbaum/rMVPA/issues/84)). The per-fold

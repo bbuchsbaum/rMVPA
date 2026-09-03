@@ -207,6 +207,23 @@ warns when that leaves a flat spectrum with no direction to order
 components by. Designs built from a similarity matrix `S` already hold
 such scores and default to `"center"`.
 
+A constant column of `F` is only a problem for `"scale"`, which would
+have to divide by a standard deviation of zero. A column that is
+constant throughout is refused by
+[`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
+itself, before any ROI runs; one that is constant only within a training
+fold is refused by that fit. Either way the message names how many such
+columns there are and which is worst. Constancy is judged against each
+column’s own magnitude, so `F` may mix units freely and rescaling it
+cannot change whether an analysis runs.
+
+Under `"center"` nothing is divided, so those columns are accepted, and
+`"pls"` and `"pca"` cap the number of components at the numerical rank
+of the feature matrix — for the final fit, and separately within each
+segment of `"blocked"` or `"loo"` component selection, so a column whose
+variance sits in a held-out block cannot contribute a meaningless
+component or a meaningless tuning score.
+
 ## How should you select the number of components?
 
 PLS and PCR fit up to `max_comps`; `ncomp_selection` decides how many
@@ -219,7 +236,7 @@ choose their own component count.
 | `"blocked"` | One fit per training block, plus the final fit | Leave-one-block-out MSE or pattern-relative performance; each block contributes one score | Preferred when runs, sessions, subjects, or another genuine independence unit are available |
 | `"loo"` (default) | One fit per training observation, plus the final fit | Leave-one-observation-out MSE | Backward-compatible choice for exchangeable, independent rows; expensive for long designs |
 | `"pve"` | One fit | Cumulative predictor variance explained, stopping at `pve_threshold` (default 0.9) | A fast heuristic when held-out tuning is not required |
-| `"max"` | One fit | No tuning; always use the available `max_comps` | A fixed-complexity analysis chosen in advance |
+| `"max"` | One fit | No tuning; use `max_comps`, capped at the numerical rank of `F` | A fixed-complexity analysis chosen in advance |
 
 `ncomp_objective = "mse"` remains the default in this release,
 preserving the existing selector and its one-standard-error rule: choose
@@ -412,12 +429,12 @@ than .01 at the median or .03 at the lower decile.
 
 | Estimator / selector | Median ms | Speedup vs PLS LOO | MSE ratio | Pattern delta | RDM delta |
 |:---|---:|---:|---:|---:|---:|
-| PLS LOO | 91.00 | 1.0 | 1.000 | 0.0000 | 0.0000 |
-| PLS blocked | 8.00 | 11.4 | 1.000 | 0.0000 | 0.0000 |
-| Ridge GCV | 2.19 | 41.9 | 0.877 | 0.0022 | 0.0026 |
-| Ridge analytic LOO | 8.33 | 10.9 | 0.887 | 0.0018 | 0.0021 |
-| Ridge blocked | 9.00 | 10.1 | 0.888 | 0.0018 | 0.0018 |
-| glmnet ridge blocked CV | 688.50 | 0.1 | 2.624 | -0.0100 | -0.0126 |
+| PLS LOO | 206.50 | 1.0 | 1.000 | 0.0000 | 0.0000 |
+| PLS blocked | 12.00 | 12.1 | 1.000 | 0.0000 | 0.0000 |
+| Ridge GCV | 2.62 | 46.8 | 0.877 | 0.0022 | 0.0026 |
+| Ridge analytic LOO | 10.83 | 10.7 | 0.887 | 0.0018 | 0.0021 |
+| Ridge blocked | 15.83 | 10.2 | 0.888 | 0.0018 | 0.0018 |
+| glmnet ridge blocked CV | 1402.00 | 0.1 | 2.624 | -0.0100 | -0.0126 |
 
 Twenty-seed dense-linear characterization on Apple M3 Max. Accuracy
 columns are relative to PLS LOO; timings are descriptive. {.table}
