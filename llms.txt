@@ -492,7 +492,7 @@ All functions exported by rMVPA
   : Create a Permutation Control Object
 
 - [`permute_labels()`](https://bbuchsbaum.github.io/rMVPA/reference/permute_labels.md)
-  : Permute Training Labels in an MVPA Design
+  : Permute Labels in a Design for Permutation Testing
 
 - [`predict_model()`](https://bbuchsbaum.github.io/rMVPA/reference/predict_model.md)
   : Predict Model Output
@@ -583,6 +583,9 @@ All functions exported by rMVPA
 - [`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
   : Construct a design for an RSA (Representational Similarity Analysis)
   model
+
+- [`rsa_design_diagnostics()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design_diagnostics.md)
+  : Diagnose the effective support of an RSA design
 
 - [`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
   : Construct an RSA (Representational Similarity Analysis) model

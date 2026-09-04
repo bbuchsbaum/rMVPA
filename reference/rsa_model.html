@@ -79,8 +79,11 @@ One of: <code>"pearson"</code>, <code>"spearman"</code>, <code>"lm"</code>, or <
 
 
 <dt id="arg-check-collinearity">check_collinearity<a class="anchor" aria-label="anchor" href="#arg-check-collinearity"></a></dt>
-<dd><p>Logical indicating whether to check for collinearity in the design matrix.
-Only applies when <code>regtype="lm"</code>. Default is TRUE.</p></dd>
+<dd><p>Logical. When <code>regtype = "lm"</code>, stop if two
+predictor RDMs correlate above 0.99 or the design matrix is rank deficient.
+When <code>regtype</code> is <code>"lm"</code> or <code>"rfit"</code>, also warn if a model
+predictor is supported by fewer than 10 effective items (see the section
+on effective support). Default is TRUE.</p></dd>
 
 
 <dt id="arg-nneg">nneg<a class="anchor" aria-label="anchor" href="#arg-nneg"></a></dt>
@@ -128,7 +131,28 @@ or <code>"spearman"</code> (rank-then-standardize). Default <code>"pearson"</cod
 <li><p><code>regtype</code>    : the regression type</p></li>
 <li><p><code>nneg</code>       : a named list of constrained variables, if any</p></li>
 <li><p><code>semipartial</code>: whether to compute semi-partial correlations</p></li>
+<li><p><code>design_diagnostics</code>: an <code>rsa_design_diagnostics</code> object
+        (see <code><a href="rsa_design_diagnostics.html">rsa_design_diagnostics</a></code>)</p></li>
 </ul></div>
+    <div class="section level2">
+    <h2 id="effective-support-of-the-design">Effective support of the design<a class="anchor" aria-label="anchor" href="#effective-support-of-the-design"></a></h2>
+
+
+<p>RDM entries are not independent observations. Every item enters
+<code>n_items - 1</code> pairs, so the <code>n_pairs</code> entries of a vectorised RDM
+carry on the order of <code>n_items</code> independent pieces of information, and
+a regression coefficient's variance is inflated further by the predictor's
+collinearity with the others (its VIF). The constructor computes
+<code>n_items / VIF</code> for every predictor and stores the result as
+<code>design_diagnostics</code> (see <code><a href="rsa_design_diagnostics.html">rsa_design_diagnostics</a></code>). When
+<code>regtype</code> is <code>"lm"</code> or <code>"rfit"</code> and a model predictor falls
+below 10 effective items, it warns: that coefficient will vary across ROIs
+largely through noise. This is a heuristic screen, not a test.</p>
+<p>For inference on RSA maps use <code><a href="run_permutation_searchlight.html">run_permutation_searchlight</a></code>,
+which permutes item labels and so carries the same dependence into the
+null. The per-ROI t-values returned by <code>regtype = "lm"</code> use
+<code>n_pairs</code> degrees of freedom and are anti-conservative.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
@@ -150,6 +174,7 @@ or <code>"spearman"</code> (rank-then-standardize). Default <code>"pearson"</cod
 <span class="r-in"><span><span class="va">rsa_mod</span> <span class="op">&lt;-</span> <span class="fu">rsa_model</span><span class="op">(</span><span class="va">mvpa_data</span>, <span class="va">rdes</span>, regtype <span class="op">=</span> <span class="st">"lm"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Checking design matrix for collinearity...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Collinearity check passed.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>RSA design has only 5 items, which is ~4.1 effective items for predictor 'dismat1' (VIF = 1.2). Its coefficient will be unstable across ROIs. Add items or pool runs. RDM entries share items, so the 10 pairs carry roughly 5 independent observations. Use run_permutation_searchlight() for inference; per-ROI t-values overstate the evidence.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create an RSA model enforcing non-negativity for dismat2 only:</span></span></span>
 <span class="r-in"><span><span class="co"># Requires the 'glmnet' package to be installed</span></span></span>
@@ -161,6 +186,7 @@ or <code>"spearman"</code> (rank-then-standardize). Default <code>"pearson"</cod
 <span class="r-in"><span>                        semipartial <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Checking design matrix for collinearity...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Collinearity check passed.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>RSA design has only 5 items, which is ~4.1 effective items for predictor 'dismat1' (VIF = 1.2). Its coefficient will be unstable across ROIs. Add items or pool runs. RDM entries share items, so the 10 pairs carry roughly 5 independent observations. Use run_permutation_searchlight() for inference; per-ROI t-values overstate the evidence.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Train the model using a trial-by-feature matrix</span></span></span>
 <span class="r-in"><span><span class="va">fit_params</span> <span class="op">&lt;-</span> <span class="fu"><a href="train_model.html">train_model</a></span><span class="op">(</span><span class="va">rsa_mod_sp</span>, <span class="va">data_mat</span>, y <span class="op">=</span> <span class="cn">NULL</span>, indices <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></span>

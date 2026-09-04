@@ -125,6 +125,12 @@ plus
 
   Dataset row indices when `pairs = "between"`.
 
+- block_var_b:
+
+  Block labels for domain B (equal to `block_var_a` in within mode);
+  used by
+  [`permute_labels`](https://bbuchsbaum.github.io/rMVPA/reference/permute_labels.md).
+
 ## Details
 
 The returned object inherits from `rsa_design` so it is a drop-in

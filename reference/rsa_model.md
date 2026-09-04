@@ -46,8 +46,11 @@ rsa_model(
 
 - check_collinearity:
 
-  Logical indicating whether to check for collinearity in the design
-  matrix. Only applies when `regtype="lm"`. Default is TRUE.
+  Logical. When `regtype = "lm"`, stop if two predictor RDMs correlate
+  above 0.99 or the design matrix is rank deficient. When `regtype` is
+  `"lm"` or `"rfit"`, also warn if a model predictor is supported by
+  fewer than 10 effective items (see the section on effective support).
+  Default is TRUE.
 
 - nneg:
 
@@ -105,6 +108,29 @@ An object of class `"rsa_model"` (and `"list"`), containing:
 
 - `semipartial`: whether to compute semi-partial correlations
 
+- `design_diagnostics`: an `rsa_design_diagnostics` object (see
+  [`rsa_design_diagnostics`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design_diagnostics.md))
+
+## Effective support of the design
+
+RDM entries are not independent observations. Every item enters
+`n_items - 1` pairs, so the `n_pairs` entries of a vectorised RDM carry
+on the order of `n_items` independent pieces of information, and a
+regression coefficient's variance is inflated further by the predictor's
+collinearity with the others (its VIF). The constructor computes
+`n_items / VIF` for every predictor and stores the result as
+`design_diagnostics` (see
+[`rsa_design_diagnostics`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design_diagnostics.md)).
+When `regtype` is `"lm"` or `"rfit"` and a model predictor falls below
+10 effective items, it warns: that coefficient will vary across ROIs
+largely through noise. This is a heuristic screen, not a test.
+
+For inference on RSA maps use
+[`run_permutation_searchlight`](https://bbuchsbaum.github.io/rMVPA/reference/run_permutation_searchlight.md),
+which permutes item labels and so carries the same dependence into the
+null. The per-ROI t-values returned by `regtype = "lm"` use `n_pairs`
+degrees of freedom and are anti-conservative.
+
 ## Examples
 
 ``` r
@@ -126,6 +152,7 @@ rdes <- rsa_design(~ dismat1 + dismat2,
 rsa_mod <- rsa_model(mvpa_data, rdes, regtype = "lm")
 #> Checking design matrix for collinearity...
 #> Collinearity check passed.
+#> Warning: RSA design has only 5 items, which is ~4.1 effective items for predictor 'dismat1' (VIF = 1.2). Its coefficient will be unstable across ROIs. Add items or pool runs. RDM entries share items, so the 10 pairs carry roughly 5 independent observations. Use run_permutation_searchlight() for inference; per-ROI t-values overstate the evidence.
 
 # Create an RSA model enforcing non-negativity for dismat2 only:
 # Requires the 'glmnet' package to be installed
@@ -137,6 +164,7 @@ rsa_mod_sp <- rsa_model(mvpa_data, rdes, regtype = "lm",
                         semipartial = TRUE)
 #> Checking design matrix for collinearity...
 #> Collinearity check passed.
+#> Warning: RSA design has only 5 items, which is ~4.1 effective items for predictor 'dismat1' (VIF = 1.2). Its coefficient will be unstable across ROIs. Add items or pool runs. RDM entries share items, so the 10 pairs carry roughly 5 independent observations. Use run_permutation_searchlight() for inference; per-ROI t-values overstate the evidence.
 
 # Train the model using a trial-by-feature matrix
 fit_params <- train_model(rsa_mod_sp, data_mat, y = NULL, indices = NULL)
