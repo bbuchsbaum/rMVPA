@@ -492,57 +492,57 @@ GB). Timings are descriptive, not thresholds.</caption>
 <tr class="odd">
 <td align="left">sequential</td>
 <td align="left">default</td>
-<td align="right">5.341</td>
-<td align="left">5.193–5.523</td>
+<td align="right">5.875</td>
+<td align="left">5.705–6.160</td>
 <td align="right">12.444</td>
 </tr>
 <tr class="even">
 <td align="left">sequential</td>
 <td align="left">shard</td>
-<td align="right">4.014</td>
-<td align="left">3.925–4.108</td>
+<td align="right">4.211</td>
+<td align="left">4.183–4.642</td>
 <td align="right">0.101</td>
 </tr>
 <tr class="odd">
 <td align="left">multisession</td>
 <td align="left">default</td>
-<td align="right">8.577</td>
-<td align="left">8.459–8.629</td>
+<td align="right">9.452</td>
+<td align="left">9.081–9.639</td>
 <td align="right">12.444</td>
 </tr>
 <tr class="even">
 <td align="left">multisession</td>
 <td align="left">shard</td>
-<td align="right">6.315</td>
-<td align="left">6.237–6.480</td>
+<td align="right">6.710</td>
+<td align="left">6.566–6.856</td>
 <td align="right">0.101</td>
 </tr>
 <tr class="odd">
 <td align="left">multicore</td>
 <td align="left">default</td>
-<td align="right">6.070</td>
-<td align="left">6.012–6.178</td>
+<td align="right">6.276</td>
+<td align="left">6.269–7.411</td>
 <td align="right">12.444</td>
 </tr>
 <tr class="even">
 <td align="left">multicore</td>
 <td align="left">shard</td>
-<td align="right">3.650</td>
-<td align="left">3.494–4.058</td>
+<td align="right">3.589</td>
+<td align="left">3.249–3.672</td>
 <td align="right">0.101</td>
 </tr>
 <tr class="odd">
 <td align="left">mirai</td>
 <td align="left">default</td>
-<td align="right">13.737</td>
-<td align="left">12.690–15.675</td>
+<td align="right">13.457</td>
+<td align="left">12.940–13.911</td>
 <td align="right">12.444</td>
 </tr>
 <tr class="even">
 <td align="left">mirai</td>
 <td align="left">shard</td>
-<td align="right">10.891</td>
-<td align="left">10.022–11.018</td>
+<td align="right">10.217</td>
+<td align="left">9.968–11.436</td>
 <td align="right">0.101</td>
 </tr>
 </tbody>
@@ -553,14 +553,14 @@ frames totaled 13,048,800 bytes per run; shard frames totaled 105,712
 bytes, a 123-fold reduction for this design. This is direct evidence
 about the transport structure measured by <code><a href="https://rdrr.io/r/utils/object.size.html" class="external-link">object.size()</a></code>,
 not a claim that physical RAM fell by exactly the same factor.</p>
-<p>Shard reduced the median time for sequential, multicore, and
-(slightly) mirai in this short local run, but it was slower with
-multisession. The three-repetition timing ranges overlap for every
-pairing, and startup dominates the separate-session plans. Multicore’s
-local timing does not override its safety constraints. Mirai’s
-fresh-process overhead here does not predict a long-lived mirai
-deployment. Re-run the driver on the target system before choosing on
-speed.</p>
+<p>Shard reduced the median time for every plan measured in this short
+local run, and the three-repetition timing ranges are separated for
+every pairing. Startup dominates the separate-session plans. Read that
+ordering as one machine on one afternoon rather than a property of the
+backends: multicore’s local timing does not override its safety
+constraints, and mirai’s fresh-process overhead here does not predict a
+long-lived mirai deployment. Re-run the driver on the target system
+before choosing on speed.</p>
 <p>The receipt intentionally omits process-tree RSS as a publication
 claim. Summed RSS can double-count shared and copy-on-write pages, while
 socket and mirai workers may be detached from the controller’s

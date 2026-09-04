@@ -305,14 +305,14 @@ pairing ran in three fresh R processes from a clean installed rMVPA
 
 | Future plan  | Data backend | Median (s) | Range (s)     | Task frames (MiB) |
 |:-------------|:-------------|-----------:|:--------------|------------------:|
-| sequential   | default      |      5.341 | 5.193–5.523   |            12.444 |
-| sequential   | shard        |      4.014 | 3.925–4.108   |             0.101 |
-| multisession | default      |      8.577 | 8.459–8.629   |            12.444 |
-| multisession | shard        |      6.315 | 6.237–6.480   |             0.101 |
-| multicore    | default      |      6.070 | 6.012–6.178   |            12.444 |
-| multicore    | shard        |      3.650 | 3.494–4.058   |             0.101 |
-| mirai        | default      |     13.737 | 12.690–15.675 |            12.444 |
-| mirai        | shard        |     10.891 | 10.022–11.018 |             0.101 |
+| sequential   | default      |      5.875 | 5.705–6.160   |            12.444 |
+| sequential   | shard        |      4.211 | 4.183–4.642   |             0.101 |
+| multisession | default      |      9.452 | 9.081–9.639   |            12.444 |
+| multisession | shard        |      6.710 | 6.566–6.856   |             0.101 |
+| multicore    | default      |      6.276 | 6.269–7.411   |            12.444 |
+| multicore    | shard        |      3.589 | 3.249–3.672   |             0.101 |
+| mirai        | default      |     13.457 | 12.940–13.911 |            12.444 |
+| mirai        | shard        |     10.217 | 9.968–11.436  |             0.101 |
 
 Local fresh-process characterization on an Apple M3 Max (36 GB). Timings
 are descriptive, not thresholds. {.table}
@@ -325,13 +325,14 @@ transport structure measured by
 [`object.size()`](https://rdrr.io/r/utils/object.size.html), not a claim
 that physical RAM fell by exactly the same factor.
 
-Shard reduced the median time for sequential, multicore, and (slightly)
-mirai in this short local run, but it was slower with multisession. The
-three-repetition timing ranges overlap for every pairing, and startup
-dominates the separate-session plans. Multicore’s local timing does not
-override its safety constraints. Mirai’s fresh-process overhead here
-does not predict a long-lived mirai deployment. Re-run the driver on the
-target system before choosing on speed.
+Shard reduced the median time for every plan measured in this short
+local run, and the three-repetition timing ranges are separated for
+every pairing. Startup dominates the separate-session plans. Read that
+ordering as one machine on one afternoon rather than a property of the
+backends: multicore’s local timing does not override its safety
+constraints, and mirai’s fresh-process overhead here does not predict a
+long-lived mirai deployment. Re-run the driver on the target system
+before choosing on speed.
 
 The receipt intentionally omits process-tree RSS as a publication claim.
 Summed RSS can double-count shared and copy-on-write pages, while socket
