@@ -62,6 +62,9 @@
 #'     \item{n_a, n_b}{Item counts.}
 #'     \item{pair_index}{A data frame describing each retained pair.}
 #'     \item{row_idx_a, row_idx_b}{Dataset row indices when \code{pairs = "between"}.}
+#'     \item{block_var_b}{Block labels for domain B (equal to
+#'       \code{block_var_a} in within mode); used by
+#'       \code{\link{permute_labels}}.}
 #'   }
 #'
 #' @seealso \code{\link{rsa_design}}, \code{\link{rsa_model}},
@@ -226,6 +229,7 @@ pair_rsa_design <- function(items_a,
     split_by     = NULL,
     split_groups = NULL,
     block_var    = block_var_a,
+    block_var_b  = block_var_b,
     include      = include,
     model_mat    = model_mat,
     model_predictors = model_names,

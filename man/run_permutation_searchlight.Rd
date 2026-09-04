@@ -15,7 +15,10 @@ run_permutation_searchlight(
 )
 }
 \arguments{
-\item{model_spec}{An \code{mvpa_model} or compatible model specification.}
+\item{model_spec}{An \code{mvpa_model}, \code{rsa_model}, or compatible
+model specification whose design has a \code{\link{permute_labels}}
+method.  For \code{rsa_model} the permutation relabels items, so the null
+carries the same item-level dependence as the observed statistic.}
 
 \item{observed}{Optional pre-computed searchlight result (output of
 \code{run_searchlight()}).  If \code{NULL}, it is computed internally.
@@ -30,8 +33,13 @@ center ID.}
 
 \item{perm_ctrl}{A \code{\link{permutation_control}} object.}
 
-\item{metric}{Character. Which performance metric to use for inference.
-If \code{NULL} (default), the first metric is used.}
+\item{metric}{Character vector naming the performance metric(s) to test.
+If \code{NULL} (default), the first metric is used, except for
+\code{rsa_model} specifications, where every model predictor is tested:
+a permutation pass returns all predictors at once, so testing them
+jointly costs nothing extra and they share one null pool.  A metric that
+is named explicitly but absent from the results is an error rather than
+a silent fallback to the first metric.}
 
 \item{...}{Additional arguments forwarded to \code{run_searchlight()}
 (observed pass and \code{"searchlight"} permutations).  For
@@ -42,7 +50,11 @@ are ignored for that path to avoid argument-mismatch failures
 \code{run_searchlight} but not for \code{mvpa_iterate}).}
 }
 \value{
-A \code{permutation_result} S3 object containing:
+When one metric is tested, a \code{permutation_result} S3 object.
+  When several are tested (the default for \code{rsa_model}), a
+  \code{permutation_result_set}: a named list of \code{permutation_result}
+  objects, one per metric, all scored against the same permutations.  Each
+  \code{permutation_result} contains:
   \describe{
     \item{p_map}{Spatial map of raw p-values.}
     \item{p_adj_map}{Spatial map of FDR-adjusted p-values (if requested).}

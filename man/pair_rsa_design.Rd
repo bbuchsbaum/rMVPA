@@ -79,6 +79,9 @@ A list with class \code{c("pair_rsa_design", "rsa_design", "list")}
     \item{n_a, n_b}{Item counts.}
     \item{pair_index}{A data frame describing each retained pair.}
     \item{row_idx_a, row_idx_b}{Dataset row indices when \code{pairs = "between"}.}
+    \item{block_var_b}{Block labels for domain B (equal to
+      \code{block_var_a} in within mode); used by
+      \code{\link{permute_labels}}.}
   }
 }
 \description{

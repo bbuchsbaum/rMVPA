@@ -1,5 +1,31 @@
 # rMVPA 0.1.3
 
+* `run_permutation_searchlight()` now supports `rsa_model`. `permute_labels()`
+  is an S3 generic; its `rsa_design` and `pair_rsa_design` methods relabel
+  *items* within blocks rather than shuffling RDM entries, because every item
+  enters `n - 1` pairs and an entry-wise shuffle would destroy that dependence
+  and give an anti-conservative null. The permutation is applied to the rows of
+  the neural pattern matrix in `train_model.rsa_model`, which is equivalent to
+  permuting every model RDM by the inverse permutation, so the design matrix
+  and the cached fast kernel are reused unchanged. `shuffle = "global"` is
+  refused for designs that exclude within-block pairs. For `rsa_model` the run
+  scores every model predictor against one shared null pool and returns a
+  `permutation_result_set`; `metric` accepts a character vector for any model
+  type, and a metric that is named but absent is now an error instead of a
+  silent fallback to the first one. The per-ROI extractor also reads the
+  one-row performance matrices that `rsa_model` produces, which it previously
+  reduced to their first column whatever metric was requested.
+
+* `rsa_model()` reports the effective support of its design. RDM entries share
+  items, so `n_pairs` entries carry roughly `n_items` independent observations,
+  and collinearity among predictor RDMs divides that further. The new
+  `rsa_design_diagnostics()` computes `n_items / VIF` per predictor, the
+  constructor stores it as `design_diagnostics` and prints it, and for
+  `regtype = "lm"` or `"rfit"` it warns when a model predictor falls below 10
+  effective items. Previously `check_collinearity` was a cliff: it stopped at
+  |r| > 0.99 and said nothing at 0.95 with a dozen items, where per-ROI
+  coefficients change sign through noise alone.
+
 * The parallel runtime receipt is regenerated against current source, and the
   parallelism vignette now derives its claims from it. The receipt fingerprints
   the five files whose behaviour it measures, and that fingerprint had gone

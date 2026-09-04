@@ -248,6 +248,208 @@ check_collinearity <- function(model_mat) {
 }
 
 
+#' Diagnose the effective support of an RSA design
+#'
+#' Summarises how much information an RSA design can bring to bear on each
+#' predictor RDM.  RDM entries are not independent observations: every item
+#' enters \code{n_items - 1} pairs, so the \code{n_pairs} entries of a
+#' vectorised RDM carry on the order of \code{n_items} independent pieces of
+#' information rather than \code{n_pairs}.  A regression coefficient's variance
+#' is inflated further by the predictor's collinearity with the others, its
+#' variance inflation factor (VIF).  The ratio \code{n_items / VIF} is
+#' reported per predictor as the effective number of items supporting that
+#' predictor's unique contribution.  Values below 10 mark a predictor whose
+#' coefficient will vary across ROIs largely through noise.  This is a
+#' heuristic screen, not a test; it flags designs that cannot separate their
+#' predictors, it does not certify those that can.
+#'
+#' For \code{\link{pair_rsa_design}} objects in between-domain mode the item
+#' count is \code{n_a + n_b}, since each item of either set enters every pair
+#' with the other set.
+#'
+#' @param design An \code{rsa_design} or \code{pair_rsa_design}.
+#'
+#' @return An object of class \code{rsa_design_diagnostics}: a list with
+#'   \code{n_items}, \code{n_pairs} (after any within-block exclusion),
+#'   \code{n_predictors}, \code{predictors}, \code{predictor_roles},
+#'   \code{max_abs_cor} and \code{max_abs_cor_pair} (the most correlated pair
+#'   of predictors), \code{vif} (named, \code{Inf} when the design matrix is
+#'   singular, \code{NA} for a constant predictor), \code{items_per_predictor}
+#'   (\code{n_items / vif}), and \code{threshold} (10).
+#'
+#' @seealso \code{\link{rsa_model}}, which computes this at construction and
+#'   warns when a model predictor falls below the threshold, and
+#'   \code{\link{run_permutation_searchlight}} for inference that respects the
+#'   item-level dependence.
+#'
+#' @examples
+#' set.seed(1)
+#' items <- 12
+#' shared <- matrix(rnorm(items * 4), items, 4)
+#' a <- dist(shared)
+#' b <- dist(shared + matrix(rnorm(items * 4, sd = 0.3), items, 4))
+#' des <- rsa_design(~ a + b, list(a = a, b = b))
+#' rsa_design_diagnostics(des)
+#'
+#' @export
+rsa_design_diagnostics <- function(design) {
+  assert_that(inherits(design, "rsa_design"))
+  model_mat <- design$model_mat
+  if (is.null(model_mat) || length(model_mat) == 0L) {
+    stop("The RSA design has no predictors in `model_mat`.", call. = FALSE)
+  }
+
+  X <- as.matrix(do.call(cbind, model_mat))
+  storage.mode(X) <- "double"
+  colnames(X) <- names(model_mat)
+  p       <- ncol(X)
+  n_pairs <- nrow(X)
+  n_items <- .rsa_design_n_items(design)
+
+  vif         <- stats::setNames(rep(1, p), colnames(X))
+  max_abs_cor <- NA_real_
+  max_pair    <- c(NA_character_, NA_character_)
+
+  if (p > 1L) {
+    # pairwise.complete.obs keeps an NA cell in one RDM from blanking the
+    # whole correlation matrix; a constant column is NA on its own diagonal.
+    R   <- suppressWarnings(stats::cor(X, use = "pairwise.complete.obs"))
+    off <- abs(R)
+    diag(off) <- NA_real_
+    if (any(is.finite(off))) {
+      idx         <- which(off == max(off, na.rm = TRUE), arr.ind = TRUE)[1L, ]
+      max_abs_cor <- off[idx[1L], idx[2L]]
+      max_pair    <- colnames(X)[sort(idx)]
+    }
+
+    good  <- is.finite(diag(R))
+    vif[] <- NA_real_
+    if (sum(good) == 1L) {
+      vif[good] <- 1
+    } else if (sum(good) > 1L) {
+      inv <- tryCatch(solve(R[good, good, drop = FALSE]), error = function(e) NULL)
+      vif[good] <- if (is.null(inv)) Inf else pmax(diag(inv), 1)
+    }
+  }
+
+  structure(
+    list(
+      n_items             = n_items,
+      n_pairs             = n_pairs,
+      n_predictors        = p,
+      predictors          = colnames(X),
+      predictor_roles     = design$predictor_roles,
+      max_abs_cor         = max_abs_cor,
+      max_abs_cor_pair    = max_pair,
+      vif                 = vif,
+      items_per_predictor = n_items / vif,
+      threshold           = .rsa_min_items_per_predictor
+    ),
+    class = "rsa_design_diagnostics"
+  )
+}
+
+#' @export
+print.rsa_design_diagnostics <- function(x, ...) {
+  cat("RSA design diagnostics\n")
+  cat(sprintf("  items: %d   pairs: %d   predictors: %d\n",
+              x$n_items, x$n_pairs, x$n_predictors))
+  if (is.finite(x$max_abs_cor)) {
+    cat(sprintf("  max |r| between predictors: %.3f (%s, %s)\n",
+                x$max_abs_cor, x$max_abs_cor_pair[1L], x$max_abs_cor_pair[2L]))
+  }
+  cat("  effective items per predictor (items / VIF):\n")
+  for (nm in x$predictors) {
+    ipp  <- x$items_per_predictor[[nm]]
+    flag <- if (is.finite(ipp) && ipp < x$threshold) "  <- below threshold" else ""
+    cat(sprintf("    %-20s VIF %7.2f   ~%6.1f items%s\n", nm, x$vif[[nm]], ipp, flag))
+  }
+  invisible(x)
+}
+
+# Effective items per predictor below which rsa_model() warns for regression
+# regtypes.  A heuristic; see rsa_design_diagnostics().
+.rsa_min_items_per_predictor <- 10
+
+#' @keywords internal
+#' @noRd
+.rsa_design_n_items <- function(design) {
+  if (!is.null(design$n_a)) {
+    if (identical(design$pair_kind %||% "within", "between")) {
+      return(as.integer(design$n_a + design$n_b))
+    }
+    return(as.integer(design$n_a))
+  }
+  if (!is.null(design$data) && length(design$data) > 0L) {
+    return(as.integer(.rsa_design_entry_size(design$data[[1L]])))
+  }
+  if (is.null(design$include) && length(design$model_mat) > 0L) {
+    len <- length(design$model_mat[[1L]])
+    n   <- (1 + sqrt(1 + 8 * len)) / 2
+    if (isTRUE(all.equal(n, round(n)))) return(as.integer(round(n)))
+  }
+  stop("Cannot determine the number of items in this RSA design.", call. = FALSE)
+}
+
+#' @keywords internal
+#' @noRd
+.rsa_warn_effective_support <- function(diagnostics, design) {
+  preds <- design$model_predictors
+  if (is.null(preds) || length(preds) == 0L) {
+    preds <- names(diagnostics$items_per_predictor)
+  }
+  ipp <- diagnostics$items_per_predictor[intersect(preds, names(diagnostics$items_per_predictor))]
+  ipp <- ipp[is.finite(ipp)]
+  if (length(ipp) == 0L || min(ipp) >= diagnostics$threshold) {
+    return(invisible(FALSE))
+  }
+  worst    <- names(ipp)[which.min(ipp)]
+  vif_w    <- diagnostics$vif[[worst]]
+  shared   <- sprintf(paste0(
+    "RDM entries share items, so the %d pairs carry roughly %d independent ",
+    "observations. Use run_permutation_searchlight() for inference; per-ROI ",
+    "t-values overstate the evidence."),
+    diagnostics$n_pairs, diagnostics$n_items)
+
+  msg <- if (vif_w < 1.5) {
+    # Item-limited: collinearity is not the problem, the item count is.
+    sprintf(paste0(
+      "RSA design has only %d items, which is ~%.1f effective items for predictor ",
+      "'%s' (VIF = %.1f). Its coefficient will be unstable across ROIs. Add items ",
+      "or pool runs. %s"),
+      diagnostics$n_items, ipp[[worst]], worst, vif_w, shared)
+  } else {
+    cor_txt <- if (is.finite(diagnostics$max_abs_cor)) {
+      sprintf("; max |r| between predictors = %.2f (%s vs %s)",
+              diagnostics$max_abs_cor,
+              diagnostics$max_abs_cor_pair[1L], diagnostics$max_abs_cor_pair[2L])
+    } else {
+      ""
+    }
+    sprintf(paste0(
+      "RSA design supports predictor '%s' with only ~%.1f effective items ",
+      "(%d items, VIF = %.1f%s). Variance inflation from collinear predictors ",
+      "divides the item count further, and the coefficient will be unstable ",
+      "across ROIs. Use fewer or less collinear predictors. %s"),
+      worst, ipp[[worst]], diagnostics$n_items, vif_w, cor_txt, shared)
+  }
+  warning(msg, call. = FALSE)
+  invisible(TRUE)
+}
+
+#' @keywords internal
+#' @noRd
+.rsa_apply_item_perm <- function(idx, perm, what = "item_perm") {
+  if (is.null(perm)) return(idx)
+  n <- length(idx)
+  if (length(perm) != n || !identical(sort(as.integer(perm)), seq_len(n))) {
+    stop(sprintf("`%s` must be a permutation of 1..%d (length %d supplied).",
+                 what, n, length(perm)), call. = FALSE)
+  }
+  idx[perm]
+}
+
+
 #' @keywords internal
 #' @importFrom stats coef cor dist rnorm terms lm sd
 #' @noRd
@@ -552,6 +754,10 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
       stop("`row_idx_a`/`row_idx_b` reference rows outside the training data.",
            call. = FALSE)
     }
+    # Permutation-test hook (see permute_labels.pair_rsa_design): relabel the
+    # neural patterns of each item set within its own blocks.
+    ia <- .rsa_apply_item_perm(ia, obj$design$item_perm, "item_perm")
+    ib <- .rsa_apply_item_perm(ib, obj$design$item_perm_b, "item_perm_b")
     M <- 1 - stats::cor(t(train_dat[ia, , drop = FALSE]),
                          t(train_dat[ib, , drop = FALSE]),
                          method = obj$distmethod)
@@ -564,6 +770,13 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
              call. = FALSE)
       }
       train_dat <- train_dat[ia, , drop = FALSE]
+    }
+    # Permutation-test hook (see permute_labels.rsa_design): relabel items by
+    # permuting pattern rows, equivalent to permuting every model RDM by the
+    # inverse permutation while leaving the model matrix and kernel cached.
+    if (!is.null(obj$design$item_perm)) {
+      rows      <- .rsa_apply_item_perm(seq_len(nrow(train_dat)), obj$design$item_perm)
+      train_dat <- train_dat[rows, , drop = FALSE]
     }
     dvec <- .rdm_vector_correlation(train_dat, method = obj$distmethod, center = "none")
   }
@@ -776,6 +989,17 @@ print.rsa_model <- function(x, ...) {
 
   var_names <- names(x$design$model_mat)
   cat("  |- Predictors: ", paste(var_names, collapse=", "), "\n")
+  if (!is.null(x$design_diagnostics)) {
+    d <- x$design_diagnostics
+    cat("  |- Items: ", d$n_items, "   Pairs: ", d$n_pairs, "\n", sep = "")
+    if (is.finite(d$max_abs_cor)) {
+      cat(sprintf("  |- Max |r| between predictors: %.3f (%s, %s)\n",
+                  d$max_abs_cor, d$max_abs_cor_pair[1L], d$max_abs_cor_pair[2L]))
+    }
+    ipp <- d$items_per_predictor
+    cat("  |- Effective items per predictor (items / VIF): ",
+        paste(sprintf("%s = %.1f", names(ipp), ipp), collapse = ", "), "\n", sep = "")
+  }
   cat("\n")
 
   # Structure info
@@ -875,8 +1099,11 @@ print.rsa_design <- function(x, ...) {
 #'        One of: \code{"pearson"} or \code{"spearman"} (defaults to "spearman").
 #' @param regtype A character string specifying the analysis method. 
 #'        One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").
-#' @param check_collinearity Logical indicating whether to check for collinearity in the design matrix. 
-#'        Only applies when \code{regtype="lm"}. Default is TRUE.
+#' @param check_collinearity Logical. When \code{regtype = "lm"}, stop if two
+#'   predictor RDMs correlate above 0.99 or the design matrix is rank deficient.
+#'   When \code{regtype} is \code{"lm"} or \code{"rfit"}, also warn if a model
+#'   predictor is supported by fewer than 10 effective items (see the section
+#'   on effective support). Default is TRUE.
 #' @param nneg A named list of variables (predictors) for which non-negative regression coefficients should be enforced 
 #'        (only if \code{regtype="lm"}). Defaults to \code{NULL} (no constraints).
 #' @param semipartial Logical indicating whether to compute semi-partial correlations in the \code{"lm"} case 
@@ -897,6 +1124,23 @@ print.rsa_design <- function(x, ...) {
 #' @param fingerprint_basis Basis used to span the model RDM subspace when
 #'   \code{return_fingerprint = TRUE}: \code{"pca"} (default) or \code{"qr"}.
 #'
+#' @section Effective support of the design:
+#' RDM entries are not independent observations. Every item enters
+#' \code{n_items - 1} pairs, so the \code{n_pairs} entries of a vectorised RDM
+#' carry on the order of \code{n_items} independent pieces of information, and
+#' a regression coefficient's variance is inflated further by the predictor's
+#' collinearity with the others (its VIF). The constructor computes
+#' \code{n_items / VIF} for every predictor and stores the result as
+#' \code{design_diagnostics} (see \code{\link{rsa_design_diagnostics}}). When
+#' \code{regtype} is \code{"lm"} or \code{"rfit"} and a model predictor falls
+#' below 10 effective items, it warns: that coefficient will vary across ROIs
+#' largely through noise. This is a heuristic screen, not a test.
+#'
+#' For inference on RSA maps use \code{\link{run_permutation_searchlight}},
+#' which permutes item labels and so carries the same dependence into the
+#' null. The per-ROI t-values returned by \code{regtype = "lm"} use
+#' \code{n_pairs} degrees of freedom and are anti-conservative.
+#'
 #' @return An object of class \code{"rsa_model"} (and \code{"list"}), containing:
 #' \itemize{
 #'   \item \code{dataset}    : the input dataset
@@ -905,6 +1149,8 @@ print.rsa_design <- function(x, ...) {
 #'   \item \code{regtype}    : the regression type
 #'   \item \code{nneg}       : a named list of constrained variables, if any
 #'   \item \code{semipartial}: whether to compute semi-partial correlations
+#'   \item \code{design_diagnostics}: an \code{rsa_design_diagnostics} object
+#'         (see \code{\link{rsa_design_diagnostics}})
 #' }
 #' @examples
 #' # Create a random MVPA dataset (image data)
@@ -1027,6 +1273,11 @@ rsa_model <- function(dataset,
     ))
   }
 
+  design_diagnostics <- rsa_design_diagnostics(design)
+  if (regtype %in% c("lm", "rfit") && isTRUE(check_collinearity)) {
+    .rsa_warn_effective_support(design_diagnostics, design)
+  }
+
   fast_kernel <- NULL
   if (.rsa_fast_kernel_enabled()) {
     fast_kernel <- .rsa_prepare_fast_kernel(
@@ -1060,6 +1311,7 @@ rsa_model <- function(dataset,
     return_fingerprint = isTRUE(return_fingerprint),
     fingerprint_method = fingerprint_method,
     fingerprint_basis  = fingerprint_basis,
+    design_diagnostics = design_diagnostics,
     .fast_kernel = fast_kernel,
     .fingerprint_basis = fingerprint_basis_obj
   )

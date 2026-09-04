@@ -6,7 +6,8 @@
 \description{
 This module provides permutation testing infrastructure for searchlight MVPA,
 including covariate-conditioned null distributions, stratified subsampling,
-and FDR correction.  It wraps existing \pkg{rMVPA} infrastructure without
-modifying any core files.
+and FDR correction.  It wraps existing \pkg{rMVPA} infrastructure; a model
+type takes part by providing a \code{\link{permute_labels}} method for its
+design class.
 }
 \keyword{internal}

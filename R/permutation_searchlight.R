@@ -2,8 +2,9 @@
 #'
 #' This module provides permutation testing infrastructure for searchlight MVPA,
 #' including covariate-conditioned null distributions, stratified subsampling,
-#' and FDR correction.  It wraps existing \pkg{rMVPA} infrastructure without
-#' modifying any core files.
+#' and FDR correction.  It wraps existing \pkg{rMVPA} infrastructure; a model
+#' type takes part by providing a \code{\link{permute_labels}} method for its
+#' design class.
 #'
 #' @name permutation_searchlight
 #' @keywords internal
@@ -163,63 +164,166 @@ print.permutation_control <- function(x, ...) {
 # 2. permute_labels() — Label shuffling
 # ---------------------------------------------------------------------------
 
-#' Permute Training Labels in an MVPA Design
+#' Permute Labels in a Design for Permutation Testing
 #'
-#' Returns a copy of \code{design} with \code{y_train}, \code{cv_labels},
-#' and \code{targets} replaced by permuted versions.  \code{block_var} is
-#' never permuted.
+#' Returns a copy of \code{design} in which the link between the brain data
+#' and the quantity being decoded or modelled has been broken by a random
+#' relabelling that respects the design's block structure.  This is the
+#' null-generating step of \code{\link{run_permutation_searchlight}}.
 #'
-#' @param design An \code{mvpa_design} object.
-#' @param method Character. One of \code{"within_block"},
+#' The generic dispatches on the design class:
+#' \describe{
+#'   \item{\code{mvpa_design}}{Shuffles trial labels: \code{y_train},
+#'     \code{cv_labels}, and \code{targets} are replaced by permuted versions.
+#'     \code{block_var} is never permuted.}
+#'   \item{\code{rsa_design}}{Permutes \emph{item} labels, not RDM entries.
+#'     The entries of an RDM are not independent observations: every item
+#'     takes part in \code{n - 1} pairs, so shuffling the vectorised RDM would
+#'     destroy that dependence and give an anti-conservative null.
+#'     Relabelling items keeps it intact.  The permutation is stored on the
+#'     design as \code{item_perm}; \code{train_model.rsa_model} applies it to
+#'     the rows of the neural pattern matrix before the brain RDM is computed.
+#'     That is equivalent to permuting the rows and columns of every model RDM
+#'     by the inverse permutation, so the model matrix and any cached kernel
+#'     stay untouched.}
+#'   \item{\code{pair_rsa_design}}{As \code{rsa_design} in within-domain mode.
+#'     For \code{pairs = "between"} the two item sets are permuted
+#'     independently, each within its own blocks (\code{block_var_a},
+#'     \code{block_var_b}), and the second permutation is stored as
+#'     \code{item_perm_b}.}
+#' }
+#'
+#' When an RSA design excludes within-block pairs (the default whenever a
+#' \code{block_var} is supplied and some pairs fall within a block), items are
+#' exchangeable only within a block, and \code{method = "global"} is refused:
+#' the null would compare neural patterns from the same run while the observed
+#' statistic never does.  If every block holds a single item, no within-block
+#' shuffle can move anything and the method errors; when no pairs are excluded
+#' in that situation, \code{method = "global"} is the valid choice.
+#'
+#' @param design An \code{mvpa_design}, \code{rsa_design}, or
+#'   \code{pair_rsa_design} object.
+#' @param method Character. One of \code{"within_block"} (default),
 #'   \code{"circular_shift"}, or \code{"global"}.
 #' @param seed Optional integer seed; RNG state is restored on exit.
 #'
-#' @return A modified \code{mvpa_design} with permuted labels.
+#' @return A modified copy of \code{design} with the same class.
 #'
 #' @export
 permute_labels <- function(design,
                            method = c("within_block", "circular_shift", "global"),
                            seed   = NULL) {
-  method <- match.arg(method)
-  assertthat::assert_that(inherits(design, "mvpa_design"),
-                          msg = "design must be an mvpa_design object")
+  UseMethod("permute_labels")
+}
 
-  if (!is.null(seed)) {
-    old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-      get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-    } else {
-      NULL
-    }
-    set.seed(seed)
-    on.exit({
-      if (!is.null(old_seed)) {
-        assign(".Random.seed", old_seed, envir = .GlobalEnv)
-      }
-    }, add = TRUE)
+#' @rdname permute_labels
+#' @export
+permute_labels.default <- function(design,
+                                   method = c("within_block", "circular_shift", "global"),
+                                   seed   = NULL) {
+  stop(sprintf(
+    "permute_labels() has no method for designs of class <%s>. Supported: mvpa_design, rsa_design, pair_rsa_design.",
+    paste(class(design), collapse = "/")
+  ), call. = FALSE)
+}
+
+#' @rdname permute_labels
+#' @export
+permute_labels.mvpa_design <- function(design,
+                                       method = c("within_block", "circular_shift", "global"),
+                                       seed   = NULL) {
+  method <- match.arg(method)
+  labels <- design$cv_labels
+
+  perm_idx <- .with_perm_seed(seed, function() {
+    .permutation_index(length(labels), design$block_var, method)
+  })
+
+  perm_design            <- design
+  perm_design$cv_labels  <- labels[perm_idx]
+  perm_design$y_train    <- perm_design$cv_labels
+  perm_design$targets    <- if (!is.null(design$targets)) design$targets[perm_idx]
+                            else perm_design$cv_labels
+  perm_design
+}
+
+#' @rdname permute_labels
+#' @export
+permute_labels.rsa_design <- function(design,
+                                      method = c("within_block", "circular_shift", "global"),
+                                      seed   = NULL) {
+  method <- match.arg(method)
+  .check_rsa_shuffle(design, method)
+
+  n_items <- .rsa_design_n_items(design)
+  if (!.blocks_permutable(design$block_var, n_items, method)) {
+    .stop_not_permutable(design)
+  }
+  design$item_perm <- .with_perm_seed(seed, function() {
+    .permutation_index(n_items, design$block_var, method)
+  })
+  design
+}
+
+#' @rdname permute_labels
+#' @export
+permute_labels.pair_rsa_design <- function(design,
+                                           method = c("within_block", "circular_shift", "global"),
+                                           seed   = NULL) {
+  method <- match.arg(method)
+  .check_rsa_shuffle(design, method)
+
+  between <- identical(design$pair_kind %||% "within", "between")
+  if (between && !is.null(design$include) && is.null(design$block_var_b)) {
+    stop(paste0(
+      "This between-domain pair_rsa_design excludes within-block pairs but does not ",
+      "record `block_var_b`; rebuild it with the current pair_rsa_design() before permuting."
+    ), call. = FALSE)
   }
 
-  labels <- design$cv_labels
-  n      <- length(labels)
+  permutable <- .blocks_permutable(design$block_var, design$n_a, method) ||
+    (between && .blocks_permutable(design$block_var_b, design$n_b, method))
+  if (!permutable) {
+    .stop_not_permutable(design)
+  }
 
-  perm_idx <- switch(method,
+  perms <- .with_perm_seed(seed, function() {
+    a <- .permutation_index(design$n_a, design$block_var, method)
+    b <- if (between) .permutation_index(design$n_b, design$block_var_b, method) else NULL
+    list(a = a, b = b)
+  })
+
+  design$item_perm <- perms$a
+  if (between) design$item_perm_b <- perms$b
+  design
+}
+
+# Shared helpers -------------------------------------------------------------
+
+#' @keywords internal
+#' @noRd
+.permutation_index <- function(n, block_var = NULL,
+                               method = c("within_block", "circular_shift", "global")) {
+  method <- match.arg(method)
+  if (n < 1L) return(integer(0))
+
+  switch(method,
     global = sample.int(n),
     within_block = {
-      block_var <- design$block_var
       if (is.null(block_var)) {
         sample.int(n)
       } else {
         idx <- seq_len(n)
         for (blk in unique(block_var)) {
-          pos        <- which(block_var == blk)
-          idx[pos]   <- pos[sample.int(length(pos))]
+          pos      <- which(block_var == blk)
+          idx[pos] <- pos[sample.int(length(pos))]
         }
         idx
       }
     },
     circular_shift = {
-      block_var <- design$block_var
       if (is.null(block_var)) {
-        shift  <- sample.int(max(1L, n - 1L), 1L)
+        shift <- sample.int(max(1L, n - 1L), 1L)
         (seq_len(n) - 1L + shift) %% n + 1L
       } else {
         idx <- seq_len(n)
@@ -235,13 +339,70 @@ permute_labels <- function(design,
       }
     }
   )
+}
 
-  perm_design            <- design
-  perm_design$cv_labels  <- labels[perm_idx]
-  perm_design$y_train    <- perm_design$cv_labels
-  perm_design$targets    <- if (!is.null(design$targets)) design$targets[perm_idx]
-                            else perm_design$cv_labels
-  perm_design
+#' @keywords internal
+#' @noRd
+.with_perm_seed <- function(seed, fn) {
+  if (is.null(seed)) {
+    return(fn())
+  }
+  old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  } else {
+    NULL
+  }
+  set.seed(seed)
+  on.exit({
+    if (!is.null(old_seed)) {
+      assign(".Random.seed", old_seed, envir = .GlobalEnv)
+    }
+  }, add = TRUE)
+  fn()
+}
+
+#' @keywords internal
+#' @noRd
+.check_rsa_shuffle <- function(design, method) {
+  excludes_pairs <- !is.null(design$include) && !all(design$include)
+  if (identical(method, "global") && excludes_pairs) {
+    stop(paste0(
+      "shuffle = 'global' is not valid for an RSA design that excludes within-block pairs: ",
+      "relabelling items across blocks would put same-block neural pairs into the null ",
+      "that the observed statistic never uses. Use 'within_block' or 'circular_shift'."
+    ), call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+#' Can a block-respecting shuffle move anything?
+#'
+#' \code{FALSE} when fewer than two items exist, or when every block holds a
+#' single item so that \code{"within_block"} and \code{"circular_shift"} are
+#' forced to the identity.  \code{"global"} ignores blocks and is permutable
+#' whenever there are two or more items.
+#'
+#' @keywords internal
+#' @noRd
+.blocks_permutable <- function(block_var, n, method) {
+  if (n < 2L) return(FALSE)
+  if (identical(method, "global") || is.null(block_var)) return(TRUE)
+  any(table(block_var) > 1L)
+}
+
+#' @keywords internal
+#' @noRd
+.stop_not_permutable <- function(design) {
+  excludes_pairs <- !is.null(design$include) && !all(design$include)
+  hint <- if (excludes_pairs) {
+    "The design excludes within-block pairs, so a global shuffle is not valid either; an item-permutation null is not available for this design."
+  } else {
+    "No pairs are excluded, so items are exchangeable across blocks: use method = 'global'."
+  }
+  stop(paste0(
+    "No within-block item permutation is possible: every block holds a single item ",
+    "(or there are fewer than two items). ", hint
+  ), call. = FALSE)
 }
 
 
@@ -635,9 +796,53 @@ print.null_diagnostics <- function(x, ...) {
 #' Extract performance values from an mvpa_iterate result tibble
 #' @keywords internal
 #' @noRd
-.extract_perf_values <- function(result_tbl, metric = NULL) {
+.extract_perf_values <- function(result_tbl, metric = NULL, strict = FALSE) {
+  mat <- .extract_perf_matrix(result_tbl, metrics = metric, strict = strict)
+  vals <- as.numeric(mat[, 1L])
+  names(vals) <- rownames(mat)
+  vals
+}
+
+#' Extract one value from a per-ROI performance entry
+#'
+#' Performance entries are named numeric vectors for most model types and
+#' one-row matrices with column names for \code{rsa_model}.  Both are read by
+#' name.  With \code{strict = FALSE} a metric that is absent falls back to the
+#' first entry (the historical behaviour for an inferred metric); with
+#' \code{strict = TRUE} it yields \code{NA}, so a user-named metric that does
+#' not exist surfaces as an error downstream instead of silently scoring the
+#' wrong quantity.
+#'
+#' @keywords internal
+#' @noRd
+.perf_entry_value <- function(p, metric = NULL, strict = FALSE) {
+  if (is.null(p) || length(p) == 0L) return(NA_real_)
+  nm <- if (is.matrix(p)) colnames(p) else names(p)
+  if (!is.null(metric)) {
+    if (!is.null(nm) && metric %in% nm) {
+      v <- if (is.matrix(p)) p[1L, metric] else p[[metric]]
+      return(as.numeric(v)[1L])
+    }
+    if (strict) return(NA_real_)
+  }
+  as.numeric(p[[1L]])[1L]
+}
+
+#' Extract several metrics from an mvpa_iterate result table
+#'
+#' @return A numeric matrix with one row per successful center (rownames are
+#'   center ids) and one column per requested metric.  When \code{metrics} is
+#'   \code{NULL} a single positional column named \code{"metric"} is returned.
+#' @keywords internal
+#' @noRd
+.extract_perf_matrix <- function(result_tbl, metrics = NULL, strict = FALSE) {
+  col_names <- if (is.null(metrics)) "metric" else metrics
+  keys      <- if (is.null(metrics)) list(NULL) else as.list(metrics)
+  k         <- length(col_names)
+
+  empty <- matrix(numeric(0), nrow = 0L, ncol = k, dimnames = list(NULL, col_names))
   if (is.null(result_tbl) || nrow(result_tbl) == 0L) {
-    return(numeric(0))
+    return(empty)
   }
 
   good_rows <- !isTRUE(result_tbl$error)
@@ -647,17 +852,31 @@ print.null_diagnostics <- function(x, ...) {
 
   perf_list <- result_tbl$performance[good_rows]
   ids_good  <- result_tbl$id[good_rows]
+  if (length(perf_list) == 0L) {
+    return(empty)
+  }
 
   vals <- vapply(perf_list, function(p) {
-    if (is.null(p) || length(p) == 0L) return(NA_real_)
-    if (!is.null(metric) && metric %in% names(p)) {
-      return(as.numeric(p[[metric]]))
-    }
-    as.numeric(p[[1L]])
-  }, numeric(1L))
+    vapply(keys, function(m) .perf_entry_value(p, m, strict), numeric(1L))
+  }, numeric(k))
 
-  names(vals) <- as.character(ids_good)
-  vals
+  matrix(vals, nrow = length(perf_list), ncol = k, byrow = TRUE,
+         dimnames = list(as.character(ids_good), col_names))
+}
+
+#' Extract several metrics from a searchlight_result at given center ids
+#'
+#' @return A numeric matrix, rows = \code{center_ids}, columns = metrics.
+#' @keywords internal
+#' @noRd
+.searchlight_result_matrix <- function(sl_result, center_ids, metrics, strict = FALSE) {
+  cols <- lapply(metrics, function(m) {
+    .extract_values_from_searchlight_result(sl_result, center_ids, metric = m,
+                                            strict = strict)
+  })
+  mat <- do.call(cbind, cols)
+  dimnames(mat) <- list(as.character(center_ids), metrics)
+  mat
 }
 
 #' Extract metric values from a searchlight_result at specified center IDs
@@ -689,7 +908,8 @@ print.null_diagnostics <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 .extract_values_from_searchlight_result <- function(sl_result, center_ids,
-                                                    metric = NULL) {
+                                                    metric = NULL,
+                                                    strict = FALSE) {
   out <- rep(NA_real_, length(center_ids))
   names(out) <- as.character(center_ids)
 
@@ -734,6 +954,8 @@ print.null_diagnostics <- function(x, ...) {
 
   metric_map <- if (!is.null(metric) && metric %in% names(results_obj)) {
     results_obj[[metric]]
+  } else if (strict && !is.null(metric)) {
+    return(out)
   } else {
     results_obj[[1L]]
   }
@@ -844,7 +1066,10 @@ print.null_diagnostics <- function(x, ...) {
 #'   }
 #' }
 #'
-#' @param model_spec An \code{mvpa_model} or compatible model specification.
+#' @param model_spec An \code{mvpa_model}, \code{rsa_model}, or compatible
+#'   model specification whose design has a \code{\link{permute_labels}}
+#'   method.  For \code{rsa_model} the permutation relabels items, so the null
+#'   carries the same item-level dependence as the observed statistic.
 #' @param observed Optional pre-computed searchlight result (output of
 #'   \code{run_searchlight()}).  If \code{NULL}, it is computed internally.
 #'   Can also be a named numeric vector of observed metric values indexed by
@@ -854,8 +1079,13 @@ print.null_diagnostics <- function(x, ...) {
 #'   \code{run_searchlight()} when \code{observed} is \code{NULL} or when
 #'   \code{perm_strategy = "searchlight"}.
 #' @param perm_ctrl A \code{\link{permutation_control}} object.
-#' @param metric Character. Which performance metric to use for inference.
-#'   If \code{NULL} (default), the first metric is used.
+#' @param metric Character vector naming the performance metric(s) to test.
+#'   If \code{NULL} (default), the first metric is used, except for
+#'   \code{rsa_model} specifications, where every model predictor is tested:
+#'   a permutation pass returns all predictors at once, so testing them
+#'   jointly costs nothing extra and they share one null pool.  A metric that
+#'   is named explicitly but absent from the results is an error rather than
+#'   a silent fallback to the first metric.
 #' @param ... Additional arguments forwarded to \code{run_searchlight()}
 #'   (observed pass and \code{"searchlight"} permutations).  For
 #'   \code{"iterate"} permutations, only arguments that are formal
@@ -864,7 +1094,11 @@ print.null_diagnostics <- function(x, ...) {
 #'   (e.g., \code{engine = "legacy"} is meaningful for
 #'   \code{run_searchlight} but not for \code{mvpa_iterate}).
 #'
-#' @return A \code{permutation_result} S3 object containing:
+#' @return When one metric is tested, a \code{permutation_result} S3 object.
+#'   When several are tested (the default for \code{rsa_model}), a
+#'   \code{permutation_result_set}: a named list of \code{permutation_result}
+#'   objects, one per metric, all scored against the same permutations.  Each
+#'   \code{permutation_result} contains:
 #'   \describe{
 #'     \item{p_map}{Spatial map of raw p-values.}
 #'     \item{p_adj_map}{Spatial map of FDR-adjusted p-values (if requested).}
@@ -926,6 +1160,12 @@ run_permutation_searchlight <- function(
       c(list(model_spec = model_spec, radius = radius, method = method), dots)
     )
   }
+
+  # Which metrics to score.  Resolved after the observed pass so an inferred
+  # metric can be read off the searchlight_result.
+  metric_info   <- .resolve_permutation_metrics(model_spec, observed, metric)
+  metrics       <- metric_info$metrics
+  metric_strict <- metric_info$strict
 
   # Step 2: build searchlight iterator (needed for feature counts)
   futile.logger::flog.info("Building searchlight iterator ...")
@@ -1000,7 +1240,8 @@ run_permutation_searchlight <- function(
     )
   }
 
-  null_values    <- numeric(0)
+  null_values    <- matrix(numeric(0), nrow = 0L, ncol = length(metrics),
+                           dimnames = list(NULL, metrics))
   null_nfeatures <- numeric(0)
 
   for (i in seq_len(perm_ctrl$n_perm)) {
@@ -1043,13 +1284,15 @@ run_permutation_searchlight <- function(
 
       if (is.null(perm_result) || nrow(perm_result) == 0L) next
 
-      perm_vals <- .extract_perf_values(perm_result, metric = metric)
-      if (length(perm_vals) == 0L) next
+      perm_mat <- .extract_perf_matrix(perm_result, metrics, strict = metric_strict)
+      keep     <- rowSums(!is.na(perm_mat)) > 0L
+      if (!any(keep)) next
+      perm_mat <- perm_mat[keep, , drop = FALSE]
 
-      null_values    <- c(null_values, perm_vals)
+      null_values    <- rbind(null_values, perm_mat)
       null_nfeatures <- c(null_nfeatures,
                           sub$covariates$nfeatures[
-                            match(names(perm_vals), as.character(sub$center_ids))
+                            match(rownames(perm_mat), as.character(sub$center_ids))
                           ])
 
     } else {
@@ -1072,60 +1315,151 @@ run_permutation_searchlight <- function(
 
       if (is.null(perm_sl)) next
 
-      perm_vals <- .extract_values_from_searchlight_result(
-        perm_sl, all_ids, metric = metric
-      )
+      perm_mat <- .searchlight_result_matrix(perm_sl, all_ids, metrics,
+                                             strict = metric_strict)
+      keep     <- rowSums(!is.na(perm_mat)) > 0L
+      if (!any(keep)) next
 
-      # Drop NAs (centers that failed or produced no result)
-      valid     <- !is.na(perm_vals)
-      if (sum(valid) == 0L) next
-
-      null_values    <- c(null_values, perm_vals[valid])
-      null_nfeatures <- c(null_nfeatures, nfeatures_all[valid])
+      null_values    <- rbind(null_values, perm_mat[keep, , drop = FALSE])
+      null_nfeatures <- c(null_nfeatures, nfeatures_all[keep])
     }
   }
 
-  if (length(null_values) == 0L) {
+  if (nrow(null_values) == 0L) {
     stop("No valid null values collected. All permutations may have failed.")
   }
 
-  null_covariates <- data.frame(nfeatures = null_nfeatures)
+  # Step 6: observed values for every center and metric
+  obs_mat <- if (is.numeric(observed)) {
+    matrix(.align_to_ids(observed, all_ids), ncol = 1L,
+           dimnames = list(as.character(all_ids), metrics))
+  } else {
+    .searchlight_result_matrix(observed, all_ids, metrics, strict = metric_strict)
+  }
 
-  # Determine metric name used
-  if (is.null(metric)) {
-    # Try to infer from observed
-    if (inherits(observed, "searchlight_result") && length(observed$metrics) > 0L) {
-      metric <- observed$metrics[[1L]]
-    } else {
-      metric <- "metric"
+  # Steps 7-11 run once per metric against the shared null pool
+  results <- lapply(metrics, function(m) {
+    .score_permutation_metric(
+      metric          = m,
+      null_col        = null_values[, m],
+      null_nfeatures  = null_nfeatures,
+      obs_vals        = obs_mat[, m],
+      all_ids         = all_ids,
+      covariates_full = covariates_full,
+      perm_ctrl       = perm_ctrl,
+      model_spec      = model_spec,
+      observed        = observed,
+      strategy        = strategy
+    )
+  })
+  names(results) <- metrics
+
+  if (length(results) == 1L) {
+    return(results[[1L]])
+  }
+  structure(results, class = c("permutation_result_set", "list"))
+}
+
+
+#' Resolve which metrics a permutation run scores
+#'
+#' An explicit \code{metric} wins.  Otherwise \code{rsa_model} tests every
+#' model predictor (its per-ROI output already holds all of them), and any
+#' other model type tests the first metric of the observed result.
+#'
+#' Metrics that come from the user or from the model spec are \emph{strict}:
+#' they must be present by name in every result, or the run fails.  Only the
+#' legacy path, where the metric is inferred from the observed result or is
+#' the positional placeholder \code{"metric"}, keeps the first-entry fallback.
+#'
+#' @return A list with \code{metrics} (character) and \code{strict} (logical).
+#' @keywords internal
+#' @noRd
+.resolve_permutation_metrics <- function(model_spec, observed, metric) {
+  strict <- TRUE
+  if (!is.null(metric)) {
+    if (!is.character(metric) || length(metric) == 0L || anyNA(metric) ||
+        any(!nzchar(metric))) {
+      stop("`metric` must be NULL or a character vector of metric names.",
+           call. = FALSE)
+    }
+    metrics <- unique(metric)
+  } else if (inherits(model_spec, "rsa_model")) {
+    metrics <- model_spec$design$model_predictors
+    if (is.null(metrics) || length(metrics) == 0L) {
+      metrics <- names(model_spec$design$model_mat)
+    }
+  } else if (inherits(observed, "searchlight_result") &&
+             length(observed$metrics) > 0L) {
+    metrics <- observed$metrics[[1L]]
+    strict  <- FALSE
+  } else {
+    metrics <- "metric"
+    strict  <- FALSE
+  }
+
+  if (is.numeric(observed) && length(metrics) > 1L) {
+    stop(paste0(
+      "`observed` is a numeric vector, which carries a single metric; ",
+      "supply `metric` as one name."
+    ), call. = FALSE)
+  }
+
+  # A strict metric must exist in the observed result; fail before any
+  # permutation is run rather than after all of them come back empty, and
+  # never let a missing observed map fall back to the first one.
+  if (strict && inherits(observed, "searchlight_result")) {
+    available <- names(observed$results)
+    if (is.null(available)) available <- as.character(observed$metrics)
+    missing <- setdiff(metrics, available)
+    if (length(available) > 0L && length(missing) > 0L) {
+      stop(sprintf(
+        "metric '%s' not found in the observed searchlight result; available: %s.",
+        paste(missing, collapse = "', '"), paste(available, collapse = ", ")
+      ), call. = FALSE)
     }
   }
+  list(metrics = metrics, strict = strict)
+}
+
+
+#' Score one metric against its null pool (steps 6-11 of the pipeline)
+#'
+#' @keywords internal
+#' @noRd
+.score_permutation_metric <- function(metric, null_col, null_nfeatures, obs_vals,
+                                      all_ids, covariates_full, perm_ctrl,
+                                      model_spec, observed, strategy) {
+  ok <- !is.na(null_col)
+  if (!any(ok)) {
+    stop(sprintf("No valid null values were collected for metric '%s'.", metric),
+         call. = FALSE)
+  }
+  if (all(is.na(obs_vals))) {
+    stop(sprintf("No observed values were found for metric '%s'.", metric),
+         call. = FALSE)
+  }
+  null_col        <- null_col[ok]
+  null_covariates <- data.frame(nfeatures = null_nfeatures[ok])
 
   # Step 6: optional diagnostics on the null
   diag_result <- NULL
   if (perm_ctrl$diagnose) {
-    futile.logger::flog.info("Running null diagnostics ...")
-    diag_result <- diagnose_null(null_values, null_covariates,
+    futile.logger::flog.info("Running null diagnostics for '%s' ...", metric)
+    diag_result <- diagnose_null(null_col, null_covariates,
                                  n_perm = perm_ctrl$n_perm)
     print(diag_result)
   }
 
   # Step 7: build adjusted null
-  futile.logger::flog.info("Building adjusted null distribution (%s, %d bins) ...",
-                           perm_ctrl$null_method, perm_ctrl$n_bins)
+  futile.logger::flog.info("Building adjusted null distribution for '%s' (%s, %d bins) ...",
+                           metric, perm_ctrl$null_method, perm_ctrl$n_bins)
   adj_null <- build_adjusted_null(
-    null_values  = null_values,
+    null_values  = null_col,
     covariates   = null_covariates,
     n_bins       = perm_ctrl$n_bins,
     method       = perm_ctrl$null_method
   )
-
-  # Step 8: extract observed values for all centers
-  obs_vals <- if (is.numeric(observed)) {
-    .align_to_ids(observed, all_ids)
-  } else {
-    .extract_values_from_searchlight_result(observed, all_ids, metric = metric)
-  }
 
   # Step 9: compute p-values for all centers
   futile.logger::flog.info("Computing p-values for %d centers ...", length(all_ids))
@@ -1161,8 +1495,8 @@ run_permutation_searchlight <- function(
   }
 
   n_sig <- sum(p_adjusted < 0.05, na.rm = TRUE)
-  futile.logger::flog.info("Done. %d centers significant at FDR < 0.05 (%s).",
-                           n_sig, perm_ctrl$correction)
+  futile.logger::flog.info("Done '%s'. %d centers significant at FDR < 0.05 (%s).",
+                           metric, n_sig, perm_ctrl$correction)
 
   structure(
     list(
@@ -1178,7 +1512,7 @@ run_permutation_searchlight <- function(
       perm_strategy = strategy,
       all_ids      = all_ids,
       n_perm_used  = perm_ctrl$n_perm,
-      n_null_vals  = length(null_values)
+      n_null_vals  = length(null_col)
     ),
     class = "permutation_result"
   )
@@ -1205,6 +1539,35 @@ print.permutation_result <- function(x, ...) {
   cat(sprintf("  Significant (raw p < 0.05)    : %d\n", n_sig_raw))
   cat(sprintf("  Significant (adj p < 0.05)    : %d\n", n_sig_adj))
   invisible(x)
+}
+
+#' @export
+print.permutation_result_set <- function(x, ...) {
+  first <- x[[1L]]
+  cat("Permutation Searchlight Results (", length(x), " metrics)\n", sep = "")
+  cat(strrep("=", 40), "\n")
+  cat("  Strategy         :", first$perm_strategy, "\n")
+  cat("  Permutations used:", first$n_perm_used, "\n")
+  cat("  Null values      :", first$n_null_vals, "\n")
+  cat("  Total centers    :", length(first$all_ids), "\n")
+  cat("  Correction       :", first$perm_ctrl$correction, "\n\n")
+  cat(sprintf("  %-24s %12s %12s\n", "metric", "raw p<0.05", "adj p<0.05"))
+  for (m in names(x)) {
+    r <- x[[m]]
+    cat(sprintf("  %-24s %12d %12d\n", m,
+                sum(r$p_values < 0.05, na.rm = TRUE),
+                sum(r$p_adjusted < 0.05, na.rm = TRUE)))
+  }
+  invisible(x)
+}
+
+#' @export
+summary.permutation_result_set <- function(object, ...) {
+  for (m in names(object)) {
+    cat("\n[", m, "]\n", sep = "")
+    summary(object[[m]], ...)
+  }
+  invisible(object)
 }
 
 #' @export

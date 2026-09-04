@@ -2,27 +2,88 @@
 % Please edit documentation in R/permutation_searchlight.R
 \name{permute_labels}
 \alias{permute_labels}
-\title{Permute Training Labels in an MVPA Design}
+\alias{permute_labels.default}
+\alias{permute_labels.mvpa_design}
+\alias{permute_labels.rsa_design}
+\alias{permute_labels.pair_rsa_design}
+\title{Permute Labels in a Design for Permutation Testing}
 \usage{
 permute_labels(
   design,
   method = c("within_block", "circular_shift", "global"),
   seed = NULL
 )
+
+\method{permute_labels}{default}(
+  design,
+  method = c("within_block", "circular_shift", "global"),
+  seed = NULL
+)
+
+\method{permute_labels}{mvpa_design}(
+  design,
+  method = c("within_block", "circular_shift", "global"),
+  seed = NULL
+)
+
+\method{permute_labels}{rsa_design}(
+  design,
+  method = c("within_block", "circular_shift", "global"),
+  seed = NULL
+)
+
+\method{permute_labels}{pair_rsa_design}(
+  design,
+  method = c("within_block", "circular_shift", "global"),
+  seed = NULL
+)
 }
 \arguments{
-\item{design}{An \code{mvpa_design} object.}
+\item{design}{An \code{mvpa_design}, \code{rsa_design}, or
+\code{pair_rsa_design} object.}
 
-\item{method}{Character. One of \code{"within_block"},
+\item{method}{Character. One of \code{"within_block"} (default),
 \code{"circular_shift"}, or \code{"global"}.}
 
 \item{seed}{Optional integer seed; RNG state is restored on exit.}
 }
 \value{
-A modified \code{mvpa_design} with permuted labels.
+A modified copy of \code{design} with the same class.
 }
 \description{
-Returns a copy of \code{design} with \code{y_train}, \code{cv_labels},
-and \code{targets} replaced by permuted versions.  \code{block_var} is
-never permuted.
+Returns a copy of \code{design} in which the link between the brain data
+and the quantity being decoded or modelled has been broken by a random
+relabelling that respects the design's block structure.  This is the
+null-generating step of \code{\link{run_permutation_searchlight}}.
+}
+\details{
+The generic dispatches on the design class:
+\describe{
+  \item{\code{mvpa_design}}{Shuffles trial labels: \code{y_train},
+    \code{cv_labels}, and \code{targets} are replaced by permuted versions.
+    \code{block_var} is never permuted.}
+  \item{\code{rsa_design}}{Permutes \emph{item} labels, not RDM entries.
+    The entries of an RDM are not independent observations: every item
+    takes part in \code{n - 1} pairs, so shuffling the vectorised RDM would
+    destroy that dependence and give an anti-conservative null.
+    Relabelling items keeps it intact.  The permutation is stored on the
+    design as \code{item_perm}; \code{train_model.rsa_model} applies it to
+    the rows of the neural pattern matrix before the brain RDM is computed.
+    That is equivalent to permuting the rows and columns of every model RDM
+    by the inverse permutation, so the model matrix and any cached kernel
+    stay untouched.}
+  \item{\code{pair_rsa_design}}{As \code{rsa_design} in within-domain mode.
+    For \code{pairs = "between"} the two item sets are permuted
+    independently, each within its own blocks (\code{block_var_a},
+    \code{block_var_b}), and the second permutation is stored as
+    \code{item_perm_b}.}
+}
+
+When an RSA design excludes within-block pairs (the default whenever a
+\code{block_var} is supplied and some pairs fall within a block), items are
+exchangeable only within a block, and \code{method = "global"} is refused:
+the null would compare neural patterns from the same run while the observed
+statistic never does.  If every block holds a single item, no within-block
+shuffle can move anything and the method errors; when no pairs are excluded
+in that situation, \code{method = "global"} is the valid choice.
 }

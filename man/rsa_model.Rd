@@ -29,8 +29,11 @@ One of: \code{"pearson"} or \code{"spearman"} (defaults to "spearman").}
 \item{regtype}{A character string specifying the analysis method. 
 One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").}
 
-\item{check_collinearity}{Logical indicating whether to check for collinearity in the design matrix. 
-Only applies when \code{regtype="lm"}. Default is TRUE.}
+\item{check_collinearity}{Logical. When \code{regtype = "lm"}, stop if two
+predictor RDMs correlate above 0.99 or the design matrix is rank deficient.
+When \code{regtype} is \code{"lm"} or \code{"rfit"}, also warn if a model
+predictor is supported by fewer than 10 effective items (see the section
+on effective support). Default is TRUE.}
 
 \item{nneg}{A named list of variables (predictors) for which non-negative regression coefficients should be enforced 
 (only if \code{regtype="lm"}). Defaults to \code{NULL} (no constraints).}
@@ -66,11 +69,32 @@ An object of class \code{"rsa_model"} (and \code{"list"}), containing:
   \item \code{regtype}    : the regression type
   \item \code{nneg}       : a named list of constrained variables, if any
   \item \code{semipartial}: whether to compute semi-partial correlations
+  \item \code{design_diagnostics}: an \code{rsa_design_diagnostics} object
+        (see \code{\link{rsa_design_diagnostics}})
 }
 }
 \description{
 This function creates an RSA model object by taking an MVPA (Multi-Variate Pattern Analysis) dataset and an RSA design.
 }
+\section{Effective support of the design}{
+
+RDM entries are not independent observations. Every item enters
+\code{n_items - 1} pairs, so the \code{n_pairs} entries of a vectorised RDM
+carry on the order of \code{n_items} independent pieces of information, and
+a regression coefficient's variance is inflated further by the predictor's
+collinearity with the others (its VIF). The constructor computes
+\code{n_items / VIF} for every predictor and stores the result as
+\code{design_diagnostics} (see \code{\link{rsa_design_diagnostics}}). When
+\code{regtype} is \code{"lm"} or \code{"rfit"} and a model predictor falls
+below 10 effective items, it warns: that coefficient will vary across ROIs
+largely through noise. This is a heuristic screen, not a test.
+
+For inference on RSA maps use \code{\link{run_permutation_searchlight}},
+which permutes item labels and so carries the same dependence into the
+null. The per-ROI t-values returned by \code{regtype = "lm"} use
+\code{n_pairs} degrees of freedom and are anti-conservative.
+}
+
 \examples{
 # Create a random MVPA dataset (image data)
 arr  <- array(rnorm(100 * 5), c(5, 5, 4, 5))   # 5 voxels x 5 voxels x 4 slices x 5 observations
