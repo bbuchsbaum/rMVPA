@@ -14,7 +14,7 @@ banded_ridge_model(
   outer_crossval = NULL,
   tune_crossval = NULL,
   candidates = NULL,
-  alphas = 10^seq(-2, 2, length.out = 9L),
+  alphas = "auto",
   theta_method = c("grid", "fixed", "random"),
   theta = NULL,
   theta_grid_points = 3L,
@@ -89,7 +89,20 @@ banded_ridge_model(
 - alphas:
 
   Non-negative overall ridge penalties used when constructing
-  candidates.
+  candidates, or \`"auto"\` (the default) to scale the grid to the
+  design. Every solver path standardizes each training column and then
+  scales band \`b\` by \`sqrt(theta_b)\`, so \`alpha\` competes with the
+  eigenvalues of the resulting cross-product, which average \`(n - 1) \*
+  mean(D_b) / min(n - 1, p)\` under a uniform \`theta\` for band widths
+  \`D_b\`. \`"auto"\` places nine points spanning six decades centred on
+  that anchor, so the grid brackets the range in which the penalty
+  changes the fit however many rows and features the design has. A fixed
+  grid cannot: a design with a few thousand timepoints needs penalties
+  several orders of magnitude above the fixed \`10^seq(-2, 2)\` grid
+  this default replaced, and every response then selects the largest
+  available value. \`run_banded_ridge()\` warns when that happens; see
+  \`result\$selection_diagnostics\`. The resolved grid is on the
+  returned model as \`alpha_grid\`.
 
 - theta_method:
 
@@ -198,34 +211,54 @@ the full-model R2.
 
 ``` r
 set.seed(71)
-sample <- gen_sample_dataset(c(3, 3, 3), nobs = 24,
-                             response_type = "continuous", blocks = 4)
-X <- matrix(rnorm(24 * 6), 24, 6)
+n <- 24L
+dims <- c(3L, 3L, 3L)
+X <- matrix(rnorm(n * 6), n, 6)
+Y <- X %*% matrix(rnorm(6 * prod(dims), sd = 0.8), 6, prod(dims)) +
+  matrix(rnorm(n * prod(dims), sd = 0.5), n, prod(dims))
+dataset <- mvpa_dataset(
+  neuroim2::NeuroVec(array(as.vector(t(Y)), c(dims, n)),
+                     neuroim2::NeuroSpace(c(dims, n), c(1, 1, 1))),
+  mask = neuroim2::NeuroVol(array(1, dims),
+                            neuroim2::NeuroSpace(dims, c(1, 1, 1)))
+)
 fs <- feature_sets(X, blocks(low = 3, semantic = 3))
 design <- feature_sets_design(
   fs, block_var_train = rep(1:4, each = 6), time_series = TRUE
 )
 model <- banded_ridge_model(
-  sample$dataset, design, outer_crossval = 4, tune_crossval = 2,
-  alphas = c(0.1, 1), theta_method = "fixed",
-  theta = c(low = 0.5, semantic = 0.5), target_batch_size = 9,
-  delta_sets = "all"
+  dataset, design, outer_crossval = 4, tune_crossval = 2,
+  theta_method = "fixed", theta = c(low = 0.5, semantic = 0.5),
+  target_batch_size = 9, delta_sets = "all"
 )
 result <- run_banded_ridge(model)
 head(result$metrics)
-#>   voxel_index response n_obs       mse correlation         r2
-#> 1           1  voxel_1    24 2.2490635  0.11496185 -0.3256049
-#> 2           2  voxel_2    24 0.8268850  0.27293694 -0.1366843
-#> 3           3  voxel_3    24 0.7820130  0.15040717 -0.2838389
-#> 4           4  voxel_4    24 0.9775494 -0.50925231 -0.5134845
-#> 5           5  voxel_5    24 1.2261782  0.07083063 -0.2447747
-#> 6           6  voxel_6    24 1.0972899 -0.05340696 -0.5051683
+#>   voxel_index response n_obs       mse correlation        r2
+#> 1           1  voxel_1    24 0.5168105   0.9657918 0.9168180
+#> 2           2  voxel_2    24 0.3340694   0.9618700 0.9229610
+#> 3           3  voxel_3    24 0.7278631   0.7454001 0.5520757
+#> 4           4  voxel_4    24 0.5893974   0.9316744 0.8622335
+#> 5           5  voxel_5    24 0.2821740   0.7864845 0.6128238
+#> 6           6  voxel_6    24 0.3863853   0.9233786 0.8493119
+result$selection_diagnostics$alpha
+#>              model n_selections n_alpha_grid alpha_grid_min alpha_grid_max
+#> 1             full          108            9         0.0115          11500
+#> 2      without_low          108            9         0.0115          11500
+#> 3 without_semantic          108            9         0.0115          11500
+#>   modal_alpha modal_share share_at_grid_min share_at_grid_max share_interior
+#> 1   0.3636619   0.3333333        0.24074074        0.00000000      0.7592593
+#> 2   2.0450213   0.3518519        0.07407407        0.14814815      0.7777778
+#> 3   2.0450213   0.2407407        0.20370370        0.06481481      0.7314815
+#>   saturated
+#> 1     FALSE
+#> 2     FALSE
+#> 3     FALSE
 head(result$predictive_leave_one_band_out$effects)
 #>   voxel_index response delta_cv_r2_low delta_cv_r2_semantic
-#> 1           1  voxel_1     -0.24282444          -0.09553650
-#> 2           2  voxel_2     -0.08412324           0.11898830
-#> 3           3  voxel_3      0.13252334          -0.23087791
-#> 4           4  voxel_4     -0.01101613          -0.31467685
-#> 5           5  voxel_5     -0.14902784          -0.04875116
-#> 6           6  voxel_6     -0.40296980          -0.16540710
+#> 1           1  voxel_1       0.8524352           0.45597131
+#> 2           2  voxel_2       0.6055967           0.19375823
+#> 3           3  voxel_3       0.3164995           0.43824971
+#> 4           4  voxel_4       0.2287460           0.31607592
+#> 5           5  voxel_5       1.0416128           0.27988198
+#> 6           6  voxel_6       1.1002373           0.06409502
 ```

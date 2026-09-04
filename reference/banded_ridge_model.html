@@ -53,7 +53,7 @@ training blocks come exclusively from `feature_sets_design()`.</p>
 <span>  outer_crossval <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  tune_crossval <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  candidates <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  alphas <span class="op">=</span> <span class="fl">10</span><span class="op">^</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span>, <span class="fl">2</span>, length.out <span class="op">=</span> <span class="fl">9L</span><span class="op">)</span>,</span>
+<span>  alphas <span class="op">=</span> <span class="st">"auto"</span>,</span>
 <span>  theta_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"grid"</span>, <span class="st">"fixed"</span>, <span class="st">"random"</span><span class="op">)</span>,</span>
 <span>  theta <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  theta_grid_points <span class="op">=</span> <span class="fl">3L</span>,</span>
@@ -127,7 +127,19 @@ request fails here rather than in `run_banded_ridge()`.</p></dd>
 
 <dt id="arg-alphas">alphas<a class="anchor" aria-label="anchor" href="#arg-alphas"></a></dt>
 <dd><p>Non-negative overall ridge penalties used when constructing
-candidates.</p></dd>
+candidates, or `"auto"` (the default) to scale the grid to the design.
+Every solver path standardizes each training column and then scales band
+`b` by `sqrt(theta_b)`, so `alpha` competes with the eigenvalues of the
+resulting cross-product, which average
+`(n - 1) * mean(D_b) / min(n - 1, p)` under a uniform `theta` for band
+widths `D_b`. `"auto"` places nine points spanning six decades centred on
+that anchor, so the grid brackets the range in which the penalty changes
+the fit however many rows and features the design has. A fixed grid cannot:
+a design with a few thousand timepoints needs penalties several orders of
+magnitude above the fixed `10^seq(-2, 2)` grid this default replaced, and
+every response then selects the largest available value. `run_banded_ridge()`
+warns when that happens; see `result$selection_diagnostics`. The resolved
+grid is on the returned model as `alpha_grid`.</p></dd>
 
 
 <dt id="arg-theta-method">theta_method<a class="anchor" aria-label="anchor" href="#arg-theta-method"></a></dt>
@@ -239,36 +251,56 @@ may be negative, and need not sum to the full-model R2.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">71</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">3</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">24</span>,</span></span>
-<span class="r-in"><span>                             response_type <span class="op">=</span> <span class="st">"continuous"</span>, blocks <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">24</span> <span class="op">*</span> <span class="fl">6</span><span class="op">)</span>, <span class="fl">24</span>, <span class="fl">6</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">24L</span></span></span>
+<span class="r-in"><span><span class="va">dims</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3L</span>, <span class="fl">3L</span>, <span class="fl">3L</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span> <span class="op">*</span> <span class="fl">6</span><span class="op">)</span>, <span class="va">n</span>, <span class="fl">6</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">Y</span> <span class="op">&lt;-</span> <span class="va">X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">6</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/prod.html" class="external-link">prod</a></span><span class="op">(</span><span class="va">dims</span><span class="op">)</span>, sd <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span>, <span class="fl">6</span>, <span class="fu"><a href="https://rdrr.io/r/base/prod.html" class="external-link">prod</a></span><span class="op">(</span><span class="va">dims</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/prod.html" class="external-link">prod</a></span><span class="op">(</span><span class="va">dims</span><span class="op">)</span>, sd <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>, <span class="va">n</span>, <span class="fu"><a href="https://rdrr.io/r/base/prod.html" class="external-link">prod</a></span><span class="op">(</span><span class="va">dims</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVec-class.html" class="external-link">NeuroVec</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">Y</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">dims</span>, <span class="va">n</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                     <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroSpace.html" class="external-link">NeuroSpace</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">dims</span>, <span class="va">n</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  mask <span class="op">=</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">dims</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                            <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroSpace.html" class="external-link">NeuroSpace</a></span><span class="op">(</span><span class="va">dims</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fs</span> <span class="op">&lt;-</span> <span class="fu"><a href="feature_sets.html">feature_sets</a></span><span class="op">(</span><span class="va">X</span>, <span class="fu"><a href="blocks.html">blocks</a></span><span class="op">(</span>low <span class="op">=</span> <span class="fl">3</span>, semantic <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="feature_sets_design.html">feature_sets_design</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">fs</span>, block_var_train <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span>, each <span class="op">=</span> <span class="fl">6</span><span class="op">)</span>, time_series <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">banded_ridge_model</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">sample</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">design</span>, outer_crossval <span class="op">=</span> <span class="fl">4</span>, tune_crossval <span class="op">=</span> <span class="fl">2</span>,</span></span>
-<span class="r-in"><span>  alphas <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">1</span><span class="op">)</span>, theta_method <span class="op">=</span> <span class="st">"fixed"</span>,</span></span>
-<span class="r-in"><span>  theta <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>low <span class="op">=</span> <span class="fl">0.5</span>, semantic <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>, target_batch_size <span class="op">=</span> <span class="fl">9</span>,</span></span>
-<span class="r-in"><span>  delta_sets <span class="op">=</span> <span class="st">"all"</span></span></span>
+<span class="r-in"><span>  <span class="va">dataset</span>, <span class="va">design</span>, outer_crossval <span class="op">=</span> <span class="fl">4</span>, tune_crossval <span class="op">=</span> <span class="fl">2</span>,</span></span>
+<span class="r-in"><span>  theta_method <span class="op">=</span> <span class="st">"fixed"</span>, theta <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>low <span class="op">=</span> <span class="fl">0.5</span>, semantic <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  target_batch_size <span class="op">=</span> <span class="fl">9</span>, delta_sets <span class="op">=</span> <span class="st">"all"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_banded_ridge.html">run_banded_ridge</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">metrics</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   voxel_index response n_obs       mse correlation         r2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1           1  voxel_1    24 2.2490635  0.11496185 -0.3256049</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2           2  voxel_2    24 0.8268850  0.27293694 -0.1366843</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3           3  voxel_3    24 0.7820130  0.15040717 -0.2838389</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4           4  voxel_4    24 0.9775494 -0.50925231 -0.5134845</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5           5  voxel_5    24 1.2261782  0.07083063 -0.2447747</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6           6  voxel_6    24 1.0972899 -0.05340696 -0.5051683</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   voxel_index response n_obs       mse correlation        r2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1           1  voxel_1    24 0.5168105   0.9657918 0.9168180</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2           2  voxel_2    24 0.3340694   0.9618700 0.9229610</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3           3  voxel_3    24 0.7278631   0.7454001 0.5520757</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4           4  voxel_4    24 0.5893974   0.9316744 0.8622335</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5           5  voxel_5    24 0.2821740   0.7864845 0.6128238</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6           6  voxel_6    24 0.3863853   0.9233786 0.8493119</span>
+<span class="r-in"><span><span class="va">result</span><span class="op">$</span><span class="va">selection_diagnostics</span><span class="op">$</span><span class="va">alpha</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>              model n_selections n_alpha_grid alpha_grid_min alpha_grid_max</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1             full          108            9         0.0115          11500</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2      without_low          108            9         0.0115          11500</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 without_semantic          108            9         0.0115          11500</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   modal_alpha modal_share share_at_grid_min share_at_grid_max share_interior</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   0.3636619   0.3333333        0.24074074        0.00000000      0.7592593</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   2.0450213   0.3518519        0.07407407        0.14814815      0.7777778</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   2.0450213   0.2407407        0.20370370        0.06481481      0.7314815</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   saturated</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1     FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3     FALSE</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">predictive_leave_one_band_out</span><span class="op">$</span><span class="va">effects</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   voxel_index response delta_cv_r2_low delta_cv_r2_semantic</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1           1  voxel_1     -0.24282444          -0.09553650</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2           2  voxel_2     -0.08412324           0.11898830</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3           3  voxel_3      0.13252334          -0.23087791</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4           4  voxel_4     -0.01101613          -0.31467685</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5           5  voxel_5     -0.14902784          -0.04875116</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6           6  voxel_6     -0.40296980          -0.16540710</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1           1  voxel_1       0.8524352           0.45597131</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2           2  voxel_2       0.6055967           0.19375823</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3           3  voxel_3       0.3164995           0.43824971</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4           4  voxel_4       0.2287460           0.31607592</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5           5  voxel_5       1.0416128           0.27988198</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6           6  voxel_6       1.1002373           0.06409502</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

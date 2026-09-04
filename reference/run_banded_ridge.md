@@ -37,5 +37,26 @@ run_banded_ridge(
 ## Value
 
 A \`banded_ridge_result\` with spatial maps, metrics, exact outer-fold
-hyperparameters, optional predictions/weights, and allocation
-provenance.
+hyperparameters, selection diagnostics, optional predictions/weights,
+and allocation provenance.
+
+## Selection diagnostics
+
+\`result\$selection_diagnostics\$alpha\` carries one row per fitted
+model (the full model and each leave-one-band-out model) giving the
+alpha grid it could select from, the modal selection and its share, the
+share pinned to each end of the grid, and the share strictly interior.
+\`\$fit\` gives the median and mean outer out-of-fold R2 per model and
+the share of responses above zero.
+
+Two conditions are warned about rather than left to be discovered. The
+first is a saturated grid: at least 95 largest available alpha, or the
+smallest, or the two ends between them once the grid has an interior to
+leave empty. Under the default per-response alpha scope a heterogeneous
+mask splits its boundary mass across both ends, so the combined share is
+what catches a grid that brackets nothing. In every form the inner
+optimum lies outside the grid: the refits are mis-penalized and
+leave-one-band-out delta R2 compares two mis-tuned models. The second is
+a median outer out-of-fold R2 below -0.05, which means the fit predicts
+worse than the mean of the data it was scored on, whatever the cause,
+and nothing derived from it describes explained variance.

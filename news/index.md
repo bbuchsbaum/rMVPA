@@ -2,6 +2,53 @@
 
 ## rMVPA 0.1.3
 
+- [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md)
+  scales its default alpha grid to the design instead of assuming one
+  ([\#87](https://github.com/bbuchsbaum/rMVPA/issues/87)). The old
+  default, `10^seq(-2, 2, length.out = 9)`, capped the penalty at 100,
+  but every solver path standardizes each training column and then
+  scales band `b` by `sqrt(theta_b)`, so alpha competes with
+  cross-product eigenvalues that average
+  `(n - 1) * mean(D_b) / min(n - 1, p)`. That anchor grows with the
+  number of rows and with band width: on a 1976-row, 1500-column,
+  five-band encoding design it is about 400, and the optimum sat at 1e4
+  — two orders of magnitude above where the grid ended. Every response
+  then took the ceiling, and the pooled out-of-fold R2 was -0.300
+  instead of the -0.0075 a wider grid reached on identical data.
+  `alphas = "auto"` (the new default) places nine points across six
+  decades around that anchor, so the grid brackets the range in which
+  the penalty changes the fit whatever the design’s shape; the resolved
+  values are on the model as `alpha_grid`. Passing an explicit numeric
+  `alphas`, or a full `candidates` manifest, is unchanged.
+
+- [`run_banded_ridge()`](https://bbuchsbaum.github.io/rMVPA/reference/run_banded_ridge.md)
+  no longer lets a truncated tuning grid pass silently
+  ([\#87](https://github.com/bbuchsbaum/rMVPA/issues/87)). A grid that
+  stops below the optimum does not fail: every response takes the
+  largest available alpha and the maps, metrics, and leave-one-band-out
+  delta R2 come back fully populated, which is how a variance partition
+  can be read off two badly fitting models. The result now carries
+  `selection_diagnostics`, with one row per fitted model — full and each
+  leave-one-band-out — giving the grid it could select from, the modal
+  selection and its share, the shares pinned to each end, and the share
+  strictly interior, plus per-model median/mean out-of-fold R2 and the
+  share of responses above zero. An interior modal selection is the
+  signature of a grid that contains the optimum. Two conditions now warn
+  rather than waiting to be discovered. The first is a saturated grid:
+  at least 95% of a model’s selections taking the largest available
+  alpha, or the smallest, or the two ends between them once the grid has
+  an interior to leave empty — under the default per-response alpha
+  scope a mask of signal and noise voxels sends its boundary mass to
+  opposite ends, so a grid that brackets nothing can leave neither end
+  near the threshold while almost nothing lands inside. The second is a
+  median out-of-fold R2 below -0.05, which means the fit predicts worse
+  than the mean of the data it was scored on, whatever the cause. Shares
+  are computed over the alphas a response could actually have been
+  given, so a fixed alpha scope is not reported as saturated, and a grid
+  of one reports no boundary shares at all.
+  [`print()`](https://rdrr.io/r/base/print.html) on the result shows the
+  modal alpha, the boundary shares, and the median R2.
+
 - The near-zero-variance guard in
   [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
   no longer fails ROIs it has no reason to fail
@@ -26,6 +73,7 @@
   whose only visible output is an all-NA performance table. The guard on
   the brain data `X`, which is always z-scored, is unchanged in intent
   but is likewise relative, so `X` in small units no longer fails.
+
 - [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
   no longer fits `pls` or `pca` components that the feature matrix does
   not define. The component count is capped at the numerical rank of the
@@ -36,6 +84,7 @@
   the tuning scores as if they were comparable numbers. A component
   count that some segment cannot define is no longer a candidate, so
   component counts are compared on the same segments.
+
 - Banded-ridge tuning with the optimized solvers needs far less memory
   and skips redundant work
   ([\#84](https://github.com/bbuchsbaum/rMVPA/issues/84)). The per-fold
@@ -61,6 +110,7 @@
   `solver_cache_oversize`, `solver_cache_peak_mb`, and
   `solver_cache_limit_mb`, and the work manifest gains matching
   per-model columns.
+
 - [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)
   gains `feature_standardize = c("scale", "center")`. The feature matrix
   `F` has always been z-scored per training fold, which was undocumented
@@ -78,6 +128,7 @@
   diagnostic in `model$feature_spectrum`. The standardization contract
   is documented in a new help section
   ([\#82](https://github.com/bbuchsbaum/rMVPA/issues/82)).
+
 - [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md)
   now accepts a `cross_validation` object (for example
   [`blocked_cross_validation()`](https://bbuchsbaum.github.io/rMVPA/reference/cross_validation.md),
@@ -97,6 +148,7 @@
   validated as supplied rather than purged
   ([\#80](https://github.com/bbuchsbaum/rMVPA/issues/80),
   [\#81](https://github.com/bbuchsbaum/rMVPA/issues/81)).
+
 - Feature RSA PLS/PCR component selection and ridge penalty selection
   can now optimize held-out `pattern_discrimination` in leakage-safe
   blocked inner CV; PLS/PCR can also optimize `pattern_rank_percentile`.
@@ -105,6 +157,7 @@
   correct-minus-incorrect pattern-correlation advantage while scaling
   linearly in held-out observations for a fixed voxel count and avoiding
   a quadratic candidate-correlation matrix.
+
 - Feature RSA identification, discrimination, RDM, and permutation
   metrics now respect outer-fold candidate sets. This prevents merged
   out-of-fold predictions from being compared with targets that trained
@@ -114,6 +167,7 @@
   effective-dimension and lambda-grid boundary diagnostics make
   over-shrinkage visible. Variance checks now use numerically stable
   two-pass kernels.
+
 - `feature_rsa_model(method = "ridge")` adds a compact multi-response
   ridge estimator for dense feature spaces. It supports one-SVD GCV,
   exact analytic LOO, leakage-safe blocked selection, or a fixed
@@ -122,6 +176,7 @@
   Blocked tuning scores its full penalty path from spectral
   cross-products without materializing a voxel prediction matrix for
   every candidate.
+
 - Added first-class single-domain banded-ridge encoding via
   [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md)
   and
@@ -131,26 +186,31 @@
   with allocation and cache provenance, chunked spatial execution, exact
   outer-fold hyperparameter receipts, and optional OOF predictions or
   primal/dual weight retention.
+
 - [`feature_sets_design()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md)
   now stores training blocks and an explicit time-series declaration.
   Banded-ridge models reject unsafe random time-series validation,
   mismatched design rows, overlapping searchlight execution, and
   retained or intermediate allocation requests above caller-supplied
   limits.
+
 - Optional `delta_sets` computes independently retuned predictive
   leave-one-band-out outer-OOF delta R2. Effects are not clipped and are
   not an additive unique/shared variance partition. The new executable
   `Banded_Ridge_Encoding` vignette includes objective scaling, output
   and storage contracts, a reproducible issue-#70 simulation audit,
   ecosystem comparison boundaries, and fixed-shape performance receipts.
+
 - Rank-deficient RSA nuisance designs now retain aliased semi-partial
   terms as named `NA` values instead of failing or silently replacing
   the complete `sp_*` result set with missing maps.
+
 - [`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
   now accepts named `era_effects_block` formulas and emits block
   incremental R-squared, partial F, and rank-based numerator degrees of
   freedom from full and reduced models fit to the same complete-item
   set.
+
 - Fixed a silent positive bias in `crossnobis` estimation:
   [`compute_crossvalidated_means_sl()`](https://bbuchsbaum.github.io/rMVPA/reference/compute_crossvalidated_means_sl.md)
   now builds condition means from independent partitions instead of
@@ -158,53 +218,67 @@
   with rMVPA 0.1.2’s built-in crossnobis fold constructor should be
   recomputed; results built from independent partition means directly
   are unaffected.
+
 - The optional shard backend now requires shard 0.2.1 or newer, which
   safely rejects invalidated shared-memory handles instead of
   dereferencing them.
+
 - [`run_custom_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_custom_searchlight.md)
   now gives callbacks separate training and test sphere matrices plus
   arbitrary caller-supplied `user_data`, so custom train/test statistics
   can be computed without concatenating image series.
+
 - [`mvpa_dataset()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_dataset.md)
   now rejects training, test, and mask images whose spatial dimensions,
   spacing, origin, axes, or affine transforms do not agree.
+
 - Searchlight iteration now chooses bounded, memory-aware batch sizes by
   default. Set `batch_size` explicitly to override the automatic choice.
+
 - Custom regional and searchlight analyses now apply `.cores` for the
   duration of the call and restore the caller’s previous `future` plan
   afterward.
+
 - [`save_results()`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.md)
   now writes custom searchlight metric maps as NIfTI files instead of
   storing their wrappers as auxiliary R objects.
+
 - [`save_results()`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.md)
   no longer loads optional surface packages merely to record their
   versions when writing a volumetric-result manifest.
+
 - [`mvpa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
   now accepts row-aligned numeric, integer, character, logical, and
   factor vectors for blocking and splitting variables, with explicit
   alignment errors.
+
 - Dual-LDA AUC scoring now treats differences at accumulated
   floating-point error scale as ties, preserving incremental/full
   searchlight parity across platforms without relaxing the parity
   threshold.
+
 - [`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
   now accepts combined encoding/retrieval image series split explicitly
   by `phase_var`, validates optional one-to-one item pairing, and
   supports Pearson or Spearman matched-item similarity.
+
 - ERA-RSA can now map zero-order item-covariate correlations and
   adjusted, directional semi-partial correlations via `era_correlates`,
   `era_association`, and `era_effects`, with complete-item counts and no
   redundant unsigned R-squared maps.
+
 - ERA-RSA item associations now use trial-specific
   matched-minus-nonmatch similarity by default, with raw matched
   similarity available explicitly via
   `era_association_score = "matched"`. The new `era_components` argument
   can skip identification and geometry work for association-focused
   searchlights.
+
 - ERA-RSA searchlights now reuse prepared item pairing, use
   allocation-light item and RDM-vector kernels for finite data, and
   amortize shard dispatch with larger index-only batches and optional
   rather than unconditional batch GC.
+
 - Eligible one-to-one volumetric ERA-RSA standard searchlights now
   select a dedicated direct-matrix engine automatically. It filters
   matrix columns with the same center-preservation rules as the

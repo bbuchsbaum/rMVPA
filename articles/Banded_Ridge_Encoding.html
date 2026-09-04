@@ -132,13 +132,26 @@ purge.</p>
 <code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/banded_ridge_model.html">banded_ridge_model</a></span><span class="op">(</span></span>
 <span>  <span class="va">example</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">design</span>,</span>
 <span>  outer_crossval <span class="op">=</span> <span class="fl">3</span>, tune_crossval <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>  alphas <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">1</span>, <span class="fl">10</span><span class="op">)</span>,</span>
 <span>  theta_method <span class="op">=</span> <span class="st">"grid"</span>, theta_grid_points <span class="op">=</span> <span class="fl">3</span>,</span>
 <span>  target_batch_size <span class="op">=</span> <span class="fl">7</span>, return_predictions <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  delta_sets <span class="op">=</span> <span class="st">"all"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_banded_ridge.html">run_banded_ridge</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span></code></pre></div>
+<p><code>alphas</code> is left at its default, <code>"auto"</code>,
+which places nine penalties across six decades around the scale at which
+the penalty starts to change this design’s fit. That scale is a property
+of the design, not a constant: the solver standardizes every training
+column and scales band <code>b</code> by <code>sqrt(theta_b)</code>, so
+alpha competes with cross-product eigenvalues that average
+<code>(n - 1) * mean(D_b) / min(n - 1, p)</code>. It grows with the
+number of rows and with band width, which is why a design with a few
+thousand timepoints needs penalties orders of magnitude larger than one
+with a few dozen.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif</a></span><span class="op">(</span><span class="va">model</span><span class="op">$</span><span class="va">alpha_grid</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 1.75e-02 9.84e-02 5.53e-01 3.11e+00 1.75e+01 9.84e+01 5.53e+02 3.11e+03</span></span>
+<span><span class="co">#&gt; [9] 1.75e+04</span></span></code></pre></div>
 <p><code>outer_crossval</code> also accepts a
 <code>cross_validation</code> object, so
 <code>blocked_cross_validation(example$blocks)</code> selects the same
@@ -153,34 +166,82 @@ scopes.</p>
 <p>The compact result table is already in original voxel order. These
 are pooled outer out-of-fold metrics: every observation contributes
 once, from the outer fold in which it was held out.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">metrics</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   voxel_index response n_obs       mse correlation        r2</span></span>
-<span><span class="co">#&gt; 1           1  voxel_1    36 0.4235741   0.9181327 0.8416651</span></span>
-<span><span class="co">#&gt; 2           2  voxel_2    36 0.3941309   0.9554256 0.9125179</span></span>
-<span><span class="co">#&gt; 3           3  voxel_3    36 0.3701638   0.9612983 0.9239358</span></span>
-<span><span class="co">#&gt; 4           4  voxel_4    36 0.5548827   0.7856798 0.6079312</span></span>
-<span><span class="co">#&gt; 5           5  voxel_5    36 0.4297018   0.6228975 0.3794191</span></span>
-<span><span class="co">#&gt; 6           6  voxel_6    36 0.3540274   0.9165011 0.8396405</span></span></code></pre></div>
+<span><span class="co">#&gt; 1           1  voxel_1    36 0.4212985   0.9188365 0.8425157</span></span>
+<span><span class="co">#&gt; 2           2  voxel_2    36 0.3902411   0.9558373 0.9133813</span></span>
+<span><span class="co">#&gt; 3           3  voxel_3    36 0.3619358   0.9620976 0.9256266</span></span>
+<span><span class="co">#&gt; 4           4  voxel_4    36 0.5749462   0.7747922 0.5937547</span></span>
+<span><span class="co">#&gt; 5           5  voxel_5    36 0.5011491   0.5359127 0.2762339</span></span>
+<span><span class="co">#&gt; 6           6  voxel_6    36 0.3534999   0.9166569 0.8398795</span></span></code></pre></div>
 <p>The hyperparameter table is deliberately fold-specific. A single
 averaged alpha or theta map is convenient for visualization, but this
 table is the exact record of what generated each fold’s predictions.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">hyperparameters</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="st">"voxel_index"</span>, <span class="st">"outer_fold"</span>, <span class="st">"alpha"</span>,</span>
 <span>  <span class="st">"theta_visual"</span>, <span class="st">"theta_semantic"</span>, <span class="st">"inner_score"</span></span>
 <span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   voxel_index outer_fold alpha theta_visual theta_semantic inner_score</span></span>
-<span><span class="co">#&gt; 1           1     fold_1   0.1          0.5            0.5   0.5668786</span></span>
-<span><span class="co">#&gt; 2           1     fold_2   0.1          1.0            0.0   0.2934363</span></span>
-<span><span class="co">#&gt; 3           1     fold_3   1.0          1.0            0.0   0.5844635</span></span>
-<span><span class="co">#&gt; 4           2     fold_1   0.1          1.0            0.0   0.5679738</span></span>
-<span><span class="co">#&gt; 5           2     fold_2   0.1          1.0            0.0   0.5800163</span></span>
-<span><span class="co">#&gt; 6           2     fold_3   0.1          1.0            0.0   0.3335561</span></span></code></pre></div>
+<span><span class="co">#&gt;   voxel_index outer_fold      alpha theta_visual theta_semantic inner_score</span></span>
+<span><span class="co">#&gt; 1           1     fold_1 0.09840973          0.5            0.5   0.5676847</span></span>
+<span><span class="co">#&gt; 2           1     fold_2 0.09840973          1.0            0.0   0.2934400</span></span>
+<span><span class="co">#&gt; 3           1     fold_3 0.55339859          1.0            0.0   0.5994161</span></span>
+<span><span class="co">#&gt; 4           2     fold_1 0.09840973          1.0            0.0   0.5679984</span></span>
+<span><span class="co">#&gt; 5           2     fold_2 0.01750000          1.0            0.0   0.5735952</span></span>
+<span><span class="co">#&gt; 6           2     fold_3 0.55339859          1.0            0.0   0.3304154</span></span></code></pre></div>
 <p><img src="Banded_Ridge_Encoding_files/figure-html/plot-summary-1.png" class="r-plt" alt="" width="768" style="display: block; margin: auto;"></p>
 <p>Positive and negative values are both meaningful. A negative delta
 means the independently retuned reduced model predicted better in these
 finite samples; the value is never clipped.</p>
+</div>
+<div class="section level2">
+<h2 id="did-the-tuning-grid-contain-the-optimum">Did the tuning grid contain the optimum?<a class="anchor" aria-label="anchor" href="#did-the-tuning-grid-contain-the-optimum"></a>
+</h2>
+<p>A tuning grid that stops short of the optimum does not fail. Every
+response simply takes the largest penalty on offer, the refit is
+under-penalized, and the maps and delta R2 values come back fully
+populated and wrong. Read <code>result$selection_diagnostics</code>
+before anything else.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span><span class="op">$</span><span class="va">selection_diagnostics</span><span class="op">$</span><span class="va">alpha</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  <span class="st">"model"</span>, <span class="st">"modal_alpha"</span>, <span class="st">"share_at_grid_min"</span>, <span class="st">"share_at_grid_max"</span>,</span>
+<span>  <span class="st">"share_interior"</span>, <span class="st">"saturated"</span></span>
+<span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;              model  modal_alpha share_at_grid_min share_at_grid_max</span></span>
+<span><span class="co">#&gt; 1             full 5.533986e-01        0.14814815         0.0000000</span></span>
+<span><span class="co">#&gt; 2   without_visual 1.750000e+04        0.09259259         0.3148148</span></span>
+<span><span class="co">#&gt; 3 without_semantic 3.111989e+00        0.09259259         0.2222222</span></span>
+<span><span class="co">#&gt;   share_interior saturated</span></span>
+<span><span class="co">#&gt; 1      0.8518519     FALSE</span></span>
+<span><span class="co">#&gt; 2      0.5925926     FALSE</span></span>
+<span><span class="co">#&gt; 3      0.6851852     FALSE</span></span></code></pre></div>
+<p>The signature of a usable grid is an <strong>interior</strong> modal
+selection: most responses chose an alpha that is neither the smallest
+nor the largest available, so the grid brackets the optimum rather than
+truncating it. <code>saturated</code> is set when 95% of a model’s
+selections take one end of the grid, or when the two ends hold 95%
+between them, and <code><a href="../reference/run_banded_ridge.html">run_banded_ridge()</a></code> warns. Both forms
+matter. Alpha is tuned per response by default, so a mask that mixes
+predictable voxels with unpredictable ones sends its boundary mass to
+opposite ends — the noise voxels want more penalty than the ceiling
+offers, the signal voxels less than the floor — and neither end alone
+need look alarming while almost nothing lands inside. Widen
+<code>alphas</code> until the modal selection moves inside.</p>
+<p><code>$fit</code> answers the second question, which is independent
+of the grid: did the model predict at all?</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span><span class="op">$</span><span class="va">selection_diagnostics</span><span class="op">$</span><span class="va">fit</span></span>
+<span><span class="co">#&gt;              model n_responses n_scored  median_r2   mean_r2 share_r2_positive</span></span>
+<span><span class="co">#&gt; 1             full          18       18  0.7527416 0.6054574         0.9444444</span></span>
+<span><span class="co">#&gt; 2   without_visual          18       18 -0.0218104 0.1722848         0.3333333</span></span>
+<span><span class="co">#&gt; 3 without_semantic          18       18  0.2720315 0.3170440         0.6666667</span></span></code></pre></div>
+<p>A median outer out-of-fold R2 below <code>-0.05</code> means the fit
+predicts worse than the mean of the data it was scored on, and
+<code><a href="../reference/run_banded_ridge.html">run_banded_ridge()</a></code> warns about that separately. Nothing
+downstream of such a fit describes explained variance — in particular,
+the leave-one-band-out deltas are then differences between two models
+that both fail.</p>
 </div>
 <div class="section level2">
 <h2 id="which-loss-and-which-score-are-you-reading">Which loss and which score are you reading?<a class="anchor" aria-label="anchor" href="#which-loss-and-which-score-are-you-reading"></a>

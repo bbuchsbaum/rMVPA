@@ -58,13 +58,29 @@ purge.
 model <- banded_ridge_model(
   example$dataset, design,
   outer_crossval = 3, tune_crossval = 2,
-  alphas = c(0.1, 1, 10),
   theta_method = "grid", theta_grid_points = 3,
   target_batch_size = 7, return_predictions = TRUE,
   delta_sets = "all"
 )
 
 result <- run_banded_ridge(model)
+```
+
+`alphas` is left at its default, `"auto"`, which places nine penalties
+across six decades around the scale at which the penalty starts to
+change this design’s fit. That scale is a property of the design, not a
+constant: the solver standardizes every training column and scales band
+`b` by `sqrt(theta_b)`, so alpha competes with cross-product eigenvalues
+that average `(n - 1) * mean(D_b) / min(n - 1, p)`. It grows with the
+number of rows and with band width, which is why a design with a few
+thousand timepoints needs penalties orders of magnitude larger than one
+with a few dozen.
+
+``` r
+
+signif(model$alpha_grid, 3)
+#> [1] 1.75e-02 9.84e-02 5.53e-01 3.11e+00 1.75e+01 9.84e+01 5.53e+02 3.11e+03
+#> [9] 1.75e+04
 ```
 
 `outer_crossval` also accepts a `cross_validation` object, so
@@ -85,12 +101,12 @@ from the outer fold in which it was held out.
 
 head(result$metrics)
 #>   voxel_index response n_obs       mse correlation        r2
-#> 1           1  voxel_1    36 0.4235741   0.9181327 0.8416651
-#> 2           2  voxel_2    36 0.3941309   0.9554256 0.9125179
-#> 3           3  voxel_3    36 0.3701638   0.9612983 0.9239358
-#> 4           4  voxel_4    36 0.5548827   0.7856798 0.6079312
-#> 5           5  voxel_5    36 0.4297018   0.6228975 0.3794191
-#> 6           6  voxel_6    36 0.3540274   0.9165011 0.8396405
+#> 1           1  voxel_1    36 0.4212985   0.9188365 0.8425157
+#> 2           2  voxel_2    36 0.3902411   0.9558373 0.9133813
+#> 3           3  voxel_3    36 0.3619358   0.9620976 0.9256266
+#> 4           4  voxel_4    36 0.5749462   0.7747922 0.5937547
+#> 5           5  voxel_5    36 0.5011491   0.5359127 0.2762339
+#> 6           6  voxel_6    36 0.3534999   0.9166569 0.8398795
 ```
 
 The hyperparameter table is deliberately fold-specific. A single
@@ -103,13 +119,13 @@ head(result$hyperparameters[, c(
   "voxel_index", "outer_fold", "alpha",
   "theta_visual", "theta_semantic", "inner_score"
 )])
-#>   voxel_index outer_fold alpha theta_visual theta_semantic inner_score
-#> 1           1     fold_1   0.1          0.5            0.5   0.5668786
-#> 2           1     fold_2   0.1          1.0            0.0   0.2934363
-#> 3           1     fold_3   1.0          1.0            0.0   0.5844635
-#> 4           2     fold_1   0.1          1.0            0.0   0.5679738
-#> 5           2     fold_2   0.1          1.0            0.0   0.5800163
-#> 6           2     fold_3   0.1          1.0            0.0   0.3335561
+#>   voxel_index outer_fold      alpha theta_visual theta_semantic inner_score
+#> 1           1     fold_1 0.09840973          0.5            0.5   0.5676847
+#> 2           1     fold_2 0.09840973          1.0            0.0   0.2934400
+#> 3           1     fold_3 0.55339859          1.0            0.0   0.5994161
+#> 4           2     fold_1 0.09840973          1.0            0.0   0.5679984
+#> 5           2     fold_2 0.01750000          1.0            0.0   0.5735952
+#> 6           2     fold_3 0.55339859          1.0            0.0   0.3304154
 ```
 
 ![](Banded_Ridge_Encoding_files/figure-html/plot-summary-1.png)
@@ -117,6 +133,62 @@ head(result$hyperparameters[, c(
 Positive and negative values are both meaningful. A negative delta means
 the independently retuned reduced model predicted better in these finite
 samples; the value is never clipped.
+
+## Did the tuning grid contain the optimum?
+
+A tuning grid that stops short of the optimum does not fail. Every
+response simply takes the largest penalty on offer, the refit is
+under-penalized, and the maps and delta R2 values come back fully
+populated and wrong. Read `result$selection_diagnostics` before anything
+else.
+
+``` r
+
+result$selection_diagnostics$alpha[, c(
+  "model", "modal_alpha", "share_at_grid_min", "share_at_grid_max",
+  "share_interior", "saturated"
+)]
+#>              model  modal_alpha share_at_grid_min share_at_grid_max
+#> 1             full 5.533986e-01        0.14814815         0.0000000
+#> 2   without_visual 1.750000e+04        0.09259259         0.3148148
+#> 3 without_semantic 3.111989e+00        0.09259259         0.2222222
+#>   share_interior saturated
+#> 1      0.8518519     FALSE
+#> 2      0.5925926     FALSE
+#> 3      0.6851852     FALSE
+```
+
+The signature of a usable grid is an **interior** modal selection: most
+responses chose an alpha that is neither the smallest nor the largest
+available, so the grid brackets the optimum rather than truncating it.
+`saturated` is set when 95% of a model’s selections take one end of the
+grid, or when the two ends hold 95% between them, and
+[`run_banded_ridge()`](https://bbuchsbaum.github.io/rMVPA/reference/run_banded_ridge.md)
+warns. Both forms matter. Alpha is tuned per response by default, so a
+mask that mixes predictable voxels with unpredictable ones sends its
+boundary mass to opposite ends — the noise voxels want more penalty than
+the ceiling offers, the signal voxels less than the floor — and neither
+end alone need look alarming while almost nothing lands inside. Widen
+`alphas` until the modal selection moves inside.
+
+`$fit` answers the second question, which is independent of the grid:
+did the model predict at all?
+
+``` r
+
+result$selection_diagnostics$fit
+#>              model n_responses n_scored  median_r2   mean_r2 share_r2_positive
+#> 1             full          18       18  0.7527416 0.6054574         0.9444444
+#> 2   without_visual          18       18 -0.0218104 0.1722848         0.3333333
+#> 3 without_semantic          18       18  0.2720315 0.3170440         0.6666667
+```
+
+A median outer out-of-fold R2 below `-0.05` means the fit predicts worse
+than the mean of the data it was scored on, and
+[`run_banded_ridge()`](https://bbuchsbaum.github.io/rMVPA/reference/run_banded_ridge.md)
+warns about that separately. Nothing downstream of such a fit describes
+explained variance — in particular, the leave-one-band-out deltas are
+then differences between two models that both fail.
 
 ## Which loss and which score are you reading?
 
