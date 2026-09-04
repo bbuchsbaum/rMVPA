@@ -1,5 +1,21 @@
 # rMVPA 0.1.3
 
+* The parallel runtime receipt is regenerated against current source, and the
+  parallelism vignette now derives its claims from it. The receipt fingerprints
+  the five files whose behaviour it measures, and that fingerprint had gone
+  stale, so `test_parallelism_documentation.R` failed: the checked-in timings
+  described source that no longer existed. Re-running the driver on the same
+  machine, R version, and package set restores the match, with exact output
+  parity across all eight scheduler/data-backend paths and identical task-frame
+  sizes (13,048,800 default vs 105,712 shard bytes). Two prose claims had gone
+  stale the same way and were describing a receipt two regenerations old --- one
+  of them asserted shard was slower under `multisession` when the checked-in
+  receipt already showed the opposite. The frame sizes, the fold reduction, the
+  direction of every shard-vs-default comparison, and whether the repetition
+  ranges overlap are now computed from the receipt in the vignette rather than
+  written out, and the test asserts that derivation instead of asserting a
+  literal number that a re-run invalidates.
+
 * `banded_ridge_model()` scales its default alpha grid to the design instead of
   assuming one (#87). The old default, `10^seq(-2, 2, length.out = 9)`, capped
   the penalty at 100, but every solver path standardizes each training column

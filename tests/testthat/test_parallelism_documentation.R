@@ -12,7 +12,14 @@ test_that("parallelism vignette separates the three runtime layers", {
                fixed = TRUE)
   expect_match(text, "Copy-on-write is a memory\\s+mechanism")
   expect_match(text, "max_abs_result_error = 0", fixed = TRUE)
-  expect_match(text, "123-fold reduction", fixed = TRUE)
+  # the frame-size claim must be computed from the receipt, not written out:
+  # a literal here goes stale the moment the benchmark is re-run
+  expect_match(text, "`r shard_summary$fold`-fold reduction", fixed = TRUE)
+  expect_match(text, "`r shard_summary$default_bytes` bytes", fixed = TRUE)
+  expect_match(text, "`r shard_summary$shard_bytes` bytes", fixed = TRUE)
+  # so must the direction and separation of the timings
+  expect_match(text, "`r shard_summary$faster_clause`", fixed = TRUE)
+  expect_match(text, "`r shard_summary$overlap_clause`", fixed = TRUE)
   expect_false(grepl("rMVPA:::", text, fixed = TRUE))
 })
 

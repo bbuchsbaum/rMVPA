@@ -442,6 +442,47 @@ stopifnot(
   ])
 )
 
+# Every claim the prose makes about this table is derived from it here, so a
+# regenerated receipt cannot leave the surrounding sentences asserting the
+# ordering of a previous run.
+oxford <- function(x) {
+  if (!length(x)) return("no plan")
+  if (length(x) == 1L) return(x)
+  if (length(x) == 2L) return(paste(x, collapse = " and "))
+  paste0(paste(x[-length(x)], collapse = ", "), ", and ", x[[length(x)]])
+}
+
+shard_summary <- local({
+  defaults <- parallel_receipt[parallel_receipt$data_backend == "default", ]
+  shards <- parallel_receipt[parallel_receipt$data_backend == "shard", ]
+  defaults <- defaults[order(defaults$future_backend), ]
+  shards <- shards[order(shards$future_backend), ]
+  plan <- sub("_multisession$", "", defaults$future_backend)
+  faster <- shards$analysis_median_seconds < defaults$analysis_median_seconds
+  overlap <- pmin(defaults$analysis_max_seconds, shards$analysis_max_seconds) >=
+    pmax(defaults$analysis_min_seconds, shards$analysis_min_seconds)
+  list(
+    faster_clause = if (all(faster)) {
+      "every plan measured"
+    } else oxford(plan[faster]),
+    slower_clause = if (any(!faster)) {
+      paste0(", and raised it for ", oxford(plan[!faster]))
+    } else "",
+    overlap_clause = if (all(overlap)) {
+      "overlap for every pairing"
+    } else if (!any(overlap)) {
+      "are separated for every pairing"
+    } else {
+      sprintf("overlap for %d of the %d pairings", sum(overlap), length(overlap))
+    },
+    default_bytes = format(defaults$frame_bytes_sum_median[[1L]],
+                           big.mark = ",", scientific = FALSE),
+    shard_bytes = format(shards$frame_bytes_sum_median[[1L]],
+                         big.mark = ",", scientific = FALSE),
+    fold = round(median(shards$default_to_shard_frame_sum_ratio))
+  )
+})
+
 display_receipt <- transform(
   parallel_receipt,
   plan = sub("_multisession$", "", future_backend),
@@ -467,16 +508,19 @@ knitr::kable(
 ```
 
 All eight paths produced identical canonical result vectors in every fixture
-repetition (`max_abs_result_error = 0`). The default frames totaled 13,048,800
-bytes per run; shard frames totaled 105,712 bytes, a 123-fold reduction for
-this design. This is direct evidence about the transport structure measured by
-`object.size()`, not a claim that physical RAM fell by exactly the same factor.
+repetition (`max_abs_result_error = 0`). The default frames totaled
+`r shard_summary$default_bytes` bytes per run; shard frames totaled
+`r shard_summary$shard_bytes` bytes, a `r shard_summary$fold`-fold reduction
+for this design. This is direct evidence about the transport structure measured
+by `object.size()`, not a claim that physical RAM fell by exactly the same
+factor.
 
-Shard reduced the median time for sequential, multicore, and (slightly) mirai
-in this short local run, but it was slower with multisession. The
-three-repetition timing ranges overlap for every pairing, and startup dominates
-the separate-session plans. Multicore's local timing does not override its
-safety constraints. Mirai's fresh-process overhead here does not predict a
+Shard reduced the median time for `r shard_summary$faster_clause` in this short
+local run`r shard_summary$slower_clause`, and the three-repetition timing ranges
+`r shard_summary$overlap_clause`. Startup dominates the separate-session plans.
+Read that ordering as one machine on one afternoon rather than a property of
+the backends: multicore's local timing does not override its safety
+constraints, and mirai's fresh-process overhead here does not predict a
 long-lived mirai deployment. Re-run the driver on the target system before
 choosing on speed.
 
