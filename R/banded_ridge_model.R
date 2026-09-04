@@ -15,6 +15,247 @@
   as.integer(utils::tail(dims, 1L))
 }
 
+# Share of alpha selections pinned to the ends of the grid above which the grid
+# is reported as saturated. A selection at the largest available alpha means the
+# inner objective was still improving when the grid ran out, so the refit is
+# under-penalized; at the smallest it is over-penalized. The share is counted
+# over both ends together as well as each end alone: under the default
+# per-response alpha scope a heterogeneous mask splits its boundary mass across
+# the two ends, so a grid that brackets nothing can leave neither end near the
+# threshold while almost no response lands inside.
+.brm_alpha_saturation_share <- 0.95
+
+# Median outer out-of-fold R2 below which the full model is reported as
+# predicting worse than the mean of the held-out data. .banded_ridge_score()
+# forms ss_tot from the mean of the rows being scored, so that, not the
+# training mean, is the baseline a negative R2 loses to.
+.brm_r2_floor <- -0.05
+
+# Scale at which the penalty starts to bite for this design.
+#
+# Every solver path standardizes each training column to unit standard
+# deviation and then scales band b by sqrt(theta_b), so alpha is compared
+# against the eigenvalues of Z'Z with Z = Xs diag(sqrt(theta_feature)). Those
+# eigenvalues average trace(Z'Z) / rank, which under a uniform theta is
+# (n - 1) * mean(D_b) / min(n - 1, p), where D_b counts the non-degenerate
+# columns of band b. The anchor therefore grows with the number of training
+# rows and with band width, which is why a fixed grid cannot be right for every
+# design: a grid that brackets the anchor is in the range where the penalty
+# changes the fit, and a grid far below it selects its own ceiling for every
+# response.
+.brm_alpha_anchor <- function(X, groups) {
+  n <- nrow(X)
+  if (is.null(n) || n < 2L) return(NA_real_)
+  # colVars rather than .brc_column_sds: identical verdict, without
+  # materialising a centred and a squared copy of the design
+  vars <- matrixStats::colVars(X)
+  usable <- is.finite(vars) & vars > 0
+  p <- sum(usable)
+  if (p < 1L) return(NA_real_)
+  per_band <- vapply(split(usable, as.character(groups)),
+                     function(z) as.numeric(sum(z)), numeric(1))
+  ((n - 1) * mean(per_band)) / min(n - 1, p)
+}
+
+# Design-scaled default alpha grid: nine points spanning six decades centred on
+# the anchor above.
+.brm_default_alphas <- function(X, groups, n_points = 9L, decades = 3,
+                                anchor = .brm_alpha_anchor(X, groups)) {
+  if (!is.finite(anchor) || anchor <= 0) anchor <- 1
+  anchor * 10^seq(-decades, decades, length.out = n_points)
+}
+
+.brm_resolve_alphas <- function(alphas, X, groups) {
+  if (is.numeric(alphas)) {
+    return(list(alphas = alphas, origin = "user", anchor = NA_real_))
+  }
+  named <- (is.character(alphas) || is.factor(alphas)) &&
+    length(alphas) == 1L && !is.na(alphas) &&
+    identical(as.character(alphas), "auto")
+  if (!named) {
+    stop(
+      "alphas must be \"auto\" or a numeric vector of non-negative penalties.",
+      call. = FALSE
+    )
+  }
+  anchor <- .brm_alpha_anchor(X, groups)
+  list(alphas = .brm_default_alphas(X, groups, anchor = anchor),
+       origin = "auto", anchor = anchor)
+}
+
+# Alphas a response could actually have been given, after the alpha/theta scope
+# constraints. Using the whole manifest here would report a fixed alpha scope as
+# fully saturated.
+.brm_selectable_alphas <- function(candidates,
+                                   alpha_scope,
+                                   theta_scope,
+                                   fixed_alpha = NULL,
+                                   fixed_theta = NULL) {
+  available <- tryCatch(
+    .brt_available_candidates(
+      candidates, alpha_scope, theta_scope,
+      fixed_alpha = fixed_alpha, fixed_theta = fixed_theta
+    ),
+    error = function(e) seq_along(candidates$alpha)
+  )
+  sort(unique(candidates$alpha[available]))
+}
+
+# One row summarising where a model's alpha selections landed in its grid.
+.brm_alpha_diagnostics <- function(selections, alphas, label) {
+  grid <- sort(unique(as.numeric(alphas)))
+  selected <- as.numeric(selections$alpha)
+  n_selections <- length(selected)
+  lo <- grid[[1L]]
+  hi <- grid[[length(grid)]]
+  # counted against the grid itself, so modal_alpha is one of its values rather
+  # than a value round-tripped through table()'s character names
+  counts <- tabulate(match(selected, grid), nbins = length(grid))
+  scored <- sum(counts) > 0L
+  # a one-value grid offered no choice, so it has no boundary to be at: 1 in
+  # both share columns would be arithmetically true and read as total saturation
+  single <- length(grid) < 2L
+  share_min <- if (single) NA_real_ else mean(selected == lo)
+  share_max <- if (single) NA_real_ else mean(selected == hi)
+  share_interior <- if (length(grid) < 3L) {
+    NA_real_
+  } else mean(selected > lo & selected < hi)
+  data.frame(
+    model = label,
+    n_selections = n_selections,
+    n_alpha_grid = length(grid),
+    alpha_grid_min = lo,
+    alpha_grid_max = hi,
+    modal_alpha = if (scored) grid[[which.max(counts)]] else NA_real_,
+    modal_share = if (scored) max(counts) / n_selections else NA_real_,
+    share_at_grid_min = share_min,
+    share_at_grid_max = share_max,
+    share_interior = share_interior,
+    # either end alone, or both ends together once there is an interior to
+    # leave empty
+    saturated = !single &&
+      (max(share_min, share_max) >= .brm_alpha_saturation_share ||
+         (length(grid) >= 3L &&
+            (share_min + share_max) >= .brm_alpha_saturation_share)),
+    stringsAsFactors = FALSE
+  )
+}
+
+.brm_fit_diagnostics <- function(metrics, label) {
+  # a constant response has no variance to explain and scores NaN; it is
+  # counted, but it cannot move the summary
+  r2 <- metrics$r2[is.finite(metrics$r2)]
+  data.frame(
+    model = label,
+    n_responses = nrow(metrics),
+    n_scored = length(r2),
+    median_r2 = if (length(r2)) stats::median(r2) else NA_real_,
+    mean_r2 = if (length(r2)) mean(r2) else NA_real_,
+    share_r2_positive = if (length(r2)) mean(r2 > 0) else NA_real_,
+    stringsAsFactors = FALSE
+  )
+}
+
+.brm_one_sided <- function(row) {
+  max(row$share_at_grid_min, row$share_at_grid_max) >=
+    .brm_alpha_saturation_share
+}
+
+.brm_saturation_message <- function(row, subject) {
+  if (.brm_one_sided(row)) {
+    at_max <- row$share_at_grid_max >= row$share_at_grid_min
+    return(paste0(
+      subject, " took the ", if (at_max) "largest" else "smallest",
+      " available alpha (",
+      format(if (at_max) row$alpha_grid_max else row$alpha_grid_min,
+             digits = 4L),
+      ") for ",
+      sprintf("%.1f%%",
+              100 * max(row$share_at_grid_min, row$share_at_grid_max)),
+      " of its ", row$n_selections, " selections"
+    ))
+  }
+  interior <- if (is.na(row$share_interior)) {
+    max(0, 1 - row$share_at_grid_min - row$share_at_grid_max)
+  } else row$share_interior
+  paste0(
+    subject, " left only ", sprintf("%.1f%%", 100 * interior),
+    " of its ", row$n_selections, " selections inside the grid (",
+    sprintf("%.1f%%", 100 * row$share_at_grid_min), " took ",
+    format(row$alpha_grid_min, digits = 4L), ", ",
+    sprintf("%.1f%%", 100 * row$share_at_grid_max), " took ",
+    format(row$alpha_grid_max, digits = 4L), ")"
+  )
+}
+
+# Saturation is reported once per run: one warning naming the full model and any
+# leave-one-band-out models whose selections pinned to a grid edge.
+.brm_warn_alpha_saturation <- function(alpha_diagnostics,
+                                       alpha_grid_origin = NA_character_) {
+  hit <- alpha_diagnostics[which(alpha_diagnostics$saturated), , drop = FALSE]
+  if (!nrow(hit)) return(invisible(NULL))
+  full <- hit[hit$model == "full", , drop = FALSE]
+  reduced <- hit[hit$model != "full", , drop = FALSE]
+  parts <- character()
+  if (nrow(full)) {
+    parts <- c(parts, .brm_saturation_message(full, "The full model"))
+  }
+  if (nrow(reduced)) {
+    worst <- reduced[which.max(
+      reduced$share_at_grid_min + reduced$share_at_grid_max
+    ), , drop = FALSE]
+    bands <- sub("^without_", "", reduced$model)
+    parts <- c(parts, .brm_saturation_message(worst, if (nrow(reduced) == 1L) {
+      paste0("Its leave-one-band-out model (", bands, ")")
+    } else {
+      paste0(nrow(reduced), " leave-one-band-out models (",
+             paste(bands, collapse = ", "), "), the worst of which")
+    }))
+  }
+  directions <- vapply(seq_len(nrow(hit)), function(ii) {
+    row <- hit[ii, , drop = FALSE]
+    if (!.brm_one_sided(row)) return("both ends")
+    if (row$share_at_grid_max >= row$share_at_grid_min) {
+      "under-penalized"
+    } else "over-penalized"
+  }, character(1))
+  direction <- if (length(unique(directions)) == 1L &&
+                     directions[[1L]] != "both ends") {
+    directions[[1L]]
+  } else "mis-penalized"
+  # `alphas` is ignored when a candidate manifest is supplied, so naming it
+  # there would send the user to an argument with no effect
+  remedy <- if (identical(alpha_grid_origin, "candidates")) {
+    "Widen the alpha values in `candidates`"
+  } else "Widen `alphas`"
+  rlang::warn(paste0(
+    "run_banded_ridge: the alpha grid is saturated. ",
+    paste(parts, collapse = ". "), ". The inner optimum is very likely ",
+    "outside the grid, so the refits are ", direction,
+    " and any leave-one-band-out delta R2 compares two mis-tuned models. ",
+    remedy, " until the modal selection is interior; see ",
+    "`result$selection_diagnostics$alpha`."
+  ))
+}
+
+.brm_warn_negative_r2 <- function(fit_diagnostics) {
+  full <- fit_diagnostics[fit_diagnostics$model == "full", , drop = FALSE]
+  if (!nrow(full) || !is.finite(full$median_r2) ||
+      full$median_r2 >= .brm_r2_floor) {
+    return(invisible(NULL))
+  }
+  rlang::warn(paste0(
+    "run_banded_ridge: the median outer out-of-fold R2 across the ",
+    full$n_scored, " scored responses is ", sprintf("%.4g", full$median_r2),
+    " and only ", sprintf("%.1f%%", 100 * full$share_r2_positive),
+    " of responses beat the mean of the data they were scored on. Nothing ",
+    "downstream of this fit, ",
+    "leave-one-band-out delta R2 included, describes explained variance. ",
+    "Check the alpha grid, the design, and the fold structure before reading ",
+    "the maps."
+  ))
+}
+
 # Convert a cross_validation object into the internal outer-fold list. The
 # object only expresses test partitions, so `purge` is applied to the training
 # rows here, exactly as the integer path does.
@@ -353,7 +594,19 @@
 #' @param candidates Optional candidate manifest. By default one is created from
 #'   `alphas`, `theta_method`, and the remaining theta arguments.
 #' @param alphas Non-negative overall ridge penalties used when constructing
-#'   candidates.
+#'   candidates, or `"auto"` (the default) to scale the grid to the design.
+#'   Every solver path standardizes each training column and then scales band
+#'   `b` by `sqrt(theta_b)`, so `alpha` competes with the eigenvalues of the
+#'   resulting cross-product, which average
+#'   `(n - 1) * mean(D_b) / min(n - 1, p)` under a uniform `theta` for band
+#'   widths `D_b`. `"auto"` places nine points spanning six decades centred on
+#'   that anchor, so the grid brackets the range in which the penalty changes
+#'   the fit however many rows and features the design has. A fixed grid cannot:
+#'   a design with a few thousand timepoints needs penalties several orders of
+#'   magnitude above the fixed `10^seq(-2, 2)` grid this default replaced, and
+#'   every response then selects the largest available value. `run_banded_ridge()`
+#'   warns when that happens; see `result$selection_diagnostics`. The resolved
+#'   grid is on the returned model as `alpha_grid`.
 #' @param theta_method One of `"grid"`, `"fixed"`, or `"random"`. The default
 #'   constructs a small, deterministic simplex grid.
 #' @param theta Fixed named simplex vector/matrix for `theta_method = "fixed"`.
@@ -395,21 +648,29 @@
 #' @export
 #' @examples
 #' set.seed(71)
-#' sample <- gen_sample_dataset(c(3, 3, 3), nobs = 24,
-#'                              response_type = "continuous", blocks = 4)
-#' X <- matrix(rnorm(24 * 6), 24, 6)
+#' n <- 24L
+#' dims <- c(3L, 3L, 3L)
+#' X <- matrix(rnorm(n * 6), n, 6)
+#' Y <- X %*% matrix(rnorm(6 * prod(dims), sd = 0.8), 6, prod(dims)) +
+#'   matrix(rnorm(n * prod(dims), sd = 0.5), n, prod(dims))
+#' dataset <- mvpa_dataset(
+#'   neuroim2::NeuroVec(array(as.vector(t(Y)), c(dims, n)),
+#'                      neuroim2::NeuroSpace(c(dims, n), c(1, 1, 1))),
+#'   mask = neuroim2::NeuroVol(array(1, dims),
+#'                             neuroim2::NeuroSpace(dims, c(1, 1, 1)))
+#' )
 #' fs <- feature_sets(X, blocks(low = 3, semantic = 3))
 #' design <- feature_sets_design(
 #'   fs, block_var_train = rep(1:4, each = 6), time_series = TRUE
 #' )
 #' model <- banded_ridge_model(
-#'   sample$dataset, design, outer_crossval = 4, tune_crossval = 2,
-#'   alphas = c(0.1, 1), theta_method = "fixed",
-#'   theta = c(low = 0.5, semantic = 0.5), target_batch_size = 9,
-#'   delta_sets = "all"
+#'   dataset, design, outer_crossval = 4, tune_crossval = 2,
+#'   theta_method = "fixed", theta = c(low = 0.5, semantic = 0.5),
+#'   target_batch_size = 9, delta_sets = "all"
 #' )
 #' result <- run_banded_ridge(model)
 #' head(result$metrics)
+#' result$selection_diagnostics$alpha
 #' head(result$predictive_leave_one_band_out$effects)
 #'
 #' @section Predictive leave-one-band-out delta R2:
@@ -424,7 +685,7 @@ banded_ridge_model <- function(dataset,
                                outer_crossval = NULL,
                                tune_crossval = NULL,
                                candidates = NULL,
-                               alphas = 10^seq(-2, 2, length.out = 9L),
+                               alphas = "auto",
                                theta_method = c("grid", "fixed", "random"),
                                theta = NULL,
                                theta_grid_points = 3L,
@@ -493,12 +754,17 @@ banded_ridge_model <- function(dataset,
   )
   group_names <- design$X_train$set_order
   if (is.null(candidates)) {
+    alpha_grid <- .brm_resolve_alphas(
+      alphas, design$X_train$X, as.character(design$X_train$set)
+    )
     candidates <- .banded_ridge_candidates(
-      group_names, alphas, method = theta_method, theta = theta,
+      group_names, alpha_grid$alphas, method = theta_method, theta = theta,
       grid_points = theta_grid_points, n_theta = n_theta, seed = seed
     )
   } else {
     candidates <- .brt_validate_candidates(candidates, group_names)
+    alpha_grid <- list(alphas = sort(unique(candidates$alpha)),
+                       origin = "candidates", anchor = NA_real_)
   }
   available <- .brt_available_candidates(
     candidates, alpha_scope, theta_scope,
@@ -565,6 +831,9 @@ banded_ridge_model <- function(dataset,
     outer_folds = outer_folds, inner_folds = tuning$inner_folds,
     inner_v = tuning$inner_v, inner_tuning = tuning$inner_tuning,
     candidates = candidates, metric = metric,
+    alpha_grid = alpha_grid$alphas, alpha_grid_origin = alpha_grid$origin,
+    alpha_anchor = alpha_grid$anchor,
+    selectable_alphas = sort(unique(candidates$alpha[available])),
     alpha_scope = alpha_scope, theta_scope = theta_scope,
     fixed_alpha = fixed_alpha, fixed_theta = fixed_theta,
     delta_sets = delta_sets, reduced_candidates = reduced_candidates,
@@ -596,7 +865,27 @@ banded_ridge_model <- function(dataset,
 #' @param response_partitions Optional list of non-overlapping global voxel IDs
 #'   that exactly cover the active mask.
 #' @return A `banded_ridge_result` with spatial maps, metrics, exact outer-fold
-#'   hyperparameters, optional predictions/weights, and allocation provenance.
+#'   hyperparameters, selection diagnostics, optional predictions/weights, and
+#'   allocation provenance.
+#'
+#' @section Selection diagnostics:
+#' `result$selection_diagnostics$alpha` carries one row per fitted model (the
+#' full model and each leave-one-band-out model) giving the alpha grid it could
+#' select from, the modal selection and its share, the share pinned to each end
+#' of the grid, and the share strictly interior. `$fit` gives the median and
+#' mean outer out-of-fold R2 per model and the share of responses above zero.
+#'
+#' Two conditions are warned about rather than left to be discovered. The first
+#' is a saturated grid: at least 95% of a model's alpha selections taking the
+#' largest available alpha, or the smallest, or the two ends between them once
+#' the grid has an interior to leave empty. Under the default per-response
+#' alpha scope a heterogeneous mask splits its boundary mass across both ends,
+#' so the combined share is what catches a grid that brackets nothing. In every
+#' form the inner optimum lies outside the grid: the refits are mis-penalized
+#' and leave-one-band-out delta R2 compares two mis-tuned models. The second is
+#' a median outer out-of-fold R2 below -0.05, which means the fit predicts
+#' worse than the mean of the data it was scored on, whatever the cause, and
+#' nothing derived from it describes explained variance.
 #' @export
 run_banded_ridge <- function(model,
                              target_batch_size = model$target_batch_size,
@@ -760,6 +1049,16 @@ run_banded_ridge <- function(model,
   selections <- selections[order(match(selections$voxel_index, active_ids),
                                  selections$outer_fold), ]
   rownames(selections) <- NULL
+  # model specs built before selectable_alphas existed still describe their own
+  # scope constraints, so the grid is recoverable rather than fatal
+  full_alphas <- model$selectable_alphas %||% .brm_selectable_alphas(
+    model$candidates, model$alpha_scope, model$theta_scope,
+    fixed_alpha = model$fixed_alpha, fixed_theta = model$fixed_theta
+  )
+  alpha_diagnostic_rows <- list(.brm_alpha_diagnostics(
+    selections, full_alphas, "full"
+  ))
+  fit_diagnostic_rows <- list(.brm_fit_diagnostics(metrics, "full"))
   maps <- list(
     mse = .brm_map(metrics$mse, active_ids, model$dataset$mask),
     correlation = .brm_map(metrics$correlation, active_ids, model$dataset$mask),
@@ -801,6 +1100,18 @@ run_banded_ridge <- function(model,
       )
       reduced_performance[[band]] <- reduced_metric
       reduced_hyperparameters[[band]] <- reduced_selection
+      alpha_diagnostic_rows[[length(alpha_diagnostic_rows) + 1L]] <-
+        .brm_alpha_diagnostics(
+          reduced_selection,
+          .brm_selectable_alphas(
+            model$reduced_candidates[[band]], model$alpha_scope,
+            model$theta_scope, fixed_alpha = model$fixed_alpha,
+            fixed_theta = model$reduced_fixed_theta[[band]]
+          ),
+          paste0("without_", band)
+        )
+      fit_diagnostic_rows[[length(fit_diagnostic_rows) + 1L]] <-
+        .brm_fit_diagnostics(reduced_metric, paste0("without_", band))
     }
     predictive_leave_one_band_out <- list(
       estimand = paste0(
@@ -837,9 +1148,25 @@ run_banded_ridge <- function(model,
     )
   }
   if (!is.null(weights)) weights <- weights[paste0("voxel_", active_ids)]
+  alpha_diagnostics <- do.call(rbind, alpha_diagnostic_rows)
+  rownames(alpha_diagnostics) <- NULL
+  fit_diagnostics <- do.call(rbind, fit_diagnostic_rows)
+  rownames(fit_diagnostics) <- NULL
+  selection_diagnostics <- list(
+    alpha = alpha_diagnostics,
+    fit = fit_diagnostics,
+    alpha_grid_origin = model$alpha_grid_origin %||% NA_character_,
+    alpha_anchor = model$alpha_anchor %||% NA_real_,
+    saturation_share = .brm_alpha_saturation_share,
+    r2_floor = .brm_r2_floor
+  )
+  .brm_warn_alpha_saturation(alpha_diagnostics,
+                             selection_diagnostics$alpha_grid_origin)
+  .brm_warn_negative_r2(fit_diagnostics)
   out <- list(
     metrics = metrics,
     hyperparameters = selections,
+    selection_diagnostics = selection_diagnostics,
     maps = maps,
     predictions = predictions,
     weights = weights,
@@ -891,6 +1218,36 @@ print.banded_ridge_result <- function(x, ...) {
   cat("Responses: ", nrow(x$metrics), "\n", sep = "")
   cat("Solver:    ", x$provenance$solver, "\n", sep = "")
   cat("OOF MSE:   ", sprintf("%.6g", mean(x$metrics$mse)), " (mean)\n", sep = "")
+  # results saved before selection_diagnostics existed still print
+  diagnostics <- x$selection_diagnostics
+  full_fit <- if (is.null(diagnostics$fit)) NULL else {
+    diagnostics$fit[diagnostics$fit$model == "full", , drop = FALSE]
+  }
+  if (!is.null(full_fit) && nrow(full_fit)) {
+    cat("OOF R2:    ", sprintf("%.6g", full_fit$median_r2), " (median), ",
+        sprintf("%.1f%%", 100 * full_fit$share_r2_positive), " above zero\n",
+        sep = "")
+  }
+  full_alpha <- if (is.null(diagnostics$alpha)) NULL else {
+    diagnostics$alpha[diagnostics$alpha$model == "full", , drop = FALSE]
+  }
+  if (!is.null(full_alpha) && nrow(full_alpha)) {
+    if (full_alpha$n_alpha_grid < 2L) {
+      cat("Alpha:     fixed at ",
+          format(full_alpha$alpha_grid_min, digits = 4L), "\n", sep = "")
+    } else {
+      cat("Alpha:     modal ", format(full_alpha$modal_alpha, digits = 4L),
+          " in [", format(full_alpha$alpha_grid_min, digits = 4L), ", ",
+          format(full_alpha$alpha_grid_max, digits = 4L), "]; ",
+          sprintf("%.1f%%", 100 * full_alpha$share_at_grid_max),
+          " at the ceiling, ",
+          sprintf("%.1f%%", 100 * full_alpha$share_at_grid_min),
+          " at the floor\n", sep = "")
+    }
+    if (isTRUE(full_alpha$saturated)) {
+      cat("           grid saturated: widen the alpha grid\n")
+    }
+  }
   if (!is.null(x$predictive_leave_one_band_out)) {
     cat("Dropouts:  ", paste(
       x$predictive_leave_one_band_out$provenance$requested_bands,

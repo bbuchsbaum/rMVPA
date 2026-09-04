@@ -132,13 +132,25 @@ provide intact blocks or an explicit temporal purge.
 model <- banded_ridge_model(
   example$dataset, design,
   outer_crossval = 3, tune_crossval = 2,
-  alphas = c(0.1, 1, 10),
   theta_method = "grid", theta_grid_points = 3,
   target_batch_size = 7, return_predictions = TRUE,
   delta_sets = "all"
 )
 
 result <- run_banded_ridge(model)
+```
+
+`alphas` is left at its default, `"auto"`, which places nine penalties across
+six decades around the scale at which the penalty starts to change this
+design's fit. That scale is a property of the design, not a constant: the
+solver standardizes every training column and scales band `b` by
+`sqrt(theta_b)`, so alpha competes with cross-product eigenvalues that average
+`(n - 1) * mean(D_b) / min(n - 1, p)`. It grows with the number of rows and
+with band width, which is why a design with a few thousand timepoints needs
+penalties orders of magnitude larger than one with a few dozen.
+
+```{r resolved-alphas}
+signif(model$alpha_grid, 3)
 ```
 
 `outer_crossval` also accepts a `cross_validation` object, so
@@ -218,6 +230,46 @@ plot_encoding_summary(result)
 Positive and negative values are both meaningful. A negative delta means the
 independently retuned reduced model predicted better in these finite samples;
 the value is never clipped.
+
+## Did the tuning grid contain the optimum?
+
+A tuning grid that stops short of the optimum does not fail. Every response
+simply takes the largest penalty on offer, the refit is under-penalized, and
+the maps and delta R2 values come back fully populated and wrong. Read
+`result$selection_diagnostics` before anything else.
+
+```{r inspect-selection-diagnostics}
+result$selection_diagnostics$alpha[, c(
+  "model", "modal_alpha", "share_at_grid_min", "share_at_grid_max",
+  "share_interior", "saturated"
+)]
+```
+
+The signature of a usable grid is an **interior** modal selection: most
+responses chose an alpha that is neither the smallest nor the largest
+available, so the grid brackets the optimum rather than truncating it.
+`saturated` is set when 95% of a model's selections take one end of the grid,
+or when the two ends hold 95% between them, and `run_banded_ridge()` warns.
+Both forms matter. Alpha is tuned per response by default, so a mask that
+mixes predictable voxels with unpredictable ones sends its boundary mass to
+opposite ends --- the noise voxels want more penalty than the ceiling offers,
+the signal voxels less than the floor --- and neither end alone need look
+alarming while almost nothing lands inside. Widen `alphas` until the modal
+selection moves inside.
+
+`$fit` answers the second question, which is independent of the grid: did the
+model predict at all?
+
+```{r inspect-fit-diagnostics}
+result$selection_diagnostics$fit
+```
+
+A median outer out-of-fold R2 below `-0.05` means the fit predicts worse than
+the mean of the data it was scored on, and `run_banded_ridge()` warns about
+that separately.
+Nothing downstream of such a fit describes explained variance --- in
+particular, the leave-one-band-out deltas are then differences between two
+models that both fail.
 
 ## Which loss and which score are you reading?
 

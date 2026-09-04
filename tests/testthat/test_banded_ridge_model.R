@@ -204,7 +204,8 @@ test_that("outer-test response mutations cannot affect that fold's tuning or fit
     mutated_fixture, outer_crossval = model$outer_folds,
     target_batch_size = Inf, retain_diagnostics = TRUE
   )
-  mutated <- run_banded_ridge(mutated_model)
+  # the corrupted fold makes this fit lose to the training mean by design
+  mutated <- suppressWarnings(run_banded_ridge(mutated_model))
   before_diag <- baseline$diagnostics[[1L]][[2L]]
   after_diag <- mutated$diagnostics[[1L]][[2L]]
 
@@ -568,4 +569,281 @@ test_that("dual solver reuses band Grams and a capped cache reproduces results",
   expect_gt(tiny$provenance$solver_cache_evictions, 0L)
   expect_identical(tiny$predictions, dual$predictions)
   expect_identical(sum(tiny$provenance$work_manifest$cache_oversize_added), 0L)
+})
+
+# Issue #87: a fixed alpha grid cannot be right for every design, and a grid
+# that stops below the optimum used to pass silently.
+
+.brm_saturation_fixture <- function(seed = 8701L, n = 300L, D = 40L,
+                                    dims = c(4L, 4L, 2L), signal = 0.02) {
+  set.seed(seed)
+  p <- D * 3L
+  nv <- prod(dims)
+  X <- matrix(rnorm(n * p), n, p,
+              dimnames = list(NULL, paste0("x", seq_len(p))))
+  Y <- X %*% matrix(rnorm(p * nv, sd = signal), p, nv) +
+    matrix(rnorm(n * nv), n, nv)
+  data_array <- array(as.vector(t(Y)), c(dims, n))
+  dataset <- mvpa_dataset(
+    neuroim2::NeuroVec(data_array,
+                       neuroim2::NeuroSpace(c(dims, n), c(1, 1, 1))),
+    mask = neuroim2::NeuroVol(array(1, dims),
+                              neuroim2::NeuroSpace(dims, c(1, 1, 1)))
+  )
+  features <- feature_sets(X, blocks(a = D, b = D, c = D))
+  design <- feature_sets_design(
+    features, block_var_train = as.integer(cut(seq_len(n), 4L, labels = FALSE)),
+    time_series = TRUE
+  )
+  list(X = X, dataset = dataset, design = design,
+       groups = as.character(features$set))
+}
+
+.brm_saturation_model <- function(fixture, alpha_scope = "shared", ...) {
+  banded_ridge_model(
+    fixture$dataset, fixture$design, outer_crossval = 4L, tune_crossval = 2L,
+    theta_method = "fixed", theta = c(a = 1 / 3, b = 1 / 3, c = 1 / 3),
+    alpha_scope = alpha_scope, theta_scope = "shared", ...
+  )
+}
+
+test_that("the default alpha grid is anchored on the design, not on a constant", {
+  fixture <- .brm_saturation_fixture()
+  n <- nrow(fixture$X)
+  p <- ncol(fixture$X)
+  expected_anchor <- ((n - 1) * (p / 3L)) / min(n - 1, p)
+  expect_equal(rMVPA:::.brm_alpha_anchor(fixture$X, fixture$groups),
+               expected_anchor)
+
+  model <- .brm_saturation_model(fixture)
+  expect_identical(model$alpha_grid_origin, "auto")
+  expect_equal(model$alpha_anchor, expected_anchor)
+  expect_equal(model$alpha_grid,
+               expected_anchor * 10^seq(-3, 3, length.out = 9L))
+  expect_identical(model$selectable_alphas, sort(model$alpha_grid))
+
+  # with more rows than columns the rank bound is the column count, so the
+  # anchor is (n - 1) / bands: doubling the rows doubles it, and no constant
+  # grid can track that
+  expect_equal(expected_anchor, (n - 1) / 3)
+  wide_n <- .brm_saturation_fixture(seed = 8702L, n = 600L)
+  expect_equal(rMVPA:::.brm_alpha_anchor(wide_n$X, wide_n$groups),
+               (600 - 1) / 3)
+
+  # with more columns than rows the rank bound is the row count and the anchor
+  # is the mean band width, where degenerate columns are not counted
+  short <- .brm_saturation_fixture(seed = 8704L, n = 60L)
+  expect_equal(rMVPA:::.brm_alpha_anchor(short$X, short$groups),
+               ncol(short$X) / 3)
+  flat <- short$X
+  flat[, 1:20] <- 1
+  expect_equal(rMVPA:::.brm_alpha_anchor(flat, short$groups),
+               (ncol(short$X) - 20) / 3)
+
+  explicit <- .brm_saturation_model(fixture, alphas = c(1, 10))
+  expect_identical(explicit$alpha_grid_origin, "user")
+  expect_identical(explicit$alpha_grid, c(1, 10))
+  expect_true(is.na(explicit$alpha_anchor))
+  expect_error(.brm_saturation_model(fixture, alphas = "wide"),
+               "must be \"auto\" or a numeric vector", fixed = TRUE)
+  # a factor is not a numeric grid either, and used to fall through to the
+  # solver's less helpful message
+  expect_error(.brm_saturation_model(fixture, alphas = factor("wide")),
+               "must be \"auto\" or a numeric vector", fixed = TRUE)
+  expect_identical(
+    .brm_saturation_model(fixture, alphas = factor("auto"))$alpha_grid,
+    model$alpha_grid
+  )
+
+  # a supplied manifest ignores alphas entirely, and says so
+  manifest <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b", "c"), alphas = c(2, 20, 200), method = "fixed",
+    theta = c(a = 1 / 3, b = 1 / 3, c = 1 / 3)
+  )
+  from_manifest <- .brm_saturation_model(fixture, alphas = c(1, 10),
+                                         candidates = manifest)
+  expect_identical(from_manifest$alpha_grid_origin, "candidates")
+  expect_identical(from_manifest$alpha_grid, c(2, 20, 200))
+  expect_true(is.na(from_manifest$alpha_anchor))
+})
+
+test_that("the saturation warning names the end, the direction, and the remedy", {
+  fixture <- .brm_saturation_fixture()
+  ceiling_grid <- .brm_saturation_model(
+    fixture, alphas = 10^seq(-2, 2, length.out = 9L), delta_sets = "all"
+  )
+  message <- tryCatch(run_banded_ridge(ceiling_grid),
+                      warning = conditionMessage)
+  expect_match(message, "The full model took the largest available alpha (100)",
+               fixed = TRUE)
+  expect_match(message, "3 leave-one-band-out models (a, b, c), the worst of which",
+               fixed = TRUE)
+  expect_match(message, "refits are under-penalized", fixed = TRUE)
+  expect_match(message, "Widen `alphas`", fixed = TRUE)
+
+  # the same grid supplied as a manifest must not point at an argument that
+  # is ignored
+  manifest <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b", "c"), alphas = 10^seq(-2, 2, length.out = 9L),
+    method = "fixed", theta = c(a = 1 / 3, b = 1 / 3, c = 1 / 3)
+  )
+  manifest_message <- tryCatch(
+    run_banded_ridge(.brm_saturation_model(fixture, candidates = manifest)),
+    warning = conditionMessage
+  )
+  expect_match(manifest_message, "Widen the alpha values in `candidates`",
+               fixed = TRUE)
+
+  # a floor pile-up names the other end and the other direction
+  floor_message <- tryCatch(
+    run_banded_ridge(.brm_saturation_model(
+      .brm_saturation_fixture(seed = 8706L, signal = 0.6),
+      alphas = 10^seq(2, 6, length.out = 5L)
+    )),
+    warning = conditionMessage
+  )
+  expect_match(floor_message, "took the smallest available alpha", fixed = TRUE)
+  expect_match(floor_message, "refits are over-penalized", fixed = TRUE)
+})
+
+test_that("a truncated alpha grid is reported instead of silently saturating", {
+  fixture <- .brm_saturation_fixture()
+  narrow <- .brm_saturation_model(fixture,
+                                  alphas = 10^seq(-2, 2, length.out = 9L))
+  expect_warning(narrow_result <- run_banded_ridge(narrow),
+                 "alpha grid is saturated")
+
+  narrow_alpha <- narrow_result$selection_diagnostics$alpha
+  expect_identical(narrow_alpha$model, "full")
+  expect_identical(narrow_alpha$share_at_grid_max, 1)
+  expect_identical(narrow_alpha$share_interior, 0)
+  expect_identical(narrow_alpha$modal_alpha, 100)
+  expect_true(narrow_alpha$saturated)
+
+  # the same data on the design-scaled default finds an interior optimum and
+  # predicts better than the training mean it previously lost to
+  auto_result <- .brm_saturation_model(fixture)
+  auto_result <- run_banded_ridge(auto_result)
+  auto_alpha <- auto_result$selection_diagnostics$alpha
+  expect_false(auto_alpha$saturated)
+  expect_identical(auto_alpha$share_interior, 1)
+  # the modal alpha is one of the grid's own values, not a reformatted copy
+  expect_true(any(vapply(auto_result$hyperparameters$alpha, identical,
+                         logical(1), auto_alpha$modal_alpha)))
+  expect_gt(auto_alpha$modal_alpha, narrow_alpha$alpha_grid_max)
+  expect_gt(auto_result$selection_diagnostics$fit$median_r2,
+            narrow_result$selection_diagnostics$fit$median_r2)
+  expect_gt(auto_result$selection_diagnostics$fit$share_r2_positive,
+            narrow_result$selection_diagnostics$fit$share_r2_positive)
+
+  expect_identical(auto_result$selection_diagnostics$alpha_grid_origin, "auto")
+  expect_identical(auto_result$selection_diagnostics$saturation_share, 0.95)
+  printed <- utils::capture.output(print(auto_result))
+  expect_true(any(grepl("^Alpha: ", printed)))
+  expect_true(any(grepl("^OOF R2: ", printed)))
+})
+
+test_that("saturation is judged over the alphas a response could have taken", {
+  fixture <- .brm_saturation_fixture()
+
+  # a fixed alpha scope selects one value by construction; that is not evidence
+  # that the grid is too narrow
+  fixed <- .brm_saturation_model(fixture, alphas = c(1, 10, 100),
+                                 alpha_scope = "fixed", fixed_alpha = 100)
+  expect_identical(fixed$selectable_alphas, 100)
+  fixed_result <- suppressWarnings(run_banded_ridge(fixed))
+  fixed_alpha <- fixed_result$selection_diagnostics$alpha
+  expect_identical(fixed_alpha$n_alpha_grid, 1L)
+  expect_false(fixed_alpha$saturated)
+  expect_true(is.na(fixed_alpha$share_interior))
+  # a grid of one offered no choice, so it has no boundary to be at
+  expect_true(is.na(fixed_alpha$share_at_grid_min))
+  expect_true(is.na(fixed_alpha$share_at_grid_max))
+  expect_match(utils::capture.output(print(fixed_result)),
+               "^Alpha:     fixed at 100$", all = FALSE)
+
+  # two candidate alphas have no interior, so share_interior is undefined, but
+  # a one-sided pile-up is still evidence that the optimum is past that end
+  two <- .brm_saturation_model(fixture, alphas = c(1, 10))
+  two_alpha <- expect_warning(
+    run_banded_ridge(two), "alpha grid is saturated"
+  )$selection_diagnostics$alpha
+  expect_identical(two_alpha$n_alpha_grid, 2L)
+  expect_true(is.na(two_alpha$share_interior))
+  expect_identical(two_alpha$share_at_grid_max, 1)
+  expect_true(two_alpha$saturated)
+})
+
+test_that("boundary mass split across both ends is still a saturated grid", {
+  # under the default per-response alpha scope a mask of signal and noise
+  # voxels sends its boundary mass to opposite ends, so neither end alone
+  # reaches the threshold while almost nothing lands inside
+  set.seed(8705L)
+  n <- 60L
+  D <- 8L
+  dims <- c(4L, 4L, 2L)
+  nv <- prod(dims)
+  X <- matrix(rnorm(n * 2L * D), n, 2L * D,
+              dimnames = list(NULL, paste0("x", seq_len(2L * D))))
+  beta <- matrix(0, 2L * D, nv)
+  signal <- seq_len(nv / 2L)
+  beta[, signal] <- matrix(rnorm(2L * D * length(signal), sd = 2),
+                           2L * D, length(signal))
+  Y <- X %*% beta + matrix(rnorm(n * nv), n, nv)
+  dataset <- mvpa_dataset(
+    neuroim2::NeuroVec(array(as.vector(t(Y)), c(dims, n)),
+                       neuroim2::NeuroSpace(c(dims, n), c(1, 1, 1))),
+    mask = neuroim2::NeuroVol(array(1, dims),
+                              neuroim2::NeuroSpace(dims, c(1, 1, 1)))
+  )
+  features <- feature_sets(X, blocks(a = D, b = D))
+  design <- feature_sets_design(
+    features, block_var_train = as.integer(cut(seq_len(n), 3L, labels = FALSE)),
+    time_series = TRUE
+  )
+  model <- banded_ridge_model(
+    dataset, design, outer_crossval = 3L, tune_crossval = 2L,
+    theta_method = "fixed", theta = c(a = 0.5, b = 0.5),
+    alphas = c(0.5, 1, 2)
+  )
+  result <- expect_warning(run_banded_ridge(model),
+                           "inside the grid")
+  alpha <- result$selection_diagnostics$alpha
+  expect_lt(max(alpha$share_at_grid_min, alpha$share_at_grid_max),
+            rMVPA:::.brm_alpha_saturation_share)
+  expect_lt(alpha$share_interior, 1 - rMVPA:::.brm_alpha_saturation_share)
+  expect_true(alpha$saturated)
+})
+
+test_that("leave-one-band-out models are diagnosed alongside the full model", {
+  fixture <- .brm_saturation_fixture()
+  model <- .brm_saturation_model(fixture, delta_sets = "all",
+                                 alphas = 10^seq(-4, -2, length.out = 5L))
+  result <- expect_warning(run_banded_ridge(model), "leave-one-band-out model")
+
+  alpha <- result$selection_diagnostics$alpha
+  expect_identical(alpha$model,
+                   c("full", "without_a", "without_b", "without_c"))
+  expect_true(all(alpha$saturated))
+  expect_identical(nrow(result$selection_diagnostics$fit), 4L)
+  expect_identical(result$selection_diagnostics$fit$model, alpha$model)
+})
+
+test_that("a fit that loses to the training mean says so", {
+  fixture <- .brm_saturation_fixture()
+  starved <- .brm_saturation_model(fixture,
+                                   alphas = 10^seq(-4, -2, length.out = 5L))
+  result <- expect_warning(run_banded_ridge(starved),
+                           "median outer out-of-fold R2")
+  fit <- result$selection_diagnostics$fit
+  expect_lt(fit$median_r2, rMVPA:::.brm_r2_floor)
+  expect_identical(fit$n_responses, nrow(result$metrics))
+  expect_identical(fit$n_scored, sum(is.finite(result$metrics$r2)))
+  expect_equal(fit$share_r2_positive, mean(result$metrics$r2 > 0))
+  expect_equal(fit$mean_r2, mean(result$metrics$r2))
+
+  # a fit that beats the mean is not warned about
+  expect_silent(run_banded_ridge(.brm_saturation_model(
+    .brm_saturation_fixture(seed = 8703L, signal = 0.5)
+  )))
 })

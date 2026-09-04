@@ -10,7 +10,7 @@ banded_ridge_model(
   outer_crossval = NULL,
   tune_crossval = NULL,
   candidates = NULL,
-  alphas = 10^seq(-2, 2, length.out = 9L),
+  alphas = "auto",
   theta_method = c("grid", "fixed", "random"),
   theta = NULL,
   theta_grid_points = 3L,
@@ -69,7 +69,19 @@ request fails here rather than in `run_banded_ridge()`.}
 `alphas`, `theta_method`, and the remaining theta arguments.}
 
 \item{alphas}{Non-negative overall ridge penalties used when constructing
-candidates.}
+candidates, or `"auto"` (the default) to scale the grid to the design.
+Every solver path standardizes each training column and then scales band
+`b` by `sqrt(theta_b)`, so `alpha` competes with the eigenvalues of the
+resulting cross-product, which average
+`(n - 1) * mean(D_b) / min(n - 1, p)` under a uniform `theta` for band
+widths `D_b`. `"auto"` places nine points spanning six decades centred on
+that anchor, so the grid brackets the range in which the penalty changes
+the fit however many rows and features the design has. A fixed grid cannot:
+a design with a few thousand timepoints needs penalties several orders of
+magnitude above the fixed `10^seq(-2, 2)` grid this default replaced, and
+every response then selects the largest available value. `run_banded_ridge()`
+warns when that happens; see `result$selection_diagnostics`. The resolved
+grid is on the returned model as `alpha_grid`.}
 
 \item{theta_method}{One of `"grid"`, `"fixed"`, or `"random"`. The default
 constructs a small, deterministic simplex grid.}
@@ -145,21 +157,29 @@ may be negative, and need not sum to the full-model R2.
 
 \examples{
 set.seed(71)
-sample <- gen_sample_dataset(c(3, 3, 3), nobs = 24,
-                             response_type = "continuous", blocks = 4)
-X <- matrix(rnorm(24 * 6), 24, 6)
+n <- 24L
+dims <- c(3L, 3L, 3L)
+X <- matrix(rnorm(n * 6), n, 6)
+Y <- X \%*\% matrix(rnorm(6 * prod(dims), sd = 0.8), 6, prod(dims)) +
+  matrix(rnorm(n * prod(dims), sd = 0.5), n, prod(dims))
+dataset <- mvpa_dataset(
+  neuroim2::NeuroVec(array(as.vector(t(Y)), c(dims, n)),
+                     neuroim2::NeuroSpace(c(dims, n), c(1, 1, 1))),
+  mask = neuroim2::NeuroVol(array(1, dims),
+                            neuroim2::NeuroSpace(dims, c(1, 1, 1)))
+)
 fs <- feature_sets(X, blocks(low = 3, semantic = 3))
 design <- feature_sets_design(
   fs, block_var_train = rep(1:4, each = 6), time_series = TRUE
 )
 model <- banded_ridge_model(
-  sample$dataset, design, outer_crossval = 4, tune_crossval = 2,
-  alphas = c(0.1, 1), theta_method = "fixed",
-  theta = c(low = 0.5, semantic = 0.5), target_batch_size = 9,
-  delta_sets = "all"
+  dataset, design, outer_crossval = 4, tune_crossval = 2,
+  theta_method = "fixed", theta = c(low = 0.5, semantic = 0.5),
+  target_batch_size = 9, delta_sets = "all"
 )
 result <- run_banded_ridge(model)
 head(result$metrics)
+result$selection_diagnostics$alpha
 head(result$predictive_leave_one_band_out$effects)
 
 }

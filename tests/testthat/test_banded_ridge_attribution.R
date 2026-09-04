@@ -55,7 +55,9 @@ context("banded_ridge predictive leave-one-band-out attribution")
   list(
     X = X, Y_active = Y_active, groups = groups, blocks = blocks_train,
     dataset = dataset, design = design, model = model,
-    result = run_banded_ridge(model)
+    # these fixtures pin a deliberately minimal two-alpha manifest to keep the
+    # attribution arithmetic checkable by hand, which reads as a saturated grid
+    result = suppressWarnings(run_banded_ridge(model))
   )
 }
 
@@ -217,11 +219,12 @@ test_that("outer-test response mutation cannot change full or reduced tuning", {
   target <- base$model$outer_folds[[2L]]
   mutated_y <- Y
   mutated_y[target$test, ] <- mutated_y[target$test, ] + 1e6
-  mutated <- .bra_test_problem(
+  # the corrupted fold makes this fit lose to the training mean by design
+  mutated <- suppressWarnings(.bra_test_problem(
     X, mutated_y, groups, blocks_train = base$blocks,
     candidates = base$model$candidates, retain_diagnostics = TRUE,
     target_batch_size = Inf
-  )
+  ))
 
   full_before <- base$result$diagnostics[[1L]][[2L]]
   full_after <- mutated$result$diagnostics[[1L]][[2L]]

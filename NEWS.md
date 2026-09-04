@@ -1,5 +1,44 @@
 # rMVPA 0.1.3
 
+* `banded_ridge_model()` scales its default alpha grid to the design instead of
+  assuming one (#87). The old default, `10^seq(-2, 2, length.out = 9)`, capped
+  the penalty at 100, but every solver path standardizes each training column
+  and then scales band `b` by `sqrt(theta_b)`, so alpha competes with
+  cross-product eigenvalues that average `(n - 1) * mean(D_b) / min(n - 1, p)`.
+  That anchor grows with the number of rows and with band width: on a 1976-row,
+  1500-column, five-band encoding design it is about 400, and the optimum sat
+  at 1e4 — two orders of magnitude above where the grid ended. Every response
+  then took the ceiling, and the pooled out-of-fold R2 was -0.300 instead of
+  the -0.0075 a wider grid reached on identical data. `alphas = "auto"` (the
+  new default) places nine points across six decades around that anchor, so the
+  grid brackets the range in which the penalty changes the fit whatever the
+  design's shape; the resolved values are on the model as `alpha_grid`. Passing
+  an explicit numeric `alphas`, or a full `candidates` manifest, is unchanged.
+
+* `run_banded_ridge()` no longer lets a truncated tuning grid pass silently
+  (#87). A grid that stops below the optimum does not fail: every response takes
+  the largest available alpha and the maps, metrics, and leave-one-band-out
+  delta R2 come back fully populated, which is how a variance partition can be
+  read off two badly fitting models. The result now carries
+  `selection_diagnostics`, with one row per fitted model — full and each
+  leave-one-band-out — giving the grid it could select from, the modal
+  selection and its share, the shares pinned to each end, and the share
+  strictly interior, plus per-model median/mean out-of-fold R2 and the share of
+  responses above zero. An interior modal selection is the signature of a grid
+  that contains the optimum. Two conditions now warn rather than waiting to be
+  discovered. The first is a saturated grid: at least 95% of a model's
+  selections taking the largest available alpha, or the smallest, or the two
+  ends between them once the grid has an interior to leave empty — under the
+  default per-response alpha scope a mask of signal and noise voxels sends its
+  boundary mass to opposite ends, so a grid that brackets nothing can leave
+  neither end near the threshold while almost nothing lands inside. The second
+  is a median out-of-fold R2 below -0.05, which means the fit predicts worse
+  than the mean of the data it was scored on, whatever the cause. Shares are
+  computed over the alphas a response could actually have been given, so a
+  fixed alpha scope is not reported as saturated, and a grid of one reports no
+  boundary shares at all. `print()` on the result shows the modal alpha, the
+  boundary shares, and the median R2.
+
 * The near-zero-variance guard in `feature_rsa_model()` no longer fails ROIs
   it has no reason to fail (#85). Its threshold on the feature matrix `F` was
   absolute (`var < 1e-10`), so multiplying `F` by a constant, which leaves the
