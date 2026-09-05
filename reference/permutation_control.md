@@ -17,7 +17,8 @@ permutation_control(
   correction = c("fdr", "none"),
   diagnose = TRUE,
   seed = NULL,
-  perm_strategy = c("iterate", "searchlight")
+  perm_strategy = c("iterate", "searchlight"),
+  rsa_null = c("individual", "joint")
 )
 ```
 
@@ -32,6 +33,8 @@ permutation_control(
   Character. How to permute labels: `"within_block"` (default) shuffles
   within each block, `"circular_shift"` shifts the label sequence within
   each block, `"global"` shuffles all labels ignoring block structure.
+  Circular shifts include zero in each block; leaving some or all blocks
+  unchanged is a valid null draw.
 
 - null_method:
 
@@ -109,6 +112,16 @@ permutation_control(
 
       Null pool size: `n_perm * all_centers`.
 
+- rsa_null:
+
+  Null hypothesis for `rsa_model`: `"individual"` (default) tests
+  marginal associations for correlation models, or the coefficient of a
+  regression with only one design predictor. Regression models with
+  multiple predictors (including nuisance predictors) require `"joint"`:
+  no association with *any* design predictor. Raw item permutations
+  cannot test an individual regression coefficient conditional on the
+  others. Ignored for other model classes.
+
 ## Value
 
 An S3 object of class `"permutation_control"`.
@@ -128,6 +141,7 @@ print(pc2)
 #>   perm_strategy     : searchlight 
 #>   n_perm            : 20 
 #>   shuffle           : within_block 
+#>   rsa_null          : individual 
 #>   null_method       : adjusted 
 #>   adjust_by         : nfeatures 
 #>   n_bins            : 5 

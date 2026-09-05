@@ -93,7 +93,10 @@ predictors, it does not certify those that can.</p>
   <code>max_abs_cor</code> and <code>max_abs_cor_pair</code> (the most correlated pair
   of predictors), <code>vif</code> (named, <code>Inf</code> when the design matrix is
   singular, <code>NA</code> for a constant predictor), <code>items_per_predictor</code>
-  (<code>n_items / vif</code>), and <code>threshold</code> (10).</p>
+  (<code>n_items / vif</code>), and <code>threshold</code> (10).
+  <code>unsupported_predictors</code> names predictors with fewer than two
+  distinct finite values; their VIF and effective item count are <code>NA</code>,
+  including when the design contains only that predictor.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

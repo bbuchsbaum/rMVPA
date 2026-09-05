@@ -134,7 +134,15 @@ null-generating step of <code><a href="run_permutation_searchlight.html">run_per
     <code>item_perm_b</code>.</p></dd>
 
 
-</dl><p>When an RSA design excludes within-block pairs (the default whenever a
+</dl><p>RSA item permutations break the brain's association with <em>all</em>
+design predictors, including nuisance predictors. For regression with
+multiple predictors they generate a joint no-association null, not a null
+for an individual coefficient conditional on the other predictors. See
+the <code>rsa_null</code> setting in <code><a href="permutation_control.html">permutation_control</a></code>.</p>
+<p>Circular shifts sample every rotation, including zero, independently in
+each block. Identity draws and draws that move only some blocks belong to
+the null distribution and are retained.</p>
+<p>When an RSA design excludes within-block pairs (the default whenever a
 <code>block_var</code> is supplied and some pairs fall within a block), items are
 exchangeable only within a block, and <code>method = "global"</code> is refused:
 the null would compare neural patterns from the same run while the observed

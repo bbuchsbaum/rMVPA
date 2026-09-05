@@ -55,7 +55,8 @@ run_permutation_searchlight."></head><body>
 <span>  correction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"fdr"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
 <span>  diagnose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  perm_strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"iterate"</span>, <span class="st">"searchlight"</span><span class="op">)</span></span>
+<span>  perm_strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"iterate"</span>, <span class="st">"searchlight"</span><span class="op">)</span>,</span>
+<span>  rsa_null <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"individual"</span>, <span class="st">"joint"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -71,7 +72,8 @@ run_permutation_searchlight."></head><body>
 <dd><p>Character. How to permute labels: <code>"within_block"</code>
 (default) shuffles within each block, <code>"circular_shift"</code> shifts the
 label sequence within each block, <code>"global"</code> shuffles all labels
-ignoring block structure.</p></dd>
+ignoring block structure. Circular shifts include zero in each block;
+leaving some or all blocks unchanged is a valid null draw.</p></dd>
 
 
 <dt id="arg-null-method">null_method<a class="anchor" aria-label="anchor" href="#arg-null-method"></a></dt>
@@ -149,6 +151,16 @@ centers proportionally from nfeatures quantile bins.</p></dd>
 
 </dl></dd>
 
+
+<dt id="arg-rsa-null">rsa_null<a class="anchor" aria-label="anchor" href="#arg-rsa-null"></a></dt>
+<dd><p>Null hypothesis for <code>rsa_model</code>: <code>"individual"</code>
+(default) tests marginal associations for correlation models, or the
+coefficient of a regression with only one design predictor. Regression
+models with multiple predictors (including nuisance predictors) require
+<code>"joint"</code>: no association with <em>any</em> design predictor. Raw item
+permutations cannot test an individual regression coefficient conditional
+on the others. Ignored for other model classes.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -169,6 +181,7 @@ centers proportionally from nfeatures quantile bins.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   perm_strategy     : searchlight </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   n_perm            : 20 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   shuffle           : within_block </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   rsa_null          : individual </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   null_method       : adjusted </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   adjust_by         : nfeatures </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   n_bins            : 5 </span>

@@ -2,6 +2,24 @@
 
 ## rMVPA 0.1.3
 
+- RSA permutation inference now states its null hypothesis. The default
+  `permutation_control(rsa_null = "individual")` supports marginal
+  correlations and single-predictor regressions. Regression with
+  multiple design predictors, including nuisance predictors, requires
+  explicit `rsa_null = "joint"`: no association with any design
+  predictor. Raw item permutations destroy nuisance effects and cannot
+  test an individual coefficient conditional on the others; unsupported
+  requests now error before the observed searchlight runs, even if only
+  one metric is selected. Results record and print the null hypothesis
+  and identify the predictors covered by it.
+
+- Circular permutation shifts now include zero independently in every
+  block. This restores identity draws and partial-block shifts to the
+  null; two-item blocks previously always swapped, producing a biased,
+  potentially constant null pool. Single-predictor RSA diagnostics now
+  report `NA` support for a constant or entirely missing RDM and warn
+  for regression, rather than assigning VIF = 1 and the full item count.
+
 - [`run_permutation_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_permutation_searchlight.md)
   now supports `rsa_model`.
   [`permute_labels()`](https://bbuchsbaum.github.io/rMVPA/reference/permute_labels.md)

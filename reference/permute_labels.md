@@ -91,6 +91,17 @@ The generic dispatches on the design class:
   (`block_var_a`, `block_var_b`), and the second permutation is stored
   as `item_perm_b`.
 
+RSA item permutations break the brain's association with *all* design
+predictors, including nuisance predictors. For regression with multiple
+predictors they generate a joint no-association null, not a null for an
+individual coefficient conditional on the other predictors. See the
+`rsa_null` setting in
+[`permutation_control`](https://bbuchsbaum.github.io/rMVPA/reference/permutation_control.md).
+
+Circular shifts sample every rotation, including zero, independently in
+each block. Identity draws and draws that move only some blocks belong
+to the null distribution and are retained.
+
 When an RSA design excludes within-block pairs (the default whenever a
 `block_var` is supplied and some pairs fall within a block), items are
 exchangeable only within a block, and `method = "global"` is refused:

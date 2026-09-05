@@ -33,6 +33,9 @@ An object of class `rsa_design_diagnostics`: a list with `n_items`,
 (the most correlated pair of predictors), `vif` (named, `Inf` when the
 design matrix is singular, `NA` for a constant predictor),
 `items_per_predictor` (`n_items / vif`), and `threshold` (10).
+`unsupported_predictors` names predictors with fewer than two distinct
+finite values; their VIF and effective item count are `NA`, including
+when the design contains only that predictor.
 
 ## Details
 
