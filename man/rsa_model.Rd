@@ -32,7 +32,7 @@ One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defa
 \item{check_collinearity}{Logical. When \code{regtype = "lm"}, stop if two
 predictor RDMs correlate above 0.99 or the design matrix is rank deficient.
 When \code{regtype} is \code{"lm"} or \code{"rfit"}, also warn if a model
-predictor is supported by fewer than 10 effective items (see the section
+predictor has no usable variation or fewer than 10 effective items (see the section
 on effective support). Default is TRUE.}
 
 \item{nneg}{A named list of variables (predictors) for which non-negative regression coefficients should be enforced 
@@ -91,8 +91,12 @@ largely through noise. This is a heuristic screen, not a test.
 
 For inference on RSA maps use \code{\link{run_permutation_searchlight}},
 which permutes item labels and so carries the same dependence into the
-null. The per-ROI t-values returned by \code{regtype = "lm"} use
-\code{n_pairs} degrees of freedom and are anti-conservative.
+null. For regression with multiple design predictors (including nuisance
+predictors), this supports only an explicit joint no-association null via
+\code{permutation_control(rsa_null = "joint")}; it does not provide
+conditional inference on individual coefficients. The per-ROI t-values
+returned by \code{regtype = "lm"} use pair-based degrees of freedom and
+are anti-conservative.
 }
 
 \examples{

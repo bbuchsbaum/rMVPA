@@ -103,7 +103,7 @@ test_that("permute_labels circular_shift shifts within blocks", {
     if (n > 1) {
       doubled <- c(as.character(orig), as.character(orig))
       found <- FALSE
-      for (s in 1:(n - 1)) {
+      for (s in 0:(n - 1)) {
         candidate <- doubled[(s + 1):(s + n)]
         if (identical(candidate, as.character(shifted))) {
           found <- TRUE

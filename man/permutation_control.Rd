@@ -15,7 +15,8 @@ permutation_control(
   correction = c("fdr", "none"),
   diagnose = TRUE,
   seed = NULL,
-  perm_strategy = c("iterate", "searchlight")
+  perm_strategy = c("iterate", "searchlight"),
+  rsa_null = c("individual", "joint")
 )
 }
 \arguments{
@@ -24,7 +25,8 @@ permutation_control(
 \item{shuffle}{Character. How to permute labels: \code{"within_block"}
 (default) shuffles within each block, \code{"circular_shift"} shifts the
 label sequence within each block, \code{"global"} shuffles all labels
-ignoring block structure.}
+ignoring block structure. Circular shifts include zero in each block;
+leaving some or all blocks unchanged is a valid null draw.}
 
 \item{null_method}{Character. How to build the null distribution:
 \code{"adjusted"} conditions on covariate bins (default),
@@ -84,6 +86,14 @@ centers proportionally from nfeatures quantile bins.}
 
       Null pool size: \code{n_perm * all_centers}.}
   }}
+
+\item{rsa_null}{Null hypothesis for \code{rsa_model}: \code{"individual"}
+(default) tests marginal associations for correlation models, or the
+coefficient of a regression with only one design predictor. Regression
+models with multiple predictors (including nuisance predictors) require
+\code{"joint"}: no association with \emph{any} design predictor. Raw item
+permutations cannot test an individual regression coefficient conditional
+on the others. Ignored for other model classes.}
 }
 \value{
 An S3 object of class \code{"permutation_control"}.

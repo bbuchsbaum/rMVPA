@@ -17,6 +17,9 @@ An object of class \code{rsa_design_diagnostics}: a list with
   of predictors), \code{vif} (named, \code{Inf} when the design matrix is
   singular, \code{NA} for a constant predictor), \code{items_per_predictor}
   (\code{n_items / vif}), and \code{threshold} (10).
+  \code{unsupported_predictors} names predictors with fewer than two
+  distinct finite values; their VIF and effective item count are \code{NA},
+  including when the design contains only that predictor.
 }
 \description{
 Summarises how much information an RSA design can bring to bear on each

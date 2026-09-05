@@ -77,7 +77,7 @@ test_that("permute_labels.rsa_design circular_shift shifts within each run", {
     # a cyclic shift of pos: consecutive differences are all 1 except one wrap
     shifted <- pd$item_perm[pos]
     expect_true(all(diff(shifted) %in% c(1L, 1L - length(pos))))
-    expect_false(identical(shifted, pos))
+    # A zero shift is a valid rotation and must be allowed in every block.
   }
 })
 
@@ -385,10 +385,12 @@ test_that("run_permutation_searchlight on an rsa_model honours a single named me
   mspec <- rsa_model(fx$dataset, rdes, regtype = "lm", check_collinearity = FALSE)
 
   pc  <- permutation_control(n_perm = 4, subsample = 0.4, seed = 5L,
-                             null_method = "global", diagnose = FALSE)
+                             null_method = "global", diagnose = FALSE, rsa_null = "joint")
   res <- run_permutation_searchlight(mspec, radius = 2, perm_ctrl = pc, metric = "b")
   expect_s3_class(res, "permutation_result")
   expect_equal(res$metric, "b")
+  expect_identical(res$rsa_null, "joint")
+  expect_identical(res$null_predictors, c("a", "b"))
 
   expect_error(
     run_permutation_searchlight(mspec, radius = 2, perm_ctrl = pc, metric = "nope"),

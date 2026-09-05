@@ -25,7 +25,8 @@ NULL
 #' @param shuffle Character. How to permute labels: \code{"within_block"}
 #'   (default) shuffles within each block, \code{"circular_shift"} shifts the
 #'   label sequence within each block, \code{"global"} shuffles all labels
-#'   ignoring block structure.
+#'   ignoring block structure. Circular shifts include zero in each block;
+#'   leaving some or all blocks unchanged is a valid null draw.
 #' @param null_method Character. How to build the null distribution:
 #'   \code{"adjusted"} conditions on covariate bins (default),
 #'   \code{"global"} uses one global null.
@@ -42,6 +43,13 @@ NULL
 #'   (Benjamini-Hochberg, default) or \code{"none"}.
 #' @param diagnose Logical. If \code{TRUE} (default), run null diagnostics.
 #' @param seed Optional integer random seed.
+#' @param rsa_null Null hypothesis for \code{rsa_model}: \code{"individual"}
+#'   (default) tests marginal associations for correlation models, or the
+#'   coefficient of a regression with only one design predictor. Regression
+#'   models with multiple predictors (including nuisance predictors) require
+#'   \code{"joint"}: no association with \emph{any} design predictor. Raw item
+#'   permutations cannot test an individual regression coefficient conditional
+#'   on the others. Ignored for other model classes.
 #' @param perm_strategy Character. Controls how each permutation pass is
 #'   executed.  Two strategies are available; neither contains any
 #'   engine-specific branching:
@@ -101,13 +109,15 @@ permutation_control <- function(
   correction          = c("fdr", "none"),
   diagnose            = TRUE,
   seed                = NULL,
-  perm_strategy       = c("iterate", "searchlight")
+  perm_strategy       = c("iterate", "searchlight"),
+  rsa_null            = c("individual", "joint")
 ) {
   shuffle       <- match.arg(shuffle)
   null_method   <- match.arg(null_method)
   adjust_by     <- match.arg(adjust_by)
   correction    <- match.arg(correction)
   perm_strategy <- match.arg(perm_strategy)
+  rsa_null      <- match.arg(rsa_null)
 
   assertthat::assert_that(is.numeric(n_perm), length(n_perm) == 1L,
                           n_perm >= 1, msg = "n_perm must be a positive integer >= 1")
@@ -132,7 +142,8 @@ permutation_control <- function(
       correction         = correction,
       diagnose           = isTRUE(diagnose),
       seed               = seed,
-      perm_strategy      = perm_strategy
+      perm_strategy      = perm_strategy,
+      rsa_null           = rsa_null
     ),
     class = "permutation_control"
   )
@@ -144,6 +155,7 @@ print.permutation_control <- function(x, ...) {
   cat("  perm_strategy     :", x$perm_strategy, "\n")
   cat("  n_perm            :", x$n_perm, "\n")
   cat("  shuffle           :", x$shuffle, "\n")
+  cat("  rsa_null          :", x$rsa_null %||% "individual", "\n")
   cat("  null_method       :", x$null_method, "\n")
   cat("  adjust_by         :", x$adjust_by, "\n")
   cat("  n_bins            :", x$n_bins, "\n")
@@ -192,6 +204,16 @@ print.permutation_control <- function(x, ...) {
 #'     \code{block_var_b}), and the second permutation is stored as
 #'     \code{item_perm_b}.}
 #' }
+#'
+#' RSA item permutations break the brain's association with \emph{all}
+#' design predictors, including nuisance predictors. For regression with
+#' multiple predictors they generate a joint no-association null, not a null
+#' for an individual coefficient conditional on the other predictors. See
+#' the \code{rsa_null} setting in \code{\link{permutation_control}}.
+#'
+#' Circular shifts sample every rotation, including zero, independently in
+#' each block. Identity draws and draws that move only some blocks belong to
+#' the null distribution and are retained.
 #'
 #' When an RSA design excludes within-block pairs (the default whenever a
 #' \code{block_var} is supplied and some pairs fall within a block), items are
@@ -323,7 +345,7 @@ permute_labels.pair_rsa_design <- function(design,
     },
     circular_shift = {
       if (is.null(block_var)) {
-        shift <- sample.int(max(1L, n - 1L), 1L)
+        shift <- sample.int(n, 1L) - 1L
         (seq_len(n) - 1L + shift) %% n + 1L
       } else {
         idx <- seq_len(n)
@@ -331,7 +353,7 @@ permute_labels.pair_rsa_design <- function(design,
           pos <- which(block_var == blk)
           m   <- length(pos)
           if (m > 1L) {
-            shift    <- sample.int(m - 1L, 1L)
+            shift    <- sample.int(m, 1L) - 1L
             idx[pos] <- pos[(seq_len(m) - 1L + shift) %% m + 1L]
           }
         }
@@ -1022,6 +1044,26 @@ print.null_diagnostics <- function(x, ...) {
 #' running the analysis on permuted labels, building a covariate-adjusted
 #' null distribution, and mapping p-values back to all brain voxels.
 #'
+#' @section RSA null hypothesis:
+#' Raw item permutations break associations with every design predictor,
+#' including nuisance predictors. With \code{regtype = "lm"} or
+#' \code{"rfit"} and multiple design predictors, they do not preserve the
+#' effects of the other predictors when testing one coefficient. Such runs
+#' are refused by default, even when \code{metric} selects a single output.
+#' Use \code{permutation_control(rsa_null = "joint")} only to test the joint
+#' no-association null. Each output metric then supplies a statistic for that
+#' same joint null; significance does not establish that the corresponding
+#' predictor has a unique effect. Conditional coefficient inference is not
+#' implemented. This restriction also covers semi-partial and constrained
+#' regression statistics.
+#'
+#' Correlation models test marginal associations, without adjusting for the
+#' other RDMs, and single-predictor regressions remain available with the
+#' default \code{rsa_null = "individual"}. RSA results record
+#' \code{rsa_null}, \code{null_hypothesis}, and \code{null_predictors}.
+#' FDR adjustment is performed separately within each metric's spatial map;
+#' it does not correct across metrics.
+#'
 #' @section Permutation strategy:
 #'
 #' The \code{perm_strategy} field in \code{perm_ctrl} determines how each
@@ -1082,8 +1124,9 @@ print.null_diagnostics <- function(x, ...) {
 #' @param metric Character vector naming the performance metric(s) to test.
 #'   If \code{NULL} (default), the first metric is used, except for
 #'   \code{rsa_model} specifications, where every model predictor is tested:
-#'   a permutation pass returns all predictors at once, so testing them
-#'   jointly costs nothing extra and they share one null pool.  A metric that
+#'   a permutation pass returns all predictors at once, so scoring them
+#'   uses the same permutation passes. The null hypothesis is controlled by
+#'   \code{perm_ctrl$rsa_null}, not by how many metrics are selected. A metric that
 #'   is named explicitly but absent from the results is an error rather than
 #'   a silent fallback to the first metric.
 #' @param ... Additional arguments forwarded to \code{run_searchlight()}
@@ -1110,6 +1153,9 @@ print.null_diagnostics <- function(x, ...) {
 #'     \item{perm_ctrl}{The \code{permutation_control} used.}
 #'     \item{metric}{Metric name used for inference.}
 #'     \item{perm_strategy}{The strategy that was actually used.}
+#'     \item{rsa_null, null_hypothesis, null_predictors}{For RSA, the null
+#'       scope, its description, and the predictors covered by that null.
+#'       These fields are \code{NULL} for other model classes.}
 #'   }
 #'
 #' @examples
@@ -1151,6 +1197,9 @@ run_permutation_searchlight <- function(
     strategy %in% c("iterate", "searchlight"),
     msg = "perm_ctrl$perm_strategy must be one of: 'iterate', 'searchlight'"
   )
+  # Fail before the observed pass, inspecting all fitted predictors rather
+  # than only the requested metric or the predictors tagged as models.
+  rsa_null <- .resolve_rsa_permutation_null(model_spec, perm_ctrl)
 
   # Step 1: run observed searchlight if not supplied
   if (is.null(observed)) {
@@ -1349,7 +1398,8 @@ run_permutation_searchlight <- function(
       perm_ctrl       = perm_ctrl,
       model_spec      = model_spec,
       observed        = observed,
-      strategy        = strategy
+      strategy        = strategy,
+      rsa_null        = rsa_null
     )
   })
   names(results) <- metrics
@@ -1358,6 +1408,27 @@ run_permutation_searchlight <- function(
     return(results[[1L]])
   }
   structure(results, class = c("permutation_result_set", "list"))
+}
+
+
+#' Validate the hypothesis supported by raw RSA item permutations
+#' @keywords internal
+#' @noRd
+.resolve_rsa_permutation_null <- function(model_spec, perm_ctrl) {
+  if (!inherits(model_spec, "rsa_model")) return(NULL)
+  mode <- match.arg(perm_ctrl$rsa_null %||% "individual", c("individual", "joint"))
+  if (identical(mode, "individual") &&
+      model_spec$regtype %in% c("lm", "rfit") &&
+      length(model_spec$design$model_mat) > 1L) {
+    stop(paste0(
+      "Raw RSA item permutations cannot test an individual regression coefficient ",
+      "conditional on other design predictors (including nuisance predictors). ",
+      "Use permutation_control(rsa_null = 'joint') only for the joint null of ",
+      "no association with any design predictor; conditional coefficient inference ",
+      "is not implemented. Selecting one `metric` does not change this restriction."
+    ), call. = FALSE)
+  }
+  mode
 }
 
 
@@ -1429,7 +1500,7 @@ run_permutation_searchlight <- function(
 #' @noRd
 .score_permutation_metric <- function(metric, null_col, null_nfeatures, obs_vals,
                                       all_ids, covariates_full, perm_ctrl,
-                                      model_spec, observed, strategy) {
+                                      model_spec, observed, strategy, rsa_null = NULL) {
   ok <- !is.na(null_col)
   if (!any(ok)) {
     stop(sprintf("No valid null values were collected for metric '%s'.", metric),
@@ -1498,6 +1569,21 @@ run_permutation_searchlight <- function(
   futile.logger::flog.info("Done '%s'. %d centers significant at FDR < 0.05 (%s).",
                            metric, n_sig, perm_ctrl$correction)
 
+  null_hypothesis <- if (identical(rsa_null, "joint")) {
+    "Joint no association with any design predictor, including nuisance predictors."
+  } else if (identical(rsa_null, "individual")) {
+    sprintf("No marginal association with '%s' under item exchangeability.", metric)
+  } else {
+    NULL
+  }
+  null_predictors <- if (identical(rsa_null, "joint")) {
+    names(model_spec$design$model_mat)
+  } else if (identical(rsa_null, "individual")) {
+    metric
+  } else {
+    NULL
+  }
+
   structure(
     list(
       p_map        = p_map,
@@ -1509,6 +1595,9 @@ run_permutation_searchlight <- function(
       adj_null     = adj_null,
       perm_ctrl    = perm_ctrl,
       metric       = metric,
+      rsa_null     = rsa_null,
+      null_hypothesis = null_hypothesis,
+      null_predictors = null_predictors,
       perm_strategy = strategy,
       all_ids      = all_ids,
       n_perm_used  = perm_ctrl$n_perm,
@@ -1528,6 +1617,7 @@ print.permutation_result <- function(x, ...) {
   cat("Permutation Searchlight Result\n")
   cat(strrep("=", 40), "\n")
   cat("  Metric           :", x$metric, "\n")
+  if (!is.null(x$null_hypothesis)) cat("  Null hypothesis  :", x$null_hypothesis, "\n")
   cat("  Strategy         :", x$perm_strategy %||%
         x$perm_ctrl$perm_strategy %||% "iterate", "\n")
   cat("  Permutations used:", x$n_perm_used, "\n")
@@ -1546,6 +1636,11 @@ print.permutation_result_set <- function(x, ...) {
   first <- x[[1L]]
   cat("Permutation Searchlight Results (", length(x), " metrics)\n", sep = "")
   cat(strrep("=", 40), "\n")
+  if (identical(first$rsa_null, "joint")) {
+    cat("  Null hypothesis  :", first$null_hypothesis, "\n")
+  } else if (identical(first$rsa_null, "individual")) {
+    cat("  Null hypotheses  : individual marginal associations\n")
+  }
   cat("  Strategy         :", first$perm_strategy, "\n")
   cat("  Permutations used:", first$n_perm_used, "\n")
   cat("  Null values      :", first$n_null_vals, "\n")
@@ -1575,6 +1670,7 @@ summary.permutation_result <- function(object, ...) {
   cat("Permutation Searchlight Summary\n")
   cat(strrep("=", 50), "\n")
   cat("  Metric           :", object$metric, "\n")
+  if (!is.null(object$null_hypothesis)) cat("  Null hypothesis  :", object$null_hypothesis, "\n")
   cat("  Strategy         :", object$perm_strategy %||%
         object$perm_ctrl$perm_strategy %||% "iterate", "\n")
   cat("  Permutations     :", object$n_perm_used, "\n")

@@ -36,8 +36,9 @@ center ID.}
 \item{metric}{Character vector naming the performance metric(s) to test.
 If \code{NULL} (default), the first metric is used, except for
 \code{rsa_model} specifications, where every model predictor is tested:
-a permutation pass returns all predictors at once, so testing them
-jointly costs nothing extra and they share one null pool.  A metric that
+a permutation pass returns all predictors at once, so scoring them
+uses the same permutation passes. The null hypothesis is controlled by
+\code{perm_ctrl$rsa_null}, not by how many metrics are selected. A metric that
 is named explicitly but absent from the results is an error rather than
 a silent fallback to the first metric.}
 
@@ -66,6 +67,9 @@ When one metric is tested, a \code{permutation_result} S3 object.
     \item{perm_ctrl}{The \code{permutation_control} used.}
     \item{metric}{Metric name used for inference.}
     \item{perm_strategy}{The strategy that was actually used.}
+    \item{rsa_null, null_hypothesis, null_predictors}{For RSA, the null
+      scope, its description, and the predictors covered by that null.
+      These fields are \code{NULL} for other model classes.}
   }
 }
 \description{
@@ -73,6 +77,28 @@ Computes permutation-based p-values for a searchlight MVPA result by
 running the analysis on permuted labels, building a covariate-adjusted
 null distribution, and mapping p-values back to all brain voxels.
 }
+\section{RSA null hypothesis}{
+
+Raw item permutations break associations with every design predictor,
+including nuisance predictors. With \code{regtype = "lm"} or
+\code{"rfit"} and multiple design predictors, they do not preserve the
+effects of the other predictors when testing one coefficient. Such runs
+are refused by default, even when \code{metric} selects a single output.
+Use \code{permutation_control(rsa_null = "joint")} only to test the joint
+no-association null. Each output metric then supplies a statistic for that
+same joint null; significance does not establish that the corresponding
+predictor has a unique effect. Conditional coefficient inference is not
+implemented. This restriction also covers semi-partial and constrained
+regression statistics.
+
+Correlation models test marginal associations, without adjusting for the
+other RDMs, and single-predictor regressions remain available with the
+default \code{rsa_null = "individual"}. RSA results record
+\code{rsa_null}, \code{null_hypothesis}, and \code{null_predictors}.
+FDR adjustment is performed separately within each metric's spatial map;
+it does not correct across metrics.
+}
+
 \section{Permutation strategy}{
 
 

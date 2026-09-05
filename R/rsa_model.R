@@ -276,6 +276,9 @@ check_collinearity <- function(model_mat) {
 #'   of predictors), \code{vif} (named, \code{Inf} when the design matrix is
 #'   singular, \code{NA} for a constant predictor), \code{items_per_predictor}
 #'   (\code{n_items / vif}), and \code{threshold} (10).
+#'   \code{unsupported_predictors} names predictors with fewer than two
+#'   distinct finite values; their VIF and effective item count are \code{NA},
+#'   including when the design contains only that predictor.
 #'
 #' @seealso \code{\link{rsa_model}}, which computes this at construction and
 #'   warns when a model predictor falls below the threshold, and
@@ -306,7 +309,14 @@ rsa_design_diagnostics <- function(design) {
   n_pairs <- nrow(X)
   n_items <- .rsa_design_n_items(design)
 
-  vif         <- stats::setNames(rep(1, p), colnames(X))
+  # Check variation even for a single predictor. A constant (or missing)
+  # column cannot acquire support merely because no other columns exist.
+  has_variation <- vapply(seq_len(p), function(j) {
+    x <- X[, j]
+    x <- x[is.finite(x)]
+    length(x) > 1L && any(x != x[1L])
+  }, logical(1))
+  vif         <- stats::setNames(ifelse(has_variation, 1, NA_real_), colnames(X))
   max_abs_cor <- NA_real_
   max_pair    <- c(NA_character_, NA_character_)
 
@@ -322,7 +332,7 @@ rsa_design_diagnostics <- function(design) {
       max_pair    <- colnames(X)[sort(idx)]
     }
 
-    good  <- is.finite(diag(R))
+    good  <- has_variation & is.finite(diag(R))
     vif[] <- NA_real_
     if (sum(good) == 1L) {
       vif[good] <- 1
@@ -339,6 +349,7 @@ rsa_design_diagnostics <- function(design) {
       n_predictors        = p,
       predictors          = colnames(X),
       predictor_roles     = design$predictor_roles,
+      unsupported_predictors = colnames(X)[!has_variation],
       max_abs_cor         = max_abs_cor,
       max_abs_cor_pair    = max_pair,
       vif                 = vif,
@@ -361,7 +372,13 @@ print.rsa_design_diagnostics <- function(x, ...) {
   cat("  effective items per predictor (items / VIF):\n")
   for (nm in x$predictors) {
     ipp  <- x$items_per_predictor[[nm]]
-    flag <- if (is.finite(ipp) && ipp < x$threshold) "  <- below threshold" else ""
+    flag <- if (nm %in% x$unsupported_predictors) {
+      "  <- no usable variation"
+    } else if (is.finite(ipp) && ipp < x$threshold) {
+      "  <- below threshold"
+    } else {
+      ""
+    }
     cat(sprintf("    %-20s VIF %7.2f   ~%6.1f items%s\n", nm, x$vif[[nm]], ipp, flag))
   }
   invisible(x)
@@ -398,6 +415,13 @@ print.rsa_design_diagnostics <- function(x, ...) {
   if (is.null(preds) || length(preds) == 0L) {
     preds <- names(diagnostics$items_per_predictor)
   }
+  unsupported <- intersect(preds, diagnostics$unsupported_predictors)
+  if (length(unsupported) > 0L) {
+    warning(sprintf(
+      "RSA predictor(s) '%s' have no usable variation (fewer than two distinct finite values); their coefficients are not identifiable and effective support is NA.",
+      paste(unsupported, collapse = "', '")
+    ), call. = FALSE)
+  }
   ipp <- diagnostics$items_per_predictor[intersect(preds, names(diagnostics$items_per_predictor))]
   ipp <- ipp[is.finite(ipp)]
   if (length(ipp) == 0L || min(ipp) >= diagnostics$threshold) {
@@ -407,8 +431,9 @@ print.rsa_design_diagnostics <- function(x, ...) {
   vif_w    <- diagnostics$vif[[worst]]
   shared   <- sprintf(paste0(
     "RDM entries share items, so the %d pairs carry roughly %d independent ",
-    "observations. Use run_permutation_searchlight() for inference; per-ROI ",
-    "t-values overstate the evidence."),
+    "observations. Per-ROI t-values overstate the evidence. See ",
+    "run_permutation_searchlight() for the supported RSA null hypotheses; ",
+    "conditional coefficient inference with other predictors is not implemented."),
     diagnostics$n_pairs, diagnostics$n_items)
 
   msg <- if (vif_w < 1.5) {
@@ -1102,7 +1127,7 @@ print.rsa_design <- function(x, ...) {
 #' @param check_collinearity Logical. When \code{regtype = "lm"}, stop if two
 #'   predictor RDMs correlate above 0.99 or the design matrix is rank deficient.
 #'   When \code{regtype} is \code{"lm"} or \code{"rfit"}, also warn if a model
-#'   predictor is supported by fewer than 10 effective items (see the section
+#'   predictor has no usable variation or fewer than 10 effective items (see the section
 #'   on effective support). Default is TRUE.
 #' @param nneg A named list of variables (predictors) for which non-negative regression coefficients should be enforced 
 #'        (only if \code{regtype="lm"}). Defaults to \code{NULL} (no constraints).
@@ -1138,8 +1163,12 @@ print.rsa_design <- function(x, ...) {
 #'
 #' For inference on RSA maps use \code{\link{run_permutation_searchlight}},
 #' which permutes item labels and so carries the same dependence into the
-#' null. The per-ROI t-values returned by \code{regtype = "lm"} use
-#' \code{n_pairs} degrees of freedom and are anti-conservative.
+#' null. For regression with multiple design predictors (including nuisance
+#' predictors), this supports only an explicit joint no-association null via
+#' \code{permutation_control(rsa_null = "joint")}; it does not provide
+#' conditional inference on individual coefficients. The per-ROI t-values
+#' returned by \code{regtype = "lm"} use pair-based degrees of freedom and
+#' are anti-conservative.
 #'
 #' @return An object of class \code{"rsa_model"} (and \code{"list"}), containing:
 #' \itemize{
