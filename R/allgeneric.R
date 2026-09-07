@@ -1529,3 +1529,97 @@ model_importance <- function(object, X_train, ...) UseMethod("model_importance")
 #' }
 #' @export
 run_global <- function(model_spec, ...) UseMethod("run_global")
+
+
+#' Model Targets
+#'
+#' Retrieve the model-specific targets of a design together with their
+#' meaning. Cross-validation folds are built from \code{cv_labels}; the
+#' estimator sees the targets returned here. The two are identical for
+#' ordinary classification designs but differ when a design carries
+#' matrix-valued or continuous targets (feature prediction, feature sets,
+#' feature RSA).
+#'
+#' @details
+#' \code{model_targets} completes the \code{cv_labels} / \code{targets} split
+#' introduced in \code{\link{mvpa_design}}. It never changes what
+#' \code{\link{y_train}} returns: \code{y_train()} keeps returning the
+#' cross-validation labels for backward compatibility.
+#'
+#' The returned object is a list of class \code{model_targets} with:
+#' \describe{
+#'   \item{values}{A factor, numeric vector, or numeric matrix with one row
+#'     (or element) per observation of the requested partition.}
+#'   \item{observation_ids}{Integer row identifiers, aligned with
+#'     \code{values}.}
+#'   \item{response_ids}{Character identifiers for the responses: factor
+#'     levels, matrix column names, or \code{NULL} for an unnamed scalar
+#'     response.}
+#'   \item{response_groups}{Optional grouping of responses (for example the
+#'     feature-set membership of a \code{\link{feature_sets_design}}), or
+#'     \code{NULL}.}
+#'   \item{row_weights}{Optional numeric observation weights, or \code{NULL}.}
+#'   \item{type}{One of \code{"categorical"}, \code{"continuous"}, or
+#'     \code{"matrix"}.}
+#'   \item{partition}{The requested partition.}
+#' }
+#'
+#' @param design A design object such as \code{\link{mvpa_design}},
+#'   \code{\link{feature_sets_design}}, or \code{\link{feature_rsa_design}}.
+#' @param partition Either \code{"train"} or \code{"test"}. Requesting the
+#'   test partition of a design without test targets returns \code{NULL}.
+#' @param ... Additional arguments passed to methods.
+#' @return A \code{model_targets} list as described above, or \code{NULL}
+#'   when the requested partition has no targets.
+#' @examples
+#' des <- mvpa_design(data.frame(cond = rep(c("a", "b"), 10)), y_train = ~ cond)
+#' model_targets(des)$type
+#'
+#' feats <- matrix(rnorm(20 * 3), 20, 3, dimnames = list(NULL, c("f1", "f2", "f3")))
+#' des2 <- mvpa_design(data.frame(id = 1:20), cv_labels = 1:20, targets = feats)
+#' dim(model_targets(des2)$values)
+#' @seealso \code{\link{mvpa_design}}, \code{\link{y_train}}
+#' @export
+model_targets <- function(design, partition = c("train", "test"), ...) {
+  UseMethod("model_targets")
+}
+
+#' Spatial Adjacency Graph Aligned to Dataset Features
+#'
+#' Build a sparse adjacency graph whose vertex \eqn{j} refers to column
+#' \eqn{j} of the feature matrix returned by \code{\link{get_feature_matrix}}
+#' for the same dataset. This alignment is the contract every spatially
+#' regularized estimator in rMVPA relies on.
+#'
+#' @details
+#' Methods exist for volumetric datasets (grid adjacency over the mask;
+#' 6, 18, or 26 neighbours), multibasis volumetric datasets (one grid graph
+#' per basis channel, disconnected across channels unless
+#' \code{connect_basis = TRUE}), surface datasets (mesh adjacency from
+#' \pkg{neurosurf}, restricted to masked nodes), clustered datasets
+#' (two parcels are adjacent when any of their voxels are), and raw
+#' adjacency matrices supplied directly (\code{matrix}, \code{Matrix}, or a
+#' list with an \code{A} element).
+#'
+#' The result is a list of class \code{spatial_graph} with the sparse
+#' symmetric adjacency \code{A}, its \code{degree} vector, the combinatorial
+#' Laplacian \code{L = diag(degree) - A}, the \code{feature_ids} that map
+#' graph vertices back to dataset locations, the number of features
+#' \code{n_features}, a \code{domain_type}, a \code{geometry_id} string
+#' identifying the geometry the graph was built from, and, for multibasis
+#' data, a \code{basis} vector giving each column's basis channel. The object
+#' also carries the \code{A}, \code{weighted}, and \code{degree} fields that
+#' the graph-regularized NMF functions accept as their \code{graph} argument.
+#'
+#' @param x A dataset (\code{\link{mvpa_dataset}} and friends) or a raw
+#'   adjacency specification.
+#' @param ... Additional arguments passed to methods; see
+#'   \code{\link{spatial_graph.mvpa_image_dataset}}.
+#' @return A \code{spatial_graph} object.
+#' @examples
+#' ds <- gen_sample_dataset(c(5, 5, 5), 10)
+#' g <- spatial_graph(ds$dataset)
+#' g$n_features == ncol(get_feature_matrix(ds$dataset))
+#' @seealso \code{\link{restrict_graph}}, \code{\link{graph_edges}}
+#' @export
+spatial_graph <- function(x, ...) UseMethod("spatial_graph")

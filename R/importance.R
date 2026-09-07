@@ -69,10 +69,32 @@ extract_weights.default <- function(object, ...) {
 #' from decoding weights to encoding (activation) patterns:
 #' \code{A = Sigma_x \%*\% W \%*\% solve(t(W) \%*\% Sigma_x \%*\% W)}.
 #'
+#' @details
+#' Two equivalent computation paths are available. Supplying \code{Sigma_x}
+#' uses the explicit \eqn{P \times P} covariance. Supplying the training
+#' observations \code{X} instead uses the matrix-free identity
+#' \deqn{Z = X_c W}
+#' \deqn{A = X_c^\top Z (Z^\top Z)^{+}}
+#' where \eqn{X_c} is the column-centred data. The covariance normalisation
+#' cancels exactly, so the two paths agree to numerical precision, but the
+#' matrix-free path never forms a \eqn{P \times P} matrix: it needs only
+#' \eqn{n \times D}, \eqn{P \times D}, and \eqn{D \times D} quantities. Use it
+#' for whole-brain feature counts, where a dense covariance is infeasible.
+#' Because \eqn{Z} is centred, \eqn{X_c^\top Z = X^\top Z}, so \code{X} itself
+#' is never copied; \code{block_size} additionally limits the number of feature
+#' columns multiplied at once.
+#'
 #' @param W A P x D weight matrix (features x discriminant directions).
-#' @param Sigma_x A P x P covariance matrix of the training features.
+#' @param Sigma_x A P x P covariance matrix of the training features. Ignored
+#'   when \code{X} is supplied.
 #' @param summary_fun A function applied to the rows of A to produce a scalar
 #'   importance per feature. Defaults to the L2 norm across discriminants.
+#' @param X Optional n x P matrix of training observations. When supplied, the
+#'   matrix-free path is used and \code{Sigma_x} is not needed.
+#' @param center Logical; centre the columns of \code{X} before computing the
+#'   patterns (default \code{TRUE}, matching \code{cov()}).
+#' @param block_size Optional integer; when \code{X} is supplied, compute the
+#'   activation patterns in column blocks of at most this many features.
 #'
 #' @return A list with components:
 #'   \describe{
@@ -90,31 +112,89 @@ extract_weights.default <- function(object, ...) {
 #'   W <- matrix(rnorm(10*2), 10, 2)
 #'   X <- matrix(rnorm(50*10), 50, 10)
 #'   haufe_importance(W, cov(X))
+#'   # identical, without forming cov(X):
+#'   haufe_importance(W, X = X)
 #' }
 #' @export
-haufe_importance <- function(W, Sigma_x,
-                              summary_fun = function(A) sqrt(rowSums(A^2))) {
+haufe_importance <- function(W, Sigma_x = NULL,
+                              summary_fun = function(A) sqrt(rowSums(A^2)),
+                              X = NULL, center = TRUE, block_size = NULL) {
   W <- as.matrix(W)
-  Sigma_x <- as.matrix(Sigma_x)
 
-  stopifnot(nrow(W) == nrow(Sigma_x),
-            nrow(Sigma_x) == ncol(Sigma_x))
+  if (!is.null(X)) {
+    A <- .haufe_patterns_from_data(W, X, center = center, block_size = block_size)
+  } else {
+    if (is.null(Sigma_x)) {
+      stop("haufe_importance: supply either 'Sigma_x' or 'X'.", call. = FALSE)
+    }
+    Sigma_x <- as.matrix(Sigma_x)
 
-  # W'*Sigma_x*W  (D x D)
-  WtSW <- crossprod(W, Sigma_x %*% W)
+    stopifnot(nrow(W) == nrow(Sigma_x),
+              nrow(Sigma_x) == ncol(Sigma_x))
 
-  # Use ginv for robustness to singular matrices
-  WtSW_inv <- tryCatch(
-    solve(WtSW),
-    error = function(e) MASS::ginv(WtSW)
-  )
+    # W'*Sigma_x*W  (D x D)
+    WtSW <- crossprod(W, Sigma_x %*% W)
 
-  # A = Sigma_x * W * (W'*Sigma_x*W)^{-1}
-  A <- Sigma_x %*% W %*% WtSW_inv
+    # Use ginv for robustness to singular matrices
+    WtSW_inv <- tryCatch(
+      solve(WtSW),
+      error = function(e) MASS::ginv(WtSW)
+    )
+
+    # A = Sigma_x * W * (W'*Sigma_x*W)^{-1}
+    A <- Sigma_x %*% W %*% WtSW_inv
+  }
 
   importance <- summary_fun(A)
 
   list(A = A, importance = as.numeric(importance))
+}
+
+#' @keywords internal
+#' @noRd
+.haufe_patterns_from_data <- function(W, X, center = TRUE, block_size = NULL) {
+  if (!is.matrix(X)) X <- as.matrix(X)
+  if (!is.numeric(X)) stop("haufe_importance: 'X' must be a numeric matrix.", call. = FALSE)
+  n <- nrow(X)
+  P <- ncol(X)
+  if (nrow(W) != P) {
+    stop(sprintf("haufe_importance: nrow(W) = %d must equal ncol(X) = %d.", nrow(W), P),
+         call. = FALSE)
+  }
+  if (n < 2L) stop("haufe_importance: 'X' needs at least two observations.", call. = FALSE)
+
+  # Z = X_c W computed without materialising X_c: X W - 1 (mu' W)
+  Z <- X %*% W
+  if (center) {
+    mu <- colMeans(X)
+    Z <- sweep(Z, 2L, as.numeric(crossprod(mu, W)), "-")
+  }
+  # Scale by (n - 1) so that the D x D matrix matches W' cov(X) W exactly and the
+  # ginv fallback behaves identically to the covariance path.
+  denom <- n - 1
+  ZtZ <- crossprod(Z) / denom
+  ZtZ_inv <- tryCatch(
+    solve(ZtZ),
+    error = function(e) MASS::ginv(ZtZ)
+  )
+
+  # X_c' Z = X' Z because Z is column-centred (when center = TRUE); when not
+  # centring, X' Z is the uncentred cross-product, matching crossprod(X)/denom.
+  D <- ncol(W)
+  if (is.null(block_size) || block_size >= P) {
+    XtZ <- crossprod(X, Z) / denom
+    A <- XtZ %*% ZtZ_inv
+  } else {
+    block_size <- max(1L, as.integer(block_size))
+    A <- matrix(0, P, D)
+    starts <- seq.int(1L, P, by = block_size)
+    for (s in starts) {
+      e <- min(P, s + block_size - 1L)
+      A[s:e, ] <- (crossprod(X[, s:e, drop = FALSE], Z) / denom) %*% ZtZ_inv
+    }
+  }
+  dimnames(A) <- list(colnames(X), colnames(W))
+  A
 }
 
 
@@ -125,8 +205,7 @@ haufe_importance <- function(W, Sigma_x,
 #' @export
 model_importance.sda <- function(object, X_train, summary_fun = NULL, ...) {
   W <- extract_weights(object)
-  Sigma_x <- cov(X_train)
-  haufe_args <- list(W = W, Sigma_x = Sigma_x)
+  haufe_args <- list(W = W, X = X_train)
   if (!is.null(summary_fun)) {
     haufe_args$summary_fun <- summary_fun
   }
@@ -139,8 +218,7 @@ model_importance.sda <- function(object, X_train, summary_fun = NULL, ...) {
 #' @export
 model_importance.glmnet <- function(object, X_train, summary_fun = NULL, ...) {
   W <- extract_weights(object)
-  Sigma_x <- cov(X_train)
-  haufe_args <- list(W = W, Sigma_x = Sigma_x)
+  haufe_args <- list(W = W, X = X_train)
   if (!is.null(summary_fun)) {
     haufe_args$summary_fun <- summary_fun
   }
@@ -153,8 +231,7 @@ model_importance.glmnet <- function(object, X_train, summary_fun = NULL, ...) {
 #' @export
 model_importance.spacenet_fit <- function(object, X_train, summary_fun = NULL, ...) {
   W <- extract_weights(object)
-  Sigma_x <- cov(X_train)
-  haufe_args <- list(W = W, Sigma_x = Sigma_x)
+  haufe_args <- list(W = W, X = X_train)
   if (!is.null(summary_fun)) {
     haufe_args$summary_fun <- summary_fun
   }

@@ -361,3 +361,23 @@ print.feature_sets_design <- function(x, ...) {
   }
   invisible(x)
 }
+
+
+#' @rdname model_targets
+#' @export
+model_targets.feature_sets_design <- function(design, partition = c("train", "test"), ...) {
+  partition <- match.arg(partition)
+  fs <- if (partition == "train") design$X_train else design$X_test
+  if (is.null(fs)) return(NULL)
+  values <- as.matrix(fs$X)
+  if (is.null(colnames(values))) {
+    colnames(values) <- paste0(as.character(fs$set), ".", stats::ave(seq_along(fs$set), fs$set, FUN = seq_along))
+  }
+  new_model_targets(
+    values,
+    partition,
+    response_ids = colnames(values),
+    response_groups = factor(as.character(fs$set), levels = fs$set_order),
+    row_weights = fs$row_weights
+  )
+}
