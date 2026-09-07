@@ -77,6 +77,7 @@ Collate:
     'spatial_output.R'
     'spatial_nmf.R'
     'spatial_nmf_inference.R'
+    'pattern_spatial.R'
     'save_results.R'
     'vector_rsa_model.R'
     'distcalc.R'

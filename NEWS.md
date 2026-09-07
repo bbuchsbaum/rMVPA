@@ -1,5 +1,21 @@
 # rMVPA 0.1.3
 
+* `haufe_importance()` accepts the training observations (`X = `) and computes
+  activation patterns matrix-free, never forming the P x P covariance. The
+  `model_importance()` methods for `sda`, `glmnet`, and `spacenet` fits and the
+  averaged activation patterns of `run_global()` now use that path, so
+  whole-brain global analyses no longer allocate a dense feature covariance.
+* New `model_targets()` generic returns a design's model-specific targets
+  (vector or matrix) with row identifiers, response identifiers, response
+  groups, and row weights, for `mvpa_design`, `feature_sets_design`, and
+  `feature_rsa_design`. `mvpa_design()` gains a `targets_test` argument and
+  validates target row alignment. `y_train()` is unchanged.
+* New `spatial_graph()` generic builds feature-aligned adjacency graphs for
+  volume, multibasis, surface, and clustered datasets (plus raw adjacency
+  input), with `restrict_graph()` and `graph_edges()` helpers.
+* `run_global()` now reports a clear error for model classes without a global
+  method instead of a generic dispatch failure.
+
 * RSA permutation inference now states its null hypothesis. The default
   `permutation_control(rsa_null = "individual")` supports marginal
   correlations and single-predictor regressions. Regression with multiple

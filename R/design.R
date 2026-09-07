@@ -127,8 +127,12 @@ parse_variable <- function(var, design) {
 #' @param cv_labels Optional vector of labels used for cross-validation fold construction
 #'   (new path; mutually exclusive with \code{y_train}). If provided without \code{targets},
 #'   \code{targets} defaults to \code{cv_labels}.
-#' @param targets Optional vector of model-specific training targets. Defaults to \code{cv_labels}
+#' @param targets Optional vector or numeric matrix of model-specific training targets, with
+#'   one element or row per training observation. Defaults to \code{cv_labels}
 #'   when \code{cv_labels} is supplied, or to the parsed \code{y_train} when the old path is used.
+#' @param targets_test Optional vector or numeric matrix of model-specific test targets, with
+#'   one element or row per \code{test_design} row. Requires \code{test_design}. When
+#'   \code{NULL}, \code{\link{model_targets}} falls back to \code{y_test}.
 #' @param ... Additional arguments (currently unused)
 #'
 #' @return An \code{mvpa_design} object (S3 class) containing:
@@ -137,6 +141,7 @@ parse_variable <- function(var, design) {
 #'     \item{test_design}{Data frame of test design (if provided)}
 #'     \item{cv_labels}{Labels used for cross-validation fold construction}
 #'     \item{targets}{Model-specific training targets}
+#'     \item{targets_test}{Model-specific test targets (if provided)}
 #'     \item{y_train}{Alias for \code{cv_labels} (for backward compatibility)}
 #'     \item{y_test}{Test response variable (if provided)}
 #'     \item{block_var}{Blocking variable for cross-validation (if provided)}
@@ -155,6 +160,9 @@ parse_variable <- function(var, design) {
 #' The new \code{cv_labels} and \code{targets} parameters allow separating the labels used
 #' for fold construction from the actual training targets. When using the old \code{y_train}
 #' path, both \code{cv_labels} and \code{targets} are set to the parsed \code{y_train} value.
+#' Targets may be a numeric matrix with one row per observation; use
+#' \code{\link{model_targets}} to retrieve targets together with their meaning.
+#' \code{\link{y_train}} continues to return \code{cv_labels}.
 #'
 #' @examples
 #' # Basic design with only training data
@@ -186,12 +194,18 @@ parse_variable <- function(var, design) {
 #' @importFrom stats as.formula
 #' @export
 mvpa_design <- function(train_design, test_design=NULL, y_train=NULL, y_test=NULL,
-                         block_var=NULL, split_by=NULL, cv_labels=NULL, targets=NULL, ...) {
+                         block_var=NULL, split_by=NULL, cv_labels=NULL, targets=NULL,
+                         targets_test=NULL, ...) {
 
   ## Validate mutual exclusion of y_train and cv_labels
   if (!is.null(y_train) && !is.null(cv_labels)) {
     stop("'y_train' and 'cv_labels' are mutually exclusive. Use one or the other.")
   }
+
+  if (!is.null(targets_test) && is.null(test_design)) {
+    stop("'targets_test' requires a 'test_design'.")
+  }
+  targets_supplied <- !is.null(targets)
 
   if (!is.null(y_train)) {
     ## Old path: parse y_train, then set cv_labels and targets from it
@@ -294,10 +308,21 @@ mvpa_design <- function(train_design, test_design=NULL, y_train=NULL, y_test=NUL
 
   train_design <- tibble::as_tibble(train_design, .name_repair = .name_repair) %>% mutate(.rownum=1:n())
 
+  if (inherits(targets, "formula") || inherits(targets_test, "formula")) {
+    stop("'targets' and 'targets_test' do not accept formulas; pass a vector or matrix.",
+         call. = FALSE)
+  }
+  targets_label <- if (targets_supplied) "targets" else if (!is.null(y_train)) "y_train" else "cv_labels"
+  .check_targets_alignment(targets, nrow(train_design), targets_label)
+  if (!is.null(targets_test)) {
+    .check_targets_alignment(targets_test, nrow(test_design), "targets_test")
+  }
+
   des <- list(
     train_design=tibble::as_tibble(train_design, .name_repair = .name_repair),
     cv_labels=cv_labels,
     targets=targets,
+    targets_test=targets_test,
     y_train=cv_labels,
     test_design=if (!is.null(test_design)) tibble::as_tibble(test_design, .name_repair = .name_repair) else NULL,
     y_test=y_test,
@@ -422,4 +447,121 @@ print.mvpa_design <- function(x, ...) {
     cat(info_style("  - Split Groups: "), none_style("None"), "\n")
   }
   cat("\n")
+}
+
+
+# ---------- model targets ----------
+
+#' @keywords internal
+#' @noRd
+.check_targets_alignment <- function(targets, n_expected, what = "targets") {
+  if (is.null(targets) || is.function(targets)) return(invisible(TRUE))
+  # Lists other than data frames carry model-specific structures (for example
+  # the feature-set bundles of feature_sets_design); they are validated by
+  # their own constructors.
+  if (is.list(targets) && !is.data.frame(targets)) return(invisible(TRUE))
+
+  n_actual <- if (is.matrix(targets) || is.data.frame(targets)) nrow(targets) else length(targets)
+  if (!identical(as.integer(n_actual), as.integer(n_expected))) {
+    stop(sprintf("'%s' has %d rows/elements but the design has %d observations.",
+                 what, as.integer(n_actual), as.integer(n_expected)), call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+#' @keywords internal
+#' @noRd
+.targets_type <- function(values) {
+  if (is.factor(values) || is.character(values) || is.logical(values)) {
+    "categorical"
+  } else if (is.matrix(values) || is.data.frame(values)) {
+    "matrix"
+  } else {
+    "continuous"
+  }
+}
+
+#' @keywords internal
+#' @noRd
+new_model_targets <- function(values, partition, observation_ids = NULL,
+                              response_ids = NULL, response_groups = NULL,
+                              row_weights = NULL) {
+  if (is.data.frame(values)) {
+    if (!all(vapply(values, is.numeric, logical(1)))) {
+      stop("model_targets: a data.frame of targets must have numeric columns only.",
+           call. = FALSE)
+    }
+    values <- as.matrix(values)
+  }
+  if (is.matrix(values) && !is.numeric(values)) {
+    stop("model_targets: matrix-valued targets must be numeric.", call. = FALSE)
+  }
+  if (is.null(dim(values)) && (is.character(values) || is.logical(values))) {
+    values <- factor(values)
+  }
+  n <- if (is.matrix(values)) nrow(values) else length(values)
+  if (is.null(observation_ids)) observation_ids <- seq_len(n)
+  if (is.null(response_ids)) {
+    response_ids <- if (is.factor(values)) {
+      levels(values)
+    } else if (is.matrix(values)) {
+      colnames(values)
+    } else {
+      NULL
+    }
+  }
+  if (!is.null(row_weights) && length(row_weights) != n) {
+    stop("row_weights must have one entry per observation.", call. = FALSE)
+  }
+  structure(
+    list(
+      values = values,
+      observation_ids = as.integer(observation_ids),
+      response_ids = response_ids,
+      response_groups = response_groups,
+      row_weights = row_weights,
+      type = .targets_type(values),
+      partition = partition
+    ),
+    class = c("model_targets", "list")
+  )
+}
+
+#' @export
+print.model_targets <- function(x, ...) {
+  n <- length(x$observation_ids)
+  q <- if (is.matrix(x$values)) ncol(x$values) else if (is.factor(x$values)) nlevels(x$values) else 1L
+  cat(sprintf("model_targets [%s partition]: %s targets, %d observations x %d responses\n",
+              x$partition, x$type, n, q))
+  if (!is.null(x$response_groups)) {
+    cat("  response groups:", paste(unique(as.character(x$response_groups)), collapse = ", "), "\n")
+  }
+  if (!is.null(x$row_weights)) cat("  row weights: present\n")
+  invisible(x)
+}
+
+#' @rdname model_targets
+#' @export
+model_targets.mvpa_design <- function(design, partition = c("train", "test"), ...) {
+  partition <- match.arg(partition)
+  if (partition == "train") {
+    values <- design$targets %||% design$cv_labels
+    .check_targets_alignment(values, nrow(design$train_design), "targets")
+    return(new_model_targets(values, "train"))
+  }
+  if (is.null(design$test_design)) return(NULL)
+  values <- design$targets_test %||% design$y_test
+  if (is.null(values)) return(NULL)
+  .check_targets_alignment(values, nrow(design$test_design), "targets_test")
+  new_model_targets(values, "test")
+}
+
+#' @rdname model_targets
+#' @export
+model_targets.feature_rsa_design <- function(design, partition = c("train", "test"), ...) {
+  partition <- match.arg(partition)
+  if (partition == "test") return(NULL)
+  values <- as.matrix(design$targets)
+  if (is.null(colnames(values))) colnames(values) <- paste0("F", seq_len(ncol(values)))
+  new_model_targets(values, "train", response_ids = colnames(values))
 }

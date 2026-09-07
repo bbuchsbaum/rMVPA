@@ -318,8 +318,8 @@ run_global.mvpa_model <- function(model_spec, X = NULL, summary_fun = NULL,
     W_avg <- Reduce("+", valid_weights) / length(valid_weights)
 
     # Compute averaged activation pattern matrix for linear models
-    Sigma_x <- cov(X)
-    haufe_args <- list(W = W_avg, Sigma_x = Sigma_x)
+    # (matrix-free: never forms the P x P covariance)
+    haufe_args <- list(W = W_avg, X = X)
     if (!is.null(summary_fun)) {
       haufe_args$summary_fun <- summary_fun
     }
@@ -430,4 +430,23 @@ print.global_mvpa_result <- function(x, ...) {
   }
 
   cat("\n")
+}
+
+
+#' @rdname run_global
+#' @export
+run_global.default <- function(model_spec, ...) {
+  cls <- paste(class(model_spec), collapse = "/")
+  stop(
+    sprintf(
+      paste0(
+        "run_global: no global (whole-domain) method for model class '%s'. ",
+        "Only 'mvpa_model' specifications use the shared global pipeline; ",
+        "fit_roi()-based analysis families need their own run_global() method. ",
+        "Use run_regional() with a whole-brain region mask for a single-domain fit."
+      ),
+      cls
+    ),
+    call. = FALSE
+  )
 }

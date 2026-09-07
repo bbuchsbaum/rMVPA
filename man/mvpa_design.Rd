@@ -13,6 +13,7 @@ mvpa_design(
   split_by = NULL,
   cv_labels = NULL,
   targets = NULL,
+  targets_test = NULL,
   ...
 )
 }
@@ -37,8 +38,13 @@ vector specifying how to split analyses.}
 (new path; mutually exclusive with \code{y_train}). If provided without \code{targets},
 \code{targets} defaults to \code{cv_labels}.}
 
-\item{targets}{Optional vector of model-specific training targets. Defaults to \code{cv_labels}
+\item{targets}{Optional vector or numeric matrix of model-specific training targets, with
+one element or row per training observation. Defaults to \code{cv_labels}
 when \code{cv_labels} is supplied, or to the parsed \code{y_train} when the old path is used.}
+
+\item{targets_test}{Optional vector or numeric matrix of model-specific test targets, with
+one element or row per \code{test_design} row. Requires \code{test_design}. When
+\code{NULL}, \code{\link{model_targets}} falls back to \code{y_test}.}
 
 \item{...}{Additional arguments (currently unused)}
 }
@@ -49,6 +55,7 @@ An \code{mvpa_design} object (S3 class) containing:
     \item{test_design}{Data frame of test design (if provided)}
     \item{cv_labels}{Labels used for cross-validation fold construction}
     \item{targets}{Model-specific training targets}
+    \item{targets_test}{Model-specific test targets (if provided)}
     \item{y_train}{Alias for \code{cv_labels} (for backward compatibility)}
     \item{y_test}{Test response variable (if provided)}
     \item{block_var}{Blocking variable for cross-validation (if provided)}
@@ -71,6 +78,9 @@ value per design row.
 The new \code{cv_labels} and \code{targets} parameters allow separating the labels used
 for fold construction from the actual training targets. When using the old \code{y_train}
 path, both \code{cv_labels} and \code{targets} are set to the parsed \code{y_train} value.
+Targets may be a numeric matrix with one row per observation; use
+\code{\link{model_targets}} to retrieve targets together with their meaning.
+\code{\link{y_train}} continues to return \code{cv_labels}.
 }
 \examples{
 # Basic design with only training data

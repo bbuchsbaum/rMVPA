@@ -4,15 +4,32 @@
 \alias{haufe_importance}
 \title{Haufe Feature Importance (Activation Patterns)}
 \usage{
-haufe_importance(W, Sigma_x, summary_fun = function(A) sqrt(rowSums(A^2)))
+haufe_importance(
+  W,
+  Sigma_x = NULL,
+  summary_fun = function(A) sqrt(rowSums(A^2)),
+  X = NULL,
+  center = TRUE,
+  block_size = NULL
+)
 }
 \arguments{
 \item{W}{A P x D weight matrix (features x discriminant directions).}
 
-\item{Sigma_x}{A P x P covariance matrix of the training features.}
+\item{Sigma_x}{A P x P covariance matrix of the training features. Ignored
+when \code{X} is supplied.}
 
 \item{summary_fun}{A function applied to the rows of A to produce a scalar
 importance per feature. Defaults to the L2 norm across discriminants.}
+
+\item{X}{Optional n x P matrix of training observations. When supplied, the
+matrix-free path is used and \code{Sigma_x} is not needed.}
+
+\item{center}{Logical; centre the columns of \code{X} before computing the
+patterns (default \code{TRUE}, matching \code{cov()}).}
+
+\item{block_size}{Optional integer; when \code{X} is supplied, compute the
+activation patterns in column blocks of at most this many features.}
 }
 \value{
 A list with components:
@@ -26,11 +43,28 @@ Computes per-feature importance using the Haufe et al. (2014) transformation
 from decoding weights to encoding (activation) patterns:
 \code{A = Sigma_x \%*\% W \%*\% solve(t(W) \%*\% Sigma_x \%*\% W)}.
 }
+\details{
+Two equivalent computation paths are available. Supplying \code{Sigma_x}
+uses the explicit \eqn{P \times P} covariance. Supplying the training
+observations \code{X} instead uses the matrix-free identity
+\deqn{Z = X_c W}
+\deqn{A = X_c^\top Z (Z^\top Z)^{+}}
+where \eqn{X_c} is the column-centred data. The covariance normalisation
+cancels exactly, so the two paths agree to numerical precision, but the
+matrix-free path never forms a \eqn{P \times P} matrix: it needs only
+\eqn{n \times D}, \eqn{P \times D}, and \eqn{D \times D} quantities. Use it
+for whole-brain feature counts, where a dense covariance is infeasible.
+Because \eqn{Z} is centred, \eqn{X_c^\top Z = X^\top Z}, so \code{X} itself
+is never copied; \code{block_size} additionally limits the number of feature
+columns multiplied at once.
+}
 \examples{
 \donttest{
   W <- matrix(rnorm(10*2), 10, 2)
   X <- matrix(rnorm(50*10), 50, 10)
   haufe_importance(W, cov(X))
+  # identical, without forming cov(X):
+  haufe_importance(W, X = X)
 }
 }
 \references{

@@ -3,6 +3,7 @@
 \name{run_global}
 \alias{run_global}
 \alias{run_global.mvpa_model}
+\alias{run_global.default}
 \title{Run Global (Whole-Brain) MVPA Analysis}
 \usage{
 run_global(model_spec, ...)
@@ -16,6 +17,8 @@ run_global(model_spec, ...)
   preflight = c("warn", "error", "off"),
   ...
 )
+
+\method{run_global}{default}(model_spec, ...)
 }
 \arguments{
 \item{model_spec}{An \code{mvpa_model} specification.}
