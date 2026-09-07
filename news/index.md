@@ -2,6 +2,32 @@
 
 ## rMVPA 0.1.3
 
+- New
+  [`pattern_model()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_model.md)
+  analysis family: a pattern-first spatial reduced-rank model
+  `x = A C'y + eps` with a structured residual covariance
+  `Psi = D + UU'`. One fit yields condition classification, multivariate
+  target decoding, encoding predictions, and forward patterns. Targets
+  may be categorical or vector-valued (matrix `targets`,
+  `feature_sets_design`, or `feature_rsa_design`), read through
+  [`model_targets()`](https://bbuchsbaum.github.io/rMVPA/reference/model_targets.md).
+  Rank is chosen by nested block-aware cross-validation on held-out
+  decoding loss, with ties going to the smaller rank; the mean selected
+  rank is reported as `rank_mean`. Predictions are kept both
+  fold-resolved and pooled to one sorted record per observation with
+  repeats averaged, matching how the rest of the package aggregates
+  repeated cross-validation predictions, so metrics and prediction
+  tables never double count a repeatedly tested row. Works in global,
+  regional, and searchlight modes;
+  [`run_global()`](https://bbuchsbaum.github.io/rMVPA/reference/run_global.md)
+  returns a `pattern_global_result` carrying the out-of-fold prediction
+  ledger, the per-fold fits, and an optional full-data refit. Spatial
+  penalties are declared through `penalty` but rejected in this version.
+  See
+  [`pattern_control()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_control.md)
+  and
+  [`predict.pattern_fit()`](https://bbuchsbaum.github.io/rMVPA/reference/predict.pattern_fit.md).
+
 - [`haufe_importance()`](https://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.md)
   accepts the training observations (`X =`) and computes activation
   patterns matrix-free, never forming the P x P covariance. The

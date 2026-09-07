@@ -27,6 +27,9 @@ fit_roi(model, roi_data, context, ...)
 # S3 method for class 'rsa_model'
 fit_roi(model, roi_data, context, ...)
 
+# S3 method for class 'pattern_model'
+fit_roi(model, roi_data, context, ...)
+
 # S3 method for class 'vector_rsa_model'
 fit_roi(model, roi_data, context, ...)
 

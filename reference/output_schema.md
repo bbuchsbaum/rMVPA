@@ -23,6 +23,9 @@ output_schema(model)
 # S3 method for class 'rsa_model'
 output_schema(model)
 
+# S3 method for class 'pattern_model'
+output_schema(model)
+
 # S3 method for class 'vector_rsa_model'
 output_schema(model)
 

@@ -6,6 +6,9 @@ Generic function to compute performance metrics from result objects.
 
 ``` r
 performance(x, ...)
+
+# S3 method for class 'pattern_global_result'
+performance(x, ...)
 ```
 
 ## Arguments

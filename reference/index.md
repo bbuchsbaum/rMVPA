@@ -350,6 +350,12 @@ All functions exported by rMVPA
 - [`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
   : Construct a pair-observation RSA design
 
+- [`pattern_control()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_control.md)
+  : Control parameters for the pattern model estimator
+
+- [`pattern_model()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_model.md)
+  : Pattern-First Spatial Reduced-Rank MVPA Model
+
 - [`performance()`](https://bbuchsbaum.github.io/rMVPA/reference/performance-methods.md)
   : Compute Performance Metrics
 
@@ -361,6 +367,9 @@ All functions exported by rMVPA
 
 - [`permute_labels()`](https://bbuchsbaum.github.io/rMVPA/reference/permute_labels.md)
   : Permute Labels in a Design for Permutation Testing
+
+- [`predict(`*`<pattern_fit>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/predict.pattern_fit.md)
+  : Predict from a fitted pattern model
 
 - [`predict_model()`](https://bbuchsbaum.github.io/rMVPA/reference/predict_model.md)
   : Predict Model Output

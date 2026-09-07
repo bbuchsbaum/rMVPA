@@ -415,12 +415,12 @@ out of the tuning scores.
     neuroim2::space(sample$dataset$mask)
   )
   res <- run_regional(mdl, region_mask)
-#> INFO [2026-09-07 17:12:09] 
+#> INFO [2026-09-07 17:24:58] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 2
 #> - Processed: 2
 #> - Skipped: 0
-#> INFO [2026-09-07 17:12:09] run_regional: 2 ROIs processed (success=2, errors=0)
+#> INFO [2026-09-07 17:24:58] run_regional: 2 ROIs processed (success=2, errors=0)
   preds <- feature_rsa_predictions(res)
   dim(preds$predicted[[1]])
 #> [1] 24 34

@@ -22,6 +22,15 @@ run_global(
 
 # Default S3 method
 run_global(model_spec, ...)
+
+# S3 method for class 'pattern_model'
+run_global(
+  model_spec,
+  return_fits = isTRUE(model_spec$keep_fold_fits),
+  refit = model_spec$refit,
+  preflight = c("warn", "error", "off"),
+  ...
+)
 ```
 
 ## Arguments
@@ -46,7 +55,7 @@ run_global(model_spec, ...)
 
 - return_fits:
 
-  Logical; if TRUE, store per-fold model fits.
+  Retain the per-fold `pattern_fit` objects.
 
 - aggregation:
 
@@ -54,7 +63,12 @@ run_global(model_spec, ...)
 
 - preflight:
 
-  One of `"warn"` (default), `"error"`, or `"off"`.
+  Preflight validation level (`"warn"`, `"error"`, or `"off"`); the
+  pattern model runs a lightweight specification check.
+
+- refit:
+
+  Also fit the model on all training rows (descriptive fit).
 
 ## Value
 
