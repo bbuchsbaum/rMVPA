@@ -7,7 +7,14 @@ transformation from decoding weights to encoding (activation) patterns:
 ## Usage
 
 ``` r
-haufe_importance(W, Sigma_x, summary_fun = function(A) sqrt(rowSums(A^2)))
+haufe_importance(
+  W,
+  Sigma_x = NULL,
+  summary_fun = function(A) sqrt(rowSums(A^2)),
+  X = NULL,
+  center = TRUE,
+  block_size = NULL
+)
 ```
 
 ## Arguments
@@ -18,12 +25,29 @@ haufe_importance(W, Sigma_x, summary_fun = function(A) sqrt(rowSums(A^2)))
 
 - Sigma_x:
 
-  A P x P covariance matrix of the training features.
+  A P x P covariance matrix of the training features. Ignored when `X`
+  is supplied.
 
 - summary_fun:
 
   A function applied to the rows of A to produce a scalar importance per
   feature. Defaults to the L2 norm across discriminants.
+
+- X:
+
+  Optional n x P matrix of training observations. When supplied, the
+  matrix-free path is used and `Sigma_x` is not needed.
+
+- center:
+
+  Logical; centre the columns of `X` before computing the patterns
+  (default `TRUE`, matching
+  [`cov()`](https://rdrr.io/r/stats/cor.html)).
+
+- block_size:
+
+  Optional integer; when `X` is supplied, compute the activation
+  patterns in column blocks of at most this many features.
 
 ## Value
 
@@ -36,6 +60,21 @@ A list with components:
 - importance:
 
   A numeric vector of length P with per-feature importance.
+
+## Details
+
+Two equivalent computation paths are available. Supplying `Sigma_x` uses
+the explicit \\P \times P\\ covariance. Supplying the training
+observations `X` instead uses the matrix-free identity \$\$Z = X_c W\$\$
+\$\$A = X_c^\top Z (Z^\top Z)^{+}\$\$ where \\X_c\\ is the
+column-centred data. The covariance normalisation cancels exactly, so
+the two paths agree to numerical precision, but the matrix-free path
+never forms a \\P \times P\\ matrix: it needs only \\n \times D\\, \\P
+\times D\\, and \\D \times D\\ quantities. Use it for whole-brain
+feature counts, where a dense covariance is infeasible. Because \\Z\\ is
+centred, \\X_c^\top Z = X^\top Z\\, so `X` itself is never copied;
+`block_size` additionally limits the number of feature columns
+multiplied at once.
 
 ## References
 
@@ -52,21 +91,40 @@ vectors of linear models in multivariate neuroimaging. NeuroImage, 87,
   X <- matrix(rnorm(50*10), 50, 10)
   haufe_importance(W, cov(X))
 #> $A
-#>              [,1]        [,2]
-#>  [1,]  0.06640464  0.11308119
-#>  [2,]  0.03448824 -0.02899078
-#>  [3,]  0.05492971  0.29190164
-#>  [4,]  0.17396037 -0.13989468
-#>  [5,] -0.13015008 -0.03640639
-#>  [6,]  0.01846279  0.10230708
-#>  [7,]  0.13456863 -0.12180256
-#>  [8,]  0.22313751 -0.09159190
-#>  [9,] -0.07746549 -0.01223071
-#> [10,] -0.06476447 -0.10092418
+#>              [,1]         [,2]
+#>  [1,]  0.03640501 -0.175169969
+#>  [2,]  0.07557471  0.013402844
+#>  [3,] -0.11008962 -0.058702466
+#>  [4,] -0.20928129  0.007006917
+#>  [5,] -0.02694763 -0.002780939
+#>  [6,] -0.03072565 -0.070472721
+#>  [7,] -0.10072057  0.003351169
+#>  [8,] -0.01765588 -0.077190825
+#>  [9,] -0.11627070 -0.099868229
+#> [10,]  0.08372862  0.147295206
 #> 
 #> $importance
-#>  [1] 0.13113707 0.04505445 0.29702498 0.22323247 0.13514610 0.10395967
-#>  [7] 0.18150642 0.24120412 0.07842507 0.11991717
+#>  [1] 0.17891295 0.07675398 0.12476259 0.20939856 0.02709074 0.07687958
+#>  [7] 0.10077631 0.07918430 0.15327276 0.16942951
+#> 
+  # identical, without forming cov(X):
+  haufe_importance(W, X = X)
+#> $A
+#>              [,1]         [,2]
+#>  [1,]  0.03640501 -0.175169969
+#>  [2,]  0.07557471  0.013402844
+#>  [3,] -0.11008962 -0.058702466
+#>  [4,] -0.20928129  0.007006917
+#>  [5,] -0.02694763 -0.002780939
+#>  [6,] -0.03072565 -0.070472721
+#>  [7,] -0.10072057  0.003351169
+#>  [8,] -0.01765588 -0.077190825
+#>  [9,] -0.11627070 -0.099868229
+#> [10,]  0.08372862  0.147295206
+#> 
+#> $importance
+#>  [1] 0.17891295 0.07675398 0.12476259 0.20939856 0.02709074 0.07687958
+#>  [7] 0.10077631 0.07918430 0.15327276 0.16942951
 #> 
 # }
 ```

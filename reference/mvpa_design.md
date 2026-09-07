@@ -16,6 +16,7 @@ mvpa_design(
   split_by = NULL,
   cv_labels = NULL,
   targets = NULL,
+  targets_test = NULL,
   ...
 )
 ```
@@ -59,9 +60,18 @@ mvpa_design(
 
 - targets:
 
-  Optional vector of model-specific training targets. Defaults to
+  Optional vector or numeric matrix of model-specific training targets,
+  with one element or row per training observation. Defaults to
   `cv_labels` when `cv_labels` is supplied, or to the parsed `y_train`
   when the old path is used.
+
+- targets_test:
+
+  Optional vector or numeric matrix of model-specific test targets, with
+  one element or row per `test_design` row. Requires `test_design`. When
+  `NULL`,
+  [`model_targets`](https://bbuchsbaum.github.io/rMVPA/reference/model_targets.md)
+  falls back to `y_test`.
 
 - ...:
 
@@ -86,6 +96,10 @@ An `mvpa_design` object (S3 class) containing:
 - targets:
 
   Model-specific training targets
+
+- targets_test:
+
+  Model-specific test targets (if provided)
 
 - y_train:
 
@@ -117,7 +131,12 @@ exactly one value per design row.
 The new `cv_labels` and `targets` parameters allow separating the labels
 used for fold construction from the actual training targets. When using
 the old `y_train` path, both `cv_labels` and `targets` are set to the
-parsed `y_train` value.
+parsed `y_train` value. Targets may be a numeric matrix with one row per
+observation; use
+[`model_targets`](https://bbuchsbaum.github.io/rMVPA/reference/model_targets.md)
+to retrieve targets together with their meaning.
+[`y_train`](https://bbuchsbaum.github.io/rMVPA/reference/y_train-methods.md)
+continues to return `cv_labels`.
 
 ## See also
 

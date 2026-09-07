@@ -53,6 +53,7 @@ response variables, and optional blocking and splitting factors.</p>
 <span>  split_by <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  cv_labels <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  targets <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  targets_test <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -96,8 +97,15 @@ vector specifying how to split analyses.</p></dd>
 
 
 <dt id="arg-targets">targets<a class="anchor" aria-label="anchor" href="#arg-targets"></a></dt>
-<dd><p>Optional vector of model-specific training targets. Defaults to <code>cv_labels</code>
+<dd><p>Optional vector or numeric matrix of model-specific training targets, with
+one element or row per training observation. Defaults to <code>cv_labels</code>
 when <code>cv_labels</code> is supplied, or to the parsed <code>y_train</code> when the old path is used.</p></dd>
+
+
+<dt id="arg-targets-test">targets_test<a class="anchor" aria-label="anchor" href="#arg-targets-test"></a></dt>
+<dd><p>Optional vector or numeric matrix of model-specific test targets, with
+one element or row per <code>test_design</code> row. Requires <code>test_design</code>. When
+<code>NULL</code>, <code><a href="model_targets.html">model_targets</a></code> falls back to <code>y_test</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -117,6 +125,9 @@ when <code>cv_labels</code> is supplied, or to the parsed <code>y_train</code> w
 
     <dt>targets</dt>
 <dd><p>Model-specific training targets</p></dd>
+
+    <dt>targets_test</dt>
+<dd><p>Model-specific test targets (if provided)</p></dd>
 
     <dt>y_train</dt>
 <dd><p>Alias for <code>cv_labels</code> (for backward compatibility)</p></dd>
@@ -142,7 +153,10 @@ evaluated within the relevant design matrix; vectors must have exactly one
 value per design row.</p>
 <p>The new <code>cv_labels</code> and <code>targets</code> parameters allow separating the labels used
 for fold construction from the actual training targets. When using the old <code>y_train</code>
-path, both <code>cv_labels</code> and <code>targets</code> are set to the parsed <code>y_train</code> value.</p>
+path, both <code>cv_labels</code> and <code>targets</code> are set to the parsed <code>y_train</code> value.
+Targets may be a numeric matrix with one row per observation; use
+<code><a href="model_targets.html">model_targets</a></code> to retrieve targets together with their meaning.
+<code><a href="y_train-methods.html">y_train</a></code> continues to return <code>cv_labels</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

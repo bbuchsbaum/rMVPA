@@ -282,9 +282,9 @@ panel <- rbind(
 panel <- panel[order(-panel$accuracy), ]
 panel
 #>    classifier accuracy   auc seconds
-#> 5  sda_notune    0.917 0.973     1.8
+#> 5  sda_notune    0.917 0.973     1.7
 #> 4   svmLinear    0.698 0.853     2.4
-#> 3          rf    0.500 0.694    12.1
+#> 3          rf    0.500 0.694    12.0
 #> 2 naive_bayes    0.375 0.481     1.9
 #> 1    corclass    0.271 0.289     1.6
 ```

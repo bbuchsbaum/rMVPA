@@ -2,6 +2,41 @@
 
 ## rMVPA 0.1.3
 
+- [`haufe_importance()`](https://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.md)
+  accepts the training observations (`X =`) and computes activation
+  patterns matrix-free, never forming the P x P covariance. The
+  [`model_importance()`](https://bbuchsbaum.github.io/rMVPA/reference/model_importance.md)
+  methods for `sda`, `glmnet`, and `spacenet` fits and the averaged
+  activation patterns of
+  [`run_global()`](https://bbuchsbaum.github.io/rMVPA/reference/run_global.md)
+  now use that path, so whole-brain global analyses no longer allocate a
+  dense feature covariance.
+
+- New
+  [`model_targets()`](https://bbuchsbaum.github.io/rMVPA/reference/model_targets.md)
+  generic returns a design’s model-specific targets (vector or matrix)
+  with row identifiers, response identifiers, response groups, and row
+  weights, for `mvpa_design`, `feature_sets_design`, and
+  `feature_rsa_design`.
+  [`mvpa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_design.md)
+  gains a `targets_test` argument and validates target row alignment.
+  [`y_train()`](https://bbuchsbaum.github.io/rMVPA/reference/y_train-methods.md)
+  is unchanged.
+
+- New
+  [`spatial_graph()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_graph.md)
+  generic builds feature-aligned adjacency graphs for volume,
+  multibasis, surface, and clustered datasets (plus raw adjacency
+  input), with
+  [`restrict_graph()`](https://bbuchsbaum.github.io/rMVPA/reference/restrict_graph.md)
+  and
+  [`graph_edges()`](https://bbuchsbaum.github.io/rMVPA/reference/graph_edges.md)
+  helpers.
+
+- [`run_global()`](https://bbuchsbaum.github.io/rMVPA/reference/run_global.md)
+  now reports a clear error for model classes without a global method
+  instead of a generic dispatch failure.
+
 - RSA permutation inference now states its null hypothesis. The default
   `permutation_control(rsa_null = "individual")` supports marginal
   correlations and single-predictor regressions. Regression with

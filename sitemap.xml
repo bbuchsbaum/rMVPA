@@ -133,6 +133,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/get_searchlight.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/get_unique_regions.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/global_mvpa_result.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/graph_edges.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/group_means.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/has_crossval-methods.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/has_test_set-methods.html</loc></url>
@@ -154,6 +155,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/mock_roi_data.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/model_importance.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/model_targets.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/msreve_design.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/msreve_temporal_confounds.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.html</loc></url>
@@ -212,6 +214,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/repmed_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/repnet_design.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/repnet_model.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/restrict_graph.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/roi_result.html</loc></url>
@@ -242,6 +245,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/set_log_level.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/shard_backend.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/shard_cleanup.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/spatial_graph.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_component_test.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_global_test.html</loc></url>

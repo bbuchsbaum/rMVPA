@@ -211,6 +211,9 @@ All functions exported by rMVPA
 - [`global_mvpa_result()`](https://bbuchsbaum.github.io/rMVPA/reference/global_mvpa_result.md)
   : Construct a Global MVPA Result
 
+- [`graph_edges()`](https://bbuchsbaum.github.io/rMVPA/reference/graph_edges.md)
+  : Edge List of a Spatial Graph
+
 - [`group_means()`](https://bbuchsbaum.github.io/rMVPA/reference/group_means.md)
   : Compute Group Means of a Matrix
 
@@ -278,6 +281,9 @@ All functions exported by rMVPA
 
 - [`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
   : Model-space representational connectivity from a fitted rMVPA result
+
+- [`model_targets()`](https://bbuchsbaum.github.io/rMVPA/reference/model_targets.md)
+  : Model Targets
 
 - [`msreve_design()`](https://bbuchsbaum.github.io/rMVPA/reference/msreve_design.md)
   : Constructor for msreve_design
@@ -433,6 +439,9 @@ All functions exported by rMVPA
 - [`repnet_model()`](https://bbuchsbaum.github.io/rMVPA/reference/repnet_model.md)
   : Representational connectivity model (ReNA-RC)
 
+- [`restrict_graph()`](https://bbuchsbaum.github.io/rMVPA/reference/restrict_graph.md)
+  : Restrict a Spatial Graph to a Subset of Features
+
 - [`rmvpa_api_lifecycle()`](https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.md)
   : List the rMVPA API Lifecycle Registry
 
@@ -510,6 +519,9 @@ All functions exported by rMVPA
 
 - [`shard_cleanup()`](https://bbuchsbaum.github.io/rMVPA/reference/shard_cleanup.md)
   : Clean Up Shared-Memory Segments
+
+- [`spatial_graph()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_graph.md)
+  : Spatial Adjacency Graph Aligned to Dataset Features
 
 - [`spatial_nmf()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf.md)
   : Spatial Non-negative Matrix Factorization

@@ -47,7 +47,14 @@ from decoding weights to encoding (activation) patterns:
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">haufe_importance</span><span class="op">(</span><span class="va">W</span>, <span class="va">Sigma_x</span>, summary_fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">A</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="va">A</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">haufe_importance</span><span class="op">(</span></span>
+<span>  <span class="va">W</span>,</span>
+<span>  Sigma_x <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  summary_fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">A</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="va">A</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  X <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  center <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  block_size <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -59,12 +66,28 @@ from decoding weights to encoding (activation) patterns:
 
 
 <dt id="arg-sigma-x">Sigma_x<a class="anchor" aria-label="anchor" href="#arg-sigma-x"></a></dt>
-<dd><p>A P x P covariance matrix of the training features.</p></dd>
+<dd><p>A P x P covariance matrix of the training features. Ignored
+when <code>X</code> is supplied.</p></dd>
 
 
 <dt id="arg-summary-fun">summary_fun<a class="anchor" aria-label="anchor" href="#arg-summary-fun"></a></dt>
 <dd><p>A function applied to the rows of A to produce a scalar
 importance per feature. Defaults to the L2 norm across discriminants.</p></dd>
+
+
+<dt id="arg-x">X<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
+<dd><p>Optional n x P matrix of training observations. When supplied, the
+matrix-free path is used and <code>Sigma_x</code> is not needed.</p></dd>
+
+
+<dt id="arg-center">center<a class="anchor" aria-label="anchor" href="#arg-center"></a></dt>
+<dd><p>Logical; centre the columns of <code>X</code> before computing the
+patterns (default <code>TRUE</code>, matching <code><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov()</a></code>).</p></dd>
+
+
+<dt id="arg-block-size">block_size<a class="anchor" aria-label="anchor" href="#arg-block-size"></a></dt>
+<dd><p>Optional integer; when <code>X</code> is supplied, compute the
+activation patterns in column blocks of at most this many features.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -77,6 +100,22 @@ importance per feature. Defaults to the L2 norm across discriminants.</p></dd>
 
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Two equivalent computation paths are available. Supplying <code>Sigma_x</code>
+uses the explicit \(P \times P\) covariance. Supplying the training
+observations <code>X</code> instead uses the matrix-free identity
+$$Z = X_c W$$
+$$A = X_c^\top Z (Z^\top Z)^{+}$$
+where \(X_c\) is the column-centred data. The covariance normalisation
+cancels exactly, so the two paths agree to numerical precision, but the
+matrix-free path never forms a \(P \times P\) matrix: it needs only
+\(n \times D\), \(P \times D\), and \(D \times D\) quantities. Use it
+for whole-brain feature counts, where a dense covariance is infeasible.
+Because \(Z\) is centred, \(X_c^\top Z = X^\top Z\), so <code>X</code> itself
+is never copied; <code>block_size</code> additionally limits the number of feature
+columns multiplied at once.</p>
+    </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p>Haufe, S., Meinecke, F., Goergen, K., Daehne, S., Haynes, J.D.,
@@ -91,21 +130,40 @@ vectors of linear models in multivariate neuroimaging. NeuroImage, 87, 96-110.</
 <span class="r-in"><span>  <span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">50</span><span class="op">*</span><span class="fl">10</span><span class="op">)</span>, <span class="fl">50</span>, <span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu">haufe_importance</span><span class="op">(</span><span class="va">W</span>, <span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $A</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>              [,1]        [,2]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1,]  0.06640464  0.11308119</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [2,]  0.03448824 -0.02899078</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [3,]  0.05492971  0.29190164</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [4,]  0.17396037 -0.13989468</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [5,] -0.13015008 -0.03640639</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [6,]  0.01846279  0.10230708</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [7,]  0.13456863 -0.12180256</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [8,]  0.22313751 -0.09159190</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [9,] -0.07746549 -0.01223071</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [10,] -0.06476447 -0.10092418</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>              [,1]         [,2]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [1,]  0.03640501 -0.175169969</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [2,]  0.07557471  0.013402844</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [3,] -0.11008962 -0.058702466</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [4,] -0.20928129  0.007006917</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [5,] -0.02694763 -0.002780939</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [6,] -0.03072565 -0.070472721</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [7,] -0.10072057  0.003351169</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [8,] -0.01765588 -0.077190825</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [9,] -0.11627070 -0.099868229</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [10,]  0.08372862  0.147295206</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $importance</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 0.13113707 0.04505445 0.29702498 0.22323247 0.13514610 0.10395967</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  [7] 0.18150642 0.24120412 0.07842507 0.11991717</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 0.17891295 0.07675398 0.12476259 0.20939856 0.02709074 0.07687958</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [7] 0.10077631 0.07918430 0.15327276 0.16942951</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span>  <span class="co"># identical, without forming cov(X):</span></span></span>
+<span class="r-in"><span>  <span class="fu">haufe_importance</span><span class="op">(</span><span class="va">W</span>, X <span class="op">=</span> <span class="va">X</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $A</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>              [,1]         [,2]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [1,]  0.03640501 -0.175169969</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [2,]  0.07557471  0.013402844</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [3,] -0.11008962 -0.058702466</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [4,] -0.20928129  0.007006917</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [5,] -0.02694763 -0.002780939</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [6,] -0.03072565 -0.070472721</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [7,] -0.10072057  0.003351169</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [8,] -0.01765588 -0.077190825</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [9,] -0.11627070 -0.099868229</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [10,]  0.08372862  0.147295206</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $importance</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 0.17891295 0.07675398 0.12476259 0.20939856 0.02709074 0.07687958</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [7] 0.10077631 0.07918430 0.15327276 0.16942951</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>

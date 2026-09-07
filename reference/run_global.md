@@ -19,6 +19,9 @@ run_global(
   preflight = c("warn", "error", "off"),
   ...
 )
+
+# Default S3 method
+run_global(model_spec, ...)
 ```
 
 ## Arguments
