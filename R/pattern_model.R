@@ -42,6 +42,14 @@
 #' under \code{$fits} of the regional result. \code{\link{run_global}} fits the
 #' whole domain once and returns a \code{pattern_global_result}.
 #'
+#' Two ledgers are kept. The fold-resolved one records every prediction with
+#' the fold that produced it. The pooled one holds a single record per tested
+#' observation, in sorted order, with repeats averaged; it is what the metrics
+#' and the prediction table are built from, so a cross-validation scheme that
+#' tests a row several times (\code{\link{twofold_blocked_cross_validation}},
+#' sequential, or bootstrap) does not give that row extra weight. This matches
+#' how every other rMVPA model aggregates repeated predictions.
+#'
 #' @param dataset An \code{\link{mvpa_dataset}} (image, multibasis, surface,
 #'   or clustered).
 #' @param design A design with a \code{\link{model_targets}} method.
@@ -370,7 +378,8 @@ print.pattern_model <- function(x, ...) {
          type = model$target_type),
     class = c("pattern_ledger", "list")
   )
-  metrics <- .pattern_score_ledger(ledger)
+  pooled <- .pattern_pool_ledger(ledger)
+  metrics <- .pattern_score_ledger(pooled)
   metrics <- c(metrics, rank_mean = mean(ranks))
 
   refit_obj <- NULL
@@ -383,7 +392,7 @@ print.pattern_model <- function(x, ...) {
     refit_obj <- .pattern_fit(X, targets, rank = r_all, control = control, cap_rank = TRUE)
   }
 
-  list(metrics = metrics, ledger = ledger, ranks = ranks,
+  list(metrics = metrics, ledger = ledger, pooled = pooled, ranks = ranks,
        fold_fits = if (keep_fits) fold_fits else NULL, refit = refit_obj)
 }
 
@@ -420,10 +429,84 @@ print.pattern_model <- function(x, ...) {
   }
 }
 
+#' Pool a fold-resolved ledger into one record per observation.
+#'
+#' Cross-validation schemes that test a row more than once (twofold with
+#' \code{nreps}, sequential, bootstrap) produce several predictions for the
+#' same observation. \code{wrap_result()} -- the path every other rMVPA model
+#' takes -- averages those repeats and returns one row per tested observation
+#' in sorted order. This does the same for a \code{pattern_ledger}: class
+#' probabilities are averaged (equivalently summed and renormalized) and
+#' continuous predictions are divided by their repeat count, so a repeatedly
+#' tested observation does not get extra weight in the reported metrics.
+#'
+#' Pooling is a no-op for schemes that test each row once, which includes
+#' blocked and k-fold cross-validation and the external-test path.
+#' @keywords internal
+#' @noRd
+.pattern_pool_ledger <- function(ledger) {
+  obs <- ledger$observation
+  uo <- sort(unique(obs))
+  if (identical(obs, uo)) {
+    # already one sorted record per observation: pooling is the identity
+    ledger$pooled <- TRUE
+    ledger$n_repeats <- rep(1L, length(obs))
+    return(ledger)
+  }
+  idx <- match(obs, uo)
+  counts <- as.integer(tabulate(idx, nbins = length(uo)))
+
+  pool <- function(M) {
+    M <- as.matrix(M)
+    out <- rowsum(M, group = idx, reorder = TRUE) / counts
+    dimnames(out) <- list(NULL, colnames(M))
+    out
+  }
+  pred <- pool(ledger$prediction)
+  if (identical(ledger$type, "categorical")) {
+    pred <- pred / rowSums(pred)          # rows already sum to 1; guards drift
+  }
+  base <- if (is.null(ledger$baseline)) NULL else pool(ledger$baseline)
+
+  first <- match(uo, obs)
+  truth <- if (is.matrix(ledger$truth)) {
+    ledger$truth[first, , drop = FALSE]
+  } else {
+    ledger$truth[first]
+  }
+  # repeats of one observation must agree about the truth
+  chk <- if (is.matrix(ledger$truth)) {
+    all(abs(ledger$truth - truth[idx, , drop = FALSE]) < 1e-9)
+  } else {
+    all(as.character(ledger$truth) == as.character(truth)[idx])
+  }
+  if (!isTRUE(chk)) {
+    stop("pattern_model: repeated predictions for one observation disagree about its target.",
+         call. = FALSE)
+  }
+
+  # `fold` is dropped: a pooled record can come from several folds. The
+  # fold-resolved ledger keeps that information.
+  structure(
+    list(fold = rep(NA_integer_, length(uo)), observation = uo, truth = truth,
+         prediction = pred, baseline = base, partition = ledger$partition,
+         type = ledger$type, pooled = TRUE, n_repeats = counts),
+    class = c("pattern_ledger", "list")
+  )
+}
+
 #' @export
 print.pattern_ledger <- function(x, ...) {
-  cat(sprintf("pattern_ledger [%s]: %d predictions over %d folds (%s targets)\n",
-              x$partition, length(x$observation), length(unique(x$fold)), x$type))
+  if (isTRUE(x$pooled) && !is.null(x$n_repeats) && any(x$n_repeats > 1L)) {
+    cat(sprintf("pattern_ledger [%s, pooled]: %d observations, %.2f predictions each on average (%s targets)\n",
+                x$partition, length(x$observation), mean(x$n_repeats), x$type))
+  } else if (isTRUE(x$pooled)) {
+    cat(sprintf("pattern_ledger [%s, pooled]: %d observations, tested once each (%s targets)\n",
+                x$partition, length(x$observation), x$type))
+  } else {
+    cat(sprintf("pattern_ledger [%s]: %d predictions over %d folds (%s targets)\n",
+                x$partition, length(x$observation), length(unique(x$fold)), x$type))
+  }
   invisible(x)
 }
 
@@ -463,15 +546,19 @@ fit_roi.pattern_model <- function(model, roi_data, context, ...) {
   metrics[!is.finite(metrics)] <- NA_real_
 
   predictor <- structure(
-    list(ledger = out$ledger, ranks = out$ranks, fold_fits = out$fold_fits,
-         refit = out$refit, indices = roi_data$indices, id = context$id),
+    list(ledger = out$ledger, pooled_ledger = out$pooled, ranks = out$ranks,
+         fold_fits = out$fold_fits, refit = out$refit,
+         indices = roi_data$indices, id = context$id),
     class = c("pattern_roi_fits", "list")
   )
 
   # Categorical targets ride in a classification_result so the regional
   # prediction table, pooling, and $fits all work through the standard path.
   # Continuous multi-response targets keep the ledger under $predictor only.
-  led <- out$ledger
+  # The pooled ledger has one row per tested observation in sorted order, the
+  # same shape wrap_result() gives every other model, so the regional
+  # prediction table has unique .rownum values.
+  led <- out$pooled
   result <- if (identical(model$target_type, "categorical")) {
     P <- led$prediction[, levels(led$truth), drop = FALSE]
     pred <- factor(colnames(P)[max.col(P, ties.method = "first")], levels = levels(led$truth))
@@ -522,7 +609,8 @@ run_global.pattern_model <- function(model_spec, return_fits = isTRUE(model_spec
   structure(
     list(
       performance_table = tibble::as_tibble(as.list(out$metrics)),
-      ledger = out$ledger,
+      ledger = out$pooled,
+      fold_ledger = out$ledger,
       ranks = out$ranks,
       fold_fits = out$fold_fits,
       refit = out$refit,
@@ -543,6 +631,10 @@ print.pattern_global_result <- function(x, ...) {
               x$model_spec$target_type))
   cat(sprintf("  evaluation: %s over %d fold(s); rank selected per fold: %s\n",
               x$ledger$partition, length(x$ranks), paste(x$ranks, collapse = " ")))
+  if (!is.null(x$ledger$n_repeats) && any(x$ledger$n_repeats > 1L)) {
+    cat(sprintf("  repeated testing: %.2f predictions per observation, averaged\n",
+                mean(x$ledger$n_repeats)))
+  }
   cat("  performance:\n")
   print(x$performance_table)
   cat(sprintf("  fold fits retained: %s; refit: %s\n",

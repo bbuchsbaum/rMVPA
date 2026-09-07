@@ -242,6 +242,96 @@ test_that("a fold missing a class is handled rather than crashing", {
   expect_true(all(res$ranks >= 1L))
 })
 
+test_that("repeated-CV predictions are pooled the way wrap_result pools them", {
+  sim <- sim_pattern_data(n = 60, dims = c(5, 5, 3), K = 3, snr = 1.5, seed = 50)
+  bv <- sim$design$block_var
+  schemes <- list(
+    blocked = blocked_cross_validation(bv),
+    twofold = twofold_blocked_cross_validation(bv, nreps = 4),
+    sequential = sequential_blocked_cross_validation(bv, nfolds = 2, nreps = 3),
+    bootstrap = bootstrap_blocked_cross_validation(bv, nreps = 4)
+  )
+  for (nm in names(schemes)) {
+    spec <- pattern_model(sim$dataset, sim$design, rank = 2, crossval = schemes[[nm]])
+    res <- suppressWarnings(quiet_run(run_global(spec)))
+    pooled <- res$ledger
+    folded <- res$fold_ledger
+
+    # one record per tested observation, in sorted order, like wrap_result()
+    info <- paste("scheme", nm)
+    expect_true(isTRUE(pooled$pooled), info = info)
+    expect_equal(pooled$observation, sort(unique(folded$observation)), info = info)
+    expect_false(anyDuplicated(pooled$observation) > 0, info = info)
+    expect_equal(nrow(pooled$prediction), length(pooled$observation), info = info)
+    expect_equal(unname(rowSums(pooled$prediction)), rep(1, length(pooled$observation)),
+                 info = info)
+    expect_equal(sum(pooled$n_repeats), length(folded$observation), info = info)
+
+    # the pooled probability of each observation is the mean over its repeats
+    i <- pooled$observation[1]
+    reps <- which(folded$observation == i)
+    expect_equal(unname(pooled$prediction[1, ]),
+                 unname(colMeans(folded$prediction[reps, , drop = FALSE])),
+                 tolerance = 1e-10, info = info)
+    # truth survives pooling
+    expect_equal(as.character(pooled$truth[1]), as.character(folded$truth[reps[1]]), info = info)
+  }
+  # only the repeated schemes actually repeat
+  expect_true(all(res$ledger$n_repeats == 4L))          # bootstrap, nreps = 4
+})
+
+test_that("pooling averages continuous predictions and their baseline", {
+  simc <- sim_pattern_data(n = 60, dims = c(5, 5, 3), q = 3, r = 2, snr = 2, seed = 51)
+  spec <- pattern_model(simc$dataset, simc$design, rank = 2,
+                        crossval = bootstrap_blocked_cross_validation(simc$design$block_var, nreps = 3))
+  res <- suppressWarnings(quiet_run(run_global(spec)))
+  pooled <- res$ledger; folded <- res$fold_ledger
+  expect_equal(length(pooled$observation), 60L)
+  expect_equal(dim(pooled$prediction), c(60L, 3L))
+  expect_equal(dim(pooled$baseline), c(60L, 3L))
+  reps <- which(folded$observation == pooled$observation[1])
+  expect_gt(length(reps), 1L)
+  expect_equal(unname(pooled$prediction[1, ]),
+               unname(colMeans(folded$prediction[reps, , drop = FALSE])), tolerance = 1e-10)
+  expect_equal(unname(pooled$baseline[1, ]),
+               unname(colMeans(folded$baseline[reps, , drop = FALSE])), tolerance = 1e-10)
+  expect_true(is.finite(performance(res)$R2))
+})
+
+test_that("a repeatedly tested observation is not double counted in the metrics", {
+  # Under bootstrap CV a naive fold-order ledger would weight repeatedly tested
+  # rows more heavily. Scoring the pooled ledger gives each observation one vote.
+  sim <- sim_pattern_data(n = 60, dims = c(5, 5, 3), K = 3, snr = 0.4, seed = 52)
+  spec <- pattern_model(sim$dataset, sim$design, rank = 2,
+                        crossval = bootstrap_blocked_cross_validation(sim$design$block_var, nreps = 4))
+  res <- suppressWarnings(quiet_run(run_global(spec)))
+  pooled <- res$ledger
+  pred <- factor(colnames(pooled$prediction)[max.col(pooled$prediction, ties.method = "first")],
+                 levels = levels(pooled$truth))
+  expect_equal(performance(res)$Accuracy, mean(pred == pooled$truth), tolerance = 1e-12)
+  # and that differs from the fold-order accuracy when repeats disagree
+  f <- res$fold_ledger
+  fpred <- factor(colnames(f$prediction)[max.col(f$prediction, ties.method = "first")],
+                  levels = levels(f$truth))
+  expect_equal(length(f$observation), 240L)
+  expect_false(isTRUE(all.equal(mean(fpred == f$truth), performance(res)$Accuracy)))
+})
+
+test_that("the regional prediction table has one row per observation per ROI under repeats", {
+  sim <- sim_pattern_data(n = 60, dims = c(5, 5, 3), K = 3, snr = 1.5, seed = 53)
+  region <- neuroim2::NeuroVol(array(rep(1:3, length.out = 75), sim$dims),
+                               neuroim2::space(sim$dataset$mask))
+  spec <- pattern_model(sim$dataset, sim$design, rank = 2, return_predictions = TRUE,
+                        crossval = bootstrap_blocked_cross_validation(sim$design$block_var, nreps = 4))
+  reg <- suppressWarnings(quiet_run(run_regional(spec, region)))
+  pt <- reg$prediction_table
+  expect_equal(nrow(pt), 180L)                       # 60 observations x 3 ROIs
+  expect_false(any(duplicated(pt[, c("roinum", ".rownum")])))
+  expect_equal(sort(unique(pt$.rownum)), 1:60)
+  expect_s3_class(reg$fits[[1]]$pooled_ledger, "pattern_ledger")
+  expect_equal(length(reg$fits[[1]]$ledger$observation), 240L)   # fold-resolved kept too
+})
+
 test_that("run_global preflight and run_analysis wiring", {
   sim <- sim_pattern_data(n = 45, dims = c(5, 5, 3), K = 2, seed = 22)
   spec <- pattern_model(sim$dataset, sim$design, rank = 1)

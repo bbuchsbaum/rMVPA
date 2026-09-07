@@ -93,6 +93,14 @@ out-of-fold prediction table (categorical targets), and with either
 its prediction ledger (plus the fold fits when \code{return_fits = TRUE})
 under \code{$fits} of the regional result. \code{\link{run_global}} fits the
 whole domain once and returns a \code{pattern_global_result}.
+
+Two ledgers are kept. The fold-resolved one records every prediction with
+the fold that produced it. The pooled one holds a single record per tested
+observation, in sorted order, with repeats averaged; it is what the metrics
+and the prediction table are built from, so a cross-validation scheme that
+tests a row several times (\code{\link{twofold_blocked_cross_validation}},
+sequential, or bootstrap) does not give that row extra weight. This matches
+how every other rMVPA model aggregates repeated predictions.
 }
 
 \examples{

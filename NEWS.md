@@ -8,7 +8,11 @@
   `feature_rsa_design`), read through `model_targets()`. Rank is chosen by
   nested block-aware cross-validation on held-out decoding loss, with ties
   going to the smaller rank; the mean selected rank is reported as
-  `rank_mean`. Works in global, regional, and searchlight modes;
+  `rank_mean`. Predictions are kept both fold-resolved and pooled to one
+  sorted record per observation with repeats averaged, matching how the rest
+  of the package aggregates repeated cross-validation predictions, so metrics
+  and prediction tables never double count a repeatedly tested row. Works in
+  global, regional, and searchlight modes;
   `run_global()` returns a `pattern_global_result` carrying the out-of-fold
   prediction ledger, the per-fold fits, and an optional full-data refit.
   Spatial penalties are declared through `penalty` but rejected in this
