@@ -1,5 +1,23 @@
 # rMVPA 0.1.3
 
+* New `pattern_model()` analysis family: a pattern-first spatial reduced-rank
+  model `x = A C'y + eps` with a structured residual covariance
+  `Psi = D + UU'`. One fit yields condition classification, multivariate
+  target decoding, encoding predictions, and forward patterns. Targets may be
+  categorical or vector-valued (matrix `targets`, `feature_sets_design`, or
+  `feature_rsa_design`), read through `model_targets()`. Rank is chosen by
+  nested block-aware cross-validation on held-out decoding loss, with ties
+  going to the smaller rank; the mean selected rank is reported as
+  `rank_mean`. Predictions are kept both fold-resolved and pooled to one
+  sorted record per observation with repeats averaged, matching how the rest
+  of the package aggregates repeated cross-validation predictions, so metrics
+  and prediction tables never double count a repeatedly tested row. Works in
+  global, regional, and searchlight modes;
+  `run_global()` returns a `pattern_global_result` carrying the out-of-fold
+  prediction ledger, the per-fold fits, and an optional full-data refit.
+  Spatial penalties are declared through `penalty` but rejected in this
+  version. See `pattern_control()` and `predict.pattern_fit()`.
+
 * `haufe_importance()` accepts the training observations (`X = `) and computes
   activation patterns matrix-free, never forming the P x P covariance. The
   `model_importance()` methods for `sda`, `glmnet`, and `spacenet` fits and the

@@ -30,7 +30,11 @@ rmvpa_api_lifecycle <- function() {
       "mock_roi_data",
       "mock_context",
       "cv_evaluate_roi",
-      "use_shard"
+      "use_shard",
+      "pattern_model",
+      "pattern_control",
+      "model_targets",
+      "spatial_graph"
     ),
     lifecycle = c(
       "stable",
@@ -53,6 +57,10 @@ rmvpa_api_lifecycle <- function() {
       "developer",
       "developer",
       "developer",
+      "experimental",
+      "experimental",
+      "experimental",
+      "experimental",
       "experimental"
     ),
     notes = c(
@@ -76,7 +84,11 @@ rmvpa_api_lifecycle <- function() {
       "Developer helper for plugin/unit tests.",
       "Developer helper for plugin/unit tests.",
       "Developer wrapper around ROI CV helpers.",
-      "Experimental shared-memory backend selector."
+      "Experimental shared-memory backend selector.",
+      "Experimental pattern-first reduced-rank analysis family.",
+      "Experimental estimator controls for pattern_model.",
+      "Experimental accessor for model-specific design targets.",
+      "Experimental feature-aligned spatial adjacency constructor."
     ),
     stringsAsFactors = FALSE
   )
