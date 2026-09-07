@@ -12,7 +12,10 @@ pattern_control(
   lambda_2 = 0,
   max_outer = 50L,
   tol = 1e-08,
-  refine_path = FALSE
+  refine_path = FALSE,
+  max_inner = 500L,
+  tol_inner = 1e-09,
+  tol_iterate = 1e-06
 )
 }
 \arguments{
@@ -42,9 +45,17 @@ residual covariance, so it is rejected rather than solved approximately.}
 \item{tol}{Relative objective change that declares convergence.}
 
 \item{refine_path}{Logical; when fitting a rank path, run the alternating
-refinement for every rank (default \code{FALSE}: path solutions are the
-exact reduced-rank optima, which coincide with the refined solution for
-the unpenalized objective).}
+refinement for every rank (default \code{FALSE}: unpenalized path
+solutions are the exact reduced-rank optima, so refinement changes
+nothing). Refinement is always used when a spatial penalty is active.}
+
+\item{max_inner}{Maximum proximal-gradient iterations per penalized A-step.}
+
+\item{tol_inner}{Relative objective change that stops the A-step solver.}
+
+\item{tol_iterate}{Relative change in the patterns required alongside
+\code{tol_inner}. The objective is flat near the optimum, so it can settle
+while the patterns are still moving; both must be small.}
 }
 \value{
 A list of class \code{pattern_control}.

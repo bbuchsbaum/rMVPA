@@ -8,12 +8,14 @@
 #   suppressor : one informative region plus a region that carries a shared
 #                noise component but no task signal (a noise canceller)
 #   redundant  : the same task dimension expressed in two separate regions
-#   diffuse    : weak signal spread over most of the volume
+#   diffuse    : weak signal spread over most of the volume, spatially random
+#                (dense but NOT smooth: neighbouring loadings are unrelated)
+#   smooth     : a spatially coherent blob, where neighbouring loadings agree
 #   signflip   : one contiguous informative region with alternating-sign
 #                loadings (fine-scale code inside a coherent territory)
 sim_pattern_data <- function(n = 90, dims = c(8, 8, 4), K = 3, q = NULL, r = NULL,
                              snr = 2, scenario = c("basic", "suppressor", "redundant",
-                                                   "diffuse", "signflip"),
+                                                   "diffuse", "signflip", "smooth"),
                              blocks = 3, noise_sd = 1, external_test = FALSE,
                              n_test = n, seed = NULL) {
   scenario <- match.arg(scenario)
@@ -45,6 +47,15 @@ sim_pattern_data <- function(n = 90, dims = c(8, 8, 4), K = 3, q = NULL, r = NUL
     r <- 1L; A <- A[, 1, drop = FALSE]
   } else if (scenario == "diffuse") {
     A[] <- 0; A[, 1] <- rnorm(p, sd = 0.3)
+    r <- 1L; A <- A[, 1, drop = FALSE]
+  } else if (scenario == "smooth") {
+    # a spatially coherent blob: neighbouring voxels carry similar loadings, so
+    # graph smoothing is a correct prior here
+    A[] <- 0
+    centre <- (dims + 1) / 2
+    d2 <- rowSums(sweep(coords, 2L, centre, "-")^2)
+    A[, 1] <- exp(-d2 / (2 * (max(dims) / 4)^2))
+    A[A[, 1] < 0.05, 1] <- 0
     r <- 1L; A <- A[, 1, drop = FALSE]
   } else if (scenario == "signflip") {
     A[] <- 0

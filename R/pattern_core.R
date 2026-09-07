@@ -152,9 +152,14 @@
 # ---------------------------------------------------------------------------
 
 # f(A, C) = 1/(2n) tr[(X - Yw C A') Psi^{-1} (X - Yw C A')']
-.pattern_objective <- function(X, Yw, A, C, noise) {
+.pattern_objective <- function(X, Yw, A, C, noise, penalty = NULL) {
   R <- X - (Yw %*% C) %*% t(A)
-  0.5 * .noise_quadform(noise, R) / nrow(X)
+  val <- 0.5 * .noise_quadform(noise, R) / nrow(X)
+  if (!is.null(penalty) && isTRUE(penalty$active)) {
+    if (penalty$lambda_s > 0) val <- val + penalty$lambda_s * sum(sqrt(rowSums(A^2)))
+    if (penalty$lambda_l > 0) val <- val + 0.5 * penalty$lambda_l * sum(A * as.matrix(penalty$L %*% A))
+  }
+  val
 }
 
 # A-step. With no penalty the stationarity condition is
@@ -186,7 +191,7 @@
 # whitened data X W' on Yw. Returns A, C for every rank up to r_max (nested).
 .pattern_init_rrr <- function(X, Yw, noise, r_max) {
   n <- nrow(X)
-  Xw <- t(.noise_whiten(noise, t(X)))                 # X W'      (n x p)
+  Xw <- .noise_whiten_rows(noise, X)                  # X W'      (n x p)
   B <- crossprod(Yw, Xw) / n                          # (Yw'Yw)^{-1} Yw' Xw = Yw'Xw / n  (q_eff x p)
   k <- min(r_max, ncol(Yw), ncol(X), n - 1L)
   # The fitted values are Yw %*% B, and Yw / sqrt(n) has orthonormal columns, so
@@ -230,7 +235,7 @@
 #' @keywords internal
 #' @noRd
 .pattern_fit <- function(X, targets, rank = 1L, control = pattern_control(), graph = NULL,
-                         cap_rank = FALSE) {
+                         cap_rank = FALSE, penalty = NULL, start = NULL) {
   X <- as.matrix(X)
   n <- nrow(X); p_input <- ncol(X)
   if (n < 3L) stop("pattern_model: at least three training observations are required.", call. = FALSE)
@@ -238,10 +243,21 @@
   # --- feature screening and transform (training rows only) ---
   keep <- .pattern_screen_columns(X)
   if (length(keep) == 0L) stop("pattern_model: no usable (finite, non-constant) features.", call. = FALSE)
-  Xk <- X[, keep, drop = FALSE]
+  # avoid a full copy when screening drops nothing
+  Xk <- if (length(keep) == ncol(X)) X else X[, keep, drop = FALSE]
   xt <- .pattern_x_transform_fit(Xk, scale = control$x_scale)
   Xc <- .pattern_x_transform_apply(xt, Xk)
   p <- ncol(Xc)
+
+  # The graph must describe exactly the columns the estimator sees, so restrict
+  # it whenever screening dropped features.
+  if (!is.null(graph)) {
+    if (identical(as.integer(graph$n_features), as.integer(ncol(X)))) {
+      if (length(keep) != ncol(X)) graph <- restrict_graph(graph, keep)
+    } else {
+      .assert_graph_aligned(graph, p, "screened feature matrix")
+    }
+  }
 
   # --- target coding ---
   enc <- .pattern_encode_targets(targets, scale = control$y_scale)
@@ -263,19 +279,47 @@
   # --- supervised spectral initialization under Psi ---
   init <- .pattern_init_rrr(Xc, Yw, noise, r_max)
 
-  make_fit <- function(r, refine = TRUE) {
+  # One O(n p q) pass supplies every quantity the alternation needs: X'Yw gives
+  # both X'T (= X'Yw C) and the C-step's cross-product, and the constant term
+  # completes the expanded objective. After this the whole alternation is
+  # O(p q r + p r^2 + nnz(L) r) per iteration, with no n x p work at all.
+  XtYw <- crossprod(Xc, Yw)
+  quad_const <- .noise_quadform(noise, Xc)
+
+  make_fit <- function(r, refine = TRUE, A_start = NULL) {
     st <- .pattern_init_rank(init, r)
-    A <- st$A; C <- st$C
-    obj <- .pattern_objective(Xc, Yw, A, C, noise)
+    A <- if (!is.null(A_start) && identical(dim(A_start), c(p, r))) A_start else st$A
+    C <- st$C
+    # The penalty scale is resolved at this rank's initial C, so `sparse` means
+    # the same fraction of "the penalty that empties the model" at every rank.
+    pen <- .pattern_resolve_penalty(penalty, Xc, Yw %*% C, noise, graph,
+                                    XtT = XtYw %*% C)
+    build_prob <- function(Cmat) {
+      .pattern_astep_problem(Xc, Yw %*% Cmat, noise, pen$L, pen$lambda_s, pen$lambda_l,
+                             quad_const, XtT = XtYw %*% Cmat)
+    }
+    inner <- list()
+    prob <- build_prob(C)
+    obj <- .pattern_astep_objective(A, prob)
     trace <- obj
     converged <- FALSE
     iter <- 0L
     if (refine) {
       for (it in seq_len(control$max_outer)) {
         iter <- it
-        C <- .pattern_step_C(Xc, Yw, A, noise)
-        A <- .pattern_step_A(Xc, Yw %*% C)
-        obj_new <- .pattern_objective(Xc, Yw, A, C, noise)
+        C <- .polar_factor(crossprod(XtYw, .noise_apply_precision(noise, A)))
+        prob <- build_prob(C)
+        if (pen$active) {
+          sol <- .pattern_astep_fista(A, prob, max_iter = control$max_inner,
+                                      tol = control$tol_inner,
+                                      tol_iterate = control$tol_iterate)
+          A <- sol$A
+          inner[[length(inner) + 1L]] <- list(iterations = sol$iterations,
+                                              converged = sol$converged)
+        } else {
+          A <- t(solve(prob$TtT, t(prob$XtT)))
+        }
+        obj_new <- .pattern_astep_objective(A, prob)
         trace <- c(trace, obj_new)
         rel <- abs(obj - obj_new) / max(abs(obj), .Machine$double.eps)
         obj <- obj_new
@@ -285,15 +329,23 @@
     .new_pattern_fit(A, C, noise, xt, yt, Yw, keep, p_input, r, control,
                      diagnostics = list(objective = trace, outer_iterations = iter,
                                         converged = converged,
+                                        inner = inner,
                                         init_singular_values = init$singular_values,
                                         noise_spectrum = noise$meta$spectrum,
                                         noise_rank = noise$h,
-                                        rank_eligible = r_elig),
-                     graph = graph)
+                                        rank_eligible = r_elig,
+                                        n_nonzero = sum(rowSums(A^2) > 0)),
+                     graph = graph, penalty = pen)
   }
 
   if (identical(rank, "path")) {
-    fits <- lapply(seq_len(r_max), function(r) make_fit(r, refine = control$refine_path))
+    # Each rank starts from its own spectral initialization. Warm starting rank
+    # r from rank r-1 is not the free lunch it looks like: the objective is
+    # invariant under (A, C) -> (A Q, C Q) for orthogonal Q, so a padded
+    # lower-rank solution sits in an arbitrary rotation of the new coordinates
+    # and was observed to leave the alternation short of convergence.
+    refine <- control$refine_path || !is.null(penalty)
+    fits <- lapply(seq_len(r_max), function(r) make_fit(r, refine = refine))
     names(fits) <- paste0("rank", seq_len(r_max))
     return(fits)
   }
@@ -302,11 +354,11 @@
   if (rank < 1L || rank > r_max) {
     stop(sprintf("pattern_model: requested rank %d exceeds the eligible rank %d.", rank, r_max), call. = FALSE)
   }
-  make_fit(rank, refine = TRUE)
+  make_fit(rank, refine = TRUE, A_start = start)
 }
 
 .new_pattern_fit <- function(A, C, noise, xt, yt, Yw, keep, p_input, rank, control,
-                             diagnostics = list(), graph = NULL) {
+                             diagnostics = list(), graph = NULL, penalty = NULL) {
   PA <- .noise_apply_precision(noise, A)          # Psi^{-1} A  (p x r)
   G <- crossprod(A, PA)                          # A' Psi^{-1} A (r x r)
   Tm <- Yw %*% C
@@ -320,6 +372,7 @@
       feature_index = keep, p_input = p_input,
       rank = as.integer(rank),
       control = control,
+      penalty = penalty,
       diagnostics = diagnostics,
       graph = graph,
       n_train = nrow(Tm)
@@ -349,16 +402,22 @@
 #' @param max_outer Maximum number of alternating (C-step, A-step) updates.
 #' @param tol Relative objective change that declares convergence.
 #' @param refine_path Logical; when fitting a rank path, run the alternating
-#'   refinement for every rank (default \code{FALSE}: path solutions are the
-#'   exact reduced-rank optima, which coincide with the refined solution for
-#'   the unpenalized objective).
+#'   refinement for every rank (default \code{FALSE}: unpenalized path
+#'   solutions are the exact reduced-rank optima, so refinement changes
+#'   nothing). Refinement is always used when a spatial penalty is active.
+#' @param max_inner Maximum proximal-gradient iterations per penalized A-step.
+#' @param tol_inner Relative objective change that stops the A-step solver.
+#' @param tol_iterate Relative change in the patterns required alongside
+#'   \code{tol_inner}. The objective is flat near the optimum, so it can settle
+#'   while the patterns are still moving; both must be small.
 #' @return A list of class \code{pattern_control}.
 #' @examples
 #' pattern_control(max_rank = 3)
 #' @export
 pattern_control <- function(max_rank = 8L, x_scale = c("none", "sd"), y_scale = c("none", "sd"),
                             noise = list(type = "diag_lowrank", rank = "auto", max_rank = 10L, shrink = 0.1),
-                            lambda_2 = 0, max_outer = 50L, tol = 1e-8, refine_path = FALSE) {
+                            lambda_2 = 0, max_outer = 50L, tol = 1e-8, refine_path = FALSE,
+                            max_inner = 500L, tol_inner = 1e-9, tol_iterate = 1e-6) {
   x_scale <- match.arg(x_scale)
   y_scale <- match.arg(y_scale)
   noise_default <- list(type = "diag_lowrank", rank = "auto", max_rank = 10L, shrink = 0.1)
@@ -374,7 +433,9 @@ pattern_control <- function(max_rank = 8L, x_scale = c("none", "sd"), y_scale = 
   structure(
     list(max_rank = as.integer(max_rank), x_scale = x_scale, y_scale = y_scale, noise = noise,
          lambda_2 = lambda_2, max_outer = as.integer(max_outer), tol = tol,
-         refine_path = isTRUE(refine_path)),
+         refine_path = isTRUE(refine_path),
+         max_inner = as.integer(max_inner), tol_inner = tol_inner,
+         tol_iterate = tol_iterate),
     class = c("pattern_control", "list")
   )
 }
@@ -383,6 +444,11 @@ pattern_control <- function(max_rank = 8L, x_scale = c("none", "sd"), y_scale = 
 print.pattern_fit <- function(x, ...) {
   cat(sprintf("pattern_fit: rank %d, %d features (of %d input), %s targets (%d coded dims)\n",
               x$rank, nrow(x$A), x$p_input, x$y_transform$type, x$y_transform$q_eff))
+  if (!is.null(x$penalty) && isTRUE(x$penalty$active)) {
+    cat(sprintf("  penalty: sparse alpha = %.3g (lambda_s = %.4g), signed_smooth rho = %.3g; %d of %d features non-zero\n",
+                x$penalty$alpha, x$penalty$lambda_s, x$penalty$rho,
+                x$diagnostics$n_nonzero %||% NA_integer_, nrow(x$A)))
+  }
   cat(sprintf("  noise: %s (h = %d), n_train = %d, converged = %s after %d outer iterations\n",
               x$noise$type, x$noise$h, x$n_train,
               if (isTRUE(x$diagnostics$converged)) "TRUE" else "FALSE",

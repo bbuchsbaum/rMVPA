@@ -18,10 +18,22 @@ test_that("pattern_model constructor validates inputs and fixes the penalty API"
   expect_false(spec$return_fits)
   expect_output(print(spec), "pattern_model specification")
 
-  expect_error(pattern_model(sim$dataset, sim$design, penalty = list(sparse = 0.1)), "not\\s+implemented")
-  expect_error(pattern_model(sim$dataset, sim$design, penalty = list(support_smooth = "auto")), "not\\s+implemented")
+  # sparse and signed_smooth are implemented; support_smooth is reserved and
+  # must never quietly become a quadratic on signed coefficients
+  sp <- pattern_model(sim$dataset, sim$design, penalty = list(sparse = 0.1))
+  expect_equal(sp$penalty$sparse, 0.1)
+  expect_true(sp$penalty$sparse_active)
+  expect_null(sp$graph)                                # sparsity needs no anatomy
+  sm <- pattern_model(sim$dataset, sim$design, penalty = list(signed_smooth = 0.5))
+  expect_s3_class(sm$graph, "spatial_graph")           # smoothing builds one
+  expect_equal(sm$graph$n_features, ncol(get_feature_matrix(sim$dataset)))
+  expect_error(pattern_model(sim$dataset, sim$design, penalty = list(support_smooth = "auto")),
+               "not implemented")
   expect_error(pattern_model(sim$dataset, sim$design, penalty = list(banana = 1)), "unknown penalty")
-  expect_silent(pattern_model(sim$dataset, sim$design, penalty = list(sparse = 0, signed_smooth = NULL)))
+  expect_error(pattern_model(sim$dataset, sim$design, penalty = list(sparse = 1.5)), "below 1")
+  expect_error(pattern_model(sim$dataset, sim$design, penalty = list(sparse = -1)), "non-negative")
+  # an all-zero penalty is the same as none
+  expect_null(pattern_model(sim$dataset, sim$design, penalty = list(sparse = 0, signed_smooth = NULL))$penalty)
   expect_error(pattern_model(sim$dataset, sim$design, rank = 0), "positive integer")
   expect_error(pattern_model(sim$dataset, sim$design, control = list()), "pattern_control")
   expect_error(pattern_model("nope", sim$design))

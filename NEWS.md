@@ -15,8 +15,20 @@
   global, regional, and searchlight modes;
   `run_global()` returns a `pattern_global_result` carrying the out-of-fold
   prediction ledger, the per-fold fits, and an optional full-data refit.
-  Spatial penalties are declared through `penalty` but rejected in this
-  version. See `pattern_control()` and `predict.pattern_fit()`.
+  See `pattern_control()` and `predict.pattern_fit()`.
+* `pattern_model()` gains spatial penalties on the forward patterns, so what
+  is regularized is where task signal is expressed rather than which
+  measurements help prediction. `penalty = list(sparse = )` is a row-wise
+  group lasso, given as a fraction of the penalty that empties the model, so
+  the same number means the same thing across folds and feature domains;
+  `signed_smooth` adds graph-Laplacian smoothing of the signed loadings,
+  weighted against the data-fit curvature and using a `spatial_graph()` built
+  from the dataset when not supplied. Either may be `"auto"`, which
+  cross-validates over a short path jointly with rank. `support_smooth` is
+  reserved for a smooth support envelope and is rejected rather than quietly
+  redirected, because the two encode different assumptions: smoothing signed
+  loadings cannot represent a code that flips sign within a region. Penalized
+  fits report `n_selected`.
 
 * `haufe_importance()` accepts the training observations (`X = `) and computes
   activation patterns matrix-free, never forming the P x P covariance. The
