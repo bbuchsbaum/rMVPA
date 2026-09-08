@@ -5,7 +5,9 @@
 .DS_Store
 inst/doc
 docs
-adocs/
+adocs/*
+!adocs/pattern-model-plan.md
+!adocs/pattern-model-benchmarks.md
 covr/
 vendor/
 oldR/

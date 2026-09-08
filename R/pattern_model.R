@@ -420,6 +420,10 @@ print.pattern_model <- function(x, ...) {
     }
     fit_k <- .pattern_fit(X[tr, , drop = FALSE], tr_targets, rank = r_k, control = control,
                           cap_rank = TRUE, graph = graph, penalty = pen_k)
+    fit_k$training_observation_ids <- paste0("train:", tt$observation_ids[tr])
+    fit_k$assessment_observation_ids <- if (external) paste0("test:", model$targets_test$observation_ids[te]) else paste0("train:", tt$observation_ids[te])
+    fit_k$fold_definition_hash <- digest::digest(folds[[k]])
+    fit_k$basis_id <- digest::digest(list(C = fit_k$C, y_transform = fit_k$y_transform))
     ranks[k] <- fit_k$rank
     alphas[k] <- fit_k$penalty$alpha %||% 0
     rhos[k] <- fit_k$penalty$rho %||% 0
@@ -481,6 +485,11 @@ print.pattern_model <- function(x, ...) {
                               graph = graph, penalty = pen_all)
   }
 
+  if (!is.null(refit_obj)) {
+    refit_obj$training_observation_ids <- paste0("train:", tt$observation_ids)
+    refit_obj$basis_id <- digest::digest(list(C = refit_obj$C, y_transform = refit_obj$y_transform))
+    refit_obj$fold_definition_hash <- digest::digest(folds)
+  }
   list(metrics = metrics, ledger = ledger, pooled = pooled, ranks = ranks,
        alphas = alphas, rhos = rhos, n_nonzero = nnz,
        fold_fits = if (keep_fits) fold_fits else NULL, refit = refit_obj)
@@ -700,7 +709,7 @@ run_global.pattern_model <- function(model_spec, return_fits = isTRUE(model_spec
                                   keep_fits = isTRUE(return_fits), refit = isTRUE(refit),
                                   graph = model_spec$graph)
 
-  structure(
+  result <- structure(
     list(
       performance_table = tibble::as_tibble(as.list(out$metrics)),
       ledger = out$pooled,
@@ -718,6 +727,17 @@ run_global.pattern_model <- function(model_spec, return_fits = isTRUE(model_spec
     ),
     class = c("pattern_global_result", "list")
   )
+  result$component_stability <- if (length(out$fold_fits) >= 2L) component_stability(result) else NULL
+  if (length(out$fold_fits)) {
+    assessment <- if (is.null(X_test)) X else X_test
+    result$haufe_diagnostics <- lapply(seq_along(out$fold_fits), function(k) {
+      rows <- out$ledger$observation[out$ledger$fold == k]
+      if (length(rows) < 2L) return(list(status = "fewer than two held-out rows"))
+      pattern_haufe(out$fold_fits[[k]], assessment[rows, , drop = FALSE],
+                    out$fold_fits[[k]]$assessment_observation_ids)
+    })
+  }
+  result
 }
 
 #' @export
