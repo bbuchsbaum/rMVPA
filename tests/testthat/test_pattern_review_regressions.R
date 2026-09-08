@@ -76,3 +76,17 @@ test_that("fixed-rank tuning respects each fold's eligible rank", {
   expect_equal(selected$loss, (2 + 3*.5)/4)
   expect_equal(selected$rank, 2)
 })
+
+
+test_that("coincident ROI coordinates do not alias retained test columns", {
+  set.seed(774)
+  sp <- neuroim2::NeuroSpace(c(3, 3, 3), c(1, 1, 1))
+  coords <- rbind(c(1, 1, 1), c(2, 2, 2), c(1, 1, 1))
+  train <- cbind(0, rnorm(20), rnorm(20))
+  test <- matrix(rnorm(60), 20, 3)
+  roi <- list(train_roi = neuroim2::ROIVec(sp, coords, train),
+    test_roi = neuroim2::ROIVec(sp, coords, test), feature_positions = c(8L, 9L, 10L))
+  filtered <- filter_roi(roi)
+  expect_equal(as.matrix(neuroim2::values(filtered$test_roi)), test[, 2:3], ignore_attr = TRUE)
+  expect_equal(filtered$feature_positions, c(9L, 10L))
+})
