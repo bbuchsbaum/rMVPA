@@ -1,6 +1,6 @@
 # Pattern-first spatial reduced-rank MVPA (`pattern_model`) — assessment and implementation plan
 
-**Status:** Phases 0-6 implemented within the boundaries below; local validation recorded; package gates and dependent PR review pending. Supported-rank tests (5b), support envelope/local noise (3b), and joint hierarchical fitting remain extensions.
+**Status:** Phases 0-6 implemented within the boundaries below; local package and integration gates passed as recorded below; dependent PR review and hosted gates pending. Supported-rank tests (5b), support envelope/local noise (3b), and joint hierarchical fitting remain extensions.
 **Date:** 2026-09-06
 **Base commit:** `acccd31` (master)
 **Scope:** assess the "pattern-first spatial reduced-rank MVPA" proposal and turn it into a staged, verifiable implementation plan for rMVPA.
@@ -288,6 +288,13 @@ Tests: null calibration (uniform p under label shuffling within block structure)
 - `inst/benchmarks/pattern_model/validate_group.R`: 2,000 Gaussian sufficient-statistic null experiments with 24 subjects and rank 2 gave mean p = 0.5021 and 5.0% rejection at nominal 5%. Mean heterogeneity trace was 0.2492 versus the known 0.25. The heterogeneous-precision stress case gave mean p = 0.5031 and 4.6% rejection, supporting that tested case without making heterogeneous-precision inference exact.
 - That 24-subject, 2,000-feature workload took 7.723 seconds and retained 9,224,552 bytes on the same R 4.5.1/macOS arm64 environment. Confirmation and group guides rendered and passed visual inspection, including their figures; the owned temporary browser closed and its tooling was removed.
 - Phase 5 is independently committed and published as draft PR #94, stacked on #93. Phase 6 is a separate dependent change. Full package artifact receipts follow below; hosted checks, human review, merge, and guide deployment remain pending.
+
+**Final combined artifact receipt (2026-09-07):**
+
+- Packaged code commit: `2702c2f54ec13acbbbb9c159753809071087af90`. Final combined archive SHA256: `0b2da3f97c2c055adb4337cefe7398a469232c7267bb14872a07ad168dca1f07`. All 566 packaged code/test/help/vignette source files were compared byte-for-byte with that commit; DESCRIPTION fields also match. Later receipt-only commits change tracked planning documentation, which is excluded from the package.
+- On the same R 4.5.1/macOS arm64 environment, `R CMD check --no-manual --no-tests` completed with **0 errors, 0 warnings, 0 notes**, including installation, examples, dependency/S3/help checks, and rebuilding all 34 vignette outputs. The archive reused the already-rendered Phase 5 vignette assets plus the freshly rendered group guide during `R CMD build --no-build-vignettes`; the check itself rebuilt the vignette sources successfully.
+- Tests were deliberately not repeated inside this second package check: the full default core suite had already passed on the Phase 5 artifact, and the final combined head passed 828 focused/integration assertions after the two dependency follow-ups. This final run includes all 139 new confirmation, group, and review-regression assertions. It had one existing two-block warning and one opt-in performance guardrail skip. Neither a new complete default suite on the final head nor a PDF manual check is claimed.
+- Draft PR #94 holds Phase 5; draft PR #95 holds Phase 6, stacked on #94. Their earlier dependencies remain #93 and #91. Hosted package CI has not run on these phase-branch PR bases (the current workflow filters master/main); human review, merge, guide deployment, and release remain pending. Local checks are not substituted for those gates.
 
 ---
 
