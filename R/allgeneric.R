@@ -389,6 +389,7 @@ process_roi.default <- function(mod_spec, roi, rnum, center_global_id = NA, ...)
       train_data = as.matrix(neuroim2::values(roi$train_roi)),
       test_data = if (!is.null(roi$test_roi)) as.matrix(neuroim2::values(roi$test_roi)) else NULL,
       indices = neuroim2::indices(roi$train_roi),
+      feature_positions = roi$feature_positions,
       train_roi = roi$train_roi,
       test_roi = roi$test_roi
     )

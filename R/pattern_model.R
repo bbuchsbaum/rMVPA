@@ -305,7 +305,7 @@ print.pattern_model <- function(x, ...) {
 # feature, or a smoothness assumption is only taken on when it buys held-out
 # accuracy.
 .pattern_select_config <- function(X, targets, blocks, control, penalty = NULL,
-                                   graph = NULL) {
+                                   graph = NULL, rank = "auto") {
   n <- nrow(X)
   folds <- .pattern_inner_folds(n, blocks)
   grid <- .pattern_penalty_grid(penalty)
@@ -343,13 +343,14 @@ print.pattern_model <- function(x, ...) {
     l <- loss_mat[[g]]
     if (is.null(l) || !length(l) || !any(is.finite(l))) next
     l <- unname(l) / max(n_used[g], 1L)
-    r <- as.integer(which.min(l))
+    r <- if (identical(rank, "auto")) as.integer(which.min(l)) else min(as.integer(rank), length(l))
     if (is.null(best) || l[r] < best$loss - 1e-12) {
       best <- list(rank = r, penalty = grid[[g]], loss = l[r], losses = l, grid_index = g)
     }
   }
   if (is.null(best)) {
-    return(list(rank = 1L, penalty = grid[[1]], losses = NULL, grid_index = 1L))
+    return(list(rank = if (identical(rank, "auto")) 1L else as.integer(rank),
+                penalty = grid[[1]], losses = NULL, grid_index = 1L))
   }
   best
 }
@@ -411,7 +412,7 @@ print.pattern_model <- function(x, ...) {
     tune <- identical(model$rank, "auto") || .pattern_penalty_needs_tuning(model$penalty)
     if (tune) {
       sel <- .pattern_select_config(X[tr, , drop = FALSE], tr_targets, blocks[tr], control,
-                                    penalty = model$penalty, graph = graph)
+                                    penalty = model$penalty, graph = graph, rank = model$rank)
       r_k <- if (identical(model$rank, "auto")) sel$rank else model$rank
       pen_k <- sel$penalty
     } else {
@@ -474,7 +475,7 @@ print.pattern_model <- function(x, ...) {
   if (isTRUE(refit)) {
     if (identical(model$rank, "auto") || .pattern_penalty_needs_tuning(model$penalty)) {
       sel <- .pattern_select_config(X, targets, blocks, control,
-                                    penalty = model$penalty, graph = graph)
+                                    penalty = model$penalty, graph = graph, rank = model$rank)
       r_all <- if (identical(model$rank, "auto")) sel$rank else model$rank
       pen_all <- sel$penalty
     } else {
@@ -733,8 +734,11 @@ run_global.pattern_model <- function(model_spec, return_fits = isTRUE(model_spec
     result$haufe_diagnostics <- lapply(seq_along(out$fold_fits), function(k) {
       rows <- out$ledger$observation[out$ledger$fold == k]
       if (length(rows) < 2L) return(list(status = "fewer than two held-out rows"))
-      pattern_haufe(out$fold_fits[[k]], assessment[rows, , drop = FALSE],
-                    out$fold_fits[[k]]$assessment_observation_ids)
+      fit_k <- out$fold_fits[[k]]
+      X_hold <- assessment[rows, , drop = FALSE]
+      if (any(!is.finite(X_hold[, fit_k$feature_index, drop = FALSE])))
+        return(list(status = "non-finite held-out retained features"))
+      pattern_haufe(fit_k, X_hold, fit_k$assessment_observation_ids)
     })
   }
   result
@@ -846,6 +850,12 @@ performance.pattern_global_result <- function(x, ...) {
 .pattern_roi_graph <- function(model, roi_data) {
   g <- model$graph
   if (is.null(g)) return(NULL)
+  if (inherits(model$dataset, "mvpa_clustered_dataset")) {
+    pos <- roi_data$feature_positions
+    if (is.null(pos) || length(pos) != ncol(roi_data$train_data))
+      stop("Clustered ROIs require aligned feature_positions.", call. = FALSE)
+    return(restrict_graph(g, pos))
+  }
   idx <- roi_data$indices
   if (is.null(idx)) return(NULL)
   pos <- .pattern_graph_positions(g, idx)

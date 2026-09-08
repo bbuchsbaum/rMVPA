@@ -276,6 +276,9 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
     result <- list(train_roi=troi, test_roi=teroi)
   }
 
+  # Carry actual retained columns; centroid coordinates need not identify clusters.
+  result$column_positions <- which(keep)
+  if (!is.null(roi$feature_positions)) result$feature_positions <- roi$feature_positions[keep]
   # Propagate basis_count to downstream consumers
   result$basis_count <- roi$basis_count
   result
@@ -308,6 +311,10 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
          }
        } else NULL)
   result$basis_count <- roi$basis_count
+  if (!is.null(roi$feature_positions)) {
+    if (is.null(filtered$column_positions)) stop("ROI filter did not retain column positions.", call. = FALSE)
+    result$feature_positions <- roi$feature_positions[filtered$column_positions]
+  }
   result
 }
 
