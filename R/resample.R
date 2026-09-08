@@ -298,7 +298,7 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
          # Use the logical mask from filtered train ROI indices
          keep_idx <- neuroim2::indices(filtered$train_roi)
          orig_idx <- neuroim2::indices(roi$train_roi)
-         kp <- match(keep_idx, orig_idx)
+         kp <- filtered$column_positions %||% match(keep_idx, orig_idx)
          # Guard against mismatch
          if (any(is.na(kp))) {
            warning("filter_roi.list: index mismatch between filtered train and original train ROI; ",
