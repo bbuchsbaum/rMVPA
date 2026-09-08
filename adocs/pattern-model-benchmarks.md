@@ -113,3 +113,20 @@ covariance model from the subspace. A full searchlight-versus-global comparison
 belongs with Phase 4's `local_performance()`, where restricted regional
 prediction becomes a first-class output and the two methods can be scored on
 the same regions and rows.
+
+
+## Confirmation inference validation (2026-09-07)
+
+The reproducible script `inst/benchmarks/pattern_model/validate_confirmation.R`
+adds 1,000 null experiments over 40 generated designs with 30 independent blocks.
+At nominal 5%, the CR1 Wald approximation rejected 8.4% (mean p 0.4549), while
+the restricted block wild bootstrap with 199 draws rejected 4.1% (mean p 0.4992).
+The maximum-statistic omnibus family rejected in 3/40 designs. This small family
+count does not establish a precise family-wise rate. CR1 remains available as an
+explicit approximation; the worked confirmation guide uses the bootstrap.
+
+A 400-row, 2,000-feature, rank-2 CR1 regression with 40 blocks took 0.032 seconds
+and retained 242,584 bytes of fit summaries on R 4.5.1 / macOS arm64 / Accelerate
+BLAS. The complete null simulation took 23.788 seconds. The implementation uses
+one QR decomposition and rank-sized per-feature covariance, with vectorized
+rank-1 and rank-2 statistics; no dense n-by-n or p-by-p covariance is allocated.

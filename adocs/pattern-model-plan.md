@@ -1,6 +1,6 @@
 # Pattern-first spatial reduced-rank MVPA (`pattern_model`) — assessment and implementation plan
 
-**Status:** Phases 0-4 implemented and locally validated; Phase 4 review pending; Phases 5-6 deferred
+**Status:** Phases 0-5 implemented; local Phase 5 validation recorded below; dependent PR review and full package gates pending; Phase 6 follows separately
 **Date:** 2026-09-06
 **Base commit:** `acccd31` (master)
 **Scope:** assess the "pattern-first spatial reduced-rank MVPA" proposal and turn it into a staged, verifiable implementation plan for rMVPA.
@@ -244,6 +244,23 @@ Exit: v1 feature-complete. Write `vignettes/Pattern_Model.Rmd` (classification +
 4. `rank_supported` deferred to 5b with its own validated null.
 
 Tests: null calibration (uniform p under label shuffling within block structure), power on `sim_pattern_data`, refusal when discovery/confirmation rows overlap.
+
+**Phase 5 as built (2026-09-07):**
+
+- `confirmation_plan()`, `pattern_basis()`, `pattern_confirm()`, and `pattern_component_tests()` live in `R/pattern_inference.R`. Confirmation performs unpenalized mass regression in original measurement units on frozen, training-whitened target scores with an intercept and optional numeric nuisance columns. Every input feature is tested, including discovery-screened features. Rank-deficient designs are rejected; singular sampling distributions yield unavailable tests.
+- Independent Gaussian t/F tests, CR1 block sandwich approximations, and restricted-residual Rademacher block wild bootstrap are explicit choices. The bootstrap refits each component's restricted null as well as the omnibus null. It is approximate with estimated nuisance effects, not an exact permutation test. Holm families are all feature-component pairs and all feature omnibus tests separately. Bootstrap maxima span features within component (with Bonferroni across components), or all feature omnibus statistics separately. Unavailable bootstrap covariance is treated conservatively. RNG state is restored.
+- Component association adjusts for nuisance but is marginal over other components. Incremental value fits full and reduced ordinary least-squares score-to-raw-target heads on caller-supplied discovery/calibration rows, then compares squared loss on untouched confirmation rows. Loss is averaged across raw target columns, within blocks, and equally across blocks. The paired t / centered wild-bootstrap inference is approximate; these are new linear heads, not the original Gaussian posterior decoder. Calibration is optional so association does not require retaining discovery measurements.
+- The API requires globally meaningful discovery/confirmation IDs, explicit feature IDs, and a preprocessing recipe/unit identifier. It checks overlap and target/feature ordering, retains content and fit hashes, full frozen basis, nuisance, blocks, subject identity, and covariance. These are caller assertions about identity and independence, not proof based on legacy positional train/test prefixes. Independent errors store a small design covariance times feature residual variances; block methods store rank-by-rank covariance at each feature, never feature-by-feature covariance. Rank-1/2 block statistics are vectorized.
+- The raw target basis includes training scaling and whitening, enabling exact later transport of both coefficients and covariance. Display rotations continue to use the underlying fitted inference basis. `rank_supported` remains Phase 5b: neither a component test nor selected CV rank supplies a validated sequential rank null.
+- The separate prerequisite commit fixes reproduced PR #91/#93 findings: fixed-rank penalty selection evaluates the requested eligible rank, clustered ROI filtering propagates actual cluster-column positions to spatial graphs, and unavailable optional Haufe diagnostics do not discard completed evaluations. Eleven regression assertions pass, alongside the existing integration tests.
+- `vignettes/Pattern_Confirmation.Rmd` gives a runnable discovery/confirmation workflow, loading and component tests, calibration boundaries, covariance/provenance storage, and statistical limits. It is linked from the existing guide and pkgdown index.
+
+**Phase 5 local evidence:**
+
+- Independent `lm`/ANOVA and dense cluster-sandwich oracles; full coefficient/covariance rotation tests; overlap, ordering, rank deficiency, categorical rank-one and degenerate-score regressions; calibrated-head predictions and paired loss tests. The dedicated inference file passed 69 assertions without test warnings before the final package gate. Integration covers pattern files, `fit_roi`, plugin extension API, global analysis, output schema, and Collate; its sole warning is the existing two-block simulation warning.
+- `inst/benchmarks/pattern_model/validate_confirmation.R`: 1,000 null experiments across 40 independently generated 30-block designs. CR1 omnibus mean p = 0.4549, rejection at nominal 5% = 8.4%; restricted wild bootstrap (199 draws) mean p = 0.4992, rejection = 4.1%. The global-null maximum family rejected in 3 of 40 designs (7.5%, a noisy estimate). This is evidence for the tested design, not universal calibration. The guide recommends the bootstrap example and explicitly reports the sandwich limitation.
+- On macOS arm64, R 4.5.1 / Accelerate BLAS, the 400-row, 2,000-feature, rank-2, 40-block CR1 regression took 0.032 seconds and retained 242,584 bytes of regression summaries. The null simulation took 23.788 seconds. These are recorded workloads, not cross-platform performance guarantees.
+- Full artifact package checks and rendered-guide inspection are recorded with the subsequent validation receipt; hosted CI, independent review, merging, and guide deployment remain separate gates.
 
 ### Phase 6 — Group analysis (after Phase 5)
 
