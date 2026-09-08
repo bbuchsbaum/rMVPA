@@ -130,3 +130,19 @@ and retained 242,584 bytes of fit summaries on R 4.5.1 / macOS arm64 / Accelerat
 BLAS. The complete null simulation took 23.788 seconds. The implementation uses
 one QR decomposition and rank-sized per-feature covariance, with vectorized
 rank-1 and rank-2 statistics; no dense n-by-n or p-by-p covariance is allocated.
+
+
+## Group sufficient-statistic validation (2026-09-07)
+
+`inst/benchmarks/pattern_model/validate_group.R` generates known Gaussian subject
+estimates independently of the confirmation regression. Across 2,000 rank-2
+null experiments with 24 subjects, omnibus mean p was 0.5021 and the nominal 5%
+rejection fraction was 5.0%. Estimated mean between-subject covariance trace was
+0.2492 versus true 0.25. A heterogeneous-precision stress case gave mean p 0.5031
+and rejection 4.6%; this supports the tested regime, not exact inference for
+arbitrary heterogeneity.
+
+The 24-subject / 2,000-feature random-effects workload took 7.723 seconds and
+retained 9,224,552 bytes on R 4.5.1 / macOS arm64 / Accelerate BLAS. Group pooling
+transports one feature's subject covariances at a time and retains aligned
+coefficients, mean/between covariance, identity mappings, and provenance.

@@ -1,6 +1,6 @@
 # Pattern-first spatial reduced-rank MVPA (`pattern_model`) — assessment and implementation plan
 
-**Status:** Phases 0-5 implemented; local Phase 5 validation recorded below; dependent PR review and full package gates pending; Phase 6 follows separately
+**Status:** Phases 0-6 implemented within the boundaries below; local validation recorded; package gates and dependent PR review pending. Supported-rank tests (5b), support envelope/local noise (3b), and joint hierarchical fitting remain extensions.
 **Date:** 2026-09-06
 **Base commit:** `acccd31` (master)
 **Scope:** assess the "pattern-first spatial reduced-rank MVPA" proposal and turn it into a staged, verifiable implementation plan for rMVPA.
@@ -265,6 +265,22 @@ Tests: null calibration (uniform p under label shuffling within block structure)
 ### Phase 6 — Group analysis (after Phase 5)
 
 `R/pattern_group.R`: `pattern_group(subject_confirmations, reference_basis, spatial_mapping, effects = "random")` operating on subject loading estimates and SEs in a shared target basis; mean pattern, heterogeneity, subject expression, prediction summaries. Joint hierarchical estimator `A_s = M_s A_0 + Delta_s` is a later extension.
+
+**Phase 6 as built (2026-09-07):**
+
+- `pattern_group()` in `R/pattern_group.R` requires distinct subject IDs and independent confirmation observations, checks their union against every discovery set, and checks preprocessing recipe and nuisance definitions. It aligns target names and solves the exact raw-target basis relation, transporting both loadings and full coefficient covariance. Unequal target subspaces are rejected rather than Procrustes-approximated. The returned reference-coordinate hash is recomputed from the actual matrix, retaining the source discovery hash separately.
+- Spatial mappings are explicit one-to-one correspondences in a common feature set, optionally selecting a shared subset. Implicit matching uses exact feature IDs. Many-to-one aggregation/interpolation is rejected because the confirmation object does not retain the cross-feature covariance required for its uncertainty. The user must perform such transformations before confirmation and establish common units, target/nuisance meaning, and conditional estimands.
+- Random effects estimate the equally weighted subject population mean. Mean covariance is sample coefficient covariance divided by subject count; within-subject error is not counted twice. Component tests use t(s-1) and omnibus tests use Hotelling F(r, s-r). These are exact for iid Gaussian subject estimates with common total covariance, approximate with unequal precision or nonnormal effects. At least r+2 subjects are required. Singular distributions yield unavailable inference.
+- Between-subject covariance is the PSD projection of sample covariance minus average within-subject covariance: a transparent moment estimator, not REML or a fitted joint hierarchy. Fixed effects are full-covariance GLS with asymptotic normal/chi-squared inference. The heterogeneity Q diagnostic uses r(s-1) df and treats within-subject covariance as known. It is unadjusted and distinct from the corrected component/omnibus families.
+- Scalar norms, omnibus tests, heterogeneity trace, and leave-one-subject-out expression are invariant to orthogonal reference rotations. Component columns and their tests remain basis dependent. Subject expression is descriptive, not an independent group decoder. Original decoder prediction metrics remain subject-resolved and have equal-subject summaries; unavailable metrics do not silently drop a subject.
+- Group covariance is transformed one feature at a time; there is no duplicated rank-by-rank-by-feature-by-subject working array. Aligned coefficients and final mean/between covariance are retained. The guide `vignettes/Pattern_Group.Rmd` covers the full public workflow, correspondence, uncertainty, heterogeneity, invariance, and the separate hierarchical/rank extensions.
+
+**Phase 6 local evidence:**
+
+- 54 focused group assertions cover independent GLS and Hotelling oracles, unequal-scale basis transport, orthogonal invariance, identity-safe spatial mappings, rank-one/three paths, singular covariance, covariance validity at tiny measurement scales, prediction summaries, and reference hash integrity. The two new implementation files have 96.13% line coverage from the targeted confirmation/group tests (up from 88.89% before the additional boundary and rank-three tests); this is not repository-wide coverage.
+- `inst/benchmarks/pattern_model/validate_group.R`: 2,000 Gaussian sufficient-statistic null experiments with 24 subjects and rank 2 gave mean p = 0.5021 and 5.0% rejection at nominal 5%. Mean heterogeneity trace was 0.2492 versus the known 0.25. The heterogeneous-precision stress case gave mean p = 0.5031 and 4.6% rejection, supporting that tested case without making heterogeneous-precision inference exact.
+- That 24-subject, 2,000-feature workload took 7.723 seconds and retained 9,224,552 bytes on the same R 4.5.1/macOS arm64 environment. Confirmation and group guides rendered and passed visual inspection, including their figures; the owned temporary browser closed and its tooling was removed.
+- Phase 5 is independently committed and published as draft PR #94, stacked on #93. Phase 6 is a separate dependent change. Full package artifact receipts follow below; hosted checks, human review, merge, and guide deployment remain pending.
 
 ---
 
