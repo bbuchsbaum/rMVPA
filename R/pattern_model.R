@@ -320,12 +320,13 @@ print.pattern_model <- function(x, ...) {
     Xte <- X[f$test, , drop = FALSE]
     te_targets <- .pattern_subset_rows(targets, f$test)
     for (g in seq_along(grid)) {
-      path <- tryCatch(
-        .pattern_fit(Xtr, tr_targets, rank = "path", control = control,
+      fitted <- tryCatch(
+        .pattern_fit(Xtr, tr_targets, rank = if (identical(rank, "auto")) "path" else rank, control = control,
                      graph = graph, penalty = grid[[g]]),
         error = function(e) NULL
       )
-      if (is.null(path)) next
+      if (is.null(fitted)) next
+      path <- if (identical(rank, "auto")) fitted else list(fitted)
       l <- vapply(path, function(fit) .pattern_loss(fit, Xte, te_targets), numeric(1))
       if (!all(is.finite(l))) next
       if (is.null(loss_mat[[g]])) {
@@ -343,9 +344,10 @@ print.pattern_model <- function(x, ...) {
     l <- loss_mat[[g]]
     if (is.null(l) || !length(l) || !any(is.finite(l))) next
     l <- unname(l) / max(n_used[g], 1L)
-    r <- if (identical(rank, "auto")) as.integer(which.min(l)) else min(as.integer(rank), length(l))
+    r <- if (identical(rank, "auto")) as.integer(which.min(l)) else 1L
     if (is.null(best) || l[r] < best$loss - 1e-12) {
-      best <- list(rank = r, penalty = grid[[g]], loss = l[r], losses = l, grid_index = g)
+      best <- list(rank = if (identical(rank, "auto")) r else as.integer(rank),
+                   penalty = grid[[g]], loss = l[r], losses = l, grid_index = g)
     }
   }
   if (is.null(best)) {

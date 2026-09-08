@@ -1,7 +1,8 @@
 test_that("fixed-rank tuning compares penalties at the rank that will be fitted", {
   testthat::local_mocked_bindings(
     .pattern_fit = function(X, targets, rank, control, graph, penalty) {
-      list(list(rank = 1, sparse = penalty$sparse), list(rank = 2, sparse = penalty$sparse))
+      path <- list(list(rank = 1, sparse = penalty$sparse), list(rank = 2, sparse = penalty$sparse))
+      if (identical(rank, "path")) path else path[[rank]]
     },
     .pattern_loss = function(fit, X, targets) {
       if (fit$sparse == 0.1) c(1, 0.1)[fit$rank] else c(0.5, 0.4)[fit$rank]
@@ -52,4 +53,26 @@ test_that("optional Haufe diagnostics do not discard an evaluation with missing 
   model <- pattern_model(sim$dataset, sim$design, rank = 1)
   utils::capture.output(out <- suppressMessages(run_global(model, return_fits = TRUE)))
   expect_equal(out$haufe_diagnostics[[1]]$status, "non-finite held-out retained features")
+})
+
+
+test_that("fixed-rank tuning respects each fold's eligible rank", {
+  testthat::local_mocked_bindings(
+    .pattern_fit = function(X, targets, rank, control, graph, penalty) {
+      cap <- if (1 %in% X[, 1]) 2L else 1L
+      path <- lapply(seq_len(cap), function(k) list(rank = k, sparse = penalty$sparse))
+      if (identical(rank, "path")) path else path[[min(rank, cap)]]
+    },
+    .pattern_loss = function(fit, X, targets) {
+      if (fit$sparse == .1) c(.2, 20)[fit$rank] else c(2, .5)[fit$rank]
+    }
+  )
+  X <- cbind(1:40, 41:80)
+  selected <- .pattern_select_config(X, X, rep(1:4, each = 10), pattern_control(),
+    penalty = list(sparse = c(.1, .8)), rank = 2)
+  # One inner fold fits eligible rank one; three fit requested rank two.
+  # Taking the minimum common path rank would incorrectly choose sparse=.1.
+  expect_equal(selected$penalty$sparse, .8)
+  expect_equal(selected$loss, (2 + 3*.5)/4)
+  expect_equal(selected$rank, 2)
 })
