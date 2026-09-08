@@ -322,7 +322,7 @@ print.pattern_model <- function(x, ...) {
     for (g in seq_along(grid)) {
       fitted <- tryCatch(
         .pattern_fit(Xtr, tr_targets, rank = if (identical(rank, "auto")) "path" else rank, control = control,
-                     graph = graph, penalty = grid[[g]]),
+                     graph = graph, penalty = grid[[g]], cap_rank = TRUE),
         error = function(e) NULL
       )
       if (is.null(fitted)) next

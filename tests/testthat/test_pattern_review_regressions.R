@@ -1,6 +1,6 @@
 test_that("fixed-rank tuning compares penalties at the rank that will be fitted", {
   testthat::local_mocked_bindings(
-    .pattern_fit = function(X, targets, rank, control, graph, penalty) {
+    .pattern_fit = function(X, targets, rank, control, graph, penalty, cap_rank = FALSE) {
       path <- list(list(rank = 1, sparse = penalty$sparse), list(rank = 2, sparse = penalty$sparse))
       if (identical(rank, "path")) path else path[[rank]]
     },
@@ -58,8 +58,9 @@ test_that("optional Haufe diagnostics do not discard an evaluation with missing 
 
 test_that("fixed-rank tuning respects each fold's eligible rank", {
   testthat::local_mocked_bindings(
-    .pattern_fit = function(X, targets, rank, control, graph, penalty) {
+    .pattern_fit = function(X, targets, rank, control, graph, penalty, cap_rank = FALSE) {
       cap <- if (1 %in% X[, 1]) 2L else 1L
+      if (!identical(rank, "path") && rank > cap && !cap_rank) stop("exceeds eligible rank")
       path <- lapply(seq_len(cap), function(k) list(rank = k, sparse = penalty$sparse))
       if (identical(rank, "path")) path else path[[min(rank, cap)]]
     },
@@ -89,4 +90,28 @@ test_that("coincident ROI coordinates do not alias retained test columns", {
   filtered <- filter_roi(roi)
   expect_equal(as.matrix(neuroim2::values(filtered$test_roi)), test[, 2:3], ignore_attr = TRUE)
   expect_equal(filtered$feature_positions, c(9L, 10L))
+})
+
+
+test_that("real fixed-rank tuning caps feature-limited inner fits", {
+  set.seed(775)
+  Y <- cbind(signal = rnorm(80), other = rnorm(80))
+  X <- matrix(2 * Y[, 1] + rnorm(80, sd = .4), ncol = 1)
+  blocks <- rep(1:4, each = 20)
+  control <- pattern_control(max_rank = 2, noise = list(type = "diag"))
+  candidates <- list(sparse = c(.1, .8))
+  grid <- .pattern_penalty_grid(candidates)
+  folds <- .pattern_inner_folds(nrow(X), blocks)
+  # Direct capped fits provide the oracle. Every inner fit has eligible rank
+  # one although the caller requested two; dropping them would choose the
+  # fallback (first/strongest) penalty instead of the lowest held-out loss.
+  losses <- vapply(grid, function(penalty) mean(vapply(folds, function(f) {
+    fit <- .pattern_fit(X[f$train, , drop = FALSE], Y[f$train, , drop = FALSE],
+      rank = 2, control = control, penalty = penalty, cap_rank = TRUE)
+    .pattern_loss(fit, X[f$test, , drop = FALSE], Y[f$test, , drop = FALSE])
+  }, numeric(1))), numeric(1))
+  selected <- .pattern_select_config(X, Y, blocks, control, penalty = candidates, rank = 2)
+  expect_equal(which.min(losses), 2L)
+  expect_equal(selected$penalty, grid[[which.min(losses)]])
+  expect_equal(selected$loss, min(losses), tolerance = 1e-10)
 })
