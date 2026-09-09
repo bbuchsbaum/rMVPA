@@ -281,9 +281,11 @@
 #' @param graph optional spatial_graph aligned to the columns of X (unused in
 #'   Phase 2; stored for Phase 3).
 #' @param weights optional non-negative observation weights (length n). The
-#'   fit minimizes the weighted objective; integer weights are exactly
-#'   equivalent to replicating rows, and zero-weight rows are dropped up
-#'   front, so a zero weight is exactly equivalent to omitting the row.
+#'   fit minimizes the weighted objective; integer weights match row
+#'   replication for the weighted estimating equations (exactly under
+#'   identity noise). Residual df and Bessel corrections use the compressed
+#'   row count so weights stay scale-invariant. Zero-weight rows are dropped
+#'   up front, so a zero weight is exactly equivalent to omitting the row.
 #' @return A `pattern_fit`, or for rank = "path" a list of `pattern_fit`s.
 #' @keywords internal
 #' @noRd
@@ -336,8 +338,10 @@
   # leaving the algebra untouched: crossprod(Yw)/n is still the identity, so
   # the C-step stays an exact Procrustes problem; the A-step normal equations,
   # the pilot residuals, the noise estimate, and the penalty scale
-  # (lambda_max, curvature) all become weighted for free. Integer weights are
-  # exactly row replication (the normalizations agree because w sums to n).
+  # (lambda_max, curvature) all become weighted for free. Integer weights match
+  # row replication for these 1/n normalizations (w sums to n); residual df
+  # still uses the compressed row count, so default-noise Psi is scale-invariant
+  # rather than literal-replication df.
   if (!is.null(w)) {
     sw <- sqrt(w)
     Xc <- Xc * sw

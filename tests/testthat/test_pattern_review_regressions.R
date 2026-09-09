@@ -56,6 +56,18 @@ test_that("optional Haufe diagnostics do not discard an evaluation with missing 
   expect_equal(out$haufe_diagnostics[[1]]$status, "non-finite held-out retained features")
 })
 
+test_that("optional Haufe diagnostics do not discard an evaluation with reused observation IDs", {
+  sim <- sim_pattern_data(n = 48, dims = c(3, 3, 2), K = 2, seed = 773)
+  model <- pattern_model(sim$dataset, sim$design, rank = 1)
+  # Non-unique design IDs make assessment IDs collide; diagnostics must soft-fail.
+  model$targets_train$observation_ids <- rep(seq_len(24), each = 2)
+  utils::capture.output(out <- suppressMessages(run_global(model, return_fits = TRUE)))
+  expect_true(is.data.frame(out$performance_table) || inherits(out$performance_table, "tbl_df"))
+  expect_true(all(vapply(out$haufe_diagnostics, function(h) {
+    is.list(h) && identical(h$status, "invalid held-out observation_ids")
+  }, logical(1))))
+})
+
 
 test_that("fixed-rank tuning respects each fold's eligible rank", {
   testthat::local_mocked_bindings(

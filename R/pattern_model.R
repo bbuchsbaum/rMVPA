@@ -110,9 +110,12 @@
 #'   supplied here overrides the design's weights. Weights enter the estimator
 #'   itself -- centring, target whitening, the residual-covariance estimate,
 #'   and the penalized objective are all weighted -- and the held-out loss
-#'   that drives rank/penalty selection. Integer weights are exactly
-#'   equivalent to replicating rows, and a zero weight is exactly equivalent
-#'   to omitting the row from training. Reported performance metrics remain
+#'   that drives rank/penalty selection. Integer weights match row
+#'   replication for the weighted estimating equations (and exactly under
+#'   \code{noise = "identity"}); residual degrees of freedom use the
+#'   compressed row count so weights stay scale-invariant. A zero weight is
+#'   exactly equivalent to omitting the row from training, including from
+#'   \code{training_observation_ids}. Reported performance metrics remain
 #'   unweighted: every tested observation counts once.
 #' @param ... Additional fields stored on the specification.
 #' @return A \code{pattern_model} specification (class
@@ -482,7 +485,10 @@ print.pattern_model <- function(x, ...) {
     }
     fit_k <- .pattern_fit(X[tr, , drop = FALSE], tr_targets, rank = r_k, control = control,
                           cap_rank = TRUE, graph = graph, penalty = pen_k, weights = w_tr)
-    fit_k$training_observation_ids <- paste0("train:", tt$observation_ids[tr])
+    # Zero-weight training rows are dropped inside .pattern_fit; keep the ID
+    # list aligned so "omitted" rows are not treated as in-sample later.
+    tr_used <- if (is.null(w_tr)) tr else tr[w_tr > 0]
+    fit_k$training_observation_ids <- paste0("train:", tt$observation_ids[tr_used])
     fit_k$assessment_observation_ids <- if (external) paste0("test:", model$targets_test$observation_ids[te]) else paste0("train:", tt$observation_ids[te])
     fit_k$fold_definition_hash <- digest::digest(folds[[k]])
     fit_k$basis_id <- digest::digest(list(C = fit_k$C, y_transform = fit_k$y_transform))
@@ -549,7 +555,8 @@ print.pattern_model <- function(x, ...) {
   }
 
   if (!is.null(refit_obj)) {
-    refit_obj$training_observation_ids <- paste0("train:", tt$observation_ids)
+    used <- if (is.null(w_all)) seq_len(n) else which(w_all > 0)
+    refit_obj$training_observation_ids <- paste0("train:", tt$observation_ids[used])
     refit_obj$basis_id <- digest::digest(list(C = refit_obj$C, y_transform = refit_obj$y_transform))
     refit_obj$fold_definition_hash <- digest::digest(folds)
   }
@@ -800,7 +807,16 @@ run_global.pattern_model <- function(model_spec, return_fits = isTRUE(model_spec
       X_hold <- assessment[rows, , drop = FALSE]
       if (any(!is.finite(X_hold[, fit_k$feature_index, drop = FALSE])))
         return(list(status = "non-finite held-out retained features"))
-      pattern_haufe(fit_k, X_hold, fit_k$assessment_observation_ids)
+      ids <- fit_k$assessment_observation_ids
+      # Keep optional diagnostics from aborting a finished evaluation when
+      # bootstrap/custom splits reuse IDs or designs lack unique row IDs.
+      if (!is.null(ids)) {
+        if (length(ids) != nrow(X_hold) || anyNA(ids) || anyDuplicated(ids))
+          return(list(status = "invalid held-out observation_ids"))
+        if (any(ids %in% fit_k$training_observation_ids))
+          return(list(status = "held-out observation_ids overlap training rows"))
+      }
+      pattern_haufe(fit_k, X_hold, ids)
     })
   }
   result

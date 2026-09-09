@@ -351,12 +351,14 @@ head:
    weighted centring, weighted target whitening, and square-root row scaling,
    so the C-step stays an exact Procrustes problem and the A-step, noise
    estimate, and penalty calibration become weighted without new algebra. The
-   contract is exact and tested (`test_pattern_weights.R`): uniform weights ==
-   unweighted fit, integer weights == replicated rows, zero weight == dropped
-   row (zero-weight rows are removed up front, so a poisoned zero-weight row
-   cannot influence the fit). The inner tuning loss is weighted the same way;
-   reported metrics stay unweighted. Confirmation (`pattern_confirm`)
-   continues to reject nonuniform weights.
+   contract is tested (`test_pattern_weights.R`): uniform weights ==
+   unweighted fit, integer weights match replicated rows for the estimating
+   equations (exactly under identity noise; residual df stays scale-invariant
+   on the compressed row count), zero weight == dropped row (zero-weight rows
+   are removed up front, so a poisoned zero-weight row cannot influence the
+   fit, and training observation IDs omit them). The inner tuning loss is
+   weighted the same way; reported metrics stay unweighted. Confirmation
+   (`pattern_confirm`) continues to reject nonuniform weights.
 
 ## Part D2. Deferred items -- future consideration (recorded 2026-09-09)
 

@@ -6,9 +6,11 @@
   the estimator itself -- weighted centring, weighted target whitening (the
   C-step remains an exact Procrustes problem), the residual-covariance
   estimate, and the penalized objective -- and the held-out loss that drives
-  rank/penalty selection. The contract is exact: uniform weights reproduce the
-  unweighted fit, integer weights are equivalent to replicating rows, and a
-  zero weight is equivalent to omitting the row from training. Reported
+  rank/penalty selection. Uniform weights reproduce the unweighted fit; integer
+  weights match row replication for the weighted estimating equations (and
+  exactly under identity noise), while residual degrees of freedom use the
+  compressed row count so weights stay scale-invariant; a zero weight omits
+  the row from training (including from training observation IDs). Reported
   performance metrics remain unweighted, so weighted and unweighted runs stay
   comparable; the previous "row weights are not used" warning is gone.
 * New benchmark `inst/benchmarks/pattern_model/bench_vs_baselines.R`: the

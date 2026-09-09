@@ -4,9 +4,10 @@ library(testthat)
 #
 # The contract under test:
 #   * uniform weights are exactly no weights,
-#   * integer weights are exactly row replication,
+#   * integer weights match row replication for the estimating equations
+#     (exactly under identity noise; residual df stays on the compressed n),
 #   * a zero weight is exactly a dropped row (so a poisoned zero-weight row
-#     cannot influence the fit),
+#     cannot influence the fit), including training_observation_ids,
 #   * weights reach the estimator through the design's row_weights or the
 #     constructor's `weights` argument, without the old "ignored" warning,
 #   * the inner tuning loss is weighted the same way the fit is,
@@ -69,13 +70,13 @@ test_that("uniform weights reproduce the unweighted fit exactly", {
   expect_equal(unif$weights, rep(1, nrow(d$X)))
 })
 
-test_that("integer weights are exactly row replication", {
+test_that("integer weights match row replication under identity noise", {
   d <- .sim_xy(n = 36, seed = 4)
   reps <- rep(c(2L, 1L, 1L, 3L), length.out = 36)
   idx <- rep(seq_len(36), times = reps)
 
-  # identity noise so the residual-df convention (which sees n differently for
-  # 36 weighted rows and 63 replicated rows) cannot enter the comparison
+  # identity noise: residual df (compressed n vs expanded N) does not affect
+  # Psi, so the scale-invariant weight path matches literal replication
   ctrl <- pattern_control(max_rank = 2, noise = list(type = "identity"))
   fw <- rMVPA:::.pattern_fit(d$X, d$y, rank = 2, control = ctrl, weights = reps)
   fr <- rMVPA:::.pattern_fit(d$X[idx, , drop = FALSE], d$y[idx], rank = 2, control = ctrl)
@@ -184,11 +185,16 @@ test_that("design row_weights flow into fitting without the old warning", {
   expect_gt(clean(res_w), clean(res_u))
 
   # the fold fit actually dropped the zero-weight training rows
-  spec_fit <- pattern_model(sim$dataset, make_design(fs_w), rank = 1, return_fits = TRUE)
+  spec_fit <- pattern_model(sim$dataset, make_design(fs_w), rank = 1, return_fits = TRUE,
+                            refit = TRUE)
   res_fit <- quiet_run(run_global(spec_fit, preflight = "off"))
   ff <- res_fit$fold_fits[[which(vapply(res_fit$fold_fits, function(f) f$n_train, 1L) ==
                                    min(vapply(res_fit$fold_fits, function(f) f$n_train, 1L)))[1]]]
   expect_lt(ff$n_train, 60L)                   # a 2-block training set minus block-1 rows
+  expect_equal(length(ff$training_observation_ids), ff$n_train)
+  expect_false(any(paste0("train:", b1) %in% ff$training_observation_ids))
+  expect_equal(length(res_fit$refit$training_observation_ids), res_fit$refit$n_train)
+  expect_false(any(paste0("train:", b1) %in% res_fit$refit$training_observation_ids))
 })
 
 test_that("categorical weights work through fit_roi and keep metrics unweighted", {
