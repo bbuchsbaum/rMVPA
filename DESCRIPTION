@@ -13,6 +13,7 @@ Depends: R (>= 4.1.0)
 Imports:
     assertthat,
     crayon,
+    digest,
     dplyr,
     future,
     future.apply,
@@ -82,6 +83,10 @@ Collate:
     'pattern_core.R'
     'pattern_predict.R'
     'pattern_model.R'
+    'pattern_maps.R'
+    'pattern_result.R'
+    'pattern_inference.R'
+    'pattern_group.R'
     'save_results.R'
     'vector_rsa_model.R'
     'distcalc.R'

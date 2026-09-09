@@ -2,7 +2,8 @@ name: extended-tests
 
 on:
   pull_request:
-    branches: [main, master]
+    # Stacked pattern-model PRs need the same gates before reaching master.
+    branches: [main, master, "pattern-model-*"]
   push:
     branches: [main, master]
   schedule:

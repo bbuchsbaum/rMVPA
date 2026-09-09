@@ -276,6 +276,9 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
     result <- list(train_roi=troi, test_roi=teroi)
   }
 
+  # Carry actual retained columns; centroid coordinates need not identify clusters.
+  result$column_positions <- which(keep)
+  if (!is.null(roi$feature_positions)) result$feature_positions <- roi$feature_positions[keep]
   # Propagate basis_count to downstream consumers
   result$basis_count <- roi$basis_count
   result
@@ -295,7 +298,7 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
          # Use the logical mask from filtered train ROI indices
          keep_idx <- neuroim2::indices(filtered$train_roi)
          orig_idx <- neuroim2::indices(roi$train_roi)
-         kp <- match(keep_idx, orig_idx)
+         kp <- filtered$column_positions %||% match(keep_idx, orig_idx)
          # Guard against mismatch
          if (any(is.na(kp))) {
            warning("filter_roi.list: index mismatch between filtered train and original train ROI; ",
@@ -308,6 +311,10 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
          }
        } else NULL)
   result$basis_count <- roi$basis_count
+  if (!is.null(roi$feature_positions)) {
+    if (is.null(filtered$column_positions)) stop("ROI filter did not retain column positions.", call. = FALSE)
+    result$feature_positions <- roi$feature_positions[filtered$column_positions]
+  }
   result
 }
 

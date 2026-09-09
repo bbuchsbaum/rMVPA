@@ -4,7 +4,8 @@ on:
   push:
     branches: [main, master]
   pull_request:
-    branches: [main, master]
+    # Stacked pattern-model PRs need the same gates before reaching master.
+    branches: [main, master, "pattern-model-*"]
 
 name: test-coverage
 
