@@ -1,6 +1,6 @@
 # Pattern-first spatial reduced-rank MVPA (`pattern_model`) — assessment and implementation plan
 
-**Status:** Phases 0-6 implemented within the boundaries below; local package and integration gates passed as recorded below; dependent PR review and hosted gates pending. Supported-rank tests (5b), support envelope/local noise (3b), and joint hierarchical fitting remain extensions.
+**Status:** Phases 0-6 implemented within the boundaries below; local package and integration gates passed as recorded below; dependent PR review pending (hosted CI now runs on the stacked PR bases and is green). Post-phase additions of 2026-09-09 (Part C2): the head-to-head baseline benchmark is run and recorded, and observation weights are implemented. Deferred extensions are triaged in Part D2: supported-rank tests (5b), support envelope/local noise (3b), joint hierarchical fitting, and response-set weighting.
 **Date:** 2026-09-06
 **Base commit:** `acccd31` (master)
 **Scope:** assess the "pattern-first spatial reduced-rank MVPA" proposal and turn it into a staged, verifiable implementation plan for rMVPA.
@@ -147,7 +147,7 @@ Exit: `pattern_model` works end-to-end (global, regional, searchlight) with `pen
 - *Blocked CV source.* The constructor reads `design$block_var %||% design$block_var_train`, so `feature_sets_design` gets blocked CV; a design with no blocks now **warns** rather than silently using random k-fold.
 - *Folds that omit a class.* Each fold's probability matrix is padded to the full class set with an exact zero column, so a class confined to one run does not crash the run; those rows score as errors with clamped log loss. Inner folds that cannot score a class are dropped from rank selection rather than propagating `NA`.
 - *R² baseline.* Reported `R2` uses each fold's **training**-target mean as the baseline, matching the rank-selection loss, not the pooled test mean.
-- *Not implemented in Phase 2:* target metric / feature-block weighting (`row_weights` are read from the design and a warning is issued that they are ignored), and the `graph` argument is stored but unused.
+- *Not implemented in Phase 2:* target metric / feature-block weighting, and the `graph` argument is stored but unused. (`row_weights` were originally read from the design and ignored with a warning; observation weighting was implemented on 2026-09-09 -- see "Post-phase additions" below. Response-set weighting via a target metric remains unimplemented.)
 
 - *Repeated cross-validation is reconciled with the package convention.* Two ledgers are kept. The **fold-resolved** ledger records every prediction with its fold. The **pooled** ledger holds one record per tested observation, sorted, with repeats averaged (class probabilities averaged; continuous predictions and their training-mean baselines divided by the repeat count), exactly as `wrap_result()` in `R/mvpa_model.R` does for every other model. Metrics and the `classification_result` handed to rMVPA are built from the pooled ledger, so a row tested four times under bootstrap CV gets one vote, and the regional prediction table has unique `(roinum, .rownum)` pairs. Note the ordering is not merely a duplicate question: twofold, sequential, and bootstrap schemes are randomized, so even when each row is tested once the fold-order concatenation need not be sorted; pooling always sorts. `run_global()` returns the pooled ledger as `$ledger` and the fold-resolved one as `$fold_ledger`; ROI fits carry both as `$ledger` and `$pooled_ledger`.
 
@@ -329,6 +329,66 @@ Tests: null calibration (uniform p under label shuffling within block structure)
 | `inst/benchmarks/pattern_model/` | 3 | benchmark scripts + recorded results |
 
 Rough effort: Phases 0–4 ≈ 10–13 working days of implementation plus review; Phase 5 ≈ 3; Phase 6 ≈ 3–5. Phase 1 is a standalone improvement and should land first regardless.
+
+## Part C2. Post-phase additions (2026-09-09)
+
+Two items completed after the Phase 6 receipts, on the `pattern-model-phase6`
+head:
+
+1. **Head-to-head predictive benchmark** (`inst/benchmarks/pattern_model/bench_vs_baselines.R`,
+   results in `adocs/pattern-model-benchmarks.md`). The comparison the Phase 3
+   plan left unrun: pattern_model vs searchlight shrinkage LDA (honest
+   inner-CV sphere selection plus an oracle upper bound), `spacenet_tvl1`,
+   whole-brain shrinkage LDA, and CV-tuned PLS, on identical blocked splits
+   with planted smooth, sign-flipping, redundant, and localized-nuisance
+   structure. Outcome: the feared searchlight loss does not materialize (the
+   unpenalized pattern model beats even the oracle sphere off-ceiling); the
+   serious competitor is whole-brain shrinkage LDA, which the pattern model
+   matches; `sparse = "auto"` measurably hurts when the informative support is
+   dense and weak, which the benchmark note records as an honest negative.
+2. **Observation weights** (`weights` argument on `pattern_model()`, or
+   `row_weights` carried by the design). Implemented inside the estimator by
+   weighted centring, weighted target whitening, and square-root row scaling,
+   so the C-step stays an exact Procrustes problem and the A-step, noise
+   estimate, and penalty calibration become weighted without new algebra. The
+   contract is exact and tested (`test_pattern_weights.R`): uniform weights ==
+   unweighted fit, integer weights == replicated rows, zero weight == dropped
+   row (zero-weight rows are removed up front, so a poisoned zero-weight row
+   cannot influence the fit). The inner tuning loss is weighted the same way;
+   reported metrics stay unweighted. Confirmation (`pattern_confirm`)
+   continues to reject nonuniform weights.
+
+## Part D2. Deferred items -- future consideration (recorded 2026-09-09)
+
+Priority-ordered assessment of the remaining deferred scope, following the
+head-to-head benchmark:
+
+1. **Graph-local noise precision (Phase 3b, noise half) -- conditional, currently
+   unmotivated.** The noise abstraction reserves `noise$type = "diag_lowrank_local"`.
+   Both the Section 2 regional benchmark (three covariance heads within 0.025)
+   and the 2026-09-09 head-to-head (searchlights lose even with a planted
+   localized-nuisance region) show the covariance model is not the bottleneck
+   on simulation. Build this only when a real dataset shows the restricted
+   regional predictor losing to an independently fitted local model on the
+   same rows -- `local_performance()` makes that comparison directly.
+2. **TV support envelope (Phase 3b, penalty half) -- low priority.** Needs a
+   primal-dual solver (likely C); the scientific point is substantially
+   covered by `signed_smooth`, and the Phase 3 honest finding (smoothing can
+   improve pattern recovery while worsening held-out decoding) cautions
+   against more anatomical regularization by default. The `support_smooth`
+   argument name is already reserved and rejected, so it can arrive without
+   API change.
+3. **`rank_supported` (Phase 5b) -- research problem, not a feature.** Requires
+   a validated sequential higher-rank null. CV-selected rank (`rank_mean`) and
+   `component_stability()` answer the practical question today.
+4. **Joint hierarchical group estimator (`A_s = M_s A_0 + Delta_s`) -- wait for
+   demand.** The Phase 6 moment estimator is transparent and calibrated (5.0%
+   at nominal 5%); a REML/joint hierarchy earns its complexity only on a
+   multi-subject dataset where the moment estimator demonstrably falls short.
+5. **Response-set weighting (target metric) -- small, unscheduled.** Weighting
+   *responses* (e.g. feature sets) in the target whitening, the counterpart of
+   the now-implemented observation weighting. Do it when a feature-sets user
+   needs sets to contribute unequally to the fitted subspace.
 
 ## Part D. Open decisions for the user
 

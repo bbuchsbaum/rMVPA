@@ -10,14 +10,46 @@
 # .pattern_fit() takes matrices in and returns a serializable `pattern_fit`.
 
 # ---------------------------------------------------------------------------
+# Observation weights
+# ---------------------------------------------------------------------------
+
+# Validate observation weights and normalize them to sum to the row count, so
+# every 1/n normalization downstream becomes the weighted average
+# sum(w_i x_i) / sum(w_i) without further bookkeeping. Weights are therefore
+# scale-invariant: c * w fits identically to w. Returns NULL for NULL input;
+# zero weights are allowed here and dropped (with their rows) by the caller.
+.pattern_check_weights <- function(weights, n) {
+  if (is.null(weights)) return(NULL)
+  w <- as.numeric(weights)
+  if (length(w) != n) {
+    stop(sprintf("pattern_model: %d observation weights but %d observations.",
+                 length(w), n), call. = FALSE)
+  }
+  if (any(!is.finite(w)) || any(w < 0)) {
+    stop("pattern_model: observation weights must be finite and non-negative.", call. = FALSE)
+  }
+  if (sum(w) <= 0) {
+    stop("pattern_model: observation weights must have a positive sum.", call. = FALSE)
+  }
+  w * (n / sum(w))
+}
+
+# ---------------------------------------------------------------------------
 # Feature transform (columnwise only, so regional restriction stays local)
 # ---------------------------------------------------------------------------
 
-.pattern_x_transform_fit <- function(X, scale = c("none", "sd")) {
+.pattern_x_transform_fit <- function(X, scale = c("none", "sd"), weights = NULL) {
   scale <- match.arg(scale)
-  mu <- colMeans(X)
+  # weights are normalized to sum to nrow(X), so the weighted mean is
+  # colSums(w * X) / n and uniform weights reproduce colMeans exactly.
+  mu <- if (is.null(weights)) colMeans(X) else colSums(X * weights) / nrow(X)
   sd <- if (scale == "sd") {
-    s <- sqrt(colSums(sweep(X, 2L, mu, "-")^2) / max(nrow(X) - 1, 1))
+    sq <- if (is.null(weights)) {
+      colSums(sweep(X, 2L, mu, "-")^2)
+    } else {
+      colSums(weights * sweep(X, 2L, mu, "-")^2)
+    }
+    s <- sqrt(sq / max(nrow(X) - 1, 1))
     s[!is.finite(s) | s <= 0] <- 1
     s
   } else {
@@ -36,10 +68,14 @@
 }
 
 # Columns that are finite and non-constant on the training rows. Positions are
-# kept (feature_index) so dropped columns stay distinguishable in maps.
-.pattern_screen_columns <- function(X) {
+# kept (feature_index) so dropped columns stay distinguishable in maps. With
+# observation weights the variance is weighted, so a column that varies only on
+# zero-weight rows is dropped exactly as if those rows were absent.
+.pattern_screen_columns <- function(X, weights = NULL) {
   finite <- colSums(!is.finite(X)) == 0
-  v <- colSums(sweep(X, 2L, colMeans(X), "-")^2)
+  mu <- if (is.null(weights)) colMeans(X) else colSums(X * weights) / nrow(X)
+  dev2 <- sweep(X, 2L, mu, "-")^2
+  v <- if (is.null(weights)) colSums(dev2) else colSums(weights * dev2)
   keep <- which(finite & v > 0)
   keep
 }
@@ -56,15 +92,22 @@
 #' numerically non-null eigenspace. Whitening (i) removes the rank deficiency
 #' of centred one-hot codes (K classes -> K - 1 columns), (ii) makes the
 #' C-step an exact orthogonal Procrustes problem, and (iii) gives the working
-#' prior y_w ~ N(0, I) used for decoding.
+#' prior y_w ~ N(0, I) used for decoding. With observation weights the
+#' centring statistics, class priors, and whitening covariance are all
+#' weighted, so the stored transform is the one an equivalently replicated
+#' dataset would produce.
 #' @keywords internal
 #' @noRd
-.pattern_encode_targets <- function(values, scale = c("none", "sd"), tol = 1e-8) {
+.pattern_encode_targets <- function(values, scale = c("none", "sd"), tol = 1e-8,
+                                    weights = NULL) {
   scale <- match.arg(scale)
   if (is.character(values) || is.logical(values)) values <- factor(values)
   if (anyNA(values)) {
     stop("pattern_model: targets contain missing values; drop or impute those ",
          "observations before fitting.", call. = FALSE)
+  }
+  wmean <- function(M) {
+    if (is.null(weights)) colMeans(M) else colSums(M * weights) / nrow(M)
   }
 
   if (is.factor(values)) {
@@ -74,7 +117,11 @@
     if (K < 2L) stop("pattern_model: categorical targets need at least two classes.", call. = FALSE)
     Y <- matrix(0, length(values), K, dimnames = list(NULL, lev))
     Y[cbind(seq_along(values), as.integer(values))] <- 1
-    priors <- colMeans(Y)
+    priors <- wmean(Y)
+    if (any(priors <= 0)) {
+      stop(sprintf("pattern_model: class(es) %s carry zero total observation weight.",
+                   paste(lev[priors <= 0], collapse = ", ")), call. = FALSE)
+    }
     mu <- priors
     sdv <- NULL
     type <- "categorical"
@@ -83,9 +130,11 @@
     if (!is.numeric(Y)) stop("pattern_model: continuous targets must be numeric.", call. = FALSE)
     if (is.null(colnames(Y))) colnames(Y) <- paste0("y", seq_len(ncol(Y)))
     lev <- NULL; priors <- NULL; K <- NA_integer_
-    mu <- colMeans(Y)
+    mu <- wmean(Y)
     sdv <- if (scale == "sd") {
-      s <- sqrt(colSums(sweep(Y, 2L, mu, "-")^2) / max(nrow(Y) - 1, 1))
+      dev2 <- sweep(Y, 2L, mu, "-")^2
+      sq <- if (is.null(weights)) colSums(dev2) else colSums(weights * dev2)
+      s <- sqrt(sq / max(nrow(Y) - 1, 1))
       s[!is.finite(s) | s <= 0] <- 1
       s
     } else {
@@ -98,8 +147,8 @@
   if (!is.null(sdv)) Yc <- sweep(Yc, 2L, sdv, "/")
   n <- nrow(Yc)
 
-  # Whitening on the non-null eigenspace of the target covariance.
-  S <- crossprod(Yc) / n
+  # Whitening on the non-null eigenspace of the (weighted) target covariance.
+  S <- if (is.null(weights)) crossprod(Yc) / n else crossprod(Yc * sqrt(weights)) / n
   eg <- eigen(S, symmetric = TRUE)
   keep <- eg$values > tol * max(eg$values[1], .Machine$double.eps)
   if (!any(keep)) stop("pattern_model: targets are constant on the training rows.", call. = FALSE)
@@ -231,21 +280,39 @@
 #' @param control list from `pattern_control()`.
 #' @param graph optional spatial_graph aligned to the columns of X (unused in
 #'   Phase 2; stored for Phase 3).
+#' @param weights optional non-negative observation weights (length n). The
+#'   fit minimizes the weighted objective; integer weights are exactly
+#'   equivalent to replicating rows, and zero-weight rows are dropped up
+#'   front, so a zero weight is exactly equivalent to omitting the row.
 #' @return A `pattern_fit`, or for rank = "path" a list of `pattern_fit`s.
 #' @keywords internal
 #' @noRd
 .pattern_fit <- function(X, targets, rank = 1L, control = pattern_control(), graph = NULL,
-                         cap_rank = FALSE, penalty = NULL, start = NULL) {
+                         cap_rank = FALSE, penalty = NULL, start = NULL, weights = NULL) {
   X <- as.matrix(X)
+  w <- .pattern_check_weights(weights, nrow(X))
+  # Zero-weight rows are removed here rather than carried through as zeroed
+  # rows: this makes "weight zero" mean exactly "row absent" for every
+  # downstream quantity (rank caps, degrees of freedom, minimum-row checks),
+  # not just for the ones that happen to be weighted sums.
+  if (!is.null(w) && any(w == 0)) {
+    pos <- which(w > 0)
+    X <- X[pos, , drop = FALSE]
+    targets <- .pattern_subset_rows(targets, pos)
+    w <- w[pos] * (length(pos) / sum(w[pos]))
+  }
   n <- nrow(X); p_input <- ncol(X)
-  if (n < 3L) stop("pattern_model: at least three training observations are required.", call. = FALSE)
+  if (n < 3L) {
+    stop("pattern_model: at least three (positively weighted) training observations are required.",
+         call. = FALSE)
+  }
 
   # --- feature screening and transform (training rows only) ---
-  keep <- .pattern_screen_columns(X)
+  keep <- .pattern_screen_columns(X, weights = w)
   if (length(keep) == 0L) stop("pattern_model: no usable (finite, non-constant) features.", call. = FALSE)
   # avoid a full copy when screening drops nothing
   Xk <- if (length(keep) == ncol(X)) X else X[, keep, drop = FALSE]
-  xt <- .pattern_x_transform_fit(Xk, scale = control$x_scale)
+  xt <- .pattern_x_transform_fit(Xk, scale = control$x_scale, weights = w)
   Xc <- .pattern_x_transform_apply(xt, Xk)
   p <- ncol(Xc)
 
@@ -260,8 +327,22 @@
   }
 
   # --- target coding ---
-  enc <- .pattern_encode_targets(targets, scale = control$y_scale)
+  enc <- .pattern_encode_targets(targets, scale = control$y_scale, weights = w)
   Yw <- enc$Yw; yt <- enc$transform
+
+  # Weighted fitting by square-root row scaling. After weighted centring and
+  # weighted target whitening, scaling the rows of Xc and Yw by sqrt(w) turns
+  # every downstream crossproduct-over-n into its weighted counterpart while
+  # leaving the algebra untouched: crossprod(Yw)/n is still the identity, so
+  # the C-step stays an exact Procrustes problem; the A-step normal equations,
+  # the pilot residuals, the noise estimate, and the penalty scale
+  # (lambda_max, curvature) all become weighted for free. Integer weights are
+  # exactly row replication (the normalizations agree because w sums to n).
+  if (!is.null(w)) {
+    sw <- sqrt(w)
+    Xc <- Xc * sw
+    Yw <- Yw * sw
+  }
   r_elig <- min(yt$q_eff, p, n - 1L)
   r_max <- min(control$max_rank, r_elig)
   if (r_max < 1L) stop("pattern_model: eligible rank is zero.", call. = FALSE)
@@ -335,7 +416,7 @@
                                         noise_rank = noise$h,
                                         rank_eligible = r_elig,
                                         n_nonzero = sum(rowSums(A^2) > 0)),
-                     graph = graph, penalty = pen)
+                     graph = graph, penalty = pen, weights = w)
   }
 
   if (identical(rank, "path")) {
@@ -358,7 +439,8 @@
 }
 
 .new_pattern_fit <- function(A, C, noise, xt, yt, Yw, keep, p_input, rank, control,
-                             diagnostics = list(), graph = NULL, penalty = NULL) {
+                             diagnostics = list(), graph = NULL, penalty = NULL,
+                             weights = NULL) {
   PA <- .noise_apply_precision(noise, A)          # Psi^{-1} A  (p x r)
   G <- crossprod(A, PA)                          # A' Psi^{-1} A (r x r)
   Tm <- Yw %*% C
@@ -375,7 +457,8 @@
       penalty = penalty,
       diagnostics = diagnostics,
       graph = graph,
-      n_train = nrow(Tm)
+      n_train = nrow(Tm),
+      weights = weights
     ),
     class = c("pattern_fit", "list")
   )
