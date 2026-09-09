@@ -114,6 +114,11 @@ test_that("subspace stability is rotation invariant and exposes unequal ranks", 
   expect_equal(component_stability(result)$overlap, 0.5, tolerance = 1e-12)
   g$A[] <- 0; result$fold_fits[[2]] <- g
   expect_true(is.na(component_stability(result)$overlap))
+  result$fold_fits <- list(f, NULL, rotate_fit_coordinates(f, Q))
+  skipped <- component_stability(result)
+  expect_equal(skipped$fold1, 1L)
+  expect_equal(skipped$fold2, 3L)
+  expect_equal(skipped$overlap, 1, tolerance = 1e-12)
 })
 
 test_that("global regional ledgers, maps, diagnostics, and serialization agree", {

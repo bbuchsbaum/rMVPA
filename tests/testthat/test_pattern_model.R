@@ -254,6 +254,34 @@ test_that("a fold missing a class is handled rather than crashing", {
   expect_true(all(res$ranks >= 1L))
 })
 
+test_that("a binary fold with one training class is scored, not aborted", {
+  set.seed(32)
+  sim <- sim_pattern_data(n = 60, dims = c(5, 5, 3), K = 2, snr = 1.5, seed = 32)
+  y <- as.character(sim$targets)
+  blk <- sim$design$block_var
+  # confine class "b" to block 3 so leave-one-block-out trains that fold on "a" only
+  y[y == "b"] <- "a"
+  y[blk == 3] <- "b"
+  des <- mvpa_design(data.frame(y = factor(y), block = blk), y_train = ~ y, block_var = ~ block)
+  spec <- pattern_model(sim$dataset, des, rank = 1)
+  res <- suppressWarnings(quiet_run(run_global(spec, return_fits = TRUE)))
+  expect_s3_class(res, "pattern_global_result")
+  deg <- which(vapply(res$fold_fits, is.null, logical(1)))
+  expect_equal(length(deg), 1L)
+  expect_true(is.na(res$ranks[deg]))
+  expect_true(all(res$ranks[-deg] >= 1L))
+  expect_true(is.finite(performance(res)$Accuracy))
+  expect_true(is.finite(performance(res)$rank_mean))
+  f_deg <- which(res$fold_ledger$fold == deg)
+  expect_true(all(as.character(res$fold_ledger$truth[f_deg]) == "b"))
+  expect_true(all(res$fold_ledger$prediction[f_deg, "a"] == 1))
+  expect_true(all(res$fold_ledger$prediction[f_deg, "b"] == 0))
+  expect_equal(res$haufe_diagnostics[[deg]]$status, "single-class training fold")
+  loc <- local_performance(res, list(all = seq_len(res$n_features)))
+  expect_true(all(is.finite(loc$local_restricted)))
+  expect_equal(nrow(res$component_stability), 1L)
+})
+
 test_that("repeated-CV predictions are pooled the way wrap_result pools them", {
   sim <- sim_pattern_data(n = 60, dims = c(5, 5, 3), K = 3, snr = 1.5, seed = 50)
   bv <- sim$design$block_var

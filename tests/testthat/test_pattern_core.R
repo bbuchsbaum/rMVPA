@@ -126,6 +126,17 @@ test_that("rank path is nested, rank is capped, and errors are informative", {
   expect_error(rMVPA:::.pattern_fit(X, factor(rep("a", 40)), rank = 1), "at least two classes")
 })
 
+test_that("max_rank does not cap a requested fixed rank", {
+  set.seed(15)
+  X <- matrix(rnorm(80 * 20), 80, 20)
+  y <- matrix(rnorm(80 * 12), 80, 12)
+  ctrl <- pattern_control(max_rank = 4, noise = list(type = "diag"))
+  fit <- rMVPA:::.pattern_fit(X, y, rank = 10, cap_rank = TRUE, control = ctrl)
+  expect_equal(fit$rank, 10L)
+  path <- rMVPA:::.pattern_fit(X, y, rank = "path", control = ctrl)
+  expect_equal(length(path), 4L)
+})
+
 test_that("constant and non-finite columns are dropped but positions are kept", {
   set.seed(6)
   X <- matrix(rnorm(30 * 12), 30, 12)
