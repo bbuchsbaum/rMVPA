@@ -22,6 +22,9 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/articles/Parallelism.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/articles/Plugin_Development.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/articles/RSA.html</loc></url>
@@ -68,9 +71,11 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/combine_rsa_standard.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/combine_schema_standard.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/combine_standard.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/component_stability.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/compute_crossvalidated_means_sl.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/compute_local_redundancy.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/compute_performance-methods.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/confirmation_plan.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/contrasts.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/create_dist.html</loc></url>
@@ -144,6 +149,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/item_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/kfold_cross_validation.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/load_model.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/local_performance.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/make_feature_contrasts.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/manova_design.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/manova_model.html</loc></url>
@@ -154,6 +160,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/mock_context.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/mock_roi_data.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/model_importance.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/model_patterns.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/model_targets.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/msreve_design.html</loc></url>
@@ -180,7 +187,12 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/output_schema.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/partition_indices.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/pattern_basis.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/pattern_component_tests.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/pattern_confirm.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/pattern_control.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/pattern_group.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/pattern_haufe.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/pattern_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/performance-methods.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/performance.regression_result.html</loc></url>
@@ -221,6 +233,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_api_lifecycle.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/rmvpa_stable_api.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/roi_result.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/rotate_patterns.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/rsa_design_diagnostics.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.html</loc></url>
@@ -237,6 +250,7 @@
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight_base.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/run_single_roi.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/save_results.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/rMVPA/reference/save_results.pattern_global_result.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/save_results.rmvpa_analysis_run.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/schema_metric_spec.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/rMVPA/reference/score_observed.html</loc></url>

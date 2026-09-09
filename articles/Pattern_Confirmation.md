@@ -1,0 +1,220 @@
+# Confirming a frozen pattern model
+
+A discovery fit chooses directions worth studying. Confirmation asks
+whether those **already chosen directions** predict brain measurements
+in independent data. It estimates fresh, unpenalized loadings while
+freezing the target coding, whitening, and component directions learned
+during discovery.
+
+This separation permits t and omnibus tests without treating a selected,
+regularized discovery loading as an ordinary regression coefficient. It
+does not turn cross-validated rank selection into a test of population
+rank.
+
+## Freeze a discovery fit
+
+The example has two continuous targets and 32 features. The first half
+of the features responds to the first target; the second half responds
+to the second. Shared run noise makes rows within a run dependent.
+
+``` r
+
+p <- 32
+A <- cbind(rep(c(1, 0), each = 16), rep(c(0, 1), each = 16))
+make_sample <- function(n = 120, runs = 12) {
+  Y <- cbind(speed = rnorm(n), difficulty = rnorm(n))
+  run <- rep(seq_len(runs), length.out = n)
+  X <- Y %*% t(A) + matrix(rnorm(n * p), n, p) + rnorm(runs)[run]
+  list(X = X, Y = Y, run = run)
+}
+discovery <- make_sample(runs = 4)
+space <- neuroim2::NeuroSpace(c(4, 4, 2), c(1, 1, 1))
+mask <- neuroim2::NeuroVol(array(1, c(4, 4, 2)), space)
+images <- neuroim2::NeuroVec(array(t(discovery$X), c(4, 4, 2, 120)),
+                            neuroim2::NeuroSpace(c(4, 4, 2, 120), c(1, 1, 1)))
+dataset <- mvpa_dataset(images, mask = mask)
+design <- mvpa_design(data.frame(y = discovery$Y[, 1], run = discovery$run),
+                      y_train = ~ y, block_var = ~ run, targets = discovery$Y)
+fit <- run_global(pattern_model(dataset, design, rank = 2), refit = TRUE)$refit
+basis <- pattern_basis(fit)
+round(basis$matrix, 3)
+#>              [,1]  [,2]
+#> speed      -0.705 0.683
+#> difficulty  0.712 0.670
+```
+
+The rows of `basis$matrix` are named raw targets and its columns are
+frozen scores. This matrix includes the training scaling and whitening;
+storing `C` alone would lose that information. Independent display
+rotations from
+[`rotate_patterns()`](https://bbuchsbaum.github.io/rMVPA/reference/rotate_patterns.md)
+do not redefine this inference basis.
+
+## Estimate and test loadings on new rows
+
+Use globally meaningful observation IDs, including the participant,
+session, and observation identity in a real study. Declare **every**
+discovery row used for preprocessing, tuning, selection, or fitting.
+Prefixing the same rows with new names would defeat the check; IDs
+cannot establish independence by themselves.
+
+``` r
+
+heldout <- make_sample()
+discovery_ids <- paste0("participant01:discovery:", seq_len(120))
+confirmation_ids <- paste0("participant01:confirmation:", seq_len(120))
+confirmation <- pattern_confirm(
+  fit, heldout$X, heldout$Y,
+  block_var = heldout$run,
+  inference = confirmation_plan("sign_flip", n_resamples = 999, seed = 505),
+  observation_ids = confirmation_ids,
+  discovery_ids = discovery_ids,
+  feature_ids = paste0("voxel", seq_len(p)),
+  preprocessing_id = "simulated-BOLD-original-units-v1",
+  subject_id = "participant01"
+)
+head(data.frame(feature = confirmation$feature_ids,
+                F = confirmation$omnibus$F,
+                p_max = confirmation$bootstrap$p_omnibus_max))
+#>   feature        F p_max
+#> 1  voxel1 34.01951 0.016
+#> 2  voxel2 77.81606 0.004
+#> 3  voxel3 48.09660 0.009
+#> 4  voxel4 52.75659 0.007
+#> 5  voxel5 23.07478 0.035
+#> 6  voxel6 19.84900 0.049
+```
+
+Each row tests whether **all** frozen score coefficients at that feature
+are zero, conditional on any nuisance columns. Loadings and their
+standard errors are in original measurement units. All input features
+enter the hypothesis family, including ones screened or penalized to
+zero during discovery.
+
+`confirmation$estimate`, `$se`, `$t`, and `$p` contain the component
+results. `$p_holm` adjusts over every feature-component pair. The
+omnibus table has its own Holm correction over features. Neither family
+correction simultaneously covers every alternative analysis a researcher
+might try.
+
+``` r
+
+plot(confirmation$omnibus$F, type = "h", xlab = "Input feature",
+     ylab = "Omnibus Wald F")
+```
+
+![Omnibus confirmation statistics across 32 simulated signal
+features.](Pattern_Confirmation_files/figure-html/confirmed-map-1.png)
+
+### Choose the error model before inspecting results
+
+- `confirmation_plan("independent")` uses ordinary Gaussian t/F tests
+  with residual degrees of freedom. It assumes independent,
+  homoskedastic rows.
+- `confirmation_plan("block_robust")` uses a CR1 sandwich and
+  approximate t/Wald F inference with the number of independent blocks
+  minus one as the denominator degrees of freedom. Few blocks can give
+  unreliable inference. In the bundled 30-block null simulation, this
+  approximation rejected 8.4% of nominal 5% omnibus tests; it should not
+  be treated as exactly calibrated.
+- `confirmation_plan("sign_flip", n_resamples = 999, seed = 1)` refits
+  restricted residuals using one Rademacher sign per independent block.
+  This is an **approximate restricted wild bootstrap**, not an exact
+  permutation test with estimated nuisance effects. `$bootstrap$p_max`
+  maximizes across features within each component and Bonferroni-adjusts
+  across components; `$bootstrap$p_omnibus_max` maximizes omnibus
+  statistics across features. The same signs are used across features,
+  preserving their joint dependence. The bundled null simulation
+  rejected 4.1% of nominal 5% omnibus tests with 199 draws; this
+  simulation is evidence for that design, not a guarantee for every
+  block structure. Use more draws for final analysis.
+
+The [FSL randomise
+documentation](https://fsl.fmrib.ox.ac.uk/fsl/docs/statistics/randomise.html)
+also distinguishes exact exchangeability from approximate residual-based
+resampling with nuisance effects. No residual-resampling option repairs
+an incorrect independence or exchangeability assumption. A Monte Carlo p
+value cannot be smaller than `1 / (n_resamples + 1)`. For large feature
+families, Holm correction can therefore be unable to reject anything at
+the chosen resolution. Use the stated maximum-statistic family, or
+budget enough draws for the intended marginal-p correction; inspect
+Monte Carlo uncertainty near a decision threshold.
+
+`block_var` identifies independent units; it does **not** add run
+intercepts. For that estimand, supply, for example,
+`nuisance = model.matrix(~ factor(heldout$run))[, -1, drop = FALSE]`. An
+intercept is always included. Redundant nuisance columns or target
+scores that cannot be distinguished from nuisance effects cause an
+error. Nonuniform row weights are unsupported. No p value is returned
+for a singular sampling distribution.
+
+## Separate association from incremental prediction
+
+A decoded component can correlate with its target without improving
+prediction once other components are available. The two questions need
+different tests.
+
+``` r
+
+components <- pattern_component_tests(
+  fit, confirmation, heldout$X, heldout$Y,
+  calibration = list(dataset = discovery$X, design = discovery$Y,
+                     observation_ids = discovery_ids)
+)
+components$association
+#>   component correlation         t df     p p_holm
+#> 1         1   0.9630855 31.035148 11 0.002  0.004
+#> 2         2   0.5955507  7.525721 11 0.002  0.004
+components$incremental
+#>   component      gain         se        t df     p p_holm
+#> 1         1 0.4515601 0.06245468 7.230206 11 0.001  0.002
+#> 2         2 0.1883391 0.03514264 5.359275 11 0.001  0.002
+```
+
+Association is the partial correlation between each frozen decoded score
+and its corresponding target score, adjusting for the confirmation
+nuisance columns. It is marginal with respect to the other components.
+
+For incremental value, full and reduced **linear decoding heads** are
+fitted on calibration rows only. Removing a component refits all
+remaining head coefficients. Both heads predict the untouched
+confirmation rows. Positive `gain` means that removing the component
+increases squared error. Loss is averaged over raw target columns, then
+within each block, then equally across blocks; choose commensurate
+target units before discovery. A paired block-mean t test provides
+approximate inference. For a sign-flip plan it is replaced by an
+approximate centered, studentized block wild bootstrap.
+
+These comparisons evaluate the separately calibrated linear heads, not
+the original Gaussian posterior decoder. Categorical targets use one-hot
+squared loss, and linear head outputs are not probabilities. The
+confirmation object also includes descriptive held-out performance of
+the original decoder in `$prediction`.
+
+Data and fit hashes prevent accidentally reusing a confirmation record
+with a different fit or different rows. Calibration IDs must belong to
+the declared discovery set and cannot overlap confirmation IDs. A
+completely untouched calibration split may be included in that declared
+set before confirmation.
+
+## Preserve the inferential record
+
+``` r
+
+saveRDS(list(confirmation = confirmation, components = components),
+        "participant01-confirmation.rds")
+```
+
+The confirmation object retains the frozen raw target basis, coefficient
+covariance, preprocessing identifier and hash, observation IDs, block
+labels, and nuisance specification. Independent-error covariance is
+factorized into a small design covariance and per-feature residual
+variances. Block methods retain a small component-by-component
+covariance at each feature. Neither allocates a feature-by-feature
+covariance matrix.
+
+Individual component effects depend on the frozen coordinates. Omnibus
+tests are invariant to nonsingular changes of score coordinates.
+Confirmation of several components is not a sequential rank test:
+`rank_supported` remains a separate research extension with a separately
+validated null.

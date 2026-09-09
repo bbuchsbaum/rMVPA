@@ -50,6 +50,12 @@ approaches
   rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.md):
 - [ITEM Trial-Wise
   Decoding](https://bbuchsbaum.github.io/rMVPA/articles/ITEM_Decoding.md):
+- [Pattern models: whole-brain fit, regional
+  access](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Model.md):
+- [Confirming a frozen pattern
+  model](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md):
+- [Group patterns in shared target
+  coordinates](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.md):
 - [Command-Line MVPA
   Interfaces](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md):
 

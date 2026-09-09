@@ -72,11 +72,13 @@ or a <code><a href="feature_rsa_design.html">feature_rsa_design</a></code>), rea
 <span>  rank <span class="op">=</span> <span class="st">"auto"</span>,</span>
 <span>  max_rank <span class="op">=</span> <span class="fl">8L</span>,</span>
 <span>  penalty <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  graph <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  noise <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"diag_lowrank"</span>, rank <span class="op">=</span> <span class="st">"auto"</span><span class="op">)</span>,</span>
 <span>  control <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  return_predictions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  return_fits <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  refit <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  weights <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -110,9 +112,19 @@ positive integer, capped at the eligible rank.</p></dd>
 
 
 <dt id="arg-penalty">penalty<a class="anchor" aria-label="anchor" href="#arg-penalty"></a></dt>
-<dd><p>Spatial penalty specification, a list with elements
-<code>sparse</code>, <code>signed_smooth</code>, and <code>support_smooth</code>. Reserved:
-this version accepts only <code>NULL</code>.</p></dd>
+<dd><p>Spatial penalty on the forward patterns: a list with any of
+<code>sparse</code> (row-wise group lasso, as a fraction of the penalty that
+empties the model), <code>signed_smooth</code> (graph-Laplacian smoothing of
+the signed loadings, relative to the data-fit curvature), and
+<code>support_smooth</code> (reserved, not implemented). Each may be a number,
+a vector of candidates, or <code>"auto"</code>. <code>NULL</code> (default) fits
+without a spatial penalty. See the Spatial penalties section.</p></dd>
+
+
+<dt id="arg-graph">graph<a class="anchor" aria-label="anchor" href="#arg-graph"></a></dt>
+<dd><p>A <code><a href="spatial_graph.html">spatial_graph</a></code> aligned to the dataset's
+features, used by <code>signed_smooth</code>. Built from the dataset when
+needed and not supplied.</p></dd>
 
 
 <dt id="arg-noise">noise<a class="anchor" aria-label="anchor" href="#arg-noise"></a></dt>
@@ -138,6 +150,19 @@ overrides <code>max_rank</code> and <code>noise</code>.</p></dd>
 deployment fit, distinct from the cross-validated evidence).</p></dd>
 
 
+<dt id="arg-weights">weights<a class="anchor" aria-label="anchor" href="#arg-weights"></a></dt>
+<dd><p>Optional non-negative observation weights, one per training
+observation. When <code>NULL</code> (default) they are read from the design
+(<code><a href="feature_sets_design.html">feature_sets_design</a></code> carries <code>row_weights</code>); a vector
+supplied here overrides the design's weights. Weights enter the estimator
+itself – centring, target whitening, the residual-covariance estimate,
+and the penalized objective are all weighted – and the held-out loss
+that drives rank/penalty selection. Integer weights are exactly
+equivalent to replicating rows, and a zero weight is exactly equivalent
+to omitting the row from training. Reported performance metrics remain
+unweighted: every tested observation counts once.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional fields stored on the specification.</p></dd>
 
@@ -154,11 +179,43 @@ deployment fit, distinct from the cross-validated evidence).</p></dd>
 <p>Targets are centred and whitened on the training rows; \(C\) has
 orthonormal columns so all scale lives in the spatial patterns \(A\).
 The residual covariance \(\Psi = D + UU^\top\) is estimated once from a
-training-only pilot fit and held fixed. Rank is chosen by nested,
-block-aware cross-validation on held-out decoding loss (log loss for
-categorical targets, normalized squared error for continuous targets).
-Spatial penalties are declared through <code>penalty</code> but are not yet
-available in this version: any non-<code>NULL</code> penalty is rejected.</p>
+training-only pilot fit and held fixed. Rank and penalty strength are
+chosen together by nested, block-aware cross-validation on held-out
+decoding loss (log loss for categorical targets, normalized squared error
+for continuous targets), with ties going to the smaller rank.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="spatial-penalties">Spatial penalties<a class="anchor" aria-label="anchor" href="#spatial-penalties"></a></h2>
+
+
+<p>Penalties act on the forward patterns \(A\), not on decoding weights, so
+what is regularized is where task signal is expressed rather than which
+measurements happen to help prediction.</p><dl><dt><code>sparse</code></dt>
+<dd><p>Row-wise group lasso: a feature is either in the
+    patterns or out of them, for all components at once. Given as a
+    fraction of the smallest penalty that empties the model, so the same
+    number means the same thing across folds and feature domains. Needs no
+    anatomy.</p></dd>
+
+  <dt><code>signed_smooth</code></dt>
+<dd><p>A graph-Laplacian quadratic that pulls
+    neighbouring loadings together, weighted relative to the curvature of
+    the data-fit term, so 1 makes smoothing as influential as the data.
+    Requires a <code><a href="spatial_graph.html">spatial_graph</a></code>, built from the dataset unless
+    one is supplied. This assumes neighbouring voxels carry <em>similar
+    signed</em> loadings, which is wrong for a fine-grained code that flips
+    sign within a region, so it defaults to off and is worth tuning.</p></dd>
+
+  <dt><code>support_smooth</code></dt>
+<dd><p>Reserved for a spatially smooth support
+    envelope, which would let a coherent anatomical territory contain
+    sign-flipping loadings. Not implemented; it is rejected rather than
+    quietly redirected to <code>signed_smooth</code>, because they encode
+    different assumptions.</p></dd>
+
+
+</dl><p>Either penalty may be <code>"auto"</code>, which cross-validates over a short
+path; a number is used as given and does not enlarge the tuning grid.</p>
     </div>
     <div class="section level2">
     <h2 id="outputs">Outputs<a class="anchor" aria-label="anchor" href="#outputs"></a></h2>
@@ -168,7 +225,9 @@ available in this version: any non-<code>NULL</code> penalty is rejected.</p>
 <code><a href="output_schema.html">output_schema</a></code>): <code>Accuracy</code>, <code>AUC</code>, <code>logloss</code>,
 and <code>rank_mean</code> for categorical targets; <code>R2</code>, <code>RMSE</code>,
 <code>cor</code>, and <code>rank_mean</code> for continuous targets. <code>rank_mean</code>
-is the mean rank selected across folds and need not be a whole number. With
+is the mean rank selected across folds and need not be a whole number. When
+a penalty is in force, <code>n_selected</code> reports the mean number of
+features with a non-zero pattern. With
 <code>return_predictions = TRUE</code> a regional run also returns the usual
 out-of-fold prediction table (categorical targets), and with either
 <code>return_predictions = TRUE</code> or <code>return_fits = TRUE</code> each ROI keeps
@@ -199,6 +258,15 @@ how every other rMVPA model aggregates repeated predictions.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Accuracy    AUC logloss rank_mean</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      0.3 -<span style="color: #BB0000;">0.129</span>    3.32      1.33</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># sparse forward patterns, with the penalty chosen by nested CV</span></span></span>
+<span class="r-in"><span><span class="va">sparse_spec</span> <span class="op">&lt;-</span> <span class="fu">pattern_model</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">ds</span><span class="op">$</span><span class="va">design</span>, rank <span class="op">=</span> <span class="fl">1</span>,</span></span>
+<span class="r-in"><span>                             penalty <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sparse <span class="op">=</span> <span class="st">"auto"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="run_global.html">run_global</a></span><span class="op">(</span><span class="va">sparse_spec</span><span class="op">)</span><span class="op">$</span><span class="va">performance_table</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 1 × 5</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Accuracy    AUC logloss rank_mean n_selected</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     0.25 -<span style="color: #BB0000;">0.128</span>    1.33         1       13.3</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

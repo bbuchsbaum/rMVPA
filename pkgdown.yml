@@ -22,6 +22,9 @@ articles:
   MVPA_RegionalCmdline: MVPA_RegionalCmdline.html
   Naive_Cross_Decoding: Naive_Cross_Decoding.html
   Parallelism: Parallelism.html
+  Pattern_Confirmation: Pattern_Confirmation.html
+  Pattern_Group: Pattern_Group.html
+  Pattern_Model: Pattern_Model.html
   Plugin_Development: Plugin_Development.html
   Regional_Analysis: Regional_Analysis.html
   REMAP_RRR: REMAP_RRR.html
@@ -33,7 +36,7 @@ articles:
   Searchlight_Analysis: Searchlight_Analysis.html
   Temporal_Confounds_in_RSA: Temporal_Confounds_in_RSA.html
   Vector_RSA: Vector_RSA.html
-last_built: 2026-09-07T17:24Z
+last_built: 2026-09-09T12:45Z
 urls:
   reference: https://bbuchsbaum.github.io/rMVPA/reference
   article: https://bbuchsbaum.github.io/rMVPA/articles

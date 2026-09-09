@@ -203,8 +203,14 @@ All functions exported by rMVPA
 - [`combine_prediction_tables()`](https://bbuchsbaum.github.io/rMVPA/reference/combine_prediction_tables.md)
   : Combine prediction tables
 
+- [`component_stability()`](https://bbuchsbaum.github.io/rMVPA/reference/component_stability.md)
+  : Compare spatial subspaces across retained folds
+
 - [`compute_local_redundancy()`](https://bbuchsbaum.github.io/rMVPA/reference/compute_local_redundancy.md)
   : Compute Local Redundancy for Each Searchlight Center
+
+- [`confirmation_plan()`](https://bbuchsbaum.github.io/rMVPA/reference/confirmation_plan.md)
+  : Specify a confirmation error model
 
 - [`contrast_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/contrast_rsa_model.md)
   : Constructor for contrast_rsa_model
@@ -379,6 +385,9 @@ All functions exported by rMVPA
 - [`load_model()`](https://bbuchsbaum.github.io/rMVPA/reference/load_model.md)
   : Load a Pre-defined MVPA Model
 
+- [`local_performance()`](https://bbuchsbaum.github.io/rMVPA/reference/local_performance.md)
+  : Evaluate regional access under a whole-brain pattern fit
+
 - [`make_feature_contrasts()`](https://bbuchsbaum.github.io/rMVPA/reference/make_feature_contrasts.md)
   : Generate Contrasts from a Feature Matrix (Optional PCA)
 
@@ -416,6 +425,12 @@ All functions exported by rMVPA
 
 - [`model_importance()`](https://bbuchsbaum.github.io/rMVPA/reference/model_importance.md)
   : Per-Feature Model Importance
+
+- [`model_patterns()`](https://bbuchsbaum.github.io/rMVPA/reference/model_patterns.md)
+  [`model_importance(`*`<pattern_fit>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/model_patterns.md)
+  [`model_importance(`*`<pattern_view>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/model_patterns.md)
+  [`model_importance(`*`<pattern_global_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/model_patterns.md)
+  : Extract forward patterns, calibrated weights, or invariant maps
 
 - [`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
   : Model-space representational connectivity from a fitted rMVPA result
@@ -488,8 +503,26 @@ All functions exported by rMVPA
 - [`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
   : Construct a pair-observation RSA design
 
+- [`pattern_basis()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_basis.md)
+  : Describe the frozen target coordinates of a pattern fit
+
+- [`pattern_component_tests()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_component_tests.md)
+  : Test frozen component association and incremental decoding value
+
+- [`pattern_confirm()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_confirm.md)
+  [`print(`*`<pattern_confirmation>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_confirm.md)
+  : Confirm a frozen pattern basis on independent observations
+
 - [`pattern_control()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_control.md)
   : Control parameters for the pattern model estimator
+
+- [`pattern_group()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_group.md)
+  [`print(`*`<pattern_group_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_group.md)
+  : Combine independent subject confirmations in shared target
+  coordinates
+
+- [`pattern_haufe()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_haufe.md)
+  : Compare empirical held-out Haufe patterns with the forward model
 
 - [`pattern_model()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_model.md)
   : Pattern-First Spatial Reduced-Rank MVPA Model
@@ -598,6 +631,10 @@ All functions exported by rMVPA
 - [`roi_result()`](https://bbuchsbaum.github.io/rMVPA/reference/roi_result.md)
   : Construct a Standardized ROI Result
 
+- [`rotate_patterns()`](https://bbuchsbaum.github.io/rMVPA/reference/rotate_patterns.md)
+  [`predict(`*`<pattern_view>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/rotate_patterns.md)
+  : Display patterns in orthogonal spatial and target coordinates
+
 - [`rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md)
   : Construct a design for an RSA (Representational Similarity Analysis)
   model
@@ -638,6 +675,9 @@ All functions exported by rMVPA
 
 - [`save_results()`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.md)
   : Save MVPA Results to Disk
+
+- [`save_results(`*`<pattern_global_result>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.pattern_global_result.md)
+  : Save a global pattern result and its invariant maps
 
 - [`save_results(`*`<rmvpa_analysis_run>`*`)`](https://bbuchsbaum.github.io/rMVPA/reference/save_results.rmvpa_analysis_run.md)
   : Save a High-Level Analysis Run
@@ -830,6 +870,12 @@ approaches
   rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Haxby_2001.md):
 - [ITEM Trial-Wise
   Decoding](https://bbuchsbaum.github.io/rMVPA/articles/ITEM_Decoding.md):
+- [Pattern models: whole-brain fit, regional
+  access](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Model.md):
+- [Confirming a frozen pattern
+  model](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md):
+- [Group patterns in shared target
+  coordinates](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.md):
 - [Command-Line MVPA
   Interfaces](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md):
 

@@ -13,7 +13,10 @@ pattern_control(
   lambda_2 = 0,
   max_outer = 50L,
   tol = 1e-08,
-  refine_path = FALSE
+  refine_path = FALSE,
+  max_inner = 500L,
+  tol_inner = 1e-09,
+  tol_iterate = 1e-06
 )
 ```
 
@@ -59,9 +62,23 @@ pattern_control(
 - refine_path:
 
   Logical; when fitting a rank path, run the alternating refinement for
-  every rank (default `FALSE`: path solutions are the exact reduced-rank
-  optima, which coincide with the refined solution for the unpenalized
-  objective).
+  every rank (default `FALSE`: unpenalized path solutions are the exact
+  reduced-rank optima, so refinement changes nothing). Refinement is
+  always used when a spatial penalty is active.
+
+- max_inner:
+
+  Maximum proximal-gradient iterations per penalized A-step.
+
+- tol_inner:
+
+  Relative objective change that stops the A-step solver.
+
+- tol_iterate:
+
+  Relative change in the patterns required alongside `tol_inner`. The
+  objective is flat near the optimum, so it can settle while the
+  patterns are still moving; both must be small.
 
 ## Value
 
@@ -105,6 +122,15 @@ pattern_control(max_rank = 3)
 #> 
 #> $refine_path
 #> [1] FALSE
+#> 
+#> $max_inner
+#> [1] 500
+#> 
+#> $tol_inner
+#> [1] 1e-09
+#> 
+#> $tol_iterate
+#> [1] 1e-06
 #> 
 #> attr(,"class")
 #> [1] "pattern_control" "list"           

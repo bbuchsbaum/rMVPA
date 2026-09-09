@@ -49,7 +49,10 @@
 <span>  lambda_2 <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  max_outer <span class="op">=</span> <span class="fl">50L</span>,</span>
 <span>  tol <span class="op">=</span> <span class="fl">1e-08</span>,</span>
-<span>  refine_path <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  refine_path <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  max_inner <span class="op">=</span> <span class="fl">500L</span>,</span>
+<span>  tol_inner <span class="op">=</span> <span class="fl">1e-09</span>,</span>
+<span>  tol_iterate <span class="op">=</span> <span class="fl">1e-06</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -98,9 +101,23 @@ residual covariance, so it is rejected rather than solved approximately.</p></dd
 
 <dt id="arg-refine-path">refine_path<a class="anchor" aria-label="anchor" href="#arg-refine-path"></a></dt>
 <dd><p>Logical; when fitting a rank path, run the alternating
-refinement for every rank (default <code>FALSE</code>: path solutions are the
-exact reduced-rank optima, which coincide with the refined solution for
-the unpenalized objective).</p></dd>
+refinement for every rank (default <code>FALSE</code>: unpenalized path
+solutions are the exact reduced-rank optima, so refinement changes
+nothing). Refinement is always used when a spatial penalty is active.</p></dd>
+
+
+<dt id="arg-max-inner">max_inner<a class="anchor" aria-label="anchor" href="#arg-max-inner"></a></dt>
+<dd><p>Maximum proximal-gradient iterations per penalized A-step.</p></dd>
+
+
+<dt id="arg-tol-inner">tol_inner<a class="anchor" aria-label="anchor" href="#arg-tol-inner"></a></dt>
+<dd><p>Relative objective change that stops the A-step solver.</p></dd>
+
+
+<dt id="arg-tol-iterate">tol_iterate<a class="anchor" aria-label="anchor" href="#arg-tol-iterate"></a></dt>
+<dd><p>Relative change in the patterns required alongside
+<code>tol_inner</code>. The objective is flat near the optimum, so it can settle
+while the patterns are still moving; both must be small.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -145,6 +162,15 @@ the unpenalized objective).</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $refine_path</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $max_inner</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 500</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $tol_inner</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1e-09</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $tol_iterate</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1e-06</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "pattern_control" "list"           </span>

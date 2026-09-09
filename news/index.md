@@ -2,6 +2,27 @@
 
 ## rMVPA 0.1.3
 
+- [`pattern_model()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_model.md)
+  supports observation weights. Weights are read from the design’s
+  `row_weights` (as carried by `feature_sets_design`) or supplied
+  directly via the new `weights` argument, which takes precedence. They
+  enter the estimator itself – weighted centring, weighted target
+  whitening (the C-step remains an exact Procrustes problem), the
+  residual-covariance estimate, and the penalized objective – and the
+  held-out loss that drives rank/penalty selection. The contract is
+  exact: uniform weights reproduce the unweighted fit, integer weights
+  are equivalent to replicating rows, and a zero weight is equivalent to
+  omitting the row from training. Reported performance metrics remain
+  unweighted, so weighted and unweighted runs stay comparable; the
+  previous “row weights are not used” warning is gone.
+
+- New benchmark `inst/benchmarks/pattern_model/bench_vs_baselines.R`:
+  the head-to-head predictive comparison of `pattern_model` against
+  searchlight shrinkage LDA (honest inner-CV sphere selection and an
+  oracle upper bound), `spacenet_tvl1`, whole-brain shrinkage LDA, and
+  CV-tuned PLS on identical blocked splits. Results are recorded in
+  `adocs/pattern-model-benchmarks.md`.
+
 - New
   [`pattern_model()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_model.md)
   analysis family: a pattern-first spatial reduced-rank model
@@ -21,12 +42,27 @@
   regional, and searchlight modes;
   [`run_global()`](https://bbuchsbaum.github.io/rMVPA/reference/run_global.md)
   returns a `pattern_global_result` carrying the out-of-fold prediction
-  ledger, the per-fold fits, and an optional full-data refit. Spatial
-  penalties are declared through `penalty` but rejected in this version.
-  See
+  ledger, the per-fold fits, and an optional full-data refit. See
   [`pattern_control()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_control.md)
   and
   [`predict.pattern_fit()`](https://bbuchsbaum.github.io/rMVPA/reference/predict.pattern_fit.md).
+
+- [`pattern_model()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_model.md)
+  gains spatial penalties on the forward patterns, so what is
+  regularized is where task signal is expressed rather than which
+  measurements help prediction. `penalty = list(sparse = )` is a
+  row-wise group lasso, given as a fraction of the penalty that empties
+  the model, so the same number means the same thing across folds and
+  feature domains; `signed_smooth` adds graph-Laplacian smoothing of the
+  signed loadings, weighted against the data-fit curvature and using a
+  [`spatial_graph()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_graph.md)
+  built from the dataset when not supplied. Either may be `"auto"`,
+  which cross-validates over a short path jointly with rank.
+  `support_smooth` is reserved for a smooth support envelope and is
+  rejected rather than quietly redirected, because the two encode
+  different assumptions: smoothing signed loadings cannot represent a
+  code that flips sign within a region. Penalized fits report
+  `n_selected`.
 
 - [`haufe_importance()`](https://bbuchsbaum.github.io/rMVPA/reference/haufe_importance.md)
   accepts the training observations (`X =`) and computes activation
