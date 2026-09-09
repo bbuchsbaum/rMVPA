@@ -86,6 +86,7 @@ Collate:
     'pattern_maps.R'
     'pattern_result.R'
     'pattern_inference.R'
+    'pattern_group.R'
     'save_results.R'
     'vector_rsa_model.R'
     'distcalc.R'

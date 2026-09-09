@@ -1,10 +1,11 @@
 test_that("fixed-rank tuning compares penalties at the rank that will be fitted", {
   testthat::local_mocked_bindings(
-    .pattern_fit = function(X, targets, rank, control, graph, penalty, cap_rank = FALSE) {
+    .pattern_fit = function(X, targets, rank, control, graph, penalty, cap_rank = FALSE,
+                            weights = NULL) {
       path <- list(list(rank = 1, sparse = penalty$sparse), list(rank = 2, sparse = penalty$sparse))
       if (identical(rank, "path")) path else path[[rank]]
     },
-    .pattern_loss = function(fit, X, targets) {
+    .pattern_loss = function(fit, X, targets, weights = NULL) {
       if (fit$sparse == 0.1) c(1, 0.1)[fit$rank] else c(0.5, 0.4)[fit$rank]
     }
   )
@@ -58,13 +59,14 @@ test_that("optional Haufe diagnostics do not discard an evaluation with missing 
 
 test_that("fixed-rank tuning respects each fold's eligible rank", {
   testthat::local_mocked_bindings(
-    .pattern_fit = function(X, targets, rank, control, graph, penalty, cap_rank = FALSE) {
+    .pattern_fit = function(X, targets, rank, control, graph, penalty, cap_rank = FALSE,
+                            weights = NULL) {
       cap <- if (1 %in% X[, 1]) 2L else 1L
       if (!identical(rank, "path") && rank > cap && !cap_rank) stop("exceeds eligible rank")
       path <- lapply(seq_len(cap), function(k) list(rank = k, sparse = penalty$sparse))
       if (identical(rank, "path")) path else path[[min(rank, cap)]]
     },
-    .pattern_loss = function(fit, X, targets) {
+    .pattern_loss = function(fit, X, targets, weights = NULL) {
       if (fit$sparse == .1) c(.2, 20)[fit$rank] else c(2, .5)[fit$rank]
     }
   )

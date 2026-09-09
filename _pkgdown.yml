@@ -40,6 +40,7 @@ articles:
   - ITEM_Decoding
   - Pattern_Model
   - Pattern_Confirmation
+  - Pattern_Group
   - CommandLine
 - title: Representational Similarity Analysis
   desc: |
