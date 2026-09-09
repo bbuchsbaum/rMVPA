@@ -85,6 +85,24 @@ new_pattern_noise <- function(D, U = NULL, type = "diag_lowrank", meta = list())
   M + noise$P %*% (f * crossprod(noise$P, M))
 }
 
+#' Whitening applied on the right: X W' for X whose COLUMNS are features.
+#'
+#' The estimator needs X W' (n x p), and .noise_whiten() expects a matrix whose
+#' rows are features, so the obvious route transposes X twice and allocates
+#' three n x p temporaries. Since W = (I + P F P') D^{-1/2} with F diagonal,
+#' W' = D^{-1/2} + D^{-1/2} P F P', so X W' = Xs + (Xs P) F P' with
+#' Xs = X D^{-1/2}: one n x p temporary and two n x h products.
+#' @keywords internal
+#' @noRd
+.noise_whiten_rows <- function(noise, X) {
+  # identity noise leaves X alone; skip the copy entirely
+  if (identical(noise$type, "identity") && is.null(noise$U)) return(as.matrix(X))
+  Xs <- sweep(as.matrix(X), 2L, sqrt(noise$D), "/")
+  if (is.null(noise$U)) return(Xs)
+  f <- 1 / sqrt(1 + noise$s^2) - 1
+  Xs + sweep(Xs %*% noise$P, 2L, f, "*") %*% t(noise$P)
+}
+
 #' Inverse of .noise_whiten:  W^{-1} M = D^{1/2} (I + V V')^{1/2} M.
 #' @keywords internal
 #' @noRd

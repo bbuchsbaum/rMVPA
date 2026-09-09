@@ -32,12 +32,15 @@ new_spatial_graph <- function(A, feature_ids, domain_type, geometry_id,
 
   # Validate raw weights before any symmetrization can mask them.
   A <- Matrix::drop0(A)
-  if (length(A@x) && any(A@x < 0)) {
-    stop("spatial_graph: edge weights must be non-negative.", call. = FALSE)
+  if (length(A@x) && (anyNA(A@x) || any(!is.finite(A@x)) || any(A@x < 0))) {
+    stop("spatial_graph: edge weights must be finite and non-negative.", call. = FALSE)
   }
-  # Symmetrize (an edge present in either direction is kept, with the larger
-  # weight), drop self-loops, and binarize unless weights are meaningful.
-  A <- Matrix::drop0(pmax(A, Matrix::t(A)))
+  # Symmetrize by taking the larger of the two directions. base::pmax has no
+  # sparse method and would coerce to a dense p x p matrix, which is fatal at
+  # whole-brain feature counts, so use the sparse-preserving identity
+  # max(a, b) = (a + b + |a - b|) / 2.
+  At <- Matrix::t(A)
+  A <- Matrix::drop0((A + At + abs(A - At)) / 2)
   Matrix::diag(A) <- 0
   A <- Matrix::drop0(A)
   if (!isTRUE(weighted) && length(A@x)) A@x[] <- 1
@@ -51,6 +54,7 @@ new_spatial_graph <- function(A, feature_ids, domain_type, geometry_id,
       A = A,
       degree = degree,
       L = L,
+      L_norm = if (n > 0L) .pattern_L_norm(L) else 0,
       feature_ids = feature_ids,
       n_features = n,
       domain_type = domain_type,
@@ -310,4 +314,251 @@ graph_edges <- function(graph) {
                  graph$n_features, what, as.integer(n_columns)), call. = FALSE)
   }
   invisible(TRUE)
+}
+
+
+# ---------------------------------------------------------------------------
+# Spatial penalties for the pattern model
+#
+# The A-step minimises, for fixed target directions C and residual covariance
+# Psi,
+#
+#   g(A) + h(A),
+#   g(A) = 1/(2n) tr[(X - T A') Psi^{-1} (X - T A')'] + lambda_l/2 tr(A' L A)
+#   h(A) = lambda_s sum_v ||A_v||_2
+#
+# with T = Y_w C. g is smooth and convex, h is separable across features, so
+# the step is a proximal gradient problem. Expanding g removes every n x p
+# operation from the inner loop: with XtT = X'T and the constant tr(X Psi^{-1} X')
+# precomputed once per outer iteration, each FISTA iteration costs
+# O(p r^2 + nnz(L) r).
+# ---------------------------------------------------------------------------
+
+#' Row-wise group soft-threshold (the prox of the group lasso).
+#' @keywords internal
+#' @noRd
+.prox_group_lasso <- function(B, thr) {
+  if (thr <= 0) return(B)
+  nrm <- sqrt(rowSums(B^2))
+  scale <- pmax(0, 1 - thr / pmax(nrm, .Machine$double.eps))
+  B * scale
+}
+
+#' A deterministic starting vector for power iteration.
+#'
+#' Fits must be reproducible, so the power iterations that set the step size
+#' cannot draw from the global RNG stream: two identical calls would otherwise
+#' return slightly different step sizes and therefore slightly different
+#' iterates. This is a fixed low-discrepancy pattern, unlikely to be orthogonal
+#' to a leading eigenvector.
+#' @keywords internal
+#' @noRd
+.power_start <- function(m) {
+  i <- seq_len(m)
+  v <- sin(i * 0.7391) + cos(i * 1.2153)
+  v / sqrt(sum(v^2))
+}
+
+#' Spectral norm of the A-step's linear operator, by power iteration.
+#'
+#' The gradient of the smooth part is linear in A:
+#'   A -> (1/n) Psi^{-1} A (T'T) + lambda_l L A
+#' and its spectral norm is the Lipschitz constant that sets the step size. The
+#' 1/n is part of the operator: dropping it would make the step roughly n times
+#' too short and inflate any penalty calibrated against this norm by the same
+#' factor. Power iteration converges from below, so `safety` inflates the
+#' result when it is used as a Lipschitz bound; leave it at 1 when the value is
+#' wanted as a scale reference instead.
+#' @keywords internal
+#' @noRd
+.pattern_grad_norm <- function(noise, TtT, L, lambda_l, n, p, r, iter = 60L, tol = 1e-8,
+                               safety = 1.02) {
+  V <- matrix(.power_start(p * r), p, r)
+  lam <- 0
+  for (i in seq_len(iter)) {
+    W <- .noise_apply_precision(noise, V %*% TtT) / n
+    if (lambda_l > 0 && !is.null(L)) W <- W + lambda_l * as.matrix(L %*% V)
+    nw <- sqrt(sum(W^2))
+    if (!is.finite(nw) || nw <= 0) return(1)
+    V <- W / nw
+    if (abs(nw - lam) <= tol * nw) { lam <- nw; break }
+    lam <- nw
+  }
+  lam * safety
+}
+
+#' Smallest group-lasso penalty that zeroes every feature at A = 0.
+#'
+#' At A = 0 the smooth gradient is -(1/n) Psi^{-1} X'T, so feature v survives
+#' the prox only when its gradient row norm exceeds lambda_s.
+#' @keywords internal
+#' @noRd
+.pattern_lambda_max <- function(PXtT, n) {
+  max(sqrt(rowSums((PXtT / n)^2)))
+}
+
+#' Objective of the A-step, without any n x p operation.
+#' @keywords internal
+#' @noRd
+.pattern_astep_objective <- function(A, prob) {
+  PA <- .noise_apply_precision(prob$noise, A)
+  quad <- sum((A %*% prob$TtT) * PA)
+  cross <- sum(prob$XtT * PA)
+  g <- (prob$const - 2 * cross + quad) / (2 * prob$n)
+  if (prob$lambda_l > 0) g <- g + 0.5 * prob$lambda_l * sum(A * as.matrix(prob$L %*% A))
+  g + prob$lambda_s * sum(sqrt(rowSums(A^2)))
+}
+
+#' Gradient of the smooth part of the A-step.
+#' @keywords internal
+#' @noRd
+.pattern_astep_gradient <- function(A, prob) {
+  G <- .noise_apply_precision(prob$noise, A %*% prob$TtT - prob$XtT) / prob$n
+  if (prob$lambda_l > 0) G <- G + prob$lambda_l * as.matrix(prob$L %*% A)
+  G
+}
+
+#' Monotone FISTA for the penalized A-step.
+#'
+#' Uses the monotone variant (Beck & Teboulle 2009), which accepts a candidate
+#' only when it does not increase the objective, so the returned trace is
+#' non-increasing by construction.
+#' @keywords internal
+#' @noRd
+.pattern_astep_fista <- function(A_init, prob, max_iter = 300L, tol = 1e-7,
+                                 tol_iterate = 1e-5) {
+  A <- A_init
+  step <- 1 / prob$lipschitz
+  y <- A
+  tk <- 1
+  restarted <- FALSE
+  obj <- .pattern_astep_objective(A, prob)
+  trace <- obj
+  converged <- FALSE
+  iters <- 0L
+  for (k in seq_len(max_iter)) {
+    iters <- k
+    z <- .prox_group_lasso(y - step * .pattern_astep_gradient(y, prob), step * prob$lambda_s)
+    obj_z <- .pattern_astep_objective(z, prob)
+
+    if (obj_z > obj) {
+      # No progress. Never report this as convergence: a rejected candidate
+      # leaves the objective unchanged, which would otherwise look like a zero
+      # relative change. Momentum overshoot is the common cause, so drop the
+      # momentum first; if a plain proximal-gradient step from the current
+      # iterate also fails, the step length itself is too long.
+      if (restarted) step <- step / 2 else restarted <- TRUE
+      tk <- 1
+      y <- A
+      next
+    }
+
+    A_prev <- A
+    A <- z
+    restarted <- FALSE
+    tk_new <- (1 + sqrt(1 + 4 * tk^2)) / 2
+    y <- A + ((tk - 1) / tk_new) * (A - A_prev)
+    tk <- tk_new
+    rel <- abs(obj - obj_z) / max(abs(obj), .Machine$double.eps)
+    # The objective is flat near the optimum, so a small change in it does not
+    # imply a settled iterate. Require both: otherwise the patterns, which are
+    # the scientific output, can still be a percent away when the loop stops.
+    rel_A <- sqrt(sum((A - A_prev)^2)) / max(sqrt(sum(A^2)), .Machine$double.eps)
+    trace <- c(trace, obj_z)
+    obj <- obj_z
+    if (rel < tol && rel_A < tol_iterate) { converged <- TRUE; break }
+  }
+  list(A = A, objective = obj, trace = trace, iterations = iters, converged = converged)
+}
+
+#' Assemble the fixed quantities of one A-step subproblem.
+#'
+#' `XtT` and the constant term are the only n x p work; everything the solver
+#' then does is O(p r^2 + nnz(L) r) per iteration.
+#' @keywords internal
+#' @noRd
+.pattern_astep_problem <- function(X, Tm, noise, L, lambda_s, lambda_l, const, XtT = NULL) {
+  n <- nrow(X)
+  prob <- list(
+    n = n, TtT = crossprod(Tm),
+    XtT = if (is.null(XtT)) crossprod(X, Tm) else XtT,
+    noise = noise,
+    L = L, lambda_s = lambda_s, lambda_l = lambda_l, const = const
+  )
+  prob$lipschitz <- .pattern_grad_norm(noise, prob$TtT, L, lambda_l, n, ncol(X), ncol(Tm))
+  prob
+}
+
+#' Resolve a penalty specification into concrete lambda values.
+#'
+#' \code{sparse} is a fraction of the smallest penalty that zeroes every
+#' feature, so it means the same thing across folds and feature domains.
+#' \code{signed_smooth} is the weight of the graph-Laplacian term relative to
+#' the curvature of the data-fit term, again dimensionless: a value of 1 makes
+#' smoothing as influential as the data fit. Both are resolved on training
+#' rows only.
+#' @keywords internal
+#' @noRd
+.pattern_resolve_penalty <- function(penalty, X, Tm, noise, graph, XtT = NULL) {
+  out <- list(lambda_s = 0, lambda_l = 0, alpha = 0, rho = 0,
+              lambda_max = NA_real_, L = NULL, active = FALSE)
+  if (is.null(penalty)) return(out)
+  alpha <- penalty$sparse %||% 0
+  rho <- penalty$signed_smooth %||% 0
+  if (!is.numeric(alpha) || length(alpha) != 1L || alpha < 0 || alpha >= 1) {
+    stop("pattern_model: penalty$sparse must be a single number in [0, 1).", call. = FALSE)
+  }
+  if (!is.numeric(rho) || length(rho) != 1L || rho < 0) {
+    stop("pattern_model: penalty$signed_smooth must be a single number >= 0.", call. = FALSE)
+  }
+  if (alpha == 0 && rho == 0) return(out)
+
+  n <- nrow(X)
+  PXtT <- .noise_apply_precision(noise, if (is.null(XtT)) crossprod(X, Tm) else XtT)
+  out$lambda_max <- .pattern_lambda_max(PXtT, n)
+  out$alpha <- alpha
+  out$lambda_s <- alpha * out$lambda_max
+
+  if (rho > 0) {
+    if (is.null(graph)) {
+      stop("pattern_model: penalty$signed_smooth requires a spatial graph; ",
+           "pass one via spatial_graph(dataset).", call. = FALSE)
+    }
+    .assert_graph_aligned(graph, ncol(X), "feature matrix")
+    # Normalise the Laplacian to unit spectral norm so rho is comparable across
+    # domains, then scale it to the data-fit curvature.
+    L <- graph$L
+    Lnorm <- graph$L_norm %||% .pattern_L_norm(L)
+    if (!is.finite(Lnorm) || Lnorm <= 0) {
+      out$L <- NULL
+    } else {
+      out$L <- L / Lnorm
+      # scale reference, not a step-size bound, so no safety inflation
+      dat <- .pattern_grad_norm(noise, crossprod(Tm), NULL, 0, n, ncol(X), ncol(Tm),
+                                safety = 1)
+      out$lambda_l <- rho * dat
+    }
+  }
+  out$rho <- rho
+  out$active <- out$lambda_s > 0 || out$lambda_l > 0
+  out
+}
+
+#' Spectral norm of a graph Laplacian (power iteration; bounded by 2 max degree).
+#' @keywords internal
+#' @noRd
+.pattern_L_norm <- function(L, iter = 100L, tol = 1e-9) {
+  p <- nrow(L)
+  if (p == 0L) return(0)
+  v <- .power_start(p)
+  lam <- 0
+  for (i in seq_len(iter)) {
+    w <- as.numeric(L %*% v)
+    nw <- sqrt(sum(w^2))
+    if (!is.finite(nw) || nw <= 0) return(0)
+    v <- w / nw
+    if (abs(nw - lam) <= tol * nw) { lam <- nw; break }
+    lam <- nw
+  }
+  lam
 }

@@ -11,11 +11,13 @@ pattern_model(
   rank = "auto",
   max_rank = 8L,
   penalty = NULL,
+  graph = NULL,
   noise = list(type = "diag_lowrank", rank = "auto"),
   control = NULL,
   return_predictions = FALSE,
   return_fits = FALSE,
   refit = FALSE,
+  weights = NULL,
   ...
 )
 }
@@ -34,9 +36,17 @@ positive integer, capped at the eligible rank.}
 
 \item{max_rank}{Largest rank considered when \code{rank = "auto"}.}
 
-\item{penalty}{Spatial penalty specification, a list with elements
-\code{sparse}, \code{signed_smooth}, and \code{support_smooth}. Reserved:
-this version accepts only \code{NULL}.}
+\item{penalty}{Spatial penalty on the forward patterns: a list with any of
+\code{sparse} (row-wise group lasso, as a fraction of the penalty that
+empties the model), \code{signed_smooth} (graph-Laplacian smoothing of
+the signed loadings, relative to the data-fit curvature), and
+\code{support_smooth} (reserved, not implemented). Each may be a number,
+a vector of candidates, or \code{"auto"}. \code{NULL} (default) fits
+without a spatial penalty. See the Spatial penalties section.}
+
+\item{graph}{A \code{\link{spatial_graph}} aligned to the dataset's
+features, used by \code{signed_smooth}. Built from the dataset when
+needed and not supplied.}
 
 \item{noise}{Residual covariance specification passed to
 \code{\link{pattern_control}}.}
@@ -50,6 +60,17 @@ overrides \code{max_rank} and \code{noise}.}
 
 \item{refit}{Also fit the model on all training rows (a descriptive
 deployment fit, distinct from the cross-validated evidence).}
+
+\item{weights}{Optional non-negative observation weights, one per training
+observation. When \code{NULL} (default) they are read from the design
+(\code{\link{feature_sets_design}} carries \code{row_weights}); a vector
+supplied here overrides the design's weights. Weights enter the estimator
+itself -- centring, target whitening, the residual-covariance estimate,
+and the penalized objective are all weighted -- and the held-out loss
+that drives rank/penalty selection. Integer weights are exactly
+equivalent to replicating rows, and a zero weight is exactly equivalent
+to omitting the row from training. Reported performance metrics remain
+unweighted: every tested observation counts once.}
 
 \item{...}{Additional fields stored on the specification.}
 }
@@ -73,11 +94,38 @@ or a \code{\link{feature_rsa_design}}), read through
 Targets are centred and whitened on the training rows; \eqn{C} has
 orthonormal columns so all scale lives in the spatial patterns \eqn{A}.
 The residual covariance \eqn{\Psi = D + UU^\top} is estimated once from a
-training-only pilot fit and held fixed. Rank is chosen by nested,
-block-aware cross-validation on held-out decoding loss (log loss for
-categorical targets, normalized squared error for continuous targets).
-Spatial penalties are declared through \code{penalty} but are not yet
-available in this version: any non-\code{NULL} penalty is rejected.
+training-only pilot fit and held fixed. Rank and penalty strength are
+chosen together by nested, block-aware cross-validation on held-out
+decoding loss (log loss for categorical targets, normalized squared error
+for continuous targets), with ties going to the smaller rank.
+}
+
+\section{Spatial penalties}{
+
+Penalties act on the forward patterns \eqn{A}, not on decoding weights, so
+what is regularized is where task signal is expressed rather than which
+measurements happen to help prediction.
+\describe{
+  \item{\code{sparse}}{Row-wise group lasso: a feature is either in the
+    patterns or out of them, for all components at once. Given as a
+    fraction of the smallest penalty that empties the model, so the same
+    number means the same thing across folds and feature domains. Needs no
+    anatomy.}
+  \item{\code{signed_smooth}}{A graph-Laplacian quadratic that pulls
+    neighbouring loadings together, weighted relative to the curvature of
+    the data-fit term, so 1 makes smoothing as influential as the data.
+    Requires a \code{\link{spatial_graph}}, built from the dataset unless
+    one is supplied. This assumes neighbouring voxels carry \emph{similar
+    signed} loadings, which is wrong for a fine-grained code that flips
+    sign within a region, so it defaults to off and is worth tuning.}
+  \item{\code{support_smooth}}{Reserved for a spatially smooth support
+    envelope, which would let a coherent anatomical territory contain
+    sign-flipping loadings. Not implemented; it is rejected rather than
+    quietly redirected to \code{signed_smooth}, because they encode
+    different assumptions.}
+}
+Either penalty may be \code{"auto"}, which cross-validates over a short
+path; a number is used as given and does not enlarge the tuning grid.
 }
 
 \section{Outputs}{
@@ -86,7 +134,9 @@ Regional and searchlight runs report scalar metrics per ROI (see
 \code{\link{output_schema}}): \code{Accuracy}, \code{AUC}, \code{logloss},
 and \code{rank_mean} for categorical targets; \code{R2}, \code{RMSE},
 \code{cor}, and \code{rank_mean} for continuous targets. \code{rank_mean}
-is the mean rank selected across folds and need not be a whole number. With
+is the mean rank selected across folds and need not be a whole number. When
+a penalty is in force, \code{n_selected} reports the mean number of
+features with a non-zero pattern. With
 \code{return_predictions = TRUE} a regional run also returns the usual
 out-of-fold prediction table (categorical targets), and with either
 \code{return_predictions = TRUE} or \code{return_fits = TRUE} each ROI keeps
@@ -108,6 +158,11 @@ ds <- gen_sample_dataset(c(6, 6, 4), 60, nlevels = 3, blocks = 3)
 spec <- pattern_model(ds$dataset, ds$design, max_rank = 2)
 res <- run_global(spec)
 res$performance_table
+
+# sparse forward patterns, with the penalty chosen by nested CV
+sparse_spec <- pattern_model(ds$dataset, ds$design, rank = 1,
+                             penalty = list(sparse = "auto"))
+run_global(sparse_spec)$performance_table
 }
 \seealso{
 \code{\link{run_global}}, \code{\link{run_regional}},

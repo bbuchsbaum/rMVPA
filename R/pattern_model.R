@@ -23,18 +23,45 @@
 #' Targets are centred and whitened on the training rows; \eqn{C} has
 #' orthonormal columns so all scale lives in the spatial patterns \eqn{A}.
 #' The residual covariance \eqn{\Psi = D + UU^\top} is estimated once from a
-#' training-only pilot fit and held fixed. Rank is chosen by nested,
-#' block-aware cross-validation on held-out decoding loss (log loss for
-#' categorical targets, normalized squared error for continuous targets).
-#' Spatial penalties are declared through \code{penalty} but are not yet
-#' available in this version: any non-\code{NULL} penalty is rejected.
+#' training-only pilot fit and held fixed. Rank and penalty strength are
+#' chosen together by nested, block-aware cross-validation on held-out
+#' decoding loss (log loss for categorical targets, normalized squared error
+#' for continuous targets), with ties going to the smaller rank.
+#'
+#' @section Spatial penalties:
+#' Penalties act on the forward patterns \eqn{A}, not on decoding weights, so
+#' what is regularized is where task signal is expressed rather than which
+#' measurements happen to help prediction.
+#' \describe{
+#'   \item{\code{sparse}}{Row-wise group lasso: a feature is either in the
+#'     patterns or out of them, for all components at once. Given as a
+#'     fraction of the smallest penalty that empties the model, so the same
+#'     number means the same thing across folds and feature domains. Needs no
+#'     anatomy.}
+#'   \item{\code{signed_smooth}}{A graph-Laplacian quadratic that pulls
+#'     neighbouring loadings together, weighted relative to the curvature of
+#'     the data-fit term, so 1 makes smoothing as influential as the data.
+#'     Requires a \code{\link{spatial_graph}}, built from the dataset unless
+#'     one is supplied. This assumes neighbouring voxels carry \emph{similar
+#'     signed} loadings, which is wrong for a fine-grained code that flips
+#'     sign within a region, so it defaults to off and is worth tuning.}
+#'   \item{\code{support_smooth}}{Reserved for a spatially smooth support
+#'     envelope, which would let a coherent anatomical territory contain
+#'     sign-flipping loadings. Not implemented; it is rejected rather than
+#'     quietly redirected to \code{signed_smooth}, because they encode
+#'     different assumptions.}
+#' }
+#' Either penalty may be \code{"auto"}, which cross-validates over a short
+#' path; a number is used as given and does not enlarge the tuning grid.
 #'
 #' @section Outputs:
 #' Regional and searchlight runs report scalar metrics per ROI (see
 #' \code{\link{output_schema}}): \code{Accuracy}, \code{AUC}, \code{logloss},
 #' and \code{rank_mean} for categorical targets; \code{R2}, \code{RMSE},
 #' \code{cor}, and \code{rank_mean} for continuous targets. \code{rank_mean}
-#' is the mean rank selected across folds and need not be a whole number. With
+#' is the mean rank selected across folds and need not be a whole number. When
+#' a penalty is in force, \code{n_selected} reports the mean number of
+#' features with a non-zero pattern. With
 #' \code{return_predictions = TRUE} a regional run also returns the usual
 #' out-of-fold prediction table (categorical targets), and with either
 #' \code{return_predictions = TRUE} or \code{return_fits = TRUE} each ROI keeps
@@ -59,9 +86,16 @@
 #' @param rank \code{"auto"} (selected by nested cross-validation) or a fixed
 #'   positive integer, capped at the eligible rank.
 #' @param max_rank Largest rank considered when \code{rank = "auto"}.
-#' @param penalty Spatial penalty specification, a list with elements
-#'   \code{sparse}, \code{signed_smooth}, and \code{support_smooth}. Reserved:
-#'   this version accepts only \code{NULL}.
+#' @param penalty Spatial penalty on the forward patterns: a list with any of
+#'   \code{sparse} (row-wise group lasso, as a fraction of the penalty that
+#'   empties the model), \code{signed_smooth} (graph-Laplacian smoothing of
+#'   the signed loadings, relative to the data-fit curvature), and
+#'   \code{support_smooth} (reserved, not implemented). Each may be a number,
+#'   a vector of candidates, or \code{"auto"}. \code{NULL} (default) fits
+#'   without a spatial penalty. See the Spatial penalties section.
+#' @param graph A \code{\link{spatial_graph}} aligned to the dataset's
+#'   features, used by \code{signed_smooth}. Built from the dataset when
+#'   needed and not supplied.
 #' @param noise Residual covariance specification passed to
 #'   \code{\link{pattern_control}}.
 #' @param control A \code{\link{pattern_control}} object. When supplied it
@@ -70,6 +104,16 @@
 #' @param return_fits Retain the fold fits per ROI (implies ledgers).
 #' @param refit Also fit the model on all training rows (a descriptive
 #'   deployment fit, distinct from the cross-validated evidence).
+#' @param weights Optional non-negative observation weights, one per training
+#'   observation. When \code{NULL} (default) they are read from the design
+#'   (\code{\link{feature_sets_design}} carries \code{row_weights}); a vector
+#'   supplied here overrides the design's weights. Weights enter the estimator
+#'   itself -- centring, target whitening, the residual-covariance estimate,
+#'   and the penalized objective are all weighted -- and the held-out loss
+#'   that drives rank/penalty selection. Integer weights are exactly
+#'   equivalent to replicating rows, and a zero weight is exactly equivalent
+#'   to omitting the row from training. Reported performance metrics remain
+#'   unweighted: every tested observation counts once.
 #' @param ... Additional fields stored on the specification.
 #' @return A \code{pattern_model} specification (class
 #'   \code{c("pattern_model", "model_spec")}).
@@ -78,14 +122,20 @@
 #' spec <- pattern_model(ds$dataset, ds$design, max_rank = 2)
 #' res <- run_global(spec)
 #' res$performance_table
+#'
+#' # sparse forward patterns, with the penalty chosen by nested CV
+#' sparse_spec <- pattern_model(ds$dataset, ds$design, rank = 1,
+#'                              penalty = list(sparse = "auto"))
+#' run_global(sparse_spec)$performance_table
 #' @seealso \code{\link{run_global}}, \code{\link{run_regional}},
 #'   \code{\link{predict.pattern_fit}}, \code{\link{pattern_control}}
 #' @export
 pattern_model <- function(dataset, design, crossval = NULL, rank = "auto", max_rank = 8L,
-                          penalty = NULL,
+                          penalty = NULL, graph = NULL,
                           noise = list(type = "diag_lowrank", rank = "auto"),
                           control = NULL,
-                          return_predictions = FALSE, return_fits = FALSE, refit = FALSE, ...) {
+                          return_predictions = FALSE, return_fits = FALSE, refit = FALSE,
+                          weights = NULL, ...) {
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   targets_train <- model_targets(design, "train")
   if (is.null(targets_train)) {
@@ -95,20 +145,7 @@ pattern_model <- function(dataset, design, crossval = NULL, rank = "auto", max_r
     stop("pattern_model: unsupported target type.", call. = FALSE)
   }
 
-  if (!is.null(penalty)) {
-    penalty <- as.list(penalty)
-    allowed <- c("sparse", "signed_smooth", "support_smooth")
-    bad <- setdiff(names(penalty), allowed)
-    if (length(bad)) {
-      stop(sprintf("pattern_model: unknown penalty element(s): %s.", paste(bad, collapse = ", ")),
-           call. = FALSE)
-    }
-    active <- vapply(penalty, function(v) !is.null(v) && !(is.numeric(v) && all(v == 0)), logical(1))
-    if (any(active)) {
-      stop("pattern_model: spatial penalties (sparse, signed_smooth, support_smooth) are not ",
-           "implemented in this version; pass penalty = NULL.", call. = FALSE)
-    }
-  }
+  penalty <- .pattern_check_penalty(penalty)
 
   if (is.null(control)) {
     control <- pattern_control(max_rank = max_rank, noise = noise)
@@ -138,9 +175,33 @@ pattern_model <- function(dataset, design, crossval = NULL, rank = "auto", max_r
     }
   }
 
-  if (!is.null(targets_train$row_weights) && any(targets_train$row_weights != 1)) {
-    warning("pattern_model: observation row weights are not used by this version ",
-            "of the estimator; every observation is weighted equally.", call. = FALSE)
+  # Observation weights: an explicit argument wins over design-carried
+  # row_weights. Validation matches .pattern_check_weights, but happens here so
+  # a bad specification fails at construction, not inside the first fold.
+  w <- weights %||% targets_train$row_weights
+  if (!is.null(w)) {
+    w <- as.numeric(w)
+    n_obs <- length(targets_train$observation_ids)
+    if (length(w) != n_obs) {
+      stop(sprintf("pattern_model: %d observation weights but %d training observations.",
+                   length(w), n_obs), call. = FALSE)
+    }
+    if (any(!is.finite(w)) || any(w < 0)) {
+      stop("pattern_model: observation weights must be finite and non-negative.", call. = FALSE)
+    }
+    if (sum(w) <= 0) {
+      stop("pattern_model: observation weights must have a positive sum.", call. = FALSE)
+    }
+    targets_train$row_weights <- w
+  }
+
+  # A signed-smoothness penalty needs anatomy: build the graph from the dataset
+  # unless the caller supplied one.
+  if (!is.null(penalty) && isTRUE(penalty$signed_smooth_active) && is.null(graph)) {
+    graph <- spatial_graph(dataset)
+  }
+  if (!is.null(graph) && !inherits(graph, "spatial_graph")) {
+    stop("pattern_model: 'graph' must come from spatial_graph().", call. = FALSE)
   }
 
   has_test <- !is.null(dataset$test_data) && !is.null(model_targets(design, "test"))
@@ -161,6 +222,7 @@ pattern_model <- function(dataset, design, crossval = NULL, rank = "auto", max_r
     crossval = crossval,
     rank = rank,
     penalty = penalty,
+    graph = graph,
     control = control,
     return_fits = retain_results,
     keep_fold_fits = isTRUE(return_fits),
@@ -185,6 +247,11 @@ print.pattern_model <- function(x, ...) {
               x$control$max_rank, x$control$noise$type))
   cat(sprintf("  crossval: %s, external test set: %s\n",
               class(x$crossval)[1], if (isTRUE(x$has_test_set)) "yes" else "no"))
+  w <- x$targets_train$row_weights
+  if (!is.null(w) && !all(w == w[1L])) {
+    cat(sprintf("  observation weights: yes (%d of %d rows weighted zero)\n",
+                sum(w == 0), length(w)))
+  }
   cat(sprintf("  return_predictions: %s, return_fits: %s, refit: %s\n",
               x$return_predictions, x$return_fits, x$refit))
   invisible(x)
@@ -216,8 +283,10 @@ print.pattern_model <- function(x, ...) {
     nb <- max(ids)
     grp <- if (nb > max_folds) ((ids - 1L) %% max_folds) + 1L else ids
   } else {
+    # Deterministic: drawing here would make tuning depend on the global RNG
+    # stream and break reproducibility of the whole fit.
     k <- min(max_folds, n)
-    grp <- sample(rep(seq_len(k), length.out = n))
+    grp <- ((seq_len(n) - 1L) %% k) + 1L
   }
   lapply(sort(unique(grp)), function(g) {
     te <- which(grp == g)
@@ -237,57 +306,106 @@ print.pattern_model <- function(x, ...) {
 }
 
 # Held-out decoding loss (lower is better). Returns NA when the fold carries no
-# scorable rows so the caller can drop it rather than propagate the NA.
-.pattern_loss <- function(fit, X_test, truth) {
+# scorable rows so the caller can drop it rather than propagate the NA. With
+# observation weights the loss is the weighted average, so a down-weighted
+# assessment row steers the tuning as little as it steered the fit.
+.pattern_loss <- function(fit, X_test, truth, weights = NULL) {
+  if (!is.null(weights) && (!any(weights > 0))) return(NA_real_)
   if (fit$y_transform$type == "categorical") {
     P <- predict(fit, X_test, type = "prob")
     truth <- factor(as.character(truth), levels = fit$y_transform$levels)
     # Rows whose class never appeared in this fold's training data carry no
     # information about rank; scoring them would make every rank equally bad.
     ok <- !is.na(truth)
+    if (!is.null(weights)) ok <- ok & weights > 0
     if (!any(ok)) return(NA_real_)
     p_true <- P[cbind(which(ok), as.integer(truth[ok]))]
-    mean(-log(pmax(p_true, 1e-12)))
+    ll <- -log(pmax(p_true, 1e-12))
+    if (is.null(weights)) mean(ll) else stats::weighted.mean(ll, weights[ok])
   } else {
     Yhat <- predict(fit, X_test, type = "decode")
     Y <- as.matrix(truth)
     mu <- fit$y_transform$mu           # training-mean baseline (see .pattern_score_ledger)
-    sst <- colSums(sweep(Y, 2L, mu, "-")^2)
-    sse <- colSums((Y - Yhat)^2)
+    dev2 <- sweep(Y, 2L, mu, "-")^2
+    err2 <- (Y - Yhat)^2
+    if (!is.null(weights)) {
+      dev2 <- dev2 * weights
+      err2 <- err2 * weights
+    }
+    sst <- colSums(dev2)
+    sse <- colSums(err2)
     mean(sse / pmax(sst, .Machine$double.eps))
   }
 }
 
-# Nested rank selection: exact reduced-rank path per inner fold, summed loss.
-.pattern_select_rank <- function(X, targets, blocks, control) {
+# Nested selection of rank and penalty strength.
+#
+# For each candidate penalty setting the whole nested rank path is fitted once
+# per inner fold and the held-out decoding losses are summed over folds. Ties
+# go to the smaller rank, and across penalty settings to the first grid entry,
+# which is the strongest sparsity at the weakest smoothing: a dimension, a
+# feature, or a smoothness assumption is only taken on when it buys held-out
+# accuracy.
+.pattern_select_config <- function(X, targets, blocks, control, penalty = NULL,
+                                   graph = NULL, rank = "auto", weights = NULL) {
   n <- nrow(X)
   folds <- .pattern_inner_folds(n, blocks)
-  losses <- NULL
-  n_used <- 0L
+  grid <- .pattern_penalty_grid(penalty)
+  loss_mat <- vector("list", length(grid))
+  n_used <- integer(length(grid))
+
   for (f in folds) {
     if (length(f$train) < 3L || length(f$test) < 1L) next
     tr_targets <- .pattern_subset_rows(targets, f$train)
     if (is.factor(tr_targets) && nlevels(droplevels(tr_targets)) < 2L) next
-    path <- tryCatch(.pattern_fit(X[f$train, , drop = FALSE], tr_targets, rank = "path", control = control),
-                     error = function(e) NULL)
-    if (is.null(path)) next
-    l <- vapply(path, function(fit) .pattern_loss(fit, X[f$test, , drop = FALSE],
-                                                 .pattern_subset_rows(targets, f$test)), numeric(1))
-    if (!all(is.finite(l))) next
-    if (is.null(losses)) {
-      losses <- l
-    } else {
-      m <- min(length(losses), length(l))
-      losses <- losses[seq_len(m)] + l[seq_len(m)]
+    w_tr <- if (is.null(weights)) NULL else weights[f$train]
+    w_te <- if (is.null(weights)) NULL else weights[f$test]
+    if (!is.null(w_tr) && sum(w_tr > 0) < 3L) next
+    Xtr <- X[f$train, , drop = FALSE]
+    Xte <- X[f$test, , drop = FALSE]
+    te_targets <- .pattern_subset_rows(targets, f$test)
+    for (g in seq_along(grid)) {
+      fitted <- tryCatch(
+        .pattern_fit(Xtr, tr_targets, rank = if (identical(rank, "auto")) "path" else rank, control = control,
+                     graph = graph, penalty = grid[[g]], cap_rank = TRUE, weights = w_tr),
+        error = function(e) NULL
+      )
+      if (is.null(fitted)) next
+      path <- if (identical(rank, "auto")) fitted else list(fitted)
+      l <- vapply(path, function(fit) .pattern_loss(fit, Xte, te_targets, weights = w_te), numeric(1))
+      if (!all(is.finite(l))) next
+      if (is.null(loss_mat[[g]])) {
+        loss_mat[[g]] <- l
+      } else {
+        m <- min(length(loss_mat[[g]]), length(l))
+        loss_mat[[g]] <- loss_mat[[g]][seq_len(m)] + l[seq_len(m)]
+      }
+      n_used[g] <- n_used[g] + 1L
     }
-    n_used <- n_used + 1L
   }
-  if (is.null(losses) || !length(losses) || !any(is.finite(losses))) {
-    return(list(rank = 1L, losses = NULL))
+
+  best <- NULL
+  for (g in seq_along(grid)) {
+    l <- loss_mat[[g]]
+    if (is.null(l) || !length(l) || !any(is.finite(l))) next
+    l <- unname(l) / max(n_used[g], 1L)
+    r <- if (identical(rank, "auto")) as.integer(which.min(l)) else 1L
+    if (is.null(best) || l[r] < best$loss - 1e-12) {
+      best <- list(rank = if (identical(rank, "auto")) r else as.integer(rank),
+                   penalty = grid[[g]], loss = l[r], losses = l, grid_index = g)
+    }
   }
-  # Ties go to the smaller rank: when an extra dimension buys no held-out
-  # accuracy, prefer the more parsimonious model.
-  list(rank = as.integer(unname(which.min(losses))), losses = unname(losses) / max(n_used, 1L))
+  if (is.null(best)) {
+    return(list(rank = if (identical(rank, "auto")) 1L else as.integer(rank),
+                penalty = grid[[1]], losses = NULL, grid_index = 1L))
+  }
+  best
+}
+
+# Backward-compatible wrapper: rank selection with no spatial penalty.
+.pattern_select_rank <- function(X, targets, blocks, control) {
+  sel <- .pattern_select_config(X, targets, blocks, control)
+  list(rank = sel$rank, losses = sel$losses)
 }
 
 # ---------------------------------------------------------------------------
@@ -298,7 +416,8 @@ print.pattern_model <- function(x, ...) {
 # Cross-validated when no external test set is present; otherwise a single
 # train -> test evaluation. Returns metrics, a prediction ledger, and
 # optionally the fold fits and a full-data refit.
-.pattern_evaluate_domain <- function(model, X, X_test = NULL, keep_fits = FALSE, refit = FALSE) {
+.pattern_evaluate_domain <- function(model, X, X_test = NULL, keep_fits = FALSE, refit = FALSE,
+                                     graph = NULL) {
   X <- as.matrix(X)
   n <- nrow(X)
   tt <- model$targets_train
@@ -310,6 +429,18 @@ print.pattern_model <- function(x, ...) {
   blocks <- model$crossval$block_var
   if (!is.null(blocks) && length(blocks) != n) blocks <- NULL
   control <- model$control
+  # Observation weights train the estimator and steer the inner tuning loss.
+  # Reported metrics stay unweighted: every tested observation counts once, so
+  # performance numbers remain comparable across weighted and unweighted runs.
+  w_all <- tt$row_weights
+  if (!is.null(w_all)) {
+    w_all <- as.numeric(w_all)
+    if (length(w_all) != n) {
+      stop(sprintf("pattern_model: %d observation weights but %d observations.",
+                   length(w_all), n), call. = FALSE)
+    }
+    if (all(w_all == w_all[1L])) w_all <- NULL   # uniform weights are no weights
+  }
   categorical <- identical(model$target_type, "categorical")
   all_levels <- if (categorical) {
     lv <- model$targets_train$response_ids
@@ -329,20 +460,36 @@ print.pattern_model <- function(x, ...) {
 
   fold_fits <- vector("list", length(folds))
   ranks <- integer(length(folds))
+  alphas <- numeric(length(folds)); rhos <- numeric(length(folds))
+  nnz <- integer(length(folds))
   ledger_fold <- integer(0); ledger_obs <- integer(0)
   ledger_truth <- NULL; ledger_pred <- NULL; ledger_base <- NULL
 
   for (k in seq_along(folds)) {
     tr <- folds[[k]]$train; te <- folds[[k]]$test
     tr_targets <- .pattern_subset_rows(targets, tr)
-    if (identical(model$rank, "auto")) {
-      sel <- .pattern_select_rank(X[tr, , drop = FALSE], tr_targets, blocks[tr], control)
-      r_k <- sel$rank
+    w_tr <- if (is.null(w_all)) NULL else w_all[tr]
+    tune <- identical(model$rank, "auto") || .pattern_penalty_needs_tuning(model$penalty)
+    if (tune) {
+      sel <- .pattern_select_config(X[tr, , drop = FALSE], tr_targets, blocks[tr], control,
+                                    penalty = model$penalty, graph = graph, rank = model$rank,
+                                    weights = w_tr)
+      r_k <- if (identical(model$rank, "auto")) sel$rank else model$rank
+      pen_k <- sel$penalty
     } else {
       r_k <- model$rank
+      pen_k <- .pattern_penalty_grid(model$penalty)[[1]]
     }
-    fit_k <- .pattern_fit(X[tr, , drop = FALSE], tr_targets, rank = r_k, control = control, cap_rank = TRUE)
+    fit_k <- .pattern_fit(X[tr, , drop = FALSE], tr_targets, rank = r_k, control = control,
+                          cap_rank = TRUE, graph = graph, penalty = pen_k, weights = w_tr)
+    fit_k$training_observation_ids <- paste0("train:", tt$observation_ids[tr])
+    fit_k$assessment_observation_ids <- if (external) paste0("test:", model$targets_test$observation_ids[te]) else paste0("train:", tt$observation_ids[te])
+    fit_k$fold_definition_hash <- digest::digest(folds[[k]])
+    fit_k$basis_id <- digest::digest(list(C = fit_k$C, y_transform = fit_k$y_transform))
     ranks[k] <- fit_k$rank
+    alphas[k] <- fit_k$penalty$alpha %||% 0
+    rhos[k] <- fit_k$penalty$rho %||% 0
+    nnz[k] <- fit_k$diagnostics$n_nonzero %||% nrow(fit_k$A)
     if (keep_fits) fold_fits[[k]] <- fit_k
 
     X_te <- if (external) as.matrix(X_test)[te, , drop = FALSE] else X[te, , drop = FALSE]
@@ -381,18 +528,33 @@ print.pattern_model <- function(x, ...) {
   pooled <- .pattern_pool_ledger(ledger)
   metrics <- .pattern_score_ledger(pooled)
   metrics <- c(metrics, rank_mean = mean(ranks))
+  if (!is.null(model$penalty)) {
+    metrics <- c(metrics, n_selected = mean(nnz))
+  }
 
   refit_obj <- NULL
   if (isTRUE(refit)) {
-    r_all <- if (identical(model$rank, "auto")) {
-      .pattern_select_rank(X, targets, blocks, control)$rank
+    if (identical(model$rank, "auto") || .pattern_penalty_needs_tuning(model$penalty)) {
+      sel <- .pattern_select_config(X, targets, blocks, control,
+                                    penalty = model$penalty, graph = graph, rank = model$rank,
+                                    weights = w_all)
+      r_all <- if (identical(model$rank, "auto")) sel$rank else model$rank
+      pen_all <- sel$penalty
     } else {
-      model$rank
+      r_all <- model$rank
+      pen_all <- .pattern_penalty_grid(model$penalty)[[1]]
     }
-    refit_obj <- .pattern_fit(X, targets, rank = r_all, control = control, cap_rank = TRUE)
+    refit_obj <- .pattern_fit(X, targets, rank = r_all, control = control, cap_rank = TRUE,
+                              graph = graph, penalty = pen_all, weights = w_all)
   }
 
+  if (!is.null(refit_obj)) {
+    refit_obj$training_observation_ids <- paste0("train:", tt$observation_ids)
+    refit_obj$basis_id <- digest::digest(list(C = refit_obj$C, y_transform = refit_obj$y_transform))
+    refit_obj$fold_definition_hash <- digest::digest(folds)
+  }
   list(metrics = metrics, ledger = ledger, pooled = pooled, ranks = ranks,
+       alphas = alphas, rhos = rhos, n_nonzero = nnz,
        fold_fits = if (keep_fits) fold_fits else NULL, refit = refit_obj)
 }
 
@@ -517,11 +679,13 @@ print.pattern_ledger <- function(x, ...) {
 #' @rdname output_schema
 #' @export
 output_schema.pattern_model <- function(model) {
-  if (identical(model$target_type, "categorical")) {
+  sch <- if (identical(model$target_type, "categorical")) {
     list(Accuracy = "scalar", AUC = "scalar", logloss = "scalar", rank_mean = "scalar")
   } else {
     list(R2 = "scalar", RMSE = "scalar", cor = "scalar", rank_mean = "scalar")
   }
+  if (!is.null(model$penalty)) sch$n_selected <- "scalar"
+  sch
 }
 
 #' @rdname fit_roi
@@ -532,7 +696,8 @@ fit_roi.pattern_model <- function(model, roi_data, context, ...) {
   keep <- isTRUE(model$keep_fold_fits)
 
   out <- tryCatch(
-    .pattern_evaluate_domain(model, X, X_test = X_test, keep_fits = keep, refit = isTRUE(model$refit)),
+    .pattern_evaluate_domain(model, X, X_test = X_test, keep_fits = keep,
+                             refit = isTRUE(model$refit), graph = .pattern_roi_graph(model, roi_data)),
     error = function(e) e
   )
   if (inherits(out, "error")) {
@@ -604,9 +769,10 @@ run_global.pattern_model <- function(model_spec, return_fits = isTRUE(model_spec
   feature_ids <- feature_ids_for_dataset(dataset, ncol(X))
 
   out <- .pattern_evaluate_domain(model_spec, X, X_test = X_test,
-                                  keep_fits = isTRUE(return_fits), refit = isTRUE(refit))
+                                  keep_fits = isTRUE(return_fits), refit = isTRUE(refit),
+                                  graph = model_spec$graph)
 
-  structure(
+  result <- structure(
     list(
       performance_table = tibble::as_tibble(as.list(out$metrics)),
       ledger = out$pooled,
@@ -614,6 +780,9 @@ run_global.pattern_model <- function(model_spec, return_fits = isTRUE(model_spec
       ranks = out$ranks,
       fold_fits = out$fold_fits,
       refit = out$refit,
+      alphas = out$alphas,
+      rhos = out$rhos,
+      n_nonzero = out$n_nonzero,
       feature_ids = feature_ids,
       n_features = ncol(X),
       model_spec = model_spec,
@@ -621,6 +790,20 @@ run_global.pattern_model <- function(model_spec, return_fits = isTRUE(model_spec
     ),
     class = c("pattern_global_result", "list")
   )
+  result$component_stability <- if (length(out$fold_fits) >= 2L) component_stability(result) else NULL
+  if (length(out$fold_fits)) {
+    assessment <- if (is.null(X_test)) X else X_test
+    result$haufe_diagnostics <- lapply(seq_along(out$fold_fits), function(k) {
+      rows <- out$ledger$observation[out$ledger$fold == k]
+      if (length(rows) < 2L) return(list(status = "fewer than two held-out rows"))
+      fit_k <- out$fold_fits[[k]]
+      X_hold <- assessment[rows, , drop = FALSE]
+      if (any(!is.finite(X_hold[, fit_k$feature_index, drop = FALSE])))
+        return(list(status = "non-finite held-out retained features"))
+      pattern_haufe(fit_k, X_hold, fit_k$assessment_observation_ids)
+    })
+  }
+  result
 }
 
 #' @export
@@ -647,4 +830,120 @@ print.pattern_global_result <- function(x, ...) {
 #' @export
 performance.pattern_global_result <- function(x, ...) {
   x$performance_table
+}
+
+# ---------------------------------------------------------------------------
+# Penalty specification
+# ---------------------------------------------------------------------------
+
+# Normalize a user penalty into a validated specification. The names describe
+# roles, not functional forms, so a later total-variation implementation can
+# arrive under the same argument without changing what any of them mean.
+# In particular nothing called support_* ever applies a quadratic penalty to
+# signed coefficients.
+.pattern_check_penalty <- function(penalty) {
+  if (is.null(penalty)) return(NULL)
+  penalty <- as.list(penalty)
+  allowed <- c("sparse", "signed_smooth", "support_smooth")
+  bad <- setdiff(names(penalty), allowed)
+  if (length(bad)) {
+    stop(sprintf("pattern_model: unknown penalty element(s): %s. Expected any of %s.",
+                 paste(bad, collapse = ", "), paste(allowed, collapse = ", ")), call. = FALSE)
+  }
+  if (!is.null(penalty$support_smooth) &&
+      !(is.numeric(penalty$support_smooth) && all(penalty$support_smooth == 0))) {
+    stop("pattern_model: penalty$support_smooth (a spatially smooth support envelope) ",
+         "is not implemented in this version. Use penalty$signed_smooth for ",
+         "graph smoothing of the signed loadings, which is a different assumption.",
+         call. = FALSE)
+  }
+  chk <- function(v, nm) {
+    if (is.null(v)) return(NULL)
+    if (identical(v, "auto")) return("auto")
+    if (!is.numeric(v) || anyNA(v) || any(v < 0)) {
+      stop(sprintf("pattern_model: penalty$%s must be \"auto\", or non-negative number(s).", nm),
+           call. = FALSE)
+    }
+    as.numeric(v)
+  }
+  sparse <- chk(penalty$sparse, "sparse")
+  smooth <- chk(penalty$signed_smooth, "signed_smooth")
+  if (is.numeric(sparse) && any(sparse >= 1)) {
+    stop("pattern_model: penalty$sparse is a fraction of the penalty that zeroes every ",
+         "feature, so it must be below 1.", call. = FALSE)
+  }
+  sparse_active <- identical(sparse, "auto") || (is.numeric(sparse) && any(sparse > 0))
+  smooth_active <- identical(smooth, "auto") || (is.numeric(smooth) && any(smooth > 0))
+  if (!sparse_active && !smooth_active) return(NULL)
+  list(sparse = sparse, signed_smooth = smooth,
+       sparse_active = sparse_active, signed_smooth_active = smooth_active)
+}
+
+# The candidate (sparse, signed_smooth) settings a fit will be tuned over.
+# "auto" expands to a short path; numbers are used as given, so a manual
+# override never enlarges the grid.
+.pattern_penalty_grid <- function(penalty) {
+  if (is.null(penalty)) return(list(NULL))
+  sparse <- if (identical(penalty$sparse, "auto")) c(0.5, 0.25, 0.1, 0.05) else penalty$sparse %||% 0
+  smooth <- if (identical(penalty$signed_smooth, "auto")) c(0, 1, 4, 16) else penalty$signed_smooth %||% 0
+  grid <- expand.grid(sparse = sparse, signed_smooth = smooth, KEEP.OUT.ATTRS = FALSE)
+  # Strongest sparsity and weakest smoothing first, so that when several
+  # settings tie on held-out loss the selected one is the most parsimonious
+  # and the least reliant on the smoothness assumption.
+  grid <- grid[order(grid$signed_smooth, -grid$sparse), , drop = FALSE]
+  lapply(seq_len(nrow(grid)), function(i) {
+    list(sparse = grid$sparse[i], signed_smooth = grid$signed_smooth[i])
+  })
+}
+
+# TRUE when the penalty specification leaves something for cross-validation to
+# choose. A fully fixed numeric penalty is used as given.
+.pattern_penalty_needs_tuning <- function(penalty) {
+  if (is.null(penalty)) return(FALSE)
+  identical(penalty$sparse, "auto") || identical(penalty$signed_smooth, "auto") ||
+    (is.numeric(penalty$sparse) && length(penalty$sparse) > 1L) ||
+    (is.numeric(penalty$signed_smooth) && length(penalty$signed_smooth) > 1L)
+}
+
+# The graph for one ROI: the whole-domain graph restricted to the ROI's
+# features. roi_data$indices are dataset feature ids, and the graph's
+# feature_ids are in the same space, so the restriction is a lookup. Returns
+# NULL when the model needs no graph.
+.pattern_roi_graph <- function(model, roi_data) {
+  g <- model$graph
+  if (is.null(g)) return(NULL)
+  if (inherits(model$dataset, "mvpa_clustered_dataset")) {
+    pos <- roi_data$feature_positions
+    if (is.null(pos) || length(pos) != ncol(roi_data$train_data))
+      stop("Clustered ROIs require aligned feature_positions.", call. = FALSE)
+    return(restrict_graph(g, pos))
+  }
+  idx <- roi_data$indices
+  if (is.null(idx)) return(NULL)
+  pos <- .pattern_graph_positions(g, idx)
+  restrict_graph(g, pos)
+}
+
+# Column positions in the graph for a set of dataset feature ids.
+#
+# Multibasis datasets repeat each voxel id once per basis channel, in both the
+# graph and the ROI, so a plain match() would return the first channel's
+# position for every entry and collapse the ROI onto one channel. Matching the
+# k-th occurrence of an id to the k-th occurrence in the graph handles that,
+# and reduces to match() when ids are unique.
+.pattern_graph_positions <- function(graph, ids) {
+  ids <- as.integer(ids)
+  if (!anyDuplicated(graph$feature_ids) && !anyDuplicated(ids)) {
+    pos <- match(ids, graph$feature_ids)
+  } else {
+    occ <- stats::ave(seq_along(ids), ids, FUN = seq_along)
+    gocc <- stats::ave(seq_along(graph$feature_ids), graph$feature_ids, FUN = seq_along)
+    pos <- match(paste(ids, occ, sep = "/"),
+                 paste(graph$feature_ids, gocc, sep = "/"))
+  }
+  if (anyNA(pos)) {
+    stop("pattern_model: ROI features are absent from the spatial graph; the graph ",
+         "and the dataset must describe the same feature domain.", call. = FALSE)
+  }
+  pos
 }

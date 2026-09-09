@@ -38,6 +38,9 @@ articles:
   - Regional_Analysis
   - Haxby_2001
   - ITEM_Decoding
+  - Pattern_Model
+  - Pattern_Confirmation
+  - Pattern_Group
   - CommandLine
 - title: Representational Similarity Analysis
   desc: |

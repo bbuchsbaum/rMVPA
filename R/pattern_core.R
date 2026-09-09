@@ -10,14 +10,46 @@
 # .pattern_fit() takes matrices in and returns a serializable `pattern_fit`.
 
 # ---------------------------------------------------------------------------
+# Observation weights
+# ---------------------------------------------------------------------------
+
+# Validate observation weights and normalize them to sum to the row count, so
+# every 1/n normalization downstream becomes the weighted average
+# sum(w_i x_i) / sum(w_i) without further bookkeeping. Weights are therefore
+# scale-invariant: c * w fits identically to w. Returns NULL for NULL input;
+# zero weights are allowed here and dropped (with their rows) by the caller.
+.pattern_check_weights <- function(weights, n) {
+  if (is.null(weights)) return(NULL)
+  w <- as.numeric(weights)
+  if (length(w) != n) {
+    stop(sprintf("pattern_model: %d observation weights but %d observations.",
+                 length(w), n), call. = FALSE)
+  }
+  if (any(!is.finite(w)) || any(w < 0)) {
+    stop("pattern_model: observation weights must be finite and non-negative.", call. = FALSE)
+  }
+  if (sum(w) <= 0) {
+    stop("pattern_model: observation weights must have a positive sum.", call. = FALSE)
+  }
+  w * (n / sum(w))
+}
+
+# ---------------------------------------------------------------------------
 # Feature transform (columnwise only, so regional restriction stays local)
 # ---------------------------------------------------------------------------
 
-.pattern_x_transform_fit <- function(X, scale = c("none", "sd")) {
+.pattern_x_transform_fit <- function(X, scale = c("none", "sd"), weights = NULL) {
   scale <- match.arg(scale)
-  mu <- colMeans(X)
+  # weights are normalized to sum to nrow(X), so the weighted mean is
+  # colSums(w * X) / n and uniform weights reproduce colMeans exactly.
+  mu <- if (is.null(weights)) colMeans(X) else colSums(X * weights) / nrow(X)
   sd <- if (scale == "sd") {
-    s <- sqrt(colSums(sweep(X, 2L, mu, "-")^2) / max(nrow(X) - 1, 1))
+    sq <- if (is.null(weights)) {
+      colSums(sweep(X, 2L, mu, "-")^2)
+    } else {
+      colSums(weights * sweep(X, 2L, mu, "-")^2)
+    }
+    s <- sqrt(sq / max(nrow(X) - 1, 1))
     s[!is.finite(s) | s <= 0] <- 1
     s
   } else {
@@ -36,10 +68,14 @@
 }
 
 # Columns that are finite and non-constant on the training rows. Positions are
-# kept (feature_index) so dropped columns stay distinguishable in maps.
-.pattern_screen_columns <- function(X) {
+# kept (feature_index) so dropped columns stay distinguishable in maps. With
+# observation weights the variance is weighted, so a column that varies only on
+# zero-weight rows is dropped exactly as if those rows were absent.
+.pattern_screen_columns <- function(X, weights = NULL) {
   finite <- colSums(!is.finite(X)) == 0
-  v <- colSums(sweep(X, 2L, colMeans(X), "-")^2)
+  mu <- if (is.null(weights)) colMeans(X) else colSums(X * weights) / nrow(X)
+  dev2 <- sweep(X, 2L, mu, "-")^2
+  v <- if (is.null(weights)) colSums(dev2) else colSums(weights * dev2)
   keep <- which(finite & v > 0)
   keep
 }
@@ -56,15 +92,22 @@
 #' numerically non-null eigenspace. Whitening (i) removes the rank deficiency
 #' of centred one-hot codes (K classes -> K - 1 columns), (ii) makes the
 #' C-step an exact orthogonal Procrustes problem, and (iii) gives the working
-#' prior y_w ~ N(0, I) used for decoding.
+#' prior y_w ~ N(0, I) used for decoding. With observation weights the
+#' centring statistics, class priors, and whitening covariance are all
+#' weighted, so the stored transform is the one an equivalently replicated
+#' dataset would produce.
 #' @keywords internal
 #' @noRd
-.pattern_encode_targets <- function(values, scale = c("none", "sd"), tol = 1e-8) {
+.pattern_encode_targets <- function(values, scale = c("none", "sd"), tol = 1e-8,
+                                    weights = NULL) {
   scale <- match.arg(scale)
   if (is.character(values) || is.logical(values)) values <- factor(values)
   if (anyNA(values)) {
     stop("pattern_model: targets contain missing values; drop or impute those ",
          "observations before fitting.", call. = FALSE)
+  }
+  wmean <- function(M) {
+    if (is.null(weights)) colMeans(M) else colSums(M * weights) / nrow(M)
   }
 
   if (is.factor(values)) {
@@ -74,7 +117,11 @@
     if (K < 2L) stop("pattern_model: categorical targets need at least two classes.", call. = FALSE)
     Y <- matrix(0, length(values), K, dimnames = list(NULL, lev))
     Y[cbind(seq_along(values), as.integer(values))] <- 1
-    priors <- colMeans(Y)
+    priors <- wmean(Y)
+    if (any(priors <= 0)) {
+      stop(sprintf("pattern_model: class(es) %s carry zero total observation weight.",
+                   paste(lev[priors <= 0], collapse = ", ")), call. = FALSE)
+    }
     mu <- priors
     sdv <- NULL
     type <- "categorical"
@@ -83,9 +130,11 @@
     if (!is.numeric(Y)) stop("pattern_model: continuous targets must be numeric.", call. = FALSE)
     if (is.null(colnames(Y))) colnames(Y) <- paste0("y", seq_len(ncol(Y)))
     lev <- NULL; priors <- NULL; K <- NA_integer_
-    mu <- colMeans(Y)
+    mu <- wmean(Y)
     sdv <- if (scale == "sd") {
-      s <- sqrt(colSums(sweep(Y, 2L, mu, "-")^2) / max(nrow(Y) - 1, 1))
+      dev2 <- sweep(Y, 2L, mu, "-")^2
+      sq <- if (is.null(weights)) colSums(dev2) else colSums(weights * dev2)
+      s <- sqrt(sq / max(nrow(Y) - 1, 1))
       s[!is.finite(s) | s <= 0] <- 1
       s
     } else {
@@ -98,8 +147,8 @@
   if (!is.null(sdv)) Yc <- sweep(Yc, 2L, sdv, "/")
   n <- nrow(Yc)
 
-  # Whitening on the non-null eigenspace of the target covariance.
-  S <- crossprod(Yc) / n
+  # Whitening on the non-null eigenspace of the (weighted) target covariance.
+  S <- if (is.null(weights)) crossprod(Yc) / n else crossprod(Yc * sqrt(weights)) / n
   eg <- eigen(S, symmetric = TRUE)
   keep <- eg$values > tol * max(eg$values[1], .Machine$double.eps)
   if (!any(keep)) stop("pattern_model: targets are constant on the training rows.", call. = FALSE)
@@ -152,9 +201,14 @@
 # ---------------------------------------------------------------------------
 
 # f(A, C) = 1/(2n) tr[(X - Yw C A') Psi^{-1} (X - Yw C A')']
-.pattern_objective <- function(X, Yw, A, C, noise) {
+.pattern_objective <- function(X, Yw, A, C, noise, penalty = NULL) {
   R <- X - (Yw %*% C) %*% t(A)
-  0.5 * .noise_quadform(noise, R) / nrow(X)
+  val <- 0.5 * .noise_quadform(noise, R) / nrow(X)
+  if (!is.null(penalty) && isTRUE(penalty$active)) {
+    if (penalty$lambda_s > 0) val <- val + penalty$lambda_s * sum(sqrt(rowSums(A^2)))
+    if (penalty$lambda_l > 0) val <- val + 0.5 * penalty$lambda_l * sum(A * as.matrix(penalty$L %*% A))
+  }
+  val
 }
 
 # A-step. With no penalty the stationarity condition is
@@ -186,7 +240,7 @@
 # whitened data X W' on Yw. Returns A, C for every rank up to r_max (nested).
 .pattern_init_rrr <- function(X, Yw, noise, r_max) {
   n <- nrow(X)
-  Xw <- t(.noise_whiten(noise, t(X)))                 # X W'      (n x p)
+  Xw <- .noise_whiten_rows(noise, X)                  # X W'      (n x p)
   B <- crossprod(Yw, Xw) / n                          # (Yw'Yw)^{-1} Yw' Xw = Yw'Xw / n  (q_eff x p)
   k <- min(r_max, ncol(Yw), ncol(X), n - 1L)
   # The fitted values are Yw %*% B, and Yw / sqrt(n) has orthonormal columns, so
@@ -226,26 +280,69 @@
 #' @param control list from `pattern_control()`.
 #' @param graph optional spatial_graph aligned to the columns of X (unused in
 #'   Phase 2; stored for Phase 3).
+#' @param weights optional non-negative observation weights (length n). The
+#'   fit minimizes the weighted objective; integer weights are exactly
+#'   equivalent to replicating rows, and zero-weight rows are dropped up
+#'   front, so a zero weight is exactly equivalent to omitting the row.
 #' @return A `pattern_fit`, or for rank = "path" a list of `pattern_fit`s.
 #' @keywords internal
 #' @noRd
 .pattern_fit <- function(X, targets, rank = 1L, control = pattern_control(), graph = NULL,
-                         cap_rank = FALSE) {
+                         cap_rank = FALSE, penalty = NULL, start = NULL, weights = NULL) {
   X <- as.matrix(X)
+  w <- .pattern_check_weights(weights, nrow(X))
+  # Zero-weight rows are removed here rather than carried through as zeroed
+  # rows: this makes "weight zero" mean exactly "row absent" for every
+  # downstream quantity (rank caps, degrees of freedom, minimum-row checks),
+  # not just for the ones that happen to be weighted sums.
+  if (!is.null(w) && any(w == 0)) {
+    pos <- which(w > 0)
+    X <- X[pos, , drop = FALSE]
+    targets <- .pattern_subset_rows(targets, pos)
+    w <- w[pos] * (length(pos) / sum(w[pos]))
+  }
   n <- nrow(X); p_input <- ncol(X)
-  if (n < 3L) stop("pattern_model: at least three training observations are required.", call. = FALSE)
+  if (n < 3L) {
+    stop("pattern_model: at least three (positively weighted) training observations are required.",
+         call. = FALSE)
+  }
 
   # --- feature screening and transform (training rows only) ---
-  keep <- .pattern_screen_columns(X)
+  keep <- .pattern_screen_columns(X, weights = w)
   if (length(keep) == 0L) stop("pattern_model: no usable (finite, non-constant) features.", call. = FALSE)
-  Xk <- X[, keep, drop = FALSE]
-  xt <- .pattern_x_transform_fit(Xk, scale = control$x_scale)
+  # avoid a full copy when screening drops nothing
+  Xk <- if (length(keep) == ncol(X)) X else X[, keep, drop = FALSE]
+  xt <- .pattern_x_transform_fit(Xk, scale = control$x_scale, weights = w)
   Xc <- .pattern_x_transform_apply(xt, Xk)
   p <- ncol(Xc)
 
+  # The graph must describe exactly the columns the estimator sees, so restrict
+  # it whenever screening dropped features.
+  if (!is.null(graph)) {
+    if (identical(as.integer(graph$n_features), as.integer(ncol(X)))) {
+      if (length(keep) != ncol(X)) graph <- restrict_graph(graph, keep)
+    } else {
+      .assert_graph_aligned(graph, p, "screened feature matrix")
+    }
+  }
+
   # --- target coding ---
-  enc <- .pattern_encode_targets(targets, scale = control$y_scale)
+  enc <- .pattern_encode_targets(targets, scale = control$y_scale, weights = w)
   Yw <- enc$Yw; yt <- enc$transform
+
+  # Weighted fitting by square-root row scaling. After weighted centring and
+  # weighted target whitening, scaling the rows of Xc and Yw by sqrt(w) turns
+  # every downstream crossproduct-over-n into its weighted counterpart while
+  # leaving the algebra untouched: crossprod(Yw)/n is still the identity, so
+  # the C-step stays an exact Procrustes problem; the A-step normal equations,
+  # the pilot residuals, the noise estimate, and the penalty scale
+  # (lambda_max, curvature) all become weighted for free. Integer weights are
+  # exactly row replication (the normalizations agree because w sums to n).
+  if (!is.null(w)) {
+    sw <- sqrt(w)
+    Xc <- Xc * sw
+    Yw <- Yw * sw
+  }
   r_elig <- min(yt$q_eff, p, n - 1L)
   r_max <- min(control$max_rank, r_elig)
   if (r_max < 1L) stop("pattern_model: eligible rank is zero.", call. = FALSE)
@@ -263,19 +360,47 @@
   # --- supervised spectral initialization under Psi ---
   init <- .pattern_init_rrr(Xc, Yw, noise, r_max)
 
-  make_fit <- function(r, refine = TRUE) {
+  # One O(n p q) pass supplies every quantity the alternation needs: X'Yw gives
+  # both X'T (= X'Yw C) and the C-step's cross-product, and the constant term
+  # completes the expanded objective. After this the whole alternation is
+  # O(p q r + p r^2 + nnz(L) r) per iteration, with no n x p work at all.
+  XtYw <- crossprod(Xc, Yw)
+  quad_const <- .noise_quadform(noise, Xc)
+
+  make_fit <- function(r, refine = TRUE, A_start = NULL) {
     st <- .pattern_init_rank(init, r)
-    A <- st$A; C <- st$C
-    obj <- .pattern_objective(Xc, Yw, A, C, noise)
+    A <- if (!is.null(A_start) && identical(dim(A_start), c(p, r))) A_start else st$A
+    C <- st$C
+    # The penalty scale is resolved at this rank's initial C, so `sparse` means
+    # the same fraction of "the penalty that empties the model" at every rank.
+    pen <- .pattern_resolve_penalty(penalty, Xc, Yw %*% C, noise, graph,
+                                    XtT = XtYw %*% C)
+    build_prob <- function(Cmat) {
+      .pattern_astep_problem(Xc, Yw %*% Cmat, noise, pen$L, pen$lambda_s, pen$lambda_l,
+                             quad_const, XtT = XtYw %*% Cmat)
+    }
+    inner <- list()
+    prob <- build_prob(C)
+    obj <- .pattern_astep_objective(A, prob)
     trace <- obj
     converged <- FALSE
     iter <- 0L
     if (refine) {
       for (it in seq_len(control$max_outer)) {
         iter <- it
-        C <- .pattern_step_C(Xc, Yw, A, noise)
-        A <- .pattern_step_A(Xc, Yw %*% C)
-        obj_new <- .pattern_objective(Xc, Yw, A, C, noise)
+        C <- .polar_factor(crossprod(XtYw, .noise_apply_precision(noise, A)))
+        prob <- build_prob(C)
+        if (pen$active) {
+          sol <- .pattern_astep_fista(A, prob, max_iter = control$max_inner,
+                                      tol = control$tol_inner,
+                                      tol_iterate = control$tol_iterate)
+          A <- sol$A
+          inner[[length(inner) + 1L]] <- list(iterations = sol$iterations,
+                                              converged = sol$converged)
+        } else {
+          A <- t(solve(prob$TtT, t(prob$XtT)))
+        }
+        obj_new <- .pattern_astep_objective(A, prob)
         trace <- c(trace, obj_new)
         rel <- abs(obj - obj_new) / max(abs(obj), .Machine$double.eps)
         obj <- obj_new
@@ -285,15 +410,23 @@
     .new_pattern_fit(A, C, noise, xt, yt, Yw, keep, p_input, r, control,
                      diagnostics = list(objective = trace, outer_iterations = iter,
                                         converged = converged,
+                                        inner = inner,
                                         init_singular_values = init$singular_values,
                                         noise_spectrum = noise$meta$spectrum,
                                         noise_rank = noise$h,
-                                        rank_eligible = r_elig),
-                     graph = graph)
+                                        rank_eligible = r_elig,
+                                        n_nonzero = sum(rowSums(A^2) > 0)),
+                     graph = graph, penalty = pen, weights = w)
   }
 
   if (identical(rank, "path")) {
-    fits <- lapply(seq_len(r_max), function(r) make_fit(r, refine = control$refine_path))
+    # Each rank starts from its own spectral initialization. Warm starting rank
+    # r from rank r-1 is not the free lunch it looks like: the objective is
+    # invariant under (A, C) -> (A Q, C Q) for orthogonal Q, so a padded
+    # lower-rank solution sits in an arbitrary rotation of the new coordinates
+    # and was observed to leave the alternation short of convergence.
+    refine <- control$refine_path || !is.null(penalty)
+    fits <- lapply(seq_len(r_max), function(r) make_fit(r, refine = refine))
     names(fits) <- paste0("rank", seq_len(r_max))
     return(fits)
   }
@@ -302,11 +435,12 @@
   if (rank < 1L || rank > r_max) {
     stop(sprintf("pattern_model: requested rank %d exceeds the eligible rank %d.", rank, r_max), call. = FALSE)
   }
-  make_fit(rank, refine = TRUE)
+  make_fit(rank, refine = TRUE, A_start = start)
 }
 
 .new_pattern_fit <- function(A, C, noise, xt, yt, Yw, keep, p_input, rank, control,
-                             diagnostics = list(), graph = NULL) {
+                             diagnostics = list(), graph = NULL, penalty = NULL,
+                             weights = NULL) {
   PA <- .noise_apply_precision(noise, A)          # Psi^{-1} A  (p x r)
   G <- crossprod(A, PA)                          # A' Psi^{-1} A (r x r)
   Tm <- Yw %*% C
@@ -320,9 +454,11 @@
       feature_index = keep, p_input = p_input,
       rank = as.integer(rank),
       control = control,
+      penalty = penalty,
       diagnostics = diagnostics,
       graph = graph,
-      n_train = nrow(Tm)
+      n_train = nrow(Tm),
+      weights = weights
     ),
     class = c("pattern_fit", "list")
   )
@@ -349,16 +485,22 @@
 #' @param max_outer Maximum number of alternating (C-step, A-step) updates.
 #' @param tol Relative objective change that declares convergence.
 #' @param refine_path Logical; when fitting a rank path, run the alternating
-#'   refinement for every rank (default \code{FALSE}: path solutions are the
-#'   exact reduced-rank optima, which coincide with the refined solution for
-#'   the unpenalized objective).
+#'   refinement for every rank (default \code{FALSE}: unpenalized path
+#'   solutions are the exact reduced-rank optima, so refinement changes
+#'   nothing). Refinement is always used when a spatial penalty is active.
+#' @param max_inner Maximum proximal-gradient iterations per penalized A-step.
+#' @param tol_inner Relative objective change that stops the A-step solver.
+#' @param tol_iterate Relative change in the patterns required alongside
+#'   \code{tol_inner}. The objective is flat near the optimum, so it can settle
+#'   while the patterns are still moving; both must be small.
 #' @return A list of class \code{pattern_control}.
 #' @examples
 #' pattern_control(max_rank = 3)
 #' @export
 pattern_control <- function(max_rank = 8L, x_scale = c("none", "sd"), y_scale = c("none", "sd"),
                             noise = list(type = "diag_lowrank", rank = "auto", max_rank = 10L, shrink = 0.1),
-                            lambda_2 = 0, max_outer = 50L, tol = 1e-8, refine_path = FALSE) {
+                            lambda_2 = 0, max_outer = 50L, tol = 1e-8, refine_path = FALSE,
+                            max_inner = 500L, tol_inner = 1e-9, tol_iterate = 1e-6) {
   x_scale <- match.arg(x_scale)
   y_scale <- match.arg(y_scale)
   noise_default <- list(type = "diag_lowrank", rank = "auto", max_rank = 10L, shrink = 0.1)
@@ -374,7 +516,9 @@ pattern_control <- function(max_rank = 8L, x_scale = c("none", "sd"), y_scale = 
   structure(
     list(max_rank = as.integer(max_rank), x_scale = x_scale, y_scale = y_scale, noise = noise,
          lambda_2 = lambda_2, max_outer = as.integer(max_outer), tol = tol,
-         refine_path = isTRUE(refine_path)),
+         refine_path = isTRUE(refine_path),
+         max_inner = as.integer(max_inner), tol_inner = tol_inner,
+         tol_iterate = tol_iterate),
     class = c("pattern_control", "list")
   )
 }
@@ -383,6 +527,11 @@ pattern_control <- function(max_rank = 8L, x_scale = c("none", "sd"), y_scale = 
 print.pattern_fit <- function(x, ...) {
   cat(sprintf("pattern_fit: rank %d, %d features (of %d input), %s targets (%d coded dims)\n",
               x$rank, nrow(x$A), x$p_input, x$y_transform$type, x$y_transform$q_eff))
+  if (!is.null(x$penalty) && isTRUE(x$penalty$active)) {
+    cat(sprintf("  penalty: sparse alpha = %.3g (lambda_s = %.4g), signed_smooth rho = %.3g; %d of %d features non-zero\n",
+                x$penalty$alpha, x$penalty$lambda_s, x$penalty$rho,
+                x$diagnostics$n_nonzero %||% NA_integer_, nrow(x$A)))
+  }
   cat(sprintf("  noise: %s (h = %d), n_train = %d, converged = %s after %d outer iterations\n",
               x$noise$type, x$noise$h, x$n_train,
               if (isTRUE(x$diagnostics$converged)) "TRUE" else "FALSE",
