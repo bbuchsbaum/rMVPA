@@ -1,5 +1,21 @@
 # rMVPA 0.1.3
 
+* `pattern_model()` supports observation weights. Weights are read from the
+  design's `row_weights` (as carried by `feature_sets_design`) or supplied
+  directly via the new `weights` argument, which takes precedence. They enter
+  the estimator itself -- weighted centring, weighted target whitening (the
+  C-step remains an exact Procrustes problem), the residual-covariance
+  estimate, and the penalized objective -- and the held-out loss that drives
+  rank/penalty selection. The contract is exact: uniform weights reproduce the
+  unweighted fit, integer weights are equivalent to replicating rows, and a
+  zero weight is equivalent to omitting the row from training. Reported
+  performance metrics remain unweighted, so weighted and unweighted runs stay
+  comparable; the previous "row weights are not used" warning is gone.
+* New benchmark `inst/benchmarks/pattern_model/bench_vs_baselines.R`: the
+  head-to-head predictive comparison of `pattern_model` against searchlight
+  shrinkage LDA (honest inner-CV sphere selection and an oracle upper bound),
+  `spacenet_tvl1`, whole-brain shrinkage LDA, and CV-tuned PLS on identical
+  blocked splits. Results are recorded in `adocs/pattern-model-benchmarks.md`.
 * New `pattern_model()` analysis family: a pattern-first spatial reduced-rank
   model `x = A C'y + eps` with a structured residual covariance
   `Psi = D + UU'`. One fit yields condition classification, multivariate

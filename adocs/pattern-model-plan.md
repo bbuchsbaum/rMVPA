@@ -1,6 +1,6 @@
 # Pattern-first spatial reduced-rank MVPA (`pattern_model`) — assessment and implementation plan
 
-**Status:** Phases 0-4 implemented and locally validated; Phase 4 review pending; Phases 5-6 deferred
+**Status:** Phases 0-6 implemented within the boundaries below; local package and integration gates passed as recorded below; dependent PR review pending (hosted CI now runs on the stacked PR bases and is green). Post-phase additions of 2026-09-09 (Part C2): the head-to-head baseline benchmark is run and recorded, and observation weights are implemented. Deferred extensions are triaged in Part D2: supported-rank tests (5b), support envelope/local noise (3b), joint hierarchical fitting, and response-set weighting.
 **Date:** 2026-09-06
 **Base commit:** `acccd31` (master)
 **Scope:** assess the "pattern-first spatial reduced-rank MVPA" proposal and turn it into a staged, verifiable implementation plan for rMVPA.
@@ -147,7 +147,7 @@ Exit: `pattern_model` works end-to-end (global, regional, searchlight) with `pen
 - *Blocked CV source.* The constructor reads `design$block_var %||% design$block_var_train`, so `feature_sets_design` gets blocked CV; a design with no blocks now **warns** rather than silently using random k-fold.
 - *Folds that omit a class.* Each fold's probability matrix is padded to the full class set with an exact zero column, so a class confined to one run does not crash the run; those rows score as errors with clamped log loss. Inner folds that cannot score a class are dropped from rank selection rather than propagating `NA`.
 - *R² baseline.* Reported `R2` uses each fold's **training**-target mean as the baseline, matching the rank-selection loss, not the pooled test mean.
-- *Not implemented in Phase 2:* target metric / feature-block weighting (`row_weights` are read from the design and a warning is issued that they are ignored), and the `graph` argument is stored but unused.
+- *Not implemented in Phase 2:* target metric / feature-block weighting, and the `graph` argument is stored but unused. (`row_weights` were originally read from the design and ignored with a warning; observation weighting was implemented on 2026-09-09 -- see "Post-phase additions" below. Response-set weighting via a target metric remains unimplemented.)
 
 - *Repeated cross-validation is reconciled with the package convention.* Two ledgers are kept. The **fold-resolved** ledger records every prediction with its fold. The **pooled** ledger holds one record per tested observation, sorted, with repeats averaged (class probabilities averaged; continuous predictions and their training-mean baselines divided by the repeat count), exactly as `wrap_result()` in `R/mvpa_model.R` does for every other model. Metrics and the `classification_result` handed to rMVPA are built from the pooled ledger, so a row tested four times under bootstrap CV gets one vote, and the regional prediction table has unique `(roinum, .rownum)` pairs. Note the ordering is not merely a duplicate question: twofold, sequential, and bootstrap schemes are randomized, so even when each row is tested once the fold-order concatenation need not be sorted; pooling always sorts. `run_global()` returns the pooled ledger as `$ledger` and the fold-resolved one as `$fold_ledger`; ROI fits carry both as `$ledger` and `$pooled_ledger`.
 
@@ -245,9 +245,64 @@ Exit: v1 feature-complete. Write `vignettes/Pattern_Model.Rmd` (classification +
 
 Tests: null calibration (uniform p under label shuffling within block structure), power on `sim_pattern_data`, refusal when discovery/confirmation rows overlap.
 
+**Phase 5 as built (2026-09-07):**
+
+- `confirmation_plan()`, `pattern_basis()`, `pattern_confirm()`, and `pattern_component_tests()` live in `R/pattern_inference.R`. Confirmation performs unpenalized mass regression in original measurement units on frozen, training-whitened target scores with an intercept and optional numeric nuisance columns. Every input feature is tested, including discovery-screened features. Rank-deficient designs are rejected; singular sampling distributions yield unavailable tests.
+- Independent Gaussian t/F tests, CR1 block sandwich approximations, and restricted-residual Rademacher block wild bootstrap are explicit choices. The bootstrap refits each component's restricted null as well as the omnibus null. It is approximate with estimated nuisance effects, not an exact permutation test. Holm families are all feature-component pairs and all feature omnibus tests separately. Bootstrap maxima span features within component (with Bonferroni across components), or all feature omnibus statistics separately. Unavailable bootstrap covariance is treated conservatively. RNG state is restored.
+- Component association adjusts for nuisance but is marginal over other components. Incremental value fits full and reduced ordinary least-squares score-to-raw-target heads on caller-supplied discovery/calibration rows, then compares squared loss on untouched confirmation rows. Loss is averaged across raw target columns, within blocks, and equally across blocks. The paired t / centered wild-bootstrap inference is approximate; these are new linear heads, not the original Gaussian posterior decoder. Calibration is optional so association does not require retaining discovery measurements.
+- The API requires globally meaningful discovery/confirmation IDs, explicit feature IDs, and a preprocessing recipe/unit identifier. It checks overlap and target/feature ordering, retains content and fit hashes, full frozen basis, nuisance, blocks, subject identity, and covariance. These are caller assertions about identity and independence, not proof based on legacy positional train/test prefixes. Independent errors store a small design covariance times feature residual variances; block methods store rank-by-rank covariance at each feature, never feature-by-feature covariance. Rank-1/2 block statistics are vectorized.
+- The raw target basis includes training scaling and whitening, enabling exact later transport of both coefficients and covariance. Display rotations continue to use the underlying fitted inference basis. `rank_supported` remains Phase 5b: neither a component test nor selected CV rank supplies a validated sequential rank null.
+- The separate prerequisite commit fixes reproduced PR #91/#93 findings: fixed-rank penalty selection evaluates the requested eligible rank, clustered ROI filtering propagates actual cluster-column positions to spatial graphs, and unavailable optional Haufe diagnostics do not discard completed evaluations. Nineteen regression assertions pass, alongside the existing integration tests. Fixed ranks are fitted directly within each inner fold, respecting its eligible rank without computing unused paths; retained test columns follow positions even when rounded centroids coincide.
+- `vignettes/Pattern_Confirmation.Rmd` gives a runnable discovery/confirmation workflow, loading and component tests, calibration boundaries, covariance/provenance storage, and statistical limits. It is linked from the existing guide and pkgdown index.
+
+**Phase 5 local evidence:**
+
+- Independent `lm`/ANOVA and dense cluster-sandwich oracles; full coefficient/covariance rotation tests; overlap, ordering, rank deficiency, categorical rank-one and degenerate-score regressions; calibrated-head predictions and paired loss tests. The dedicated inference file passed 69 assertions without test warnings before the final package gate. Integration covers pattern files, `fit_roi`, plugin extension API, global analysis, output schema, and Collate; its sole warning is the existing two-block simulation warning.
+- `inst/benchmarks/pattern_model/validate_confirmation.R`: 1,000 null experiments across 40 independently generated 30-block designs. CR1 omnibus mean p = 0.4549, rejection at nominal 5% = 8.4%; restricted wild bootstrap (199 draws) mean p = 0.4992, rejection = 4.1%. The global-null maximum family rejected in 3 of 40 designs (7.5%, a noisy estimate). This is evidence for the tested design, not universal calibration. The guide recommends the bootstrap example and explicitly reports the sandwich limitation.
+- On macOS arm64, R 4.5.1 / Accelerate BLAS, the 400-row, 2,000-feature, rank-2, 40-block CR1 regression took 0.032 seconds and retained 242,584 bytes of regression summaries. The null simulation took 23.788 seconds. These are recorded workloads, not cross-platform performance guarantees.
+- Full artifact package checks and rendered-guide inspection are recorded with the subsequent validation receipt; hosted CI, independent review, merging, and guide deployment remain separate gates.
+
+**Phase 5 artifact receipt (2026-09-07):**
+
+- The complete default `R CMD check --no-manual` on commit `0e8b1786fd7add32393f4b5e2bf731a09d0a3a8f` finished with **0 errors, 0 warnings, 0 notes**, including vignette rebuilding. The source archive SHA256 is `97afbbf363bcc231ba26fe5b8b38458d9d177128d6e0ef61183e7c1d124c8c3a`; 562 packaged code/test/help/vignette files match that commit byte-for-byte and DESCRIPTION fields match. The archive contains 33 vignette HTML outputs.
+- Its default suite passed **7,346 assertions**, with zero failures, 98 test warnings, and 148 skips. These test warnings are separate from R CMD check's WARNING count; optional/extended and CRAN-gated checks remain skipped. Environment: R 4.5.1, macOS arm64, `LC_ALL=C LANG=C R_LIBS=/tmp/pattern-check-library RGL_USE_NULL=TRUE RMVPA_RUN_EXTENDED_TESTS=false`. PDF manual generation was not checked.
+- Follow-up commits `7c83cfa` and `db725f9` complete fixed-rank fold handling and coincident-coordinate test-column preservation. Their owning tests and the pattern/filter suites pass. The pre-review combined Phase 5/6 head `2702c2f54ec13acbbbb9c159753809071087af90` passed **828 integration assertions**, zero failures, one existing two-block warning, and one opt-in performance skip. This explicitly distinguishes the earlier full-suite artifact from the final focused/integration evidence; the combined artifact package gate is recorded under Phase 6.
+- A late review reproduced an omitted `cap_rank = TRUE` in the direct inner-fit call. The new real-fit, one-feature/two-requested-rank regression fails against `720b357` (all folds are skipped and the fallback penalty is returned). The corrected call matches independently fitted capped-fold losses; all 19 dependency regressions and the pattern/filter suites pass. The mock now enforces the real uncapped default instead of hiding it. The final post-review artifact receipt is recorded under Phase 6.
+- Draft PR #94 is stacked on #93. Human review, hosted package CI, merge, and documentation deployment remain pending; no default-branch or release claim is made.
+
 ### Phase 6 — Group analysis (after Phase 5)
 
 `R/pattern_group.R`: `pattern_group(subject_confirmations, reference_basis, spatial_mapping, effects = "random")` operating on subject loading estimates and SEs in a shared target basis; mean pattern, heterogeneity, subject expression, prediction summaries. Joint hierarchical estimator `A_s = M_s A_0 + Delta_s` is a later extension.
+
+**Phase 6 as built (2026-09-07):**
+
+- `pattern_group()` in `R/pattern_group.R` requires distinct subject IDs and independent confirmation observations, checks their union against every discovery set, and checks preprocessing recipe and nuisance definitions. It aligns target names and solves the exact raw-target basis relation, transporting both loadings and full coefficient covariance. Unequal target subspaces are rejected rather than Procrustes-approximated. The returned reference-coordinate hash is recomputed from the actual matrix, retaining the source discovery hash separately.
+- Spatial mappings are explicit one-to-one correspondences in a common feature set, optionally selecting a shared subset. Implicit matching uses exact feature IDs. Many-to-one aggregation/interpolation is rejected because the confirmation object does not retain the cross-feature covariance required for its uncertainty. The user must perform such transformations before confirmation and establish common units, target/nuisance meaning, and conditional estimands.
+- Random effects estimate the equally weighted subject population mean. Mean covariance is sample coefficient covariance divided by subject count; within-subject error is not counted twice. Component tests use t(s-1) and omnibus tests use Hotelling F(r, s-r). These are exact for iid Gaussian subject estimates with common total covariance, approximate with unequal precision or nonnormal effects. At least r+2 subjects are required. Singular distributions yield unavailable inference.
+- Between-subject covariance is the PSD projection of sample covariance minus average within-subject covariance: a transparent moment estimator, not REML or a fitted joint hierarchy. Fixed effects are full-covariance GLS with asymptotic normal/chi-squared inference. The heterogeneity Q diagnostic uses r(s-1) df and treats within-subject covariance as known. It is unadjusted and distinct from the corrected component/omnibus families.
+- Scalar norms, omnibus tests, heterogeneity trace, and leave-one-subject-out expression are invariant to orthogonal reference rotations. Component columns and their tests remain basis dependent. Subject expression is descriptive, not an independent group decoder. Original decoder prediction metrics remain subject-resolved and have equal-subject summaries; unavailable metrics do not silently drop a subject.
+- Group covariance is transformed one feature at a time; there is no duplicated rank-by-rank-by-feature-by-subject working array. Aligned coefficients and final mean/between covariance are retained. The guide `vignettes/Pattern_Group.Rmd` covers the full public workflow, correspondence, uncertainty, heterogeneity, invariance, and the separate hierarchical/rank extensions.
+
+**Phase 6 local evidence:**
+
+- 54 focused group assertions cover independent GLS and Hotelling oracles, unequal-scale basis transport, orthogonal invariance, identity-safe spatial mappings, rank-one/three paths, singular covariance, covariance validity at tiny measurement scales, prediction summaries, and reference hash integrity. The two new implementation files have 96.13% line coverage from the targeted confirmation/group tests (up from 88.89% before the additional boundary and rank-three tests); this is not repository-wide coverage.
+- `inst/benchmarks/pattern_model/validate_group.R`: 2,000 Gaussian sufficient-statistic null experiments with 24 subjects and rank 2 gave mean p = 0.5021 and 5.0% rejection at nominal 5%. Mean heterogeneity trace was 0.2492 versus the known 0.25. The heterogeneous-precision stress case gave mean p = 0.5031 and 4.6% rejection, supporting that tested case without making heterogeneous-precision inference exact.
+- That 24-subject, 2,000-feature workload took 7.723 seconds and retained 9,224,552 bytes on the same R 4.5.1/macOS arm64 environment. Confirmation and group guides rendered and passed visual inspection, including their figures; the owned temporary browser closed and its tooling was removed.
+- Phase 5 is independently committed and published as draft PR #94, stacked on #93. Phase 6 is a separate dependent change. Full package artifact receipts follow below; hosted checks, human review, merge, and guide deployment remain pending.
+
+**Combined artifact receipt before the rank-cap review correction (2026-09-07):**
+
+- Packaged code commit: `2702c2f54ec13acbbbb9c159753809071087af90`. Combined archive SHA256: `0b2da3f97c2c055adb4337cefe7398a469232c7267bb14872a07ad168dca1f07`. All 566 packaged code/test/help/vignette source files were compared byte-for-byte with that commit; DESCRIPTION fields also match. Later receipt-only commits change tracked planning documentation, which is excluded from the package.
+- On the same R 4.5.1/macOS arm64 environment, `R CMD check --no-manual --no-tests` completed with **0 errors, 0 warnings, 0 notes**, including installation, examples, dependency/S3/help checks, and rebuilding all 34 vignette outputs. The archive reused the already-rendered Phase 5 vignette assets plus the freshly rendered group guide during `R CMD build --no-build-vignettes`; the check itself rebuilt the vignette sources successfully.
+- Tests were deliberately not repeated inside this second package check: the full default core suite had already passed on the Phase 5 artifact, and the final combined head passed 828 focused/integration assertions after the two dependency follow-ups. That integration run included all 139 new confirmation, group, and review-regression assertions. It had one existing two-block warning and one opt-in performance guardrail skip. Neither a new complete default suite on the final head nor a PDF manual check is claimed.
+- Draft PR #94 holds Phase 5; draft PR #95 holds Phase 6, stacked on #94. Their earlier dependencies remain #93 and #91. Hosted package CI has not run on these phase-branch PR bases (the current workflow filters master/main); human review, merge, guide deployment, and release remain pending. Local checks are not substituted for those gates.
+
+**Final post-review receipt (2026-09-07):**
+
+- Final packaged code commit: `b22909b3afbb217886c6d34ec172aa2aad87a387`, including the explicit capped inner-fit correction from `c999e85`. Source archive SHA256: `ae2f31696489d79a62c08b1a5eb89329752fa0c404c284a60c21908d7c8a633d`. All 566 packaged code/test/help/vignette source files and DESCRIPTION fields match this commit; the archive retains all 34 vignette HTML outputs.
+- `R CMD check --no-manual --no-tests --no-vignettes` completed with **0 errors, 0 warnings, 0 notes**. Installation, examples, code, dependencies, S3 methods, help files, and vignette metadata were checked. The last one-line production correction does not alter vignette sources; all 34 had already rebuilt successfully in the preceding combined check. Vignette execution/rebuilding and the full default suite were deliberately not repeated in this final artifact check. PDF manual generation remains unchecked.
+- The exact final code head separately passed **831 focused/integration assertions**, zero failures, one existing two-block warning, and one opt-in performance guardrail skip. This includes **142 new assertions**: 69 confirmation, 54 group, and 19 dependency/review regressions. The real-fit eligible-rank regression exposed the uncapped call that the original mock hid; three assertions failed before the correction and all 19 review-regression assertions pass afterward. The earlier full default suite of 7,346 assertions remains evidence for its explicitly named Phase 5 snapshot, not a claimed rerun on this head.
+- Targeted inference/group line coverage remains 96.13%; those two implementation files are unchanged by the final rank-cap correction. Both guides were rendered and visually inspected, browser tooling was closed/removed, and canonical tracked plans are mirrored to the ignored local planning files. Final receipt-only commits do not change packaged code. Draft PRs #94 and #95 remain dependent on #93/#91, with human review, hosted package CI, merge, and deployment pending.
 
 ---
 
@@ -274,6 +329,66 @@ Tests: null calibration (uniform p under label shuffling within block structure)
 | `inst/benchmarks/pattern_model/` | 3 | benchmark scripts + recorded results |
 
 Rough effort: Phases 0–4 ≈ 10–13 working days of implementation plus review; Phase 5 ≈ 3; Phase 6 ≈ 3–5. Phase 1 is a standalone improvement and should land first regardless.
+
+## Part C2. Post-phase additions (2026-09-09)
+
+Two items completed after the Phase 6 receipts, on the `pattern-model-phase6`
+head:
+
+1. **Head-to-head predictive benchmark** (`inst/benchmarks/pattern_model/bench_vs_baselines.R`,
+   results in `adocs/pattern-model-benchmarks.md`). The comparison the Phase 3
+   plan left unrun: pattern_model vs searchlight shrinkage LDA (honest
+   inner-CV sphere selection plus an oracle upper bound), `spacenet_tvl1`,
+   whole-brain shrinkage LDA, and CV-tuned PLS, on identical blocked splits
+   with planted smooth, sign-flipping, redundant, and localized-nuisance
+   structure. Outcome: the feared searchlight loss does not materialize (the
+   unpenalized pattern model beats even the oracle sphere off-ceiling); the
+   serious competitor is whole-brain shrinkage LDA, which the pattern model
+   matches; `sparse = "auto"` measurably hurts when the informative support is
+   dense and weak, which the benchmark note records as an honest negative.
+2. **Observation weights** (`weights` argument on `pattern_model()`, or
+   `row_weights` carried by the design). Implemented inside the estimator by
+   weighted centring, weighted target whitening, and square-root row scaling,
+   so the C-step stays an exact Procrustes problem and the A-step, noise
+   estimate, and penalty calibration become weighted without new algebra. The
+   contract is exact and tested (`test_pattern_weights.R`): uniform weights ==
+   unweighted fit, integer weights == replicated rows, zero weight == dropped
+   row (zero-weight rows are removed up front, so a poisoned zero-weight row
+   cannot influence the fit). The inner tuning loss is weighted the same way;
+   reported metrics stay unweighted. Confirmation (`pattern_confirm`)
+   continues to reject nonuniform weights.
+
+## Part D2. Deferred items -- future consideration (recorded 2026-09-09)
+
+Priority-ordered assessment of the remaining deferred scope, following the
+head-to-head benchmark:
+
+1. **Graph-local noise precision (Phase 3b, noise half) -- conditional, currently
+   unmotivated.** The noise abstraction reserves `noise$type = "diag_lowrank_local"`.
+   Both the Section 2 regional benchmark (three covariance heads within 0.025)
+   and the 2026-09-09 head-to-head (searchlights lose even with a planted
+   localized-nuisance region) show the covariance model is not the bottleneck
+   on simulation. Build this only when a real dataset shows the restricted
+   regional predictor losing to an independently fitted local model on the
+   same rows -- `local_performance()` makes that comparison directly.
+2. **TV support envelope (Phase 3b, penalty half) -- low priority.** Needs a
+   primal-dual solver (likely C); the scientific point is substantially
+   covered by `signed_smooth`, and the Phase 3 honest finding (smoothing can
+   improve pattern recovery while worsening held-out decoding) cautions
+   against more anatomical regularization by default. The `support_smooth`
+   argument name is already reserved and rejected, so it can arrive without
+   API change.
+3. **`rank_supported` (Phase 5b) -- research problem, not a feature.** Requires
+   a validated sequential higher-rank null. CV-selected rank (`rank_mean`) and
+   `component_stability()` answer the practical question today.
+4. **Joint hierarchical group estimator (`A_s = M_s A_0 + Delta_s`) -- wait for
+   demand.** The Phase 6 moment estimator is transparent and calibrated (5.0%
+   at nominal 5%); a REML/joint hierarchy earns its complexity only on a
+   multi-subject dataset where the moment estimator demonstrably falls short.
+5. **Response-set weighting (target metric) -- small, unscheduled.** Weighting
+   *responses* (e.g. feature sets) in the target whitening, the counterpart of
+   the now-implemented observation weighting. Do it when a feature-sets user
+   needs sets to contribute unequally to the fitted subspace.
 
 ## Part D. Open decisions for the user
 

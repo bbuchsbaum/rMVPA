@@ -206,10 +206,12 @@ training rows only. Predictions are returned in the original target units.
 The current noise model combines diagonal variance and a few shared residual
 components. It may miss richer local correlations. Signed Laplacian smoothing
 encourages neighboring loadings to agree; it does not provide a coherent
-support envelope for alternating-sign fine-scale codes. Confirmation inference,
-rank tests, group estimates, and that support-envelope extension are separate
-work.
+support envelope for alternating-sign fine-scale codes. Rank tests and the
+support-envelope extension remain separate work.
 
 To save retained fits, ledgers, and refit maps, call
 `save_results(result, "pattern-output")`. The RDS preserves the result object;
 spatial refit maps are also written as images for supported datasets.
+
+For independent loading tests and component comparisons, continue with
+[Confirming a frozen pattern model](Pattern_Confirmation.html).

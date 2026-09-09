@@ -1,0 +1,199 @@
+---
+title: "Group patterns in shared target coordinates"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: |
+  %\VignetteIndexEntry{Group patterns in shared target coordinates}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", message = FALSE,
+                     fig.width = 6, fig.height = 3.5)
+library(rMVPA)
+set.seed(606)
+```
+
+Group analysis starts with independently estimated subject loadings and their
+uncertainty. It needs a common meaning for both axes of every loading matrix:
+features must correspond spatially, and target coordinates must represent the
+same task quantities. Similar-looking component columns are insufficient.
+
+`pattern_group()` transports each subject's estimates **and full coefficient
+covariance** into a reference target basis, then estimates the group effect.
+An orthogonal rotation of the reference changes component columns but preserves
+omnibus tests, effect norms, and descriptive subject expression.
+
+## Create independent subject confirmations
+
+This runnable example uses one independently fitted discovery basis for all
+subjects. A simulation then generates 12 subjects with Gaussian variation
+around the discovery loading matrix. Conditioning on that fixed discovery fit
+makes the population loading matrix known for this example.
+
+```{r discovery}
+ds <- gen_sample_dataset(c(4, 4, 3), 72, nlevels = 3, blocks = 3)
+fit <- run_global(pattern_model(ds$dataset, ds$design, rank = 2),
+                  refit = TRUE)$refit
+reference <- pattern_basis(fit)
+population <- model_patterns(fit, type = "forward")
+p <- nrow(population)
+feature_ids <- paste0("shared-voxel", seq_len(p))
+discovery_ids <- paste0("external-discovery:", seq_len(72))
+```
+
+The same discovery cohort may supply a basis to multiple subjects. None of its
+observations may appear in any subject's confirmation data. In a real study,
+subject-specific discovery fits are also allowed if their raw target matrices
+span exactly the reference subspace. Full-rank two-component models for the
+same three class contrasts, for example, can differ in whitening and rotation
+while representing the same target subspace.
+
+```{r subjects}
+labels <- factor(rep(reference$target_ids, each = 30),
+                 levels = reference$target_ids)
+code <- model.matrix(~ labels - 1)
+colnames(code) <- reference$target_ids
+scores <- sweep(code, 2, reference$center, "-") %*% reference$matrix
+subjects <- lapply(seq_len(12), function(s) {
+  subject_pattern <- population + matrix(rnorm(p * 2, sd = 0.2), p, 2)
+  X <- scores %*% t(subject_pattern) + matrix(rnorm(90 * p), 90, p)
+  pattern_confirm(
+    fit, X, labels,
+    inference = confirmation_plan("independent"),
+    observation_ids = paste0("subject", s, ":confirmation:", seq_len(90)),
+    discovery_ids = discovery_ids,
+    feature_ids = feature_ids,
+    preprocessing_id = "simulated-BOLD-original-units-v1",
+    subject_id = paste0("subject", s)
+  )
+})
+```
+
+For real run-dependent observations, choose a suitable block error model in
+each subject's confirmation; see
+[Confirming a frozen pattern model](Pattern_Confirmation.html). A group model
+does not repair biased subject estimates or discovery/confirmation leakage.
+
+## Estimate the population mean
+
+```{r group}
+group <- pattern_group(subjects, reference_basis = reference, effects = "random")
+group
+head(group$omnibus)
+```
+
+The random-effects estimand is the **equally weighted subject population mean**.
+Its covariance is the sample covariance of subject coefficient vectors divided
+by the number of subjects. This includes both between-subject variation and
+subject estimation error. Adding the within-subject variance again would count
+sampling error twice.
+
+The omnibus test is Hotelling's T-squared expressed as an F statistic. With
+12 subjects and two target dimensions it uses F(2, 10), regardless of how many
+rows each subject contributed. It is exact for iid Gaussian subject estimates
+with common total covariance, and approximate with heterogeneous precision or
+nonnormal effects. More than rank plus one subjects are required; singular
+covariance produces unavailable omnibus inference, not an invented zero effect.
+
+Component t tests in `$p` have 11 degrees of freedom here. `$p_holm` adjusts all
+feature-component tests together. `$omnibus$p_holm` separately adjusts the
+omnibus family across features. These are distinct hypothesis families.
+
+```{r group-map, fig.alt="Estimated group loading norms and known simulated population norms across features."}
+plot(group$effect_norm, type = "l", xlab = "Shared feature",
+     ylab = "Loading-vector norm", ylim = range(c(group$effect_norm,
+                                               sqrt(rowSums(population^2)))))
+points(sqrt(rowSums(population^2)), pch = 1, col = "steelblue")
+legend("topright", c("Estimated group", "Simulation population"),
+       lty = c(1, NA), pch = c(NA, 1), col = c("black", "steelblue"), bty = "n")
+```
+
+```{r checks, include=FALSE}
+stopifnot(all(is.finite(group$estimate)), all(group$omnibus$df2 == 10),
+          max(abs(group$estimate - population)) < 0.35)
+Q <- matrix(c(cos(0.4), sin(0.4), -sin(0.4), cos(0.4)), 2)
+rotated <- reference
+rotated$matrix <- reference$matrix %*% Q
+rotated_group <- pattern_group(subjects, rotated)
+stopifnot(isTRUE(all.equal(group$effect_norm, rotated_group$effect_norm)),
+          isTRUE(all.equal(group$omnibus, rotated_group$omnibus)))
+```
+
+Norms are descriptive and nonnegative; sampling noise biases small norms
+upward. They are not thresholded significance maps. Their magnitude also depends
+on the reference score scale. Only orthogonal changes preserve Euclidean norms.
+
+## Inspect heterogeneity and subject expression
+
+```{r heterogeneity}
+head(group$heterogeneity)
+group$prediction$summary
+```
+
+`$between_covariance` is a moment estimate: sample coefficient covariance minus
+average within-subject covariance, projected onto positive-semidefinite
+matrices. `$heterogeneity$trace` summarizes its magnitude without choosing
+component axes. Truncation at zero introduces boundary bias; this is not REML.
+The Q test concerns a common-effect null, treats within-subject covariance as
+known, and is approximate when those covariances are estimated. Its p values
+are unadjusted descriptive diagnostics, separate from the confirmation families.
+
+`$subject_expression` projects each subject onto the normalized mean of the
+**other** subjects at each feature. It describes agreement and sign relative to
+that shared pattern. It is neither an out-of-sample group decoder nor an
+independent validation of the group map. `$prediction` separately retains the
+original frozen decoder's held-out metrics for each subject and their
+unweighted means. An unavailable subject metric makes the group mean of that
+metric unavailable; missing subjects are not silently dropped.
+
+`effects = "fixed"` instead uses full inverse-covariance GLS weighting. Its
+normal and chi-squared tests treat estimated subject covariance as known and
+are asymptotic. This estimates a common effect among these subjects and does
+not support population generalization in the presence of heterogeneity.
+
+## Make spatial correspondence explicit
+
+By default all subjects must have the same feature-ID set; their column order
+may differ. If identifiers differ after an independently specified spatial
+correspondence, supply a mapping for each subject. Each mapping names the shared
+feature and gives that subject's source feature ID.
+
+```{r mapping, eval=FALSE}
+mapping <- list(
+  subject1 = c(left_motor = "native_roi_17", right_motor = "native_roi_22"),
+  subject2 = c(left_motor = "native_roi_08", right_motor = "native_roi_31")
+  # ...one entry for every subject, with the same shared feature names
+)
+group <- pattern_group(subjects, reference, spatial_mapping = mapping)
+```
+
+Mappings are one-to-one correspondences, possibly selecting a common subset.
+They do not resample images or average voxels. Interpolation or parcel averaging
+requires cross-feature covariance to propagate uncertainty, which confirmation
+objects do not store. Perform that spatial transformation before confirmation,
+then fit and estimate the transformed measurements in their stated units.
+
+Matching preprocessing identifiers and nuisance column names are checked, but
+the caller must verify that preprocessing recipes, measurement units, target
+units, and nuisance meanings agree. Target sampling and omitted target
+effects must also permit the same conditional estimand across subjects.
+Unequal target subspaces are rejected:
+rotating them to look similar would silently change the group estimand.
+
+```{r save, eval=FALSE}
+saveRDS(group, "group-pattern-confirmation.rds")
+```
+
+The saved result includes aligned subject coefficients, full mean and
+between-subject covariance, basis transformations, mappings, and provenance.
+It transports subject covariance one feature at a time, avoiding a second
+copy of every subject covariance array. The retained aligned estimates require
+features times rank times subjects storage; mean and heterogeneity covariance
+require features times squared rank storage. No feature-by-feature covariance
+is formed. The reference basis ID is recomputed from its actual raw target
+coordinates; `source_basis_id` retains the discovery basis identifier. Joint hierarchical fitting of
+discovery patterns and sequential supported-rank inference remain separate
+extensions.

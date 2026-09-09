@@ -423,7 +423,7 @@ as_roi.clustered_data_sample <- function(obj, data, ...) {
     NULL
   }
 
-  list(train_roi = train_roi, test_roi = test_roi)
+  list(train_roi = train_roi, test_roi = test_roi, feature_positions = neighbors)
 }
 
 

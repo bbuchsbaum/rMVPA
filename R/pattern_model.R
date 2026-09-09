@@ -104,6 +104,16 @@
 #' @param return_fits Retain the fold fits per ROI (implies ledgers).
 #' @param refit Also fit the model on all training rows (a descriptive
 #'   deployment fit, distinct from the cross-validated evidence).
+#' @param weights Optional non-negative observation weights, one per training
+#'   observation. When \code{NULL} (default) they are read from the design
+#'   (\code{\link{feature_sets_design}} carries \code{row_weights}); a vector
+#'   supplied here overrides the design's weights. Weights enter the estimator
+#'   itself -- centring, target whitening, the residual-covariance estimate,
+#'   and the penalized objective are all weighted -- and the held-out loss
+#'   that drives rank/penalty selection. Integer weights are exactly
+#'   equivalent to replicating rows, and a zero weight is exactly equivalent
+#'   to omitting the row from training. Reported performance metrics remain
+#'   unweighted: every tested observation counts once.
 #' @param ... Additional fields stored on the specification.
 #' @return A \code{pattern_model} specification (class
 #'   \code{c("pattern_model", "model_spec")}).
@@ -124,7 +134,8 @@ pattern_model <- function(dataset, design, crossval = NULL, rank = "auto", max_r
                           penalty = NULL, graph = NULL,
                           noise = list(type = "diag_lowrank", rank = "auto"),
                           control = NULL,
-                          return_predictions = FALSE, return_fits = FALSE, refit = FALSE, ...) {
+                          return_predictions = FALSE, return_fits = FALSE, refit = FALSE,
+                          weights = NULL, ...) {
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   targets_train <- model_targets(design, "train")
   if (is.null(targets_train)) {
@@ -164,9 +175,24 @@ pattern_model <- function(dataset, design, crossval = NULL, rank = "auto", max_r
     }
   }
 
-  if (!is.null(targets_train$row_weights) && any(targets_train$row_weights != 1)) {
-    warning("pattern_model: observation row weights are not used by this version ",
-            "of the estimator; every observation is weighted equally.", call. = FALSE)
+  # Observation weights: an explicit argument wins over design-carried
+  # row_weights. Validation matches .pattern_check_weights, but happens here so
+  # a bad specification fails at construction, not inside the first fold.
+  w <- weights %||% targets_train$row_weights
+  if (!is.null(w)) {
+    w <- as.numeric(w)
+    n_obs <- length(targets_train$observation_ids)
+    if (length(w) != n_obs) {
+      stop(sprintf("pattern_model: %d observation weights but %d training observations.",
+                   length(w), n_obs), call. = FALSE)
+    }
+    if (any(!is.finite(w)) || any(w < 0)) {
+      stop("pattern_model: observation weights must be finite and non-negative.", call. = FALSE)
+    }
+    if (sum(w) <= 0) {
+      stop("pattern_model: observation weights must have a positive sum.", call. = FALSE)
+    }
+    targets_train$row_weights <- w
   }
 
   # A signed-smoothness penalty needs anatomy: build the graph from the dataset
@@ -221,6 +247,11 @@ print.pattern_model <- function(x, ...) {
               x$control$max_rank, x$control$noise$type))
   cat(sprintf("  crossval: %s, external test set: %s\n",
               class(x$crossval)[1], if (isTRUE(x$has_test_set)) "yes" else "no"))
+  w <- x$targets_train$row_weights
+  if (!is.null(w) && !all(w == w[1L])) {
+    cat(sprintf("  observation weights: yes (%d of %d rows weighted zero)\n",
+                sum(w == 0), length(w)))
+  }
   cat(sprintf("  return_predictions: %s, return_fits: %s, refit: %s\n",
               x$return_predictions, x$return_fits, x$refit))
   invisible(x)
@@ -275,23 +306,34 @@ print.pattern_model <- function(x, ...) {
 }
 
 # Held-out decoding loss (lower is better). Returns NA when the fold carries no
-# scorable rows so the caller can drop it rather than propagate the NA.
-.pattern_loss <- function(fit, X_test, truth) {
+# scorable rows so the caller can drop it rather than propagate the NA. With
+# observation weights the loss is the weighted average, so a down-weighted
+# assessment row steers the tuning as little as it steered the fit.
+.pattern_loss <- function(fit, X_test, truth, weights = NULL) {
+  if (!is.null(weights) && (!any(weights > 0))) return(NA_real_)
   if (fit$y_transform$type == "categorical") {
     P <- predict(fit, X_test, type = "prob")
     truth <- factor(as.character(truth), levels = fit$y_transform$levels)
     # Rows whose class never appeared in this fold's training data carry no
     # information about rank; scoring them would make every rank equally bad.
     ok <- !is.na(truth)
+    if (!is.null(weights)) ok <- ok & weights > 0
     if (!any(ok)) return(NA_real_)
     p_true <- P[cbind(which(ok), as.integer(truth[ok]))]
-    mean(-log(pmax(p_true, 1e-12)))
+    ll <- -log(pmax(p_true, 1e-12))
+    if (is.null(weights)) mean(ll) else stats::weighted.mean(ll, weights[ok])
   } else {
     Yhat <- predict(fit, X_test, type = "decode")
     Y <- as.matrix(truth)
     mu <- fit$y_transform$mu           # training-mean baseline (see .pattern_score_ledger)
-    sst <- colSums(sweep(Y, 2L, mu, "-")^2)
-    sse <- colSums((Y - Yhat)^2)
+    dev2 <- sweep(Y, 2L, mu, "-")^2
+    err2 <- (Y - Yhat)^2
+    if (!is.null(weights)) {
+      dev2 <- dev2 * weights
+      err2 <- err2 * weights
+    }
+    sst <- colSums(dev2)
+    sse <- colSums(err2)
     mean(sse / pmax(sst, .Machine$double.eps))
   }
 }
@@ -305,7 +347,7 @@ print.pattern_model <- function(x, ...) {
 # feature, or a smoothness assumption is only taken on when it buys held-out
 # accuracy.
 .pattern_select_config <- function(X, targets, blocks, control, penalty = NULL,
-                                   graph = NULL) {
+                                   graph = NULL, rank = "auto", weights = NULL) {
   n <- nrow(X)
   folds <- .pattern_inner_folds(n, blocks)
   grid <- .pattern_penalty_grid(penalty)
@@ -316,17 +358,21 @@ print.pattern_model <- function(x, ...) {
     if (length(f$train) < 3L || length(f$test) < 1L) next
     tr_targets <- .pattern_subset_rows(targets, f$train)
     if (is.factor(tr_targets) && nlevels(droplevels(tr_targets)) < 2L) next
+    w_tr <- if (is.null(weights)) NULL else weights[f$train]
+    w_te <- if (is.null(weights)) NULL else weights[f$test]
+    if (!is.null(w_tr) && sum(w_tr > 0) < 3L) next
     Xtr <- X[f$train, , drop = FALSE]
     Xte <- X[f$test, , drop = FALSE]
     te_targets <- .pattern_subset_rows(targets, f$test)
     for (g in seq_along(grid)) {
-      path <- tryCatch(
-        .pattern_fit(Xtr, tr_targets, rank = "path", control = control,
-                     graph = graph, penalty = grid[[g]]),
+      fitted <- tryCatch(
+        .pattern_fit(Xtr, tr_targets, rank = if (identical(rank, "auto")) "path" else rank, control = control,
+                     graph = graph, penalty = grid[[g]], cap_rank = TRUE, weights = w_tr),
         error = function(e) NULL
       )
-      if (is.null(path)) next
-      l <- vapply(path, function(fit) .pattern_loss(fit, Xte, te_targets), numeric(1))
+      if (is.null(fitted)) next
+      path <- if (identical(rank, "auto")) fitted else list(fitted)
+      l <- vapply(path, function(fit) .pattern_loss(fit, Xte, te_targets, weights = w_te), numeric(1))
       if (!all(is.finite(l))) next
       if (is.null(loss_mat[[g]])) {
         loss_mat[[g]] <- l
@@ -343,13 +389,15 @@ print.pattern_model <- function(x, ...) {
     l <- loss_mat[[g]]
     if (is.null(l) || !length(l) || !any(is.finite(l))) next
     l <- unname(l) / max(n_used[g], 1L)
-    r <- as.integer(which.min(l))
+    r <- if (identical(rank, "auto")) as.integer(which.min(l)) else 1L
     if (is.null(best) || l[r] < best$loss - 1e-12) {
-      best <- list(rank = r, penalty = grid[[g]], loss = l[r], losses = l, grid_index = g)
+      best <- list(rank = if (identical(rank, "auto")) r else as.integer(rank),
+                   penalty = grid[[g]], loss = l[r], losses = l, grid_index = g)
     }
   }
   if (is.null(best)) {
-    return(list(rank = 1L, penalty = grid[[1]], losses = NULL, grid_index = 1L))
+    return(list(rank = if (identical(rank, "auto")) 1L else as.integer(rank),
+                penalty = grid[[1]], losses = NULL, grid_index = 1L))
   }
   best
 }
@@ -381,6 +429,18 @@ print.pattern_model <- function(x, ...) {
   blocks <- model$crossval$block_var
   if (!is.null(blocks) && length(blocks) != n) blocks <- NULL
   control <- model$control
+  # Observation weights train the estimator and steer the inner tuning loss.
+  # Reported metrics stay unweighted: every tested observation counts once, so
+  # performance numbers remain comparable across weighted and unweighted runs.
+  w_all <- tt$row_weights
+  if (!is.null(w_all)) {
+    w_all <- as.numeric(w_all)
+    if (length(w_all) != n) {
+      stop(sprintf("pattern_model: %d observation weights but %d observations.",
+                   length(w_all), n), call. = FALSE)
+    }
+    if (all(w_all == w_all[1L])) w_all <- NULL   # uniform weights are no weights
+  }
   categorical <- identical(model$target_type, "categorical")
   all_levels <- if (categorical) {
     lv <- model$targets_train$response_ids
@@ -408,10 +468,12 @@ print.pattern_model <- function(x, ...) {
   for (k in seq_along(folds)) {
     tr <- folds[[k]]$train; te <- folds[[k]]$test
     tr_targets <- .pattern_subset_rows(targets, tr)
+    w_tr <- if (is.null(w_all)) NULL else w_all[tr]
     tune <- identical(model$rank, "auto") || .pattern_penalty_needs_tuning(model$penalty)
     if (tune) {
       sel <- .pattern_select_config(X[tr, , drop = FALSE], tr_targets, blocks[tr], control,
-                                    penalty = model$penalty, graph = graph)
+                                    penalty = model$penalty, graph = graph, rank = model$rank,
+                                    weights = w_tr)
       r_k <- if (identical(model$rank, "auto")) sel$rank else model$rank
       pen_k <- sel$penalty
     } else {
@@ -419,7 +481,7 @@ print.pattern_model <- function(x, ...) {
       pen_k <- .pattern_penalty_grid(model$penalty)[[1]]
     }
     fit_k <- .pattern_fit(X[tr, , drop = FALSE], tr_targets, rank = r_k, control = control,
-                          cap_rank = TRUE, graph = graph, penalty = pen_k)
+                          cap_rank = TRUE, graph = graph, penalty = pen_k, weights = w_tr)
     fit_k$training_observation_ids <- paste0("train:", tt$observation_ids[tr])
     fit_k$assessment_observation_ids <- if (external) paste0("test:", model$targets_test$observation_ids[te]) else paste0("train:", tt$observation_ids[te])
     fit_k$fold_definition_hash <- digest::digest(folds[[k]])
@@ -474,7 +536,8 @@ print.pattern_model <- function(x, ...) {
   if (isTRUE(refit)) {
     if (identical(model$rank, "auto") || .pattern_penalty_needs_tuning(model$penalty)) {
       sel <- .pattern_select_config(X, targets, blocks, control,
-                                    penalty = model$penalty, graph = graph)
+                                    penalty = model$penalty, graph = graph, rank = model$rank,
+                                    weights = w_all)
       r_all <- if (identical(model$rank, "auto")) sel$rank else model$rank
       pen_all <- sel$penalty
     } else {
@@ -482,7 +545,7 @@ print.pattern_model <- function(x, ...) {
       pen_all <- .pattern_penalty_grid(model$penalty)[[1]]
     }
     refit_obj <- .pattern_fit(X, targets, rank = r_all, control = control, cap_rank = TRUE,
-                              graph = graph, penalty = pen_all)
+                              graph = graph, penalty = pen_all, weights = w_all)
   }
 
   if (!is.null(refit_obj)) {
@@ -733,8 +796,11 @@ run_global.pattern_model <- function(model_spec, return_fits = isTRUE(model_spec
     result$haufe_diagnostics <- lapply(seq_along(out$fold_fits), function(k) {
       rows <- out$ledger$observation[out$ledger$fold == k]
       if (length(rows) < 2L) return(list(status = "fewer than two held-out rows"))
-      pattern_haufe(out$fold_fits[[k]], assessment[rows, , drop = FALSE],
-                    out$fold_fits[[k]]$assessment_observation_ids)
+      fit_k <- out$fold_fits[[k]]
+      X_hold <- assessment[rows, , drop = FALSE]
+      if (any(!is.finite(X_hold[, fit_k$feature_index, drop = FALSE])))
+        return(list(status = "non-finite held-out retained features"))
+      pattern_haufe(fit_k, X_hold, fit_k$assessment_observation_ids)
     })
   }
   result
@@ -846,6 +912,12 @@ performance.pattern_global_result <- function(x, ...) {
 .pattern_roi_graph <- function(model, roi_data) {
   g <- model$graph
   if (is.null(g)) return(NULL)
+  if (inherits(model$dataset, "mvpa_clustered_dataset")) {
+    pos <- roi_data$feature_positions
+    if (is.null(pos) || length(pos) != ncol(roi_data$train_data))
+      stop("Clustered ROIs require aligned feature_positions.", call. = FALSE)
+    return(restrict_graph(g, pos))
+  }
   idx <- roi_data$indices
   if (is.null(idx)) return(NULL)
   pos <- .pattern_graph_positions(g, idx)

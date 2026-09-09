@@ -17,6 +17,7 @@ pattern_model(
   return_predictions = FALSE,
   return_fits = FALSE,
   refit = FALSE,
+  weights = NULL,
   ...
 )
 }
@@ -59,6 +60,17 @@ overrides \code{max_rank} and \code{noise}.}
 
 \item{refit}{Also fit the model on all training rows (a descriptive
 deployment fit, distinct from the cross-validated evidence).}
+
+\item{weights}{Optional non-negative observation weights, one per training
+observation. When \code{NULL} (default) they are read from the design
+(\code{\link{feature_sets_design}} carries \code{row_weights}); a vector
+supplied here overrides the design's weights. Weights enter the estimator
+itself -- centring, target whitening, the residual-covariance estimate,
+and the penalized objective are all weighted -- and the held-out loss
+that drives rank/penalty selection. Integer weights are exactly
+equivalent to replicating rows, and a zero weight is exactly equivalent
+to omitting the row from training. Reported performance metrics remain
+unweighted: every tested observation counts once.}
 
 \item{...}{Additional fields stored on the specification.}
 }
