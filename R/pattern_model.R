@@ -482,7 +482,9 @@ print.pattern_model <- function(x, ...) {
     }
     fit_k <- .pattern_fit(X[tr, , drop = FALSE], tr_targets, rank = r_k, control = control,
                           cap_rank = TRUE, graph = graph, penalty = pen_k, weights = w_tr)
-    fit_k$training_observation_ids <- paste0("train:", tt$observation_ids[tr])
+    # Match .pattern_fit's zero-weight drop: IDs name only rows that entered the fit.
+    kept_tr <- if (is.null(w_tr)) tr else tr[w_tr > 0]
+    fit_k$training_observation_ids <- paste0("train:", tt$observation_ids[kept_tr])
     fit_k$assessment_observation_ids <- if (external) paste0("test:", model$targets_test$observation_ids[te]) else paste0("train:", tt$observation_ids[te])
     fit_k$fold_definition_hash <- digest::digest(folds[[k]])
     fit_k$basis_id <- digest::digest(list(C = fit_k$C, y_transform = fit_k$y_transform))
@@ -549,7 +551,8 @@ print.pattern_model <- function(x, ...) {
   }
 
   if (!is.null(refit_obj)) {
-    refit_obj$training_observation_ids <- paste0("train:", tt$observation_ids)
+    kept_all <- if (is.null(w_all)) seq_len(n) else which(w_all > 0)
+    refit_obj$training_observation_ids <- paste0("train:", tt$observation_ids[kept_all])
     refit_obj$basis_id <- digest::digest(list(C = refit_obj$C, y_transform = refit_obj$y_transform))
     refit_obj$fold_definition_hash <- digest::digest(folds)
   }

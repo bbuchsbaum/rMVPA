@@ -185,10 +185,23 @@ test_that("design row_weights flow into fitting without the old warning", {
 
   # the fold fit actually dropped the zero-weight training rows
   spec_fit <- pattern_model(sim$dataset, make_design(fs_w), rank = 1, return_fits = TRUE)
-  res_fit <- quiet_run(run_global(spec_fit, preflight = "off"))
+  res_fit <- quiet_run(run_global(spec_fit, preflight = "off", refit = TRUE))
   ff <- res_fit$fold_fits[[which(vapply(res_fit$fold_fits, function(f) f$n_train, 1L) ==
                                    min(vapply(res_fit$fold_fits, function(f) f$n_train, 1L)))[1]]]
   expect_lt(ff$n_train, 60L)                   # a 2-block training set minus block-1 rows
+
+  # training_observation_ids must name only positively weighted rows (aligned
+  # with n_train / weights), including the full-data refit
+  expect_equal(length(ff$training_observation_ids), ff$n_train)
+  expect_equal(length(ff$weights), ff$n_train)
+  expect_false(any(paste0("train:", b1) %in% ff$training_observation_ids))
+  expect_equal(length(res_fit$refit$training_observation_ids), res_fit$refit$n_train)
+  expect_equal(length(res_fit$refit$weights), res_fit$refit$n_train)
+  expect_false(any(paste0("train:", b1) %in% res_fit$refit$training_observation_ids))
+  # a zero-weight training row is not blocked as training by pattern_haufe
+  zid <- paste0("train:", b1[1])
+  Xh <- sim$X[rep(b1[1], 2), , drop = FALSE]
+  expect_silent(pattern_haufe(ff, Xh, observation_ids = c(zid, paste0(zid, ":holdout"))))
 })
 
 test_that("categorical weights work through fit_roi and keep metrics unweighted", {
