@@ -1,5 +1,10 @@
 # rMVPA 0.1.3
 
+* Pattern-model vignettes now teach the method as a three-article path:
+  `vignette("Pattern_Model")` leads with the task, the planted territories,
+  and the object flow; confirmation and group articles are framed as the
+  next two steps. The articles index gives them their own "Pattern Models"
+  section.
 * `pattern_model()` supports observation weights. Weights are read from the
   design's `row_weights` (as carried by `feature_sets_design`) or supplied
   directly via the new `weights` argument, which takes precedence. They enter

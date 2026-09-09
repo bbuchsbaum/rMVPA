@@ -67,7 +67,7 @@ Use Feature-Based RSA when:
 - You want **regularisation** (PLS, PCR, fast ridge, or elastic net) because your feature space is high-dimensional, correlated, or has more features than trials.
 - You want **multiple performance metrics** out of one fit — pattern correlation, pattern discrimination, RDM correlation, voxel correlation, R² — rather than choosing one a priori.
 
-If you only have a model RDM (no feature matrix) and want a per-trial similarity score with built-in across-block masking, see `vignette("Vector_RSA")`. If you want to test multiple model RDMs as regressors and read out coefficients, see `vignette("RSA")`.
+If you only have a model RDM (no feature matrix) and want a per-trial similarity score with built-in across-block masking, see `vignette("Vector_RSA")`. If you want to test multiple model RDMs as regressors and read out coefficients, see `vignette("RSA")`. If you want a whole-brain, covariance-aware reduced-rank model that yields forward patterns and regional access from one fit, see `vignette("Pattern_Model")`.
 
 ## Inputs and outputs
 
