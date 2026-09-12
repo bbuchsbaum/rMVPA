@@ -1,0 +1,36 @@
+{
+  "document_kind": "design_navigation_manifest",
+  "revision": "2026-09-12",
+  "runtime_protocol_implemented": false,
+  "reviewed_source": {
+    "repository": "bbuchsbaum/rMVPA",
+    "commit": "7c93f8d3afc9cafd4fcefaab22489de783601990",
+    "branch_observed": "master"
+  },
+  "settled_decisions": {
+    "public_name": "pattern_model",
+    "numerical_core_owner": "rMVPA",
+    "existing_phases": "retain implemented code and historical receipts, do not rebuild"
+  },
+  "active_plan": "adocs/pattern-model-plan.md",
+  "experience_map": "adocs/pattern-model-benchmarks.md",
+  "shared_contract": {
+    "repository": "bbuchsbaum/crossform",
+    "version": "scientific-state-v1",
+    "path": "design/agent-system-contract.md",
+    "sha256": "0d274f11fd340dc630496b2ac2cf457dfd11206d10175ad06824e096ff598a36",
+    "review_branch": "docs/agent-coherent-pattern-system"
+  },
+  "interop_plan": {
+    "repository": "bbuchsbaum/crossform",
+    "path": "design/pattern-model-interop-plan.md"
+  },
+  "new_runtime_work": [
+    "P-A0 metadata inspection",
+    "P-A1 transitive provenance and exposure",
+    "P-A2 measured bounded execution",
+    "P-A3 optional crossform bridge",
+    "P-A4 scoped learning and agent evaluation"
+  ],
+  "numerical_tests_run_for_this_revision": false
+}
