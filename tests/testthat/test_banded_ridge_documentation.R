@@ -222,7 +222,9 @@ test_that("coverage and uninstrumented integration courts stay separated", {
   capability_script <- readLines(capability_script_path, warn = FALSE)
 
   expect_true(any(grepl('NOT_CRAN: "false"', coverage, fixed = TRUE)))
-  expect_true(any(grepl("covr::codecov(", coverage, fixed = TRUE)))
+  expect_true(any(grepl("covr::to_cobertura(", coverage, fixed = TRUE)))
+  expect_true(any(grepl("codecov/codecov-action@", coverage, fixed = TRUE)))
+  expect_true(any(grepl("fail_ci_if_error: true", coverage, fixed = TRUE)))
   expect_false(any(grepl(
     'NOT_CRAN: "false"', integrations, fixed = TRUE
   )))
