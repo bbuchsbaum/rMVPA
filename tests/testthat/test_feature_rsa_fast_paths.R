@@ -755,6 +755,33 @@ test_that("blockwise feature RSA geometry matches dense correlation oracles", {
   )
 })
 
+test_that("feature RSA RDMs canonicalize roundoff for collinear patterns", {
+  n_voxels <- 95L
+  base_pattern <- seq(-1, 1, length.out = n_voxels)
+  collinear <- t(vapply(seq_len(30L), function(i) {
+    (1 + i / 10) * base_pattern + i * 0.37
+  }, numeric(n_voxels)))
+  distinct <- base_pattern + 1e-3 * sin(seq_len(n_voxels))
+  x <- rbind(collinear, distinct)
+
+  old_block <- getOption("rMVPA.feature_rsa_metric_block_rows")
+  on.exit(options(rMVPA.feature_rsa_metric_block_rows = old_block), add = TRUE)
+  results <- lapply(c(1L, 7L, 30L), function(block_rows) {
+    options(rMVPA.feature_rsa_metric_block_rows = block_rows)
+    rMVPA:::.feature_rsa_rdm_vector_blockwise(x)
+  })
+
+  expect_equal(results[[1L]], results[[2L]], tolerance = 3e-12)
+  expect_equal(results[[1L]], results[[3L]], tolerance = 3e-12)
+  for (result in results) {
+    distance <- matrix(0, nrow(x), nrow(x))
+    distance[lower.tri(distance)] <- result
+    distance <- distance + t(distance)
+    expect_true(all(distance[seq_len(30L), seq_len(30L)] == 0))
+    expect_true(all(distance[31L, seq_len(30L)] > 1e-10))
+  }
+})
+
 test_that("feature RSA row correlation preserves constant and missing-data semantics", {
   x <- rbind(
     c(1, 2, 3, 4, 5),

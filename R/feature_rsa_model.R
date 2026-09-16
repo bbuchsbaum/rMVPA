@@ -1188,6 +1188,16 @@ feature_rsa_model <- function(dataset,
 
 #' Lower-triangle correlation-distance vector using bounded row blocks
 #' @noRd
+.feature_rsa_canonicalize_correlation_distance <- function(distance,
+                                                           n_features) {
+  tolerance <- 64 * .Machine$double.eps * max(1, n_features)
+  distance[is.finite(distance) & abs(distance) <= tolerance] <- 0
+  distance
+}
+
+
+#' Lower-triangle correlation-distance vector using bounded row blocks
+#' @noRd
 .feature_rsa_rdm_vector_blockwise <- function(X) {
   X <- as.matrix(X)
   n <- nrow(X)
@@ -1196,7 +1206,11 @@ feature_rsa_model <- function(dataset,
   normalized <- .feature_rsa_normalize_rows(X)
   if (is.null(normalized)) {
     dense <- .feature_rsa_row_cor(X)
-    return(as.numeric((1 - dense)[lower.tri(dense)]))
+    distance <- as.numeric((1 - dense)[lower.tri(dense)])
+    return(.feature_rsa_canonicalize_correlation_distance(
+      distance,
+      ncol(X)
+    ))
   }
 
   out <- numeric(n_pairs)
@@ -1219,7 +1233,10 @@ feature_rsa_model <- function(dataset,
       invalid_rows <- !normalized$valid[rows]
       if (any(invalid_rows)) values[invalid_rows] <- NA_real_
       positions <- seq.int(offset + 1L, offset + count)
-      out[positions] <- 1 - values
+      out[positions] <- .feature_rsa_canonicalize_correlation_distance(
+        1 - values,
+        ncol(X)
+      )
       offset <- offset + count
     }
   }
