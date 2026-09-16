@@ -62,15 +62,18 @@
 
     
     
-<p>A discovery fit chooses directions worth studying. Confirmation asks
-whether those <strong>already chosen directions</strong> predict brain
-measurements in independent data. It estimates fresh, unpenalized
-loadings while freezing the target coding, whitening, and component
-directions learned during discovery.</p>
-<p>This separation permits t and omnibus tests without treating a
-selected, regularized discovery loading as an ordinary regression
-coefficient. It does not turn cross-validated rank selection into a test
-of population rank.</p>
+<p>This is the second pattern-model article. The first,
+<code><a href="../articles/Pattern_Model.html">vignette("Pattern_Model")</a></code>, chooses rank, penalties, and a
+residual covariance on discovery data. Confirmation asks a narrower
+question: do those <strong>already chosen directions</strong> still
+predict brain measurements in independent rows?</p>
+<p>It estimates fresh, unpenalized loadings while freezing the target
+coding, whitening, and component directions learned during discovery.
+That separation permits t and omnibus tests without treating a selected,
+regularized discovery loading as an ordinary regression coefficient. It
+does not turn cross-validated rank selection into a test of population
+rank. Pooling confirmed subject loadings is
+<code><a href="../articles/Pattern_Group.html">vignette("Pattern_Group")</a></code>.</p>
 <div class="section level2">
 <h2 id="freeze-a-discovery-fit">Freeze a discovery fit<a class="anchor" aria-label="anchor" href="#freeze-a-discovery-fit"></a>
 </h2>
@@ -265,6 +268,8 @@ Omnibus tests are invariant to nonsingular changes of score coordinates.
 Confirmation of several components is not a sequential rank test:
 <code>rank_supported</code> remains a separate research extension with a
 separately validated null.</p>
+<p>To pool these subject-level confirmations in a shared target basis,
+continue with <code><a href="../articles/Pattern_Group.html">vignette("Pattern_Group")</a></code>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

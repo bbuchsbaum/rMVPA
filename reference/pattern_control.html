@@ -61,10 +61,11 @@
 
 
 <dl><dt id="arg-max-rank">max_rank<a class="anchor" aria-label="anchor" href="#arg-max-rank"></a></dt>
-<dd><p>Maximum rank considered (capped at the eligible rank:
-number of classes minus one for categorical targets, the effective
-number of target dimensions otherwise, and never above the number of
-features or observations).</p></dd>
+<dd><p>Largest rank considered when fitting a rank path
+(<code>rank = "path"</code> / <code>rank = "auto"</code>). Capped at the eligible
+rank (classes minus one for categorical targets, the effective number of
+target dimensions otherwise, and never above the number of features or
+observations). A requested fixed rank is not limited by this ceiling.</p></dd>
 
 
 <dt id="arg-x-scale">x_scale<a class="anchor" aria-label="anchor" href="#arg-x-scale"></a></dt>

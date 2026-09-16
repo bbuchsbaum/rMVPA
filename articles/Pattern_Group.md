@@ -1,10 +1,16 @@
 # Group patterns in shared target coordinates
 
-Group analysis starts with independently estimated subject loadings and
-their uncertainty. It needs a common meaning for both axes of every
-loading matrix: features must correspond spatially, and target
-coordinates must represent the same task quantities. Similar-looking
-component columns are insufficient.
+This is the third pattern-model article. Fit a discovery model with
+[`vignette("Pattern_Model")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Model.md),
+confirm each subject on independent rows with
+[`vignette("Pattern_Confirmation")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md),
+then pool those confirmed loadings here.
+
+Group analysis starts from independently estimated subject loadings and
+their uncertainty. Both axes of every loading matrix must already mean
+the same thing: features correspond spatially, and target coordinates
+represent the same task quantities. Similar-looking component columns
+are not enough.
 
 [`pattern_group()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_group.md)
 transports each subject’s estimates **and full coefficient covariance**
@@ -64,8 +70,8 @@ subjects <- lapply(seq_len(12), function(s) {
 ```
 
 For real run-dependent observations, choose a suitable block error model
-in each subject’s confirmation; see [Confirming a frozen pattern
-model](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md).
+in each subject’s confirmation; see
+[`vignette("Pattern_Confirmation")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md).
 A group model does not repair biased subject estimates or
 discovery/confirmation leakage.
 
@@ -209,10 +215,12 @@ The saved result includes aligned subject coefficients, full mean and
 between-subject covariance, basis transformations, mappings, and
 provenance. It transports subject covariance one feature at a time,
 avoiding a second copy of every subject covariance array. The retained
-aligned estimates require features times rank times subjects storage;
-mean and heterogeneity covariance require features times squared rank
-storage. No feature-by-feature covariance is formed. The reference basis
-ID is recomputed from its actual raw target coordinates;
-`source_basis_id` retains the discovery basis identifier. Joint
-hierarchical fitting of discovery patterns and sequential supported-rank
-inference remain separate extensions.
+aligned estimates require features $`\times`$ rank $`\times`$ subjects
+storage; mean and heterogeneity covariance require features $`\times`$
+rank$`^2`$ storage. No feature-by-feature covariance is formed. The
+reference basis ID is recomputed from the actual raw target coordinates;
+`source_basis_id` keeps the discovery basis identifier.
+
+Joint hierarchical fitting of discovery patterns, and sequential
+supported-rank inference, remain separate extensions. They are not
+required for the workflow in this article.

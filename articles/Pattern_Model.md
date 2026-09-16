@@ -1,21 +1,86 @@
-# Pattern models: whole-brain fit, regional access
+# Fit a whole-brain pattern model
 
-A pattern model learns a low-rank relationship between task targets and
-brain measurements across the whole feature domain. From the same fit
-you can predict held-out targets, inspect where model-implied signal
-varies, and ask how much of the prediction remains accessible within a
-region.
+A pattern model answers a joint question: **can the whole feature domain
+decode the task, and where is that information expressed?** It fits one
+low-rank forward model
 
-The distinction matters when a region helps cancel correlated noise. Its
-forward loading can be zero even though observing it improves
-prediction. Forward patterns and decoding weights describe different
-aspects of the fit.
+``` math
+x = A C^{\top} y + \varepsilon, \qquad \varepsilon \sim (0, \Psi)
+```
 
-## Fit and evaluate a classification model
+and then reuses that fit for classification or multivariate decoding,
+encoding, forward patterns, and restricted regional prediction. You do
+not fit one model to predict labels and another to draw a map.
 
-This small example creates two signal territories and a third territory
-that shares noise with the first. Rows represent observations; columns
-represent voxels. Class labels are balanced within each of three runs.
+This is the first of three pattern-model articles. Confirmation of a
+frozen fit is
+[`vignette("Pattern_Confirmation")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md);
+pooling confirmed subject loadings is
+[`vignette("Pattern_Group")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.md).
+
+## When to use it
+
+Use
+[`pattern_model()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_model.md)
+when you want **one covariance-aware fit** over a whole domain (or a
+large ROI) and several derived answers from it:
+
+- held-out classification or multi-response decoding
+- model-implied forward patterns, not only decoding weights
+- how much of the whole-domain prediction remains accessible inside a
+  region
+- later confirmation or group analysis of those patterns
+
+Use a different family when the question is narrower:
+
+| Question | Model family |
+|----|----|
+| Decode feature vectors inside independently fitted regions | `feature_rsa_model` ([`vignette("Feature_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)) |
+| Voxelwise encoding from grouped predictors | `banded_ridge_model` ([`vignette("Banded_Ridge_Encoding")`](https://bbuchsbaum.github.io/rMVPA/articles/Banded_Ridge_Encoding.md)) |
+| Map between perception and retrieval domains | `remap_rrr_model` ([`vignette("REMAP_RRR")`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)) |
+| Find locally predictive neighborhoods with separate local fits | searchlight analysis ([`vignette("Searchlight_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)) |
+
+The current residual covariance is diagonal plus a few shared noise
+components. It can miss richer *local* noise correlations. Spatial
+penalties act on the forward patterns $`A`$, not on decoding weights.
+
+## What you pass in and get back
+
+| Object | Role |
+|----|----|
+| `mvpa_dataset` | Brain measurements. Rows are observations; columns are features. |
+| design with [`model_targets()`](https://bbuchsbaum.github.io/rMVPA/reference/model_targets.md) | Categorical labels (`mvpa_design`) or a numeric target matrix (`targets`, `feature_sets_design`, or `feature_rsa_design`). |
+| [`pattern_model()`](https://bbuchsbaum.github.io/rMVPA/reference/pattern_model.md) | The specification: rank, noise, optional spatial penalty, optional observation weights. |
+| [`run_global()`](https://bbuchsbaum.github.io/rMVPA/reference/run_global.md) | One domain-wide evaluation. Same specification also works with [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md) and [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md). |
+| `pattern_global_result` | Held-out `performance_table`, prediction ledger, optional fold fits, optional full-data `refit`. |
+
+The usual next calls on that result are
+[`performance()`](https://bbuchsbaum.github.io/rMVPA/reference/performance-methods.md),
+[`model_importance()`](https://bbuchsbaum.github.io/rMVPA/reference/model_importance.md)
+/
+[`model_patterns()`](https://bbuchsbaum.github.io/rMVPA/reference/model_patterns.md)
+on `$refit`,
+[`local_performance()`](https://bbuchsbaum.github.io/rMVPA/reference/local_performance.md),
+and [`predict()`](https://rdrr.io/r/stats/predict.html) on a retained
+`pattern_fit`.
+
+## Plant four territories
+
+The example has 120 observations in three runs and 48 voxels. Class
+labels cycle through `a`, `b`, and `c`. Four contiguous territories are
+planted:
+
+- **signal 1** (voxels 1–12): an A-versus-B code, plus a shared noise
+  process
+- **signal 2** (voxels 13–24): a B-versus-C code
+- **shared noise** (voxels 25–36): the same noise process, no task
+  loading
+- **background** (voxels 37–48): independent noise only
+
+The shared-noise territory is a *noise canceller*. Observing it can
+improve whole-domain decoding even when its forward loading is near
+zero. That is why the guide keeps forward patterns and decoding weights
+as separate outputs.
 
 ``` r
 
@@ -26,16 +91,25 @@ run <- rep(1:3, each = 40)
 code <- model.matrix(~ class - 1)
 X <- matrix(rnorm(n * p), n, p)
 shared_noise <- rnorm(n, sd = 2)
-X[, 1:12] <- X[, 1:12] + 1.2 * (code[, 1] - code[, 2]) + shared_noise
+X[, 1:12]  <- X[, 1:12]  + 1.2 * (code[, 1] - code[, 2]) + shared_noise
 X[, 13:24] <- X[, 13:24] + 1.2 * (code[, 2] - code[, 3])
 X[, 25:36] <- X[, 25:36] + shared_noise
+
 space <- neuroim2::NeuroSpace(c(4, 4, 3), c(1, 1, 1))
 mask <- neuroim2::NeuroVol(array(1, c(4, 4, 3)), space)
-images <- neuroim2::NeuroVec(array(t(X), c(4, 4, 3, n)),
-                           neuroim2::NeuroSpace(c(4, 4, 3, n), c(1, 1, 1)))
+images <- neuroim2::NeuroVec(
+  array(t(X), c(4, 4, 3, n)),
+  neuroim2::NeuroSpace(c(4, 4, 3, n), c(1, 1, 1))
+)
 dataset <- mvpa_dataset(images, mask = mask)
 design <- mvpa_design(data.frame(class, run), y_train = ~ class,
                       block_var = ~ run)
+```
+
+## Fit the domain and score held-out runs
+
+``` r
+
 spec <- pattern_model(dataset, design, rank = 2,
                       noise = list(type = "diag_lowrank", rank = 1))
 result <- run_global(spec, return_fits = TRUE, refit = TRUE)
@@ -46,66 +120,108 @@ performance(result)
 #> 1    0.983 0.998  0.0532         2
 ```
 
-The performance table scores held-out runs. The refit uses every
-training row and supplies descriptive maps; it is not the fit used to
-report validation accuracy. Here the rank is fixed at two. With
-`rank = "auto"`, rank is selected inside each outer training split. A
-spatial penalty can be added with
-`penalty = list(sparse = "auto", signed_smooth = 1)`; it acts on forward
-patterns, and its strength is selected using held-out decoding loss.
+[`performance()`](https://bbuchsbaum.github.io/rMVPA/reference/performance-methods.md)
+is leave-one-run-out accuracy. Chance is one third. `rank_mean` is the
+mean rank selected across outer folds; here rank is fixed at 2, so the
+column is exactly 2.
 
-`return_fits = TRUE` retains the fold fits needed for locality and
-diagnostics. Retaining these objects costs memory, especially with many
-resamples.
+Two fits are retained for different jobs:
 
-## Read invariant maps
+- **fold fits** (`return_fits = TRUE`) are the cross-validated
+  estimators.
+  [`local_performance()`](https://bbuchsbaum.github.io/rMVPA/reference/local_performance.md)
+  and the Haufe diagnostic need them.
+- **`$refit`** uses every training row. It is the descriptive map and
+  the object you would confirm later. It is **not** the fit that
+  produced the accuracy table.
+
+`return_fits = TRUE` costs memory, especially with many resamples.
+
+``` r
+
+X_all <- get_feature_matrix(dataset)
+head(predict(result$refit, X_all, type = "prob"))
+#>                 a            b            c
+#> [1,] 9.965573e-01 7.158840e-14 3.442679e-03
+#> [2,] 4.620917e-13 1.000000e+00 1.289233e-16
+#> [3,] 2.736966e-05 1.686358e-10 9.999726e-01
+#> [4,] 9.999999e-01 6.327767e-12 1.367196e-07
+#> [5,] 1.725962e-11 1.000000e+00 3.411714e-13
+#> [6,] 4.256850e-05 2.393210e-18 9.999574e-01
+```
+
+[`predict()`](https://rdrr.io/r/stats/predict.html) on a `pattern_fit`
+returns class probabilities, class labels, decoded continuous targets,
+calibrated scores, or encoded brain measurements. The probabilities
+above come from the descriptive refit, so they are not the held-out
+scores in
+[`performance()`](https://bbuchsbaum.github.io/rMVPA/reference/performance-methods.md).
+
+## Read where the signal lives
 
 ``` r
 
 signal_sd <- model_importance(result$refit, type = "signal_sd")
 information <- model_importance(result$refit, type = "conditional_info")
-oldpar <- par(mfrow = c(1, 2), mar = c(4, 4, 1, 1))
-plot(signal_sd, type = "h", xlab = "Input voxel", ylab = "Signal SD")
-plot(information, type = "h", xlab = "Input voxel", ylab = "Conditional information (nats)")
+oldpar <- par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+for (panel in list(
+  list(y = signal_sd, ylab = "Signal SD"),
+  list(y = information, ylab = "Conditional information (nats)")
+)) {
+  plot(panel$y, type = "h", xlab = "Input voxel", ylab = panel$ylab)
+  abline(v = c(12.5, 24.5, 36.5), lty = 2, col = "grey70")
+  mtext(c("S1", "S2", "noise", "bg"), side = 3, line = 0,
+        at = c(6, 18, 30, 42), cex = 0.8)
+}
 ```
 
-![Model-implied signal standard deviation and conditional information
-across input voxels.](Pattern_Model_files/figure-html/maps-1.png)
+![Model-implied signal standard deviation and Gaussian conditional
+information across 48 input voxels, with planted territory
+boundaries.](Pattern_Model_files/figure-html/maps-1.png)
 
 ``` r
 
 par(oldpar)
 ```
 
-Signal SD is the standard deviation implied by the fitted signal
-covariance, `sqrt(diag(A Phi A'))`, expressed in the original
-measurement units. It includes all fitted task directions. Conditional
-information asks what a voxel adds once the other voxels have been
-observed. It can be positive in a noise canceller with zero signal SD.
-Finite-sample estimated loadings are rarely exactly zero without
-sparsity, so the simulated nuisance territory need not have an exactly
-zero estimated signal map.
+**Signal SD** is $`\sqrt{\mathrm{diag}(A\Phi A')}`$ in the original
+measurement units. It says where fitted task variance is expressed. In
+this realization the B-versus-C territory (S2) is strongest, the
+A-versus-B territory (S1) is next, and background is near zero. The
+shared-noise territory is not exactly zero: finite-sample loadings
+rarely vanish without a sparsity penalty.
 
-Conditional information is a **working Gaussian score-model** quantity,
-in nats. For classification it is not empirical mutual information about
-discrete class labels. Both maps are descriptive, not significance maps.
+**Conditional information** asks what a voxel adds once the other voxels
+have been observed. It can be high in a noise canceller whose signal SD
+is modest. It is a working Gaussian score-model quantity, in nats — not
+empirical mutual information about class labels, and not a significance
+map.
 
-Using `model_importance(result)` returns a spatial image through the
-dataset’s map builder. Using `result$refit` returns a vector aligned to
-input columns; screened columns are `NA`. Forward component patterns and
-calibrated decoder weights are available from
-`model_patterns(fit, "forward")` and `model_patterns(fit, "weights")`.
-Their individual columns depend on the chosen component coordinates.
-Multibasis datasets require separate channel maps; automatic channel
-aggregation would change the quantity being shown.
+`model_importance(result)` builds a spatial image through the dataset.
+`model_importance(result$refit)` returns a vector aligned to input
+columns; screened columns are `NA`. Component-wise forward patterns and
+calibrated decoder weights come from `model_patterns(fit, "forward")`
+and `model_patterns(fit, "weights")`. Those columns depend on the chosen
+component coordinates. Scalar maps do not.
 
 ## Ask what each region can decode
 
+[`local_performance()`](https://bbuchsbaum.github.io/rMVPA/reference/local_performance.md)
+keeps the whole-domain task representation and restricts only the
+residual covariance to the region. It then predicts the **same held-out
+observations** used for the whole-domain score. Cropping whole-brain
+decoding weights would keep noise-cancellation terms that require
+unobserved voxels; that is a different, generally incorrect, estimand.
+
 ``` r
 
-regions <- list(signal_1 = 1:12, signal_2 = 13:24,
-                shared_noise = 25:36, background = 37:48,
-                whole_domain = 1:48)
+regions <- list(
+  signal_1     = 1:12,
+  signal_2     = 13:24,
+  shared_noise = 25:36,
+  background   = 37:48,
+  whole_domain = 1:48
+)
 local <- local_performance(result, regions)
 local[local$metric == "Accuracy", ]
 #>          region   metric whole_brain local_restricted
@@ -116,93 +232,54 @@ local[local$metric == "Accuracy", ]
 #> 13 whole_domain Accuracy   0.9833333        0.9833333
 ```
 
-In this realization, the first signal territory is near chance on its
-own despite nonzero loadings. The whole-domain prediction benefits from
-observing features beyond that territory.
+Each name in `regions` is a set of **input-matrix column positions**,
+not voxel IDs.
 
-Each entry in `regions` specifies **input matrix column positions**, not
-voxel IDs. For every fold, the query keeps the whole-brain forward
-pattern within the region and restricts the residual covariance to
-`Psi_RR`. It then recomputes the decoder and predicts the same held-out
-observations used in the whole-brain ledger. Cropping whole-brain
-decoding weights would retain noise cancellation terms that require
-unobserved features and gives a different, generally incorrect answer.
+In this realization the table matches the planting:
 
-The regional score measures access under the shared whole-brain
-representation. It does not estimate the best accuracy any separately
-trained local model could reach. A finite-sample region can outperform
-the whole-brain prediction. A noise-only territory may contribute
-conditionally while decoding poorly alone. For independent ROI
-comparisons, `independent_roi` accepts a named list of fold-resolved
-ledgers with matching rows, folds, truth, and baselines. Repeated
-assessments are pooled to one prediction per observation before any of
-these methods is scored.
+- **signal 2** decodes well on its own.
+- **signal 1** is near chance by itself. It carries both the A-versus-B
+  code and the shared noise, and without the canceller it cannot
+  separate them.
+- **shared noise** is also near chance alone, as it should be: it has no
+  task loading.
+- **whole domain** recovers the high held-out accuracy. The canceller is
+  useful only when the signal territories are observed with it.
 
-## Rotate a display and compare folds
-
-``` r
-
-view <- rotate_patterns(result$refit)
-view$reconstruction_error
-#> [1] 7.198298e-16
-result$component_stability[, c("fold1", "fold2", "rank1", "rank2", "n_common", "overlap")]
-#>   fold1 fold2 rank1 rank2 n_common   overlap
-#> 1     1     2     2     2       48 0.9213209
-#> 2     1     3     2     2       48 0.8117325
-#> 3     2     3     2     2       48 0.7999901
-```
-
-Rotation changes display coordinates, preserving `L_b H L_t' = A C'`.
-The view retains the original fit, so predictions and invariant maps
-remain exactly unchanged. Its matrices use fitted feature units and
-whitened target coordinates; the view also stores their back-transforms.
-Only orthogonal rotations are supported.
-
-Stability compares spatial column spaces in original feature units using
-principal angles on features retained in both folds. An overlap of one
-means the two nonempty subspaces coincide. Different ranks reduce
-overlap even if the smaller space lies within the larger. This is a
-subspace diagnostic, not a test that individual components or a
-particular rank are supported.
-
-``` r
-
-vapply(result$haufe_diagnostics, function(x) x$relative_discrepancy, numeric(1))
-#> [1] 0.4278746 0.5853670 0.7012616
-```
-
-The Haufe diagnostic compares empirical held-out covariance patterns
-with the model-implied patterns using calibrated scores. Large
-discrepancies can flag sampling noise or model misspecification. They
-are not p-values. Fold-level row identities are checked against training
-IDs. For an additional independent sample, use
-`pattern_haufe(fit, X_holdout, observation_ids)` and supply identifiers
-in the fit’s training-ID namespace. Automatic results use
-`train:<row ID>` for training/CV rows and `test:<row ID>` for an
-external test partition; the user must ensure an external partition
-contains genuinely independent observations.
+The regional score is access under the shared whole-brain
+representation, not the best accuracy a separately trained local model
+could reach. A finite-sample region can beat the whole-domain number.
+For a true independent-ROI comparison, pass fold-resolved ledgers
+through `independent_roi`; those ledgers must match rows, folds, truth,
+and baselines.
 
 ## Decode continuous feature targets
 
-The same model accepts multiple continuous targets. The example below
-uses two continuous measurements generated with a low-rank encoding
-relationship.
+The same constructor accepts a numeric target matrix. The example below
+encodes two continuous features into the first two territories.
 
 ``` r
 
 features <- matrix(rnorm(n * 2), n, 2,
                    dimnames = list(NULL, c("feature_1", "feature_2")))
 brain <- matrix(rnorm(n * p), n, p)
-brain[, 1:12] <- brain[, 1:12] + features[, 1]
+brain[, 1:12]  <- brain[, 1:12]  + features[, 1]
 brain[, 13:24] <- brain[, 13:24] + features[, 2]
 continuous_data <- mvpa_dataset(
-  neuroim2::NeuroVec(array(t(brain), c(4, 4, 3, n)),
-                    neuroim2::NeuroSpace(c(4, 4, 3, n), c(1, 1, 1))), mask = mask)
-continuous_design <- mvpa_design(data.frame(id = 1:n, run),
-                                 cv_labels = 1:n, targets = features,
-                                 block_var = ~ run)
-continuous <- run_global(pattern_model(continuous_data, continuous_design, rank = 2),
-                         return_fits = TRUE)
+  neuroim2::NeuroVec(
+    array(t(brain), c(4, 4, 3, n)),
+    neuroim2::NeuroSpace(c(4, 4, 3, n), c(1, 1, 1))
+  ),
+  mask = mask
+)
+continuous_design <- mvpa_design(
+  data.frame(id = 1:n, run),
+  cv_labels = 1:n, targets = features, block_var = ~ run
+)
+continuous <- run_global(
+  pattern_model(continuous_data, continuous_design, rank = 2),
+  return_fits = TRUE
+)
 performance(continuous)
 #> # A tibble: 1 × 4
 #>      R2  RMSE   cor rank_mean
@@ -218,34 +295,121 @@ local_performance(continuous, list(first = 1:12, second = 13:24))
 #> 6 second    cor   0.9503506        0.4523845
 ```
 
-Predictive R-squared uses each fold’s training-target mean as its
-baseline; it is not squared correlation and can be negative. The
-reported aggregate averages per-response R-squared. Targets are centred
-and whitened using training rows only. Predictions are returned in the
-original target units.
+`R2` is predictive R-squared against each fold’s **training-target
+mean**, not squared correlation, and it can be negative. The reported
+value averages per-response R-squared. Targets are centred and whitened
+on training rows only; `predict(..., type = "decode")` returns original
+target units. Here each territory reconstructs its own feature only
+partly; the whole domain does much better because both features are
+observed together.
 
-## Choose the model for the question
+`feature_sets_design` is the other common continuous-target path. Its
+`row_weights` are used by the estimator (see below).
 
-| Question | Model family |
-|----|----|
-| Whole-domain forward patterns and regional access under one covariance-aware fit | `pattern_model` |
-| Decode feature vectors within independently fitted regions | `feature_rsa_model` |
-| Voxelwise encoding from grouped predictors | `banded_ridge_model` |
-| Map between perception and retrieval domains | `remap_rrr_model` |
-| Find locally predictive neighborhoods using separate local fits | Searchlight analysis |
+## Control rank, penalties, and weights
 
-The current noise model combines diagonal variance and a few shared
-residual components. It may miss richer local correlations. Signed
-Laplacian smoothing encourages neighboring loadings to agree; it does
-not provide a coherent support envelope for alternating-sign fine-scale
-codes. Rank tests and the support-envelope extension remain separate
-work.
+**Rank.** `"auto"` (the default) selects rank inside each outer training
+split by held-out decoding loss, then reports `rank_mean`. A fixed
+integer is used as given and still capped at the eligible rank (number
+of classes minus one for categorical targets).
 
-To save retained fits, ledgers, and refit maps, call
-`save_results(result, "pattern-output")`. The RDS preserves the result
-object; spatial refit maps are also written as images for supported
-datasets.
+**Spatial penalties** act on $`A`$. They are optional and they are
+hypotheses about anatomy, not defaults.
 
-For independent loading tests and component comparisons, continue with
-[Confirming a frozen pattern
-model](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md).
+``` r
+
+# Localized support: a feature is in the patterns or out of them.
+pattern_model(dataset, design, rank = 2, penalty = list(sparse = 0.1))
+
+# Neighbouring voxels should carry similar signed loadings.
+# A spatial_graph() is built from the dataset when one is not supplied.
+pattern_model(dataset, design, rank = 2, penalty = list(signed_smooth = 1))
+```
+
+`sparse` is a fraction of the penalty that empties the model, so `0.1`
+means the same thing across folds and domains. `signed_smooth` is the
+weight of a graph-Laplacian term relative to the data-fit curvature.
+Either entry may be `"auto"`, which cross-validates a short path jointly
+with rank. Do **not** default to `sparse = "auto"` on a dense or weak
+whole-brain code: inner folds can pick a penalty that hurts held-out
+accuracy. Use sparsity when you believe support is localized.
+`support_smooth` is reserved for a later envelope penalty and is
+rejected rather than quietly remapped.
+
+**Observation weights** enter the fit itself: centring, target
+whitening, the residual covariance, the objective, and the inner tuning
+loss. They do not reweight the reported metrics — every tested
+observation still counts once.
+
+``` r
+
+# Explicit weights override design-carried row_weights.
+# A zero weight drops that row from training, exactly.
+pattern_model(dataset, design, rank = 2, weights = w)
+```
+
+If the design is a `feature_sets_design`, its `row_weights` are used
+automatically. Integer weights are equivalent to replicating rows.
+Confirmation
+([`vignette("Pattern_Confirmation")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md))
+does not accept nonuniform weights.
+
+## Rotate a display and compare folds
+
+``` r
+
+view <- rotate_patterns(result$refit)
+view$reconstruction_error
+#> [1] 7.198298e-16
+result$component_stability[, c("fold1", "fold2", "rank1", "rank2",
+                               "n_common", "overlap")]
+#>   fold1 fold2 rank1 rank2 n_common   overlap
+#> 1     1     2     2     2       48 0.9213209
+#> 2     1     3     2     2       48 0.8117325
+#> 3     2     3     2     2       48 0.7999901
+```
+
+[`rotate_patterns()`](https://bbuchsbaum.github.io/rMVPA/reference/rotate_patterns.md)
+changes display coordinates while preserving $`L_b H L_t' = A C'`$. The
+underlying fit is unchanged, so predictions and scalar maps stay
+bit-identical. Only orthogonal rotations are supported. Compare patterns
+across folds or subjects with the column space, the support, or a
+coordinate-invariant map — never raw entries of $`A`$.
+
+`component_stability` compares spatial column spaces with principal
+angles on features retained in both folds. An overlap of one means the
+two nonempty subspaces coincide. Unequal ranks reduce overlap even if
+the smaller space sits inside the larger. This is a subspace diagnostic,
+not a test that a particular rank is supported.
+
+``` r
+
+vapply(result$haufe_diagnostics, function(x) x$relative_discrepancy,
+       numeric(1))
+#> [1] 0.4278746 0.5853670 0.7012616
+```
+
+The Haufe diagnostic compares empirical held-out covariance patterns
+with the model-implied patterns. Large discrepancies can flag sampling
+noise or misspecification; they are not *p*-values. Automatic results
+use `train:<row ID>` for training and CV rows and `test:<row ID>` for an
+external test partition. Independence of an external partition is a
+caller obligation. For a separately held-out matrix, call
+`pattern_haufe(fit, X_holdout, observation_ids)`.
+
+## Save and continue
+
+``` r
+
+save_results(result, "pattern-output")
+```
+
+The RDS stores the result, including retained fits and ledgers. Spatial
+refit maps are also written as images for supported datasets. Multibasis
+image aggregation is refused because averaging channels would change the
+estimand; those results save as RDS.
+
+To test the frozen discovery directions on new rows, continue with
+[`vignette("Pattern_Confirmation")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md).
+To pool confirmed subject loadings in a shared target basis, use
+[`vignette("Pattern_Group")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.md).

@@ -1,15 +1,18 @@
 # Confirming a frozen pattern model
 
-A discovery fit chooses directions worth studying. Confirmation asks
-whether those **already chosen directions** predict brain measurements
-in independent data. It estimates fresh, unpenalized loadings while
-freezing the target coding, whitening, and component directions learned
-during discovery.
+This is the second pattern-model article. The first,
+[`vignette("Pattern_Model")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Model.md),
+chooses rank, penalties, and a residual covariance on discovery data.
+Confirmation asks a narrower question: do those **already chosen
+directions** still predict brain measurements in independent rows?
 
-This separation permits t and omnibus tests without treating a selected,
+It estimates fresh, unpenalized loadings while freezing the target
+coding, whitening, and component directions learned during discovery.
+That separation permits t and omnibus tests without treating a selected,
 regularized discovery loading as an ordinary regression coefficient. It
 does not turn cross-validated rank selection into a test of population
-rank.
+rank. Pooling confirmed subject loadings is
+[`vignette("Pattern_Group")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.md).
 
 ## Freeze a discovery fit
 
@@ -218,3 +221,7 @@ tests are invariant to nonsingular changes of score coordinates.
 Confirmation of several components is not a sequential rank test:
 `rank_supported` remains a separate research extension with a separately
 validated null.
+
+To pool these subject-level confirmations in a shared target basis,
+continue with
+[`vignette("Pattern_Group")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.md).

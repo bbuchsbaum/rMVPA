@@ -40,6 +40,9 @@ similarity score with built-in across-block masking, see
 If you want to test multiple model RDMs as regressors and read out
 coefficients, see
 [`vignette("RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md).
+If you want a whole-brain, covariance-aware reduced-rank model that
+yields forward patterns and regional access from one fit, see
+[`vignette("Pattern_Model")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Model.md).
 
 ## Inputs and outputs
 
