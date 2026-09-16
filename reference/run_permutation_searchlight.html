@@ -227,220 +227,220 @@ produced.  Neither strategy contains any engine-specific branching.</p>
 <span class="r-in"><span>  <span class="co"># Strategy 1: subsampled iterator (default, universal)</span></span></span>
 <span class="r-in"><span>  <span class="va">pc1</span>   <span class="op">&lt;-</span> <span class="fu"><a href="permutation_control.html">permutation_control</a></span><span class="op">(</span>n_perm <span class="op">=</span> <span class="fl">10</span>, subsample <span class="op">=</span> <span class="fl">0.2</span>, seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">res1</span>  <span class="op">&lt;-</span> <span class="fu">run_permutation_searchlight</span><span class="op">(</span><span class="va">mspec</span>, radius <span class="op">=</span> <span class="fl">3</span>, perm_ctrl <span class="op">=</span> <span class="va">pc1</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:10] Running observed searchlight (radius = 3 mm) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:40] Running observed searchlight (radius = 3 mm) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:10] searchlight engine: general-purpose iterator (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:10] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:10] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:10] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:10] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:10] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:10] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:14] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:40] searchlight engine: general-purpose iterator (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:40] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:40] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:40] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:40] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:40] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:40] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:43] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:14] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:14] Building searchlight iterator ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:14] Subsampling searchlight centers ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:14] Using 25 / 125 centers for permutation runs.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:14] Permutation 1 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:14] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:16] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:43] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:43] Building searchlight iterator ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:43] Subsampling searchlight centers ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:43] Using 25 / 125 centers for permutation runs.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:43] Permutation 1 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:43] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:45] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:16] Permutation 2 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:16] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:18] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:45] Permutation 2 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:45] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:47] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:18] Permutation 3 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:18] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:20] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:47] Permutation 3 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:47] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:48] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:20] Permutation 4 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:20] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:21] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:49] Permutation 4 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:49] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:51] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:22] Permutation 5 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:22] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:23] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:51] Permutation 5 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:51] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:52] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:24] Permutation 6 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:24] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:25] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:53] Permutation 6 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:53] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:54] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:26] Permutation 7 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:26] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:27] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:55] Permutation 7 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:55] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:56] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:27] Permutation 8 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:27] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:29] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:56] Permutation 8 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:56] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:58] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:29] Permutation 9 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:29] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:31] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:58] Permutation 9 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:30:58] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:00] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:31] Permutation 10 / 10 (strategy: iterate) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:31] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:00] Permutation 10 / 10 (strategy: iterate) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:00] Using automatic searchlight batch size 25 for 25 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">25</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] Running null diagnostics for 'Accuracy' ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] Running null diagnostics for 'Accuracy' ...</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Null Distribution Diagnostics (n_perm = 10 )</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------- </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   nfeatures            [OK]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     rho=-0.063  p=0.3224</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     No significant correlation with nfeatures.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------- </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] Building adjusted null distribution for 'Accuracy' (adjusted, 5 bins) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] Computing p-values for 125 centers ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] Building p-value spatial maps ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] Done 'Accuracy'. 0 centers significant at FDR &lt; 0.05 (fdr).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] Building adjusted null distribution for 'Accuracy' (adjusted, 5 bins) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] Computing p-values for 125 centers ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] Building p-value spatial maps ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] Done 'Accuracy'. 0 centers significant at FDR &lt; 0.05 (fdr).</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># Strategy 2: full-brain via run_searchlight (engine-aware)</span></span></span>
 <span class="r-in"><span>  <span class="va">pc2</span>   <span class="op">&lt;-</span> <span class="fu"><a href="permutation_control.html">permutation_control</a></span><span class="op">(</span>n_perm <span class="op">=</span> <span class="fl">5</span>, perm_strategy <span class="op">=</span> <span class="st">"searchlight"</span>,</span></span>
 <span class="r-in"><span>                               seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">res2</span>  <span class="op">&lt;-</span> <span class="fu">run_permutation_searchlight</span><span class="op">(</span><span class="va">mspec</span>, radius <span class="op">=</span> <span class="fl">3</span>, perm_ctrl <span class="op">=</span> <span class="va">pc2</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] Running observed searchlight (radius = 3 mm) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] Running observed searchlight (radius = 3 mm) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] searchlight engine: general-purpose iterator (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:33] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] searchlight engine: general-purpose iterator (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:02] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] Building searchlight iterator ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] Strategy = 'searchlight': full brain computed per permutation. 'subsample' parameter ignored; all 125 centers contribute to null.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] Permutation 1 / 5 (strategy: searchlight) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] Building searchlight iterator ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] Strategy = 'searchlight': full brain computed per permutation. 'subsample' parameter ignored; all 125 centers contribute to null.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] Permutation 1 / 5 (strategy: searchlight) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] searchlight engine: general-purpose iterator (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:37] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:41] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] searchlight engine: general-purpose iterator (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:05] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:08] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:42] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:42] Permutation 2 / 5 (strategy: searchlight) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:09] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:09] Permutation 2 / 5 (strategy: searchlight) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:42] searchlight engine: general-purpose iterator (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:42] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:42] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:42] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:42] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:42] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:42] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:46] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:09] searchlight engine: general-purpose iterator (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:09] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:09] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:09] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:09] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:09] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:09] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:12] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:46] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:46] Permutation 3 / 5 (strategy: searchlight) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:12] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:12] Permutation 3 / 5 (strategy: searchlight) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:46] searchlight engine: general-purpose iterator (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:46] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:46] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:46] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:46] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:46] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:46] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:50] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:12] searchlight engine: general-purpose iterator (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:12] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:12] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:12] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:12] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:12] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:12] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:16] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:50] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:50] Permutation 4 / 5 (strategy: searchlight) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:16] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:16] Permutation 4 / 5 (strategy: searchlight) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:50] searchlight engine: general-purpose iterator (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:50] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:50] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:50] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:50] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:50] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:50] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:54] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:16] searchlight engine: general-purpose iterator (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:16] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:16] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:16] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:16] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:16] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:16] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:19] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:54] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:54] Permutation 5 / 5 (strategy: searchlight) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:19] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:19] Permutation 5 / 5 (strategy: searchlight) ...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>run_searchlight preflight reported 0 failure(s) and 1 warning(s).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> block_count: Only 2 blocks found. Leave-one-block-out CV will have only 2 folds, providing limited evaluation with high variance estimates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:54] searchlight engine: general-purpose iterator (no eligible fast path)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:54] Running standard searchlight with radius = 3</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:54] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:54] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:54] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:54] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:54] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:58] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:19] searchlight engine: general-purpose iterator (no eligible fast path)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:19] Running standard searchlight with radius = 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:19] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:19] shard backend [volumetric]: shared 20 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:19] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:19] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:19] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:22] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:59] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:59] Running null diagnostics for 'Accuracy' ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:23] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:23] Running null diagnostics for 'Accuracy' ...</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Null Distribution Diagnostics (n_perm = 5 )</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------- </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   nfeatures            [OK]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     rho=-0.084  p=0.0350</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     No significant correlation with nfeatures.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------- </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:59] Building adjusted null distribution for 'Accuracy' (adjusted, 5 bins) ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:59] Computing p-values for 125 centers ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:59] Building p-value spatial maps ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:17:59] Done 'Accuracy'. 0 centers significant at FDR &lt; 0.05 (fdr).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:23] Building adjusted null distribution for 'Accuracy' (adjusted, 5 bins) ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:23] Computing p-values for 125 centers ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:23] Building p-value spatial maps ...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-09-16 16:31:23] Done 'Accuracy'. 0 centers significant at FDR &lt; 0.05 (fdr).</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
