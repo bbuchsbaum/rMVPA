@@ -68,6 +68,7 @@ local_performance <- function(result, regions, independent_roi = NULL) {
     ledger <- ref
     for (k in seq_along(result$fold_fits)) {
       rows <- which(ref$fold == k)
+      if (is.null(result$fold_fits[[k]])) next
       fit <- .pattern_restrict_fit(result$fold_fits[[k]], regions[[name]])
       pred <- predict(fit, X[ref$observation[rows], , drop = FALSE],
                       type = if (ref$type == "categorical") "prob" else "decode")
@@ -123,10 +124,11 @@ local_performance <- function(result, regions, independent_roi = NULL) {
 #' @export
 component_stability <- function(object) {
   fits <- object$fold_fits
-  if (!inherits(object, "pattern_global_result") || length(fits) < 2L) {
+  idx <- if (is.null(fits)) integer(0) else which(!vapply(fits, is.null, logical(1)))
+  if (!inherits(object, "pattern_global_result") || length(idx) < 2L) {
     stop("component_stability requires at least two retained fold fits.", call. = FALSE)
   }
-  pairs <- utils::combn(seq_along(fits), 2L)
+  pairs <- utils::combn(idx, 2L)
   rows <- lapply(seq_len(ncol(pairs)), function(k) {
     i <- pairs[1, k]; j <- pairs[2, k]
     a <- fits[[i]]; b <- fits[[j]]

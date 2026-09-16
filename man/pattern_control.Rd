@@ -19,10 +19,11 @@ pattern_control(
 )
 }
 \arguments{
-\item{max_rank}{Maximum rank considered (capped at the eligible rank:
-number of classes minus one for categorical targets, the effective
-number of target dimensions otherwise, and never above the number of
-features or observations).}
+\item{max_rank}{Largest rank considered when fitting a rank path
+(\code{rank = "path"} / \code{rank = "auto"}). Capped at the eligible
+rank (classes minus one for categorical targets, the effective number of
+target dimensions otherwise, and never above the number of features or
+observations). A requested fixed rank is not limited by this ceiling.}
 
 \item{x_scale}{Feature scaling on training rows: \code{"none"} (centre
 only) or \code{"sd"}.}

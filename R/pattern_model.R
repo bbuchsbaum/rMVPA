@@ -459,9 +459,9 @@ print.pattern_model <- function(x, ...) {
   }
 
   fold_fits <- vector("list", length(folds))
-  ranks <- integer(length(folds))
-  alphas <- numeric(length(folds)); rhos <- numeric(length(folds))
-  nnz <- integer(length(folds))
+  ranks <- rep(NA_integer_, length(folds))
+  alphas <- rep(NA_real_, length(folds)); rhos <- rep(NA_real_, length(folds))
+  nnz <- rep(NA_integer_, length(folds))
   ledger_fold <- integer(0); ledger_obs <- integer(0)
   ledger_truth <- NULL; ledger_pred <- NULL; ledger_base <- NULL
 
@@ -469,35 +469,52 @@ print.pattern_model <- function(x, ...) {
     tr <- folds[[k]]$train; te <- folds[[k]]$test
     tr_targets <- .pattern_subset_rows(targets, tr)
     w_tr <- if (is.null(w_all)) NULL else w_all[tr]
-    tune <- identical(model$rank, "auto") || .pattern_penalty_needs_tuning(model$penalty)
-    if (tune) {
-      sel <- .pattern_select_config(X[tr, , drop = FALSE], tr_targets, blocks[tr], control,
-                                    penalty = model$penalty, graph = graph, rank = model$rank,
-                                    weights = w_tr)
-      r_k <- if (identical(model$rank, "auto")) sel$rank else model$rank
-      pen_k <- sel$penalty
-    } else {
-      r_k <- model$rank
-      pen_k <- .pattern_penalty_grid(model$penalty)[[1]]
-    }
-    fit_k <- .pattern_fit(X[tr, , drop = FALSE], tr_targets, rank = r_k, control = control,
-                          cap_rank = TRUE, graph = graph, penalty = pen_k, weights = w_tr)
-    fit_k$training_observation_ids <- paste0("train:", tt$observation_ids[tr])
-    fit_k$assessment_observation_ids <- if (external) paste0("test:", model$targets_test$observation_ids[te]) else paste0("train:", tt$observation_ids[te])
-    fit_k$fold_definition_hash <- digest::digest(folds[[k]])
-    fit_k$basis_id <- digest::digest(list(C = fit_k$C, y_transform = fit_k$y_transform))
-    ranks[k] <- fit_k$rank
-    alphas[k] <- fit_k$penalty$alpha %||% 0
-    rhos[k] <- fit_k$penalty$rho %||% 0
-    nnz[k] <- fit_k$diagnostics$n_nonzero %||% nrow(fit_k$A)
-    if (keep_fits) fold_fits[[k]] <- fit_k
-
     X_te <- if (external) as.matrix(X_test)[te, , drop = FALSE] else X[te, , drop = FALSE]
     truth <- if (external) .pattern_subset_rows(model$targets_test$values, te) else .pattern_subset_rows(targets, te)
-    pred <- if (categorical) {
-      .pattern_pad_probs(predict(fit_k, X_te, type = "prob"), all_levels)
+
+    # Outer training folds can retain a single class (binary blocked CV with
+    # one condition confined to the held-out run). Inner rank selection already
+    # skips those folds; here we still score the held-out rows with a
+    # degenerate predictor rather than aborting in .pattern_fit.
+    n_tr_cls <- if (categorical) nlevels(droplevels(as.factor(tr_targets))) else NA_integer_
+    if (categorical && n_tr_cls < 2L) {
+      pred <- matrix(0, length(te), length(all_levels), dimnames = list(NULL, all_levels))
+      tr_lev <- levels(droplevels(as.factor(tr_targets)))
+      if (length(tr_lev) == 1L && tr_lev %in% all_levels) pred[, tr_lev] <- 1
     } else {
-      predict(fit_k, X_te, type = "decode")
+      tune <- identical(model$rank, "auto") || .pattern_penalty_needs_tuning(model$penalty)
+      if (tune) {
+        sel <- .pattern_select_config(X[tr, , drop = FALSE], tr_targets, blocks[tr], control,
+                                      penalty = model$penalty, graph = graph, rank = model$rank,
+                                      weights = w_tr)
+        r_k <- if (identical(model$rank, "auto")) sel$rank else model$rank
+        pen_k <- sel$penalty
+      } else {
+        r_k <- model$rank
+        pen_k <- .pattern_penalty_grid(model$penalty)[[1]]
+      }
+      fit_k <- .pattern_fit(X[tr, , drop = FALSE], tr_targets, rank = r_k, control = control,
+                            cap_rank = TRUE, graph = graph, penalty = pen_k, weights = w_tr)
+      # Match .pattern_fit's drop of zero-weight rows so IDs align with n_train/weights.
+      kept_tr <- if (is.null(w_tr)) tr else tr[w_tr > 0]
+      fit_k$training_observation_ids <- paste0("train:", tt$observation_ids[kept_tr])
+      fit_k$assessment_observation_ids <- if (external) {
+        paste0("test:", model$targets_test$observation_ids[te])
+      } else {
+        paste0("train:", tt$observation_ids[te])
+      }
+      fit_k$fold_definition_hash <- digest::digest(folds[[k]])
+      fit_k$basis_id <- digest::digest(list(C = fit_k$C, y_transform = fit_k$y_transform))
+      ranks[k] <- fit_k$rank
+      alphas[k] <- fit_k$penalty$alpha %||% 0
+      rhos[k] <- fit_k$penalty$rho %||% 0
+      nnz[k] <- fit_k$diagnostics$n_nonzero %||% nrow(fit_k$A)
+      if (keep_fits) fold_fits[[k]] <- fit_k
+      pred <- if (categorical) {
+        .pattern_pad_probs(predict(fit_k, X_te, type = "prob"), all_levels)
+      } else {
+        predict(fit_k, X_te, type = "decode")
+      }
     }
 
     ledger_fold <- c(ledger_fold, rep(k, length(te)))
@@ -527,9 +544,9 @@ print.pattern_model <- function(x, ...) {
   )
   pooled <- .pattern_pool_ledger(ledger)
   metrics <- .pattern_score_ledger(pooled)
-  metrics <- c(metrics, rank_mean = mean(ranks))
+  metrics <- c(metrics, rank_mean = mean(ranks, na.rm = TRUE))
   if (!is.null(model$penalty)) {
-    metrics <- c(metrics, n_selected = mean(nnz))
+    metrics <- c(metrics, n_selected = mean(nnz, na.rm = TRUE))
   }
 
   refit_obj <- NULL
@@ -549,7 +566,8 @@ print.pattern_model <- function(x, ...) {
   }
 
   if (!is.null(refit_obj)) {
-    refit_obj$training_observation_ids <- paste0("train:", tt$observation_ids)
+    kept_all <- if (is.null(w_all)) seq_along(tt$observation_ids) else which(w_all > 0)
+    refit_obj$training_observation_ids <- paste0("train:", tt$observation_ids[kept_all])
     refit_obj$basis_id <- digest::digest(list(C = refit_obj$C, y_transform = refit_obj$y_transform))
     refit_obj$fold_definition_hash <- digest::digest(folds)
   }
@@ -790,13 +808,15 @@ run_global.pattern_model <- function(model_spec, return_fits = isTRUE(model_spec
     ),
     class = c("pattern_global_result", "list")
   )
-  result$component_stability <- if (length(out$fold_fits) >= 2L) component_stability(result) else NULL
+  n_retained <- if (is.null(out$fold_fits)) 0L else sum(!vapply(out$fold_fits, is.null, logical(1)))
+  result$component_stability <- if (n_retained >= 2L) component_stability(result) else NULL
   if (length(out$fold_fits)) {
     assessment <- if (is.null(X_test)) X else X_test
     result$haufe_diagnostics <- lapply(seq_along(out$fold_fits), function(k) {
       rows <- out$ledger$observation[out$ledger$fold == k]
       if (length(rows) < 2L) return(list(status = "fewer than two held-out rows"))
       fit_k <- out$fold_fits[[k]]
+      if (is.null(fit_k)) return(list(status = "single-class training fold"))
       X_hold <- assessment[rows, , drop = FALSE]
       if (any(!is.finite(X_hold[, fit_k$feature_index, drop = FALSE])))
         return(list(status = "non-finite held-out retained features"))

@@ -344,8 +344,22 @@
     Yw <- Yw * sw
   }
   r_elig <- min(yt$q_eff, p, n - 1L)
-  r_max <- min(control$max_rank, r_elig)
-  if (r_max < 1L) stop("pattern_model: eligible rank is zero.", call. = FALSE)
+  if (r_elig < 1L) stop("pattern_model: eligible rank is zero.", call. = FALSE)
+  # max_rank limits only the auto / path search. A requested fixed rank is
+  # capped against the eligible dimensionality (when cap_rank is TRUE), not
+  # against that search ceiling, so rank = 10 with the default max_rank = 8
+  # still fits rank 10 when the targets support it.
+  if (identical(rank, "path")) {
+    r_max <- min(control$max_rank, r_elig)
+  } else {
+    rank <- as.integer(rank)
+    if (isTRUE(cap_rank)) rank <- min(rank, r_elig)
+    if (rank < 1L || rank > r_elig) {
+      stop(sprintf("pattern_model: requested rank %d exceeds the eligible rank %d.",
+                   rank, r_elig), call. = FALSE)
+    }
+    r_max <- rank
+  }
 
   # --- pilot fit (identity noise) -> residual covariance, held fixed ---
   pilot <- .pattern_init_rrr(Xc, Yw, .estimate_pattern_noise(Xc, type = "identity"), r_max)
@@ -430,11 +444,6 @@
     names(fits) <- paste0("rank", seq_len(r_max))
     return(fits)
   }
-  rank <- as.integer(rank)
-  if (isTRUE(cap_rank)) rank <- min(rank, r_max)
-  if (rank < 1L || rank > r_max) {
-    stop(sprintf("pattern_model: requested rank %d exceeds the eligible rank %d.", rank, r_max), call. = FALSE)
-  }
   make_fit(rank, refine = TRUE, A_start = start)
 }
 
@@ -466,10 +475,11 @@
 
 #' Control parameters for the pattern model estimator
 #'
-#' @param max_rank Maximum rank considered (capped at the eligible rank:
-#'   number of classes minus one for categorical targets, the effective
-#'   number of target dimensions otherwise, and never above the number of
-#'   features or observations).
+#' @param max_rank Largest rank considered when fitting a rank path
+#'   (\code{rank = "path"} / \code{rank = "auto"}). Capped at the eligible
+#'   rank (classes minus one for categorical targets, the effective number of
+#'   target dimensions otherwise, and never above the number of features or
+#'   observations). A requested fixed rank is not limited by this ceiling.
 #' @param x_scale Feature scaling on training rows: \code{"none"} (centre
 #'   only) or \code{"sd"}.
 #' @param y_scale Continuous-target scaling before whitening: \code{"none"}

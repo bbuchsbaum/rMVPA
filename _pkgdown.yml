@@ -38,10 +38,15 @@ articles:
   - Regional_Analysis
   - Haxby_2001
   - ITEM_Decoding
+  - CommandLine
+- title: Pattern Models
+  desc: |
+    Fit one covariance-aware whole-brain reduced-rank model, then confirm
+    frozen loadings on independent data and pool them across subjects.
+  contents:
   - Pattern_Model
   - Pattern_Confirmation
   - Pattern_Group
-  - CommandLine
 - title: Representational Similarity Analysis
   desc: |
     RSA methods from basic to specialized approaches
