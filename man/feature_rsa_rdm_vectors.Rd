@@ -21,6 +21,8 @@ A tibble with one row per ROI and columns:
       predicted RDM.}
     \item{fold_id}{List-column identifying the outer test fold for each
       observation. Cross-fold entries in the RDM vectors are missing.}
+    \item{rdm_centering}{Centring mode used for these vectors. Older payloads
+      without this field are labelled \code{"none"}.}
     \item{rdm_vec}{List-column containing the lower-triangle predicted RDM
       vector for that ROI.}
     \item{observed_rdm_vec}{List-column containing the lower-triangle

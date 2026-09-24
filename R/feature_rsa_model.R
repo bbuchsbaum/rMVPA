@@ -197,6 +197,20 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #' @param permute_by DEPRECATED. Permutation is always done by shuffling rows of the predicted matrix.
 #' @param save_distributions Logical, if TRUE and nperm > 0, save the full null distributions
 #'   from the permutation test. Defaults to FALSE.
+#' @param rdm_centering RDM preprocessing: \code{"items"} (default) subtracts
+#'   each voxel's mean across held-out items, separately for predicted and
+#'   observed patterns within each outer test fold. \code{"double"} additionally
+#'   centres each fold's correlation-distance matrix by rows and columns,
+#'   including its zero diagonal: \eqn{H D H}, where \eqn{H = I - 11'/n}.
+#'   The centred entries can be negative and are no longer distances.
+#'   This centres the unsquared distances before Spearman ranking; it is not
+#'   partial Spearman correlation. \code{"none"} retains the historical score.
+#'   Held-out means use no labels or model refitting, but define geometry
+#'   relative to the evaluated item set, not the training intercept. Missing
+#'   voxel values are omitted in the voxel means and pairwise correlations;
+#'   undefined distances remain missing. In \code{"double"}, any undefined
+#'   distance makes that fold's centred RDM unavailable. Noise whitening and
+#'   cross-validated distances are not performed.
 #' @param return_rdm_vectors Logical; if TRUE, retain each ROI's predicted
 #'   lower-triangle RDM vector in the regional result's `fits` slot. Cross-fold
 #'   pairs are stored as missing because the two observations were not withheld
@@ -354,8 +368,10 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   - `rdm_correlation`: Spearman correlation between jointly withheld pairs
 #'     in the observed and predicted RDMs (defined as 1 - trial-by-trial
 #'     correlation across voxels). Captures similarity of held-out
-#'     representational geometry without comparing a prediction with a target
-#'     that trained that prediction.
+#'     representational geometry after the selected `rdm_centering`, without
+#'     comparing a prediction with a target that trained that prediction.
+#'   - `rdm_correlation_raw`: The historical uncentred RDM correlation,
+#'     reported alongside the selected score for comparison.
 #'
 #' *Global reconstruction metrics*:
 #'   - `voxel_correlation`: Correlation of the flattened predicted and observed
@@ -409,9 +425,11 @@ feature_rsa_model <- function(dataset,
                                max_retained_mb = 1024,
                                prediction_overflow = c("error", "none"),
                                feature_standardize = NULL,
+                               rdm_centering = c("items", "double", "none"),
                                ...) {
   
   method <- match.arg(method)
+  rdm_centering <- match.arg(rdm_centering)
   ncomp_selection <- match.arg(ncomp_selection)
   ncomp_objective <- match.arg(ncomp_objective)
   lambda_selection <- match.arg(lambda_selection)
@@ -654,6 +672,7 @@ feature_rsa_model <- function(dataset,
   model_spec$nperm <- nperm
   model_spec$permute_by <- permute_by
   model_spec$save_distributions <- save_distributions
+  model_spec$rdm_centering <- rdm_centering
   model_spec$return_rdm_vectors <- isTRUE(return_rdm_vectors)
   model_spec$max_retained_mb <- max_retained_mb
   model_spec$prediction_overflow <- prediction_overflow
@@ -1198,19 +1217,36 @@ feature_rsa_model <- function(dataset,
 
 #' Lower-triangle correlation-distance vector using bounded row blocks
 #' @noRd
-.feature_rsa_rdm_vector_blockwise <- function(X) {
+.feature_rsa_rdm_vector_blockwise <- function(X, rdm_centering = "none") {
+  rdm_centering <- match.arg(rdm_centering, c("items", "double", "none"))
   X <- as.matrix(X)
   n <- nrow(X)
   n_pairs <- n * (n - 1L) / 2L
   if (n_pairs < 1L) return(numeric(0))
+  if (rdm_centering != "none") {
+    # Subtract an anchor first: identical columns must become exactly zero,
+    # even when rounding in colMeans would leave a tiny common pattern.
+    anchor <- X[1L, ]
+    anchor[!is.finite(anchor)] <- 0
+    X <- sweep(X, 2L, anchor, "-")
+    X <- sweep(X, 2L, colMeans(X, na.rm = TRUE), "-")
+    if (n == 2L) {
+      # The two deviations are opposites. Do not rank floating-point noise
+      # around the exact distance 2 (or the centred off-diagonal value 1).
+      correlation <- suppressWarnings(.feature_rsa_row_cor(X))[2L, 1L]
+      return(if (!is.finite(correlation)) NA_real_ else if (rdm_centering == "double") 1 else 2)
+    }
+  }
   normalized <- .feature_rsa_normalize_rows(X)
   if (is.null(normalized)) {
     dense <- .feature_rsa_row_cor(X)
-    distance <- as.numeric((1 - dense)[lower.tri(dense)])
-    return(.feature_rsa_canonicalize_correlation_distance(
-      distance,
+    out <- .feature_rsa_canonicalize_correlation_distance(
+      as.numeric((1 - dense)[lower.tri(dense)]),
       ncol(X)
-    ))
+    )
+    return(if (rdm_centering == "double") {
+      .feature_rsa_center_rdm_vector(out, n)
+    } else out)
   }
 
   out <- numeric(n_pairs)
@@ -1240,7 +1276,41 @@ feature_rsa_model <- function(dataset,
       offset <- offset + count
     }
   }
-  out
+  if (rdm_centering == "double") .feature_rsa_center_rdm_vector(out, n) else out
+}
+
+# Double-centre D itself (H D H), including its zero diagonal, without
+# allocating an n x n matrix. Undefined pairs make the fold undefined.
+.feature_rsa_center_rdm_vector <- function(values, n) {
+  if (!length(values)) return(values)
+  if (any(!is.finite(values))) return(rep(NA_real_, length(values)))
+  row_sums <- numeric(n)
+  offset <- 0L
+  for (column in seq_len(n - 1L)) {
+    rows <- seq.int(column + 1L, n)
+    positions <- seq.int(offset + 1L, offset + length(rows))
+    row_sums[column] <- row_sums[column] + sum(values[positions])
+    row_sums[rows] <- row_sums[rows] + values[positions]
+    offset <- offset + length(rows)
+  }
+  row_means <- row_sums / n
+  grand_mean <- mean(row_means)
+  offset <- 0L
+  for (column in seq_len(n - 1L)) {
+    rows <- seq.int(column + 1L, n)
+    positions <- seq.int(offset + 1L, offset + length(rows))
+    values[positions] <- values[positions] - row_means[column] -
+      row_means[rows] + grand_mean
+    offset <- offset + length(rows)
+  }
+  values
+}
+
+.feature_rsa_rdm_cor <- function(predicted, observed) {
+  keep <- is.finite(predicted) & is.finite(observed)
+  if (sum(keep) < 2L) return(NA_real_)
+  value <- suppressWarnings(stats::cor(predicted[keep], observed[keep], method = "spearman"))
+  if (is.finite(value)) value else NA_real_
 }
 
 
@@ -1251,7 +1321,8 @@ feature_rsa_model <- function(dataset,
 #' @noRd
 .feature_rsa_grouped_rdm_vectors <- function(X,
                                              fold_id = NULL,
-                                             full_length = FALSE) {
+                                             full_length = FALSE,
+                                             rdm_centering = "none") {
   X <- as.matrix(X)
   n <- nrow(X)
   fold_id <- .feature_rsa_resolve_fold_id(fold_id, n)
@@ -1264,14 +1335,14 @@ feature_rsa_model <- function(dataset,
     for (group in groups) {
       if (length(group) < 2L) next
       out[.feature_rsa_pair_indices(group, n)] <-
-        .feature_rsa_rdm_vector_blockwise(X[group, , drop = FALSE])
+        .feature_rsa_rdm_vector_blockwise(X[group, , drop = FALSE], rdm_centering)
     }
     return(out)
   }
 
   values <- lapply(groups, function(group) {
     if (length(group) < 2L) return(numeric(0))
-    .feature_rsa_rdm_vector_blockwise(X[group, , drop = FALSE])
+    .feature_rsa_rdm_vector_blockwise(X[group, , drop = FALSE], rdm_centering)
   })
   unlist(values, use.names = FALSE)
 }
@@ -3083,7 +3154,9 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
                                    valid_col,
                                    fold_id = NULL,
                                    predicted_rdm_cache = NULL,
-                                   observed_rdm_cache = NULL)
+                                   observed_rdm_cache = NULL,
+                                   rdm_centering = "none",
+                                   rdm_cor_raw = NULL)
 {
   futile.logger::flog.info(
     "Performing permutation tests with %d permutations... (feature_rsa_model)",
@@ -3115,7 +3188,8 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
       .feature_rsa_grouped_rdm_vectors(
         predicted,
         fold_id = fold_id,
-        full_length = TRUE
+        full_length = TRUE,
+        rdm_centering = rdm_centering
       ),
       error = function(e) NULL
     )
@@ -3125,7 +3199,8 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
       .feature_rsa_grouped_rdm_vectors(
         observed,
         fold_id = fold_id,
-        full_length = TRUE
+        full_length = TRUE,
+        rdm_centering = rdm_centering
       ),
       error = function(e) NULL
     )
@@ -3172,6 +3247,13 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
                     "mse", "r_squared", "mean_voxelwise_temporal_cor")
   obs_vals <- c(pattern_cor, pattern_discrim, pattern_rank, rdm_cor,
                 voxel_cor, mse, r_squared, mean_voxelwise_temporal_cor)
+  include_raw <- !is.null(rdm_cor_raw)
+  if (include_raw) {
+    metric_names <- c(metric_names, "rdm_correlation_raw")
+    obs_vals <- c(obs_vals, rdm_cor_raw)
+    raw_predicted_cache <- .feature_rsa_grouped_rdm_vectors(predicted, fold_id, TRUE)
+    raw_observed_cache <- .feature_rsa_grouped_rdm_vectors(observed, fold_id, TRUE)
+  }
   names(obs_vals) <- metric_names
   n_met <- length(metric_names)
 
@@ -3208,26 +3290,19 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
       }
     }
 
-    ## -- Representational geometry (RDM correlation) --
-    if (length(vr) >= 2L) {
-      if (!is.null(predicted_rdm_cache) && !is.null(observed_rdm_cache)) {
-        predicted_pair_index <- .feature_rsa_grouped_pair_indices(
-          perm_idx[vr],
-          fold_id[vr],
-          n_rows
-        )
-        observed_pair_index <- .feature_rsa_grouped_pair_indices(
-          vr,
-          fold_id[vr],
-          n_rows
-        )
-        pv <- predicted_rdm_cache[predicted_pair_index]
-        ov <- observed_rdm_cache[observed_pair_index]
-        if (length(pv) >= 2 && length(pv) == length(ov)) {
-          prdm <- tryCatch(stats::cor(pv, ov, method = "spearman", use = "complete.obs"),
-                           error = function(e) NA_real_)
-        }
-      }
+    ## Centring commutes with permutations restricted to the same fold.
+    rdm_rows <- if (rdm_centering == "none") vr else seq_len(n_rows)
+    if (length(rdm_rows) >= 2L && !is.null(predicted_rdm_cache) &&
+        !is.null(observed_rdm_cache)) {
+      pi <- .feature_rsa_grouped_pair_indices(perm_idx[rdm_rows], fold_id[rdm_rows], n_rows)
+      oi <- .feature_rsa_grouped_pair_indices(rdm_rows, fold_id[rdm_rows], n_rows)
+      prdm <- .feature_rsa_rdm_cor(predicted_rdm_cache[pi], observed_rdm_cache[oi])
+    }
+    prdm_raw <- NA_real_
+    if (include_raw && length(vr) >= 2L) {
+      pi <- .feature_rsa_grouped_pair_indices(perm_idx[vr], fold_id[vr], n_rows)
+      oi <- .feature_rsa_grouped_pair_indices(vr, fold_id[vr], n_rows)
+      prdm_raw <- .feature_rsa_rdm_cor(raw_predicted_cache[pi], raw_observed_cache[oi])
     }
 
     ## -- Global reconstruction --
@@ -3267,6 +3342,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
     }
 
     pvals <- c(ppc, ppd, ppr, prdm, pvc, pmse, prsq, pmvtc)
+    if (include_raw) pvals <- c(pvals, prdm_raw)
 
     ## Update accumulators
     for (m in seq_len(n_met)) {
@@ -3331,6 +3407,8 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #'   cross-validation test fold. Pattern discrimination, identification rank,
 #'   and RDM correlation then use only candidates or pairs withheld together.
 #'   Cross-validated workflows supply this automatically.
+#' @param rdm_centering RDM centring mode; defaults to the model's setting,
+#'   or `"items"` when absent. See \code{\link{feature_rsa_model}}.
 #' @param ... Additional arguments
 #'
 #' @return A list containing:
@@ -3347,7 +3425,9 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #'       0.5 = chance, 1 = perfect.}
 #'     \item{rdm_correlation}{Spearman correlation between predicted and
 #'       observed correlation-distance pairs whose observations were withheld
-#'       together.}
+#'       together, after the selected centring.}
+#'     \item{rdm_correlation_raw}{Historical uncentred RDM correlation.}
+#'     \item{rdm_centering}{Centring mode used for the score and stored RDMs.}
 #'     \item{voxel_correlation}{Correlation of the flattened predicted and
 #'       observed matrices (global reconstruction quality).}
 #'     \item{mse}{Mean squared error.}
@@ -3370,8 +3450,10 @@ evaluate_model.feature_rsa_model <- function(object,
                                              save_distributions = FALSE,
                                              compute_rdm_vectors = isTRUE(object$return_rdm_vectors),
                                              fold_id = NULL,
+                                             rdm_centering = object$rdm_centering %||% "items",
                                              ...)
 {
+  rdm_centering <- match.arg(rdm_centering, c("items", "double", "none"))
   observed  <- as.matrix(observed)
   predicted <- as.matrix(predicted)
 
@@ -3414,8 +3496,6 @@ evaluate_model.feature_rsa_model <- function(object,
   pattern_discrim <- NA_real_
   pattern_rank    <- NA_real_
   rdm_cor         <- NA_real_
-  predicted_rdm_subset <- NULL
-  observed_rdm_subset <- NULL
 
   if (length(valid_row) >= 2) {
     pmat <- predicted[valid_row, , drop = FALSE]
@@ -3433,39 +3513,21 @@ evaluate_model.feature_rsa_model <- function(object,
   ## ================================================================
   ## 1b. Representational geometry metric (RDM correlation)
   ## ================================================================
-  ## Compute within-space RDMs (1 - trial-by-trial correlation) and correlate
-  ## lower triangles between predicted and observed. With cross-validation,
-  ## only pairs withheld together enter the estimand.
-  if (length(valid_row) >= 2) {
-    pmat <- predicted[valid_row, , drop = FALSE]
-    omat <- observed[valid_row,  , drop = FALSE]
-    predicted_rdm_subset <- tryCatch(
-      .feature_rsa_grouped_rdm_vectors(
-        pmat,
-        fold_id = fold_id[valid_row]
-      ),
-      error = function(e) NULL
+  ## The raw score preserves the historical valid-row rule. Centred geometry
+  ## uses every item to estimate each voxel mean before checking distances.
+  raw_pred <- .feature_rsa_grouped_rdm_vectors(
+    predicted[valid_row, , drop = FALSE], fold_id[valid_row])
+  raw_obs <- .feature_rsa_grouped_rdm_vectors(
+    observed[valid_row, , drop = FALSE], fold_id[valid_row])
+  rdm_cor_raw <- .feature_rsa_rdm_cor(raw_pred, raw_obs)
+  if (rdm_centering == "none") {
+    rdm_cor <- rdm_cor_raw
+  } else {
+    rdm_cor <- .feature_rsa_rdm_cor(
+      .feature_rsa_grouped_rdm_vectors(predicted, fold_id, rdm_centering = rdm_centering),
+      .feature_rsa_grouped_rdm_vectors(observed, fold_id, rdm_centering = rdm_centering)
     )
-    observed_rdm_subset <- tryCatch(
-      .feature_rsa_grouped_rdm_vectors(
-        omat,
-        fold_id = fold_id[valid_row]
-      ),
-      error = function(e) NULL
-    )
-    if (!is.null(predicted_rdm_subset) && !is.null(observed_rdm_subset)) {
-      if (length(predicted_rdm_subset) >= 2 &&
-          length(predicted_rdm_subset) == length(observed_rdm_subset)) {
-        rdm_cor <- tryCatch(stats::cor(
-                              predicted_rdm_subset,
-                              observed_rdm_subset,
-                              method = "spearman",
-                              use = "complete.obs"),
-                            error = function(e) NA_real_)
-      }
-    }
   }
-  if (!is.finite(rdm_cor)) rdm_cor <- NA_real_
 
   ## ================================================================
   ## 2. Global reconstruction metrics
@@ -3498,7 +3560,8 @@ evaluate_model.feature_rsa_model <- function(object,
         suppressWarnings(.feature_rsa_grouped_rdm_vectors(
           predicted,
           fold_id = fold_id,
-          full_length = TRUE
+          full_length = TRUE,
+          rdm_centering = rdm_centering
         )),
         error = function(e) NULL
       )
@@ -3506,7 +3569,8 @@ evaluate_model.feature_rsa_model <- function(object,
         suppressWarnings(.feature_rsa_grouped_rdm_vectors(
           observed,
           fold_id = fold_id,
-          full_length = TRUE
+          full_length = TRUE,
+          rdm_centering = rdm_centering
         )),
         error = function(e) NULL
       )
@@ -3542,7 +3606,9 @@ evaluate_model.feature_rsa_model <- function(object,
       valid_col      = valid_col,
       fold_id        = fold_id,
       predicted_rdm_cache = predicted_rdm_cache,
-      observed_rdm_cache = observed_rdm_cache
+      observed_rdm_cache = observed_rdm_cache,
+      rdm_centering = rdm_centering,
+      rdm_cor_raw = rdm_cor_raw
     )
   }
 
@@ -3551,6 +3617,8 @@ evaluate_model.feature_rsa_model <- function(object,
     pattern_discrimination      = pattern_discrim,
     pattern_rank_percentile     = pattern_rank,
     rdm_correlation             = rdm_cor,
+    rdm_correlation_raw         = rdm_cor_raw,
+    rdm_centering               = rdm_centering,
     voxel_correlation           = voxel_cor,
     mse                         = mse,
     r_squared                   = r_squared,
@@ -4304,6 +4372,7 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
     perf$pattern_discrimination,
     perf$pattern_rank_percentile,
     perf$rdm_correlation,
+    perf$rdm_correlation_raw,
     perf$voxel_correlation,
     perf$mse,
     perf$r_squared,
@@ -4311,7 +4380,7 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   )
   base_names <- c(
     "pattern_correlation", "pattern_discrimination", "pattern_rank_percentile",
-    "rdm_correlation",
+    "rdm_correlation", "rdm_correlation_raw",
     "voxel_correlation", "mse", "r_squared",
     "mean_voxelwise_temporal_cor"
   )
@@ -4427,6 +4496,7 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
       observed_rdm_vec  = if (keep_rdm) perf$observed_rdm_vec else NULL,
       observation_index = combined_test_index,
       fold_id = combined_fold_id,
+      rdm_centering = perf$rdm_centering,
       n_obs = nrow(combined_predicted),
       predicted = if (keep_predictions) combined_predicted else NULL,
       observed = if (keep_predictions) combined_observed else NULL,
@@ -4435,7 +4505,7 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   }
   
   tibble::tibble(
-    result      = list(list(predictor = predictor_obj)),
+    result      = list(list(predictor = predictor_obj, rdm_centering = perf$rdm_centering)),
     indices     = list(indices),
     performance = list(perf_mat),
     id          = id,
@@ -4490,7 +4560,7 @@ output_schema.feature_rsa_model <- function(model) {
   }
   nms <- c(
     "pattern_correlation", "pattern_discrimination", "pattern_rank_percentile",
-    "rdm_correlation", "voxel_correlation", "mse", "r_squared",
+    "rdm_correlation", "rdm_correlation_raw", "voxel_correlation", "mse", "r_squared",
     "mean_voxelwise_temporal_cor",
     if (identical(model$method, "ridge")) {
       c(

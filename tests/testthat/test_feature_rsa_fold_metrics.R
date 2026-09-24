@@ -34,6 +34,10 @@ fold_metric_reference <- function(predicted, observed, fold_id) {
 }
 
 fold_rdm_reference <- function(x, fold_id) {
+  for (fold in unique(fold_id)) {
+    rows <- which(fold_id == fold)
+    x[rows, ] <- scale(x[rows, , drop = FALSE], center = TRUE, scale = FALSE)
+  }
   correlation <- suppressWarnings(stats::cor(
     t(x),
     use = "pairwise.complete.obs"

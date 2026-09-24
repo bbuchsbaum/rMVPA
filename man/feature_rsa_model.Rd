@@ -27,6 +27,7 @@ feature_rsa_model(
   max_retained_mb = 1024,
   prediction_overflow = c("error", "none"),
   feature_standardize = NULL,
+  rdm_centering = c("items", "double", "none"),
   ...
 )
 }
@@ -170,6 +171,21 @@ resolves to \code{"center"} for designs built from a similarity matrix
 variances of \code{F} are meaningful, e.g. PCA scores or other
 pre-whitened inputs. See the Feature standardization section.}
 
+\item{rdm_centering}{RDM preprocessing: \code{"items"} (default) subtracts
+each voxel's mean across held-out items, separately for predicted and
+observed patterns within each outer test fold. \code{"double"} additionally
+centres each fold's correlation-distance matrix by rows and columns,
+including its zero diagonal: \eqn{H D H}, where \eqn{H = I - 11'/n}.
+The centred entries can be negative and are no longer distances.
+This centres the unsquared distances before Spearman ranking; it is not
+partial Spearman correlation. \code{"none"} retains the historical score.
+Held-out means use no labels or model refitting, but define geometry
+relative to the evaluated item set, not the training intercept. Missing
+voxel values are omitted in the voxel means and pairwise correlations;
+undefined distances remain missing. In \code{"double"}, any undefined
+distance makes that fold's centred RDM unavailable. Noise whitening and
+cross-validated distances are not performed.}
+
 \item{...}{Additional arguments (currently unused). Passing deprecated
 arguments such as \code{cache_pca} now results in an error.}
 }
@@ -232,8 +248,10 @@ estimate held-out performance for component selection.
   - `rdm_correlation`: Spearman correlation between jointly withheld pairs
     in the observed and predicted RDMs (defined as 1 - trial-by-trial
     correlation across voxels). Captures similarity of held-out
-    representational geometry without comparing a prediction with a target
-    that trained that prediction.
+    representational geometry after the selected `rdm_centering`, without
+    comparing a prediction with a target that trained that prediction.
+  - `rdm_correlation_raw`: The historical uncentred RDM correlation,
+    reported alongside the selected score for comparison.
 
 *Global reconstruction metrics*:
   - `voxel_correlation`: Correlation of the flattened predicted and observed

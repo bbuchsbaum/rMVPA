@@ -21,6 +21,8 @@ A tibble with one row per ROI and columns:
     \item{fold_id}{List-column identifying the outer test fold for each
       observation. Identification and geometry scoring must stay inside
       these groups.}
+    \item{rdm_centering}{Centring mode used for the reported RDM score;
+      retained pattern matrices themselves are unchanged.}
     \item{voxel_index}{List-column of the spatial indices for matrix
       columns.}
     \item{predicted}{List-column of out-of-fold `Yhat` matrices

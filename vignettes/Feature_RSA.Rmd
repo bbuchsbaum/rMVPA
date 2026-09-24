@@ -97,6 +97,19 @@ vectors are retained, they keep their full lower-triangle shape but mark
 cross-fold pairs as `NA`; `feature_rsa_rdm_vectors()` also returns the fold
 assignment.
 
+By default, `rdm_centering = "items"` subtracts each voxel's mean across
+held-out items, separately for predictions and observations within each fold.
+This removes the fold-common spatial pattern before computing correlation
+distances. It uses the evaluated item set's means, not the training intercept,
+and does not change the fitted model or the other performance metrics.
+`rdm_centering = "double"` also removes row and column means from each fold's
+unsquared RDM (including its zero diagonal) before Spearman ranking. This is
+not partial Spearman correlation and does not guarantee a nonnegative score.
+`rdm_centering = "none"` restores the previous metric, which is always available
+as `rdm_correlation_raw`. Stored RDM vectors follow the selected mode and carry
+`rdm_centering` metadata. Noise whitening and cross-validated distances are
+separate methods and are not applied here.
+
 ### Custom scoring from out-of-fold predictions
 
 The ten built-in columns are not the only scoring rules one might want.
@@ -424,7 +437,8 @@ stopifnot(
 The checked-in characterization uses 20 independently seeded dense linear
 fixtures. Each has 120 observations, 16 correlated features, 100 voxel
 responses, six blocks, and a never-tuned-on final held-out block. All native
-thread limits were one. The prospective accuracy margin required median MSE
+thread limits were one. This estimator benchmark retains the historical raw
+RDM metric (`rdm_centering = "none"`), as recorded in its receipt. The prospective accuracy margin required median MSE
 no more than 5% worse than PLS LOO, 90th-percentile MSE no more than 20% worse,
 and pattern/RDM correlation losses no larger than .01 at the median or .03 at
 the lower decile.
@@ -457,6 +471,11 @@ stopifnot(
   nzchar(unique(ridge_receipt$source_fingerprint))
 )
 
+ridge_speedups <- setNames(
+  round(ridge_receipt$median_speedup_vs_pls_loo, 1),
+  ridge_receipt$implementation
+)
+
 display_ridge_receipt <- transform(
   ridge_receipt,
   method = c(
@@ -486,9 +505,12 @@ knitr::kable(
 
 All three ridge selectors cleared the declared margin. Median MSE was
 11--12% lower than PLS LOO, while median pattern and RDM correlations were
-slightly higher. GCV was about 39 times faster than PLS LOO; analytic LOO and
-blocked ridge were about 10 and 9 times faster. Blocked PLS was also about 11
-times faster than PLS LOO and had essentially identical accuracy here, so
+slightly higher. GCV was about `r ridge_speedups[["ridge_gcv"]]` times faster
+than PLS LOO; analytic LOO and blocked ridge were about
+`r ridge_speedups[["ridge_analytic_loo"]]` and
+`r ridge_speedups[["ridge_blocked"]]` times faster. Blocked PLS was also about
+`r ridge_speedups[["pls_streaming_blocked"]]` times faster than PLS LOO and
+had essentially identical accuracy here, so
 users who specifically need PLS should prefer a scientifically valid block
 unit rather than changing estimators only for speed.
 

@@ -565,6 +565,7 @@ frperf_prediction_metrics <- function(predicted, observed, row_cor) {
   )
   pattern <- rowSums(predicted_centered * observed_centered) / denominator
 
+  # Keep the historical raw geometry estimand for this estimator benchmark.
   predicted_rdm <- 1 - row_cor(predicted)
   observed_rdm <- 1 - row_cor(observed)
   lower <- lower.tri(predicted_rdm)
@@ -995,6 +996,7 @@ frperf_ridge_accuracy_receipt <- function(rows, source_root = ".") {
   receipt$n_blocks <- unique(rows$n_blocks)
   receipt$max_comps <- unique(rows$max_comps)
   receipt$fixture <- "correlated_dense_linear_last_block_holdout"
+  receipt$rdm_centering <- "none"
   receipt$package_version <- as.character(utils::packageVersion("rMVPA"))
   receipt$pls_version <- as.character(utils::packageVersion("pls"))
   receipt$glmnet_version <- if (requireNamespace("glmnet", quietly = TRUE)) {

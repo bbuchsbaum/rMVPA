@@ -649,6 +649,7 @@ test_that("evaluate_model.feature_rsa_model returns full-length RDM vectors matc
 
   perf_with_vecs <- evaluate_model.feature_rsa_model(
     object = NULL,
+    rdm_centering = "none",
     predicted = predicted,
     observed = observed,
     nperm = 0,
@@ -656,6 +657,7 @@ test_that("evaluate_model.feature_rsa_model returns full-length RDM vectors matc
   )
   perf_no_vecs <- evaluate_model.feature_rsa_model(
     object = NULL,
+    rdm_centering = "none",
     predicted = predicted,
     observed = observed,
     nperm = 0,

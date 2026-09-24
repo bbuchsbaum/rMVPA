@@ -12,6 +12,7 @@ evaluate_model.feature_rsa_model(
   save_distributions = FALSE,
   compute_rdm_vectors = isTRUE(object$return_rdm_vectors),
   fold_id = NULL,
+  rdm_centering = object$rdm_centering \%||\% "items",
   ...
 )
 }
@@ -34,6 +35,9 @@ cross-validation test fold. Pattern discrimination, identification rank,
 and RDM correlation then use only candidates or pairs withheld together.
 Cross-validated workflows supply this automatically.}
 
+\item{rdm_centering}{RDM centring mode; defaults to the model's setting,
+or `"items"` when absent. See \code{\link{feature_rsa_model}}.}
+
 \item{...}{Additional arguments}
 }
 \value{
@@ -51,7 +55,9 @@ A list containing:
       0.5 = chance, 1 = perfect.}
     \item{rdm_correlation}{Spearman correlation between predicted and
       observed correlation-distance pairs whose observations were withheld
-      together.}
+      together, after the selected centring.}
+    \item{rdm_correlation_raw}{Historical uncentred RDM correlation.}
+    \item{rdm_centering}{Centring mode used for the score and stored RDMs.}
     \item{voxel_correlation}{Correlation of the flattened predicted and
       observed matrices (global reconstruction quality).}
     \item{mse}{Mean squared error.}

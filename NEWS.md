@@ -1,5 +1,19 @@
 # rMVPA 0.1.3
 
+* `feature_rsa_model()` now defaults to `rdm_centering = "items"`: each
+  voxel is centred across held-out items separately in predicted and observed
+  patterns within each fold, removing the fold-common spatial pattern before
+  RDM construction. `"double"` also removes row and column means from each
+  unsquared correlation-distance RDM (including its zero diagonal) before
+  Spearman correlation. `"none"` restores the previous behavior, also reported
+  as `rdm_correlation_raw`. Both scores have permutation summaries when
+  requested. Model specifications, retained diagnostics, and extracted or
+  disk-backed RDM vectors record the mode. Existing saved vectors without
+  metadata retain their historical uncentred interpretation. Other performance
+  metrics and retained predicted/observed matrices are unchanged. Centring
+  does not guarantee a nonnegative score: item-level RDM effects can remain
+  with `"items"`, motivating the additional `"double"` option.
+
 * Pattern-model vignettes now teach the method as a three-article path:
   `vignette("Pattern_Model")` leads with the task, the planted territories,
   and the object flow; confirmation and group articles are framed as the

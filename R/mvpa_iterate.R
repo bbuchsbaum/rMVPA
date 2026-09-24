@@ -773,6 +773,7 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
       n_obs = as.integer(if (is.null(predictor$n_obs)) NA_integer_ else predictor$n_obs),
       observation_index = list(tryCatch(predictor$observation_index, error = function(...) NULL)),
       fold_id = list(tryCatch(predictor$fold_id, error = function(...) NULL)),
+      rdm_centering = predictor$rdm_centering %||% "none",
       rdm_vec = list(as.numeric(pred_vec)),
       observed_rdm_vec = list(if (!is.null(obs_vec)) as.numeric(obs_vec) else NULL)
     )

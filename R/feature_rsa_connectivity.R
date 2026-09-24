@@ -20,6 +20,8 @@
 #'       predicted RDM.}
 #'     \item{fold_id}{List-column identifying the outer test fold for each
 #'       observation. Cross-fold entries in the RDM vectors are missing.}
+#'     \item{rdm_centering}{Centring mode used for these vectors. Older payloads
+#'       without this field are labelled \code{"none"}.}
 #'     \item{rdm_vec}{List-column containing the lower-triangle predicted RDM
 #'       vector for that ROI.}
 #'     \item{observed_rdm_vec}{List-column containing the lower-triangle
@@ -37,7 +39,9 @@
 #' @export
 feature_rsa_rdm_vectors <- function(x) {
   if (is.data.frame(x) && all(c("roinum", "rdm_vec") %in% names(x))) {
-    return(tibble::as_tibble(x))
+    out <- tibble::as_tibble(x)
+    if (!"rdm_centering" %in% names(out)) out$rdm_centering <- "none"
+    return(out)
   }
 
   if (!inherits(x, "regional_mvpa_result")) {
@@ -54,6 +58,10 @@ feature_rsa_rdm_vectors <- function(x) {
     if (!length(rows)) {
       stop("feature_rsa_rdm_vectors: no predicted RDM vectors found in `rdm_batch_dir`.")
     }
+    rows <- lapply(rows, function(tbl) {
+      if (!"rdm_centering" %in% names(tbl)) tbl$rdm_centering <- "none"
+      tbl
+    })
     return(dplyr::bind_rows(rows))
   }
 
@@ -82,6 +90,7 @@ feature_rsa_rdm_vectors <- function(x) {
       n_obs = as.integer(if (is.null(pred$n_obs)) NA_integer_ else pred$n_obs),
       observation_index = list(pred$observation_index),
       fold_id = list(tryCatch(pred$fold_id, error = function(...) NULL)),
+      rdm_centering = pred$rdm_centering %||% "none",
       rdm_vec = list(as.numeric(vec)),
       observed_rdm_vec = list(if (!is.null(obs_vec)) as.numeric(obs_vec) else NULL)
     )
@@ -117,6 +126,8 @@ feature_rsa_rdm_vectors <- function(x) {
 #'     \item{fold_id}{List-column identifying the outer test fold for each
 #'       observation. Identification and geometry scoring must stay inside
 #'       these groups.}
+#'     \item{rdm_centering}{Centring mode used for the reported RDM score;
+#'       retained pattern matrices themselves are unchanged.}
 #'     \item{voxel_index}{List-column of the spatial indices for matrix
 #'       columns.}
 #'     \item{predicted}{List-column of out-of-fold `Yhat` matrices
@@ -190,6 +201,7 @@ feature_rsa_predictions <- function(x) {
       n_obs = as.integer(if (is.null(pred[["n_obs"]])) nrow(yhat) else pred[["n_obs"]]),
       observation_index = list(pred[["observation_index"]]),
       fold_id = list(tryCatch(pred[["fold_id"]], error = function(...) NULL)),
+      rdm_centering = pred$rdm_centering %||% "none",
       voxel_index = list(tryCatch(pred[["voxel_index"]], error = function(...) NULL)),
       predicted = list(as.matrix(yhat)),
       observed = list(if (is.null(observed)) NULL else as.matrix(observed))
