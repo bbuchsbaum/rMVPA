@@ -1,9 +1,9 @@
 #' @noRd
 #' @keywords internal
 check_len <- function(y, block_var) {
-  futile.logger::flog.debug("Checking length of y and block_var")
-  futile.logger::flog.debug("y: %s", paste(dim(y), collapse=" x "))
-  futile.logger::flog.debug("block_var: %s", length(block_var))
+  .log_debug("Checking length of y and block_var")
+  .log_debug("y: %s", paste(dim(y), collapse=" x "))
+  .log_debug("block_var: %s", length(block_var))
   if (is.vector(y)) {
     if (!length(block_var) == length(y)) {
       stop("length of `block_var` must be equal to length(y)", call. = FALSE)

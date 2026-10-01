@@ -1382,16 +1382,16 @@ spatial_nmf_maps <- function(group_A,
 
 .auto_parallel <- function() {
   if (!requireNamespace("future.apply", quietly = TRUE)) {
-    futile.logger::flog.debug("auto_parallel: future.apply not available")
+    .log_debug("auto_parallel: future.apply not available")
     return(FALSE)
   }
   if (!requireNamespace("future", quietly = TRUE)) {
-    futile.logger::flog.debug("auto_parallel: future not available")
+    .log_debug("auto_parallel: future not available")
     return(FALSE)
   }
   nworkers <- tryCatch(future::nbrOfWorkers(), error = function(e) 1L)
   result <- is.numeric(nworkers) && length(nworkers) == 1L && nworkers > 1
-  futile.logger::flog.debug("auto_parallel: nbrOfWorkers=%s, using_parallel=%s",
+  .log_debug("auto_parallel: nbrOfWorkers=%s, using_parallel=%s",
                             as.character(nworkers), as.character(result))
   result
 }

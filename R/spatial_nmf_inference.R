@@ -985,7 +985,7 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
 
 .maybe_log_progress <- function(i, n, step, label) {
   if (i %% step == 0 || i == n) {
-    futile.logger::flog.debug("%s %d/%d", label, i, n)
+    .log_debug("%s %d/%d", label, i, n)
   }
   invisible(NULL)
 }

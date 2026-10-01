@@ -104,7 +104,7 @@ fit_roi.repnet_model <- function(model, roi_data, context, ...) {
   items_seed <- rownames(seed_mat)
   common_items <- intersect(items_roi, items_seed)
   K <- length(common_items)
-  futile.logger::flog.debug(
+  .log_debug(
     sprintf("repnet_model: items(roi)=%d, items(seed)=%d, common=%d",
             length(items_roi), length(items_seed), K)
   )

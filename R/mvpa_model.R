@@ -617,10 +617,10 @@ fit_roi.mvpa_model <- function(model, roi_data, context, ...) {
 #' @export
 strip_dataset.default <- function(obj, ...) {
   if (!is.null(obj$dataset)) {
-    futile.logger::flog.debug("Stripping dataset from model specification.")
+    .log_debug("Stripping dataset from model specification.")
     obj$dataset <- NULL
   } else {
-    futile.logger::flog.debug("Dataset already NULL or missing in model specification.")
+    .log_debug("Dataset already NULL or missing in model specification.")
   }
   obj
 }
