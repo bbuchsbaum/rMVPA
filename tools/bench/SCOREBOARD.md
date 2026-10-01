@@ -1,6 +1,6 @@
 # Benchmark scoreboard
 
-Generated 2026-10-01 09:09 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
+Generated 2026-10-01 10:55 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
 Single-threaded medians. **Ratio = rMVPA / competitor (< 1 means rMVPA is faster).**
 A ratio is shown only when the two output digests agree to 1e-4 relative;
 otherwise the methods are not computing the same thing and the row is marked.
@@ -43,6 +43,19 @@ Losses are recorded as losses.
 | gaussian_nb_general | perf/aggregate-naive-bayes @0002265 | legacy | 11.9 | — | — | — | rMVPA only |
 | lda_shrinkage | perf/aggregate-naive-bayes @0002265 | dual_lda_fast | 2.1 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
 | sda_notune | perf/aggregate-naive-bayes @0002265 | legacy | 41.0 | — | — | — | rMVPA only |
+| corclass | perf/native-sda @d54b591 | aggregate_fast | 0.264 | 2.5 | nilearn | **0.11** | match |
+| corclass_general | perf/native-sda @d54b591 | legacy | 11.8 | — | — | — | rMVPA only |
+| gaussian_nb | perf/native-sda @d54b591 | aggregate_fast | 0.224 | 4.5 | nilearn | **0.05** | match |
+| gaussian_nb_general | perf/native-sda @d54b591 | legacy | 11.9 | — | — | — | rMVPA only |
+| lda_shrinkage | perf/native-sda @d54b591 | dual_lda_fast | 2.2 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
+| sda_notune | perf/native-sda @d54b591 | legacy | 14.4 | — | — | — | rMVPA only |
+| corclass | perf/native-sda @6ca160e | aggregate_fast | 0.255 | 2.5 | nilearn | **0.10** | match |
+| corclass_general | perf/native-sda @6ca160e | legacy | 11.8 | — | — | — | rMVPA only |
+| gaussian_nb | perf/native-sda @6ca160e | aggregate_fast | 0.227 | 4.5 | nilearn | **0.05** | match |
+| gaussian_nb_general | perf/native-sda @6ca160e | legacy | 11.9 | — | — | — | rMVPA only |
+| lda_shrinkage | perf/native-sda @6ca160e | dual_lda_fast | 2.1 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
+| sda_notune | perf/native-sda @6ca160e | sda_fast | 2.6 | — | — | — | rMVPA only |
+| sda_notune_general | perf/native-sda @6ca160e | legacy | 14.7 | — | — | — | rMVPA only |
 
 ## regional_haxby_vt (ms per roi)
 
@@ -64,6 +77,18 @@ Losses are recorded as losses.
 | gaussian_nb | perf/naive-bayes-vectorise @adde694 |  | 77.5 | 14.0 | scikit-learn | **5.53** | match |
 | lda_shrinkage | perf/naive-bayes-vectorise @adde694 |  | 551.5 | 568.9 | scikit-learn | n/a | differ (0.927083 vs 0.885417) |
 | sda_notune | perf/naive-bayes-vectorise @adde694 |  | 364.5 | — | — | — | rMVPA only |
+| corclass | perf/native-sda @70ff848 |  | 71.5 | 7.0 | scikit-learn | **10.17** | match |
+| corclass_general | perf/native-sda @70ff848 |  | 71.0 | — | — | — | rMVPA only |
+| gaussian_nb | perf/native-sda @70ff848 |  | 74.5 | 14.0 | scikit-learn | **5.31** | match |
+| gaussian_nb_general | perf/native-sda @70ff848 |  | 76.0 | — | — | — | rMVPA only |
+| lda_shrinkage | perf/native-sda @70ff848 |  | 550.5 | 568.9 | scikit-learn | n/a | differ (0.927083 vs 0.885417) |
+| sda_notune | perf/native-sda @70ff848 |  | 103.5 | — | — | — | rMVPA only |
+| corclass | perf/native-sda @6ca160e |  | 70.0 | 7.0 | scikit-learn | **9.95** | match |
+| corclass_general | perf/native-sda @6ca160e |  | 71.5 | — | — | — | rMVPA only |
+| gaussian_nb | perf/native-sda @6ca160e |  | 83.5 | 14.0 | scikit-learn | **5.96** | match |
+| gaussian_nb_general | perf/native-sda @6ca160e |  | 80.0 | — | — | — | rMVPA only |
+| lda_shrinkage | perf/native-sda @6ca160e |  | 541.5 | 568.9 | scikit-learn | n/a | differ (0.927083 vs 0.885417) |
+| sda_notune | perf/native-sda @6ca160e |  | 121.0 | — | — | — | rMVPA only |
 
 ## rsa_haxby (ms per rdm)
 
@@ -75,6 +100,8 @@ Losses are recorded as losses.
 | rdm_crossnobis_identity | perf/logger-gating @fe364b8 |  | 1.8 | 3.4 | rsatoolbox | **0.54** | match |
 | rdm_correlation_condmeans | perf/regional-scaffold @fe364b8 |  | 0.334 | 0.185 | rsatoolbox | **1.81** | match |
 | rdm_crossnobis_identity | perf/regional-scaffold @fe364b8 |  | 1.8 | 3.4 | rsatoolbox | **0.55** | match |
+| rdm_correlation_condmeans | perf/native-sda @6ca160e |  | 0.331 | 0.185 | rsatoolbox | **1.79** | match |
+| rdm_crossnobis_identity | perf/native-sda @6ca160e |  | 1.8 | 3.4 | rsatoolbox | **0.53** | match |
 
 ## Environment
 
