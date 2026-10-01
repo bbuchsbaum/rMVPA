@@ -47,7 +47,7 @@ generate_crossval_samples <- function(mspec, roi) {
 #' @keywords internal
 #' @noRd
 .fold_cache_enabled <- function() {
-  TRUE
+  .fast_path_enabled("fold_cache")
 }
 
 #' @keywords internal
