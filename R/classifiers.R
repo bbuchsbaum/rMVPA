@@ -812,7 +812,7 @@ MVPAModels$naive_bayes <- list(
       mus[k, ] <- colMeans(samples)
 
       nk <- length(idx)
-      vars_k <- apply(samples, 2, var) * (nk - 1) / nk
+      vars_k <- matrixStats::colVars(samples) * (nk - 1) / nk
       zero_var <- vars_k <= .Machine$double.eps
       if (any(zero_var)) {
         nz <- vars_k[vars_k > .Machine$double.eps]
@@ -849,11 +849,9 @@ MVPAModels$naive_bayes <- list(
   prob = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
     newdata <- as.matrix(newdata)
     log_post <- calculate_log_posteriors(modelFit, newdata)
-    probs <- t(apply(log_post, 1, function(row) {
-      max_log <- max(row)
-      exp(row - max_log) / sum(exp(row - max_log))
-    }))
-    colnames(probs) <- modelFit$classes
+    shifted <- exp(log_post - matrixStats::rowMaxs(log_post))
+    probs <- shifted / rowSums(shifted)
+    dimnames(probs) <- list(NULL, modelFit$classes)
     probs
   }
 )
@@ -879,12 +877,12 @@ calculate_log_posteriors <- function(modelFit, newdata) {
   log_posts <- matrix(NA, nrow = nrow(newdata), ncol = n_class,
                        dimnames = list(NULL, classes))
 
+  # One vectorised dnorm() call per class over all features (dnorm recycles
+  # mean and sd elementwise), bit-identical to the former per-feature loop.
+  n_obs <- nrow(newdata)
   for (k in seq_along(classes)) {
-    mu <- mus[k, ]
-    var <- vars[k, ]
-    ll <- sapply(seq_along(mu), function(j) {
-      dnorm(newdata[, j], mean = mu[j], sd = sqrt(var[j]), log = TRUE)
-    })
+    ll <- stats::dnorm(newdata, mean = rep(mus[k, ], each = n_obs),
+                       sd = rep(sqrt(vars[k, ]), each = n_obs), log = TRUE)
     ll[!is.finite(ll)] <- -1e100
     log_posts[, k] <- rowSums(ll) + log_priors[k]
   }
