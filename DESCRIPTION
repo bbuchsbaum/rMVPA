@@ -74,6 +74,7 @@ Collate:
     'dual_lda_searchlight.R'
     'searchlight_engine.R'
     'swift_searchlight.R'
+    'aggregate_searchlight.R'
     'searchlight.R'
     'spatial_output.R'
     'spatial_nmf.R'

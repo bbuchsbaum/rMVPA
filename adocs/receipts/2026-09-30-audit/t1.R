@@ -1,0 +1,18 @@
+suppressMessages(pkgload::load_all("/Users/bbuchsbaum/code/rMVPA", quiet=TRUE))
+futile.logger::flog.threshold(futile.logger::ERROR)
+set.seed(1)
+D <- c(12,12,12)
+ds <- gen_sample_dataset(D, 100, nlevels=4, blocks=5)
+cat("mask vox:", sum(ds$dataset$mask>0), "\n")
+cv <- blocked_cross_validation(ds$design$block_var)
+run <- function(mname, engine, radius=3) {
+  ms <- mvpa_model(load_model(mname), ds$dataset, ds$design, "classification", crossval=cv)
+  t <- system.time(r <- run_searchlight(ms, radius=radius, method="standard", engine=engine, verbose=FALSE))
+  cat(sprintf("%-10s %-8s r=%d elapsed=%.2fs  engine_attr=%s  ms/sphere=%.2f\n", mname, engine, radius, t[3], attr(r,"searchlight_engine"), 1000*t[3]/sum(ds$dataset$mask>0)))
+  invisible(r)
+}
+run("corclass","auto")
+run("corclass","legacy")
+run("sda_notune","auto")
+run("sda_notune","legacy")
+run("dual_lda","auto")

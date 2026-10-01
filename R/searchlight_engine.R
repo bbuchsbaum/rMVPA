@@ -2,8 +2,8 @@
 #' @noRd
 .match_searchlight_engine <- function(engine = "auto") {
   allowed <- c(
-    "auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast",
-    "era_rsa_fast"
+    "auto", "legacy", "swift", "dual_lda_fast", "aggregate_fast",
+    "naive_xdec_fast", "era_rsa_fast"
   )
   match.arg(as.character(engine)[1], allowed)
 }
@@ -17,7 +17,7 @@
       eligible = function(model_spec, method) TRUE
     ),
     swift = list(
-      label = "SWIFT multiclass fast path",
+      label = "SWIFT nearest-class-mean estimator (explicit opt-in only)",
       eligible = function(model_spec, method) {
         .swift_searchlight_enabled() && .is_swift_fast_path(model_spec, method)
       }
@@ -26,6 +26,12 @@
       label = "Dual-LDA incremental fast path",
       eligible = function(model_spec, method) {
         .is_dual_lda_fast_path(model_spec, method)
+      }
+    ),
+    aggregate_fast = list(
+      label = "Exact sphere-aggregation engine (corclass)",
+      eligible = function(model_spec, method) {
+        .is_aggregate_fast_path(model_spec, method)
       }
     ),
     naive_xdec_fast = list(
@@ -94,7 +100,7 @@ searchlight_engines <- function(model_spec = NULL,
 #' @export
 explain_searchlight_engine <- function(model_spec,
                                        method = c("standard", "randomized", "resampled"),
-                                       engine = c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast", "era_rsa_fast")) {
+                                       engine = c("auto", "legacy", "swift", "dual_lda_fast", "aggregate_fast", "naive_xdec_fast", "era_rsa_fast")) {
   method <- match.arg(method)
   requested <- .match_searchlight_engine(match.arg(engine))
   registry_tbl <- searchlight_engines(model_spec = model_spec, method = method)
@@ -191,10 +197,14 @@ explain_searchlight_engine <- function(model_spec,
     return("dual_lda_fast")
   }
 
-  if (isTRUE(registry$swift$eligible(model_spec, method))) {
-    return("swift")
+  if (isTRUE(registry$aggregate_fast$eligible(model_spec, method))) {
+    return("aggregate_fast")
   }
 
+  # SWIFT is never selected automatically: it computes its own z-scored
+  # nearest-class-mean estimator rather than the classifier in model_spec, so
+  # auto-selecting it would silently substitute a different model. It runs
+  # only on an explicit engine = "swift" request.
   "legacy"
 }
 
@@ -258,6 +268,14 @@ explain_searchlight_engine <- function(model_spec,
       )
     }
     attr(res, "searchlight_engine") <- "swift"
+    attr(res, "searchlight_estimator") <- "swift_nearest_mean"
+    return(res)
+  }
+
+  if (identical(engine, "aggregate_fast")) {
+    res <- run_searchlight_aggregate_fast(model_spec = model_spec, radius = radius,
+                                          verbose = verbose)
+    attr(res, "searchlight_engine") <- "aggregate_fast"
     return(res)
   }
 
@@ -331,6 +349,18 @@ explain_searchlight_engine <- function(model_spec,
     )
   }
 
+  if (identical(engine, "swift")) {
+    message(
+      sprintf(
+        paste0(
+          "engine = 'swift' computes SWIFT's z-scored nearest-class-mean ",
+          "estimator, not the requested '%s' classifier."
+        ),
+        model_spec$model$label %||% "model"
+      )
+    )
+  }
+
   if (identical(engine, "legacy")) {
     if (!identical(requested, "legacy")) {
       futile.logger::flog.info(
@@ -372,10 +402,21 @@ explain_searchlight_engine <- function(model_spec,
     ))
   }
 
+  err_cond <- attr(fast_res, "condition")
   err_msg <- tryCatch(
-    conditionMessage(attr(fast_res, "condition")),
+    conditionMessage(err_cond),
     error = function(...) as.character(fast_res)
   )
+
+  # An engine may refuse data outside its proven regime (e.g. missing values).
+  # That is expected behaviour, not a failure: fall back quietly under auto.
+  if (inherits(err_cond, "rmvpa_engine_ineligible") && !strict_requested) {
+    futile.logger::flog.info(
+      "searchlight engine '%s' not applicable (%s); using the general-purpose iterator",
+      engine, err_msg
+    )
+    return(list(handled = FALSE, result = NULL, engine = "legacy"))
+  }
 
   if (strict_requested) {
     stop(

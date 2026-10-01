@@ -1,0 +1,12 @@
+suppressMessages(pkgload::load_all("/Users/bbuchsbaum/code/rMVPA", quiet=TRUE))
+futile.logger::flog.threshold(futile.logger::ERROR)
+utils::assignInNamespace("flog.debug", function(...) invisible(NULL), "futile.logger")
+set.seed(3)
+ds <- gen_sample_dataset(c(8,8,8), 100, nlevels=4, blocks=5)
+# inject signal
+cv <- blocked_cross_validation(ds$design$block_var)
+ms <- mvpa_model(load_model("corclass"), ds$dataset, ds$design, "classification", crossval=cv)
+a <- run_searchlight(ms, radius=3, engine="auto"); l <- run_searchlight(ms, radius=3, engine="legacy")
+cat("engine:", attr(a,"searchlight_engine"), " metrics auto:", names(a$results), " legacy:", names(l$results), "\n")
+va <- as.numeric(as.array(a$results$Accuracy)); vl <- as.numeric(as.array(l$results$Accuracy))
+cat("cor(acc swift, acc corclass legacy) =", cor(va, vl), " mean abs diff", mean(abs(va-vl)), "\n")

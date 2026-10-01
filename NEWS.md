@@ -1,5 +1,49 @@
 # rMVPA (development version)
 
+* New exact sphere-aggregation searchlight engine (`engine = "aggregate_fast"`),
+  selected automatically for `corclass` (Pearson, mean prototypes)
+  classification searchlights. Per fold, per-voxel class means and products
+  are computed once and summed over every sphere with sparse products, giving
+  the same estimator as the per-sphere path: the same voxel screening,
+  correlations, softmax, `zapsmall()` rounding, fold pooling and metrics.
+  Centres whose aggregated values come too close to a rounding boundary are
+  recomputed exactly with the per-sphere code. Accuracy and AUC maps match the
+  general path at every centre (within 1e-15) on synthetic data and on Haxby
+  VT, and the benchmark volume's mean accuracy matches nilearn's
+  `SearchLight` exactly. The engine runs at about 0.26 ms per centre, against
+  13 ms for the general path and 2.5 ms for nilearn. Data outside its regime
+  (missing values, identical voxel columns, a class absent from a training
+  fold) fall back to the general path automatically.
+* `mvpa_model(..., class_metrics = TRUE)` works again for multiclass
+  searchlight and regional analyses. The output schema did not declare the
+  per-class `AUC_<class>` columns, so every ROI failed the schema width check
+  and regional performance tables came back empty.
+* **Correctness fix (changes results):** `run_searchlight()` with the default
+  `engine = "auto"` no longer routes multiclass (three or more classes)
+  `mvpa_model` searchlights to the SWIFT engine. SWIFT computes its own
+  z-scored nearest-class-mean estimator. It was being selected regardless of
+  the requested classifier, so `corclass`, `sda_notune`, `svmLinear` and other
+  models silently returned SWIFT results instead of their own. `auto` now
+  selects a fast engine only when it computes the specified estimator
+  (currently `dual_lda_fast` for `dual_lda`). Every other classifier runs
+  through the general-purpose iterator.
+  - Multiclass searchlights from earlier versions run with the default engine
+    should be rerun.
+  - Expect longer run times for affected models until exact fast engines land.
+  - SWIFT remains available through an explicit `engine = "swift"`. It then
+    emits a message naming the substitution and records
+    `attr(result, "searchlight_estimator") == "swift_nearest_mean"`.
+* **Correctness fix (changes results):** predicted classes are now the exact
+  maximum, with exact ties going to the first class, as in numpy and
+  scikit-learn `argmax` and CoSMoMVPA. Before, `max.col()`'s default broke
+  ties at random. It also treated scores within a relative 1e-5 of the maximum
+  as tied, so it could return a class that was not the maximum, and results
+  depended on the RNG state. This mostly affects `corclass`, whose softmax
+  probabilities are nearly flat. In the Haxby VT regional fixture one of 96
+  predictions changed (scissors 0.1250855 vs face 0.1250849: face had been
+  chosen) and accuracy rose by one observation. A `corclass` searchlight now
+  reproduces nilearn's `SearchLight` mean accuracy exactly (0.2620138889 on the
+  benchmark volume) under any seed.
 * The `naive_bayes` classifier is vectorised over features: per-class
   variances use `matrixStats::colVars()`, likelihoods use one `dnorm()` call
   per class, and the softmax is row-vectorised. Results are bit-identical to
