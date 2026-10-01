@@ -1293,6 +1293,14 @@ run_permutation_searchlight <- function(
                            dimnames = list(NULL, metrics))
   null_nfeatures <- numeric(0)
 
+  # Exact engines (aggregate_fast, sda_fast) are prepared once: data,
+  # neighbourhoods, folds and voxel validity do not depend on the labels, so
+  # each permutation only rescores. Values equal the per-ROI path's.
+  engine_centres <- if (identical(strategy, "iterate")) sub$center_ids else all_ids
+  fast <- if (identical(method, "standard")) {
+    .permutation_engine(model_spec, radius, engine_centres, metrics, dots)
+  }
+
   for (i in seq_len(perm_ctrl$n_perm)) {
     perm_seed <- if (!is.null(perm_ctrl$seed)) perm_ctrl$seed + i else NULL
 
@@ -1307,6 +1315,30 @@ run_permutation_searchlight <- function(
 
     perm_spec        <- model_spec
     perm_spec$design <- perm_design
+
+    fast_mat <- if (!is.null(fast)) fast$score(perm_spec)
+    if (!is.null(fast_mat)) {
+      if (identical(strategy, "iterate")) {
+        perm_mat <- fast_mat
+        keep <- rowSums(!is.na(perm_mat)) > 0L
+        if (!any(keep)) next
+        perm_mat <- perm_mat[keep, , drop = FALSE]
+        null_values    <- rbind(null_values, perm_mat)
+        null_nfeatures <- c(null_nfeatures,
+                            sub$covariates$nfeatures[
+                              match(rownames(perm_mat), as.character(sub$center_ids))
+                            ])
+      } else {
+        perm_mat <- matrix(NA_real_, length(all_ids), length(metrics),
+                           dimnames = list(as.character(all_ids), metrics))
+        perm_mat[rownames(fast_mat), ] <- fast_mat
+        keep <- rowSums(!is.na(perm_mat)) > 0L
+        if (!any(keep)) next
+        null_values    <- rbind(null_values, perm_mat[keep, , drop = FALSE])
+        null_nfeatures <- c(null_nfeatures, nfeatures_all[keep])
+      }
+      next
+    }
 
     if (identical(strategy, "iterate")) {
       # ---- "iterate" strategy ----
@@ -1408,6 +1440,45 @@ run_permutation_searchlight <- function(
     return(results[[1L]])
   }
   structure(results, class = c("permutation_result_set", "list"))
+}
+
+
+#' Prepare an exact searchlight engine for repeated permutation scoring
+#'
+#' Returns NULL when no exact engine applies (or the caller asked for a
+#' specific engine), so the per-permutation code runs as before. Otherwise a
+#' list whose `score(perm_spec)` returns a centre x metric matrix (row names
+#' are centre ids), or NULL when the engine declines that permutation's labels.
+#' @keywords internal
+#' @noRd
+.permutation_engine <- function(model_spec, radius, centres, metrics, dots) {
+  requested <- dots$engine %||% "auto"
+  if (!identical(requested, "auto")) return(NULL)
+  engine <- .resolve_searchlight_engine(model_spec, "standard", "auto")
+  prepare <- switch(engine,
+    aggregate_fast = function() .aggregate_prepare(model_spec, radius, centers = centres),
+    sda_fast = function() .sda_engine_prepare(model_spec, radius, centers = centres),
+    NULL
+  )
+  if (is.null(prepare)) return(NULL)
+  prep <- tryCatch(prepare(), rmvpa_engine_ineligible = function(e) NULL)
+  if (is.null(prep)) return(NULL)
+  score <- switch(engine,
+    aggregate_fast = function(y) .aggregate_score(prep, y)$perf,
+    sda_fast = function(y) .sda_engine_score(prep, y)$perf
+  )
+  ids <- if (identical(engine, "aggregate_fast")) prep$nb$centers else prep$centers
+  futile.logger::flog.info("Permutations use the exact '%s' engine (prepared once).", engine)
+  list(
+    engine = engine,
+    score = function(perm_spec) {
+      perf <- tryCatch(score(y_train(perm_spec)), rmvpa_engine_ineligible = function(e) NULL)
+      if (is.null(perf) || !all(metrics %in% colnames(perf))) return(NULL)
+      out <- perf[, metrics, drop = FALSE]
+      rownames(out) <- as.character(ids)
+      out
+    }
+  )
 }
 
 
