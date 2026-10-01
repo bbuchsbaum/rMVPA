@@ -1432,33 +1432,40 @@ run_permutation_searchlight <- function(
 .permutation_engine <- function(model_spec, radius, centres, metrics, dots) {
   requested <- dots$engine %||% "auto"
   if (!identical(requested, "auto")) return(NULL)
+  engine <- .resolve_searchlight_engine(model_spec, "standard", "auto")
   # Label independence alone does not make fold generation reusable. In
   # particular, kfold_cross_validation() stores a block_var but its sampler
   # draws new folds on every call. Admit only known fixed-fold samplers;
   # unknown subclasses may override crossval_samples() and must fall back.
-  cv_class <- class(model_spec$crossval)[1L]
-  if (!(cv_class %in% c("blocked_cross_validation", "custom_cross_validation"))) {
-    return(NULL)
+  # rsa_model has no cross-validation, so there are no folds to redraw.
+  if (!identical(engine, "rsa_fast")) {
+    cv_class <- class(model_spec$crossval)[1L]
+    if (!(cv_class %in% c("blocked_cross_validation", "custom_cross_validation"))) {
+      return(NULL)
+    }
   }
-  engine <- .resolve_searchlight_engine(model_spec, "standard", "auto")
   prepare <- switch(engine,
     aggregate_fast = function() .aggregate_prepare(model_spec, radius, centers = centres),
     sda_fast = function() .sda_engine_prepare(model_spec, radius, centers = centres),
+    rsa_fast = function() .rsa_engine_prepare(model_spec, radius, centers = centres),
     NULL
   )
   if (is.null(prepare)) return(NULL)
   prep <- tryCatch(prepare(), rmvpa_engine_ineligible = function(e) NULL)
   if (is.null(prep)) return(NULL)
+  # Each scorer takes the permuted model spec: classifier engines read its
+  # labels, the RSA engine its design (item permutations).
   score <- switch(engine,
-    aggregate_fast = function(y) .aggregate_score(prep, y)$perf,
-    sda_fast = function(y) .sda_engine_score(prep, y)$perf
+    aggregate_fast = function(spec) .aggregate_score(prep, y_train(spec))$perf,
+    sda_fast = function(spec) .sda_engine_score(prep, y_train(spec))$perf,
+    rsa_fast = function(spec) .rsa_engine_score(prep, spec)
   )
   ids <- if (identical(engine, "aggregate_fast")) prep$nb$centers else prep$centers
   futile.logger::flog.info("Permutations use the exact '%s' engine (prepared once).", engine)
   list(
     engine = engine,
     score = function(perm_spec) {
-      perf <- tryCatch(score(y_train(perm_spec)), rmvpa_engine_ineligible = function(e) NULL)
+      perf <- tryCatch(score(perm_spec), rmvpa_engine_ineligible = function(e) NULL)
       if (is.null(perf) || !all(metrics %in% colnames(perf))) return(NULL)
       out <- perf[, metrics, drop = FALSE]
       rownames(out) <- as.character(ids)

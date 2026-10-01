@@ -1,5 +1,12 @@
 # rMVPA (development version)
 
+* RSA permutation searchlights (`rsa_model` with item permutations) also use
+  the prepared-once engine path (`rsa_fast`). The permuted design's
+  `item_perm` is honoured per sphere through `train_model.rsa_model()`, so
+  null distributions and p-values are identical to the per-ROI path, for
+  individual (correlation) and joint (`lm`) nulls under both strategies. 6-16x
+  faster on a 6x6x6 volume.
+
 * `dual_lda` now solves problems with more features than training
   observations (most ROIs) in the dual, via the Woodbury identity: an n x n
   Cholesky instead of a p x p one. With small `gamma` the p x p system is
