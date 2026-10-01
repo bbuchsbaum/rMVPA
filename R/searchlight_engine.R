@@ -3,7 +3,7 @@
 .match_searchlight_engine <- function(engine = "auto") {
   allowed <- c(
     "auto", "legacy", "swift", "dual_lda_fast", "aggregate_fast",
-    "sda_fast", "naive_xdec_fast", "era_rsa_fast"
+    "sda_fast", "rsa_fast", "naive_xdec_fast", "era_rsa_fast"
   )
   match.arg(as.character(engine)[1], allowed)
 }
@@ -38,6 +38,12 @@
       label = "Exact sphere-aggregation engine (corclass, naive_bayes)",
       eligible = function(model_spec, method) {
         .is_aggregate_fast_path(model_spec, method)
+      }
+    ),
+    rsa_fast = list(
+      label = "RSA per-sphere engine without iterator overhead",
+      eligible = function(model_spec, method) {
+        .is_rsa_fast_path(model_spec, method)
       }
     ),
     naive_xdec_fast = list(
@@ -106,7 +112,7 @@ searchlight_engines <- function(model_spec = NULL,
 #' @export
 explain_searchlight_engine <- function(model_spec,
                                        method = c("standard", "randomized", "resampled"),
-                                       engine = c("auto", "legacy", "swift", "dual_lda_fast", "aggregate_fast", "sda_fast", "naive_xdec_fast", "era_rsa_fast")) {
+                                       engine = c("auto", "legacy", "swift", "dual_lda_fast", "aggregate_fast", "sda_fast", "rsa_fast", "naive_xdec_fast", "era_rsa_fast")) {
   method <- match.arg(method)
   requested <- .match_searchlight_engine(match.arg(engine))
   registry_tbl <- searchlight_engines(model_spec = model_spec, method = method)
@@ -178,6 +184,13 @@ explain_searchlight_engine <- function(model_spec,
   }
   if (inherits(model_spec, "mvpa_model")) {
     return(.resolve_searchlight_engine.mvpa_model(model_spec, method, engine))
+  }
+  if (inherits(model_spec, "rsa_model")) {
+    requested <- .match_searchlight_engine(engine)
+    if (requested %in% c("auto", "rsa_fast") && .is_rsa_fast_path(model_spec, method)) {
+      return("rsa_fast")
+    }
+    return("legacy")
   }
   "legacy"
 }

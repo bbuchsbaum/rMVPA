@@ -1,5 +1,14 @@
 # rMVPA (development version)
 
+* RSA searchlights (`rsa_model`) run on a new engine (`engine = "rsa_fast"`,
+  selected automatically). It extracts the data once and calls
+  `train_model.rsa_model()` per sphere on exactly the columns the per-ROI path
+  uses, without the iterator's per-sphere ROI objects, filtering and result
+  tables. Maps are identical for every distance and regression type,
+  including semipartial. Spearman ranking in RDM computation now uses
+  `matrixStats` (identical ranks). This also speeds up the per-ROI path.
+  Haxby VT Spearman RSA searchlight (r = 6 mm): 2.13 s -> 0.23 s.
+
 * `run_permutation_searchlight()` uses the exact searchlight engines
   (`aggregate_fast` for `corclass` and `naive_bayes`, `sda_fast` for
   `sda_notune`) under both permutation strategies. Data, neighbourhoods, folds
