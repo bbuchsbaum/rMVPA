@@ -1,5 +1,16 @@
 # rMVPA (development version)
 
+* **Correctness fix (changes results):** predicted classes are now the exact
+  maximum, with exact ties going to the first class, as in numpy and
+  scikit-learn `argmax` and CoSMoMVPA. Before, `max.col()`'s default broke
+  ties at random. It also treated scores within a relative 1e-5 of the maximum
+  as tied, so it could return a class that was not the maximum, and results
+  depended on the RNG state. This mostly affects `corclass`, whose softmax
+  probabilities are nearly flat. In the Haxby VT regional fixture one of 96
+  predictions changed (scissors 0.1250855 vs face 0.1250849: face had been
+  chosen) and accuracy rose by one observation. A `corclass` searchlight now
+  reproduces nilearn's `SearchLight` mean accuracy exactly (0.2620138889 on the
+  benchmark volume) under any seed.
 * The `naive_bayes` classifier is vectorised over features: per-class
   variances use `matrixStats::colVars()`, likelihoods use one `dnorm()` call
   per class, and the softmax is row-vectorised. Results are bit-identical to

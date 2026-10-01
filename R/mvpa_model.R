@@ -19,7 +19,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
     
     ## probs must sum to one, can divide by sum.
     prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
-    maxid <- max.col(prob)
+    maxid <- max.col(prob, ties.method = "first")
     pclass <- levels(observed)[maxid]
     
     ## storing observed, testind, test_design 
