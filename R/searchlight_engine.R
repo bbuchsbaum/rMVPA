@@ -3,7 +3,7 @@
 .match_searchlight_engine <- function(engine = "auto") {
   allowed <- c(
     "auto", "legacy", "swift", "dual_lda_fast", "aggregate_fast",
-    "naive_xdec_fast", "era_rsa_fast"
+    "sda_fast", "naive_xdec_fast", "era_rsa_fast"
   )
   match.arg(as.character(engine)[1], allowed)
 }
@@ -26,6 +26,12 @@
       label = "Dual-LDA incremental fast path",
       eligible = function(model_spec, method) {
         .is_dual_lda_fast_path(model_spec, method)
+      }
+    ),
+    sda_fast = list(
+      label = "Exact sda_notune engine (shared per-voxel statistics)",
+      eligible = function(model_spec, method) {
+        .is_sda_fast_path(model_spec, method)
       }
     ),
     aggregate_fast = list(
@@ -100,7 +106,7 @@ searchlight_engines <- function(model_spec = NULL,
 #' @export
 explain_searchlight_engine <- function(model_spec,
                                        method = c("standard", "randomized", "resampled"),
-                                       engine = c("auto", "legacy", "swift", "dual_lda_fast", "aggregate_fast", "naive_xdec_fast", "era_rsa_fast")) {
+                                       engine = c("auto", "legacy", "swift", "dual_lda_fast", "aggregate_fast", "sda_fast", "naive_xdec_fast", "era_rsa_fast")) {
   method <- match.arg(method)
   requested <- .match_searchlight_engine(match.arg(engine))
   registry_tbl <- searchlight_engines(model_spec = model_spec, method = method)
@@ -201,6 +207,10 @@ explain_searchlight_engine <- function(model_spec,
     return("aggregate_fast")
   }
 
+  if (isTRUE(registry$sda_fast$eligible(model_spec, method))) {
+    return("sda_fast")
+  }
+
   # SWIFT is never selected automatically: it computes its own z-scored
   # nearest-class-mean estimator rather than the classifier in model_spec, so
   # auto-selecting it would silently substitute a different model. It runs
@@ -269,6 +279,12 @@ explain_searchlight_engine <- function(model_spec,
     }
     attr(res, "searchlight_engine") <- "swift"
     attr(res, "searchlight_estimator") <- "swift_nearest_mean"
+    return(res)
+  }
+
+  if (identical(engine, "sda_fast")) {
+    res <- run_searchlight_sda_fast(model_spec = model_spec, radius = radius, verbose = verbose)
+    attr(res, "searchlight_engine") <- "sda_fast"
     return(res)
   }
 
