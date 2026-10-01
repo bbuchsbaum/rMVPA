@@ -220,7 +220,7 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
       mat <- mat[, object$feature_mask,drop=FALSE]
     }
 
-    futile.logger::flog.debug("Predicting with data dimensions: %s", paste(dim(mat), collapse=" x "))
+    .log_debug("Predicting with data dimensions: %s", paste(dim(mat), collapse=" x "))
     
     probs <- object$model$prob(object$fit, mat)
     if (is.null(probs) || length(probs) == 0) {
@@ -236,7 +236,7 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
     
   }, error = function(e) {
     futile.logger::flog.error("Class model prediction failed: %s", e$message)
-    futile.logger::flog.debug("Input data dimensions: %s", paste(dim(newdata), collapse=" x "))
+    .log_debug("Input data dimensions: %s", paste(dim(newdata), collapse=" x "))
     stop(sprintf("Prediction failed: %s", e$message))
   })
 }
@@ -272,7 +272,7 @@ predict.regression_model_fit <- function(object, newdata, sub_indices=NULL,...) 
       mat <- mat[, object$feature_mask,drop=FALSE]
     }
 
-    futile.logger::flog.debug("Regression prediction with data dimensions: %s", paste(dim(mat), collapse=" x "))
+    .log_debug("Regression prediction with data dimensions: %s", paste(dim(mat), collapse=" x "))
     
     preds <- object$model$predict(object$fit, mat)
     if (is.null(preds) || length(preds) == 0) {
@@ -285,7 +285,7 @@ predict.regression_model_fit <- function(object, newdata, sub_indices=NULL,...) 
     
   }, error = function(e) {
     futile.logger::flog.error("Regression model prediction failed: %s", e$message)
-    futile.logger::flog.debug("Input data dimensions: %s", paste(dim(newdata), collapse=" x "))
+    .log_debug("Input data dimensions: %s", paste(dim(newdata), collapse=" x "))
     stop(sprintf("Prediction failed: %s", e$message))
   })
 }
@@ -474,13 +474,13 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
   quiet_error <- isTRUE(dots$quiet_error)
   
   tryCatch({
-    futile.logger::flog.debug("Starting train_model with data dimensions: %s", 
+    .log_debug("Starting train_model with data dimensions: %s", 
                              paste(dim(train_dat), collapse=" x "))
-    futile.logger::flog.debug("Response variable levels: %s", 
+    .log_debug("Response variable levels: %s", 
                              paste(levels(y), collapse=", "))
     
     param <- tune_grid(obj, train_dat, y, len=1)
-    futile.logger::flog.debug("Tuning grid parameters: %s", 
+    .log_debug("Tuning grid parameters: %s", 
                              paste(names(param), collapse=", "))
 
     if (is.character(y)) {
@@ -489,19 +489,19 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
     
     ## columns that have zero variance
     nzero <- nonzeroVarianceColumns2(train_dat)
-    futile.logger::flog.debug("Non-zero variance columns: %d", sum(nzero))
+    .log_debug("Non-zero variance columns: %d", sum(nzero))
     
     ## columns with NAs
     nacols <- na_cols(train_dat)
-    futile.logger::flog.debug("NA columns: %d", sum(nacols))
+    .log_debug("NA columns: %d", sum(nacols))
     
     ## duplicated columns
     dup <- !duplicated(t(train_dat))
-    futile.logger::flog.debug("Non-duplicate columns: %d", sum(dup))
+    .log_debug("Non-duplicate columns: %d", sum(dup))
     
     ## invalid columns
     nzero <- nzero & dup & !nacols
-    futile.logger::flog.debug("Valid columns after filtering: %d", sum(nzero))
+    .log_debug("Valid columns after filtering: %d", sum(nzero))
     
     if (length(nzero) == 0 || sum(nzero,na.rm=TRUE) < 2) {
       stop(sprintf("training data must have more than one valid feature (found %d)", 
@@ -531,7 +531,7 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
       feature_mask <- as.logical(group_any[group_idx])
     }
 
-    futile.logger::flog.debug("Features selected: %d", sum(feature_mask))
+    .log_debug("Features selected: %d", sum(feature_mask))
     
     if (sum(feature_mask) < 2) {
       stop("train_model: training data must have more than one valid feature after feature selection")
@@ -542,7 +542,7 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
     ## parameter_tuning
     best_param <- if (!is.vector(param) && !is.null(nrow(param)) && nrow(param) > 1) {
       bp <- tune_model(obj, train_dat, y, wts, param, obj$tune_reps)
-      futile.logger::flog.debug("Best tuning parameters: %s", 
+      .log_debug("Best tuning parameters: %s", 
                                paste(capture.output(print(bp)), collapse="\n"))
       bp
     } else {
@@ -557,7 +557,7 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
       stop("'y' must be a numeric vector or factor")
     }
     
-    futile.logger::flog.debug("Fitting model of type: %s", mtype)
+    .log_debug("Fitting model of type: %s", mtype)
     selected_feature_ids <- indices[feature_mask]
     spatial_mask <- if (!is.null(obj$dataset) &&
                         inherits(obj$dataset, c("mvpa_image_dataset", "mvpa_multibasis_image_dataset"))) {
@@ -578,12 +578,12 @@ train_model.mvpa_model <- function(obj, train_dat, y, indices, wts=NULL, ...) {
     
   }, error = function(e) {
     if (quiet_error) {
-      futile.logger::flog.debug("train_model failed: %s", e$message)
+      .log_debug("train_model failed: %s", e$message)
     } else {
       futile.logger::flog.error("train_model failed: %s", e$message)
     }
-    futile.logger::flog.debug("Data dimensions: %s", paste(dim(train_dat), collapse=" x "))
-    futile.logger::flog.debug("Response levels: %s", paste(levels(y), collapse=", "))
+    .log_debug("Data dimensions: %s", paste(dim(train_dat), collapse=" x "))
+    .log_debug("Response levels: %s", paste(levels(y), collapse=", "))
     stop(e$message)  # Re-throw the error after logging
   })
 }

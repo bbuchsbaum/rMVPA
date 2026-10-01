@@ -1015,7 +1015,7 @@ get_searchlight.mvpa_image_dataset <- function(obj,
   )
   cached <- .searchlight_geometry_cache_get(key)
   if (!is.null(cached)) {
-    futile.logger::flog.debug("searchlight geometry cache hit [image]: radius=%s", paste(radius, collapse = ","))
+    .log_debug("searchlight geometry cache hit [image]: radius=%s", paste(radius, collapse = ","))
     return(cached)
   }
 
@@ -1058,7 +1058,7 @@ get_searchlight.mvpa_surface_dataset <- function(obj, type = c("standard", "rand
   )
   cached <- .searchlight_geometry_cache_get(key)
   if (!is.null(cached)) {
-    futile.logger::flog.debug("searchlight geometry cache hit [surface]: radius=%s", paste(radius, collapse = ","))
+    .log_debug("searchlight geometry cache hit [surface]: radius=%s", paste(radius, collapse = ","))
     return(cached)
   }
 

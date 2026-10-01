@@ -137,7 +137,7 @@ configure_runtime_backend <- function(model_spec,
 
   # If shard isn't installed, default path
   if (!requireNamespace("shard", quietly = TRUE)) {
-    futile.logger::flog.debug(
+    .log_debug(
       "%s backend=auto: package 'shard' unavailable, using default backend", context
     )
     return(model_spec)
@@ -147,7 +147,7 @@ configure_runtime_backend <- function(model_spec,
   tryCatch(
     use_shard(model_spec),
     error = function(e) {
-      futile.logger::flog.debug(
+      .log_debug(
         "%s backend=auto: shard unavailable for this run (%s); using default backend",
         context, e$message
       )
@@ -797,7 +797,7 @@ shard_cleanup <- function(shard_data) {
     x <- shard_data[[nm]]
     if (!is.null(x)) {
       tryCatch(close(x), error = function(e) {
-        futile.logger::flog.debug(
+        .log_debug(
           "shard_cleanup: close() failed for '%s': %s", nm, e$message)
       })
     }

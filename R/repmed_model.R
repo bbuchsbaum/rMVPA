@@ -104,7 +104,7 @@ fit_roi.repmed_model <- function(model, roi_data, context, ...) {
   items_Y <- rownames(model$Y_rdm)
   common_items <- Reduce(intersect, list(items, items_roi, items_X, items_Y))
   K <- length(common_items)
-  futile.logger::flog.debug(
+  .log_debug(
     sprintf("repmed_model: items(design)=%d, items(roi)=%d, items(X)=%d, items(Y)=%d, common=%d",
             length(items), length(items_roi), length(items_X), length(items_Y), K)
   )

@@ -352,7 +352,7 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
     ))
   }
 
-  futile.logger::flog.debug("REMAP ROI %s: start (train_dim=%s x %s, test_dim=%s x %s)",
+  .log_debug("REMAP ROI %s: start (train_dim=%s x %s, test_dim=%s x %s)",
                             id, nrow(Xtrain), ncol(Xtrain), nrow(Xtest), ncol(Xtest))
 
   # Build paired prototypes and key factors
@@ -360,7 +360,7 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
                          model$link_by, ytr, yte)
   Xp <- pairs$Xp; Ym <- pairs$Ym
   n_pairs <- nrow(Xp)
-  futile.logger::flog.debug("REMAP ROI %s: paired prototypes = %s", id, n_pairs)
+  .log_debug("REMAP ROI %s: paired prototypes = %s", id, n_pairs)
   # Hard error if fewer than 2 paired items
   if (n_pairs < 2L || nrow(Ym) < 2L) {
     return(roi_result(
@@ -397,7 +397,7 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
   ss_vox  <- rep(0, ncol(Xtrain))
 
   use_loko <- isTRUE(model$leave_one_key_out) && length(unique_keys) >= 3L
-  futile.logger::flog.debug("REMAP ROI %s: use_loko=%s, unique_keys=%s", id, use_loko, length(unique_keys))
+  .log_debug("REMAP ROI %s: use_loko=%s, unique_keys=%s", id, use_loko, length(unique_keys))
 
   adapter_svals <- c()
   adapter_ranks <- c()
@@ -428,13 +428,13 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
                               max_rank = model$max_rank,
                               ridge_lambda = model$ridge_rrr_lambda)
       Delta <- rf$Delta
-      futile.logger::flog.debug("REMAP ROI %s LOKO heldout=%s: fit rank=%s", id, k,
+      .log_debug("REMAP ROI %s LOKO heldout=%s: fit rank=%s", id, k,
                                 tryCatch(rf$rank, error = function(...) NA))
 
       # Lambda selection on training keys
       lam_res <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, model$lambda_grid)
       lam_opt <- lam_res$lambda
-      futile.logger::flog.debug("REMAP ROI %s LOKO heldout=%s: lambda_opt=%.3f", id, k, lam_opt)
+      .log_debug("REMAP ROI %s LOKO heldout=%s: lambda_opt=%.3f", id, k, lam_opt)
 
       # ---- diagnostics in whitened space ----
       R_naive <- JW$Yw_fit - JW$Xw_fit
@@ -626,7 +626,7 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
                           ridge_lambda = model$ridge_rrr_lambda)
   Delta <- rf$Delta
   lam_opt <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, model$lambda_grid)$lambda
-  futile.logger::flog.debug("REMAP ROI %s: non-LOKO rank=%s, lambda_opt=%.3f", id,
+  .log_debug("REMAP ROI %s: non-LOKO rank=%s, lambda_opt=%.3f", id,
                             tryCatch(rf$rank, error = function(...) NA), lam_opt)
 
   # Residual diagnostics (global fit)
@@ -637,7 +637,7 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
   ss_remap <- sum(R_remap^2)
   roi_improv <- if (ss_naive > .Machine$double.eps) 1 - (ss_remap / ss_naive) else NA_real_
   delta_frob <- sqrt(sum((lam_opt * Delta)^2))
-  futile.logger::flog.debug("REMAP ROI %s: roi_improv=%.3f, delta_frob=%.3f", id, roi_improv, delta_frob)
+  .log_debug("REMAP ROI %s: roi_improv=%.3f, delta_frob=%.3f", id, roi_improv, delta_frob)
 
   # Templates for all keys and correlation-based classification
   Xw_all <- (sweep(Xp[unique_keys, , drop = FALSE], 2, JW$mu, "-")) %*% JW$W

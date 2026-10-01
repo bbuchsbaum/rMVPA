@@ -171,7 +171,7 @@ fit_roi.repmap_model <- function(model, roi_data, context, ...) {
   items_seed   <- rownames(model$seed_features)
   common_items <- Reduce(intersect, list(items, items_roi, items_seed))
   K <- length(common_items)
-  futile.logger::flog.debug(
+  .log_debug(
     sprintf("repmap_model: items(design)=%d, items(roi)=%d, items(seed)=%d, common=%d",
             length(items), length(items_roi), length(items_seed), K)
   )

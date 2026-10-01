@@ -1283,7 +1283,7 @@ run_permutation_searchlight <- function(
   # ------------------------------------------------------------------
 
   if (length(dot_parts$ignored_iterate) > 0L) {
-    futile.logger::flog.debug(
+    .log_debug(
       "Ignoring iterate-unsupported args in ...: %s",
       paste(dot_parts$ignored_iterate, collapse = ", ")
     )
