@@ -1,5 +1,13 @@
 # rMVPA (development version)
 
+* `dual_lda` now solves problems with more features than training
+  observations (most ROIs) in the dual, via the Woodbury identity: an n x n
+  Cholesky instead of a p x p one. With small `gamma` the p x p system is
+  severely ill-conditioned. On a 577-voxel ROI the previous solve was off by
+  2e-8 relative and the dual solve by 2e-15, against a stable SVD reference.
+  Predictions and metrics are unchanged on the Haxby fixtures. Haxby VT
+  regional `dual_lda`: about 357 -> 126-195 ms.
+
 * Permutation engine preparation is reused only for built-in blocked CV and
   explicit custom splits. Randomized CV keeps its existing per-permutation
   fold draws and RNG behavior. Permutation p-values now use sorted null

@@ -223,11 +223,23 @@ MVPAModels$pca_lda <- list(
 
   class_id <- match(y, classes)
   centered <- x - means[class_id, , drop = FALSE]
-  sigma <- crossprod(centered) + diag(gamma, p)
-  chol_sigma <- chol(sigma)
-
   means_t <- t(means)
-  inv_sigma_means <- backsolve(chol_sigma, forwardsolve(t(chol_sigma), means_t))
+
+  inv_sigma_means <- if (p <= n) {
+    # Primal: Sigma = C'C + gamma I is p x p.
+    sigma <- crossprod(centered) + diag(gamma, p)
+    chol_sigma <- chol(sigma)
+    backsolve(chol_sigma, forwardsolve(t(chol_sigma), means_t))
+  } else {
+    # Dual, for p > n: by Woodbury,
+    # (gamma I + C'C)^-1 M = (M - C' (gamma I + C C')^-1 C M) / gamma,
+    # an n x n solve instead of a p x p one.
+    kern <- tcrossprod(centered)
+    diag(kern) <- diag(kern) + gamma
+    chol_k <- chol(kern)
+    cm <- centered %*% means_t
+    (means_t - crossprod(centered, backsolve(chol_k, backsolve(chol_k, cm, transpose = TRUE)))) / gamma
+  }
   lin_const <- -0.5 * colSums(means_t * inv_sigma_means) + log(pmax(priors, .Machine$double.eps))
 
   list(
