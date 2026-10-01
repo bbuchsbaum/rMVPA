@@ -39,20 +39,21 @@
   TRUE
 }
 
+#' Label-independent setup of the sda engine
+#'
+#' Data, neighbourhoods (optionally only for `centers`), fold splits,
+#' per-fold voxel validity and each sphere's columns in the general path's
+#' voxel order.
 #' @keywords internal
 #' @noRd
-run_searchlight_sda_fast <- function(model_spec, radius, verbose = FALSE, ...) {
+.sda_engine_prepare <- function(model_spec, radius, centers = NULL) {
   ds <- model_spec$dataset
   y_all <- y_train(model_spec)
-  classes <- levels(y_all)
-  K <- length(classes)
-  kind <- attr(model_spec$performance, "rmvpa_perf_kind", exact = TRUE)
-  class_metrics <- isTRUE(attr(model_spec$performance, "rmvpa_class_metrics", exact = TRUE))
-
   nb <- .aggregate_neighbourhoods(ds, radius)
-  n_centres <- length(nb$centers)
-  if (n_centres == 0L) return(empty_searchlight_result(ds))
-
+  if (!is.null(centers)) {
+    keep <- match(centers, nb$centers)
+    nb$centers <- nb$centers[keep[!is.na(keep)]]
+  }
   x_all <- as.matrix(neuroim2::series(ds$train_data, nb$mask_indices))
   if (nrow(x_all) != length(y_all)) {
     stop("sda_fast: mismatch between train rows and y_train length.")
@@ -60,15 +61,10 @@ run_searchlight_sda_fast <- function(model_spec, radius, verbose = FALSE, ...) {
   if (!all(is.finite(x_all))) {
     stop(.aggregate_ineligible("data contain missing or non-finite values"))
   }
-
   folds <- generate_folds(model_spec$crossval, tibble::tibble(.row = seq_len(nrow(x_all))), y_all)
   fold_list <- lapply(seq_len(nrow(folds)), function(i) {
     tr <- as.integer(.extract_sample_indices(folds$train[[i]]))
     te <- as.integer(.extract_sample_indices(folds$test[[i]]))
-    ytr <- factor(y_all[tr], levels = classes)
-    if (any(table(ytr) == 0L)) {
-      stop(.aggregate_ineligible("a class is absent from a training fold"))
-    }
     if (length(tr) < 3L) {
       stop(.aggregate_ineligible("fewer than three training observations"))
     }
@@ -76,15 +72,37 @@ run_searchlight_sda_fast <- function(model_spec, radius, verbose = FALSE, ...) {
     if (anyDuplicated(t(x_all[tr, valid, drop = FALSE])) > 0L) {
       stop(.aggregate_ineligible("identical voxel columns in a training fold"))
     }
-    list(train = tr, test = te, valid = valid, ytr = ytr,
-         stats = .sda_column_stats(x_all[tr, , drop = FALSE], ytr))
+    list(train = tr, test = te, valid = valid)
+  })
+  list(
+    ds = ds, centers = nb$centers, x_all = x_all, folds = fold_list,
+    sphere_cols = if (length(nb$centers)) {
+      .aggregate_generic_order(ds, radius, nb$centers, nb$mask_indices)
+    } else list(),
+    kind = attr(model_spec$performance, "rmvpa_perf_kind", exact = TRUE),
+    class_metrics = isTRUE(attr(model_spec$performance, "rmvpa_class_metrics", exact = TRUE))
+  )
+}
+
+#' Score every prepared centre for one labelling
+#' @keywords internal
+#' @noRd
+.sda_engine_score <- function(prep, y_all) {
+  classes <- levels(y_all)
+  K <- length(classes)
+  x_all <- prep$x_all
+  fold_list <- lapply(prep$folds, function(f) {
+    f$ytr <- factor(y_all[f$train], levels = classes)
+    if (any(table(f$ytr) == 0L)) {
+      stop(.aggregate_ineligible("a class is absent from a training fold"))
+    }
+    f$stats <- .sda_column_stats(x_all[f$train, , drop = FALSE], f$ytr)
+    f
   })
   testind <- sort(unique(unlist(lapply(fold_list, `[[`, "test"))))
   observed <- y_all[testind]
   n_obs <- length(testind)
-
-  # Each sphere's columns in the general path's voxel order.
-  sphere_cols <- .aggregate_generic_order(ds, radius, nb$centers, nb$mask_indices)
+  n_centres <- length(prep$centers)
 
   pooled <- matrix(0, n_obs * n_centres, K)
   ok <- rep(TRUE, n_centres)
@@ -93,7 +111,7 @@ run_searchlight_sda_fast <- function(model_spec, radius, verbose = FALSE, ...) {
     dest_rows <- match(f$test, testind)
     for (c in seq_len(n_centres)) {
       if (!ok[c]) next
-      cols <- sphere_cols[[c]]
+      cols <- prep$sphere_cols[[c]]
       cols <- cols[f$valid[cols]]
       if (length(cols) < 2L) { ok[c] <- FALSE; next }
       fit <- .sda_fit_columns(f$stats, cols)
@@ -108,11 +126,19 @@ run_searchlight_sda_fast <- function(model_spec, radius, verbose = FALSE, ...) {
       pooled[dest, ] <- pooled[dest, , drop = FALSE] + pr
     }
   }
+  list(perf = .engine_pooled_metrics(pooled, observed, classes, prep$kind, prep$class_metrics, ok))
+}
 
-  perf <- .engine_pooled_metrics(pooled, observed, classes, kind, class_metrics, ok)
+#' @keywords internal
+#' @noRd
+run_searchlight_sda_fast <- function(model_spec, radius, verbose = FALSE, ...) {
+  ds <- model_spec$dataset
+  prep <- .sda_engine_prepare(model_spec, radius)
+  if (length(prep$centers) == 0L) return(empty_searchlight_result(ds))
+  perf <- .sda_engine_score(prep, y_train(model_spec))$perf
   good <- !is.na(perf[, "Accuracy"])
   if (!any(good)) return(empty_searchlight_result(ds))
-  out <- wrap_out(perf[good, , drop = FALSE], ds, ids = nb$centers[good])
+  out <- wrap_out(perf[good, , drop = FALSE], ds, ids = prep$centers[good])
   attr(out, "bad_results") <- tibble::tibble()
   out
 }
