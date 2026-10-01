@@ -1,0 +1,9 @@
+NULL
+   user  system elapsed 
+ 65.656   0.784  66.676 
+Error in FUN(X[[i]], ...) : subscript out of bounds
+Calls: summaryRprof -> vapply
+In addition: Warning message:
+In readLines(con, n = chunksize) :
+  line 4900 appears to contain an embedded nul
+Execution halted

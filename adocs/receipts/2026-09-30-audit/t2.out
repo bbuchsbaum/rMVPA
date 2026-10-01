@@ -1,0 +1,74 @@
+NULL
+mask vox: 8000 
+corclass   auto     r=3 elapsed=1.72s  engine_attr=swift  ms/sphere=0.21
+corclass   legacy   r=3 elapsed=244.57s  engine_attr=legacy  ms/sphere=30.57
+sda_notune auto     r=3 elapsed=1.24s  engine_attr=swift  ms/sphere=0.15
+sda_notune legacy   r=3 elapsed=488.91s  engine_attr=legacy  ms/sphere=61.11
+dual_lda   auto     r=3 elapsed=17.39s  engine_attr=dual_lda_fast  ms/sphere=2.17
+                               self.time self.pct total.time total.pct
+"aperm.default"                    22.00    10.72      23.66     11.53
+"get0"                             19.95     9.72      19.95      9.72
+"apply"                            14.00     6.82      45.07     21.95
+"internal_crossval"                12.02     5.86     170.30     82.96
+"shard_extract_roi_volumetric"     11.83     5.76      26.02     12.67
+"doTryCatch"                        9.61     4.68     205.26     99.99
+"array"                             7.07     3.44       7.13      3.47
+"var"                               5.04     2.46       9.78      4.76
+"t.default"                         4.75     2.31       4.75      2.31
+".filter_roi_stats_fast"            3.78     1.84       7.96      3.88
+"get_lr"                            3.70     1.80      24.58     11.97
+"is.na"                             3.14     1.53       3.14      1.53
+"length"                            2.85     1.39       2.85      1.39
+"stopifnot"                         2.62     1.28       4.00      1.95
+"vapply"                            2.40     1.17       3.87      1.89
+"FUN"                               2.38     1.16      42.38     20.64
+"str.default"                       2.24     1.09      10.87      5.29
+"grep"                              2.13     1.04       2.26      1.10
+"ROIVec"                            2.03     0.99       3.43      1.67
+"order"                             1.92     0.94       3.52      1.71
+"match.arg"                         1.79     0.87       4.54      2.21
+"auc"                               1.70     0.83       1.74      0.85
+"eval"                              1.35     0.66       2.30      1.12
+"lapply"                            1.21     0.59      30.68     14.94
+"sub"                               1.14     0.56       1.21      0.59
+                               total.time total.pct self.time self.pct
+"<Anonymous>"                      205.29    100.00      0.86     0.42
+"do.call"                          205.29    100.00      0.27     0.13
+"do_standard"                      205.29    100.00      0.00     0.00
+"run_searchlight.default"          205.29    100.00      0.00     0.00
+"run_searchlight"                  205.29    100.00      0.00     0.00
+"doTryCatch"                       205.26     99.99      9.61     4.68
+"tryCatch"                         205.26     99.99      0.59     0.29
+"tryCatchOne"                      205.26     99.99      0.38     0.19
+"tryCatchList"                     205.26     99.99      0.35     0.17
+"mvpa_fun"                         205.25     99.98      0.00     0.00
+"run_future.shard_model_spec"      199.99     97.42      0.00     0.00
+"run_future"                       199.99     97.42      0.00     0.00
+"run_map"                          199.96     97.40      0.01     0.00
+"worker_fun"                       199.95     97.40      0.00     0.00
+"worker_impl"                      199.95     97.40      0.00     0.00
+"process_roi"                      173.87     84.69      0.02     0.01
+"process_roi.default"              173.85     84.69      0.04     0.02
+"fit_roi.mvpa_model"               170.37     82.99      0.03     0.01
+"fit_roi"                          170.37     82.99      0.00     0.00
+"internal_crossval"                170.30     82.96     12.02     5.86
+"train_model"                      120.58     58.74      0.04     0.02
+"train_model.mvpa_model"           120.54     58.72      0.05     0.02
+"futile.logger::flog.debug"         51.83     25.25      0.13     0.06
+".log_level"                        51.70     25.18      0.06     0.03
+"flog.logger"                       51.64     25.15      0.05     0.02
+"UseFunction"                       51.59     25.13      0.49     0.24
+"apply"                             45.07     21.95     14.00     6.82
+"FUN"                               42.38     20.64      2.38     1.16
+"lapply"                            30.68     14.94      1.21     0.59
+"nonzeroVarianceColumns2"           29.72     14.48      0.06     0.03
+"tibble::tibble"                    26.94     13.12      0.01     0.00
+"tibble_quos"                       26.84     13.07      0.43     0.21
+"shard_extract_roi_volumetric"      26.02     12.67     11.83     5.76
+"shard_extract_roi"                 26.02     12.67      0.00     0.00
+".External2"                        25.54     12.44      0.90     0.44
+"get_lr"                            24.58     11.97      3.70     1.80
+"aperm"                             24.11     11.74      0.22     0.11
+"merge_results"                     23.91     11.65      0.03     0.01
+"merge_results.mvpa_model"          23.88     11.63      0.02     0.01
+"aperm.default"                     23.66     11.53     22.00    10.72

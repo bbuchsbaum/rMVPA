@@ -1,0 +1,80 @@
+  'test_shard_backend.R:866:3', 'test_shard_backend.R:898:3',
+  'test_subspace_alignment_model.R:52:3',
+  'test_subspace_alignment_model.R:71:3',
+  'test_sweep_parallel_runtime_grid_smoke.R:2:3',
+  'test_swift_searchlight_perf.R:150:3', 'test_swift_searchlight_perf.R:177:3'
+• Set RMVPA_RUN_EXTENDED_TESTS=true to run long integration tests. (10):
+  'test_mvpa_regional.R:169:3', 'test_mvpa_regional.R:191:3',
+  'test_mvpa_regional.R:203:3', 'test_mvpa_regional.R:243:3',
+  'test_mvpa_regional.R:256:3', 'test_mvpa_regional.R:283:3',
+  'test_mvpa_regional.R:343:3', 'test_mvpa_searchlight.R:147:3',
+  'test_mvpa_searchlight.R:163:3', 'test_mvpa_searchlight.R:311:3'
+• benchmark source is not installed (3):
+  'test_feature_rsa_hotpath_benchmark.R:56:3',
+  'test_feature_rsa_hotpath_benchmark.R:97:3',
+  'test_feature_rsa_hotpath_benchmark.R:136:3'
+• not running from the package source tree (1): 'test_collate_field.R:17:3'
+• source pkgdown configuration is excluded from the tarball (1):
+  'test_parallelism_documentation.R:120:3'
+• source vignette is not installed in the package tarball (1):
+  'test_parallelism_documentation.R:3:3'
+• source vignettes are not installed (1):
+  'test_feature_rsa_hotpath_benchmark.R:214:3'
+• source-only CI artifacts are excluded from the tarball (2):
+  'test_banded_ridge_documentation.R:174:3',
+  'test_banded_ridge_documentation.R:212:3'
+• source-only NEWS/pkgdown consistency artifacts are excluded from the tarball
+  (1): 'test_banded_ridge_documentation.R:45:3'
+• the source-only runtime sweep is not installed with the package (1):
+  'test_sweep_parallel_runtime_grid_smoke.R:75:3'
+• {randomForest} is not installed (7): 'test_global_analysis.R:327:3',
+  'test_global_analysis.R:344:3', 'test_global_analysis.R:370:3',
+  'test_global_analysis.R:392:3', 'test_global_analysis.R:410:3',
+  'test_region_importance.R:300:3', 'test_region_importance.R:350:3'
+• {rrpack} is not installed (4): 'test-rena_analytical.R:632:3',
+  'test-rena_analytical.R:671:3', 'test-rena_analytical.R:747:3',
+  'test_searchlight_remap_rrr_valid_results.R:2:3'
+• {spls} is not installed (1): 'test_multibasis_dataset.R:573:3'
+
+══ Failed tests ════════════════════════════════════════════════════════════════
+── Error ('test_feature_rsa_fast_paths.R:180:5'): feature RSA matrix kernels respect supported pls algorithms ──
+Error in `match.arg(method, c("kernelpls", "widekernelpls", "simpls", "oscorespls", 
+    "model.frame"))`: 'arg' should be one of "kernelpls", "widekernelpls", "simpls", "oscorespls", "model.frame"
+Backtrace:
+    ▆
+ 1. ├─base::suppressWarnings(...) at test_feature_rsa_fast_paths.R:180:5
+ 2. │ └─base::withCallingHandlers(...)
+ 3. └─pls::plsr(...)
+ 4.   └─base::match.arg(...)
+── Error ('test_feature_rsa_fast_paths.R:591:5'): slim PVE calculation reproduces every supported pls algorithm ──
+Error in `match.arg(method, c("kernelpls", "widekernelpls", "simpls", "oscorespls", 
+    "model.frame"))`: 'arg' should be one of "kernelpls", "widekernelpls", "simpls", "oscorespls", "model.frame"
+Backtrace:
+    ▆
+ 1. ├─base::suppressWarnings(...) at test_feature_rsa_fast_paths.R:591:5
+ 2. │ └─base::withCallingHandlers(...)
+ 3. └─pls::plsr(...)
+ 4.   └─base::match.arg(...)
+── Failure ('test_feature_rsa_ridge.R:731:3'): fixed ridge agrees with glmnet's alpha-zero estimator ──
+unname(got) not equal to unname(expected).
+378/400 mismatches (average diff: 3.04e-06)
+[1]  0.426 -  0.426 == -2.78e-06
+[2] -1.267 - -1.267 == -2.84e-06
+[3]  0.375 -  0.375 ==  3.53e-06
+[4]  0.195 -  0.195 ==  1.37e-06
+[5] -0.424 - -0.424 ==  4.70e-07
+[6]  0.224 -  0.224 ==  4.77e-06
+[7] -0.552 - -0.552 == -2.55e-06
+[8] -0.374 - -0.374 ==  2.04e-06
+[9] -0.542 - -0.542 == -1.40e-06
+...
+── Error ('test_mvpa_searchlight.R:299:3'): randomized mvpa_searchlight works with regression ──
+<packageNotFoundError/error/condition>
+Error in `library(spls)`: there is no package called 'spls'
+Backtrace:
+    ▆
+ 1. └─base::library(spls) at test_mvpa_searchlight.R:299:3
+
+[ FAIL 4 | WARN 117 | SKIP 160 | PASS 7406 ]
+Error: Test failures
+Execution halted
