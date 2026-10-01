@@ -1,6 +1,6 @@
 # Benchmark scoreboard
 
-Generated 2026-10-01 08:35 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
+Generated 2026-10-01 09:09 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
 Single-threaded medians. **Ratio = rMVPA / competitor (< 1 means rMVPA is faster).**
 A ratio is shown only when the two output digests agree to 1e-4 relative;
 otherwise the methods are not computing the same thing and the row is marked.
@@ -31,6 +31,18 @@ Losses are recorded as losses.
 | gaussian_nb | perf/sphere-aggregation-engine @d906ca8 | legacy | 12.0 | 4.5 | nilearn | **2.69** | match |
 | lda_shrinkage | perf/sphere-aggregation-engine @d906ca8 | dual_lda_fast | 2.2 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
 | sda_notune | perf/sphere-aggregation-engine @d906ca8 | legacy | 41.5 | — | — | — | rMVPA only |
+| corclass | perf/aggregate-naive-bayes @8674e85 | aggregate_fast | 0.262 | 2.5 | nilearn | **0.10** | match |
+| corclass_general | perf/aggregate-naive-bayes @8674e85 | legacy | 11.9 | — | — | — | rMVPA only |
+| gaussian_nb | perf/aggregate-naive-bayes @8674e85 | aggregate_fast | 1.9 | 4.5 | nilearn | **0.43** | match |
+| gaussian_nb_general | perf/aggregate-naive-bayes @8674e85 | legacy | 11.8 | — | — | — | rMVPA only |
+| lda_shrinkage | perf/aggregate-naive-bayes @8674e85 | dual_lda_fast | 2.2 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
+| sda_notune | perf/aggregate-naive-bayes @8674e85 | legacy | 41.3 | — | — | — | rMVPA only |
+| corclass | perf/aggregate-naive-bayes @0002265 | aggregate_fast | 0.269 | 2.5 | nilearn | **0.11** | match |
+| corclass_general | perf/aggregate-naive-bayes @0002265 | legacy | 11.9 | — | — | — | rMVPA only |
+| gaussian_nb | perf/aggregate-naive-bayes @0002265 | aggregate_fast | 0.255 | 4.5 | nilearn | **0.06** | match |
+| gaussian_nb_general | perf/aggregate-naive-bayes @0002265 | legacy | 11.9 | — | — | — | rMVPA only |
+| lda_shrinkage | perf/aggregate-naive-bayes @0002265 | dual_lda_fast | 2.1 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
+| sda_notune | perf/aggregate-naive-bayes @0002265 | legacy | 41.0 | — | — | — | rMVPA only |
 
 ## regional_haxby_vt (ms per roi)
 

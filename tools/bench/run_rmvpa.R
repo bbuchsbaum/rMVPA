@@ -84,7 +84,8 @@ n_centres <- sum(as.logical(mask))
 sl_methods <- list(
   corclass = list(model = "corclass", engine = "auto", note = "same model as nilearn corclass; best exact engine auto selects"),
   corclass_general = list(model = "corclass", engine = "legacy", note = "rMVPA only: general per-sphere path, for tracking"),
-  gaussian_nb = list(model = "naive_bayes", engine = "legacy", note = "same model as GaussianNB up to variance smoothing"),
+  gaussian_nb = list(model = "naive_bayes", engine = "auto", note = "same model as GaussianNB up to variance smoothing; best exact engine auto selects"),
+  gaussian_nb_general = list(model = "naive_bayes", engine = "legacy", note = "rMVPA only: general per-sphere path, for tracking"),
   lda_shrinkage = list(model = "dual_lda", engine = "dual_lda_fast", note = "comparable, not identical: dual_lda gamma vs sklearn Ledoit-Wolf"),
   sda_notune = list(model = "sda_notune", engine = "legacy", note = "rMVPA only; no sklearn equivalent")
 )
