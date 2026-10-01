@@ -363,7 +363,7 @@ resolve_inst_file <- function(directory, filename) {
 }
 
 issue70 <- utils::read.csv(resolve_inst_file(
-  "extdata", "banded_ridge_issue70_results.csv"
+  "extdata", "banded_ridge_issue70_results.csv.gz"
 ))
 issue70_by_rep <- aggregate(
   cbind(shared_oof_correlation, response_oof_correlation,

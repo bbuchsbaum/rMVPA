@@ -236,7 +236,7 @@ test_that("coverage and uninstrumented integration courts stay separated", {
 
 test_that("issue 70 receipt declares seeds, folds, candidates, and uncertainty inputs", {
   results_path <- .brdoc_inst_file(
-    "extdata", "banded_ridge_issue70_results.csv"
+    "extdata", "banded_ridge_issue70_results.csv.gz"
   )
   script_path <- .brdoc_inst_file(
     "benchmarks", "banded_ridge_issue70.R"
