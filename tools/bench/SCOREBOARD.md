@@ -1,6 +1,6 @@
 # Benchmark scoreboard
 
-Generated 2026-10-01 07:18 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
+Generated 2026-10-01 07:32 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
 Single-threaded medians. **Ratio = rMVPA / competitor (< 1 means rMVPA is faster).**
 A ratio is shown only when the two output digests agree to 1e-4 relative;
 otherwise the methods are not computing the same thing and the row is marked.
@@ -22,6 +22,10 @@ Losses are recorded as losses.
 | gaussian_nb | perf/regional-scaffold @fe364b8 | legacy | 24.1 | 4.5 | nilearn | **5.38** | match |
 | lda_shrinkage | perf/regional-scaffold @fe364b8 | dual_lda_fast | 2.1 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
 | sda_notune | perf/regional-scaffold @fe364b8 | legacy | 42.7 | — | — | — | rMVPA only |
+| corclass | perf/naive-bayes-vectorise @9c97b6e | legacy | 12.9 | 2.5 | nilearn | **5.17** | match |
+| gaussian_nb | perf/naive-bayes-vectorise @9c97b6e | legacy | 13.1 | 4.5 | nilearn | **2.92** | match |
+| lda_shrinkage | perf/naive-bayes-vectorise @9c97b6e | dual_lda_fast | 2.2 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
+| sda_notune | perf/naive-bayes-vectorise @9c97b6e | legacy | 42.7 | — | — | — | rMVPA only |
 
 ## regional_haxby_vt (ms per roi)
 
@@ -39,6 +43,10 @@ Losses are recorded as losses.
 | gaussian_nb | perf/regional-scaffold @fe364b8 |  | 365.5 | 14.0 | scikit-learn | **26.08** | match |
 | lda_shrinkage | perf/regional-scaffold @fe364b8 |  | 553.0 | 568.9 | scikit-learn | n/a | differ (0.927083 vs 0.885417) |
 | sda_notune | perf/regional-scaffold @fe364b8 |  | 372.0 | — | — | — | rMVPA only |
+| corclass | perf/naive-bayes-vectorise @adde694 |  | 74.0 | 7.0 | scikit-learn | **10.52** | match |
+| gaussian_nb | perf/naive-bayes-vectorise @adde694 |  | 77.5 | 14.0 | scikit-learn | **5.53** | match |
+| lda_shrinkage | perf/naive-bayes-vectorise @adde694 |  | 551.5 | 568.9 | scikit-learn | n/a | differ (0.927083 vs 0.885417) |
+| sda_notune | perf/naive-bayes-vectorise @adde694 |  | 364.5 | — | — | — | rMVPA only |
 
 ## rsa_haxby (ms per rdm)
 
