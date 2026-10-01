@@ -629,6 +629,90 @@ run_lm_fast <- function(dvec, obj) {
   tvals
 }
 
+# QR compilation keeps coefficient queries separate from pair-based t-values.
+# Missing neural cells change the eligible design, so their queries are rebuilt.
+.rsa_coefficient_query <- function(model_mat, model_names, contrasts = NULL, rows = NULL,
+                                   validate_only = FALSE) {
+  X <- cbind(`(Intercept)` = 1, do.call(cbind, model_mat))
+  storage.mode(X) <- "double"
+  if (is.null(rows)) rows <- seq_len(nrow(X))
+  rows <- rows[apply(X[rows, , drop = FALSE], 1L, function(x) all(is.finite(x)))]
+  Xk <- X[rows, , drop = FALSE]
+  decomposition <- if (length(rows)) qr(Xk) else NULL
+  if (!length(rows) || decomposition$rank < ncol(X)) {
+    aliases <- if (length(rows)) {
+      colnames(X)[decomposition$pivot[seq.int(decomposition$rank + 1L, ncol(X))]]
+    } else colnames(X)
+    stop("Relational coefficient design is rank deficient including its intercept; ",
+         "aliased or unsupported columns: ", paste(aliases, collapse = ", "),
+         ". Check background terms and eligible pairs.", call. = FALSE)
+  }
+  if (isTRUE(validate_only)) return(invisible(NULL))
+  operator <- backsolve(qr.R(decomposition), t(qr.Q(decomposition)))
+  operator <- operator[order(decomposition$pivot), , drop = FALSE]
+  rownames(operator) <- colnames(X)
+  query <- operator[model_names, , drop = FALSE]
+  if (length(contrasts)) {
+    if (!is.list(contrasts) || is.null(names(contrasts)) || anyNA(names(contrasts)) ||
+        any(!nzchar(names(contrasts))) || anyDuplicated(names(contrasts))) {
+      stop("`contrasts` must be a uniquely named list of named numeric coefficient weights.",
+           call. = FALSE)
+    }
+    for (nm in names(contrasts)) {
+      weights <- contrasts[[nm]]
+      if (!is.numeric(weights) || !length(weights) || any(!is.finite(weights)) ||
+          is.null(names(weights)) || anyNA(names(weights)) || any(!nzchar(names(weights))) ||
+          anyDuplicated(names(weights)) || any(!names(weights) %in% colnames(X))) {
+        stop("Contrast '", nm, "' must contain finite named weights for design coefficients.",
+             call. = FALSE)
+      }
+      value <- matrix(drop(crossprod(weights, operator[names(weights), , drop = FALSE])),
+                      nrow = 1L)
+      rownames(value) <- paste0("contrast_", nm)
+      query <- rbind(query, value)
+    }
+  }
+  if (anyDuplicated(rownames(query))) {
+    stop("Contrast output names must not duplicate model predictor names.", call. = FALSE)
+  }
+  if (!nrow(query)) {
+    stop("Coefficient output requires model predictors or a requested contrast.", call. = FALSE)
+  }
+  list(query = query, rows = rows)
+}
+
+.rsa_coefficient_metrics <- function(y, obj) {
+  state <- obj$.coefficient_query
+  if (is.null(state) || any(!is.finite(y[state$rows]))) {
+    state <- .rsa_coefficient_query(obj$design$model_mat, obj$design$model_predictors,
+                                    obj$contrasts, rows = which(is.finite(y)))
+  }
+  out <- drop(state$query %*% y[state$rows])
+  stats::setNames(as.numeric(out), rownames(state$query))
+}
+
+# Correlations are bilinear after row-wise centering/ranking and normalization.
+# Contract fixed coefficient queries directly with the patterns, avoiding the
+# neural pair matrix. Non-finite/degenerate patterns use the ordinary fallback.
+.rsa_coefficient_contraction <- function(A, B, obj, between) {
+  state <- obj$.coefficient_query
+  if (is.null(state) || !all(is.finite(A)) || !all(is.finite(B))) return(NULL)
+  left <- .era_normalize_similarity_rows(A, obj$distmethod)
+  right <- .era_normalize_similarity_rows(B, obj$distmethod)
+  if (!all(left$valid) || !all(right$valid)) return(NULL)
+  n_pairs <- if (between) nrow(A) * nrow(B) else choose(nrow(A), 2L)
+  eligible <- if (is.null(obj$design$include)) seq_len(n_pairs) else which(obj$design$include)
+  out <- vapply(seq_len(nrow(state$query)), function(k) {
+    weights <- numeric(n_pairs)
+    weights[eligible[state$rows]] <- state$query[k, ]
+    Q <- matrix(0, nrow(A), nrow(B))
+    if (between) Q[] <- weights else Q[lower.tri(Q)] <- weights
+    value <- sum((t(Q) %*% left$values) * right$values)
+    if (identical(obj$measure, "similarity")) value else sum(weights) - value
+  }, numeric(1L))
+  stats::setNames(out, rownames(state$query))
+}
+
 
 ################################################################################
 # NEW: Constrained LM with glmnet
@@ -783,6 +867,11 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
     # neural patterns of each item set within its own blocks.
     ia <- .rsa_apply_item_perm(ia, obj$design$item_perm, "item_perm")
     ib <- .rsa_apply_item_perm(ib, obj$design$item_perm_b, "item_perm_b")
+    if (identical(obj$statistic, "beta") && !isTRUE(obj$return_fingerprint)) {
+      result <- .rsa_coefficient_contraction(train_dat[ia, , drop = FALSE],
+                                             train_dat[ib, , drop = FALSE], obj, TRUE)
+      if (!is.null(result)) return(result)
+    }
     M <- 1 - stats::cor(t(train_dat[ia, , drop = FALSE]),
                          t(train_dat[ib, , drop = FALSE]),
                          method = obj$distmethod)
@@ -803,13 +892,26 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
       rows      <- .rsa_apply_item_perm(seq_len(nrow(train_dat)), obj$design$item_perm)
       train_dat <- train_dat[rows, , drop = FALSE]
     }
-    dvec <- .rdm_vector_correlation(train_dat, method = obj$distmethod, center = "none")
+    if (identical(obj$statistic, "beta") && !isTRUE(obj$return_fingerprint)) {
+      result <- .rsa_coefficient_contraction(train_dat, train_dat, obj, FALSE)
+      if (!is.null(result)) return(result)
+    }
+    if (identical(obj$statistic, "beta")) {
+      # Match the rectangular measurement rule. In particular, cor() keeps
+      # missing observations missing when ranking for Spearman correlation.
+      similarity <- stats::cor(t(train_dat), method = obj$distmethod)
+      dvec <- 1 - similarity[lower.tri(similarity)]
+    } else {
+      dvec <- .rdm_vector_correlation(train_dat, method = obj$distmethod, center = "none")
+    }
   }
 
   # 2) Exclude certain comparisons if needed
   if (!is.null(obj$design$include)) {
     dvec <- dvec[obj$design$include]
   }
+
+  if (identical(obj$measure, "similarity")) dvec <- 1 - dvec
 
   # 3) Switch on regtype + constraints + semipartial
   out <- switch(
@@ -820,19 +922,23 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
 
     # linear model
     lm = {
-      has_nneg <- (!is.null(obj$nneg) && length(obj$nneg) > 0)
-
-      if (has_nneg) {
-        # Use constrained approach
-        run_lm_constrained(dvec, obj)
-      } else if (isTRUE(obj$semipartial)) {
-        # Semi-partial correlations
-        run_lm_semipartial(dvec, obj)
-      } else if (use_fast_kernel && !is.null(obj$.fast_kernel$lm)) {
-        run_lm_fast(dvec, obj)
+      if (identical(obj$statistic, "beta")) {
+        .rsa_coefficient_metrics(dvec, obj)
       } else {
-        # Standard approach = t-values
-        run_lm(dvec, obj)
+        has_nneg <- (!is.null(obj$nneg) && length(obj$nneg) > 0)
+
+        if (has_nneg) {
+          # Use constrained approach
+          run_lm_constrained(dvec, obj)
+        } else if (isTRUE(obj$semipartial)) {
+          # Semi-partial correlations
+          run_lm_semipartial(dvec, obj)
+        } else if (use_fast_kernel && !is.null(obj$.fast_kernel$lm)) {
+          run_lm_fast(dvec, obj)
+        } else {
+          # Standard approach = t-values
+          run_lm(dvec, obj)
+        }
       }
     },
 
@@ -985,6 +1091,8 @@ print.rsa_model <- function(x, ...) {
   cat("Configuration:\n")
   cat("  |- Distance Method: ", x$distmethod, "\n")
   cat("  |- Regression Type: ", x$regtype, "\n")
+  if (identical(x$measure, "similarity")) cat("  |- Measurement: correlation similarity\n")
+  if (identical(x$statistic, "beta")) cat("  |- Output: model coefficients and requested contrasts\n")
 
   # If nonneg constraints are present
   if (!is.null(x$nneg) && length(x$nneg) > 0) {
@@ -1148,6 +1256,32 @@ print.rsa_design <- function(x, ...) {
 #'   or \code{"spearman"} (rank-then-standardize). Default \code{"pearson"}.
 #' @param fingerprint_basis Basis used to span the model RDM subspace when
 #'   \code{return_fingerprint = TRUE}: \code{"pca"} (default) or \code{"qr"}.
+#' @param measure Neural pair measurement: \code{"distance"} (default,
+#'   correlation distance) or \code{"similarity"} (correlation). The choice
+#'   applies after pattern centering and uses \code{distmethod} in either case.
+#' @param statistic \code{NULL} preserves the existing output selected by
+#'   \code{regtype}/\code{semipartial}. Use \code{"beta"} with ordinary,
+#'   unconstrained \code{regtype = "lm"} to return raw model coefficients.
+#'   Nuisance coefficients remain internal. Fixed designs cache QR coefficient
+#'   queries; missing neural cells rebuild the query for eligible pairs.
+#' @param contrasts Optional uniquely named list of named numeric coefficient
+#'   weights, available with \code{statistic = "beta"}. Coefficient names are
+#'   those in \code{design$model_mat}, plus \code{"(Intercept)"}. Outputs are
+#'   named \code{contrast_<name>}.
+#'
+#' @section Relational coefficients:
+#' Combine \code{pair_rsa_design(..., modulation = ...)} with
+#' \code{measure = "similarity", regtype = "lm", statistic = "beta"} to
+#' estimate modulated relationships. For balanced one-to-one correspondence
+#' and retrieval-observation intercepts, these coefficients equal regression
+#' on matching-minus-nonmatching ERA scores. Unequal eligible candidate counts
+#' generally imply a weighted reduction. Coefficient queries are conditional
+#' on the specified measurement and fixed templates; they do not correct
+#' first-level measurement bias or error in estimated neural predictors.
+#' Pair cells are dependent. These outputs provide participant-level effects,
+#' not calibrated standard errors or population inference. Existing label
+#' permutations retain their joint-null restriction for multiple predictors;
+#' they do not test a modulation coefficient conditional on other terms.
 #'
 #' @section Effective support of the design:
 #' RDM entries are not independent observations. Every item enters
@@ -1223,7 +1357,10 @@ rsa_model <- function(dataset,
                       pattern_center = c("none", "stimulus_mean"),
                       return_fingerprint = FALSE,
                       fingerprint_method = c("pearson", "spearman"),
-                      fingerprint_basis = c("pca", "qr")) {
+                      fingerprint_basis = c("pca", "qr"),
+                      measure = c("distance", "similarity"),
+                      statistic = NULL,
+                      contrasts = NULL) {
 
   assert_that(inherits(dataset, "mvpa_dataset"))
   assert_that(inherits(design, "rsa_design"))
@@ -1233,6 +1370,16 @@ rsa_model <- function(dataset,
   pattern_center <- match.arg(pattern_center)
   fingerprint_method <- match.arg(fingerprint_method)
   fingerprint_basis  <- match.arg(fingerprint_basis)
+  measure <- match.arg(measure)
+  if (!is.null(statistic)) statistic <- match.arg(statistic, "beta")
+  if (!is.null(statistic) &&
+      (!identical(regtype, "lm") || isTRUE(semipartial) || length(nneg))) {
+    stop("`statistic = 'beta'` requires unconstrained regtype = 'lm' and semipartial = FALSE.",
+         call. = FALSE)
+  }
+  if (!is.null(contrasts) && !identical(statistic, "beta")) {
+    stop("`contrasts` requires statistic = 'beta'.", call. = FALSE)
+  }
   
   # Check for glmnet if nneg constraints are provided
   if (!is.null(nneg) && length(nneg) > 0 && regtype == "lm") {
@@ -1242,7 +1389,7 @@ rsa_model <- function(dataset,
   }
   
   # If using LM, optionally check for collinearity
-  if (regtype == "lm" && check_collinearity) {
+  if (regtype == "lm" && check_collinearity && is.null(statistic)) {
     message("Checking design matrix for collinearity...")
     check_collinearity(design$model_mat)
     message("Collinearity check passed.")
@@ -1308,7 +1455,10 @@ rsa_model <- function(dataset,
   }
 
   fast_kernel <- NULL
-  if (.rsa_fast_kernel_enabled()) {
+  coefficient_query <- if (identical(statistic, "beta")) {
+    .rsa_coefficient_query(design$model_mat, design$model_predictors, contrasts)
+  } else NULL
+  if (.rsa_fast_kernel_enabled() && is.null(statistic)) {
     fast_kernel <- .rsa_prepare_fast_kernel(
       design = design,
       regtype = regtype,
@@ -1334,6 +1484,9 @@ rsa_model <- function(dataset,
     design,
     distmethod = distmethod,
     regtype    = regtype,
+    measure    = measure,
+    statistic  = statistic,
+    contrasts  = contrasts,
     nneg       = nneg,
     semipartial = semipartial,
     pattern_center = pattern_center,
@@ -1342,6 +1495,7 @@ rsa_model <- function(dataset,
     fingerprint_basis  = fingerprint_basis,
     design_diagnostics = design_diagnostics,
     .fast_kernel = fast_kernel,
+    .coefficient_query = coefficient_query,
     .fingerprint_basis = fingerprint_basis_obj
   )
   obj
@@ -1417,7 +1571,9 @@ rsa_model <- function(dataset,
 #' @method output_schema rsa_model
 #' @export
 output_schema.rsa_model <- function(model) {
-  predictor_names <- names(model$design$model_mat)
+  predictor_names <- if (identical(model$statistic, "beta")) {
+    rownames(model$.coefficient_query$query)
+  } else names(model$design$model_mat)
   schema <- as.list(rep("scalar", length(predictor_names)))
   names(schema) <- predictor_names
   schema

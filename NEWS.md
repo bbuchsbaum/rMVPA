@@ -1,5 +1,19 @@
 # rMVPA 0.1.3
 
+* `pair_rsa_design()` supports per-template `modulation` formulas and
+  formula-based nuisance terms using side-qualified observation metadata.
+  Repeated item IDs retain separate observations; within-domain formulas
+  require an explicit symmetric rule. Aliases are checked against the full
+  regression design, including its intercept.
+* `rsa_model()` adds opt-in correlation similarity (`measure = "similarity"`),
+  raw model coefficients (`regtype = "lm", statistic = "beta"`), and named
+  coefficient contrasts. Cached QR queries contract directly with finite
+  normalized patterns; missing neural cells use an eligible-pair fallback.
+  Classical and modulated ERA are exact special cases under their stated
+  weighting/background assumptions. These are participant-level effects;
+  calibrated conditional inference and measurement-error modeling remain
+  separate requirements. Existing distance and statistic defaults are unchanged.
+
 * Pattern-model vignettes now teach the method as a three-article path:
   `vignette("Pattern_Model")` leads with the task, the planted territories,
   and the object flow; confirmation and group articles are framed as the

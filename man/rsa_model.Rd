@@ -15,7 +15,10 @@ rsa_model(
   pattern_center = c("none", "stimulus_mean"),
   return_fingerprint = FALSE,
   fingerprint_method = c("pearson", "spearman"),
-  fingerprint_basis = c("pca", "qr")
+  fingerprint_basis = c("pca", "qr"),
+  measure = c("distance", "similarity"),
+  statistic = NULL,
+  contrasts = NULL
 )
 }
 \arguments{
@@ -59,6 +62,21 @@ or \code{"spearman"} (rank-then-standardize). Default \code{"pearson"}.}
 
 \item{fingerprint_basis}{Basis used to span the model RDM subspace when
 \code{return_fingerprint = TRUE}: \code{"pca"} (default) or \code{"qr"}.}
+
+\item{measure}{Neural pair measurement: \code{"distance"} (default,
+correlation distance) or \code{"similarity"} (correlation). The choice
+applies after pattern centering and uses \code{distmethod} in either case.}
+
+\item{statistic}{\code{NULL} preserves the existing output selected by
+\code{regtype}/\code{semipartial}. Use \code{"beta"} with ordinary,
+unconstrained \code{regtype = "lm"} to return raw model coefficients.
+Nuisance coefficients remain internal. Fixed designs cache QR coefficient
+queries; missing neural cells rebuild the query for eligible pairs.}
+
+\item{contrasts}{Optional uniquely named list of named numeric coefficient
+weights, available with \code{statistic = "beta"}. Coefficient names are
+those in \code{design$model_mat}, plus \code{"(Intercept)"}. Outputs are
+named \code{contrast_<name>}.}
 }
 \value{
 An object of class \code{"rsa_model"} (and \code{"list"}), containing:
@@ -76,6 +94,22 @@ An object of class \code{"rsa_model"} (and \code{"list"}), containing:
 \description{
 This function creates an RSA model object by taking an MVPA (Multi-Variate Pattern Analysis) dataset and an RSA design.
 }
+\section{Relational coefficients}{
+
+Combine \code{pair_rsa_design(..., modulation = ...)} with
+\code{measure = "similarity", regtype = "lm", statistic = "beta"} to
+estimate modulated relationships. For balanced one-to-one correspondence
+and retrieval-observation intercepts, these coefficients equal regression
+on matching-minus-nonmatching ERA scores. Unequal eligible candidate counts
+generally imply a weighted reduction. Coefficient queries are conditional
+on the specified measurement and fixed templates; they do not correct
+first-level measurement bias or error in estimated neural predictors.
+Pair cells are dependent. These outputs provide participant-level effects,
+not calibrated standard errors or population inference. Existing label
+permutations retain their joint-null restriction for multiple predictors;
+they do not test a modulation coefficient conditional on other terms.
+}
+
 \section{Effective support of the design}{
 
 RDM entries are not independent observations. Every item enters
