@@ -125,6 +125,9 @@ zeroVarianceColumns2 <- function(M) {
 #' @keywords internal
 #' @noRd
 na_cols <- function(M) {
+  if (is.matrix(M) && is.numeric(M)) {
+    return(matrixStats::colAnyNAs(M))
+  }
   apply(M, 2, function(x) any(is.na(x)))
 }
 
@@ -137,6 +140,20 @@ nonzeroVarianceColumns <- function(M) {
 #' @keywords internal
 #' @noRd
 nonzeroVarianceColumns2 <- function(M) {
+  if (is.matrix(M) && is.numeric(M)) {
+    # Exact, vectorised equivalent of sd(x, na.rm = TRUE) > 0: a column has
+    # nonzero variance iff its finite non-missing values are not all equal
+    # (it needs at least two non-missing values). Comparing min and max avoids
+    # summation round-off, which could give a constant column sd ~ 1e-17.
+    n_ok <- colSums(!is.na(M))
+    rng_ok <- suppressWarnings(matrixStats::colMaxs(M, na.rm = TRUE) >
+                                 matrixStats::colMins(M, na.rm = TRUE))
+    # sd() of a column holding Inf is NaN, which the reference treats as FALSE.
+    has_inf <- colSums(is.infinite(M)) > 0
+    ret <- n_ok >= 2L & rng_ok & !has_inf
+    ret[is.na(ret)] <- FALSE
+    return(ret)
+  }
   ret <- apply(M, 2, sd, na.rm=TRUE) > 0
   ret[is.na(ret)] <- FALSE
   ret
