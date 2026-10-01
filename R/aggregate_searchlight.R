@@ -9,17 +9,19 @@
 # class means, the same Pearson correlations, softmax, zapsmall rounding,
 # fold pooling and metrics, up to floating-point summation order.
 #
-# Supported: corclass (method = "pearson", robust = FALSE). Data outside the
-# proven regime (missing or non-finite values, identical voxel columns, a
-# class absent from a training fold) raise an "rmvpa_engine_ineligible"
-# condition, and the run falls back to the general-purpose iterator.
+# Supported: corclass (method = "pearson", robust = FALSE) and naive_bayes.
+# Data outside the proven regime (missing or non-finite values, identical
+# voxel columns, a class absent from a training fold, and for naive_bayes a
+# zero within-class variance) raise an "rmvpa_engine_ineligible" condition,
+# and the run falls back to the general-purpose iterator.
 
 #' @keywords internal
 #' @noRd
 .is_aggregate_fast_path <- function(model_spec, method) {
   if (!inherits(model_spec, "mvpa_model")) return(FALSE)
   if (!identical(method, "standard")) return(FALSE)
-  if (!identical(model_spec$model$label, "corclass")) return(FALSE)
+  label <- model_spec$model$label
+  if (!(identical(label, "corclass") || identical(label, "naive_bayes"))) return(FALSE)
   if (!isTRUE(has_crossval(model_spec)) || isTRUE(has_test_set(model_spec))) return(FALSE)
 
   ds <- model_spec$dataset
@@ -33,8 +35,9 @@
   grid <- model_spec$tune_grid
   if (!is.null(grid)) {
     if (!is.data.frame(grid) || nrow(grid) != 1L) return(FALSE)
-    if (!identical(as.character(grid$method), "pearson")) return(FALSE)
-    if (!identical(as.logical(grid$robust), FALSE)) return(FALSE)
+    if (identical(label, "corclass") &&
+        (!identical(as.character(grid$method), "pearson") ||
+         !identical(as.logical(grid$robust), FALSE))) return(FALSE)
   }
 
   if (!isTRUE(model_spec$compute_performance)) return(FALSE)
@@ -231,6 +234,122 @@
   list(probs = round(probs, digits = rep(rep(zd, each = n_te), times = K)), flag = flag)
 }
 
+#' Per-voxel Gaussian naive Bayes fit, identical to MVPAModels$naive_bayes$fit
+#' on any subset of columns (every statistic is per voxel).
+#' @keywords internal
+#' @noRd
+.aggregate_nb_fit <- function(x, y, classes) {
+  y <- factor(y, levels = classes)
+  mus <- vars <- matrix(NA_real_, length(classes), ncol(x), dimnames = list(classes, NULL))
+  for (k in seq_along(classes)) {
+    samples <- x[y == classes[k], , drop = FALSE]
+    nk <- nrow(samples)
+    mus[k, ] <- colMeans(samples)
+    vars[k, ] <- matrixStats::colVars(samples) * (nk - 1) / nk
+  }
+  list(mus = mus, vars = vars, log_priors = as.numeric(log(table(y) / length(y))))
+}
+
+#' Per-fold naive Bayes probabilities for a block of centres
+#'
+#' Same layout as .aggregate_corclass_fold(). Per-voxel log densities are the
+#' same dnorm() values the per-sphere path computes. Only their summation over
+#' each sphere differs in order, so each row carries an error bound on its
+#' probabilities, used to flag near-ties for exact recomputation.
+#' @keywords internal
+#' @noRd
+.aggregate_nb_fold <- function(nb_fit, x_test, tS, valid) {
+  n_te <- nrow(x_test)
+  K <- nrow(nb_fit$mus)
+  tS_f <- Matrix::Diagonal(x = as.numeric(valid)) %*% tS
+  p <- Matrix::colSums(tS_f)
+  n_c <- ncol(tS)
+
+  lp <- matrix(NA_real_, n_te * n_c, K)
+  abs_sum <- numeric(n_te * n_c)
+  for (k in seq_len(K)) {
+    ll <- stats::dnorm(x_test, mean = rep(nb_fit$mus[k, ], each = n_te),
+                       sd = rep(sqrt(nb_fit$vars[k, ]), each = n_te), log = TRUE)
+    ll[!is.finite(ll)] <- -1e100
+    lp[, k] <- as.vector(as.matrix(ll %*% tS_f)) + nb_fit$log_priors[k]
+    abs_sum <- pmax(abs_sum, as.vector(as.matrix(abs(ll) %*% tS_f)))
+  }
+  bad <- p < 2
+  lp[rep(bad, each = n_te), ] <- 0
+  shifted <- exp(lp - matrixStats::rowMaxs(lp))
+  probs <- shifted / rowSums(shifted)
+  probs[rep(bad, each = n_te), ] <- NA_real_
+  # Summation error of the log posteriors bounds the probability error
+  # (softmax is 1-Lipschitz in each coordinate).
+  err <- 16 * rep(pmax(p, 1), each = n_te) * .Machine$double.eps * (abs_sum + 1)
+  list(probs = probs, flag = rep(FALSE, n_c), err = err)
+}
+
+#' Centres whose pooled probabilities have a near-tie the error bound cannot
+#' resolve
+#'
+#' `err` bounds the absolute error of each row's log posteriors, so each
+#' probability carries a relative error of at most about 2 * err. A centre is
+#' flagged when an observation's top two probabilities, or two observations'
+#' one-vs-rest AUC scores, are within their combined error. Exact ties count
+#' too, except between saturated observations: all non-top probabilities
+#' below 1e-17. Those produce the same exact scores (1 and -1/(K-1), or 1 and
+#' 0 for two classes) under any perturbation within the bound.
+#' @keywords internal
+#' @noRd
+.aggregate_near_tie_flags <- function(pooled, err, n_obs, ok) {
+  K <- ncol(pooled)
+  P <- pooled / rowSums(pooled)
+  P[is.na(P)] <- 1 / K  # centres with too few voxels; masked out by `ok`
+  rel <- 4 * err
+  top <- matrixStats::rowMaxs(P)
+  rest <- rowSums(P) - top
+  sat <- rest < 1e-17
+
+  # First-order softmax sensitivity: |dp_k| <= 2 * err * min(p_k, 1 - p_k),
+  # plus a floor for the rounding of the score arithmetic itself.
+  floor_eps <- 16 * .Machine$double.eps
+  n_b <- nrow(P) %/% n_obs
+  P2 <- P
+  P2[cbind(seq_len(nrow(P)), max.col(P, ties.method = "first"))] <- -Inf
+  second <- matrixStats::rowMaxs(P2)
+  top_err <- rel * (pmin(top, 1 - top) + pmin(second, 1 - second)) + floor_eps
+  top_flag <- !sat & (top - second) <= top_err
+  flag <- matrixStats::colAnys(matrix(top_flag, n_obs))
+
+  centre <- rep(seq_len(n_b), each = n_obs)
+  lo <- rep(seq_len(n_obs - 1L), n_b) + rep((seq_len(n_b) - 1L) * n_obs, each = n_obs - 1L)
+  hi <- lo + 1L
+  for (k in seq_len(K)) {
+    # The one-vs-rest score p_k - mean(p_-k) equals (K p_k - 1) / (K - 1).
+    score <- if (K == 2L) P[, k] else P[, k] - rowMeans(P[, -k, drop = FALSE])
+    e <- (if (K == 2L) 1 else K / (K - 1)) * rel * pmin(P[, k], 1 - P[, k]) + floor_eps
+    e[sat] <- 0
+    # One ordering for the whole block: by centre, then score.
+    o <- order(centre, score)
+    s_o <- score[o]; e_o <- e[o]; sat_o <- sat[o]
+    gap <- s_o[hi] - s_o[lo]
+    near <- gap <= e_o[lo] + e_o[hi]
+    robust <- gap == 0 & sat_o[lo] & sat_o[hi]
+    flag <- flag | matrixStats::colAnys(matrix(near & !robust, n_obs - 1L))
+  }
+  flag & ok
+}
+
+#' Mask-column indices of each centre's sphere in the general path's voxel
+#' order (as get_searchlight() returns them), for exact recomputation.
+#' @keywords internal
+#' @noRd
+.aggregate_generic_order <- function(ds, radius, centres, mask_indices) {
+  sl <- get_searchlight(ds, "standard", radius)
+  sp <- neuroim2::space(ds$mask)
+  parent <- vapply(sl, function(w) as.integer(w@parent_index), 1L)
+  lapply(centres, function(cid) {
+    w <- sl[[match(cid, parent)]]
+    match(as.integer(neuroim2::grid_to_index(sp, w@coords)), mask_indices)
+  })
+}
+
 #' @keywords internal
 #' @noRd
 run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
@@ -252,11 +371,14 @@ run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
   if (!all(is.finite(x_all))) {
     stop(.aggregate_ineligible("data contain missing or non-finite values"))
   }
+  label <- model_spec$model$label
+  is_nb <- identical(label, "naive_bayes")
   # Pearson correlation across voxels is invariant to a common shift; removing
   # the grand mean limits cancellation in the aggregated sums. The original
-  # values are kept for exact recomputation of flagged centres.
+  # values are kept for exact recomputation of flagged centres. Naive Bayes
+  # is not shift invariant and needs no shift (its per-voxel terms are exact).
   x_orig <- x_all
-  x_all <- x_all - mean(x_all)
+  if (!is_nb) x_all <- x_all - mean(x_all)
 
   folds <- generate_folds(model_spec$crossval, tibble::tibble(.row = seq_len(nrow(x_all))), y_all)
   fold_list <- lapply(seq_len(nrow(folds)), function(i) {
@@ -270,7 +392,16 @@ run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
     if (anyDuplicated(t(x_all[tr, valid, drop = FALSE])) > 0L) {
       stop(.aggregate_ineligible("identical voxel columns in a training fold"))
     }
-    list(train = tr, test = te, valid = valid)
+    nb_fit <- NULL
+    if (is_nb) {
+      # naive_bayes floors a zero within-class variance at a value that depends
+      # on the other voxels in the sphere; such data are left to the general path.
+      nb_fit <- .aggregate_nb_fit(x_all[tr, , drop = FALSE], ytr, classes)
+      if (any(nb_fit$vars[, valid, drop = FALSE] <= .Machine$double.eps)) {
+        stop(.aggregate_ineligible("zero within-class variance in a training fold"))
+      }
+    }
+    list(train = tr, test = te, valid = valid, nb_fit = nb_fit)
   })
   testind <- sort(unique(unlist(lapply(fold_list, `[[`, "test"))))
   observed <- y_all[testind]
@@ -290,27 +421,47 @@ run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
     pooled <- matrix(0, n_obs * n_b, K)
     ok <- rep(TRUE, n_b)
     flagged <- rep(FALSE, n_b)
+    err <- numeric(n_obs * n_b)
     offsets <- (seq_len(n_b) - 1L) * n_obs
     for (f in fold_list) {
-      fr <- .aggregate_corclass_fold(x_all[f$train, , drop = FALSE], y_all[f$train],
-                                     x_all[f$test, , drop = FALSE], tS, f$valid, classes)
+      fr <- if (is_nb) {
+        .aggregate_nb_fold(f$nb_fit, x_all[f$test, , drop = FALSE], tS, f$valid)
+      } else {
+        .aggregate_corclass_fold(x_all[f$train, , drop = FALSE], y_all[f$train],
+                                 x_all[f$test, , drop = FALSE], tS, f$valid, classes)
+      }
       pr <- fr$probs
       ok <- ok & !is.na(pr[(seq_len(n_b) - 1L) * length(f$test) + 1L, 1])
       flagged <- flagged | fr$flag
       dest <- as.vector(outer(match(f$test, testind), offsets, "+"))
       pooled[dest, ] <- pooled[dest, , drop = FALSE] + pr
+      if (!is.null(fr$err)) err[dest] <- pmax(err[dest], fr$err)
+    }
+    if (is_nb) {
+      flagged <- flagged | .aggregate_near_tie_flags(pooled, err, n_obs, ok)
     }
     # Exact recomputation, with the per-sphere classifier code, for centres
     # whose aggregated values were too close to a rounding boundary.
-    for (b in which(flagged & ok)) {
-      cols <- which(tS[, b] != 0)
+    repair <- which(flagged & ok)
+    generic_cols <- if (length(repair)) {
+      .aggregate_generic_order(ds, radius, nb$centers[blk[repair]], nb$mask_indices)
+    }
+    for (ri in seq_along(repair)) {
+      b <- repair[ri]
+      cols <- generic_cols[[ri]]
       rows_b <- offsets[b] + seq_len(n_obs)
       pooled[rows_b, ] <- 0
       for (f in fold_list) {
         vc <- cols[f$valid[cols]]
-        fit <- corsimFit(x_orig[f$train, vc, drop = FALSE], factor(y_all[f$train], levels = classes),
-                         "pearson", FALSE)
-        pr <- prob_corsimFit(fit, x_orig[f$test, vc, drop = FALSE])
+        ytr <- factor(y_all[f$train], levels = classes)
+        pr <- if (is_nb) {
+          nbm <- MVPAModels$naive_bayes
+          fit <- nbm$fit(x_orig[f$train, vc, drop = FALSE], ytr, NULL, NULL, classes, NULL, NULL, TRUE)
+          nbm$prob(fit, x_orig[f$test, vc, drop = FALSE])
+        } else {
+          fit <- corsimFit(x_orig[f$train, vc, drop = FALSE], ytr, "pearson", FALSE)
+          prob_corsimFit(fit, x_orig[f$test, vc, drop = FALSE])
+        }
         dest <- offsets[b] + match(f$test, testind)
         pooled[dest, ] <- pooled[dest, , drop = FALSE] + pr
       }
