@@ -5,14 +5,14 @@ testthat::skip_if_not_installed("neuroim2")
 agg_maps <- function(res) lapply(res$results, function(m) as.numeric(neuroim2::values(m)))
 
 agg_spec <- function(seed, D = c(5, 5, 5), nobs = 48, nlevels = 3, blocks = 4,
-                     class_metrics = FALSE, scale = 1, offset = 0) {
+                     class_metrics = FALSE, scale = 1, offset = 0, model = "corclass") {
   set.seed(seed)
   ds <- gen_sample_dataset(D = D, nobs = nobs, nlevels = nlevels, blocks = blocks)
   if (scale != 1 || offset != 0) {
     arr <- as.array(ds$dataset$train_data) * scale + offset
     ds$dataset$train_data <- neuroim2::NeuroVec(arr, neuroim2::space(ds$dataset$train_data))
   }
-  mvpa_model(load_model("corclass"), ds$dataset, ds$design, "classification",
+  mvpa_model(load_model(model), ds$dataset, ds$design, "classification",
              crossval = blocked_cross_validation(ds$design$block_var),
              class_metrics = class_metrics)
 }
@@ -83,4 +83,38 @@ test_that("zapsmall emulation matches base::zapsmall on this R", {
     m <- matrix(stats::runif(40) * scale, 8)
     expect_identical(round(m, digits = rule(max(abs(m)), getOption("digits"))), base::zapsmall(m))
   }
+})
+
+test_that("aggregation engine matches the general path for naive_bayes", {
+  expect_engine_parity(agg_spec(911, model = "naive_bayes"))
+  expect_engine_parity(agg_spec(912, model = "naive_bayes", nlevels = 2, nobs = 40))
+  expect_engine_parity(agg_spec(913, model = "naive_bayes", class_metrics = TRUE))
+  expect_engine_parity(agg_spec(914, model = "naive_bayes", scale = 5, offset = 1500))
+})
+
+test_that("naive_bayes engine repairs near-tied centres exactly", {
+  # Strong signal saturates probabilities, so one-vs-rest scores tie at the
+  # last bit; flagged centres are recomputed in the general path's voxel order.
+  set.seed(915)
+  ds <- gen_sample_dataset(D = c(5, 5, 5), nobs = 48, nlevels = 3, blocks = 4)
+  arr <- as.array(ds$dataset$train_data)
+  y <- as.integer(ds$design$y_train)
+  for (i in seq_along(y)) arr[, , , i] <- arr[, , , i] + 3 * y[i]
+  ds$dataset$train_data <- neuroim2::NeuroVec(arr, neuroim2::space(ds$dataset$train_data))
+  ms <- mvpa_model(load_model("naive_bayes"), ds$dataset, ds$design, "classification",
+                   crossval = blocked_cross_validation(ds$design$block_var))
+  fast <- expect_engine_parity(ms)
+  expect_true(attr(fast, "aggregate_recomputed_centres") >= 0L)
+})
+
+test_that("naive_bayes engine declines zero within-class variance", {
+  ms <- agg_spec(916, model = "naive_bayes")
+  arr <- as.array(ms$dataset$train_data)
+  y <- ms$design$y_train
+  arr[2, 2, 2, y == levels(y)[1]] <- 4.2  # constant within one class, varies overall
+  ms$dataset$train_data <- neuroim2::NeuroVec(arr, neuroim2::space(ms$dataset$train_data))
+  expect_error(run_searchlight(ms, radius = 2, engine = "aggregate_fast", backend = "default"),
+               "zero within-class variance")
+  res <- suppressWarnings(run_searchlight(ms, radius = 2, backend = "default"))
+  expect_identical(attr(res, "searchlight_engine"), "legacy")
 })

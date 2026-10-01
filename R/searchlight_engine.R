@@ -29,7 +29,7 @@
       }
     ),
     aggregate_fast = list(
-      label = "Exact sphere-aggregation engine (corclass)",
+      label = "Exact sphere-aggregation engine (corclass, naive_bayes)",
       eligible = function(model_spec, method) {
         .is_aggregate_fast_path(model_spec, method)
       }
