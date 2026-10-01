@@ -53,30 +53,26 @@ centers proportionally from nfeatures quantile bins.}
 \item{seed}{Optional integer random seed.}
 
 \item{perm_strategy}{Character. Controls how each permutation pass is
-  executed.  Two strategies are available; neither contains any
-  engine-specific branching:
+  executed. Eligible exact engines reuse preparation across permutations
+  for built-in blocked CV or explicit custom splits. Other CV specifications
+  retain their per-permutation fold generation.
 
   \describe{
-    \item{\code{"iterate"} (default)}{Each permutation runs
-      \code{\link{mvpa_iterate}} on a \strong{subsampled} set of centers.
-      This is the universal, safe path: it works with every model type
-      and every searchlight engine because it goes through the generic
-      per-ROI iterator.
+    \item{\code{"iterate"} (default)}{Each permutation evaluates a
+      \strong{subsampled} set of centers using a prepared engine when
+      eligible, or \code{\link{mvpa_iterate}} otherwise.
 
       \strong{When to use}: slow classifiers, large brains, limited
       compute.  The \code{subsample} parameter controls how many centers
-      are evaluated per permutation, giving 5--20\eqn{\times} speedup
-      over a full-brain pass.
+      are evaluated per permutation.
 
       Null pool size: \code{n_perm * n_subsampled_centers}.}
 
-    \item{\code{"searchlight"}}{Each permutation runs
-      \code{\link{run_searchlight}} on the \strong{full brain}, then
-      extracts metric values at every center.  Because the call goes
-      through the standard \code{run_searchlight} dispatch, it
-      automatically benefits from any fast engine the model qualifies
-      for (e.g.\ SWIFT, dual-LDA) as well as any user-defined
-      \code{run_searchlight.<class>} method.
+    \item{\code{"searchlight"}}{Each permutation evaluates the
+      \strong{full brain} using a prepared engine when eligible, or
+      \code{\link{run_searchlight}} otherwise. The latter retains
+      standard engine dispatch and user-defined
+      \code{run_searchlight.<class>} methods.
 
       \strong{When to use}: models with a fast searchlight engine, or
       when you want the richest possible null distribution.  Since the

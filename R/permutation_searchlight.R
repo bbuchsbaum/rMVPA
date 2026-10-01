@@ -51,30 +51,26 @@ NULL
 #'   permutations cannot test an individual regression coefficient conditional
 #'   on the others. Ignored for other model classes.
 #' @param perm_strategy Character. Controls how each permutation pass is
-#'   executed.  Two strategies are available; neither contains any
-#'   engine-specific branching:
+#'   executed. Eligible exact engines reuse preparation across permutations
+#'   for built-in blocked CV or explicit custom splits. Other CV specifications
+#'   retain their per-permutation fold generation.
 #'
 #'   \describe{
-#'     \item{\code{"iterate"} (default)}{Each permutation runs
-#'       \code{\link{mvpa_iterate}} on a \strong{subsampled} set of centers.
-#'       This is the universal, safe path: it works with every model type
-#'       and every searchlight engine because it goes through the generic
-#'       per-ROI iterator.
+#'     \item{\code{"iterate"} (default)}{Each permutation evaluates a
+#'       \strong{subsampled} set of centers using a prepared engine when
+#'       eligible, or \code{\link{mvpa_iterate}} otherwise.
 #'
 #'       \strong{When to use}: slow classifiers, large brains, limited
 #'       compute.  The \code{subsample} parameter controls how many centers
-#'       are evaluated per permutation, giving 5--20\eqn{\times} speedup
-#'       over a full-brain pass.
+#'       are evaluated per permutation.
 #'
 #'       Null pool size: \code{n_perm * n_subsampled_centers}.}
 #'
-#'     \item{\code{"searchlight"}}{Each permutation runs
-#'       \code{\link{run_searchlight}} on the \strong{full brain}, then
-#'       extracts metric values at every center.  Because the call goes
-#'       through the standard \code{run_searchlight} dispatch, it
-#'       automatically benefits from any fast engine the model qualifies
-#'       for (e.g.\ SWIFT, dual-LDA) as well as any user-defined
-#'       \code{run_searchlight.<class>} method.
+#'     \item{\code{"searchlight"}}{Each permutation evaluates the
+#'       \strong{full brain} using a prepared engine when eligible, or
+#'       \code{\link{run_searchlight}} otherwise. The latter retains
+#'       standard engine dispatch and user-defined
+#'       \code{run_searchlight.<class>} methods.
 #'
 #'       \strong{When to use}: models with a fast searchlight engine, or
 #'       when you want the richest possible null distribution.  Since the
@@ -680,20 +676,11 @@ print.adjusted_null <- function(x, ...) {
 #' @keywords internal
 score_observed <- function(observed_values, adjusted_null, covariates_full) {
   n   <- length(observed_values)
-  p   <- numeric(n)
+  p   <- rep(NA_real_, n)
   adj <- adjusted_null
 
   if (adj$method == "global" || adj$n_bins == 1L) {
-    null_bin <- adj$bin_nulls[[1L]]
-    for (i in seq_len(n)) {
-      obs_i <- observed_values[i]
-      if (is.na(obs_i)) {
-        p[i] <- NA_real_
-      } else {
-        p[i] <- (sum(null_bin >= obs_i, na.rm = TRUE) + 1L) /
-                (length(null_bin) + 1L)
-      }
-    }
+    bin_assignment <- rep(1L, n)
   } else {
     bin_assignment <- findInterval(
       covariates_full$nfeatures,
@@ -701,22 +688,17 @@ score_observed <- function(observed_values, adjusted_null, covariates_full) {
       rightmost.closed = TRUE
     )
     bin_assignment <- pmax(1L, pmin(bin_assignment, adj$n_bins))
+  }
 
-    for (i in seq_len(n)) {
-      obs_i <- observed_values[i]
-      if (is.na(obs_i)) {
-        p[i] <- NA_real_
-        next
-      }
-      b        <- bin_assignment[i]
-      null_bin <- adj$bin_nulls[[b]]
-      if (length(null_bin) == 0L) {
-        p[i] <- 1
-      } else {
-        p[i] <- (sum(null_bin >= obs_i, na.rm = TRUE) + 1L) /
-                (length(null_bin) + 1L)
-      }
-    }
+  # build_adjusted_null() already sorts each bin and removes missing values.
+  # Count strictly smaller values so ties stay in the conservative >= tail.
+  # An empty bin gives (0 + 1) / (0 + 1), as in the direct-counting path.
+  for (b in seq_len(adj$n_bins)) {
+    rows <- which(bin_assignment == b & !is.na(observed_values))
+    if (!length(rows)) next
+    null_bin <- adj$bin_nulls[[b]]
+    n_less <- findInterval(observed_values[rows], null_bin, left.open = TRUE)
+    p[rows] <- (length(null_bin) - n_less + 1) / (length(null_bin) + 1)
   }
 
   p
@@ -1070,36 +1052,33 @@ print.null_diagnostics <- function(x, ...) {
 #' permutation pass is executed.  The two strategies share the same
 #' downstream pipeline (null construction, p-value scoring, FDR
 #' correction) — they differ only in \emph{how} null metric values are
-#' produced.  Neither strategy contains any engine-specific branching.
+#' produced. Eligible exact engines reuse preparation across permutations
+#' for built-in blocked CV or explicit custom splits. Other CV specifications
+#' retain their per-permutation fold generation.
 #'
 #' \describe{
 #'   \item{\strong{\code{"iterate"}} (default)}{
-#'     Calls \code{\link{mvpa_iterate}} on a \strong{subsampled} set of
-#'     centers.  This is the generic per-ROI iterator that works with
-#'     every model type and every dataset class.  The \code{subsample}
+#'     Evaluates a \strong{subsampled} set of centers using a prepared
+#'     engine when eligible, or \code{\link{mvpa_iterate}} otherwise.
+#'     The \code{subsample}
 #'     parameter in \code{perm_ctrl} controls how many centers are
 #'     evaluated per permutation.
 #'
 #'     \strong{Null pool size}: \code{n_perm * n_subsampled_centers}.
 #'
 #'     \strong{Best for}: slow classifiers, large brains, limited compute.
-#'     The subsampling gives a 5--20\eqn{\times} speedup over a full-brain
-#'     pass.
+#'     Subsampling reduces the number of centers scored per permutation.
 #'   }
 #'
 #'   \item{\strong{\code{"searchlight"}}}{
-#'     Calls \code{\link{run_searchlight}} on the \strong{full brain} for
-#'     each permutation.  Because the call goes through the standard
-#'     \code{run_searchlight} S3 dispatch, it automatically benefits from
-#'     any fast engine the model qualifies for (e.g.\ SWIFT, dual-LDA)
-#'     \emph{and} from any user-defined \code{run_searchlight.<class>}
-#'     method.  No engine-specific code exists here — it is purely the
-#'     standard \code{run_searchlight} call.
+#'     Evaluates the \strong{full brain} using a prepared engine when
+#'     eligible, or \code{\link{run_searchlight}} otherwise. The latter
+#'     retains standard engine dispatch and user-defined
+#'     \code{run_searchlight.<class>} methods.
 #'
 #'     Since the full brain is computed anyway, \strong{all} centers
 #'     contribute to the null distribution (the \code{subsample} parameter
-#'     is ignored and a note is logged).  This yields a richer null and
-#'     therefore better-calibrated p-values.
+#'     is ignored and a note is logged).
 #'
 #'     \strong{Null pool size}: \code{n_perm * all_centers}.
 #'
@@ -1266,14 +1245,12 @@ run_permutation_searchlight <- function(
   # ------------------------------------------------------------------
   #
   # The two strategies are kept in separate code paths for clarity, but
-  # they share the same contract: after the loop, `null_values` and
-  # `null_nfeatures` are numeric vectors of equal length, ready for
-  # build_adjusted_null().
+  # they share the same contract: each collected metric row has a matching
+  # feature count, ready for build_adjusted_null(). Collect chunks in draw
+  # order and concatenate once, avoiding a growing copy on every permutation.
   #
-  # Neither path contains any engine-specific logic.  The "searchlight"
-  # path calls run_searchlight(), which handles engine dispatch
-  # internally via S3 methods.  The "iterate" path calls mvpa_iterate(),
-  # which is the universal per-ROI iterator.
+  # An eligible fixed-fold engine can be reused by either strategy. Otherwise
+  # "searchlight" calls run_searchlight() and "iterate" calls mvpa_iterate().
   #
   # Dots policy:
   # - Searchlight path receives all user dots (for run_searchlight dispatch).
@@ -1289,13 +1266,12 @@ run_permutation_searchlight <- function(
     )
   }
 
-  null_values    <- matrix(numeric(0), nrow = 0L, ncol = length(metrics),
-                           dimnames = list(NULL, metrics))
-  null_nfeatures <- numeric(0)
+  null_chunks      <- vector("list", perm_ctrl$n_perm)
+  nfeatures_chunks <- vector("list", perm_ctrl$n_perm)
 
-  # Exact engines (aggregate_fast, sda_fast) are prepared once: data,
-  # neighbourhoods, folds and voxel validity do not depend on the labels, so
-  # each permutation only rescores. Values equal the per-ROI path's.
+  # Reuse data, neighbourhoods and fold-specific checks only when the CV
+  # specification supplies fixed folds. Randomized CV must keep redrawing
+  # its folds through the existing per-permutation path.
   engine_centres <- if (identical(strategy, "iterate")) sub$center_ids else all_ids
   fast <- if (identical(method, "standard")) {
     .permutation_engine(model_spec, radius, engine_centres, metrics, dots)
@@ -1323,19 +1299,18 @@ run_permutation_searchlight <- function(
         keep <- rowSums(!is.na(perm_mat)) > 0L
         if (!any(keep)) next
         perm_mat <- perm_mat[keep, , drop = FALSE]
-        null_values    <- rbind(null_values, perm_mat)
-        null_nfeatures <- c(null_nfeatures,
-                            sub$covariates$nfeatures[
-                              match(rownames(perm_mat), as.character(sub$center_ids))
-                            ])
+        null_chunks[[i]] <- perm_mat
+        nfeatures_chunks[[i]] <- sub$covariates$nfeatures[
+          match(rownames(perm_mat), as.character(sub$center_ids))
+        ]
       } else {
         perm_mat <- matrix(NA_real_, length(all_ids), length(metrics),
                            dimnames = list(as.character(all_ids), metrics))
         perm_mat[rownames(fast_mat), ] <- fast_mat
         keep <- rowSums(!is.na(perm_mat)) > 0L
         if (!any(keep)) next
-        null_values    <- rbind(null_values, perm_mat[keep, , drop = FALSE])
-        null_nfeatures <- c(null_nfeatures, nfeatures_all[keep])
+        null_chunks[[i]] <- perm_mat[keep, , drop = FALSE]
+        nfeatures_chunks[[i]] <- nfeatures_all[keep]
       }
       next
     }
@@ -1370,11 +1345,10 @@ run_permutation_searchlight <- function(
       if (!any(keep)) next
       perm_mat <- perm_mat[keep, , drop = FALSE]
 
-      null_values    <- rbind(null_values, perm_mat)
-      null_nfeatures <- c(null_nfeatures,
-                          sub$covariates$nfeatures[
-                            match(rownames(perm_mat), as.character(sub$center_ids))
-                          ])
+      null_chunks[[i]] <- perm_mat
+      nfeatures_chunks[[i]] <- sub$covariates$nfeatures[
+        match(rownames(perm_mat), as.character(sub$center_ids))
+      ]
 
     } else {
       # ---- "searchlight" strategy ----
@@ -1401,12 +1375,15 @@ run_permutation_searchlight <- function(
       keep     <- rowSums(!is.na(perm_mat)) > 0L
       if (!any(keep)) next
 
-      null_values    <- rbind(null_values, perm_mat[keep, , drop = FALSE])
-      null_nfeatures <- c(null_nfeatures, nfeatures_all[keep])
+      null_chunks[[i]] <- perm_mat[keep, , drop = FALSE]
+      nfeatures_chunks[[i]] <- nfeatures_all[keep]
     }
   }
 
-  if (nrow(null_values) == 0L) {
+  null_values <- do.call(rbind, null_chunks)
+  null_nfeatures <- unlist(nfeatures_chunks, use.names = FALSE)
+  rm(null_chunks, nfeatures_chunks)
+  if (is.null(null_values) || nrow(null_values) == 0L) {
     stop("No valid null values collected. All permutations may have failed.")
   }
 
@@ -1446,7 +1423,8 @@ run_permutation_searchlight <- function(
 #' Prepare an exact searchlight engine for repeated permutation scoring
 #'
 #' Returns NULL when no exact engine applies (or the caller asked for a
-#' specific engine), so the per-permutation code runs as before. Otherwise a
+#' specific engine), or folds are not fixed, so the per-permutation code runs
+#' as before. Otherwise a
 #' list whose `score(perm_spec)` returns a centre x metric matrix (row names
 #' are centre ids), or NULL when the engine declines that permutation's labels.
 #' @keywords internal
@@ -1454,6 +1432,14 @@ run_permutation_searchlight <- function(
 .permutation_engine <- function(model_spec, radius, centres, metrics, dots) {
   requested <- dots$engine %||% "auto"
   if (!identical(requested, "auto")) return(NULL)
+  # Label independence alone does not make fold generation reusable. In
+  # particular, kfold_cross_validation() stores a block_var but its sampler
+  # draws new folds on every call. Admit only known fixed-fold samplers;
+  # unknown subclasses may override crossval_samples() and must fall back.
+  cv_class <- class(model_spec$crossval)[1L]
+  if (!(cv_class %in% c("blocked_cross_validation", "custom_cross_validation"))) {
+    return(NULL)
+  }
   engine <- .resolve_searchlight_engine(model_spec, "standard", "auto")
   prepare <- switch(engine,
     aggregate_fast = function() .aggregate_prepare(model_spec, radius, centers = centres),
