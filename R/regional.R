@@ -155,7 +155,7 @@ combine_prediction_tables <- function(predtabs, wts=rep(1,length(predtabs)), col
     p <- probs %>% dplyr::select(dplyr::starts_with("prob_"))
     pmat <- as.matrix(p)
     pobserved <- pmat[cbind(seq_len(nrow(probs)), as.integer(probs$observed))]
-    mc <- max.col(pmat)
+    mc <- max.col(pmat, ties.method = "first")
     preds <- levels(probs$observed)[mc]
 
     prediction_table <- tibble(

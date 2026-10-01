@@ -560,14 +560,14 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
     prob <- prob_all
     pred <- factor(pred_all, levels = levs)
     if (any(is.na(pred))) {
-      mc <- max.col(prob)
+      mc <- max.col(prob, ties.method = "first")
       pred <- factor(levs[mc], levels = levs)
     }
     if (use_naive) {
       prob_naive_full <- prob_naive
       pred_naive_fac <- factor(pred_naive, levels = levs)
       if (any(is.na(pred_naive_fac))) {
-        mc_naive <- max.col(prob_naive_full)
+        mc_naive <- max.col(prob_naive_full, ties.method = "first")
         pred_naive_fac <- factor(levs[mc_naive], levels = levs)
       }
     }
@@ -663,13 +663,13 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
   }
   pred <- factor(pred_chr, levels = unique_keys)
   if (any(is.na(pred))) {
-    mc <- max.col(prob)
+    mc <- max.col(prob, ties.method = "first")
     pred <- factor(unique_keys[mc], levels = unique_keys)
   }
   if (use_naive) {
     pred_naive <- factor(pred_naive_chr, levels = unique_keys)
     if (any(is.na(pred_naive))) {
-      mc_naive <- max.col(prob_naive)
+      mc_naive <- max.col(prob_naive, ties.method = "first")
       pred_naive <- factor(unique_keys[mc_naive], levels = unique_keys)
     }
   }
