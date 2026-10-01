@@ -13,7 +13,7 @@
 ^\.cursor($|/)
 ^test1($|/)
 ^test2($|/)
-^[^/]+\.md$
+^(?!(NEWS|README)\.md$)[^/]+\.md$
 ^paper/.*\.md$
 ^planning($|/)
 .*xml
@@ -55,3 +55,4 @@
 ^vignettes/(?!albers-header\.html$).*\.html$
 ^vignettes/.*_files($|/)
 ^codemeta\.json$
+^tools($|/)

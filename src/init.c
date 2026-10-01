@@ -1,6 +1,3 @@
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wunknown-warning-option"
-#endif
 #include <R.h>
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>

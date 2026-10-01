@@ -4,16 +4,22 @@
 #' \code{PATH}. The installed commands are \code{rmvpa-searchlight} and
 #' \code{rmvpa-regional}.
 #'
-#' @param dest_dir Destination directory for the wrappers.
+#' @param dest_dir Destination directory for the wrappers, for example
+#'   \code{"~/.local/bin"}. Required: nothing is written to your home
+#'   directory unless you choose it.
 #' @param overwrite Logical; overwrite existing wrapper files if \code{TRUE}.
 #' @param commands Which wrappers to install. Any subset of
 #'   \code{c("searchlight", "regional")}.
 #'
 #' @return Invisibly, a named character vector of installed wrapper paths.
 #' @export
-install_cli <- function(dest_dir = "~/.local/bin",
+install_cli <- function(dest_dir,
                         overwrite = FALSE,
                         commands = c("searchlight", "regional")) {
+  if (missing(dest_dir)) {
+    stop("install_cli() needs `dest_dir`, a directory on your PATH ",
+         "(for example \"~/.local/bin\").", call. = FALSE)
+  }
   command_map <- .cli_command_map()
   commands <- match.arg(commands, names(command_map), several.ok = TRUE)
   commands <- unique(commands)

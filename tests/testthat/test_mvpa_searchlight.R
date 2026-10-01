@@ -296,7 +296,7 @@ test_that("randomized mvpa_searchlight and tune_grid runs without error", {
 })
 
 test_that("randomized mvpa_searchlight works with regression", {
-  library(spls)
+  skip_if_not_installed("spls")
   dataset <- gen_sample_dataset(c(3,3,3), 30, blocks=3, response_type="continuous")
   cval <- blocked_cross_validation(dataset$design$block_var)
   tuneGrid <- expand.grid(K=3, eta=.5, kappa=.5)

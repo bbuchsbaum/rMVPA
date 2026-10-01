@@ -192,7 +192,7 @@ Faces and houses lead — exactly as in Figure 2 of the original paper.
 
 ## Comparing classifiers
 
-`mvpa_model()` reads its classifier from rMVPA's pre-registered registry, so swapping the family is one line. Below we run the same VT analysis under five classifiers covering different inductive biases:
+`mvpa_model()` reads its classifier from rMVPA's pre-registered registry, so swapping the family is one line. Below we run the same VT analysis under up to five classifiers (two need optional packages) covering different inductive biases:
 
 - **`corclass`** — correlation-to-prototype, the original Haxby (2001) method.
 - **`naive_bayes`** — independent-feature Gaussian; a simple baseline.
@@ -215,18 +215,21 @@ fit_one <- function(model_name, ...) {
   )
 }
 
+# rf and svmLinear need the optional randomForest and e1071 packages;
+# classifiers whose package is not installed are left out of the table.
+available <- function(pkg) is.null(pkg) || requireNamespace(pkg, quietly = TRUE)
 panel <- rbind(
   fit_one("corclass"),
   fit_one("naive_bayes"),
-  fit_one("rf",        tune_grid = data.frame(mtry = 50)),
-  fit_one("svmLinear"),
+  if (available("randomForest")) fit_one("rf", tune_grid = data.frame(mtry = 50)),
+  if (available("e1071")) fit_one("svmLinear"),
   fit_one("sda_notune")
 )
 panel <- panel[order(-panel$accuracy), ]
 panel
 ```
 
-```{r classifier-bars, echo = FALSE, fig.cap = "Cross-validated accuracy under five classifiers, all on the same VT patterns and the same leave-one-run-out CV. Dashed line = chance for an 8-way problem (12.5%).", out.width = "75%", fig.width = 6, fig.height = 3.6}
+```{r classifier-bars, echo = FALSE, fig.cap = "Cross-validated accuracy under the available classifiers, all on the same VT patterns and the same leave-one-run-out CV. Dashed line = chance for an 8-way problem (12.5%).", out.width = "75%", fig.width = 6, fig.height = 3.6}
 op <- par(mar = c(7, 4, 1.5, 0.5))
 bp <- barplot(panel$accuracy, names.arg = panel$classifier, las = 2,
               col = "#3a5b97", border = NA,

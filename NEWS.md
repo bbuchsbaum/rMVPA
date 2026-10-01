@@ -1,3 +1,21 @@
+# rMVPA (development version)
+
+* `install_cli()` no longer defaults `dest_dir` to `~/.local/bin`; the
+  destination must be given, so nothing is written to the home directory
+  unless chosen (CRAN policy).
+* CRAN readiness:
+  - tests requiring optional `spls`, newer `pls` (`nipalspls`) or an
+    installed (non-development) rMVPA now skip when unavailable;
+  - the glmnet ridge comparison passes its convergence settings as arguments
+    (`glmnet` ignored the `control` list), so it now meets its original
+    tolerance;
+  - the `Haxby_2001` vignette omits classifiers whose optional packages are
+    absent;
+  - compiler-warning pragmas were removed from `src/`;
+  - NEWS.md is included in the build and `tools/` excluded;
+  - CITATION reads the package version;
+  - a stray debug script under `tests/` was removed.
+
 # rMVPA 0.1.3
 
 * Pattern-model vignettes now teach the method as a three-article path:

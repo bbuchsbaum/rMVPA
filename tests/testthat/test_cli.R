@@ -69,7 +69,16 @@ test_that("cli_prepare_output enforces overwrite and skip semantics", {
   )
 })
 
+test_that("install_cli requires an explicit destination", {
+  expect_error(rMVPA::install_cli(), "dest_dir")
+})
+
 test_that("install_cli copies packaged wrappers", {
+  # The copied wrappers start a fresh Rscript that loads the *installed*
+  # rMVPA. Under a development load (pkgload) that may be a different, stale
+  # version, so this runs only against an installed package (R CMD check).
+  skip_if(requireNamespace("pkgload", quietly = TRUE) && pkgload::is_dev_package("rMVPA"),
+          "needs an installed rMVPA, not a development load")
   dest_dir <- tempfile("rmvpa-cli-bin-")
   dir.create(dest_dir)
 
