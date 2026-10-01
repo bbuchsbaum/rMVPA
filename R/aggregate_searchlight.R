@@ -309,26 +309,29 @@
   # First-order softmax sensitivity: |dp_k| <= 2 * err * min(p_k, 1 - p_k),
   # plus a floor for the rounding of the score arithmetic itself.
   floor_eps <- 16 * .Machine$double.eps
-  second <- apply(P, 1, function(v) sort(v, decreasing = TRUE)[2])
+  n_b <- nrow(P) %/% n_obs
+  P2 <- P
+  P2[cbind(seq_len(nrow(P)), max.col(P, ties.method = "first"))] <- -Inf
+  second <- matrixStats::rowMaxs(P2)
   top_err <- rel * (pmin(top, 1 - top) + pmin(second, 1 - second)) + floor_eps
   top_flag <- !sat & (top - second) <= top_err
   flag <- matrixStats::colAnys(matrix(top_flag, n_obs))
 
+  centre <- rep(seq_len(n_b), each = n_obs)
+  lo <- rep(seq_len(n_obs - 1L), n_b) + rep((seq_len(n_b) - 1L) * n_obs, each = n_obs - 1L)
+  hi <- lo + 1L
   for (k in seq_len(K)) {
     # The one-vs-rest score p_k - mean(p_-k) equals (K p_k - 1) / (K - 1).
     score <- if (K == 2L) P[, k] else P[, k] - rowMeans(P[, -k, drop = FALSE])
     e <- (if (K == 2L) 1 else K / (K - 1)) * rel * pmin(P[, k], 1 - P[, k]) + floor_eps
     e[sat] <- 0
-    S <- matrix(score, n_obs); E <- matrix(e, n_obs); SAT <- matrix(sat, n_obs)
-    for (c in which(!flag & ok)) {
-      o <- order(S[, c])
-      s_c <- S[o, c]; e_c <- E[o, c]; sat_c <- SAT[o, c]
-      gap <- diff(s_c)
-      lo <- seq_len(n_obs - 1L); hi <- lo + 1L
-      near <- gap <= e_c[lo] + e_c[hi]
-      robust <- gap == 0 & sat_c[lo] & sat_c[hi]
-      if (any(near & !robust)) flag[c] <- TRUE
-    }
+    # One ordering for the whole block: by centre, then score.
+    o <- order(centre, score)
+    s_o <- score[o]; e_o <- e[o]; sat_o <- sat[o]
+    gap <- s_o[hi] - s_o[lo]
+    near <- gap <= e_o[lo] + e_o[hi]
+    robust <- gap == 0 & sat_o[lo] & sat_o[hi]
+    flag <- flag | matrixStats::colAnys(matrix(near & !robust, n_obs - 1L))
   }
   flag & ok
 }
