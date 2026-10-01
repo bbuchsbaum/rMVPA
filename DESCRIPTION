@@ -41,6 +41,7 @@ Collate:
     'custom.R'
     'balance.R'
     'classifiers.R'
+    'sda_native.R'
     'caret_models.R'
     'crossnobis_helpers.R'
     'common.R'
