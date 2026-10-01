@@ -168,7 +168,8 @@ test_that("auto engine never substitutes SWIFT for the specified classifier", {
 
     expect_s3_class(res, "searchlight_result")
     expect_false("SWIFT_Info" %in% names(res$results))
-    expect_identical(attr(res, "searchlight_engine"), "legacy")
+    # sda_notune's own exact engine, never SWIFT.
+    expect_identical(attr(res, "searchlight_engine"), "sda_fast")
   })
 })
 

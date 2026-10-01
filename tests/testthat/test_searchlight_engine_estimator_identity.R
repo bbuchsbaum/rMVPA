@@ -31,9 +31,9 @@ test_that("auto does not resolve multiclass classifiers to SWIFT", {
     tbl <- searchlight_engines(mspec, method = "standard")
     expect_true(tbl$eligible[tbl$engine == "swift"], info = model_name)
 
-    # ... but auto never selects it. corclass gets the exact aggregation
-    # engine; the others have no exact fast engine and use the general path.
-    expected <- if (identical(model_name, "corclass")) "aggregate_fast" else "legacy"
+    # ... but auto never selects it. corclass and sda_notune get their exact
+    # engines; svmLinear has none and uses the general path.
+    expected <- switch(model_name, corclass = "aggregate_fast", sda_notune = "sda_fast", "legacy")
     expect_identical(
       .resolve_searchlight_engine(mspec, method = "standard", engine = "auto"),
       expected,
