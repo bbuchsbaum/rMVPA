@@ -167,9 +167,42 @@ def run_rsa(reps):
     return rows
 
 
+def run_rsa_searchlight(reps):
+    """rsatoolbox searchlight: same 20 condition patterns and model RDM as rMVPA.
+
+    Spheres from get_volume_searchlight(radius=3, threshold=1.0), RDMs from
+    get_searchlight_RDMs(method='correlation'), model fit with the vectorised
+    rsatoolbox.rdm.compare(method='corr') over all searchlight RDMs (faster than
+    evaluate_models_searchlight's per-centre loop).
+    """
+    from rsatoolbox.util.searchlight import get_volume_searchlight, get_searchlight_RDMs
+    from rsatoolbox.rdm import RDMs, compare
+    import io, contextlib
+    bold = np.asarray(nib.load(os.path.join(DATA, "synth12_bold.nii.gz")).dataobj, dtype=float)
+    mask = np.asarray(nib.load(os.path.join(DATA, "synth12_mask.nii.gz")).dataobj).astype(bool)
+    data = bold[..., :20]
+    data_2d = data.reshape(-1, 20).T  # C-order voxel index, as ravel_multi_index
+    model = RDMs(pd.read_csv(os.path.join(DATA, "rsa_model_rdm.csv"))["model"].to_numpy()[None, :])
+    events = np.arange(20)
+
+    def run():
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            centers, neighbors = get_volume_searchlight(mask, radius=3, threshold=1.0)
+            sl_rdms = get_searchlight_RDMs(data_2d, centers, neighbors, events, method="correlation", verbose=False)
+            r = compare(model, sl_rdms, method="corr").ravel()
+        return centers, r
+    times, (centers, r) = time_reps(run, reps)
+    xyz = np.array(np.unravel_index(centers, mask.shape)).T
+    pd.DataFrame({"x": xyz[:, 0], "y": xyz[:, 1], "z": xyz[:, 2], "r": r}).to_csv(
+        os.path.join(DATA, "rsa_sl_rsatoolbox_values.csv"), index=False)
+    return [receipt("rsa_sl_synth12_r3", "rdm_corr_pearson_fit", "rsatoolbox", times, int(mask.sum()), "centre",
+                    {"mean_r": float(np.nanmean(r))},
+                    "get_volume_searchlight r=3 + get_searchlight_RDMs + vectorised compare")]
+
+
 def main():
     reps = int(sys.argv[1]) if len(sys.argv) > 1 else 3
-    groups = sys.argv[2].split(",") if len(sys.argv) > 2 else ["sl", "regional", "rsa"]
+    groups = sys.argv[2].split(",") if len(sys.argv) > 2 else ["sl", "regional", "rsa", "rsa_sl"]
     os.makedirs(os.path.join(ROOT, "receipts"), exist_ok=True)
     sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                          capture_output=True, text=True).stdout.strip()
@@ -182,6 +215,8 @@ def main():
             rows += run_regional(max(reps, 10))
         if "sl" in groups:
             rows += run_searchlight(reps)
+        if "rsa_sl" in groups:
+            rows += run_rsa_searchlight(reps)
     with open(path, "a") as fh:
         for r in rows:
             r["rmvpa_git_sha"] = sha

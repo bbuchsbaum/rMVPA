@@ -1,6 +1,6 @@
 # Benchmark scoreboard
 
-Generated 2026-10-01 10:55 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
+Generated 2026-10-01 13:40 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
 Single-threaded medians. **Ratio = rMVPA / competitor (< 1 means rMVPA is faster).**
 A ratio is shown only when the two output digests agree to 1e-4 relative;
 otherwise the methods are not computing the same thing and the row is marked.
@@ -102,6 +102,12 @@ Losses are recorded as losses.
 | rdm_crossnobis_identity | perf/regional-scaffold @fe364b8 |  | 1.8 | 3.4 | rsatoolbox | **0.55** | match |
 | rdm_correlation_condmeans | perf/native-sda @6ca160e |  | 0.331 | 0.185 | rsatoolbox | **1.79** | match |
 | rdm_crossnobis_identity | perf/native-sda @6ca160e |  | 1.8 | 3.4 | rsatoolbox | **0.53** | match |
+
+## rsa_sl_synth12_r3 (ms per centre)
+
+| method | rMVPA side | engine | rMVPA | competitor | tool | ratio | digests |
+|---|---|---|---|---|---|---|---|
+| rdm_corr_pearson_fit | perf/regional-dual-lda @c5341d0 | rsa_fast | 0.170 | 0.194 | rsatoolbox | **0.88** | match |
 
 ## Environment
 

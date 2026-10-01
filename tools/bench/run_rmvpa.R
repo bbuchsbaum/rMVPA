@@ -3,7 +3,7 @@
 #
 #   Rscript tools/bench/run_rmvpa.R [reps] [groups]
 #
-# groups: comma-separated subset of sl,regional,rsa (default: all).
+# groups: comma-separated subset of sl,regional,rsa,rsa_sl (default: all).
 #
 # Appends one JSON line per (scenario, method) to
 # tools/bench/receipts/<date>-rmvpa.jsonl, in the same format as
@@ -15,7 +15,7 @@ invisible(futile.logger::flog.threshold(futile.logger::INFO))
 
 args <- commandArgs(trailingOnly = TRUE)
 reps <- if (length(args)) as.integer(args[[1]]) else 3L
-groups <- if (length(args) >= 2) strsplit(args[[2]], ",")[[1]] else c("sl", "regional", "rsa")
+groups <- if (length(args) >= 2) strsplit(args[[2]], ",")[[1]] else c("sl", "regional", "rsa", "rsa_sl")
 data_dir <- file.path("tools", "bench", "data")
 receipt_dir <- file.path("tools", "bench", "receipts")
 dir.create(receipt_dir, recursive = TRUE, showWarnings = FALSE)
@@ -150,6 +150,27 @@ r <- time_reps(function() {
 }, max(reps, 20L), inner = 100L)
 rows[[length(rows) + 1]] <- receipt("rsa_haxby", "rdm_crossnobis_identity", r$times, 1, "rdm",
                                     list(sum = sum(r$out)), notes = "identity noise; runs as cv folds")
+}
+
+# ---- RSA searchlight: 20 condition patterns, 1 - Pearson RDM, Pearson model fit ----
+if ("rsa_sl" %in% groups) {
+  bold20 <- neuroim2::sub_vector(bold, 1:20)
+  rsa_ds <- mvpa_dataset(bold20, mask = neuroim2::LogicalNeuroVol(as.logical(mask), neuroim2::space(mask)))
+  model_vec <- utils::read.csv(file.path(data_dir, "rsa_model_rdm.csv"))$model
+  Mm <- matrix(0, 20, 20); Mm[lower.tri(Mm)] <- model_vec; Mm <- Mm + t(Mm)
+  rdes <- rsa_design(~ model, list(model = stats::as.dist(Mm)))
+  rms <- rsa_model(rsa_ds, rdes, distmethod = "pearson", regtype = "pearson", check_collinearity = FALSE)
+  # rsatoolbox radius 3 (voxels, strict <) == rMVPA radius 2.99 mm (<=) on 1 mm voxels
+  r <- time_reps(function() run_searchlight(rms, radius = 2.99, backend = "default"), reps)
+  vals <- as.numeric(neuroim2::values(r$out$results$model))
+  idx <- which(as.logical(mask))
+  coords <- arrayInd(idx, dim(mask))
+  utils::write.csv(data.frame(x = coords[, 1] - 1, y = coords[, 2] - 1, z = coords[, 3] - 1, r = vals[idx]),
+                   file.path(data_dir, "rsa_sl_rmvpa_values.csv"), row.names = FALSE)
+  rows[[length(rows) + 1]] <- receipt("rsa_sl_synth12_r3", "rdm_corr_pearson_fit", r$times, n_centres, "centre",
+                                      list(mean_r = mean(vals[idx], na.rm = TRUE)),
+                                      engine = attr(r$out, "searchlight_engine"),
+                                      notes = "20 conditions; rsatoolbox radius 3 vox (<) == 2.99 mm (<=)")
 }
 
 path <- file.path(receipt_dir, paste0(format(Sys.Date()), "-rmvpa.jsonl"))

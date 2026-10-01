@@ -36,6 +36,15 @@ A full rMVPA run on master code takes about 25 minutes because the general
 searchlight path is slow. For jobs that long, launch with
 `nohup ... > log 2>&1 &` and check the process with `pgrep`.
 
+## Scenarios
+
+| Scenario | Data | Comparison |
+|---|---|---|
+| `sl_synth12_r3` | synthetic 12³, 100 trials, 4 classes, 5 runs, radius 3 mm | nilearn `SearchLight` with matched estimators |
+| `regional_haxby_vt` | Haxby VT block patterns, leave-one-run-out | scikit-learn `cross_val_score` |
+| `rsa_haxby` | Haxby condition means | rsatoolbox `calc_rdm` (correlation, crossnobis) |
+| `rsa_sl_synth12_r3` | first 20 synthetic observations as conditions, random model RDM | rsatoolbox `get_volume_searchlight(radius = 3)` + `get_searchlight_RDMs` + vectorised `compare(method = "corr")`. rsatoolbox's strict `< 3` voxels equals rMVPA's `<= 2.99` mm on 1 mm voxels. Per-centre values are written to `data/` for exact comparison. |
+
 ## Rules
 
 - **Same model, same data, same folds.** Every scenario uses

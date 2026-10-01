@@ -17,6 +17,12 @@ utils::write.csv(data.frame(label = as.character(ds$design$y_train),
                             run = ds$design$block_var),
                  file.path(out, "synth12_design.csv"), row.names = FALSE)
 
+# RSA searchlight scenario: the first 20 synthetic observations act as 20
+# conditions; a fixed random model RDM over them (190 pairs, lower triangle
+# column-major = upper triangle row-major).
+set.seed(20261002)
+utils::write.csv(data.frame(model = stats::runif(190)), file.path(out, "rsa_model_rdm.csv"), row.names = FALSE)
+
 bundle <- readRDS(system.file("extdata", "haxby2001_subj1", "patterns.rds", package = "rMVPA"))
 utils::write.csv(bundle$patterns, file.path(out, "haxby_patterns.csv"), row.names = FALSE)
 utils::write.csv(data.frame(label = as.character(bundle$category), run = bundle$run),
