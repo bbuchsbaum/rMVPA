@@ -1,3 +1,21 @@
+# rMVPA (development version)
+
+* **Correctness fix (changes results):** `run_searchlight()` with the default
+  `engine = "auto"` no longer routes multiclass (three or more classes)
+  `mvpa_model` searchlights to the SWIFT engine. SWIFT computes its own
+  z-scored nearest-class-mean estimator. It was being selected regardless of
+  the requested classifier, so `corclass`, `sda_notune`, `svmLinear` and other
+  models silently returned SWIFT results instead of their own. `auto` now
+  selects a fast engine only when it computes the specified estimator
+  (currently `dual_lda_fast` for `dual_lda`). Every other classifier runs
+  through the general-purpose iterator.
+  - Multiclass searchlights from earlier versions run with the default engine
+    should be rerun.
+  - Expect longer run times for affected models until exact fast engines land.
+  - SWIFT remains available through an explicit `engine = "swift"`. It then
+    emits a message naming the substitution and records
+    `attr(result, "searchlight_estimator") == "swift_nearest_mean"`.
+
 # rMVPA 0.1.3
 
 * Pattern-model vignettes now teach the method as a three-article path:
