@@ -15,7 +15,7 @@
 #' predicted_class(prob)
 #' @export
 predicted_class <- function(prob) {
-  maxid <- max.col(prob, ties.method="random")
+  maxid <- max.col(prob, ties.method = "first")
   pclass <- colnames(prob)[maxid]
 }
 
@@ -207,7 +207,7 @@ merge_results.binary_classification_result <- function(obj, ...) {
   rlist <- list(obj, ...)
   probs <- Reduce("+", lapply(rlist, function(result) result$probs))/length(rlist)
   
-  mc <- max.col(probs)
+  mc <- max.col(probs, ties.method = "first")
   predicted <- levels(obj$observed)[mc]
   binary_classification_result(observed = obj$observed,
                                predicted = predicted,
@@ -270,7 +270,7 @@ merge_results.multiway_classification_result <- function(obj, ...) {
   #ds <- sapply(rlist, function(x) nrow(x$probs))
   
   probs <- Reduce("+", lapply(rlist, function(result) result$probs))/length(rlist)
-  mc <- max.col(probs)
+  mc <- max.col(probs, ties.method = "first")
   predicted <- levels(obj$observed)[mc]
   
   multiway_classification_result(observed = obj$observed,
