@@ -291,10 +291,10 @@
 #' `err` bounds the absolute error of each row's log posteriors, so each
 #' probability carries a relative error of at most about 2 * err. A centre is
 #' flagged when an observation's top two probabilities, or two observations'
-#' one-vs-rest AUC scores, are within their combined error. Exact ties count
-#' too, except between saturated observations: all non-top probabilities
-#' below 1e-17. Those produce the same exact scores (1 and -1/(K-1), or 1 and
-#' 0 for two classes) under any perturbation within the bound.
+#' one-vs-rest AUC scores (their own class probabilities), are within their
+#' combined error. Exact ties count too, except between saturated observations
+#' (all non-top probabilities below 1e-17), whose top probability rounds to
+#' exactly 1 under any perturbation within the bound.
 #' @keywords internal
 #' @noRd
 .aggregate_near_tie_flags <- function(pooled, err, n_obs, ok) {
@@ -307,13 +307,13 @@
   sat <- rest < 1e-17
 
   # First-order softmax sensitivity: |dp_k| <= 2 * err * min(p_k, 1 - p_k),
-  # plus a floor for the rounding of the score arithmetic itself.
-  floor_eps <- 16 * .Machine$double.eps
+  # plus a relative floor for the rounding of the renormalisation.
+  floor_rel <- 8 * .Machine$double.eps
   n_b <- nrow(P) %/% n_obs
   P2 <- P
   P2[cbind(seq_len(nrow(P)), max.col(P, ties.method = "first"))] <- -Inf
   second <- matrixStats::rowMaxs(P2)
-  top_err <- rel * (pmin(top, 1 - top) + pmin(second, 1 - second)) + floor_eps
+  top_err <- rel * (pmin(top, 1 - top) + pmin(second, 1 - second)) + floor_rel * (top + second)
   top_flag <- !sat & (top - second) <= top_err
   flag <- matrixStats::colAnys(matrix(top_flag, n_obs))
 
@@ -321,9 +321,9 @@
   lo <- rep(seq_len(n_obs - 1L), n_b) + rep((seq_len(n_b) - 1L) * n_obs, each = n_obs - 1L)
   hi <- lo + 1L
   for (k in seq_len(K)) {
-    # The one-vs-rest score p_k - mean(p_-k) equals (K p_k - 1) / (K - 1).
-    score <- if (K == 2L) P[, k] else P[, k] - rowMeans(P[, -k, drop = FALSE])
-    e <- (if (K == 2L) 1 else K / (K - 1)) * rel * pmin(P[, k], 1 - P[, k]) + floor_eps
+    # One-vs-rest scores are the class's own probability (multiclass_perf()).
+    score <- P[, k]
+    e <- rel * pmin(P[, k], 1 - P[, k]) + floor_rel * P[, k]
     e[sat] <- 0
     # One ordering for the whole block: by centre, then score.
     o <- order(centre, score)
@@ -479,7 +479,7 @@ run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
       vals <- cbind(Accuracy = acc, AUC = auc)
     } else {
       auc_k <- vapply(seq_len(K), function(k) {
-        score <- pooled[, k] - rowMeans(pooled[, -k, drop = FALSE])
+        score <- pooled[, k]
         2 * .aggregate_col_auc(matrix(score, n_obs), observed == classes[k]) - 1
       }, numeric(n_b))
       auc_k <- matrix(auc_k, nrow = n_b)
