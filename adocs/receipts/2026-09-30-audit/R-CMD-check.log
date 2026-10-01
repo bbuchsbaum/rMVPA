@@ -1,0 +1,130 @@
+* using log directory ‘/private/tmp/claude-502/-Users-bbuchsbaum-code-rMVPA/091a2d86-6099-4765-bfab-33728c1693fb/scratchpad/cran/rMVPA.Rcheck’
+* using R version 4.3.3 (2024-02-29)
+* using platform: aarch64-apple-darwin20 (64-bit)
+* R was compiled by
+    Apple clang version 14.0.0 (clang-1400.0.29.202)
+    GNU Fortran (GCC) 12.2.0
+* running under: macOS 15.1.1
+* using session charset: UTF-8
+* using options ‘--no-manual --ignore-vignettes --as-cran’
+* checking for file ‘rMVPA/DESCRIPTION’ ... OK
+* checking extension type ... Package
+* this is package ‘rMVPA’ version ‘0.1.3’
+* package encoding: UTF-8
+* checking CRAN incoming feasibility ... NOTE
+Maintainer: ‘Bradley Buchsbaum <brad.buchsbaum@gmail.com>’
+
+New submission
+
+Unknown, possibly misspelled, fields in DESCRIPTION:
+  ‘Remotes’
+
+Suggests or Enhances not in mainstream repositories:
+  fmridesign, fmrilss, neurosurf
+
+Package has a VignetteBuilder field but no prebuilt vignette index.
+
+The Date field is over a month old.
+* checking package namespace information ... OK
+* checking package dependencies ... NOTE
+Packages suggested but not available for checking:
+  'carrier', 'covr', 'e1071', 'future.callr', 'future.mirai',
+  'randomForest', 'sparsediscrim', 'spls', 'rrpack', 'xgboost'
+
+Imports includes 23 non-default packages.
+Importing from so many packages makes the package vulnerable to any of
+them becoming unavailable.  Move as many as possible to Suggests and
+use conditionally.
+* checking if this is a source package ... OK
+* checking if there is a namespace ... OK
+* checking for executable files ... OK
+* checking for hidden files and directories ... OK
+* checking for portable file names ... OK
+* checking for sufficient/correct file permissions ... OK
+* checking whether package ‘rMVPA’ can be installed ... [14s/16s] OK
+* used C compiler: ‘Apple clang version 16.0.0 (clang-1600.0.26.4)’
+* used SDK: ‘MacOSX15.1.sdk’
+* checking installed package size ... NOTE
+  installed size is  6.9Mb
+  sub-directories of 1Mb or more:
+    R         3.1Mb
+    extdata   2.8Mb
+* checking package directory ... OK
+* checking for future file timestamps ... NOTE
+unable to verify current time
+* checking DESCRIPTION meta-information ... OK
+* checking top-level files ... OK
+* checking for left-over files ... OK
+* checking index information ... OK
+* checking package subdirectories ... OK
+* checking R files for non-ASCII characters ... OK
+* checking R files for syntax errors ... OK
+* checking whether the package can be loaded ... OK
+* checking whether the package can be loaded with stated dependencies ... OK
+* checking whether the package can be unloaded cleanly ... OK
+* checking whether the namespace can be loaded with stated dependencies ... OK
+* checking whether the namespace can be unloaded cleanly ... OK
+* checking loading without being on the library search path ... OK
+* checking startup messages can be suppressed ... OK
+* checking use of S3 registration ... OK
+* checking dependencies in R code ... OK
+* checking S3 generic/method consistency ... OK
+* checking replacement functions ... OK
+* checking foreign function calls ... OK
+* checking R code for possible problems ... [29s/30s] OK
+* checking Rd files ... OK
+* checking Rd metadata ... OK
+* checking Rd line widths ... OK
+* checking Rd cross-references ... OK
+* checking for missing documentation entries ... OK
+* checking for code/documentation mismatches ... OK
+* checking Rd \usage sections ... OK
+* checking Rd contents ... OK
+* checking for unstated dependencies in examples ... OK
+* checking line endings in C/C++/Fortran sources/headers ... OK
+* checking line endings in Makefiles ... OK
+* checking compilation flags in Makevars ... OK
+* checking for GNU extensions in Makefiles ... OK
+* checking for portable use of $(BLAS_LIBS) and $(LAPACK_LIBS) ... OK
+* checking use of PKG_*FLAGS in Makefiles ... OK
+* checking use of SHLIB_OPENMP_*FLAGS in Makefiles ... OK
+* checking pragmas in C/C++ headers and code ... NOTE
+Files which contain pragma(s) suppressing diagnostics:
+  ‘src/dual_lda_cholupdate.c’ ‘src/init.c’
+* checking compilation flags used ... OK
+* checking compiled code ... OK
+* checking files in ‘vignettes’ ... SKIPPED
+* checking examples ... [18s/19s] OK
+* checking examples with --run-donttest ... [89s/90s] OK
+* checking for unstated dependencies in ‘tests’ ... OK
+* checking tests ...
+  Running ‘simple_test.R’
+  Running ‘testthat.R’ [427s/431s]
+ [428s/433s] ERROR
+Running the tests in ‘tests/testthat.R’ failed.
+Last 13 lines of output:
+  [6]  0.224 -  0.224 ==  4.77e-06
+  [7] -0.552 - -0.552 == -2.55e-06
+  [8] -0.374 - -0.374 ==  2.04e-06
+  [9] -0.542 - -0.542 == -1.40e-06
+  ...
+  ── Error ('test_mvpa_searchlight.R:299:3'): randomized mvpa_searchlight works with regression ──
+  <packageNotFoundError/error/condition>
+  Error in `library(spls)`: there is no package called 'spls'
+  Backtrace:
+      ▆
+   1. └─base::library(spls) at test_mvpa_searchlight.R:299:3
+  
+  [ FAIL 4 | WARN 117 | SKIP 160 | PASS 7406 ]
+  Error: Test failures
+  Execution halted
+* checking for non-standard things in the check directory ... OK
+* checking for detritus in the temp directory ... OK
+* DONE
+
+Status: 1 ERROR, 5 NOTEs
+See
+  ‘/private/tmp/claude-502/-Users-bbuchsbaum-code-rMVPA/091a2d86-6099-4765-bfab-33728c1693fb/scratchpad/cran/rMVPA.Rcheck/00check.log’
+for details.
+
+_R_CHECK_FORCE_SUGGESTS_=false R CMD check --as-cran --no-manual    595.38s user 17.10s system 96% cpu 10:35.57 total
