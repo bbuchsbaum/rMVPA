@@ -1,6 +1,6 @@
 # Benchmark scoreboard
 
-Generated 2026-10-01 07:32 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
+Generated 2026-10-01 08:35 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
 Single-threaded medians. **Ratio = rMVPA / competitor (< 1 means rMVPA is faster).**
 A ratio is shown only when the two output digests agree to 1e-4 relative;
 otherwise the methods are not computing the same thing and the row is marked.
@@ -26,6 +26,11 @@ Losses are recorded as losses.
 | gaussian_nb | perf/naive-bayes-vectorise @9c97b6e | legacy | 13.1 | 4.5 | nilearn | **2.92** | match |
 | lda_shrinkage | perf/naive-bayes-vectorise @9c97b6e | dual_lda_fast | 2.2 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
 | sda_notune | perf/naive-bayes-vectorise @9c97b6e | legacy | 42.7 | — | — | — | rMVPA only |
+| corclass | perf/sphere-aggregation-engine @d906ca8 | aggregate_fast | 0.254 | 2.5 | nilearn | **0.10** | match |
+| corclass_general | perf/sphere-aggregation-engine @d906ca8 | legacy | 11.8 | — | — | — | rMVPA only |
+| gaussian_nb | perf/sphere-aggregation-engine @d906ca8 | legacy | 12.0 | 4.5 | nilearn | **2.69** | match |
+| lda_shrinkage | perf/sphere-aggregation-engine @d906ca8 | dual_lda_fast | 2.2 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
+| sda_notune | perf/sphere-aggregation-engine @d906ca8 | legacy | 41.5 | — | — | — | rMVPA only |
 
 ## regional_haxby_vt (ms per roi)
 
