@@ -93,8 +93,23 @@ corsimFit <- function(x, y, method, robust) {
   if (identical("mean", estimator)) {
     list(conditionMeans=group_means(x, 1, y), levs=lev, method=method, robust=robust)
   } else {
-    list(conditionMeans = neuroim2::split_reduce(as.matrix(x), y, estimator), levs=lev, method=method, robust=robust)
+    list(conditionMeans = robust_group_centers(as.matrix(x), y, estimator), levs=lev, method=method, robust=robust)
   }
+}
+
+#' Per-class column centres with a robust estimator
+#'
+#' Same result as `neuroim2::split_reduce()`, which dispatches every class
+#' through `future.apply` and so pays future setup cost on each fit.
+#' @keywords internal
+#' @noRd
+robust_group_centers <- function(x, y, estimator) {
+  ind <- split(seq_along(y), y)
+  out <- do.call(rbind, lapply(ind, function(i) {
+    apply(x[i, , drop = FALSE], 2, estimator)
+  }))
+  row.names(out) <- levels(y)
+  out
 }
 
 #' @keywords internal

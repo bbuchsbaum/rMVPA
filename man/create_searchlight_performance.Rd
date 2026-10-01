@@ -20,9 +20,9 @@ A searchlight_performance object
 Creates a searchlight_performance object with the expected structure for tests
 }
 \examples{
-\dontrun{
-  # Internal function for creating searchlight performance objects
-  perf <- create_searchlight_performance(neurovol, "Accuracy")
-}
+vol <- neuroim2::NeuroVol(array(runif(27), c(3, 3, 3)),
+                          neuroim2::NeuroSpace(c(3, 3, 3)))
+perf <- create_searchlight_performance(vol, "Accuracy")
+str(perf$summary_stats)
 }
 \keyword{internal}

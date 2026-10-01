@@ -17,13 +17,8 @@ rMVPA version, and key dependencies. This information is helpful for
 debugging, reporting issues, and ensuring reproducibility.
 }
 \examples{
-\dontrun{
-# Display system information in the console
-mvpa_sysinfo()
-
-# Capture the information in a variable
+# Display system information and capture it in a variable
 sys_info <- mvpa_sysinfo()
-print(sys_info$r_version)
-print(sys_info$dependencies$rsample)
-}
+sys_info$platform
+sys_info$dependencies$rsample
 }

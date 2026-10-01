@@ -5,7 +5,7 @@
 \alias{rMVPA-package}
 \title{rMVPA: Multivoxel Pattern Analysis in R}
 \description{
-An R package to facilitate multivoxel pattern analysis of neuroimaging data in R.
+Multivariate pattern analysis of functional neuroimaging data. Provides searchlight and region-of-interest decoding with cross-validation for classification and regression, representational similarity analysis (including cross-validated Mahalanobis 'crossnobis' distances), and permutation-based inference with searchlight-size-adjusted null distributions. Common classifiers and representational similarity models are fitted by exact searchlight engines that share computation across spheres. Methods follow Haxby et al. (2001) \doi{10.1126/science.1063736}, Kriegeskorte, Goebel and Bandettini (2006) \doi{10.1073/pnas.0600244103}, Kriegeskorte, Mur and Bandettini (2008) \doi{10.3389/neuro.06.004.2008}, Walther et al. (2016) \doi{10.1016/j.neuroimage.2015.12.012}, and Ahdesmaki and Strimmer (2010) \doi{10.1214/09-AOAS277}.
 }
 \seealso{
 Useful links:

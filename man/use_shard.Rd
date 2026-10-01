@@ -26,10 +26,15 @@ It requires the \pkg{shard} package and a platform that supports POSIX
 shared memory (\code{shm_open}).
 }
 \examples{
-\dontrun{
-  mspec <- mvpa_model(mdl, dataset, design, "classification", crossval = cval)
+if (requireNamespace("shard", quietly = TRUE)) {
+  ds <- gen_sample_dataset(c(4, 4, 4), 24, nlevels = 2, blocks = 3)
+  cval <- blocked_cross_validation(ds$design$block_var)
+  mspec <- mvpa_model(load_model("corclass"), ds$dataset, ds$design,
+                      "classification", crossval = cval)
   mspec <- use_shard(mspec)
-  results <- run_searchlight(mspec, ...)
+  results <- run_searchlight(mspec, radius = 2, method = "randomized",
+                             niter = 1)
+  shard_cleanup(mspec$shard_data)
 }
 
 }

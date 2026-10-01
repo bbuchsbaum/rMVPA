@@ -36,8 +36,11 @@ kernel-based nuisance (delegates to \code{temporal_nuisance_for_msreve}) or
 an HRF-overlap-based nuisance built trial-wise then reduced to condition level.
 }
 \examples{
-\dontrun{
-  spec <- list(lag=list(kernel="exp", lambda=3))
-  conf <- msreve_temporal_confounds(mvpa_design, time_idx=1:100, spec)
-}
+ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 4, blocks = 3)
+spec <- list(lag = list(kernel = "exp", lambda = 3),
+             hrf = list(kind = "hrf", TR = 2))
+conf <- msreve_temporal_confounds(ds$design,
+                                  time_idx = seq(0, by = 2, length.out = 24),
+                                  spec = spec)
+lapply(conf, dim)
 }

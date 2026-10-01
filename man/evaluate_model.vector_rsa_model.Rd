@@ -37,8 +37,12 @@ A list containing the mean RSA score (`rsa_score`), raw scores, and
 Computes the mean second-order similarity score and handles permutation testing.
 }
 \examples{
-\dontrun{
-  # Internal S3 method called during processing
-  # perf <- evaluate_model(vector_rsa_model, observed, roi_data)
-}
+# Normally called internally during processing; shown here on toy scores.
+ds <- gen_sample_dataset(c(4, 4, 4), nobs = 10, blocks = 2)
+D <- as.matrix(dist(matrix(rnorm(5 * 3), 5, 3)))
+rownames(D) <- colnames(D) <- letters[1:5]
+des <- vector_rsa_design(D, factor(rep(letters[1:5], 2)), rep(1:2, each = 5))
+mdl <- vector_rsa_model(ds$dataset, des)
+trial_scores <- rnorm(10)
+evaluate_model.vector_rsa_model(mdl, predicted = NULL, observed = trial_scores)
 }

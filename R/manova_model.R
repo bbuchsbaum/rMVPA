@@ -52,20 +52,12 @@ manova_design <- function(formula, data) {
 #' @importFrom assertthat assert_that
 #' @importFrom purrr is_formula
 #' @examples
-#' \dontrun{
 #' # Create a MANOVA model using gen_sample_dataset
-#' dset <- gen_sample_dataset(D = c(5, 5, 5), nobs = 50, nlevels = 3, blocks = 3)
+#' dset <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 3, blocks = 3)
 #'
-#' # Create dissimilarity matrices for MANOVA design
-#' formula <- y ~ x1 + x2
-#' data_list <- list(
-#'   y = matrix(rnorm(9), nrow = 3),
-#'   x1 = matrix(rnorm(9), nrow = 3),
-#'   x2 = matrix(rnorm(9), nrow = 3)
-#' )
-#' design <- manova_design(formula, data_list)
+#' # MANOVA design: voxel patterns modelled by condition and block
+#' design <- manova_design(~ Y + block_var, dset$design$train_design)
 #' manova_model_obj <- manova_model(dset$dataset, design)
-#' }
 #' @export
 manova_model <- function(dataset,
                       design) {
@@ -158,8 +150,10 @@ print.manova_model <- function(x, ...) {
 
   # Variables section
   cat("Variables:\n")
-  predictors <- all.vars(x$design$formula[[3]])  # Get predictor names from RHS of formula
-  response <- all.vars(x$design$formula[[2]])    # Get response name from LHS of formula
+  fml <- x$design$formula
+  two_sided <- length(fml) == 3L
+  predictors <- all.vars(fml[[if (two_sided) 3L else 2L]])  # RHS of formula
+  response <- if (two_sided) all.vars(fml[[2L]]) else "(voxel patterns)"
   cat("  |- Response: ", response, "\n")
   cat("  |- Predictors: ", paste(predictors, collapse=", "), "\n\n")
 
@@ -217,10 +211,14 @@ print.manova_design <- function(x, ...) {
 #'
 #' @return A tibble row with the formatted performance metrics for the ROI/sphere.
 #' @examples
-#' \dontrun{
-#'   # Internal S3 method called during ROI processing
-#'   # result <- merge_results(manova_model, result_set, indices, id)
-#' }
+#' # Normally called internally during ROI/searchlight processing
+#' dset <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 3, blocks = 3)
+#' mspec <- manova_model(dset$dataset, manova_design(~ Y, dset$design$train_design))
+#'
+#' # A processor result holding -log(p) values for one ROI
+#' result_set <- tibble::tibble(result = list(c(Y = 2.3)), error = FALSE,
+#'                              error_message = "~")
+#' merge_results(mspec, result_set, indices = 1:10, id = 1)
 #' @importFrom tibble tibble
 #' @importFrom futile.logger flog.error flog.warn
 #' @rdname merge_results-methods

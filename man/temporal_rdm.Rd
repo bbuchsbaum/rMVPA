@@ -90,14 +90,15 @@ temp_rdm <- temporal_rdm(trial_index, block = run_labels,
                          kernel = "exp", lambda = 2,
                          within_blocks_only = TRUE)
 
-# Use in RSA design
-\dontrun{
-rdes <- rsa_design(~ task_rdm + temporal_rdm(trial_idx, block=run, kernel="adjacent"),
-                   data = list(task_rdm = my_task_rdm,
-                              trial_idx = seq_len(n_trials),
-                              run = run_ids),
+# Use as a nuisance predictor in an RSA design
+set.seed(1)
+task_rdm <- dist(matrix(rnorm(20 * 3), 20, 3))
+rdes <- rsa_design(~ task_rdm + temp_rdm,
+                   data = list(task_rdm = task_rdm,
+                               temp_rdm = temporal_rdm(trial_index, block = run_labels,
+                                                       kernel = "adjacent"),
+                               run = run_labels),
                    block_var = ~ run,
                    keep_intra_run = TRUE)
-}
 
 }

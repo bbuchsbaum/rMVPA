@@ -76,19 +76,25 @@ tune_model <- function(mspec, x, y, wts, param_grid, nreps = 10) {
     rsample::bootstraps(df_for_rsample, times = nreps)
   }
 
+  # Materialise the predictors once and slice by the bootstrap row ids;
+  # this matches rsample::analysis()/assessment() + as.matrix() per split
+  # without rebuilding data frames for every grid row.
+  x_cols <- names(df_for_rsample) != ".response_var_for_stratification"
+  x_all <- as.matrix(df_for_rsample[, x_cols, drop = FALSE])
+  split_rows <- lapply(resamples_obj$splits, function(split) {
+    list(train = split$in_id, test = rsample::complement(split))
+  })
+
   tuning_metrics <- purrr::map_dfr(seq_len(nrow(param_grid)), .f = function(param_idx) {
     current_params_df <- param_grid[param_idx, , drop = FALSE]
     
     # Performance over resamples for this parameter set
-    resample_perf <- purrr::map_dbl(resamples_obj$splits, .f = function(split) {
-      train_df_fold <- rsample::analysis(split)
-      test_df_fold  <- rsample::assessment(split)
-      
-      y_train_fold <- train_df_fold$.response_var_for_stratification
-      x_train_fold <- as.matrix(train_df_fold[, !(names(train_df_fold) %in% ".response_var_for_stratification"), drop = FALSE])
-      
-      y_test_fold  <- test_df_fold$.response_var_for_stratification
-      x_test_fold  <- as.matrix(test_df_fold[, !(names(test_df_fold) %in% ".response_var_for_stratification"), drop = FALSE])
+    resample_perf <- purrr::map_dbl(split_rows, .f = function(rows) {
+      y_train_fold <- y_vector[rows$train]
+      x_train_fold <- x_all[rows$train, , drop = FALSE]
+
+      y_test_fold  <- y_vector[rows$test]
+      x_test_fold  <- x_all[rows$test, , drop = FALSE]
 
       # mspec$model is the list from MVPAModels (e.g., MVPAModels$sda_notune)
       # Call its $fit element

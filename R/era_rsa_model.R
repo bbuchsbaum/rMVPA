@@ -264,9 +264,15 @@
 #' \code{era_effects_block} formulas instead test one or more terms jointly by
 #' comparing nested full and reduced models on that same complete-case set.
 #' @examples
-#' \dontrun{
-#'   # See vignette for complete ERA-RSA workflow
-#' }
+#' # Encoding (train) and retrieval (test) data share item labels
+#' toy <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 4, blocks = 3,
+#'                           external_test = TRUE)
+#' toy$design$train_design$Item <- toy$design$train_design$Y
+#' toy$design$test_design$Item  <- toy$design$test_design$Ytest
+#' # suppressWarnings(): no per-item run metadata is supplied in this toy example
+#' model <- suppressWarnings(era_rsa_model(toy$dataset, toy$design, key_var = ~ Item))
+#' res <- run_regional(model, toy$dataset$mask)
+#' res$performance_table
 #' @export
 era_rsa_model <- function(dataset,
                           design,

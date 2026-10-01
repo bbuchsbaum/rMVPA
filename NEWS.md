@@ -15,6 +15,20 @@
   - NEWS.md is included in the build and `tools/` excluded;
   - CITATION reads the package version;
   - a stray debug script under `tests/` was removed.
+  - examples no longer use `\dontrun{}`: they run on small synthetic data,
+    or sit in `\donttest{}` when slower; several previously broken examples
+    (e.g. `temporal_rdm()`, `spatial_nmf_stability()`) were corrected.
+* Robust `corclass` (`robust = TRUE`) computes its per-class Huber centres
+  directly instead of through `neuroim2::split_reduce()`, which dispatched
+  every class through `future.apply`; results are identical and fitting is
+  about 4x faster.
+* Hyperparameter tuning (`tune_grid`) slices the predictor matrix once per
+  bootstrap split instead of rebuilding data frames for every grid row;
+  splits and results are unchanged.
+* `spatial_nmf_voxelwise_stats()` works with sparse volumetric maps (it called
+  `neuroim2::indices()`, which has no `SparseNeuroVol` method).
+* `print.manova_model()` handles one-sided formulas (`~ Y + block_var`).
+* `gen_sample_dataset(external_test = TRUE)` no longer emits a stray message.
 
 # rMVPA 0.1.3
 

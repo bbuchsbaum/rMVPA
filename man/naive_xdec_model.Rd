@@ -52,19 +52,17 @@ evaluating domain-adaptive methods like REMAP-RRR. Also known as "zero-shot
 transfer" or "direct transfer" in machine learning literature.
 }
 \examples{
-\dontrun{
-  # Requires dataset with train_data and test_data
-  ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
-  model <- naive_xdec_model(ds$dataset, ds$design)
+ds <- gen_sample_dataset(c(5, 5, 5), 20, external_test = TRUE)
+model <- naive_xdec_model(ds$dataset, ds$design)
 
-  # Custom metric that uses a column from test_design
-  custom_fun <- function(result) {
-    vivid <- result$test_design$RateVivid
-    probs <- as.matrix(result$probs)
-    obs   <- as.character(result$observed)
-    true_p <- probs[cbind(seq_along(obs), match(obs, colnames(probs)))]
-    c(vivid_spearman = stats::cor(vivid, true_p, method = "spearman"))
-  }
-  model <- naive_xdec_model(ds$dataset, ds$design, performance = custom_fun)
+# Custom metric: mean probability assigned to the true class
+custom_fun <- function(result) {
+  probs <- as.matrix(result$probs)
+  obs   <- as.character(result$observed)
+  true_p <- probs[cbind(seq_along(obs), match(obs, colnames(probs)))]
+  c(mean_true_prob = mean(true_p))
 }
+model2 <- naive_xdec_model(ds$dataset, ds$design, performance = custom_fun)
+res <- run_regional(model2, ds$dataset$mask)
+res$performance_table
 }

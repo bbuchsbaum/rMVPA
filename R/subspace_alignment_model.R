@@ -17,10 +17,13 @@
 #'   `run_regional()` / `run_searchlight()`.
 #'
 #' @examples
-#' \dontrun{
-#'   ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
-#'   model <- subspace_alignment_model(ds$dataset, ds$design, d=10)
-#' }
+#' ds <- gen_sample_dataset(c(4, 4, 4), 24, nlevels = 3, blocks = 3,
+#'                          external_test = TRUE)
+#' model <- subspace_alignment_model(ds$dataset, ds$design, d = 5)
+#' region_mask <- neuroim2::NeuroVol(array(1, c(4, 4, 4)),
+#'                                   neuroim2::space(ds$dataset$mask))
+#' res <- run_regional(model, region_mask)
+#' res$performance_table
 #' @export
 subspace_alignment_model <- function(dataset,
                                      design,
