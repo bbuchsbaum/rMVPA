@@ -9,7 +9,7 @@ remains in the submitted DESCRIPTION.
 
 ## R CMD check results
 
-0 errors | 0 warnings | n notes
+0 errors | 0 warnings | 3 notes (expected)
 
 * New submission.
 
@@ -19,10 +19,11 @@ remains in the submitted DESCRIPTION.
   back ends (e.g. glmnet, sda, pls, randomForest, e1071, xgboost) are in
   Suggests and are used conditionally via `requireNamespace()`.
 
-* Installed package size (if reported): the bulk is R code (a large
-  analysis API) and small example data in `inst/extdata` (a reduced Haxby
-  et al. 2001 subject and the Kriegeskorte 92-image RDMs) used by the
-  examples and vignettes.
+* Installed package size is about 6 MB: 3.1 MB of R code (a large
+  analysis API) and 1.2 MB of example data in `inst/extdata` (a reduced
+  Haxby et al. 2001 subject and the Kriegeskorte 92-image RDMs) used by the
+  examples and vignettes. Only seven core vignettes are shipped; the
+  remaining articles are on the package website.
 
 ## Test environments
 
