@@ -104,7 +104,10 @@ H <- matrix(runif(2 * 20), nrow = 2)
 X <- W \%*\% H
 result <- spatial_nmf(X, k = 2, max_iter = 20)
 
-\dontrun{
-result <- spatial_nmf(group_A_vols, group_B = group_B_vols, mask = mask, k = 5)
-}
+# Map input: two groups of small NeuroVol maps
+sp <- neuroim2::NeuroSpace(c(5, 5, 2))
+mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(5, 5, 2)), sp)
+group_A_vols <- lapply(1:5, function(i) neuroim2::NeuroVol(array(runif(50), c(5, 5, 2)), sp))
+group_B_vols <- lapply(1:5, function(i) neuroim2::NeuroVol(array(runif(50), c(5, 5, 2)), sp))
+result <- spatial_nmf(group_A_vols, group_B = group_B_vols, mask = mask, k = 2)
 }

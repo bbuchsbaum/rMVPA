@@ -24,8 +24,13 @@ from a `regional_mvpa_result` when `return_fits=TRUE`, or directly from a
 predictor list returned by `process_roi()`.
 }
 \examples{
-\dontrun{
-res <- run_regional(model, region_mask, return_fits = TRUE)
-items_tbl <- summarize_remap_items(res, roi = 1)
-}
+# A predictor list as stored in regional_mvpa_result$fits when
+# run_regional(..., return_fits = TRUE) is used with remap_rrr_model():
+pred <- list(diag_by_fold = list(
+  list(train_items = c("a", "b"), item_res_naive = c(4, 8),
+       item_res_remap = c(2, 4)),
+  list(train_items = c("a", "b"), item_res_naive = c(6, 10),
+       item_res_remap = c(3, 5))
+))
+summarize_remap_items(pred)
 }

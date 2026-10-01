@@ -34,16 +34,22 @@ with an informative message. This commonly happens with contrasts that
 compare distinct subsets of conditions, such as c(1,-1,0,0) and c(0,0,1,-1).
 }
 \examples{
-\dontrun{
-# Example with non-overlapping contrasts (zero interaction)
-C1 <- matrix(c(1,-1,0,0, 0,0,1,-1), nrow=4, 
-             dimnames=list(NULL, c("A","B")))
-# A compares conditions 1 vs 2, B compares 3 vs 4
-# Their interaction will be zero and skipped
+# Design with 4 conditions
+df <- data.frame(cond = factor(rep(c("c1", "c2", "c3", "c4"), times = 6)),
+                 run  = rep(1:3, each = 8))
+mvdes <- mvpa_design(df, y_train = ~ cond, block_var = ~ run)
 
-# Example with overlapping contrasts (non-zero interaction)  
-C2 <- matrix(c(1,1,-1,-1, 1,-1,1,-1), nrow=4,
-             dimnames=list(NULL, c("Main1","Main2")))
-# These contrasts overlap and will produce a meaningful interaction
-}
+# Overlapping contrasts: their interaction is non-zero and is added
+C2 <- matrix(c(1, 1, -1, -1,
+               1, -1, 1, -1), nrow = 4,
+             dimnames = list(c("c1", "c2", "c3", "c4"), c("Main1", "Main2")))
+des2 <- add_interaction_contrasts(msreve_design(mvdes, C2))
+colnames(des2$contrast_matrix)
+
+# Non-overlapping contrasts (1 vs 2, 3 vs 4): interaction is zero and skipped
+C1 <- matrix(c(1, -1, 0, 0,
+               0, 0, 1, -1), nrow = 4,
+             dimnames = list(c("c1", "c2", "c3", "c4"), c("A", "B")))
+des1 <- add_interaction_contrasts(msreve_design(mvdes, C1))
+colnames(des1$contrast_matrix)
 }

@@ -53,15 +53,16 @@
 #'                          kernel = "exp", lambda = 2,
 #'                          within_blocks_only = TRUE)
 #' 
-#' # Use in RSA design
-#' \dontrun{
-#' rdes <- rsa_design(~ task_rdm + temporal_rdm(trial_idx, block=run, kernel="adjacent"),
-#'                    data = list(task_rdm = my_task_rdm,
-#'                               trial_idx = seq_len(n_trials),
-#'                               run = run_ids),
+#' # Use as a nuisance predictor in an RSA design
+#' set.seed(1)
+#' task_rdm <- dist(matrix(rnorm(20 * 3), 20, 3))
+#' rdes <- rsa_design(~ task_rdm + temp_rdm,
+#'                    data = list(task_rdm = task_rdm,
+#'                                temp_rdm = temporal_rdm(trial_index, block = run_labels,
+#'                                                        kernel = "adjacent"),
+#'                                run = run_labels),
 #'                    block_var = ~ run,
 #'                    keep_intra_run = TRUE)
-#' }
 #' 
 #' @export
 #' @importFrom stats dist sd
@@ -198,24 +199,31 @@ temporal_rdm <- function(index,
 #' relationships between conditions based on the temporal structure of individual trials.
 #'
 #' @examples
-#' \dontrun{
+#' # Small synthetic design with 4 conditions
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 4, blocks = 3)
+#' mvpa_des <- ds$design
+#'
 #' # Create temporal nuisance for MS-ReVE
 #' temp_K <- temporal_nuisance_for_msreve(
 #'   mvpa_design = mvpa_des,
 #'   time_idx = seq_len(nrow(mvpa_des$train_design)),
 #'   reduce = "min",
-#'   kernel = "exp", 
+#'   kernel = "exp",
 #'   lambda = 3,
 #'   within_blocks_only = TRUE
 #' )
-#' 
+#' dim(temp_K)
+#'
 #' # Use in msreve_design
+#' C_mat <- matrix(c(1, 1, -1, -1,
+#'                   1, -1, 0, 0), nrow = 4,
+#'                 dimnames = list(levels(mvpa_des$y_train),
+#'                                 c("AB_vs_CD", "A_vs_B")))
 #' msreve_des <- msreve_design(
 #'   mvpa_design = mvpa_des,
 #'   contrast_matrix = C_mat,
 #'   nuisance_rdms = list(temp_decay = temp_K)
 #' )
-#' }
 #' 
 #' @export
 temporal_nuisance_for_msreve <- function(mvpa_design, 
@@ -358,14 +366,18 @@ temporal_nuisance_for_msreve <- function(mvpa_design,
 #' It calls \code{temporal_rdm} with the same parameters.
 #'
 #' @examples
-#' \dontrun{
-#' # Use directly in RSA formula
+#' run_ids <- rep(1:4, each = 10)
+#' set.seed(1)
+#' task_rdm <- dist(matrix(rnorm(40 * 3), 40, 3))
+#'
+#' # Build a temporal nuisance RDM and use it in an RSA design
 #' rdes <- rsa_design(
-#'   ~ task_rdm + temporal(trial_index, block=run, kernel="adjacent", width=2),
-#'   data = list(task_rdm = task_rdm, trial_index = 1:100, run = run_ids),
+#'   ~ task_rdm + temp_rdm,
+#'   data = list(task_rdm = task_rdm,
+#'               temp_rdm = temporal(1:40, block = run_ids, kernel = "adjacent", width = 2),
+#'               run = run_ids),
 #'   block_var = ~ run
 #' )
-#' }
 #' 
 #' @export
 #' @seealso \code{\link{temporal_rdm}}
@@ -426,10 +438,8 @@ to_distance <- function(dv) {
 #'
 #' @return A dist object or matrix representing temporal relationships
 #' @examples
-#' \dontrun{
-#'   onsets <- c(0, 2.5, 5.0, 7.5, 10.0)
-#'   temp_rdm <- temporal_from_onsets(onsets, kernel="exp", lambda=3)
-#' }
+#' onsets <- c(0, 2.5, 5.0, 7.5, 10.0)
+#' temp_rdm <- temporal_from_onsets(onsets, kernel = "exp", lambda = 3)
 #' @export
 temporal_from_onsets <- function(onsets, run = NULL, ..., units = c("auto", "sec", "TR", "index"), TR = NULL, as_dist = TRUE) {
   units <- match.arg(units)
@@ -459,10 +469,8 @@ temporal_from_onsets <- function(onsets, run = NULL, ..., units = c("auto", "sec
 #'
 #' @return A \code{dist} object or symmetric matrix (N x N)
 #' @examples
-#' \dontrun{
-#'   onsets <- c(0, 5, 10, 15, 20)
-#'   hrf_rdm <- temporal_hrf_overlap(onsets, TR=2, hrf="spm")
-#' }
+#' onsets <- c(0, 5, 10, 15, 20)
+#' hrf_rdm <- temporal_hrf_overlap(onsets, TR = 2, hrf = "spm")
 #' @export
 #' @importFrom stats cor convolve sd as.dist
 #' @importFrom utils head
@@ -612,10 +620,9 @@ hrf_glover <- function(t) {
 #'
 #' @return A named list of \code{dist} objects (or matrices if \code{as_dist=FALSE})
 #' @examples
-#' \dontrun{
-#'   spec <- list(lag=list(kernel="exp", lambda=3), hrf=list(kind="hrf"))
-#'   conf <- temporal_confounds(spec, onsets=1:20, run=rep(1:4,each=5), TR=2)
-#' }
+#' spec <- list(lag = list(kernel = "exp", lambda = 3), hrf = list(kind = "hrf"))
+#' conf <- temporal_confounds(spec, onsets = 1:20, run = rep(1:4, each = 5), TR = 2)
+#' names(conf)
 #' @export
 temporal_confounds <- function(spec, onsets, run = NULL, units = c("auto", "sec", "TR", "index"), TR = NULL, as_dist = TRUE) {
   units <- match.arg(units)
@@ -681,10 +688,13 @@ temporal_confounds <- function(spec, onsets, run = NULL, units = c("auto", "sec"
 #'
 #' @return a named list of K x K matrices aligned to levels(mvpa_design$Y)
 #' @examples
-#' \dontrun{
-#'   spec <- list(lag=list(kernel="exp", lambda=3))
-#'   conf <- msreve_temporal_confounds(mvpa_design, time_idx=1:100, spec)
-#' }
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 4, blocks = 3)
+#' spec <- list(lag = list(kernel = "exp", lambda = 3),
+#'              hrf = list(kind = "hrf", TR = 2))
+#' conf <- msreve_temporal_confounds(ds$design,
+#'                                   time_idx = seq(0, by = 2, length.out = 24),
+#'                                   spec = spec)
+#' lapply(conf, dim)
 #' @export
 msreve_temporal_confounds <- function(mvpa_design,
                                       time_idx,

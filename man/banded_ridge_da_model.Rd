@@ -170,28 +170,38 @@ on held-out test:
 where \eqn{R^2_{-g}} is obtained by refitting the model without feature set \eqn{g}.
 }
 \examples{
-\dontrun{
-# Build encoding predictors and declare feature sets
-fs_enc <- feature_sets(X_enc, blocks(low = 100, mid = 100, high = 100, sem = 100))
+set.seed(1)
+# Toy encoding (train, 30 TRs) and recall (test, 20 TRs) data, 27 voxels
+dset <- gen_sample_dataset(c(3, 3, 3), nobs = 30, external_test = TRUE,
+                           ntest_obs = 20)$dataset
 
-# Build recall predictors from a soft alignment posterior gamma
-fs_rec <- expected_features(fs_enc, gamma, drop_null = TRUE, renormalize = FALSE)
+# Build encoding predictors and declare feature sets
+X_enc <- matrix(rnorm(30 * 6), 30, 6)
+fs_enc <- feature_sets(X_enc, blocks(low = 2, mid = 2, sem = 2))
+
+# Build recall predictors from a soft alignment posterior gamma (recall x encoding)
+gamma <- matrix(runif(20 * 30), 20, 30)
+gamma <- gamma / rowSums(gamma)
+fs_rec <- expected_features(fs_enc, gamma, drop_null = FALSE, renormalize = FALSE)
 
 # Create design and model spec
+recall_runs <- rep(1:2, each = 10)
 des <- feature_sets_design(fs_enc, fs_rec, block_var_test = recall_runs)
 ms <- grouped_ridge_da_model(
   dataset = dset,
   design = des,
   mode = "coupled",
-  lambdas = c(low = 10, mid = 10, high = 10, sem = 10),
+  lambdas = c(low = 10, mid = 10, sem = 10),
   alpha_recall = 0.2,
   rho = 5,
   compute_delta_r2 = TRUE,
   return_diagnostics = TRUE
 )
 
+region_mask <- neuroim2::NeuroVol(array(1, c(3, 3, 3)),
+                                  neuroim2::space(dset$mask))
 res <- run_regional(ms, region_mask)
-}
+res$performance_table
 }
 \seealso{
 \code{\link{feature_sets}}, \code{\link{expected_features}}, \code{\link{feature_sets_design}},

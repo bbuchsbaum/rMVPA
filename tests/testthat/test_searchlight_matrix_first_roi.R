@@ -74,6 +74,7 @@ test_that("process_roi_default uses matrix-first input", {
 })
 
 test_that("matrix-first ROI path preserves mvpa_model searchlight outputs", {
+  skip_on_cran()
   mspec <- build_matrix_first_mvpa_spec()
 
   set.seed(3301)

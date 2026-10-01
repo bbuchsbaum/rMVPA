@@ -4,9 +4,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 2
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: teal
   preset: study
@@ -287,7 +287,7 @@ better match to the independence structure. It requires an observation-aligned
 outer fold. Inner centering and scaling are learned without the held-out block.
 `"pve"` and `"max"` are cheaper still, but they change the tuning estimand
 rather than accelerating the same validation scheme. See
-`vignette("Feature_RSA")` for the selection contract.
+[Feature-Based RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html) for the selection contract.
 
 rMVPA now streams held-out segment errors, uses compact matrix-level PLS/PCR
 fits, and computes the final out-of-fold geometry once. A worker also drops the
@@ -423,7 +423,7 @@ receipt_path <- system.file(
 )
 if (!nzchar(receipt_path)) {
   receipt_path <- file.path(
-    "..", "inst", "extdata", "parallel_runtime_benchmark_results.csv"
+    "..", "..", "inst", "extdata", "parallel_runtime_benchmark_results.csv"
   )
 }
 parallel_receipt <- utils::read.csv(receipt_path, stringsAsFactors = FALSE)

@@ -44,14 +44,14 @@
 #'   nlevels = 2
 #' )
 #'
-#' # Generate continuous surface dataset
-#' \dontrun{
-#' surf_data <- gen_sample_dataset(
-#'   D = 1000,  # number of vertices
-#'   nobs = 50,
-#'   response_type = "continuous",
-#'   data_mode = "surface"
-#' )
+#' # Generate continuous surface dataset (requires the neurosurf package)
+#' if (requireNamespace("neurosurf", quietly = TRUE)) {
+#'   surf_data <- gen_sample_dataset(
+#'     D = 1000,  # ignored for surfaces: uses the neurosurf example mesh
+#'     nobs = 20,
+#'     response_type = "continuous",
+#'     data_mode = "surface"
+#'   )
 #' }
 #'
 #' # Generate dataset with external test set
@@ -144,7 +144,6 @@ gen_sample_dataset <- function(D, nobs, response_type=c("categorical", "continuo
   }
   
   if (external_test) {
-    message("external test")
     mvdes <- mvpa_design(data.frame(Y=Y, block_var=block_var), test_design=data.frame(Ytest = Ytest), 
                        block_var= "block_var", y_train= ~ Y, y_test = ~ Ytest, split_by=split_by)
   } else {
@@ -537,14 +536,12 @@ mvpa_multibasis_dataset <- function(train_data,
 #' @inheritParams mvpa_multibasis_dataset
 #' @return An object of class \code{mvpa_multibasis_image_dataset}.
 #' @examples
-#' \dontrun{
-#'   # See mvpa_multibasis_dataset for examples
-#'   ds <- gen_sample_dataset(c(5,5,5), 20)
-#'   mb <- mvpa_multibasis_image_dataset(
-#'     list(ds$dataset$train_data, ds$dataset$train_data),
-#'     mask = ds$dataset$mask
-#'   )
-#' }
+#' # See mvpa_multibasis_dataset for details
+#' ds <- gen_sample_dataset(c(5,5,5), 20)
+#' mb <- mvpa_multibasis_image_dataset(
+#'   list(ds$dataset$train_data, ds$dataset$train_data),
+#'   mask = ds$dataset$mask
+#' )
 #' @export
 mvpa_multibasis_image_dataset <- mvpa_multibasis_dataset
 
@@ -573,16 +570,24 @@ mvpa_multibasis_image_dataset <- mvpa_multibasis_dataset
 #' The mask will be a numeric vector with length equal to the number of nodes in the surface geometry.
 #'
 #' @examples
-#' \dontrun{
-#' # Create surface dataset with automatic mask
-#' train_surf <- NeuroSurfaceVector(geometry, data)
-#' dataset <- mvpa_surface_dataset(train_surf, name="lh")
+#' if (requireNamespace("neurosurf", quietly = TRUE)) {
+#'   fname <- system.file("extdata/std.8_lh.inflated.asc", package = "neurosurf")
+#'   geometry <- neurosurf::read_surf_geometry(fname)
+#'   nvert <- nrow(neurosurf::vertices(geometry))
 #'
-#' # Create dataset with test data and custom mask
-#' test_surf <- NeuroSurfaceVector(geometry, test_data)
-#' mask <- numeric(length(nodes(geometry)))
-#' mask[roi_indices] <- 1
-#' dataset <- mvpa_surface_dataset(train_surf, test_surf, mask, name="rh")
+#'   # Create surface dataset with automatic mask
+#'   train_surf <- neurosurf::NeuroSurfaceVector(
+#'     geometry, seq_len(nvert), matrix(rnorm(nvert * 6), nvert, 6)
+#'   )
+#'   dataset <- mvpa_surface_dataset(train_surf, name = "lh")
+#'
+#'   # Create dataset with test data and custom mask
+#'   test_surf <- neurosurf::NeuroSurfaceVector(
+#'     geometry, seq_len(nvert), matrix(rnorm(nvert * 4), nvert, 4)
+#'   )
+#'   mask <- numeric(nvert)
+#'   mask[1:50] <- 1
+#'   dataset <- mvpa_surface_dataset(train_surf, test_surf, mask, name = "lh")
 #' }
 #'
 #' @seealso 

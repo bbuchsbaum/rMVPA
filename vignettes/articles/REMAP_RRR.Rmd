@@ -6,9 +6,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 2.0
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: red
   preset: interaction
@@ -83,7 +83,7 @@ Key points
 > `leave_one_key_out = FALSE` and use a fixed rank, trading slightly more optimistic adaptor diagnostics
 > for much faster single‑fit adapters per ROI.
 
-> **Note**: For a complete introduction to naive cross-decoding (the baseline method), see `vignette("Naive_Cross_Decoding")`. That vignette explains the algorithm, use cases, and when domain adaptation is needed.
+> **Note**: For a complete introduction to naive cross-decoding (the baseline method), see [Naive Cross-Decoding](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.html). That vignette explains the algorithm, use cases, and when domain adaptation is needed.
 
 ## Minimal example (regional)
 

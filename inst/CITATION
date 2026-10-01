@@ -5,7 +5,7 @@ bibentry(
                     role = c("aut", "cre"),
                     comment = c(ORCID = "0000-0002-1108-4866")),
   year     = "2026",
-  note     = "R package version 0.1.2",
+  note     = paste("R package version", meta$Version),
   url      = "https://github.com/bbuchsbaum/rMVPA",
   header   = "To cite rMVPA in publications use:"
 )

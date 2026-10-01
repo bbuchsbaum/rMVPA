@@ -50,7 +50,11 @@ By default, if an object's class does not implement a specific
 \code{run_searchlight_base}.
 }
 \examples{
-\dontrun{
-  # See run_searchlight generic for examples
-}
+# An mvpa_model has no dedicated method, so dispatch uses this default
+ds <- gen_sample_dataset(D = c(3, 3, 3), nobs = 24, nlevels = 2, blocks = 3)
+cval <- blocked_cross_validation(ds$design$block_var)
+mspec <- mvpa_model(load_model("corclass"), dataset = ds$dataset,
+                    design = ds$design, crossval = cval)
+res <- run_searchlight(mspec, radius = 2, method = "standard")
+names(res$results)
 }

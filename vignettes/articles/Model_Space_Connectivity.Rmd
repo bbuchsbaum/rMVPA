@@ -6,9 +6,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 2.0
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: red
   preset: interaction
@@ -72,7 +72,7 @@ The shared abstraction is **pairwise model-space representation per analysis uni
 
 rMVPA exposes two complementary ways to ask "do these ROIs share representational geometry?" Picking the right one is the single most important decision in this analysis:
 
-| | **Model-space connectivity** *(this vignette)* | **Feature-RSA connectivity** *(`vignette("Feature_RSA_Connectivity")`)* |
+| | **Model-space connectivity** *(this vignette)* | **Feature-RSA connectivity** *([Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html))* |
 |:--|:--|:--|
 | **Question it answers** | Do ROIs project onto the *same axes of my declared model RDMs*? | Do ROIs *predict the same trial-by-trial similarity structure* through a learned feature space? |
 | **What you supply** | One or more explicit model RDMs | A feature matrix `F` (or similarity matrix `S`) |
@@ -374,9 +374,9 @@ A practical default is `k = 20`. Reasonable lower bound: the rank of your model-
 ## Where to go next
 
 - For decorrelating correlated model RDMs *before* you run any of the above, see `vignette("RSA")` and `?rdm_decorrelate`.
-- For the *learned-feature-space* connectivity path — predicting one ROI's RDM from another via a feature-RSA model — see `vignette("Feature_RSA_Connectivity")`. The two paths are complementary: `model_space_connectivity()` works in your declared model-RDM subspace; `feature_rsa_connectivity()` works in a fitted feature space.
-- For variance partitioning by signed contrasts, see `vignette("Contrast_RSA")`.
-- For temporal / nuisance pair predictors, see `vignette("Temporal_Confounds_in_RSA")` and `?temporal_rdm`.
+- For the *learned-feature-space* connectivity path — predicting one ROI's RDM from another via a feature-RSA model — see [Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html). The two paths are complementary: `model_space_connectivity()` works in your declared model-RDM subspace; `feature_rsa_connectivity()` works in a fitted feature space.
+- For variance partitioning by signed contrasts, see [Contrast RSA with contrast_rsa_model](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html).
+- For temporal / nuisance pair predictors, see [Temporal Confounds in RSA](https://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.html) and `?temporal_rdm`.
 
 ## Reproducibility note
 

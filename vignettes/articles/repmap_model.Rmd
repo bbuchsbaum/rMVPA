@@ -4,9 +4,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 2.0
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: red
   preset: interaction
@@ -43,7 +43,7 @@ cat(sprintf(
 ))
 ```
 
-> *ReNA-Map* is one of four cross-domain representational models in rMVPA. For the section's terminology and how to choose between *ReNA-RC*, *ReNA-Map*, *ReNA-RM*, and *REMAP-RRR*, see the glossary at the top of `vignette("Naive_Cross_Decoding")`.
+> *ReNA-Map* is one of four cross-domain representational models in rMVPA. For the section's terminology and how to choose between *ReNA-RC*, *ReNA-Map*, *ReNA-RM*, and *REMAP-RRR*, see the glossary at the top of [Naive Cross-Decoding](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.html).
 
 Overview
 --------
@@ -194,9 +194,9 @@ Notes and pitfalls
 See also
 --------
 
-- `vignette("repmed_model")` -- Representational Mediation (ReNA-RM)
-- `vignette("repnet_model")` -- Representational Connectivity (ReNA-RC)
-- `vignette("Naive_Cross_Decoding")` -- Naive cross-decoding baseline
+- [Representational Mediation (ReNA-RM): repmed_model](https://bbuchsbaum.github.io/rMVPA/articles/repmed_model.html) -- Representational Mediation (ReNA-RM)
+- [Representational Connectivity (ReNA-RC): repnet_model](https://bbuchsbaum.github.io/rMVPA/articles/repnet_model.html) -- Representational Connectivity (ReNA-RC)
+- [Naive Cross-Decoding](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.html) -- Naive cross-decoding baseline
 
 Session info
 ------------

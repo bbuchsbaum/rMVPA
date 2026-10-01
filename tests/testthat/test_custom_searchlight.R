@@ -76,6 +76,7 @@ test_that("run_custom_searchlight (standard) runs without error and returns corr
 
 
 test_that("run_custom_searchlight (randomized) runs without error", {
+  skip_on_cran()
   # Create a fresh dataset for this test to ensure consistency
   dset_info_rand <- gen_sample_dataset(D = c(6, 6, 6), nobs = 20, nlevels = 2)
   dataset_rand <- dset_info_rand$dataset
@@ -271,6 +272,7 @@ test_that(".cores = 1 overrides and restores an inherited parallel plan", {
 })
 
 test_that("save_results writes custom searchlight performance maps", {
+  skip_on_cran()
   result <- run_custom_searchlight(
     dataset_vol,
     mean_signal_sl,

@@ -84,10 +84,10 @@ differences in expression, rather than testing individual voxels.
 }
 }
 \examples{
-\dontrun{
-  # Requires completed spatial NMF fit
-  W <- matrix(rnorm(20*5), 20, 5)
-  groups <- factor(rep(c("A","B"), each=10))
-  result <- spatial_nmf_component_test(W=W, groups=groups, nperm=100)
-}
+# Subject-by-component loadings (normally taken from a spatial NMF fit)
+set.seed(1)
+W <- matrix(runif(20 * 3), 20, 3)
+groups <- factor(rep(c("A", "B"), each = 10))
+result <- spatial_nmf_component_test(W = W, groups = groups, nperm = 50, seed = 1)
+result$table
 }

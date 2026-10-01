@@ -717,7 +717,10 @@ test_that("fixed ridge agrees with glmnet's alpha-zero estimator", {
     lambda = lambda,
     standardize = FALSE,
     intercept = TRUE,
-    control = list(thresh = 1e-14, maxit = 1e6)
+    # glmnet reads convergence settings as arguments; a `control` list is
+    # ignored, which left the comparison at the default 1e-7 threshold.
+    thresh = 1e-14,
+    maxit = 1e6
   )
   got <- drop(stats::predict(
     glmnet_fit,

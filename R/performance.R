@@ -33,9 +33,10 @@ predicted_class <- function(prob) {
 #' - RMSE: root mean squared error, a measure of the differences between predicted and observed values.
 #' - Spearman correlation: a measure of the monotonic relationship between predicted and observed values.
 #' @examples
-#' \dontrun{
-#'   # See performance() generic for examples
-#' }
+#' res <- regression_result(observed = c(1.0, 2.1, 2.9, 4.2, 5.1),
+#'                          predicted = c(1.2, 1.9, 3.1, 3.8, 5.0),
+#'                          testind = 1:5)
+#' performance(res)
 #' @seealso \code{\link{regression_result}}
 #' @export
 #' @importFrom yardstick rsq_vec rmse_vec

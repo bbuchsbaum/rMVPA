@@ -1141,10 +1141,13 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
 #' @return The result object from \code{do_standard} or \code{do_randomized} (often a \code{searchlight_result} or similar).
 #'
 #' @examples
-#' \dontrun{
-#'   # Internal base function - users should call run_searchlight instead
-#'   # result <- run_searchlight_base(model_spec, radius=8, method="standard")
-#' }
+#' # Internal base function - users should normally call run_searchlight()
+#' ds <- gen_sample_dataset(D = c(3, 3, 3), nobs = 24, nlevels = 2, blocks = 3)
+#' cval <- blocked_cross_validation(ds$design$block_var)
+#' mspec <- mvpa_model(load_model("corclass"), dataset = ds$dataset,
+#'                     design = ds$design, crossval = cval)
+#' res <- run_searchlight_base(mspec, radius = 2, method = "standard")
+#' names(res$results)
 #' @keywords internal
 #' @export
 run_searchlight_base <- function(model_spec,
@@ -1318,9 +1321,13 @@ run_searchlight_base <- function(model_spec,
 #'   }
 #' @return A `searchlight_result` object containing spatial maps for each metric.
 #' @examples
-#' \dontrun{
-#'   # See run_searchlight generic for examples
-#' }
+#' # An mvpa_model has no dedicated method, so dispatch uses this default
+#' ds <- gen_sample_dataset(D = c(3, 3, 3), nobs = 24, nlevels = 2, blocks = 3)
+#' cval <- blocked_cross_validation(ds$design$block_var)
+#' mspec <- mvpa_model(load_model("corclass"), dataset = ds$dataset,
+#'                     design = ds$design, crossval = cval)
+#' res <- run_searchlight(mspec, radius = 2, method = "standard")
+#' names(res$results)
 #' @export
 run_searchlight.default <- function(model_spec, radius = 8, method = c("standard","randomized","resampled"),
                                     niter = 4,
@@ -1438,10 +1445,16 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
 #'     one for each contrast (Q maps in total).}
 #'   \item{...}{Other standard searchlight metadata.}
 #' @examples
-#' \dontrun{
-#'   # Internal function for combining MS-ReVE results
-#'   # result <- combine_msreve_standard(model_spec, good_results, bad_results)
-#' }
+#' # Deprecated internal combiner; shown with mock per-center results
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 20, nlevels = 2, blocks = 2)
+#' ids <- which(as.logical(ds$dataset$mask))[1:10]
+#' good <- tibble::tibble(
+#'   id = ids,
+#'   performance = lapply(seq_along(ids), function(i) c(AvsB = rnorm(1), CvsD = rnorm(1)))
+#' )
+#' spec <- list(output_metric = "beta_delta", dataset = ds$dataset)
+#' res <- suppressWarnings(combine_msreve_standard(spec, good, tibble::tibble()))
+#' names(res$results)
 #' @keywords internal
 #' @importFrom neuroim2 SparseNeuroVec space add_dim
 #' @importFrom purrr map

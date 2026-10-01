@@ -15,21 +15,21 @@ articles:
   desc: |
     Essential concepts and basic workflows
   contents:
-  - Constructing_Datasets
+  - articles/Constructing_Datasets
   - CrossValidation
-  - FeatureSelection
+  - articles/FeatureSelection
 - title: Performance and Deployment
   desc: |
     Choose Future process topologies, data transport, and native thread limits
     with reproducible correctness and performance evidence.
   contents:
-  - Parallelism
+  - articles/Parallelism
 - title: Voxelwise Encoding Models
   desc: |
     Fit leakage-safe grouped encoding models with per-response tuning,
     scalable solvers, explicit storage contracts, and predictive band drop-out.
   contents:
-  - Banded_Ridge_Encoding
+  - articles/Banded_Ridge_Encoding
 - title: Standard MVPA Analysis
   desc: |
     Classification and regression analyses using searchlight and regional approaches
@@ -37,52 +37,52 @@ articles:
   - Searchlight_Analysis
   - Regional_Analysis
   - Haxby_2001
-  - ITEM_Decoding
-  - CommandLine
+  - articles/ITEM_Decoding
+  - articles/CommandLine
 - title: Pattern Models
   desc: |
     Fit one covariance-aware whole-brain reduced-rank model, then confirm
     frozen loadings on independent data and pool them across subjects.
   contents:
   - Pattern_Model
-  - Pattern_Confirmation
-  - Pattern_Group
+  - articles/Pattern_Confirmation
+  - articles/Pattern_Group
 - title: Representational Similarity Analysis
   desc: |
     RSA methods from basic to specialized approaches
   contents:
   - RSA
-  - Contrast_RSA
-  - Temporal_Confounds_in_RSA
-  - Feature_RSA
-  - Vector_RSA
-  - Feature_RSA_Advanced_Workflows
-  - Feature_RSA_Connectivity
-  - Model_Space_Connectivity
-  - Feature_RSA_Domain_Adaptation
-  - Kriegeskorte_92_Images
+  - articles/Contrast_RSA
+  - articles/Temporal_Confounds_in_RSA
+  - articles/Feature_RSA
+  - articles/Vector_RSA
+  - articles/Feature_RSA_Advanced_Workflows
+  - articles/Feature_RSA_Connectivity
+  - articles/Model_Space_Connectivity
+  - articles/Feature_RSA_Domain_Adaptation
+  - articles/Kriegeskorte_92_Images
 - title: Representation Mapping (REMAP) Models
   desc: |
     Models for learning transformations between perception and memory representations
   contents:
-  - Naive_Cross_Decoding
-  - ERA_RSA_Cross_Decoding
-  - REMAP_RRR
-  - repmap_model
-  - repmed_model
-  - repnet_model
+  - articles/Naive_Cross_Decoding
+  - articles/ERA_RSA_Cross_Decoding
+  - articles/REMAP_RRR
+  - articles/repmap_model
+  - articles/repmed_model
+  - articles/repnet_model
 - title: Extensibility
   desc: |
     Customizing and extending rMVPA functionality
   contents:
-  - CustomAnalyses
-  - Plugin_Development
+  - articles/CustomAnalyses
+  - articles/Plugin_Development
 - title: internal
   desc: |
     Superseded vignettes retained as redirects. New work should use `vignette("CommandLine")`.
   contents:
-  - CommandLineScripts
-  - MVPA_RegionalCmdline
+  - articles/CommandLineScripts
+  - articles/MVPA_RegionalCmdline
 reference:
 - title: REMAP Diagnostics
   desc: |

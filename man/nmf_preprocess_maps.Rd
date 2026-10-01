@@ -57,16 +57,25 @@ subjects jointly to preserve relative differences. The returned `offset`
 can be used to interpret results in the original scale.
 }
 \examples{
-\dontrun{
+set.seed(1)
+sp <- neuroim2::NeuroSpace(c(5, 5, 2))
+mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(5, 5, 2)), sp)
+# Chance-centered AUC maps (AUC - 0.5)
+auc_maps <- lapply(1:6, function(i) {
+  neuroim2::NeuroVol(array(rnorm(50, sd = 0.1), c(5, 5, 2)), sp)
+})
+
 # For AUC-0.5 maps (chance-centered)
 prepped <- nmf_preprocess_maps(auc_maps, method = "auc")
-result <- spatial_nmf_maps(prepped$maps, mask = mask, k = 5)
+result <- spatial_nmf_maps(prepped$maps, mask = mask, k = 2)
 
 # For raw AUC maps
-prepped <- nmf_preprocess_maps(auc_maps, method = "auc_raw")
+raw_auc_maps <- lapply(auc_maps, function(m) m + 0.5)
+prepped <- nmf_preprocess_maps(raw_auc_maps, method = "auc_raw")
 
 # For z-score maps with small positive floor
+zmaps <- lapply(1:6, function(i) neuroim2::NeuroVol(array(rnorm(50), c(5, 5, 2)), sp))
 prepped <- nmf_preprocess_maps(zmaps, method = "shift", min_val = 0.01)
-}
+prepped$offset
 
 }

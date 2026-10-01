@@ -34,8 +34,6 @@ Convenience wrapper that accepts event onsets (and optional run labels) and
 delegates to \code{temporal_rdm}. This is useful in RSA formulas.
 }
 \examples{
-\dontrun{
-  onsets <- c(0, 2.5, 5.0, 7.5, 10.0)
-  temp_rdm <- temporal_from_onsets(onsets, kernel="exp", lambda=3)
-}
+onsets <- c(0, 2.5, 5.0, 7.5, 10.0)
+temp_rdm <- temporal_from_onsets(onsets, kernel = "exp", lambda = 3)
 }

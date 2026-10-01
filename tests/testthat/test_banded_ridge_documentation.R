@@ -30,7 +30,7 @@ context("banded ridge documentation and certification artifacts")
 }
 
 test_that("source, Rd, NEWS, and pkgdown agree on the public lifecycle", {
-  vignette_path <- .brdoc_root_file("vignettes", "Banded_Ridge_Encoding.Rmd")
+  vignette_path <- .brdoc_root_file("vignettes", "articles", "Banded_Ridge_Encoding.Rmd")
   model_rd_path <- .brdoc_root_file("man", "banded_ridge_model.Rd")
   run_rd_path <- .brdoc_root_file("man", "run_banded_ridge.Rd")
   news_path <- .brdoc_root_file("NEWS.md")
@@ -81,7 +81,7 @@ test_that("source, Rd, NEWS, and pkgdown agree on the public lifecycle", {
 
 test_that("the executable guide exposes the complete user journey without internals", {
   vignette_path <- .brdoc_root_file(
-    "vignettes", "Banded_Ridge_Encoding.Rmd"
+    "vignettes", "articles", "Banded_Ridge_Encoding.Rmd"
   )
   skip_if_not(
     file.exists(vignette_path),
@@ -152,16 +152,17 @@ test_that("the hosted dependency chain is declared explicitly", {
   expect_true(all(c(
     "bbuchsbaum/fmridesign", "bbuchsbaum/fmrilss"
   ) %in% remotes))
-  indirect <- c(
-    "github::bbuchsbaum/fmriAR", "github::bbuchsbaum/fmrihrf"
-  )
+  # fmriAR and fmrihrf are on CRAN; accept either the CRAN name or a
+  # GitHub source pin for the indirect dependencies.
+  indirect <- c("fmriAR", "fmrihrf")
   for (field in c(
     "Config/Needs/check", "Config/Needs/coverage", "Config/Needs/website"
   )) {
     needs <- trimws(strsplit(
       description[[1L, field]], ",", fixed = TRUE
     )[[1L]])
-    expect_true(all(indirect %in% needs), info = field)
+    need_pkgs <- sub("^.*/", "", sub("^github::", "", needs))
+    expect_true(all(indirect %in% need_pkgs), info = field)
   }
 })
 
@@ -236,7 +237,7 @@ test_that("coverage and uninstrumented integration courts stay separated", {
 
 test_that("issue 70 receipt declares seeds, folds, candidates, and uncertainty inputs", {
   results_path <- .brdoc_inst_file(
-    "extdata", "banded_ridge_issue70_results.csv"
+    "extdata", "banded_ridge_issue70_results.csv.gz"
   )
   script_path <- .brdoc_inst_file(
     "benchmarks", "banded_ridge_issue70.R"

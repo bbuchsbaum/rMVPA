@@ -444,11 +444,10 @@ pairwise_dist.pcadist <- function(obj, X,...) {
 #' - Finally, loops over row pairs to compute \code{(x_i - x_j) * inv_cov * (x_i - x_j)^T}.
 #'
 #' @examples
-#' \dontrun{
-#'   X <- matrix(rnorm(100), 10, 10)
-#'   dist_obj <- robustmahadist()
-#'   dist_matrix <- pairwise_dist(dist_obj, X)
-#' }
+#' X <- matrix(rnorm(100), 10, 10)
+#' dist_obj <- robustmahadist()
+#' dist_matrix <- pairwise_dist(dist_obj, X)
+#' dim(dist_matrix)
 #'
 #' @export
 #' @noRd

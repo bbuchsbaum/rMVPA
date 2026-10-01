@@ -6,9 +6,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 3
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: red
   preset: interaction
@@ -67,7 +67,7 @@ Use Feature-Based RSA when:
 - You want **regularisation** (PLS, PCR, fast ridge, or elastic net) because your feature space is high-dimensional, correlated, or has more features than trials.
 - You want **multiple performance metrics** out of one fit — pattern correlation, pattern discrimination, RDM correlation, voxel correlation, R² — rather than choosing one a priori.
 
-If you only have a model RDM (no feature matrix) and want a per-trial similarity score with built-in across-block masking, see `vignette("Vector_RSA")`. If you want to test multiple model RDMs as regressors and read out coefficients, see `vignette("RSA")`. If you want a whole-brain, covariance-aware reduced-rank model that yields forward patterns and regional access from one fit, see `vignette("Pattern_Model")`.
+If you only have a model RDM (no feature matrix) and want a per-trial similarity score with built-in across-block masking, see [Vector-Based RSA](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.html). If you want to test multiple model RDMs as regressors and read out coefficients, see `vignette("RSA")`. If you want a whole-brain, covariance-aware reduced-rank model that yields forward patterns and regional access from one fit, see `vignette("Pattern_Model")`.
 
 ## Inputs and outputs
 
@@ -436,7 +436,7 @@ ridge_receipt_path <- system.file(
 )
 if (!nzchar(ridge_receipt_path)) {
   ridge_receipt_path <- file.path(
-    "..", "inst", "extdata", "feature_rsa_ridge_accuracy_results.csv"
+    "..", "..", "inst", "extdata", "feature_rsa_ridge_accuracy_results.csv"
   )
 }
 ridge_receipt <- utils::read.csv(
@@ -520,7 +520,7 @@ Standard RSA is lighter and more interpretable when your hypothesis is about geo
 
 ## What's next
 
-- `vignette("Vector_RSA")` — per-trial RSA scores with built-in across-block masking, when you have a single reference RDM.
-- `vignette("Feature_RSA_Advanced_Workflows")` — workflow extensions: returning predicted RDM vectors, cross-ROI representational connectivity from feature-RSA fits, multi-scenario evaluation.
-- `vignette("Feature_RSA_Connectivity")` and `vignette("Feature_RSA_Domain_Adaptation")` — connectivity and cross-state extensions of the same model.
+- [Vector-Based RSA](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.html) — per-trial RSA scores with built-in across-block masking, when you have a single reference RDM.
+- [Feature-RSA Advanced Workflows](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.html) — workflow extensions: returning predicted RDM vectors, cross-ROI representational connectivity from feature-RSA fits, multi-scenario evaluation.
+- [Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html) and [Feature-RSA Across States: Domain Adaptation from Encoding to Recall](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html) — connectivity and cross-state extensions of the same model.
 - `?feature_rsa_design`, `?feature_rsa_model` — full argument reference.
