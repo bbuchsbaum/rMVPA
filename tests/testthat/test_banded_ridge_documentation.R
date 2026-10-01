@@ -152,16 +152,17 @@ test_that("the hosted dependency chain is declared explicitly", {
   expect_true(all(c(
     "bbuchsbaum/fmridesign", "bbuchsbaum/fmrilss"
   ) %in% remotes))
-  indirect <- c(
-    "github::bbuchsbaum/fmriAR", "github::bbuchsbaum/fmrihrf"
-  )
+  # fmriAR and fmrihrf are on CRAN; accept either the CRAN name or a
+  # GitHub source pin for the indirect dependencies.
+  indirect <- c("fmriAR", "fmrihrf")
   for (field in c(
     "Config/Needs/check", "Config/Needs/coverage", "Config/Needs/website"
   )) {
     needs <- trimws(strsplit(
       description[[1L, field]], ",", fixed = TRUE
     )[[1L]])
-    expect_true(all(indirect %in% needs), info = field)
+    need_pkgs <- sub("^.*/", "", sub("^github::", "", needs))
+    expect_true(all(indirect %in% need_pkgs), info = field)
   }
 })
 

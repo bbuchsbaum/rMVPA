@@ -132,6 +132,7 @@ test_that("cli parser accepts canonical and legacy option spellings", {
 })
 
 test_that("installed-style wrappers support help and version", {
+  skip_on_cran()
   wrappers <- c(searchlight = "searchlight", regional = "regional")
   rscript <- file.path(R.home("bin"), "Rscript")
 

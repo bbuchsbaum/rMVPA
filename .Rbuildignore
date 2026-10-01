@@ -56,3 +56,4 @@
 ^vignettes/.*_files($|/)
 ^codemeta\.json$
 ^tools($|/)
+^cran-comments\.md$

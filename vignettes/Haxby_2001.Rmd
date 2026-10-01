@@ -284,4 +284,4 @@ The package's `data-raw/haxby2001_subj1.R` script reproduces the bundled `patter
 > ventral temporal cortex.* **Science 293**: 2425–2430.
 > <https://doi.org/10.1126/science.1063736>
 
-Subject 1 data are redistributed by the [PyMVPA project](http://www.pymvpa.org/datadb/haxby2001.html) and on [OpenNeuro ds000105](https://openneuro.org/datasets/ds000105). Cite Haxby et al. (2001) and the data redistribution source you used.
+Subject 1 data are redistributed by the [PyMVPA project](https://www.pymvpa.org/datadb/haxby2001.html) and on [OpenNeuro ds000105](https://openneuro.org/datasets/ds000105). Cite Haxby et al. (2001) and the data redistribution source you used.

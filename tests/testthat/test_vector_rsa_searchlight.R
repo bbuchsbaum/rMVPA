@@ -22,6 +22,7 @@ test_that("vector_rsa runs without error and produces valid outputs", {
 })
 
 test_that("vector_rsa runs with mahalanobis distance without error and produces valid outputs", {
+  skip_on_cran()
   # Generate a sample dataset with 100 rows, 3 blocks, and a (5,5,5) volume structure
   # Assuming a helper function gen_sample_dataset() that creates suitable data
   dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
@@ -173,6 +174,7 @@ test_that("print.vector_rsa_model produces output", {
 
 ## --- Tests for run_searchlight.vector_rsa ---
 test_that("vector_rsa searchlight runs without error with different distance functions", {
+  skip_on_cran()
   dataset_obj <- gen_sample_dataset(c(5,5,5), 100, blocks = 3)
   D <- as.matrix(dist(matrix(rnorm(15*15), 15, 15)))
   labels <- paste0("Label", 1:15)

@@ -140,6 +140,7 @@ run_searchlight_fast_filter <- function(mspec, radius, fast_enabled) {
 }
 
 test_that("fast filter backend preserves searchlight outputs across model families", {
+  skip_on_cran()
   specs <- list(
     mvpa = build_fast_filter_mvpa_spec(),
     rsa = build_fast_filter_rsa_spec(),

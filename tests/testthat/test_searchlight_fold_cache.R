@@ -155,6 +155,7 @@ test_that("internal_crossval skips crossval_samples when valid fold cache is att
 })
 
 test_that("searchlight fold cache preserves output maps when enabled", {
+  skip_on_cran()
   built <- build_fold_cache_mspec()
   mspec <- built$mspec
 

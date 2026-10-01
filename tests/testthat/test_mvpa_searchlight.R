@@ -257,6 +257,7 @@ test_that("randomized mvpa_searchlight with bootstrap crossvalidation works", {
 })
 
 test_that("standard mvpa_searchlight and tune_grid runs without error", {
+  skip_on_cran()
   
   dataset <- gen_sample_dataset(c(3,3,3), 30, nlevels=2, blocks=3)
   cval <- blocked_cross_validation(dataset$design$block_var)
@@ -270,6 +271,7 @@ test_that("standard mvpa_searchlight and tune_grid runs without error", {
 })
 
 test_that("standard mvpa_searchlight and tune_grid with two-fold cross-validation runs without error", {
+  skip_on_cran()
   
   dataset <- gen_sample_dataset(c(3,3,4), 36, nlevels=2, blocks=2)
   cval <- blocked_cross_validation(dataset$design$block_var)

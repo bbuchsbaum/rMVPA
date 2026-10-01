@@ -1,6 +1,7 @@
 context("rsa searchlight")
 
 test_that("standard rsa_searchlight and blocking variable runs without error", {
+  skip_on_cran()
   dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
   
   Dmat <- dist(matrix(rnorm(100*100), 100, 100))
@@ -18,6 +19,7 @@ test_that("standard rsa_searchlight and blocking variable runs without error", {
 })
 
 test_that("standard rsa_searchlight with multiple distance matrices and blocking variable runs without error", {
+  skip_on_cran()
   dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
   
   Dmat1 <- dist(matrix(rnorm(100*100), 100, 100))
@@ -48,6 +50,7 @@ test_that("randomized rsa_searchlight and blocking variable runs without error",
 })
 
 test_that("standard rsa_searchlight and no blocking variable runs without error", {
+  skip_on_cran()
   dataset <- gen_sample_dataset(c(5,5,5), 100, blocks=3)
   
   Dmat <- dist(matrix(rnorm(100*100), 100, 100))
@@ -63,6 +66,7 @@ test_that("standard rsa_searchlight and no blocking variable runs without error"
 })
 
 test_that("standard rsa_searchlight and blocking variable runs without error", {
+  skip_on_cran()
   # Generate a sample MVPA dataset with a design including a blocking variable
   dataset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
   
@@ -88,6 +92,7 @@ test_that("standard rsa_searchlight and blocking variable runs without error", {
 })
 
 test_that("standard rsa_searchlight with multiple distance matrices and blocking variable runs without error", {
+  skip_on_cran()
   dataset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
   
   # Create two distance matrices
@@ -125,6 +130,7 @@ test_that("randomized rsa_searchlight and blocking variable runs without error",
 })
 
 test_that("standard rsa_searchlight and no blocking variable runs without error", {
+  skip_on_cran()
   dataset <- gen_sample_dataset(c(5, 5, 5), 100, blocks = 3)
 
   Dmat <- dist(matrix(rnorm(100 * 100), 100, 100))

@@ -50,6 +50,7 @@ test_that("feature RSA benchmark validates parity without timing thresholds", {
 })
 
 test_that("ridge accuracy suite summarizes predeclared linear-fixture margins", {
+  skip_on_cran()
   script <- testthat::test_path(
     "..", "..", "inst", "benchmarks", "feature_rsa_hotpaths.R"
   )
