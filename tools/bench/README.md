@@ -49,6 +49,10 @@ searchlight path is slow. For jobs that long, launch with
   reference BLAS while numpy uses Apple Accelerate, so BLAS-heavy rows favour
   the competitor. Report both R BLAS configurations before claiming a win on
   those rows.
+- **Fixed seeds.** rMVPA breaks predicted-class ties at random (release-plan
+  finding C2), so `run_rmvpa.R` reseeds before every rep. Receipts recorded
+  before that change may differ in the 5th or 6th decimal of a digest for
+  that reason alone.
 - **Append, never edit.** New runs add receipts. Losses stay on the
   scoreboard until a later receipt beats them.
 
@@ -60,3 +64,8 @@ searchlight path is slow. For jobs that long, launch with
 - **Linear SVM:** rMVPA's `svmLinear` needs e1071, which is not installed
   here, and the planned LinearSVC-equivalent model does not exist yet.
 - **Peak memory:** not yet recorded.
+- **Byte compilation:** runners use `pkgload::load_all`, which does not
+  byte-compile. Some per-call cost is JIT compilation an installed package
+  would not pay. Relative comparisons between rMVPA branches are fair;
+  before quoting absolute numbers, run against an installed build in a
+  temporary library.

@@ -1,6 +1,6 @@
 # Benchmark scoreboard
 
-Generated 2026-10-01 06:47 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
+Generated 2026-10-01 07:18 from `tools/bench/receipts/` by `tools/bench/scoreboard.R`.
 Single-threaded medians. **Ratio = rMVPA / competitor (< 1 means rMVPA is faster).**
 A ratio is shown only when the two output digests agree to 1e-4 relative;
 otherwise the methods are not computing the same thing and the row is marked.
@@ -18,6 +18,10 @@ Losses are recorded as losses.
 | gaussian_nb | perf/logger-gating @fe364b8 | legacy | 32.1 | 4.5 | nilearn | **7.17** | match |
 | lda_shrinkage | perf/logger-gating @fe364b8 | dual_lda_fast | 2.1 | 17.6 | nilearn | n/a | differ (0.237436 vs 0.239508) |
 | sda_notune | perf/logger-gating @fe364b8 | legacy | 50.7 | — | — | — | rMVPA only |
+| corclass | perf/regional-scaffold @fe364b8 | legacy | 13.0 | 2.5 | nilearn | **5.20** | match |
+| gaussian_nb | perf/regional-scaffold @fe364b8 | legacy | 24.1 | 4.5 | nilearn | **5.38** | match |
+| lda_shrinkage | perf/regional-scaffold @fe364b8 | dual_lda_fast | 2.1 | 17.6 | nilearn | n/a | differ (0.237442 vs 0.239508) |
+| sda_notune | perf/regional-scaffold @fe364b8 | legacy | 42.7 | — | — | — | rMVPA only |
 
 ## regional_haxby_vt (ms per roi)
 
@@ -31,6 +35,10 @@ Losses are recorded as losses.
 | gaussian_nb | perf/logger-gating @fe364b8 |  | 853.0 | 14.0 | scikit-learn | **60.85** | match |
 | lda_shrinkage | perf/logger-gating @fe364b8 |  | 1032.5 | 568.9 | scikit-learn | n/a | differ (0.927083 vs 0.885417) |
 | sda_notune | perf/logger-gating @fe364b8 |  | 850.0 | — | — | — | rMVPA only |
+| corclass | perf/regional-scaffold @fe364b8 |  | 73.0 | 7.0 | scikit-learn | **10.38** | match |
+| gaussian_nb | perf/regional-scaffold @fe364b8 |  | 365.5 | 14.0 | scikit-learn | **26.08** | match |
+| lda_shrinkage | perf/regional-scaffold @fe364b8 |  | 553.0 | 568.9 | scikit-learn | n/a | differ (0.927083 vs 0.885417) |
+| sda_notune | perf/regional-scaffold @fe364b8 |  | 372.0 | — | — | — | rMVPA only |
 
 ## rsa_haxby (ms per rdm)
 
@@ -40,6 +48,8 @@ Losses are recorded as losses.
 | rdm_crossnobis_identity | bench/competitor-harness @8a13e6e |  | 1.8 | 3.4 | rsatoolbox | **0.53** | match |
 | rdm_correlation_condmeans | perf/logger-gating @fe364b8 |  | 0.346 | 0.185 | rsatoolbox | **1.87** | match |
 | rdm_crossnobis_identity | perf/logger-gating @fe364b8 |  | 1.8 | 3.4 | rsatoolbox | **0.54** | match |
+| rdm_correlation_condmeans | perf/regional-scaffold @fe364b8 |  | 0.334 | 0.185 | rsatoolbox | **1.81** | match |
+| rdm_crossnobis_identity | perf/regional-scaffold @fe364b8 |  | 1.8 | 3.4 | rsatoolbox | **0.55** | match |
 
 ## Environment
 

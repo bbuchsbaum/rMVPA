@@ -29,10 +29,16 @@ quiet <- function(code) {
 
 # `inner` repeats fn within each timed rep, for operations shorter than the
 # timer resolution; times are reported per call.
+#
+# Every rep reseeds: rMVPA currently breaks predicted-class ties at random
+# (release-plan finding C2), so without a fixed seed the output digest would
+# depend on how much RNG earlier runs consumed.
 time_reps <- function(fn, reps, inner = 1L) {
+  set.seed(20261001)
   quiet(fn())  # warm-up
   out <- NULL
   times <- vapply(seq_len(reps), function(i) {
+    set.seed(20261001)
     t0 <- proc.time()[["elapsed"]]
     for (k in seq_len(inner)) out <<- quiet(fn())
     (proc.time()[["elapsed"]] - t0) / inner
