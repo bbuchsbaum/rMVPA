@@ -55,3 +55,4 @@
 ^vignettes/(?!albers-header\.html$).*\.html$
 ^vignettes/.*_files($|/)
 ^codemeta\.json$
+^tools($|/)
