@@ -1,5 +1,9 @@
 # rMVPA (development version)
 
+* `mvpa_model(..., class_metrics = TRUE)` works again for multiclass
+  searchlight and regional analyses. The output schema did not declare the
+  per-class `AUC_<class>` columns, so every ROI failed the schema width check
+  and regional performance tables came back empty.
 * **Correctness fix (changes results):** `run_searchlight()` with the default
   `engine = "auto"` no longer routes multiclass (three or more classes)
   `mvpa_model` searchlights to the SWIFT engine. SWIFT computes its own
