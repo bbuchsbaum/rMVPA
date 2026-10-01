@@ -1202,15 +1202,19 @@ run_regional.vector_rsa_model <- function(model_spec, region_mask,
   # The result from merge_results.vector_rsa_model will contain:
   # - performance: list column with the summary performance matrix
   # - result: list column containing list(rsa_scores=scores_vector) or NULL
-  iteration_results <- mvpa_iterate(
-    model_spec,
-    prepped$vox_iter,
-    ids = prepped$region_set,
-    processor = processor, # Use default processor unless specified
-    verbose = verbose,
-    analysis_type = "regional",
-    ...
-  )
+  # Forward the remaining dots, not `...`: the arguments consumed above
+  # (verbose, processor, return_fits, ...) must not reach mvpa_iterate twice.
+  iteration_results <- do.call(mvpa_iterate, c(
+    list(
+      model_spec,
+      prepped$vox_iter,
+      ids = prepped$region_set,
+      processor = processor, # Use default processor unless specified
+      verbose = verbose,
+      analysis_type = "regional"
+    ),
+    dots
+  ))
   
   # 3) Performance computation (using base helper)
   # This extracts the 'performance' column from iteration_results
