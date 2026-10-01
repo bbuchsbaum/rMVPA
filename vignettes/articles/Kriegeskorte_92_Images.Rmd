@@ -6,9 +6,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 2.0
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: red
   preset: interaction
@@ -46,7 +46,7 @@ resolve_kriegeskorte_path <- function() {
   # Fallback when the vignette is rendered from a source checkout that has
   # not been installed (e.g. devtools::build_vignettes()).
   src_candidates <- c(
-    file.path("..", "inst", "extdata", "kriegeskorte92", "rdms.rds"),
+    file.path("..", "..", "inst", "extdata", "kriegeskorte92", "rdms.rds"),
     file.path("inst", "extdata", "kriegeskorte92", "rdms.rds")
   )
   for (p in src_candidates) if (file.exists(p)) return(normalizePath(p))
@@ -188,7 +188,7 @@ box()
 par(op)
 ```
 
-`conn$component_similarity` decomposes the 8 × 8 matrix into rank-1 contributions from each orthogonal axis of the model space. The first axis captures most of the shared geometry; the rest distinguish *which* models a given (subject, session) leans on more than the others. See `vignette("Model_Space_Connectivity")` for that workflow on synthetic data.
+`conn$component_similarity` decomposes the 8 × 8 matrix into rank-1 contributions from each orthogonal axis of the model space. The first axis captures most of the shared geometry; the rest distinguish *which* models a given (subject, session) leans on more than the others. See [Model-Space Representational Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html) for that workflow on synthetic data.
 
 ## Verifying against the published table
 
@@ -207,9 +207,9 @@ The ordering is the same as in the paper: the categorical models (monkey IT, ani
 
 ## Where to go next
 
-- For a synthetic-data walkthrough of the same connectivity machinery, see `vignette("Model_Space_Connectivity")`.
+- For a synthetic-data walkthrough of the same connectivity machinery, see [Model-Space Representational Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html).
 - For pair-design generalisations (cross-domain RDMs, function-valued model entries), see the same vignette.
-- For Feature-RSA's complementary "predict the RDM through a learned feature space" workflow, see `vignette("Feature_RSA_Connectivity")`.
+- For Feature-RSA's complementary "predict the RDM through a learned feature space" workflow, see [Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html).
 
 ## Citation
 

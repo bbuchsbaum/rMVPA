@@ -6,9 +6,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 3
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: red
   preset: interaction
@@ -71,7 +71,7 @@ Use Vector-Based RSA when:
 - You want **per-trial RSA scores** so you can correlate them with behaviour or a single-trial covariate.
 - You want a **permutation-based p-value and z-score** without writing the permutation loop yourself.
 
-If you instead have a feature matrix and want regression-style metrics (pattern correlation, R²) under cross-validation, see `vignette("Feature_RSA")`. If you want to fit multiple model RDMs as competing predictors, see `vignette("RSA")`.
+If you instead have a feature matrix and want regression-style metrics (pattern correlation, R²) under cross-validation, see [Feature-Based RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html). If you want to fit multiple model RDMs as competing predictors, see `vignette("RSA")`.
 
 ## Inputs and outputs
 
@@ -200,6 +200,6 @@ Permutation is done *within each ROI* — it shuffles which neural row goes with
 
 ## What's next
 
-- `vignette("Feature_RSA")` — when you have a feature matrix rather than a single reference RDM.
+- [Feature-Based RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html) — when you have a feature matrix rather than a single reference RDM.
 - `vignette("RSA")` — the standard whole-RDM workflow with multiple model RDMs and `keep_intra_run`.
 - `?vector_rsa_design`, `?vector_rsa_model`, `?second_order_similarity` — argument reference and the underlying scoring function.

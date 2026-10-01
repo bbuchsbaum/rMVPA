@@ -6,9 +6,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 2.0
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: red
   preset: interaction
@@ -293,5 +293,5 @@ aligned to trials (consider the `check_hash` guard above).
 ## Next steps
 
 - `?item_model`, `?item_design` -- full parameter documentation
-- `vignette("Naive_Cross_Decoding")` -- a no-learning cross-domain baseline
+- [Naive Cross-Decoding](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.html) -- a no-learning cross-domain baseline
 - `vignette("Searchlight_Analysis")` -- general searchlight workflow

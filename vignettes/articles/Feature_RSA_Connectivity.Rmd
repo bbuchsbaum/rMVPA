@@ -4,9 +4,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 2.0
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: red
   preset: interaction
@@ -340,7 +340,7 @@ These adjustments answer different questions, so it is often worth saving both t
 
 rMVPA exposes two ways to compute ROI-to-ROI representational connectivity. They are not redundant — they answer subtly different questions, and the right tool depends on whether you supply a *model* or a *feature space*:
 
-| | **Feature-RSA connectivity** *(this vignette)* | **Model-space connectivity** *(`vignette("Model_Space_Connectivity")`)* |
+| | **Feature-RSA connectivity** *(this vignette)* | **Model-space connectivity** *([Model-Space Representational Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html))* |
 |:--|:--|:--|
 | **What you supply** | A feature matrix `F` (or similarity matrix `S`) | One or more explicit model RDMs |
 | **Fitting** | CV-fitted PLS / PCA / glmnet maps neural patterns ↔ feature space | No fitting — neural pair vectors are projected onto a fixed model-RDM basis |
@@ -355,4 +355,4 @@ A useful rule of thumb: **declared model → model-space connectivity; learned m
 
 ## Next steps
 
-If your transfer problem is across cognitive states rather than across ROIs, see `vignette("Feature_RSA_Domain_Adaptation")`. If you want the broader decision map for within-ROI fits, cross-state transfer, and ROI-to-ROI generalization, see `vignette("Feature_RSA_Advanced_Workflows")`. For the model-RDM-driven counterpart of the connectivity workflow, see `vignette("Model_Space_Connectivity")`.
+If your transfer problem is across cognitive states rather than across ROIs, see [Feature-RSA Across States: Domain Adaptation from Encoding to Recall](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html). If you want the broader decision map for within-ROI fits, cross-state transfer, and ROI-to-ROI generalization, see [Feature-RSA Advanced Workflows](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.html). For the model-RDM-driven counterpart of the connectivity workflow, see [Model-Space Representational Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html).

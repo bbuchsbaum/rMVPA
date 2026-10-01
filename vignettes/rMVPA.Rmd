@@ -12,7 +12,6 @@ resource_files:
 - albers.css
 - albers.js
 - albers-header.html
-- fonts
 params:
   family: red
   preset: interaction
@@ -142,7 +141,7 @@ stopifnot(
 
 In your own study, these rows would usually be trial-wise or condition-wise
 beta estimates from a first-level model. See
-`vignette("Constructing_Datasets")` for file-backed images, masks, and other
+[Constructing Datasets for MVPA Analysis](https://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.html) for file-backed images, masks, and other
 input layouts.
 
 ## What must remain independent?
@@ -286,7 +285,7 @@ A clean preflight is necessary, not magical. It can verify the design and fold
 structure represented in these objects; it cannot prove that upstream
 preprocessing was scientifically appropriate. Any data-driven scaling,
 feature selection, or tuning must also be learned without looking at the test
-observations. `vignette("FeatureSelection")` shows how to place feature
+observations. [Feature Selection in rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html) shows how to place feature
 selection inside the resampling loop.
 
 ## What does the held-out analysis find?
@@ -497,12 +496,12 @@ save_results(result, dir = "haxby-vt-results")
 
 ## Where should you go next?
 
-- **Bring your own images and masks:** `vignette("Constructing_Datasets")`.
+- **Bring your own images and masks:** [Constructing Datasets for MVPA Analysis](https://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.html).
 - **Design leakage-resistant resampling:** `vignette("CrossValidation")`.
-- **Select voxels inside the training folds:** `vignette("FeatureSelection")`.
+- **Select voxels inside the training folds:** [Feature Selection in rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html).
 - **Move from one region to a decoding map:** `vignette("Searchlight_Analysis")`.
 - **Study representational geometry instead of category prediction:**
-  `vignette("RSA")`, followed by `vignette("Kriegeskorte_92_Images")` for a
+  `vignette("RSA")`, followed by [Reproducing Kriegeskorte (2008) with rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html) for a
   real-data example.
 
 The package's core public workflow is now in view:

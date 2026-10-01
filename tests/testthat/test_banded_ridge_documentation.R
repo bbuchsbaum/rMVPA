@@ -30,7 +30,7 @@ context("banded ridge documentation and certification artifacts")
 }
 
 test_that("source, Rd, NEWS, and pkgdown agree on the public lifecycle", {
-  vignette_path <- .brdoc_root_file("vignettes", "Banded_Ridge_Encoding.Rmd")
+  vignette_path <- .brdoc_root_file("vignettes", "articles", "Banded_Ridge_Encoding.Rmd")
   model_rd_path <- .brdoc_root_file("man", "banded_ridge_model.Rd")
   run_rd_path <- .brdoc_root_file("man", "run_banded_ridge.Rd")
   news_path <- .brdoc_root_file("NEWS.md")
@@ -81,7 +81,7 @@ test_that("source, Rd, NEWS, and pkgdown agree on the public lifecycle", {
 
 test_that("the executable guide exposes the complete user journey without internals", {
   vignette_path <- .brdoc_root_file(
-    "vignettes", "Banded_Ridge_Encoding.Rmd"
+    "vignettes", "articles", "Banded_Ridge_Encoding.Rmd"
   )
   skip_if_not(
     file.exists(vignette_path),

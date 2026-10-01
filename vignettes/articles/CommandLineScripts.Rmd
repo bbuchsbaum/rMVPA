@@ -6,9 +6,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 2.0
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: red
   preset: interaction
@@ -26,7 +26,7 @@ vignette: |
 
 # Superseded
 
-This vignette has been superseded by `vignette("CommandLine")`, which now
+This vignette has been superseded by [Command-Line MVPA Interfaces](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.html), which now
 documents the supported command-line interface for both:
 
 - `rmvpa-searchlight`
@@ -40,5 +40,5 @@ Use the unified vignette for:
 - searchlight-specific options and examples
 - regional-specific options and examples
 
-If you arrived here from an older link, switch to `vignette("CommandLine")`
+If you arrived here from an older link, switch to [Command-Line MVPA Interfaces](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.html)
 for the current interface.

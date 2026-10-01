@@ -4,9 +4,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 2
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: lapis
   preset: study
@@ -354,7 +354,7 @@ resolve_inst_file <- function(directory, filename) {
   installed <- system.file(directory, filename, package = "rMVPA")
   if (nzchar(installed) && file.exists(installed)) return(installed)
   candidates <- c(
-    file.path("..", "inst", directory, filename),
+    file.path("..", "..", "inst", directory, filename),
     file.path("inst", directory, filename)
   )
   found <- candidates[file.exists(candidates)]

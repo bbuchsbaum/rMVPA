@@ -57,3 +57,5 @@
 ^codemeta\.json$
 ^tools($|/)
 ^cran-comments\.md$
+^vignettes/articles$
+^vignettes/fonts$

@@ -6,9 +6,9 @@ output:
   rmarkdown::html_vignette:
     toc: yes
     toc_depth: 3
-    css: albers.css
+    css: ../albers.css
     includes:
-      in_header: albers-header.html
+      in_header: ../albers-header.html
 params:
   family: red
   preset: interaction
@@ -222,7 +222,7 @@ cross_validation:
   nreps: 10
 ```
 
-See `vignette("FeatureSelection")` and `vignette("CrossValidation")` for the
+See [Feature Selection in rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html) and `vignette("CrossValidation")` for the
 full option surface.
 
 # Searchlight Analysis (`rmvpa-searchlight`)
@@ -409,7 +409,7 @@ remap_min_pairs: 5
 
 Outputs include the standard regional summaries plus REMAP diagnostics such as
 `remap_improv`, `delta_frob_mean`, and `lambda_mean`. See
-`vignette("REMAP_RRR")` for the model-level details.
+[REMAP‑RRR — Domain‑Adaptive Cross‑Decoding](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html) for the model-level details.
 
 # Backward Compatibility
 

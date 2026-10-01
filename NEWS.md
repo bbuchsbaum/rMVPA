@@ -28,6 +28,13 @@
 * `spatial_nmf_voxelwise_stats()` works with sparse volumetric maps (it called
   `neuroim2::indices()`, which has no `SparseNeuroVol` method).
 * `print.manova_model()` handles one-sided formulas (`~ Y + block_var`).
+* Package size: seven core vignettes ship with the package (`rMVPA`,
+  `CrossValidation`, `Searchlight_Analysis`, `Regional_Analysis`, `RSA`,
+  `Haxby_2001`, `Pattern_Model`); the other 27 are pkgdown articles at
+  <https://bbuchsbaum.github.io/rMVPA/articles/>. Installed vignettes no
+  longer embed the albersdown web fonts (~560 KB each); the website keeps
+  them.
+* `regression_result()` is exported, like its classification siblings.
 * `gen_sample_dataset(external_test = TRUE)` no longer emits a stray message.
 
 # rMVPA 0.1.3

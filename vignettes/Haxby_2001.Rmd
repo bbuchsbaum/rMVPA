@@ -16,7 +16,6 @@ resource_files:
 - albers.css
 - albers.js
 - albers-header.html
-- fonts
 
 vignette: |
   %\VignetteIndexEntry{Reproducing Haxby (2001) classification with rMVPA}
@@ -244,7 +243,7 @@ par(op)
 
 Why such a wide spread? The dataset shape (96 observations × 577 voxels × 8 classes) is exactly the regime where pooled shrinkage covariance estimation pays for itself: voxels are strongly correlated, the within-class covariance is rank-deficient, and unregularised methods either overfit (`naive_bayes` is forced into independence; `rf` averages weak high-variance trees) or treat the boundary geometrically without using the covariance structure (`svmLinear`). `corclass` tops out at ≈27 % because it's an 8-way correlation-to-prototype classifier; the canonical Haxby (2001) ≈90 % numbers came from a *binary, split-half-within-run* version of correlation classification that is structurally different from the 8-way leave-one-run-out reported here.
 
-The full `MVPAModels` registry includes 22 classifiers; see `ls(rMVPA:::MVPAModels)` for the complete list and `vignette("FeatureSelection")` for adding feature selection inside the CV loop.
+The full `MVPAModels` registry includes 22 classifiers; see `ls(rMVPA:::MVPAModels)` for the complete list and [Feature Selection in rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html) for adding feature selection inside the CV loop.
 
 ## Where the raw data lives
 
@@ -274,7 +273,7 @@ The package's `data-raw/haxby2001_subj1.R` script reproduces the bundled `patter
 ## Where to go next
 
 - For a searchlight version of this analysis, see `vignette("Searchlight_Analysis")`. The same `mspec` plus `run_searchlight()` produces a per-voxel decoding map.
-- For RSA-style geometry (rather than category labels), `vignette("Kriegeskorte_92_Images")` walks through the matched real-data RSA workflow.
+- For RSA-style geometry (rather than category labels), [Reproducing Kriegeskorte (2008) with rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html) walks through the matched real-data RSA workflow.
 - For rMVPA's classification ergonomics in general, see `vignette("Regional_Analysis")` and `vignette("CrossValidation")`.
 
 ## Citation
