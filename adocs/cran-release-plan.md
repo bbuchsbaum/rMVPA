@@ -331,11 +331,16 @@ The golden fixtures enforce these.
   - This is **exact** corclass (Pearson), Euclidean nearest-centroid, Gaussian NB and diagonal LDA.
   - It replaces SWIFT's approximate role. SWIFT is either retired or kept as an explicitly named model.
   - Expected ~0.2–0.5 ms/sphere.
+- **Native shrinkage discriminant (`sda` replacement):** maintainer priority (2026-10-01).
+  - The `sda` package alone costs about 37 ms per sphere, and `sda_notune` is the recommended default.
+  - Implement the same estimator in rMVPA: James–Stein shrinkage of correlations, variances and class frequencies (Schäfer–Strimmer analytic intensities), then the discriminant.
+  - Golden/parity against `sda::sda` predictions and posteriors on the existing fixtures, at a stated tolerance.
+  - Then run it in the incremental engine below.
 - **Shrinkage LDA:**
   - Extend the `dual_lda_fast` incremental-Cholesky engine to `sda_notune`-equivalent and sklearn-equivalent shrinkage. This needs an explicit λ mapping and parity tier.
   - Route full-covariance LDA there.
   - Woodbury fold downdates instead of per-fold refits.
-- **Linear SVM:** a compiled dual coordinate-descent solver (liblinear-style), warm-started from the neighbouring sphere along the snake order already used by dual_lda.
+- **Linear SVM (low priority, maintainer 2026-10-01; after everything else in Stage B):** a compiled dual coordinate-descent solver (liblinear-style), warm-started from the neighbouring sphere along the snake order already used by dual_lda.
   - It is a **new, separately named model** (e.g. `svm_linear_l2`), with its own loss, intercept handling and multiclass strategy, matching sklearn `LinearSVC`.
   - It never accelerates the existing e1071 `svmLinear`, which is libsvm with hinge loss, an unregularised intercept and OvO.
   - Parity is against liblinear/LinearSVC.
@@ -437,7 +442,11 @@ The golden fixtures enforce these.
 
 **External, long lead time. The maintainer is assessing this (see §4, decision 1); the options below stand until that decision is made.**
 
-- **neuroim2:** release a CRAN version that rMVPA can depend on with a version floor, and fix the exported `scale` masking. If that release slips, constrain rMVPA to the API in CRAN 0.13.0.
+- **neuroim2:** release a CRAN version that rMVPA can depend on with a version floor, and fix the exported `scale` masking.
+  - **Status 2026-10-01:** neuroim2 0.20.0 is prepared (commit `b7b874c` on `feat/plot-hillclimb`; local check 0 errors, 0 warnings, 2 notes; no `scale` export) and installed locally.
+  - Against it, rMVPA's golden fixtures and broad tests show no change, and the three `scale`-related vignette failures are gone.
+  - After the CRAN release, set `neuroim2 (>= 0.20.0)`.
+- **Vignettes using optional packages:** `Haxby_2001` fails when `randomForest`/`e1071` are absent (failed fits leave no `Accuracy` column). Every vignette must guard optional classifiers.
 - **shard:** release 0.2.1 or lower the floor.
 - **fmridesign, fmrilss, neurosurf:**
   - Option (a): CRAN-release them.
