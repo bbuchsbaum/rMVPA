@@ -296,6 +296,58 @@ utils::globalVariables(c(
   "scores_list"
 ))
 
+# Stable fast paths are always on for users: the rMVPA.* options that once
+# toggled them are deliberately ignored (see test_searchlight_profile_policy.R).
+# Each fast path still keeps its reference implementation, and parity tests and
+# perf guardrails must be able to run it. They do so through this package-private
+# switch, which is not an option and is not user-facing.
+.rmvpa_fast_path_names <- c(
+  "fold_cache",
+  "searchlight_geometry_cache",
+  "clustered_nn_fastpath",
+  "matrix_first_roi",
+  "fast_filter_roi",
+  "rsa_fast_kernel",
+  "naive_xdec_fast_kernel"
+)
+
+.rmvpa_reference_paths <- new.env(parent = emptyenv())
+
+#' @keywords internal
+#' @noRd
+.fast_path_enabled <- function(name) {
+  !isTRUE(.rmvpa_reference_paths[[name]])
+}
+
+#' Run code with selected fast paths replaced by their reference implementations
+#'
+#' Internal, for parity tests and benchmarks only.
+#'
+#' @keywords internal
+#' @noRd
+.with_reference_paths <- function(names, code) {
+  unknown <- setdiff(names, .rmvpa_fast_path_names)
+  if (length(unknown) > 0L) {
+    stop("Unknown fast path name(s): ", paste(unknown, collapse = ", "), call. = FALSE)
+  }
+  previous <- mget(names, envir = .rmvpa_reference_paths, ifnotfound = list(NULL))
+  on.exit({
+    for (nm in names) {
+      if (is.null(previous[[nm]])) {
+        if (exists(nm, envir = .rmvpa_reference_paths, inherits = FALSE)) {
+          rm(list = nm, envir = .rmvpa_reference_paths)
+        }
+      } else {
+        assign(nm, previous[[nm]], envir = .rmvpa_reference_paths)
+      }
+    }
+  }, add = TRUE)
+  for (nm in names) {
+    assign(nm, TRUE, envir = .rmvpa_reference_paths)
+  }
+  force(code)
+}
+
 #' Apply a scoped future plan with an exact worker contract
 #'
 #' Internal helper shared by the CLI and custom analysis entry points. The

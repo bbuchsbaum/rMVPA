@@ -159,19 +159,13 @@ test_that("searchlight fold cache preserves output maps when enabled", {
   mspec <- built$mspec
 
   set.seed(2201)
-  old_off <- options(
-    rMVPA.searchlight_mode = "legacy",
-    rMVPA.fold_cache_enabled = NULL
-  )
-  on.exit(options(old_off), add = TRUE)
-  res_base <- run_searchlight(mspec, radius = 2, method = "standard", backend = "default")
+  res_base <- rMVPA:::.with_reference_paths("fold_cache", {
+    expect_false(rMVPA:::.fold_cache_enabled())
+    run_searchlight(mspec, radius = 2, method = "standard", backend = "default")
+  })
 
   set.seed(2201)
-  old_on <- options(
-    rMVPA.searchlight_mode = "fast",
-    rMVPA.fold_cache_enabled = NULL
-  )
-  on.exit(options(old_on), add = TRUE)
+  expect_true(rMVPA:::.fold_cache_enabled())
   res_cache <- run_searchlight(mspec, radius = 2, method = "standard", backend = "default")
 
   expect_searchlight_parity(

@@ -7,7 +7,7 @@ gen_id <- function(n) {
 #' @keywords internal
 #' @noRd
 .fast_filter_roi_enabled <- function() {
-  TRUE
+  .fast_path_enabled("fast_filter_roi")
 }
 
 #' @keywords internal

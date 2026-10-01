@@ -40,17 +40,16 @@ test_that("rsa fast kernel state is constructed by default", {
 })
 
 test_that("rsa fast kernel preserves lm t-values (differential parity)", {
-  fix <- rsa_fast_kernel_fixture(regtype = "lm", distmethod = "pearson", semipartial = FALSE)
+  # The reference model must be constructed with the fast path off, because
+  # the kernel state is chosen at rsa_model() construction.
+  base <- rMVPA:::.with_reference_paths("rsa_fast_kernel", {
+    fix <- rsa_fast_kernel_fixture(regtype = "lm", distmethod = "pearson", semipartial = FALSE)
+    expect_null(fix$mspec$.fast_kernel)
+    rMVPA:::train_model.rsa_model(fix$mspec, fix$train_mat, y = NULL, indices = NULL)
+  })
 
-  old_opt <- options(
-    rMVPA.searchlight_mode = "legacy",
-    rMVPA.rsa_fast_kernel = NULL
-  )
-  on.exit(options(old_opt), add = TRUE)
-  base <- rMVPA:::train_model.rsa_model(fix$mspec, fix$train_mat, y = NULL, indices = NULL)
-
-  options(rMVPA.searchlight_mode = "fast", rMVPA.rsa_fast_kernel = NULL)
   fast_fix <- rsa_fast_kernel_fixture(regtype = "lm", distmethod = "pearson", semipartial = FALSE)
+  expect_false(is.null(fast_fix$mspec$.fast_kernel))
   fast <- rMVPA:::train_model.rsa_model(fast_fix$mspec, fast_fix$train_mat, y = NULL, indices = NULL)
 
   expect_identical(names(fast), names(base))
@@ -58,17 +57,16 @@ test_that("rsa fast kernel preserves lm t-values (differential parity)", {
 })
 
 test_that("rsa fast kernel preserves correlation outputs for spearman predictor fit", {
-  fix <- rsa_fast_kernel_fixture(regtype = "pearson", distmethod = "spearman", semipartial = FALSE)
+  # The reference model must be constructed with the fast path off, because
+  # the kernel state is chosen at rsa_model() construction.
+  base <- rMVPA:::.with_reference_paths("rsa_fast_kernel", {
+    fix <- rsa_fast_kernel_fixture(regtype = "pearson", distmethod = "spearman", semipartial = FALSE)
+    expect_null(fix$mspec$.fast_kernel)
+    rMVPA:::train_model.rsa_model(fix$mspec, fix$train_mat, y = NULL, indices = NULL)
+  })
 
-  old_opt <- options(
-    rMVPA.searchlight_mode = "legacy",
-    rMVPA.rsa_fast_kernel = NULL
-  )
-  on.exit(options(old_opt), add = TRUE)
-  base <- rMVPA:::train_model.rsa_model(fix$mspec, fix$train_mat, y = NULL, indices = NULL)
-
-  options(rMVPA.searchlight_mode = "fast", rMVPA.rsa_fast_kernel = NULL)
   fast_fix <- rsa_fast_kernel_fixture(regtype = "pearson", distmethod = "spearman", semipartial = FALSE)
+  expect_false(is.null(fast_fix$mspec$.fast_kernel))
   fast <- rMVPA:::train_model.rsa_model(fast_fix$mspec, fast_fix$train_mat, y = NULL, indices = NULL)
 
   expect_identical(names(fast), names(base))

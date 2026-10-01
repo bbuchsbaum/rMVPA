@@ -109,18 +109,15 @@ resolve_perf_mode <- function(mode) {
   match.arg(mode, c("legacy", "fast"))
 }
 
-perf_mode_options <- function(mode) {
-  mode <- resolve_perf_mode(mode)
-  list(
-    rMVPA.searchlight_mode = mode,
-    rMVPA.searchlight_profile = NULL,
-    rMVPA.warn_legacy_options = FALSE
-  )
+# "legacy" runs every stable fast path's retained reference implementation;
+# "fast" is the default runtime. Model specs are built by the caller, so
+# construction-time kernels (rsa, naive_xdec) are not covered by this switch;
+# their own perf files rebuild the model inside the override.
+run_with_reference_paths <- function(names, code) {
+  if (length(names) == 0L) force(code) else rMVPA:::.with_reference_paths(names, code)
 }
 
-run_with_perf_mode <- function(mspec, radius, mode = c("legacy", "fast")) {
-  old_opt <- options(perf_mode_options(mode))
-  on.exit(options(old_opt), add = TRUE)
+run_sequential_searchlight <- function(mspec, radius) {
   if (requireNamespace("future", quietly = TRUE)) {
     old_plan <- future::plan()
     on.exit(future::plan(old_plan), add = TRUE)
@@ -129,24 +126,27 @@ run_with_perf_mode <- function(mspec, radius, mode = c("legacy", "fast")) {
   run_searchlight(mspec, radius = radius, method = "standard", backend = "default")
 }
 
+run_with_perf_mode <- function(mspec, radius, mode = c("legacy", "fast")) {
+  mode <- resolve_perf_mode(mode)
+  names <- if (identical(mode, "legacy")) rMVPA:::.rmvpa_fast_path_names else character()
+  run_with_reference_paths(names, run_sequential_searchlight(mspec, radius))
+}
+
 run_with_fold_cache <- function(mspec, radius, fold_cache_enabled) {
-  mode <- if (isTRUE(fold_cache_enabled)) "fast" else "legacy"
-  run_with_perf_mode(mspec, radius = radius, mode = mode)
+  names <- if (isTRUE(fold_cache_enabled)) character() else "fold_cache"
+  run_with_reference_paths(names, run_sequential_searchlight(mspec, radius))
 }
 
 run_with_geometry_cache <- function(dset, radius, cache_enabled) {
-  old_opt <- options(
-    rMVPA.searchlight_mode = "fast",
-    rMVPA.searchlight_profile = NULL,
-    rMVPA.searchlight_geometry_cache = isTRUE(cache_enabled),
-    rMVPA.searchlight_geometry_cache_max_entries = 8L,
-    rMVPA.warn_legacy_options = FALSE
-  )
+  old_opt <- options(rMVPA.searchlight_geometry_cache_max_entries = 8L)
   on.exit(options(old_opt), add = TRUE)
   rMVPA:::.searchlight_geometry_cache_clear()
 
-  invisible(get_searchlight(dset, type = "standard", radius = radius))
-  invisible(get_searchlight(dset, type = "standard", radius = radius))
+  names <- if (isTRUE(cache_enabled)) character() else "searchlight_geometry_cache"
+  run_with_reference_paths(names, {
+    invisible(get_searchlight(dset, type = "standard", radius = radius))
+    invisible(get_searchlight(dset, type = "standard", radius = radius))
+  })
 }
 
 test_that("mvpa_model fold cache path does not regress runtime (guardrail)", {

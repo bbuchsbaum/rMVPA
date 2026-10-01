@@ -37,17 +37,13 @@ test_that("naive_xdec fast kernel cache is constructed by default", {
 test_that("naive_xdec fast kernel preserves fit_roi outputs (differential parity)", {
   fix <- build_naive_xdec_fast_fixture(seed = 9402L)
 
-  old_opt <- options(
-    rMVPA.searchlight_mode = "legacy",
-    rMVPA.naive_xdec_fast_kernel = NULL
-  )
-  on.exit(options(old_opt), add = TRUE)
-
-  base_model <- naive_xdec_model(fix$dataset, fix$design, return_predictions = TRUE)
-  base <- fit_roi(base_model, fix$roi_data, fix$context)
+  base <- rMVPA:::.with_reference_paths("naive_xdec_fast_kernel", {
+    base_model <- naive_xdec_model(fix$dataset, fix$design, return_predictions = TRUE)
+    expect_null(base_model$.fast_kernel)
+    fit_roi(base_model, fix$roi_data, fix$context)
+  })
   expect_false(base$error)
 
-  options(rMVPA.searchlight_mode = "fast", rMVPA.naive_xdec_fast_kernel = NULL)
   fast_model <- naive_xdec_model(fix$dataset, fix$design, return_predictions = TRUE)
   fast <- fit_roi(fast_model, fix$roi_data, fix$context)
   expect_false(fast$error)

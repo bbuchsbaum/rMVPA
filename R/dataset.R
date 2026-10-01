@@ -760,7 +760,7 @@ print.mvpa_surface_dataset <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 .searchlight_geometry_cache_enabled <- function() {
-  TRUE
+  .fast_path_enabled("searchlight_geometry_cache")
 }
 
 #' @keywords internal

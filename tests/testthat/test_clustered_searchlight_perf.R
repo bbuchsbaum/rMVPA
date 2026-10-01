@@ -71,13 +71,8 @@ build_clustered_perf_dataset <- function(D = c(35, 35, 35), nobs = 12, K = 300, 
 }
 
 run_clustered_neighbor_build <- function(dset, radius, k, fast_enabled) {
-  old_opt <- options(
-    rMVPA.searchlight_mode = if (isTRUE(fast_enabled)) "fast" else "legacy",
-    rMVPA.clustered_nn_fastpath = NULL,
-    rMVPA.warn_legacy_options = FALSE
-  )
-  on.exit(options(old_opt), add = TRUE)
-  invisible(get_searchlight(dset, type = "standard", radius = radius, k = k))
+  run <- function() invisible(get_searchlight(dset, type = "standard", radius = radius, k = k))
+  if (isTRUE(fast_enabled)) run() else rMVPA:::.with_reference_paths("clustered_nn_fastpath", run())
 }
 
 test_that("clustered fastpath does not regress neighbor construction at larger K", {
