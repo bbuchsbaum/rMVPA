@@ -584,7 +584,9 @@ run_cor_fast <- function(dvec, obj) {
   }
 
   dwork <- if (identical(state$method, "spearman")) {
-    rank(dvec, ties.method = "average")
+    # Identical to rank(dvec, ties.method = "average"), with less overhead.
+    as.vector(matrixStats::colRanks(matrix(as.numeric(dvec)), ties.method = "average",
+                                    preserveShape = TRUE))
   } else {
     dvec
   }
