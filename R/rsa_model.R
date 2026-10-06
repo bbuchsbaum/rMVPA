@@ -1118,6 +1118,9 @@ print.rsa_design <- function(x, ...) {
 #'
 #' This function creates an RSA model object by taking an MVPA (Multi-Variate Pattern Analysis) dataset and an RSA design.
 #'
+#' @seealso \code{\link{rsa_neural_rdm}} to compute the full neural correlation
+#'   distance matrix from supplied observation-by-feature patterns.
+#'
 #' @param dataset An instance of an \code{mvpa_dataset}.
 #' @param design An instance of an \code{rsa_design} created by \code{rsa_design()}.
 #' @param distmethod A character string specifying the method used to compute distances between observations. 
