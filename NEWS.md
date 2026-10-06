@@ -1,5 +1,11 @@
 # rMVPA 0.1.3
 
+* `rsa_neural_rdm()` exposes full Pearson or Spearman neural correlation-distance
+  matrices for reliability and noise-ceiling workflows. It preserves observation
+  names and order, supports stimulus-mean centering, and rejects nonfinite inputs
+  and constant centered patterns. Run/item exclusions remain with the caller or
+  RSA design.
+
 * `pair_rsa_design()` supports per-template `modulation` formulas and
   formula-based nuisance terms using side-qualified observation metadata.
   Repeated item IDs retain separate observations; within-domain formulas

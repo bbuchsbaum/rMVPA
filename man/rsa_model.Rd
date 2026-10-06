@@ -165,3 +165,7 @@ fit_params <- train_model(rsa_mod_sp, data_mat, y = NULL, indices = NULL)
 # 'fit_params' = named vector of semi-partial correlations for each predictor
 
 }
+\seealso{
+\code{\link{rsa_neural_rdm}} to compute the full neural correlation
+  distance matrix from supplied observation-by-feature patterns.
+}

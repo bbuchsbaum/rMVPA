@@ -312,6 +312,93 @@ pairwise_dist.cordist <- function(obj, X,...) {
 }
 
 
+#' Compute a Neural RDM for RSA
+#'
+#' Compute the full representational dissimilarity matrix (RDM) among observed
+#' neural patterns using the correlation distances used by \code{\link{rsa_model}}.
+#'
+#' @param patterns A finite numeric matrix with observations in rows and measured
+#'   features (for example, voxels) in columns. At least two observations and two
+#'   features are required. Each row must vary across features after optional
+#'   pattern centering.
+#' @param method Correlation method: \code{"spearman"} (the default, matching
+#'   \code{rsa_model()}) or \code{"pearson"}. Spearman uses average ranks for ties.
+#' @param pattern_center Use \code{"none"} for uncentered patterns, or
+#'   \code{"stimulus_mean"} to subtract each feature's mean across the supplied
+#'   observations before computing correlations (and before Spearman ranking).
+#'
+#' @return A symmetric numeric matrix with one row and column per observation,
+#'   a zero diagonal, and distances \code{1 - correlation}. Observation order and
+#'   row names are preserved on both axes; unnamed inputs yield unnamed outputs.
+#'
+#' @details
+#' These are correlation distances, not noise-whitened or crossvalidated
+#' distances. No averaging, feature selection, run/item exclusion, reliability
+#' estimate, or noise-ceiling calculation is performed. All pairs are returned;
+#' exclusions belong to \code{\link{rsa_design}} or the caller.
+#'
+#' To reproduce an \code{rsa_model()} neural RDM, supply the same preprocessed
+#' pattern matrix and feature selection, with \code{method} matching the model's
+#' \code{distmethod}. Stimulus-mean centering depends on all supplied observations:
+#' centering separate runs or subsets generally changes the distances. The model
+#' centers its input before any design-level row selection or pair exclusions;
+#' reproduce that order when extracting subsets of this matrix.
+#'
+#' Nonfinite inputs and patterns that are constant across features after
+#' centering are rejected because their correlations are undefined.
+#'
+#' @seealso \code{\link{rsa_model}}, \code{\link{rsa_design}},
+#'   \code{\link{cordist}}
+#' @examples
+#' patterns <- rbind(item_a = c(1, 2, 4, 3),
+#'                   item_b = c(2, 1, 3, 4),
+#'                   item_c = c(4, 3, 1, 2))
+#' rdm <- rsa_neural_rdm(patterns)
+#' rdm[lower.tri(rdm)]
+#' rsa_neural_rdm(patterns, method = "pearson",
+#'                pattern_center = "stimulus_mean")
+#' @export
+rsa_neural_rdm <- function(patterns, method = c("spearman", "pearson"),
+                           pattern_center = c("none", "stimulus_mean")) {
+  method <- match.arg(method)
+  pattern_center <- match.arg(pattern_center)
+  if (!is.matrix(patterns) || !is.numeric(patterns)) {
+    stop("`patterns` must be a numeric matrix.", call. = FALSE)
+  }
+  if (nrow(patterns) < 2L || ncol(patterns) < 2L) {
+    stop("`patterns` must have at least two observations and two features.",
+         call. = FALSE)
+  }
+  if (any(!is.finite(patterns))) {
+    stop("`patterns` must contain only finite values.", call. = FALSE)
+  }
+
+  centered <- center_patterns(patterns, method = pattern_center)
+  if (any(!is.finite(centered))) {
+    stop("Pattern centering produced nonfinite values.", call. = FALSE)
+  }
+  constant <- apply(centered, 1L, function(x) all(x == x[1L]))
+  if (any(constant)) {
+    stop("Correlation distance is undefined for constant patterns after centering",
+         " (rows: ", paste(which(constant), collapse = ", "), ").", call. = FALSE)
+  }
+
+  # Use the ordinary RSA fitting kernel: even roundoff differences between
+  # equivalent correlation implementations can change downstream rank ties.
+  distances <- .rdm_vector_correlation(centered, method = method, center = "none")
+  if (any(!is.finite(distances))) {
+    stop("Correlation distance produced nonfinite values.", call. = FALSE)
+  }
+  rdm <- matrix(0, nrow(patterns), nrow(patterns))
+  rdm[lower.tri(rdm)] <- distances
+  rdm <- rdm + t(rdm)
+  observation_names <- rownames(patterns)
+  dimnames(rdm) <- if (is.null(observation_names)) NULL else
+    list(observation_names, observation_names)
+  rdm
+}
+
+
 #' Compute Pairwise Euclidean Distances
 #'
 #' Returns a full NxN matrix of Euclidean distances among the rows of \code{X}.
