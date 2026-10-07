@@ -160,6 +160,12 @@
   fold draws and RNG behavior. Permutation p-values now use sorted null
   lookups, preserving upper-tail ties and the +1 correction, and null results
   are concatenated once instead of copied into a growing matrix on every draw.
+* RSA permutation searchlights (`rsa_model` with item permutations) also use
+  the prepared-once engine path (`rsa_fast`). The permuted design's
+  `item_perm` is honoured per sphere through `train_model.rsa_model()`, so
+  null distributions and p-values are identical to the per-ROI path, for
+  individual (correlation) and joint (`lm`) nulls under both strategies. 6-16x
+  faster on a 6x6x6 volume.
 
 # rMVPA 0.1.3
 

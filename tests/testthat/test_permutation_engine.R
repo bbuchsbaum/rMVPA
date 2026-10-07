@@ -141,3 +141,24 @@ test_that("null collection retains valid draws around skipped draws", {
     expect_error(run(30 + which(!valid)[1L] - 1L, 1), "No valid null values collected")
   }
 })
+
+test_that("RSA permutations through rsa_fast equal the per-ROI path", {
+  set.seed(1303)
+  ds <- gen_sample_dataset(c(4, 4, 4), 20, blocks = 4)
+  D1 <- dist(matrix(rnorm(20 * 4), 20)); D2 <- dist(matrix(rnorm(20 * 4), 20))
+  rdes <- rsa_design(~ D1 + D2, list(D1 = D1, D2 = D2, block = ds$design$block_var),
+                     block_var = "block")
+  for (rt in c("pearson", "lm")) for (st in c("iterate", "searchlight")) {
+    ms <- rsa_model(ds$dataset, rdes, distmethod = "pearson", regtype = rt, check_collinearity = FALSE)
+    pc <- permutation_control(n_perm = 3, seed = 5, perm_strategy = st, subsample = 0.5,
+                              diagnose = FALSE, rsa_null = if (rt == "lm") "joint" else "individual")
+    obs <- suppressWarnings(run_searchlight(ms, radius = 2, engine = "legacy", backend = "default"))
+    fast <- suppressWarnings(run_permutation_searchlight(ms, observed = obs, radius = 2,
+                                                         perm_ctrl = pc, metric = "D1"))
+    ref <- suppressWarnings(run_permutation_searchlight(ms, observed = obs, radius = 2,
+                                                        perm_ctrl = pc, metric = "D1", engine = "legacy"))
+    expect_identical(sort(unlist(fast$adj_null$bin_nulls)), sort(unlist(ref$adj_null$bin_nulls)),
+                     info = paste(rt, st))
+    expect_identical(fast$p_values, ref$p_values, info = paste(rt, st))
+  }
+})

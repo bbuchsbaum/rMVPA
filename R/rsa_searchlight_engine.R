@@ -23,15 +23,15 @@
     !isTRUE(model_spec$return_fingerprint)
 }
 
+#' Label-independent setup of the RSA engine: data, the filter_roi() voxel
+#' rule, and each sphere's columns (optionally only for `centers`).
 #' @keywords internal
 #' @noRd
-run_searchlight_rsa_fast <- function(model_spec, radius, verbose = FALSE, ...) {
+.rsa_engine_prepare <- function(model_spec, radius, centers = NULL) {
   ds <- model_spec$dataset
   mask_indices <- ds$mask_indices %||% compute_mask_indices(ds$mask)
   sl <- get_searchlight(ds, "standard", radius)
-  if (length(sl) == 0L) return(empty_searchlight_result(ds))
   sp <- neuroim2::space(ds$mask)
-
   x_all <- as.matrix(neuroim2::series(ds$train_data, mask_indices))
   if (!all(is.finite(x_all))) {
     stop(.aggregate_ineligible("data contain missing or non-finite values"))
@@ -39,31 +39,55 @@ run_searchlight_rsa_fast <- function(model_spec, radius, verbose = FALSE, ...) {
   # filter_roi(): keep voxels whose range across observations is non-zero.
   span <- matrixStats::colMaxs(x_all) - matrixStats::colMins(x_all)
   keep_voxel <- is.finite(span) & span > 0
+  ids <- vapply(sl, function(w) as.integer(w@parent_index), 1L)
+  sel <- if (is.null(centers)) seq_along(sl) else which(ids %in% centers)
+  cols <- lapply(sel, function(i) {
+    cc <- match(as.integer(neuroim2::grid_to_index(sp, sl[[i]]@coords)), mask_indices)
+    cc <- cc[!is.na(cc)]
+    cc[keep_voxel[cc] | mask_indices[cc] == ids[i]]
+  })
+  list(ds = ds, x_all = x_all, mask_indices = mask_indices, centers = ids[sel], cols = cols)
+}
 
-  centres <- vapply(sl, function(w) as.integer(w@parent_index), 1L)
-  outputs <- vector("list", length(sl))
-  for (i in seq_along(sl)) {
-    cols <- match(as.integer(neuroim2::grid_to_index(sp, sl[[i]]@coords)), mask_indices)
-    cols <- cols[!is.na(cols)]
-    cols <- cols[keep_voxel[cols] | mask_indices[cols] == centres[i]]
-    if (length(cols) < 1L) next
+#' Run train_model.rsa_model() on every prepared sphere
+#'
+#' `spec` carries the design, so permuted designs (item_perm) are honoured.
+#' Returns a centre x output matrix (row names are centre ids; NA rows for
+#' spheres that fail), as the per-ROI path would produce.
+#' @keywords internal
+#' @noRd
+.rsa_engine_score <- function(prep, spec) {
+  outputs <- lapply(seq_along(prep$cols), function(i) {
+    cols <- prep$cols[[i]]
+    if (length(cols) < 1L) return(NULL)
     res <- tryCatch(
-      train_model(model_spec, x_all[, cols, drop = FALSE], y = NULL,
-                  indices = mask_indices[cols]),
+      train_model(spec, prep$x_all[, cols, drop = FALSE], y = NULL,
+                  indices = prep$mask_indices[cols]),
       error = function(e) NULL
     )
-    if (is.numeric(res) && length(res) > 0L) {
-      attributes(res)[["fingerprint"]] <- NULL
-      outputs[[i]] <- res
-    }
-  }
-
+    if (!is.numeric(res) || length(res) == 0L) return(NULL)
+    attributes(res)[["fingerprint"]] <- NULL
+    res
+  })
   good <- which(!vapply(outputs, is.null, logical(1)))
-  if (length(good) == 0L) return(empty_searchlight_result(ds))
+  if (length(good) == 0L) return(NULL)
   metric_names <- names(outputs[[good[1]]])
-  perf <- do.call(rbind, lapply(outputs[good], function(v) v[metric_names]))
-  colnames(perf) <- metric_names
-  out <- wrap_out(perf, ds, ids = centres[good])
+  perf <- matrix(NA_real_, length(outputs), length(metric_names),
+                 dimnames = list(as.character(prep$centers), metric_names))
+  for (g in good) perf[g, ] <- outputs[[g]][metric_names]
+  perf
+}
+
+#' @keywords internal
+#' @noRd
+run_searchlight_rsa_fast <- function(model_spec, radius, verbose = FALSE, ...) {
+  ds <- model_spec$dataset
+  prep <- .rsa_engine_prepare(model_spec, radius)
+  if (length(prep$centers) == 0L) return(empty_searchlight_result(ds))
+  perf <- .rsa_engine_score(prep, model_spec)
+  if (is.null(perf)) return(empty_searchlight_result(ds))
+  good <- rowSums(!is.na(perf)) > 0L
+  out <- wrap_out(perf[good, , drop = FALSE], ds, ids = prep$centers[good])
   attr(out, "bad_results") <- tibble::tibble()
   out
 }
