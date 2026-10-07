@@ -55,6 +55,13 @@
   arguments such as `verbose = FALSE` or `batch_size`. Those arguments were
   consumed and then forwarded a second time to the iterator ("formal argument
   'verbose' matched by multiple actual arguments").
+* Faster regional analysis and per-fold screening. The iterator no longer
+  forces garbage collection several times per batch. A full collection walks
+  the whole heap, so its cost grew with everything else in the session. Set
+  `options(rMVPA.gc_each_batch = TRUE)` to restore per-batch collection. The
+  per-fold zero-variance and missing-value column checks are vectorised, with
+  results identical to the previous ones. On Haxby VT (leave-one-run-out), a
+  `corclass` regional analysis went from 556 to 73 ms. Results are unchanged.
 * Faster general-purpose searchlight and regional iteration. Debug logging is
   now checked once per run instead of on every per-fold call. Each disabled
   `futile.logger` call previously resolved the logger namespace before

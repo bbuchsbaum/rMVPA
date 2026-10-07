@@ -11,6 +11,25 @@ setup_mvpa_logger <- function() {
   invisible(NULL)
 }
 
+#' Collect garbage only when explicitly requested
+#'
+#' The iterator used to call gc() several times per batch. A full collection
+#' walks the whole heap, so its cost grows with everything else the session
+#' holds (about 16 ms in a fresh session, far more with large results in
+#' memory), and R collects automatically when it needs memory. Set
+#' options(rMVPA.gc_each_batch = TRUE) to restore per-batch collection, e.g.
+#' to keep peak memory down in long runs. The older
+#' rMVPA.shard_gc_each_batch option is honoured too.
+#' @keywords internal
+#' @noRd
+.maybe_gc <- function() {
+  if (isTRUE(getOption("rMVPA.gc_each_batch", FALSE)) ||
+      isTRUE(getOption("rMVPA.shard_gc_each_batch", FALSE))) {
+    gc(FALSE)
+  }
+  invisible(NULL)
+}
+
 #' @keywords internal
 try_warning  <- function(expr) {
   warn <- err <- NULL
@@ -1095,10 +1114,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           sf <- NULL
           batch_prepared <- NULL
           vlist <- NULL
-          if (!use_shard_backend ||
-              isTRUE(getOption("rMVPA.shard_gc_each_batch", FALSE))) {
-            gc(FALSE)
-          }
+          .maybe_gc()
         } else {
           skipped_rois <- skipped_rois + length(batch_positions)
           futile.logger::flog.warn("%s Batch %s: All ROIs filtered out (size < 2 voxels)", 
@@ -1168,7 +1184,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
   # Combine all results and free the per-batch list immediately
   final_results <- dplyr::bind_rows(results)
   rm(results)
-  gc()
+  .maybe_gc()
   if (profile_enabled) {
     timing$processed_rois <- processed_rois
     timing$skipped_rois <- skipped_rois
@@ -1250,7 +1266,7 @@ as_worker_spec <- function(obj) {
 run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
                                analysis_type = "searchlight", drop_probs = FALSE,
                                fail_fast = FALSE, ...) {
-  gc()
+  .maybe_gc()
   future_seed <- !inherits(obj, "era_rsa_model")
   # Ensure workers never receive the full dataset.
   obj <- as_worker_spec(obj)
@@ -1412,7 +1428,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
   # Free the frame (which holds all batch ROI data) and the closure
   # before GC so the memory is actually reclaimable.
   rm(frame, run_map)
-  gc()
+  .maybe_gc()
 
   dplyr::bind_rows(results)
 }
