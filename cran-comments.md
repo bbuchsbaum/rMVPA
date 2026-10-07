@@ -2,7 +2,7 @@
 
 This is a new submission.
 
-rMVPA depends on neuroim2 (>= 0.20.0) and suggests fmridesign, fmrilss and
+rMVPA depends on neuroim2 (>= 0.19.1) and suggests fmridesign, fmrilss and
 neurosurf. These packages, by the same maintainer, are submitted to CRAN
 first; rMVPA is submitted once they are available, so no `Remotes` field
 remains in the submitted DESCRIPTION.
