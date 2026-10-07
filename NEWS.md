@@ -88,8 +88,8 @@
   reproduces nilearn's `SearchLight` mean accuracy exactly (0.2620138889 on the
   benchmark volume) under any seed.
 * New exact sphere-aggregation searchlight engine (`engine = "aggregate_fast"`),
-  selected automatically for `corclass` (Pearson, mean prototypes)
-  classification searchlights. Per fold, per-voxel class means and products
+  selected automatically for `corclass` (Pearson, mean prototypes) and
+  `naive_bayes` classification searchlights. Per fold, per-voxel class means and products
   are computed once and summed over every sphere with sparse products, giving
   the same estimator as the per-sphere path: the same voxel screening,
   correlations, softmax, `zapsmall()` rounding, fold pooling and metrics.
