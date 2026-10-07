@@ -1,5 +1,11 @@
 # rMVPA 0.1.3
 
+* `rsa_neural_rdm()` exposes full Pearson or Spearman neural correlation-distance
+  matrices for reliability and noise-ceiling workflows. It preserves observation
+  names and order, supports stimulus-mean centering, and rejects nonfinite inputs
+  and constant centered patterns. Run/item exclusions remain with the caller or
+  RSA design.
+
 * Pattern-model vignettes now teach the method as a three-article path:
   `vignette("Pattern_Model")` leads with the task, the planted territories,
   and the object flow; confirmation and group articles are framed as the
