@@ -55,6 +55,10 @@
   arguments such as `verbose = FALSE` or `batch_size`. Those arguments were
   consumed and then forwarded a second time to the iterator ("formal argument
   'verbose' matched by multiple actual arguments").
+* The `naive_bayes` classifier is vectorised over features: per-class
+  variances use `matrixStats::colVars()`, likelihoods use one `dnorm()` call
+  per class, and the softmax is row-vectorised. Results are bit-identical to
+  before. A Haxby VT regional analysis went from 366 to 78 ms.
 * Faster regional analysis and per-fold screening. The iterator no longer
   forces garbage collection several times per batch. A full collection walks
   the whole heap, so its cost grew with everything else in the session. Set
