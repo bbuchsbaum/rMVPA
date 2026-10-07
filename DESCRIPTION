@@ -204,12 +204,12 @@ NeedsCompilation: yes
 URL: https://github.com/bbuchsbaum/rMVPA, https://bbuchsbaum.github.io/rMVPA/
 BugReports: https://github.com/bbuchsbaum/rMVPA/issues
 Config/Needs/check:
-    fmriAR,
+    bbuchsbaum/fmriAR,
     fmrihrf
 Config/Needs/coverage:
-    fmriAR,
+    bbuchsbaum/fmriAR,
     fmrihrf
 Config/Needs/website:
     albersdown,
-    fmriAR,
+    bbuchsbaum/fmriAR,
     fmrihrf
