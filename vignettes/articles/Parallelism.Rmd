@@ -414,7 +414,7 @@ The checked-in benchmark used a 72-observation, `28 x 28 x 28` regional
 classification fixture with 18 regions, five batches of at most four regions,
 and `sda_notune`. Non-sequential plans configured two workers. OpenMP and BLAS
 were fixed at one thread. Each scheduler/data-backend pairing ran in three
-fresh R processes from a clean installed rMVPA 0.1.3 tarball.
+fresh R processes from a clean installed rMVPA tarball.
 
 ```{r benchmark-receipt, echo = FALSE}
 receipt_path <- system.file(
@@ -444,7 +444,23 @@ stopifnot(
 
 # Every claim the prose makes about this table is derived from it here, so a
 # regenerated receipt cannot leave the surrounding sentences asserting the
-# ordering of a previous run.
+# ordering of a previous run, or the machine and source of a previous run.
+receipt_meta <- local({
+  one <- function(x) unique(x)[[1L]]
+  chip <- one(parallel_receipt$hardware_chip)
+  memory <- one(parallel_receipt$hardware_memory)
+  hardware <- if (!is.na(chip) && nzchar(chip)) {
+    if (!is.na(memory) && nzchar(memory)) sprintf("%s (%s)", chip, memory) else chip
+  } else {
+    one(parallel_receipt$platform)
+  }
+  list(
+    hardware = hardware,
+    package_version = one(parallel_receipt$package_version),
+    commit = substr(one(parallel_receipt$source_git_head), 1L, 7L),
+    date = one(parallel_receipt$benchmark_date)
+  )
+})
 oxford <- function(x) {
   if (!length(x)) return("no plan")
   if (length(x) == 1L) return(x)
@@ -501,11 +517,16 @@ knitr::kable(
     "Task frames (MiB)"
   ),
   caption = paste(
-    "Local fresh-process characterization on an Apple M3 Max (36 GB).",
+    sprintf("Local fresh-process characterization on %s.", receipt_meta$hardware),
     "Timings are descriptive, not thresholds."
   )
 )
 ```
+
+These timings were recorded with rMVPA `r receipt_meta$package_version` at
+commit `r receipt_meta$commit` on `r receipt_meta$date`. They describe that
+source on that machine; later changes to the package are reflected only when
+the driver below is re-run.
 
 All eight paths produced identical canonical result vectors in every fixture
 repetition (`max_abs_result_error = 0`). The default frames totaled

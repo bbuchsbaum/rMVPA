@@ -12,6 +12,15 @@
     (`rMVPA.searchlight_mem_budget`) still bounds it.
   A cross-validated `corclass` searchlight (10^3, 80 observations, 4
   multisession workers) went from 35.4 s (22.2 s sequential) to 14.3 s.
+* Benchmark receipts are dated evidence, not source locks. The parallel
+  runtime and feature-RSA ridge receipt tests now check that each receipt is
+  well-formed and records the source it measured (fingerprint, commit, date),
+  instead of failing whenever `R/mvpa_iterate.R` or `R/shard_backend.R`
+  changes. The Parallelism, Feature RSA and Banded Ridge vignettes read their
+  machine, commit and every quoted number from the receipt, so a re-run on
+  another machine cannot leave stale prose (the Feature RSA speed-ups quoted
+  39x/10x/9x where its receipt recorded 41x/11x/10x). The feature-RSA driver
+  now records the CPU model.
 * The `rsa_fast` RSA searchlight engine:
   - computes correlation-distance RDMs and the cached correlation/lm fits
     directly for within-set designs (no pattern centring), with the same

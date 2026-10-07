@@ -457,6 +457,46 @@ stopifnot(
   nzchar(unique(ridge_receipt$source_fingerprint))
 )
 
+# The prose below reads its numbers, platform and source from the receipt,
+# so a regenerated receipt cannot leave it describing a previous run.
+ridge_row <- function(impl) ridge_receipt[ridge_receipt$implementation == impl, ]
+ridge_speedup <- function(impl) {
+  format(round(ridge_row(impl)$median_speedup_vs_pls_loo), nsmall = 0)
+}
+ridge_mse_drop <- round(100 * (1 - range(ridge_receipt$median_mse_ratio[ridge_rows])))
+ridge_meta <- list(
+  # Receipts from before the driver recorded hardware name the platform.
+  platform = local({
+    chip <- if ("hardware_chip" %in% names(ridge_receipt)) unique(ridge_receipt$hardware_chip)[[1L]]
+    if (!is.null(chip) && !is.na(chip) && nzchar(chip)) chip else unique(ridge_receipt$platform)[[1L]]
+  }),
+  r_version = sub("^R version ([^ ]+).*", "\\1", unique(ridge_receipt$r_version)[[1L]]),
+  package_version = unique(ridge_receipt$package_version)[[1L]],
+  commit = substr(unique(ridge_receipt$git_head)[[1L]], 1L, 7L),
+  date = unique(ridge_receipt$benchmark_date)[[1L]]
+)
+ridge_prose <- list(
+  all_within = if (all(ridge_receipt$within_linear_fixture_margin[ridge_rows])) {
+    "All three ridge selectors cleared the declared margin."
+  } else {
+    "Not every ridge selector cleared the declared margin."
+  },
+  mse = if (all(ridge_receipt$median_mse_ratio[ridge_rows] < 1)) {
+    sprintf("Median MSE was %s%% lower than PLS LOO",
+            paste(unique(sort(ridge_mse_drop)), collapse = "--"))
+  } else {
+    "Median MSE relative to PLS LOO is shown in the table"
+  },
+  correlations = if (all(ridge_receipt$median_pattern_delta[ridge_rows] >= 0 &
+                         ridge_receipt$median_rdm_delta[ridge_rows] >= 0)) {
+    "median pattern and RDM correlations were slightly higher"
+  } else {
+    "median pattern and RDM correlation changes are shown in the table"
+  },
+  pls_blocked_same = abs(ridge_row("pls_streaming_blocked")$median_mse_ratio - 1) < 0.01,
+  glmnet_within = isTRUE(ridge_row("glmnet_alpha0_blocked_cv")$within_linear_fixture_margin)
+)
+
 display_ridge_receipt <- transform(
   ridge_receipt,
   method = c(
@@ -478,23 +518,30 @@ knitr::kable(
     "MSE ratio", "Pattern delta", "RDM delta"
   ),
   caption = paste(
-    "Twenty-seed dense-linear characterization on Apple M3 Max.",
+    sprintf("Twenty-seed dense-linear characterization on %s (R %s).",
+            ridge_meta$platform, ridge_meta$r_version),
     "Accuracy columns are relative to PLS LOO; timings are descriptive."
   )
 )
 ```
 
-All three ridge selectors cleared the declared margin. Median MSE was
-11--12% lower than PLS LOO, while median pattern and RDM correlations were
-slightly higher. GCV was about 39 times faster than PLS LOO; analytic LOO and
-blocked ridge were about 10 and 9 times faster. Blocked PLS was also about 11
-times faster than PLS LOO and had essentially identical accuracy here, so
-users who specifically need PLS should prefer a scientifically valid block
-unit rather than changing estimators only for speed.
+`r ridge_prose$all_within` `r ridge_prose$mse`, while
+`r ridge_prose$correlations`. GCV was about
+`r ridge_speedup("ridge_gcv")` times faster than PLS LOO; analytic LOO and
+blocked ridge were about `r ridge_speedup("ridge_analytic_loo")` and
+`r ridge_speedup("ridge_blocked")` times faster. Blocked PLS was also about
+`r ridge_speedup("pls_streaming_blocked")` times faster than PLS
+LOO`r if (ridge_prose$pls_blocked_same) " and had essentially identical accuracy here" else ""`,
+so users who specifically need PLS should prefer a scientifically valid block
+unit rather than changing estimators only for speed. These timings were
+recorded with rMVPA `r ridge_meta$package_version` at commit
+`r ridge_meta$commit` on `r ridge_meta$date`; re-run the driver to describe
+later source or another machine.
 
 The `glmnet` result is not a general ranking: it reports that package's
 blocked-CV choice on this particular dense fixture, where it selected a
-different penalty and missed the fixture-specific equivalence margin. Ridge
+different penalty and `r if (ridge_prose$glmnet_within) "still met" else "missed"`
+the fixture-specific equivalence margin. Ridge
 does not replace elastic net when sparsity is part of the estimand. Likewise,
 these simulations do not prove equivalence on a new dataset; compare outer-fold
 metrics on your own ROIs before changing a preregistered method.
