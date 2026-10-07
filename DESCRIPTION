@@ -36,7 +36,7 @@ Imports:
     memoise,
     methods,
     modelr,
-    neuroim2 (>= 0.20.0),
+    neuroim2 (>= 0.19.1),
     purrr,
     rlang,
     stringr,
