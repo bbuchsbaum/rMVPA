@@ -194,6 +194,7 @@ Suggests:
     yaml
 VignetteBuilder: knitr
 Remotes:
+    bbuchsbaum/fmriAR,
     bbuchsbaum/fmridesign,
     bbuchsbaum/fmrilss,
     bbuchsbaum/neuroim2,
