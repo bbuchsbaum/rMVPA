@@ -9,7 +9,7 @@ agg_spec <- function(seed, D = c(5, 5, 5), nobs = 48, nlevels = 3, blocks = 4,
   set.seed(seed)
   ds <- gen_sample_dataset(D = D, nobs = nobs, nlevels = nlevels, blocks = blocks)
   if (scale != 1 || offset != 0) {
-    arr <- as.array(ds$dataset$train_data) * scale + offset
+    arr <- neuroim2::as.array(ds$dataset$train_data) * scale + offset
     ds$dataset$train_data <- neuroim2::NeuroVec(arr, neuroim2::space(ds$dataset$train_data))
   }
   mvpa_model(load_model(model), ds$dataset, ds$design, "classification",
@@ -65,7 +65,7 @@ test_that("auto selects the aggregation engine only for eligible corclass specs"
 
 test_that("data outside the regime fall back quietly under auto and error when requested", {
   ms <- agg_spec(906)
-  arr <- as.array(ms$dataset$train_data)
+  arr <- neuroim2::as.array(ms$dataset$train_data)
   arr[1, 1, 1, 3] <- NA
   ms$dataset$train_data <- neuroim2::NeuroVec(arr, neuroim2::space(ms$dataset$train_data))
 
@@ -97,7 +97,7 @@ test_that("naive_bayes engine repairs near-tied centres exactly", {
   # last bit; flagged centres are recomputed in the general path's voxel order.
   set.seed(915)
   ds <- gen_sample_dataset(D = c(5, 5, 5), nobs = 48, nlevels = 3, blocks = 4)
-  arr <- as.array(ds$dataset$train_data)
+  arr <- neuroim2::as.array(ds$dataset$train_data)
   y <- as.integer(ds$design$y_train)
   for (i in seq_along(y)) arr[, , , i] <- arr[, , , i] + 3 * y[i]
   ds$dataset$train_data <- neuroim2::NeuroVec(arr, neuroim2::space(ds$dataset$train_data))
@@ -109,7 +109,7 @@ test_that("naive_bayes engine repairs near-tied centres exactly", {
 
 test_that("naive_bayes engine declines zero within-class variance", {
   ms <- agg_spec(916, model = "naive_bayes")
-  arr <- as.array(ms$dataset$train_data)
+  arr <- neuroim2::as.array(ms$dataset$train_data)
   y <- ms$design$y_train
   arr[2, 2, 2, y == levels(y)[1]] <- 4.2  # constant within one class, varies overall
   ms$dataset$train_data <- neuroim2::NeuroVec(arr, neuroim2::space(ms$dataset$train_data))

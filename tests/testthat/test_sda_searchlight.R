@@ -8,7 +8,7 @@ sda_sl_spec <- function(seed, nlevels = 3, nobs = 48, class_metrics = FALSE,
   set.seed(seed)
   ds <- gen_sample_dataset(D = c(5, 5, 5), nobs = nobs, nlevels = nlevels, blocks = 4)
   if (scale != 1 || offset != 0) {
-    arr <- as.array(ds$dataset$train_data) * scale + offset
+    arr <- neuroim2::as.array(ds$dataset$train_data) * scale + offset
     ds$dataset$train_data <- neuroim2::NeuroVec(arr, neuroim2::space(ds$dataset$train_data))
   }
   mvpa_model(load_model("sda_notune"), ds$dataset, ds$design, "classification",
@@ -42,7 +42,7 @@ test_that("sda engine matches the general path on raw-BOLD-scale data", {
 test_that("auto selects the sda engine and falls back on missing values", {
   ms <- sda_sl_spec(1205)
   expect_identical(rMVPA:::.resolve_searchlight_engine(ms, "standard", "auto"), "sda_fast")
-  arr <- as.array(ms$dataset$train_data)
+  arr <- neuroim2::as.array(ms$dataset$train_data)
   arr[2, 2, 2, 5] <- NA
   ms$dataset$train_data <- neuroim2::NeuroVec(arr, neuroim2::space(ms$dataset$train_data))
   res <- expect_no_warning(run_searchlight(ms, radius = 2, backend = "default"))

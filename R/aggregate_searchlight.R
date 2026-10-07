@@ -245,7 +245,7 @@
     samples <- x[y == classes[k], , drop = FALSE]
     nk <- nrow(samples)
     mus[k, ] <- colMeans(samples)
-    vars[k, ] <- matrixStats::colVars(samples) * (nk - 1) / nk
+    vars[k, ] <- apply(samples, 2L, stats::var) * (nk - 1) / nk
   }
   list(mus = mus, vars = vars, log_priors = as.numeric(log(table(y) / length(y))))
 }

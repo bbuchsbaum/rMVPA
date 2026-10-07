@@ -264,6 +264,7 @@ set_log_level <- function(level = "INFO") {
   }
 
   futile.logger::flog.threshold(lvl_num)
+  futile.logger::flog.threshold(lvl_num, name = "rMVPA")
   .rmvpa_refresh_log_state()
   invisible(lvl_num)
 }
@@ -281,7 +282,7 @@ set_log_level <- function(level = "INFO") {
 #' @noRd
 .rmvpa_refresh_log_state <- function() {
   levels <- c(TRACE = 9, DEBUG = 8, INFO = 6, WARN = 4, ERROR = 2, FATAL = 1)
-  threshold <- futile.logger::flog.threshold()
+  threshold <- futile.logger::flog.threshold(name = "rMVPA")
   level <- if (is.numeric(threshold)) threshold else unname(levels[toupper(threshold)])
   .rmvpa_log_state$debug <- isTRUE(level >= levels[["DEBUG"]])
   invisible(.rmvpa_log_state$debug)
@@ -295,7 +296,7 @@ set_log_level <- function(level = "INFO") {
     enabled <- .rmvpa_refresh_log_state()
   }
   if (isTRUE(enabled)) {
-    futile.logger::flog.debug(...)
+    futile.logger::flog.debug(..., name = "rMVPA")
   }
   invisible(NULL)
 }

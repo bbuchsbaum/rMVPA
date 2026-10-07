@@ -540,7 +540,7 @@ MVPAModels$lda_thomaz_boot <- list(
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
     preds <- lapply(modelFit$fits, function(fit) {
       ind <- attr(fit, "keep.ind")
-      scores <- -t(predict(fit, newdata[,ind])$scores)
+      scores <- -as.matrix(predict(fit, newdata[, ind, drop = FALSE], type = "score"))
       mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores, ties.method = "first"))]
       probs <- exp(scores - mc)
       zapsmall(probs/rowSums(probs))
@@ -554,7 +554,7 @@ MVPAModels$lda_thomaz_boot <- list(
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
     preds <- lapply(modelFit$fits, function(fit) {
       ind <- attr(fit, "keep.ind")
-      scores <- -t(predict(fit, newdata[,ind])$scores)
+      scores <- -as.matrix(predict(fit, newdata[, ind, drop = FALSE], type = "score"))
       mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores, ties.method = "first"))]
       probs <- exp(scores - mc)
       zapsmall(probs/rowSums(probs))
@@ -769,12 +769,12 @@ MVPAModels$lda_thomaz <- list(
   },
 
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    # Returns a list with element $class
-    predict(modelFit, as.matrix(newdata))$class
+    factor(predict(modelFit, as.matrix(newdata), type = "class"),
+           levels = modelFit$obsLevels)
   },
 
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    p <- predict(modelFit, as.matrix(newdata), type="prob")
+    p <- as.matrix(predict(modelFit, as.matrix(newdata), type = "prob"))
     # p is posterior probabilities with columns corresponding to classes in modelFit$obsLevels
     if (!is.null(modelFit$obsLevels)) colnames(p) <- modelFit$obsLevels
     p
@@ -852,7 +852,8 @@ MVPAModels$naive_bayes <- list(
       mus[k, ] <- colMeans(samples)
 
       nk <- length(idx)
-      vars_k <- matrixStats::colVars(samples) * (nk - 1) / nk
+      # Preserve stats::var rounding: tiny probability ties affect rank metrics.
+      vars_k <- apply(samples, 2L, stats::var) * (nk - 1) / nk
       zero_var <- vars_k <= .Machine$double.eps
       if (any(zero_var)) {
         nz <- vars_k[vars_k > .Machine$double.eps]

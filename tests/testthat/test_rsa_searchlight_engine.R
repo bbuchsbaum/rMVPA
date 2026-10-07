@@ -34,7 +34,7 @@ test_that("rsa_fast is identical to the general path across distance and regress
 
 test_that("rsa_fast declines missing values and fingerprints", {
   fx <- rsa_engine_fixture(1402)
-  arr <- as.array(fx$ds$dataset$train_data)
+  arr <- neuroim2::as.array(fx$ds$dataset$train_data)
   arr[2, 2, 2, 3] <- NA
   fx$ds$dataset$train_data <- neuroim2::NeuroVec(arr, neuroim2::space(fx$ds$dataset$train_data))
   ms <- rsa_model(fx$ds$dataset, fx$rdes, check_collinearity = FALSE)
