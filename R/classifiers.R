@@ -481,6 +481,16 @@ MVPAModels$sda_boot <- list(
 )
 
 
+# sparsediscrim requires predictor names; keep supplied feature identities and
+# give unnamed ROI matrices stable positional names at the adapter boundary.
+#' @keywords internal
+#' @noRd
+.thomaz_matrix <- function(x) {
+  x <- as.matrix(x)
+  if (is.null(colnames(x))) colnames(x) <- paste0("V", seq_len(ncol(x)))
+  x
+}
+
 # lda_thomaz_boot
 # Store lev similarly, ensure correct predictions and probs
 #' @keywords internal
@@ -495,7 +505,7 @@ MVPAModels$lda_thomaz_boot <- list(
   grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
 
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-    x <- as.matrix(x)
+    x <- .thomaz_matrix(x)
     mfits <- list()
     count <- 1
     failures <- 0
@@ -538,6 +548,7 @@ MVPAModels$lda_thomaz_boot <- list(
   },
 
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    newdata <- .thomaz_matrix(newdata)
     preds <- lapply(modelFit$fits, function(fit) {
       ind <- attr(fit, "keep.ind")
       scores <- -as.matrix(predict(fit, newdata[, ind, drop = FALSE], type = "score"))
@@ -552,6 +563,7 @@ MVPAModels$lda_thomaz_boot <- list(
   },
 
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    newdata <- .thomaz_matrix(newdata)
     preds <- lapply(modelFit$fits, function(fit) {
       ind <- attr(fit, "keep.ind")
       scores <- -as.matrix(predict(fit, newdata[, ind, drop = FALSE], type = "score"))
@@ -763,18 +775,18 @@ MVPAModels$lda_thomaz <- list(
   grid=function(x, y, len = NULL) data.frame(parameter="none"),
 
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-    fit <- sparsediscrim::lda_thomaz(as.matrix(x), y, ...)
+    fit <- sparsediscrim::lda_thomaz(.thomaz_matrix(x), y, ...)
     fit$obsLevels <- lev
     fit
   },
 
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    factor(predict(modelFit, as.matrix(newdata), type = "class"),
+    factor(predict(modelFit, .thomaz_matrix(newdata), type = "class"),
            levels = modelFit$obsLevels)
   },
 
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    p <- as.matrix(predict(modelFit, as.matrix(newdata), type = "prob"))
+    p <- as.matrix(predict(modelFit, .thomaz_matrix(newdata), type = "prob"))
     # p is posterior probabilities with columns corresponding to classes in modelFit$obsLevels
     if (!is.null(modelFit$obsLevels)) colnames(p) <- modelFit$obsLevels
     p

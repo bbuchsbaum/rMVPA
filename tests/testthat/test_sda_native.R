@@ -48,3 +48,18 @@ test_that("sda_notune uses the native fit and needs no sda package for it", {
   expect_equal(unname(rowSums(probs)), rep(1, 5), tolerance = 1e-6)
   expect_identical(levels(model$predict(fit, X[1:5, ])), levels(y))
 })
+
+
+test_that("native SDA retains weight extraction and training-data importance", {
+  skip_if_not_installed("sda")
+  set.seed(79)
+  y <- factor(rep(c("a", "b"), 30))
+  X <- matrix(rnorm(60 * 12), 60, 12,
+              dimnames = list(NULL, paste0("v", 1:12)))
+  fit <- rMVPA:::.sda_native_fit(X, y)
+  ref <- sda::sda(X, y, verbose = FALSE)
+  expect_equal(extract_weights(fit), extract_weights(ref), tolerance = 1e-9)
+  expect_equal(model_importance(fit, X), model_importance(ref, X), tolerance = 1e-9)
+  expect_equal(rownames(extract_weights(fit)), colnames(X))
+  expect_equal(colnames(extract_weights(fit)), levels(y))
+})

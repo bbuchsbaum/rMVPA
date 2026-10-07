@@ -105,7 +105,8 @@ searchlight_engines <- function(model_spec = NULL,
 #' @param method Searchlight method to audit.
 #' @param engine Requested engine policy: \code{"auto"}, \code{"legacy"}
 #'   (the compatibility key for the general-purpose iterator), \code{"swift"},
-#'   \code{"dual_lda_fast"}, \code{"naive_xdec_fast"}, or
+#'   \code{"dual_lda_fast"}, \code{"aggregate_fast"}, \code{"sda_fast"},
+#'   \code{"rsa_fast"}, \code{"naive_xdec_fast"}, or
 #'   \code{"era_rsa_fast"}.
 #'
 #' @return A data frame with selection metadata.
