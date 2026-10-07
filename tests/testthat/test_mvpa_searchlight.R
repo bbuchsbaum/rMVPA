@@ -105,6 +105,7 @@ test_that("standard mvpa_searchlight runs without error", {
 })
 
 test_that("standard mvpa_searchlight with boot_lda_thomaz runs without error", {
+  skip_if_not_installed("sparsediscrim")
   
   dataset <- gen_sample_dataset(c(3,3,3), 36, blocks=3)
   cval <- blocked_cross_validation(dataset$design$block_var)
@@ -117,6 +118,7 @@ test_that("standard mvpa_searchlight with boot_lda_thomaz runs without error", {
 })
 
 test_that("standard mvpa_searchlight with boot_lda_thomaz and NA columns runs without error", {
+  skip_if_not_installed("sparsediscrim")
   
   dataset <- gen_sample_dataset(c(3,3,3), 36, blocks=3, na_cols=4)
   cval <- blocked_cross_validation(dataset$design$block_var)

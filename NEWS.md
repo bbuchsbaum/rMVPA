@@ -87,6 +87,24 @@
   chosen) and accuracy rose by one observation. A `corclass` searchlight now
   reproduces nilearn's `SearchLight` mean accuracy exactly (0.2620138889 on the
   benchmark volume) under any seed.
+* New exact sphere-aggregation searchlight engine (`engine = "aggregate_fast"`),
+  selected automatically for `corclass` (Pearson, mean prototypes)
+  classification searchlights. Per fold, per-voxel class means and products
+  are computed once and summed over every sphere with sparse products, giving
+  the same estimator as the per-sphere path: the same voxel screening,
+  correlations, softmax, `zapsmall()` rounding, fold pooling and metrics.
+  Centres whose aggregated values come too close to a rounding boundary are
+  recomputed exactly with the per-sphere code. Accuracy and AUC maps match the
+  general path at every centre (within 1e-15) on synthetic data and on Haxby
+  VT, and the benchmark volume's mean accuracy matches nilearn's
+  `SearchLight` exactly. The engine runs at about 0.26 ms per centre, against
+  13 ms for the general path and 2.5 ms for nilearn. Data outside its regime
+  (missing values, identical voxel columns, a class absent from a training
+  fold) fall back to the general path automatically.
+* `mvpa_model(..., class_metrics = TRUE)` works again for multiclass
+  searchlight and regional analyses. The output schema did not declare the
+  per-class `AUC_<class>` columns, so every ROI failed the schema width check
+  and regional performance tables came back empty.
 
 # rMVPA 0.1.3
 

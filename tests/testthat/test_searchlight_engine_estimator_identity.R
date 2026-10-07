@@ -31,18 +31,20 @@ test_that("auto does not resolve multiclass classifiers to SWIFT", {
     tbl <- searchlight_engines(mspec, method = "standard")
     expect_true(tbl$eligible[tbl$engine == "swift"], info = model_name)
 
-    # ... but auto never selects it.
+    # ... but auto never selects it. corclass gets the exact aggregation
+    # engine; the others have no exact fast engine and use the general path.
+    expected <- if (identical(model_name, "corclass")) "aggregate_fast" else "legacy"
     expect_identical(
       .resolve_searchlight_engine(mspec, method = "standard", engine = "auto"),
-      "legacy",
+      expected,
       info = model_name
     )
     explained <- explain_searchlight_engine(mspec, method = "standard", engine = "auto")
-    expect_identical(explained$engine[explained$selected], "legacy", info = model_name)
+    expect_identical(explained$engine[explained$selected], expected, info = model_name)
   }
 })
 
-test_that("auto and legacy give identical corclass searchlight maps", {
+test_that("auto (exact aggregation engine) and legacy give the same corclass maps", {
   set.seed(5102)
   mspec <- build_identity_mspec("corclass")
 
@@ -53,11 +55,11 @@ test_that("auto and legacy give identical corclass searchlight maps", {
   res_legacy <- run_searchlight(mspec, radius = 2, method = "standard",
                                 backend = "default", engine = "legacy")
 
-  expect_identical(attr(res_auto, "searchlight_engine"), "legacy")
+  expect_identical(attr(res_auto, "searchlight_engine"), "aggregate_fast")
   expect_false("SWIFT_Info" %in% names(res_auto$results))
   expect_identical(sort(names(res_auto$results)), sort(names(res_legacy$results)))
   expect_equal(identity_map_values(res_auto)[names(res_legacy$results)],
-               identity_map_values(res_legacy))
+               identity_map_values(res_legacy), tolerance = 1e-10)
 })
 
 test_that("dual_lda keeps its exact fast engine under auto", {

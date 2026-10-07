@@ -178,6 +178,10 @@ output_schema.mvpa_model <- function(model) {
     nms <- c("Accuracy", "AUC")
   } else if (is.factor(y) && length(levels(y)) > 2) {
     nms <- c("Accuracy", "AUC")
+    # multiclass_perf(class_metrics = TRUE) also returns one AUC per class.
+    if (isTRUE(attr(model$performance, "rmvpa_class_metrics", exact = TRUE))) {
+      nms <- c(nms, paste0("AUC_", levels(y)))
+    }
   } else {
     # custom perf or unknown type — fall back to combine_standard
     return(NULL)
