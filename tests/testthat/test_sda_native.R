@@ -58,7 +58,10 @@ test_that("native SDA retains weight extraction and training-data importance", {
               dimnames = list(NULL, paste0("v", 1:12)))
   fit <- rMVPA:::.sda_native_fit(X, y)
   ref <- sda::sda(X, y, verbose = FALSE)
-  expect_equal(extract_weights(fit), extract_weights(ref), tolerance = 1e-9)
+  # The backend adds a shrinkage class to its coefficient matrix.
+  expect_equal(as.numeric(extract_weights(fit)), as.numeric(extract_weights(ref)),
+               tolerance = 1e-9)
+  expect_equal(dim(extract_weights(fit)), dim(extract_weights(ref)))
   expect_equal(model_importance(fit, X), model_importance(ref, X), tolerance = 1e-9)
   expect_equal(rownames(extract_weights(fit)), colnames(X))
   expect_equal(colnames(extract_weights(fit)), levels(y))

@@ -1,5 +1,12 @@
 # rMVPA (development version)
 
+* Native SDA retains weight extraction and training-data importance for global
+  and regional analyses.
+* Thomaz LDA adapters accept unnamed ROI matrices and the current
+  `sparsediscrim` class, probability, and score prediction interfaces.
+* Debug logging uses the effective rMVPA logger threshold, including when a
+  named logger has been configured.
+
 * `install_cli()` no longer defaults `dest_dir` to `~/.local/bin`; the
   destination must be given, so nothing is written to the home directory
   unless chosen (CRAN policy).
