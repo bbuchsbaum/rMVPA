@@ -140,6 +140,14 @@
   p-values are identical to before for the same seed. Permutation runs are
   15-117x faster for these models (6x6x6 volume). Passing an explicit
   `engine` (e.g. `"legacy"`) keeps the per-ROI path.
+* RSA searchlights (`rsa_model`) run on a new engine (`engine = "rsa_fast"`,
+  selected automatically). It extracts the data once and calls
+  `train_model.rsa_model()` per sphere on exactly the columns the per-ROI path
+  uses, without the iterator's per-sphere ROI objects, filtering and result
+  tables. Maps are identical for every distance and regression type,
+  including semipartial. Spearman ranking in RDM computation now uses
+  `matrixStats` (identical ranks). This also speeds up the per-ROI path.
+  Haxby VT Spearman RSA searchlight (r = 6 mm): 2.13 s -> 0.23 s.
 
 # rMVPA 0.1.3
 
