@@ -186,7 +186,7 @@ Suggests:
     scales,
     roxygen2,
     sda,
-    shard (>= 0.2.0),
+    shard (>= 0.2.1),
     sparsediscrim,
     spls,
     systemfonts,
@@ -202,7 +202,8 @@ Remotes:
     bbuchsbaum/fmridesign,
     bbuchsbaum/fmrilss,
     bbuchsbaum/neuroim2,
-    bbuchsbaum/neurosurf
+    bbuchsbaum/neurosurf,
+    bbuchsbaum/shard
 Encoding: UTF-8
 NeedsCompilation: yes
 URL: https://github.com/bbuchsbaum/rMVPA, https://bbuchsbaum.github.io/rMVPA/
