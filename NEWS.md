@@ -131,6 +131,15 @@
   correlation shrinkage of exactly zero (where `sda` uses a pseudoinverse) are
   still delegated to `sda::sda()`. Haxby VT regional analysis went from 372 to
   104 ms.
+* `run_permutation_searchlight()` uses the exact searchlight engines
+  (`aggregate_fast` for `corclass` and `naive_bayes`, `sda_fast` for
+  `sda_notune`) under both permutation strategies. Data, neighbourhoods, folds
+  and voxel validity do not depend on the labels, so they are prepared once and
+  each permutation only rescores. The default `"iterate"` strategy previously
+  ran every permutation through the per-ROI iterator. Null distributions and
+  p-values are identical to before for the same seed. Permutation runs are
+  15-117x faster for these models (6x6x6 volume). Passing an explicit
+  `engine` (e.g. `"legacy"`) keeps the per-ROI path.
 
 # rMVPA 0.1.3
 

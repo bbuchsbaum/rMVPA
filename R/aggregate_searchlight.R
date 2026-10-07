@@ -383,20 +383,23 @@
   vals
 }
 
+#' Label-independent setup of the aggregation engine
+#'
+#' Data, neighbourhoods (optionally only for `centers`), fold splits and
+#' per-fold voxel validity. None of these depend on the class labels, so a
+#' permutation test reuses them for every permutation.
 #' @keywords internal
 #' @noRd
-run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
-                                           block_size = 4000L, ...) {
+.aggregate_prepare <- function(model_spec, radius, centers = NULL, block_size = 4000L) {
   ds <- model_spec$dataset
   y_all <- y_train(model_spec)
-  classes <- levels(y_all)
-  K <- length(classes)
-  kind <- attr(model_spec$performance, "rmvpa_perf_kind", exact = TRUE)
-  class_metrics <- isTRUE(attr(model_spec$performance, "rmvpa_class_metrics", exact = TRUE))
-
   nb <- .aggregate_neighbourhoods(ds, radius)
-  if (length(nb$centers) == 0L) return(empty_searchlight_result(ds))
-
+  if (!is.null(centers)) {
+    keep <- match(centers, nb$centers)
+    keep <- keep[!is.na(keep)]
+    nb$S <- nb$S[keep, , drop = FALSE]
+    nb$centers <- nb$centers[keep]
+  }
   x_all <- as.matrix(neuroim2::series(ds$train_data, nb$mask_indices))
   if (nrow(x_all) != length(y_all)) {
     stop("aggregate_fast: mismatch between train rows and y_train length.")
@@ -404,8 +407,7 @@ run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
   if (!all(is.finite(x_all))) {
     stop(.aggregate_ineligible("data contain missing or non-finite values"))
   }
-  label <- model_spec$model$label
-  is_nb <- identical(label, "naive_bayes")
+  is_nb <- identical(model_spec$model$label, "naive_bayes")
   # Pearson correlation across voxels is invariant to a common shift; removing
   # the grand mean limits cancellation in the aggregated sums. The original
   # values are kept for exact recomputation of flagged centres. Naive Bayes
@@ -417,40 +419,72 @@ run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
   fold_list <- lapply(seq_len(nrow(folds)), function(i) {
     tr <- as.integer(.extract_sample_indices(folds$train[[i]]))
     te <- as.integer(.extract_sample_indices(folds$test[[i]]))
-    ytr <- factor(y_all[tr], levels = classes)
-    if (any(table(ytr) == 0L)) {
-      stop(.aggregate_ineligible("a class is absent from a training fold"))
-    }
     valid <- nonzeroVarianceColumns2(x_all[tr, , drop = FALSE])
     if (anyDuplicated(t(x_all[tr, valid, drop = FALSE])) > 0L) {
       stop(.aggregate_ineligible("identical voxel columns in a training fold"))
     }
-    nb_fit <- NULL
+    list(train = tr, test = te, valid = valid)
+  })
+  cache <- new.env(parent = emptyenv())
+  list(
+    ds = ds, radius = radius, nb = nb, x_all = x_all, x_orig = x_orig, is_nb = is_nb,
+    folds = fold_list, tS_all = Matrix::t(nb$S), block_size = block_size,
+    kind = attr(model_spec$performance, "rmvpa_perf_kind", exact = TRUE),
+    class_metrics = isTRUE(attr(model_spec$performance, "rmvpa_class_metrics", exact = TRUE)),
+    generic_cols = function(centre_ids) {
+      missing <- setdiff(as.character(centre_ids), ls(cache))
+      if (length(missing)) {
+        cols <- .aggregate_generic_order(ds, radius, as.integer(missing), nb$mask_indices)
+        for (k in seq_along(missing)) assign(missing[k], cols[[k]], envir = cache)
+      }
+      lapply(as.character(centre_ids), get, envir = cache)
+    }
+  )
+}
+
+#' Score every prepared centre for one labelling
+#'
+#' Returns the centre x metric performance matrix (NA for centres with too
+#' few voxels) and the number of centres recomputed exactly.
+#' @keywords internal
+#' @noRd
+.aggregate_score <- function(prep, y_all) {
+  classes <- levels(y_all)
+  K <- length(classes)
+  is_nb <- prep$is_nb
+  x_all <- prep$x_all
+  x_orig <- prep$x_orig
+
+  fold_list <- lapply(prep$folds, function(f) {
+    ytr <- factor(y_all[f$train], levels = classes)
+    if (any(table(ytr) == 0L)) {
+      stop(.aggregate_ineligible("a class is absent from a training fold"))
+    }
     if (is_nb) {
       # naive_bayes floors a zero within-class variance at a value that depends
       # on the other voxels in the sphere; such data are left to the general path.
-      nb_fit <- .aggregate_nb_fit(x_all[tr, , drop = FALSE], ytr, classes)
-      if (any(nb_fit$vars[, valid, drop = FALSE] <= .Machine$double.eps)) {
+      f$nb_fit <- .aggregate_nb_fit(x_all[f$train, , drop = FALSE], ytr, classes)
+      if (any(f$nb_fit$vars[, f$valid, drop = FALSE] <= .Machine$double.eps)) {
         stop(.aggregate_ineligible("zero within-class variance in a training fold"))
       }
     }
-    list(train = tr, test = te, valid = valid, nb_fit = nb_fit)
+    f
   })
   testind <- sort(unique(unlist(lapply(fold_list, `[[`, "test"))))
   observed <- y_all[testind]
   n_obs <- length(testind)
 
-  tS_all <- Matrix::t(nb$S)
-  n_centres <- length(nb$centers)
-  blocks <- split(seq_len(n_centres), ceiling(seq_len(n_centres) / block_size))
+  centers <- prep$nb$centers
+  n_centres <- length(centers)
+  blocks <- split(seq_len(n_centres), ceiling(seq_len(n_centres) / prep$block_size))
   metric_names <- c("Accuracy", "AUC",
-                    if (class_metrics && identical(kind, "multiclass")) paste0("AUC_", classes))
+                    if (prep$class_metrics && identical(prep$kind, "multiclass")) paste0("AUC_", classes))
   perf <- matrix(NA_real_, n_centres, length(metric_names), dimnames = list(NULL, metric_names))
   n_repaired <- 0L
 
   for (blk in blocks) {
     n_b <- length(blk)
-    tS <- tS_all[, blk, drop = FALSE]
+    tS <- prep$tS_all[, blk, drop = FALSE]
     pooled <- matrix(0, n_obs * n_b, K)
     ok <- rep(TRUE, n_b)
     flagged <- rep(FALSE, n_b)
@@ -476,9 +510,7 @@ run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
     # Exact recomputation, with the per-sphere classifier code, for centres
     # whose aggregated values were too close to a rounding boundary.
     repair <- which(flagged & ok)
-    generic_cols <- if (length(repair)) {
-      .aggregate_generic_order(ds, radius, nb$centers[blk[repair]], nb$mask_indices)
-    }
+    generic_cols <- if (length(repair)) prep$generic_cols(centers[blk[repair]])
     for (ri in seq_along(repair)) {
       b <- repair[ri]
       cols <- generic_cols[[ri]]
@@ -500,13 +532,24 @@ run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
       }
     }
     n_repaired <- n_repaired + sum(flagged & ok)
-    perf[blk, ] <- .engine_pooled_metrics(pooled, observed, classes, kind, class_metrics, ok)
+    perf[blk, ] <- .engine_pooled_metrics(pooled, observed, classes, kind = prep$kind,
+                                          class_metrics = prep$class_metrics, ok)
   }
+  list(perf = perf, n_repaired = n_repaired)
+}
 
-  good <- !is.na(perf[, "Accuracy"])
+#' @keywords internal
+#' @noRd
+run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
+                                           block_size = 4000L, ...) {
+  ds <- model_spec$dataset
+  prep <- .aggregate_prepare(model_spec, radius, block_size = block_size)
+  if (length(prep$nb$centers) == 0L) return(empty_searchlight_result(ds))
+  sc <- .aggregate_score(prep, y_train(model_spec))
+  good <- !is.na(sc$perf[, "Accuracy"])
   if (!any(good)) return(empty_searchlight_result(ds))
-  out <- wrap_out(perf[good, , drop = FALSE], ds, ids = nb$centers[good])
+  out <- wrap_out(sc$perf[good, , drop = FALSE], ds, ids = prep$nb$centers[good])
   attr(out, "bad_results") <- tibble::tibble()
-  attr(out, "aggregate_recomputed_centres") <- n_repaired
+  attr(out, "aggregate_recomputed_centres") <- sc$n_repaired
   out
 }
