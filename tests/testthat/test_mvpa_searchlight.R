@@ -104,30 +104,43 @@ test_that("standard mvpa_searchlight runs without error", {
   
 })
 
-test_that("standard mvpa_searchlight with boot_lda_thomaz runs without error", {
+# Thomaz LDA requires at least two observations per training class. Keep this
+# smoke fixture balanced within runs so it tests ROI/NA handling deterministically.
+thomaz_searchlight_fixture <- function(na_cols = 0) {
+  set.seed(4101 + na_cols)
+  ds <- gen_sample_dataset(c(3, 3, 3), 36, blocks = 3, na_cols = na_cols)
+  ds$design <- mvpa_design(
+    data.frame(Y = factor(rep(letters[1:5], length.out = 36)),
+               block = rep(1:3, each = 12)),
+    y_train = ~ Y, block_var = ~ block
+  )
+  ds
+}
+
+test_that("standard mvpa_searchlight with lda_thomaz runs without error", {
   skip_if_not_installed("sparsediscrim")
-  
-  dataset <- gen_sample_dataset(c(3,3,3), 36, blocks=3)
+  dataset <- thomaz_searchlight_fixture()
+  counts <- table(dataset$design$y_train, dataset$design$block_var)
+  expect_true(all(rowSums(counts) - counts >= 2))
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("lda_thomaz")
-  grid <- data.frame(nreps=2, frac=.5)
-  mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval, tune_grid=grid)
-  res <- run_searchlight(mspec,radius=2, method="standard")
+  mspec <- mvpa_model(model, dataset$dataset, design = dataset$design,
+                      model_type = "classification", crossval = cval)
+  res <- run_searchlight(mspec, radius = 2, method = "standard")
   expect_true(!is.null(res))
-  
 })
 
-test_that("standard mvpa_searchlight with boot_lda_thomaz and NA columns runs without error", {
+test_that("standard mvpa_searchlight with lda_thomaz and NA columns runs without error", {
   skip_if_not_installed("sparsediscrim")
-  
-  dataset <- gen_sample_dataset(c(3,3,3), 36, blocks=3, na_cols=4)
+  dataset <- thomaz_searchlight_fixture(na_cols = 4)
+  counts <- table(dataset$design$y_train, dataset$design$block_var)
+  expect_true(all(rowSums(counts) - counts >= 2))
   cval <- blocked_cross_validation(dataset$design$block_var)
   model <- load_model("lda_thomaz")
-  grid <- data.frame(nreps=2, frac=.5)
-  mspec <- mvpa_model(model, dataset$dataset, design=dataset$design, model_type="classification", crossval=cval, tune_grid=grid)
-  res <- run_searchlight(mspec,radius=2, method="standard")
+  mspec <- mvpa_model(model, dataset$dataset, design = dataset$design,
+                      model_type = "classification", crossval = cval)
+  res <- run_searchlight(mspec, radius = 2, method = "standard")
   expect_true(!is.null(res))
-  
 })
 
 test_that("standard mvpa_searchlight and custom cross-validation runs without error", {
