@@ -165,6 +165,45 @@ golden_rsa_scenario <- function(distmethod, regtype) {
   }
 }
 
+# Expose the two stages of the frozen Spearman RSA scenario. Last-bit BLAS
+# differences in distances can change their exact ranks at the scoring stage.
+golden_spearman_rsa_components <- function() {
+  b <- readRDS(golden_find_extdata("haxby2001_subj1", "patterns.rds"))
+  groups <- as.integer(cut(seq_len(ncol(b$patterns)), 4L, labels = FALSE))
+  patterns <- lapply(seq_len(4L), function(roi) {
+    b$patterns[, groups == roi, drop = FALSE]
+  })
+  distances <- lapply(patterns, function(X) {
+    D <- rsa_neural_rdm(X, method = "spearman")
+    unname(D[lower.tri(D)])
+  })
+  # Independent base-R correlation implementation, without the package's RDM
+  # ranking, normalization, or matrix-product helper.
+  independent <- lapply(patterns, function(X) {
+    D <- 1 - stats::cor(t(X), method = "spearman")
+    unname(D[lower.tri(D)])
+  })
+  predictors <- list(
+    same_category = as.numeric(stats::as.dist(1 - outer(b$category, b$category, "=="))),
+    run_distance = as.numeric(stats::dist(b$run))
+  )
+  include <- predictors$run_distance != 0
+  list(patterns = patterns, distances = distances, independent = independent,
+       predictors = lapply(predictors, `[`, include), include = include)
+}
+
+golden_spearman_rsa_scores <- function(distances, components) {
+  scores <- t(vapply(distances, function(d) {
+    vapply(components$predictors, function(x) {
+      # Historical rsa_model semantics use distmethod for this correlation,
+      # including when regtype is named "pearson". Preserve that contract.
+      stats::cor(d[components$include], x, method = "spearman")
+    }, numeric(1))
+  }, numeric(length(components$predictors))))
+  colnames(scores) <- names(components$predictors)
+  data.frame(roinum = seq_along(distances), scores, check.names = FALSE)
+}
+
 golden_vector_rsa_scenario <- function() {
   h <- golden_haxby()
   cats <- levels(h$bundle$category)

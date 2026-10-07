@@ -10,6 +10,10 @@
   against the original SDA estimator on the running platform plus independent
   pair counting. Row-normalization rounding can break exact probability ties
   differently across platforms; the numerical tolerance remains unchanged.
+* Spearman RSA characterisation also freezes intermediate neural distances
+  and checks distance accuracy and rank-based scoring separately. This avoids
+  requiring last-bit BLAS ties to match across platforms; the original frozen
+  scores and numerical tolerances are retained.
 
 * `install_cli()` no longer defaults `dest_dir` to `~/.local/bin`; the
   destination must be given, so nothing is written to the home directory

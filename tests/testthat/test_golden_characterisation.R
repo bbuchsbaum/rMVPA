@@ -40,6 +40,26 @@ for (scenario in names(golden_scenarios())) {
         actual$performance$AUC <- NULL
         expected$performance$AUC <- NULL
       }
+      if (identical(nm, "rsa_spearman_pearson")) {
+        # The second correlation ranks neural distances. Comparing final
+        # coefficients across platforms incorrectly requires last-bit distance
+        # ties to be invariant. Freeze distances and verify each stage instead.
+        components <- golden_spearman_rsa_components()
+        frozen_distances <- fixture$distance_reference$value
+        expect_false(is.null(frozen_distances))
+        expect_equal(components$distances, frozen_distances,
+                     tolerance = golden_tolerance, info = "frozen Spearman distances")
+        expect_equal(components$distances, components$independent,
+                     tolerance = 1e-12, info = "independent Spearman distances")
+        expect_equal(actual$performance,
+                     golden_spearman_rsa_scores(components$distances, components),
+                     tolerance = golden_tolerance, info = "current-distance RSA scoring")
+        expect_equal(expected$performance,
+                     golden_spearman_rsa_scores(frozen_distances, components),
+                     tolerance = golden_tolerance, info = "frozen-distance RSA scoring")
+        actual$performance[c("same_category", "run_distance")] <- NULL
+        expected$performance[c("same_category", "run_distance")] <- NULL
+      }
       expect_equal(actual, expected,
                    tolerance = golden_tolerance, info = nm)
     })

@@ -37,7 +37,14 @@ for (nm in targets) {
   t0 <- Sys.time()
   value <- golden_run_scenario(nm)
   secs <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  saveRDS(list(value = value, meta = c(meta_common, scenario = nm, seconds = secs)),
+  fixture <- list(value = value, meta = c(meta_common, scenario = nm, seconds = secs))
+  if (identical(nm, "rsa_spearman_pearson")) {
+    fixture$distance_reference <- list(
+      value = golden_spearman_rsa_components()$distances,
+      meta = meta_common
+    )
+  }
+  saveRDS(fixture,
           file.path(out_dir, paste0(nm, ".rds")), version = 2)
   cat(sprintf("%-24s %6.1fs\n", nm, secs))
 }
