@@ -115,6 +115,22 @@
   regional fixtures this moved AUC by 0.2% (`sda_notune`), 0.4%
   (`naive_bayes`) and 1.6% (`dual_lda`, whose probabilities saturate). rMVPA's
   multiclass AUC now equals scikit-learn's to 15 digits on those data.
+* `sda_notune`, the recommended default classifier, now fits the `sda`
+  estimator natively. Shrinkage intensities, discriminant coefficients and
+  posteriors match `sda::sda()` to about 1e-12 (posteriors identical after
+  `sda`'s own `zapsmall()` rounding). The fit is about 10x faster and no
+  longer needs the `sda`, `corpcor`, `entropy` and `fdrtool` packages. `sda`
+  uses two SVDs and an eigendecomposition. The native fit uses the n x n Gram
+  matrix of the centred, standardised data: the shrinkage intensity needs only
+  its Frobenius norm, and the shrunk inverse correlation is applied by the
+  Woodbury identity with one Cholesky factorisation (or the smaller p x p
+  system when a fit has fewer voxels than training observations). A new
+  searchlight engine (`engine = "sda_fast"`, selected automatically) computes
+  the fit's per-voxel statistics once per fold and runs only the cross-voxel
+  steps per sphere. Its maps are bit-identical to the per-sphere path's. Fits with an estimated
+  correlation shrinkage of exactly zero (where `sda` uses a pseudoinverse) are
+  still delegated to `sda::sda()`. Haxby VT regional analysis went from 372 to
+  104 ms.
 
 # rMVPA 0.1.3
 

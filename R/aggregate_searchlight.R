@@ -350,6 +350,39 @@
   })
 }
 
+#' Metrics for a block of centres from pooled fold probabilities
+#'
+#' `pooled` has one row per (observation, centre), observation varying
+#' fastest, and one column per class. As in wrap_result() and
+#' multiclass_perf()/binary_perf(): rows are renormalised, the prediction is
+#' the exact argmax, and AUC is one-vs-rest on each class's own probability.
+#' Centres with `ok = FALSE` get NA.
+#' @keywords internal
+#' @noRd
+.engine_pooled_metrics <- function(pooled, observed, classes, kind, class_metrics, ok) {
+  K <- length(classes)
+  n_obs <- length(observed)
+  n_b <- nrow(pooled) %/% n_obs
+  pooled[rep(!ok, each = n_obs), ] <- 1
+  pooled <- pooled / rowSums(pooled)
+  pred <- matrix(max.col(pooled, ties.method = "first"), n_obs)
+  acc <- colMeans(pred == as.integer(observed))
+
+  if (identical(kind, "binary")) {
+    auc <- 2 * .aggregate_col_auc(matrix(pooled[, 2], n_obs), observed == classes[2]) - 1
+    vals <- cbind(Accuracy = acc, AUC = auc)
+  } else {
+    auc_k <- vapply(seq_len(K), function(k) {
+      2 * .aggregate_col_auc(matrix(pooled[, k], n_obs), observed == classes[k]) - 1
+    }, numeric(n_b))
+    auc_k <- matrix(auc_k, nrow = n_b, dimnames = list(NULL, paste0("AUC_", classes)))
+    vals <- cbind(Accuracy = acc, AUC = rowMeans(auc_k, na.rm = TRUE))
+    if (class_metrics) vals <- cbind(vals, auc_k)
+  }
+  vals[!ok, ] <- NA_real_
+  vals
+}
+
 #' @keywords internal
 #' @noRd
 run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
@@ -467,27 +500,7 @@ run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
       }
     }
     n_repaired <- n_repaired + sum(flagged & ok)
-    bad_rows <- rep(!ok, each = n_obs)
-    pooled[bad_rows, ] <- 1
-    # wrap_result(): renormalise pooled rows, then the exact argmax.
-    pooled <- pooled / rowSums(pooled)
-    pred <- matrix(max.col(pooled, ties.method = "first"), n_obs)
-    acc <- colMeans(pred == as.integer(observed))
-
-    if (identical(kind, "binary")) {
-      auc <- 2 * .aggregate_col_auc(matrix(pooled[, 2], n_obs), observed == classes[2]) - 1
-      vals <- cbind(Accuracy = acc, AUC = auc)
-    } else {
-      auc_k <- vapply(seq_len(K), function(k) {
-        score <- pooled[, k]
-        2 * .aggregate_col_auc(matrix(score, n_obs), observed == classes[k]) - 1
-      }, numeric(n_b))
-      auc_k <- matrix(auc_k, nrow = n_b)
-      vals <- cbind(Accuracy = acc, AUC = rowMeans(auc_k, na.rm = TRUE))
-      if (class_metrics) vals <- cbind(vals, auc_k)
-    }
-    vals[!ok, ] <- NA_real_
-    perf[blk, ] <- vals
+    perf[blk, ] <- .engine_pooled_metrics(pooled, observed, classes, kind, class_metrics, ok)
   }
 
   good <- !is.na(perf[, "Accuracy"])

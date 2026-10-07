@@ -348,23 +348,36 @@ MVPAModels$corsim <- MVPAModels$corclass
 #' @noRd
 MVPAModels$sda_notune <- list(
   type = "Classification",
-  library = "sda",
+  # Fitted natively (R/sda_native.R); the sda package is needed only for the
+  # rare fits that are delegated to it (estimated lambda of zero, n < 3).
+  library = NULL,
   label="sda_notune",
   loop = NULL,
   parameters=data.frame(parameters="parameter", class="character", label="parameter"),
   grid=function(x, y, len = NULL) data.frame(parameter="none"),
 
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-    m <- quiet_sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...)
+    m <- if (length(list(...)) == 0L) .sda_native_fit(as.matrix(x), y) else NULL
+    if (is.null(m)) {
+      require_package("sda", "for this sda_notune fit (delegated to sda::sda)")
+      m <- quiet_sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...)
+    }
     m$obsLevels <- lev
     m
   },
 
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    if (inherits(modelFit, "sda_native")) {
+      probs <- .sda_native_posterior(modelFit, newdata)
+      return(factor(colnames(probs)[max.col(probs, ties.method = "first")], levels = colnames(probs)))
+    }
     predict(modelFit, as.matrix(newdata), verbose=FALSE)$class
   },
 
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    if (inherits(modelFit, "sda_native")) {
+      return(.sda_native_posterior(modelFit, newdata))
+    }
     predict(modelFit, as.matrix(newdata), verbose=FALSE)$posterior
   }
 )
