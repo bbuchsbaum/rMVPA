@@ -1056,7 +1056,7 @@ predict_model <- function(object, fit, newdata, ...) {
 #' @keywords internal
 #' @noRd
 .matrix_first_roi_enabled <- function() {
-  TRUE
+  .fast_path_enabled("matrix_first_roi")
 }
 
 #' Run Searchlight Analysis

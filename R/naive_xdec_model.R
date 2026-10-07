@@ -100,7 +100,7 @@ print.naive_xdec_model <- function(x, ...) {
 
 #' @keywords internal
 .naive_xdec_fast_kernel_enabled <- function() {
-  TRUE
+  .fast_path_enabled("naive_xdec_fast_kernel")
 }
 
 #' @keywords internal

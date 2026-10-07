@@ -502,7 +502,7 @@ run_cor <- function(dvec, obj) {
 }
 
 .rsa_fast_kernel_enabled <- function() {
-  TRUE
+  .fast_path_enabled("rsa_fast_kernel")
 }
 
 .rsa_prepare_fast_kernel <- function(design, regtype, distmethod, semipartial, nneg) {
