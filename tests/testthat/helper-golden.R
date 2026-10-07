@@ -98,15 +98,51 @@ golden_searchlight_scenario <- function(model_name, engine) {
   }
 }
 
-golden_regional_scenario <- function(model_name) {
+golden_regional_scenario <- function(model_name, model = NULL) {
   force(model_name)
+  force(model)
   function() {
     h <- golden_haxby()
-    mspec <- mvpa_model(load_model(model_name), h$dataset, h$design, "classification",
+    spec <- if (is.null(model)) load_model(model_name) else model
+    mspec <- mvpa_model(spec, h$dataset, h$design, "classification",
                         crossval = h$crossval, return_predictions = TRUE)
     set.seed(12)
     golden_regional_tables(run_regional(mspec, h$rois, verbose = FALSE))
   }
+}
+
+# The original SDA estimator is an independent reference for the native fit.
+# Pass a local model specification through the public runner; do not alter the
+# model registry or namespace used by the implementation under test.
+golden_external_sda <- function() {
+  model <- load_model("sda_notune")
+  model$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    fit <- sda::sda(as.matrix(x), y, verbose = FALSE, ...)
+    fit$obsLevels <- lev
+    fit
+  }
+  model$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    predict(modelFit, as.matrix(newdata), verbose = FALSE)$class
+  }
+  model$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    predict(modelFit, as.matrix(newdata), verbose = FALSE)$posterior
+  }
+  golden_quiet(golden_regional_scenario("sda_notune", model)())
+}
+
+# Independent Mann-Whitney pair counting: exact score ties receive half credit.
+# Use the probabilities as returned, without rounding or tolerance-based ties.
+golden_pairwise_auc <- function(tables) {
+  vapply(tables$performance$roinum, function(roi) {
+    pred <- tables$predictions[tables$predictions$roinum == roi, , drop = FALSE]
+    columns <- grep("^prob_", names(pred), value = TRUE)
+    auc <- vapply(columns, function(column) {
+      positive <- pred$observed == sub("^prob_", "", column)
+      difference <- outer(pred[[column]][positive], pred[[column]][!positive], "-")
+      mean((difference > 0) + 0.5 * (difference == 0))
+    }, numeric(1))
+    mean(2 * auc - 1)
+  }, numeric(1))
 }
 
 golden_rsa_scenario <- function(distmethod, regtype) {
@@ -164,6 +200,10 @@ golden_crossnobis_scenario <- function() {
 }
 
 golden_metric_scenario <- function() {
+  # Canonical ASCII name order, independent of R CMD check's C collation.
+  ordered_metrics <- function(x) {
+    unclass(x)[order(tolower(names(x)), method = "radix")]
+  }
   set.seed(15)
   obs <- seq(-2, 2, length.out = 20)
   regression <- list(
@@ -191,9 +231,9 @@ golden_metric_scenario <- function() {
   binary <- performance(classification_result(bin_obs, bin_pred, bin_probs))
 
   list(
-    regression = lapply(regression, function(x) unclass(x)[sort(names(x))]),
-    multiclass = unclass(multiclass)[sort(names(multiclass))],
-    binary = unclass(binary)[sort(names(binary))]
+    regression = lapply(regression, ordered_metrics),
+    multiclass = ordered_metrics(multiclass),
+    binary = ordered_metrics(binary)
   )
 }
 

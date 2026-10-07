@@ -6,6 +6,10 @@
   `sparsediscrim` class, probability, and score prediction interfaces.
 * Debug logging uses the effective rMVPA logger threshold, including when a
   named logger has been configured.
+* Regional SDA characterisation retains frozen predictions and checks AUC
+  against the original SDA estimator on the running platform plus independent
+  pair counting. Row-normalization rounding can break exact probability ties
+  differently across platforms; the numerical tolerance remains unchanged.
 
 * `install_cli()` no longer defaults `dest_dir` to `~/.local/bin`; the
   destination must be given, so nothing is written to the home directory
@@ -62,10 +66,10 @@
   arguments such as `verbose = FALSE` or `batch_size`. Those arguments were
   consumed and then forwarded a second time to the iterator ("formal argument
   'verbose' matched by multiple actual arguments").
-* The `naive_bayes` classifier is vectorised over features: per-class
-  variances use `matrixStats::colVars()`, likelihoods use one `dnorm()` call
-  per class, and the softmax is row-vectorised. Results are bit-identical to
-  before. A Haxby VT regional analysis went from 366 to 78 ms.
+* The `naive_bayes` classifier vectorises likelihoods with one `dnorm()` call
+  per class and a row-vectorised softmax. Per-class variances retain the
+  original `stats::var()` calculation to preserve last-bit probability ties
+  and rank metrics.
 * Faster regional analysis and per-fold screening. The iterator no longer
   forces garbage collection several times per batch. A full collection walks
   the whole heap, so its cost grew with everything else in the session. Set

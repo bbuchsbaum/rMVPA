@@ -22,7 +22,25 @@ for (scenario in names(golden_scenarios())) {
       expect_true(file.exists(path), info = paste("missing fixture", path))
       skip_if_not(file.exists(path))
       fixture <- readRDS(path)
-      expect_equal(golden_run_scenario(nm), fixture$value,
+      actual <- golden_run_scenario(nm)
+      expected <- fixture$value
+      if (identical(nm, "regional_sda_notune")) {
+        # SDA rounds its posterior before wrap_result() normalizes each row.
+        # A different summation precision can change the normalized values by
+        # 2e-16, breaking exact ties and moving AUC by a discrete pair count.
+        # Keep frozen probabilities and every other field at the same tolerance;
+        # compare the full result to the original estimator on this platform.
+        reference <- golden_external_sda()
+        expect_equal(actual, reference, tolerance = golden_tolerance,
+                     info = "native SDA versus original sda::sda")
+        expect_equal(actual$performance$AUC, golden_pairwise_auc(actual),
+                     tolerance = golden_tolerance, info = "native SDA pair-count AUC")
+        expect_equal(expected$performance$AUC, golden_pairwise_auc(expected),
+                     tolerance = golden_tolerance, info = "frozen SDA pair-count AUC")
+        actual$performance$AUC <- NULL
+        expected$performance$AUC <- NULL
+      }
+      expect_equal(actual, expected,
                    tolerance = golden_tolerance, info = nm)
     })
   })
