@@ -7,7 +7,7 @@ gen_id <- function(n) {
 #' @keywords internal
 #' @noRd
 .fast_filter_roi_enabled <- function() {
-  TRUE
+  .fast_path_enabled("fast_filter_roi")
 }
 
 #' @keywords internal
@@ -177,7 +177,7 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
       group_zv <- as.logical(tapply(!sdnonzero, group_idx, any))
       n_na  <- sum(group_na & !group_keep)
       n_zv  <- sum(group_zv & !group_na & !group_keep)
-      futile.logger::flog.debug(
+      .log_debug(
         "filter_roi: removing %d/%d physical voxels (NA: %d, zero-variance: %d); %d remain. [basis_count=%d]",
         n_removed, V_phys, n_na, n_zv, sum(group_keep), basis_count)
     }
@@ -189,7 +189,7 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
       first_block_ids <- gi[seq_len(V_phys)]
       preserve_group <- match(preserve, first_block_ids)
       if (!is.na(preserve_group) && !group_keep[preserve_group]) {
-        futile.logger::flog.debug(
+        .log_debug(
           "Preserving voxel group %s that would have been filtered (NA or zero variance)",
           preserve)
         group_keep[preserve_group] <- TRUE
@@ -203,7 +203,7 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
       reasons <- c()
       if (any(group_na)) reasons <- c(reasons, sprintf("NA voxel groups: %d", sum(group_na)))
       if (any(group_zv)) reasons <- c(reasons, sprintf("zero-variance voxel groups: %d", sum(group_zv)))
-      futile.logger::flog.debug(
+      .log_debug(
         "filter_roi.ROIVec: %d valid physical voxels (< %d). Reasons: %s",
         sum(group_keep), min_voxels,
         paste(reasons, collapse = "; ")
@@ -225,7 +225,7 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
     if (n_removed > 0) {
       n_na  <- sum(nas)
       n_zv  <- sum(!sdnonzero & !nas)  # zero-var but not already counted as NA
-      futile.logger::flog.debug(
+      .log_debug(
         "filter_roi: removing %d/%d voxels (NA: %d, zero-variance: %d); %d remain.",
         n_removed, length(keep), n_na, n_zv, sum(keep))
     }
@@ -235,7 +235,7 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
       gi <- neuroim2::indices(roi$train_roi)
       kp <- match(preserve, gi)
       if (!is.na(kp) && !keep[kp]) {
-        futile.logger::flog.debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
+        .log_debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
         keep[kp] <- TRUE
       }
     }
@@ -246,7 +246,7 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
       reasons <- c()
       if (any(nas)) reasons <- c(reasons, sprintf("NA voxels: %d", sum(nas)))
       if (any(!sdnonzero)) reasons <- c(reasons, sprintf("zero-variance voxels: %d", sum(!sdnonzero)))
-      futile.logger::flog.debug(
+      .log_debug(
         "filter_roi.ROIVec: %d valid columns (< %d). Reasons: %s",
         sum(keep), min_voxels,
         paste(reasons, collapse = "; ")
@@ -335,7 +335,7 @@ filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, min_voxels = 2, ..
     gi <- roi$train_roi@indices
     kp <- match(preserve, gi)
     if (!is.na(kp) && !keep[kp]) {
-      futile.logger::flog.debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
+      .log_debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
       keep[kp] <- TRUE
     }
   }
@@ -410,14 +410,14 @@ as_roi.data_sample <- function(obj, data, ...) {
     invalid_vox <- setdiff(obj$vox, mask_indices)
 
     if (length(invalid_vox) > 0) {
-      futile.logger::flog.debug(
+      .log_debug(
         "as_roi.data_sample: %d voxel(s) outside data mask (expected for edge searchlights; should not occur for regional).",
         length(invalid_vox))
       obj$vox <- intersect(obj$vox, mask_indices)
 
       # Don't fail for <2 voxels -- let filter_roi handle the minimum check
       if (length(obj$vox) == 0) {
-        futile.logger::flog.debug("as_roi.data_sample: 0 voxels remain after mask filtering.")
+        .log_debug("as_roi.data_sample: 0 voxels remain after mask filtering.")
         train_roi <- structure(list(message = "No voxels remaining after mask filtering"),
                               class = "try-error")
         return(list(train_roi = train_roi, test_roi = NULL))
@@ -470,7 +470,7 @@ as_roi.multibasis_data_sample <- function(obj, data, ...) {
 
     invalid_vox <- setdiff(obj$vox, mask_indices)
     if (length(invalid_vox) > 0) {
-      futile.logger::flog.debug(
+      .log_debug(
         "as_roi.multibasis_data_sample: %d voxel(s) outside data mask.",
         length(invalid_vox)
       )

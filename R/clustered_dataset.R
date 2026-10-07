@@ -127,7 +127,7 @@ length.clustered_roi_spec <- function(x) {
 #' @keywords internal
 #' @noRd
 .clustered_nn_fastpath_enabled <- function() {
-  TRUE
+  .fast_path_enabled("clustered_nn_fastpath")
 }
 
 #' @keywords internal

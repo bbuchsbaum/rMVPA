@@ -1,5 +1,20 @@
 # rMVPA (development version)
 
+* Native SDA retains weight extraction and training-data importance for global
+  and regional analyses.
+* Thomaz LDA adapters accept unnamed ROI matrices and the current
+  `sparsediscrim` class, probability, and score prediction interfaces.
+* Debug logging uses the effective rMVPA logger threshold, including when a
+  named logger has been configured.
+* Regional SDA characterisation retains frozen predictions and checks AUC
+  against the original SDA estimator on the running platform plus independent
+  pair counting. Row-normalization rounding can break exact probability ties
+  differently across platforms; the numerical tolerance remains unchanged.
+* Spearman RSA characterisation also freezes intermediate neural distances
+  and checks distance accuracy and rank-based scoring separately. This avoids
+  requiring last-bit BLAS ties to match across platforms; the original frozen
+  scores and numerical tolerances are retained.
+
 * `install_cli()` no longer defaults `dest_dir` to `~/.local/bin`; the
   destination must be given, so nothing is written to the home directory
   unless chosen (CRAN policy).
@@ -36,6 +51,136 @@
   them.
 * `regression_result()` is exported, like its classification siblings.
 * `gen_sample_dataset(external_test = TRUE)` no longer emits a stray message.
+* **Correctness fix (changes results):** `run_searchlight()` with the default
+  `engine = "auto"` no longer routes multiclass (three or more classes)
+  `mvpa_model` searchlights to the SWIFT engine. SWIFT computes its own
+  z-scored nearest-class-mean estimator. It was being selected regardless of
+  the requested classifier, so `corclass`, `sda_notune`, `svmLinear` and other
+  models silently returned SWIFT results instead of their own. `auto` now
+  selects a fast engine only when it computes the specified estimator
+  (currently `dual_lda_fast` for `dual_lda`). Every other classifier runs
+  through the general-purpose iterator.
+  - Multiclass searchlights from earlier versions run with the default engine
+    should be rerun.
+  - Expect longer run times for affected models until exact fast engines land.
+  - SWIFT remains available through an explicit `engine = "swift"`. It then
+    emits a message naming the substitution and records
+    `attr(result, "searchlight_estimator") == "swift_nearest_mean"`.
+* `run_regional()` for `vector_rsa_model` no longer fails when given runner
+  arguments such as `verbose = FALSE` or `batch_size`. Those arguments were
+  consumed and then forwarded a second time to the iterator ("formal argument
+  'verbose' matched by multiple actual arguments").
+* The `naive_bayes` classifier vectorises likelihoods with one `dnorm()` call
+  per class and a row-vectorised softmax. Per-class variances retain the
+  original `stats::var()` calculation to preserve last-bit probability ties
+  and rank metrics.
+* Faster regional analysis and per-fold screening. The iterator no longer
+  forces garbage collection several times per batch. A full collection walks
+  the whole heap, so its cost grew with everything else in the session. Set
+  `options(rMVPA.gc_each_batch = TRUE)` to restore per-batch collection. The
+  per-fold zero-variance and missing-value column checks are vectorised, with
+  results identical to the previous ones. On Haxby VT (leave-one-run-out), a
+  `corclass` regional analysis went from 556 to 73 ms. Results are unchanged.
+* Faster general-purpose searchlight and regional iteration. Debug logging is
+  now checked once per run instead of on every per-fold call. Each disabled
+  `futile.logger` call previously resolved the logger namespace before
+  comparing thresholds, and the general path made hundreds of thousands of such
+  calls. Measured on a 6x6x6 searchlight (100 trials, 5 folds, reference BLAS):
+  `corclass` went from 72 to 21 ms per centre and `sda_notune` from 93 to 42 ms
+  per centre. Results are unchanged.
+* `set_log_level("DEBUG")` is no longer undone at the start of every run in
+  interactive sessions. The internal logger setup compared a level name with a
+  number, so its guard was always false.
+* **Correctness fix (changes results):** predicted classes are now the exact
+  maximum, with exact ties going to the first class, as in numpy and
+  scikit-learn `argmax` and CoSMoMVPA. Before, `max.col()`'s default broke
+  ties at random. It also treated scores within a relative 1e-5 of the maximum
+  as tied, so it could return a class that was not the maximum, and results
+  depended on the RNG state. This mostly affects `corclass`, whose softmax
+  probabilities are nearly flat. In the Haxby VT regional fixture one of 96
+  predictions changed (scissors 0.1250855 vs face 0.1250849: face had been
+  chosen) and accuracy rose by one observation. A `corclass` searchlight now
+  reproduces nilearn's `SearchLight` mean accuracy exactly (0.2620138889 on the
+  benchmark volume) under any seed.
+* New exact sphere-aggregation searchlight engine (`engine = "aggregate_fast"`),
+  selected automatically for `corclass` (Pearson, mean prototypes) and
+  `naive_bayes` classification searchlights. Per fold, per-voxel class means and products
+  are computed once and summed over every sphere with sparse products, giving
+  the same estimator as the per-sphere path: the same voxel screening,
+  correlations, softmax, `zapsmall()` rounding, fold pooling and metrics.
+  Centres whose aggregated values come too close to a rounding boundary are
+  recomputed exactly with the per-sphere code. Accuracy and AUC maps match the
+  general path at every centre (within 1e-15) on synthetic data and on Haxby
+  VT, and the benchmark volume's mean accuracy matches nilearn's
+  `SearchLight` exactly. The engine runs at about 0.26 ms per centre, against
+  13 ms for the general path and 2.5 ms for nilearn. Data outside its regime
+  (missing values, identical voxel columns, a class absent from a training
+  fold) fall back to the general path automatically.
+* `mvpa_model(..., class_metrics = TRUE)` works again for multiclass
+  searchlight and regional analyses. The output schema did not declare the
+  per-class `AUC_<class>` columns, so every ROI failed the schema width check
+  and regional performance tables came back empty.
+* **Metric change (changes results):** multiclass one-vs-rest AUC now ranks
+  each class's own probability, as scikit-learn's
+  `roc_auc_score(multi_class = "ovr")` does. The former score,
+  `p_k - mean(p_-k)`, is a monotone function of `p_k` when probabilities sum
+  to one, so it gives the same AUC in exact arithmetic. But rounding the mean
+  turned tiny, distinct class probabilities into last-bit ties that counted
+  as half credit. AUC values change only in such cases. In the Haxby VT
+  regional fixtures this moved AUC by 0.2% (`sda_notune`), 0.4%
+  (`naive_bayes`) and 1.6% (`dual_lda`, whose probabilities saturate). rMVPA's
+  multiclass AUC now equals scikit-learn's to 15 digits on those data.
+* `sda_notune`, the recommended default classifier, now fits the `sda`
+  estimator natively. Shrinkage intensities, discriminant coefficients and
+  posteriors match `sda::sda()` to about 1e-12 (posteriors identical after
+  `sda`'s own `zapsmall()` rounding). The fit is about 10x faster and no
+  longer needs the `sda`, `corpcor`, `entropy` and `fdrtool` packages. `sda`
+  uses two SVDs and an eigendecomposition. The native fit uses the n x n Gram
+  matrix of the centred, standardised data: the shrinkage intensity needs only
+  its Frobenius norm, and the shrunk inverse correlation is applied by the
+  Woodbury identity with one Cholesky factorisation (or the smaller p x p
+  system when a fit has fewer voxels than training observations). A new
+  searchlight engine (`engine = "sda_fast"`, selected automatically) computes
+  the fit's per-voxel statistics once per fold and runs only the cross-voxel
+  steps per sphere. Its maps are bit-identical to the per-sphere path's. Fits with an estimated
+  correlation shrinkage of exactly zero (where `sda` uses a pseudoinverse) are
+  still delegated to `sda::sda()`. Haxby VT regional analysis went from 372 to
+  104 ms.
+* `run_permutation_searchlight()` uses the exact searchlight engines
+  (`aggregate_fast` for `corclass` and `naive_bayes`, `sda_fast` for
+  `sda_notune`) under both permutation strategies with fixed folds. Data,
+  neighbourhoods, folds and voxel validity are prepared once and each
+  permutation only rescores. The default `"iterate"` strategy previously
+  ran every permutation through the per-ROI iterator. Null distributions and
+  p-values matched for the same seed in the recorded blocked-CV benchmark,
+  with 15-117x faster runs for these models (6x6x6 volume). Passing an explicit
+  engine other than `"auto"` bypasses preparation reuse.
+* RSA searchlights (`rsa_model`) run on a new engine (`engine = "rsa_fast"`,
+  selected automatically). It extracts the data once and calls
+  `train_model.rsa_model()` per sphere on exactly the columns the per-ROI path
+  uses, without the iterator's per-sphere ROI objects, filtering and result
+  tables. Maps are identical for every distance and regression type,
+  including semipartial. Spearman ranking in RDM computation now uses
+  `matrixStats` (identical ranks). This also speeds up the per-ROI path.
+  Haxby VT Spearman RSA searchlight (r = 6 mm): 2.13 s -> 0.23 s.
+* `dual_lda` now solves problems with more features than training
+  observations (most ROIs) in the dual, via the Woodbury identity: an n x n
+  Cholesky instead of a p x p one. With small `gamma` the p x p system is
+  severely ill-conditioned. On a 577-voxel ROI the previous solve was off by
+  2e-8 relative and the dual solve by 2e-15, against a stable SVD reference.
+  Predictions and metrics are unchanged on the Haxby fixtures. Haxby VT
+  regional `dual_lda`: about 357 -> 126-195 ms.
+* Permutation engine preparation is reused only for built-in blocked CV and
+  explicit custom splits. Randomized CV keeps its existing per-permutation
+  fold draws and RNG behavior. Permutation p-values now use sorted null
+  lookups, preserving upper-tail ties and the +1 correction, and null results
+  are concatenated once instead of copied into a growing matrix on every draw.
+* RSA permutation searchlights (`rsa_model` with item permutations) also use
+  the prepared-once engine path (`rsa_fast`). The permuted design's
+  `item_perm` is honoured per sphere through `train_model.rsa_model()`, so
+  null distributions and p-values are identical to the per-ROI path, for
+  individual (correlation) and joint (`lm`) nulls under both strategies. 6-16x
+  faster on a 6x6x6 volume.
 
 # rMVPA 0.1.3
 

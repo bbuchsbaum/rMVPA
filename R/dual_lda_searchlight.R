@@ -716,7 +716,7 @@
 #' @keywords internal
 #' @noRd
 .dual_lda_metric_core <- function(observed, probs, classes, kind, class_metrics = FALSE) {
-  pred <- factor(classes[max.col(probs)], levels = classes)
+  pred <- factor(classes[max.col(probs, ties.method = "first")], levels = classes)
   acc <- mean(pred == observed)
 
   if (identical(kind, "binary")) {
@@ -729,9 +729,8 @@
   k <- length(classes)
   aucres <- rep(NA_real_, k)
   for (i in seq_len(k)) {
-    pclass <- probs[, i]
-    pother <- rowMeans(probs[, -i, drop = FALSE])
-    score <- pclass - pother
+    # Same one-vs-rest score as multiclass_perf(): the class's own probability.
+    score <- probs[, i]
     aucres[i] <- .dual_lda_auc_from_scores(score, observed == classes[i])
   }
 
@@ -1117,7 +1116,7 @@
   colnames(prob) <- classes
 
   obs <- factor(y_all[test_idx], levels = classes)
-  pred <- factor(classes[max.col(prob)], levels = classes)
+  pred <- factor(classes[max.col(prob, ties.method = "first")], levels = classes)
   classification_result(
     observed = obs,
     predicted = pred,

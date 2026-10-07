@@ -7,8 +7,8 @@
 explain_searchlight_engine(
   model_spec,
   method = c("standard", "randomized", "resampled"),
-  engine = c("auto", "legacy", "swift", "dual_lda_fast", "naive_xdec_fast",
-    "era_rsa_fast")
+  engine = c("auto", "legacy", "swift", "dual_lda_fast", "aggregate_fast", "sda_fast",
+    "rsa_fast", "naive_xdec_fast", "era_rsa_fast")
 )
 }
 \arguments{
@@ -18,7 +18,8 @@ explain_searchlight_engine(
 
 \item{engine}{Requested engine policy: \code{"auto"}, \code{"legacy"}
 (the compatibility key for the general-purpose iterator), \code{"swift"},
-\code{"dual_lda_fast"}, \code{"naive_xdec_fast"}, or
+\code{"dual_lda_fast"}, \code{"aggregate_fast"}, \code{"sda_fast"},
+\code{"rsa_fast"}, \code{"naive_xdec_fast"}, or
 \code{"era_rsa_fast"}.}
 }
 \value{

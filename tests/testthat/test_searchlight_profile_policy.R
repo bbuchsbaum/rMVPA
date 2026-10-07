@@ -50,3 +50,28 @@ test_that("stable fast paths are always enabled", {
     expect_true(rMVPA:::.naive_xdec_fast_kernel_enabled())
   })
 })
+
+test_that("reference-path override is internal, scoped and restored", {
+  paths <- rMVPA:::.rmvpa_fast_path_names
+  expect_true(all(vapply(paths, rMVPA:::.fast_path_enabled, logical(1))))
+
+  inside <- rMVPA:::.with_reference_paths(paths, {
+    vapply(paths, rMVPA:::.fast_path_enabled, logical(1))
+  })
+  expect_false(any(inside))
+  expect_false(rMVPA:::.with_reference_paths("rsa_fast_kernel", rMVPA:::.rsa_fast_kernel_enabled()))
+
+  # Restored afterwards, including after an error inside the scope.
+  expect_true(all(vapply(paths, rMVPA:::.fast_path_enabled, logical(1))))
+  expect_error(rMVPA:::.with_reference_paths("fold_cache", stop("boom")), "boom")
+  expect_true(rMVPA:::.fold_cache_enabled())
+
+  # Nested scopes restore the outer state.
+  rMVPA:::.with_reference_paths("fold_cache", {
+    rMVPA:::.with_reference_paths("fold_cache", NULL)
+    expect_false(rMVPA:::.fold_cache_enabled())
+  })
+  expect_true(rMVPA:::.fold_cache_enabled())
+
+  expect_error(rMVPA:::.with_reference_paths("not_a_path", NULL), "Unknown fast path")
+})

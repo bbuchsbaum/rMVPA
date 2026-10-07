@@ -19,7 +19,7 @@ wrap_result <- function(result_table, design, fit=NULL) {
     
     ## probs must sum to one, can divide by sum.
     prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
-    maxid <- max.col(prob)
+    maxid <- max.col(prob, ties.method = "first")
     pclass <- levels(observed)[maxid]
     
     ## storing observed, testind, test_design 
@@ -178,6 +178,10 @@ output_schema.mvpa_model <- function(model) {
     nms <- c("Accuracy", "AUC")
   } else if (is.factor(y) && length(levels(y)) > 2) {
     nms <- c("Accuracy", "AUC")
+    # multiclass_perf(class_metrics = TRUE) also returns one AUC per class.
+    if (isTRUE(attr(model$performance, "rmvpa_class_metrics", exact = TRUE))) {
+      nms <- c(nms, paste0("AUC_", levels(y)))
+    }
   } else {
     # custom perf or unknown type — fall back to combine_standard
     return(NULL)
@@ -617,10 +621,10 @@ fit_roi.mvpa_model <- function(model, roi_data, context, ...) {
 #' @export
 strip_dataset.default <- function(obj, ...) {
   if (!is.null(obj$dataset)) {
-    futile.logger::flog.debug("Stripping dataset from model specification.")
+    .log_debug("Stripping dataset from model specification.")
     obj$dataset <- NULL
   } else {
-    futile.logger::flog.debug("Dataset already NULL or missing in model specification.")
+    .log_debug("Dataset already NULL or missing in model specification.")
   }
   obj
 }

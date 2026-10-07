@@ -3037,7 +3037,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   if (nrow(predictions) > 1) {
     pred_sds <- .feature_rsa_col_sds(predictions)
     if (all(pred_sds < 1e-12, na.rm = TRUE)) {
-      futile.logger::flog.debug(
+      .log_debug(
         "predict_model (%s): all %d voxel predictions are constant across %d trials (max sd=%.2e). Model has no predictive power for this ROI.",
         method, ncol(predictions), nrow(predictions),
         max(pred_sds, na.rm = TRUE))
@@ -3663,7 +3663,7 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
           k, obj$max_comps, nrow(sf$X_sc), ncol(sf$X_sc), f_rank))
       }
       if (f_rank < structural_k && obj$max_comps > f_rank) {
-        futile.logger::flog.debug(
+        .log_debug(
           paste0("train_model (%s): F has numerical rank %d of %d possible ",
                  "components; fitting %d instead of %d."),
           method_label, f_rank, structural_k, k,

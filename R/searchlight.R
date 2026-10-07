@@ -323,7 +323,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
       if (any(!vapply(pob_list, is.null, logical(1)))) {
         if (!inherits(model_spec$dataset, "mvpa_image_dataset") ||
             searchlight_scope(model_spec$dataset) != "searchlight") {
-          futile.logger::flog.debug("pobserved maps not supported for this dataset type/scope; skipping.")
+          .log_debug("pobserved maps not supported for this dataset type/scope; skipping.")
         } else {
           # Volumetric case: build a SparseNeuroVec where rows are mask
           # voxels and columns are trials (probability of true class).
@@ -394,7 +394,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
             )
             ret$pobserved <- created_map
           } else {
-            futile.logger::flog.debug("combine_standard: no finite prob_observed values; skipping pobserved map.")
+            .log_debug("combine_standard: no finite prob_observed values; skipping pobserved map.")
           }
         }
       }
@@ -403,7 +403,7 @@ combine_standard <- function(model_spec, good_results, bad_results) {
     return(ret)
   }, error = function(e) {
     futile.logger::flog.error("Error combining results: %s", e$message)
-    futile.logger::flog.debug("Error details: %s", e$call)
+    .log_debug("Error details: %s", e$call)
     stop(paste("Failed to combine searchlight results:", e$message))
   })
 }
@@ -469,7 +469,7 @@ combine_rsa_standard <- function(model_spec, good_results, bad_results) {
 #' @param bad_results A data frame containing the unsuccessful classifier results.
 #' @return A list containing the combined and normalized performance matrix along with other information from the dataset.
 combine_randomized <- function(model_spec, good_results, bad_results=NULL, ...) {
-  futile.logger::flog.debug("combine_randomized: Starting with %d ROI results", nrow(good_results))
+  .log_debug("combine_randomized: Starting with %d ROI results", nrow(good_results))
 
   # Check if we have results
   if (nrow(good_results) == 0 || length(good_results$performance) == 0) {
@@ -478,7 +478,7 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL, ...) 
   }
 
   # Find first non-NULL performance entry to determine metric count and names
-  futile.logger::flog.debug("combine_randomized: Scanning for metric prototype and names")
+  .log_debug("combine_randomized: Scanning for metric prototype and names")
   perf_proto <- NULL
   metric_names <- NULL
   for (idx in seq_len(nrow(good_results))) {
@@ -502,12 +502,12 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL, ...) 
     stop("No valid performance entries found")
   }
 
-  futile.logger::flog.debug("combine_randomized: Found %d metrics: %s",
+  .log_debug("combine_randomized: Found %d metrics: %s",
                            ncols,
                            paste(if (is.null(metric_names)) paste0("Metric", seq_len(ncols)) else metric_names, collapse=", "))
 
   # Accumulate triplets for sparse matrix construction
-  futile.logger::flog.debug("combine_randomized: Building triplet lists from ROI results")
+  .log_debug("combine_randomized: Building triplet lists from ROI results")
   I_list <- list()
   J_list <- list()
   X_list <- list()
@@ -548,21 +548,21 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL, ...) 
     })
   }
 
-  futile.logger::flog.debug("combine_randomized: Processed %d valid ROIs, skipped %d", k - 1L, skipped)
+  .log_debug("combine_randomized: Processed %d valid ROIs, skipped %d", k - 1L, skipped)
 
   # Flatten triplet lists
-  futile.logger::flog.debug("combine_randomized: Flattening triplet lists")
+  .log_debug("combine_randomized: Flattening triplet lists")
   I <- unlist(I_list, use.names = FALSE)
   J <- unlist(J_list, use.names = FALSE)
   X <- unlist(X_list, use.names = FALSE)
 
-  futile.logger::flog.debug("combine_randomized: Total triplets: %d (%.1f MB)",
+  .log_debug("combine_randomized: Total triplets: %d (%.1f MB)",
                            length(I),
                            (length(I) * 8 * 3) / 1024^2)
 
   # Build sparse matrices for sums and counts in one pass
   # sparseMatrix automatically sums duplicate (i,j) entries
-  futile.logger::flog.debug("combine_randomized: Constructing sparse values matrix (%d x %d)",
+  .log_debug("combine_randomized: Constructing sparse values matrix (%d x %d)",
                            length(model_spec$dataset$mask), ncols)
   vals_mat <- Matrix::sparseMatrix(
     i = I,
@@ -571,7 +571,7 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL, ...) 
     dims = c(length(model_spec$dataset$mask), ncols)
   )
 
-  futile.logger::flog.debug("combine_randomized: Constructing sparse counts matrix")
+  .log_debug("combine_randomized: Constructing sparse counts matrix")
   counts_mat <- Matrix::sparseMatrix(
     i = I,
     j = J,
@@ -580,10 +580,10 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL, ...) 
   )
 
   # Normalize by counts (avoid division by zero)
-  futile.logger::flog.debug("combine_randomized: Normalizing by counts")
+  .log_debug("combine_randomized: Normalizing by counts")
   perf_mat <- vals_mat / pmax(counts_mat, 1)
 
-  futile.logger::flog.debug("combine_randomized: Result sparsity: %.2f%% (non-zero: %d)",
+  .log_debug("combine_randomized: Result sparsity: %.2f%% (non-zero: %d)",
                            100 * Matrix::nnzero(perf_mat) / prod(dim(perf_mat)),
                            Matrix::nnzero(perf_mat))
 
@@ -594,9 +594,9 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL, ...) 
   colnames(perf_mat) <- metric_names
 
   # Wrap and return results
-  futile.logger::flog.debug("combine_randomized: Wrapping output")
+  .log_debug("combine_randomized: Wrapping output")
   ret <- wrap_out(perf_mat, model_spec$dataset)
-  futile.logger::flog.debug("combine_randomized: Complete")
+  .log_debug("combine_randomized: Complete")
   ret
 }
 
@@ -827,15 +827,15 @@ do_randomized <- function(model_spec, radius, niter,
   
   ret <- purrr::map(seq(1,niter), function(i) {
     futile.logger::flog.info("\nIteration %s/%s", crayon::blue(i), crayon::blue(niter))
-    futile.logger::flog.debug("do_randomized iter %d: Generating searchlight with radius %d", i, radius)
+    .log_debug("do_randomized iter %d: Generating searchlight with radius %d", i, radius)
     slight <- get_searchlight(model_spec$dataset, "randomized", radius)
 
-    futile.logger::flog.debug("do_randomized iter %d: Got %d ROIs, extracting center indices", i, length(slight))
+    .log_debug("do_randomized iter %d: Got %d ROIs, extracting center indices", i, length(slight))
 
     cind <- .searchlight_center_ids(slight)
 
     # Pass analysis_type to the mvpa function
-    futile.logger::flog.debug("do_randomized iter %d: Calling mvpa_fun with %d ROIs", i, length(slight))
+    .log_debug("do_randomized iter %d: Calling mvpa_fun with %d ROIs", i, length(slight))
 
     result <- tryCatch({
       mvpa_fun(model_spec, slight, cind, analysis_type="searchlight",
@@ -876,7 +876,7 @@ do_randomized <- function(model_spec, radius, niter,
       )
     }
 
-    futile.logger::flog.debug("do_randomized iter %d: mvpa_fun returned %d results", i, nrow(result))
+    .log_debug("do_randomized iter %d: mvpa_fun returned %d results", i, nrow(result))
 
     # Count successful and failed models
     n_success <- sum(!result$error, na.rm=TRUE)
@@ -885,20 +885,20 @@ do_randomized <- function(model_spec, radius, niter,
     total_errors <<- total_errors + n_errors
 
     if (n_errors > 0) {
-      futile.logger::flog.debug("- %s ROIs failed in this iteration", n_errors)
+      .log_debug("- %s ROIs failed in this iteration", n_errors)
     }
 
-    futile.logger::flog.debug("do_randomized iter %d: Complete (success=%d, errors=%d)", i, n_success, n_errors)
+    .log_debug("do_randomized iter %d: Complete (success=%d, errors=%d)", i, n_success, n_errors)
     result
   })
   
-  futile.logger::flog.debug("do_randomized: Combining %d iteration results", length(ret))
+  .log_debug("do_randomized: Combining %d iteration results", length(ret))
   results <- dplyr::bind_rows(ret)
-  futile.logger::flog.debug("do_randomized: Combined into %d total results", nrow(results))
+  .log_debug("do_randomized: Combined into %d total results", nrow(results))
   split <- split_results(results)
   good_results <- split$good
   bad_results  <- split$bad
-  futile.logger::flog.debug("do_randomized: Split into %d good, %d bad results", nrow(good_results), nrow(bad_results))
+  .log_debug("do_randomized: Split into %d good, %d bad results", nrow(good_results), nrow(bad_results))
 
   summarize_errors(results, "searchlight (randomized)")
 
@@ -930,11 +930,11 @@ do_randomized <- function(model_spec, radius, niter,
     ))
   }
 
-  futile.logger::flog.debug("do_randomized: Calling combiner function with %d good results", nrow(good_results))
+  .log_debug("do_randomized: Calling combiner function with %d good results", nrow(good_results))
   result <- combiner(model_spec, good_results, bad_results,
                      chunk_size = chunk_size,
                      return_pobserved = return_pobserved)
-  futile.logger::flog.debug("do_randomized: Combiner complete, returning results")
+  .log_debug("do_randomized: Combiner complete, returning results")
   attr(result, "bad_results") <- bad_results
   result
 }
@@ -981,7 +981,7 @@ do_resampled <- function(model_spec, radius, niter,
   }
 
   slight <- get_searchlight(model_spec$dataset, type = "resampled", radius = radius, iter = niter)
-  futile.logger::flog.debug("do_resampled: Got %d ROIs, extracting center indices", length(slight))
+  .log_debug("do_resampled: Got %d ROIs, extracting center indices", length(slight))
 
   cind <- .searchlight_center_ids(slight)
 
@@ -1031,9 +1031,9 @@ do_resampled <- function(model_spec, radius, niter,
     stop("No valid results produced")
   }
 
-  futile.logger::flog.debug("do_resampled: Calling combiner function with %d good results", nrow(good_results))
+  .log_debug("do_resampled: Calling combiner function with %d good results", nrow(good_results))
   res <- combiner(model_spec, good_results, bad_results)
-  futile.logger::flog.debug("do_resampled: Combiner complete, returning results")
+  .log_debug("do_resampled: Combiner complete, returning results")
   attr(res, "bad_results") <- bad_results
   res
 }
@@ -1065,7 +1065,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   t_sl_create <- proc.time()[3]
   slight <- get_searchlight(model_spec$dataset, "standard", radius, k = k)
   setup_elapsed <- proc.time()[3] - t_sl_create
-  flog.debug("get_searchlight (standard) took %.3f sec", setup_elapsed)
+  .log_debug("get_searchlight (standard) took %.3f sec", setup_elapsed)
 
   t_iterate <- proc.time()[3]
   cind <- get_center_ids(model_spec$dataset)
@@ -1075,7 +1075,7 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
                   drop_probs = drop_probs, fail_fast = fail_fast, ...)
   iterate_elapsed <- proc.time()[3] - t_iterate
   iterate_timing <- attr(ret, "timing")
-  flog.debug("mvpa_iterate (standard searchlight) took %.3f sec",
+  .log_debug("mvpa_iterate (standard searchlight) took %.3f sec",
              iterate_elapsed)
   split <- split_results(ret)
   good_results <- split$good
@@ -1090,13 +1090,13 @@ do_standard <- function(model_spec, radius, mvpa_fun=mvpa_iterate, combiner=comb
   t_combine <- proc.time()[3]
   schema <- output_schema(model_spec)
   if (!is.null(schema)) {
-    flog.debug("output_schema found (%d entries); using schema combiner", length(schema))
+    .log_debug("output_schema found (%d entries); using schema combiner", length(schema))
     out <- combine_schema_standard(model_spec, good_results, bad_results)
   } else {
     out <- combiner(model_spec, good_results, bad_results)
   }
   combine_elapsed <- proc.time()[3] - t_combine
-  flog.debug("Combiner took %.3f sec", combine_elapsed)
+  .log_debug("Combiner took %.3f sec", combine_elapsed)
   attr(out, "bad_results") <- bad_results
   if (profile_enabled) {
     attr(out, "timing") <- list(
@@ -1310,7 +1310,11 @@ run_searchlight_base <- function(model_spec,
 #'     \item{engine}{Searchlight engine: \code{"auto"} (default), \code{"legacy"}
 #'       (the compatibility key for the general-purpose iterator),
 #'       \code{"swift"}, \code{"dual_lda_fast"}, \code{"naive_xdec_fast"}, or
-#'       \code{"era_rsa_fast"}.}
+#'       \code{"era_rsa_fast"}. \code{"auto"} only selects engines that compute
+#'       the same estimator as the model specification. \code{"swift"} is
+#'       never selected automatically: it replaces the specified classifier
+#'       with SWIFT's z-scored nearest-class-mean estimator and must be
+#'       requested explicitly.}
 #'     \item{combiner}{Combiner function or name for randomized/resampled methods
 #'       (default \code{"average"}).}
 #'     \item{drop_probs}{If \code{TRUE}, drop probability predictions (default \code{FALSE}).}

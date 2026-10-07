@@ -31,7 +31,11 @@ fall back to default).}
   \item{engine}{Searchlight engine: \code{"auto"} (default), \code{"legacy"}
     (the compatibility key for the general-purpose iterator),
     \code{"swift"}, \code{"dual_lda_fast"}, \code{"naive_xdec_fast"}, or
-    \code{"era_rsa_fast"}.}
+    \code{"era_rsa_fast"}. \code{"auto"} only selects engines that compute
+    the same estimator as the model specification. \code{"swift"} is
+    never selected automatically: it replaces the specified classifier
+    with SWIFT's z-scored nearest-class-mean estimator and must be
+    requested explicitly.}
   \item{combiner}{Combiner function or name for randomized/resampled methods
     (default \code{"average"}).}
   \item{drop_probs}{If \code{TRUE}, drop probability predictions (default \code{FALSE}).}

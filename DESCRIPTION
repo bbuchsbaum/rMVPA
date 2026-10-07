@@ -36,7 +36,7 @@ Imports:
     memoise,
     methods,
     modelr,
-    neuroim2 (>= 0.20.0),
+    neuroim2 (>= 0.19.1),
     purrr,
     rlang,
     stringr,
@@ -52,6 +52,7 @@ Collate:
     'custom.R'
     'balance.R'
     'classifiers.R'
+    'sda_native.R'
     'caret_models.R'
     'crossnobis_helpers.R'
     'common.R'
@@ -79,12 +80,15 @@ Collate:
     'shard_backend.R'
     'resampling_utils.R'
     'rsa_model.R'
+    'rsa_searchlight_engine.R'
     'rsa_schematic.R'
     'roisplit.R'
     'searchlight_engine_utils.R'
     'dual_lda_searchlight.R'
     'searchlight_engine.R'
     'swift_searchlight.R'
+    'aggregate_searchlight.R'
+    'sda_searchlight.R'
     'searchlight.R'
     'spatial_output.R'
     'spatial_nmf.R'
@@ -182,7 +186,7 @@ Suggests:
     scales,
     roxygen2,
     sda,
-    shard (>= 0.2.0),
+    shard (>= 0.2.1),
     sparsediscrim,
     spls,
     systemfonts,
@@ -194,21 +198,23 @@ Suggests:
     yaml
 VignetteBuilder: knitr
 Remotes:
+    bbuchsbaum/fmriAR,
     bbuchsbaum/fmridesign,
     bbuchsbaum/fmrilss,
     bbuchsbaum/neuroim2,
-    bbuchsbaum/neurosurf
+    bbuchsbaum/neurosurf,
+    bbuchsbaum/shard
 Encoding: UTF-8
 NeedsCompilation: yes
 URL: https://github.com/bbuchsbaum/rMVPA, https://bbuchsbaum.github.io/rMVPA/
 BugReports: https://github.com/bbuchsbaum/rMVPA/issues
 Config/Needs/check:
-    fmriAR,
+    bbuchsbaum/fmriAR,
     fmrihrf
 Config/Needs/coverage:
-    fmriAR,
+    bbuchsbaum/fmriAR,
     fmrihrf
 Config/Needs/website:
     albersdown,
-    fmriAR,
+    bbuchsbaum/fmriAR,
     fmrihrf

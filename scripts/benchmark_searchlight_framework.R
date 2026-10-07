@@ -38,14 +38,22 @@ resolve_bench_profile <- function(profile) {
   match.arg(tolower(profile), c("legacy", "phase1", "phase2"))
 }
 
-bench_profile_options <- function(profile) {
+# Fast paths cannot be switched off through options (they are ignored by
+# design). A profile names the fast paths that run their retained reference
+# implementation instead, through the package-private override.
+bench_profile_reference_paths <- function(profile) {
   profile <- resolve_bench_profile(profile)
-  list(
-    rMVPA.fold_cache_enabled = profile %in% c("phase1", "phase2"),
-    rMVPA.matrix_first_roi = identical(profile, "phase2"),
-    rMVPA.fast_filter_roi = identical(profile, "phase2"),
-    rMVPA.naive_xdec_fast_kernel = identical(profile, "phase2")
+  switch(profile,
+    legacy = c("fold_cache", "matrix_first_roi", "fast_filter_roi", "naive_xdec_fast_kernel"),
+    phase1 = c("matrix_first_roi", "fast_filter_roi", "naive_xdec_fast_kernel"),
+    phase2 = character()
   )
+}
+
+apply_bench_profile <- function(profile) {
+  for (nm in bench_profile_reference_paths(profile)) {
+    assign(nm, TRUE, envir = rMVPA:::.rmvpa_reference_paths)
+  }
 }
 
 with_profile_timing <- function(expr) {
@@ -128,10 +136,10 @@ collect_row <- function(workload, repetition, elapsed, res, backend, bench_profi
     repetition = repetition,
     backend = backend,
     bench_profile = bench_profile,
-    fold_cache_enabled = isTRUE(getOption("rMVPA.fold_cache_enabled", FALSE)),
-    matrix_first_roi = isTRUE(getOption("rMVPA.matrix_first_roi", FALSE)),
-    fast_filter_roi = isTRUE(getOption("rMVPA.fast_filter_roi", FALSE)),
-    naive_xdec_fast_kernel = isTRUE(getOption("rMVPA.naive_xdec_fast_kernel", FALSE)),
+    fold_cache_enabled = rMVPA:::.fast_path_enabled("fold_cache"),
+    matrix_first_roi = rMVPA:::.fast_path_enabled("matrix_first_roi"),
+    fast_filter_roi = rMVPA:::.fast_path_enabled("fast_filter_roi"),
+    naive_xdec_fast_kernel = rMVPA:::.fast_path_enabled("naive_xdec_fast_kernel"),
     elapsed_seconds = as.numeric(elapsed),
     setup_seconds = as.numeric(timing$setup_seconds %||% NA_real_),
     iterate_seconds = as.numeric(timing$iterate_seconds %||% NA_real_),
@@ -229,7 +237,7 @@ bench_profile <- resolve_bench_profile(Sys.getenv("RMVPA_BENCH_PROFILE", "legacy
 include_clustered <- flag_enabled("RMVPA_BENCH_INCLUDE_CLUSTERED")
 selected_cases <- env_csv("RMVPA_BENCH_CASES")
 dry_run <- flag_enabled("RMVPA_BENCH_DRY_RUN")
-options(bench_profile_options(bench_profile))
+apply_bench_profile(bench_profile)
 
 cases <- list(
   list(name = "mvpa_classification", builder = build_mvpa_spec, radius = 3, dots = list()),
@@ -259,10 +267,10 @@ if (isTRUE(dry_run)) {
     workload = vapply(cases, function(case) case$name, character(1)),
     backend = backend,
     bench_profile = bench_profile,
-    fold_cache_enabled = isTRUE(getOption("rMVPA.fold_cache_enabled", FALSE)),
-    matrix_first_roi = isTRUE(getOption("rMVPA.matrix_first_roi", FALSE)),
-    fast_filter_roi = isTRUE(getOption("rMVPA.fast_filter_roi", FALSE)),
-    naive_xdec_fast_kernel = isTRUE(getOption("rMVPA.naive_xdec_fast_kernel", FALSE)),
+    fold_cache_enabled = rMVPA:::.fast_path_enabled("fold_cache"),
+    matrix_first_roi = rMVPA:::.fast_path_enabled("matrix_first_roi"),
+    fast_filter_roi = rMVPA:::.fast_path_enabled("fast_filter_roi"),
+    naive_xdec_fast_kernel = rMVPA:::.fast_path_enabled("naive_xdec_fast_kernel"),
     nrep = nrep,
     radius = vapply(cases, function(case) case$radius, numeric(1)),
     stringsAsFactors = FALSE

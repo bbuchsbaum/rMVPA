@@ -11,6 +11,12 @@ extract_weights.sda <- function(object, ...) {
 
 #' @rdname extract_weights
 #' @export
+extract_weights.sda_native <- function(object, ...) {
+  extract_weights.sda(object, ...)
+}
+
+#' @rdname extract_weights
+#' @export
 extract_weights.glmnet <- function(object, ...) {
   s <- object$opt_lambda
   if (is.null(s)) {
@@ -211,6 +217,12 @@ model_importance.sda <- function(object, X_train, summary_fun = NULL, ...) {
   }
   res <- do.call(haufe_importance, haufe_args)
   res$importance
+}
+
+#' @rdname model_importance
+#' @export
+model_importance.sda_native <- function(object, X_train, summary_fun = NULL, ...) {
+  model_importance.sda(object, X_train, summary_fun = summary_fun, ...)
 }
 
 #' @rdname model_importance
